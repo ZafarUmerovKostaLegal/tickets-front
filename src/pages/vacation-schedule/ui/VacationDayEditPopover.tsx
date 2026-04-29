@@ -45,15 +45,9 @@ export function VacationDayEditPopover({ open, x, y, legendItems, current, savin
             if (e.key === 'Escape')
                 onClose();
         };
-        const onDoc = (e: MouseEvent) => {
-            if (ref.current && !ref.current.contains(e.target as Node))
-                onClose();
-        };
         document.addEventListener('keydown', onKey);
-        document.addEventListener('mousedown', onDoc);
         return () => {
             document.removeEventListener('keydown', onKey);
-            document.removeEventListener('mousedown', onDoc);
         };
     }, [open, onClose]);
     if (!open)

@@ -157,7 +157,7 @@ export function TimeUserProjectAccessModal({ authUserId, userLabel, canSave, onC
             setSaving(false);
         }
     };
-    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation" onClick={onClose}>
+    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
         <div className="tt-tm-modal tt-tm-modal--project-access" role="dialog" aria-modal="true" aria-labelledby={`${uid}-pa-title`} onClick={(ev) => ev.stopPropagation()}>
             <div className="tt-tm-modal__head">
                 <h2 id={`${uid}-pa-title`} className="tt-tm-modal__title">

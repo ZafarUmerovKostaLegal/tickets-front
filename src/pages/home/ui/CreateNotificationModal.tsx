@@ -13,7 +13,7 @@ type CreateNotificationModalProps = {
 export const CreateNotificationModal = memo(function CreateNotificationModal(props: CreateNotificationModalProps) {
     const { onClose, onSubmit, title, description, onTitleChange, onDescriptionChange, loading, error, } = props;
     const modal = (<div className="tm" role="dialog" aria-modal="true">
-      <div className="tm__backdrop" onClick={onClose} role="button" tabIndex={-1} aria-label="Закрыть"/>
+      <div className="tm__backdrop" aria-hidden/>
       <div className="tm__box" onClick={(e) => e.stopPropagation()}>
         <div className="tm__head">
           <div className="tm__head-left">

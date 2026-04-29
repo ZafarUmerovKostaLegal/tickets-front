@@ -140,7 +140,7 @@ function ClientTaskModal({ mode, clientId, initial, onClose, onSaved }: TaskModa
             setSaving(false);
         }
     };
-    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation" onClick={onClose}>
+    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
       <div className="tt-tm-modal tt-tm-modal--task" role="dialog" aria-modal="true" aria-labelledby={`${uid}-task-title`} onClick={(ev) => ev.stopPropagation()}>
         <div className="tt-tm-modal__head">
           <h2 id={`${uid}-task-title`} className="tt-tm-modal__title">

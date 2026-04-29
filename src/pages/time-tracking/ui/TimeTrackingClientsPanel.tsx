@@ -298,7 +298,7 @@ function ClientViewModal({ listRow, canManage, onClose, onEdit }: ClientViewModa
     }, [listRow.id]);
     const c = detail ?? listRow;
     const extras = c.extra_contacts ?? [];
-    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation" onClick={onClose}>
+    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
       <div className="tt-tm-modal tt-tm-modal--client tt-tm-modal--client-view" role="dialog" aria-modal="true" aria-labelledby={`${uid}-view-title`} onClick={(ev) => ev.stopPropagation()}>
         <div className="tt-tm-modal__head">
           <h2 id={`${uid}-view-title`} className="tt-tm-modal__title">
@@ -601,7 +601,7 @@ function TimeManagerClientModal({ mode, initial, canManage, onClose, onSaved }: 
             setContactBusy(false);
         }
     };
-    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation" onClick={onClose}>
+    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
       <div className="tt-tm-modal tt-tm-modal--client" role="dialog" aria-modal="true" aria-labelledby={`${uid}-title`} onClick={(ev) => ev.stopPropagation()}>
         <div className="tt-tm-modal__head">
           <h2 id={`${uid}-title`} className="tt-tm-modal__title">
@@ -873,7 +873,7 @@ function AddClientContactModal({ includeArchived, canManage, onClose }: AddClien
             setSaving(false);
         }
     };
-    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation" onClick={onClose}>
+    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
       <div className="tt-tm-modal tt-tm-modal--add-contact" role="dialog" aria-modal="true" aria-labelledby={`${uid}-add-contact-title`} onClick={(ev) => ev.stopPropagation()}>
         <div className="tt-tm-modal__head">
           <h2 id={`${uid}-add-contact-title`} className="tt-tm-modal__title">

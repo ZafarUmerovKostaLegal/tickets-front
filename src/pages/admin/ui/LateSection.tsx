@@ -111,7 +111,7 @@ export function LateSection({ lateLoading, lateError, lateMetrics, loadAttendanc
       {photoPreviewBlobUrl &&
             typeof document !== 'undefined' &&
             createPortal(<div className="ap__late-photo-modal" role="dialog" aria-modal="true" aria-label="Фото объяснительной">
-            <div className="ap__late-photo-backdrop" onClick={closePhotoPreview}/>
+            <div className="ap__late-photo-backdrop" aria-hidden/>
             <div className="ap__late-photo-dialog">
               <button type="button" className="ap__late-photo-close" onClick={closePhotoPreview} aria-label="Закрыть">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">

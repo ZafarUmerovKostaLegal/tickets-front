@@ -103,7 +103,7 @@ function CallEventDetailModal({ event, onClose }: {
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose]);
-    return createPortal(<div className="csched-modal-overlay" role="presentation" onClick={onClose}>
+    return createPortal(<div className="csched-modal-overlay" role="presentation">
       <div className="csched-modal" role="dialog" aria-modal="true" aria-labelledby={`${uid}-call-title`} onClick={(e) => e.stopPropagation()}>
         <div className="csched-modal__head">
           <h2 id={`${uid}-call-title`} className="csched-modal__title">
@@ -187,7 +187,7 @@ function CallDayListModal({ dateIso, events, onClose, onSelectEvent, }: {
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose]);
-    return createPortal(<div className="csched-modal-overlay" role="presentation" onClick={onClose}>
+    return createPortal(<div className="csched-modal-overlay" role="presentation">
       <div className="csched-modal csched-daylist" role="dialog" aria-modal="true" aria-labelledby={`${uid}-daylist`} onClick={(e) => e.stopPropagation()}>
         <div className="csched-modal__head">
           <h2 id={`${uid}-daylist`} className="csched-modal__title csched-daylist__title">
@@ -300,7 +300,7 @@ function CreateCallEventModal({ open, onClose, onCreated, initialDateIso, calend
             setSaving(false);
         }
     };
-    return createPortal(<div className="csched-modal-overlay" role="presentation" onClick={onClose}>
+    return createPortal(<div className="csched-modal-overlay" role="presentation">
       <div className="csched-modal csched-modal--form" role="dialog" aria-modal="true" aria-labelledby={`${formId}-title`} onClick={(e) => e.stopPropagation()}>
         <form onSubmit={submit}>
           <div className="csched-modal__head">

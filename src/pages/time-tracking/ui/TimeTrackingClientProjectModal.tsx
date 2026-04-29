@@ -786,7 +786,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
       </div>
     </div>);
   }
-  return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation" onClick={onClose}>
+  return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
     <div className="tt-tm-modal tt-tm-modal--project" role="dialog" aria-modal="true" aria-labelledby={`${uid}-proj-title`} onClick={(ev) => ev.stopPropagation()}>
       <div className="tt-tm-modal__head">
         <h2 id={`${uid}-proj-title`} className="tt-tm-modal__title">

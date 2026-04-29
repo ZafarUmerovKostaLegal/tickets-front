@@ -100,8 +100,8 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
             setDeletingEmployee(false);
         }
     };
-    return createPortal(<div className="vac-emp-ov" role="dialog" aria-modal="true" aria-labelledby="vac-emp-title" onClick={onClose}>
-      <div className="vac-emp-card" onClick={(e) => e.stopPropagation()}>
+    return createPortal(<div className="vac-emp-ov" role="dialog" aria-modal="true" aria-labelledby="vac-emp-title">
+      <div className="vac-emp-card">
         <div className="vac-emp-card__head">
           <h2 id="vac-emp-title" className="vac-emp-card__title">
             {loading ? 'Загрузка…' : fullName || 'Сотрудник'}

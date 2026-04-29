@@ -32,7 +32,7 @@ export function WorkdaySettingsModal({ initial, onClose, onSave }: WorkdaySettin
         }
     };
     return (<div className="att-modal" role="dialog" aria-modal="true">
-      <div className="att-modal__backdrop" onClick={onClose}/>
+      <div className="att-modal__backdrop" aria-hidden/>
       <div className="att-modal__dialog">
         <div className="att-modal__head">
           <div className="att-modal__head-left">

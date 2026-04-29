@@ -25,10 +25,7 @@ export function ExpenseConfirmDialog({ isOpen, title, message, confirmLabel, can
     const confirmClass = confirmVariant === 'danger'
         ? 'exp-panel-btn exp-panel-btn--primary exp-panel-btn--danger'
         : 'exp-panel-btn exp-panel-btn--primary';
-    return (<div className="exp-mod-backdrop" role="presentation" onClick={() => {
-            if (!busy)
-                onClose();
-        }}>
+    return (<div className="exp-mod-backdrop" role="presentation">
       <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby={titleId} onClick={e => e.stopPropagation()}>
         <h3 id={titleId} className="exp-mod-dialog__title">
           {title}

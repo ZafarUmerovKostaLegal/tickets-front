@@ -13,10 +13,7 @@ export type ExpenseAttachmentPreviewModalProps = {
 export function ExpenseAttachmentPreviewModal({ isOpen, fileName, loading, error, model, canOpenExternal, onClose, onOpenExternal, }: ExpenseAttachmentPreviewModalProps) {
     if (!isOpen)
         return null;
-    return createPortal(<div className="exp-attach-preview-backdrop" role="presentation" onClick={e => {
-            if (e.target === e.currentTarget)
-                onClose();
-        }}>
+    return createPortal(<div className="exp-attach-preview-backdrop" role="presentation">
       <div className="exp-attach-preview" role="dialog" aria-modal aria-labelledby="exp-attach-preview-title" onClick={e => e.stopPropagation()}>
         <div className="exp-attach-preview__hd">
           <h2 id="exp-attach-preview-title" className="exp-attach-preview__title">

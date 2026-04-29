@@ -1,11 +1,11 @@
-import type { PatchTimeEntryBody, TimeEntryRow, TimeEntryVoidKind, } from '@entities/time-tracking';
+import type { CreateTimeEntryBody, PatchTimeEntryBody, TimeEntryRow, TimeEntryVoidKind, } from '@entities/time-tracking';
 import type { TimeExcelPreviewRow, } from './previewExcelTypes';
 
 function hoursToDurationSeconds(h: number): number {
     const x = Number.isFinite(h) ? h : 0;
     return Math.max(0, Math.round(x * 3600));
 }
-function taskIdForApi(taskId: string): string | null {
+export function taskIdForApi(taskId: string): string | null {
     const t = String(taskId ?? '').trim();
     if (!t || t.startsWith('task:'))
         return null;
@@ -28,15 +28,43 @@ function durationHoursForPatch(row: TimeExcelPreviewRow): number {
 }
 
 export function timeExcelPreviewRowToPatchBody(row: TimeExcelPreviewRow): PatchTimeEntryBody {
-    return {
+    const rec = String(row.recordedAt ?? '').trim();
+    const out: PatchTimeEntryBody = {
         workDate: workDateYmd(row.workDate),
-        
         durationSeconds: hoursToDurationSeconds(durationHoursForPatch(row)),
         isBillable: Boolean(row.isBillable),
         projectId: String(row.projectId ?? '').trim() || null,
         taskId: taskIdForApi(row.taskId),
         description: (row.note || row.description || '').trim() || null,
     };
+    if (rec)
+        out.recordedAt = rec;
+    return out;
+}
+
+export function timeExcelPreviewRowToCreateBody(row: TimeExcelPreviewRow, overrides: {
+    workDate: string;
+    recordedAt?: string | null;
+    durationSecondsOverride?: number;
+}): CreateTimeEntryBody {
+    let durationSeconds = hoursToDurationSeconds(durationHoursForPatch(row));
+    if (typeof overrides.durationSecondsOverride === 'number' && Number.isFinite(overrides.durationSecondsOverride)) {
+        durationSeconds = Math.max(0, Math.round(overrides.durationSecondsOverride));
+    }
+    else if (durationSeconds <= 0)
+        durationSeconds = 3600;
+    const body: CreateTimeEntryBody = {
+        workDate: workDateYmd(overrides.workDate),
+        durationSeconds,
+        isBillable: Boolean(row.isBillable),
+        projectId: String(row.projectId ?? '').trim() || null,
+        taskId: taskIdForApi(row.taskId),
+        description: (row.note || row.description || '').trim() || null,
+    };
+    if (overrides.recordedAt != null && String(overrides.recordedAt).trim() !== '') {
+        body.recordedAt = String(overrides.recordedAt).trim();
+    }
+    return body;
 }
 function parseHoursField(h: string | number): number {
     if (typeof h === 'number')
@@ -69,8 +97,10 @@ export function mergeTimeEntryResponseIntoRow(tr: TimeEntryRow): Partial<TimeExc
         o.projectId = String(tr.project_id);
     if (tr.task_id != null)
         o.taskId = String(tr.task_id);
-    if (tr.created_at != null && String(tr.created_at).trim())
-        o.recordedAt = String(tr.created_at);
+    const trRec = tr as TimeEntryRow & { recorded_at?: string | null; recordedAt?: string | null };
+    const recRaw = trRec.recorded_at ?? trRec.recordedAt ?? tr.created_at;
+    if (recRaw != null && String(recRaw).trim())
+        o.recordedAt = String(recRaw).trim();
     const trAny2 = tr as TimeEntryRow & { billableAmount?: unknown };
     const baRaw = tr.billable_amount ?? trAny2.billableAmount;
     if (baRaw != null && String(baRaw).trim() !== '') {
@@ -79,4 +109,27 @@ export function mergeTimeEntryResponseIntoRow(tr: TimeEntryRow): Partial<TimeExc
             o.amountToPay = x;
     }
     return o;
+}
+
+export function previewRowAfterCreate(template: TimeExcelPreviewRow, tr: TimeEntryRow, opts?: { recordedAt?: string | null; }): TimeExcelPreviewRow {
+    const merged = mergeTimeEntryResponseIntoRow(tr);
+    const trRec = tr as TimeEntryRow & { recorded_at?: string | null; recordedAt?: string | null };
+    const fromApi = trRec.recorded_at ?? trRec.recordedAt ?? merged.recordedAt;
+    const recordedAt = opts?.recordedAt?.trim()
+        || (typeof fromApi === 'string' && fromApi.trim() ? fromApi.trim() : '')
+        || template.recordedAt
+        || tr.created_at;
+    const nextTaskId = String(merged.taskId ?? template.taskId ?? '').trim();
+    return {
+        ...template,
+        ...merged,
+        rowKey: `e-${tr.id}`,
+        timeEntryId: tr.id,
+        rowKind: 'entry',
+        sourceEntryCount: 1,
+        authUserId: tr.auth_user_id,
+        recordedAt: String(recordedAt || ''),
+        taskId: nextTaskId,
+        taskName: template.taskName,
+    };
 }

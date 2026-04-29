@@ -25,7 +25,7 @@ export function LogoutConfirmDialog({ open, onCancel, onConfirm }: LogoutConfirm
     }, [open, onCancel]);
     if (!open || typeof document === 'undefined')
         return null;
-    return createPortal(<div className="logout-confirm" role="presentation" onClick={onCancel}>
+    return createPortal(<div className="logout-confirm" role="presentation">
       <div className="logout-confirm__panel" role="alertdialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={descId} onClick={(e) => e.stopPropagation()}>
         <h2 className="logout-confirm__title" id={titleId}>
           Выйти из аккаунта?

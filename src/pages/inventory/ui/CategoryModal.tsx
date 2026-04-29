@@ -5,7 +5,7 @@ export function CategoryModal() {
     const { categoryModal, setCategoryModal, categoryForm, setCategoryForm, formError, submitting, handleCategorySubmit, } = ctx;
     if (!categoryModal)
         return null;
-    const content = (<div className="inv__overlay" onClick={() => !submitting && setCategoryModal(null)} role="dialog" aria-modal="true">
+    const content = (<div className="inv__overlay" role="dialog" aria-modal="true">
       <div className="inv__modal" onClick={(e) => e.stopPropagation()}>
         <div className="inv__modal-head">
           <h3 className="inv__modal-title">

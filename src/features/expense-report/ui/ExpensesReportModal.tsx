@@ -146,7 +146,7 @@ export function ExpensesReportModal({ isOpen, requests, onClose }: Props) {
         return true;
     }).length;
     const modal = (<>
-      <div className="rep-overlay" aria-hidden onClick={onClose}/>
+      <div className="rep-overlay" aria-hidden/>
       <div className="rep-modal" role="dialog" aria-modal aria-labelledby="rep-modal-title">
         <div className="rep-modal__hd">
           <div className="rep-modal__hd-icon">

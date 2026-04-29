@@ -207,8 +207,8 @@ export const TodoCardModal = memo(function TodoCardModal({ card, columnTitle, co
         document.addEventListener('mousedown', onClick);
         return () => document.removeEventListener('mousedown', onClick);
     }, [activePanel]);
-    return (<div className="tcm-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby={titleId}>
-      <div className="tcm" onClick={(e) => e.stopPropagation()}>
+    return (<div className="tcm-backdrop" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div className="tcm">
 
         <header className="tcm__header">
           <div className="tcm__header-left">

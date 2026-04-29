@@ -1093,12 +1093,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         };
     }, [scrollLockActive]);
     const portalLayer = (<>
-      {rejectOpen && editingRequest && (<div className="exp-mod-backdrop" role="presentation" onClick={() => {
-                if (!moderationBusy) {
-                    setRejectOpen(false);
-                    setModerationErr(null);
-                }
-            }}>
+      {rejectOpen && editingRequest && (<div className="exp-mod-backdrop" role="presentation">
           <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-mod-reject-title" onClick={e => e.stopPropagation()}>
             <h3 id="exp-mod-reject-title" className="exp-mod-dialog__title">Отклонить заявку</h3>
             <p className="exp-mod-dialog__sub">Заявка {editingRequest.id}. Укажите причину — автор её увидит в истории.</p>
@@ -1110,12 +1105,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             </div>
           </div>
         </div>)}
-      {reviseOpen && editingRequest && (<div className="exp-mod-backdrop" role="presentation" onClick={() => {
-                if (!moderationBusy) {
-                    setReviseOpen(false);
-                    setModerationErr(null);
-                }
-            }}>
+      {reviseOpen && editingRequest && (<div className="exp-mod-backdrop" role="presentation">
           <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-mod-revise-title" onClick={e => e.stopPropagation()}>
             <h3 id="exp-mod-revise-title" className="exp-mod-dialog__title">Вернуть на доработку</h3>
             <p className="exp-mod-dialog__sub">Заявка {editingRequest.id}. Автор сможет исправить заявку и отправить снова.</p>
@@ -1151,8 +1141,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             }} onConfirm={handlePanelConfirmSubmit}/>)}
       <ExpenseAttachmentPreviewModal isOpen={attachPreview != null} fileName={attachPreview?.fileName ?? ''} loading={attachPreview?.loading ?? false} error={attachPreview?.error ?? null} model={attachPreview?.model ?? null} canOpenExternal={Boolean(attachPreview &&
             (attachPreview.server || attachPreview.localFile || attachPreview.previewObjectUrl))} onClose={closeAttachPreview} onOpenExternal={openAttachmentExternal}/>
-      <div className={`exp-panel-overlay${isOpen ? ' exp-panel-overlay--open' : ''}`} aria-hidden onClick={() => { if (!formAsyncBusy)
-        onClose(); }}/>
+      <div className={`exp-panel-overlay${isOpen ? ' exp-panel-overlay--open' : ''}`} aria-hidden/>
       <aside className={`exp-panel${isOpen ? ' exp-panel--open' : ''}${formAsyncBusy ? ' exp-panel--async-busy' : ''}`} aria-modal aria-busy={formAsyncBusy} aria-label={title}>
         
         <div className="exp-panel__hd">

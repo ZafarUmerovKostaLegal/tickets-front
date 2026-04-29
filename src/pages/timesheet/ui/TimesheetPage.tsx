@@ -124,7 +124,7 @@ function AddEntryModal({ defaultDate, onClose, onSave }: {
         });
         onClose();
     }
-    return createPortal(<div className="ts__modal-overlay" onClick={onClose}>
+    return createPortal(<div className="ts__modal-overlay">
       <div className="ts__modal" onClick={e => e.stopPropagation()}>
         <div className="ts__modal-head">
           <h3 className="ts__modal-title">Добавить время</h3>

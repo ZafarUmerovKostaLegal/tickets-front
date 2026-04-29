@@ -598,7 +598,7 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
         }
     }
     if (projectsLoading) {
-        return createPortal(<div className="tsp-ov" onClick={onClose}>
+        return createPortal(<div className="tsp-ov">
             <div className="tsp-m" onClick={(e) => e.stopPropagation()}>
                 <div className="tsp-m__head">
                     <h3 className="tsp-m__title">{entry ? 'Редактировать запись' : 'Добавить время'}</h3>
@@ -618,7 +618,7 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
         </div>, document.body);
     }
     if (!proj) {
-        return createPortal(<div className="tsp-ov" onClick={onClose}>
+        return createPortal(<div className="tsp-ov">
             <div className="tsp-m" onClick={(e) => e.stopPropagation()}>
                 <div className="tsp-m__head">
                     <h3 className="tsp-m__title">Добавить время</h3>
@@ -640,7 +640,7 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
             </div>
         </div>, document.body);
     }
-    return createPortal(<div className="tsp-ov tsp-ov--entry" onClick={onClose}>
+    return createPortal(<div className="tsp-ov tsp-ov--entry">
         <div className="tsp-m tsp-m--time-entry" style={{ '--tsp-m-stripe': proj.color } as CSSProperties} onClick={(e) => e.stopPropagation()}>
             <div className="tsp-m__head tsp-m__head--time-entry">
                 <button type="button" className="tsp-m__x" onClick={onClose} aria-label="Закрыть">
@@ -779,7 +779,7 @@ function TimerBusyHintModal({ open, onClose }: {
     }, [open]);
     if (!open)
         return null;
-    return createPortal(<div className="tsp-ov" role="presentation" onClick={onClose}>
+    return createPortal(<div className="tsp-ov" role="presentation">
         <div className="tsp-m tsp-m--hint-dialog" role="dialog" aria-modal="true" aria-labelledby="tsp-timer-hint-title" onClick={(e) => e.stopPropagation()}>
             <div className="tsp-m__head">
                 <h3 id="tsp-timer-hint-title" className="tsp-m__title">Сначала остановите таймер</h3>
@@ -2006,7 +2006,7 @@ function TimesheetDeleteConfirm({ entry, busy, onCancel, onConfirm }: TimesheetD
 
     const hoursLabel = formatHoursClockFromDecimalHours(entry.hours);
 
-    return createPortal(<div className="tsp-cfm__overlay" role="dialog" aria-modal="true" aria-labelledby="tsp-cfm-title" onClick={() => !busy && onCancel()}>
+    return createPortal(<div className="tsp-cfm__overlay" role="dialog" aria-modal="true" aria-labelledby="tsp-cfm-title">
         <div className="tsp-cfm__modal" onClick={(e) => e.stopPropagation()}>
             <div className="tsp-cfm__head">
                 <div className="tsp-cfm__ico" aria-hidden>

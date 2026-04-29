@@ -79,8 +79,8 @@ export function VacationAddEmployeeModal({ open, onClose, year, onSuccess }: Pro
     }, [excelRow, fullName, note, onClose, onSuccess, year]);
     if (!open)
         return null;
-    return createPortal(<div className="vac-imp-modal" role="dialog" aria-modal="true" aria-labelledby={`${uid}-title`} onClick={() => !submitting && onClose()}>
-      <div className="vac-imp-modal__dialog" onClick={(ev) => ev.stopPropagation()}>
+    return createPortal(<div className="vac-imp-modal" role="dialog" aria-modal="true" aria-labelledby={`${uid}-title`}>
+      <div className="vac-imp-modal__dialog">
         <div className="vac-imp-modal__head">
           <h2 id={`${uid}-title`} className="vac-imp-modal__title">
             Добавить сотрудника в график

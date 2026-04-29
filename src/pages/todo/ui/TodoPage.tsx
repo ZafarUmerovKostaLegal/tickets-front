@@ -1293,7 +1293,7 @@ export function TodoPage() {
         </main>
       </div>
 
-      {addEventOpen && createPortal(<div className="cal-event-backdrop" style={todoThemeVarsStyle} onClick={() => setAddEventOpen(false)}>
+      {addEventOpen && createPortal(<div className="cal-event-backdrop" style={todoThemeVarsStyle}>
           <form className="cal-event-modal" onClick={(e) => e.stopPropagation()} onSubmit={handleSubmitEvent}>
             <div className="cal-event-modal__head">
               <h3 className="cal-event-modal__title">Новое событие</h3>

@@ -54,13 +54,8 @@ export function NetworkDriveCredentialsModal(p: Props) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            onMouseDown={(e) => {
-                if (e.target === e.currentTarget) {
-                    p.onClose();
-                }
-            }}
         >
-            <div className="ndrive-credmodal__panel" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="ndrive-credmodal__panel">
                 <div className="ndrive-credmodal__head">
                     <h2 className="ndrive-credmodal__title" id={titleId}>
                         Подключение к сети

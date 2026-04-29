@@ -4,7 +4,7 @@ export function DeleteConfirmModal() {
     const { deleteTarget, setDeleteTarget, formError, submitting, handleDeleteCategory, handleDeleteItem, } = useInventory();
     if (!deleteTarget)
         return null;
-    const content = (<div className="inv__overlay" onClick={() => !submitting && setDeleteTarget(null)} role="dialog" aria-modal="true">
+    const content = (<div className="inv__overlay" role="dialog" aria-modal="true">
       <div className="inv__modal" onClick={(e) => e.stopPropagation()}>
         <div className="inv__modal-head">
           <h3 className="inv__modal-title">Удалить?</h3>

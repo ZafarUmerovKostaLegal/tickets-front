@@ -62,8 +62,7 @@ export function UserFieldChangeConfirmModal({ pending, ttRoleOptions, savingUser
           </span>
         </div>
       </>);
-    return createPortal(<div className="ap__overlay" role="presentation" onClick={() => { if (!busy)
-        onDismiss(); }}>
+    return createPortal(<div className="ap__overlay" role="presentation">
       <div className="ap__modal ap__modal--confirm" role="dialog" aria-modal="true" aria-labelledby="ap-user-field-confirm-title" onClick={(e) => e.stopPropagation()}>
         <div className="ap__modal-head">
           <h3 id="ap-user-field-confirm-title" className="ap__modal-title">

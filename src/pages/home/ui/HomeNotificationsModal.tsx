@@ -31,8 +31,8 @@ export const HomeNotificationsModal = memo(function HomeNotificationsModal(props
         onClose();
     };
     const modal = (<div className="hnm" role="dialog" aria-modal="true" aria-labelledby="hnm-title">
-      <div className="hnm__backdrop" onClick={onClose} role="button" tabIndex={-1} aria-label="Закрыть"/>
-      <div className="hnm__box" onClick={(e) => e.stopPropagation()}>
+      <div className="hnm__backdrop" aria-hidden/>
+      <div className="hnm__box">
         <div className="hnm__head">
           <div className="hnm__head-left">
             <span className="hnm__icon"><IconBell /></span>

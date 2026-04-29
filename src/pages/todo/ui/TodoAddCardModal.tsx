@@ -7,8 +7,8 @@ type TodoAddCardModalProps = {
     onSubmit: () => void;
 };
 export function TodoAddCardModal({ columnTitle, title, onTitleChange, onClose, onSubmit, }: TodoAddCardModalProps) {
-    return (<div className="todo-add-card-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="todo-add-card-modal-title">
-      <div className="todo-add-card-modal" onClick={(e) => e.stopPropagation()}>
+    return (<div className="todo-add-card-modal-backdrop">
+      <div className="todo-add-card-modal" role="dialog" aria-modal="true" aria-labelledby="todo-add-card-modal-title">
         <div className="todo-add-card-modal__head">
           <h2 id="todo-add-card-modal-title" className="todo-add-card-modal__title">
             {columnTitle}

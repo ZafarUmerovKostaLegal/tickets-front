@@ -129,7 +129,7 @@ function RateFormModal({ rate, type, onSave, onClose }: RateFormProps) {
             setSaving(false);
         }
     };
-    return (<div className="uep__modal-overlay" onClick={onClose}>
+    return (<div className="uep__modal-overlay">
       <div className="uep__modal" onClick={(e) => e.stopPropagation()}>
         <div className="uep__modal-head">
           <h3 className="uep__modal-title">

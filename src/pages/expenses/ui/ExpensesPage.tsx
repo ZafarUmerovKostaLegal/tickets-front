@@ -1152,12 +1152,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
       {tableOverlayOpen &&
             typeof document !== 'undefined' &&
             createPortal(<>
-            {tableReject && (<div className="exp-mod-backdrop" role="presentation" onClick={() => {
-                        if (!tableModBusy) {
-                            setTableReject(null);
-                            setTableModErr(null);
-                        }
-                    }}>
+            {tableReject && (<div className="exp-mod-backdrop" role="presentation">
                 <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-table-reject-title" onClick={e => e.stopPropagation()}>
                   <h3 id="exp-table-reject-title" className="exp-mod-dialog__title">Отклонить заявку</h3>
                   <p className="exp-mod-dialog__sub">Заявка {tableReject.id}. Укажите причину — автор её увидит в истории.</p>
@@ -1169,12 +1164,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                   </div>
                 </div>
               </div>)}
-            {tableRevise && (<div className="exp-mod-backdrop" role="presentation" onClick={() => {
-                        if (!tableModBusy) {
-                            setTableRevise(null);
-                            setTableModErr(null);
-                        }
-                    }}>
+            {tableRevise && (<div className="exp-mod-backdrop" role="presentation">
                 <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-table-revise-title" onClick={e => e.stopPropagation()}>
                   <h3 id="exp-table-revise-title" className="exp-mod-dialog__title">Вернуть на доработку</h3>
                   <p className="exp-mod-dialog__sub">Заявка {tableRevise.id}. Автор сможет исправить заявку и отправить снова.</p>

@@ -21,6 +21,7 @@ import {
     isTimeTrackingHttpError,
     isWorkDateInClosedReportingPeriod,
     patchTimeEntry,
+    createTimeEntry,
     deleteTimeEntry,
     listClientTasks,
     canOverrideReportPreviewWeeklyLock,
@@ -38,7 +39,8 @@ import {
     flattenUninvoicedToExcelRows,
     flattenBudgetToExcelRows,
 } from '../lib/reportPreviewApiToExcelRows';
-import { mergeTimeEntryResponseIntoRow, timeExcelPreviewRowToPatchBody, } from '../lib/reportPreviewTimeEntrySave';
+import { mergeTimeEntryResponseIntoRow, previewRowAfterCreate, timeExcelPreviewRowToCreateBody, timeExcelPreviewRowToPatchBody, } from '../lib/reportPreviewTimeEntrySave';
+import { localYmdAndHmToIso, } from '../lib/briefRecordDateTimeEdit';
 import type { TimeExcelPreviewRow, ExpenseExcelPreviewRow, UninvoicedExcelPreviewRow, BudgetExcelPreviewRow, } from '../lib/previewExcelTypes';
 import { useCurrentUser } from '@shared/hooks';
 import { AppPageSettings } from '@shared/ui';
@@ -51,6 +53,69 @@ function stripReportPagination(filters: ReportFiltersV2): ReportFiltersV2 {
 }
 function previewProjectOptionLabel(p: ProjectOption): string {
     return p.client ? `${p.name} — ${p.client}` : p.name;
+}
+function pad2p(n: number): string {
+    return n < 10 ? `0${n}` : String(n);
+}
+function pickDefaultWorkDateInRange(from: string, to: string): string {
+    const f = from.slice(0, 10);
+    const t = to.slice(0, 10);
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${pad2p(now.getMonth() + 1)}-${pad2p(now.getDate())}`;
+    if (todayStr >= f && todayStr <= t)
+        return todayStr;
+    return t;
+}
+function buildTemplateForNewPreviewRow(params: {
+    user: {
+        id: number;
+        display_name: string | null;
+        email: string;
+        position: string | null;
+    };
+    opt: ProjectOption;
+    workDate: string;
+    recordedAt: string;
+}): TimeExcelPreviewRow {
+    const name = params.user.display_name?.trim() || params.user.email;
+    return {
+        rowKey: 'new',
+        timeEntryId: '',
+        rowKind: 'entry',
+        sourceEntryCount: 1,
+        userName: name,
+        employeeName: name,
+        authUserId: params.user.id,
+        employeePosition: params.user.position ?? '',
+        workDate: params.workDate,
+        recordedAt: params.recordedAt,
+        clientId: params.opt.clientId,
+        clientName: params.opt.client,
+        projectId: params.opt.id,
+        projectName: params.opt.name,
+        projectCode: '',
+        taskId: '',
+        taskName: '',
+        note: '',
+        description: '',
+        hours: 1,
+        billableHours: 1,
+        isBillable: true,
+        taskBillableByDefault: false,
+        isInvoiced: false,
+        isPaid: false,
+        isWeekSubmitted: false,
+        billableRate: 0,
+        amountToPay: 0,
+        costRate: 0,
+        costAmount: 0,
+        currency: params.opt.currency || 'USD',
+        externalReferenceUrl: '',
+        invoiceId: '',
+        invoiceNumber: '',
+        isVoided: false,
+        voidKind: null,
+    };
 }
 function buildApiFilters(xfer: ReportPreviewTransferV2, rangeFrom: string, rangeTo: string, selectedProjectId: string, selectedClientId: string): Omit<ReportFiltersV2, 'page' | 'per_page'> {
     const base = stripReportPagination(xfer.filters);
@@ -389,6 +454,33 @@ export function ReportPreviewPage() {
         }
         return timeProjectTitle;
     }, [xferSnapshot, rangeFrom, rangeTo, selectedClientId, timeExcelRows, timeProjectTitle]);
+    const addEntryProjectOption = useMemo((): ProjectOption | null => {
+        if (!xferSnapshot || xferSnapshot.reportType !== 'time' || !rangeFrom || !rangeTo)
+            return null;
+        if (xferSnapshot.groupBy === 'projects') {
+            const id = selectedProjectId.trim();
+            if (!id)
+                return null;
+            return projectItemsForSelect.find((p) => p.id === id) ?? null;
+        }
+        const cid = selectedClientId.trim();
+        if (!cid)
+            return null;
+        const rowWithProject = timeExcelRows.find((r) => String(r.clientId ?? '').trim() === cid && String(r.projectId ?? '').trim());
+        if (!rowWithProject)
+            return null;
+        const opt = projectItemsForSelect.find((p) => p.id === rowWithProject.projectId);
+        if (opt)
+            return opt;
+        return {
+            id: rowWithProject.projectId,
+            name: (rowWithProject.projectName || rowWithProject.projectId).trim() || rowWithProject.projectId,
+            client: rowWithProject.clientName,
+            clientId: rowWithProject.clientId,
+            color: 'hsl(220 14% 46%)',
+            currency: rowWithProject.currency || 'USD',
+        };
+    }, [xferSnapshot, rangeFrom, rangeTo, selectedProjectId, selectedClientId, projectItemsForSelect, timeExcelRows]);
     useEffect(() => {
         if (!xferSnapshot || !rangeFrom || !rangeTo) {
             setTimeExcelRows([]);
@@ -667,6 +759,111 @@ export function ReportPreviewPage() {
             setTimeEntryActionPendingRowKey(null);
         }
     }, [canOverrideWeeklyLock, projectItemsForSelect]);
+    const handleAddTimeEntry = useCallback(async () => {
+        if (!user)
+            return;
+        const opt = addEntryProjectOption;
+        if (!opt?.id.trim()) {
+            window.alert('Чтобы добавить запись, выберите конкретный проект или клиента, по которому в отчёте уже есть строка с проектом.');
+            return;
+        }
+        const wd = pickDefaultWorkDateInRange(rangeFrom, rangeTo);
+        const now = new Date();
+        const hm = `${pad2p(now.getHours())}:${pad2p(now.getMinutes())}`;
+        const recordedAt = localYmdAndHmToIso(wd, hm);
+        if (wd && isWorkDateInClosedReportingPeriod(wd) && !canOverrideWeeklyLock) {
+            window.alert('Дата по умолчанию попадает в закрытый отчётный период. Смените период предпросмотра или обратитесь к администратору.');
+            return;
+        }
+        setTimeEntrySaveUI('saving');
+        setTimeEntrySaveMessage(null);
+        try {
+            const template = buildTemplateForNewPreviewRow({
+                user,
+                opt,
+                workDate: wd,
+                recordedAt,
+            });
+            const body = timeExcelPreviewRowToCreateBody(template, {
+                workDate: wd,
+                recordedAt,
+                durationSecondsOverride: 3600,
+            });
+            const tr = await createTimeEntry(user.id, body);
+            const newRow = previewRowAfterCreate(template, tr, { recordedAt });
+            setTimeExcelRows((prev) => {
+                const next = [...prev, newRow];
+                timeExcelRowsRef.current = next;
+                return next;
+            });
+            setTimeEntrySaveUI('saved');
+            setTimeEntrySaveMessage('Запись создана');
+            setTimeout(() => {
+                setTimeEntrySaveUI((u) => (u === 'saved' ? 'idle' : u));
+                setTimeEntrySaveMessage((m) => (m === 'Запись создана' ? null : m));
+            }, 3200);
+        }
+        catch (e) {
+            const msg = isTimeTrackingHttpError(e)
+                ? e.message
+                : e instanceof Error
+                    ? e.message
+                    : 'Не удалось создать запись';
+            setTimeEntrySaveUI('err');
+            setTimeEntrySaveMessage(msg);
+        }
+    }, [user, addEntryProjectOption, rangeFrom, rangeTo, canOverrideWeeklyLock]);
+    const handleDuplicateTimeEntry = useCallback(async (rowKey: string, workDateYmd: string, recordedAtIso: string) => {
+        const row = timeExcelRowsRef.current.find((r) => r.rowKey === rowKey);
+        if (!row || row.rowKind !== 'entry' || !row.timeEntryId?.trim())
+            return;
+        if (row.isVoided) {
+            window.alert('Нельзя дублировать запись, снятую с учёта.');
+            return;
+        }
+        const wd = workDateYmd.slice(0, 10);
+        const min = rangeFrom.slice(0, 10);
+        const max = rangeTo.slice(0, 10);
+        if (wd < min || wd > max) {
+            window.alert(`Дата работы должна быть в пределах периода предпросмотра (${min} — ${max}).`);
+            return;
+        }
+        if (wd && isWorkDateInClosedReportingPeriod(wd) && !canOverrideWeeklyLock) {
+            window.alert('Неделя по выбранной дате закрыта — выберите дату в открытом периоде.');
+            return;
+        }
+        setTimeEntryActionPendingRowKey(rowKey);
+        setTimeEntrySaveUI('saving');
+        setTimeEntrySaveMessage(null);
+        try {
+            const body = timeExcelPreviewRowToCreateBody(row, { workDate: wd, recordedAt: recordedAtIso });
+            const tr = await createTimeEntry(row.authUserId, body);
+            const newRow = previewRowAfterCreate(row, tr, { recordedAt: recordedAtIso });
+            setTimeExcelRows((prev) => {
+                const next = [...prev, newRow];
+                timeExcelRowsRef.current = next;
+                return next;
+            });
+            setTimeEntrySaveUI('saved');
+            setTimeEntrySaveMessage('Запись продублирована');
+            setTimeout(() => {
+                setTimeEntrySaveUI((u) => (u === 'saved' ? 'idle' : u));
+                setTimeEntrySaveMessage((m) => (m === 'Запись продублирована' ? null : m));
+            }, 3200);
+        }
+        catch (e) {
+            const msg = isTimeTrackingHttpError(e)
+                ? e.message
+                : e instanceof Error
+                    ? e.message
+                    : 'Не удалось создать копию записи';
+            setTimeEntrySaveUI('err');
+            setTimeEntrySaveMessage(msg);
+        }
+        finally {
+            setTimeEntryActionPendingRowKey(null);
+        }
+    }, [canOverrideWeeklyLock, rangeFrom, rangeTo]);
     const patchExpenseExcel = useCallback((rowKey: string, patch: Partial<ExpenseExcelPreviewRow>) => {
         setExpenseExcelRows((prev) => prev.map((r) => (r.rowKey === rowKey ? { ...r, ...patch } : r)));
     }, []);
@@ -774,7 +971,7 @@ export function ReportPreviewPage() {
             const showTimeLiveTitle = xferSnapshot.groupBy !== 'projects';
             return (<>
           {showTimeLiveTitle ? (<p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>) : null}
-          <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} timeSave={{ ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={user ? projectItemsForSelect : undefined} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={user ? handleMoveTimeEntryToProject : undefined} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey}/>
+          <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} timeSave={{ ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={user ? projectItemsForSelect : undefined} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={user ? handleMoveTimeEntryToProject : undefined} onDuplicateTimeEntry={user ? handleDuplicateTimeEntry : undefined} onAddTimeEntry={user ? handleAddTimeEntry : undefined} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey}/>
         </>);
         }
         if (xferSnapshot.reportType === 'expenses') {

@@ -293,6 +293,12 @@ type TimeReportPersistenceProps = {
     moveProjectOptions?: ProjectOption[];
     onDeleteTimeEntry?: (rowKey: string) => void | Promise<void>;
     onMoveTimeEntryToProject?: (rowKey: string, projectId: string) => void | Promise<void>;
+    onDuplicateTimeEntry?: (rowKey: string, workDateYmd: string, recordedAtIso: string) => void | Promise<void>;
+    onAddTimeEntry?: () => void | Promise<void>;
+    timeEntryWorkDateBounds?: {
+        min: string;
+        max: string;
+    } | null;
     timeEntryActionPendingRowKey?: string | null;
 };
 function PreviewServerReloadBtn({ onRequestServerReload, serverReloadBusy, }: PreviewServerReloadProps) {
@@ -334,7 +340,7 @@ function TimeBriefMoveEntryDialog({ open, row, projectOptions, onClose, onConfir
     }, [projectOptions, row]);
     if (!open || !row)
         return null;
-    return createPortal(<div className="tt-rp-mtable-move-ov" role="presentation" onClick={busy ? undefined : onClose}>
+    return createPortal(<div className="tt-rp-mtable-move-ov" role="presentation">
       <div className="tt-rp-mtable-move" role="dialog" aria-modal="true" aria-labelledby={`${uid}-t`} onClick={(e) => e.stopPropagation()}>
         <div className="tt-rp-mtable-move__head">
           <h2 id={`${uid}-t`} className="tt-rp-mtable-move__title">
@@ -366,7 +372,82 @@ function TimeBriefMoveEntryDialog({ open, row, projectOptions, onClose, onConfir
       </div>
     </div>, document.body);
 }
-export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, timeEntryActionPendingRowKey = null, }: {
+function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOverrideClosedWeek, onClose, onConfirm, busy, }: {
+    open: boolean;
+    row: TimeExcelPreviewRow | null;
+    workDateMin: string;
+    workDateMax: string;
+    canOverrideClosedWeek: boolean;
+    onClose: () => void;
+    onConfirm: (workDateYmd: string, recordedAtIso: string) => void | Promise<void>;
+    busy: boolean;
+}) {
+    const uid = useId();
+    const [wd, setWd] = useState('');
+    const [hm, setHm] = useState('12:00');
+    useEffect(() => {
+        if (open && row) {
+            setWd(row.workDate.slice(0, 10));
+            const t = getLocalYmdAndHmFromIso(row.recordedAt);
+            setHm(t?.hm ?? '12:00');
+        }
+    }, [open, row?.rowKey]);
+    useEffect(() => {
+        if (!open)
+            return;
+        const h = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && !busy)
+                onClose();
+        };
+        document.addEventListener('keydown', h);
+        return () => { document.removeEventListener('keydown', h); };
+    }, [open, busy, onClose]);
+    if (!open || !row)
+        return null;
+    const min = workDateMin.slice(0, 10);
+    const max = workDateMax.slice(0, 10);
+    const weekLockedForPick = Boolean(wd && isWorkDateInClosedReportingPeriod(wd) && !canOverrideClosedWeek);
+    const iso = localYmdAndHmToIso(wd || min, hm);
+    return createPortal(<div className="tt-rp-mtable-move-ov" role="presentation">
+      <div className="tt-rp-mtable-move" role="dialog" aria-modal="true" aria-labelledby={`${uid}-dup-t`} onClick={(e) => e.stopPropagation()}>
+        <div className="tt-rp-mtable-move__head">
+          <h2 id={`${uid}-dup-t`} className="tt-rp-mtable-move__title">
+            Дублировать запись
+          </h2>
+          <button type="button" className="tt-rp-mtable-move__x" onClick={onClose} disabled={busy} aria-label="Закрыть">
+            ×
+          </button>
+        </div>
+        <p className="tt-rp-mtable-move__lead">
+          Копия для <strong>{row.employeeName || row.userName}</strong>: укажите <strong>дату работы</strong> и <strong>время записи</strong> для новой строки. Часы, задача и текст совпадут с исходной записью.
+        </p>
+        <div className="tt-rp-mtable-move__field">
+          <label className="tt-rp-mtable-move__lbl" htmlFor={`${uid}-dup-d`}>
+            Дата работы
+          </label>
+          <input id={`${uid}-dup-d`} className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="date" min={min} max={max} value={wd} onChange={(e) => setWd(e.target.value)} disabled={busy}/>
+        </div>
+        <div className="tt-rp-mtable-move__field">
+          <label className="tt-rp-mtable-move__lbl" htmlFor={`${uid}-dup-time`}>
+            Время записи
+          </label>
+          <input id={`${uid}-dup-time`} className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="time" step={60} value={hm} onChange={(e) => setHm(e.target.value)} disabled={busy}/>
+        </div>
+        {weekLockedForPick ? (<p className="tt-rp-mtable-move__lead" role="status">
+            Эта дата в закрытом отчётном периоде — выберите дату в открытом периоде или обратитесь к администратору.
+          </p>) : null}
+        <div className="tt-rp-mtable-move__foot">
+          <button type="button" className="tt-rp-mtable-move__btn tt-rp-mtable-move__btn--ghost" onClick={onClose} disabled={busy}>
+            Отмена
+          </button>
+          <button type="button" className="tt-rp-mtable-move__btn tt-rp-mtable-move__btn--ok" disabled={!wd || weekLockedForPick || busy} onClick={() => void onConfirm(wd, iso)}>
+            {busy ? 'Создание…' : 'Создать копию'}
+          </button>
+        </div>
+      </div>
+    </div>, document.body);
+}
+export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, }: {
     projectTitle: string;
     
     viewMode?: 'brief' | 'full';
@@ -420,6 +501,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     const [briefColumnsModalOpen, setBriefColumnsModalOpen] = useState(false);
     const [fullColumnsModalOpen, setFullColumnsModalOpen] = useState(false);
     const [moveTargetRow, setMoveTargetRow] = useState<TimeExcelPreviewRow | null>(null);
+    const [duplicateTargetRow, setDuplicateTargetRow] = useState<TimeExcelPreviewRow | null>(null);
     const [bfWhen, setBfWhen] = useState('');
     const [bfTask, setBfTask] = useState('');
     const [bfNote, setBfNote] = useState('');
@@ -489,6 +571,46 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     }, [rowsForTotals, displayRows, rows]);
     const billablePct = totals.h > 0 ? Math.round((totals.bh / totals.h) * 100) : 0;
     const moveDialogBusy = Boolean(moveTargetRow && timeEntryActionPendingRowKey === moveTargetRow.rowKey);
+    const duplicateDialogBusy = Boolean(duplicateTargetRow && timeEntryActionPendingRowKey === duplicateTargetRow.rowKey);
+    const dupBounds = timeEntryWorkDateBounds ?? {
+        min: '1970-01-01',
+        max: '2099-12-31',
+    };
+    const renderEntryRowActions = (r: TimeExcelPreviewRow, wk: boolean, i: number): ReactNode => {
+        if (!showEntryActions || r.rowKind !== 'entry' || !r.timeEntryId?.trim())
+            return null;
+        const pending = timeEntryActionPendingRowKey === r.rowKey;
+        return (<div className="tt-rp-mtable__brief-row-actions" role="group" aria-label={`Действия, строка ${i + 1}`}>
+          {onDuplicateTimeEntry ? (<button type="button" className="tt-rp-mtable__row-act" title="Дублировать запись (выбор даты и времени)" disabled={Boolean(wk) || pending} onClick={() => {
+                setDuplicateTargetRow(r);
+            }} aria-label="Дублировать запись">
+              <span className="tt-rp-mtable__row-act-ico" aria-hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+              </span>
+            </button>) : null}
+          {onMoveTimeEntryToProject ? (<button type="button" className="tt-rp-mtable__row-act" title="Перенести запись на другой проект" disabled={Boolean(wk) || pending} onClick={() => {
+                setMoveTargetRow(r);
+            }} aria-label="Перенести на другой проект">
+              <span className="tt-rp-mtable__row-act-ico" aria-hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </span>
+            </button>) : null}
+          {onDeleteTimeEntry ? (<button type="button" className="tt-rp-mtable__row-act tt-rp-mtable__row-act--del" title="Удалить запись" disabled={Boolean(wk) || pending} onClick={() => {
+                void onDeleteTimeEntry(r.rowKey);
+            }} aria-label="Удалить запись">
+              <span className="tt-rp-mtable__row-act-ico" aria-hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                </svg>
+              </span>
+            </button>) : null}
+        </div>);
+    };
 
     const briefFootFirstCellLabel = (colIdx: number): ReactNode => {
         if (colIdx !== 0)
@@ -550,7 +672,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                   <span className="tt-rp-brief-th__label">Сумма</span>
                 </th>);
             case 'actions':
-                return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--brief-actions" scope="col" title="Удаление или перенос записи на другой проект">
+                return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--brief-actions" scope="col" title="Дублирование, перенос на другой проект или удаление записи">
                   Действия
                 </th>);
             default:
@@ -599,26 +721,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 </td>);
             case 'actions':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--brief-actions" onClick={(e) => e.stopPropagation()}>
-                  {showEntryActions ? (r.rowKind === 'entry' && r.timeEntryId?.trim() ? (<div className="tt-rp-mtable__brief-row-actions" role="group" aria-label={`Действия, строка ${i + 1}`}>
-                        {onMoveTimeEntryToProject && (<button type="button" className="tt-rp-mtable__row-act" title="Перенести запись на другой проект" disabled={Boolean(wk) || timeEntryActionPendingRowKey === r.rowKey} onClick={() => {
-                            setMoveTargetRow(r);
-                        }} aria-label="Перенести на другой проект">
-                          <span className="tt-rp-mtable__row-act-ico" aria-hidden>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M5 12h14M12 5l7 7-7 7"/>
-                            </svg>
-                          </span>
-                        </button>)}
-                        {onDeleteTimeEntry && (<button type="button" className="tt-rp-mtable__row-act tt-rp-mtable__row-act--del" title="Удалить запись" disabled={Boolean(wk) || timeEntryActionPendingRowKey === r.rowKey} onClick={() => {
-                            void onDeleteTimeEntry(r.rowKey);
-                        }} aria-label="Удалить запись">
-                          <span className="tt-rp-mtable__row-act-ico" aria-hidden>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
-                            </svg>
-                          </span>
-                        </button>)}
-                      </div>) : null) : null}
+                  {renderEntryRowActions(r, wk, i)}
                 </td>);
             default:
                 return null;
@@ -987,6 +1090,9 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                             Сервер
                           </span>)) : (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--api" title="Предпросмотр">Предпросмотр</span>)}
               <PreviewServerReloadBtn onRequestServerReload={onRequestServerReload} serverReloadBusy={serverReloadBusy}/>
+              {onAddTimeEntry ? (<button type="button" className="tt-rp-mtable-reload" onClick={() => void onAddTimeEntry()} disabled={Boolean(serverReloadBusy || timeSave?.ui === 'saving' || timeEntryActionPendingRowKey != null)} title="Создать новую запись времени (POST) для текущего пользователя и контекста проекта">
+                  Добавить запись
+                </button>) : null}
               <button type="button" className="tt-rp-mtable-cols-open" onClick={() => {
                   if (isFull)
                       setFullColumnsModalOpen(true);
@@ -1023,6 +1129,9 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             <thead>
               <tr>
                 {visibleFullIds.map((colId) => renderFullHeaderCell(colId))}
+                {showEntryActions ? (<th key="actions-full" className="tt-rp-mtable__th tt-rp-mtable__th--brief-actions" scope="col">
+                    Действия
+                  </th>) : null}
               </tr>
             </thead>
             <tbody>
@@ -1036,12 +1145,16 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 }
                 : undefined} aria-selected={selectedUserName === r.userName ? true : undefined}>
                   {visibleFullIds.map((colId) => renderFullBodyCell(colId, r, i, wk))}
+                  {showEntryActions ? (<td key="actions-full" className="tt-rp-mtable__td tt-rp-mtable__td--brief-actions" onClick={(e) => e.stopPropagation()}>
+                      {renderEntryRowActions(r, wk, i)}
+                    </td>) : null}
                 </tr>);
             })}
             </tbody>
             <tfoot>
               <tr className="tt-rp-mtable__foot">
                 {visibleFullIds.map((colId, colIdx) => renderFullFooterCell(colId, colIdx))}
+                {showEntryActions ? (<td key="full-actions-foot" className="tt-rp-mtable__td tt-rp-mtable__td--foot tt-rp-mtable__td--brief-actions" aria-hidden/>) : null}
               </tr>
             </tfoot>
           </table>) : (<table className="tt-rp-mtable tt-rp-mtable--time-brief">
@@ -1081,6 +1194,18 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             try {
                 await Promise.resolve(onMoveTimeEntryToProject(moveTargetRow.rowKey, projectId));
                 setMoveTargetRow(null);
+            }
+            catch {
+            }
+        }}/>
+      <TimeDuplicateEntryDialog open={Boolean(duplicateTargetRow)} row={duplicateTargetRow} workDateMin={dupBounds.min} workDateMax={dupBounds.max} canOverrideClosedWeek={canOverrideClosedWeek} busy={duplicateDialogBusy} onClose={() => {
+            setDuplicateTargetRow(null);
+        }} onConfirm={async (workDateYmd, recordedAtIso) => {
+            if (!duplicateTargetRow || !onDuplicateTimeEntry)
+                return;
+            try {
+                await Promise.resolve(onDuplicateTimeEntry(duplicateTargetRow.rowKey, workDateYmd, recordedAtIso));
+                setDuplicateTargetRow(null);
             }
             catch {
             }

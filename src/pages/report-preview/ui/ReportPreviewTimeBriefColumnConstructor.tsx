@@ -70,7 +70,7 @@ export function ReportPreviewTimeBriefColumnsModal({ open, onClose, includeActio
     if (!open)
         return null;
 
-    return createPortal(<div className="tt-rp-brief-columns-modal-ov" role="presentation" onClick={onClose}>
+    return createPortal(<div className="tt-rp-brief-columns-modal-ov" role="presentation">
       <div className="tt-rp-brief-columns-modal" role="dialog" aria-modal="true" aria-labelledby={`${uid}-cols-title`} onClick={(e) => e.stopPropagation()}>
         <div className="tt-rp-brief-columns-modal__head">
           <h2 id={`${uid}-cols-title`} className="tt-rp-brief-columns-modal__title">

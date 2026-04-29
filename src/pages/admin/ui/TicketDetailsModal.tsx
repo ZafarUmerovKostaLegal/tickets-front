@@ -8,7 +8,7 @@ type TicketDetailsModalProps = {
     onClose: () => void;
 };
 export function TicketDetailsModal({ ticket, loading, error, onClose }: TicketDetailsModalProps) {
-    return (<div className="ap__overlay" onClick={onClose}>
+    return (<div className="ap__overlay">
       <div className="ap__modal" onClick={(e) => e.stopPropagation()}>
         <div className="ap__modal-head">
           <h3 className="ap__modal-title">Детали тикета</h3>

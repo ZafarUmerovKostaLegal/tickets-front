@@ -641,7 +641,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
       </div>
 
       {showForm &&
-            createPortal(<div className="exp__modal-overlay" onClick={cancelForm}>
+            createPortal(<div className="exp__modal-overlay">
             <form className="exp__form" onSubmit={saveForm} onClick={(e) => e.stopPropagation()}>
               <div className="exp__form-header">
                 <h2 className="exp__form-title">Новый расход</h2>
@@ -764,7 +764,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
           </div>, document.body)}
 
       {detailExp &&
-            createPortal(<div className="exp__detail-overlay" onClick={() => setDetailExp(null)}>
+            createPortal(<div className="exp__detail-overlay">
           <div className="exp__detail" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
 
             <div className="exp__detail-head">

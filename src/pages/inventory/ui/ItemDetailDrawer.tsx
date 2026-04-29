@@ -18,7 +18,7 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
     }, [onClose]);
-    const content = (<div className="inv-drawer__overlay" onClick={onClose} role="dialog" aria-modal="true">
+    const content = (<div className="inv-drawer__overlay" role="dialog" aria-modal="true">
       <aside className="inv-drawer" onClick={(e) => e.stopPropagation()}>
         
         <div className="inv-drawer__header">

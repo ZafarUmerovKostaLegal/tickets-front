@@ -45,7 +45,7 @@ export function QuickCreateClientModal({ canManage, onClose, onCreated, onOpenFu
             setSaving(false);
         }
     };
-    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation" onClick={onClose}>
+    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
       <div className="tt-tm-modal tt-tm-modal--client tt-tm-modal--client-quick" role="dialog" aria-modal="true" aria-labelledby={`${uid}-qcc-title`} onClick={(ev) => ev.stopPropagation()}>
         <div className="tt-tm-modal__head">
           <h2 id={`${uid}-qcc-title`} className="tt-tm-modal__title">

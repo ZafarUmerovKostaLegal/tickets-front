@@ -138,6 +138,7 @@ export type TimeEntryRow = {
     project_id: string | null;
     task_id: string | null;
     description: string | null;
+    recorded_at?: string | null;
     created_at: string;
     updated_at: string | null;
     
@@ -405,6 +406,7 @@ export type CreateTimeEntryBody = {
     taskId?: string | null;
     description?: string | null;
     billableFxAsOf?: string | null;
+    recordedAt?: string | null;
 };
 export async function createTimeEntry(authUserId: number, body: CreateTimeEntryBody): Promise<TimeEntryRow> {
     const payload: Record<string, unknown> = {
@@ -416,6 +418,9 @@ export async function createTimeEntry(authUserId: number, body: CreateTimeEntryB
     };
     if (body.taskId != null)
         payload.taskId = body.taskId;
+    if (body.recordedAt != null && String(body.recordedAt).trim() !== '') {
+        payload.recordedAt = String(body.recordedAt).trim();
+    }
     if (body.billableFxAsOf != null && String(body.billableFxAsOf).trim() !== '') {
         payload.billableFxAsOf = String(body.billableFxAsOf).trim();
     }
@@ -435,6 +440,7 @@ export type PatchTimeEntryBody = {
     taskId?: string | null;
     description?: string | null;
     billableFxAsOf?: string | null;
+    recordedAt?: string | null;
 };
 export async function patchTimeEntry(authUserId: number, entryId: string, patch: PatchTimeEntryBody): Promise<TimeEntryRow> {
     const res = await apiFetch(`/api/v1/time-tracking/users/${authUserId}/time-entries/${encodeURIComponent(entryId)}`, {

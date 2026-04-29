@@ -6,8 +6,8 @@ type TodoAddColumnModalProps = {
     onSubmit: () => void;
 };
 export function TodoAddColumnModal({ title, onTitleChange, onClose, onSubmit }: TodoAddColumnModalProps) {
-    return (<div className="todo-add-card-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="todo-add-column-modal-title">
-      <div className="todo-add-card-modal" onClick={(e) => e.stopPropagation()}>
+    return (<div className="todo-add-card-modal-backdrop">
+      <div className="todo-add-card-modal" role="dialog" aria-modal="true" aria-labelledby="todo-add-column-modal-title">
         <div className="todo-add-card-modal__head">
           <h2 id="todo-add-column-modal-title" className="todo-add-card-modal__title">
             Новая колонка

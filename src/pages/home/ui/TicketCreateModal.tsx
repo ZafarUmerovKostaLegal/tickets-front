@@ -43,8 +43,8 @@ export const TicketCreateModal = memo(function TicketCreateModal(props: TicketCr
         return value || 'Средний';
     };
     const modal = (<div className="tm" role="dialog" aria-modal="true" aria-labelledby="tm-title">
-      <div className="tm__backdrop" onClick={onClose} role="button" tabIndex={-1} aria-label="Закрыть"/>
-      <div className="tm__box" onClick={(e) => e.stopPropagation()}>
+      <div className="tm__backdrop" aria-hidden/>
+      <div className="tm__box">
         <div className="tm__head">
           <div className="tm__head-left">
             <span className="tm__head-icon">

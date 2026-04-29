@@ -307,7 +307,7 @@ export function AttendanceReportSection({ dateFrom, setDateFrom, dateTo, setDate
       {photoPreviewBlobUrl &&
             typeof document !== 'undefined' &&
             createPortal(<div className="att-modal att-modal--explain-photo" role="dialog" aria-modal="true" aria-label="Фото объяснительной">
-            <div className="att-modal__backdrop" onClick={closePhotoPreview}/>
+            <div className="att-modal__backdrop" aria-hidden/>
             <div className="att-modal__dialog att-modal__dialog--explain-photo">
               <button type="button" className="att-modal__close" onClick={closePhotoPreview} aria-label="Закрыть">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

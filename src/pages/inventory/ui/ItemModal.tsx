@@ -4,7 +4,7 @@ export function ItemModal() {
     const { itemModal, setItemModal, itemForm, setItemForm, itemPhotoFile, setItemPhotoFile, formError, submitting, categories, statuses, photoInputRef, handleItemSubmit, } = useInventory();
     if (!itemModal)
         return null;
-    const content = (<div className="inv__overlay" onClick={() => !submitting && setItemModal(null)} role="dialog" aria-modal="true">
+    const content = (<div className="inv__overlay" role="dialog" aria-modal="true">
       <div className="inv__modal inv__modal--wide" onClick={(e) => e.stopPropagation()}>
         <div className="inv__modal-head">
           <h3 className="inv__modal-title">
