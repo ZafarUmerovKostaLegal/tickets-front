@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { AppPageSettings, AppBackButton } from '@shared/ui';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { AppPageSettings } from '@shared/ui';
 import { routes } from '@shared/config';
 import { useHome } from '../model/HomeContext';
 import { TicketCreateModal } from './TicketCreateModal';
@@ -32,28 +32,52 @@ export function HomePageView() {
     };
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const location = useLocation();
+    const navigate = useNavigate();
     const showBackToHub = location.pathname === routes.tickets;
     return (<div className="home-page">
       {showCreateForm && (<TicketCreateModal onClose={() => setShowCreateForm(false)} onSubmit={handleCreateSubmit} theme={createForm.theme} description={createForm.description} category={createForm.category} priority={createForm.priority} onThemeChange={(v) => setCreateForm((f) => ({ ...f, theme: v }))} onDescriptionChange={(v) => setCreateForm((f) => ({ ...f, description: v }))} onCategoryChange={(v) => setCreateForm((f) => ({ ...f, category: v }))} onPriorityChange={(v) => setCreateForm((f) => ({ ...f, priority: v }))} categories={TICKET_CATEGORIES} priorities={priorities} file={createFile} onFileChange={setCreateFile} isDragging={isDraggingFile} onDragStart={() => setIsDraggingFile(true)} onDragEnd={() => setIsDraggingFile(false)} onDrop={(f) => setCreateFile(f)} fileInputRef={fileInputRef} categoryDropdownOpen={categoryDropdownOpen} setCategoryDropdownOpen={setCategoryDropdownOpen} priorityDropdownOpen={priorityDropdownOpen} setPriorityDropdownOpen={setPriorityDropdownOpen} categoryDropdownRef={categoryDropdownRef} priorityDropdownRef={priorityDropdownRef} submitting={createSubmitting} error={createError}/>)}
 
       <main className="home-page__main">
         <header className="home-page__header">
-          <div className="home-page__header-left">
-            {showBackToHub && (<AppBackButton to={routes.home} label="На главную" className="app-back-btn home-page__header-back" ariaLabel="На главную"/>)}
-            <span className="home-page__header-eyebrow">Тикет-система</span>
-            <h1 className="home-page__header-h1">Заявки</h1>
-          </div>
-          <div className="home-page__header-right">
-            <AppPageSettings />
-            <button type="button" className={`home-page__btn-notifications ${notificationsOpen ? 'home-page__btn-notifications--active' : ''}`} onClick={() => setNotificationsOpen((v) => !v)} aria-label={notificationsOpen ? 'Скрыть уведомления' : 'Показать уведомления'} aria-expanded={notificationsOpen}>
-              <IconBell />
-              {notifications.length > 0 && (<span className="home-page__btn-notifications-badge">{notifications.length}</span>)}
-            </button>
-            {canCreateTicket && (<button type="button" className="home-page__btn-create" onClick={handleOpenCreateForm} aria-label="Новая заявка">
-                <IconPlus />
-                <span className="home-page__btn-create-text">Новая заявка</span>
-              </button>)}
-          </div>
+          {showBackToHub ? (<>
+            <div className="home-page__header-ttl-row">
+              <button type="button" className="home-page__ttl-back-btn" onClick={() => navigate(routes.home)} aria-label="Назад">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m15 18-6-6 6-6"/>
+                </svg>
+                <span className="home-page__ttl-back-label">Назад</span>
+              </button>
+              <div className="home-page__ttl-divider"/>
+              <h1 className="home-page__ttl-title">Заявки</h1>
+            </div>
+            <div className="home-page__header-right">
+              <AppPageSettings />
+              <button type="button" className={`home-page__btn-notifications ${notificationsOpen ? 'home-page__btn-notifications--active' : ''}`} onClick={() => setNotificationsOpen((v) => !v)} aria-label={notificationsOpen ? 'Скрыть уведомления' : 'Показать уведомления'} aria-expanded={notificationsOpen}>
+                <IconBell />
+                {notifications.length > 0 && (<span className="home-page__btn-notifications-badge">{notifications.length}</span>)}
+              </button>
+              {canCreateTicket && (<button type="button" className="home-page__btn-create" onClick={handleOpenCreateForm} aria-label="Новая заявка">
+                  <IconPlus />
+                  <span className="home-page__btn-create-text">Новая заявка</span>
+                </button>)}
+            </div>
+          </>) : (<>
+            <div className="home-page__header-left">
+              <span className="home-page__header-eyebrow">Тикет-система</span>
+              <h1 className="home-page__header-h1">Заявки</h1>
+            </div>
+            <div className="home-page__header-right">
+              <AppPageSettings />
+              <button type="button" className={`home-page__btn-notifications ${notificationsOpen ? 'home-page__btn-notifications--active' : ''}`} onClick={() => setNotificationsOpen((v) => !v)} aria-label={notificationsOpen ? 'Скрыть уведомления' : 'Показать уведомления'} aria-expanded={notificationsOpen}>
+                <IconBell />
+                {notifications.length > 0 && (<span className="home-page__btn-notifications-badge">{notifications.length}</span>)}
+              </button>
+              {canCreateTicket && (<button type="button" className="home-page__btn-create" onClick={handleOpenCreateForm} aria-label="Новая заявка">
+                  <IconPlus />
+                  <span className="home-page__btn-create-text">Новая заявка</span>
+                </button>)}
+            </div>
+          </>)}
         </header>
 
         <div className="home-page__main-inner">
