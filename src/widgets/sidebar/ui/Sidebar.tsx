@@ -80,7 +80,7 @@ export function Sidebar({ isCollapsed = false, onToggleCollapse, isMobileOpen = 
             {visibleNavItems.map(({ to, label, icon: Icon }) => {
             const IconComponent = Icon;
             return (<li key={label}>
-                  <AnimatedNavLink to={to} className={({ isActive }) => `sidebar__link ${isActive ? 'sidebar__link--active' : ''}`} end={to === routes.home} onClick={isMobile ? onCloseMobile : undefined} title={label}>
+                  <AnimatedNavLink to={to} className={({ isActive }) => `sidebar__link ${isActive ? 'sidebar__link--active' : ''}`} end={to === routes.home || to === routes.tickets} onClick={isMobile ? onCloseMobile : undefined} title={label}>
                     <span className="sidebar__link-icon"><IconComponent /></span>
                     <span className="sidebar__link-text">{label}</span>
                   </AnimatedNavLink>

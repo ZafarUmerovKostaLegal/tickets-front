@@ -4,7 +4,7 @@ import { routes } from '@shared/config';
 import type { User } from '@entities/user';
 import { canAccessExpensesSection } from '@entities/expenses/model/expenseModeration';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
-import { IconHome, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, } from '../ui/SidebarIcons';
+import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, } from '../ui/SidebarIcons';
 
 export type AppNavItemDef = {
     to: string;
@@ -17,6 +17,7 @@ export type AppNavItemDef = {
 
 export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { to: routes.home, label: 'Главная', icon: IconHome },
+    { to: routes.tickets, label: 'Заявки', icon: IconTicket },
     { to: routes.timeTracking, label: 'Учёт времени', icon: IconStopwatch },
     { to: routes.expenses, label: 'Расходы', icon: IconWallet },
     { to: routes.todo, label: 'Список дел', icon: IconList },
@@ -37,6 +38,7 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
     let visible: AppNavItemDef[] = APP_NAV_DEFINITIONS;
     if (isEmployee) {
         visible = APP_NAV_DEFINITIONS.filter((item) => item.label === 'Главная' ||
+            item.label === 'Заявки' ||
             item.label === 'График отпусков' ||
             item.label === 'Посещаемость' ||
             item.label === 'Учёт времени' ||

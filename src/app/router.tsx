@@ -27,6 +27,7 @@ function routerBasename(): string | undefined {
 const LoginPage = lazy(() => import('@pages/login').then(m => ({ default: m.LoginPage })));
 const AuthCallbackPage = lazy(() => import('@pages/auth-callback').then(m => ({ default: m.AuthCallbackPage })));
 const HomePage = lazy(() => import('@pages/home').then(m => ({ default: m.HomePage })));
+const TicketsPage = lazy(() => import('@pages/tickets').then(m => ({ default: m.TicketsPage })));
 const AdminPage = lazy(() => import('@pages/admin').then(m => ({ default: m.AdminPage })));
 const NetworkDriveAccessPage = lazy(() => import('@pages/network-drive').then(m => ({ default: m.NetworkDriveAccessPage })));
 const AttendancePage = lazy(() => import('@pages/attendance').then(m => ({ default: m.AttendancePage })));
@@ -76,6 +77,7 @@ const router = createBrowserRouter([
             { path: routes.login, element: withGuest(<LoginPage />) },
             { path: routes.authCallback, element: <Suspense fallback={<LazyFallback />}><AuthCallbackPage /></Suspense> },
             { path: routes.home, element: withProtected(<HomePage />) },
+            { path: routes.tickets, element: withProtected(<TicketsPage />) },
             { path: routes.ticketDetail, element: withProtected(<TicketDetailPage />) },
             { path: routes.attendance, element: withProtected(<AttendancePage />) },
             { path: routes.vacationSchedule, element: withProtected(<VacationSchedulePage />) },

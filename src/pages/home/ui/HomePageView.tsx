@@ -7,7 +7,6 @@ import { HomeTicketsSection } from './HomeTicketsSection';
 import { HomeNotificationsModal } from './HomeNotificationsModal';
 import { NotificationDetailModal } from './NotificationDetailModal';
 import { CreateNotificationModal } from './CreateNotificationModal';
-import { HomeNavTiles } from './HomeNavTiles';
 import './HomePage.css';
 const IconPlus = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
@@ -53,8 +52,6 @@ export function HomePageView() {
         </header>
 
         <div className="home-page__main-inner">
-          <HomeNavTiles />
-
           {!ticketsError && !ticketsLoading && (<HomeStats total={tickets.length} ticketStats={ticketStats} filterStatus={filterStatus} setFilterStatus={setFilterStatus} statuses={statuses}/>)}
 
           <div className="home-page__content-grid home-page__content-grid--notifications-hidden">

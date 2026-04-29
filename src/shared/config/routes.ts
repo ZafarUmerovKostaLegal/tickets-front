@@ -1,6 +1,7 @@
 export const routes = {
     login: '/',
     home: '/home',
+    tickets: '/tickets',
     authCallback: '/auth/callback',
     ticketDetail: '/ticket/:uuid',
     attendance: '/attendance',

@@ -11,3 +11,4 @@ export { RulesPage } from './rules';
 export { HelpPage } from './help';
 export { LoginPage } from './login';
 export { AuthCallbackPage } from './auth-callback';
+export { TicketsPage } from './tickets';

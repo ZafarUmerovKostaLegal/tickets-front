@@ -1,8 +1,5 @@
-import { HomeProvider } from '../model/HomeContext';
-import { HomePageView } from './HomePageView';
+import { HomePageHub } from './HomePageHub';
 
 export function HomePage() {
-    return (<HomeProvider>
-      <HomePageView />
-    </HomeProvider>);
+    return <HomePageHub />;
 }
