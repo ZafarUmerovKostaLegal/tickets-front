@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback, useId, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AnimatedLink } from '@shared/ui';
 import { listTimeManagerClients, listClientProjects, getTimeManagerClient, createTimeManagerClient, patchTimeManagerClient, deleteTimeManagerClient, createClientContact, patchClientContact, deleteClientContact, isForbiddenError, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientContactRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { Pagination } from '@shared/ui/Pagination';
@@ -9,11 +10,12 @@ import { useCurrentUser } from '@shared/hooks';
 import { getProjectDetailUrl } from '@shared/config';
 import { formatDateRu } from '@shared/lib/formatDate';
 import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
-import type { ProjectStatus, ProjectType } from '@entities/time-tracking/model/types';
+import type { ProjectRow, ProjectStatus, ProjectType } from '@entities/time-tracking/model/types';
 import { canManageTimeManagerClients } from '@entities/time-tracking/model/timeManagerClientsAccess';
 import { ClientProjectModal } from './TimeTrackingClientProjectModal';
 import { QuickCreateClientModal } from './QuickCreateClientModal';
-import { TimeTrackingClientsListSkeleton } from './TimeTrackingClientsSkeleton';
+import { ProjectsTableSkeleton } from './ProjectsSkeleton';
+import { AddClientContactForClientModal } from './AddClientContactForClientModal';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 const CURRENCIES = TIME_TRACKING_PROJECT_CURRENCIES;
 const TT_MODAL_DD_Z = 12000;
@@ -33,6 +35,41 @@ const STATUS_DOT: Record<ProjectStatus, string> = {
 function fmtAmt(n: number, cur = 'UZS') {
     return `${n.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} ${cur}`;
 }
+function fmtGroupSpentByCurrency(projects: ProjectRow[]): string {
+    const m = new Map<string, number>();
+    for (const p of projects) {
+        const c = (p.currency || 'USD').trim() || 'USD';
+        const add = Number.isFinite(p.spent) ? p.spent : 0;
+        m.set(c, (m.get(c) ?? 0) + add);
+    }
+    if (m.size === 0)
+        return '—';
+    const parts = [...m.entries()].sort(([a], [b]) => {
+        const rank = (x: string) => (x === 'USD' ? 0 : x === 'UZS' ? 1 : 2);
+        return rank(a) - rank(b) || a.localeCompare(b, 'en');
+    });
+    return parts.map(([cur, sum]) => fmtAmt(sum, cur)).join(' · ');
+}
+function remainingPct(budget: number, spent: number) {
+    return Math.round(((budget - spent) / budget) * 100);
+}
+function spentPct(budget: number, spent: number) {
+    return Math.min((spent / budget) * 100, 100);
+}
+function BudgetBar({ budget, spent }: {
+    budget: number;
+    spent: number;
+}) {
+    const over = spent > budget;
+    const bluePct = over ? 100 : spentPct(budget, spent);
+    const redPct = over ? Math.min(((spent - budget) / budget) * 80, 45) : 0;
+    return (<div className="pp__bar-wrap" title={`Потрачено: ${fmtAmt(spent)} / Бюджет: ${fmtAmt(budget)}`}>
+      <div className="pp__bar">
+        <div className="pp__bar-fill pp__bar-fill--blue" style={{ width: `${bluePct}%` }}/>
+        {over && <div className="pp__bar-fill pp__bar-fill--red" style={{ width: `${redPct}%` }}/>}
+      </div>
+    </div>);
+}
 function pluralProjectsRu(n: number): string {
     if (n === 0)
         return 'нет проектов';
@@ -51,13 +88,18 @@ const IcoSearch = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="n
 const IcoChevron = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <path d="M6 9l6 6 6-6"/>
   </svg>);
-const IcoChevronAccordion = ({ open }: {
-    open: boolean;
-}) => (<span className={`tt-ccp-head-chevron${open ? ' tt-ccp-head-chevron--open' : ''}`} aria-hidden>
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M6 9l6 6 6-6"/>
-    </svg>
-  </span>);
+const IcoChevronPp = ({ cls = '' }: {
+    cls?: string;
+}) => (<svg className={cls} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9l6 6 6-6"/>
+  </svg>);
+const IcoPlus = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="12" y1="5" x2="12" y2="19"/>
+    <line x1="5" y1="12" x2="19" y2="12"/>
+  </svg>);
+const IcoFolder = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+  </svg>);
 const IcoCheck = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
     <polyline points="20 6 9 17 4 12"/>
   </svg>);
@@ -940,6 +982,11 @@ export function TimeTrackingClientsPanel() {
     } | null>(null);
     const [actionProjectId, setActionProjectId] = useState<string | null>(null);
     const actionMenuRef = useRef<HTMLDivElement>(null);
+    const [contactModalClient, setContactModalClient] = useState<{
+        id: string;
+        name: string;
+        is_archived: boolean;
+    } | null>(null);
     useEffect(() => {
         const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
         return () => window.clearTimeout(t);
@@ -1148,81 +1195,80 @@ export function TimeTrackingClientsPanel() {
         setProjectEdit(null);
     };
     const hasClientsInDirectory = debouncedSearch ? searchFilteredAll.length > 0 : clientsTotal > 0;
-    return (<div className="tt-settings__content">
-      <div className="tt-settings__header-row">
-        <h1 className="tt-settings__page-title">Клиенты</h1>
-      </div>
-
-      <div className="tt-settings__actions-row tt-settings__actions-row--clients">
-        {listBusy && !search.trim() ? (<>
-            <div className="tt-settings__toolbar-left tt-settings__toolbar-left--inline" aria-hidden>
-              <span className="tt-skel__btn tt-skel__btn--primary"/>
-              <span className="tt-skel__btn"/>
-              <span className="tt-skel__btn tt-skel__btn--import"/>
-            </div>
-            <div className="tt-settings__actions-end">
-              <div className="tt-settings__search-wrap">
-                <span className="tt-skel__search"/>
-              </div>
-            </div>
-          </>) : (<>
-            <div className="tt-settings__toolbar-left tt-settings__toolbar-left--inline">
-              <button type="button" className="tt-settings__btn tt-settings__btn--primary" disabled={!canManage} title={!canManage ? 'Доступно главному администратору, администратору и партнёру' : undefined} onClick={() => setQuickClientOpen(true)}>
-                + Новый клиент
-              </button>
-              <button type="button" className="tt-settings__btn tt-settings__btn--outline tt-settings__btn--accent-text" disabled={!canManage || !hasClientsInDirectory} title={!canManage
-                ? 'Доступно главному администратору, администратору и партнёру'
-                : !hasClientsInDirectory
-                    ? 'Сначала создайте клиента'
-                    : undefined} onClick={() => setAddContactOpen(true)}>
-                + Добавить контакт
-              </button>
-              <div className="tt-settings__dropdown-wrap" ref={importRef}>
-                <button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={() => setImportOpen((v) => !v)} aria-expanded={importOpen}>
-                  Импорт/Экспорт <IcoChevron />
-                </button>
-                {importOpen && (<div className="tt-settings__dropdown">
-                    <button type="button" className="tt-settings__dropdown-item" disabled title="В разработке">
-                      Импорт клиентов
-                    </button>
-                    <button type="button" className="tt-settings__dropdown-item" disabled title="В разработке">
-                      Экспорт клиентов
-                    </button>
-                  </div>)}
-              </div>
-            </div>
-            <div className="tt-settings__actions-end">
-              <div className="tt-settings__search-wrap">
-                <span className="tt-settings__search-icon">
-                  <IcoSearch />
-                </span>
-                <input type="search" className="tt-settings__search" placeholder="Фильтр по названию, адресу, телефону или email" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Фильтр по клиенту"/>
-              </div>
-              <label className="tt-settings__archive-toggle">
-                <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)}/>
-                <span>Показать архивных</span>
-              </label>
-            </div>
-          </>)}
-      </div>
-
-      {listError && (<p className="tt-settings__banner-error" role="alert">
+    return (<div className="pp pp--clients">
+      {listError && (<p className="tt-settings__banner-error pp__load-error" role="alert">
           {listError}
         </p>)}
+
+      <div className="pp__topbar">
+        <div className="pp__topbar-left">
+          <h1 className="pp__title">Клиенты</h1>
+        </div>
+        <div className="pp__topbar-right pp__topbar-right--clients">
+          <div className="tt-settings__search-wrap pp__clients-search">
+            <span className="tt-settings__search-icon">
+              <IcoSearch />
+            </span>
+            <input type="search" className="tt-settings__search" placeholder="Фильтр по названию, адресу, телефону или email" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Фильтр по клиенту"/>
+          </div>
+          <label className="tt-settings__archive-toggle">
+            <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)}/>
+            <span>Показать архивных</span>
+          </label>
+          <div className="tt-settings__dropdown-wrap" ref={importRef}>
+            <button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={() => setImportOpen((v) => !v)} aria-expanded={importOpen}>
+              Импорт/Экспорт <IcoChevron />
+            </button>
+            {importOpen && (<div className="tt-settings__dropdown">
+                <button type="button" className="tt-settings__dropdown-item" disabled title="В разработке">
+                  Импорт клиентов
+                </button>
+                <button type="button" className="tt-settings__dropdown-item" disabled title="В разработке">
+                  Экспорт клиентов
+                </button>
+              </div>)}
+          </div>
+          <button type="button" className="tt-settings__btn tt-settings__btn--outline tt-settings__btn--accent-text" disabled={!canManage || !hasClientsInDirectory} title={!canManage
+            ? 'Доступно главному администратору, администратору и партнёру'
+            : !hasClientsInDirectory
+                ? 'Сначала создайте клиента'
+                : undefined} onClick={() => setAddContactOpen(true)}>
+            <IcoPlus /> Добавить контакт
+          </button>
+          <button type="button" className="pp__new-btn" disabled={!canManage} title={!canManage ? 'Доступно главному администратору, администратору и партнёру' : undefined} onClick={() => setQuickClientOpen(true)}>
+            <IcoPlus /> Новый клиент
+          </button>
+        </div>
+      </div>
 
       {!listBusy && !listError && !canManage && (<p className="tt-settings__banner-info" role="status">
           Режим просмотра: полную карточку можно открыть кнопкой «Сведения». Создавать и редактировать клиентов могут главный
           администратор, администратор и партнёр.
         </p>)}
 
-      {!listError && (<div className={`tt-settings__list tt-settings__list--clients-accordion${listBusy ? ' tt-settings__list--clients-skeleton' : ''}`} aria-busy={listBusy} aria-label={listBusy ? 'Загрузка списка клиентов' : undefined}>
-          {listBusy && <TimeTrackingClientsListSkeleton />}
-          {!listBusy && displayClients.length === 0 && (<div className="tt-settings__rates-empty tt-settings__list-empty-inner">
-              {!hasClientsInDirectory && !debouncedSearch
-                    ? 'Пока нет клиентов. Создайте первого кнопкой «Новый клиент».'
-                    : 'Ничего не найдено по фильтру.'}
-            </div>)}
-          {!listBusy &&
+      {!listError && (<div className="pp__table-wrap">
+          {listBusy ? <ProjectsTableSkeleton /> : (<div className="pp__table">
+              <div className="pp__thead">
+                <span className="pp__th pp__th--check">
+                  <span className="pp__checkbox"/>
+                </span>
+                <span className="pp__th pp__th--name">Клиент / Проект</span>
+                <span className="pp__th pp__th--budget">Бюджет</span>
+                <span className="pp__th pp__th--spent">Потрачено</span>
+                <span className="pp__th pp__th--bar"/>
+                <span className="pp__th pp__th--remaining">Остаток</span>
+                <span className="pp__th pp__th--costs">Затраты</span>
+                <span className="pp__th pp__th--actions"/>
+              </div>
+              {!listBusy && displayClients.length === 0 && (<div className="pp__empty">
+                  <IcoFolder />
+                  <span>
+                    {!hasClientsInDirectory && !debouncedSearch
+                        ? 'Пока нет клиентов. Создайте первого кнопкой «Новый клиент».'
+                        : 'Ничего не найдено по фильтру.'}
+                  </span>
+                </div>)}
+              {!listBusy &&
                 displayClients.map((c) => {
                     const projectsExpandedFor = projectsExpanded.has(c.id);
                     const pj = clientProjects[c.id];
@@ -1230,112 +1276,141 @@ export function TimeTrackingClientsPanel() {
                     const projectTotal = pj?.total ?? 0;
                     const projPanelLoading = Boolean(pj?.loading);
                     const clientHasOpenProjectMenu = rawProjects.some((p) => p.id === actionProjectId);
-                    return (<div key={c.id} className={`tt-settings__list-row tt-settings__list-row--client${c.is_archived ? ' tt-settings__list-row--archived' : ''}${clientHasOpenProjectMenu ? ' tt-settings__list-row--ccp-menu-open' : ''}`}>
-                <div className="tt-settings__client-block tt-ccp-col">
-                  <button type="button" className="tt-ccp-head" aria-expanded={projectsExpandedFor} onClick={() => toggleClientProjectsCollapse(c.id)}>
-                    <IcoChevronAccordion open={projectsExpandedFor}/>
-                    <span className="tt-ccp-head-name">{c.name}</span>
-                    {c.is_archived && <span className="tt-settings__archived-badge">Архив</span>}
-                    <span className="tt-ccp-head-count">
-                      {!projectsExpandedFor
+                    const mappedForSpent = rawProjects.map((pr) => mapClientProjectToProjectRow(pr, c));
+                    const countLabel = !pj
                         ? '…'
                         : projPanelLoading && rawProjects.length === 0
                             ? '…'
-                            : pluralProjectsRu(projectTotal)}
-                    </span>
-                  </button>
-                  {c.address ? (<span className="tt-settings__client-address">{c.address}</span>) : null}
-                  <span className="tt-settings__client-meta">{formatClientMeta(c)}</span>
-                  {projectsExpandedFor && (<div className="tt-ccp-panel">
-                      {projPanelLoading && rawProjects.length === 0 ? (<p className="tt-ccp-panel-hint" role="status">
-                          Загрузка проектов…
-                        </p>) : !projPanelLoading && rawProjects.length === 0 ? (<p className="tt-ccp-panel-hint">Нет проектов у этого клиента.</p>) : (<>
-                          <div className="tt-ccp-thead" aria-hidden>
-                            <span className="tt-ccp-th tt-ccp-th--check"/>
-                            <span className="tt-ccp-th">Проект</span>
-                            <span className="tt-ccp-th">Бюджет</span>
-                            <span className="tt-ccp-th">Записей</span>
-                            <span className="tt-ccp-th tt-ccp-th--actions"/>
+                            : pluralProjectsRu(projectTotal);
+                    return (<div key={c.id} className={`pp__group${!projectsExpandedFor ? ' pp__group--collapsed' : ''}${clientHasOpenProjectMenu ? ' pp__group--menu-open' : ''}`}>
+                        <div className="pp__client-row">
+                          <div className="pp__client-row-main" onClick={() => toggleClientProjectsCollapse(c.id)} role="button" tabIndex={0} aria-expanded={projectsExpandedFor} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && toggleClientProjectsCollapse(c.id)}>
+                            <span className={`pp__client-chevron${projectsExpandedFor ? ' pp__client-chevron--open' : ''}`}>
+                              <IcoChevronPp />
+                            </span>
+                            <span className="pp__client-name">{c.name}</span>
+                            {c.is_archived && <span className="tt-settings__archived-badge">Архив</span>}
+                            <span className="pp__client-meta">{countLabel}</span>
+                            {!projectsExpandedFor && pj && !projPanelLoading && rawProjects.length > 0 && (<span className="pp__client-total" title="Потрачено по валютам проектов клиента">
+                                {fmtGroupSpentByCurrency(mappedForSpent)}
+                              </span>)}
                           </div>
-                          {rawProjects.map((p) => {
+                          {canManage && (<button type="button" className="pp__client-add-contact" disabled={Boolean(c.is_archived)} title={c.is_archived
+                                ? 'Клиент в архиве — сначала разархивируйте в карточке клиента'
+                                : 'Добавить контакт к этому клиенту'} onClick={(e) => {
+                                e.stopPropagation();
+                                setContactModalClient({
+                                    id: c.id,
+                                    name: c.name,
+                                    is_archived: Boolean(c.is_archived),
+                                });
+                            }}>
+                              <IcoPlus />
+                              <span>Контакт</span>
+                            </button>)}
+                        </div>
+                        {projectsExpandedFor && (<>
+                            <div className="pp__client-subrow">
+                              <div className="pp__client-subrow-main">
+                                {c.address ? <span className="pp__client-subrow-addr">{c.address}</span> : null}
+                                <span className="pp__client-subrow-meta">{formatClientMeta(c)}</span>
+                              </div>
+                              <div className="pp__client-subrow-actions">
+                                <button type="button" className="tt-settings__row-edit tt-settings__row-edit--foot" onClick={() => setViewClient(c)}>
+                                  Сведения
+                                </button>
+                                <button type="button" className="tt-settings__row-edit tt-settings__row-edit--foot" disabled={!canManage} title={!canManage ? 'Недостаточно прав' : undefined} onClick={() => setModal({ mode: 'edit', row: c })}>
+                                  Редактировать
+                                </button>
+                                <button type="button" className="tt-settings__row-edit tt-settings__row-edit--foot tt-settings__row-edit--danger" disabled={!canManage} title={!canManage ? 'Недостаточно прав' : undefined} onClick={() => void handleDelete(c.id, c.name)}>
+                                  Удалить
+                                </button>
+                              </div>
+                            </div>
+                            {projPanelLoading && rawProjects.length === 0 ? (<p className="pp__client-panel-hint" role="status">
+                                Загрузка проектов…
+                              </p>) : !projPanelLoading && rawProjects.length === 0 ? (<p className="pp__client-panel-hint">Нет проектов у этого клиента.</p>) : (<>
+                                {rawProjects.map((p) => {
                                     const mapped = mapClientProjectToProjectRow(p, c);
                                     const typeMeta = TYPE_COLOR[mapped.type];
+                                    const hasBudget = mapped.budget != null;
+                                    const over = hasBudget && mapped.spent > mapped.budget!;
+                                    const rem = hasBudget ? mapped.budget! - mapped.spent : null;
+                                    const pct = hasBudget ? remainingPct(mapped.budget!, mapped.spent) : null;
                                     const isOpen = actionProjectId === p.id;
-                                    const isSel = selectedProjectIds.has(p.id);
-                                    return (<div key={p.id} className={`tt-ccp-prow${isSel ? ' tt-ccp-prow--selected' : ''}`} role="button" tabIndex={0} onClick={() => navigate(getProjectDetailUrl(p.id, c.id))} onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                e.preventDefault();
-                                                navigate(getProjectDetailUrl(p.id, c.id));
-                                            }
-                                        }}>
-                                <span className="tt-ccp-td tt-ccp-td--check" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                                  <span className={`pp__checkbox${isSel ? ' pp__checkbox--on' : ''}`} onClick={() => toggleProjectSelect(p.id)} role="checkbox" aria-checked={isSel} tabIndex={0} onKeyDown={(e) => {
-                                            if (e.key === ' ') {
-                                                e.preventDefault();
-                                                toggleProjectSelect(p.id);
-                                            }
-                                        }}>
-                                    {isSel && <IcoCheck />}
-                                  </span>
-                                </span>
-                                <span className="tt-ccp-td tt-ccp-td--name">
-                                  <span className="pp__proj-name">
-                                    <span className="pp__proj-dot" style={{ background: STATUS_DOT[mapped.status] }}/>
-                                    {p.name}
-                                  </span>
-                                  <span className="pp__type-badge" style={{ color: typeMeta.color, background: typeMeta.bg }}>
-                                    {mapped.type}
-                                  </span>
-                                </span>
-                                <span className="tt-ccp-td tt-ccp-td--num">
-                                  {mapped.budget != null ? (fmtAmt(mapped.budget, mapped.currency)) : (<span className="pp__dash">—</span>)}
-                                </span>
-                                <span className="tt-ccp-td tt-ccp-td--num">{p.usage_count}</span>
-                                <span className="tt-ccp-td tt-ccp-td--actions" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
-                                  <div className="pp__actions-wrap" ref={isOpen ? actionMenuRef : undefined}>
-                                    <button type="button" className={`pp__actions-btn${isOpen ? ' pp__actions-btn--open' : ''}`} onClick={() => setActionProjectId(isOpen ? null : p.id)}>
-                                      Действия{' '}
-                                      <span className={`pp__actions-chevron${isOpen ? ' pp__actions-chevron--open' : ''}`}>
-                                        <IcoChevron />
-                                      </span>
-                                    </button>
-                                    {isOpen && (<div className="pp__actions-menu" role="menu">
-                                        <button type="button" className="pp__actions-item" onClick={() => {
-                                                setActionProjectId(null);
-                                                navigate(getProjectDetailUrl(p.id, c.id));
-                                            }}>
-                                          Открыть
-                                        </button>
-                                        <button type="button" className="pp__actions-item" disabled={!canManage} title={!canManage ? 'Недостаточно прав' : undefined} onClick={() => {
-                                                setActionProjectId(null);
-                                                setProjectEdit({ client: c, project: p });
-                                            }}>
-                                          Редактировать
-                                        </button>
-                                      </div>)}
-                                  </div>
-                                </span>
-                              </div>);
+                                    const isSelected = selectedProjectIds.has(p.id);
+                                    return (<div key={p.id} className={`pp__row${isSelected ? ' pp__row--selected' : ''}`} onClick={() => navigate(getProjectDetailUrl(p.id, c.id))} style={{ cursor: 'pointer' }}>
+                                        <span className="pp__td pp__td--check" onClick={(e) => e.stopPropagation()}>
+                                          <span className={`pp__checkbox${isSelected ? ' pp__checkbox--on' : ''}`} onClick={() => toggleProjectSelect(p.id)} role="checkbox" aria-checked={isSelected} tabIndex={0} onKeyDown={(e) => e.key === ' ' && toggleProjectSelect(p.id)}>
+                                            {isSelected && <IcoCheck />}
+                                          </span>
+                                        </span>
+                                        <span className="pp__td pp__td--name">
+                                          <AnimatedLink className="pp__proj-name pp__proj-name--link" to={getProjectDetailUrl(p.id, c.id)}>
+                                            <span className="pp__proj-dot" style={{ background: STATUS_DOT[mapped.status] }}/>
+                                            {p.name}
+                                          </AnimatedLink>
+                                          <span className="pp__type-badge" style={{ color: typeMeta.color, background: typeMeta.bg }}>
+                                            {mapped.type}
+                                          </span>
+                                        </span>
+                                        <span className="pp__td pp__td--budget">
+                                          {hasBudget ? fmtAmt(mapped.budget!, mapped.currency) : <span className="pp__dash">—</span>}
+                                        </span>
+                                        <span className="pp__td pp__td--spent">
+                                          {mapped.spent > 0 ? fmtAmt(mapped.spent, mapped.currency) : <span className="pp__dash">—</span>}
+                                        </span>
+                                        <span className="pp__td pp__td--bar">
+                                          {hasBudget && mapped.spent > 0 && <BudgetBar budget={mapped.budget!} spent={mapped.spent}/>}
+                                        </span>
+                                        <span className={`pp__td pp__td--remaining${over ? ' pp__td--over' : ''}`}>
+                                          {rem != null ? (<>
+                                              <span className="pp__rem-val">
+                                                {over ? '−' : ''}
+                                                {fmtAmt(Math.abs(rem), mapped.currency)}
+                                              </span>
+                                              {pct != null && (<span className={`pp__rem-pct${over ? ' pp__rem-pct--over' : ''}`}>
+                                                  ({over ? '-' : ''}
+                                                  {Math.abs(pct)}%)
+                                                </span>)}
+                                            </>) : (<span className="pp__dash">—</span>)}
+                                        </span>
+                                        <span className="pp__td pp__td--costs">
+                                          {mapped.costs > 0 ? (<span className="pp__costs-val">{fmtAmt(mapped.costs, mapped.currency)}</span>) : (<span className="pp__zero">0,00 {mapped.currency}</span>)}
+                                        </span>
+                                        <span className="pp__td pp__td--actions" onClick={(e) => e.stopPropagation()}>
+                                          <div className="pp__actions-wrap" ref={isOpen ? actionMenuRef : undefined}>
+                                            <button type="button" className={`pp__actions-btn${isOpen ? ' pp__actions-btn--open' : ''}`} onClick={() => setActionProjectId(isOpen ? null : p.id)}>
+                                              Действия{' '}
+                                              <IcoChevronPp cls={`pp__actions-chevron${isOpen ? ' pp__actions-chevron--open' : ''}`}/>
+                                            </button>
+                                            {isOpen && (<div className="pp__actions-menu" role="menu">
+                                                <button type="button" className="pp__actions-item" onClick={() => {
+                                                    setActionProjectId(null);
+                                                    navigate(getProjectDetailUrl(p.id, c.id));
+                                                }}>
+                                                  Открыть
+                                                </button>
+                                                <button type="button" className="pp__actions-item" disabled={!canManage} title={!canManage ? 'Недостаточно прав' : undefined} onClick={() => {
+                                                    setActionProjectId(null);
+                                                    setProjectEdit({ client: c, project: p });
+                                                }}>
+                                                  Редактировать
+                                                </button>
+                                              </div>)}
+                                          </div>
+                                        </span>
+                                      </div>);
                                 })}
-                          {pj && pj.total > PAGE ? (<Pagination page={pj.page} totalCount={pj.total} pageSize={PAGE} loading={pj.loading} onPageChange={(p) => void loadClientProjectsPage(c.id, p)}/>) : null}
-                        </>)}
-                    </div>)}
-                  <div className="tt-settings__client-actions tt-settings__client-actions--foot">
-                    <button type="button" className="tt-settings__row-edit tt-settings__row-edit--foot" onClick={() => setViewClient(c)}>
-                      Сведения
-                    </button>
-                    <button type="button" className="tt-settings__row-edit tt-settings__row-edit--foot" disabled={!canManage} title={!canManage ? 'Недостаточно прав' : undefined} onClick={() => setModal({ mode: 'edit', row: c })}>
-                      Редактировать
-                    </button>
-                    <button type="button" className="tt-settings__row-edit tt-settings__row-edit--foot tt-settings__row-edit--danger" disabled={!canManage} title={!canManage ? 'Недостаточно прав' : undefined} onClick={() => void handleDelete(c.id, c.name)}>
-                      Удалить
-                    </button>
-                  </div>
-                </div>
-              </div>);
+                                {pj && pj.total > PAGE ? (<Pagination page={pj.page} totalCount={pj.total} pageSize={PAGE} loading={pj.loading} onPageChange={(p) => void loadClientProjectsPage(c.id, p)}/>) : null}
+                              </>)}
+                          </>)}
+                      </div>);
                 })}
-          {!listBusy && clientsPagerTotal > PAGE ? (<Pagination page={clientsPagerPage} totalCount={clientsPagerTotal} pageSize={PAGE} loading={listBusy} onPageChange={(p) => debouncedSearch ? setClientsSearchPage(p) : setClientsPage(p)}/>) : null}
+            </div>)}
         </div>)}
+
+      {!listBusy && clientsPagerTotal > PAGE ? (<Pagination className="pp__table-pagination" page={clientsPagerPage} totalCount={clientsPagerTotal} pageSize={PAGE} loading={listBusy} onPageChange={(p) => debouncedSearch ? setClientsSearchPage(p) : setClientsPage(p)}/>) : null}
 
       {quickClientOpen && (<QuickCreateClientModal canManage={canManage} onClose={() => setQuickClientOpen(false)} onCreated={onSaved} onOpenFullForm={() => setModal({ mode: 'create', row: null })}/>)}
 
@@ -1344,6 +1419,8 @@ export function TimeTrackingClientsPanel() {
       {projectEdit && (<ClientProjectModal key={projectEdit.project.id} mode="edit" fixedClientId={projectEdit.client.id} initial={projectEdit.project} canManage={canManage} onClose={() => setProjectEdit(null)} onSaved={onProjectSavedFromModal}/>)}
 
       {addContactOpen && (<AddClientContactModal includeArchived={includeArchived} canManage={canManage} onClose={() => setAddContactOpen(false)}/>)}
+
+      {contactModalClient && (<AddClientContactForClientModal clientId={contactModalClient.id} clientName={contactModalClient.name} clientArchived={contactModalClient.is_archived} canManage={canManage} onClose={() => setContactModalClient(null)}/>)}
 
       {viewClient && (<ClientViewModal listRow={viewClient} canManage={canManage} onClose={() => setViewClient(null)} onEdit={(detail) => {
                 setViewClient(null);

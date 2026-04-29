@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useLayoutEffect, useCallback, use
 import { createPortal } from 'react-dom';
 import { AnimatedLink } from '@shared/ui';
 import { useNavigate } from 'react-router-dom';
-import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, patchClientProject, deleteClientProject, createClientContact, isForbiddenError, type TimeManagerClientRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
+import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, patchClientProject, deleteClientProject, isForbiddenError, type TimeManagerClientRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { Pagination, SearchableSelect } from '@shared/ui';
 import { useCurrentUser } from '@shared/hooks';
@@ -12,7 +12,7 @@ import type { ProjectRow, ProjectStatus, ProjectType } from '@entities/time-trac
 import { getProjectDetailUrl, getTimeTrackingNewProjectUrl } from '@shared/config';
 import { ProjectsSkeleton } from './ProjectsSkeleton';
 import { ClientProjectModal } from './TimeTrackingClientProjectModal';
-import { portalTimeTrackingModal } from './timeTrackingModalPortal';
+import { AddClientContactForClientModal } from './AddClientContactForClientModal';
 function fmtAmt(n: number, cur = 'UZS') {
     return `${n.toLocaleString('ru-RU')} ${cur}`;
 }
@@ -137,115 +137,6 @@ function BudgetBar({ budget, spent }: {
       <div className="pp__bar">
         <div className="pp__bar-fill pp__bar-fill--blue" style={{ width: `${bluePct}%` }}/>
         {over && <div className="pp__bar-fill pp__bar-fill--red" style={{ width: `${redPct}%` }}/>}
-      </div>
-    </div>);
-}
-type AddClientContactFromProjectsRowProps = {
-    clientId: string;
-    clientName: string;
-    clientArchived: boolean;
-    canManage: boolean;
-    onClose: () => void;
-};
-function AddClientContactFromProjectsRowModal({ clientId, clientName, clientArchived, canManage, onClose, }: AddClientContactFromProjectsRowProps) {
-    const uid = useId();
-    const [name, setName] = useState('');
-    const [phone, setPhone] = useState('');
-    const [email, setEmail] = useState('');
-    const [error, setError] = useState<string | null>(null);
-    const [saving, setSaving] = useState(false);
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape')
-                onClose();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, [onClose]);
-    const submit = async () => {
-        const n = name.trim();
-        if (!n) {
-            setError('Укажите имя контакта');
-            return;
-        }
-        setError(null);
-        setSaving(true);
-        try {
-            await createClientContact(clientId, {
-                name: n,
-                phone: phone.trim() || null,
-                email: email.trim() || null,
-            });
-            onClose();
-        }
-        catch (e) {
-            setError(e instanceof Error ? e.message : 'Не удалось добавить контакт');
-        }
-        finally {
-            setSaving(false);
-        }
-    };
-    return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation" onClick={onClose}>
-      <div className="tt-tm-modal tt-tm-modal--add-contact" role="dialog" aria-modal="true" aria-labelledby={`${uid}-add-contact-title`} onClick={(ev) => ev.stopPropagation()}>
-        <div className="tt-tm-modal__head">
-          <h2 id={`${uid}-add-contact-title`} className="tt-tm-modal__title">
-            Добавить контакт к клиенту
-          </h2>
-          <button type="button" className="tt-tm-modal__close" onClick={onClose} aria-label="Закрыть">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-        <div className="tt-tm-modal__body">
-          {!canManage && (<p className="tt-tm-field-error" role="alert">
-              Недостаточно прав для добавления контактов.
-            </p>)}
-          {clientArchived && (<p className="tt-tm-hint" role="status">
-              Этот клиент в архиве. Разархивируйте клиента в карточке редактирования, затем добавьте контакт.
-            </p>)}
-          <div className="tt-tm-field">
-            <label className="tt-tm-label" htmlFor={`${uid}-client-readonly`}>
-              Клиент
-            </label>
-            <input id={`${uid}-client-readonly`} className="tt-tm-input" value={clientName} readOnly tabIndex={-1}/>
-          </div>
-          <div className="tt-tm-field">
-            <label className="tt-tm-label" htmlFor={`${uid}-cname`}>
-              Имя контакта <span className="tt-tm-req">*</span>
-            </label>
-            <input id={`${uid}-cname`} className="tt-tm-input" value={name} onChange={(e) => setName(e.target.value)} placeholder="ФИО или должность" disabled={!canManage || clientArchived}/>
-          </div>
-          <div className="tt-tm-field-row tt-tm-field-row--grid-3">
-            <div className="tt-tm-field tt-tm-field--cell">
-              <label className="tt-tm-label" htmlFor={`${uid}-cphone`}>
-                Телефон
-              </label>
-              <input id={`${uid}-cphone`} className="tt-tm-input" value={phone} onChange={(e) => setPhone(e.target.value)} autoComplete="tel" disabled={!canManage || clientArchived}/>
-            </div>
-            <div className="tt-tm-field tt-tm-field--cell" style={{ gridColumn: 'span 2' }}>
-              <label className="tt-tm-label" htmlFor={`${uid}-cemail`}>
-                Email
-              </label>
-              <input id={`${uid}-cemail`} type="email" className="tt-tm-input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" disabled={!canManage || clientArchived}/>
-            </div>
-          </div>
-          <p className="tt-tm-hint">
-            Контакт сохраняется в списке дополнительных контактов клиента. Основной контакт и реквизиты организации
-            настраиваются в «Редактировать клиента».
-          </p>
-          {error && (<p className="tt-tm-field-error" role="alert">
-              {error}
-            </p>)}
-        </div>
-        <div className="tt-tm-modal__foot">
-          <button type="button" className="tt-settings__btn tt-settings__btn--ghost" disabled={saving} onClick={onClose}>
-            Отмена
-          </button>
-          <button type="button" className="tt-settings__btn tt-settings__btn--primary" disabled={saving || !canManage || clientArchived} onClick={() => void submit()}>
-            {saving ? 'Сохранение…' : 'Добавить'}
-          </button>
-        </div>
       </div>
     </div>);
 }
@@ -600,7 +491,7 @@ export function ProjectsPanel() {
         {filtered.length > PAGE ? (<Pagination className="pp__table-pagination" page={projectsTablePage} totalCount={filtered.length} pageSize={PAGE} onPageChange={setProjectsTablePage}/>) : null}
       </div>
 
-      {contactModalClient && (<AddClientContactFromProjectsRowModal clientId={contactModalClient.id} clientName={contactModalClient.name} clientArchived={contactModalClient.is_archived} canManage={canManage} onClose={() => setContactModalClient(null)}/>)}
+      {contactModalClient && (<AddClientContactForClientModal clientId={contactModalClient.id} clientName={contactModalClient.name} clientArchived={contactModalClient.is_archived} canManage={canManage} onClose={() => setContactModalClient(null)}/>)}
 
       {actionOpen &&
             openActionProject &&

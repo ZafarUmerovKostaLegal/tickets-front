@@ -302,18 +302,18 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         const codes = projects.map((p) => p.code);
         setCodeHint(suggestedNextKlProjectCode(clientNameForCode, codes, effectiveClientId
           ? { clientId: effectiveClientId, allClients: clientsForPicker ?? [] }
-          : undefined));
+          : undefined, form.name));
       })
       .catch(() => {
         if (!cancelled)
           setCodeHint(suggestedNextKlProjectCode(clientNameForCode, [], effectiveClientId
             ? { clientId: effectiveClientId, allClients: clientsForPicker ?? [] }
-            : undefined));
+            : undefined, form.name));
       });
     return () => {
       cancelled = true;
     };
-  }, [mode, effectiveClientId, clientNameForCode, clientsForPicker]);
+  }, [mode, effectiveClientId, clientNameForCode, clientsForPicker, form.name]);
   const showMemberBillableRate = useMemo(() => (form.projectType === 'time_and_materials' || form.projectType === 'fixed_fee') && form.billableRateType === 'person_billable_rate', [form.projectType, form.billableRateType]);
   const showProjectBillableRate = useMemo(() => (form.projectType === 'time_and_materials' || form.projectType === 'fixed_fee') && form.billableRateType === 'project_billable_rate', [form.projectType, form.billableRateType]);
   const assignedUserIdsRef = useRef(assignedUserIds);

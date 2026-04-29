@@ -17,10 +17,10 @@ export type AppNavItemDef = {
 
 export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { to: routes.home, label: 'Главная', icon: IconHome },
-    { to: routes.tickets, label: 'Заявки', icon: IconTicket },
     { to: routes.timeTracking, label: 'Учёт времени', icon: IconStopwatch },
     { to: routes.expenses, label: 'Расходы', icon: IconWallet },
     { to: routes.todo, label: 'Список дел', icon: IconList },
+    { to: routes.tickets, label: 'Заявки', icon: IconTicket },
     { to: routes.vacationSchedule, label: 'График отпусков', icon: IconCalendarCheck },
     { to: routes.inventory, label: 'Инвентаризация', icon: IconBox },
     { to: routes.admin, label: 'Админ-панель', icon: IconGear },
@@ -38,12 +38,12 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
     let visible: AppNavItemDef[] = APP_NAV_DEFINITIONS;
     if (isEmployee) {
         visible = APP_NAV_DEFINITIONS.filter((item) => item.label === 'Главная' ||
+            item.label === 'Учёт времени' ||
+            item.label === 'Расходы' ||
+            item.label === 'Список дел' ||
             item.label === 'Заявки' ||
             item.label === 'График отпусков' ||
             item.label === 'Посещаемость' ||
-            item.label === 'Учёт времени' ||
-            item.label === 'Список дел' ||
-            item.label === 'Расходы' ||
             item.label === 'Правила' ||
             item.label === 'Помощь');
     }

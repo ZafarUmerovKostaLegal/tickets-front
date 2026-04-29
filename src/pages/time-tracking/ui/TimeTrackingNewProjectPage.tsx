@@ -7,6 +7,7 @@ import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackin
 import { canManageTimeManagerClients } from '@entities/time-tracking/model/timeManagerClientsAccess';
 import { AppPageSettings } from '@shared/ui';
 import { ClientProjectModal } from './TimeTrackingClientProjectModal';
+import { TimeTrackingNewProjectFormSkeleton } from './TimeTrackingNewProjectFormSkeleton';
 import './TimeTrackingPage.css';
 
 export function TimeTrackingNewProjectPage() {
@@ -51,9 +52,29 @@ export function TimeTrackingNewProjectPage() {
     }, [clientIdFromUrl, clients]);
 
     if (userLoading || loadingClients) {
-        return (<div className="time-page time-page--enter" role="status" aria-live="polite">
-      <main className="time-page__main" style={{ minHeight: '40vh', padding: '1.5rem' }}>
-        Загрузка…
+        const toProjectsLoading = () => {
+            void navigate({ pathname: routes.timeTracking, search: '?tab=projects' });
+        };
+        return (<div className="time-page time-page--enter time-page--new-project-sub" role="status" aria-live="polite" aria-busy="true">
+      <span className="tt-clients-skel__sr-only">Загрузка формы нового проекта…</span>
+      <main className="time-page__main">
+        <nav className="time-page__navbar" aria-label="Навигация">
+          <button type="button" className="time-page__back-btn" onClick={toProjectsLoading} aria-label="К проектам">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15 18-6-6 6-6"/>
+            </svg>
+            <span className="time-page__back-label">К проектам</span>
+          </button>
+          <div className="time-page__navbar-sep" aria-hidden="true"/>
+          <span className="time-page__navbar-title">Новый проект</span>
+          <div className="time-page__navbar-spacer"/>
+          <div className="time-page__navbar-settings">
+            <AppPageSettings />
+          </div>
+        </nav>
+        <div className="time-page__content time-page__content--enter time-page__content--new-project-form">
+          <TimeTrackingNewProjectFormSkeleton />
+        </div>
       </main>
     </div>);
     }

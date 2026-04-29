@@ -2422,7 +2422,7 @@
   line-height: 1.2;
 }
 @media (min-width: 769px) {
-  .home-page--tile-nav .home-page__header {
+  .home-page--tile-nav .home-page__header:not(.home-page__header--hub) {
     padding-left: 2rem;
   }
 }
@@ -2466,12 +2466,22 @@
 
 .home-page--hub {
   min-height: 100dvh;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
 }
 .home-page__main--hub {
   min-height: 100dvh;
+  width: 100%;
+  max-width: none;
 }
 .home-page__header--hub {
   justify-content: space-between;
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
 }
 
 .home-page__header-right--hub {
@@ -2490,8 +2500,9 @@
   justify-content: flex-start;
   box-sizing: border-box;
   width: 100%;
+  max-width: none;
   min-height: 0;
-  padding: 1.25rem clamp(1rem, 4vw, 3rem) 2.5rem;
+  padding: 1rem max(0.75rem, env(safe-area-inset-left, 0px)) 2rem max(0.75rem, env(safe-area-inset-right, 0px));
   margin: 0;
   animation: none;
   opacity: 1;

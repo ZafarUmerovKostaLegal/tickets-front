@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useId, useRef, useReducer, type CSSProperties } from 'react';
+import { useState, useMemo, useEffect, useId, useRef, useReducer, useLayoutEffect, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { upsertTimeTrackingUser, listClientTasks, listTimeEntries, createTimeEntry, patchTimeEntry, deleteTimeEntry, isTimeTrackingHttpError, isWorkDateInClosedReportingPeriod, type TimeEntryRow, type TimeTrackingUserRow, type CreateTimeEntryBody, type PatchTimeEntryBody, } from '@entities/time-tracking';
 import { loadTimesheetProjectOptions, type ProjectOption, } from './timesheetProjectLoader';
@@ -88,6 +88,37 @@ function fmtShort(d: Date) {
 }
 function fmtHours(h: number): string {
     return formatHoursClockFromDecimalHours(h);
+}
+function sanitizeColonHoursInput(raw: string): string {
+    const v = raw.replace(/[^\d:]/g, '');
+    const i = v.indexOf(':');
+    if (i === -1) {
+        return v.slice(0, 5);
+    }
+    const h = v.slice(0, i).replace(/\D/g, '').slice(0, 5);
+    const m = v.slice(i + 1).replace(/\D/g, '').slice(0, 2);
+    return `${h}:${m}`;
+}
+const TIME_ENTRY_NOTE_REMINDER_MS = 5 * 60 * 1000;
+function scheduleTimeEntryNoteMissedReminder(contextLabel: string): void {
+    const label = contextLabel.trim();
+    window.setTimeout(() => {
+        const title = 'Учёт времени';
+        const body = label
+            ? `Запись была сохранена без примечания (${label}). При необходимости откройте запись и добавьте заметку.`
+            : 'Запись была сохранена без примечания. При необходимости откройте запись и добавьте заметку.';
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            try {
+                new Notification(title, { body });
+            }
+            catch {
+                window.alert(`${title}\n\n${body}`);
+            }
+        }
+        else {
+            window.alert(`${title}\n\n${body}`);
+        }
+    }, TIME_ENTRY_NOTE_REMINDER_MS);
 }
 const DEFAULT_WEEKLY_CAP_HOURS = 40;
 function weeklyCapHoursFromProfile(raw: number | string | null | undefined): number {
@@ -388,6 +419,7 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
     onSave: (e: TimeEntry) => void | Promise<void>;
 }) {
     const uid = useId();
+    const notesRef = useRef<HTMLTextAreaElement>(null);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState<EntryForm>(() => projects.length > 0 ? resolveInitialForm(entry, defaultDate, projects, tasksByClientId) : {
         projectId: '',
@@ -409,6 +441,13 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
         document.body.style.overflow = 'hidden';
         return () => { document.removeEventListener('keydown', h); document.body.style.overflow = ''; };
     }, [onClose]);
+    useLayoutEffect(() => {
+        const el = notesRef.current;
+        if (!el)
+            return;
+        el.style.height = '0px';
+        el.style.height = `${el.scrollHeight}px`;
+    }, [form.notes]);
     const proj = projects.find((p) => p.id === form.projectId) ?? projects[0];
     const clientTasks = proj ? (tasksByClientId[proj.clientId] ?? []) : [];
     const clientTasksListReady = !clientTasksIndexLoading;
@@ -434,30 +473,28 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
             return { ...f, taskId: first.id, task: first.name, billable: first.billableByDefault };
         });
     }, [proj?.clientId, proj?.id, tasksByClientId]);
-    function parseHours(s: string): number {
-        const clean = s.trim().replace(',', '.');
-        if (clean.includes(':')) {
-            const parts = clean.split(':').map(Number);
-            if (parts.some((x) => Number.isNaN(x)))
-                return Number.NaN;
-            if (parts.length === 2)
-                return parts[0]! + (parts[1] || 0) / 60;
-            if (parts.length >= 3) {
-                return parts[0]! + (parts[1] || 0) / 60 + (parts[2] || 0) / 3600;
-            }
-            return parts[0]!;
-        }
-        if (/^\d+\s+\d+$/.test(clean)) {
-            const [h, m] = clean.split(/\s+/).map(Number);
-            return h + (m || 0) / 60;
-        }
-        return parseFloat(clean);
+    function parseHoursStrict(s: string): number {
+        const clean = s.trim();
+        if (!clean)
+            return 0;
+        if (!clean.includes(':'))
+            return Number.NaN;
+        const i = clean.indexOf(':');
+        const hs = clean.slice(0, i).replace(/\D/g, '');
+        const ms = clean.slice(i + 1).replace(/\D/g, '');
+        if (ms.length > 2)
+            return Number.NaN;
+        const h = hs === '' ? 0 : Number(hs);
+        const m = ms === '' ? Number.NaN : Number(ms);
+        if (Number.isNaN(h) || Number.isNaN(m) || m > 59)
+            return Number.NaN;
+        return h + m / 60;
     }
     const hoursForTimerHint = useMemo(() => {
         const t = form.hours.trim();
         if (!t)
             return 0;
-        const h = parseHours(form.hours);
+        const h = parseHoursStrict(form.hours);
         if (Number.isNaN(h) || h < 0)
             return null;
         return h;
@@ -490,9 +527,14 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
             setError('Выберите задачу из справочника.');
             return;
         }
-        const h = parseHours(form.hours);
+        const hoursT = form.hours.trim();
+        if (hoursT && !hoursT.includes(':')) {
+            setError('Время указывайте через двоеточие, например 1:30 или 0:45');
+            return;
+        }
+        const h = parseHoursStrict(form.hours);
         if (form.hours && (isNaN(h) || h < 0)) {
-            setError('Некорректный формат (например: 1:30, 1:30:05, 1 30 или 1.5)');
+            setError('Некорректное время. Формат: ч:мм (минуты 00–59), например 1:30 или 0:00');
             return;
         }
         const rawHours = form.hours ? h : 0;
@@ -536,6 +578,12 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
         setWeeklyLockHint(false);
         try {
             await Promise.resolve(onSave(payload));
+            if (!entry && !form.notes.trim()) {
+                if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                    void Notification.requestPermission();
+                }
+                scheduleTimeEntryNoteMissedReminder(`${proj.client} — ${proj.name}`);
+            }
             onClose();
         }
         catch (e) {
@@ -646,11 +694,11 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
 
                 <div className="tsp-m__row tsp-m__row--notes-time">
                     <div className="tsp-m__f tsp-m__te-notes">
-                        <textarea id={`${uid}-n`} className="tsp-m__inp tsp-m__inp--textarea tsp-m__inp--te-notes" placeholder="Примечание (необязательно)…" rows={1} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} disabled={formDateLocked} />
+                        <textarea ref={notesRef} id={`${uid}-n`} className="tsp-m__inp tsp-m__inp--textarea tsp-m__inp--te-notes" placeholder="Примечание (необязательно)…" rows={1} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} disabled={formDateLocked} />
                     </div>
                     <div className="tsp-m__f tsp-m__f--te-hours">
                         <label className="tsp-m__te-hours-lbl" htmlFor={`${uid}-h`}>Часы</label>
-                        <input id={`${uid}-h`} type="text" className="tsp-m__inp tsp-m__inp--h" placeholder="0:00" autoComplete="off" value={form.hours} onChange={e => setForm(f => ({ ...f, hours: e.target.value }))} disabled={formDateLocked} />
+                        <input id={`${uid}-h`} type="text" className="tsp-m__inp tsp-m__inp--h" placeholder="0:00" autoComplete="off" spellCheck={false} inputMode="text" value={form.hours} onChange={e => setForm(f => ({ ...f, hours: sanitizeColonHoursInput(e.target.value) }))} disabled={formDateLocked} />
                     </div>
                 </div>
                 {hoursForTimerHint === 0 && (<p className="tsp-m__field-note tsp-m__field-note--timer tsp-m__field-note--tight">
