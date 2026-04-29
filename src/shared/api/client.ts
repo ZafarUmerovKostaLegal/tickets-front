@@ -34,8 +34,7 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
         removeAccessToken();
 
         if (!skipAuthRedirectOn401) {
-            if (useSessionCookieOnly())
-                setSessionCookieHint(false);
+            setSessionCookieHint(false);
             clearClientSessionSecrets();
             if (!useSessionCookieOnly()) {
                 window.location.href = getAzureLoginUrl() || '/api/v1/auth/azure/login';

@@ -33,10 +33,11 @@ export function removeAccessToken(): void {
     localStorage.removeItem(TOKEN_KEY);
 }
 export function isAuthenticated(): boolean {
-    if (useSessionCookieOnly()) {
-        return hasSessionCookieHint();
-    }
-    return Boolean(getAccessToken());
+    if (getAccessToken())
+        return true;
+    if (hasSessionCookieHint())
+        return true;
+    return false;
 }
 export async function logout(): Promise<void> {
     try {

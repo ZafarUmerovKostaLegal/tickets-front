@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { setAccessToken, setSessionCookieHint } from '@shared/lib';
-import { useSessionCookieOnly } from '@shared/config';
 import { refreshCurrentUser } from '@shared/hooks';
 import { routes } from '@shared/config';
 function parseCallbackParams(): {
@@ -30,29 +29,24 @@ export function AuthCallbackPage() {
             navigate(`${routes.login}?error=${encodeURIComponent(error)}`, { replace: true });
             return;
         }
-        if (useSessionCookieOnly()) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-            void refreshCurrentUser().then((u) => {
-                if (u) {
-                    setSessionCookieHint(true);
-                    navigate(routes.home, { replace: true });
-                }
-                else {
-                    navigate(routes.login, { replace: true });
-                }
-            });
-            return;
-        }
         if (token) {
             setAccessToken(token);
             window.history.replaceState({}, document.title, window.location.pathname);
             void refreshCurrentUser().finally(() => {
                 navigate(routes.home, { replace: true });
             });
+            return;
         }
-        else {
-            navigate(routes.login, { replace: true });
-        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+        void refreshCurrentUser().then((u) => {
+            if (u) {
+                setSessionCookieHint(true);
+                navigate(routes.home, { replace: true });
+            }
+            else {
+                navigate(routes.login, { replace: true });
+            }
+        });
     }, [navigate]);
     return (<div style={{
         display: 'flex',

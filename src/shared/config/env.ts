@@ -59,5 +59,8 @@ export function getAttendanceApiBase(): string {
 }
 export const AUTH_ERROR_AUTH_FAILED = 'auth_failed';
 export function useSessionCookieOnly(): boolean {
-    return import.meta.env.VITE_USE_SESSION_COOKIE === 'true';
+    const v = import.meta.env.VITE_USE_SESSION_COOKIE;
+    if (typeof v === 'string' && v.toLowerCase() === 'false')
+        return false;
+    return true;
 }
