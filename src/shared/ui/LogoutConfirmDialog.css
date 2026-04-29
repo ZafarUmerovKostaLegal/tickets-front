@@ -1,0 +1,104 @@
+.logout-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top, 0px)) max(1rem, env(safe-area-inset-right, 0px)) max(1rem, env(safe-area-inset-bottom, 0px)) max(1rem, env(safe-area-inset-left, 0px));
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(3px);
+  box-sizing: border-box;
+}
+
+.logout-confirm__panel {
+  width: 100%;
+  max-width: 380px;
+  padding: 1.1rem 1.15rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--app-border, #e2e8f0);
+  background: var(--app-surface, #fff);
+  color: var(--app-text, #0f172a);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+  box-sizing: border-box;
+}
+
+body[data-theme='dark'] .logout-confirm__panel {
+  background: var(--app-surface, #1e293b);
+  border-color: var(--app-border, #334155);
+  color: var(--app-text, #f1f5f9);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.logout-confirm__title {
+  margin: 0 0 0.45rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+.logout-confirm__text {
+  margin: 0 0 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--app-muted, #64748b);
+}
+
+body[data-theme='dark'] .logout-confirm__text {
+  color: #94a3b8;
+}
+
+.logout-confirm__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.logout-confirm__btn {
+  padding: 0.45rem 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  border-radius: 8px;
+  border: 1px solid var(--app-border, #e2e8f0);
+  background: var(--app-surface, #fff);
+  color: var(--app-text, #334155);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, filter 0.12s;
+}
+
+body[data-theme='dark'] .logout-confirm__btn {
+  background: #334155;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+.logout-confirm__btn:hover {
+  background: var(--app-surface-soft, #f1f5f9);
+}
+
+body[data-theme='dark'] .logout-confirm__btn:hover {
+  background: #475569;
+}
+
+.logout-confirm__btn--primary {
+  border-color: color-mix(in srgb, #b91c1c 45%, var(--app-border, #e2e8f0));
+  background: #b91c1c;
+  color: #fff;
+}
+
+.logout-confirm__btn--primary:hover {
+  filter: brightness(1.06);
+  background: #b91c1c;
+}
+
+.logout-confirm__btn:focus-visible {
+  outline: 2px solid var(--app-accent, #4f46e5);
+  outline-offset: 2px;
+}
+
+.logout-confirm__btn--primary:focus-visible {
+  outline-color: #dc2626;
+}

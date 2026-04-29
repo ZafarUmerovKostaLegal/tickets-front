@@ -1,0 +1,46 @@
+{
+  "name": "tickets-front",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "desktop:dev": "tauri dev",
+    "desktop:dev:clean": "node -e \"try{require('fs').rmSync('node_modules/.vite',{recursive:true})}catch(e){}\" && tauri dev",
+    "desktop:build": "tauri build",
+    "android:init": "tauri android init",
+    "android:adb:reverse": "adb reverse tcp:5173 tcp:5173 && adb reverse tcp:1234 tcp:1234",
+    "android:dev": "tauri android dev",
+    "android:dev:usb": "npm run android:adb:reverse && tauri android dev",
+    "android:build": "tauri android build",
+    "android:build:apk": "tauri android build --apk",
+    "android:build:apk:debug": "tauri android build --apk --debug"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
+    "@types/dompurify": "^3.0.5",
+    "@types/node": "^25.3.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.1"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.10.1",
+    "buffer": "^6.0.3",
+    "core-js": "^3.49.0",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
+    "dompurify": "^3.3.3",
+    "exceljs": "^4.4.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1",
+    "recharts": "^3.7.0",
+    "regenerator-runtime": "^0.14.1"
+  }
+}

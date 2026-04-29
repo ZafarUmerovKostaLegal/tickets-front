@@ -1,0 +1,169 @@
+.gtw {
+  position: fixed;
+  top: 12px;
+  right: 24px;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px 6px 10px;
+  min-height: 40px;
+  border-radius: 12px;
+  background: #111827;
+  color: #fff;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.35;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  animation: gtw-slide-in 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 0.22s, box-shadow 0.18s;
+}
+
+.gtw:hover {
+  background: #1f2937;
+}
+
+.gtw--dragging {
+  cursor: grabbing;
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition: none;
+}
+
+.gtw--hiding {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@keyframes gtw-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.gtw__pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  flex-shrink: 0;
+  animation: gtw-pulse 1.6s infinite;
+}
+
+@keyframes gtw-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.75); }
+}
+
+.gtw__clock {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  min-width: 58px;
+}
+
+.gtw__info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  max-width: 180px;
+}
+
+.gtw__project {
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e5e7eb;
+}
+
+.gtw__task {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #9ca3af;
+}
+
+.gtw__stop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: none;
+  background: rgba(239, 68, 68, 0.9);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+  padding: 0;
+}
+
+.gtw__stop:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.gtw__stop--busy,
+.gtw__stop:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.gtw__stop svg {
+  width: 14px;
+  height: 14px;
+}
+
+.gtw__pip-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  color: #9ca3af;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  padding: 0;
+}
+
+.gtw__pip-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #e5e7eb;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.gtw__pip-btn--active {
+  background: rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.5);
+}
+
+.gtw__pip-btn--active:hover {
+  background: rgba(99, 102, 241, 0.45);
+  color: #c7d2fe;
+}
+
+.gtw__pip-btn svg {
+  width: 13px;
+  height: 13px;
+}

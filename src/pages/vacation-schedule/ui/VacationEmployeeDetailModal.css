@@ -1,0 +1,208 @@
+.vac-emp-ov {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.vac-emp-card {
+  width: 100%;
+  max-width: 420px;
+  max-height: min(85vh, 560px);
+  display: flex;
+  flex-direction: column;
+  background: var(--app-surface, #fff);
+  border-radius: 14px;
+  border: 1px solid var(--app-border, #e2e8f0);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.vac-emp-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--app-border, #e2e8f0);
+}
+
+.vac-emp-card__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--app-fg, #0f172a);
+}
+
+.vac-emp-card__x {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: var(--app-muted-bg, #f1f5f9);
+  color: var(--app-fg, #334155);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.vac-emp-card__x:hover {
+  background: #e2e8f0;
+}
+
+.vac-emp-card__body {
+  padding: 0.85rem 1rem 1.1rem;
+  overflow-y: auto;
+}
+
+.vac-emp-card__err {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.vac-emp-card__meta {
+  margin: 0 0 0.65rem;
+  font-size: 0.8125rem;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-emp-card__note {
+  margin: 0 0 0.85rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--app-fg, #1e293b);
+}
+
+.vac-emp-card__note-lbl {
+  font-weight: 600;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-emp-card__sub {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-emp-card__empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-emp-card__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.vac-emp-card__li {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+  font-size: 0.875rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--app-border, #f1f5f9);
+}
+
+.vac-emp-card__li-date {
+  font-weight: 600;
+  color: var(--app-fg, #0f172a);
+}
+
+.vac-emp-card__li-kind {
+  color: var(--app-muted, #475569);
+  text-align: right;
+}
+
+.vac-emp-card__li-del {
+  margin: 0;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--app-surface-soft, #f8fafc);
+  color: var(--app-muted, #64748b);
+  cursor: pointer;
+}
+
+.vac-emp-card__li-del:hover:not(:disabled) {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+.vac-emp-card__li-del:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vac-emp-card__footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--app-border, #e2e8f0);
+}
+
+.vac-emp-card__del-employee {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  cursor: pointer;
+}
+
+.vac-emp-card__del-employee:hover:not(:disabled) {
+  background: #fee2e2;
+}
+
+.vac-emp-card__del-employee:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+
+body[data-theme='dark'] .vac-emp-card__x {
+  background: var(--app-surface-soft);
+  color: var(--app-muted);
+}
+body[data-theme='dark'] .vac-emp-card__x:hover {
+  background: var(--app-border);
+  color: var(--app-text);
+}
+
+body[data-theme='dark'] .vac-emp-card__li-del:hover:not(:disabled) {
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+body[data-theme='dark'] .vac-emp-card__del-employee {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+body[data-theme='dark'] .vac-emp-card__del-employee:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.5);
+}

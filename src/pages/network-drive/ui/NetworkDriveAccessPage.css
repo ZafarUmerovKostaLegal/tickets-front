@@ -1,0 +1,421 @@
+.ndrive {
+  min-height: 100vh;
+  display: flex;
+  background: var(--app-bg);
+}
+
+.ndrive__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ndrive__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0 2rem;
+  height: 64px;
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.ndrive__header-inner {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.ndrive__header-start {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.ndrive__title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--app-text);
+  letter-spacing: -0.025em;
+}
+
+.ndrive__subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--app-muted);
+}
+
+.ndrive__content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.5rem 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+
+.ndrive__content--fs {
+  padding: 0;
+  overflow: hidden;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ndrive__fs-shell {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  background: var(--app-surface, #fff);
+}
+
+.ndrive__header-end {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.ndrive__title--compact {
+  font-size: 1.1rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+.ndrive-credmodal {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: color-mix(in srgb, #000 45%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.ndrive-credmodal__panel {
+  width: min(480px, 100%);
+  max-height: min(90vh, 640px);
+  overflow: auto;
+  background: var(--app-surface, #fff);
+  color: var(--app-text);
+  border: 1px solid var(--app-border, #d1d5db);
+  border-radius: 12px;
+  box-shadow:
+    0 20px 50px -12px color-mix(in srgb, #000 35%, transparent),
+    0 0 0 1px color-mix(in srgb, #fff 8%, transparent);
+}
+
+.ndrive-credmodal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 1rem 1rem 0.5rem 1.25rem;
+  border-bottom: 1px solid var(--app-border, #e5e7eb);
+}
+
+.ndrive-credmodal__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.ndrive-credmodal__x {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  line-height: 1;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.ndrive-credmodal__x:hover {
+  background: var(--app-surface-soft, #f3f4f6);
+  color: var(--app-text);
+}
+
+.ndrive-credmodal__form {
+  padding: 0 1.25rem 1.25rem;
+}
+
+.ndrive-credmodal__lede {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--app-muted);
+  line-height: 1.45;
+}
+
+.ndrive-credmodal__grid {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+@media (min-width: 480px) {
+  .ndrive-credmodal__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ndrive-credmodal__grid .ndrive__field:nth-child(1) {
+    grid-column: 1 / -1;
+  }
+}
+
+.ndrive__card {
+  border-radius: 14px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  padding: 1.25rem 1.5rem;
+}
+
+.ndrive__card-title {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.ndrive__path {
+  display: block;
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.8125rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: var(--app-surface-soft);
+  border: 1px solid var(--app-border);
+  color: var(--app-text);
+  word-break: break-all;
+}
+
+.ndrive__note {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+
+.ndrive__placeholder {
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface-soft);
+  color: var(--app-muted);
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 1.5rem;
+}
+
+.ndrive__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-accent, #4f46e5);
+  margin-bottom: 0.5rem;
+}
+
+.ndrive__card--muted {
+  background: var(--app-surface-soft);
+}
+
+.ndrive__form-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (min-width: 720px) {
+  .ndrive__form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ndrive__form-grid--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.ndrive__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.ndrive__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--app-muted);
+}
+
+.ndrive__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  border-radius: 10px;
+  border: 1px solid var(--app-border);
+  background: var(--app-bg);
+  color: var(--app-text);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.ndrive__input:focus {
+  outline: none;
+  border-color: var(--app-accent, #4f46e5);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent, #6366f1) 25%, transparent);
+}
+
+.ndrive__input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ndrive__check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 0.8125rem;
+  color: var(--app-text);
+  cursor: pointer;
+}
+
+.ndrive__check input {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+.ndrive__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.ndrive__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-text);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.ndrive__btn:hover:not(:disabled) {
+  background: var(--app-surface-soft);
+}
+
+.ndrive__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ndrive__btn--primary {
+  background: var(--app-accent, #4f46e5);
+  border-color: var(--app-accent, #4f46e5);
+  color: #fff;
+}
+
+.ndrive__btn--primary:hover:not(:disabled) {
+  filter: brightness(1.05);
+  background: var(--app-accent, #4f46e5);
+}
+
+.ndrive__btn--ghost {
+  min-height: auto;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  color: var(--app-accent, #4f46e5);
+}
+
+.ndrive__hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--app-muted);
+}
+
+.ndrive__hint--ok {
+  color: var(--app-accent, #16a34a);
+}
+
+.ndrive__table-wrap {
+  margin-top: 1.25rem;
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid var(--app-border);
+}
+
+.ndrive__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.ndrive__table th,
+.ndrive__table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--app-border);
+  vertical-align: top;
+}
+
+.ndrive__table th {
+  font-weight: 600;
+  color: var(--app-muted);
+  background: var(--app-surface-soft);
+}
+
+.ndrive__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ndrive__td-code {
+  font-family: ui-monospace, 'Cascadia Code', 'Consolas', monospace;
+  font-size: 0.75rem;
+  word-break: break-all;
+}

@@ -1,0 +1,58 @@
+.app-splash {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at top, #e5edff 0, #f8fafc 40%, #ffffff 100%);
+  color: #0f172a;
+}
+
+.app-splash__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.app-splash__logo {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.app-splash__progress-wrap {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.app-splash__progress-ring {
+  width: 100%;
+  height: 100%;
+}
+
+.app-splash__progress-bg {
+  fill: none;
+  stroke: rgba(148, 163, 184, 0.25);
+  stroke-width: 3;
+}
+
+.app-splash__progress-fill {
+  fill: none;
+  stroke: #4f46e5;
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.08s ease-out;
+}
+
+.app-splash__progress-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4f46e5;
+}
+

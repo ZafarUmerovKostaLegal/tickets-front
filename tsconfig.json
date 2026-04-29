@@ -1,0 +1,70 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "module": "ESNext",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "types": [
+      "vite/client"
+    ],
+    "skipLibCheck": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@app": [
+        "./src/app"
+      ],
+      "@app/*": [
+        "./src/app/*"
+      ],
+      "@pages": [
+        "./src/pages"
+      ],
+      "@pages/*": [
+        "./src/pages/*"
+      ],
+      "@widgets": [
+        "./src/widgets"
+      ],
+      "@widgets/*": [
+        "./src/widgets/*"
+      ],
+      "@features": [
+        "./src/features"
+      ],
+      "@features/*": [
+        "./src/features/*"
+      ],
+      "@entities": [
+        "./src/entities"
+      ],
+      "@entities/*": [
+        "./src/entities/*"
+      ],
+      "@shared": [
+        "./src/shared"
+      ],
+      "@shared/*": [
+        "./src/shared/*"
+      ]
+    },
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": [
+    "src"
+  ]
+}

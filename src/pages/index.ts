@@ -1,0 +1,13 @@
+export { HomePage } from './home';
+export { TicketDetailPage } from './ticket-detail';
+export { AttendancePage } from './attendance';
+export { VacationSchedulePage } from './vacation-schedule';
+export { CallSchedulePage } from './call-schedule';
+export { InventoryPage } from './inventory';
+export { TimeTrackingPage } from './time-tracking';
+export { TodoPage } from './todo';
+export { ExpensesPage, ExpensesReportPage, ExpensesRequestsPage } from './expenses';
+export { RulesPage } from './rules';
+export { HelpPage } from './help';
+export { LoginPage } from './login';
+export { AuthCallbackPage } from './auth-callback';

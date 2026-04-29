@@ -1,0 +1,33 @@
+.app-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0.4rem 0.65rem 0.4rem 0.45rem;
+  background: var(--app-surface-soft, #f8fafc);
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--app-text, #0f172a);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.app-back-btn:hover {
+  background: var(--app-bg, #f1f5f9);
+  border-color: var(--app-border-hover, #cbd5e1);
+  color: var(--app-accent, #4f46e5);
+}
+.app-back-btn:focus-visible {
+  outline: 2px solid var(--app-accent, #4f46e5);
+  outline-offset: 2px;
+}
+.app-back-btn__chevron {
+  flex-shrink: 0;
+  display: block;
+  margin-top: 1px;
+}
+.app-back-btn__label {
+  line-height: 1.2;
+}
