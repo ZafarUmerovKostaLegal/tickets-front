@@ -1,7 +1,8 @@
 import type { CSSProperties, MouseEvent } from 'react';
 import { Fragment, memo, useMemo } from 'react';
 import { buildUserKindYearCounts, formatPayrollMoney, sickPayTotal, vacationPayTotal, type VacationPayrollParams, } from '../lib/vacationPayrollFormulas';
-import { VACATION_KIND_COLORS, VACATION_MONTH_NAMES, parseVacationCellKey, vacationCellKey, vacationDayIsWeekendRu, vacationKindHumanLabel, vacationMonthHeaderSpans, vacationUiLegendFallback, vacationWeekdayShortRu, vacationYearDayColumns, type VacationAbsenceKind, type VacationMarksState, type VacationScheduleEmployeeRow, type VacationUiLegendItem, type VacationYearDayColumn, } from '../lib/vacationScheduleModel';
+import { basisSummaryForTooltip, hasVacationAbsenceBasisContent, type VacationAbsenceBasis } from '../lib/vacationAbsenceBasisStorage';
+import { VACATION_KIND_COLORS, VACATION_MONTH_NAMES, parseVacationCellKey, vacationCellKey, vacationDayIsWeekendRu, vacationKindHumanLabel, vacationMonthHeaderSpans, vacationRowMarkRunEdges, vacationUiLegendFallback, vacationWeekdayShortRu, vacationYearDayColumns, type VacationAbsenceKind, type VacationMarksState, type VacationScheduleEmployeeRow, type VacationUiLegendItem, type VacationYearDayColumn, } from '../lib/vacationScheduleModel';
 import './VacationContinuousTable.css';
 function buildUserMarkStats(marks: VacationMarksState, year: number, employeeIds: Set<number>): Map<number, {
     months: number[];
@@ -41,10 +42,21 @@ type VacationDayCellProps = {
     isSelected: boolean;
     isToday: boolean;
     title: string;
+    hasBasis: boolean;
+    markRunStart: boolean;
+    markRunEnd: boolean;
     readOnly: boolean;
     onActivate?: (e: MouseEvent) => void;
 };
-const VacationDayCell = memo(function VacationDayCell({ kind, kindColors, isWeekendEmpty, isMonthStart, isSelected, isToday, title, readOnly, onActivate, }: VacationDayCellProps) {
+function BasisPin() {
+    return (<span className="vac-cont__basis-pin" aria-hidden>
+      <svg className="vac-cont__basis-pin-svg" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 3.5V3a2 2 0 114 0v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
+        <path d="M6 3.5h4V8a2 2 0 01-1.25 1.86L8 10.25V14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      </svg>
+    </span>);
+}
+const VacationDayCell = memo(function VacationDayCell({ kind, kindColors, isWeekendEmpty, isMonthStart, isSelected, isToday, title, hasBasis, markRunStart, markRunEnd, readOnly, onActivate, }: VacationDayCellProps) {
     const bg = kind ? kindColors[kind] : undefined;
     const cls = [
         'vac-cont__cell',
@@ -53,15 +65,21 @@ const VacationDayCell = memo(function VacationDayCell({ kind, kindColors, isWeek
         !readOnly && 'vac-cont__cell--editable',
         isSelected && 'vac-cont__cell--selected',
         isToday && !kind && 'vac-cont__cell--today',
+        hasBasis && kind && 'vac-cont__cell--has-basis',
+        kind && markRunStart && 'vac-cont__cell--mark-run-start',
+        kind && markRunEnd && 'vac-cont__cell--mark-run-end',
     ]
         .filter(Boolean)
         .join(' ');
     const style = bg ? ({ backgroundColor: bg } as CSSProperties) : undefined;
     if (readOnly) {
-        return (<td role="gridcell" title={title} className={cls} style={style}/>);
+        return (<td role="gridcell" title={title} className={cls} style={style}>
+          {hasBasis && kind ? <BasisPin/> : null}
+        </td>);
     }
     return (<td role="gridcell" className={cls} style={style}>
       <button type="button" className="vac-cont__cell-btn" title={title} aria-label={title} onClick={(e) => onActivate?.(e)}/>
+      {hasBasis && kind ? <BasisPin/> : null}
     </td>);
 });
 export type VacationContinuousTableProps = {
@@ -85,8 +103,9 @@ export type VacationContinuousTableProps = {
         visible: boolean;
         params: VacationPayrollParams;
     };
+    basisByCell?: Readonly<Record<string, VacationAbsenceBasis>>;
 };
-export function VacationContinuousTable({ year, employees, marks, legendItems = vacationUiLegendFallback(), onEmployeeClick, emptyStateImportHint = false, readOnlyDays = true, onDayCellClick, selectedKey, todayYear, payroll, }: VacationContinuousTableProps) {
+export function VacationContinuousTable({ year, employees, marks, legendItems = vacationUiLegendFallback(), onEmployeeClick, emptyStateImportHint = false, readOnlyDays = true, onDayCellClick, selectedKey, todayYear, payroll, basisByCell = {}, }: VacationContinuousTableProps) {
     const kindColors = useMemo(() => {
         const m = { ...VACATION_KIND_COLORS };
         for (const it of legendItems) {
@@ -116,10 +135,20 @@ export function VacationContinuousTable({ year, employees, marks, legendItems = 
         const now = new Date();
         return { monthIndex: now.getMonth(), day: now.getDate() };
     }, [todayYear, year]);
+    const runEdgesByUser = useMemo(() => {
+        const m = new Map<number, {
+            runStartKeys: Set<string>;
+            runEndKeys: Set<string>;
+        }>();
+        for (const emp of employees) {
+            m.set(emp.id, vacationRowMarkRunEdges(emp.id, year, dayColumns, marks));
+        }
+        return m;
+    }, [employees, year, dayColumns, marks]);
     const legendStrip = (<ul className="vac-cont__legend" aria-label="Виды отсутствия">
-      {legendItems.map((item) => (<li key={`${item.kind}-${item.kindCode}`} className="vac-cont__legend-item" style={{ '--vac-legend-bg': item.color } as CSSProperties}>
-          <span className="vac-cont__legend-dash">—</span>
-          {item.label}
+      {legendItems.map((item) => (<li key={`${item.kind}-${item.kindCode}`} className="vac-cont__legend-item">
+          <span className="vac-cont__legend-swatch" style={{ backgroundColor: item.color }} aria-hidden/>
+          <span className="vac-cont__legend-label">{item.label}</span>
         </li>))}
     </ul>);
     if (employees.length === 0) {
@@ -176,7 +205,7 @@ export function VacationContinuousTable({ year, employees, marks, legendItems = 
                 №
               </th>
               <th className="vac-cont__sticky-name" rowSpan={2} scope="col">
-                ФИО
+                ФИО сотрудника
               </th>
               {dayColumns.map((col, i) => {
             const meta = dayMeta[i]!;
@@ -218,6 +247,7 @@ export function VacationContinuousTable({ year, employees, marks, legendItems = 
             const pr = payroll;
             const vacPay = pr?.visible ? vacationPayTotal(annualDays, pr.params) : 0;
             const sickPay = pr?.visible ? sickPayTotal(sickDays, pr.params) : 0;
+            const runEdges = runEdgesByUser.get(emp.id);
             const rowNo = emp.excelRowNo != null ? emp.excelRowNo : userIndex + 1;
             const periodHint = emp.plannedPeriodNote?.trim()
                 ? `Период (из файла): ${emp.plannedPeriodNote}`
@@ -246,12 +276,19 @@ export function VacationContinuousTable({ year, employees, marks, legendItems = 
                         const kind = cell?.kind;
                         const meta = dayMeta[col.colIndex]!;
                         const dateStr = cellDateLabel(year, col.monthIndex, col.day);
-                        const tip = kind
-                            ? `${dateStr} · ${emp.label} · ${vacationKindHumanLabel(kind)}`
-                            : `${dateStr} · ${emp.label}`;
+                        const tipParts = [
+                            kind
+                                ? `${dateStr} · ${emp.label} · ${vacationKindHumanLabel(kind)}`
+                                : `${dateStr} · ${emp.label}`,
+                            basisSummaryForTooltip(basisByCell[key]),
+                        ].filter(Boolean);
+                        const tip = tipParts.join('\n');
+                        const hasBasis = Boolean(kind && hasVacationAbsenceBasisContent(basisByCell[key]));
                         const isSelected = selectedKey === key;
                         const isToday = todayInfo?.monthIndex === col.monthIndex && todayInfo?.day === col.day;
-                        return (<VacationDayCell key={key} kind={kind} kindColors={kindColors} isWeekendEmpty={meta.wknd && !kind} isMonthStart={meta.monthStart} isSelected={isSelected} isToday={isToday} title={tip} readOnly={readOnlyDays} onActivate={(e) => onDayCellClick?.({
+                        const markRunStart = Boolean(kind && runEdges?.runStartKeys.has(key));
+                        const markRunEnd = Boolean(kind && runEdges?.runEndKeys.has(key));
+                        return (<VacationDayCell key={key} kind={kind} kindColors={kindColors} isWeekendEmpty={meta.wknd && !kind} isMonthStart={meta.monthStart} isSelected={isSelected} isToday={isToday} title={tip} hasBasis={hasBasis} markRunStart={markRunStart} markRunEnd={markRunEnd} readOnly={readOnlyDays} onActivate={(e) => onDayCellClick?.({
                                 employeeId: emp.id,
                                 monthIndex: col.monthIndex,
                                 day: col.day,
@@ -286,11 +323,18 @@ export function VacationContinuousTable({ year, employees, marks, legendItems = 
         </table>
       </div>
       <p className="vac-cont__hint-mini">
-        Подсказка: наведите на ячейку дня — дата, ФИО и вид отсутствия.
-        {!readOnlyDays && ' С правом редактирования: клик по дню — выбрать вид или снять отметку.'} Колонки «Кол-во» /
-        «Всего» — число дней отсутствий.
-        {payroll?.visible &&
-            ' Колонки «Отп.» / «Бол.» — ориентировочный расчёт по средней зарплате из панели выше (не замена бухучёту).'}
+        <span className="vac-cont__hint-icon" aria-hidden>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
+            <path d="M8 7.2V11M8 4.9v.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+        </span>
+        <span>
+          Подсказка: наведите на ячейку дня — дата, ФИО и вид отсутствия; при сохранённом основании — также комментарий или вложения (пока только в этом браузере).
+          {!readOnlyDays && ' С правом редактирования: клик по дню — выбрать вид или снять отметку.'} Колонки «Кол-во» / «Всего» — число дней отсутствий.
+          {payroll?.visible &&
+              ' Колонки «Отп.» / «Бол.» — ориентировочный расчёт по средней зарплате из панели выше (не замена бухучёту).'}
+        </span>
       </p>
     </div>);
 }

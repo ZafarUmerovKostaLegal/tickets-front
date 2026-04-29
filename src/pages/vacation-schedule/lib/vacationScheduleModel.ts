@@ -13,11 +13,11 @@ export const VACATION_ABSENCE_LEGEND: ReadonlyArray<{
     color: string;
     label: string;
 }> = [
-    { kind: 'annual', color: '#d9b3ff', label: 'ежегодный отпуск' },
-    { kind: 'sick', color: '#ff9999', label: 'отсутствие по болезни' },
-    { kind: 'dayoff', color: '#33ccff', label: 'Day Off (нерабочий)' },
-    { kind: 'business', color: '#99e699', label: 'командировка' },
-    { kind: 'remote', color: '#ffff00', label: 'дистанционный режим' },
+    { kind: 'annual', color: '#cbb2f0', label: 'Ежегодный отпуск' },
+    { kind: 'sick', color: '#f7b2d1', label: 'Отсутствие по болезни' },
+    { kind: 'dayoff', color: '#b2d8f7', label: 'Day Off (нерабочий)' },
+    { kind: 'business', color: '#b2e3c8', label: 'Командировка' },
+    { kind: 'remote', color: '#f5e6a8', label: 'Дистанционный режим' },
 ];
 export const VACATION_KIND_COLORS: Record<VacationAbsenceKind, string> = Object.fromEntries(VACATION_ABSENCE_LEGEND.map((x) => [x.kind, x.color])) as Record<VacationAbsenceKind, string>;
 const API_KIND_TO_UI: Partial<Record<string, VacationAbsenceKind>> = {
@@ -214,6 +214,31 @@ export type VacationMarkCell = {
     absenceDayId?: number;
 };
 export type VacationMarksState = Record<string, VacationMarkCell>;
+/** For a single employee row: which marked cells start / end a contiguous run of the same kind (for bar rounding). */
+export function vacationRowMarkRunEdges(userId: number, year: number, dayColumns: VacationYearDayColumn[], marks: VacationMarksState): {
+    runStartKeys: Set<string>;
+    runEndKeys: Set<string>;
+} {
+    const runStartKeys = new Set<string>();
+    const runEndKeys = new Set<string>();
+    const n = dayColumns.length;
+    for (let i = 0; i < n; i += 1) {
+        const col = dayColumns[i]!;
+        const key = vacationCellKey(userId, year, col.monthIndex, col.day);
+        const kind = marks[key]?.kind;
+        if (!kind)
+            continue;
+        const prevCol = i > 0 ? dayColumns[i - 1]! : undefined;
+        const prevKind = prevCol ? marks[vacationCellKey(userId, year, prevCol.monthIndex, prevCol.day)]?.kind : undefined;
+        const nextCol = i < n - 1 ? dayColumns[i + 1]! : undefined;
+        const nextKind = nextCol ? marks[vacationCellKey(userId, year, nextCol.monthIndex, nextCol.day)]?.kind : undefined;
+        if (kind !== prevKind)
+            runStartKeys.add(key);
+        if (kind !== nextKind)
+            runEndKeys.add(key);
+    }
+    return { runStartKeys, runEndKeys };
+}
 function parseIsoDateParts(iso: string): {
     year: number;
     monthIndex: number;

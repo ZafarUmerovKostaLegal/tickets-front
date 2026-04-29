@@ -1,7 +1,7 @@
 .vac-cont {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.85rem;
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -13,7 +13,7 @@
 .vac-cont__legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem 0.65rem;
+  gap: 0.45rem 0.5rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -23,26 +23,36 @@
 .vac-cont__legend-item {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.4rem;
   margin: 0;
-  padding: 0.2rem 0.45rem;
+  padding: 0.32rem 0.65rem;
   font-size: 0.6875rem;
-  line-height: 1.3;
-  border: 1px solid var(--app-border, #e2e8f0);
-  border-radius: 8px;
-  background: var(--vac-legend-bg, #eee);
+  line-height: 1.25;
+  font-weight: 500;
+  border: 1px solid #ededed;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
   cursor: default;
+  color: var(--app-text, #334155);
 }
 
 .vac-cont__legend-item:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.1);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
 }
 
-.vac-cont__legend-dash {
-  font-weight: 600;
-  opacity: 0.8;
+.vac-cont__legend-swatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in srgb, var(--app-text, #0f172a) 10%, transparent);
+}
+
+.vac-cont__legend-label {
+  white-space: nowrap;
 }
 
 .vac-cont__toolbar {
@@ -109,8 +119,8 @@
   overflow: auto;
   overflow-x: auto;
   overflow-y: auto;
-  border: 1px solid var(--app-border, #e2e8f0);
-  border-radius: 8px;
+  border: 1px solid #ededed;
+  border-radius: 12px;
   background: var(--app-surface, #fff);
   scrollbar-gutter: stable;
   scrollbar-width: thin;
@@ -165,10 +175,10 @@
   --vac-pr-m: 4rem;
   --vac-h1: 2.5rem;
   --vac-h2: 1.75rem;
-  --vac-border: #e2e8f0;
-  --vac-border-strong: #cbd5e1;
-  --vac-weekend-bg: #f1f5f9;
-  --vac-weekend-cell: #f8fafc;
+  --vac-border: #ededed;
+  --vac-border-strong: #e0e0e0;
+  --vac-weekend-bg: #e8f4fc;
+  --vac-weekend-cell: #eef7fd;
   
   --vac-sticky-overlap: 5px;
 }
@@ -206,8 +216,9 @@
   vertical-align: middle;
   line-height: var(--vac-h1);
   border: 1px solid var(--vac-border);
-  background: #fafafa;
+  background: #f7f8fa;
   color: var(--app-text, #334155);
+  font-size: 0.8125rem;
 }
 
 .vac-cont__month-title--boundary {
@@ -534,9 +545,38 @@
   cursor: pointer;
 }
 
-.vac-cont__cell--selected {
-  box-shadow: inset 0 0 0 2px var(--app-accent, #4f46e5);
-  z-index: 2;
+.vac-cont__cell--has-basis {
+  position: relative;
+}
+
+.vac-cont__basis-pin {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--app-text, #0f172a) 50%, transparent);
+  width: 11px;
+  height: 11px;
+  z-index: 1;
+}
+
+.vac-cont__basis-pin-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.vac-cont__cell--mark-run-start {
+  border-top-left-radius: 5px;
+  border-bottom-left-radius: 5px;
+}
+
+.vac-cont__cell--mark-run-end {
+  border-top-right-radius: 5px;
+  border-bottom-right-radius: 5px;
 }
 
 .vac-cont__sum-month {
@@ -653,10 +693,20 @@
 
 .vac-cont__hint-mini {
   margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
   font-size: 0.6875rem;
   line-height: 1.45;
   color: var(--app-muted, #64748b);
   flex-shrink: 0;
+}
+
+.vac-cont__hint-icon {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: #94a3b8;
+  display: flex;
 }
 
 

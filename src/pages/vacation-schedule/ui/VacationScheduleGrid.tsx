@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { deleteVacationAbsenceDay, getVacationKindCodes, getVacationKindLegend, listVacationAbsenceDays, listVacationScheduleEmployees, patchVacationAbsenceDay, postVacationEmployeeAbsenceDay, } from '@entities/vacation';
 import { useCurrentUser } from '@shared/hooks';
 import { canEditVacationSchedule } from '../model/vacationScheduleAccess';
+import { loadVacationAbsenceBasisMap, pruneVacationAbsenceBasisForYear, removeVacationAbsenceBasis, setVacationAbsenceBasis, type VacationAbsenceBasis, } from '../lib/vacationAbsenceBasisStorage';
 import { coerceVacationAbsenceDayRow, vacationCellKey, vacationIsoDateFromParts, vacationMarksFromAbsenceDays, vacationUiLegendFromKindCodes, vacationUiLegendFromKindLegendApi, type VacationMarkCell, type VacationMarksState, type VacationScheduleEmployeeRow, type VacationUiLegendItem, } from '../lib/vacationScheduleModel';
 import type { VacationAbsenceDayApi } from '@entities/vacation';
 import { loadVacationPayrollPrefs, saveVacationPayrollPrefs, type VacationPayrollParams, type VacationPayrollPrefs, } from '../lib/vacationPayrollFormulas';
@@ -43,6 +44,7 @@ export function VacationScheduleGrid() {
     const [mutationError, setMutationError] = useState<string | null>(null);
     const [editModeActive, setEditModeActive] = useState(false);
     const [payrollPrefs, setPayrollPrefs] = useState<VacationPayrollPrefs>(() => loadVacationPayrollPrefs(clampYear(currentYear)));
+    const [basisByCell, setBasisByCell] = useState<Record<string, VacationAbsenceBasis>>(() => loadVacationAbsenceBasisMap());
     useEffect(() => {
         let cancelled = false;
         void getVacationKindLegend()
@@ -110,6 +112,12 @@ export function VacationScheduleGrid() {
             cancelled = true;
         };
     }, [year, loadToken]);
+    useEffect(() => {
+        if (loading || loadError)
+            return;
+        const markKeys = new Set(Object.keys(marks));
+        setBasisByCell((prev) => pruneVacationAbsenceBasisForYear(year, markKeys, prev));
+    }, [loading, loadError, year, marks]);
     const applyYearFromInput = () => {
         const n = Number.parseInt(yearInput.trim(), 10);
         if (!Number.isFinite(n))
@@ -166,6 +174,9 @@ export function VacationScheduleGrid() {
             setDaySaving(false);
         }
     }, [closeDayPicker, dayPicker, refetch, year]);
+    const persistBasis = useCallback((cellKey: string, basis: VacationAbsenceBasis | null) => {
+        setBasisByCell((prev) => setVacationAbsenceBasis(cellKey, basis, prev));
+    }, []);
     const handleClearDay = useCallback(async () => {
         if (!dayPicker?.current)
             return;
@@ -174,10 +185,12 @@ export function VacationScheduleGrid() {
             setMutationError('Нельзя снять отметку без id записи. Нажмите «Показать» по году или обновите страницу.');
             return;
         }
+        const basisKey = vacationCellKey(dayPicker.employeeId, year, dayPicker.monthIndex, dayPicker.day);
         setDaySaving(true);
         setMutationError(null);
         try {
             await deleteVacationAbsenceDay(aid);
+            setBasisByCell((prev) => removeVacationAbsenceBasis(basisKey, prev));
             closeDayPicker();
             refetch();
         }
@@ -187,7 +200,7 @@ export function VacationScheduleGrid() {
         finally {
             setDaySaving(false);
         }
-    }, [closeDayPicker, dayPicker, refetch]);
+    }, [closeDayPicker, dayPicker, refetch, year]);
     const popoverOpen = dayPicker != null && canEditSchedule;
     const popoverCurrent = useMemo(() => {
         if (!dayPicker)
@@ -219,7 +232,181 @@ export function VacationScheduleGrid() {
             return next;
         });
     }, [year]);
+    const scheduleTodayStats = useMemo(() => {
+        const total = employees.length;
+        if (year !== currentYear || total === 0) {
+            return {
+                total,
+                vacation: 0,
+                sick: 0,
+                remote: 0,
+                business: 0,
+                todayInactive: true,
+            };
+        }
+        const now = new Date();
+        const mi = now.getMonth();
+        const d = now.getDate();
+        let vacation = 0;
+        let sick = 0;
+        let remote = 0;
+        let business = 0;
+        for (const emp of employees) {
+            const k = marks[vacationCellKey(emp.id, year, mi, d)]?.kind;
+            if (k === 'annual')
+                vacation += 1;
+            else if (k === 'sick')
+                sick += 1;
+            else if (k === 'remote')
+                remote += 1;
+            else if (k === 'business')
+                business += 1;
+        }
+        return {
+            total,
+            vacation,
+            sick,
+            remote,
+            business,
+            todayInactive: false,
+        };
+    }, [employees, marks, year, currentYear]);
     return (<div className="vac-vsg">
+      <div className="vac-vsg__top">
+        <div className="vac-vsg__payroll-bar" aria-label="Ориентировочный расчёт выплат">
+          <label className="vac-vsg__payroll-toggle vac-vsg__payroll-toggle--hero">
+            <input type="checkbox" checked={payrollPrefs.showColumns} onChange={(e) => setPayrollShowColumns(e.target.checked)}/>
+            <span>Показать оценку отпускных и больничных</span>
+          </label>
+        </div>
+        {payrollPrefs.showColumns && (<div className="vac-vsg__payroll-expand">
+            <div className="vac-vsg__payroll-fields">
+              <label className="vac-vsg__payroll-field">
+                <span>Средняя зарплата / мес., ₽</span>
+                <input type="number" min={0} step={1000} className="vac-vsg__payroll-input" value={payrollPrefs.params.avgMonthlySalary > 0 ? payrollPrefs.params.avgMonthlySalary : ''} onChange={(e) => {
+                const raw = e.target.value.trim();
+                if (raw === '') {
+                    patchPayrollParams({ avgMonthlySalary: 0 });
+                    return;
+                }
+                const v = Number.parseFloat(raw);
+                patchPayrollParams({ avgMonthlySalary: Number.isFinite(v) && v >= 0 ? v : 0 });
+            }} placeholder="0"/>
+              </label>
+              <label className="vac-vsg__payroll-field">
+                <span>Ср. кал. дней в мес.</span>
+                <input type="number" min={1} max={31} step={0.1} className="vac-vsg__payroll-input vac-vsg__payroll-input--narrow" value={payrollPrefs.params.avgCalendarDaysPerMonth} onChange={(e) => {
+                const v = Number.parseFloat(e.target.value);
+                patchPayrollParams({
+                    avgCalendarDaysPerMonth: Number.isFinite(v) ? Math.min(31, Math.max(1, v)) : 29.3,
+                });
+            }}/>
+              </label>
+              <label className="vac-vsg__payroll-field">
+                <span>Ставка больничного (0–1)</span>
+                <input type="number" min={0} max={1} step={0.05} className="vac-vsg__payroll-input vac-vsg__payroll-input--narrow" value={payrollPrefs.params.sickLeavePayRate} onChange={(e) => {
+                const v = Number.parseFloat(e.target.value);
+                patchPayrollParams({
+                    sickLeavePayRate: Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.6,
+                });
+            }}/>
+              </label>
+              <label className="vac-vsg__payroll-field">
+                <span>Коэфф. отпуска (0–2)</span>
+                <input type="number" min={0} max={2} step={0.05} className="vac-vsg__payroll-input vac-vsg__payroll-input--narrow" value={payrollPrefs.params.vacationPayRate} onChange={(e) => {
+                const v = Number.parseFloat(e.target.value);
+                patchPayrollParams({
+                    vacationPayRate: Number.isFinite(v) ? Math.min(2, Math.max(0, v)) : 1,
+                });
+            }}/>
+              </label>
+            </div>
+            <p className="vac-vsg__payroll-note">
+              Ориентир: среднедневной = зарплата / ср. дней в месяце; отпускные и больничные считаются по дням в графике с видами «ежегодный отпуск» и «болезнь». Не учитывает лимиты ФСС, стаж, МРОТ и пр.
+            </p>
+          </div>)}
+        <div className="vac-vsg__stats" aria-label="Сводка на сегодня">
+          <div className="vac-vsg__stat-card">
+            <div className="vac-vsg__stat-icon vac-vsg__stat-icon--slate" aria-hidden>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+            </div>
+            <div className="vac-vsg__stat-text">
+              <span className="vac-vsg__stat-value">
+                {scheduleTodayStats.total}
+              </span>
+              <span className="vac-vsg__stat-sub">всего</span>
+            </div>
+          </div>
+          <div className="vac-vsg__stat-card">
+            <div className="vac-vsg__stat-icon vac-vsg__stat-icon--purple" aria-hidden>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="7" width="20" height="14" rx="2"/>
+                <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+              </svg>
+            </div>
+            <div className="vac-vsg__stat-text">
+              <span className="vac-vsg__stat-value">
+                {scheduleTodayStats.todayInactive ? '—' : scheduleTodayStats.vacation}
+              </span>
+              <span className="vac-vsg__stat-sub">
+                {scheduleTodayStats.todayInactive ? 'не текущий год' : 'сегодня'}
+              </span>
+            </div>
+          </div>
+          <div className="vac-vsg__stat-card">
+            <div className="vac-vsg__stat-icon vac-vsg__stat-icon--rose" aria-hidden>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <circle cx="12" cy="12" r="9"/>
+                <path d="M12 8v8M8 12h8"/>
+              </svg>
+            </div>
+            <div className="vac-vsg__stat-text">
+              <span className="vac-vsg__stat-value">
+                {scheduleTodayStats.todayInactive ? '—' : scheduleTodayStats.sick}
+              </span>
+              <span className="vac-vsg__stat-sub">
+                {scheduleTodayStats.todayInactive ? 'не текущий год' : 'сегодня'}
+              </span>
+            </div>
+          </div>
+          <div className="vac-vsg__stat-card">
+            <div className="vac-vsg__stat-icon vac-vsg__stat-icon--sky" aria-hidden>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="2" y="4" width="20" height="14" rx="2"/>
+                <path d="M6 18h12M8 22h8"/>
+              </svg>
+            </div>
+            <div className="vac-vsg__stat-text">
+              <span className="vac-vsg__stat-value">
+                {scheduleTodayStats.todayInactive ? '—' : scheduleTodayStats.remote}
+              </span>
+              <span className="vac-vsg__stat-sub">
+                {scheduleTodayStats.todayInactive ? 'не текущий год' : 'сегодня'}
+              </span>
+            </div>
+          </div>
+          <div className="vac-vsg__stat-card">
+            <div className="vac-vsg__stat-icon vac-vsg__stat-icon--green" aria-hidden>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+              </svg>
+            </div>
+            <div className="vac-vsg__stat-text">
+              <span className="vac-vsg__stat-value">
+                {scheduleTodayStats.todayInactive ? '—' : scheduleTodayStats.business}
+              </span>
+              <span className="vac-vsg__stat-sub">
+                {scheduleTodayStats.todayInactive ? 'не текущий год' : 'сегодня'}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="vac-vsg__toolbar">
         <label className="vac-vsg__year-label" htmlFor="vac-year-input">
           Год графика (2000–2100)
@@ -253,59 +440,6 @@ export function VacationScheduleGrid() {
           </>)}
       </div>
 
-      <div className="vac-vsg__payroll-panel" aria-label="Ориентировочный расчёт выплат">
-        <label className="vac-vsg__payroll-toggle">
-          <input type="checkbox" checked={payrollPrefs.showColumns} onChange={(e) => setPayrollShowColumns(e.target.checked)}/>
-          <span>Показать оценку отпускных и больничных</span>
-        </label>
-        {payrollPrefs.showColumns && (<div className="vac-vsg__payroll-fields">
-            <label className="vac-vsg__payroll-field">
-              <span>Средняя зарплата / мес., ₽</span>
-              <input type="number" min={0} step={1000} className="vac-vsg__payroll-input" value={payrollPrefs.params.avgMonthlySalary > 0 ? payrollPrefs.params.avgMonthlySalary : ''} onChange={(e) => {
-                const raw = e.target.value.trim();
-                if (raw === '') {
-                    patchPayrollParams({ avgMonthlySalary: 0 });
-                    return;
-                }
-                const v = Number.parseFloat(raw);
-                patchPayrollParams({ avgMonthlySalary: Number.isFinite(v) && v >= 0 ? v : 0 });
-            }} placeholder="0"/>
-            </label>
-            <label className="vac-vsg__payroll-field">
-              <span>Ср. кал. дней в мес.</span>
-              <input type="number" min={1} max={31} step={0.1} className="vac-vsg__payroll-input vac-vsg__payroll-input--narrow" value={payrollPrefs.params.avgCalendarDaysPerMonth} onChange={(e) => {
-                const v = Number.parseFloat(e.target.value);
-                patchPayrollParams({
-                    avgCalendarDaysPerMonth: Number.isFinite(v) ? Math.min(31, Math.max(1, v)) : 29.3,
-                });
-            }}/>
-            </label>
-            <label className="vac-vsg__payroll-field">
-              <span>Ставка больничного (0–1)</span>
-              <input type="number" min={0} max={1} step={0.05} className="vac-vsg__payroll-input vac-vsg__payroll-input--narrow" value={payrollPrefs.params.sickLeavePayRate} onChange={(e) => {
-                const v = Number.parseFloat(e.target.value);
-                patchPayrollParams({
-                    sickLeavePayRate: Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0.6,
-                });
-            }}/>
-            </label>
-            <label className="vac-vsg__payroll-field">
-              <span>Коэфф. отпуска (0–2)</span>
-              <input type="number" min={0} max={2} step={0.05} className="vac-vsg__payroll-input vac-vsg__payroll-input--narrow" value={payrollPrefs.params.vacationPayRate} onChange={(e) => {
-                const v = Number.parseFloat(e.target.value);
-                patchPayrollParams({
-                    vacationPayRate: Number.isFinite(v) ? Math.min(2, Math.max(0, v)) : 1,
-                });
-            }}/>
-            </label>
-          </div>)}
-        {payrollPrefs.showColumns && (<p className="vac-vsg__payroll-note">
-            Ориентир: среднедневной = зарплата / ср. дней в месяце; отпускные и больничные считаются по дням в графике с
-            видами «ежегодный отпуск» и «болезнь». Не учитывает лимиты ФСС, стаж, МРОТ и пр. — для справки, не для
-            отчётности.
-          </p>)}
-      </div>
-
       {mutationError && (<p className="vac-vsg__mutation-err" role="alert">
           {mutationError}
         </p>)}
@@ -319,7 +453,7 @@ export function VacationScheduleGrid() {
 
       {loading && <VacationScheduleSkeleton />}
 
-      {!loading && !loadError && (<VacationContinuousTable year={year} employees={employees} marks={marks} legendItems={legendItems} onEmployeeClick={(id) => setDetailEmployeeId(id)} emptyStateImportHint={canEditSchedule} readOnlyDays={!canEditSchedule || !editModeActive} onDayCellClick={handleDayCellClick} selectedKey={selectedKey} todayYear={currentYear} payroll={{
+      {!loading && !loadError && (<VacationContinuousTable year={year} employees={employees} marks={marks} legendItems={legendItems} basisByCell={basisByCell} onEmployeeClick={(id) => setDetailEmployeeId(id)} emptyStateImportHint={canEditSchedule} readOnlyDays={!canEditSchedule || !editModeActive} onDayCellClick={handleDayCellClick} selectedKey={selectedKey} todayYear={currentYear} payroll={{
                 visible: payrollPrefs.showColumns,
                 params: payrollPrefs.params,
             }}/>)}
@@ -331,6 +465,6 @@ export function VacationScheduleGrid() {
 
       {detailEmployeeId != null && (<VacationEmployeeDetailModal employeeId={detailEmployeeId} year={year} onClose={() => setDetailEmployeeId(null)} canEdit={canEditSchedule} onScheduleMutated={refetch}/>)}
 
-      <VacationDayEditPopover open={popoverOpen} x={dayPicker?.clientX ?? 0} y={dayPicker?.clientY ?? 0} legendItems={legendItems} current={popoverCurrent} saving={daySaving} context={popoverContext} onPickKindCode={(code) => void handlePickKindCode(code)} onClear={() => void handleClearDay()} onClose={closeDayPicker}/>
+      <VacationDayEditPopover key={selectedKey ?? 'vac-day-closed'} open={popoverOpen} x={dayPicker?.clientX ?? 0} y={dayPicker?.clientY ?? 0} legendItems={legendItems} current={popoverCurrent} saving={daySaving} cellKey={selectedKey} initialBasis={selectedKey ? basisByCell[selectedKey] : undefined} onPersistBasis={persistBasis} context={popoverContext} onPickKindCode={(code) => void handlePickKindCode(code)} onClear={() => void handleClearDay()} onClose={closeDayPicker}/>
     </div>);
 }
