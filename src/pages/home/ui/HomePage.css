@@ -2340,6 +2340,9 @@
   margin-right: auto;
   padding-left: 0.25rem;
 }
+.home-page__header-back {
+  margin-bottom: 0.35rem;
+}
 .home-page__header-eyebrow {
   font-size: 0.65rem;
   font-weight: 700;

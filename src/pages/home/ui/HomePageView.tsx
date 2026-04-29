@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { AppPageSettings } from '@shared/ui';
+import { useLocation } from 'react-router-dom';
+import { AppPageSettings, AppBackButton } from '@shared/ui';
+import { routes } from '@shared/config';
 import { useHome } from '../model/HomeContext';
 import { TicketCreateModal } from './TicketCreateModal';
 import { HomeStats } from './HomeStats';
@@ -29,12 +31,15 @@ export function HomePageView() {
         setNotificationsOpen(false);
     };
     const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const location = useLocation();
+    const showBackToHub = location.pathname === routes.tickets;
     return (<div className="home-page">
       {showCreateForm && (<TicketCreateModal onClose={() => setShowCreateForm(false)} onSubmit={handleCreateSubmit} theme={createForm.theme} description={createForm.description} category={createForm.category} priority={createForm.priority} onThemeChange={(v) => setCreateForm((f) => ({ ...f, theme: v }))} onDescriptionChange={(v) => setCreateForm((f) => ({ ...f, description: v }))} onCategoryChange={(v) => setCreateForm((f) => ({ ...f, category: v }))} onPriorityChange={(v) => setCreateForm((f) => ({ ...f, priority: v }))} categories={TICKET_CATEGORIES} priorities={priorities} file={createFile} onFileChange={setCreateFile} isDragging={isDraggingFile} onDragStart={() => setIsDraggingFile(true)} onDragEnd={() => setIsDraggingFile(false)} onDrop={(f) => setCreateFile(f)} fileInputRef={fileInputRef} categoryDropdownOpen={categoryDropdownOpen} setCategoryDropdownOpen={setCategoryDropdownOpen} priorityDropdownOpen={priorityDropdownOpen} setPriorityDropdownOpen={setPriorityDropdownOpen} categoryDropdownRef={categoryDropdownRef} priorityDropdownRef={priorityDropdownRef} submitting={createSubmitting} error={createError}/>)}
 
       <main className="home-page__main">
         <header className="home-page__header">
           <div className="home-page__header-left">
+            {showBackToHub && (<AppBackButton to={routes.home} label="На главную" className="app-back-btn home-page__header-back" ariaLabel="На главную"/>)}
             <span className="home-page__header-eyebrow">Тикет-система</span>
             <h1 className="home-page__header-h1">Заявки</h1>
           </div>
