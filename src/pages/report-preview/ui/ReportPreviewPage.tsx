@@ -28,7 +28,12 @@ import {
     listClientTasks,
     canOverrideReportPreviewWeeklyLock,
     listPartnerUsersWithProjectAccessToProject,
+    listPartnerReportConfirmationsPending,
+    listPartnerReportConfirmationsConfirmed,
+    confirmPartnerReportConfirmation,
+    parsePartnerReportConfirmationRequest,
     type ProjectPartnerAccessRow,
+    type PartnerReportConfirmationRequest,
 } from '@entities/time-tracking';
 import { readReportPreviewTransfer, clearReportPreviewTransfer, normalizeReportPreviewTransfer, writeReportPreviewTransfer, type ReportPreviewTransferV2, } from '@entities/time-tracking/model/reportPreviewTransfer';
 import { coerceGroupByForType, type ExpenseGroup, type TimeGroup, } from '@entities/time-tracking/model/reportsPanelConfig';
@@ -178,6 +183,206 @@ function reportPreviewEmptyBlock(rangeFrom: string, rangeTo: string) {
         <p className="tt-rp-preview__period-line">{formatIsoRangeTitle(rangeFrom, rangeTo)}</p>
         <p className="tt-rp-preview__muted tt-rp-preview__no-table-msg">Нет данных за период и выбранные фильтры.</p>
       </div>);
+}
+function rpPartnerConfirmPeriodMatches(req: {
+    dateFrom: string;
+    dateTo: string;
+}, from: string, to: string): boolean {
+    return req.dateFrom === from.slice(0, 10) && req.dateTo === to.slice(0, 10);
+}
+function rpPartnerConfirmSessionKey(projectId: string, from: string, to: string): string {
+    return `tt-partner-confirm:${projectId.trim()}:${from.slice(0, 10)}:${to.slice(0, 10)}`;
+}
+function rpLoadPartnerConfirmSession(projectId: string, from: string, to: string): PartnerReportConfirmationRequest | null {
+    try {
+        const raw = sessionStorage.getItem(rpPartnerConfirmSessionKey(projectId, from, to));
+        if (!raw)
+            return null;
+        return parsePartnerReportConfirmationRequest(JSON.parse(raw));
+    }
+    catch {
+        return null;
+    }
+}
+function rpSavePartnerConfirmSession(projectId: string, from: string, to: string, req: PartnerReportConfirmationRequest): void {
+    try {
+        sessionStorage.setItem(rpPartnerConfirmSessionKey(projectId, from, to), JSON.stringify(req));
+    }
+    catch {
+        /* ignore */
+    }
+}
+function reportPreviewConfirmationProjectId(xfer: ReportPreviewTransferV2, selectedProjectId: string): string {
+    const pid = selectedProjectId.trim();
+    if (!pid)
+        return '';
+    if (xfer.reportType === 'time' && xfer.groupBy === 'projects')
+        return pid;
+    if ((xfer.reportType === 'expenses' || xfer.reportType === 'confirmed-expenses') && xfer.groupBy === 'projects')
+        return pid;
+    return '';
+}
+function reportPreviewNeedsProjectForConfirmation(xfer: ReportPreviewTransferV2): boolean {
+    if (xfer.reportType === 'time' && xfer.groupBy === 'projects')
+        return true;
+    return (xfer.reportType === 'expenses' || xfer.reportType === 'confirmed-expenses') && xfer.groupBy === 'projects';
+}
+function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, }: {
+    projectId: string;
+    dateFrom: string;
+    dateTo: string;
+    userId: number | null;
+}) {
+    const { showAlert, showConfirm } = useAppDialog();
+    const [partners, setPartners] = useState<ProjectPartnerAccessRow[]>([]);
+    const [partnersLoad, setPartnersLoad] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+    const [pendingReqs, setPendingReqs] = useState<PartnerReportConfirmationRequest[]>([]);
+    const [confirmedReqs, setConfirmedReqs] = useState<PartnerReportConfirmationRequest[]>([]);
+    const [listsLoad, setListsLoad] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+    const [confirmBusy, setConfirmBusy] = useState(false);
+    const [sessionSnapshot, setSessionSnapshot] = useState<PartnerReportConfirmationRequest | null>(null);
+    const df = dateFrom.slice(0, 10);
+    const dt = dateTo.slice(0, 10);
+    const pid = projectId.trim();
+    useEffect(() => {
+        let cancelled = false;
+        setPartnersLoad('loading');
+        void listPartnerUsersWithProjectAccessToProject(projectId).then((rows) => {
+            if (!cancelled) {
+                setPartners(rows);
+                setPartnersLoad('ok');
+            }
+        }).catch(() => {
+            if (!cancelled)
+                setPartnersLoad('error');
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId]);
+    useEffect(() => {
+        setSessionSnapshot(rpLoadPartnerConfirmSession(pid, df, dt));
+    }, [pid, df, dt]);
+    useEffect(() => {
+        let cancelled = false;
+        if (userId == null) {
+            setPendingReqs([]);
+            setConfirmedReqs([]);
+            setListsLoad('idle');
+            return;
+        }
+        setListsLoad('loading');
+        void Promise.all([
+            listPartnerReportConfirmationsPending(),
+            listPartnerReportConfirmationsConfirmed(),
+        ]).then(([p, c]) => {
+            if (!cancelled) {
+                setPendingReqs(p);
+                setConfirmedReqs(c);
+                setListsLoad('ok');
+            }
+        }).catch(() => {
+            if (!cancelled) {
+                setPendingReqs([]);
+                setConfirmedReqs([]);
+                setListsLoad('error');
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId, df, dt, userId]);
+    const pendingForProject = useMemo(() => pendingReqs.find((r) => r.projectId === pid && rpPartnerConfirmPeriodMatches(r, df, dt)), [pendingReqs, pid, df, dt]);
+    const confirmedForProject = useMemo(() => confirmedReqs.find((r) => r.projectId === pid && rpPartnerConfirmPeriodMatches(r, df, dt)), [confirmedReqs, pid, df, dt]);
+    const selfPartner = userId != null ? partners.find((p) => p.authUserId === userId) : undefined;
+    const canActAsPartner = Boolean(selfPartner);
+    const mySig = useMemo(() => {
+        if (userId == null)
+            return undefined;
+        const hit = (req: PartnerReportConfirmationRequest | null | undefined) => req?.signatures.find((s) => s.partnerAuthUserId === userId);
+        return hit(confirmedForProject) ?? hit(sessionSnapshot);
+    }, [userId, confirmedForProject, sessionSnapshot]);
+    const fullyConfirmed = confirmedForProject?.status === 'fully_confirmed';
+    const refreshLists = async () => {
+        const [p, c] = await Promise.all([
+            listPartnerReportConfirmationsPending(),
+            listPartnerReportConfirmationsConfirmed(),
+        ]);
+        setPendingReqs(p);
+        setConfirmedReqs(c);
+    };
+    const fmtConfirmed = (iso: string) => {
+        try {
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime()))
+                return iso;
+            return d.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+        }
+        catch {
+            return iso;
+        }
+    };
+    const periodLabel = formatIsoRangeTitle(df, dt);
+    const handleConfirm = async () => {
+        if (!canActAsPartner || confirmBusy || !pendingForProject)
+            return;
+        const ok = await showConfirm({
+            title: 'Подтвердить принятие отчёта?',
+            message: `Период: ${periodLabel}. Подтверждаете принятие отчётности по проекту как партнёр?`,
+            confirmLabel: 'Подтвердить',
+        });
+        if (!ok)
+            return;
+        setConfirmBusy(true);
+        try {
+            const out = await confirmPartnerReportConfirmation(pendingForProject.id);
+            rpSavePartnerConfirmSession(pid, df, dt, out);
+            setSessionSnapshot(out);
+            await refreshLists();
+        }
+        catch (e) {
+            await showAlert({
+                message: e instanceof Error ? e.message : 'Не удалось отправить подтверждение.',
+            });
+        }
+        finally {
+            setConfirmBusy(false);
+        }
+    };
+    return (<div className="tt-rp-preview__partner-bar" role="region" aria-label="Подтверждение отчёта партнёром">
+      <div className="tt-rp-preview__partner-bar-head">
+        <span className="tt-rp-preview__partner-bar-title">Подтверждение отчёта</span>
+        {partnersLoad === 'error' ? (<span className="tt-rp-preview__partner-bar-warn">Не удалось загрузить список партнёров проекта.</span>) : null}
+      </div>
+      <p className="tt-rp-preview__partner-bar-desc">
+        Запросы на подпись подтягиваются с сервера для выбранного проекта и для дат периода предпросмотра (С / По). Если автор отчёта уже отправил такой запрос, вы увидите кнопку подтверждения (доступна партнёрам проекта в учёте времени).
+      </p>
+      {!canActAsPartner && partnersLoad === 'ok' && partners.length > 0 ? (<p className="tt-rp-preview__partner-bar-muted">
+          Вы не входите в список партнёров проекта с доступом в учёте времени — подтверждение недоступно.
+        </p>) : null}
+      {!canActAsPartner && partnersLoad === 'ok' && partners.length === 0 ? (<p className="tt-rp-preview__partner-bar-muted">Для проекта не найдены партнёры для цепочки подписей.</p>) : null}
+      {canActAsPartner ? (<div className="tt-rp-preview__partner-bar-actions">
+          {listsLoad === 'loading' ? (<span className="tt-rp-preview__partner-bar-muted">Загрузка запросов…</span>) : null}
+          {listsLoad === 'error' ? (<span className="tt-rp-preview__partner-bar-err" role="alert">
+              Не удалось загрузить статус подтверждений.
+            </span>) : null}
+          {listsLoad === 'ok' && pendingForProject ? (<button type="button" className="tt-rp-preview__partner-bar-btn" onClick={() => void handleConfirm()} disabled={confirmBusy}>
+              {confirmBusy ? 'Отправка…' : 'Подтвердить принятие отчёта'}
+            </button>) : null}
+          {listsLoad === 'ok' && fullyConfirmed && mySig ? (<span className="tt-rp-preview__partner-bar-ok">
+              Все партнёры подтвердили отчёт. Ваша подпись: {fmtConfirmed(mySig.confirmedAt)}.
+            </span>) : null}
+          {listsLoad === 'ok' && fullyConfirmed && !mySig ? (<span className="tt-rp-preview__partner-bar-ok">
+              Отчёт за этот период полностью подтверждён партнёрами.
+            </span>) : null}
+          {listsLoad === 'ok' && !fullyConfirmed && !pendingForProject && mySig ? (<span className="tt-rp-preview__partner-bar-ok">
+              Вы подтвердили ({fmtConfirmed(mySig.confirmedAt)}). Ожидаются другие партнёры.
+            </span>) : null}
+          {listsLoad === 'ok' && !pendingForProject && !mySig && !fullyConfirmed ? (<span className="tt-rp-preview__partner-bar-muted">
+              Нет активного запроса на подтверждение для этого проекта и периода. Запрос отправляет автор снимка отчёта (submit на API); после этого здесь появится кнопка.
+            </span>) : null}
+        </div>) : null}
+    </div>);
 }
 export type ReportPreviewNavBarPeriod = {
     from: string;
@@ -1025,6 +1230,16 @@ export function ReportPreviewPage() {
     const budgetExcelFilterSlot = useMemo(() => (<ReportPreviewEmployeeExcelFilter uniqueNames={budgetUniqueNames} excludedNames={employeeExcluded} onExcludedChange={setEmployeeExcluded} sortAsc={employeeSortAsc} onSortAscChange={setEmployeeSortAsc}/>), [budgetUniqueNames, employeeExcluded, employeeSortAsc]);
     const liveTitle = xferSnapshot ? previewLiveTitle(xferSnapshot) : '';
     const xferExists = readReportPreviewTransfer() != null;
+    const confirmationProjectId = useMemo(() => {
+        if (!xferSnapshot || !rangeFrom || !rangeTo)
+            return '';
+        return reportPreviewConfirmationProjectId(xferSnapshot, selectedProjectId);
+    }, [xferSnapshot, rangeFrom, rangeTo, selectedProjectId]);
+    const partnerConfirmPickHint = useMemo(() => {
+        if (!xferSnapshot || !rangeFrom || !rangeTo)
+            return false;
+        return reportPreviewNeedsProjectForConfirmation(xferSnapshot) && !selectedProjectId.trim();
+    }, [xferSnapshot, rangeFrom, rangeTo, selectedProjectId]);
     if (loading) {
         return (<div className="tt-rp-preview tt-rp-preview--fill" role="status" aria-live="polite">
         <ReportPreviewNavBar />
@@ -1130,6 +1345,11 @@ export function ReportPreviewPage() {
       <ReportPreviewNavBar period={navPeriodControls} projectSlot={navProjectSlot} timeReportViewSlot={timeReportViewToggle ?? undefined}/>
 
       <div className="tt-rp-preview__main tt-rp-preview__main--fill tt-rp-preview__body-pad">
+        {partnerConfirmPickHint ? (<div className="tt-rp-preview__partner-bar tt-rp-preview__partner-bar--hint" role="note">
+            <strong>Проект не выбран.</strong>{' '}
+            Чтобы видеть блок подтверждения отчёта партнёром, откройте предпросмотр в разрезе «по проектам» и выберите проект в шапке (или откройте предпросмотр из строки отчёта по конкретному проекту).
+          </div>) : null}
+        {confirmationProjectId ? (<ReportPreviewPartnerBar projectId={confirmationProjectId} dateFrom={rangeFrom} dateTo={rangeTo} userId={user?.id ?? null}/>) : null}
         <div className={`tt-rp-preview__live${xferSnapshot && (xferSnapshot.reportType === 'time' || xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'confirmed-expenses' || xferSnapshot.reportType === 'uninvoiced' || xferSnapshot.reportType === 'project-budget') ? ' tt-rp-preview__live--sheet' : ''}`}>
           {mainBody}
         </div>
