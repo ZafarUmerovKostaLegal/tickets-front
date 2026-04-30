@@ -225,6 +225,124 @@
   color: var(--app-accent, #4f46e5);
 }
 
+.pdp__partner-report {
+  padding: 0.85rem 1rem;
+  background: var(--app-surface, #fff);
+  border: 1px solid var(--app-border, #e5e7eb);
+  border-radius: 10px;
+  font-size: 0.8125rem;
+}
+
+.pdp__partner-report-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem 1rem;
+}
+
+.pdp__partner-report-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--app-text, #111827);
+  letter-spacing: -0.02em;
+}
+
+.pdp__partner-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.pdp__partner-report-status {
+  font-size: 0.8125rem;
+  color: var(--app-muted, #64748b);
+}
+
+.pdp__partner-report-status--ok {
+  color: var(--app-text, #15803d);
+  font-weight: 500;
+}
+
+.pdp__partner-report-btn {
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.4rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid var(--app-accent, #4f46e5);
+  background: var(--app-accent, #4f46e5);
+  color: #fff;
+  cursor: pointer;
+  transition: filter 0.12s, opacity 0.12s;
+}
+
+.pdp__partner-report-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.pdp__partner-report-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.pdp__partner-report-hint {
+  margin: 0.55rem 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--app-muted, #64748b);
+}
+
+.pdp__partner-report-muted {
+  margin: 0;
+  color: var(--app-muted, #94a3b8);
+  font-size: 0.8125rem;
+}
+
+.pdp__partner-report-muted--error {
+  color: #b91c1c;
+}
+
+.pdp__partner-report-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pdp__partner-report-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.65rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  background: var(--app-bg, #f8fafc);
+}
+
+.pdp__partner-report-name {
+  font-weight: 600;
+  color: var(--app-text, #1e293b);
+}
+
+.pdp__partner-report-pos {
+  font-size: 0.78rem;
+  color: var(--app-muted, #64748b);
+}
+
+.pdp__partner-report-you {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-accent, #4f46e5);
+}
+
 .pdp__body {
   position: relative;
   z-index: 0;

@@ -6,7 +6,7 @@ import { formatDecimalHoursRu } from '@shared/lib/formatTrackingHours';
 import { useCurrentUser } from '@shared/hooks';
 import { AppPageSettings, useAppDialog } from '@shared/ui';
 import { canAccessTimeTracking, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
-import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, isForbiddenError, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, canManageTimeManagerClients, readTimeManagerProjectBillableRateAmount, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, } from '@entities/time-tracking';
+import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listPartnerUsersWithProjectAccessToProject, getMyPartnerReportConfirmation, postPartnerReportConfirmation, isForbiddenError, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, canManageTimeManagerClients, readTimeManagerProjectBillableRateAmount, type ProjectPartnerAccessRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, } from '@entities/time-tracking';
 import { ClientProjectModal } from '@pages/time-tracking/ui/TimeTrackingClientProjectModal';
 import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
 import { memberWeeklyCapacityHours } from '@entities/time-tracking/model/memberWeeklyCapacity';
@@ -784,7 +784,121 @@ function emptyDashboardCharts(): {
     const z = buildWeeks(13).map((w) => ({ ...w, value: 0 }));
     return { progressData: z, hoursData: z, progressMode: 'money' };
 }
-function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, onDetailPeriodChange, canManageInvoices, canManageProjects, onProjectRefresh, }: {
+function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: {
+    projectId: string;
+    detailPeriod: {
+        from: string;
+        to: string;
+    };
+    currentUserId: number | null;
+}) {
+    const { showAlert, showConfirm } = useAppDialog();
+    const [partners, setPartners] = useState<ProjectPartnerAccessRow[]>([]);
+    const [partnersLoad, setPartnersLoad] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+    const [confirmedAt, setConfirmedAt] = useState<string | null>(null);
+    const [confirmStatusLoad, setConfirmStatusLoad] = useState(false);
+    const [confirmBusy, setConfirmBusy] = useState(false);
+    useEffect(() => {
+        let cancelled = false;
+        setPartnersLoad('loading');
+        void listPartnerUsersWithProjectAccessToProject(projectId).then((rows) => {
+            if (!cancelled) {
+                setPartners(rows);
+                setPartnersLoad('ok');
+            }
+        }).catch(() => {
+            if (!cancelled)
+                setPartnersLoad('error');
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId]);
+    useEffect(() => {
+        let cancelled = false;
+        if (currentUserId == null) {
+            setConfirmedAt(null);
+            setConfirmStatusLoad(false);
+            return;
+        }
+        setConfirmStatusLoad(true);
+        void getMyPartnerReportConfirmation(projectId, detailPeriod.from, detailPeriod.to).then((r) => {
+            if (!cancelled)
+                setConfirmedAt(r.confirmedAt);
+        }).finally(() => {
+            if (!cancelled)
+                setConfirmStatusLoad(false);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId, detailPeriod.from, detailPeriod.to, currentUserId]);
+    const periodLabel = formatDetailPeriodLabel(detailPeriod);
+    const selfPartner = currentUserId != null ? partners.find((p) => p.authUserId === currentUserId) : undefined;
+    const canConfirmAsPartner = Boolean(selfPartner);
+    const handleConfirmReport = async () => {
+        if (!canConfirmAsPartner || confirmBusy || confirmedAt)
+            return;
+        const ok = await showConfirm({
+            title: 'Подтвердить принятие отчёта?',
+            message: periodLabel ? `Вы подтверждаете принятие отчётности за период ${periodLabel}. Это действие отражает вашу сторону как партнёра.` : 'Вы подтверждаете принятие отчётности за выбранный период.',
+            confirmLabel: 'Подтвердить',
+        });
+        if (!ok)
+            return;
+        setConfirmBusy(true);
+        try {
+            const out = await postPartnerReportConfirmation(projectId, detailPeriod.from, detailPeriod.to);
+            setConfirmedAt(out.confirmedAt ?? new Date().toISOString());
+        }
+        catch (e) {
+            await showAlert({
+                message: e instanceof Error ? e.message : 'Не удалось сохранить подтверждение. Если ошибка повторяется, возможно, сервер ещё не поддерживает этот запрос.',
+            });
+        }
+        finally {
+            setConfirmBusy(false);
+        }
+    };
+    const fmtConfirmed = (iso: string) => {
+        try {
+            const d = new Date(iso);
+            if (Number.isNaN(d.getTime()))
+                return iso;
+            return d.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+        }
+        catch {
+            return iso;
+        }
+    };
+    return (<section className="pdp__partner-report" aria-labelledby="pdp-partner-report-heading">
+        <div className="pdp__partner-report-head">
+          <h2 id="pdp-partner-report-heading" className="pdp__partner-report-title">
+            Партнёры проекта
+          </h2>
+          {canConfirmAsPartner ? (<div className="pdp__partner-report-actions">
+              {confirmedAt ? (<span className="pdp__partner-report-status pdp__partner-report-status--ok">
+                  Вы подтвердили принятие отчёта ({fmtConfirmed(confirmedAt)})
+                </span>) : confirmStatusLoad ? (<span className="pdp__partner-report-status">Проверка статуса…</span>) : (<button type="button" className="pdp__partner-report-btn" onClick={() => void handleConfirmReport()} disabled={confirmBusy}>
+                  {confirmBusy ? 'Отправка…' : 'Подтвердить принятие отчёта'}
+                </button>)}
+            </div>) : null}
+        </div>
+        <p className="pdp__partner-report-hint">
+          Перечислены партнёры организации с доступом к этому проекту в учёте времени. Подтверждение доступно только под учётной записью партнёра из списка.
+        </p>
+        {partnersLoad === 'loading' ? (<p className="pdp__partner-report-muted">Загрузка…</p>) : partnersLoad === 'error' ? (<p className="pdp__partner-report-muted pdp__partner-report-muted--error" role="alert">
+            Не удалось загрузить список партнёров.
+          </p>) : partners.length === 0 ? (<p className="pdp__partner-report-muted">Нет партнёров с доступом к проекту.</p>) : (<ul className="pdp__partner-report-list">
+            {partners.map((p) => (<li key={p.authUserId} className="pdp__partner-report-item">
+                <span className="pdp__partner-report-name">{p.displayName}</span>
+                {p.position ? (<span className="pdp__partner-report-pos">{p.position}</span>) : null}
+                {currentUserId === p.authUserId ? (<span className="pdp__partner-report-you">Вы</span>) : null}
+              </li>))}
+          </ul>)}
+      </section>);
+}
+function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, onDetailPeriodChange, canManageInvoices, canManageProjects, onProjectRefresh, currentUserId, }: {
     project: ProjectRow;
     dashboard: TimeManagerProjectDashboard | null | undefined;
     dashboardError: string | null;
@@ -799,6 +913,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
     canManageInvoices: boolean;
     canManageProjects: boolean;
     onProjectRefresh: () => void;
+    currentUserId: number | null;
 }) {
     const navigate = useNavigate();
     const { showAlert, showConfirm } = useAppDialog();
@@ -1232,6 +1347,8 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
         </button>
       </div>
 
+      <ProjectPartnerReportPanel projectId={project.id} detailPeriod={detailPeriod} currentUserId={currentUserId}/>
+
     <div className="pdp__chart-card">
           <div className="pdp__chart-tabs">
             <button className={`pdp__chart-tab${chartTab === 'progress' ? ' pdp__chart-tab--active' : ''}`} onClick={() => setChartTab('progress')}>
@@ -1651,5 +1768,5 @@ export function ProjectDetailPage() {
         </button>
       </div>);
     }
-    return (<ProjectDetailBody project={project} dashboard={dashboard} dashboardError={dashboardError} detailPeriod={detailPeriod} onDetailPeriodChange={setDetailPeriod} canManageInvoices={hasFullTimeTrackingTabs(user)} canManageProjects={canManageProjects} onProjectRefresh={onProjectRefresh}/>);
+    return (<ProjectDetailBody project={project} dashboard={dashboard} dashboardError={dashboardError} detailPeriod={detailPeriod} onDetailPeriodChange={setDetailPeriod} canManageInvoices={hasFullTimeTrackingTabs(user)} canManageProjects={canManageProjects} onProjectRefresh={onProjectRefresh} currentUserId={user?.id ?? null}/>);
 }

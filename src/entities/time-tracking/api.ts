@@ -713,6 +713,69 @@ export async function listPartnerUsersWithProjectAccessToProject(projectId: stri
     out.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru', { sensitivity: 'base' }));
     return out;
 }
+
+export type PartnerReportConfirmationMeOut = {
+    confirmedAt: string | null;
+};
+
+function parsePartnerReportConfirmationMe(j: unknown): PartnerReportConfirmationMeOut {
+    if (!j || typeof j !== 'object')
+        return { confirmedAt: null };
+    const o = j as Record<string, unknown>;
+    const raw = o.confirmed_at ?? o.confirmedAt;
+    if (raw == null || raw === '')
+        return { confirmedAt: null };
+    const s = String(raw).trim();
+    return { confirmedAt: s || null };
+}
+
+/** Подтверждение партнёром принятия отчёта за период (GET может вернуть 404, пока endpoint не развёрнут). */
+export async function getMyPartnerReportConfirmation(projectId: string, periodFrom: string, periodTo: string): Promise<PartnerReportConfirmationMeOut> {
+    try {
+        const pid = encodeURIComponent(String(projectId ?? '').trim());
+        if (!pid)
+            return { confirmedAt: null };
+        const qs = new URLSearchParams({
+            period_from: periodFrom.slice(0, 10),
+            period_to: periodTo.slice(0, 10),
+        });
+        const res = await apiFetch(`/api/v1/time-tracking/projects/${pid}/partner-report-confirmation/me?${qs}`);
+        if (res.status === 404 || res.status === 501)
+            return { confirmedAt: null };
+        await throwIfNotOk(res);
+        return parsePartnerReportConfirmationMe(await res.json());
+    }
+    catch {
+        return { confirmedAt: null };
+    }
+}
+
+export async function postPartnerReportConfirmation(projectId: string, periodFrom: string, periodTo: string): Promise<PartnerReportConfirmationMeOut> {
+    const pid = encodeURIComponent(String(projectId ?? '').trim());
+    if (!pid)
+        throw new Error('Не указан проект');
+    const res = await apiFetch(`/api/v1/time-tracking/projects/${pid}/partner-report-confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            period_from: periodFrom.slice(0, 10),
+            period_to: periodTo.slice(0, 10),
+        }),
+    });
+    await throwIfNotOk(res);
+    const text = await res.text();
+    if (!text.trim())
+        return { confirmedAt: new Date().toISOString() };
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(text) as unknown;
+    }
+    catch {
+        return { confirmedAt: new Date().toISOString() };
+    }
+    const out = parsePartnerReportConfirmationMe(parsed);
+    return { confirmedAt: out.confirmedAt ?? new Date().toISOString() };
+}
 export type TimeManagerClientContactRow = {
     id: string;
     name: string;
