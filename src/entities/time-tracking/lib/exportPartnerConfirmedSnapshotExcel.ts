@@ -156,7 +156,13 @@ function normalizeExportJsonToSnapshotRows(parsed: unknown): ReportSnapshotRow[]
     if (!parsed || typeof parsed !== 'object')
         return [];
     const root = parsed as Record<string, unknown>;
-    const nested = root.rows ?? root.snapshotRows ?? (root.snapshot as Record<string, unknown> | undefined)?.rows ?? root.items;
+    const nested = root.rows
+        ?? root.snapshotRows
+        ?? (root.snapshot as Record<string, unknown> | undefined)?.rows
+        ?? (root.data as Record<string, unknown> | undefined)?.rows
+        ?? (root.payload as Record<string, unknown> | undefined)?.rows
+        ?? (root.result as Record<string, unknown> | undefined)?.rows
+        ?? root.items;
     if (Array.isArray(nested))
         return nested.map((r, i) => coerceUnknownToSnapshotRow(r, i)).filter((x): x is ReportSnapshotRow => x != null);
     return [];
@@ -183,6 +189,47 @@ export async function loadSnapshotRowsForPartnerExcel(snapshotId: string, snapsh
     return [];
 }
 
+/** Только JSON-экспорт снимка (когда GET вернул строки-заглушки без полезной нагрузки). */
+async function loadSnapshotRowsFromJsonExport(snapshotId: string): Promise<ReportSnapshotRow[]> {
+    const sid = snapshotId.trim();
+    if (!sid)
+        return [];
+    try {
+        const { blob } = await exportReportSnapshot(sid, 'json');
+        const text = await blob.text();
+        const parsed = JSON.parse(text) as unknown;
+        const normalized = normalizeExportJsonToSnapshotRows(parsed);
+        if (normalized.length > 0)
+            return normalized.sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+    catch {
+        /* не JSON или ошибка сети */
+    }
+    return [];
+}
+
+function pickWorkDateStr(d: Record<string, unknown>): string {
+    let wd = pickStr(d, 'workDate', 'work_date');
+    if (!wd) {
+        const rec = pickStr(d, 'recordedAt', 'recorded_at');
+        wd = rec.trim().slice(0, 10);
+    }
+    return wd.trim().slice(0, 10);
+}
+
+function pickBillableHoursNum(d: Record<string, unknown>): number | null {
+    return pickNum(d,
+        'billableHours',
+        'billable_hours',
+        'hours',
+        'durationHours',
+        'duration_hours',
+        'totalHours',
+        'total_hours',
+        'quantity',
+    );
+}
+
 function isIncludedEntryRow(sr: ReportSnapshotRow, d: Record<string, unknown>): boolean {
     if (pickBool(d, 'isVoided', 'is_voided'))
         return false;
@@ -194,8 +241,8 @@ function isIncludedEntryRow(sr: ReportSnapshotRow, d: Record<string, unknown>): 
         return false;
     if (rk === 'entry')
         return true;
-    const wd = pickStr(d, 'workDate', 'work_date');
-    const hours = pickNum(d, 'billableHours', 'billable_hours', 'hours');
+    const wd = pickWorkDateStr(d);
+    const hours = pickBillableHoursNum(d);
     const te = pickStr(d, 'timeEntryId', 'time_entry_id');
     if (te && hours != null && hours > 1e-9)
         return true;
@@ -241,7 +288,7 @@ function buildDetailLinesFromSnapshotRows(rawRows: ReportSnapshotRow[]): DetailL
         if (!isIncludedEntryRow(sr, d))
             continue;
         const fullName = pickStr(d, 'employeeName', 'employee_name');
-        const hours = pickNum(d, 'billableHours', 'billable_hours', 'hours') ?? 0;
+        const hours = pickBillableHoursNum(d) ?? 0;
         if (hours <= 1e-9)
             continue;
         const rate = pickNum(d, 'billableRate', 'billable_rate') ?? 0;
@@ -249,7 +296,7 @@ function buildDetailLinesFromSnapshotRows(rawRows: ReportSnapshotRow[]): DetailL
         if (amount <= 1e-9 && rate > 0)
             amount = Math.round(hours * rate * 100) / 100;
 
-        const wd = pickStr(d, 'workDate', 'work_date');
+        const wd = pickWorkDateStr(d);
         const authId = pickNum(d, 'authUserId', 'auth_user_id');
         const personKey = authId != null && authId > 0 ? `id:${Math.round(authId)}` : `n:${fullName.toLowerCase()}`;
 
@@ -329,6 +376,11 @@ export async function buildPartnerConfirmedSnapshotExcel(snapshot: ReportSnapsho
         ? [...opts.snapshotRows].sort((a, b) => a.sortOrder - b.sortOrder)
         : await loadSnapshotRowsForPartnerExcel(snapshot.id, snapshot);
     let details = buildDetailLinesFromSnapshotRows(rawRows);
+    if (details.length === 0 && rawRows.length > 0) {
+        const jsonRows = await loadSnapshotRowsFromJsonExport(snapshot.id);
+        if (jsonRows.length > 0)
+            details = buildDetailLinesFromSnapshotRows(jsonRows);
+    }
     if (details.length === 0 && opts?.fallbackTimeRows?.length)
         details = detailLinesFromFallback(opts.fallbackTimeRows);
 

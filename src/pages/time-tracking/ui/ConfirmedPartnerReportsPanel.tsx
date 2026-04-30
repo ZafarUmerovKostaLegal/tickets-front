@@ -214,15 +214,23 @@ export function ConfirmedPartnerReportsPanel() {
             const snapshot = await getReportSnapshot(sid);
             const snapshotRows = await loadSnapshotRowsForPartnerExcel(sid, snapshot);
             let fallbackTimeRows: PartnerConfirmedExcelFallbackRow[] | undefined;
-            if (snapshotRows.length === 0) {
-                const projectRows = await fetchAllTimeReportProjectRows({
-                    dateFrom: r.dateFrom.slice(0, 10),
-                    dateTo: r.dateTo.slice(0, 10),
-                    project_id: r.projectId.trim(),
-                });
-                const fb = previewRowsToPartnerFallback(flattenTimeReportToExcelRows('projects', projectRows));
-                if (fb.length > 0)
-                    fallbackTimeRows = fb;
+            const pid = r.projectId.trim();
+            const df = r.dateFrom.slice(0, 10);
+            const dt = r.dateTo.slice(0, 10);
+            if (pid && df && dt) {
+                try {
+                    const projectRows = await fetchAllTimeReportProjectRows({
+                        dateFrom: df,
+                        dateTo: dt,
+                        project_id: pid,
+                    });
+                    const fb = previewRowsToPartnerFallback(flattenTimeReportToExcelRows('projects', projectRows));
+                    if (fb.length > 0)
+                        fallbackTimeRows = fb;
+                }
+                catch {
+                    /* оставляем только данные снимка */
+                }
             }
             const { blob, filename } = await buildPartnerConfirmedSnapshotExcel(snapshot, {
                 snapshotRows,
