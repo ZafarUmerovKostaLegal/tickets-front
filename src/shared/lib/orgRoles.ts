@@ -21,6 +21,16 @@ export function isPartnerOrgRole(role: string | null | undefined, position?: str
     const kp = normalizeOrgRoleKey(position);
     return kp.includes('партнер') || kp.includes('partner');
 }
+
+const ADMIN_PANEL_ACCESS_ROLE_KEYS = new Set(['Главный администратор', 'Администратор'].map(normalizeOrgRoleKey));
+
+/** Доступ к основной админ-панели (/admin, карточка пользователя): администраторы и партнёры (роль или должность). */
+export function canAccessAdminPanel(role: string | null | undefined, position?: string | null): boolean {
+    const k = normalizeOrgRoleKey(role);
+    if (ADMIN_PANEL_ACCESS_ROLE_KEYS.has(k))
+        return true;
+    return isPartnerOrgRole(role, position);
+}
 export function hasFullTicketAccessRole(role: string | null | undefined): boolean {
     const k = normalizeOrgRoleKey(role);
     if (isOfficeManagerRole(role))

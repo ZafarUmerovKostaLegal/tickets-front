@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { isAuthenticated } from '@shared/lib';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
+import { canAccessAdminPanel } from '@shared/lib/orgRoles';
 const ADMIN_ROLE = 'Администратор';
 type ProtectedRouteProps = {
     children: ReactNode;
@@ -27,8 +28,15 @@ export function ProtectedRoute({ children, adminOnly = false, fallback = null }:
     if (user.is_archived) {
         return <Navigate to={routes.login} state={{ archived: true }} replace/>;
     }
-    if (adminOnly && user.role !== ADMIN_ROLE) {
-        return <Navigate to={routes.home} replace/>;
+    if (adminOnly) {
+        const strictAdminOnly = location.pathname === routes.networkDriveAccess;
+        if (strictAdminOnly) {
+            if (user.role !== ADMIN_ROLE)
+                return <Navigate to={routes.home} replace/>;
+        }
+        else if (!canAccessAdminPanel(user.role, user.position)) {
+            return <Navigate to={routes.home} replace/>;
+        }
     }
     return <>{children}</>;
 }

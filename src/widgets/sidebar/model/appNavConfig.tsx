@@ -4,6 +4,7 @@ import { routes } from '@shared/config';
 import type { User } from '@entities/user';
 import { canAccessExpensesSection } from '@entities/expenses/model/expenseModeration';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
+import { canAccessAdminPanel, isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
 import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, } from '../ui/SidebarIcons';
 
 export type AppNavItemDef = {
@@ -11,7 +12,8 @@ export type AppNavItemDef = {
     label: string;
     icon: ComponentType;
     adminOnly?: boolean;
-    
+    /** Только роль «Администратор» (например сетевой диск), без партнёров. */
+    adminOnlyStrict?: boolean;
     desktopOnly?: boolean;
 };
 
@@ -24,7 +26,7 @@ export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { to: routes.vacationSchedule, label: 'График отпусков', icon: IconCalendarCheck },
     { to: routes.inventory, label: 'Инвентаризация', icon: IconBox },
     { to: routes.admin, label: 'Админ-панель', icon: IconGear },
-    { to: routes.networkDriveAccess, label: 'Сетевой диск', icon: IconFolderNetwork, adminOnly: true, desktopOnly: true },
+    { to: routes.networkDriveAccess, label: 'Сетевой диск', icon: IconFolderNetwork, adminOnly: true, adminOnlyStrict: true, desktopOnly: true },
     { to: routes.attendance, label: 'Посещаемость', icon: IconClock },
     { to: routes.callSchedule, label: 'Расписание звонков', icon: IconPhone },
     { to: routes.rules, label: 'Правила', icon: IconFileText },
@@ -34,7 +36,8 @@ export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
 export function getVisibleAppNavItems(user: User | null | undefined, loading: boolean): AppNavItemDef[] {
     const role = user?.role?.toLowerCase() || '';
     const isEmployee = !loading && role.includes('сотрудник');
-    const isAdminOrPartner = !loading && (role.includes('администратор') || role.includes('партнер'));
+    const rk = normalizeOrgRoleKey(user?.role);
+    const isAdminOrPartner = !loading && (rk.includes('администратор') || isPartnerOrgRole(user?.role, user?.position));
     let visible: AppNavItemDef[] = APP_NAV_DEFINITIONS;
     if (isEmployee) {
         visible = APP_NAV_DEFINITIONS.filter((item) => item.label === 'Главная' ||
@@ -57,7 +60,13 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
         visible = visible.filter((item) => item.label !== 'Учёт времени');
     }
     if (!loading) {
-        visible = visible.filter((item) => !item.adminOnly || user?.role === 'Администратор');
+        visible = visible.filter((item) => {
+            if (!item.adminOnly)
+                return true;
+            if (item.adminOnlyStrict)
+                return user?.role === 'Администратор';
+            return canAccessAdminPanel(user?.role, user?.position);
+        });
     }
     if (!loading && !isTauri()) {
         visible = visible.filter((item) => !item.desktopOnly);
