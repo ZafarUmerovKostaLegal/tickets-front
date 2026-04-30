@@ -2304,6 +2304,27 @@ export async function submitPartnerReportConfirmation(body: {
         throw new TimeTrackingHttpError(500, 'Некорректный ответ сервера');
     return parsed;
 }
+/** Создаёт снимок отчёта по проекту на сервере и отправляет запрос партнёрам (предпросмотр). */
+export async function submitPartnerReportConfirmationFromPreview(body: {
+    projectId: string;
+    dateFrom: string;
+    dateTo: string;
+}): Promise<PartnerReportConfirmationRequest> {
+    const res = await apiFetch('/api/v1/time-tracking/reports/partner-confirmations/submit-from-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            projectId: body.projectId.trim(),
+            dateFrom: body.dateFrom.slice(0, 10),
+            dateTo: body.dateTo.slice(0, 10),
+        }),
+    });
+    await reportsThrowIfNotOk(res);
+    const parsed = parsePartnerReportConfirmationRequest(await res.json());
+    if (!parsed)
+        throw new TimeTrackingHttpError(500, 'Некорректный ответ сервера');
+    return parsed;
+}
 export async function confirmPartnerReportConfirmation(requestId: string): Promise<PartnerReportConfirmationRequest> {
     const rid = String(requestId ?? '').trim();
     if (!rid)

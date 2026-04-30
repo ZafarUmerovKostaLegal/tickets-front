@@ -3896,6 +3896,18 @@ body[data-theme='dark'] .tt-rp-preview__chip--na {
   cursor: not-allowed;
 }
 
+.tt-rp-preview__partner-bar-btn--secondary {
+  border-color: var(--app-border, #cbd5e1);
+  background: var(--app-bg, #f8fafc);
+  color: var(--app-text, #334155);
+}
+
+.tt-rp-preview__partner-bar-btn--secondary:hover:not(:disabled) {
+  filter: none;
+  border-color: var(--app-accent, #4f46e5);
+  color: var(--app-accent, #4f46e5);
+}
+
 .tt-rp-preview__partner-bar-ok {
   font-size: 0.8125rem;
   font-weight: 500;
