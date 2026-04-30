@@ -850,6 +850,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     const viewerCanOverrideWeeklyLock = useMemo(() => canOverrideReportPreviewWeeklyLock(currentUser), [currentUser]);
     const grantUnlockEligible = useMemo(() => Boolean(currentUser && entriesAuthUserId != null && canGrantTimeEntryEditUnlock(currentUser, entriesAuthUserId)), [currentUser, entriesAuthUserId]);
     const [grantUnlockBusy, setGrantUnlockBusy] = useState(false);
+    const [grantUnlockConfirmOpen, setGrantUnlockConfirmOpen] = useState(false);
     const isSubjectDayReportingBlocked = useCallback((ymd: string) => {
         if (entriesAuthUserId == null)
             return false;
@@ -1100,7 +1101,12 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
     const activeDayYmd = useMemo(() => formatDate(activeDay), [activeDay]);
     const activeDayInClosedWeek = useMemo(() => isWorkDateInClosedReportingPeriod(activeDayYmd), [activeDayYmd]);
+    const showGrantUnlockStrip = grantUnlockEligible && isColleagueTimesheetView && entriesAuthUserId != null && activeDayInClosedWeek;
     const activeDayReportingBlocked = useMemo(() => isSubjectDayReportingBlocked(activeDayYmd), [activeDayYmd, isSubjectDayReportingBlocked]);
+    useEffect(() => {
+        if (!showGrantUnlockStrip)
+            setGrantUnlockConfirmOpen(false);
+    }, [showGrantUnlockStrip]);
     const hoursPerDay = useMemo(() => weekDays.map((d) => {
         const key = formatDate(d);
         return entries.filter((e) => e.date === key).reduce((s, e) => s + entryHoursInTotals(e), 0);
@@ -1211,7 +1217,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         const onKey = (e: KeyboardEvent) => {
             if (e.metaKey || e.ctrlKey || e.altKey)
                 return;
-            if (modal.open || deleteTarget || timerBusyHintOpen)
+            if (modal.open || deleteTarget || timerBusyHintOpen || grantUnlockConfirmOpen)
                 return;
             if (viewTxPhase !== 'idle')
                 return;
@@ -1273,7 +1279,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [modal.open, deleteTarget, timerBusyHintOpen, viewTxPhase, viewMode, activeDay, query, billableOnly, isSubjectDayReportingBlocked]);
+    }, [modal.open, deleteTarget, timerBusyHintOpen, grantUnlockConfirmOpen, viewTxPhase, viewMode, activeDay, query, billableOnly, isSubjectDayReportingBlocked]);
     async function persistTimerStopToApi(entryId: string, merged: TimeEntry) {
         const user = upsertUserForEntriesRef.current;
         const uid = entriesAuthUserIdRef.current;
@@ -1664,32 +1670,12 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                 </div>
             </div>
         </div>
-        {grantUnlockEligible && isColleagueTimesheetView && entriesAuthUserId != null && activeDayInClosedWeek ? (<div className="tsp__grant-unlock" role="region" aria-label="Временная разблокировка правок за выбранный день">
+        {showGrantUnlockStrip ? (<div className="tsp__grant-unlock" role="region" aria-label="Временная разблокировка правок за выбранный день">
             <span className="tsp__grant-unlock-txt">
-              Выбран день в закрытой неделе (<strong>{activeDayYmd}</strong>). Выдайте сотруднику правку записей за этот день на <strong>24 часа</strong> (повторное нажатие продлевает срок).
+              Выбран день в закрытой неделе (<strong>{activeDayYmd}</strong>).
             </span>
-            <button type="button" className="tsp__grant-unlock-btn" disabled={grantUnlockBusy} onClick={() => {
-                if (!entriesAuthUserId)
-                    return;
-                void (async () => {
-                    try {
-                        setGrantUnlockBusy(true);
-                        const out = await grantTimeEntryEditUnlock(entriesAuthUserId, activeDayYmd);
-                        const until = new Date(out.expiresAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
-                        setEntriesBanner({ message: `Сотрудник может править записи за ${activeDayYmd} до ${until}.`, variant: 'success' });
-                    }
-                    catch (e) {
-                        setEntriesBanner({
-                            message: e instanceof Error ? e.message : 'Не удалось выдать разблокировку',
-                            variant: 'danger',
-                        });
-                    }
-                    finally {
-                        setGrantUnlockBusy(false);
-                    }
-                })();
-            }}>
-              {grantUnlockBusy ? 'Отправка…' : 'Разрешить правки на 24 ч'}
+            <button type="button" className="tsp__grant-unlock-btn" disabled={grantUnlockBusy} onClick={() => setGrantUnlockConfirmOpen(true)}>
+              Разрешить правки на 24 ч
             </button>
           </div>) : null}
         <div className={viewTxPhase === 'idle'
@@ -2006,6 +1992,32 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         </div>
 
         {modal.open && entriesAuthUserId != null && (<EntryModal key={`${modal.date}_${modal.edit?.id ?? 'new'}`} entry={modal.edit} defaultDate={modal.date} projects={projectsState.items} projectsLoading={projectsState.loading} projectsLoadError={projectsState.error} tasksByClientId={tasksByClientId} clientTasksIndexLoading={clientTasksIndexLoading} entriesSubjectAuthUserId={entriesAuthUserId} viewerCanOverrideWeeklyLock={viewerCanOverrideWeeklyLock} onClose={closeModal} onSave={saveEntry} />)}
+        {grantUnlockConfirmOpen && showGrantUnlockStrip && entriesAuthUserId != null ? (<TimesheetGrantUnlockConfirm workDateYmd={activeDayYmd} busy={grantUnlockBusy} onCancel={() => {
+            if (!grantUnlockBusy)
+                setGrantUnlockConfirmOpen(false);
+        }} onConfirm={() => {
+            const uid = entriesAuthUserId;
+            if (!uid || grantUnlockBusy)
+                return;
+            setGrantUnlockConfirmOpen(false);
+            void (async () => {
+                try {
+                    setGrantUnlockBusy(true);
+                    const out = await grantTimeEntryEditUnlock(uid, activeDayYmd);
+                    const until = new Date(out.expiresAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+                    setEntriesBanner({ message: `Сотрудник может править записи за ${activeDayYmd} до ${until}.`, variant: 'success' });
+                }
+                catch (e) {
+                    setEntriesBanner({
+                        message: e instanceof Error ? e.message : 'Не удалось выдать разблокировку',
+                        variant: 'danger',
+                    });
+                }
+                finally {
+                    setGrantUnlockBusy(false);
+                }
+            })();
+        }} />) : null}
         <TimerBusyHintModal open={timerBusyHintOpen} onClose={() => setTimerBusyHintOpen(false)} />
         {deleteTarget && (<TimesheetDeleteConfirm entry={deleteTarget} busy={deleteBusy} onCancel={() => {
             if (deleteBusy)
@@ -2023,6 +2035,74 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
             }
         }} />)}
     </div>);
+}
+type TimesheetGrantUnlockConfirmProps = {
+    workDateYmd: string;
+    busy: boolean;
+    onCancel: () => void;
+    onConfirm: () => void | Promise<void>;
+};
+function TimesheetGrantUnlockConfirm({ workDateYmd, busy, onCancel, onConfirm }: TimesheetGrantUnlockConfirmProps) {
+    const titleId = useId();
+    const cancelRef = useRef<HTMLButtonElement | null>(null);
+    useEffect(() => {
+        const t = window.setTimeout(() => cancelRef.current?.focus(), 0);
+        return () => window.clearTimeout(t);
+    }, []);
+    useEffect(() => {
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                if (!busy)
+                    onCancel();
+            }
+            else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!busy)
+                    void onConfirm();
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [busy, onCancel, onConfirm]);
+    if (typeof document === 'undefined')
+        return null;
+
+    return createPortal(<div className="tsp-cfm__overlay" role="dialog" aria-modal="true" aria-labelledby={titleId}>
+        <div className="tsp-cfm__modal" onClick={(e) => e.stopPropagation()}>
+            <div className="tsp-cfm__head">
+                <div className="tsp-cfm__ico tsp-cfm__ico--unlock" aria-hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                        <path d="M9 12l2 2 4-4" />
+                    </svg>
+                </div>
+                <div className="tsp-cfm__head-txt">
+                    <h3 id={titleId} className="tsp-cfm__title">Разрешить правки за этот день?</h3>
+                    <p className="tsp-cfm__sub">Временная разблокировка на стороне сервера.</p>
+                </div>
+                <button type="button" className="tsp-cfm__close" onClick={onCancel} disabled={busy} aria-label="Закрыть">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div className="tsp-cfm__grant-body">
+                <p className="tsp-cfm__grant-body-p">
+                    Выбран день в закрытой неделе (<strong>{workDateYmd}</strong>). Выдайте сотруднику правку записей за этот день на <strong>24 часа</strong> (повторное нажатие продлевает срок).
+                </p>
+            </div>
+            <div className="tsp-cfm__foot">
+                <button ref={cancelRef} type="button" className="tsp-cfm__btn tsp-cfm__btn--ghost" onClick={onCancel} disabled={busy}>
+                    Отмена
+                </button>
+                <button type="button" className="tsp-cfm__btn tsp-cfm__btn--primary" onClick={() => void onConfirm()} disabled={busy}>
+                    Разрешить правки на 24 ч
+                </button>
+            </div>
+        </div>
+    </div>, document.body);
 }
 type TimesheetDeleteConfirmProps = {
     entry: TimeEntry;

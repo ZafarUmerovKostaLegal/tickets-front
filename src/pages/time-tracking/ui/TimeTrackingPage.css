@@ -13474,6 +13474,26 @@ a.pp__proj-name--link:hover {
   color: #dc2626;
 }
 .tsp-cfm__ico svg { width: 20px; height: 20px; }
+
+.tsp-cfm__ico--unlock {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 14%, transparent);
+  color: var(--app-accent, #4f46e5);
+}
+
+.tsp-cfm__grant-body {
+  padding: 0 1.125rem 0.25rem;
+}
+
+.tsp-cfm__grant-body-p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--app-text, #374151);
+}
+
+.tsp-cfm__grant-body-p strong {
+  font-weight: 700;
+}
 .tsp-cfm__head-txt { flex: 1; min-width: 0; }
 .tsp-cfm__title {
   margin: 0;
@@ -13601,6 +13621,20 @@ a.pp__proj-name--link:hover {
 .tsp-cfm__btn--danger:hover:not(:disabled) {
   background: #b91c1c;
   border-color: #b91c1c;
+}
+
+.tsp-cfm__btn--primary {
+  background: var(--app-accent, #4f46e5);
+  color: #fff;
+  border-color: var(--app-accent, #4f46e5);
+}
+
+.tsp-cfm__btn--primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.tsp-cfm__btn--primary:active:not(:disabled) {
+  transform: translateY(1px);
 }
 .tsp-cfm__btn:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--app-accent, #4f46e5) 55%, #fff);
