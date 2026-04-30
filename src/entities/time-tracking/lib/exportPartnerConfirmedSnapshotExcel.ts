@@ -1,5 +1,5 @@
 import type { Borders, Color, Fill, Font } from 'exceljs';
-import type { ReportSnapshot, ReportSnapshotRow } from '../api';
+import { exportReportSnapshot, type ReportSnapshot, type ReportSnapshotRow } from '../api';
 import { getSnapshotRowDisplayData } from './reportSnapshotOverrides';
 import { loadExcelJS } from '@shared/lib/exceljsLoader';
 
@@ -93,6 +93,96 @@ function fmtDateDdMmYyyy(iso: string): string {
     return `${d}.${m}.${y}`;
 }
 
+function coerceUnknownToSnapshotRow(raw: unknown, index: number): ReportSnapshotRow | null {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+        return null;
+    const o = raw as Record<string, unknown>;
+    const id = String(o.id ?? o.rowId ?? `row-${index}`);
+    const sortOrder = typeof o.sortOrder === 'number' && Number.isFinite(o.sortOrder)
+        ? o.sortOrder
+        : typeof o.sort_order === 'number' && Number.isFinite(o.sort_order)
+            ? o.sort_order
+            : index;
+    const sourceType = String(o.sourceType ?? o.source_type ?? 'time_entry');
+    const sourceId = String(o.sourceId ?? o.source_id ?? id);
+    let data: Record<string, unknown>;
+    if (o.data && typeof o.data === 'object' && !Array.isArray(o.data))
+        data = o.data as Record<string, unknown>;
+    else if (o.fields && typeof o.fields === 'object' && !Array.isArray(o.fields))
+        data = o.fields as Record<string, unknown>;
+    else {
+        const skip = new Set([
+            'id', 'rowId', 'sortOrder', 'sort_order', 'sourceType', 'source_type', 'sourceId', 'source_id',
+            'effective', 'overrides', 'editedByUserId', 'edited_by_user_id', 'editedAt', 'edited_at',
+        ]);
+        data = {};
+        for (const [k, v] of Object.entries(o)) {
+            if (!skip.has(k))
+                data[k] = v;
+        }
+        if (Object.keys(data).length === 0)
+            data = { ...o } as Record<string, unknown>;
+    }
+    const effRaw = o.effective;
+    const effective = effRaw && typeof effRaw === 'object' && !Array.isArray(effRaw)
+        ? effRaw as Record<string, unknown>
+        : undefined;
+    const overridesRaw = o.overrides;
+    const overrides = overridesRaw && typeof overridesRaw === 'object' && !Array.isArray(overridesRaw)
+        ? overridesRaw as Record<string, unknown>
+        : null;
+    const editedBy = o.editedByUserId ?? o.edited_by_user_id;
+    const editedByUserId = typeof editedBy === 'number' && Number.isFinite(editedBy)
+        ? editedBy
+        : null;
+    const editedRaw = o.editedAt ?? o.edited_at;
+    const editedAt = editedRaw != null && editedRaw !== '' ? String(editedRaw) : null;
+    return {
+        id,
+        sortOrder,
+        sourceType,
+        sourceId,
+        data,
+        effective,
+        overrides,
+        editedByUserId,
+        editedAt,
+    };
+}
+
+function normalizeExportJsonToSnapshotRows(parsed: unknown): ReportSnapshotRow[] {
+    if (Array.isArray(parsed))
+        return parsed.map((r, i) => coerceUnknownToSnapshotRow(r, i)).filter((x): x is ReportSnapshotRow => x != null);
+    if (!parsed || typeof parsed !== 'object')
+        return [];
+    const root = parsed as Record<string, unknown>;
+    const nested = root.rows ?? root.snapshotRows ?? (root.snapshot as Record<string, unknown> | undefined)?.rows ?? root.items;
+    if (Array.isArray(nested))
+        return nested.map((r, i) => coerceUnknownToSnapshotRow(r, i)).filter((x): x is ReportSnapshotRow => x != null);
+    return [];
+}
+
+/** Строки снимка: из GET или из JSON-экспорта `/snapshots/:id/export?format=json`, если в теле GET нет rows. */
+export async function loadSnapshotRowsForPartnerExcel(snapshotId: string, snapshot: ReportSnapshot): Promise<ReportSnapshotRow[]> {
+    const sid = snapshotId.trim();
+    if (!sid)
+        return [];
+    if (Array.isArray(snapshot.rows) && snapshot.rows.length > 0)
+        return [...snapshot.rows].sort((a, b) => a.sortOrder - b.sortOrder);
+    try {
+        const { blob } = await exportReportSnapshot(sid, 'json');
+        const text = await blob.text();
+        const parsed = JSON.parse(text) as unknown;
+        const normalized = normalizeExportJsonToSnapshotRows(parsed);
+        if (normalized.length > 0)
+            return normalized.sort((a, b) => a.sortOrder - b.sortOrder);
+    }
+    catch {
+        /* не JSON или ошибка сети */
+    }
+    return [];
+}
+
 function isIncludedEntryRow(sr: ReportSnapshotRow, d: Record<string, unknown>): boolean {
     if (pickBool(d, 'isVoided', 'is_voided'))
         return false;
@@ -107,45 +197,45 @@ function isIncludedEntryRow(sr: ReportSnapshotRow, d: Record<string, unknown>): 
     const wd = pickStr(d, 'workDate', 'work_date');
     const hours = pickNum(d, 'billableHours', 'billable_hours', 'hours');
     const te = pickStr(d, 'timeEntryId', 'time_entry_id');
-    return Boolean(te || (wd && hours != null && hours > 1e-9));
+    if (te && hours != null && hours > 1e-9)
+        return true;
+    if (wd && hours != null && hours > 1e-9)
+        return true;
+    return false;
 }
 
-export type PartnerConfirmedSnapshotExcelResult = {
-    blob: Blob;
-    filename: string;
+type DetailLine = {
+    dateStr: string;
+    initials: string;
+    task: string;
+    notes: string;
+    hours: number;
+    rate: number;
+    amount: number;
+    sortKey: string;
+    personKey: string;
+    fullName: string;
+    title: string;
 };
 
-/** Excel подтверждённого снимка: две таблицы в формате как на эталонном скриншоте партнёра. */
-export async function buildPartnerConfirmedSnapshotExcel(snapshot: ReportSnapshot): Promise<PartnerConfirmedSnapshotExcelResult> {
-    const ExcelJS = await loadExcelJS();
-    const wb = new ExcelJS.Workbook();
-    wb.creator = 'Kosta Legal';
-    wb.created = new Date();
-    wb.modified = new Date();
+/** Строки времени как в предпросмотре — если снимок без строк, подставляются из отчёта API. */
+export type PartnerConfirmedExcelFallbackRow = {
+    rowKind: 'entry' | 'aggregate';
+    workDate: string;
+    employeeName: string;
+    employeePosition: string;
+    authUserId: number;
+    taskName: string;
+    note: string;
+    billableHours: number;
+    billableRate: number;
+    amountToPay: number;
+    isVoided: boolean;
+    timeEntryId: string;
+};
 
-    const ws = wb.addWorksheet('Report', {
-        views: [{ showGridLines: true }],
-    });
-
-    const rawRows = Array.isArray(snapshot.rows) ? [...snapshot.rows] : [];
-    rawRows.sort((a, b) => a.sortOrder - b.sortOrder);
-
-    type DetailLine = {
-        dateStr: string;
-        initials: string;
-        task: string;
-        notes: string;
-        hours: number;
-        rate: number;
-        amount: number;
-        sortKey: string;
-        personKey: string;
-        fullName: string;
-        title: string;
-    };
-
+function buildDetailLinesFromSnapshotRows(rawRows: ReportSnapshotRow[]): DetailLine[] {
     const details: DetailLine[] = [];
-
     for (const sr of rawRows) {
         const d = getSnapshotRowDisplayData(sr);
         if (!isIncludedEntryRow(sr, d))
@@ -177,8 +267,70 @@ export async function buildPartnerConfirmedSnapshotExcel(snapshot: ReportSnapsho
             title: pickStr(d, 'employeePosition', 'employee_position'),
         });
     }
-
     details.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0));
+    return details;
+}
+
+function detailLinesFromFallback(fr: PartnerConfirmedExcelFallbackRow[]): DetailLine[] {
+    const details: DetailLine[] = [];
+    for (const row of fr) {
+        if (row.rowKind !== 'entry' || row.isVoided)
+            continue;
+        const hours = row.billableHours;
+        if (hours <= 1e-9)
+            continue;
+        const rate = row.billableRate;
+        let amount = row.amountToPay;
+        if (amount <= 1e-9 && rate > 0)
+            amount = Math.round(hours * rate * 100) / 100;
+        const fullName = row.employeeName.trim();
+        const wd = row.workDate.trim().slice(0, 10);
+        const personKey = row.authUserId > 0 ? `id:${row.authUserId}` : `n:${fullName.toLowerCase()}`;
+        details.push({
+            dateStr: fmtDateDdMmYyyy(wd),
+            initials: initialsFromDisplayName(fullName),
+            task: row.taskName.trim(),
+            notes: row.note.trim(),
+            hours,
+            rate,
+            amount,
+            sortKey: `${wd}\u0000${fullName}\u0000${row.timeEntryId}`,
+            personKey,
+            fullName,
+            title: row.employeePosition.trim(),
+        });
+    }
+    details.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0));
+    return details;
+}
+
+export type PartnerConfirmedSnapshotExcelResult = {
+    blob: Blob;
+    filename: string;
+};
+
+/** Excel подтверждённого снимка: две таблицы в формате как на эталонном скриншоте партнёра. */
+export async function buildPartnerConfirmedSnapshotExcel(snapshot: ReportSnapshot, opts?: {
+    /** Уже загруженные строки (из GET + при необходимости JSON export), чтобы не дублировать запросы. */
+    snapshotRows?: ReportSnapshotRow[];
+    fallbackTimeRows?: PartnerConfirmedExcelFallbackRow[];
+}): Promise<PartnerConfirmedSnapshotExcelResult> {
+    const ExcelJS = await loadExcelJS();
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'Kosta Legal';
+    wb.created = new Date();
+    wb.modified = new Date();
+
+    const ws = wb.addWorksheet('Report', {
+        views: [{ showGridLines: true }],
+    });
+
+    const rawRows = opts?.snapshotRows != null
+        ? [...opts.snapshotRows].sort((a, b) => a.sortOrder - b.sortOrder)
+        : await loadSnapshotRowsForPartnerExcel(snapshot.id, snapshot);
+    let details = buildDetailLinesFromSnapshotRows(rawRows);
+    if (details.length === 0 && opts?.fallbackTimeRows?.length)
+        details = detailLinesFromFallback(opts.fallbackTimeRows);
 
     const T1_HEADERS = ['Date', 'First Name', 'Task', 'Notes', 'Hours', 'Rate', 'Amount'];
     let r = 1;

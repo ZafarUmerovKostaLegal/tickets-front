@@ -2,16 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     buildPartnerConfirmedSnapshotExcel,
+    fetchAllTimeReportProjectRows,
     fetchReportsMeta,
     getReportSnapshot,
+    loadSnapshotRowsForPartnerExcel,
     listPartnerReportConfirmationsConfirmed,
     listTimeTrackingUsers,
+    type PartnerConfirmedExcelFallbackRow,
     type PartnerReportConfirmationRequest,
     type TimeTrackingUserRow,
     PARTNER_CONFIRMED_REPORTS_INVALIDATE_EVENT,
 } from '@entities/time-tracking';
 import { formatIsoRangeTitle } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { writeReportPreviewTransfer } from '@entities/time-tracking/model/reportPreviewTransfer';
+import { flattenTimeReportToExcelRows } from '@pages/report-preview/lib/reportPreviewApiToExcelRows';
+import type { TimeExcelPreviewRow } from '@pages/report-preview/lib/previewExcelTypes';
 import { routes } from '@shared/config';
 import { useAppDialog } from '@shared/ui';
 
@@ -66,6 +71,25 @@ function downloadBlob(blob: Blob, filename: string): void {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+}
+
+function previewRowsToPartnerFallback(rows: TimeExcelPreviewRow[]): PartnerConfirmedExcelFallbackRow[] {
+    return rows
+        .filter((row) => row.rowKind === 'entry' && !row.isVoided && Number.isFinite(row.billableHours) && row.billableHours > 1e-9)
+        .map((row) => ({
+            rowKind: row.rowKind,
+            workDate: row.workDate,
+            employeeName: row.employeeName,
+            employeePosition: row.employeePosition,
+            authUserId: row.authUserId,
+            taskName: row.taskName,
+            note: row.note || row.description || '',
+            billableHours: row.billableHours,
+            billableRate: row.billableRate,
+            amountToPay: row.amountToPay,
+            isVoided: row.isVoided,
+            timeEntryId: row.timeEntryId,
+        }));
 }
 
 export function ConfirmedPartnerReportsPanel() {
@@ -188,7 +212,22 @@ export function ConfirmedPartnerReportsPanel() {
         setExportBusySnapshotId(sid);
         try {
             const snapshot = await getReportSnapshot(sid);
-            const { blob, filename } = await buildPartnerConfirmedSnapshotExcel(snapshot);
+            const snapshotRows = await loadSnapshotRowsForPartnerExcel(sid, snapshot);
+            let fallbackTimeRows: PartnerConfirmedExcelFallbackRow[] | undefined;
+            if (snapshotRows.length === 0) {
+                const projectRows = await fetchAllTimeReportProjectRows({
+                    dateFrom: r.dateFrom.slice(0, 10),
+                    dateTo: r.dateTo.slice(0, 10),
+                    project_id: r.projectId.trim(),
+                });
+                const fb = previewRowsToPartnerFallback(flattenTimeReportToExcelRows('projects', projectRows));
+                if (fb.length > 0)
+                    fallbackTimeRows = fb;
+            }
+            const { blob, filename } = await buildPartnerConfirmedSnapshotExcel(snapshot, {
+                snapshotRows,
+                ...(fallbackTimeRows != null && fallbackTimeRows.length > 0 ? { fallbackTimeRows } : {}),
+            });
             downloadBlob(blob, filename);
         }
         catch (e) {
