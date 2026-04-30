@@ -156,16 +156,6 @@ function previewLiveTitle(xfer: ReportPreviewTransferV2): string {
         const g = xfer.groupBy === 'clients' ? 'клиентам' : 'проектам';
         return `Время — по ${g}`;
     }
-    if (xfer.reportType === 'confirmed-expenses') {
-        const gb = coerceGroupByForType('confirmed-expenses', xfer.groupBy) as ExpenseGroup;
-        const map: Record<ExpenseGroup, string> = {
-            clients: 'клиентам',
-            projects: 'проектам',
-            categories: 'категориям',
-            team: 'команде',
-        };
-        return `Подтвержденные отчеты — по ${map[gb]}`;
-    }
     if (xfer.reportType === 'expenses') {
         const gb = coerceGroupByForType('expenses', xfer.groupBy) as ExpenseGroup;
         const map: Record<ExpenseGroup, string> = {
@@ -174,7 +164,8 @@ function previewLiveTitle(xfer: ReportPreviewTransferV2): string {
             categories: 'категориям',
             team: 'команде',
         };
-        return `Расходы — по ${map[gb]}`;
+        const base = xfer.filters.confirmed_payment_only === true ? 'Расходы (оплата подтверждена)' : 'Расходы';
+        return `${base} — по ${map[gb]}`;
     }
     if (xfer.reportType === 'uninvoiced')
         return 'Не выставлено';
@@ -220,7 +211,7 @@ function reportPreviewConfirmationProjectId(xfer: ReportPreviewTransferV2, selec
         return '';
     if (xfer.reportType === 'time' && xfer.groupBy === 'projects')
         return pid;
-    if ((xfer.reportType === 'expenses' || xfer.reportType === 'confirmed-expenses') && xfer.groupBy === 'projects')
+    if (xfer.reportType === 'expenses' && xfer.groupBy === 'projects')
         return pid;
     return '';
 }
@@ -476,15 +467,6 @@ function persistXferFilters(xfer: ReportPreviewTransferV2, filters: ReportFilter
             reportType: 'time',
             groupBy: xfer.groupBy,
             filters: paged,
-        });
-        return;
-    }
-    if (xfer.reportType === 'confirmed-expenses') {
-        writeReportPreviewTransfer({
-            v: 2,
-            reportType: 'confirmed-expenses',
-            groupBy: xfer.groupBy,
-            filters: { ...paged, confirmed_payment_only: true },
         });
         return;
     }
@@ -802,13 +784,9 @@ export function ReportPreviewPage() {
                         setTimeExcelRows(flattenTimeReportToExcelRows(gb, sorted));
                     return;
                 }
-                if (xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'confirmed-expenses') {
-                    const rtForCoerce = xferSnapshot.reportType === 'confirmed-expenses' ? 'confirmed-expenses' : 'expenses';
-                    const gb = coerceGroupByForType(rtForCoerce, xferSnapshot.groupBy) as ExpenseGroup;
-                    const expenseFilters = xferSnapshot.reportType === 'confirmed-expenses'
-                        ? { ...apiFilters, confirmed_payment_only: true }
-                        : apiFilters;
-                    const raw = await fetchAllExpenseReportRows(gb, expenseFilters);
+                if (xferSnapshot.reportType === 'expenses') {
+                    const gb = coerceGroupByForType('expenses', xferSnapshot.groupBy) as ExpenseGroup;
+                    const raw = await fetchAllExpenseReportRows(gb, apiFilters);
                     if (!cancelled)
                         setExpenseExcelRows(flattenExpenseReportToExcelRows(gb, raw));
                     return;
@@ -1335,7 +1313,7 @@ export function ReportPreviewPage() {
           <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} timeSave={{ ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={user ? projectItemsForSelect : undefined} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={user ? handleMoveTimeEntryToProject : undefined} onDuplicateTimeEntry={user ? handleDuplicateTimeEntry : undefined} onGrantEditUnlock={user ? handleGrantEditUnlock : undefined} canGrantEditUnlockForTarget={user ? (tid) => canGrantTimeEntryEditUnlock(user, tid) : undefined} editUnlockPendingCompoundKey={editUnlockPendingCompoundKey} onAddTimeEntry={user ? handleAddTimeEntry : undefined} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={timeEmployeePartnerPick}/>
         </>);
         }
-        if (xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'confirmed-expenses') {
+        if (xferSnapshot.reportType === 'expenses') {
             if (expenseExcelRows.length === 0)
                 return reportPreviewEmptyBlock(rangeFrom, rangeTo);
             return (<>
@@ -1366,7 +1344,7 @@ export function ReportPreviewPage() {
 
       <div className="tt-rp-preview__main tt-rp-preview__main--fill tt-rp-preview__body-pad">
         {confirmationProjectId ? (<ReportPreviewPartnerBar projectId={confirmationProjectId} dateFrom={rangeFrom} dateTo={rangeTo} userId={user?.id ?? null}/>) : null}
-        <div className={`tt-rp-preview__live${xferSnapshot && (xferSnapshot.reportType === 'time' || xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'confirmed-expenses' || xferSnapshot.reportType === 'uninvoiced' || xferSnapshot.reportType === 'project-budget') ? ' tt-rp-preview__live--sheet' : ''}`}>
+        <div className={`tt-rp-preview__live${xferSnapshot && (xferSnapshot.reportType === 'time' || xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'uninvoiced' || xferSnapshot.reportType === 'project-budget') ? ' tt-rp-preview__live--sheet' : ''}`}>
           {mainBody}
         </div>
         {timeEntrySaveUI === 'err' && timeEntrySaveMessage

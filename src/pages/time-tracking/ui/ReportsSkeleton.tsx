@@ -3,7 +3,7 @@ export function ReportsSkeleton() {
       <div className="tt-reports__type-block">
         <span className="tt-reports-skel__type-block-title"/>
         <nav className="tt-reports__type-nav">
-          {[1, 2, 3, 4, 5].map((i) => (<span key={i} className="tt-reports-skel__type-tab"/>))}
+          {[1, 2, 3, 4].map((i) => (<span key={i} className="tt-reports-skel__type-tab"/>))}
         </nav>
       </div>
     <div className="tt-reports__header">

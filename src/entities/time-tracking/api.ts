@@ -3476,19 +3476,20 @@ function parseFilenameFromContentDisposition(header: string | null): string | nu
         return plain[1].replace(/^"+|"+$/g, '');
     return null;
 }
-function defaultReportExportFilename(reportType: 'time' | 'expenses' | 'confirmed-expenses' | 'uninvoiced' | 'project-budget', groupBy: string | null, from: string, to: string, ext: string): string {
-    const slug = groupBy ? `${reportType}_${groupBy}` : reportType;
+function defaultReportExportFilename(reportType: 'time' | 'expenses' | 'uninvoiced' | 'project-budget', groupBy: string | null, from: string, to: string, ext: string, filters?: ReportFiltersV2): string {
+    const slugBase = filters?.confirmed_payment_only === true && reportType === 'expenses'
+        ? 'expenses_confirmed_payment'
+        : reportType;
+    const slug = groupBy ? `${slugBase}_${groupBy}` : slugBase;
     return `${slug}_${from}_${to}.${ext}`;
 }
 export type ReportExportOptions = {
     
     timeExport?: 'detail' | 'summary';
 };
-export async function exportReportV2(reportType: 'time' | 'expenses' | 'confirmed-expenses' | 'uninvoiced' | 'project-budget', groupBy: string | null, filters: ReportFiltersV2, format: 'csv' | 'xlsx', exportOpts?: ReportExportOptions): Promise<void> {
-    const apiSegment = reportType === 'confirmed-expenses' ? 'expenses' : reportType;
-    const mergedFilters: ReportFiltersV2 = reportType === 'confirmed-expenses'
-        ? { ...filters, confirmed_payment_only: true }
-        : filters;
+export async function exportReportV2(reportType: 'time' | 'expenses' | 'uninvoiced' | 'project-budget', groupBy: string | null, filters: ReportFiltersV2, format: 'csv' | 'xlsx', exportOpts?: ReportExportOptions): Promise<void> {
+    const apiSegment = reportType;
+    const mergedFilters: ReportFiltersV2 = filters;
     const base = '/api/v1/time-tracking/reports';
     const path = groupBy ? `/${apiSegment}/${groupBy}/export` : `/${apiSegment}/export`;
     const p = new URLSearchParams();
@@ -3593,7 +3594,7 @@ export async function exportReportV2(reportType: 'time' | 'expenses' | 'confirme
     const blob = new Blob([buf], { type: mime });
     const ext = format === 'xlsx' ? 'xlsx' : 'csv';
     let filename = parseFilenameFromContentDisposition(res.headers.get('content-disposition')) ??
-        defaultReportExportFilename(reportType, groupBy, mergedFilters.dateFrom, mergedFilters.dateTo, ext);
+        defaultReportExportFilename(reportType, groupBy, mergedFilters.dateFrom, mergedFilters.dateTo, ext, mergedFilters);
     if (!filename.toLowerCase().endsWith(`.${ext}`)) {
         filename = `${filename.replace(/\.(csv|xlsx|xls)$/i, '')}.${ext}`;
     }

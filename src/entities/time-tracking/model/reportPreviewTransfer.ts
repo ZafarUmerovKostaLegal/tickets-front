@@ -1,6 +1,6 @@
 import type { ReportFiltersV2 } from '@entities/time-tracking';
 export const REPORT_PREVIEW_TRANSFER_KEY = 'tt-report-preview-v1';
-export type ReportPreviewReportType = 'time' | 'expenses' | 'confirmed-expenses' | 'uninvoiced' | 'project-budget';
+export type ReportPreviewReportType = 'time' | 'expenses' | 'uninvoiced' | 'project-budget';
 export type ReportPreviewTimeGroup = 'clients' | 'projects';
 export type ReportPreviewExpenseGroup = 'clients' | 'projects' | 'categories' | 'team';
 export type ReportPreviewTransferV2 = {
@@ -11,11 +11,6 @@ export type ReportPreviewTransferV2 = {
 } | {
     v: 2;
     reportType: 'expenses';
-    groupBy: ReportPreviewExpenseGroup;
-    filters: ReportFiltersV2;
-} | {
-    v: 2;
-    reportType: 'confirmed-expenses';
     groupBy: ReportPreviewExpenseGroup;
     filters: ReportFiltersV2;
 } | {
@@ -33,8 +28,17 @@ export type ReportPreviewTransferV1 = {
 };
 export type ReportPreviewTransferPayload = ReportPreviewTransferV2 | ReportPreviewTransferV1;
 export function normalizeReportPreviewTransfer(raw: ReportPreviewTransferPayload): ReportPreviewTransferV2 {
-    if (raw.v === 2)
-        return raw;
+    if (raw.v === 2) {
+        const r = raw as ReportPreviewTransferV2 | {
+            v: 2;
+            reportType: string;
+            groupBy?: ReportPreviewExpenseGroup;
+            filters: ReportFiltersV2;
+        };
+        if (r.reportType === 'confirmed-expenses' && r.groupBy != null)
+            return { v: 2, reportType: 'expenses', groupBy: r.groupBy, filters: { ...r.filters, confirmed_payment_only: true } };
+        return raw as ReportPreviewTransferV2;
+    }
     return {
         v: 2,
         reportType: 'time',
@@ -79,7 +83,7 @@ export function readReportPreviewTransfer(): ReportPreviewTransferPayload | null
         if (!filters)
             return null;
         if (rec.v === 2 && typeof rec.reportType === 'string') {
-            const rt = rec.reportType as ReportPreviewReportType;
+            const rt = rec.reportType;
             if (rt === 'time' && typeof rec.groupBy === 'string') {
                 const gbRaw = rec.groupBy as string;
                 const groupBy: ReportPreviewTimeGroup = gbRaw === 'clients' || gbRaw === 'projects'
@@ -103,9 +107,9 @@ export function readReportPreviewTransfer(): ReportPreviewTransferPayload | null
             if (rt === 'confirmed-expenses' && typeof rec.groupBy === 'string') {
                 return {
                     v: 2,
-                    reportType: 'confirmed-expenses',
+                    reportType: 'expenses',
                     groupBy: rec.groupBy as ReportPreviewExpenseGroup,
-                    filters,
+                    filters: { ...filters, confirmed_payment_only: true },
                 };
             }
             if (rt === 'uninvoiced') {

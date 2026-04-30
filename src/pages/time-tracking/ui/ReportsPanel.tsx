@@ -20,7 +20,7 @@ import {
   DEFAULT_GROUP,
   PERIOD_OPTIONS,
   PER_PAGE,
-  isReportTypeV2,
+  migrateStoredReportType,
   isExpenseLikeReportType,
   coerceGroupByForType,
 } from '@entities/time-tracking/model/reportsPanelConfig';
@@ -777,8 +777,8 @@ export function ReportsPanel() {
     document.addEventListener('mousedown', h);
     return () => document.removeEventListener('mousedown', h);
   }, [periodDropdown]);
-  const [reportType, setReportType] = useState<ReportTypeV2>(() => savedPrefs && isReportTypeV2(savedPrefs.reportType) ? savedPrefs.reportType : 'time');
-  const [groupBy, setGroupBy] = useState<GroupByV2>(() => coerceGroupByForType(savedPrefs && isReportTypeV2(savedPrefs.reportType) ? savedPrefs.reportType : 'time', savedPrefs?.groupBy));
+  const [reportType, setReportType] = useState<ReportTypeV2>(() => migrateStoredReportType(savedPrefs?.reportType));
+  const [groupBy, setGroupBy] = useState<GroupByV2>(() => coerceGroupByForType(migrateStoredReportType(savedPrefs?.reportType), savedPrefs?.groupBy));
   const groups = GROUPS_FOR_TYPE[reportType];
   function changeReportType(t: ReportTypeV2) {
     setReportType(t);
@@ -845,7 +845,6 @@ export function ReportsPanel() {
       user_id: selectedUserIds.length ? selectedUserIds.join(',') : undefined,
       include_fixed_fee: reportType === 'time' ? includeFixed : undefined,
       pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,
-      ...(reportType === 'confirmed-expenses' ? { confirmed_payment_only: true } : {}),
     };
     void (async () => {
       try {
@@ -955,7 +954,6 @@ export function ReportsPanel() {
       pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,
       page,
       per_page: effectivePerPage,
-      ...(reportType === 'confirmed-expenses' ? { confirmed_payment_only: true } : {}),
     };
     let promise: Promise<{
       results: unknown[];
@@ -1137,15 +1135,10 @@ export function ReportsPanel() {
       pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,
       page: 1,
       per_page: effectivePerPage,
-      ...(reportType === 'confirmed-expenses' ? { confirmed_payment_only: true } : {}),
     };
     let payload: ReportPreviewTransferV2;
     if (reportType === 'time') {
       payload = { v: 2, reportType: 'time', groupBy: groupBy as ReportPreviewTimeGroup, filters };
-    }
-    else if (reportType === 'confirmed-expenses') {
-      const g = groupBy as ExpenseGroup;
-      payload = { v: 2, reportType: 'confirmed-expenses', groupBy: g, filters };
     }
     else if (reportType === 'expenses') {
       const g = groupBy as ExpenseGroup;
@@ -1220,7 +1213,6 @@ export function ReportsPanel() {
         dateTo,
         user_id: selectedUserIds.length ? selectedUserIds.join(',') : undefined,
         include_fixed_fee: reportType === 'time' ? includeFixed : undefined,
-        ...(reportType === 'confirmed-expenses' ? { confirmed_payment_only: true } : {}),
       };
       const gb = groups ? groupBy : null;
       if (reportType === 'time')
@@ -1243,10 +1235,6 @@ export function ReportsPanel() {
         return `${base}. Один клиент может быть в нескольких строках — по валюте проекта записей; суммы в разных валютах не складываются.`;
       }
       return base;
-    }
-    if (reportType === 'confirmed-expenses') {
-      const g = groups?.find((x) => x.id === groupBy)?.label ?? groupBy;
-      return `Подтвержденные отчеты — разрез: ${g}`;
     }
     if (reportType === 'expenses') {
       const g = groups?.find((x) => x.id === groupBy)?.label ?? groupBy;
