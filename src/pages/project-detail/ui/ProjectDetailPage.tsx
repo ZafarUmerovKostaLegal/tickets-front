@@ -822,7 +822,7 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
 }) {
     const { showAlert, showConfirm } = useAppDialog();
     const [partners, setPartners] = useState<ProjectPartnerAccessRow[]>([]);
-    const [partnersLoad, setPartnersLoad] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
+    const [partnersLoad, setPartnersLoad] = useState<'idle' | 'loading' | 'ok' | 'error'>('loading');
     const [pendingReqs, setPendingReqs] = useState<PartnerReportConfirmationRequest[]>([]);
     const [confirmedReqs, setConfirmedReqs] = useState<PartnerReportConfirmationRequest[]>([]);
     const [listsLoad, setListsLoad] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
@@ -858,6 +858,16 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
             setListsLoad('idle');
             return;
         }
+        if (partnersLoad !== 'ok') {
+            setListsLoad('idle');
+            return;
+        }
+        if (!partners.some((p) => p.authUserId === currentUserId)) {
+            setPendingReqs([]);
+            setConfirmedReqs([]);
+            setListsLoad('idle');
+            return;
+        }
         setListsLoad('loading');
         void Promise.all([
             listPartnerReportConfirmationsPending(),
@@ -878,12 +888,10 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
         return () => {
             cancelled = true;
         };
-    }, [projectId, detailPeriod.from, detailPeriod.to, currentUserId]);
+    }, [projectId, detailPeriod.from, detailPeriod.to, currentUserId, partnersLoad, partners]);
     const pendingForProject = useMemo(() => pendingReqs.find((r) => r.projectId === pid && partnerConfirmPeriodMatches(r, periodFrom, periodTo)), [pendingReqs, pid, periodFrom, periodTo]);
     const confirmedForProject = useMemo(() => confirmedReqs.find((r) => r.projectId === pid && partnerConfirmPeriodMatches(r, periodFrom, periodTo)), [confirmedReqs, pid, periodFrom, periodTo]);
     const periodLabel = formatDetailPeriodLabel(detailPeriod);
-    const selfPartner = currentUserId != null ? partners.find((p) => p.authUserId === currentUserId) : undefined;
-    const canConfirmAsPartner = Boolean(selfPartner);
     const mySig = useMemo(() => {
         if (currentUserId == null)
             return undefined;
@@ -900,7 +908,7 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
         setConfirmedReqs(c);
     };
     const handleConfirmReport = async () => {
-        if (!canConfirmAsPartner || confirmBusy || !pendingForProject)
+        if (confirmBusy || !pendingForProject)
             return;
         const ok = await showConfirm({
             title: 'Подтвердить принятие отчёта?',
@@ -936,7 +944,15 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
             return iso;
         }
     };
-    const partnerActions = canConfirmAsPartner ? (<div className="pdp__partner-report-actions">
+    if (currentUserId == null)
+        return null;
+    if (partnersLoad === 'idle' || partnersLoad === 'loading')
+        return null;
+    if (partnersLoad === 'error')
+        return null;
+    if (!partners.some((p) => p.authUserId === currentUserId))
+        return null;
+    const partnerActions = (<div className="pdp__partner-report-actions">
         {listsLoad === 'loading' ? (<span className="pdp__partner-report-status">Загрузка запросов на подтверждение…</span>) : null}
         {listsLoad === 'error' ? (<span className="pdp__partner-report-muted pdp__partner-report-muted--error" role="alert">
             Не удалось загрузить статус подтверждений отчётов.
@@ -954,9 +970,9 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
             Вы подтвердили принятие отчёта ({fmtConfirmed(mySig.confirmedAt)}). Ожидаются подписи других партнёров.
           </span>) : null}
         {listsLoad === 'ok' && !pendingForProject && !mySig && !fullyConfirmed ? (<span className="pdp__partner-report-status">
-            За этот период нет активного запроса на подтверждение для вас. Запрос отправляет автор снимка отчёта (Учёт времени → Отчёты).
+            За этот период нет активного запроса на подтверждение для вас. Его может отправить партнёр из предпросмотра отчёта (Учёт времени → Отчёты).
           </span>) : null}
-      </div>) : null;
+      </div>);
     return (<section className="pdp__partner-report" aria-labelledby="pdp-partner-report-heading">
         <div className="pdp__partner-report-head">
           <h2 id="pdp-partner-report-heading" className="pdp__partner-report-title">
@@ -965,11 +981,9 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
           {partnerActions}
         </div>
         <p className="pdp__partner-report-hint">
-          Партнёры с доступом к проекту в учёте времени. Запрос на подтверждение отправляет автор снимка отчёта (раздел «Отчёты»). Партнёр подписывает его здесь, когда период карточки совпадает с периодом запроса. Маршруты Gateway: partner-confirmations submit → confirm (requestId); списки pending и confirmed — см. FRONTEND_INTEGRATION.md.
+          Запрос на подпись отправляется из предпросмотра отчёта (Учёт времени → Отчёты). Здесь можно подтвердить его при совпадении периода карточки с запросом.
         </p>
-        {partnersLoad === 'loading' ? (<p className="pdp__partner-report-muted">Загрузка…</p>) : partnersLoad === 'error' ? (<p className="pdp__partner-report-muted pdp__partner-report-muted--error" role="alert">
-            Не удалось загрузить список партнёров.
-          </p>) : partners.length === 0 ? (<p className="pdp__partner-report-muted">Нет партнёров с доступом к проекту.</p>) : (<ul className="pdp__partner-report-list">
+        {partners.length === 0 ? (<p className="pdp__partner-report-muted">Нет партнёров с доступом к проекту.</p>) : (<ul className="pdp__partner-report-list">
             {partners.map((p) => (<li key={p.authUserId} className="pdp__partner-report-item">
                 <span className="pdp__partner-report-name">{p.displayName}</span>
                 {p.position ? (<span className="pdp__partner-report-pos">{p.position}</span>) : null}
