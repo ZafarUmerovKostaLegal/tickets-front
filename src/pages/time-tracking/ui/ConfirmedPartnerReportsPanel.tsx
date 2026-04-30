@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-    exportReportSnapshot,
+    buildPartnerConfirmedSnapshotExcel,
     fetchReportsMeta,
+    getReportSnapshot,
     listPartnerReportConfirmationsConfirmed,
     listTimeTrackingUsers,
     type PartnerReportConfirmationRequest,
@@ -27,7 +28,7 @@ const IcoEye = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none
   <circle cx="12" cy="12" r="3" />
 </svg>);
 
-/** Выгрузка снимка CSV */
+/** Выгрузка подтверждённого отчёта в Excel */
 const IcoDownload = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
 </svg>);
@@ -180,18 +181,19 @@ export function ConfirmedPartnerReportsPanel() {
         })();
     }, [navigate]);
 
-    const exportSnapshotCsv = useCallback(async (r: PartnerReportConfirmationRequest) => {
+    const exportSnapshotExcel = useCallback(async (r: PartnerReportConfirmationRequest) => {
         const sid = r.snapshotId.trim();
         if (!sid)
             return;
         setExportBusySnapshotId(sid);
         try {
-            const { blob, filename } = await exportReportSnapshot(sid, 'csv');
+            const snapshot = await getReportSnapshot(sid);
+            const { blob, filename } = await buildPartnerConfirmedSnapshotExcel(snapshot);
             downloadBlob(blob, filename);
         }
         catch (e) {
             await showAlert({
-                message: e instanceof Error ? e.message : 'Не удалось выгрузить снимок',
+                message: e instanceof Error ? e.message : 'Не удалось выгрузить отчёт в Excel',
             });
         }
         finally {
@@ -206,7 +208,7 @@ export function ConfirmedPartnerReportsPanel() {
             Подтверждённые партнёром отчёты
           </h2>
           <p className="tt-partner-confirmed__hint">
-            Список только для просмотра: строки здесь не редактируются. Иконка «глаз» открывает предпросмотр периода и проекта на отдельной странице; иконка загрузки — зафиксированный снимок в CSV. Данные с сервера (<code className="tt-partner-confirmed__code">GET …/partner-confirmations/confirmed</code>).
+            Список только для просмотра: строки здесь не редактируются. Иконка «глаз» открывает предпросмотр периода и проекта на отдельной странице; иконка загрузки — выгрузка подтверждённого отчёта в Excel (.xlsx). Данные списка с сервера (<code className="tt-partner-confirmed__code">GET …/partner-confirmations/confirmed</code>).
           </p>
         </div>
         <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" disabled={loading || refreshBusy} onClick={() => void fetchConfirmed({ silent: true })} title="Обновить список" aria-label="Обновить список">
@@ -260,7 +262,7 @@ export function ConfirmedPartnerReportsPanel() {
                       <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" onClick={() => openReportPreviewForRow(r)} title="Открыть предпросмотр по периоду и проекту этой строки" aria-label="Предпросмотр отчёта">
                         <IcoEye />
                       </button>
-                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={exportBusySnapshotId === r.snapshotId} onClick={() => void exportSnapshotCsv(r)} title={exportBusySnapshotId === r.snapshotId ? 'Выгрузка…' : 'Скачать зафиксированный снимок (CSV)'} aria-label={exportBusySnapshotId === r.snapshotId ? 'Выгрузка CSV снимка' : 'Скачать снимок CSV'}>
+                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={exportBusySnapshotId === r.snapshotId} onClick={() => void exportSnapshotExcel(r)} title={exportBusySnapshotId === r.snapshotId ? 'Выгрузка…' : 'Скачать подтверждённый отчёт в Excel'} aria-label={exportBusySnapshotId === r.snapshotId ? 'Выгрузка Excel' : 'Скачать отчёт Excel'}>
                         {exportBusySnapshotId === r.snapshotId ? <IcoSpinner /> : <IcoDownload />}
                       </button>
                     </div>

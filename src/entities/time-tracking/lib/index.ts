@@ -7,4 +7,5 @@ export * from './klProjectCode';
 export * from './weeklyReportingLock';
 export * from './timeEntryEditUnlockStorage';
 export * from './reportSnapshotOverrides';
+export * from './exportPartnerConfirmedSnapshotExcel';
 export * from './userFacingProjectAccessError';
