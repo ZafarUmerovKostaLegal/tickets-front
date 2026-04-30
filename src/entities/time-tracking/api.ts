@@ -713,69 +713,6 @@ export async function listPartnerUsersWithProjectAccessToProject(projectId: stri
     out.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru', { sensitivity: 'base' }));
     return out;
 }
-
-export type PartnerReportConfirmationMeOut = {
-    confirmedAt: string | null;
-};
-
-function parsePartnerReportConfirmationMe(j: unknown): PartnerReportConfirmationMeOut {
-    if (!j || typeof j !== 'object')
-        return { confirmedAt: null };
-    const o = j as Record<string, unknown>;
-    const raw = o.confirmed_at ?? o.confirmedAt;
-    if (raw == null || raw === '')
-        return { confirmedAt: null };
-    const s = String(raw).trim();
-    return { confirmedAt: s || null };
-}
-
-/** Подтверждение партнёром принятия отчёта за период (GET может вернуть 404, пока endpoint не развёрнут). */
-export async function getMyPartnerReportConfirmation(projectId: string, periodFrom: string, periodTo: string): Promise<PartnerReportConfirmationMeOut> {
-    try {
-        const pid = encodeURIComponent(String(projectId ?? '').trim());
-        if (!pid)
-            return { confirmedAt: null };
-        const qs = new URLSearchParams({
-            period_from: periodFrom.slice(0, 10),
-            period_to: periodTo.slice(0, 10),
-        });
-        const res = await apiFetch(`/api/v1/time-tracking/projects/${pid}/partner-report-confirmation/me?${qs}`);
-        if (res.status === 404 || res.status === 501)
-            return { confirmedAt: null };
-        await throwIfNotOk(res);
-        return parsePartnerReportConfirmationMe(await res.json());
-    }
-    catch {
-        return { confirmedAt: null };
-    }
-}
-
-export async function postPartnerReportConfirmation(projectId: string, periodFrom: string, periodTo: string): Promise<PartnerReportConfirmationMeOut> {
-    const pid = encodeURIComponent(String(projectId ?? '').trim());
-    if (!pid)
-        throw new Error('Не указан проект');
-    const res = await apiFetch(`/api/v1/time-tracking/projects/${pid}/partner-report-confirmation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            period_from: periodFrom.slice(0, 10),
-            period_to: periodTo.slice(0, 10),
-        }),
-    });
-    await throwIfNotOk(res);
-    const text = await res.text();
-    if (!text.trim())
-        return { confirmedAt: new Date().toISOString() };
-    let parsed: unknown;
-    try {
-        parsed = JSON.parse(text) as unknown;
-    }
-    catch {
-        return { confirmedAt: new Date().toISOString() };
-    }
-    const out = parsePartnerReportConfirmationMe(parsed);
-    return { confirmedAt: out.confirmedAt ?? new Date().toISOString() };
-}
 export type TimeManagerClientContactRow = {
     id: string;
     name: string;
@@ -2259,6 +2196,128 @@ export async function exportReportSnapshot(id: string, format: 'csv' | 'json'): 
     const cd = res.headers.get('Content-Disposition') ?? '';
     const filename = cd.split('filename=')[1]?.replace(/"/g, '').trim() || `snapshot-${id}.${format}`;
     return { blob, filename };
+}
+
+/** Ответы POST/GGET partner-confirmations (camelCase, см. Gateway / FRONTEND_INTEGRATION.md). */
+export type PartnerReportConfirmationSignature = {
+    partnerAuthUserId: number;
+    confirmedAt: string;
+};
+export type PartnerReportConfirmationRequest = {
+    id: string;
+    snapshotId: string;
+    projectId: string;
+    dateFrom: string;
+    dateTo: string;
+    title: string;
+    status: string;
+    submittedByAuthUserId: number;
+    requiredPartnerAuthUserIds: number[];
+    pendingPartnerAuthUserIds: number[];
+    signatures: PartnerReportConfirmationSignature[];
+    createdAt: string;
+    updatedAt: string | null;
+};
+function readPartnerConfirmNum(v: unknown): number | null {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+}
+function parsePartnerReportConfirmationSignature(raw: unknown): PartnerReportConfirmationSignature | null {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const o = raw as Record<string, unknown>;
+    const partnerAuthUserId = readPartnerConfirmNum(o.partnerAuthUserId ?? o.partner_auth_user_id);
+    const confirmedAt = String(o.confirmedAt ?? o.confirmed_at ?? '').trim();
+    if (partnerAuthUserId == null || !confirmedAt)
+        return null;
+    return { partnerAuthUserId, confirmedAt };
+}
+export function parsePartnerReportConfirmationRequest(raw: unknown): PartnerReportConfirmationRequest | null {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const o = raw as Record<string, unknown>;
+    const id = String(o.id ?? '').trim();
+    const snapshotId = String(o.snapshotId ?? o.snapshot_id ?? '').trim();
+    const projectId = String(o.projectId ?? o.project_id ?? '').trim();
+    const dateFrom = String(o.dateFrom ?? o.date_from ?? '').slice(0, 10);
+    const dateTo = String(o.dateTo ?? o.date_to ?? '').slice(0, 10);
+    const submittedByAuthUserId = readPartnerConfirmNum(o.submittedByAuthUserId ?? o.submitted_by_auth_user_id);
+    if (!id || !snapshotId || !projectId || !dateFrom || !dateTo || submittedByAuthUserId == null)
+        return null;
+    const reqArr = o.requiredPartnerAuthUserIds ?? o.required_partner_auth_user_ids;
+    const pendArr = o.pendingPartnerAuthUserIds ?? o.pending_partner_auth_user_ids;
+    const sigRaw = Array.isArray(o.signatures) ? o.signatures : [];
+    const requiredPartnerAuthUserIds = (Array.isArray(reqArr) ? reqArr : []).map(readPartnerConfirmNum).filter((x): x is number => x != null);
+    const pendingPartnerAuthUserIds = (Array.isArray(pendArr) ? pendArr : []).map(readPartnerConfirmNum).filter((x): x is number => x != null);
+    const signatures = sigRaw.map(parsePartnerReportConfirmationSignature).filter((x): x is PartnerReportConfirmationSignature => x != null);
+    const updatedRaw = o.updatedAt ?? o.updated_at;
+    return {
+        id,
+        snapshotId,
+        projectId,
+        dateFrom,
+        dateTo,
+        title: String(o.title ?? ''),
+        status: String(o.status ?? ''),
+        submittedByAuthUserId,
+        requiredPartnerAuthUserIds,
+        pendingPartnerAuthUserIds,
+        signatures,
+        createdAt: String(o.createdAt ?? o.created_at ?? ''),
+        updatedAt: updatedRaw == null || updatedRaw === '' ? null : String(updatedRaw),
+    };
+}
+function parsePartnerReportConfirmationRequestList(raw: unknown): PartnerReportConfirmationRequest[] {
+    if (!Array.isArray(raw))
+        return [];
+    return raw.map(parsePartnerReportConfirmationRequest).filter((x): x is PartnerReportConfirmationRequest => x != null);
+}
+export async function listPartnerReportConfirmationsPending(): Promise<PartnerReportConfirmationRequest[]> {
+    const res = await apiFetch('/api/v1/time-tracking/reports/partner-confirmations/pending');
+    await reportsThrowIfNotOk(res);
+    return parsePartnerReportConfirmationRequestList(await res.json());
+}
+export async function listPartnerReportConfirmationsConfirmed(): Promise<PartnerReportConfirmationRequest[]> {
+    const res = await apiFetch('/api/v1/time-tracking/reports/partner-confirmations/confirmed');
+    await reportsThrowIfNotOk(res);
+    return parsePartnerReportConfirmationRequestList(await res.json());
+}
+export async function submitPartnerReportConfirmation(body: {
+    snapshotId: string;
+    projectId: string;
+    dateFrom: string;
+    dateTo: string;
+}): Promise<PartnerReportConfirmationRequest> {
+    const res = await apiFetch('/api/v1/time-tracking/reports/partner-confirmations/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            snapshotId: body.snapshotId.trim(),
+            projectId: body.projectId.trim(),
+            dateFrom: body.dateFrom.slice(0, 10),
+            dateTo: body.dateTo.slice(0, 10),
+        }),
+    });
+    await reportsThrowIfNotOk(res);
+    const parsed = parsePartnerReportConfirmationRequest(await res.json());
+    if (!parsed)
+        throw new TimeTrackingHttpError(500, 'Некорректный ответ сервера');
+    return parsed;
+}
+export async function confirmPartnerReportConfirmation(requestId: string): Promise<PartnerReportConfirmationRequest> {
+    const rid = String(requestId ?? '').trim();
+    if (!rid)
+        throw new Error('Не указан запрос подтверждения');
+    const res = await apiFetch(`/api/v1/time-tracking/reports/partner-confirmations/${encodeURIComponent(rid)}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+    });
+    await reportsThrowIfNotOk(res);
+    const parsed = parsePartnerReportConfirmationRequest(await res.json());
+    if (!parsed)
+        throw new TimeTrackingHttpError(500, 'Некорректный ответ сервера');
+    return parsed;
 }
 export type InvoiceUiStatus = 'draft' | 'sent' | 'viewed' | 'partial_paid' | 'paid' | 'canceled' | 'overdue';
 export type InvoiceLineDto = {
