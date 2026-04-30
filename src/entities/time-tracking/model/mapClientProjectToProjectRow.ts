@@ -24,6 +24,12 @@ export function mapClientProjectToProjectRow(p: TimeManagerClientProjectRow, cli
     else if (p.budget_type === 'hours_and_money') {
         budget = toNum(p.budget_amount) ?? toNum(p.progress_budget_amount);
     }
+    if (budget === undefined && p.project_type !== 'fixed_fee') {
+        const ba = toNum(p.budget_amount);
+        const pb = toNum(p.progress_budget_amount);
+        if (ba != null || pb != null)
+            budget = ba ?? pb;
+    }
     const today = new Date().toISOString().slice(0, 10);
     const end = p.end_date?.slice(0, 10);
     const status: ProjectStatus = end && end < today ? 'archived' : 'active';
