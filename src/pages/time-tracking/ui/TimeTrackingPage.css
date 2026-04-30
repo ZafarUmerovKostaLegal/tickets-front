@@ -8121,6 +8121,47 @@ a.pp__proj-name--link:hover {
   opacity: 0.95;
 }
 
+.tsp__grant-unlock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 1.25rem 0.65rem;
+  font-size: 0.8125rem;
+  color: var(--app-text, #0f172a);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 9%, var(--app-surface, #fff));
+  border-bottom: 1px solid var(--app-border, #e5e7eb);
+}
+
+.tsp__grant-unlock-txt {
+  flex: 1 1 12rem;
+  min-width: 0;
+  line-height: 1.45;
+}
+
+.tsp__grant-unlock-btn {
+  flex-shrink: 0;
+  padding: 0.45rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--app-accent, #4f46e5) 40%, var(--app-border, #e5e7eb));
+  background: var(--app-surface, #fff);
+  color: var(--app-accent, #4f46e5);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.tsp__grant-unlock-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 10%, var(--app-surface, #fff));
+}
+
+.tsp__grant-unlock-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .tsp__top {
   position: sticky;
   top: 0;
@@ -9712,6 +9753,18 @@ a.pp__proj-name--link:hover {
   border-radius: 8px;
   border: 1px solid rgba(245, 158, 11, 0.35);
 }
+
+.tsp-m__hint--unlock-active {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #166534;
+  background: rgba(34, 197, 94, 0.12);
+  border-radius: 8px;
+  border: 1px solid rgba(34, 197, 94, 0.45);
+}
+
 .tsp-m__hint--void {
   margin: 0.5rem 0 0;
   padding: 0.5rem 0.65rem;

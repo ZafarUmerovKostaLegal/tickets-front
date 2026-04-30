@@ -5,5 +5,6 @@ export * from './timeReportRows';
 export * from './timeReportEntryLogFormat';
 export * from './klProjectCode';
 export * from './weeklyReportingLock';
+export * from './timeEntryEditUnlockStorage';
 export * from './reportSnapshotOverrides';
 export * from './userFacingProjectAccessError';

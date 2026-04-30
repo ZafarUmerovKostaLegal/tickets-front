@@ -1,6 +1,7 @@
-import { useState, useMemo, useEffect, useId, useRef, useReducer, useLayoutEffect, type CSSProperties } from 'react';
+import { useState, useMemo, useEffect, useCallback, useId, useRef, useReducer, useLayoutEffect, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { upsertTimeTrackingUser, listClientTasks, listTimeEntries, createTimeEntry, patchTimeEntry, deleteTimeEntry, isTimeTrackingHttpError, isWorkDateInClosedReportingPeriod, type TimeEntryRow, type TimeTrackingUserRow, type CreateTimeEntryBody, type PatchTimeEntryBody, } from '@entities/time-tracking';
+import { upsertTimeTrackingUser, listClientTasks, listTimeEntries, createTimeEntry, patchTimeEntry, deleteTimeEntry, grantTimeEntryEditUnlock, isTimeTrackingHttpError, isWorkDateInClosedReportingPeriod, isClosedReportingWeekEditingBlockedForSubject, getActiveTimeEntryEditUnlockExpiresAtIso, type TimeEntryRow, type TimeTrackingUserRow, type CreateTimeEntryBody, type PatchTimeEntryBody, } from '@entities/time-tracking';
+import { canGrantTimeEntryEditUnlock, canOverrideReportPreviewWeeklyLock } from '@entities/time-tracking/model/timeTrackingAccess';
 import { loadTimesheetProjectOptions, type ProjectOption, } from './timesheetProjectLoader';
 import { useCurrentUser } from '@shared/hooks';
 import type { User } from '@entities/user';
@@ -406,7 +407,7 @@ function resolveInitialForm(entry: TimeEntry | undefined, defaultDate: string, p
         billable,
     };
 }
-function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoadError, tasksByClientId, clientTasksIndexLoading, onClose, onSave, }: {
+function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoadError, tasksByClientId, clientTasksIndexLoading, entriesSubjectAuthUserId, viewerCanOverrideWeeklyLock, onClose, onSave, }: {
     entry?: TimeEntry;
     defaultDate: string;
     projects: ProjectOption[];
@@ -415,6 +416,8 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
     tasksByClientId: Record<string, ClientTaskOption[]>;
     
     clientTasksIndexLoading: boolean;
+    entriesSubjectAuthUserId: number;
+    viewerCanOverrideWeeklyLock: boolean;
     onClose: () => void;
     onSave: (e: TimeEntry) => void | Promise<void>;
 }) {
@@ -500,8 +503,12 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
         return h;
     }, [form.hours]);
     const formDateInClosedPeriod = useMemo(() => isWorkDateInClosedReportingPeriod(form.date), [form.date]);
+    const reportingDayBlocked = useMemo(() => isClosedReportingWeekEditingBlockedForSubject(entriesSubjectAuthUserId, form.date, viewerCanOverrideWeeklyLock), [entriesSubjectAuthUserId, form.date, viewerCanOverrideWeeklyLock]);
+    const unlockUntilIso = formDateInClosedPeriod && !reportingDayBlocked && !viewerCanOverrideWeeklyLock
+        ? getActiveTimeEntryEditUnlockExpiresAtIso(entriesSubjectAuthUserId, form.date)
+        : null;
     const entryVoided = Boolean(entry?.isVoided);
-    const formDateLocked = formDateInClosedPeriod || entryVoided;
+    const formDateLocked = reportingDayBlocked || entryVoided;
     async function handleSave() {
         if (!proj) {
             setError('Нет доступных проектов');
@@ -511,8 +518,8 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
             setError('Запись снята с учёта менеджером — редактирование недоступно.');
             return;
         }
-        if (formDateInClosedPeriod) {
-            setError('Период по выбранной дате закрыт. Укажите дату в открытом периоде (неделя сдаётся в субботу, 9:00, Ташкент) и сохраните снова.');
+        if (reportingDayBlocked) {
+            setError('Период по выбранной дате закрыт для правок. Попросите менеджера учёта времени выдать разблокировку на этот день или укажите дату в открытом периоде.');
             return;
         }
         if (clientTasksIndexLoading) {
@@ -719,8 +726,12 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
                 {entryVoided && !formDateInClosedPeriod && (<p className="tsp-m__hint tsp-m__hint--void" role="status">
                     Запись снята с учёта менеджером{entry?.voidKind === 'reallocated' ? ' (перенос/перераспределение)' : ' (не принято)'} — поля только для просмотра.
                 </p>)}
-                {formDateInClosedPeriod && (<p className="tsp-m__hint tsp-m__hint--weekly-lock" role="status">
-                    Неделя по этой дате на стороне сервера закрыта для правок. Срок: <strong>суббота, 9:00 (Ташкент)</strong>. Чтобы менять поля, выберите внизу другую <strong>дату работы</strong> (открытый период).
+                {formDateInClosedPeriod && reportingDayBlocked && (<p className="tsp-m__hint tsp-m__hint--weekly-lock" role="status">
+                    Неделя по этой дате на стороне сервера закрыта для правок. Срок: <strong>суббота, 9:00 (Ташкент)</strong>. Чтобы менять поля, выберите внизу другую <strong>дату работы</strong> (открытый период) или получите временную разблокировку у менеджера учёта времени.
+                </p>)}
+                {unlockUntilIso && (<p className="tsp-m__hint tsp-m__hint--unlock-active" role="status">
+                    Временная разблокировка активна до{' '}
+                    <strong>{new Date(unlockUntilIso).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })}</strong>.
                 </p>)}
                 {error && <p className="tsp-m__err">{error}</p>}
                 {weeklyLockHint && (<p className="tsp-m__hint tsp-m__hint--weekly-lock" role="note">
@@ -836,6 +847,14 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         return currentUser;
     }, [currentUser, entriesAuthUserId, managedEntriesUserRow]);
     const isColleagueTimesheetView = Boolean(currentUser && entriesAuthUserId != null && entriesAuthUserId !== currentUser.id);
+    const viewerCanOverrideWeeklyLock = useMemo(() => canOverrideReportPreviewWeeklyLock(currentUser), [currentUser]);
+    const grantUnlockEligible = useMemo(() => Boolean(currentUser && entriesAuthUserId != null && canGrantTimeEntryEditUnlock(currentUser, entriesAuthUserId)), [currentUser, entriesAuthUserId]);
+    const [grantUnlockBusy, setGrantUnlockBusy] = useState(false);
+    const isSubjectDayReportingBlocked = useCallback((ymd: string) => {
+        if (entriesAuthUserId == null)
+            return false;
+        return isClosedReportingWeekEditingBlockedForSubject(entriesAuthUserId, ymd, viewerCanOverrideWeeklyLock);
+    }, [entriesAuthUserId, viewerCanOverrideWeeklyLock]);
     const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
     const [projectsState, setProjectsState] = useState<{
         loading: boolean;
@@ -1081,6 +1100,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
     const activeDayYmd = useMemo(() => formatDate(activeDay), [activeDay]);
     const activeDayInClosedWeek = useMemo(() => isWorkDateInClosedReportingPeriod(activeDayYmd), [activeDayYmd]);
+    const activeDayReportingBlocked = useMemo(() => isSubjectDayReportingBlocked(activeDayYmd), [activeDayYmd, isSubjectDayReportingBlocked]);
     const hoursPerDay = useMemo(() => weekDays.map((d) => {
         const key = formatDate(d);
         return entries.filter((e) => e.date === key).reduce((s, e) => s + entryHoursInTotals(e), 0);
@@ -1229,7 +1249,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
             else if (key === 'n' || key === 'N' || key === '+') {
                 e.preventDefault();
                 const ymd = formatDate(activeDay);
-                if (isWorkDateInClosedReportingPeriod(ymd))
+                if (isSubjectDayReportingBlocked(ymd))
                     return;
                 openAdd(ymd);
             }
@@ -1253,13 +1273,13 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [modal.open, deleteTarget, timerBusyHintOpen, viewTxPhase, viewMode, activeDay, query, billableOnly]);
+    }, [modal.open, deleteTarget, timerBusyHintOpen, viewTxPhase, viewMode, activeDay, query, billableOnly, isSubjectDayReportingBlocked]);
     async function persistTimerStopToApi(entryId: string, merged: TimeEntry) {
         const user = upsertUserForEntriesRef.current;
         const uid = entriesAuthUserIdRef.current;
         if (!user?.id || !uid)
             return;
-        if (isWorkDateInClosedReportingPeriod(merged.date)) {
+        if (isSubjectDayReportingBlocked(merged.date)) {
             setEntriesBanner({
                 message: 'Сервер не примет правки по этой дате: неделя уже закрыта (суббота, 9:00, Ташкент).',
                 variant: 'amber',
@@ -1333,7 +1353,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         const uid = entriesAuthUserId;
         if (!upsertU || !uid)
             throw new Error('Не удалось определить пользователя');
-        if (isWorkDateInClosedReportingPeriod(e.date)) {
+        if (isSubjectDayReportingBlocked(e.date)) {
             setEntriesBanner({
                 message: 'Период по дате работы закрыт (неделя сдаётся в субботу, 9:00, Ташкент). Укажите дату в открытом периоде.',
                 variant: 'amber',
@@ -1445,7 +1465,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         });
         if (upsertU && uid && !isDraftTimeEntryId(id)) {
             const forDelete = entriesRef.current.find((x) => x.id === id);
-            if (forDelete && isWorkDateInClosedReportingPeriod(forDelete.date)) {
+            if (forDelete && isSubjectDayReportingBlocked(forDelete.date)) {
                 setEntriesBanner({
                     message: 'Неделя по дате этой записи закрыта — удаление на сервере недоступно (суббота, 9:00, Ташкент).',
                     variant: 'amber',
@@ -1484,7 +1504,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         const ent = entriesRef.current.find((x) => x.id === id);
         if (ent?.isVoided)
             return;
-        if (ent && isWorkDateInClosedReportingPeriod(ent.date))
+        if (ent && isSubjectDayReportingBlocked(ent.date))
             return;
         const uid = entriesAuthUserId;
         const prev = runningTimerRef.current;
@@ -1601,7 +1621,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
             </p>)}
         </div>)}
 
-        <div className={`tsp__top${headingViewMode === 'day' && activeDayInClosedWeek ? ' tsp__top--day-week-closed' : ''}`}>
+        <div className={`tsp__top${headingViewMode === 'day' && activeDayReportingBlocked ? ' tsp__top--day-week-closed' : ''}`}>
             <div className="tsp__top-l">
                 <button type="button" className="tsp__arr" onClick={prevPeriod} aria-label={headingViewMode === 'calendar' ? 'Предыдущий месяц' : 'Назад'} title={headingViewMode === 'calendar' ? 'Предыдущий месяц (←)' : 'Назад (←)'}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
@@ -1621,7 +1641,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                         return;
                     setActiveDay(dt);
                     setWeekStart(startOfWeek(dt));
-                }} className={`tsp__date-jump-wrap${activeDayInClosedWeek ? ' tsp__date-jump-wrap--week-closed' : ''}`} buttonClassName="tsp__date-jump-btn" title="Перейти к дате" />)}
+                }} className={`tsp__date-jump-wrap${activeDayReportingBlocked ? ' tsp__date-jump-wrap--week-closed' : ''}`} buttonClassName="tsp__date-jump-btn" title="Перейти к дате" />)}
 
                 {showReturnToToday ? (<button type="button" className="tsp__return" onClick={goTodayPeriod} title="Вернуться к сегодня (T)">
                     Сегодня
@@ -1644,6 +1664,34 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                 </div>
             </div>
         </div>
+        {grantUnlockEligible && isColleagueTimesheetView && entriesAuthUserId != null && activeDayInClosedWeek ? (<div className="tsp__grant-unlock" role="region" aria-label="Временная разблокировка правок за выбранный день">
+            <span className="tsp__grant-unlock-txt">
+              Выбран день в закрытой неделе (<strong>{activeDayYmd}</strong>). Выдайте сотруднику правку записей за этот день на <strong>24 часа</strong> (повторное нажатие продлевает срок).
+            </span>
+            <button type="button" className="tsp__grant-unlock-btn" disabled={grantUnlockBusy} onClick={() => {
+                if (!entriesAuthUserId)
+                    return;
+                void (async () => {
+                    try {
+                        setGrantUnlockBusy(true);
+                        const out = await grantTimeEntryEditUnlock(entriesAuthUserId, activeDayYmd);
+                        const until = new Date(out.expiresAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+                        setEntriesBanner({ message: `Сотрудник может править записи за ${activeDayYmd} до ${until}.`, variant: 'success' });
+                    }
+                    catch (e) {
+                        setEntriesBanner({
+                            message: e instanceof Error ? e.message : 'Не удалось выдать разблокировку',
+                            variant: 'danger',
+                        });
+                    }
+                    finally {
+                        setGrantUnlockBusy(false);
+                    }
+                })();
+            }}>
+              {grantUnlockBusy ? 'Отправка…' : 'Разрешить правки на 24 ч'}
+            </button>
+          </div>) : null}
         <div className={viewTxPhase === 'idle'
             ? 'tsp__view-stack'
             : `tsp__view-stack tsp__view-stack--${viewTxPhase}`}>
@@ -1708,6 +1756,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                         const isFuture = d > today && !isToday;
                         const dayYmd = formatDate(d);
                         const stripDayClosed = isWorkDateInClosedReportingPeriod(dayYmd);
+                        const stripDayQuickBlocked = entriesAuthUserId != null && isSubjectDayReportingBlocked(dayYmd);
                         const vInfo = voidInfoByDate.get(dayYmd);
                         const voidDayClass = vInfo?.hasReject
                             ? 'tsp__day--void-reject'
@@ -1756,9 +1805,9 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                                 if (isFuture)
                                     return;
                                 openAdd(formatDate(d));
-                            }} aria-label={`Добавить время за ${fmtShort(d)}`} tabIndex={-1} disabled={stripDayClosed || isFuture} title={isFuture
+                            }} aria-label={`Добавить время за ${fmtShort(d)}`} tabIndex={-1} disabled={stripDayQuickBlocked || isFuture} title={isFuture
                                 ? 'Будущие даты недоступны'
-                                : (stripDayClosed ? 'Неделя по этой дате закрыта' : undefined)}>
+                                : (stripDayQuickBlocked ? 'Неделя по этой дате закрыта для правок' : undefined)}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                                     <line x1="12" y1="5" x2="12" y2="19" />
                                     <line x1="5" y1="12" x2="19" y2="12" />
@@ -1836,7 +1885,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                         </div>
                         <p className="tsp__empty-h">Нет записей за этот день</p>
                         <p className="tsp__empty-s">Добавьте первую запись, чтобы начать отслеживать время</p>
-                        <button type="button" className="tsp__empty-cta" onClick={() => openAdd(formatDate(activeDay))} disabled={activeDayInClosedWeek} title={activeDayInClosedWeek ? 'Неделя по этой дате закрыта' : undefined}>
+                        <button type="button" className="tsp__empty-cta" onClick={() => openAdd(formatDate(activeDay))} disabled={activeDayReportingBlocked} title={activeDayReportingBlocked ? 'Неделя по этой дате закрыта для правок' : undefined}>
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                             </svg>
@@ -1847,6 +1896,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                             const dayTotal = g.rows.reduce((s, e) => s + entryHoursInTotals(e), 0);
                             const isToday = isSameDay(g.date, today);
                             const gDayClosed = isWorkDateInClosedReportingPeriod(g.key);
+                            const addBlocked = entriesAuthUserId != null && isSubjectDayReportingBlocked(g.key);
                             return (<div key={g.key} className={`tsp__group${gDayClosed ? ' tsp__group--week-closed' : ''}`}>
                                 {viewMode === 'week' && (<div className={`tsp__ghd${isToday ? ' tsp__ghd--today' : ''}${gDayClosed ? ' tsp__ghd--week-closed' : ''}`}>
                                     <span className="tsp__ghd-name">
@@ -1855,7 +1905,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                                         {isToday && <span className="tsp__ghd-badge">Сегодня</span>}
                                     </span>
                                     <span className="tsp__ghd-total">{fmtHours(dayTotal)}</span>
-                                    <button type="button" className="tsp__ghd-add" onClick={() => openAdd(g.key)} aria-label="Добавить" disabled={gDayClosed} title={gDayClosed ? 'Неделя по этой дате закрыта' : undefined}>
+                                    <button type="button" className="tsp__ghd-add" onClick={() => openAdd(g.key)} aria-label="Добавить" disabled={addBlocked} title={addBlocked ? 'Неделя по этой дате закрыта для правок' : undefined}>
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                                             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                                         </svg>
@@ -1866,7 +1916,8 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                                         const isRun = runningTimer?.entryId === e.id;
                                         const runningExtraMs = isRun && runningTimer ? Date.now() - runningTimer.startedAt : 0;
                                         void timerTick;
-                                        const workDateClosed = isWorkDateInClosedReportingPeriod(e.date);
+                                        const weekClosedVisual = isWorkDateInClosedReportingPeriod(e.date);
+                                        const rowReportingBlocked = entriesAuthUserId != null && isSubjectDayReportingBlocked(e.date);
                                         const voidLocked = Boolean(e.isVoided);
                                         const timeLabel = isRun
                                             ? formatClockFromMs(e.hours * 3600000 + runningExtraMs)
@@ -1874,7 +1925,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                                         const voidRowClass = e.isVoided
                                             ? (e.voidKind === 'reallocated' ? ' tsp__row--void-realloc' : ' tsp__row--void-reject')
                                             : '';
-                                        return (<div key={e.id} className={`tsp__row${isRun ? ' tsp__row--run' : ''}${workDateClosed ? ' tsp__row--week-closed' : ''}${voidRowClass}`}>
+                                        return (<div key={e.id} className={`tsp__row${isRun ? ' tsp__row--run' : ''}${weekClosedVisual ? ' tsp__row--week-closed' : ''}${voidRowClass}`}>
                                             <span className="tsp__row-bar" style={{ background: e.color }} />
                                             <div className="tsp__row-txt">
                                                 <p className="tsp__row-proj">
@@ -1892,21 +1943,21 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                                             </div>
                                             <div className="tsp__row-acts">
                                                 <span className="tsp__row-h">{timeLabel}</span>
-                                                <button type="button" className={`tsp__row-start${isRun ? ' tsp__row-start--stop' : ''}`} disabled={isColleagueTimesheetView || workDateClosed || voidLocked} title={isColleagueTimesheetView
+                                                <button type="button" className={`tsp__row-start${isRun ? ' tsp__row-start--stop' : ''}`} disabled={isColleagueTimesheetView || rowReportingBlocked || voidLocked} title={isColleagueTimesheetView
                                                     ? 'Таймер доступен только в своём табеле'
                                                     : voidLocked
                                                         ? 'Запись снята с учёта'
-                                                        : workDateClosed
-                                                            ? 'Неделя по этой дате закрыта — таймер недоступен'
+                                                        : rowReportingBlocked
+                                                            ? 'Неделя по этой дате закрыта для правок — таймер недоступен'
                                                             : undefined} onClick={() => toggleRun(e.id)}>
                                                     {isRun
                                                         ? <><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>Стоп</>
                                                         : <><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="9" /><path d="M10 9l5 3-5 3V9z" fill="currentColor" stroke="none" /></svg>Старт</>}
                                                 </button>
-                                                <button type="button" className="tsp__row-edit" onClick={() => openEdit(e)} title={voidLocked ? 'Запись снята с учёта — правки недоступны' : workDateClosed ? 'Неделя по дате закрыта' : 'Изменить запись'} disabled={workDateClosed || voidLocked}>
+                                                <button type="button" className="tsp__row-edit" onClick={() => openEdit(e)} title={voidLocked ? 'Запись снята с учёта — правки недоступны' : rowReportingBlocked ? 'Неделя по дате закрыта для правок' : 'Изменить запись'} disabled={rowReportingBlocked || voidLocked}>
                                                     Изменить
                                                 </button>
-                                                <button className="tsp__row-del" onClick={() => setDeleteTarget(e)} aria-label="Удалить" title={voidLocked ? 'Запись снята с учёта' : workDateClosed ? 'Неделя по дате закрыта — удаление недоступно' : 'Удалить запись'} disabled={workDateClosed || voidLocked}>
+                                                <button className="tsp__row-del" onClick={() => setDeleteTarget(e)} aria-label="Удалить" title={voidLocked ? 'Запись снята с учёта' : rowReportingBlocked ? 'Неделя по дате закрыта для правок — удаление недоступно' : 'Удалить запись'} disabled={rowReportingBlocked || voidLocked}>
                                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                                                         <polyline points="3 6 5 6 21 6" />
                                                         <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4h6v2" />
@@ -1920,7 +1971,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                                             <span>Итого:</span>
                                             <span className="tsp__day-sum-n">{fmtHours(dayTotal)}</span>
                                         </span>
-                                        <button type="button" className="tsp__day-sum-add" onClick={() => openAdd(g.key)} disabled={gDayClosed} title={gDayClosed ? 'Неделя по этой дате закрыта' : undefined}>
+                                        <button type="button" className="tsp__day-sum-add" onClick={() => openAdd(g.key)} disabled={addBlocked} title={addBlocked ? 'Неделя по этой дате закрыта для правок' : undefined}>
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                                                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                                             </svg>
@@ -1954,7 +2005,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
             </div>) : null}
         </div>
 
-        {modal.open && (<EntryModal key={`${modal.date}_${modal.edit?.id ?? 'new'}`} entry={modal.edit} defaultDate={modal.date} projects={projectsState.items} projectsLoading={projectsState.loading} projectsLoadError={projectsState.error} tasksByClientId={tasksByClientId} clientTasksIndexLoading={clientTasksIndexLoading} onClose={closeModal} onSave={saveEntry} />)}
+        {modal.open && entriesAuthUserId != null && (<EntryModal key={`${modal.date}_${modal.edit?.id ?? 'new'}`} entry={modal.edit} defaultDate={modal.date} projects={projectsState.items} projectsLoading={projectsState.loading} projectsLoadError={projectsState.error} tasksByClientId={tasksByClientId} clientTasksIndexLoading={clientTasksIndexLoading} entriesSubjectAuthUserId={entriesAuthUserId} viewerCanOverrideWeeklyLock={viewerCanOverrideWeeklyLock} onClose={closeModal} onSave={saveEntry} />)}
         <TimerBusyHintModal open={timerBusyHintOpen} onClose={() => setTimerBusyHintOpen(false)} />
         {deleteTarget && (<TimesheetDeleteConfirm entry={deleteTarget} busy={deleteBusy} onCancel={() => {
             if (deleteBusy)

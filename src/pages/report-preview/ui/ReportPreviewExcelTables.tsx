@@ -1,10 +1,11 @@
-import { useEffect, useId, useMemo, useState, type MouseEvent, type ReactNode, } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode, } from 'react';
 import { createPortal } from 'react-dom';
 import type { ProjectOption, } from '@pages/time-tracking/ui/timesheetProjectLoader';
 import { ReportPreviewDateTimeFilterPopover } from './ReportPreviewDateTimeFilterPopover';
 import { ReportPreviewTextFilterPopover } from './ReportPreviewTextFilterPopover';
-import { isWorkDateInClosedReportingPeriod, listClientTasks, } from '@entities/time-tracking';
+import { isClosedReportingWeekEditingBlockedForSubject, isWorkDateInClosedReportingPeriod, listClientTasks, } from '@entities/time-tracking';
 import { formatDecimalHoursRu, formatHoursClockFromDecimalHours, } from '@shared/lib/formatTrackingHours';
+import { syncTextareaHeightToContent } from '@shared/lib/syncTextareaHeight';
 import { fmtAmtWithIso } from '@entities/time-tracking/lib/reportsFormatUtils';
 import { DecimalDurationInput } from './DecimalDurationInput';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
@@ -35,13 +36,15 @@ import { ReportPreviewTimeBriefColumnsModal } from './ReportPreviewTimeBriefColu
 import { ReportPreviewTimeFullColumnsModal } from './ReportPreviewTimeFullColumnsModal';
 import type { LabeledOption, BudgetExcelPreviewRow, ExpenseExcelPreviewRow, TimeExcelPreviewRow, UninvoicedExcelPreviewRow, } from '../lib/previewExcelTypes';
 type PatchFn<T> = (rowKey: string, patch: Partial<T>) => void;
-function isTimeRowWeekLockedForApi(r: TimeExcelPreviewRow): boolean {
+function isTimeRowEditingLockedForViewer(r: TimeExcelPreviewRow, viewerCanOverrideWeeklyLock: boolean): boolean {
     if (r.rowKind !== 'entry' || !r.timeEntryId?.trim())
         return false;
     if (r.isVoided)
         return true;
-    const wd = r.workDate?.trim().slice(0, 10);
-    return Boolean(wd && isWorkDateInClosedReportingPeriod(wd));
+    const wd = r.workDate?.trim().slice(0, 10) ?? '';
+    if (!wd)
+        return false;
+    return isClosedReportingWeekEditingBlockedForSubject(r.authUserId, wd, viewerCanOverrideWeeklyLock);
 }
 function timeEntryVoidTrModifier(r: TimeExcelPreviewRow): string {
     if (r.rowKind !== 'entry' || !r.isVoided)
@@ -161,6 +164,27 @@ function TimePreviewReadonlyText({ value, }: {
     const display = raw.trim().length === 0 ? '—' : raw;
     return (<span className="tt-rp-mtable__readonly" title={display === '—' ? undefined : display}>{display}</span>);
 }
+
+/** Vertical auto-grow for note/description; horizontal size fixed by column. */
+const TIME_PREVIEW_NOTE_AUTOSIZE_MAX_PX = 360;
+
+function TimePreviewNoteTextarea({ value, disabled, ariaLabel, variant, onValue, }: {
+    value: string;
+    disabled: boolean;
+    ariaLabel: string;
+    variant: 'brief' | 'full';
+    onValue: (next: string) => void;
+}) {
+    const ref = useRef<HTMLTextAreaElement>(null);
+    useLayoutEffect(() => {
+        syncTextareaHeightToContent(ref.current, TIME_PREVIEW_NOTE_AUTOSIZE_MAX_PX);
+    }, [value]);
+    const cls = variant === 'brief'
+        ? 'tt-rp-mtable__input tt-rp-mtable__textarea tt-rp-mtable__textarea--brief tt-rp-mtable__textarea--autosize'
+        : 'tt-rp-mtable__input tt-rp-mtable__textarea tt-rp-mtable__textarea--autosize';
+    return (<textarea ref={ref} className={cls} rows={variant === 'brief' ? 1 : 2} value={value} disabled={disabled} placeholder="note = description" aria-label={ariaLabel} onChange={(e) => onValue(e.target.value)}/>);
+}
+
 function rowTrClass(i: number, userName: string, selectedUserName: string | null, timeWeekLocked = false): string {
     const parts = ['tt-rp-mtable__tr--pickable'];
     if (i % 2 === 1)
@@ -299,6 +323,9 @@ type TimeReportPersistenceProps = {
         min: string;
         max: string;
     } | null;
+    onGrantEditUnlock?: (authUserId: number, workDateYmd: string) => void | Promise<void>;
+    canGrantEditUnlockForTarget?: (targetAuthUserId: number) => boolean;
+    editUnlockPendingCompoundKey?: string | null;
     timeEntryActionPendingRowKey?: string | null;
 };
 function PreviewServerReloadBtn({ onRequestServerReload, serverReloadBusy, }: PreviewServerReloadProps) {
@@ -406,7 +433,7 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
         return null;
     const min = workDateMin.slice(0, 10);
     const max = workDateMax.slice(0, 10);
-    const weekLockedForPick = Boolean(wd && isWorkDateInClosedReportingPeriod(wd) && !canOverrideClosedWeek);
+    const weekLockedForPick = Boolean(wd && isClosedReportingWeekEditingBlockedForSubject(row.authUserId, wd, canOverrideClosedWeek));
     const iso = localYmdAndHmToIso(wd || min, hm);
     return createPortal(<div className="tt-rp-mtable-move-ov" role="presentation">
       <div className="tt-rp-mtable-move" role="dialog" aria-modal="true" aria-labelledby={`${uid}-dup-t`} onClick={(e) => e.stopPropagation()}>
@@ -447,7 +474,7 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
       </div>
     </div>, document.body);
 }
-export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, }: {
+export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, }: {
     projectTitle: string;
     
     viewMode?: 'brief' | 'full';
@@ -455,7 +482,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     onPatch: PatchFn<TimeExcelPreviewRow>;
 } & UserRowSelectionProps & PreviewServerReloadProps & TimeReportPersistenceProps) {
     const isFull = viewMode === 'full';
-    const showEntryActions = !isFull && (Boolean(onDeleteTimeEntry) || Boolean(onMoveTimeEntryToProject));
+    const showEntryActions = !isFull && (Boolean(onDeleteTimeEntry) || Boolean(onMoveTimeEntryToProject) || Boolean(onDuplicateTimeEntry) || Boolean(onGrantEditUnlock));
     const showActionsColumn = Boolean(showEntryActions);
     const [briefColumnIds, setBriefColumnIds] = useState<TimeBriefColumnId[]>(() => {
         const loaded = loadBriefColumnsFromStorage(showActionsColumn);
@@ -580,7 +607,19 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         if (!showEntryActions || r.rowKind !== 'entry' || !r.timeEntryId?.trim())
             return null;
         const pending = timeEntryActionPendingRowKey === r.rowKey;
+        const wdUnlock = (r.workDate || '').trim().slice(0, 10);
+        const periodClosed = Boolean(wdUnlock && isWorkDateInClosedReportingPeriod(wdUnlock));
+        const showUnlockBtn = Boolean(onGrantEditUnlock && canGrantEditUnlockForTarget?.(r.authUserId) && periodClosed);
+        const unlockBusy = Boolean(editUnlockPendingCompoundKey === `${r.authUserId}:${wdUnlock}`);
         return (<div className="tt-rp-mtable__brief-row-actions" role="group" aria-label={`Действия, строка ${i + 1}`}>
+          {showUnlockBtn ? (<button type="button" className="tt-rp-mtable__row-act tt-rp-mtable__row-act--unlock" title="Разрешить сотруднику правки за этот день на 24 часа (продлевается при повторном нажатии)" disabled={unlockBusy || pending} onClick={() => void onGrantEditUnlock?.(r.authUserId, wdUnlock)} aria-label="Разблокировать правки за этот день на 24 часа">
+              <span className="tt-rp-mtable__row-act-ico" aria-hidden>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="5" y="11" width="14" height="11" rx="2"/>
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                </svg>
+              </span>
+            </button>) : null}
           {onDuplicateTimeEntry ? (<button type="button" className="tt-rp-mtable__row-act" title="Дублировать запись (выбор даты и времени)" disabled={Boolean(wk) || pending} onClick={() => {
                 setDuplicateTargetRow(r);
             }} aria-label="Дублировать запись">
@@ -703,10 +742,9 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 </td>);
             case 'note':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--comment">
-                  <textarea className="tt-rp-mtable__input tt-rp-mtable__textarea tt-rp-mtable__textarea--brief" rows={1} value={r.note} onChange={(e) => {
-                    const v = e.target.value;
+                  <TimePreviewNoteTextarea variant="brief" value={r.note} disabled={wk} ariaLabel={`note/description, ${r.userName}`} onValue={(v) => {
                     onPatch(r.rowKey, { note: v, description: v });
-                }} placeholder="note = description" aria-label={`note/description, ${r.userName}`} disabled={wk}/>
+                }}/>
                 </td>);
             case 'billHours':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--num">
@@ -909,10 +947,9 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 </td>);
             case 'note':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--comment">
-                  <textarea className="tt-rp-mtable__input tt-rp-mtable__textarea" rows={2} value={r.note} onChange={(e) => {
-                    const v = e.target.value;
+                  <TimePreviewNoteTextarea variant="full" value={r.note} disabled={wk} ariaLabel={`note/description, ${r.userName}`} onValue={(v) => {
                     onPatch(r.rowKey, { note: v, description: v });
-                }} placeholder="note = description" aria-label={`note/description, ${r.userName}`} disabled={wk}/>
+                }}/>
                 </td>);
             case 'billableHours':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--num">
@@ -1138,7 +1175,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             </thead>
             <tbody>
               {displayRows.map((r, i) => {
-                const wk = canOverrideClosedWeek ? false : isTimeRowWeekLockedForApi(r);
+                const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
                 return (<tr key={r.rowKey} className={`${rowTrClass(i, r.userName, selectedUserName, wk)}${timeEntryVoidTrModifier(r)}`} onClick={onSelectUserName
                 ? (e: MouseEvent<HTMLTableRowElement>) => {
                     if (isInteractiveCellTarget(e.target))
@@ -1167,7 +1204,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             </thead>
             <tbody>
               {displayRows.map((r, i) => {
-                const wk = canOverrideClosedWeek ? false : isTimeRowWeekLockedForApi(r);
+                const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
                 return (<tr key={r.rowKey} className={`${rowTrClass(i, r.userName, selectedUserName, wk)}${timeEntryVoidTrModifier(r)}`} onClick={onSelectUserName
                 ? (e: MouseEvent<HTMLTableRowElement>) => {
                     if (isInteractiveCellTarget(e.target))

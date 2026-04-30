@@ -856,15 +856,13 @@
 }
 
 .tt-rp-mtable tbody .tt-rp-mtable__td--brief-actions {
+  display: table-cell;
   vertical-align: middle;
   text-align: center;
   padding: 0.45rem 0.35rem;
   width: 6.85rem;
   min-width: 6.85rem;
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .tt-rp-mtable__brief-th__row--actions {
@@ -883,11 +881,12 @@
 }
 
 .tt-rp-mtable__brief-row-actions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-wrap: nowrap;
   gap: 0.35rem;
+  vertical-align: middle;
 }
 
 .tt-rp-mtable__row-act {
@@ -921,6 +920,12 @@
   color: #b91c1c;
   border-color: rgba(185, 28, 28, 0.35);
   background: rgba(254, 226, 226, 0.6);
+}
+
+.tt-rp-mtable__row-act--unlock:hover:not(:disabled) {
+  color: #15803d;
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(220, 252, 231, 0.65);
 }
 
 .tt-rp-mtable__row-act-ico {
@@ -2003,9 +2008,16 @@
 
 .tt-rp-mtable--time-brief .tt-rp-mtable__textarea--brief {
   min-height: 2.35rem;
-  max-height: 5.5rem;
+  resize: none;
+  overflow-x: hidden;
   field-sizing: fixed;
-  resize: vertical;
+}
+
+/* Note/description fields: height synced in JS (syncTextareaHeightToContent) */
+.tt-rp-mtable__textarea--autosize {
+  resize: none;
+  overflow-x: hidden;
+  field-sizing: fixed;
 }
 
 .tt-rp-mtable tfoot {

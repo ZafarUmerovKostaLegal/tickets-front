@@ -19,7 +19,9 @@ import {
     fetchAllUninvoicedReportRows,
     fetchAllBudgetReportRows,
     isTimeTrackingHttpError,
-    isWorkDateInClosedReportingPeriod,
+    canGrantTimeEntryEditUnlock,
+    grantTimeEntryEditUnlock,
+    isClosedReportingWeekEditingBlockedForSubject,
     patchTimeEntry,
     createTimeEntry,
     deleteTimeEntry,
@@ -284,6 +286,7 @@ export function ReportPreviewPage() {
     const [timeEntrySaveUI, setTimeEntrySaveUI] = useState<'idle' | 'saving' | 'saved' | 'err'>(() => 'idle');
     const [timeEntrySaveMessage, setTimeEntrySaveMessage] = useState<string | null>(null);
     const [timeEntryActionPendingRowKey, setTimeEntryActionPendingRowKey] = useState<string | null>(null);
+    const [editUnlockPendingCompoundKey, setEditUnlockPendingCompoundKey] = useState<string | null>(null);
     useLayoutEffect(() => {
         timeExcelRowsRef.current = timeExcelRows;
     }, [timeExcelRows]);
@@ -562,7 +565,7 @@ export function ReportPreviewPage() {
         if (row.isVoided)
             return;
         const wd = (row.workDate || '').trim().slice(0, 10);
-        if (wd && isWorkDateInClosedReportingPeriod(wd) && !canOverrideWeeklyLock) {
+        if (wd && isClosedReportingWeekEditingBlockedForSubject(row.authUserId, wd, canOverrideWeeklyLock)) {
             return;
         }
         setTimeEntrySaveUI('saving');
@@ -605,8 +608,8 @@ export function ReportPreviewPage() {
             const merged = next.find((x) => x.rowKey === rowKey) ?? null;
             if (merged && merged.rowKind === 'entry' && merged.timeEntryId?.trim() && !merged.isVoided) {
                 const nextWd = (merged.workDate || '').trim().slice(0, 10);
-                const closed = Boolean(nextWd && isWorkDateInClosedReportingPeriod(nextWd));
-                if (!closed || canOverrideWeeklyLock)
+                const blocked = Boolean(nextWd && isClosedReportingWeekEditingBlockedForSubject(merged.authUserId, nextWd, canOverrideWeeklyLock));
+                if (!blocked)
                     schedulePersistTimeEntry(rowKey);
             }
             return next;
@@ -623,7 +626,7 @@ export function ReportPreviewPage() {
             return;
         }
         const wd = (row.workDate || '').trim().slice(0, 10);
-        if (wd && isWorkDateInClosedReportingPeriod(wd) && !canOverrideWeeklyLock) {
+        if (wd && isClosedReportingWeekEditingBlockedForSubject(row.authUserId, wd, canOverrideWeeklyLock)) {
             window.alert('Неделя по дате записи закрыта на сервере — удаление недоступно. Можно сменить дату на день из открытого периода, затем удалить.');
             return;
         }
@@ -684,7 +687,7 @@ export function ReportPreviewPage() {
         if (String(newProjectId).trim() === String(row.projectId ?? '').trim())
             return;
         const wd = (row.workDate || '').trim().slice(0, 10);
-        if (wd && isWorkDateInClosedReportingPeriod(wd) && !canOverrideWeeklyLock) {
+        if (wd && isClosedReportingWeekEditingBlockedForSubject(row.authUserId, wd, canOverrideWeeklyLock)) {
             window.alert('Неделя по дате записи закрыта — перенос на другой проект недоступен.');
             return;
         }
@@ -771,7 +774,7 @@ export function ReportPreviewPage() {
         const now = new Date();
         const hm = `${pad2p(now.getHours())}:${pad2p(now.getMinutes())}`;
         const recordedAt = localYmdAndHmToIso(wd, hm);
-        if (wd && isWorkDateInClosedReportingPeriod(wd) && !canOverrideWeeklyLock) {
+        if (wd && isClosedReportingWeekEditingBlockedForSubject(user.id, wd, canOverrideWeeklyLock)) {
             window.alert('Дата по умолчанию попадает в закрытый отчётный период. Смените период предпросмотра или обратитесь к администратору.');
             return;
         }
@@ -828,7 +831,7 @@ export function ReportPreviewPage() {
             window.alert(`Дата работы должна быть в пределах периода предпросмотра (${min} — ${max}).`);
             return;
         }
-        if (wd && isWorkDateInClosedReportingPeriod(wd) && !canOverrideWeeklyLock) {
+        if (wd && isClosedReportingWeekEditingBlockedForSubject(row.authUserId, wd, canOverrideWeeklyLock)) {
             window.alert('Неделя по выбранной дате закрыта — выберите дату в открытом периоде.');
             return;
         }
@@ -864,6 +867,34 @@ export function ReportPreviewPage() {
             setTimeEntryActionPendingRowKey(null);
         }
     }, [canOverrideWeeklyLock, rangeFrom, rangeTo]);
+    const handleGrantEditUnlock = useCallback(async (authUserId: number, workDateYmd: string) => {
+        const wd = workDateYmd.trim().slice(0, 10);
+        const compound = `${authUserId}:${wd}`;
+        setEditUnlockPendingCompoundKey(compound);
+        setTimeEntrySaveMessage(null);
+        try {
+            const out = await grantTimeEntryEditUnlock(authUserId, wd);
+            const until = new Date(out.expiresAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+            setTimeEntrySaveUI('saved');
+            setTimeEntrySaveMessage(`Разблокировка активна до ${until}`);
+            setTimeout(() => {
+                setTimeEntrySaveUI((u) => (u === 'saved' ? 'idle' : u));
+                setTimeEntrySaveMessage((m) => (typeof m === 'string' && m.startsWith('Разблокировка активна') ? null : m));
+            }, 4200);
+        }
+        catch (e) {
+            const msg = isTimeTrackingHttpError(e)
+                ? e.message
+                : e instanceof Error
+                    ? e.message
+                    : 'Не удалось выдать разблокировку';
+            setTimeEntrySaveUI('err');
+            setTimeEntrySaveMessage(msg);
+        }
+        finally {
+            setEditUnlockPendingCompoundKey(null);
+        }
+    }, []);
     const patchExpenseExcel = useCallback((rowKey: string, patch: Partial<ExpenseExcelPreviewRow>) => {
         setExpenseExcelRows((prev) => prev.map((r) => (r.rowKey === rowKey ? { ...r, ...patch } : r)));
     }, []);
@@ -971,7 +1002,7 @@ export function ReportPreviewPage() {
             const showTimeLiveTitle = xferSnapshot.groupBy !== 'projects';
             return (<>
           {showTimeLiveTitle ? (<p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>) : null}
-          <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} timeSave={{ ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={user ? projectItemsForSelect : undefined} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={user ? handleMoveTimeEntryToProject : undefined} onDuplicateTimeEntry={user ? handleDuplicateTimeEntry : undefined} onAddTimeEntry={user ? handleAddTimeEntry : undefined} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey}/>
+          <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} timeSave={{ ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={user ? projectItemsForSelect : undefined} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={user ? handleMoveTimeEntryToProject : undefined} onDuplicateTimeEntry={user ? handleDuplicateTimeEntry : undefined} onGrantEditUnlock={user ? handleGrantEditUnlock : undefined} canGrantEditUnlockForTarget={user ? (tid) => canGrantTimeEntryEditUnlock(user, tid) : undefined} editUnlockPendingCompoundKey={editUnlockPendingCompoundKey} onAddTimeEntry={user ? handleAddTimeEntry : undefined} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey}/>
         </>);
         }
         if (xferSnapshot.reportType === 'expenses') {

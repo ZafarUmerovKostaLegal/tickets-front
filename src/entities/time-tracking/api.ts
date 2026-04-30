@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { absorbTimeEntryRowEditUnlockHint, recordTimeEntryEditUnlockExpiry } from './lib/timeEntryEditUnlockStorage';
 import { pickAllowedSnapshotOverrides } from './lib/reportSnapshotOverrides';
 import type { User } from '@entities/user';
 
@@ -158,6 +159,11 @@ export type TimeEntryRow = {
     fx_cross_rate?: number | string | null;
     fx_rate_date?: string | null;
     fx_rate_source?: string | null;
+    
+    edit_unlock_expires_at?: string | null;
+    editUnlockExpiresAt?: string | null;
+    time_entry_edit_unlock_expires_at?: string | null;
+    timeEntryEditUnlockExpiresAt?: string | null;
     billableAmount?: number | string | null;
     billableCurrency?: string | null;
     billableFxAsOf?: string | null;
@@ -185,12 +191,14 @@ export function normalizeTimeEntryRow(r: TimeEntryRow): TimeEntryRow {
     const void_kind: TimeEntryVoidKind | null = is_voided
         ? (vk === 'reallocated' ? 'reallocated' : 'rejected')
         : null;
-    return {
+    const normalized: TimeEntryRow = {
         ...o,
         voided_at: voidedAt,
         void_kind,
         is_voided,
     };
+    absorbTimeEntryRowEditUnlockHint(normalized as TimeEntryRow & Record<string, unknown>);
+    return normalized;
 }
 export type HourlyRateRow = {
     id: string;
@@ -450,6 +458,56 @@ export async function patchTimeEntry(authUserId: number, entryId: string, patch:
     });
     await throwIfNotOk(res);
     return normalizeTimeEntryRow((await res.json()) as TimeEntryRow);
+}
+
+export type TimeEntryEditUnlockGrantOut = {
+    authUserId: number;
+    workDate: string;
+    grantedByAuthUserId: number;
+    expiresAt: string;
+    createdAt: string;
+};
+
+function normalizeTimeEntryEditUnlockGrant(raw: Record<string, unknown>): TimeEntryEditUnlockGrantOut {
+    const num = (v: unknown): number => {
+        if (typeof v === 'number' && Number.isFinite(v))
+            return v;
+        const n = Number(v);
+        return Number.isFinite(n) ? n : NaN;
+    };
+    return {
+        authUserId: num(raw.authUserId ?? raw.auth_user_id),
+        workDate: String(raw.workDate ?? raw.work_date ?? '').trim().slice(0, 10),
+        grantedByAuthUserId: num(raw.grantedByAuthUserId ?? raw.granted_by_auth_user_id),
+        expiresAt: String(raw.expiresAt ?? raw.expires_at ?? ''),
+        createdAt: String(raw.createdAt ?? raw.created_at ?? ''),
+    };
+}
+
+async function parseUnlockGrantResponse(res: Response): Promise<TimeEntryEditUnlockGrantOut> {
+    const raw = (await res.json()) as Record<string, unknown>;
+    const out = normalizeTimeEntryEditUnlockGrant(raw);
+    recordTimeEntryEditUnlockExpiry(out.authUserId, out.workDate, out.expiresAt);
+    return out;
+}
+
+export async function grantTimeEntryEditUnlock(authUserId: number, workDateYmd: string): Promise<TimeEntryEditUnlockGrantOut> {
+    const wd = workDateYmd.trim().slice(0, 10);
+    const body = JSON.stringify({ workDate: wd });
+    let res = await apiFetch(`/api/v1/time-tracking/users/${authUserId}/time-entry-edit-unlock`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+    });
+    if (!res.ok && res.status === 404) {
+        res = await apiFetch(`/api/v1/users/${authUserId}/time-entry-edit-unlock`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+        });
+    }
+    await throwIfNotOk(res);
+    return parseUnlockGrantResponse(res);
 }
 
 export type DeleteTimeEntryOptions = {

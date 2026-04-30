@@ -15,6 +15,18 @@ export function canOverrideReportPreviewWeeklyLock(user: User | null | undefined
         return true;
     return canManageTimeManagerClients(user.role);
 }
+
+/** Who may call POST time-entry-edit-unlock (matches backend; TT manager cannot unlock own days without org-manage role). */
+export function canGrantTimeEntryEditUnlock(viewer: User | null | undefined, targetAuthUserId: number): boolean {
+    if (!viewer || !Number.isFinite(targetAuthUserId))
+        return false;
+    if (!canOverrideReportPreviewWeeklyLock(viewer))
+        return false;
+    const ttMgrOnly = viewer.time_tracking_role === 'manager' && !canManageTimeManagerClients(viewer.role);
+    if (ttMgrOnly && targetAuthUserId === viewer.id)
+        return false;
+    return true;
+}
 export function canAccessTimeTracking(user: User | null | undefined): boolean {
     if (!user)
         return false;
