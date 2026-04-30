@@ -115,7 +115,7 @@ export type BudgetPreviewSheet = {
     sheetId: string;
     titlePrimary: string;
     titleSecondary: string;
-    budget_by: 'hours' | 'money' | 'hours_and_money';
+    budget_by: 'none' | 'hours' | 'money' | 'hours_and_money';
     budget: number;
     budget_spent: number;
     budget_remaining: number;

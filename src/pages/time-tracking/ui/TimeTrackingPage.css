@@ -12360,6 +12360,21 @@ a.pp__proj-name--link:hover {
   min-width: 0;
 }
 
+.rpb__cell-sub {
+  font-size: 0.72rem;
+  color: var(--rpb-muted);
+  margin-top: 0.12rem;
+  line-height: 1.2;
+}
+
+.rpb__dual-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+}
+
 .rpb__chev {
   justify-content: center;
   color: var(--rpb-muted);

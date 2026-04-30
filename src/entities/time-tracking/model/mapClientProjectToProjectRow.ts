@@ -19,10 +19,10 @@ export function mapClientProjectToProjectRow(p: TimeManagerClientProjectRow, cli
         budget = toNum(p.budget_amount) ?? toNum(p.fixed_fee_amount);
     }
     else if (p.budget_type === 'total_project_fees' || p.budget_type === 'money') {
-        budget = toNum(p.budget_amount);
+        budget = toNum(p.budget_amount) ?? toNum(p.progress_budget_amount);
     }
     else if (p.budget_type === 'hours_and_money') {
-        budget = toNum(p.budget_amount);
+        budget = toNum(p.budget_amount) ?? toNum(p.progress_budget_amount);
     }
     const today = new Date().toISOString().slice(0, 10);
     const end = p.end_date?.slice(0, 10);

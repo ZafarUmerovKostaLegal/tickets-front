@@ -52,6 +52,7 @@ function ttExpenseProjectToProjectRow(p: TimeTrackingProjectForExpense): TimeMan
         project_billable_rate_amount: null,
         budget_type: null,
         budget_amount: null,
+        progress_budget_amount: null,
         budget_hours: null,
         budget_resets_every_month: false,
         budget_includes_expenses: false,

@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, type ReportsFilterUser, type ReportPagination, type TimeRowClients, type TimeRowProjects, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, } from '@entities/time-tracking';
+import { budgetReportHoursMetrics, budgetReportMoneyMetrics, budgetReportRowProgressPercent } from '@entities/time-tracking/lib/projectBudgetReportMetrics';
 import { ReportsSkeleton } from './ReportsSkeleton';
 import { ConfirmedPartnerReportsPanel } from './ConfirmedPartnerReportsPanel';
 import { DatePicker } from '@shared/ui/DatePicker';
@@ -238,7 +239,7 @@ function buildReportRowHaystack(row: unknown): string {
 function BudgetProgress({ budget, spent, budgetBy, currency, compact = false, }: {
   budget: number | null | undefined;
   spent: number | null | undefined;
-  budgetBy: 'hours' | 'money' | 'hours_and_money';
+  budgetBy: 'hours' | 'money';
   currency?: string;
   compact?: boolean;
 }) {
@@ -300,26 +301,49 @@ function UninvoicedUserRows({ users, currency }: {
     </tr>))}
   </>);
 }
-function BudgetUserSubRows({ users, currency, budgetBy, projectSpent, }: {
+function BudgetUserSubRows({ users, row }: {
   users: RUBBudget[];
-  currency: string;
-  budgetBy: 'hours' | 'money' | 'hours_and_money';
-  projectSpent: number;
+  row: BudgetRow;
 }) {
   if (!users?.length)
     return null;
-  const cur = (currency ?? '').trim();
+  const cur = (row.currency ?? '').trim();
+  const hh = budgetReportHoursMetrics(row);
+  const mm = budgetReportMoneyMetrics(row);
+  const budgetBy = row.budget_by;
   return (<div className="rpb__users" role="rowgroup">
     {users.map((u) => {
       const uCur = (u.currency ?? cur).trim() || cur;
       const userHours = Number.isFinite(u.hours_logged) ? u.hours_logged : 0;
       const userAmt = Number.isFinite(u.amount_logged) ? u.amount_logged : 0;
-      const userValue = budgetBy === 'hours' ? userHours : userAmt;
-      const share = projectSpent > 0 ? Math.min(1, Math.max(0, userValue / projectSpent)) : 0;
+      let share = 0;
+      if (budgetBy === 'hours_and_money') {
+        const sh = hh.spent > 0 ? userHours / hh.spent : 0;
+        const sm = mm.spent > 0 ? userAmt / mm.spent : 0;
+        share = Math.min(1, Math.max(0, Math.max(sh, sm)));
+      }
+      else if (budgetBy === 'hours') {
+        share = hh.spent > 0 ? Math.min(1, Math.max(0, userHours / hh.spent)) : 0;
+      }
+      else if (budgetBy === 'money') {
+        share = mm.spent > 0 ? Math.min(1, Math.max(0, userAmt / mm.spent)) : 0;
+      }
       const sharePct = Math.round(share * 100);
       const initial = (u.user_name || '?').charAt(0).toUpperCase();
-      const primary = budgetBy === 'hours' ? fmtH(userHours) : fmtAmt(userAmt, uCur);
-      const secondary = budgetBy === 'hours' ? fmtAmt(userAmt, uCur) : `${fmtH(userHours)} ч`;
+      let primary: string;
+      let secondary: string;
+      if (budgetBy === 'hours_and_money') {
+        primary = `${fmtH(userHours)} · ${fmtAmt(userAmt, uCur)}`;
+        secondary = '';
+      }
+      else if (budgetBy === 'hours') {
+        primary = fmtH(userHours);
+        secondary = fmtAmt(userAmt, uCur);
+      }
+      else {
+        primary = fmtAmt(userAmt, uCur);
+        secondary = `${fmtH(userHours)} ч`;
+      }
       return (<div key={u.user_id} className="rpb__user" role="row">
         <div className="rpb__user-name">
           <span className="rpb__user-avatar" aria-hidden>{initial}</span>
@@ -330,7 +354,7 @@ function BudgetUserSubRows({ users, currency, budgetBy, projectSpent, }: {
         <div className="rpb__user-spacer" />
         <div className="rpb__user-metric rpb-num">
           <span className="rpb__user-metric-value">{primary}</span>
-          <span className="rpb__user-metric-sub">{secondary}</span>
+          {secondary ? (<span className="rpb__user-metric-sub">{secondary}</span>) : null}
         </div>
         <div className="rpb__user-spacer" />
         <div className="rpb__user-share" title={`Доля от израсходованного по проекту: ${sharePct}%`}>
@@ -650,16 +674,50 @@ export function BudgetTable({ rows, expanded, onToggle, }: {
       const isOpen = expanded.has(key);
       const hasUsers = (r.users?.length ?? 0) > 0;
       const cur = (r.currency ?? '').trim();
-      const unitLabel = r.budget_by === 'hours' ? 'часы' : (cur || '—');
-      const fmt = (n: number | null | undefined) => r.budget_by === 'hours'
-        ? fmtH(n)
-        : n != null && Number.isFinite(n)
-          ? `${Math.round(n).toLocaleString('ru-RU')}${cur ? ` ${cur}` : ''}`
-          : '—';
-      const hasBudget = Number.isFinite(r.budget) && r.budget > 0;
-      const pctVal = hasBudget ? Math.round((r.budget_spent / r.budget) * 100) : 0;
+      const hh = budgetReportHoursMetrics(r);
+      const mm = budgetReportMoneyMetrics(r);
+      const unitLabel = r.budget_by === 'none' || r.has_budget === false
+        ? '—'
+        : r.budget_by === 'hours'
+          ? 'часы'
+          : r.budget_by === 'money'
+            ? (cur || '—')
+            : 'часы + сумма';
+      const fmtMoneyCell = (n: number | null | undefined) => n != null && Number.isFinite(n)
+        ? `${Math.round(n).toLocaleString('ru-RU')}${cur ? ` ${cur}` : ''}`
+        : '—';
+      const budgetCell = r.budget_by === 'hours_and_money'
+        ? (<>
+            <div>{fmtH(hh.budget)}</div>
+            <div className="rpb__cell-sub">{fmtMoneyCell(mm.budget)}</div>
+          </>)
+        : r.budget_by === 'hours'
+          ? fmtH(r.budget)
+          : fmtMoneyCell(r.budget);
+      const spentCell = r.budget_by === 'hours_and_money'
+        ? (<>
+            <div>{fmtH(hh.spent)}</div>
+            <div className="rpb__cell-sub">{fmtMoneyCell(mm.spent)}</div>
+          </>)
+        : r.budget_by === 'hours'
+          ? fmtH(r.budget_spent)
+          : fmtMoneyCell(r.budget_spent);
+      const remCell = r.budget_by === 'hours_and_money'
+        ? (<>
+            <div>{fmtH(hh.remaining)}</div>
+            <div className="rpb__cell-sub">{fmtMoneyCell(mm.remaining)}</div>
+          </>)
+        : r.budget_by === 'hours'
+          ? fmtH(r.budget_remaining)
+          : fmtMoneyCell(r.budget_remaining);
+      const remainderNegative = r.budget_by === 'hours_and_money'
+        ? (hh.remaining < 0 || mm.remaining < 0)
+        : Number.isFinite(r.budget_remaining) && r.budget_remaining < 0;
+      const pctVal = budgetReportRowProgressPercent(r);
+      const hasBudget = r.budget_by !== 'none' && r.has_budget !== false && (r.budget_by === 'hours_and_money'
+        ? (hh.budget > 0 || mm.budget > 0)
+        : Number.isFinite(r.budget) && r.budget > 0);
       const isOver = hasBudget && pctVal >= 100;
-      const remainderNegative = Number.isFinite(r.budget_remaining) && r.budget_remaining < 0;
       const stateClass = !hasBudget
         ? 'rpb__row--empty'
         : isOver
@@ -688,13 +746,18 @@ export function BudgetTable({ rows, expanded, onToggle, }: {
           </div>
           <div className="rpb__client" role="cell" title={r.client_name}>{r.client_name || '—'}</div>
           <div className="rpb__type" role="cell">{unitLabel}</div>
-          <div className="rpb__metric rpb-num" role="cell">{fmt(r.budget)}</div>
-          <div className="rpb__metric rpb-num" role="cell">{fmt(r.budget_spent)}</div>
+          <div className="rpb__metric rpb-num" role="cell">{budgetCell}</div>
+          <div className="rpb__metric rpb-num" role="cell">{spentCell}</div>
           <div className={`rpb__metric rpb-num${remainderNegative ? ' rpb__metric--negative' : ''}`} role="cell">
-            {fmt(r.budget_remaining)}
+            {remCell}
           </div>
           <div className="rpb__progress-cell" role="cell">
-            <BudgetProgress budget={r.budget} spent={r.budget_spent} budgetBy={r.budget_by} currency={cur} />
+            {r.budget_by === 'hours_and_money'
+              ? (<div className="rpb__dual-progress">
+                  <BudgetProgress compact budget={hh.budget} spent={hh.spent} budgetBy="hours" />
+                  <BudgetProgress compact budget={mm.budget} spent={mm.spent} budgetBy="money" currency={cur} />
+                </div>)
+              : (<BudgetProgress budget={r.budget} spent={r.budget_spent} budgetBy={r.budget_by === 'hours' ? 'hours' : 'money'} currency={cur} />)}
           </div>
           <div className="rpb__chev" role="cell" aria-hidden>
             {hasUsers ? (<span className={`rpb__chev-icon${isOpen ? ' rpb__chev-icon--open' : ''}`}>
@@ -702,7 +765,7 @@ export function BudgetTable({ rows, expanded, onToggle, }: {
             </span>) : null}
           </div>
         </div>
-        {isOpen && hasUsers && (<BudgetUserSubRows users={r.users ?? []} currency={cur} budgetBy={r.budget_by} projectSpent={r.budget_spent} />)}
+        {isOpen && hasUsers && (<BudgetUserSubRows users={r.users ?? []} row={r} />)}
       </div>);
     })}
   </div>);
@@ -1094,20 +1157,28 @@ export function ReportsPanel() {
     }
     const rows = kpiRows as BudgetRow[];
     const projectCount = rows.length;
-    const budgetHoursRows = rows.filter((r) => r.budget_by === 'hours' || r.budget_by === 'hours_and_money');
-    const budgetMoneyRows = rows.filter((r) => r.budget_by === 'money' || r.budget_by === 'hours_and_money');
-    const totalHoursBudget = budgetHoursRows.reduce((s, r) => s + r.budget, 0);
-    const spentHours = budgetHoursRows.reduce((s, r) => s + r.budget_spent, 0);
+    let totalHoursBudget = 0;
+    let spentHours = 0;
     const moneyByCurMap = new Map<string, {
       totalBudget: number;
       spent: number;
     }>();
-    for (const r of budgetMoneyRows) {
-      const c = (r.currency ?? '').trim().toUpperCase() || 'USD';
-      const prev = moneyByCurMap.get(c) ?? { totalBudget: 0, spent: 0 };
-      prev.totalBudget += r.budget ?? 0;
-      prev.spent += r.budget_spent ?? 0;
-      moneyByCurMap.set(c, prev);
+    for (const r of rows) {
+      if (r.budget_by === 'none' || r.has_budget === false)
+        continue;
+      if (r.budget_by === 'hours' || r.budget_by === 'hours_and_money') {
+        const h = budgetReportHoursMetrics(r);
+        totalHoursBudget += h.budget;
+        spentHours += h.spent;
+      }
+      if (r.budget_by === 'money' || r.budget_by === 'hours_and_money') {
+        const m = budgetReportMoneyMetrics(r);
+        const c = (r.currency ?? '').trim().toUpperCase() || 'USD';
+        const prev = moneyByCurMap.get(c) ?? { totalBudget: 0, spent: 0 };
+        prev.totalBudget += m.budget;
+        prev.spent += m.spent;
+        moneyByCurMap.set(c, prev);
+      }
     }
     const moneyBudgetByCurrency = [...moneyByCurMap.entries()]
       .map(([currency, v]) => ({ currency, totalBudget: v.totalBudget, spent: v.spent }))

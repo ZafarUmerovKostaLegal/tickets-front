@@ -91,31 +91,46 @@ function projectCurrencySymbol(iso: string): string {
   }
 }
 
-function rowToBudgetFormSlice(row: TimeManagerClientProjectRow): Pick<ProjectFormState, 'budgetType' | 'budgetAmount' | 'budgetHours'> {
+function rowToBudgetFormSlice(row: TimeManagerClientProjectRow): Pick<ProjectFormState, 'budgetType' | 'budgetAmount' | 'budgetHours' | 'progressBudgetAmount'> {
   const t = (row.budget_type ?? '').toLowerCase().replace(/-/g, '_');
   const rawA = row.budget_amount;
+  const rawP = row.progress_budget_amount;
   const rawH = row.budget_hours;
   const rawFixed = row.fixed_fee_amount;
   const aStr = rawA != null && String(rawA).trim() !== '' ? String(rawA) : '';
+  const pStr = rawP != null && String(rawP).trim() !== '' ? String(rawP) : '';
   const hStr = rawH != null && String(rawH).trim() !== '' ? String(rawH) : '';
+  const fromFixed = rawFixed != null && String(rawFixed).trim() !== '' ? String(rawFixed) : '';
   const a = aStr ? parseFloat(aStr.replace(',', '.')) : NaN;
   const h = hStr ? parseFloat(hStr.replace(',', '.')) : NaN;
-  const fromFixed = rawFixed != null && String(rawFixed).trim() !== '' ? String(rawFixed) : '';
+  const pNum = pStr ? parseFloat(pStr.replace(',', '.')) : NaN;
+  const hasProgMoney = Number.isFinite(pNum) && pNum > 0;
+  const hasHardMoney = Number.isFinite(a) && a > 0;
+  const hasMoney = hasHardMoney || hasProgMoney;
+
+  if (row.project_type === 'fixed_fee') {
+    if (Number.isFinite(a) && a > 0)
+      return { budgetType: 'total_project_fees', budgetAmount: aStr, budgetHours: '', progressBudgetAmount: '' };
+    if (fromFixed)
+      return { budgetType: 'total_project_fees', budgetAmount: fromFixed, budgetHours: '', progressBudgetAmount: '' };
+    return { budgetType: 'no_budget', budgetAmount: '', budgetHours: '', progressBudgetAmount: '' };
+  }
+
   if (t === 'hours_and_money' || t === 'hours_and_fees' || t === 'fees_and_hours')
-    return { budgetType: 'fees_and_hours', budgetAmount: aStr, budgetHours: hStr };
+    return { budgetType: 'fees_and_hours', budgetAmount: aStr, progressBudgetAmount: pStr, budgetHours: hStr };
   if (t === 'total_project_fees' || t === 'money')
-    return { budgetType: 'total_project_fees', budgetAmount: aStr, budgetHours: '' };
+    return { budgetType: 'total_project_fees', budgetAmount: aStr, budgetHours: '', progressBudgetAmount: pStr };
   if (t === 'total_project_hours' || t === 'hours')
-    return { budgetType: 'total_project_hours', budgetAmount: '', budgetHours: hStr };
-  if (Number.isFinite(a) && a > 0 && Number.isFinite(h) && h > 0)
-    return { budgetType: 'fees_and_hours', budgetAmount: aStr, budgetHours: hStr };
-  if (Number.isFinite(a) && a > 0)
-    return { budgetType: 'total_project_fees', budgetAmount: aStr, budgetHours: '' };
-  if (Number.isFinite(h) && h > 0)
-    return { budgetType: 'total_project_hours', budgetAmount: '', budgetHours: hStr };
-  if (row.project_type === 'fixed_fee' && fromFixed)
-    return { budgetType: 'total_project_fees', budgetAmount: fromFixed, budgetHours: '' };
-  return { budgetType: 'no_budget', budgetAmount: '', budgetHours: '' };
+    return { budgetType: 'total_project_hours', budgetAmount: '', progressBudgetAmount: '', budgetHours: hStr };
+
+  const hasHours = Number.isFinite(h) && h > 0;
+  if (hasHours && (hasMoney || hasProgMoney))
+    return { budgetType: 'fees_and_hours', budgetAmount: aStr, progressBudgetAmount: pStr, budgetHours: hStr };
+  if (hasHours)
+    return { budgetType: 'total_project_hours', budgetAmount: '', progressBudgetAmount: '', budgetHours: hStr };
+  if (hasMoney || hasProgMoney)
+    return { budgetType: 'total_project_fees', budgetAmount: aStr, budgetHours: '', progressBudgetAmount: pStr };
+  return { budgetType: 'no_budget', budgetAmount: '', budgetHours: '', progressBudgetAmount: '' };
 }
 
 type ProjectFormState = {
@@ -131,6 +146,7 @@ type ProjectFormState = {
   projectBillableRateAmount: string;
   budgetType: 'no_budget' | 'total_project_fees' | 'total_project_hours' | 'fees_and_hours';
   budgetAmount: string;
+  progressBudgetAmount: string;
   budgetHours: string;
   budgetResetsEveryMonth: boolean;
   budgetIncludesExpenses: boolean;
@@ -150,6 +166,7 @@ function emptyProjectForm(): ProjectFormState {
     projectBillableRateAmount: '',
     budgetType: 'no_budget',
     budgetAmount: '',
+    progressBudgetAmount: '',
     budgetHours: '',
     budgetResetsEveryMonth: false,
     budgetIncludesExpenses: false,
@@ -195,21 +212,26 @@ function buildCreatePayload(form: ProjectFormState): TimeManagerClientProjectCre
     billableRateType = form.billableRateType.trim() || 'person_billable_rate';
   }
   let budgetAmount: string | number | null = null;
+  let progressBudgetAmount: string | number | null = null;
   let budgetHours: string | number | null = null;
   if (form.budgetType === 'no_budget') {
     budgetAmount = null;
+    progressBudgetAmount = null;
     budgetHours = null;
   }
   else if (form.budgetType === 'total_project_fees') {
     budgetAmount = parseOptionalDecimal(form.budgetAmount);
+    progressBudgetAmount = pt === 'fixed_fee' ? null : parseOptionalDecimal(form.progressBudgetAmount);
     budgetHours = null;
   }
   else if (form.budgetType === 'total_project_hours') {
     budgetAmount = null;
+    progressBudgetAmount = null;
     budgetHours = parseOptionalDecimal(form.budgetHours);
   }
   else if (form.budgetType === 'fees_and_hours') {
     budgetAmount = parseOptionalDecimal(form.budgetAmount);
+    progressBudgetAmount = pt === 'fixed_fee' ? null : parseOptionalDecimal(form.progressBudgetAmount);
     budgetHours = parseOptionalDecimal(form.budgetHours);
   }
   const thresholdRaw = form.budgetAlertThresholdPercent.trim().replace(',', '.');
@@ -237,6 +259,7 @@ function buildCreatePayload(form: ProjectFormState): TimeManagerClientProjectCre
     billableRateType,
     projectBillableRateAmount,
     budgetAmount,
+    progressBudgetAmount,
     budgetHours,
     budgetResetsEveryMonth: form.budgetResetsEveryMonth,
     budgetIncludesExpenses: form.budgetIncludesExpenses,
@@ -539,21 +562,35 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
       const n = typeof ba === 'string' ? parseFloat(ba.replace(',', '.')) : Number(ba);
       const hasMoney = form.budgetType === 'total_project_fees' || form.budgetType === 'fees_and_hours';
       if (!hasMoney || !Number.isFinite(n) || n <= 0) {
-        setError('Для фиксированного гонорара укажите сумму контракта в блоке «Бюджет» (лимит по деньгам).');
+        setError('Для фиксированного гонорара укажите сумму контракта (поле «Сумма контракта» / лимит по деньгам) — на сервер уходит как budgetAmount.');
+        return;
+      }
+    }
+    if ((form.projectType === 'time_and_materials' || form.projectType === 'non_billable') && form.budgetType === 'total_project_fees') {
+      const ba = parseOptionalDecimal(form.budgetAmount);
+      const pb = parseOptionalDecimal(form.progressBudgetAmount);
+      const na = typeof ba === 'string' ? parseFloat(String(ba).replace(',', '.')) : Number(ba);
+      const np = typeof pb === 'string' ? parseFloat(String(pb).replace(',', '.')) : Number(pb);
+      const moneyOk = (Number.isFinite(na) && na > 0) || (Number.isFinite(np) && np > 0);
+      if (!moneyOk) {
+        setError('Укажите жёсткий денежный лимит или плановый бюджет для прогресса (поле ниже), либо оба.');
         return;
       }
     }
     if (form.budgetType === 'fees_and_hours') {
       const ba = parseOptionalDecimal(form.budgetAmount);
+      const pb = parseOptionalDecimal(form.progressBudgetAmount);
       const bh = parseOptionalDecimal(form.budgetHours);
       const na = typeof ba === 'string' ? parseFloat(String(ba).replace(',', '.')) : Number(ba);
+      const np = typeof pb === 'string' ? parseFloat(String(pb).replace(',', '.')) : Number(pb);
       const nh = typeof bh === 'string' ? parseFloat(String(bh).replace(',', '.')) : Number(bh);
-      if (!ba || !Number.isFinite(na) || na <= 0) {
-        setError('В режиме «Сумма и часы» укажите лимит по деньгам');
-        return;
-      }
       if (!bh || !Number.isFinite(nh) || nh <= 0) {
         setError('В режиме «Сумма и часы» укажите лимит по часам');
+        return;
+      }
+      const moneyOk = (Number.isFinite(na) && na > 0) || (Number.isFinite(np) && np > 0);
+      if (!moneyOk) {
+        setError('В режиме «Сумма и часы» укажите жёсткий лимит по деньгам или плановый бюджет для прогресса');
         return;
       }
     }
@@ -684,7 +721,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         Валюта проекта
       </label>
       <SearchableSelect<TmOpt> className="tt-tm-dd" buttonClassName="tt-tm-dd__btn" buttonId={`${uid}-cur`} value={TIME_TRACKING_PROJECT_CURRENCIES.includes(form.currency as TimeManagerProjectCurrency) ? form.currency : 'USD'} items={CURRENCY_OPTIONS} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={getTmOptSearch} onSelect={(o) => setForm((f) => ({ ...f, currency: o.id }))} placeholder="Валюта…" emptyListText="Нет валют" noMatchText="Не найдено" disabled={saving} portalDropdown portalZIndex={TM_DD_PORTAL_Z} portalMinWidth={260} aria-labelledby={`${uid}-cur-lbl`} />
-      <p className="tt-tm-hint">Лимиты бюджета (деньги) и сумма фикс-контракта — в валюте проекта.</p>
+      <p className="tt-tm-hint">Лимиты бюджета (деньги) и фикс-контракт — в валюте проекта (USD, UZS, EUR, RUB, GBP). Тип бюджета на сервере выставляется автоматически.</p>
     </div>
 
     <div className="tt-tm-field">
@@ -703,7 +740,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
 
     {showBudgetFees && (<div className="tt-tm-field">
       <label className="tt-tm-label" htmlFor={`${uid}-bamt`}>
-        {form.projectType === 'fixed_fee' ? (<>Сумма контракта <span className="tt-tm-req">*</span></>) : (form.budgetType === 'fees_and_hours' ? 'Лимит по деньгам' : 'Сумма бюджета')}
+        {form.projectType === 'fixed_fee' ? (<>Сумма контракта <span className="tt-tm-req">*</span></>) : (form.budgetType === 'fees_and_hours' ? 'Жёсткий лимит по деньгам' : 'Жёсткий лимит / сумма бюджета')}
       </label>
       <div className="tt-tm-money-input" role="group" aria-label={`Сумма в ${projectCurrencyCode}`}>
         <span className="tt-tm-money-input__symbol" title={projectCurrencyCode} aria-hidden>
@@ -711,6 +748,19 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         </span>
         <input id={`${uid}-bamt`} className="tt-tm-input tt-tm-money-input__input" inputMode="decimal" placeholder="напр. 50000" value={form.budgetAmount} onChange={(e) => setForm((f) => ({ ...f, budgetAmount: e.target.value }))} aria-label={`Сумма бюджета, ${projectCurrencyCode}`} />
       </div>
+    </div>)}
+
+    {(form.projectType === 'time_and_materials' || form.projectType === 'non_billable') && showBudgetFees && (<div className="tt-tm-field">
+      <label className="tt-tm-label" htmlFor={`${uid}-pbamt`}>
+        План для прогресса (деньги), необязательно
+      </label>
+      <div className="tt-tm-money-input" role="group" aria-label={`План прогресса, ${projectCurrencyCode}`}>
+        <span className="tt-tm-money-input__symbol" title={projectCurrencyCode} aria-hidden>
+          {projectCurrencySymbol(projectCurrencyCode)}
+        </span>
+        <input id={`${uid}-pbamt`} className="tt-tm-input tt-tm-money-input__input" inputMode="decimal" placeholder="если жёсткий лимит не нужен" value={form.progressBudgetAmount} onChange={(e) => setForm((f) => ({ ...f, progressBudgetAmount: e.target.value }))} aria-label={`Плановый бюджет для прогресса, ${projectCurrencyCode}`} />
+      </div>
+      <p className="tt-tm-hint">Сохраняется как progressBudgetAmount. Для контроля по деньгам используется, если жёсткий лимит (поле выше) пуст или 0.</p>
     </div>)}
 
     {showBudgetHours && (<div className="tt-tm-field">

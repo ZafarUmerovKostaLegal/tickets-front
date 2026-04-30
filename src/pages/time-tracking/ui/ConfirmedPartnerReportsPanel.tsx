@@ -21,26 +21,25 @@ import { routes } from '@shared/config';
 import { useAppDialog } from '@shared/ui';
 
 const IcoRefresh = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-  <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-  <path d="M3 3v5h5" />
-  <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
-  <path d="M16 21h5v-5" />
+    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+    <path d="M16 21h5v-5" />
 </svg>);
 
 /** Предпросмотр отчёта */
 const IcoEye = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-  <circle cx="12" cy="12" r="3" />
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
 </svg>);
 
-/** Выгрузка подтверждённого отчёта в Excel */
 const IcoDownload = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
 </svg>);
 
 const IcoSpinner = () => (<svg className="tt-partner-confirmed__btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
-  <circle cx="12" cy="12" r="10" opacity="0.22" />
-  <path d="M12 2a10 10 0 0 1 10 10" />
+    <circle cx="12" cy="12" r="10" opacity="0.22" />
+    <path d="M12 2a10 10 0 0 1 10 10" />
 </svg>);
 
 function fmtIsoWhen(iso: string | null | undefined): string {
@@ -249,76 +248,73 @@ export function ConfirmedPartnerReportsPanel() {
     }, [showAlert]);
 
     return (<div className="tt-partner-confirmed" aria-labelledby="tt-partner-confirmed-heading">
-      <div className="tt-partner-confirmed__head">
-        <div>
-          <h2 id="tt-partner-confirmed-heading" className="tt-partner-confirmed__title">
-            Подтверждённые партнёром отчёты
-          </h2>
-          <p className="tt-partner-confirmed__hint">
-            Список только для просмотра: строки здесь не редактируются. Иконка «глаз» открывает предпросмотр периода и проекта на отдельной странице; иконка загрузки — выгрузка подтверждённого отчёта в Excel (.xlsx). Данные списка с сервера (<code className="tt-partner-confirmed__code">GET …/partner-confirmations/confirmed</code>).
-          </p>
+        <div className="tt-partner-confirmed__head">
+            <div>
+                <h2 id="tt-partner-confirmed-heading" className="tt-partner-confirmed__title">
+                    Подтверждённые партнёром отчёты
+                </h2>
+            </div>
+            <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" disabled={loading || refreshBusy} onClick={() => void fetchConfirmed({ silent: true })} title="Обновить список" aria-label="Обновить список">
+                <IcoRefresh />
+            </button>
         </div>
-        <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" disabled={loading || refreshBusy} onClick={() => void fetchConfirmed({ silent: true })} title="Обновить список" aria-label="Обновить список">
-          <IcoRefresh />
-        </button>
-      </div>
 
-      <div className="tt-partner-confirmed__toolbar">
-        <label className="tt-partner-confirmed__search-label" htmlFor="tt-partner-confirmed-search">
-          Поиск по списку
-        </label>
-        <input id="tt-partner-confirmed-search" type="search" className="tt-reports__table-search-input tt-partner-confirmed__search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Заголовок, проект, id, даты…" spellCheck={false} autoComplete="off" />
-        <span className="tt-partner-confirmed__count" role="status">
-          {loading ? 'Загрузка…' : `${filtered.length} из ${rows.length}`}
-        </span>
-      </div>
+        <div className="tt-partner-confirmed__toolbar">
+            <label className="tt-partner-confirmed__search-label" htmlFor="tt-partner-confirmed-search">
+                Поиск по списку
+            </label>
+            <input id="tt-partner-confirmed-search" type="search" className="tt-reports__table-search-input tt-partner-confirmed__search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Заголовок, проект, id, даты…" spellCheck={false} autoComplete="off" />
+            <span className="tt-partner-confirmed__count" role="status">
+                {loading ? 'Загрузка…' : `${filtered.length} из ${rows.length}`}
+            </span>
+        </div>
 
-      {error ? (<p className="tt-reports__table-err tt-partner-confirmed__err" role="alert">{error}</p>) : null}
+        {error ? (<p className="tt-reports__table-err tt-partner-confirmed__err" role="alert">{error}</p>) : null}
 
-      {!loading && !error && rows.length === 0 ? (<p className="tt-partner-confirmed__empty">Подтверждённых отчётов пока нет — либо для вас нет доступа к строкам по правилам сервера.</p>) : null}
+        {!loading && !error && rows.length === 0 ? (<p className="tt-partner-confirmed__empty">Подтверждённых отчётов пока нет — либо для вас нет доступа к строкам по правилам сервера.</p>) : null}
 
-      {!loading && !error && rows.length > 0 ? (<div className="tt-reports__table-wrap tt-partner-confirmed__table-wrap">
-          <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly" aria-label="Подтверждённые партнёром отчёты, только просмотр">
-            <thead>
-              <tr>
-                <th scope="col">Заголовок</th>
-                <th scope="col">Период</th>
-                <th scope="col">Проект</th>
-                <th scope="col">Снимок</th>
-                <th scope="col">Отправитель</th>
-                <th scope="col">Партнёры (подписи)</th>
-                <th scope="col">Обновлено</th>
-                <th scope="col" className="tt-partner-confirmed__th-actions">Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => (<tr key={r.id}>
-                  <td className="tt-partner-confirmed__cell-title">{r.title.trim() || r.id}</td>
-                  <td>{formatIsoRangeTitle(r.dateFrom, r.dateTo)}</td>
-                  <td><code className="tt-partner-confirmed__code">{r.projectId}</code></td>
-                  <td><code className="tt-partner-confirmed__code tt-partner-confirmed__code--narrow" title={r.snapshotId}>{r.snapshotId.length > 12 ? `${r.snapshotId.slice(0, 10)}…` : r.snapshotId}</code></td>
-                  <td>{userLabel(usersById, r.submittedByAuthUserId)}</td>
-                  <td>
-                    {r.signatures.length > 0
-                ? r.signatures.map((s) => `${userLabel(usersById, s.partnerAuthUserId)} (${fmtIsoWhen(s.confirmedAt)})`).join('; ')
-                : '—'}
-                  </td>
-                  <td>{fmtIsoWhen(r.updatedAt)}</td>
-                  <td className="tt-partner-confirmed__actions-cell">
-                    <div className="tt-partner-confirmed__actions">
-                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" onClick={() => openReportPreviewForRow(r)} title="Открыть предпросмотр по периоду и проекту этой строки" aria-label="Предпросмотр отчёта">
-                        <IcoEye />
-                      </button>
-                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={exportBusySnapshotId === r.snapshotId} onClick={() => void exportSnapshotExcel(r)} title={exportBusySnapshotId === r.snapshotId ? 'Выгрузка…' : 'Скачать подтверждённый отчёт в Excel'} aria-label={exportBusySnapshotId === r.snapshotId ? 'Выгрузка Excel' : 'Скачать отчёт Excel'}>
-                        {exportBusySnapshotId === r.snapshotId ? <IcoSpinner /> : <IcoDownload />}
-                      </button>
-                    </div>
-                  </td>
-                </tr>))}
-            </tbody>
-          </table>
+        {!loading && !error && rows.length > 0 ? (<div className="tt-reports__table-wrap tt-partner-confirmed__table-wrap">
+            <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly" aria-label="Подтверждённые партнёром отчёты, только просмотр">
+                <thead>
+                    <tr>
+                        <th scope="col">Заголовок</th>
+                        <th scope="col">Период</th>
+                        <th scope="col">Проект</th>
+                        <th scope="col">Снимок</th>
+                        <th scope="col">Отправитель</th>
+                        <th scope="col">Партнёры (подписи)</th>
+                        <th scope="col">Обновлено</th>
+                        <th scope="col" className="tt-partner-confirmed__th-actions">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filtered.map((r) => (<tr key={r.id}>
+                        <td className="tt-partner-confirmed__cell-title">{r.title.trim() || r.id}</td>
+                        <td>{formatIsoRangeTitle(r.dateFrom, r.dateTo)}</td>
+                        <td><code className="tt-partner-confirmed__code">{r.projectId}</code></td>
+                        <td><code className="tt-partner-confirmed__code tt-partner-confirmed__code--narrow" title={r.snapshotId}>{r.snapshotId.length > 12 ? `${r.snapshotId.slice(0, 10)}…` : r.snapshotId}</code></td>
+                        <td>{userLabel(usersById, r.submittedByAuthUserId)}</td>
+                        <td>
+                            {r.signatures.length > 0
+                                ? r.signatures.map((s) => `${userLabel(usersById, s.partnerAuthUserId)} (${fmtIsoWhen(s.confirmedAt)})`).join('; ')
+                                : '—'}
+                        </td>
+                        <td>{fmtIsoWhen(r.updatedAt)}</td>
+                        <td className="tt-partner-confirmed__actions-cell">
+                            <div className="tt-partner-confirmed__actions">
+                                <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" onClick={() => openReportPreviewForRow(r)} title="Открыть предпросмотр по периоду и проекту этой строки" aria-label="Предпросмотр отчёта">
+                                    <IcoEye />
+                                </button>
+                                <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={exportBusySnapshotId === r.snapshotId} onClick={() => void exportSnapshotExcel(r)} title={exportBusySnapshotId === r.snapshotId ? 'Выгрузка…' : 'Скачать подтверждённый отчёт в Excel'} aria-label={exportBusySnapshotId === r.snapshotId ? 'Выгрузка Excel' : 'Скачать отчёт Excel'}>
+                                    {exportBusySnapshotId === r.snapshotId ? <IcoSpinner /> : <IcoDownload />}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>))}
+                </tbody>
+            </table>
         </div>) : null}
 
-      {!loading && query.trim() && filtered.length === 0 && rows.length > 0 ? (<p className="tt-partner-confirmed__empty">Ничего не найдено — сбросьте поиск.</p>) : null}
+        {!loading && query.trim() && filtered.length === 0 && rows.length > 0 ? (<p className="tt-partner-confirmed__empty">Ничего не найдено — сбросьте поиск.</p>) : null}
     </div>);
 }

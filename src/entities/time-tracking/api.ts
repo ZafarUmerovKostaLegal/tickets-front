@@ -1277,6 +1277,8 @@ export type TimeManagerClientProjectRow = {
     project_billable_rate_amount?: string | number | null;
     budget_type: string | null;
     budget_amount: string | number | null;
+    /** Плановый денежный бюджет для прогресса (T&M / non_billable), если жёсткий budget_amount не задан или дополнительно к нему. */
+    progress_budget_amount?: string | number | null;
     budget_hours: string | number | null;
     budget_resets_every_month: boolean;
     budget_includes_expenses: boolean;
@@ -1353,7 +1355,7 @@ export type TimeManagerProjectDashboardBudgetSlice = {
 
 export type TimeManagerProjectDashboardBudget = {
     hasBudget: boolean;
-    budgetBy: 'money' | 'hours' | 'hours_and_money';
+    budgetBy: 'none' | 'money' | 'hours' | 'hours_and_money';
     currency: string;
     
     budget: number;
@@ -1541,7 +1543,10 @@ export function normalizeProjectDashboard(raw: unknown): TimeManagerProjectDashb
         const by = String(b.budget_by ?? b.budgetBy ?? '').toLowerCase().replace(/-/g, '_');
         const cur = dashStr(b.currency) ?? dashStr(o.currency) ?? 'USD';
         const pctRoot = readPct(b.percent_used ?? b.percentUsed);
-        if (by === 'hours_and_money' || by === 'hoursandmoney') {
+        if (!hasBudget || by === 'none' || by === '') {
+            budget = undefined;
+        }
+        else if (by === 'hours_and_money' || by === 'hoursandmoney') {
             const money = readBudgetSlice(b.budgetMoney ?? b.budget_money)
                 ?? readBudgetSlice(b.money);
             const hours = readBudgetSlice(b.hoursBudget ?? b.hours_budget)
@@ -1564,7 +1569,7 @@ export function normalizeProjectDashboard(raw: unknown): TimeManagerProjectDashb
                 };
             }
         }
-        if (!budget) {
+        if (!budget && hasBudget && by !== 'none' && by !== '' && by !== 'hours_and_money' && by !== 'hoursandmoney') {
             const budgetBy: 'money' | 'hours' = by === 'hours' ? 'hours' : 'money';
             budget = {
                 hasBudget,
@@ -1594,10 +1599,14 @@ export type ProjectDashboardQuery = {
 };
 export async function getClientProjectDashboard(clientId: string, projectId: string, query?: ProjectDashboardQuery): Promise<TimeManagerProjectDashboard | null> {
     const qs = new URLSearchParams();
-    if (query?.dateFrom)
+    if (query?.dateFrom) {
         qs.set('dateFrom', query.dateFrom);
-    if (query?.dateTo)
+        qs.set('date_from', query.dateFrom);
+    }
+    if (query?.dateTo) {
         qs.set('dateTo', query.dateTo);
+        qs.set('date_to', query.dateTo);
+    }
     const suffix = qs.toString() ? `?${qs.toString()}` : '';
     const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/projects/${encodeURIComponent(projectId)}/dashboard${suffix}`);
     if (res.status === 404)
@@ -1630,6 +1639,7 @@ export type TimeManagerClientProjectCreatePayload = {
     projectBillableRateAmount?: string | number | null;
     budgetType?: string | null;
     budgetAmount?: string | number | null;
+    progressBudgetAmount?: string | number | null;
     budgetHours?: string | number | null;
     budgetResetsEveryMonth?: boolean;
     budgetIncludesExpenses?: boolean;
@@ -1650,6 +1660,7 @@ export type TimeManagerClientProjectPatchPayload = {
     projectBillableRateAmount?: string | number | null;
     budgetType?: string | null;
     budgetAmount?: string | number | null;
+    progressBudgetAmount?: string | number | null;
     budgetHours?: string | number | null;
     budgetResetsEveryMonth?: boolean;
     budgetIncludesExpenses?: boolean;
@@ -1682,6 +1693,8 @@ function projectCreateBody(body: TimeManagerClientProjectCreatePayload): Record<
         o.budgetType = body.budgetType;
     if (body.budgetAmount !== undefined)
         o.budgetAmount = body.budgetAmount;
+    if (body.progressBudgetAmount !== undefined)
+        o.progressBudgetAmount = body.progressBudgetAmount;
     if (body.budgetHours !== undefined)
         o.budgetHours = body.budgetHours;
     if (body.budgetResetsEveryMonth !== undefined)
@@ -1722,6 +1735,8 @@ function projectPatchBody(patch: TimeManagerClientProjectPatchPayload): Record<s
         o.budgetType = patch.budgetType;
     if (patch.budgetAmount !== undefined)
         o.budgetAmount = patch.budgetAmount;
+    if (patch.progressBudgetAmount !== undefined)
+        o.progressBudgetAmount = patch.progressBudgetAmount;
     if (patch.budgetHours !== undefined)
         o.budgetHours = patch.budgetHours;
     if (patch.budgetResetsEveryMonth !== undefined)
@@ -1844,6 +1859,7 @@ function projectForExpenseToPickerStub(p: TimeTrackingProjectForExpense): TimeMa
         project_billable_rate_amount: null,
         budget_type: null,
         budget_amount: null,
+        progress_budget_amount: null,
         budget_hours: null,
         budget_resets_every_month: false,
         budget_includes_expenses: false,
@@ -2921,12 +2937,22 @@ export type BudgetRow = {
     project_id: string;
     project_name: string;
     budget_is_monthly: boolean;
-    budget_by: 'hours' | 'money' | 'hours_and_money';
+    budget_by: 'none' | 'hours' | 'money' | 'hours_and_money';
+    /** Если false или отсутствует — строки без лимита (см. API). */
+    has_budget?: boolean;
     is_active: boolean;
     budget: number;
     budget_spent: number;
     budget_remaining: number;
     currency?: string;
+    /** При budget_by === hours_and_money — лимиты по часам (если отдаёт API отдельно). */
+    budget_hours_budget?: number;
+    budget_hours_spent?: number;
+    budget_hours_remaining?: number;
+    /** При budget_by === hours_and_money — лимиты по деньгам. */
+    budget_money_budget?: number;
+    budget_money_spent?: number;
+    budget_money_remaining?: number;
     users: RUBBudget[];
 };
 const REPORT_ENTRY_LOG_CAMEL_TO_SNAKE: readonly [
@@ -3214,9 +3240,16 @@ const REPORT_V2_CAMEL_TO_SNAKE: readonly [
         ['uninvoicedExpenses', 'uninvoiced_expenses'],
         ['budgetIsMonthly', 'budget_is_monthly'],
         ['budgetBy', 'budget_by'],
+        ['hasBudget', 'has_budget'],
         ['isActive', 'is_active'],
         ['budgetSpent', 'budget_spent'],
         ['budgetRemaining', 'budget_remaining'],
+        ['budgetHoursBudget', 'budget_hours_budget'],
+        ['budgetHoursSpent', 'budget_hours_spent'],
+        ['budgetHoursRemaining', 'budget_hours_remaining'],
+        ['budgetMoneyBudget', 'budget_money_budget'],
+        ['budgetMoneySpent', 'budget_money_spent'],
+        ['budgetMoneyRemaining', 'budget_money_remaining'],
         ['hoursLogged', 'hours_logged'],
         ['amountLogged', 'amount_logged'],
         ['entriesTotal', 'entries_total'],
@@ -3448,12 +3481,59 @@ export async function fetchUninvoicedReport(filters: ReportFiltersV2): Promise<R
     const data = (await res.json()) as ReportResponse<UninvoicedRow>;
     return normalizeReportV2Response(data);
 }
+function coerceBudgetReportNumeric(v: unknown): number | undefined {
+    if (v == null || v === '')
+        return undefined;
+    if (typeof v === 'number')
+        return Number.isFinite(v) ? v : undefined;
+    const n = parseFloat(String(v).replace(/\s/g, '').replace(',', '.'));
+    return Number.isFinite(n) ? n : undefined;
+}
+/** Нормализация строки отчёта «Бюджет проектов» под контракт FRONTEND_PROJECT_BUDGET. */
+export function finalizeBudgetReportRow(row: BudgetRow): BudgetRow {
+    const raw = row as Record<string, unknown>;
+    const byRaw = String(row.budget_by ?? '').toLowerCase().replace(/-/g, '_');
+    let budget_by: BudgetRow['budget_by'] = 'none';
+    if (byRaw === 'hours')
+        budget_by = 'hours';
+    else if (byRaw === 'money')
+        budget_by = 'money';
+    else if (byRaw === 'hours_and_money' || byRaw === 'hoursandmoney')
+        budget_by = 'hours_and_money';
+    const hb = coerceBudgetReportNumeric(raw.budget_hours_budget);
+    const hs = coerceBudgetReportNumeric(raw.budget_hours_spent);
+    const hr = coerceBudgetReportNumeric(raw.budget_hours_remaining);
+    const mb = coerceBudgetReportNumeric(raw.budget_money_budget);
+    const ms = coerceBudgetReportNumeric(raw.budget_money_spent);
+    const mr = coerceBudgetReportNumeric(raw.budget_money_remaining);
+    const explicitHas = raw.has_budget ?? raw.hasBudget;
+    const has_budget = explicitHas === true
+        ? true
+        : explicitHas === false
+            ? false
+            : budget_by !== 'none' && Number.isFinite(row.budget) && row.budget > 0;
+    return {
+        ...row,
+        budget_by,
+        has_budget,
+        ...(hb !== undefined ? { budget_hours_budget: hb } : {}),
+        ...(hs !== undefined ? { budget_hours_spent: hs } : {}),
+        ...(hr !== undefined ? { budget_hours_remaining: hr } : {}),
+        ...(mb !== undefined ? { budget_money_budget: mb } : {}),
+        ...(ms !== undefined ? { budget_money_spent: ms } : {}),
+        ...(mr !== undefined ? { budget_money_remaining: mr } : {}),
+    };
+}
 export async function fetchBudgetReport(filters: ReportFiltersV2): Promise<ReportResponse<BudgetRow>> {
     const qs = buildReportV2Qs(filters);
     const res = await apiFetch(`/api/v1/time-tracking/reports/project-budget?${qs}`);
     await reportsThrowIfNotOk(res);
     const data = (await res.json()) as ReportResponse<BudgetRow>;
-    return normalizeReportV2Response(data);
+    const norm = normalizeReportV2Response(data);
+    return {
+        ...norm,
+        results: norm.results.map((r) => finalizeBudgetReportRow(r as BudgetRow)),
+    };
 }
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 function parseFilenameFromContentDisposition(header: string | null): string | null {

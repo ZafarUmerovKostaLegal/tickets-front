@@ -108,6 +108,8 @@ function fmtAmtShort(n: number): string {
     return String(n);
 }
 function fmtDashboardBudgetValue(b: TimeManagerProjectDashboardBudget): string {
+    if (b.budgetBy === 'none')
+        return '—';
     if (b.budgetBy === 'hours_and_money' && b.money)
         return `${b.money.budget.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${b.currency}`;
     if (b.budgetBy === 'hours')
@@ -115,6 +117,8 @@ function fmtDashboardBudgetValue(b: TimeManagerProjectDashboardBudget): string {
     return `${b.budget.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${b.currency}`;
 }
 function fmtDashboardBudgetSpentRemaining(b: TimeManagerProjectDashboardBudget, value: number): string {
+    if (b.budgetBy === 'none')
+        return '—';
     if (b.budgetBy === 'hours_and_money' && b.money)
         return `${value.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${b.currency}`;
     if (b.budgetBy === 'hours')
@@ -757,6 +761,9 @@ function duplicateProjectCreatePayload(src: TimeManagerClientProjectRow): TimeMa
         : (src.project_type === 'fixed_fee' && src.fixed_fee_amount != null && String(src.fixed_fee_amount).trim() !== ''
             ? src.fixed_fee_amount
             : null);
+    const prog = src.progress_budget_amount != null && String(src.progress_budget_amount).trim() !== ''
+        ? src.progress_budget_amount
+        : null;
     return {
         name: `${String(src.name ?? '').trim()} (копия)`,
         code: null,
@@ -769,6 +776,7 @@ function duplicateProjectCreatePayload(src: TimeManagerClientProjectRow): TimeMa
         billableRateType: src.billable_rate_type,
         projectBillableRateAmount: readTimeManagerProjectBillableRateAmount(src).trim() || null,
         budgetAmount: amt,
+        progressBudgetAmount: prog,
         budgetHours: src.budget_hours,
         budgetResetsEveryMonth: src.budget_resets_every_month,
         budgetIncludesExpenses: src.budget_includes_expenses,
