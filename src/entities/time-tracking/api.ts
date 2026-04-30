@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { absorbTimeEntryRowEditUnlockHint, recordTimeEntryEditUnlockExpiry } from './lib/timeEntryEditUnlockStorage';
 import { pickAllowedSnapshotOverrides } from './lib/reportSnapshotOverrides';
 import type { User } from '@entities/user';
@@ -667,6 +668,48 @@ export async function listUsersWithProjectAccessToProject(projectId: string): Pr
         }
     }
     out.sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
+    return out;
+}
+
+export type ProjectPartnerAccessRow = {
+    authUserId: number;
+    displayName: string;
+    position: string;
+};
+
+/** Партнёры (орг. роль), у которых в TT выдан доступ к указанному проекту. */
+export async function listPartnerUsersWithProjectAccessToProject(projectId: string): Promise<ProjectPartnerAccessRow[]> {
+    const pid = String(projectId ?? '').trim();
+    if (!pid)
+        return [];
+    const users = await listTimeTrackingUsers();
+    const candidates = users.filter((u) => !u.is_archived && !u.is_blocked && isPartnerOrgRole(u.role));
+    const out: ProjectPartnerAccessRow[] = [];
+    for (let i = 0; i < candidates.length; i += PROJECT_ACCESS_FETCH_BATCH) {
+        const chunk = candidates.slice(i, i + PROJECT_ACCESS_FETCH_BATCH);
+        const chunkResults = await Promise.all(chunk.map(async (u) => {
+            try {
+                const { projectIds } = await getUserProjectAccess(u.id);
+                if (!projectIds.includes(pid))
+                    return null;
+                const displayName = (u.display_name?.trim() || u.email || `Пользователь ${u.id}`).trim();
+                const position = (u.position?.trim() ?? '').trim();
+                return {
+                    authUserId: u.id,
+                    displayName,
+                    position,
+                } satisfies ProjectPartnerAccessRow;
+            }
+            catch {
+                return null;
+            }
+        }));
+        for (const r of chunkResults) {
+            if (r)
+                out.push(r);
+        }
+    }
+    out.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru', { sensitivity: 'base' }));
     return out;
 }
 export type TimeManagerClientContactRow = {
@@ -2575,6 +2618,8 @@ export type ReportFiltersV2 = {
     per_page?: number;
     
     pageSizeMax?: number;
+    
+    confirmed_payment_only?: boolean;
 };
 
 export type TimeReportEntryLogItem = {
@@ -3158,6 +3203,8 @@ function buildReportV2Qs(filters: ReportFiltersV2): string {
         p.set('is_billable', String(filters.is_billable));
     if (filters.include_fixed_fee === false)
         p.set('include_fixed_fee', 'false');
+    if (filters.confirmed_payment_only === true)
+        p.set('confirmed_payment_only', 'true');
     p.set('page', String(filters.page ?? 1));
     const cap = filters.pageSizeMax != null && filters.pageSizeMax > 0
         ? Math.min(filters.pageSizeMax, 5000)
@@ -3285,7 +3332,7 @@ function parseFilenameFromContentDisposition(header: string | null): string | nu
         return plain[1].replace(/^"+|"+$/g, '');
     return null;
 }
-function defaultReportExportFilename(reportType: 'time' | 'expenses' | 'uninvoiced' | 'project-budget', groupBy: string | null, from: string, to: string, ext: string): string {
+function defaultReportExportFilename(reportType: 'time' | 'expenses' | 'confirmed-expenses' | 'uninvoiced' | 'project-budget', groupBy: string | null, from: string, to: string, ext: string): string {
     const slug = groupBy ? `${reportType}_${groupBy}` : reportType;
     return `${slug}_${from}_${to}.${ext}`;
 }
@@ -3293,29 +3340,35 @@ export type ReportExportOptions = {
     
     timeExport?: 'detail' | 'summary';
 };
-export async function exportReportV2(reportType: 'time' | 'expenses' | 'uninvoiced' | 'project-budget', groupBy: string | null, filters: ReportFiltersV2, format: 'csv' | 'xlsx', exportOpts?: ReportExportOptions): Promise<void> {
+export async function exportReportV2(reportType: 'time' | 'expenses' | 'confirmed-expenses' | 'uninvoiced' | 'project-budget', groupBy: string | null, filters: ReportFiltersV2, format: 'csv' | 'xlsx', exportOpts?: ReportExportOptions): Promise<void> {
+    const apiSegment = reportType === 'confirmed-expenses' ? 'expenses' : reportType;
+    const mergedFilters: ReportFiltersV2 = reportType === 'confirmed-expenses'
+        ? { ...filters, confirmed_payment_only: true }
+        : filters;
     const base = '/api/v1/time-tracking/reports';
-    const path = groupBy ? `/${reportType}/${groupBy}/export` : `/${reportType}/export`;
+    const path = groupBy ? `/${apiSegment}/${groupBy}/export` : `/${apiSegment}/export`;
     const p = new URLSearchParams();
     p.set('format', format);
-    p.set('dateFrom', filters.dateFrom);
-    p.set('dateTo', filters.dateTo);
-    p.set('from', filters.dateFrom);
-    p.set('to', filters.dateTo);
+    p.set('dateFrom', mergedFilters.dateFrom);
+    p.set('dateTo', mergedFilters.dateTo);
+    p.set('from', mergedFilters.dateFrom);
+    p.set('to', mergedFilters.dateTo);
     if (reportType === 'time' && exportOpts?.timeExport)
         p.set('export', exportOpts.timeExport);
-    if (filters.client_id)
-        p.set('client_id', filters.client_id);
-    if (filters.project_id)
-        p.set('project_id', filters.project_id);
-    if (filters.user_id)
-        p.set('user_id', filters.user_id);
-    if (filters.task_id)
-        p.set('task_id', filters.task_id);
-    if (filters.is_billable !== undefined)
-        p.set('is_billable', String(filters.is_billable));
-    if (filters.include_fixed_fee === false)
+    if (mergedFilters.client_id)
+        p.set('client_id', mergedFilters.client_id);
+    if (mergedFilters.project_id)
+        p.set('project_id', mergedFilters.project_id);
+    if (mergedFilters.user_id)
+        p.set('user_id', mergedFilters.user_id);
+    if (mergedFilters.task_id)
+        p.set('task_id', mergedFilters.task_id);
+    if (mergedFilters.is_billable !== undefined)
+        p.set('is_billable', String(mergedFilters.is_billable));
+    if (mergedFilters.include_fixed_fee === false)
         p.set('include_fixed_fee', 'false');
+    if (mergedFilters.confirmed_payment_only === true)
+        p.set('confirmed_payment_only', 'true');
     const accept = format === 'xlsx'
         ? `${XLSX_MIME}, application/octet-stream, */*`
         : 'text/csv, text/plain, application/octet-stream, */*';
@@ -3396,7 +3449,7 @@ export async function exportReportV2(reportType: 'time' | 'expenses' | 'uninvoic
     const blob = new Blob([buf], { type: mime });
     const ext = format === 'xlsx' ? 'xlsx' : 'csv';
     let filename = parseFilenameFromContentDisposition(res.headers.get('content-disposition')) ??
-        defaultReportExportFilename(reportType, groupBy, filters.dateFrom, filters.dateTo, ext);
+        defaultReportExportFilename(reportType, groupBy, mergedFilters.dateFrom, mergedFilters.dateTo, ext);
     if (!filename.toLowerCase().endsWith(`.${ext}`)) {
         filename = `${filename.replace(/\.(csv|xlsx|xls)$/i, '')}.${ext}`;
     }

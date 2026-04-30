@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { ProjectOption, } from '@pages/time-tracking/ui/timesheetProjectLoader';
 import { ReportPreviewDateTimeFilterPopover } from './ReportPreviewDateTimeFilterPopover';
 import { ReportPreviewTextFilterPopover } from './ReportPreviewTextFilterPopover';
-import { isClosedReportingWeekEditingBlockedForSubject, isWorkDateInClosedReportingPeriod, listClientTasks, } from '@entities/time-tracking';
+import { isClosedReportingWeekEditingBlockedForSubject, isWorkDateInClosedReportingPeriod, listClientTasks, type ProjectPartnerAccessRow, } from '@entities/time-tracking';
 import { formatDecimalHoursRu, formatHoursClockFromDecimalHours, } from '@shared/lib/formatTrackingHours';
 import { syncTextareaHeightToContent } from '@shared/lib/syncTextareaHeight';
 import { fmtAmtWithIso } from '@entities/time-tracking/lib/reportsFormatUtils';
@@ -36,6 +36,18 @@ import { ReportPreviewTimeBriefColumnsModal } from './ReportPreviewTimeBriefColu
 import { ReportPreviewTimeFullColumnsModal } from './ReportPreviewTimeFullColumnsModal';
 import type { LabeledOption, BudgetExcelPreviewRow, ExpenseExcelPreviewRow, TimeExcelPreviewRow, UninvoicedExcelPreviewRow, } from '../lib/previewExcelTypes';
 type PatchFn<T> = (rowKey: string, patch: Partial<T>) => void;
+
+type TimePreviewPartnerPickState = {
+    loading: boolean;
+    partners: ProjectPartnerAccessRow[];
+};
+
+type PartnerEmployeeSelectItem = {
+    id: string;
+    label: string;
+    position: string;
+    search: string;
+};
 function isTimeRowEditingLockedForViewer(r: TimeExcelPreviewRow, viewerCanOverrideWeeklyLock: boolean): boolean {
     if (r.rowKind !== 'entry' || !r.timeEntryId?.trim())
         return false;
@@ -474,12 +486,13 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
       </div>
     </div>, document.body);
 }
-export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, }: {
+export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, }: {
     projectTitle: string;
     
     viewMode?: 'brief' | 'full';
     rows: TimeExcelPreviewRow[];
     onPatch: PatchFn<TimeExcelPreviewRow>;
+    employeePartnerPick?: TimePreviewPartnerPickState | null;
 } & UserRowSelectionProps & PreviewServerReloadProps & TimeReportPersistenceProps) {
     const isFull = viewMode === 'full';
     const showEntryActions = !isFull && (Boolean(onDeleteTimeEntry) || Boolean(onMoveTimeEntryToProject) || Boolean(onDuplicateTimeEntry) || Boolean(onGrantEditUnlock));
@@ -543,6 +556,81 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             m.set(cid, buildTimeReportTaskOptionsForClient(cid, rows, tasksByClientId));
         return m;
     }, [rows, tasksByClientId]);
+    const employeePartnerSelectItems = useMemo((): PartnerEmployeeSelectItem[] | null => {
+        if (employeePartnerPick == null || employeePartnerPick.loading)
+            return null;
+        const m = new Map<number, PartnerEmployeeSelectItem>();
+        for (const p of employeePartnerPick.partners) {
+            const label = p.displayName.trim() || `Пользователь ${p.authUserId}`;
+            const pos = p.position.trim();
+            m.set(p.authUserId, {
+                id: String(p.authUserId),
+                label,
+                position: pos,
+                search: `${label} ${pos} ${p.authUserId}`.trim(),
+            });
+        }
+        for (const r of rows) {
+            if (r.rowKind !== 'entry')
+                continue;
+            const uid = r.authUserId;
+            if (uid > 0 && !m.has(uid)) {
+                const label = (r.employeeName || r.userName).trim() || `Пользователь ${uid}`;
+                const pos = (r.employeePosition ?? '').trim();
+                m.set(uid, {
+                    id: String(uid),
+                    label,
+                    position: pos,
+                    search: `${label} ${pos} ${uid}`.trim(),
+                });
+            }
+        }
+        return [...m.values()].sort((a, b) => a.label.localeCompare(b.label, 'ru', { sensitivity: 'base' }));
+    }, [employeePartnerPick, rows]);
+    const renderEmployeeBodyCell = (colId: TimeBriefColumnId | TimeFullColumnId, r: TimeExcelPreviewRow, i: number, wk: boolean): ReactNode => {
+        if (r.rowKind === 'aggregate') {
+            if (employeePartnerPick != null && !employeePartnerPick.loading) {
+                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--readonly">
+                  <span className="tt-rp-mtable__td--muted" title="Для строки-агрегата выбор партнёра недоступен">{r.employeeName || r.userName}</span>
+                </td>);
+            }
+            return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
+                <input className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="text" value={r.employeeName} onChange={(e) => {
+                    const v = e.target.value;
+                    onPatch(r.rowKey, { employeeName: v, userName: v });
+                }} disabled={wk} aria-label={`Сотрудник, строка ${i + 1}`}/>
+              </td>);
+        }
+        if (employeePartnerPick != null) {
+            if (employeePartnerPick.loading) {
+                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
+                  <span className="tt-rp-mtable__td--muted" role="status">Загрузка партнёров…</span>
+                </td>);
+            }
+            const items = employeePartnerSelectItems ?? [];
+            const selId = String(r.authUserId);
+            const value = items.some((x) => x.id === selId) ? selId : '';
+            return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
+              <SearchableSelect<PartnerEmployeeSelectItem> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Партнёр проекта, строка ${i + 1}`} placeholder={items.length === 0 ? 'Нет партнёров с доступом к проекту' : 'Выберите партнёра…'} emptyListText="Нет в списке" noMatchText="Не найдено" value={value} items={items} getOptionValue={(o) => o.id} getOptionLabel={(o) => (o.position ? `${o.label} (${o.position})` : o.label)} getSearchText={(o) => o.search} disabled={wk} onSelect={(o) => {
+                    const id = Number(o.id);
+                    if (!Number.isFinite(id))
+                        return;
+                    onPatch(r.rowKey, {
+                        authUserId: id,
+                        employeeName: o.label,
+                        userName: o.label,
+                        employeePosition: o.position,
+                    });
+                }}/>
+            </td>);
+        }
+        return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
+          <input className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="text" value={r.employeeName} onChange={(e) => {
+                const v = e.target.value;
+                onPatch(r.rowKey, { employeeName: v, userName: v });
+            }} disabled={wk} aria-label={`Сотрудник, строка ${i + 1}`}/>
+        </td>);
+    };
     const briefDisplayRows = useMemo(() => {
         if (isFull)
             return rows;
@@ -724,12 +812,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     const renderBriefBodyCell = (colId: TimeBriefColumnId, r: TimeExcelPreviewRow, i: number, wk: boolean): ReactNode => {
         switch (colId) {
             case 'employee':
-                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
-                  <input className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="text" value={r.employeeName} onChange={(e) => {
-                    const v = e.target.value;
-                    onPatch(r.rowKey, { employeeName: v, userName: v });
-                }} disabled={wk} aria-label={`Сотрудник, строка ${i + 1}`}/>
-                </td>);
+                return renderEmployeeBodyCell(colId, r, i, wk);
             case 'datetime':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--brief-dt">
                   <TimePreviewBriefDateTimeCell r={r} onPatch={onPatch} userName={r.userName} weekLocked={wk}/>
@@ -895,12 +978,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             case 'rn':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>);
             case 'employee':
-                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
-                  <input className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="text" value={r.employeeName} onChange={(e) => {
-                    const v = e.target.value;
-                    onPatch(r.rowKey, { employeeName: v, userName: v });
-                }} disabled={wk} aria-label={`Сотрудник, строка ${i + 1}`}/>
-                </td>);
+                return renderEmployeeBodyCell(colId, r, i, wk);
             case 'authUserId':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--readonly tt-rp-mtable__td--tight" aria-label={`authUserId, ${r.userName}`}>
                   <TimePreviewReadonlyText value={r.authUserId}/>

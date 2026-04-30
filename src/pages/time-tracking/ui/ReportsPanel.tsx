@@ -20,6 +20,7 @@ import {
   PERIOD_OPTIONS,
   PER_PAGE,
   isReportTypeV2,
+  isExpenseLikeReportType,
   coerceGroupByForType,
 } from '@entities/time-tracking/model/reportsPanelConfig';
 import { isoDateLocal, periodToDates, formatPeriodLabel, formatIsoRangeTitle } from '@entities/time-tracking/lib/reportsPeriodRange';
@@ -842,6 +843,7 @@ export function ReportsPanel() {
       user_id: selectedUserIds.length ? selectedUserIds.join(',') : undefined,
       include_fixed_fee: reportType === 'time' ? includeFixed : undefined,
       pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,
+      ...(reportType === 'confirmed-expenses' ? { confirmed_payment_only: true } : {}),
     };
     void (async () => {
       try {
@@ -852,7 +854,7 @@ export function ReportsPanel() {
           else if (groupBy === 'projects')
             out = await fetchAllTimeReportProjectRows(filtersBase);
         }
-        else if (reportType === 'expenses') {
+        else if (isExpenseLikeReportType(reportType)) {
           out = await fetchAllExpenseReportRows(groupBy as ExpenseGroup, filtersBase);
         }
         else if (reportType === 'uninvoiced') {
@@ -951,6 +953,7 @@ export function ReportsPanel() {
       pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,
       page,
       per_page: effectivePerPage,
+      ...(reportType === 'confirmed-expenses' ? { confirmed_payment_only: true } : {}),
     };
     let promise: Promise<{
       results: unknown[];
@@ -959,7 +962,7 @@ export function ReportsPanel() {
     if (reportType === 'time') {
       promise = fetchTimeReport(groupBy as TimeGroup, filters);
     }
-    else if (reportType === 'expenses') {
+    else if (isExpenseLikeReportType(reportType)) {
       promise = fetchExpenseReport(groupBy as ExpenseGroup, filters);
     }
     else if (reportType === 'uninvoiced') {
@@ -1013,7 +1016,7 @@ export function ReportsPanel() {
       if (groupBy === 'clients')
         return 'Клиент, валюта (USD, UZS…)…';
     }
-    if (reportType === 'expenses') {
+    if (isExpenseLikeReportType(reportType)) {
       if (groupBy === 'projects')
         return 'Проект, клиент…';
       if (groupBy === 'clients')
@@ -1048,7 +1051,7 @@ export function ReportsPanel() {
       const billableByCurrency = sortCurrencyBuckets([...billMap.entries()].map(([currency, amount]) => ({ currency, amount })));
       return { kind: 'time' as const, totalHours, billableHours, billableByCurrency };
     }
-    if (reportType === 'expenses') {
+    if (isExpenseLikeReportType(reportType)) {
       const rows = kpiRows as (ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam)[];
       const expMap = new Map<string, {
         totalAmount: number;
@@ -1132,10 +1135,15 @@ export function ReportsPanel() {
       pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,
       page: 1,
       per_page: effectivePerPage,
+      ...(reportType === 'confirmed-expenses' ? { confirmed_payment_only: true } : {}),
     };
     let payload: ReportPreviewTransferV2;
     if (reportType === 'time') {
       payload = { v: 2, reportType: 'time', groupBy: groupBy as ReportPreviewTimeGroup, filters };
+    }
+    else if (reportType === 'confirmed-expenses') {
+      const g = groupBy as ExpenseGroup;
+      payload = { v: 2, reportType: 'confirmed-expenses', groupBy: g, filters };
     }
     else if (reportType === 'expenses') {
       const g = groupBy as ExpenseGroup;
@@ -1210,6 +1218,7 @@ export function ReportsPanel() {
         dateTo,
         user_id: selectedUserIds.length ? selectedUserIds.join(',') : undefined,
         include_fixed_fee: reportType === 'time' ? includeFixed : undefined,
+        ...(reportType === 'confirmed-expenses' ? { confirmed_payment_only: true } : {}),
       };
       const gb = groups ? groupBy : null;
       if (reportType === 'time')
@@ -1232,6 +1241,10 @@ export function ReportsPanel() {
         return `${base}. Один клиент может быть в нескольких строках — по валюте проекта записей; суммы в разных валютах не складываются.`;
       }
       return base;
+    }
+    if (reportType === 'confirmed-expenses') {
+      const g = groups?.find((x) => x.id === groupBy)?.label ?? groupBy;
+      return `Отчёт по подтвержденным расходам — разрез: ${g}`;
     }
     if (reportType === 'expenses') {
       const g = groups?.find((x) => x.id === groupBy)?.label ?? groupBy;
@@ -1570,7 +1583,7 @@ export function ReportsPanel() {
 
       {error && (<div className="tt-reports__table-err" role="alert">{error}</div>)}
 
-      <div className={`tt-reports__table-wrap${tableDataLoading ? ' tt-reports__table-wrap--loading' : ''}${reportType === 'time' || reportType === 'expenses' || reportType === 'uninvoiced' || reportType === 'project-budget' ? ' tt-reports__table-wrap--scroll-x' : ''}`}>
+      <div className={`tt-reports__table-wrap${tableDataLoading ? ' tt-reports__table-wrap--loading' : ''}${reportType === 'time' || isExpenseLikeReportType(reportType) || reportType === 'uninvoiced' || reportType === 'project-budget' ? ' tt-reports__table-wrap--scroll-x' : ''}`}>
         {filteredTableRows.length === 0 && !tableDataLoading ? (<div className="tt-reports__empty">
           {tableSearchQ ? (<p>Ничего не найдено по запросу.</p>) : (<>
             <p className="tt-reports__empty-period">{formatIsoRangeTitle(dateFrom, dateTo)}</p>
@@ -1580,7 +1593,7 @@ export function ReportsPanel() {
                 : 'Нет данных за выбранный период.'}
             </p>
           </>)}
-        </div>) : reportType === 'time' ? (<TimeTable groupBy={groupBy as TimeGroup} rows={sortedTimeTableRows ?? []} expanded={expandedRows} onToggle={toggleRow} onProjectRowPreview={groupBy === 'projects' ? openTimeProjectPreview : undefined} projectRowPreviewDisabled={groupBy === 'projects' ? tableDataLoading : undefined} onClientRowPreview={groupBy === 'clients' ? openTimeClientPreview : undefined} clientRowPreviewDisabled={groupBy === 'clients' ? tableDataLoading : undefined} />) : reportType === 'expenses' ? (<ExpenseTable groupBy={groupBy as ExpenseGroup} rows={filteredTableRows as (ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam)[]} expanded={expandedRows} onToggle={toggleRow} />) : reportType === 'uninvoiced' ? (<UninvoicedTable rows={filteredTableRows as UninvoicedRow[]} expanded={expandedRows} onToggle={toggleRow} />) : (<BudgetTable rows={filteredTableRows as BudgetRow[]} expanded={expandedRows} onToggle={toggleRow} />)}
+        </div>) : reportType === 'time' ? (<TimeTable groupBy={groupBy as TimeGroup} rows={sortedTimeTableRows ?? []} expanded={expandedRows} onToggle={toggleRow} onProjectRowPreview={groupBy === 'projects' ? openTimeProjectPreview : undefined} projectRowPreviewDisabled={groupBy === 'projects' ? tableDataLoading : undefined} onClientRowPreview={groupBy === 'clients' ? openTimeClientPreview : undefined} clientRowPreviewDisabled={groupBy === 'clients' ? tableDataLoading : undefined} />) : isExpenseLikeReportType(reportType) ? (<ExpenseTable groupBy={groupBy as ExpenseGroup} rows={filteredTableRows as (ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam)[]} expanded={expandedRows} onToggle={toggleRow} />) : reportType === 'uninvoiced' ? (<UninvoicedTable rows={filteredTableRows as UninvoicedRow[]} expanded={expandedRows} onToggle={toggleRow} />) : (<BudgetTable rows={filteredTableRows as BudgetRow[]} expanded={expandedRows} onToggle={toggleRow} />)}
       </div>
 
 

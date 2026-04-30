@@ -3692,8 +3692,49 @@ body[data-theme='dark'] .pp__topbar-right .tsp-srch--pp.tsp-srch--open .tsp-srch
 
 .pp.pp--clients .pp__topbar-right--clients {
   flex-wrap: wrap;
-  gap: 0.5rem 0.65rem;
   align-items: center;
+  gap: 0.5rem;
+}
+
+.pp.pp--clients .pp__topbar-right--clients .pp__clients-search.tt-settings__search-wrap {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+}
+
+.pp.pp--clients .pp__topbar-right--clients .pp__clients-search .tt-settings__search {
+  height: 38px;
+  min-height: 38px;
+  padding-top: 0;
+  padding-bottom: 0;
+  line-height: 1.25;
+  box-sizing: border-box;
+}
+
+.pp.pp--clients .pp__topbar-right--clients .tt-settings__archive-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 38px;
+  height: 38px;
+  margin: 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.pp.pp--clients .pp__topbar-right--clients .tt-settings__archive-toggle span {
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.pp.pp--clients .pp__topbar-right--clients .tt-settings__dropdown-wrap {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pp.pp--clients .pp__topbar-right--clients .tt-settings__dropdown-wrap > .tt-settings__btn {
+  min-height: 38px;
 }
 
 .pp.pp--clients .pp__clients-search {

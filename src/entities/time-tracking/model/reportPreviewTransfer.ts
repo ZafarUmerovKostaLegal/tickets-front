@@ -1,6 +1,6 @@
 import type { ReportFiltersV2 } from '@entities/time-tracking';
 export const REPORT_PREVIEW_TRANSFER_KEY = 'tt-report-preview-v1';
-export type ReportPreviewReportType = 'time' | 'expenses' | 'uninvoiced' | 'project-budget';
+export type ReportPreviewReportType = 'time' | 'expenses' | 'confirmed-expenses' | 'uninvoiced' | 'project-budget';
 export type ReportPreviewTimeGroup = 'clients' | 'projects';
 export type ReportPreviewExpenseGroup = 'clients' | 'projects' | 'categories' | 'team';
 export type ReportPreviewTransferV2 = {
@@ -11,6 +11,11 @@ export type ReportPreviewTransferV2 = {
 } | {
     v: 2;
     reportType: 'expenses';
+    groupBy: ReportPreviewExpenseGroup;
+    filters: ReportFiltersV2;
+} | {
+    v: 2;
+    reportType: 'confirmed-expenses';
     groupBy: ReportPreviewExpenseGroup;
     filters: ReportFiltersV2;
 } | {
@@ -91,6 +96,14 @@ export function readReportPreviewTransfer(): ReportPreviewTransferPayload | null
                 return {
                     v: 2,
                     reportType: 'expenses',
+                    groupBy: rec.groupBy as ReportPreviewExpenseGroup,
+                    filters,
+                };
+            }
+            if (rt === 'confirmed-expenses' && typeof rec.groupBy === 'string') {
+                return {
+                    v: 2,
+                    reportType: 'confirmed-expenses',
                     groupBy: rec.groupBy as ReportPreviewExpenseGroup,
                     filters,
                 };

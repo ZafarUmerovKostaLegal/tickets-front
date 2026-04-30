@@ -1,4 +1,4 @@
-export type ReportTypeV2 = 'time' | 'expenses' | 'uninvoiced' | 'project-budget';
+export type ReportTypeV2 = 'time' | 'expenses' | 'confirmed-expenses' | 'uninvoiced' | 'project-budget';
 
 export type TimeGroup = 'clients' | 'projects';
 
@@ -12,6 +12,7 @@ export const REPORT_TYPES: {
 }[] = [
     { id: 'time', label: 'Время' },
     { id: 'expenses', label: 'Расходы' },
+    { id: 'confirmed-expenses', label: 'Подтвержденные расходы' },
     { id: 'uninvoiced', label: 'Не выставлено' },
     { id: 'project-budget', label: 'Бюджет проектов' },
 ];
@@ -28,6 +29,10 @@ export const GROUPS_FOR_TYPE: Record<ReportTypeV2, {
         { id: 'projects', label: 'Проекты' },
         { id: 'clients', label: 'Клиенты' },
     ],
+    'confirmed-expenses': [
+        { id: 'projects', label: 'Проекты' },
+        { id: 'clients', label: 'Клиенты' },
+    ],
     uninvoiced: null,
     'project-budget': null,
 };
@@ -35,6 +40,7 @@ export const GROUPS_FOR_TYPE: Record<ReportTypeV2, {
 export const DEFAULT_GROUP: Record<ReportTypeV2, GroupByV2 | null> = {
     time: 'projects',
     expenses: 'projects',
+    'confirmed-expenses': 'projects',
     uninvoiced: null,
     'project-budget': null,
 };
@@ -67,7 +73,11 @@ export type ReportsPrefsStored = {
 };
 
 export function isReportTypeV2(x: unknown): x is ReportTypeV2 {
-    return x === 'time' || x === 'expenses' || x === 'uninvoiced' || x === 'project-budget';
+    return x === 'time' || x === 'expenses' || x === 'confirmed-expenses' || x === 'uninvoiced' || x === 'project-budget';
+}
+
+export function isExpenseLikeReportType(rt: ReportTypeV2): rt is 'expenses' | 'confirmed-expenses' {
+    return rt === 'expenses' || rt === 'confirmed-expenses';
 }
 
 export function isPeriodGranularity(x: unknown): x is PeriodGranularity {

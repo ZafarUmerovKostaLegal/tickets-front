@@ -27,6 +27,8 @@ import {
     deleteTimeEntry,
     listClientTasks,
     canOverrideReportPreviewWeeklyLock,
+    listPartnerUsersWithProjectAccessToProject,
+    type ProjectPartnerAccessRow,
 } from '@entities/time-tracking';
 import { readReportPreviewTransfer, clearReportPreviewTransfer, normalizeReportPreviewTransfer, writeReportPreviewTransfer, type ReportPreviewTransferV2, } from '@entities/time-tracking/model/reportPreviewTransfer';
 import { coerceGroupByForType, type ExpenseGroup, type TimeGroup, } from '@entities/time-tracking/model/reportsPanelConfig';
@@ -147,6 +149,16 @@ function previewLiveTitle(xfer: ReportPreviewTransferV2): string {
         const g = xfer.groupBy === 'clients' ? 'клиентам' : 'проектам';
         return `Время — по ${g}`;
     }
+    if (xfer.reportType === 'confirmed-expenses') {
+        const gb = coerceGroupByForType('confirmed-expenses', xfer.groupBy) as ExpenseGroup;
+        const map: Record<ExpenseGroup, string> = {
+            clients: 'клиентам',
+            projects: 'проектам',
+            categories: 'категориям',
+            team: 'команде',
+        };
+        return `Подтвержденные расходы — по ${map[gb]}`;
+    }
     if (xfer.reportType === 'expenses') {
         const gb = coerceGroupByForType('expenses', xfer.groupBy) as ExpenseGroup;
         const map: Record<ExpenseGroup, string> = {
@@ -237,6 +249,15 @@ function persistXferFilters(xfer: ReportPreviewTransferV2, filters: ReportFilter
         });
         return;
     }
+    if (xfer.reportType === 'confirmed-expenses') {
+        writeReportPreviewTransfer({
+            v: 2,
+            reportType: 'confirmed-expenses',
+            groupBy: xfer.groupBy,
+            filters: { ...paged, confirmed_payment_only: true },
+        });
+        return;
+    }
     if (xfer.reportType === 'expenses') {
         writeReportPreviewTransfer({
             v: 2,
@@ -269,6 +290,8 @@ export function ReportPreviewPage() {
     const [projectOptions, setProjectOptions] = useState<ProjectOption[]>([]);
     const [projectsLoading, setProjectsLoading] = useState(false);
     const [projectsError, setProjectsError] = useState<string | null>(null);
+    const [projectPartnersForEmployeePick, setProjectPartnersForEmployeePick] = useState<ProjectPartnerAccessRow[]>([]);
+    const [projectPartnersPickLoading, setProjectPartnersPickLoading] = useState(false);
     const [reportLoading, setReportLoading] = useState(false);
     const [reportError, setReportError] = useState<string | null>(null);
     const [timeExcelRows, setTimeExcelRows] = useState<TimeExcelPreviewRow[]>([]);
@@ -350,6 +373,37 @@ export function ReportPreviewPage() {
             cancelled = true;
         };
     }, [user, xferSnapshot]);
+    useEffect(() => {
+        if (!xferSnapshot || xferSnapshot.reportType !== 'time' || xferSnapshot.groupBy !== 'projects') {
+            setProjectPartnersForEmployeePick([]);
+            setProjectPartnersPickLoading(false);
+            return;
+        }
+        const pid = selectedProjectId.trim();
+        if (!pid) {
+            setProjectPartnersForEmployeePick([]);
+            setProjectPartnersPickLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setProjectPartnersPickLoading(true);
+        void listPartnerUsersWithProjectAccessToProject(pid)
+            .then((partners) => {
+                if (!cancelled)
+                    setProjectPartnersForEmployeePick(partners);
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setProjectPartnersForEmployeePick([]);
+            })
+            .finally(() => {
+                if (!cancelled)
+                    setProjectPartnersPickLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [xferSnapshot, selectedProjectId]);
     useEffect(() => {
         if (!xferSnapshot || !rangeFrom || !rangeTo)
             return;
@@ -518,9 +572,13 @@ export function ReportPreviewPage() {
                         setTimeExcelRows(flattenTimeReportToExcelRows(gb, sorted));
                     return;
                 }
-                if (xferSnapshot.reportType === 'expenses') {
-                    const gb = coerceGroupByForType('expenses', xferSnapshot.groupBy) as ExpenseGroup;
-                    const raw = await fetchAllExpenseReportRows(gb, apiFilters);
+                if (xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'confirmed-expenses') {
+                    const rtForCoerce = xferSnapshot.reportType === 'confirmed-expenses' ? 'confirmed-expenses' : 'expenses';
+                    const gb = coerceGroupByForType(rtForCoerce, xferSnapshot.groupBy) as ExpenseGroup;
+                    const expenseFilters = xferSnapshot.reportType === 'confirmed-expenses'
+                        ? { ...apiFilters, confirmed_payment_only: true }
+                        : apiFilters;
+                    const raw = await fetchAllExpenseReportRows(gb, expenseFilters);
                     if (!cancelled)
                         setExpenseExcelRows(flattenExpenseReportToExcelRows(gb, raw));
                     return;
@@ -939,6 +997,16 @@ export function ReportPreviewPage() {
         const base = timeExcelRows.filter((r) => !employeeExcluded.has(r.userName));
         return sortRowsByUserName(base, employeeSortAsc);
     }, [timeExcelRows, employeeExcluded, employeeSortAsc]);
+    const timeEmployeePartnerPick = useMemo(() => {
+        if (!xferSnapshot || xferSnapshot.reportType !== 'time' || xferSnapshot.groupBy !== 'projects')
+            return null;
+        if (!selectedProjectId.trim())
+            return null;
+        return {
+            loading: projectPartnersPickLoading,
+            partners: projectPartnersForEmployeePick,
+        };
+    }, [xferSnapshot, selectedProjectId, projectPartnersPickLoading, projectPartnersForEmployeePick]);
     const expenseDisplayRows = useMemo(() => {
         const base = expenseExcelRows.filter((r) => !employeeExcluded.has(r.userName));
         return sortRowsByUserName(base, employeeSortAsc);
@@ -1029,10 +1097,10 @@ export function ReportPreviewPage() {
             const showTimeLiveTitle = xferSnapshot.groupBy !== 'projects';
             return (<>
           {showTimeLiveTitle ? (<p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>) : null}
-          <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} timeSave={{ ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={user ? projectItemsForSelect : undefined} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={user ? handleMoveTimeEntryToProject : undefined} onDuplicateTimeEntry={user ? handleDuplicateTimeEntry : undefined} onGrantEditUnlock={user ? handleGrantEditUnlock : undefined} canGrantEditUnlockForTarget={user ? (tid) => canGrantTimeEntryEditUnlock(user, tid) : undefined} editUnlockPendingCompoundKey={editUnlockPendingCompoundKey} onAddTimeEntry={user ? handleAddTimeEntry : undefined} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey}/>
+          <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} timeSave={{ ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={user ? projectItemsForSelect : undefined} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={user ? handleMoveTimeEntryToProject : undefined} onDuplicateTimeEntry={user ? handleDuplicateTimeEntry : undefined} onGrantEditUnlock={user ? handleGrantEditUnlock : undefined} canGrantEditUnlockForTarget={user ? (tid) => canGrantTimeEntryEditUnlock(user, tid) : undefined} editUnlockPendingCompoundKey={editUnlockPendingCompoundKey} onAddTimeEntry={user ? handleAddTimeEntry : undefined} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={timeEmployeePartnerPick}/>
         </>);
         }
-        if (xferSnapshot.reportType === 'expenses') {
+        if (xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'confirmed-expenses') {
             if (expenseExcelRows.length === 0)
                 return reportPreviewEmptyBlock(rangeFrom, rangeTo);
             return (<>
@@ -1062,7 +1130,7 @@ export function ReportPreviewPage() {
       <ReportPreviewNavBar period={navPeriodControls} projectSlot={navProjectSlot} timeReportViewSlot={timeReportViewToggle ?? undefined}/>
 
       <div className="tt-rp-preview__main tt-rp-preview__main--fill tt-rp-preview__body-pad">
-        <div className={`tt-rp-preview__live${xferSnapshot && (xferSnapshot.reportType === 'time' || xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'uninvoiced' || xferSnapshot.reportType === 'project-budget') ? ' tt-rp-preview__live--sheet' : ''}`}>
+        <div className={`tt-rp-preview__live${xferSnapshot && (xferSnapshot.reportType === 'time' || xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'confirmed-expenses' || xferSnapshot.reportType === 'uninvoiced' || xferSnapshot.reportType === 'project-budget') ? ' tt-rp-preview__live--sheet' : ''}`}>
           {mainBody}
         </div>
         {timeEntrySaveUI === 'err' && timeEntrySaveMessage

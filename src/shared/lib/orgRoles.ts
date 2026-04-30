@@ -10,6 +10,11 @@ export function isOfficeManagerRole(role: string | null | undefined): boolean {
     const k = normalizeOrgRoleKey(role);
     return k === 'офис менеджер';
 }
+/** Организационная роль «Партнёр» / Partner (учёт времени, проекты). */
+export function isPartnerOrgRole(role: string | null | undefined): boolean {
+    const k = normalizeOrgRoleKey(role);
+    return k === 'партнер' || k === 'partner';
+}
 export function hasFullTicketAccessRole(role: string | null | undefined): boolean {
     const k = normalizeOrgRoleKey(role);
     if (isOfficeManagerRole(role))
