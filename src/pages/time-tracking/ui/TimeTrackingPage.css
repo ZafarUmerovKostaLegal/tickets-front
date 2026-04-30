@@ -13780,6 +13780,11 @@ a.pp__proj-name--link:hover {
   max-width: 22rem;
 }
 
+.tt-partner-confirmed__th-actions {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .tt-partner-confirmed__actions-cell {
   vertical-align: middle;
   white-space: nowrap;
@@ -13787,14 +13792,28 @@ a.pp__proj-name--link:hover {
 
 .tt-partner-confirmed__actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.35rem;
 }
 
-.tt-partner-confirmed__action-btn {
-  padding: 0.28rem 0.55rem;
-  font-size: 0.8125rem;
+.tt-partner-confirmed__icon-btn.tt-reports__btn--icon {
+  padding: 0.4rem;
+  min-width: 2.35rem;
+  min-height: 2.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tt-partner-confirmed__btn-spinner {
+  animation: tt-partner-confirmed-spin 0.75s linear infinite;
+}
+
+@keyframes tt-partner-confirmed-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Read-only: same row backgrounds on hover as at rest (no “clickable row” cue from tt-reports__table) */

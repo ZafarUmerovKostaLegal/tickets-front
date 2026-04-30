@@ -21,6 +21,22 @@ const IcoRefresh = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="
   <path d="M16 21h5v-5" />
 </svg>);
 
+/** Предпросмотр отчёта */
+const IcoEye = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+  <circle cx="12" cy="12" r="3" />
+</svg>);
+
+/** Выгрузка снимка CSV */
+const IcoDownload = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+</svg>);
+
+const IcoSpinner = () => (<svg className="tt-partner-confirmed__btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+  <circle cx="12" cy="12" r="10" opacity="0.22" />
+  <path d="M12 2a10 10 0 0 1 10 10" />
+</svg>);
+
 function fmtIsoWhen(iso: string | null | undefined): string {
     if (!iso?.trim())
         return '—';
@@ -190,7 +206,7 @@ export function ConfirmedPartnerReportsPanel() {
             Подтверждённые партнёром отчёты
           </h2>
           <p className="tt-partner-confirmed__hint">
-            Записи из этого списка не редактируются здесь. Доступны предпросмотр периода и проекта на странице отчёта (актуальные данные) и выгрузка зафиксированного снимка в CSV. Данные списка с сервера (<code className="tt-partner-confirmed__code">GET …/partner-confirmations/confirmed</code>).
+            Список только для просмотра: строки здесь не редактируются. Иконка «глаз» открывает предпросмотр периода и проекта на отдельной странице; иконка загрузки — зафиксированный снимок в CSV. Данные с сервера (<code className="tt-partner-confirmed__code">GET …/partner-confirmations/confirmed</code>).
           </p>
         </div>
         <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" disabled={loading || refreshBusy} onClick={() => void fetchConfirmed({ silent: true })} title="Обновить список" aria-label="Обновить список">
@@ -213,7 +229,7 @@ export function ConfirmedPartnerReportsPanel() {
       {!loading && !error && rows.length === 0 ? (<p className="tt-partner-confirmed__empty">Подтверждённых отчётов пока нет — либо для вас нет доступа к строкам по правилам сервера.</p>) : null}
 
       {!loading && !error && rows.length > 0 ? (<div className="tt-reports__table-wrap tt-partner-confirmed__table-wrap">
-          <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly" aria-label="Подтверждённые партнёром отчёты">
+          <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly" aria-label="Подтверждённые партнёром отчёты, только просмотр">
             <thead>
               <tr>
                 <th scope="col">Заголовок</th>
@@ -223,7 +239,7 @@ export function ConfirmedPartnerReportsPanel() {
                 <th scope="col">Отправитель</th>
                 <th scope="col">Партнёры (подписи)</th>
                 <th scope="col">Обновлено</th>
-                <th scope="col">Действия</th>
+                <th scope="col" className="tt-partner-confirmed__th-actions">Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -241,11 +257,11 @@ export function ConfirmedPartnerReportsPanel() {
                   <td>{fmtIsoWhen(r.updatedAt)}</td>
                   <td className="tt-partner-confirmed__actions-cell">
                     <div className="tt-partner-confirmed__actions">
-                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-partner-confirmed__action-btn" onClick={() => openReportPreviewForRow(r)}>
-                        Предпросмотр
+                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" onClick={() => openReportPreviewForRow(r)} title="Открыть предпросмотр по периоду и проекту этой строки" aria-label="Предпросмотр отчёта">
+                        <IcoEye />
                       </button>
-                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-partner-confirmed__action-btn" disabled={exportBusySnapshotId === r.snapshotId} onClick={() => void exportSnapshotCsv(r)}>
-                        {exportBusySnapshotId === r.snapshotId ? 'Выгрузка…' : 'Снимок (CSV)'}
+                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={exportBusySnapshotId === r.snapshotId} onClick={() => void exportSnapshotCsv(r)} title={exportBusySnapshotId === r.snapshotId ? 'Выгрузка…' : 'Скачать зафиксированный снимок (CSV)'} aria-label={exportBusySnapshotId === r.snapshotId ? 'Выгрузка CSV снимка' : 'Скачать снимок CSV'}>
+                        {exportBusySnapshotId === r.snapshotId ? <IcoSpinner /> : <IcoDownload />}
                       </button>
                     </div>
                   </td>
