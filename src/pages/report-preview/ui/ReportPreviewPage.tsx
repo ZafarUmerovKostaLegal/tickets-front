@@ -533,12 +533,16 @@ export function ReportPreviewNavBar({ period, hint, hintTitle, projectSlot, time
 }
 function persistXferFilters(xfer: ReportPreviewTransferV2, filters: ReportFiltersV2, listPerPage: number): void {
     const paged: ReportFiltersV2 = { ...filters, page: 1, per_page: listPerPage };
+    const snapExtra = xfer.partnerConfirmationSnapshotId?.trim()
+        ? { partnerConfirmationSnapshotId: xfer.partnerConfirmationSnapshotId.trim() }
+        : {};
     if (xfer.reportType === 'time') {
         writeReportPreviewTransfer({
             v: 2,
             reportType: 'time',
             groupBy: xfer.groupBy,
             filters: paged,
+            ...snapExtra,
         });
         return;
     }
@@ -548,14 +552,15 @@ function persistXferFilters(xfer: ReportPreviewTransferV2, filters: ReportFilter
             reportType: 'expenses',
             groupBy: xfer.groupBy,
             filters: paged,
+            ...snapExtra,
         });
         return;
     }
     if (xfer.reportType === 'uninvoiced') {
-        writeReportPreviewTransfer({ v: 2, reportType: 'uninvoiced', filters: paged });
+        writeReportPreviewTransfer({ v: 2, reportType: 'uninvoiced', filters: paged, ...snapExtra });
         return;
     }
-    writeReportPreviewTransfer({ v: 2, reportType: 'project-budget', filters: paged });
+    writeReportPreviewTransfer({ v: 2, reportType: 'project-budget', filters: paged, ...snapExtra });
 }
 export function ReportPreviewPage() {
     const { user } = useCurrentUser();
@@ -1324,8 +1329,7 @@ export function ReportPreviewPage() {
         <div className="tt-rp-preview__main">
           <div className="tt-rp-preview__empty">
             <p>
-              Откройте «Отчёты» в учёте времени и нажмите «Предпросмотр» — передаются текущий вид отчёта, разрез и
-              фильтры.
+              Откройте раздел «Отчёты» в учёте времени и нажмите «Предпросмотр», либо список «Подтверждённые партнёром» и кнопку «Предпросмотр» у строки — передаются вид отчёта, разрез и фильтры.
             </p>
             <Link className="tt-rp-preview__btn tt-rp-preview__btn--accent" to={REPORTS_TAB_URL}>
               Перейти к отчётам
@@ -1416,6 +1420,11 @@ export function ReportPreviewPage() {
 
       <div className="tt-rp-preview__main tt-rp-preview__main--fill tt-rp-preview__body-pad">
         {confirmationProjectId ? (<ReportPreviewPartnerBar projectId={confirmationProjectId} dateFrom={rangeFrom} dateTo={rangeTo} userId={user?.id ?? null}/>) : null}
+        {xferSnapshot?.partnerConfirmationSnapshotId?.trim()
+            ? (<div className="tt-rp-preview__confirmed-banner" role="note">
+          Открыто из подтверждённого отчёта: таблица ниже показывает <strong>актуальные</strong> данные за этот период и проект. Зафиксированный снимок, который подписали партнёры, можно скачать CSV кнопкой «Снимок (CSV)» в списке подтверждённых отчётов.
+        </div>)
+            : null}
         <div className={`tt-rp-preview__live${xferSnapshot && (xferSnapshot.reportType === 'time' || xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'uninvoiced' || xferSnapshot.reportType === 'project-budget') ? ' tt-rp-preview__live--sheet' : ''}`}>
           {mainBody}
         </div>

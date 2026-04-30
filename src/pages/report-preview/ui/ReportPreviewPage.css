@@ -2412,6 +2412,22 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 }
 
 
+.tt-rp-preview__confirmed-banner {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid var(--app-border, #e2e8f0);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface, #fff));
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--app-text, #0f172a);
+}
+
+body[data-theme='dark'] .tt-rp-preview__confirmed-banner {
+  background: color-mix(in srgb, var(--app-accent, #6366f1) 14%, var(--app-surface, #1e293b));
+  border-color: var(--app-border, #334155);
+}
+
 .tt-rp-preview__main {
   width: 100%;
   max-width: none;

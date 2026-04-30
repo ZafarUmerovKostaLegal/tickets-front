@@ -13780,6 +13780,23 @@ a.pp__proj-name--link:hover {
   max-width: 22rem;
 }
 
+.tt-partner-confirmed__actions-cell {
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.tt-partner-confirmed__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tt-partner-confirmed__action-btn {
+  padding: 0.28rem 0.55rem;
+  font-size: 0.8125rem;
+}
+
 /* Read-only: same row backgrounds on hover as at rest (no “clickable row” cue from tt-reports__table) */
 .tt-partner-confirmed__table--readonly.tt-reports__table tbody tr {
   cursor: default;

@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
+    exportReportSnapshot,
+    fetchReportsMeta,
     listPartnerReportConfirmationsConfirmed,
     listTimeTrackingUsers,
     type PartnerReportConfirmationRequest,
@@ -7,6 +10,9 @@ import {
     PARTNER_CONFIRMED_REPORTS_INVALIDATE_EVENT,
 } from '@entities/time-tracking';
 import { formatIsoRangeTitle } from '@entities/time-tracking/lib/reportsPeriodRange';
+import { writeReportPreviewTransfer } from '@entities/time-tracking/model/reportPreviewTransfer';
+import { routes } from '@shared/config';
+import { useAppDialog } from '@shared/ui';
 
 const IcoRefresh = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
   <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -33,13 +39,28 @@ function userLabel(map: Map<number, string>, id: number): string {
     return map.get(id) ?? `ID ${id}`;
 }
 
+function downloadBlob(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+}
+
 export function ConfirmedPartnerReportsPanel() {
+    const navigate = useNavigate();
+    const { showAlert } = useAppDialog();
     const [rows, setRows] = useState<PartnerReportConfirmationRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshBusy, setRefreshBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [query, setQuery] = useState('');
     const [usersById, setUsersById] = useState<Map<number, string>>(new Map());
+    const [exportBusySnapshotId, setExportBusySnapshotId] = useState<string | null>(null);
 
     const loadUsers = useCallback(() => {
         void listTimeTrackingUsers().then((list: TimeTrackingUserRow[]) => {
@@ -115,6 +136,53 @@ export function ConfirmedPartnerReportsPanel() {
         });
     }, [rows, query]);
 
+    const openReportPreviewForRow = useCallback((r: PartnerReportConfirmationRequest) => {
+        void (async () => {
+            let perPage = 500;
+            try {
+                const meta = await fetchReportsMeta();
+                const cap = meta.pageSizeMax != null && meta.pageSizeMax > 0 ? Math.min(meta.pageSizeMax, 5000) : 500;
+                perPage = Math.min(500, cap);
+            }
+            catch {
+                perPage = 500;
+            }
+            writeReportPreviewTransfer({
+                v: 2,
+                reportType: 'time',
+                groupBy: 'projects',
+                filters: {
+                    dateFrom: r.dateFrom,
+                    dateTo: r.dateTo,
+                    project_id: r.projectId,
+                    page: 1,
+                    per_page: perPage,
+                },
+                partnerConfirmationSnapshotId: r.snapshotId,
+            });
+            navigate(routes.timeTrackingReportPreview);
+        })();
+    }, [navigate]);
+
+    const exportSnapshotCsv = useCallback(async (r: PartnerReportConfirmationRequest) => {
+        const sid = r.snapshotId.trim();
+        if (!sid)
+            return;
+        setExportBusySnapshotId(sid);
+        try {
+            const { blob, filename } = await exportReportSnapshot(sid, 'csv');
+            downloadBlob(blob, filename);
+        }
+        catch (e) {
+            await showAlert({
+                message: e instanceof Error ? e.message : 'Не удалось выгрузить снимок',
+            });
+        }
+        finally {
+            setExportBusySnapshotId(null);
+        }
+    }, [showAlert]);
+
     return (<div className="tt-partner-confirmed" aria-labelledby="tt-partner-confirmed-heading">
       <div className="tt-partner-confirmed__head">
         <div>
@@ -122,7 +190,7 @@ export function ConfirmedPartnerReportsPanel() {
             Подтверждённые партнёром отчёты
           </h2>
           <p className="tt-partner-confirmed__hint">
-            Режим только просмотра: записи из этого списка здесь не редактируются. Данные с сервера (<code className="tt-partner-confirmed__code">GET …/partner-confirmations/confirmed</code>). Список обновляется после полного подтверждения всех партнёров проекта.
+            Записи из этого списка не редактируются здесь. Доступны предпросмотр периода и проекта на странице отчёта (актуальные данные) и выгрузка зафиксированного снимка в CSV. Данные списка с сервера (<code className="tt-partner-confirmed__code">GET …/partner-confirmations/confirmed</code>).
           </p>
         </div>
         <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" disabled={loading || refreshBusy} onClick={() => void fetchConfirmed({ silent: true })} title="Обновить список" aria-label="Обновить список">
@@ -145,7 +213,7 @@ export function ConfirmedPartnerReportsPanel() {
       {!loading && !error && rows.length === 0 ? (<p className="tt-partner-confirmed__empty">Подтверждённых отчётов пока нет — либо для вас нет доступа к строкам по правилам сервера.</p>) : null}
 
       {!loading && !error && rows.length > 0 ? (<div className="tt-reports__table-wrap tt-partner-confirmed__table-wrap">
-          <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly" aria-label="Подтверждённые партнёром отчёты, только просмотр">
+          <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly" aria-label="Подтверждённые партнёром отчёты">
             <thead>
               <tr>
                 <th scope="col">Заголовок</th>
@@ -155,6 +223,7 @@ export function ConfirmedPartnerReportsPanel() {
                 <th scope="col">Отправитель</th>
                 <th scope="col">Партнёры (подписи)</th>
                 <th scope="col">Обновлено</th>
+                <th scope="col">Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -170,6 +239,16 @@ export function ConfirmedPartnerReportsPanel() {
                 : '—'}
                   </td>
                   <td>{fmtIsoWhen(r.updatedAt)}</td>
+                  <td className="tt-partner-confirmed__actions-cell">
+                    <div className="tt-partner-confirmed__actions">
+                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-partner-confirmed__action-btn" onClick={() => openReportPreviewForRow(r)}>
+                        Предпросмотр
+                      </button>
+                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-partner-confirmed__action-btn" disabled={exportBusySnapshotId === r.snapshotId} onClick={() => void exportSnapshotCsv(r)}>
+                        {exportBusySnapshotId === r.snapshotId ? 'Выгрузка…' : 'Снимок (CSV)'}
+                      </button>
+                    </div>
+                  </td>
                 </tr>))}
             </tbody>
           </table>
