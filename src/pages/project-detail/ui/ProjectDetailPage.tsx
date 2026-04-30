@@ -6,7 +6,7 @@ import { formatDecimalHoursRu } from '@shared/lib/formatTrackingHours';
 import { useCurrentUser } from '@shared/hooks';
 import { AppPageSettings, useAppDialog } from '@shared/ui';
 import { canAccessTimeTracking, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
-import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPending, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, isForbiddenError, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, canManageTimeManagerClients, readTimeManagerProjectBillableRateAmount, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, } from '@entities/time-tracking';
+import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPending, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, isForbiddenError, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, canManageTimeManagerClients, readTimeManagerProjectBillableRateAmount, notifyPartnerConfirmedReportsListInvalidate, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, } from '@entities/time-tracking';
 import { ClientProjectModal } from '@pages/time-tracking/ui/TimeTrackingClientProjectModal';
 import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
 import { memberWeeklyCapacityHours } from '@entities/time-tracking/model/memberWeeklyCapacity';
@@ -938,6 +938,8 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
             savePartnerConfirmToSession(pid, periodFrom, periodTo, out);
             setSessionSnapshot(out);
             await refreshConfirmationLists();
+            if (out.status === 'fully_confirmed')
+                notifyPartnerConfirmedReportsListInvalidate();
         }
         catch (e) {
             await showAlert({

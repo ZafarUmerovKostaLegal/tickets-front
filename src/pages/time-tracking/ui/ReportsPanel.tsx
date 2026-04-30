@@ -5,6 +5,7 @@ import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, type ReportsFilterUser, type ReportPagination, type TimeRowClients, type TimeRowProjects, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, } from '@entities/time-tracking';
 import { ReportsSkeleton } from './ReportsSkeleton';
+import { ConfirmedPartnerReportsPanel } from './ConfirmedPartnerReportsPanel';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { useAppDialog } from '@shared/ui';
 import { writeReportPreviewTransfer, type ReportPreviewTransferV2, type ReportPreviewTimeGroup, } from '@entities/time-tracking/model/reportPreviewTransfer';
@@ -816,6 +817,7 @@ export function ReportsPanel() {
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [initialLoading, setInitialLoading] = useState(true);
+  const [reportsSection, setReportsSection] = useState<'build' | 'partner-confirmed'>('build');
   const [exportBusy, setExportBusy] = useState(false);
   const [reportPageSizeMax, setReportPageSizeMax] = useState<number | null>(null);
   const effectivePerPage = useMemo(() => Math.min(PER_PAGE, reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : 500), [reportPageSizeMax]);
@@ -1254,9 +1256,34 @@ export function ReportsPanel() {
       return 'Неинвойсированные часы и расходы по проектам';
     return 'Бюджет проектов: план / факт / остаток';
   }, [reportType, groupBy, groups]);
-  if (initialLoading)
-    return <ReportsSkeleton />;
+  const reportsSectionSwitcher = (<div className="tt-reports__type-block tt-reports__section-switch">
+      <p className="tt-reports__type-block-title" id="tt-reports-section-heading">
+        Раздел
+      </p>
+      <nav className="tt-reports__type-nav" role="tablist" aria-labelledby="tt-reports-section-heading">
+        <button type="button" role="tab" aria-selected={reportsSection === 'build'} className={`tt-reports__type-tab${reportsSection === 'build' ? ' tt-reports__type-tab--active' : ''}`} onClick={() => setReportsSection('build')}>
+          Построение отчётов
+        </button>
+        <button type="button" role="tab" aria-selected={reportsSection === 'partner-confirmed'} className={`tt-reports__type-tab${reportsSection === 'partner-confirmed' ? ' tt-reports__type-tab--active' : ''}`} onClick={() => setReportsSection('partner-confirmed')}>
+          Подтверждённые партнёром
+        </button>
+      </nav>
+    </div>);
+  if (reportsSection === 'partner-confirmed') {
+    return (<div className="tt-reports">
+        {reportsSectionSwitcher}
+        <ConfirmedPartnerReportsPanel />
+      </div>);
+  }
+  if (initialLoading) {
+    return (<div className="tt-reports">
+        {reportsSectionSwitcher}
+        <ReportsSkeleton />
+      </div>);
+  }
   return (<div className="tt-reports">
+
+    {reportsSectionSwitcher}
 
     <div className="tt-reports__type-block">
       <p className="tt-reports__type-block-title" id="tt-reports-type-heading">

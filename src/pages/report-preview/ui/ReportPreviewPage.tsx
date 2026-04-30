@@ -35,6 +35,7 @@ import {
     parsePartnerReportConfirmationRequest,
     type ProjectPartnerAccessRow,
     type PartnerReportConfirmationRequest,
+    notifyPartnerConfirmedReportsListInvalidate,
 } from '@entities/time-tracking';
 import { readReportPreviewTransfer, clearReportPreviewTransfer, normalizeReportPreviewTransfer, writeReportPreviewTransfer, type ReportPreviewTransferV2, } from '@entities/time-tracking/model/reportPreviewTransfer';
 import { coerceGroupByForType, type ExpenseGroup, type TimeGroup, } from '@entities/time-tracking/model/reportsPanelConfig';
@@ -358,6 +359,8 @@ function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, }: {
             rpSavePartnerConfirmSession(pid, df, dt, out);
             setSessionSnapshot(out);
             await refreshLists();
+            if (out.status === 'fully_confirmed')
+                notifyPartnerConfirmedReportsListInvalidate();
         }
         catch (e) {
             await showAlert({

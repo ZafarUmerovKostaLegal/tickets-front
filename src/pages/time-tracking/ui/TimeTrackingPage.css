@@ -13705,3 +13705,78 @@ a.pp__proj-name--link:hover {
   padding-top: 0.625rem;
 }
 
+/* Partner-confirmed reports list (Reports tab subsection) */
+.tt-reports__section-switch {
+  margin-bottom: 0.25rem;
+}
+
+.tt-partner-confirmed {
+  padding: 0 0 1rem;
+}
+.tt-partner-confirmed__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+.tt-partner-confirmed__title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--app-text, #111827);
+}
+.tt-partner-confirmed__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--app-muted, #6b7280);
+  max-width: 52rem;
+  line-height: 1.45;
+}
+.tt-partner-confirmed__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125em;
+  word-break: break-all;
+}
+.tt-partner-confirmed__code--narrow {
+  display: inline-block;
+  max-width: 8rem;
+}
+.tt-partner-confirmed__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-bottom: 0.75rem;
+}
+.tt-partner-confirmed__search-label {
+  font-size: 0.8125rem;
+  color: var(--app-muted, #6b7280);
+}
+.tt-partner-confirmed__search {
+  flex: 1 1 240px;
+  min-width: 180px;
+}
+.tt-partner-confirmed__count {
+  font-size: 0.8125rem;
+  color: var(--app-muted, #6b7280);
+  font-variant-numeric: tabular-nums;
+}
+.tt-partner-confirmed__err {
+  margin: 0 0 0.75rem;
+}
+.tt-partner-confirmed__empty {
+  margin: 0;
+  padding: 1rem 0;
+  font-size: 0.9375rem;
+  color: var(--app-muted, #6b7280);
+}
+.tt-partner-confirmed__table-wrap {
+  overflow-x: auto;
+}
+.tt-partner-confirmed__cell-title {
+  font-weight: 500;
+  max-width: 22rem;
+}
+
