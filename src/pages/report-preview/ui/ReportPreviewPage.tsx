@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode, } from 'react';
+import { createPortal } from 'react-dom';
 import { ReportPreviewMockSkeleton } from './ReportPreviewMockSkeleton';
 import { ReportPreviewEmployeeExcelFilter } from './ReportPreviewEmployeeExcelFilter';
 import {
@@ -221,7 +222,9 @@ function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, }: {
     dateTo: string;
     userId: number | null;
 }) {
-    const { showAlert, showConfirm } = useAppDialog();
+    const { showAlert } = useAppDialog();
+    const [partnerModalOpen, setPartnerModalOpen] = useState(false);
+    const partnerModalPanelRef = useRef<HTMLDivElement>(null);
     const [partners, setPartners] = useState<ProjectPartnerAccessRow[]>([]);
     const [partnersLoad, setPartnersLoad] = useState<'idle' | 'loading' | 'ok' | 'error'>('loading');
     const [pendingReqs, setPendingReqs] = useState<PartnerReportConfirmationRequest[]>([]);
@@ -320,15 +323,8 @@ function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, }: {
     };
     const periodLabel = formatIsoRangeTitle(df, dt);
     const showPartnerConfirmBtn = listsLoad === 'ok' && !fullyConfirmed && !mySig;
-    const handleConfirm = async () => {
+    const handlePartnerConfirmSubmit = async () => {
         if (confirmBusy || userId == null || !showPartnerConfirmBtn)
-            return;
-        const ok = await showConfirm({
-            title: 'Подтвердить принятие отчёта?',
-            message: `Период: ${periodLabel}. Подтверждаете принятие отчётности по проекту как партнёр? После подписей всех партнёров отчёт попадает в список подтверждённых.`,
-            confirmLabel: 'Подтвердить',
-        });
-        if (!ok)
             return;
         setConfirmBusy(true);
         try {
@@ -352,6 +348,7 @@ function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, }: {
             await refreshLists();
             if (out.status === 'fully_confirmed')
                 notifyPartnerConfirmedReportsListInvalidate();
+            setPartnerModalOpen(false);
         }
         catch (e) {
             await showAlert({
@@ -362,6 +359,28 @@ function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, }: {
             setConfirmBusy(false);
         }
     };
+    const partnerModalTitleId = useId();
+    useEffect(() => {
+        if (!partnerModalOpen)
+            return;
+        const focusFirst = () => {
+            const root = partnerModalPanelRef.current;
+            const closeBtn = root?.querySelector<HTMLButtonElement>('.tt-rp-preview__partner-modal-close');
+            closeBtn?.focus();
+        };
+        const t = window.requestAnimationFrame(focusFirst);
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                setPartnerModalOpen(false);
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => {
+            window.cancelAnimationFrame(t);
+            window.removeEventListener('keydown', onKey);
+        };
+    }, [partnerModalOpen]);
     if (userId == null)
         return null;
     if (partnersLoad === 'idle' || partnersLoad === 'loading')
@@ -370,35 +389,88 @@ function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, }: {
         return null;
     if (!partners.some((p) => p.authUserId === userId))
         return null;
-    return (<div className="tt-rp-preview__partner-bar" role="region" aria-label="Подтверждение отчёта партнёром">
-      <div className="tt-rp-preview__partner-bar-head">
-        <span className="tt-rp-preview__partner-bar-title">Подтверждение отчёта</span>
+    const triggerBadge = listsLoad !== 'ok'
+        ? null
+        : showPartnerConfirmBtn
+            ? (<span className="tt-rp-preview__partner-trigger-badge">Нужна подпись</span>)
+            : fullyConfirmed && mySig
+                ? (<span className="tt-rp-preview__partner-trigger-badge tt-rp-preview__partner-trigger-badge--success">Готово</span>)
+                : fullyConfirmed && !mySig
+                    ? (<span className="tt-rp-preview__partner-trigger-badge tt-rp-preview__partner-trigger-badge--neutral">Подтверждено</span>)
+                    : listsLoad === 'ok' && !fullyConfirmed && !pendingForProject && mySig
+                        ? (<span className="tt-rp-preview__partner-trigger-badge tt-rp-preview__partner-trigger-badge--wait">Ожидание партнёров</span>)
+                        : null;
+    const modal = partnerModalOpen
+        ? createPortal(<div className="tt-rp-preview__partner-modal-overlay" role="presentation" onClick={() => setPartnerModalOpen(false)}>
+          <div ref={partnerModalPanelRef} className="tt-rp-preview__partner-modal-panel" role="dialog" aria-modal="true" aria-labelledby={partnerModalTitleId} onClick={(e) => e.stopPropagation()}>
+            <div className="tt-rp-preview__partner-modal-head">
+              <div className="tt-rp-preview__partner-modal-head-text">
+                <span className="tt-rp-preview__partner-modal-kicker">Партнёрский статус</span>
+                <h2 id={partnerModalTitleId} className="tt-rp-preview__partner-modal-title">
+                  Подтверждение отчёта
+                </h2>
+              </div>
+              <button type="button" className="tt-rp-preview__partner-modal-close" onClick={() => setPartnerModalOpen(false)} aria-label="Закрыть">
+                ×
+              </button>
+            </div>
+            <p className="tt-rp-preview__partner-modal-period">
+              Период: <strong>{periodLabel}</strong>
+            </p>
+            <p className="tt-rp-preview__partner-modal-lead">
+              Вы фиксируете принятие отчётности по проекту как партнёр. После подписей всех партнёров запись попадает в список подтверждённых отчётов.
+            </p>
+            {partners.length > 0 ? (<div className="tt-rp-preview__partner-modal-partners-block">
+                <span className="tt-rp-preview__partner-modal-label">Партнёры проекта</span>
+                <ul className="tt-rp-preview__partner-modal-partners">
+                  {partners.map((p) => (<li key={p.authUserId} className={`tt-rp-preview__partner-modal-partner${userId === p.authUserId ? ' tt-rp-preview__partner-modal-partner--you' : ''}`}>
+                      <span className="tt-rp-preview__partner-modal-partner-name">{p.displayName.trim() || `ID ${p.authUserId}`}</span>
+                      {p.position ? (<span className="tt-rp-preview__partner-modal-partner-pos">{p.position}</span>) : null}
+                      {userId === p.authUserId ? (<span className="tt-rp-preview__partner-modal-you">Вы</span>) : null}
+                    </li>))}
+                </ul>
+              </div>) : null}
+            <div className="tt-rp-preview__partner-modal-status">
+              {listsLoad === 'loading' ? (<p className="tt-rp-preview__partner-modal-status-msg tt-rp-preview__partner-modal-status-msg--muted">Загрузка статуса подтверждений…</p>) : null}
+              {listsLoad === 'error' ? (<p className="tt-rp-preview__partner-modal-status-msg tt-rp-preview__partner-modal-status-msg--err" role="alert">
+                  Не удалось загрузить статус подтверждений.
+                </p>) : null}
+              {listsLoad === 'ok' && fullyConfirmed && mySig ? (<p className="tt-rp-preview__partner-modal-status-msg tt-rp-preview__partner-modal-status-msg--ok">
+                  Все партнёры подтвердили отчёт. Ваша подпись: {fmtConfirmed(mySig.confirmedAt)}.
+                </p>) : null}
+              {listsLoad === 'ok' && fullyConfirmed && !mySig ? (<p className="tt-rp-preview__partner-modal-status-msg tt-rp-preview__partner-modal-status-msg--ok">
+                  Отчёт за этот период полностью подтверждён партнёрами.
+                </p>) : null}
+              {listsLoad === 'ok' && !fullyConfirmed && !pendingForProject && mySig ? (<p className="tt-rp-preview__partner-modal-status-msg tt-rp-preview__partner-modal-status-msg--ok">
+                  Вы подтвердили ({fmtConfirmed(mySig.confirmedAt)}). Ожидаются другие партнёры.
+                </p>) : null}
+            </div>
+            <div className="tt-rp-preview__partner-modal-footer">
+              <button type="button" className="tt-rp-preview__partner-modal-btn tt-rp-preview__partner-modal-btn--ghost" onClick={() => setPartnerModalOpen(false)}>
+                Закрыть
+              </button>
+              {showPartnerConfirmBtn ? (<button type="button" className="tt-rp-preview__partner-modal-btn tt-rp-preview__partner-modal-btn--primary" onClick={() => void handlePartnerConfirmSubmit()} disabled={confirmBusy}>
+                  {confirmBusy ? 'Отправка…' : 'Подтвердить принятие отчёта'}
+                </button>) : null}
+            </div>
+          </div>
+        </div>, document.body)
+        : null;
+    return (<>
+      <div className="tt-rp-preview__partner-trigger-wrap">
+        <button type="button" className="tt-rp-preview__partner-trigger" onClick={() => setPartnerModalOpen(true)} aria-haspopup="dialog" aria-expanded={partnerModalOpen}>
+          <span className="tt-rp-preview__partner-trigger-icon" aria-hidden>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+              <path d="m9 12 2 2 4-4"/>
+            </svg>
+          </span>
+          <span className="tt-rp-preview__partner-trigger-label">Подтверждение отчёта</span>
+          {triggerBadge}
+        </button>
       </div>
-      <p className="tt-rp-preview__partner-bar-desc">
-        Подтвердите отчёт за выбранный период — вы фиксируете принятие как партнёр. Когда все партнёры проекта подпишут запись, она попадает в список подтверждённых отчётов.
-      </p>
-      {partners.length > 0 ? (<p className="tt-rp-preview__partner-bar-muted">
-          Партнёры проекта: {partners.map((p) => p.displayName.trim() || `ID ${p.authUserId}`).join(', ')}
-        </p>) : null}
-      <div className="tt-rp-preview__partner-bar-actions">
-          {listsLoad === 'loading' ? (<span className="tt-rp-preview__partner-bar-muted">Загрузка запросов…</span>) : null}
-          {listsLoad === 'error' ? (<span className="tt-rp-preview__partner-bar-err" role="alert">
-              Не удалось загрузить статус подтверждений.
-            </span>) : null}
-          {showPartnerConfirmBtn ? (<button type="button" className="tt-rp-preview__partner-bar-btn" onClick={() => void handleConfirm()} disabled={confirmBusy}>
-              {confirmBusy ? 'Отправка…' : 'Подтвердить принятие отчёта'}
-            </button>) : null}
-          {listsLoad === 'ok' && fullyConfirmed && mySig ? (<span className="tt-rp-preview__partner-bar-ok">
-              Все партнёры подтвердили отчёт. Ваша подпись: {fmtConfirmed(mySig.confirmedAt)}.
-            </span>) : null}
-          {listsLoad === 'ok' && fullyConfirmed && !mySig ? (<span className="tt-rp-preview__partner-bar-ok">
-              Отчёт за этот период полностью подтверждён партнёрами.
-            </span>) : null}
-          {listsLoad === 'ok' && !fullyConfirmed && !pendingForProject && mySig ? (<span className="tt-rp-preview__partner-bar-ok">
-              Вы подтвердили ({fmtConfirmed(mySig.confirmedAt)}). Ожидаются другие партнёры.
-            </span>) : null}
-        </div>
-    </div>);
+      {modal}
+    </>);
 }
 export type ReportPreviewNavBarPeriod = {
     from: string;
