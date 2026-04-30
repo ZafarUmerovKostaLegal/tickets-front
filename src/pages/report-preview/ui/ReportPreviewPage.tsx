@@ -458,7 +458,7 @@ function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, }: {
         : null;
     return (<>
       <div className="tt-rp-preview__partner-trigger-wrap">
-        <button type="button" className="tt-rp-preview__partner-trigger" onClick={() => setPartnerModalOpen(true)} aria-haspopup="dialog" aria-expanded={partnerModalOpen}>
+        <button type="button" className="tt-rp-preview__partner-trigger" title="Статус партнёрского подтверждения отчёта по проекту и периоду" onClick={() => setPartnerModalOpen(true)} aria-haspopup="dialog" aria-expanded={partnerModalOpen}>
           <span className="tt-rp-preview__partner-trigger-icon" aria-hidden>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
@@ -486,8 +486,10 @@ export type ReportPreviewNavBarProps = {
     projectSlot?: ReactNode;
     
     timeReportViewSlot?: ReactNode;
+    
+    extrasSlot?: ReactNode;
 };
-export function ReportPreviewNavBar({ period, hint, hintTitle, projectSlot, timeReportViewSlot }: ReportPreviewNavBarProps) {
+export function ReportPreviewNavBar({ period, hint, hintTitle, projectSlot, timeReportViewSlot, extrasSlot }: ReportPreviewNavBarProps) {
     const rangeId = useId();
     const onLeave = () => {
         void clearReportPreviewTransfer();
@@ -520,6 +522,7 @@ export function ReportPreviewNavBar({ period, hint, hintTitle, projectSlot, time
           </div>
         </div>) : null}
       {timeReportViewSlot ? (<div className="tt-rp-preview__navbar-view-slot">{timeReportViewSlot}</div>) : null}
+      {extrasSlot ? (<div className="tt-rp-preview__navbar-extras">{extrasSlot}</div>) : null}
       <div className="time-page__navbar-spacer"/>
       <div className="time-page__navbar-settings">
         <AppPageSettings />
@@ -1316,6 +1319,9 @@ export function ReportPreviewPage() {
             return '';
         return reportPreviewConfirmationProjectId(xferSnapshot, selectedProjectId);
     }, [xferSnapshot, rangeFrom, rangeTo, selectedProjectId]);
+    const partnerConfirmNavbarSlot = confirmationProjectId && !partnerConfirmedReadOnly
+        ? (<ReportPreviewPartnerBar projectId={confirmationProjectId} dateFrom={rangeFrom} dateTo={rangeTo} userId={user?.id ?? null}/>)
+        : null;
     if (loading) {
         return (<div className="tt-rp-preview tt-rp-preview--fill" role="status" aria-live="polite">
         <ReportPreviewNavBar />
@@ -1417,10 +1423,9 @@ export function ReportPreviewPage() {
         return null;
     })();
     return (<div className="tt-rp-preview tt-rp-preview--fill">
-      <ReportPreviewNavBar period={navPeriodControls} projectSlot={navProjectSlot} timeReportViewSlot={timeReportViewToggle ?? undefined}/>
+      <ReportPreviewNavBar period={navPeriodControls} projectSlot={navProjectSlot} timeReportViewSlot={timeReportViewToggle ?? undefined} extrasSlot={partnerConfirmNavbarSlot ?? undefined}/>
 
       <div className="tt-rp-preview__main tt-rp-preview__main--fill tt-rp-preview__body-pad">
-        {confirmationProjectId && !partnerConfirmedReadOnly ? (<ReportPreviewPartnerBar projectId={confirmationProjectId} dateFrom={rangeFrom} dateTo={rangeTo} userId={user?.id ?? null}/>) : null}
         <div className={`tt-rp-preview__live${xferSnapshot && (xferSnapshot.reportType === 'time' || xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'uninvoiced' || xferSnapshot.reportType === 'project-budget') ? ' tt-rp-preview__live--sheet' : ''}`}>
           {mainBody}
         </div>

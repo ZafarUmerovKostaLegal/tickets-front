@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
             global: 'globalThis',
         },
         optimizeDeps: {
-            include: ['buffer', 'core-js', 'regenerator-runtime'],
+            include: ['buffer', 'core-js', 'regenerator-runtime', 'events', 'readable-stream'],
             
             exclude: ['exceljs', 'jszip'],
             
@@ -56,6 +56,10 @@ export default defineConfig(({ mode }) => {
             alias: {
                 
                 exceljs: path.resolve(__dirname, 'node_modules/exceljs/lib/exceljs.browser.js'),
+                
+                events: path.resolve(__dirname, 'node_modules/events/events.js'),
+                
+                stream: path.resolve(__dirname, 'node_modules/readable-stream/readable-browser.js'),
                 
                 jszip: path.resolve(__dirname, 'node_modules/jszip/lib/index.js'),
                 '@app': path.resolve(__dirname, './src/app'),
