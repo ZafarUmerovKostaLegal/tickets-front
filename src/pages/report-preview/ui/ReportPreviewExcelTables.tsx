@@ -672,8 +672,10 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                   <span className="tt-rp-brief-th__label">Сумма</span>
                 </th>);
             case 'actions':
-                return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--brief-actions" scope="col" title="Дублирование, перенос на другой проект или удаление записи">
-                  Действия
+                return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--brief-actions tt-rp-brief-th" scope="col" title="Дублирование, перенос на другой проект или удаление записи">
+                  <div className="tt-rp-brief-th__row tt-rp-brief-th__row--actions">
+                    <span className="tt-rp-brief-th__label">Действия</span>
+                  </div>
                 </th>);
             default:
                 return null;

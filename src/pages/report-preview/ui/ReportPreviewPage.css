@@ -843,31 +843,51 @@
   text-align: right;
 }
 
-.tt-rp-mtable--time-brief .tt-rp-mtable__th--brief-actions {
-  width: 4.25rem;
+/* Row actions (duplicate / move / delete): brief + full report tables */
+.tt-rp-mtable .tt-rp-mtable__th--brief-actions {
+  width: 6.85rem;
+  min-width: 6.85rem;
   text-align: center;
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: var(--app-muted, #64748b);
-  letter-spacing: 0.01em;
+  vertical-align: middle;
+  padding-left: 0.35rem;
+  padding-right: 0.35rem;
+  white-space: normal;
+  line-height: 1.25;
 }
 
-.tt-rp-mtable--time-brief .tt-rp-mtable__td--brief-actions {
+.tt-rp-mtable tbody .tt-rp-mtable__td--brief-actions {
   vertical-align: middle;
   text-align: center;
-  padding: 0.3rem 0.2rem;
-  width: 4.25rem;
+  padding: 0.45rem 0.35rem;
+  width: 6.85rem;
+  min-width: 6.85rem;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.tt-rp-mtable--time-brief tbody .tt-rp-mtable__td--brief-actions {
-  display: table-cell;
+.tt-rp-mtable__brief-th__row--actions {
+  justify-content: center;
+}
+
+.tt-rp-mtable__brief-th__row--actions .tt-rp-brief-th__label {
+  flex: 0 1 auto;
+  text-align: center;
+}
+
+.tt-rp-mtable .tt-rp-mtable__td--brief-actions--foot {
+  width: 6.85rem;
+  min-width: 6.85rem;
+  box-sizing: border-box;
 }
 
 .tt-rp-mtable__brief-row-actions {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.15rem;
+  flex-wrap: nowrap;
+  gap: 0.35rem;
 }
 
 .tt-rp-mtable__row-act {
