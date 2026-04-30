@@ -6,7 +6,7 @@ import { formatDecimalHoursRu } from '@shared/lib/formatTrackingHours';
 import { useCurrentUser } from '@shared/hooks';
 import { AppPageSettings, useAppDialog } from '@shared/ui';
 import { canAccessTimeTracking, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
-import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPending, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, parsePartnerReportConfirmationRequest, isForbiddenError, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, canManageTimeManagerClients, readTimeManagerProjectBillableRateAmount, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, } from '@entities/time-tracking';
+import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPending, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, isForbiddenError, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, canManageTimeManagerClients, readTimeManagerProjectBillableRateAmount, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, } from '@entities/time-tracking';
 import { ClientProjectModal } from '@pages/time-tracking/ui/TimeTrackingClientProjectModal';
 import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
 import { memberWeeklyCapacityHours } from '@entities/time-tracking/model/memberWeeklyCapacity';
@@ -896,8 +896,8 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
         if (currentUserId == null)
             return undefined;
         const hit = (req: PartnerReportConfirmationRequest | null | undefined) => req?.signatures.find((s) => s.partnerAuthUserId === currentUserId);
-        return hit(confirmedForProject) ?? hit(sessionSnapshot);
-    }, [currentUserId, confirmedForProject, sessionSnapshot]);
+        return hit(confirmedForProject) ?? hit(pendingForProject) ?? hit(sessionSnapshot);
+    }, [currentUserId, confirmedForProject, pendingForProject, sessionSnapshot]);
     const fullyConfirmed = confirmedForProject?.status === 'fully_confirmed';
     const refreshConfirmationLists = async () => {
         const [p, c] = await Promise.all([
@@ -907,19 +907,34 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
         setPendingReqs(p);
         setConfirmedReqs(c);
     };
+    const showPartnerConfirmBtn = listsLoad === 'ok' && !fullyConfirmed && !mySig;
     const handleConfirmReport = async () => {
-        if (confirmBusy || !pendingForProject)
+        if (confirmBusy || !showPartnerConfirmBtn)
             return;
         const ok = await showConfirm({
             title: 'Подтвердить принятие отчёта?',
-            message: periodLabel ? `Вы подтверждаете принятие отчётности за период ${periodLabel}. Это действие отражает вашу сторону как партнёра.` : 'Вы подтверждаете принятие отчётности за выбранный период.',
+            message: periodLabel ? `Вы подтверждаете принятие отчётности за период ${periodLabel}. После подписей всех партнёров отчёт попадает в список подтверждённых.` : 'Вы подтверждаете принятие отчётности за выбранный период. После подписей всех партнёров отчёт попадает в список подтверждённых.',
             confirmLabel: 'Подтвердить',
         });
         if (!ok)
             return;
         setConfirmBusy(true);
         try {
-            const out = await confirmPartnerReportConfirmation(pendingForProject.id);
+            let requestId = pendingForProject?.id;
+            if (!requestId) {
+                const created = await submitPartnerReportConfirmationFromPreview({
+                    projectId: pid,
+                    dateFrom: periodFrom,
+                    dateTo: periodTo,
+                });
+                requestId = created.id;
+                await refreshConfirmationLists();
+            }
+            if (!requestId) {
+                await showAlert({ message: 'Не удалось получить запрос подтверждения.' });
+                return;
+            }
+            const out = await confirmPartnerReportConfirmation(requestId);
             savePartnerConfirmToSession(pid, periodFrom, periodTo, out);
             setSessionSnapshot(out);
             await refreshConfirmationLists();
@@ -957,7 +972,7 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
         {listsLoad === 'error' ? (<span className="pdp__partner-report-muted pdp__partner-report-muted--error" role="alert">
             Не удалось загрузить статус подтверждений отчётов.
           </span>) : null}
-        {listsLoad === 'ok' && pendingForProject ? (<button type="button" className="pdp__partner-report-btn" onClick={() => void handleConfirmReport()} disabled={confirmBusy}>
+        {showPartnerConfirmBtn ? (<button type="button" className="pdp__partner-report-btn" onClick={() => void handleConfirmReport()} disabled={confirmBusy}>
             {confirmBusy ? 'Отправка…' : 'Подтвердить принятие отчёта'}
           </button>) : null}
         {listsLoad === 'ok' && fullyConfirmed && mySig ? (<span className="pdp__partner-report-status pdp__partner-report-status--ok">
@@ -969,9 +984,6 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
         {listsLoad === 'ok' && !fullyConfirmed && !pendingForProject && mySig ? (<span className="pdp__partner-report-status pdp__partner-report-status--ok">
             Вы подтвердили принятие отчёта ({fmtConfirmed(mySig.confirmedAt)}). Ожидаются подписи других партнёров.
           </span>) : null}
-        {listsLoad === 'ok' && !pendingForProject && !mySig && !fullyConfirmed ? (<span className="pdp__partner-report-status">
-            За этот период нет активного запроса на подтверждение для вас. Его может отправить партнёр из предпросмотра отчёта (Учёт времени → Отчёты).
-          </span>) : null}
       </div>);
     return (<section className="pdp__partner-report" aria-labelledby="pdp-partner-report-heading">
         <div className="pdp__partner-report-head">
@@ -981,7 +993,7 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
           {partnerActions}
         </div>
         <p className="pdp__partner-report-hint">
-          Запрос на подпись отправляется из предпросмотра отчёта (Учёт времени → Отчёты). Здесь можно подтвердить его при совпадении периода карточки с запросом.
+          Подтвердите отчёт за период карточки как партнёр. После подписей всех партнёров запись попадает в список подтверждённых на сервере; то же действие доступно из предпросмотра отчёта.
         </p>
         {partners.length === 0 ? (<p className="pdp__partner-report-muted">Нет партнёров с доступом к проекту.</p>) : (<ul className="pdp__partner-report-list">
             {partners.map((p) => (<li key={p.authUserId} className="pdp__partner-report-item">

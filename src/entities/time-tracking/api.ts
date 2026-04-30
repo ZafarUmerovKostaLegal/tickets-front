@@ -2304,7 +2304,7 @@ export async function submitPartnerReportConfirmation(body: {
         throw new TimeTrackingHttpError(500, 'Некорректный ответ сервера');
     return parsed;
 }
-/** Создаёт снимок отчёта по проекту на сервере и отправляет запрос партнёрам (предпросмотр). */
+/** Создаёт на сервере снимок отчёта по проекту и запись подтверждения за период (если ещё нет дубликата). */
 export async function submitPartnerReportConfirmationFromPreview(body: {
     projectId: string;
     dateFrom: string;
