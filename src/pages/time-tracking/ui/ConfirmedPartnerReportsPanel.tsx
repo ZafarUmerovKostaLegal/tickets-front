@@ -122,7 +122,7 @@ export function ConfirmedPartnerReportsPanel() {
             Подтверждённые партнёром отчёты
           </h2>
           <p className="tt-partner-confirmed__hint">
-            Данные с сервера (<code className="tt-partner-confirmed__code">GET …/partner-confirmations/confirmed</code>). Список обновляется после полного подтверждения всех партнёров проекта.
+            Режим только просмотра: записи из этого списка здесь не редактируются. Данные с сервера (<code className="tt-partner-confirmed__code">GET …/partner-confirmations/confirmed</code>). Список обновляется после полного подтверждения всех партнёров проекта.
           </p>
         </div>
         <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" disabled={loading || refreshBusy} onClick={() => void fetchConfirmed({ silent: true })} title="Обновить список" aria-label="Обновить список">
@@ -145,7 +145,7 @@ export function ConfirmedPartnerReportsPanel() {
       {!loading && !error && rows.length === 0 ? (<p className="tt-partner-confirmed__empty">Подтверждённых отчётов пока нет — либо для вас нет доступа к строкам по правилам сервера.</p>) : null}
 
       {!loading && !error && rows.length > 0 ? (<div className="tt-reports__table-wrap tt-partner-confirmed__table-wrap">
-          <table className="tt-reports__table tt-partner-confirmed__table">
+          <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly" aria-label="Подтверждённые партнёром отчёты, только просмотр">
             <thead>
               <tr>
                 <th scope="col">Заголовок</th>

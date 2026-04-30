@@ -13780,3 +13780,14 @@ a.pp__proj-name--link:hover {
   max-width: 22rem;
 }
 
+/* Read-only: same row backgrounds on hover as at rest (no “clickable row” cue from tt-reports__table) */
+.tt-partner-confirmed__table--readonly.tt-reports__table tbody tr {
+  cursor: default;
+}
+.tt-partner-confirmed__table--readonly.tt-reports__table tbody tr:nth-child(odd):hover td {
+  background-color: transparent;
+}
+.tt-partner-confirmed__table--readonly.tt-reports__table tbody tr:nth-child(even):hover td {
+  background: color-mix(in srgb, var(--app-surface-soft, #f8fafc) 65%, var(--app-surface, #fff));
+}
+
