@@ -1103,7 +1103,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     const activeDayYmd = useMemo(() => formatDate(activeDay), [activeDay]);
     const activeDayInClosedWeek = useMemo(() => isWorkDateInClosedReportingPeriod(activeDayYmd), [activeDayYmd]);
     const showGrantUnlockStrip = grantUnlockEligible && isColleagueTimesheetView && entriesAuthUserId != null && activeDayInClosedWeek;
-    const activeDayReportingBlocked = useMemo(() => isSubjectDayReportingBlocked(activeDayYmd), [activeDayYmd, isSubjectDayReportingBlocked]);
+    const activeDayReportingBlocked = isSubjectDayReportingBlocked(activeDayYmd);
     useEffect(() => {
         if (!showGrantUnlockStrip)
             setGrantUnlockConfirmOpen(false);
