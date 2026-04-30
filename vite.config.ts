@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => {
             global: 'globalThis',
         },
         optimizeDeps: {
-            include: ['buffer', 'core-js', 'regenerator-runtime', 'events', 'readable-stream'],
+            include: ['buffer', 'core-js', 'regenerator-runtime', 'events', 'readable-stream', 'process'],
             
             exclude: ['exceljs', 'jszip'],
             
