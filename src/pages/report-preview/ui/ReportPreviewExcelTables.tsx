@@ -157,6 +157,18 @@ function TimePreviewBriefDateTimeCell({ r, onPatch, userName, weekLocked, }: {
         </p>) : null}
     </div>);
 }
+function TimePreviewBriefDateTimeReadonly({ r }: {
+    r: TimeExcelPreviewRow;
+}) {
+    if (r.rowKind === 'aggregate' || !r.workDate.trim()) {
+        return (<span className="tt-rp-mtable__td--muted" title="Для агрегата нет одной даты/времени записи">—</span>);
+    }
+    const wd = r.workDate.slice(0, 10);
+    const hm = formatRuHmFromIso(r.recordedAt);
+    const dateRu = formatRuYmd(wd);
+    const title = r.recordedAt.trim() ? `ISO: ${r.recordedAt}` : undefined;
+    return (<span className="tt-rp-mtable__readonly" title={title}>{`${dateRu}, ${hm}`}</span>);
+}
 function RpBool({ checked, ariaLabel, onChange, disabled = false, }: {
     checked: boolean;
     ariaLabel: string;
@@ -486,16 +498,19 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
       </div>
     </div>, document.body);
 }
-export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, }: {
+export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, }: {
     projectTitle: string;
     
     viewMode?: 'brief' | 'full';
     rows: TimeExcelPreviewRow[];
     onPatch: PatchFn<TimeExcelPreviewRow>;
     employeePartnerPick?: TimePreviewPartnerPickState | null;
+    /** Открыто из подтверждённого партнёром отчёта: без правок и без блока подтверждения в родителе */
+    readOnly?: boolean;
 } & UserRowSelectionProps & PreviewServerReloadProps & TimeReportPersistenceProps) {
     const isFull = viewMode === 'full';
-    const showEntryActions = !isFull && (Boolean(onDeleteTimeEntry) || Boolean(onMoveTimeEntryToProject) || Boolean(onDuplicateTimeEntry) || Boolean(onGrantEditUnlock));
+    const readOnlyUi = Boolean(readOnly);
+    const showEntryActions = !readOnlyUi && !isFull && (Boolean(onDeleteTimeEntry) || Boolean(onMoveTimeEntryToProject) || Boolean(onDuplicateTimeEntry) || Boolean(onGrantEditUnlock));
     const showActionsColumn = Boolean(showEntryActions);
     const [briefColumnIds, setBriefColumnIds] = useState<TimeBriefColumnId[]>(() => {
         const loaded = loadBriefColumnsFromStorage(showActionsColumn);
@@ -588,6 +603,14 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         return [...m.values()].sort((a, b) => a.label.localeCompare(b.label, 'ru', { sensitivity: 'base' }));
     }, [employeePartnerPick, rows]);
     const renderEmployeeBodyCell = (colId: TimeBriefColumnId | TimeFullColumnId, r: TimeExcelPreviewRow, i: number, wk: boolean): ReactNode => {
+        if (readOnlyUi) {
+            const label = (r.employeeName || r.userName || '').trim() || '—';
+            const pos = (r.employeePosition ?? '').trim();
+            const text = pos ? `${label} (${pos})` : label;
+            return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--readonly">
+              <span className="tt-rp-mtable__readonly">{text}</span>
+            </td>);
+        }
         if (r.rowKind === 'aggregate') {
             if (employeePartnerPick != null && !employeePartnerPick.loading) {
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--readonly">
@@ -763,35 +786,35 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--employee-head tt-rp-brief-th">
                   <div className="tt-rp-brief-th__row">
                     <span className="tt-rp-brief-th__label">Сотрудник</span>
-                    {employeeColumnFilterSlot}
+                    {readOnlyUi ? null : employeeColumnFilterSlot}
                   </div>
                 </th>);
             case 'datetime':
                 return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--brief-when tt-rp-brief-th">
                   <div className="tt-rp-brief-th__row">
                     <span className="tt-rp-brief-th__label">Дата и время записи</span>
-                    <ReportPreviewDateTimeFilterPopover whenQuery={bfWhen} onWhenQueryChange={setBfWhen} recordedOrder={bfRecordedOrder} onRecordedOrderChange={setBfRecordedOrder}/>
+                    {readOnlyUi ? null : (<ReportPreviewDateTimeFilterPopover whenQuery={bfWhen} onWhenQueryChange={setBfWhen} recordedOrder={bfRecordedOrder} onRecordedOrderChange={setBfRecordedOrder}/>)}
                   </div>
                 </th>);
             case 'task':
                 return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--pick tt-rp-brief-th">
                   <div className="tt-rp-brief-th__row">
                     <span className="tt-rp-brief-th__label">Задача</span>
-                    <ReportPreviewTextFilterPopover aria-label="Фильтр: задача" title="Поиск по задаче" value={bfTask} onChange={setBfTask} placeholder="id, название…" hint="Совпадение по id и названию задачи."/>
+                    {readOnlyUi ? null : (<ReportPreviewTextFilterPopover aria-label="Фильтр: задача" title="Поиск по задаче" value={bfTask} onChange={setBfTask} placeholder="id, название…" hint="Совпадение по id и названию задачи."/>)}
                   </div>
                 </th>);
             case 'note':
                 return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--comment tt-rp-brief-th">
                   <div className="tt-rp-brief-th__row">
                     <span className="tt-rp-brief-th__label" title="Поле заметки и описания (как в данных)">Заметка, описание</span>
-                    <ReportPreviewTextFilterPopover aria-label="Фильтр: заметка и описание" title="Поиск по тексту" value={bfNote} onChange={setBfNote} placeholder="Текст…" hint="По note и description строки."/>
+                    {readOnlyUi ? null : (<ReportPreviewTextFilterPopover aria-label="Фильтр: заметка и описание" title="Поиск по тексту" value={bfNote} onChange={setBfNote} placeholder="Текст…" hint="По note и description строки."/>)}
                   </div>
                 </th>);
             case 'billHours':
                 return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--num tt-rp-brief-th tt-rp-brief-th--num" title="Оплачиваемые часы (ч:мм)">
                   <div className="tt-rp-brief-th__row">
                     <span className="tt-rp-brief-th__label">Оплач. часы</span>
-                    <ReportPreviewTextFilterPopover aria-label="Фильтр: оплачиваемые часы" title="Поиск по оплач. часам" value={bfBill} onChange={setBfBill} placeholder="7:30, 1,5…" hint="По десятичным часам и формату ч:мм."/>
+                    {readOnlyUi ? null : (<ReportPreviewTextFilterPopover aria-label="Фильтр: оплачиваемые часы" title="Поиск по оплач. часам" value={bfBill} onChange={setBfBill} placeholder="7:30, 1,5…" hint="По десятичным часам и формату ч:мм."/>)}
                   </div>
                 </th>);
             case 'sum':
@@ -815,26 +838,32 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return renderEmployeeBodyCell(colId, r, i, wk);
             case 'datetime':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--brief-dt">
-                  <TimePreviewBriefDateTimeCell r={r} onPatch={onPatch} userName={r.userName} weekLocked={wk}/>
+                  {readOnlyUi ? (<TimePreviewBriefDateTimeReadonly r={r}/>) : (<TimePreviewBriefDateTimeCell r={r} onPatch={onPatch} userName={r.userName} weekLocked={wk}/>)}
                 </td>);
             case 'task':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
-                  <div className="tt-rp-mtable__brief-task">
-                    <SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByClientId.get(r.clientId?.trim() ?? '') ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>
-                  </div>
+                  {readOnlyUi
+                    ? (<span className="tt-rp-mtable__readonly">{((r.taskName || r.taskId || '').trim() || '—')}</span>)
+                    : (<div className="tt-rp-mtable__brief-task">
+                      <SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByClientId.get(r.clientId?.trim() ?? '') ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>
+                    </div>)}
                 </td>);
             case 'note':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--comment">
-                  <TimePreviewNoteTextarea variant="brief" value={r.note} disabled={wk} ariaLabel={`note/description, ${r.userName}`} onValue={(v) => {
+                  {readOnlyUi
+                    ? (<span className="tt-rp-mtable__readonly tt-rp-mtable__readonly--pre">{String(r.note ?? '').trim() ? r.note : '—'}</span>)
+                    : (<TimePreviewNoteTextarea variant="brief" value={r.note} disabled={wk} ariaLabel={`note/description, ${r.userName}`} onValue={(v) => {
                     onPatch(r.rowKey, { note: v, description: v });
-                }}/>
+                }}/>)}
                 </td>);
             case 'billHours':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--num">
-                  <DecimalDurationInput className="tt-rp-mtable__input tt-rp-mtable__input--duration" valueHours={Number.isFinite(r.billableHours) ? r.billableHours : 0} onCommit={(bh) => {
+                  {readOnlyUi
+                    ? (<span className="tt-rp-mtable__readonly">{formatHoursClockFromDecimalHours(Number.isFinite(r.billableHours) ? r.billableHours : 0)}</span>)
+                    : (<DecimalDurationInput className="tt-rp-mtable__input tt-rp-mtable__input--duration" valueHours={Number.isFinite(r.billableHours) ? r.billableHours : 0} onCommit={(bh) => {
                     const atp = computeTimePreviewRowAmountToPay({ ...r, billableHours: bh });
                     onPatch(r.rowKey, { billableHours: bh, amountToPay: atp });
-                }} disabled={wk} aria-label={`Оплачиваемые часы, ${r.userName}`}/>
+                }} disabled={wk} aria-label={`Оплачиваемые часы, ${r.userName}`}/>)}
                 </td>);
             case 'sum':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--sum-ro" title="Оплач. часы × ставка">
@@ -911,7 +940,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--employee-head">
                   <div className="tt-rp-mtable__th-employee">
                     <span className="tt-rp-mtable__th-employee-label">Сотрудник</span>
-                    {employeeColumnFilterSlot}
+                    {readOnlyUi ? null : employeeColumnFilterSlot}
                   </div>
                 </th>);
             case 'authUserId':
@@ -991,13 +1020,17 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return (<td key={colId} className="tt-rp-mtable__td">
                   {r.rowKind === 'aggregate' || !r.workDate.trim()
                       ? (<span className="tt-rp-mtable__td--muted" title="Для агрегата «сотрудник → проект» одна дата не задаётся">—</span>)
-                      : (<input className="tt-rp-mtable__input tt-rp-mtable__input--date" type="date" value={r.workDate.slice(0, 10)} onChange={(e) => onPatch(r.rowKey, { workDate: e.target.value })} aria-label={`workDate, ${r.userName}`} title={wk ? 'Можно сменить дату на день из открытого периода' : undefined}/>)}
+                      : readOnlyUi
+                          ? (<span className="tt-rp-mtable__readonly">{formatRuYmd(r.workDate.slice(0, 10))}</span>)
+                          : (<input className="tt-rp-mtable__input tt-rp-mtable__input--date" type="date" value={r.workDate.slice(0, 10)} onChange={(e) => onPatch(r.rowKey, { workDate: e.target.value })} aria-label={`workDate, ${r.userName}`} title={wk ? 'Можно сменить дату на день из открытого периода' : undefined}/>)}
                 </td>);
             case 'recordedAt':
                 return (<td key={colId} className="tt-rp-mtable__td">
                   {r.rowKind === 'aggregate'
                       ? (<span className="tt-rp-mtable__td--muted" title="Для агрегата нет одного recordedAt">—</span>)
-                      : (<input className="tt-rp-mtable__input tt-rp-mtable__input--iso" type="text" value={r.recordedAt} onChange={(e) => onPatch(r.rowKey, { recordedAt: e.target.value })} placeholder="ISO…" aria-label={`recordedAt, ${r.userName}`} disabled={wk}/>)}
+                      : readOnlyUi
+                          ? (<span className="tt-rp-mtable__readonly" title={r.recordedAt}>{`${formatRuYmd(getLocalYmdFromIso(r.recordedAt) ?? r.workDate.slice(0, 10))}, ${formatRuHmFromIso(r.recordedAt)}`}</span>)
+                          : (<input className="tt-rp-mtable__input tt-rp-mtable__input--iso" type="text" value={r.recordedAt} onChange={(e) => onPatch(r.rowKey, { recordedAt: e.target.value })} placeholder="ISO…" aria-label={`recordedAt, ${r.userName}`} disabled={wk}/>)}
                 </td>);
             case 'clientId':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--readonly" aria-label={`clientId, ${r.userName}`}>
@@ -1021,55 +1054,61 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 </td>);
             case 'task':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
-                  <SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByClientId.get(r.clientId?.trim() ?? '') ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>
+                  {readOnlyUi
+                      ? (<span className="tt-rp-mtable__readonly">{((r.taskName || r.taskId || '').trim() || '—')}</span>)
+                      : (<SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByClientId.get(r.clientId?.trim() ?? '') ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>)}
                 </td>);
             case 'note':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--comment">
-                  <TimePreviewNoteTextarea variant="full" value={r.note} disabled={wk} ariaLabel={`note/description, ${r.userName}`} onValue={(v) => {
+                  {readOnlyUi
+                      ? (<span className="tt-rp-mtable__readonly tt-rp-mtable__readonly--pre">{String(r.note ?? '').trim() ? r.note : '—'}</span>)
+                      : (<TimePreviewNoteTextarea variant="full" value={r.note} disabled={wk} ariaLabel={`note/description, ${r.userName}`} onValue={(v) => {
                     onPatch(r.rowKey, { note: v, description: v });
-                }}/>
+                }}/>)}
                 </td>);
             case 'billableHours':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--num">
-                  <DecimalDurationInput className="tt-rp-mtable__input tt-rp-mtable__input--duration" valueHours={Number.isFinite(r.billableHours) ? r.billableHours : 0} onCommit={(bh) => {
+                  {readOnlyUi
+                      ? (<span className="tt-rp-mtable__readonly">{formatHoursClockFromDecimalHours(Number.isFinite(r.billableHours) ? r.billableHours : 0)}</span>)
+                      : (<DecimalDurationInput className="tt-rp-mtable__input tt-rp-mtable__input--duration" valueHours={Number.isFinite(r.billableHours) ? r.billableHours : 0} onCommit={(bh) => {
                     const atp = computeTimePreviewRowAmountToPay({ ...r, billableHours: bh });
                     onPatch(r.rowKey, { billableHours: bh, amountToPay: atp });
-                }} disabled={wk} aria-label={`Оплачиваемые часы, ${r.userName}`}/>
+                }} disabled={wk} aria-label={`Оплачиваемые часы, ${r.userName}`}/>)}
                 </td>);
             case 'isBillable':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--tight">
-                  <RpBool checked={r.isBillable} ariaLabel={`isBillable, ${r.userName}`} disabled={wk} onChange={(v) => {
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{r.isBillable ? 'Да' : 'Нет'}</span>) : (<RpBool checked={r.isBillable} ariaLabel={`isBillable, ${r.userName}`} disabled={wk} onChange={(v) => {
                     const newBh = v ? r.hours : r.billableHours;
                     const next: TimeExcelPreviewRow = { ...r, isBillable: v, billableHours: newBh };
                     onPatch(r.rowKey, { isBillable: v, billableHours: newBh, amountToPay: computeTimePreviewRowAmountToPay(next) });
-                }}/>
+                }}/>)}
                 </td>);
             case 'taskBillableByDefault':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--tight">
-                  <RpBool checked={r.taskBillableByDefault} ariaLabel={`taskBillableByDefault, ${r.userName}`} disabled={wk} onChange={(v) => onPatch(r.rowKey, { taskBillableByDefault: v })}/>
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{r.taskBillableByDefault ? 'Да' : 'Нет'}</span>) : (<RpBool checked={r.taskBillableByDefault} ariaLabel={`taskBillableByDefault, ${r.userName}`} disabled={wk} onChange={(v) => onPatch(r.rowKey, { taskBillableByDefault: v })}/>)}
                 </td>);
             case 'isInvoiced':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--tight">
-                  <RpBool checked={r.isInvoiced} ariaLabel={`isInvoiced, ${r.userName}`} disabled={wk} onChange={(v) => onPatch(r.rowKey, { isInvoiced: v })}/>
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{r.isInvoiced ? 'Да' : 'Нет'}</span>) : (<RpBool checked={r.isInvoiced} ariaLabel={`isInvoiced, ${r.userName}`} disabled={wk} onChange={(v) => onPatch(r.rowKey, { isInvoiced: v })}/>)}
                 </td>);
             case 'isPaid':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--tight">
-                  <RpBool checked={r.isPaid} ariaLabel={`isPaid, ${r.userName}`} disabled={wk} onChange={(v) => onPatch(r.rowKey, { isPaid: v })}/>
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{r.isPaid ? 'Да' : 'Нет'}</span>) : (<RpBool checked={r.isPaid} ariaLabel={`isPaid, ${r.userName}`} disabled={wk} onChange={(v) => onPatch(r.rowKey, { isPaid: v })}/>)}
                 </td>);
             case 'isWeekSubmitted':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--tight">
-                  <RpBool checked={r.isWeekSubmitted} ariaLabel={`isWeekSubmitted, ${r.userName}`} disabled={wk} onChange={(v) => onPatch(r.rowKey, { isWeekSubmitted: v })}/>
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{r.isWeekSubmitted ? 'Да' : 'Нет'}</span>) : (<RpBool checked={r.isWeekSubmitted} ariaLabel={`isWeekSubmitted, ${r.userName}`} disabled={wk} onChange={(v) => onPatch(r.rowKey, { isWeekSubmitted: v })}/>)}
                 </td>);
             case 'billableRate':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--num">
-                  <input className="tt-rp-mtable__input tt-rp-mtable__input--num" type="number" step={0.01} min={0} value={r.billableRate} onChange={(e) => {
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{Number.isFinite(r.billableRate) ? String(r.billableRate) : '—'}</span>) : (<input className="tt-rp-mtable__input tt-rp-mtable__input--num" type="number" step={0.01} min={0} value={r.billableRate} onChange={(e) => {
                     const v = parseFloat(e.target.value);
                     const rate = Number.isFinite(v) ? v : 0;
                     onPatch(r.rowKey, {
                         billableRate: rate,
                         amountToPay: computeTimePreviewRowAmountToPay({ ...r, billableRate: rate }),
                     });
-                }} disabled={wk} aria-label={`billableRate, ${r.userName}`}/>
+                }} disabled={wk} aria-label={`billableRate, ${r.userName}`}/>)}
                 </td>);
             case 'amountToPay':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--sum-ro" title="Оплач. часы × ставка">
@@ -1079,44 +1118,44 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 </td>);
             case 'costRate':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--num">
-                  <input className="tt-rp-mtable__input tt-rp-mtable__input--num" type="number" step={0.01} min={0} value={r.costRate} onChange={(e) => {
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{Number.isFinite(r.costRate) ? String(r.costRate) : '—'}</span>) : (<input className="tt-rp-mtable__input tt-rp-mtable__input--num" type="number" step={0.01} min={0} value={r.costRate} onChange={(e) => {
                     const v = parseFloat(e.target.value);
                     const cr = Number.isFinite(v) ? v : 0;
                     onPatch(r.rowKey, {
                         costRate: cr,
                         costAmount: Math.round(r.hours * cr * 100) / 100,
                     });
-                }} disabled={wk} aria-label={`costRate, ${r.userName}`}/>
+                }} disabled={wk} aria-label={`costRate, ${r.userName}`}/>)}
                 </td>);
             case 'costAmount':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--num">
-                  <input className="tt-rp-mtable__input tt-rp-mtable__input--num" type="number" step={0.01} min={0} value={Number.isFinite(r.costAmount) ? r.costAmount : ''} onChange={(e) => {
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{Number.isFinite(r.costAmount) ? String(r.costAmount) : '—'}</span>) : (<input className="tt-rp-mtable__input tt-rp-mtable__input--num" type="number" step={0.01} min={0} value={Number.isFinite(r.costAmount) ? r.costAmount : ''} onChange={(e) => {
                     const v = parseFloat(e.target.value);
                     onPatch(r.rowKey, { costAmount: Number.isFinite(v) ? v : 0 });
-                }} disabled={wk} aria-label={`costAmount, ${r.userName}`}/>
+                }} disabled={wk} aria-label={`costAmount, ${r.userName}`}/>)}
                 </td>);
             case 'sourceEntryCount':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--num">
-                  <input className="tt-rp-mtable__input tt-rp-mtable__input--num" type="number" step={1} min={0} value={r.sourceEntryCount} onChange={(e) => {
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{Number.isFinite(r.sourceEntryCount) ? String(r.sourceEntryCount) : '—'}</span>) : (<input className="tt-rp-mtable__input tt-rp-mtable__input--num" type="number" step={1} min={0} value={r.sourceEntryCount} onChange={(e) => {
                     const v = parseInt(e.target.value, 10);
                     onPatch(r.rowKey, { sourceEntryCount: Number.isFinite(v) && v >= 0 ? v : 0 });
-                }} disabled={wk} aria-label={`sourceEntryCount, ${r.userName}`}/>
+                }} disabled={wk} aria-label={`sourceEntryCount, ${r.userName}`}/>)}
                 </td>);
             case 'currency':
                 return (<td key={colId} className="tt-rp-mtable__td">
-                  <input className="tt-rp-mtable__input tt-rp-mtable__input--cur" type="text" maxLength={8} value={r.currency} onChange={(e) => onPatch(r.rowKey, { currency: e.target.value.toUpperCase().slice(0, 8) })} disabled={wk} aria-label={`currency, ${r.userName}`}/>
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{r.currency || '—'}</span>) : (<input className="tt-rp-mtable__input tt-rp-mtable__input--cur" type="text" maxLength={8} value={r.currency} onChange={(e) => onPatch(r.rowKey, { currency: e.target.value.toUpperCase().slice(0, 8) })} disabled={wk} aria-label={`currency, ${r.userName}`}/>)}
                 </td>);
             case 'externalReferenceUrl':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--comment">
-                  <input className="tt-rp-mtable__input tt-rp-mtable__input--url" type="url" value={r.externalReferenceUrl} onChange={(e) => onPatch(r.rowKey, { externalReferenceUrl: e.target.value })} placeholder="https://…" disabled={wk} aria-label={`externalReferenceUrl, ${r.userName}`}/>
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly tt-rp-mtable__readonly--pre">{String(r.externalReferenceUrl ?? '').trim() || '—'}</span>) : (<input className="tt-rp-mtable__input tt-rp-mtable__input--url" type="url" value={r.externalReferenceUrl} onChange={(e) => onPatch(r.rowKey, { externalReferenceUrl: e.target.value })} placeholder="https://…" disabled={wk} aria-label={`externalReferenceUrl, ${r.userName}`}/>)}
                 </td>);
             case 'invoiceId':
                 return (<td key={colId} className="tt-rp-mtable__td">
-                  <input className="tt-rp-mtable__input tt-rp-mtable__input--idtext" type="text" value={r.invoiceId} onChange={(e) => onPatch(r.rowKey, { invoiceId: e.target.value })} disabled={wk} aria-label={`invoiceId, ${r.userName}`}/>
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{String(r.invoiceId ?? '').trim() || '—'}</span>) : (<input className="tt-rp-mtable__input tt-rp-mtable__input--idtext" type="text" value={r.invoiceId} onChange={(e) => onPatch(r.rowKey, { invoiceId: e.target.value })} disabled={wk} aria-label={`invoiceId, ${r.userName}`}/>)}
                 </td>);
             case 'invoiceNumber':
                 return (<td key={colId} className="tt-rp-mtable__td">
-                  <input className="tt-rp-mtable__input tt-rp-mtable__input--name" type="text" value={r.invoiceNumber} onChange={(e) => onPatch(r.rowKey, { invoiceNumber: e.target.value })} disabled={wk} aria-label={`invoiceNumber, ${r.userName}`}/>
+                  {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{String(r.invoiceNumber ?? '').trim() || '—'}</span>) : (<input className="tt-rp-mtable__input tt-rp-mtable__input--name" type="text" value={r.invoiceNumber} onChange={(e) => onPatch(r.rowKey, { invoiceNumber: e.target.value })} disabled={wk} aria-label={`invoiceNumber, ${r.userName}`}/>)}
                 </td>);
             default:
                 return null;
@@ -1191,7 +1230,9 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
           <div className="tt-rp-mtable-head-text">
             <div className="tt-rp-mtable-title-row">
               <h2 className="tt-rp-mtable-title">{projectTitle}</h2>
-              {timeSave ? (timeSave.ui === 'saving'
+              {readOnlyUi ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--ro" title="Редактирование недоступно">
+                  Только просмотр
+                </span>) : timeSave ? (timeSave.ui === 'saving'
                 ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--saving" title="Сохранение на сервер">
                   Сохранение…
                 </span>)
@@ -1206,6 +1247,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                         : (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--api" title="Данные отчёта с сервера. Редактирование по строке записи времени (PATCH) с автосохранением.">
                             Сервер
                           </span>)) : (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--api" title="Предпросмотр">Предпросмотр</span>)}
+              {!readOnlyUi ? (<>
               <PreviewServerReloadBtn onRequestServerReload={onRequestServerReload} serverReloadBusy={serverReloadBusy}/>
               {onAddTimeEntry ? (<button type="button" className="tt-rp-mtable-reload" onClick={() => void onAddTimeEntry()} disabled={Boolean(serverReloadBusy || timeSave?.ui === 'saving' || timeEntryActionPendingRowKey != null)} title="Создать новую запись времени (POST) для текущего пользователя и контекста проекта">
                   Добавить запись
@@ -1218,6 +1260,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               }} title="Настроить видимые колонки таблицы">
                 Колонки отчёта
               </button>
+              </>) : null}
             </div>
           </div>
           <div className="tt-rp-mtable-stats" aria-label="Сводка по видимым строкам: только оплачиваемые часы и суммы">
@@ -1239,8 +1282,8 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             </div>
           </div>
         </header>
-        <ReportPreviewTimeBriefColumnsModal open={!isFull && briefColumnsModalOpen} onClose={() => setBriefColumnsModalOpen(false)} includeActionsColumn={showActionsColumn} activeOrderedIds={visibleBriefIds} onChange={setBriefColumnIds}/>
-        <ReportPreviewTimeFullColumnsModal open={Boolean(isFull && fullColumnsModalOpen)} onClose={() => setFullColumnsModalOpen(false)} activeOrderedIds={visibleFullIds} onChange={setFullColumnIds}/>
+        <ReportPreviewTimeBriefColumnsModal open={!readOnlyUi && !isFull && briefColumnsModalOpen} onClose={() => setBriefColumnsModalOpen(false)} includeActionsColumn={showActionsColumn} activeOrderedIds={visibleBriefIds} onChange={setBriefColumnIds}/>
+        <ReportPreviewTimeFullColumnsModal open={Boolean(!readOnlyUi && isFull && fullColumnsModalOpen)} onClose={() => setFullColumnsModalOpen(false)} activeOrderedIds={visibleFullIds} onChange={setFullColumnIds}/>
         <div className="tt-rp-mtable-scroll tt-rp-mtable-scroll--sticky-x">
           {isFull ? (<table className="tt-rp-mtable tt-rp-mtable--time-wide">
             <thead>

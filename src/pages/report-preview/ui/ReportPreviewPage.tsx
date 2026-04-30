@@ -1310,6 +1310,7 @@ export function ReportPreviewPage() {
     const budgetExcelFilterSlot = useMemo(() => (<ReportPreviewEmployeeExcelFilter uniqueNames={budgetUniqueNames} excludedNames={employeeExcluded} onExcludedChange={setEmployeeExcluded} sortAsc={employeeSortAsc} onSortAscChange={setEmployeeSortAsc}/>), [budgetUniqueNames, employeeExcluded, employeeSortAsc]);
     const liveTitle = xferSnapshot ? previewLiveTitle(xferSnapshot) : '';
     const xferExists = readReportPreviewTransfer() != null;
+    const partnerConfirmedReadOnly = Boolean(xferSnapshot?.partnerConfirmationSnapshotId?.trim());
     const confirmationProjectId = useMemo(() => {
         if (!xferSnapshot || !rangeFrom || !rangeTo)
             return '';
@@ -1344,7 +1345,7 @@ export function ReportPreviewPage() {
             to: rangeTo,
             onFromChange: onPreviewFrom,
             onToChange: onPreviewTo,
-            disabled: false,
+            disabled: partnerConfirmedReadOnly,
         }
         : null;
     const timeProjectSwitcherEnabled = xferSnapshot?.reportType === 'time' && Boolean(user) && xferSnapshot.groupBy === 'projects';
@@ -1369,8 +1370,8 @@ export function ReportPreviewPage() {
                 ? (<span className="tt-rp-preview__navbar-hint" title="Не удалось загрузить список проектов для переключения">
             {projectsError}
           </span>)
-                : (<div className="tt-rp-preview__navbar-project" title="Выбор проекта (фильтр сохраняется для возврата в отчёты).">
-            <SearchableSelect<ProjectOption> portalDropdown className="tt-rp-preview__navbar-project-select" buttonClassName="tt-rp-preview__navbar-project-btn" aria-label="Проект" disabled={projectsLoading || projectItemsForSelect.length === 0} placeholder={projectsLoading ? 'Загрузка проектов…' : projectItemsForSelect.length === 0 ? 'Нет проектов' : 'Найдите или выберите проект…'} emptyListText={projectsLoading ? 'Загрузка…' : 'Нет доступных проектов'} noMatchText="Проект не найден" value={selectedProjectId} items={projectItemsForSelect} getOptionValue={(p) => p.id} getOptionLabel={previewProjectOptionLabel} getSearchText={(p) => `${p.name} ${p.client}`.replace(/\s+/g, ' ').trim()} onSelect={(p) => onProjectPick(p.id)}/>
+                : (<div className="tt-rp-preview__navbar-project" title={partnerConfirmedReadOnly ? 'Проект зафиксирован для этого просмотра' : 'Выбор проекта (фильтр сохраняется для возврата в отчёты).'}>
+            <SearchableSelect<ProjectOption> portalDropdown className="tt-rp-preview__navbar-project-select" buttonClassName="tt-rp-preview__navbar-project-btn" aria-label="Проект" disabled={partnerConfirmedReadOnly || projectsLoading || projectItemsForSelect.length === 0} placeholder={projectsLoading ? 'Загрузка проектов…' : projectItemsForSelect.length === 0 ? 'Нет проектов' : 'Найдите или выберите проект…'} emptyListText={projectsLoading ? 'Загрузка…' : 'Нет доступных проектов'} noMatchText="Проект не найден" value={selectedProjectId} items={projectItemsForSelect} getOptionValue={(p) => p.id} getOptionLabel={previewProjectOptionLabel} getSearchText={(p) => `${p.name} ${p.client}`.replace(/\s+/g, ' ').trim()} onSelect={(p) => onProjectPick(p.id)}/>
           </div>))
             : undefined;
     const mainBody = (() => {
@@ -1386,7 +1387,7 @@ export function ReportPreviewPage() {
             const showTimeLiveTitle = xferSnapshot.groupBy !== 'projects';
             return (<>
           {showTimeLiveTitle ? (<p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>) : null}
-          <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} timeSave={{ ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={user ? projectItemsForSelect : undefined} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={user ? handleMoveTimeEntryToProject : undefined} onDuplicateTimeEntry={user ? handleDuplicateTimeEntry : undefined} onGrantEditUnlock={user ? handleGrantEditUnlock : undefined} canGrantEditUnlockForTarget={user ? (tid) => canGrantTimeEntryEditUnlock(user, tid) : undefined} editUnlockPendingCompoundKey={editUnlockPendingCompoundKey} onAddTimeEntry={user ? handleAddTimeEntry : undefined} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={timeEmployeePartnerPick}/>
+          <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={partnerConfirmedReadOnly ? undefined : setSelectedUserName} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDeleteTimeEntry} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onGrantEditUnlock={partnerConfirmedReadOnly || !user ? undefined : handleGrantEditUnlock} canGrantEditUnlockForTarget={partnerConfirmedReadOnly || !user ? undefined : (tid) => canGrantTimeEntryEditUnlock(user, tid)} editUnlockPendingCompoundKey={partnerConfirmedReadOnly ? null : editUnlockPendingCompoundKey} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={partnerConfirmedReadOnly ? null : timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick}/>
         </>);
         }
         if (xferSnapshot.reportType === 'expenses') {
@@ -1419,12 +1420,7 @@ export function ReportPreviewPage() {
       <ReportPreviewNavBar period={navPeriodControls} projectSlot={navProjectSlot} timeReportViewSlot={timeReportViewToggle ?? undefined}/>
 
       <div className="tt-rp-preview__main tt-rp-preview__main--fill tt-rp-preview__body-pad">
-        {confirmationProjectId ? (<ReportPreviewPartnerBar projectId={confirmationProjectId} dateFrom={rangeFrom} dateTo={rangeTo} userId={user?.id ?? null}/>) : null}
-        {xferSnapshot?.partnerConfirmationSnapshotId?.trim()
-            ? (<div className="tt-rp-preview__confirmed-banner" role="note">
-          Открыто из подтверждённого отчёта: таблица ниже показывает <strong>актуальные</strong> данные за этот период и проект. Зафиксированный снимок, который подписали партнёры, можно скачать CSV кнопкой «Снимок (CSV)» в списке подтверждённых отчётов.
-        </div>)
-            : null}
+        {confirmationProjectId && !partnerConfirmedReadOnly ? (<ReportPreviewPartnerBar projectId={confirmationProjectId} dateFrom={rangeFrom} dateTo={rangeTo} userId={user?.id ?? null}/>) : null}
         <div className={`tt-rp-preview__live${xferSnapshot && (xferSnapshot.reportType === 'time' || xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'uninvoiced' || xferSnapshot.reportType === 'project-budget') ? ' tt-rp-preview__live--sheet' : ''}`}>
           {mainBody}
         </div>
