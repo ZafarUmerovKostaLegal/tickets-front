@@ -12,7 +12,7 @@ export const REPORT_TYPES: {
 }[] = [
     { id: 'time', label: 'Время' },
     { id: 'expenses', label: 'Расходы' },
-    { id: 'confirmed-expenses', label: 'Подтвержденные расходы' },
+    { id: 'confirmed-expenses', label: 'Подтвержденные отчеты' },
     { id: 'uninvoiced', label: 'Не выставлено' },
     { id: 'project-budget', label: 'Бюджет проектов' },
 ];

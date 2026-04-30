@@ -1244,7 +1244,7 @@ export function ReportsPanel() {
     }
     if (reportType === 'confirmed-expenses') {
       const g = groups?.find((x) => x.id === groupBy)?.label ?? groupBy;
-      return `Отчёт по подтвержденным расходам — разрез: ${g}`;
+      return `Подтвержденные отчеты — разрез: ${g}`;
     }
     if (reportType === 'expenses') {
       const g = groups?.find((x) => x.id === groupBy)?.label ?? groupBy;

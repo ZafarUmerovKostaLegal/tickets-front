@@ -683,14 +683,15 @@ export async function listPartnerUsersWithProjectAccessToProject(projectId: stri
     if (!pid)
         return [];
     const users = await listTimeTrackingUsers();
-    const candidates = users.filter((u) => !u.is_archived && !u.is_blocked && isPartnerOrgRole(u.role));
+    const candidates = users.filter((u) => !u.is_archived && !u.is_blocked && isPartnerOrgRole(u.role, u.position));
     const out: ProjectPartnerAccessRow[] = [];
     for (let i = 0; i < candidates.length; i += PROJECT_ACCESS_FETCH_BATCH) {
         const chunk = candidates.slice(i, i + PROJECT_ACCESS_FETCH_BATCH);
         const chunkResults = await Promise.all(chunk.map(async (u) => {
             try {
                 const { projectIds } = await getUserProjectAccess(u.id);
-                if (!projectIds.includes(pid))
+                const hasProject = projectIds.some((x) => String(x).trim() === pid);
+                if (!hasProject)
                     return null;
                 const displayName = (u.display_name?.trim() || u.email || `Пользователь ${u.id}`).trim();
                 const position = (u.position?.trim() ?? '').trim();

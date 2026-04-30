@@ -157,7 +157,7 @@ function previewLiveTitle(xfer: ReportPreviewTransferV2): string {
             categories: 'категориям',
             team: 'команде',
         };
-        return `Подтвержденные расходы — по ${map[gb]}`;
+        return `Подтвержденные отчеты — по ${map[gb]}`;
     }
     if (xfer.reportType === 'expenses') {
         const gb = coerceGroupByForType('expenses', xfer.groupBy) as ExpenseGroup;
