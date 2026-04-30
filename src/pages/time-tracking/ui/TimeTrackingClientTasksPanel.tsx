@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useId } from 'react';
 import { listAllTimeManagerClientsMerged, listClientTasks, createClientTask, patchClientTask, deleteClientTask, isForbiddenError, type TimeManagerClientRow, type TimeManagerClientTaskRow, } from '@entities/time-tracking';
-import { SearchableSelect } from '@shared/ui';
+import { SearchableSelect, useAppDialog } from '@shared/ui';
 import { clientRowSearchText } from '@pages/time-tracking/lib/clientRowSearchText';
 import { useCurrentUser } from '@shared/hooks';
 import { canManageTimeManagerClients } from '@entities/time-tracking/model/timeManagerClientsAccess';
@@ -197,6 +197,7 @@ function ClientTaskModal({ mode, clientId, initial, onClose, onSaved }: TaskModa
     </div>);
 }
 export function TimeTrackingClientTasksPanel() {
+    const { showAlert, showConfirm } = useAppDialog();
     const { user } = useCurrentUser();
     const canManage = canManageTimeManagerClients(user?.role);
     const [clients, setClients] = useState<TimeManagerClientRow[]>([]);
@@ -276,14 +277,20 @@ export function TimeTrackingClientTasksPanel() {
         });
     };
     const handleDelete = async (task: TimeManagerClientTaskRow) => {
-        if (!window.confirm(`Удалить задачу «${task.name}»?`))
+        const ok = await showConfirm({
+            title: 'Удалить задачу?',
+            message: `Удалить задачу «${task.name}»?`,
+            variant: 'danger',
+            confirmLabel: 'Удалить',
+        });
+        if (!ok)
             return;
         try {
             await deleteClientTask(clientId, task.id);
             setTasks((prev) => prev.filter((t) => t.id !== task.id));
         }
         catch (e) {
-            window.alert(e instanceof Error ? e.message : 'Не удалось удалить');
+            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось удалить' });
         }
     };
     const selectedClient = clients.find((c) => c.id === clientId);

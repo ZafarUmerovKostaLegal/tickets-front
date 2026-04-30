@@ -45,7 +45,7 @@ import { mergeTimeEntryResponseIntoRow, previewRowAfterCreate, timeExcelPreviewR
 import { localYmdAndHmToIso, } from '../lib/briefRecordDateTimeEdit';
 import type { TimeExcelPreviewRow, ExpenseExcelPreviewRow, UninvoicedExcelPreviewRow, BudgetExcelPreviewRow, } from '../lib/previewExcelTypes';
 import { useCurrentUser } from '@shared/hooks';
-import { AppPageSettings } from '@shared/ui';
+import { AppPageSettings, useAppDialog } from '@shared/ui';
 import '@pages/time-tracking/ui/TimeTrackingPage.css';
 import './ReportPreviewPage.css';
 const REPORTS_TAB_URL = `${routes.timeTracking}?tab=reports`;
@@ -254,6 +254,7 @@ function persistXferFilters(xfer: ReportPreviewTransferV2, filters: ReportFilter
 }
 export function ReportPreviewPage() {
     const { user } = useCurrentUser();
+    const { showAlert, showConfirm } = useAppDialog();
     const [reportPageSizeMax, setReportPageSizeMax] = useState<number | null>(null);
     const listPerPage = useMemo(() => {
         const cap = reportPageSizeMax != null && reportPageSizeMax > 0 ? Math.min(reportPageSizeMax, 5000) : 500;
@@ -616,18 +617,28 @@ export function ReportPreviewPage() {
         });
     }, [schedulePersistTimeEntry, canOverrideWeeklyLock]);
     const handleDeleteTimeEntry = useCallback(async (rowKey: string) => {
-        if (!window.confirm('Удалить эту запись времени? Действие нельзя отменить.'))
+        const confirmed = await showConfirm({
+            title: 'Удалить запись времени?',
+            message: 'Действие нельзя отменить.',
+            variant: 'danger',
+            confirmLabel: 'Удалить',
+        });
+        if (!confirmed)
             return;
         const row = timeExcelRowsRef.current.find((r) => r.rowKey === rowKey);
         if (!row || row.rowKind !== 'entry' || !row.timeEntryId?.trim())
             return;
         if (row.isVoided) {
-            window.alert('Запись уже снята с учёта менеджером — удаление из таблицы недоступно.');
+            await showAlert({
+                message: 'Запись уже снята с учёта менеджером — удаление из таблицы недоступно.',
+            });
             return;
         }
         const wd = (row.workDate || '').trim().slice(0, 10);
         if (wd && isClosedReportingWeekEditingBlockedForSubject(row.authUserId, wd, canOverrideWeeklyLock)) {
-            window.alert('Неделя по дате записи закрыта на сервере — удаление недоступно. Можно сменить дату на день из открытого периода, затем удалить.');
+            await showAlert({
+                message: 'Неделя по дате записи закрыта на сервере — удаление недоступно. Можно сменить дату на день из открытого периода, затем удалить.',
+            });
             return;
         }
         const prevT = timeEntrySaveTimers.current.get(rowKey);
@@ -675,25 +686,31 @@ export function ReportPreviewPage() {
         finally {
             setTimeEntryActionPendingRowKey(null);
         }
-    }, [canOverrideWeeklyLock]);
+    }, [canOverrideWeeklyLock, showAlert, showConfirm]);
     const handleMoveTimeEntryToProject = useCallback(async (rowKey: string, newProjectId: string) => {
         const row = timeExcelRowsRef.current.find((r) => r.rowKey === rowKey);
         if (!row || row.rowKind !== 'entry' || !row.timeEntryId?.trim())
             return;
         if (row.isVoided) {
-            window.alert('Запись снята с учёта — перенос на другой проект недоступен.');
+            await showAlert({
+                message: 'Запись снята с учёта — перенос на другой проект недоступен.',
+            });
             return;
         }
         if (String(newProjectId).trim() === String(row.projectId ?? '').trim())
             return;
         const wd = (row.workDate || '').trim().slice(0, 10);
         if (wd && isClosedReportingWeekEditingBlockedForSubject(row.authUserId, wd, canOverrideWeeklyLock)) {
-            window.alert('Неделя по дате записи закрыта — перенос на другой проект недоступен.');
+            await showAlert({
+                message: 'Неделя по дате записи закрыта — перенос на другой проект недоступен.',
+            });
             return;
         }
         const opt = projectItemsForSelect.find((p) => p.id === newProjectId);
         if (!opt) {
-            window.alert('Проект не найден в списке доступных. Обновите список проектов (шапка предпросмотра).');
+            await showAlert({
+                message: 'Проект не найден в списке доступных. Обновите список проектов (шапка предпросмотра).',
+            });
             return;
         }
         const prevT = timeEntrySaveTimers.current.get(rowKey);
@@ -761,13 +778,15 @@ export function ReportPreviewPage() {
         finally {
             setTimeEntryActionPendingRowKey(null);
         }
-    }, [canOverrideWeeklyLock, projectItemsForSelect]);
+    }, [canOverrideWeeklyLock, projectItemsForSelect, showAlert]);
     const handleAddTimeEntry = useCallback(async () => {
         if (!user)
             return;
         const opt = addEntryProjectOption;
         if (!opt?.id.trim()) {
-            window.alert('Чтобы добавить запись, выберите конкретный проект или клиента, по которому в отчёте уже есть строка с проектом.');
+            await showAlert({
+                message: 'Чтобы добавить запись, выберите конкретный проект или клиента, по которому в отчёте уже есть строка с проектом.',
+            });
             return;
         }
         const wd = pickDefaultWorkDateInRange(rangeFrom, rangeTo);
@@ -775,7 +794,9 @@ export function ReportPreviewPage() {
         const hm = `${pad2p(now.getHours())}:${pad2p(now.getMinutes())}`;
         const recordedAt = localYmdAndHmToIso(wd, hm);
         if (wd && isClosedReportingWeekEditingBlockedForSubject(user.id, wd, canOverrideWeeklyLock)) {
-            window.alert('Дата по умолчанию попадает в закрытый отчётный период. Смените период предпросмотра или обратитесь к администратору.');
+            await showAlert({
+                message: 'Дата по умолчанию попадает в закрытый отчётный период. Смените период предпросмотра или обратитесь к администратору.',
+            });
             return;
         }
         setTimeEntrySaveUI('saving');
@@ -815,24 +836,30 @@ export function ReportPreviewPage() {
             setTimeEntrySaveUI('err');
             setTimeEntrySaveMessage(msg);
         }
-    }, [user, addEntryProjectOption, rangeFrom, rangeTo, canOverrideWeeklyLock]);
+    }, [user, addEntryProjectOption, rangeFrom, rangeTo, canOverrideWeeklyLock, showAlert]);
     const handleDuplicateTimeEntry = useCallback(async (rowKey: string, workDateYmd: string, recordedAtIso: string) => {
         const row = timeExcelRowsRef.current.find((r) => r.rowKey === rowKey);
         if (!row || row.rowKind !== 'entry' || !row.timeEntryId?.trim())
             return;
         if (row.isVoided) {
-            window.alert('Нельзя дублировать запись, снятую с учёта.');
+            await showAlert({
+                message: 'Нельзя дублировать запись, снятую с учёта.',
+            });
             return;
         }
         const wd = workDateYmd.slice(0, 10);
         const min = rangeFrom.slice(0, 10);
         const max = rangeTo.slice(0, 10);
         if (wd < min || wd > max) {
-            window.alert(`Дата работы должна быть в пределах периода предпросмотра (${min} — ${max}).`);
+            await showAlert({
+                message: `Дата работы должна быть в пределах периода предпросмотра (${min} — ${max}).`,
+            });
             return;
         }
         if (wd && isClosedReportingWeekEditingBlockedForSubject(row.authUserId, wd, canOverrideWeeklyLock)) {
-            window.alert('Неделя по выбранной дате закрыта — выберите дату в открытом периоде.');
+            await showAlert({
+                message: 'Неделя по выбранной дате закрыта — выберите дату в открытом периоде.',
+            });
             return;
         }
         setTimeEntryActionPendingRowKey(rowKey);
@@ -866,7 +893,7 @@ export function ReportPreviewPage() {
         finally {
             setTimeEntryActionPendingRowKey(null);
         }
-    }, [canOverrideWeeklyLock, rangeFrom, rangeTo]);
+    }, [canOverrideWeeklyLock, rangeFrom, rangeTo, showAlert]);
     const handleGrantEditUnlock = useCallback(async (authUserId: number, workDateYmd: string) => {
         const wd = workDateYmd.trim().slice(0, 10);
         const compound = `${authUserId}:${wd}`;

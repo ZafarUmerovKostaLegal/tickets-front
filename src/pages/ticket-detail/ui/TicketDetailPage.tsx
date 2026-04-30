@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { useParams } from 'react-router-dom';
-import { AppBackButton, AppPageSettings } from '@shared/ui';
+import { AppBackButton, AppPageSettings, useAppDialog } from '@shared/ui';
 import { useCurrentUser } from '@shared/hooks';
 import { apiFetch } from '@shared/api';
 import { getTicket, getComments, addComment, addCommentWs, subscribeTicketsWsPush, connectTicketsWsWhenReady, getStatuses, getPriorities, updateTicket, getAttachmentUrl, type Ticket, type Comment, type StatusItem, type PriorityItem, type UpdateTicketData, } from '@entities/ticket';
@@ -72,6 +72,7 @@ export function TicketDetailPage() {
         uuid: string;
     }>();
     const { user: currentUser } = useCurrentUser();
+    const { showAlert } = useAppDialog();
     const [ticket, setTicket] = useState<Ticket | null>(null);
     const [comments, setComments] = useState<Comment[]>([]);
     const [creator, setCreator] = useState<User | null>(null);
@@ -309,12 +310,12 @@ export function TicketDetailPage() {
             setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
         }
         catch (err) {
-            alert(err instanceof Error ? err.message : 'Не удалось открыть файл');
+            await showAlert({ message: err instanceof Error ? err.message : 'Не удалось открыть файл' });
         }
         finally {
             setAttachmentLoading(false);
         }
-    }, []);
+    }, [showAlert]);
     if (!uuid) {
         return (<div className="td">
         <p className="td__error-banner">Не указан идентификатор заявки.</p>

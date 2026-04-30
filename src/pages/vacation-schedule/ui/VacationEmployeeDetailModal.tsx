@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useAppDialog } from '@shared/ui';
 import { deleteVacationAbsenceDay, deleteVacationScheduleEmployee, getVacationScheduleEmployee, } from '@entities/vacation';
 import { apiAbsenceKindToUi, vacationKindHumanLabel, VACATION_MONTH_NAMES, } from '../lib/vacationScheduleModel';
 import './VacationEmployeeDetailModal.css';
@@ -22,6 +23,7 @@ type Props = {
     onScheduleMutated?: () => void;
 };
 export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit = false, onScheduleMutated, }: Props) {
+    const { showConfirm } = useAppDialog();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [fullName, setFullName] = useState('');
@@ -83,7 +85,13 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
         }
     };
     const handleDeleteEmployee = async () => {
-        if (!window.confirm('Удалить эту строку из графика? Все отмеченные дни отсутствий этого сотрудника за год будут удалены.')) {
+        const ok = await showConfirm({
+            title: 'Удалить строку из графика?',
+            message: 'Все отмеченные дни отсутствий этого сотрудника за год будут удалены.',
+            variant: 'danger',
+            confirmLabel: 'Удалить',
+        });
+        if (!ok) {
             return;
         }
         setDeletingEmployee(true);

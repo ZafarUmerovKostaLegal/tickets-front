@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
+import { useAppDialog } from '@shared/ui';
 import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
@@ -160,6 +161,7 @@ function notifyReportsInvalidated() {
     window.dispatchEvent(new Event('tt-reports-invalidate'));
 }
 export function InvoicesPanel() {
+    const { showAlert, showConfirm } = useAppDialog();
     const [clients, setClients] = useState<TimeManagerClientRow[]>([]);
     const [clientsErr, setClientsErr] = useState<string | null>(null);
     const [items, setItems] = useState<InvoiceDto[]>([]);
@@ -419,7 +421,7 @@ export function InvoicesPanel() {
     }, [loadList, loadAggStats]);
     const loadUnbilled = useCallback(async () => {
         if (!createProjectId) {
-            alert('Выберите проект — невыставленные строки запрашиваются по projectId.');
+            await showAlert({ message: 'Выберите проект — невыставленные строки запрашиваются по projectId.' });
             return;
         }
         setUnbilledLoading(true);
@@ -434,19 +436,19 @@ export function InvoicesPanel() {
             setSelExp(new Set());
         }
         catch (err) {
-            alert(err instanceof Error ? err.message : 'Не удалось загрузить невыставленное');
+            await showAlert({ message: err instanceof Error ? err.message : 'Не удалось загрузить невыставленное' });
         }
         finally {
             setUnbilledLoading(false);
         }
-    }, [createProjectId, unbilledFrom, unbilledTo]);
+    }, [createProjectId, unbilledFrom, unbilledTo, showAlert]);
     const handleCreate = useCallback(async () => {
         if (!createClientId) {
-            alert('Выберите клиента');
+            await showAlert({ message: 'Выберите клиента' });
             return;
         }
         if (selTime.size === 0 && selExp.size === 0) {
-            alert('Отметьте хотя бы одну запись времени или расход');
+            await showAlert({ message: 'Отметьте хотя бы одну запись времени или расход' });
             return;
         }
         setCreateBusy(true);
@@ -467,12 +469,12 @@ export function InvoicesPanel() {
             notifyReportsInvalidated();
         }
         catch (e) {
-            alert(e instanceof Error ? e.message : 'Ошибка создания счёта');
+            await showAlert({ message: e instanceof Error ? e.message : 'Ошибка создания счёта' });
         }
         finally {
             setCreateBusy(false);
         }
-    }, [createClientId, createProjectId, issueDate, dueDate, selTime, selExp, loadList, loadAggStats]);
+    }, [createClientId, createProjectId, issueDate, dueDate, selTime, selExp, loadList, loadAggStats, showAlert]);
     const handlePayment = useCallback(async () => {
         if (!detailId || !detail)
             return;
@@ -481,7 +483,7 @@ export function InvoicesPanel() {
         if (trimmedAmount !== '') {
             const n = parseMoneyRu(String(payAmount));
             if (!Number.isFinite(n) || n <= 0) {
-                alert('Некорректная сумма. Очистите поле, чтобы списать весь остаток, или введите число (например 216 или 216,50).');
+                await showAlert({ message: 'Некорректная сумма. Очистите поле, чтобы списать весь остаток, или введите число (например 216 или 216,50).' });
                 return;
             }
             amount = n;
@@ -491,7 +493,7 @@ export function InvoicesPanel() {
         if (trimmedAt !== '') {
             const d = new Date(trimmedAt);
             if (Number.isNaN(d.getTime())) {
-                alert('Некорректная дата оплаты. Очистите поле, чтобы использовать текущий момент на сервере.');
+                await showAlert({ message: 'Некорректная дата оплаты. Очистите поле, чтобы использовать текущий момент на сервере.' });
                 return;
             }
             paidAtIso = d.toISOString();
@@ -511,12 +513,12 @@ export function InvoicesPanel() {
             notifyReportsInvalidated();
         }
         catch (e) {
-            alert(e instanceof Error ? e.message : 'Ошибка');
+            await showAlert({ message: e instanceof Error ? e.message : 'Ошибка' });
         }
         finally {
             setActionBusy(false);
         }
-    }, [detailId, detail, payAmount, payAt, payMethod, payNote, loadList, loadAggStats]);
+    }, [detailId, detail, payAmount, payAt, payMethod, payNote, loadList, loadAggStats, showAlert]);
     const handleFullPaymentNow = useCallback(async () => {
         if (!detailId || !detail)
             return;
@@ -533,12 +535,12 @@ export function InvoicesPanel() {
             notifyReportsInvalidated();
         }
         catch (e) {
-            alert(e instanceof Error ? e.message : 'Ошибка');
+            await showAlert({ message: e instanceof Error ? e.message : 'Ошибка' });
         }
         finally {
             setActionBusy(false);
         }
-    }, [detailId, detail, loadList, loadAggStats]);
+    }, [detailId, detail, loadList, loadAggStats, showAlert]);
     const handleSaveDraft = useCallback(async () => {
         if (!detail || detail.status !== 'draft')
             return;
@@ -547,7 +549,7 @@ export function InvoicesPanel() {
         const issue = draftIssueDate.trim() || (detail.issueDate ?? '').slice(0, 10);
         const due = draftDueDate.trim() || (detail.dueDate ?? '').slice(0, 10);
         if (!issue || !due) {
-            alert('Укажите дату счёта и срок оплаты.');
+            await showAlert({ message: 'Укажите дату счёта и срок оплаты.' });
             return;
         }
         const body: InvoicePatchInput = {
@@ -571,12 +573,12 @@ export function InvoicesPanel() {
             await refreshDetail(detail.id);
         }
         catch (e) {
-            alert(e instanceof Error ? e.message : 'Ошибка');
+            await showAlert({ message: e instanceof Error ? e.message : 'Ошибка' });
         }
         finally {
             setActionBusy(false);
         }
-    }, [detail, draftIssueDate, draftDueDate, draftTaxPct, draftTax2Pct, draftDiscPct, refreshDetail]);
+    }, [detail, draftIssueDate, draftDueDate, draftTaxPct, draftTax2Pct, draftDiscPct, refreshDetail, showAlert]);
     function openCreateModal() {
         setCreateOpen(true);
         setCreateClientId('');
@@ -1010,7 +1012,7 @@ export function InvoicesPanel() {
                             await refreshDetail(detail.id);
                         }
                         catch (e) {
-                            alert(e instanceof Error ? e.message : 'Ошибка');
+                            await showAlert({ message: e instanceof Error ? e.message : 'Ошибка' });
                         }
                         finally {
                             setActionBusy(false);
@@ -1025,7 +1027,7 @@ export function InvoicesPanel() {
                             await refreshDetail(detail.id);
                         }
                         catch (e) {
-                            alert(e instanceof Error ? e.message : 'Ошибка');
+                            await showAlert({ message: e instanceof Error ? e.message : 'Ошибка' });
                         }
                         finally {
                             setActionBusy(false);
@@ -1046,7 +1048,12 @@ export function InvoicesPanel() {
                         </button>
                       </>)}
                     {invoiceCanCancel(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {
-                        if (!window.confirm('Отменить счёт?'))
+                        if (!await showConfirm({
+                            title: 'Отменить счёт?',
+                            message: 'Счёт будет отменён. Продолжить?',
+                            variant: 'danger',
+                            confirmLabel: 'Отменить счёт',
+                        }))
                             return;
                         setActionBusy(true);
                         try {
@@ -1054,7 +1061,7 @@ export function InvoicesPanel() {
                             await refreshDetail(detail.id);
                         }
                         catch (e) {
-                            alert(e instanceof Error ? e.message : 'Ошибка');
+                            await showAlert({ message: e instanceof Error ? e.message : 'Ошибка' });
                         }
                         finally {
                             setActionBusy(false);
@@ -1063,7 +1070,12 @@ export function InvoicesPanel() {
                         Отменить счёт
                       </button>)}
                     {invoiceCanDeleteDraft(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {
-                        if (!window.confirm('Удалить черновик?'))
+                        if (!await showConfirm({
+                            title: 'Удалить черновик?',
+                            message: 'Черновик будет удалён без возможности восстановления.',
+                            variant: 'danger',
+                            confirmLabel: 'Удалить',
+                        }))
                             return;
                         setActionBusy(true);
                         try {
@@ -1074,7 +1086,7 @@ export function InvoicesPanel() {
                             notifyReportsInvalidated();
                         }
                         catch (e) {
-                            alert(e instanceof Error ? e.message : 'Ошибка');
+                            await showAlert({ message: e instanceof Error ? e.message : 'Ошибка' });
                         }
                         finally {
                             setActionBusy(false);

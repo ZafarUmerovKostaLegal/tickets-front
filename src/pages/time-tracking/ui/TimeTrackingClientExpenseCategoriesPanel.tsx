@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useId } from 'react';
-import { SearchableSelect } from '@shared/ui';
+import { SearchableSelect, useAppDialog } from '@shared/ui';
 import { clientRowSearchText } from '@pages/time-tracking/lib/clientRowSearchText';
 import { listAllTimeManagerClientsMerged, listClientExpenseCategories, createClientExpenseCategory, patchClientExpenseCategory, deleteClientExpenseCategory, isForbiddenError, type TimeManagerClientRow, type TimeManagerClientExpenseCategoryRow, } from '@entities/time-tracking';
 import { useCurrentUser } from '@shared/hooks';
@@ -152,6 +152,7 @@ function ExpenseCategoryModal({ mode, clientId, initial, onClose, onSaved }: Exp
     </div>);
 }
 export function TimeTrackingClientExpenseCategoriesPanel() {
+    const { showAlert, showConfirm } = useAppDialog();
     const { user } = useCurrentUser();
     const canManage = canManageTimeManagerClients(user?.role);
     const [clients, setClients] = useState<TimeManagerClientRow[]>([]);
@@ -235,14 +236,20 @@ export function TimeTrackingClientExpenseCategoriesPanel() {
     const handleDelete = async (cat: TimeManagerClientExpenseCategoryRow) => {
         if (!cat.deletable)
             return;
-        if (!window.confirm(`Удалить категорию «${cat.name}»?`))
+        const ok = await showConfirm({
+            title: 'Удалить категорию?',
+            message: `Удалить категорию «${cat.name}»?`,
+            variant: 'danger',
+            confirmLabel: 'Удалить',
+        });
+        if (!ok)
             return;
         try {
             await deleteClientExpenseCategory(clientId, cat.id);
             setCategories((prev) => prev.filter((c) => c.id !== cat.id));
         }
         catch (e) {
-            window.alert(e instanceof Error ? e.message : 'Не удалось удалить');
+            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось удалить' });
         }
     };
     const selectedClient = clients.find((c) => c.id === clientId);

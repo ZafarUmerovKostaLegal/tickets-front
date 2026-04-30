@@ -6,6 +6,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, type ReportsFilterUser, type ReportPagination, type TimeRowClients, type TimeRowProjects, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, } from '@entities/time-tracking';
 import { ReportsSkeleton } from './ReportsSkeleton';
 import { DatePicker } from '@shared/ui/DatePicker';
+import { useAppDialog } from '@shared/ui';
 import { writeReportPreviewTransfer, type ReportPreviewTransferV2, type ReportPreviewTimeGroup, } from '@entities/time-tracking/model/reportPreviewTransfer';
 import {
   type ReportTypeV2,
@@ -715,6 +716,7 @@ export function ReportsPanel() {
   const navigate = useNavigate();
   const reportsDateRangeId = useId();
   const { user } = useCurrentUser();
+  const { showAlert } = useAppDialog();
   void user;
   const savedPrefs = useMemo(() => readReportsPrefsFromStorage(), []);
   const initRange = useMemo(() => readInitialReportsRangeState(), []);
@@ -1216,7 +1218,7 @@ export function ReportsPanel() {
         await exportReportV2(reportType, gb, baseFilters, format);
     }
     catch (e) {
-      alert(e instanceof Error ? e.message : 'Ошибка экспорта');
+      await showAlert({ message: e instanceof Error ? e.message : 'Ошибка экспорта' });
     }
     finally {
       setExportBusy(false);

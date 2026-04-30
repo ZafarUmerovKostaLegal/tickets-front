@@ -1,5 +1,5 @@
 import { useState, useEffect, useId, useMemo, useRef, useCallback } from 'react';
-import { DatePicker, SearchableSelect } from '@shared/ui';
+import { DatePicker, SearchableSelect, useAppDialog } from '@shared/ui';
 import { getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, patchHourlyRate, listUsersWithProjectAccessToProject, readTimeManagerProjectBillableRateAmount, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerProjectCurrency, type HourlyRateRow, } from '@entities/time-tracking';
 import { suggestedNextKlProjectCode } from '@entities/time-tracking/lib/klProjectCode';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
@@ -260,6 +260,7 @@ export type ClientProjectModalProps = {
 };
 export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, initial, onClose, onSaved, onClientCreated, canManage = true, presentation = 'modal', }: ClientProjectModalProps) {
   const uid = useId();
+  const { showAlert } = useAppDialog();
   const [form, setForm] = useState<ProjectFormState>(() => initial ? rowToForm(initial) : emptyProjectForm());
   const [pickedClientId, setPickedClientId] = useState(() => {
     if (fixedClientId)
@@ -477,7 +478,10 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         }
       });
       if (failed.length > 0) {
-        window.alert(`Сохранён проект, но доступ сотрудникам выдан не полностью (проверьте ставки в валюте проекта и правило «минимум один партнёр» по должности в справочнике TT):\n\n${failed.join('\n')}`);
+        await showAlert({
+          title: 'Проект сохранён частично',
+          message: `Доступ сотрудникам выдан не полностью (проверьте ставки в валюте проекта и правило «минимум один партнёр» по должности в справочнике TT):\n\n${failed.join('\n')}`,
+        });
       }
     }
     if (useRates && assignedUserIds.length > 0) {
@@ -508,7 +512,10 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         }
       }
       if (rateFailed.length > 0) {
-        window.alert(`Сохранён проект, но не все ставки записаны:\n\n${rateFailed.join('\n')}`);
+        await showAlert({
+          title: 'Проект сохранён частично',
+          message: `Не все ставки записаны:\n\n${rateFailed.join('\n')}`,
+        });
       }
     }
     setEditMembersBaseline([...assignedUserIds]);

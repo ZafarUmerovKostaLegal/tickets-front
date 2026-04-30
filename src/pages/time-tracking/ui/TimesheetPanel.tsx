@@ -13,6 +13,7 @@ import { DatePicker } from '@shared/ui/DatePicker';
 import { formatHoursClockFromDecimalHours, parseDurationToSeconds, isValidDurationSeconds, MIN_ENTRY_SECONDS, MAX_ENTRY_SECONDS, } from '@shared/lib/formatTrackingHours';
 import { TT_TIMESHEET_TIMER_LS_PREFIX } from '@shared/lib/ttTimerLocalStorage';
 import { formatBillableMoney, isCbuFxUnavailable } from '@shared/lib/formatBillableMoney';
+import { showAlert } from '@shared/ui/app-dialog';
 function startOfWeek(d: Date): Date {
     const day = new Date(d);
     const dow = day.getDay();
@@ -113,11 +114,11 @@ function scheduleTimeEntryNoteMissedReminder(contextLabel: string): void {
                 new Notification(title, { body });
             }
             catch {
-                window.alert(`${title}\n\n${body}`);
+                void showAlert({ title, message: body });
             }
         }
         else {
-            window.alert(`${title}\n\n${body}`);
+            void showAlert({ title, message: body });
         }
     }, TIME_ENTRY_NOTE_REMINDER_MS);
 }

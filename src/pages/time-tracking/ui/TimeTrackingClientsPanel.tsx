@@ -1,10 +1,9 @@
 import { useState, useMemo, useEffect, useRef, useCallback, useId, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AnimatedLink } from '@shared/ui';
+import { AnimatedLink, SearchableSelect, useAppDialog } from '@shared/ui';
 import { listTimeManagerClients, listClientProjects, getTimeManagerClient, createTimeManagerClient, patchTimeManagerClient, deleteTimeManagerClient, createClientContact, patchClientContact, deleteClientContact, isForbiddenError, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientContactRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { Pagination } from '@shared/ui/Pagination';
-import { SearchableSelect } from '@shared/ui';
 import { clientRowSearchText } from '@pages/time-tracking/lib/clientRowSearchText';
 import { useCurrentUser } from '@shared/hooks';
 import { getProjectDetailUrl } from '@shared/config';
@@ -388,6 +387,7 @@ type ClientModalProps = {
 };
 function TimeManagerClientModal({ mode, initial, canManage, onClose, onSaved }: ClientModalProps) {
     const uid = useId();
+    const { showConfirm } = useAppDialog();
     const [form, setForm] = useState<FormState>(() => (initial ? rowToForm(initial) : emptyForm()));
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
@@ -585,7 +585,13 @@ function TimeManagerClientModal({ mode, initial, canManage, onClose, onSaved }: 
     const handleDeleteContact = async (contactId: string, contactName: string) => {
         if (!clientId || !canManage || archivedLocked)
             return;
-        if (!window.confirm(`Удалить контакт «${contactName}»?`))
+        const ok = await showConfirm({
+            title: 'Удалить контакт?',
+            message: `Удалить контакт «${contactName}»?`,
+            variant: 'danger',
+            confirmLabel: 'Удалить',
+        });
+        if (!ok)
             return;
         setContactsError(null);
         setContactBusy(true);
@@ -944,6 +950,7 @@ function AddClientContactModal({ includeArchived, canManage, onClose }: AddClien
 }
 export function TimeTrackingClientsPanel() {
     const { user } = useCurrentUser();
+    const { showAlert, showConfirm } = useAppDialog();
     const canManage = canManageTimeManagerClients(user?.role);
     const navigate = useNavigate();
     const PAGE = TIME_TRACKING_LIST_PAGE_SIZE;
@@ -1133,7 +1140,13 @@ export function TimeTrackingClientsPanel() {
         void loadClients();
     };
     const handleDelete = async (id: string, name: string) => {
-        if (!window.confirm(`Удалить клиента «${name}»?`))
+        const ok = await showConfirm({
+            title: 'Удалить клиента?',
+            message: `Удалить клиента «${name}»?`,
+            variant: 'danger',
+            confirmLabel: 'Удалить',
+        });
+        if (!ok)
             return;
         try {
             await deleteTimeManagerClient(id);
@@ -1150,7 +1163,7 @@ export function TimeTrackingClientsPanel() {
             void loadClients();
         }
         catch (e) {
-            window.alert(e instanceof Error ? e.message : 'Не удалось удалить');
+            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось удалить' });
         }
     };
     const toggleClientProjectsCollapse = (clientId: string) => {

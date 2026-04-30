@@ -7,3 +7,4 @@ export { AppBackButton, type AppBackButtonProps } from './AppBackButton';
 export { AppPageSettings, type AppPageSettingsProps } from './AppPageSettings';
 export { HeaderUserMenu, type HeaderUserMenuProps } from './HeaderUserMenu';
 export { LogoutConfirmDialog } from './LogoutConfirmDialog';
+export { AppDialogProvider, useAppDialog, showAlert, showConfirm, type ShowAlertOptions, type ShowConfirmOptions } from './app-dialog';

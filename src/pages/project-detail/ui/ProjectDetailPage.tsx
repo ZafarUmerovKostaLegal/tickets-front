@@ -4,7 +4,7 @@ import { getUsers } from '@entities/user';
 import { routes, getProjectDetailUrl } from '@shared/config';
 import { formatDecimalHoursRu } from '@shared/lib/formatTrackingHours';
 import { useCurrentUser } from '@shared/hooks';
-import { AppPageSettings } from '@shared/ui';
+import { AppPageSettings, useAppDialog } from '@shared/ui';
 import { canAccessTimeTracking, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
 import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, isForbiddenError, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, canManageTimeManagerClients, readTimeManagerProjectBillableRateAmount, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, } from '@entities/time-tracking';
 import { ClientProjectModal } from '@pages/time-tracking/ui/TimeTrackingClientProjectModal';
@@ -801,6 +801,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
     onProjectRefresh: () => void;
 }) {
     const navigate = useNavigate();
+    const { showAlert, showConfirm } = useAppDialog();
     const onBackToTimeTracking = useCallback(() => navigateBackToTimeTracking(navigate), [navigate]);
     const [chartTab, setChartTab] = useState<'progress' | 'hours'>('progress');
     const [actionsOpen, setActionsOpen] = useState(false);
@@ -833,16 +834,21 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
             setEditProjectRow(p);
         }
         catch (e) {
-            window.alert(e instanceof Error ? e.message : 'Не удалось загрузить проект для редактирования');
+            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось загрузить проект для редактирования' });
         }
         finally {
             setActionBusy(false);
         }
-    }, [canManageProjects, actionBusy, project.clientId, project.id]);
+    }, [canManageProjects, actionBusy, project.clientId, project.id, showAlert]);
     const handleArchiveProject = useCallback(async () => {
         if (!canManageProjects || actionBusy)
             return;
-        if (!window.confirm('Архивировать проект? Будет установлена дата окончания — сегодня. Продолжить?')) {
+        const confirmArchive = await showConfirm({
+            title: 'Архивировать проект?',
+            message: 'Будет установлена дата окончания — сегодня. Продолжить?',
+            confirmLabel: 'Архивировать',
+        });
+        if (!confirmArchive) {
             setActionsOpen(false);
             return;
         }
@@ -854,12 +860,12 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
             onProjectRefresh();
         }
         catch (e) {
-            window.alert(e instanceof Error ? e.message : 'Не удалось архивировать проект');
+            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось архивировать проект' });
         }
         finally {
             setActionBusy(false);
         }
-    }, [canManageProjects, actionBusy, project.clientId, project.id, onProjectRefresh]);
+    }, [canManageProjects, actionBusy, project.clientId, project.id, onProjectRefresh, showAlert, showConfirm]);
     const handleDuplicateProject = useCallback(async () => {
         if (!canManageProjects || actionBusy)
             return;
@@ -871,12 +877,12 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
             navigate(getProjectDetailUrl(created.id, project.clientId));
         }
         catch (e) {
-            window.alert(e instanceof Error ? e.message : 'Не удалось создать копию проекта');
+            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось создать копию проекта' });
         }
         finally {
             setActionBusy(false);
         }
-    }, [canManageProjects, actionBusy, project.clientId, project.id, navigate]);
+    }, [canManageProjects, actionBusy, project.clientId, project.id, navigate, showAlert]);
     const handleExportProject = useCallback(() => {
         setActionsOpen(false);
         navigate(`${routes.timeTracking}?tab=reports`);
@@ -885,11 +891,19 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
         if (!canManageProjects || actionBusy)
             return;
         if (project.deletable === false) {
-            window.alert('Проект нельзя удалить: к нему привязаны данные. Сначала архивируйте проект при необходимости.');
+            await showAlert({
+                message: 'Проект нельзя удалить: к нему привязаны данные. Сначала архивируйте проект при необходимости.',
+            });
             setActionsOpen(false);
             return;
         }
-        if (!window.confirm('Удалить проект? Это действие необратимо.')) {
+        const confirmDelete = await showConfirm({
+            title: 'Удалить проект?',
+            message: 'Это действие необратимо.',
+            variant: 'danger',
+            confirmLabel: 'Удалить',
+        });
+        if (!confirmDelete) {
             setActionsOpen(false);
             return;
         }
@@ -900,12 +914,12 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
             navigate(routes.timeTracking);
         }
         catch (e) {
-            window.alert(e instanceof Error ? e.message : 'Не удалось удалить проект');
+            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось удалить проект' });
         }
         finally {
             setActionBusy(false);
         }
-    }, [canManageProjects, actionBusy, project.clientId, project.id, project.deletable, navigate]);
+    }, [canManageProjects, actionBusy, project.clientId, project.id, project.deletable, navigate, showAlert, showConfirm]);
     const [hoverIdx, setHoverIdx] = useState<number | null>(null);
     const [detailTab, setDetailTab] = useState<DetailTabId>('tasks');
     const detailTabDefs = useMemo((): [

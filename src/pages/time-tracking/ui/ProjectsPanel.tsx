@@ -4,7 +4,7 @@ import { AnimatedLink } from '@shared/ui';
 import { useNavigate } from 'react-router-dom';
 import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, patchClientProject, deleteClientProject, isForbiddenError, type TimeManagerClientRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
-import { Pagination, SearchableSelect } from '@shared/ui';
+import { Pagination, SearchableSelect, useAppDialog } from '@shared/ui';
 import { useCurrentUser } from '@shared/hooks';
 import { canManageTimeManagerClients } from '@entities/time-tracking/model/timeManagerClientsAccess';
 import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
@@ -143,6 +143,7 @@ function BudgetBar({ budget, spent }: {
 export function ProjectsPanel() {
     const navigate = useNavigate();
     const { user } = useCurrentUser();
+    const { showAlert, showConfirm } = useAppDialog();
     const canManage = canManageTimeManagerClients(user?.role);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
@@ -525,7 +526,7 @@ export function ProjectsPanel() {
                             setActionOpen(null);
                         }
                         catch (e) {
-                            alert(e instanceof Error ? e.message : 'Не удалось загрузить проект');
+                            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось загрузить проект' });
                         }
                         finally {
                             setActionBusy(false);
@@ -558,7 +559,7 @@ export function ProjectsPanel() {
                             await reloadProjects();
                         }
                         catch (e) {
-                            alert(e instanceof Error ? e.message : 'Не удалось обновить проект');
+                            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось обновить проект' });
                         }
                         finally {
                             setActionBusy(false);
@@ -577,10 +578,16 @@ export function ProjectsPanel() {
                         if (!canManage)
                             return;
                         if (openActionProject.deletable === false) {
-                            alert('Удаление недоступно: у проекта есть связанные данные.');
+                            await showAlert({ message: 'Удаление недоступно: у проекта есть связанные данные.' });
                             return;
                         }
-                        if (!window.confirm(`Удалить проект «${openActionProject.name}»? Это действие необратимо.`))
+                        const okDelete = await showConfirm({
+                            title: 'Удалить проект?',
+                            message: `Удалить проект «${openActionProject.name}»? Это действие необратимо.`,
+                            variant: 'danger',
+                            confirmLabel: 'Удалить',
+                        });
+                        if (!okDelete)
                             return;
                         setActionBusy(true);
                         try {
@@ -589,7 +596,7 @@ export function ProjectsPanel() {
                             await reloadProjects();
                         }
                         catch (e) {
-                            alert(e instanceof Error ? e.message : 'Не удалось удалить проект');
+                            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось удалить проект' });
                         }
                         finally {
                             setActionBusy(false);
