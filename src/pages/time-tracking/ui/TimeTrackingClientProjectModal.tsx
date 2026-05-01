@@ -890,7 +890,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
             <span className="tt-ios-toggle__slider" aria-hidden />
           </span>
         </label>
-        <label className="tt-ios-toggle-row tt-tm-fieldset--budget__check-wide">
+        <label className="tt-ios-toggle-row">
           <span className="tt-ios-toggle-row__text">Уведомления о превышении бюджета</span>
           <span className="tt-ios-toggle">
             <input type="checkbox" className="tt-ios-toggle__input" checked={form.sendBudgetAlerts} onChange={(e) => setForm((f) => ({ ...f, sendBudgetAlerts: e.target.checked }))} />

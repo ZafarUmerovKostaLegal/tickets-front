@@ -6790,9 +6790,9 @@ a.pp__proj-name--link:hover {
 }
 
 .tt-tm-fieldset--budget__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
   clear: both;
   width: 100%;
 }
@@ -6803,18 +6803,8 @@ a.pp__proj-name--link:hover {
   margin-bottom: 0;
 }
 
-.tt-tm-fieldset--budget__check-wide {
-  grid-column: 1 / -1;
-}
-
-@media (max-width: 480px) {
-  .tt-tm-fieldset--budget__grid {
-    grid-template-columns: 1fr;
-  }
-
-  .tt-tm-fieldset--budget__check-wide {
-    grid-column: auto;
-  }
+.tt-tm-fieldset--budget__grid .tt-ios-toggle-row {
+  padding: 0.2rem 0;
 }
 
 .tt-tm-fieldset--budget__extra {

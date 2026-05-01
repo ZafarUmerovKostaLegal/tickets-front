@@ -61,7 +61,7 @@ export function TimeTrackingNewProjectFormSkeleton() {
               <span className="npf-skel__check"/>
               <span className="npf-skel__check-line npf-skel__check-line--short"/>
             </div>
-            <div className="npf-skel__check-row tt-tm-fieldset--budget__check-wide">
+            <div className="npf-skel__check-row">
               <span className="npf-skel__check"/>
               <span className="npf-skel__check-line npf-skel__check-line--med"/>
             </div>
