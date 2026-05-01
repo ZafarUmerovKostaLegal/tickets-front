@@ -6478,6 +6478,46 @@ a.pp__proj-name--link:hover {
   cursor: not-allowed;
 }
 
+.tt-proj-task-pick__chips {
+  gap: 0.35rem;
+  margin-top: 0.45rem;
+}
+
+.tt-proj-task-pick__chip {
+  padding: 0.3rem 0.45rem 0.3rem 0.6rem;
+  border-radius: 8px;
+  gap: 0.35rem 0.55rem;
+}
+
+.tt-proj-task-pick__chip-text {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.45rem;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.tt-proj-task-pick__chip .tt-task-pill {
+  font-size: 0.67rem;
+  padding: 0.12rem 0.42rem;
+}
+
+.tt-proj-task-pick__chip .tt-tm-members__chip-remove {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 5px;
+}
+
+.tt-proj-task-pick__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: min(52vh, 22rem);
+  overflow: auto;
+  padding-right: 0.2rem;
+}
+
 .tt-tm-members__rate {
   display: flex;
   flex-direction: row;

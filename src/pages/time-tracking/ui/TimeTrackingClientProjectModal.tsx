@@ -87,12 +87,8 @@ const DEFAULT_PROJECT_TASK_SEED: Array<{ name: string; billableByDefault: boolea
   { name: 'Publications', billableByDefault: false },
   { name: 'Review new legislation', billableByDefault: false },
 ];
-const DEFAULT_PROJECT_TASK_OPTIONS: TmOpt[] = DEFAULT_PROJECT_TASK_SEED.map((task) => ({
-  id: task.name,
-  label: task.name,
-  search: `${task.name} ${task.billableByDefault ? 'billable оплачиваемая' : 'non billable неоплачиваемая'}`,
-}));
 const DEFAULT_PROJECT_TASK_BILLABLE_MAP = new Map<string, boolean>(DEFAULT_PROJECT_TASK_SEED.map((task) => [task.name, task.billableByDefault]));
+const DEFAULT_PROJECT_TASK_NAMES = DEFAULT_PROJECT_TASK_SEED.map((task) => task.name);
 
 function getTmOptSearch(o: TmOpt): string {
   return o.search ?? o.label;
@@ -341,8 +337,9 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
   const [codeHint, setCodeHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [initialTaskOptionId, setInitialTaskOptionId] = useState(DEFAULT_PROJECT_TASK_OPTIONS[0]?.id ?? '');
-  const [initialTaskNames, setInitialTaskNames] = useState<string[]>([]);
+  const [initialTaskNames, setInitialTaskNames] = useState<string[]>(() => [...DEFAULT_PROJECT_TASK_NAMES]);
+  const [taskPickerOpen, setTaskPickerOpen] = useState(false);
+  const [taskPickerDraft, setTaskPickerDraft] = useState<string[]>(() => [...DEFAULT_PROJECT_TASK_NAMES]);
   const [quickClientOpen, setQuickClientOpen] = useState(false);
   const [assignedUserIds, setAssignedUserIds] = useState<number[]>([]);
   const [memberRates, setMemberRates] = useState<Record<number, ProjectMemberRateDraft>>({});
@@ -593,16 +590,21 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     }
     setEditMembersBaseline([...assignedUserIds]);
   }
-  const addSelectedInitialTask = () => {
-    const selected = (initialTaskOptionId || '').trim();
-    if (!selected)
-      return;
-    const list = normalizeInitialTaskNames([...initialTaskNames, selected]);
-    setInitialTaskNames(list);
+  const openTaskPicker = () => {
+    setTaskPickerDraft([...initialTaskNames]);
+    setTaskPickerOpen(true);
   };
-  const removeInitialTask = (name: string) => {
-    const key = name.trim().toLocaleLowerCase('ru');
-    setInitialTaskNames((prev) => prev.filter((x) => x.trim().toLocaleLowerCase('ru') !== key));
+  const toggleTaskInDraft = (name: string, checked: boolean) => {
+    setTaskPickerDraft((prev) => {
+      if (checked)
+        return normalizeInitialTaskNames([...prev, name]);
+      const key = name.trim().toLocaleLowerCase('ru');
+      return prev.filter((x) => x.trim().toLocaleLowerCase('ru') !== key);
+    });
+  };
+  const applyTaskPicker = () => {
+    setInitialTaskNames(normalizeInitialTaskNames(taskPickerDraft));
+    setTaskPickerOpen(false);
   };
   const handleSubmit = async () => {
     if (mode === 'create' && !effectiveClientId) {
@@ -895,29 +897,23 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     </fieldset>
     {mode === 'create' && (<fieldset className="tt-tm-fieldset tt-tm-fieldset--budget">
       <legend className="tt-tm-fieldset-legend tt-tm-fieldset-legend--budget">Задачи проекта</legend>
-      <p className="tt-tm-hint">Выберите задачу из серверного набора по умолчанию и добавьте в проект.</p>
+      <p className="tt-tm-hint">Откройте список задач и снимите галочки с тех, которые не нужны в проекте.</p>
       <div className="tt-tm-members__add-row">
-        <button type="button" className="tt-tm-members__add-plus" onClick={addSelectedInitialTask} disabled={!initialTaskOptionId || saving} title="Добавить выбранную задачу">
-          +
+        <button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={openTaskPicker} disabled={saving}>
+          Задачи
         </button>
-        <SearchableSelect<TmOpt> className="tt-tm-dd tt-tm-members__add-select" buttonClassName="tt-tm-dd__btn" buttonId={`${uid}-task-default`} value={initialTaskOptionId} items={DEFAULT_PROJECT_TASK_OPTIONS} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={getTmOptSearch} onSelect={(o) => setInitialTaskOptionId(o.id)} placeholder="Выбрать задачу…" emptyListText="Нет задач" noMatchText="Задача не найдена" disabled={saving || DEFAULT_PROJECT_TASK_OPTIONS.length === 0} portalDropdown portalZIndex={TM_DD_PORTAL_Z} portalMinWidth={340} aria-label="Выбор задачи из серверного набора" />
       </div>
-      <p className="tt-tm-members__add-hint">Добавляются только выбранные задачи. Дубли по названию игнорируются.</p>
-      {initialTaskNames.length > 0 && (<div className="tt-tm-members__chips">
-        {initialTaskNames.map((taskName) => (<div key={taskName} className="tt-tm-members__chip">
+      <p className="tt-tm-members__add-hint">Выбрано задач: {initialTaskNames.length}</p>
+      {initialTaskNames.length > 0 && (<div className="tt-tm-members__chips tt-proj-task-pick__chips">
+        {initialTaskNames.map((taskName) => (<div key={taskName} className="tt-tm-members__chip tt-proj-task-pick__chip">
           <div className="tt-tm-members__chip-identity">
-            <div className="tt-tm-members__chip-text">
+            <div className="tt-tm-members__chip-text tt-proj-task-pick__chip-text">
               <span className="tt-tm-members__opt-name">{taskName}</span>
               <span className={`tt-task-pill${DEFAULT_PROJECT_TASK_BILLABLE_MAP.get(taskName) ? ' tt-task-pill--billable' : ' tt-task-pill--muted'}`}>
                 {DEFAULT_PROJECT_TASK_BILLABLE_MAP.get(taskName) ? 'Оплачиваемая' : 'Неоплачиваемая'}
               </span>
             </div>
           </div>
-          <button type="button" className="tt-tm-members__chip-remove" onClick={() => removeInitialTask(taskName)} disabled={saving} aria-label={`Удалить задачу ${taskName}`}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
         </div>))}
       </div>)}
     </fieldset>)}
@@ -970,28 +966,58 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
       {saving ? 'Сохранение…' : mode === 'create' ? 'Создать' : 'Сохранить'}
     </button>
   </div>);
+  const taskPickerModal = mode === 'create' && taskPickerOpen
+    ? portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
+      <div className="tt-tm-modal tt-tm-modal--task" role="dialog" aria-modal="true" aria-labelledby={`${uid}-task-pick-title`} onClick={(ev) => ev.stopPropagation()}>
+        <div className="tt-tm-modal__head">
+          <h2 id={`${uid}-task-pick-title`} className="tt-tm-modal__title">Задачи проекта</h2>
+          <button type="button" className="tt-tm-modal__close" onClick={() => setTaskPickerOpen(false)} aria-label="Закрыть">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <div className="tt-tm-modal__body">
+          <div className="tt-proj-task-pick__list">
+            {DEFAULT_PROJECT_TASK_SEED.map((task) => (<label key={task.name} className="tt-tm-check-row">
+              <input type="checkbox" checked={taskPickerDraft.includes(task.name)} onChange={(e) => toggleTaskInDraft(task.name, e.target.checked)} />
+              <span>{task.name} <span className={`tt-task-pill${task.billableByDefault ? ' tt-task-pill--billable' : ' tt-task-pill--muted'}`}>{task.billableByDefault ? 'Оплачиваемая' : 'Неоплачиваемая'}</span></span>
+            </label>))}
+          </div>
+        </div>
+        <div className="tt-tm-modal__foot">
+          <button type="button" className="tt-settings__btn tt-settings__btn--ghost" onClick={() => setTaskPickerOpen(false)}>Отмена</button>
+          <button type="button" className="tt-settings__btn tt-settings__btn--primary" onClick={applyTaskPicker}>Сохранить</button>
+        </div>
+      </div>
+    </div>)
+    : null;
   if (isPage) {
     return (<div className="tt-tm-proj-page">
       <div className="tt-tm-proj-page__card tt-tm-modal tt-tm-modal--project">
         <div className="tt-tm-modal__body">{formBody}</div>
         {formFooter}
       </div>
+      {taskPickerModal}
     </div>);
   }
-  return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
-    <div className="tt-tm-modal tt-tm-modal--project" role="dialog" aria-modal="true" aria-labelledby={`${uid}-proj-title`} onClick={(ev) => ev.stopPropagation()}>
-      <div className="tt-tm-modal__head">
-        <h2 id={`${uid}-proj-title`} className="tt-tm-modal__title">
-          {mode === 'create' ? 'Новый проект' : 'Изменить проект'}
-        </h2>
-        <button type="button" className="tt-tm-modal__close" onClick={onClose} aria-label="Закрыть">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
+  return (<>
+    {portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
+      <div className="tt-tm-modal tt-tm-modal--project" role="dialog" aria-modal="true" aria-labelledby={`${uid}-proj-title`} onClick={(ev) => ev.stopPropagation()}>
+        <div className="tt-tm-modal__head">
+          <h2 id={`${uid}-proj-title`} className="tt-tm-modal__title">
+            {mode === 'create' ? 'Новый проект' : 'Изменить проект'}
+          </h2>
+          <button type="button" className="tt-tm-modal__close" onClick={onClose} aria-label="Закрыть">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="tt-tm-modal__body">{formBody}</div>
+        {formFooter}
       </div>
-      <div className="tt-tm-modal__body">{formBody}</div>
-      {formFooter}
-    </div>
-  </div>);
+    </div>)}
+    {taskPickerModal}
+  </>);
 }
