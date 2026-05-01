@@ -1669,6 +1669,11 @@ export type TimeManagerClientProjectCreatePayload = {
     /** `auth_user_id` — сразу выдать доступ к проекту при создании (gateway → TT). */
     initialTimeTrackingUserAuthIds?: number[];
     /**
+     * Billable за час по проекту в том же порядке, что и `initialTimeTrackingUserAuthIds` (та же длина).
+     * Несовместимо с непустым `initialProjectAccessMembers`.
+     */
+    initialTimeTrackingUserBillableHourlyAmounts?: (number | null)[];
+    /**
      * Участники со ставкой на проекте; непустой список на бэкенде задаёт состав команды
      * (вместо отдельного initialTimeTrackingUserAuthIds).
      */
@@ -1748,7 +1753,31 @@ function projectCreateBody(body: TimeManagerClientProjectCreatePayload): Record<
         });
     }
     else if (body.initialTimeTrackingUserAuthIds != null && body.initialTimeTrackingUserAuthIds.length > 0) {
-        o.initialTimeTrackingUserAuthIds = [...new Set(body.initialTimeTrackingUserAuthIds.filter((n) => Number.isFinite(n) && n > 0))];
+        const rawIds = body.initialTimeTrackingUserAuthIds.filter((n) => Number.isFinite(n) && n > 0);
+        const amtsIn = body.initialTimeTrackingUserBillableHourlyAmounts;
+        const useAmts = amtsIn != null && amtsIn.length > 0;
+        if (useAmts && amtsIn.length !== rawIds.length) {
+            throw new Error(
+                'initialTimeTrackingUserBillableHourlyAmounts должны совпадать по длине с initialTimeTrackingUserAuthIds',
+            );
+        }
+        const seen = new Set<number>();
+        const ids: number[] = [];
+        const amtsOut: (number | null)[] = [];
+        for (let i = 0; i < rawIds.length; i++) {
+            const id = rawIds[i];
+            if (seen.has(id))
+                continue;
+            seen.add(id);
+            ids.push(id);
+            if (useAmts) {
+                const x = amtsIn[i];
+                amtsOut.push(x != null && Number.isFinite(x) ? x : null);
+            }
+        }
+        o.initialTimeTrackingUserAuthIds = ids;
+        if (useAmts)
+            o.initialTimeTrackingUserBillableHourlyAmounts = amtsOut;
     }
     return o;
 }

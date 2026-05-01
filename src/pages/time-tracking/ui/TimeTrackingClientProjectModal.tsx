@@ -245,7 +245,12 @@ function normalizeInitialTaskNames(rows: string[]): string[] {
   }
   return out;
 }
-function buildCreatePayload(form: ProjectFormState, initialTimeTrackingUserAuthIds?: number[], initialProjectAccessMembers?: TimeManagerInitialProjectAccessMember[]): TimeManagerClientProjectCreatePayload {
+function buildCreatePayload(
+  form: ProjectFormState,
+  initialTimeTrackingUserAuthIds?: number[],
+  initialProjectAccessMembers?: TimeManagerInitialProjectAccessMember[],
+  initialTimeTrackingUserBillableHourlyAmounts?: (number | null)[],
+): TimeManagerClientProjectCreatePayload {
   const name = form.name.trim();
   const pt = form.projectType;
   let billableRateType: string | null = null;
@@ -289,12 +294,14 @@ function buildCreatePayload(form: ProjectFormState, initialTimeTrackingUserAuthI
       projectBillableRateAmount = null;
   }
   const ids = (initialTimeTrackingUserAuthIds ?? []).filter((n) => Number.isFinite(n) && n > 0);
-  const uniqueIds = [...new Set(ids)];
-  const team: Pick<TimeManagerClientProjectCreatePayload, 'initialTimeTrackingUserAuthIds' | 'initialProjectAccessMembers'> = {};
+  const team: Pick<TimeManagerClientProjectCreatePayload, 'initialTimeTrackingUserAuthIds' | 'initialProjectAccessMembers' | 'initialTimeTrackingUserBillableHourlyAmounts'> = {};
   if (initialProjectAccessMembers != null && initialProjectAccessMembers.length > 0)
     team.initialProjectAccessMembers = initialProjectAccessMembers;
-  else if (uniqueIds.length > 0)
-    team.initialTimeTrackingUserAuthIds = uniqueIds;
+  else if (ids.length > 0) {
+    team.initialTimeTrackingUserAuthIds = ids;
+    if (initialTimeTrackingUserBillableHourlyAmounts != null)
+      team.initialTimeTrackingUserBillableHourlyAmounts = initialTimeTrackingUserBillableHourlyAmounts;
+  }
   return {
     name,
     code: form.code.trim() || null,
@@ -753,11 +760,23 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     setError(null);
     setSaving(true);
     try {
+      const useParallelBillableAmounts = mode === 'create'
+        && useRates
+        && assignedUserIds.length > 0
+        && (initialProjectAccessMembers == null || initialProjectAccessMembers.length === 0);
+      const initialTimeTrackingUserBillableHourlyAmounts = useParallelBillableAmounts
+        ? assignedUserIds.map((authUserId) => {
+            const dr = memberRates[authUserId];
+            const n = dr ? parseMemberAmount(dr.amount) : NaN;
+            return Number.isFinite(n) && n > 0 ? n : null;
+          })
+        : undefined;
       const body = mode === 'create'
         ? buildCreatePayload(
             form,
             initialProjectAccessMembers != null && initialProjectAccessMembers.length > 0 ? undefined : assignedUserIds,
             initialProjectAccessMembers != null && initialProjectAccessMembers.length > 0 ? initialProjectAccessMembers : undefined,
+            initialTimeTrackingUserBillableHourlyAmounts,
           )
         : buildCreatePayload(form);
       if (mode === 'create') {
