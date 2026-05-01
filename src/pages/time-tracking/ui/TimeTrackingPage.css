@@ -6518,6 +6518,14 @@ a.pp__proj-name--link:hover {
   padding-right: 0.2rem;
 }
 
+.tt-proj-task-pick__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: 0.2rem;
+}
+
 .tt-proj-task-pick__row {
   display: flex;
   align-items: center;

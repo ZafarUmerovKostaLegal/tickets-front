@@ -340,6 +340,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
   const [initialTaskNames, setInitialTaskNames] = useState<string[]>(() => [...DEFAULT_PROJECT_TASK_NAMES]);
   const [taskPickerOpen, setTaskPickerOpen] = useState(false);
   const [taskPickerDraft, setTaskPickerDraft] = useState<string[]>(() => [...DEFAULT_PROJECT_TASK_NAMES]);
+  const [taskSelectionCollapsed, setTaskSelectionCollapsed] = useState(false);
   const [quickClientOpen, setQuickClientOpen] = useState(false);
   const [assignedUserIds, setAssignedUserIds] = useState<number[]>([]);
   const [memberRates, setMemberRates] = useState<Record<number, ProjectMemberRateDraft>>({});
@@ -903,8 +904,13 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
           Задачи
         </button>
       </div>
-      <p className="tt-tm-members__add-hint">Выбрано задач: {initialTaskNames.length}</p>
-      {initialTaskNames.length > 0 && (<div className="tt-tm-members__chips tt-proj-task-pick__chips">
+      <div className="tt-proj-task-pick__summary">
+        <p className="tt-tm-members__add-hint">Выбрано задач: {initialTaskNames.length}</p>
+        {initialTaskNames.length > 0 && (<button type="button" className="tt-settings__btn tt-settings__btn--link" onClick={() => setTaskSelectionCollapsed((v) => !v)}>
+            {taskSelectionCollapsed ? 'Развернуть список' : 'Свернуть список'}
+          </button>)}
+      </div>
+      {!taskSelectionCollapsed && initialTaskNames.length > 0 && (<div className="tt-tm-members__chips tt-proj-task-pick__chips">
         {initialTaskNames.map((taskName) => (<div key={taskName} className="tt-tm-members__chip tt-proj-task-pick__chip">
           <div className="tt-tm-members__chip-identity">
             <div className="tt-tm-members__chip-text tt-proj-task-pick__chip-text">
