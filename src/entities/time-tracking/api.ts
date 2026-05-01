@@ -1311,6 +1311,16 @@ export type TimeManagerClientProjectRow = {
     deletable: boolean;
     created_at: string;
     updated_at: string | null;
+    /** New backend-ready budget fields for project lists/details. */
+    budgetDisplayValue?: string | number | null;
+    budgetSpentValue?: string | number | null;
+    budgetRemainingValue?: string | number | null;
+    budgetProgressPercent?: string | number | null;
+    /** Snake_case compatibility (if serializer returns underscored keys). */
+    budget_display_value?: string | number | null;
+    budget_spent_value?: string | number | null;
+    budget_remaining_value?: string | number | null;
+    budget_progress_percent?: string | number | null;
 };
 
 
