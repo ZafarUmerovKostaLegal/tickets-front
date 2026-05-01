@@ -1113,7 +1113,8 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
             catch {
                 teamIds = [];
             }
-            const payload: TimeManagerClientProjectCreatePayload = teamIds.length > 0
+            const shouldCloneTeamOnCreate = (String(p.billable_rate_type ?? '').trim() || 'person_billable_rate') !== 'person_billable_rate';
+            const payload: TimeManagerClientProjectCreatePayload = teamIds.length > 0 && shouldCloneTeamOnCreate
                 ? { ...basePayload, initialTimeTrackingUserAuthIds: teamIds }
                 : basePayload;
             const created = await createClientProject(project.clientId, payload);
