@@ -1,6 +1,6 @@
 import { useState, useEffect, useId, useMemo, useRef, useCallback } from 'react';
 import { DatePicker, SearchableSelect, useAppDialog } from '@shared/ui';
-import { getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, listUsersWithProjectAccessToProject, createProjectTask, readTimeManagerProjectBillableRateAmount, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerProjectCurrency, type HourlyRateRow, } from '@entities/time-tracking';
+import { getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, listUsersWithProjectAccessToProject, listProjectTasks, createProjectTask, deleteProjectTask, readTimeManagerProjectBillableRateAmount, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerInitialProjectAccessMember, type TimeManagerProjectCurrency, type HourlyRateRow, } from '@entities/time-tracking';
 import { suggestedNextKlProjectCode } from '@entities/time-tracking/lib/klProjectCode';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 import { QuickCreateClientModal } from './QuickCreateClientModal';
@@ -245,7 +245,7 @@ function normalizeInitialTaskNames(rows: string[]): string[] {
   }
   return out;
 }
-function buildCreatePayload(form: ProjectFormState, initialTimeTrackingUserAuthIds?: number[]): TimeManagerClientProjectCreatePayload {
+function buildCreatePayload(form: ProjectFormState, initialTimeTrackingUserAuthIds?: number[], initialProjectAccessMembers?: TimeManagerInitialProjectAccessMember[]): TimeManagerClientProjectCreatePayload {
   const name = form.name.trim();
   const pt = form.projectType;
   let billableRateType: string | null = null;
@@ -290,6 +290,11 @@ function buildCreatePayload(form: ProjectFormState, initialTimeTrackingUserAuthI
   }
   const ids = (initialTimeTrackingUserAuthIds ?? []).filter((n) => Number.isFinite(n) && n > 0);
   const uniqueIds = [...new Set(ids)];
+  const team: Pick<TimeManagerClientProjectCreatePayload, 'initialTimeTrackingUserAuthIds' | 'initialProjectAccessMembers'> = {};
+  if (initialProjectAccessMembers != null && initialProjectAccessMembers.length > 0)
+    team.initialProjectAccessMembers = initialProjectAccessMembers;
+  else if (uniqueIds.length > 0)
+    team.initialTimeTrackingUserAuthIds = uniqueIds;
   return {
     name,
     code: form.code.trim() || null,
@@ -308,8 +313,49 @@ function buildCreatePayload(form: ProjectFormState, initialTimeTrackingUserAuthI
     budgetIncludesExpenses: form.budgetIncludesExpenses,
     sendBudgetAlerts: form.sendBudgetAlerts,
     budgetAlertThresholdPercent,
-    ...(uniqueIds.length > 0 ? { initialTimeTrackingUserAuthIds: uniqueIds } : {}),
+    ...team,
   };
+}
+
+async function syncSelectedProjectTasksAfterCreate(
+  clientId: string,
+  projectId: string,
+  selectedNames: string[],
+  billableByTaskName: Map<string, boolean>,
+): Promise<string[]> {
+  const selected = new Set(selectedNames.map((n) => n.trim().toLocaleLowerCase('ru')));
+  const errors: string[] = [];
+  let tasks = await listProjectTasks(clientId, projectId);
+  for (const t of tasks) {
+    const key = t.name.trim().toLocaleLowerCase('ru');
+    if (!selected.has(key)) {
+      try {
+        await deleteProjectTask(clientId, projectId, t.id);
+      }
+      catch (e) {
+        errors.push(`${t.name}: ${e instanceof Error ? e.message : 'ошибка'}`);
+      }
+    }
+  }
+  tasks = await listProjectTasks(clientId, projectId);
+  const existing = new Set(tasks.map((t) => t.name.trim().toLocaleLowerCase('ru')));
+  for (const name of selectedNames) {
+    const trimmed = name.trim();
+    const key = trimmed.toLocaleLowerCase('ru');
+    if (!trimmed || existing.has(key))
+      continue;
+    try {
+      await createProjectTask(clientId, projectId, {
+        name: trimmed,
+        defaultBillableRate: null,
+        billableByDefault: billableByTaskName.get(trimmed) ?? true,
+      });
+    }
+    catch (e) {
+      errors.push(`${trimmed}: ${e instanceof Error ? e.message : 'ошибка'}`);
+    }
+  }
+  return errors;
 }
 export type ClientProjectModalProps = {
   mode: 'create' | 'edit';
@@ -696,35 +742,40 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     const normalizedInitialTaskNames = mode === 'create'
       ? normalizeInitialTaskNames(initialTaskNames)
       : [];
+    let initialProjectAccessMembers: TimeManagerInitialProjectAccessMember[] | undefined;
+    if (mode === 'create' && useRates && canManage && assignedUserIds.length > 0) {
+      initialProjectAccessMembers = assignedUserIds.map((authUserId) => {
+        const dr = memberRates[authUserId];
+        const n = dr ? parseMemberAmount(dr.amount) : NaN;
+        return { authUserId, billableHourlyAmount: Number.isFinite(n) && n > 0 ? n : 0 };
+      });
+    }
     setError(null);
     setSaving(true);
     try {
       const body = mode === 'create'
-        ? buildCreatePayload(form, assignedUserIds)
+        ? buildCreatePayload(
+            form,
+            initialProjectAccessMembers != null && initialProjectAccessMembers.length > 0 ? undefined : assignedUserIds,
+            initialProjectAccessMembers != null && initialProjectAccessMembers.length > 0 ? initialProjectAccessMembers : undefined,
+          )
         : buildCreatePayload(form);
       if (mode === 'create') {
         const row = await createClientProject(effectiveClientId, body);
-        if (normalizedInitialTaskNames.length > 0) {
-          const taskResults = await Promise.allSettled(normalizedInitialTaskNames.map((taskName) => createProjectTask(effectiveClientId, row.id, {
-            name: taskName,
-            billableByDefault: true,
-          })));
-          const failed = taskResults
-            .map((result, index) => ({ result, name: normalizedInitialTaskNames[index] }))
-            .filter((x): x is {
-            result: PromiseRejectedResult;
-            name: string;
-          } => x.result.status === 'rejected')
-            .map((x) => `${x.name}: ${x.result.reason instanceof Error ? x.result.reason.message : 'ошибка'}`);
-          if (failed.length > 0) {
-            await showAlert({
-              title: 'Проект создан частично',
-              message: `Часть задач не удалось добавить:\n\n${failed.join('\n')}`,
-            });
-          }
+        const taskSyncErrs = await syncSelectedProjectTasksAfterCreate(
+          effectiveClientId,
+          row.id,
+          normalizedInitialTaskNames,
+          DEFAULT_PROJECT_TASK_BILLABLE_MAP,
+        );
+        if (taskSyncErrs.length > 0) {
+          await showAlert({
+            title: 'Проект создан частично',
+            message: `Не удалось полностью синхронизировать задачи:\n\n${taskSyncErrs.join('\n')}`,
+          });
         }
         if (canManage)
-          await applyProjectMemberAccessAndRates(row.id);
+          setEditMembersBaseline([...assignedUserIds]);
         onSaved(row);
       }
       else if (initial) {

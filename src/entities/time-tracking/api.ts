@@ -1639,6 +1639,11 @@ export type TimeManagerClientProjectCodeHint = {
     last_code: string | null;
     suggested_next: string | null;
 };
+export type TimeManagerInitialProjectAccessMember = {
+    authUserId: number;
+    /** Сумма billable за час для этого участника на проекте; валюта = валюта проекта. */
+    billableHourlyAmount?: number | string | null;
+};
 export type TimeManagerClientProjectCreatePayload = {
     name: string;
     code?: string | null;
@@ -1663,6 +1668,11 @@ export type TimeManagerClientProjectCreatePayload = {
 
     /** `auth_user_id` — сразу выдать доступ к проекту при создании (gateway → TT). */
     initialTimeTrackingUserAuthIds?: number[];
+    /**
+     * Участники со ставкой на проекте; непустой список на бэкенде задаёт состав команды
+     * (вместо отдельного initialTimeTrackingUserAuthIds).
+     */
+    initialProjectAccessMembers?: TimeManagerInitialProjectAccessMember[];
 };
 export type TimeManagerClientProjectPatchPayload = {
     name?: string;
@@ -1724,7 +1734,20 @@ function projectCreateBody(body: TimeManagerClientProjectCreatePayload): Record<
         o.budgetAlertThresholdPercent = body.budgetAlertThresholdPercent;
     if (body.fixedFeeAmount !== undefined)
         o.fixedFeeAmount = body.fixedFeeAmount;
-    if (body.initialTimeTrackingUserAuthIds != null && body.initialTimeTrackingUserAuthIds.length > 0) {
+    if (body.initialProjectAccessMembers != null && body.initialProjectAccessMembers.length > 0) {
+        o.initialProjectAccessMembers = body.initialProjectAccessMembers.map((m) => {
+            const row: Record<string, unknown> = { authUserId: m.authUserId };
+            if (m.billableHourlyAmount != null && m.billableHourlyAmount !== '') {
+                const raw = typeof m.billableHourlyAmount === 'number'
+                    ? m.billableHourlyAmount
+                    : parseFloat(String(m.billableHourlyAmount).replace(',', '.'));
+                if (Number.isFinite(raw))
+                    row.billableHourlyAmount = raw;
+            }
+            return row;
+        });
+    }
+    else if (body.initialTimeTrackingUserAuthIds != null && body.initialTimeTrackingUserAuthIds.length > 0) {
         o.initialTimeTrackingUserAuthIds = [...new Set(body.initialTimeTrackingUserAuthIds.filter((n) => Number.isFinite(n) && n > 0))];
     }
     return o;
