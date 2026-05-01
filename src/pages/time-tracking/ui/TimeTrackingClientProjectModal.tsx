@@ -87,6 +87,12 @@ const DEFAULT_PROJECT_TASK_SEED: Array<{ name: string; billableByDefault: boolea
   { name: 'Publications', billableByDefault: false },
   { name: 'Review new legislation', billableByDefault: false },
 ];
+const DEFAULT_PROJECT_TASK_OPTIONS: TmOpt[] = DEFAULT_PROJECT_TASK_SEED.map((task) => ({
+  id: task.name,
+  label: task.name,
+  search: `${task.name} ${task.billableByDefault ? 'billable оплачиваемая' : 'non billable неоплачиваемая'}`,
+}));
+const DEFAULT_PROJECT_TASK_BILLABLE_MAP = new Map<string, boolean>(DEFAULT_PROJECT_TASK_SEED.map((task) => [task.name, task.billableByDefault]));
 
 function getTmOptSearch(o: TmOpt): string {
   return o.search ?? o.label;
@@ -335,7 +341,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
   const [codeHint, setCodeHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [initialTaskName, setInitialTaskName] = useState('');
+  const [initialTaskOptionId, setInitialTaskOptionId] = useState(DEFAULT_PROJECT_TASK_OPTIONS[0]?.id ?? '');
   const [initialTaskNames, setInitialTaskNames] = useState<string[]>([]);
   const [quickClientOpen, setQuickClientOpen] = useState(false);
   const [assignedUserIds, setAssignedUserIds] = useState<number[]>([]);
@@ -587,10 +593,12 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     }
     setEditMembersBaseline([...assignedUserIds]);
   }
-  const addInitialTask = () => {
-    const list = normalizeInitialTaskNames([...initialTaskNames, initialTaskName]);
+  const addSelectedInitialTask = () => {
+    const selected = (initialTaskOptionId || '').trim();
+    if (!selected)
+      return;
+    const list = normalizeInitialTaskNames([...initialTaskNames, selected]);
     setInitialTaskNames(list);
-    setInitialTaskName('');
   };
   const removeInitialTask = (name: string) => {
     const key = name.trim().toLocaleLowerCase('ru');
@@ -668,7 +676,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
       }
     }
     const normalizedInitialTaskNames = mode === 'create'
-      ? normalizeInitialTaskNames([...initialTaskNames, initialTaskName])
+      ? normalizeInitialTaskNames(initialTaskNames)
       : [];
     setError(null);
     setSaving(true);
@@ -887,36 +895,22 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     </fieldset>
     {mode === 'create' && (<fieldset className="tt-tm-fieldset tt-tm-fieldset--budget">
       <legend className="tt-tm-fieldset-legend tt-tm-fieldset-legend--budget">Задачи проекта</legend>
-      <p className="tt-tm-hint">Серверный набор задач по умолчанию (создаётся автоматически при создании проекта):</p>
-      <div className="tt-tm-members__chips">
-        {DEFAULT_PROJECT_TASK_SEED.map((task) => (<div key={task.name} className="tt-tm-members__chip">
-          <div className="tt-tm-members__chip-identity">
-            <div className="tt-tm-members__chip-text">
-              <span className="tt-tm-members__opt-name">{task.name}</span>
-              <span className={`tt-task-pill${task.billableByDefault ? ' tt-task-pill--billable' : ' tt-task-pill--muted'}`}>
-                {task.billableByDefault ? 'Оплачиваемая' : 'Неоплачиваемая'}
-              </span>
-            </div>
-          </div>
-        </div>))}
-      </div>
+      <p className="tt-tm-hint">Выберите задачу из серверного набора по умолчанию и добавьте в проект.</p>
       <div className="tt-tm-members__add-row">
-        <button type="button" className="tt-tm-members__add-plus" onClick={addInitialTask} disabled={!initialTaskName.trim() || saving} title="Добавить задачу">
+        <button type="button" className="tt-tm-members__add-plus" onClick={addSelectedInitialTask} disabled={!initialTaskOptionId || saving} title="Добавить выбранную задачу">
           +
         </button>
-        <input className="tt-tm-input tt-tm-members__add-select" value={initialTaskName} onChange={(e) => setInitialTaskName(e.target.value)} placeholder="Добавить задачу…" disabled={saving} onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            addInitialTask();
-          }
-        }} />
+        <SearchableSelect<TmOpt> className="tt-tm-dd tt-tm-members__add-select" buttonClassName="tt-tm-dd__btn" buttonId={`${uid}-task-default`} value={initialTaskOptionId} items={DEFAULT_PROJECT_TASK_OPTIONS} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={getTmOptSearch} onSelect={(o) => setInitialTaskOptionId(o.id)} placeholder="Выбрать задачу…" emptyListText="Нет задач" noMatchText="Задача не найдена" disabled={saving || DEFAULT_PROJECT_TASK_OPTIONS.length === 0} portalDropdown portalZIndex={TM_DD_PORTAL_Z} portalMinWidth={340} aria-label="Выбор задачи из серверного набора" />
       </div>
-      <p className="tt-tm-members__add-hint">Можно добавить свои задачи сверх серверного набора. Дубли по названию игнорируются.</p>
+      <p className="tt-tm-members__add-hint">Добавляются только выбранные задачи. Дубли по названию игнорируются.</p>
       {initialTaskNames.length > 0 && (<div className="tt-tm-members__chips">
         {initialTaskNames.map((taskName) => (<div key={taskName} className="tt-tm-members__chip">
           <div className="tt-tm-members__chip-identity">
             <div className="tt-tm-members__chip-text">
               <span className="tt-tm-members__opt-name">{taskName}</span>
+              <span className={`tt-task-pill${DEFAULT_PROJECT_TASK_BILLABLE_MAP.get(taskName) ? ' tt-task-pill--billable' : ' tt-task-pill--muted'}`}>
+                {DEFAULT_PROJECT_TASK_BILLABLE_MAP.get(taskName) ? 'Оплачиваемая' : 'Неоплачиваемая'}
+              </span>
             </div>
           </div>
           <button type="button" className="tt-tm-members__chip-remove" onClick={() => removeInitialTask(taskName)} disabled={saving} aria-label={`Удалить задачу ${taskName}`}>
