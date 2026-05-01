@@ -1702,6 +1702,15 @@ export type TimeManagerClientProjectPatchPayload = {
 };
 function projectCreateBody(body: TimeManagerClientProjectCreatePayload): Record<string, unknown> {
     const o: Record<string, unknown> = { name: body.name };
+    const members = body.initialProjectAccessMembers ?? [];
+    const hasMembers = members.length > 0;
+    const hasParallelBillableAmounts = body.initialTimeTrackingUserBillableHourlyAmounts != null
+        && body.initialTimeTrackingUserBillableHourlyAmounts.length > 0;
+    if (hasMembers && hasParallelBillableAmounts) {
+        throw new Error(
+            'Нельзя одновременно передавать initialProjectAccessMembers и initialTimeTrackingUserBillableHourlyAmounts',
+        );
+    }
     if (body.code !== undefined)
         o.code = body.code;
     if (body.currency !== undefined && body.currency !== null && String(body.currency).trim()) {
@@ -1739,8 +1748,8 @@ function projectCreateBody(body: TimeManagerClientProjectCreatePayload): Record<
         o.budgetAlertThresholdPercent = body.budgetAlertThresholdPercent;
     if (body.fixedFeeAmount !== undefined)
         o.fixedFeeAmount = body.fixedFeeAmount;
-    if (body.initialProjectAccessMembers != null && body.initialProjectAccessMembers.length > 0) {
-        o.initialProjectAccessMembers = body.initialProjectAccessMembers.map((m) => {
+    if (hasMembers) {
+        o.initialProjectAccessMembers = members.map((m) => {
             const row: Record<string, unknown> = { authUserId: m.authUserId };
             if (m.billableHourlyAmount != null && m.billableHourlyAmount !== '') {
                 const raw = typeof m.billableHourlyAmount === 'number'
