@@ -741,9 +741,9 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 
 .tt-rp-mtable.tt-rp-mtable--wide,
 .tt-rp-mtable.tt-rp-mtable--time-wide {
-  width: max-content;
+  width: 100%;
   min-width: 100%;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 
@@ -2097,6 +2097,20 @@ body[data-theme='dark'] .tt-rp-brief-th__label {
   max-width: 6.5rem;
   margin-left: auto;
   font-variant-numeric: tabular-nums;
+}
+
+/* В ячейках "Оплач. часы" убираем белую плашку инпута:
+   поле визуально сливается с фоном строки, оставаясь редактируемым. */
+.tt-rp-mtable__td--num .tt-rp-mtable__input--duration {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.tt-rp-mtable__td--num .tt-rp-mtable__input--duration:focus {
+  background: color-mix(in srgb, var(--app-surface, #fff) 60%, transparent);
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 60%, var(--app-border, #e2e8f0));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent, #4f46e5) 20%, transparent);
 }
 
 .tt-rp-mtable__select {
