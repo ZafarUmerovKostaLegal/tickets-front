@@ -263,6 +263,14 @@ export class TimeTrackingHttpError extends Error {
 export function isTimeTrackingHttpError(e: unknown, status?: number): e is TimeTrackingHttpError {
     return e instanceof TimeTrackingHttpError && (status === undefined || e.status === status);
 }
+function normalizeLegacyTimeTrackingUsersError(message: string): string {
+    const m = String(message ?? '').trim();
+    if (!m)
+        return m;
+    if (/only administrators and office managers can view time tracking users/i.test(m))
+        return 'Нет доступа к списку сотрудников.';
+    return m;
+}
 async function throwIfNotOk(res: Response): Promise<Response> {
     if (!res.ok) {
         let msg = `HTTP ${res.status}`;
@@ -295,7 +303,7 @@ async function throwIfNotOk(res: Response): Promise<Response> {
         if (res.status >= 500) {
             console.error('[time-tracking api]', res.status, msg);
         }
-        throw new TimeTrackingHttpError(res.status, msg);
+        throw new TimeTrackingHttpError(res.status, normalizeLegacyTimeTrackingUsersError(msg));
     }
     return res;
 }
@@ -2123,7 +2131,7 @@ async function reportsThrowIfNotOk(res: Response): Promise<void> {
             msg = 'Требуется вход или сессия истекла';
         else if (res.status === 403 && msg === 'HTTP 403')
             msg = 'Нет доступа к этой операции';
-        throw new TimeTrackingHttpError(res.status, msg);
+        throw new TimeTrackingHttpError(res.status, normalizeLegacyTimeTrackingUsersError(msg));
     }
 }
 function buildReportsQs(params: ReportsTableParams & {

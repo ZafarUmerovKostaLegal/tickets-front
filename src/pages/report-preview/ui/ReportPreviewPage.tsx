@@ -244,8 +244,12 @@ function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, }: {
                 setPartnersLoad('ok');
             }
         }).catch(() => {
-            if (!cancelled)
-                setPartnersLoad('error');
+            if (!cancelled) {
+                // Для обычного сотрудника пустой/недоступный список партнёров
+                // не должен блокировать остальной UI предпросмотра.
+                setPartners([]);
+                setPartnersLoad('ok');
+            }
         });
         return () => {
             cancelled = true;

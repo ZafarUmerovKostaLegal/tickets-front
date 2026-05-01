@@ -949,13 +949,16 @@ export function ReportsPanel() {
       .then((list) => {
         setUsersForFilter(list);
         setUsersForFilterError(null);
+        if (list.length === 1 && user && list[0].id === user.id) {
+          setSelectedUserIds((prev) => (prev.length === 0 ? [user.id] : prev));
+        }
       })
       .catch((e: unknown) => {
         setUsersForFilter([]);
         if (isTimeTrackingHttpError(e, 401) || isTimeTrackingHttpError(e, 403))
           setUsersForFilterError('Нет доступа к списку сотрудников для фильтра.');
       });
-  }, []);
+  }, [user]);
   useEffect(() => {
     void fetchReportsMeta()
       .then((m) => {
