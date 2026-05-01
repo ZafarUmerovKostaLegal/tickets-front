@@ -48,21 +48,23 @@ export function TimeTrackingNewProjectFormSkeleton() {
           <span className="npf-skel__label npf-skel__label--narrow"/>
           <span className="npf-skel__input"/>
         </div>
-        <fieldset className="tt-tm-fieldset">
-          <legend className="tt-tm-fieldset-legend">
+        <fieldset className="tt-tm-fieldset tt-tm-fieldset--budget">
+          <legend className="tt-tm-fieldset-legend tt-tm-fieldset-legend--budget">
             <span className="npf-skel__legend"/>
           </legend>
-          <div className="npf-skel__check-row">
-            <span className="npf-skel__check"/>
-            <span className="npf-skel__check-line"/>
-          </div>
-          <div className="npf-skel__check-row">
-            <span className="npf-skel__check"/>
-            <span className="npf-skel__check-line npf-skel__check-line--short"/>
-          </div>
-          <div className="npf-skel__check-row">
-            <span className="npf-skel__check"/>
-            <span className="npf-skel__check-line npf-skel__check-line--med"/>
+          <div className="tt-tm-fieldset--budget__grid">
+            <div className="npf-skel__check-row">
+              <span className="npf-skel__check"/>
+              <span className="npf-skel__check-line"/>
+            </div>
+            <div className="npf-skel__check-row">
+              <span className="npf-skel__check"/>
+              <span className="npf-skel__check-line npf-skel__check-line--short"/>
+            </div>
+            <div className="npf-skel__check-row tt-tm-fieldset--budget__check-wide">
+              <span className="npf-skel__check"/>
+              <span className="npf-skel__check-line npf-skel__check-line--med"/>
+            </div>
           </div>
         </fieldset>
         <div className="tt-tm-field">

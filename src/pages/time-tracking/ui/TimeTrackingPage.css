@@ -942,6 +942,15 @@
   color: var(--app-text);
 }
 
+.tt-ecat-archive-toggle--row {
+  margin-top: 0;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.tt-ecat-page__controls .tt-ecat-toolbar.tt-tasks-toolbar {
+  margin-bottom: 0.5rem;
+}
 
 .tt-ecat-toolbar.tt-tasks-toolbar {
   display: block;
@@ -6217,6 +6226,10 @@ a.pp__proj-name--link:hover {
   padding: 0 0.35rem;
 }
 
+.npf-skel fieldset.tt-tm-fieldset--budget legend.tt-tm-fieldset-legend--budget {
+  padding: 0;
+}
+
 .npf-skel .npf-skel__check-row {
   display: flex;
   align-items: center;
@@ -6622,6 +6635,62 @@ a.pp__proj-name--link:hover {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--app-text);
+}
+
+.tt-tm-fieldset.tt-tm-fieldset--budget {
+  margin: 0.35rem 0 0.65rem;
+  padding: 0.85rem 1rem 0.9rem;
+  border: 1px solid var(--app-border-soft, var(--app-border));
+  border-radius: 12px;
+  background: var(--app-surface-soft);
+}
+
+.tt-tm-fieldset.tt-tm-fieldset--budget > .tt-tm-fieldset-legend--budget {
+  float: left;
+  width: 100%;
+  padding: 0;
+  margin: 0 0 0.65rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--app-text);
+  letter-spacing: 0.01em;
+}
+
+.tt-tm-fieldset--budget__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 1rem;
+  clear: both;
+  width: 100%;
+}
+
+.tt-tm-fieldset--budget__grid .tt-tm-check-row,
+.tt-tm-fieldset--budget__grid .npf-skel__check-row {
+  margin-bottom: 0;
+}
+
+.tt-tm-fieldset--budget__check-wide {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 480px) {
+  .tt-tm-fieldset--budget__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tt-tm-fieldset--budget__check-wide {
+    grid-column: auto;
+  }
+}
+
+.tt-tm-fieldset--budget__extra {
+  margin: 0.65rem 0 0;
+  padding-top: 0.65rem;
+  border-top: 1px solid var(--app-border-soft, var(--app-border));
+}
+
+.tt-tm-fieldset--budget__extra .tt-tm-label {
+  margin-bottom: 0.35rem;
 }
 
 .tt-tm-check-row {
@@ -7289,6 +7358,13 @@ a.pp__proj-name--link:hover {
 .tt-tasks-page__list-heading-client {
   color: var(--app-text);
   font-weight: 700;
+}
+
+.tt-tasks-page__load-err {
+  margin: -0.35rem 0 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--app-danger, #b91c1c);
 }
 
 .tt-tasks-page__empty {

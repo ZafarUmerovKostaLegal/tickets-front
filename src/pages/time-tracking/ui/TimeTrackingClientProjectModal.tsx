@@ -1,6 +1,6 @@
 import { useState, useEffect, useId, useMemo, useRef, useCallback } from 'react';
 import { DatePicker, SearchableSelect, useAppDialog } from '@shared/ui';
-import { getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, patchHourlyRate, listUsersWithProjectAccessToProject, readTimeManagerProjectBillableRateAmount, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerProjectCurrency, type HourlyRateRow, } from '@entities/time-tracking';
+import { getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, patchHourlyRate, listUsersWithProjectAccessToProject, createProjectTask, readTimeManagerProjectBillableRateAmount, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerProjectCurrency, type HourlyRateRow, } from '@entities/time-tracking';
 import { suggestedNextKlProjectCode } from '@entities/time-tracking/lib/klProjectCode';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 import { QuickCreateClientModal } from './QuickCreateClientModal';
@@ -207,6 +207,21 @@ function parseOptionalDecimal(raw: string): string | number | null {
   const n = parseFloat(t);
   return Number.isFinite(n) ? t : null;
 }
+function normalizeInitialTaskNames(rows: string[]): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const raw of rows) {
+    const name = raw.trim().replace(/\s+/g, ' ');
+    if (!name)
+      continue;
+    const key = name.toLocaleLowerCase('ru');
+    if (seen.has(key))
+      continue;
+    seen.add(key);
+    out.push(name);
+  }
+  return out;
+}
 function buildCreatePayload(form: ProjectFormState, initialTimeTrackingUserAuthIds?: number[]): TimeManagerClientProjectCreatePayload {
   const name = form.name.trim();
   const pt = form.projectType;
@@ -299,6 +314,8 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
   const [codeHint, setCodeHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [initialTaskName, setInitialTaskName] = useState('');
+  const [initialTaskNames, setInitialTaskNames] = useState<string[]>([]);
   const [quickClientOpen, setQuickClientOpen] = useState(false);
   const [assignedUserIds, setAssignedUserIds] = useState<number[]>([]);
   const [memberRates, setMemberRates] = useState<Record<number, ProjectMemberRateDraft>>({});
@@ -549,6 +566,15 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     }
     setEditMembersBaseline([...assignedUserIds]);
   }
+  const addInitialTask = () => {
+    const list = normalizeInitialTaskNames([...initialTaskNames, initialTaskName]);
+    setInitialTaskNames(list);
+    setInitialTaskName('');
+  };
+  const removeInitialTask = (name: string) => {
+    const key = name.trim().toLocaleLowerCase('ru');
+    setInitialTaskNames((prev) => prev.filter((x) => x.trim().toLocaleLowerCase('ru') !== key));
+  };
   const handleSubmit = async () => {
     if (mode === 'create' && !effectiveClientId) {
       setError('Выберите клиента');
@@ -620,6 +646,9 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         }
       }
     }
+    const normalizedInitialTaskNames = mode === 'create'
+      ? normalizeInitialTaskNames([...initialTaskNames, initialTaskName])
+      : [];
     setError(null);
     setSaving(true);
     try {
@@ -628,6 +657,25 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         : buildCreatePayload(form);
       if (mode === 'create') {
         const row = await createClientProject(effectiveClientId, body);
+        if (normalizedInitialTaskNames.length > 0) {
+          const taskResults = await Promise.allSettled(normalizedInitialTaskNames.map((taskName) => createProjectTask(effectiveClientId, row.id, {
+            name: taskName,
+            billableByDefault: true,
+          })));
+          const failed = taskResults
+            .map((result, index) => ({ result, name: normalizedInitialTaskNames[index] }))
+            .filter((x): x is {
+            result: PromiseRejectedResult;
+            name: string;
+          } => x.result.status === 'rejected')
+            .map((x) => `${x.name}: ${x.result.reason instanceof Error ? x.result.reason.message : 'ошибка'}`);
+          if (failed.length > 0) {
+            await showAlert({
+              title: 'Проект создан частично',
+              message: `Часть задач не удалось добавить:\n\n${failed.join('\n')}`,
+            });
+          }
+        }
         if (canManage)
           await applyProjectMemberAccessAndRates(row.id);
         onSaved(row);
@@ -793,27 +841,58 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
       <input id={`${uid}-bhrs`} className="tt-tm-input" inputMode="decimal" placeholder="напр. 500" value={form.budgetHours} onChange={(e) => setForm((f) => ({ ...f, budgetHours: e.target.value }))} />
     </div>)}
 
-    <fieldset className="tt-tm-fieldset">
-      <legend className="tt-tm-fieldset-legend">Параметры бюджета</legend>
-      <label className="tt-tm-check-row">
-        <input type="checkbox" checked={form.budgetResetsEveryMonth} onChange={(e) => setForm((f) => ({ ...f, budgetResetsEveryMonth: e.target.checked }))} />
-        <span>Сбрасывать бюджет каждый месяц</span>
-      </label>
-      <label className="tt-tm-check-row">
-        <input type="checkbox" checked={form.budgetIncludesExpenses} onChange={(e) => setForm((f) => ({ ...f, budgetIncludesExpenses: e.target.checked }))} />
-        <span>В бюджет входят расходы</span>
-      </label>
-      <label className="tt-tm-check-row">
-        <input type="checkbox" checked={form.sendBudgetAlerts} onChange={(e) => setForm((f) => ({ ...f, sendBudgetAlerts: e.target.checked }))} />
-        <span>Уведомления о превышении бюджета</span>
-      </label>
-      {form.sendBudgetAlerts && (<div className="tt-tm-field" style={{ marginTop: '0.5rem' }}>
+    <fieldset className="tt-tm-fieldset tt-tm-fieldset--budget">
+      <legend className="tt-tm-fieldset-legend tt-tm-fieldset-legend--budget">Параметры бюджета</legend>
+      <div className="tt-tm-fieldset--budget__grid">
+        <label className="tt-tm-check-row">
+          <input type="checkbox" checked={form.budgetResetsEveryMonth} onChange={(e) => setForm((f) => ({ ...f, budgetResetsEveryMonth: e.target.checked }))} />
+          <span>Сбрасывать бюджет каждый месяц</span>
+        </label>
+        <label className="tt-tm-check-row">
+          <input type="checkbox" checked={form.budgetIncludesExpenses} onChange={(e) => setForm((f) => ({ ...f, budgetIncludesExpenses: e.target.checked }))} />
+          <span>В бюджет входят расходы</span>
+        </label>
+        <label className="tt-tm-check-row tt-tm-fieldset--budget__check-wide">
+          <input type="checkbox" checked={form.sendBudgetAlerts} onChange={(e) => setForm((f) => ({ ...f, sendBudgetAlerts: e.target.checked }))} />
+          <span>Уведомления о превышении бюджета</span>
+        </label>
+      </div>
+      {form.sendBudgetAlerts && (<div className="tt-tm-field tt-tm-fieldset--budget__extra">
         <label className="tt-tm-label" htmlFor={`${uid}-thr`}>
           Порог уведомления, %
         </label>
         <input id={`${uid}-thr`} className="tt-tm-input" inputMode="decimal" value={form.budgetAlertThresholdPercent} onChange={(e) => setForm((f) => ({ ...f, budgetAlertThresholdPercent: e.target.value }))} />
       </div>)}
     </fieldset>
+    {mode === 'create' && (<fieldset className="tt-tm-fieldset tt-tm-fieldset--budget">
+      <legend className="tt-tm-fieldset-legend tt-tm-fieldset-legend--budget">Задачи проекта</legend>
+      <div className="tt-tm-members__add-row">
+        <button type="button" className="tt-tm-members__add-plus" onClick={addInitialTask} disabled={!initialTaskName.trim() || saving} title="Добавить задачу">
+          +
+        </button>
+        <input className="tt-tm-input tt-tm-members__add-select" value={initialTaskName} onChange={(e) => setInitialTaskName(e.target.value)} placeholder="Добавить задачу…" disabled={saving} onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            addInitialTask();
+          }
+        }} />
+      </div>
+      <p className="tt-tm-members__add-hint">Эти задачи будут созданы сразу после создания проекта. Дубли по названию игнорируются.</p>
+      {initialTaskNames.length > 0 && (<div className="tt-tm-members__chips">
+        {initialTaskNames.map((taskName) => (<div key={taskName} className="tt-tm-members__chip">
+          <div className="tt-tm-members__chip-identity">
+            <div className="tt-tm-members__chip-text">
+              <span className="tt-tm-members__opt-name">{taskName}</span>
+            </div>
+          </div>
+          <button type="button" className="tt-tm-members__chip-remove" onClick={() => removeInitialTask(taskName)} disabled={saving} aria-label={`Удалить задачу ${taskName}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>))}
+      </div>)}
+    </fieldset>)}
 
     {(form.projectType === 'time_and_materials' || form.projectType === 'fixed_fee') && (<div className="tt-tm-field">
       <label className="tt-tm-label" id={`${uid}-brate-lbl`} htmlFor={`${uid}-brate`}>

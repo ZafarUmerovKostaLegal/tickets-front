@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useId } from 'react';
-import { SearchableSelect, useAppDialog } from '@shared/ui';
+import { SearchableSelect, useAppDialog, useAppToast } from '@shared/ui';
 import { clientRowSearchText } from '@pages/time-tracking/lib/clientRowSearchText';
 import { listAllTimeManagerClientsMerged, listClientExpenseCategories, createClientExpenseCategory, patchClientExpenseCategory, deleteClientExpenseCategory, isForbiddenError, type TimeManagerClientRow, type TimeManagerClientExpenseCategoryRow, } from '@entities/time-tracking';
 import { useCurrentUser } from '@shared/hooks';
@@ -153,6 +153,7 @@ function ExpenseCategoryModal({ mode, clientId, initial, onClose, onSaved }: Exp
 }
 export function TimeTrackingClientExpenseCategoriesPanel() {
     const { showAlert, showConfirm } = useAppDialog();
+    const { pushToast } = useAppToast();
     const { user } = useCurrentUser();
     const canManage = canManageTimeManagerClients(user?.role);
     const [clients, setClients] = useState<TimeManagerClientRow[]>([]);
@@ -191,6 +192,10 @@ export function TimeTrackingClientExpenseCategoriesPanel() {
     useEffect(() => {
         void loadClients();
     }, [loadClients]);
+    useEffect(() => {
+        if (catError)
+            pushToast({ message: catError, variant: 'error' });
+    }, [catError, pushToast]);
     const loadCategories = useCallback(async (cid: string, archived: boolean) => {
         if (!cid) {
             setCategories([]);
@@ -256,51 +261,58 @@ export function TimeTrackingClientExpenseCategoriesPanel() {
     return (<div className="tt-settings__content tt-tasks-page tt-ecat-page">
       <h1 className="tt-settings__page-title">Категории расходов</h1>
       <p className="tt-settings__desc tt-tasks-page__lead">
-        Справочник категорий привязан к клиенту. Удаление возможно только при нулевом счётчике использования; иначе
-        переведите категорию в архив в форме редактирования.
+        Справочник на уровне клиента: категории используются при вводе расходов. Порядок и признак «цена за единицу» задаются в форме.
       </p>
 
-      {clientsError && (<p className="tt-settings__banner-error" role="alert">
-          {clientsError}
-        </p>)}
-
-      <div className="tt-tasks-toolbar tt-ecat-toolbar">
-        <div className="tt-ecat-toolbar__main">
-          <div className="tt-ecat-toolbar__row">
-            <div className="tt-tasks-toolbar__client tt-ecat-toolbar__client-field">
-              <label className="tt-tasks-toolbar__label" id="tt-ecat-client-lbl" htmlFor="tt-ecat-client-select">
-                Клиент
+      <div className="tt-tasks-page__controls tt-ecat-page__controls">
+        <div className="tt-tasks-toolbar tt-ecat-toolbar">
+          <div className="tt-ecat-toolbar__main">
+            <div className="tt-ecat-toolbar__row">
+              <div className="tt-tasks-toolbar__client tt-ecat-toolbar__client-field">
+                <label className="tt-tasks-toolbar__label" id="tt-ecat-client-lbl" htmlFor="tt-ecat-client-select">
+                  Клиент
+                </label>
+                <SearchableSelect<TimeManagerClientRow> className="tt-tm-dd" buttonClassName="tt-tm-dd__btn" buttonId="tt-ecat-client-select" value={clientId} items={clients} getOptionValue={(c) => c.id} getOptionLabel={(c) => c.name} getSearchText={clientRowSearchText} onSelect={(c) => setClientId(c.id)} placeholder={clients.length === 0 && !clientsLoading ? 'Нет клиентов' : 'Найдите или выберите клиента…'} emptyListText="Нет клиентов" noMatchText="Клиент не найден" disabled={clientsLoading || clients.length === 0} portalDropdown portalZIndex={11020} portalMinWidth={300} portalDropdownClassName="tsp-srch__dropdown--tall" aria-labelledby="tt-ecat-client-lbl" renderOption={(c) => (<span className="tt-tm-dd__opt">
+                      <span className="tt-tm-dd__opt-name">{c.name}</span>
+                      {c.address ? (<span className="tt-tm-dd__opt-sub">{c.address}</span>) : c.email ? (<span className="tt-tm-dd__opt-sub">{c.email}</span>) : null}
+                    </span>)}/>
+              </div>
+              <label className="tt-ecat-archive-toggle tt-ecat-archive-toggle--toolbar tt-ecat-archive-toggle--row">
+                <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)}/>
+                <span>Показать архивные</span>
               </label>
-              <SearchableSelect<TimeManagerClientRow> className="tt-tm-dd" buttonClassName="tt-tm-dd__btn" buttonId="tt-ecat-client-select" value={clientId} items={clients} getOptionValue={(c) => c.id} getOptionLabel={(c) => c.name} getSearchText={clientRowSearchText} onSelect={(c) => setClientId(c.id)} placeholder={clients.length === 0 && !clientsLoading ? 'Нет клиентов' : 'Найдите или выберите клиента…'} emptyListText="Нет клиентов" noMatchText="Клиент не найден" disabled={clientsLoading || clients.length === 0} portalDropdown portalZIndex={11020} portalMinWidth={300} portalDropdownClassName="tsp-srch__dropdown--tall" aria-labelledby="tt-ecat-client-lbl" renderOption={(c) => (<span className="tt-tm-dd__opt">
-                    <span className="tt-tm-dd__opt-name">{c.name}</span>
-                    {c.address ? (<span className="tt-tm-dd__opt-sub">{c.address}</span>) : c.email ? (<span className="tt-tm-dd__opt-sub">{c.email}</span>) : null}
-                  </span>)}/>
+              <button type="button" className="tt-settings__btn tt-settings__btn--primary tt-ecat-toolbar__new-btn" disabled={!canManage || !clientId} title={!canManage ? 'Доступно главному администратору, администратору и партнёру' : undefined} onClick={() => setModal({ mode: 'create', row: null })}>
+                + Новая категория
+              </button>
             </div>
-            <button type="button" className="tt-settings__btn tt-settings__btn--primary tt-ecat-toolbar__new-btn" disabled={!canManage || !clientId} title={!canManage ? 'Доступно главному администратору, администратору и партнёру' : undefined} onClick={() => setModal({ mode: 'create', row: null })}>
-              + Новая категория
-            </button>
-          </div>
-          <label className="tt-ecat-archive-toggle tt-ecat-archive-toggle--toolbar">
-            <input type="checkbox" checked={includeArchived} onChange={(e) => setIncludeArchived(e.target.checked)}/>
-            <span>Показать архивные</span>
-          </label>
-          {!clientsLoading && clients.length === 0 && !clientsError && (<p className="tt-tasks-toolbar__hint tt-ecat-toolbar__hint">Сначала добавьте клиента на вкладке «Клиенты».</p>)}
+            {!clientsLoading && clients.length === 0 && !clientsError && (<p className="tt-tasks-toolbar__hint tt-ecat-toolbar__hint">Сначала добавьте клиента на вкладке «Клиенты».</p>)}
+            </div>
         </div>
+
+        {clientsError && (<p className="tt-tasks-page__load-err" role="alert">
+            {clientsError}
+          </p>)}
+
+        <div className="tt-tasks-page__notice tt-ecat-page__policy">
+          <p className="tt-tasks-page__notice-title">Удаление и архив</p>
+          <p className="tt-tasks-page__notice-text">Удалить можно только категорию с нулевым счётчиком использования. Если категория уже использовалась — переведите её в архив в форме редактирования.</p>
+        </div>
+
+        {selectedClient && (<p className="tt-tasks-page__scope">
+            <span className="tt-tasks-page__scope-k">Контекст:</span> {selectedClient.name}
+          </p>)}
       </div>
 
       {!canManage && !clientsLoading && clients.length > 0 && (<p className="tt-settings__banner-info tt-tasks-page__banner" role="status">
           Режим просмотра: изменять категории могут главный администратор, администратор и партнёр.
         </p>)}
 
-      {catError && (<p className="tt-settings__banner-error" role="alert">
+      {selectedClient && (<h2 className="tt-tasks-page__list-heading">Категории клиента</h2>)}
+      {selectedClient && catError && (<p className="tt-tasks-page__load-err" role="alert">
           {catError}
         </p>)}
 
-      {!catError && selectedClient && (<h2 className="tt-tasks-page__list-heading">
-          Категории <span className="tt-tasks-page__list-heading-client">{selectedClient.name}</span>
-        </h2>)}
-
-      {!catError && (<div className="tt-settings__list tt-tasks-page__list">
+      {selectedClient && !catError && (<div className="tt-settings__list tt-tasks-page__list">
           {catLoading && (<div className="tt-settings__list-loading" role="status">
               Загрузка категорий…
             </div>)}

@@ -316,7 +316,7 @@ export function TimeTrackingClientTasksPanel() {
     return (<div className="tt-settings__content tt-tasks-page">
       <h1 className="tt-settings__page-title">Задачи по проектам</h1>
       <p className="tt-settings__desc tt-tasks-page__lead">
-        Справочник задач для выбранного проекта: ставка по умолчанию и признак оплачиваемости задаются при создании и редактировании.
+        Задачи относятся к конкретному проекту. При создании проекта на сервере создаётся полный набор типовых задач (ставка по умолчанию 0); здесь вы правите справочник для выбранного проекта — название, ставку по умолчанию и признак оплачиваемости.
       </p>
 
       {clientsError && (<p className="tt-settings__banner-error" role="alert">
@@ -349,7 +349,7 @@ export function TimeTrackingClientTasksPanel() {
 
         {!projectsError && !projectsLoading && clientId && !hasProjectsForClient && (<div className="tt-tasks-page__notice">
             <p className="tt-tasks-page__notice-title">У клиента пока нет проектов</p>
-            <p className="tt-tasks-page__notice-text">Создайте проект в разделе «Проекты», после этого появится справочник задач для выбранного проекта.</p>
+            <p className="tt-tasks-page__notice-text">Создайте проект в разделе «Проекты»: для нового проекта сервер сам добавит типовой набор задач, затем вы сможете выбрать проект здесь и при необходимости отредактировать справочник.</p>
           </div>)}
 
         {selectedClient && selectedProject && (<p className="tt-tasks-page__scope">
