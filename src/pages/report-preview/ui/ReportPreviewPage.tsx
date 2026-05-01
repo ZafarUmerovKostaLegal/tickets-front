@@ -506,6 +506,8 @@ export function ReportPreviewNavBar({ period, hint, hintTitle, projectSlot, time
         <span className="time-page__back-label">Назад</span>
       </Link>
       <div className="time-page__navbar-sep" aria-hidden="true"/>
+      <span className="time-page__navbar-title">Отчёты</span>
+      <div className="time-page__navbar-sep" aria-hidden="true"/>
       <div className="time-page__navbar-tabs" role="tablist" aria-label="Текущий раздел">
         <span className="time-page__navbar-tab time-page__navbar-tab--active" role="tab" aria-selected="true" tabIndex={-1}>
           Предпросмотр
