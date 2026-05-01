@@ -6526,7 +6526,8 @@ a.pp__proj-name--link:hover {
   margin-top: 0.2rem;
 }
 
-.tt-proj-task-pick__row {
+.tt-proj-task-pick__row,
+.tt-ios-toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -6535,7 +6536,14 @@ a.pp__proj-name--link:hover {
   cursor: pointer;
 }
 
-.tt-proj-task-pick__label {
+.tt-ios-toggle-row {
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: var(--app-text);
+}
+
+.tt-proj-task-pick__label,
+.tt-ios-toggle-row__text {
   min-width: 0;
   display: inline-flex;
   align-items: center;
@@ -6543,14 +6551,21 @@ a.pp__proj-name--link:hover {
   gap: 0.35rem 0.5rem;
 }
 
-.tt-proj-task-pick__switch {
+.tt-ios-toggle-row__text {
+  flex: 1 1 auto;
+  padding-right: 0.25rem;
+}
+
+.tt-proj-task-pick__switch,
+.tt-ios-toggle {
   position: relative;
   width: 2.65rem;
   height: 1.55rem;
   flex-shrink: 0;
 }
 
-.tt-proj-task-pick__switch-input {
+.tt-proj-task-pick__switch-input,
+.tt-ios-toggle__input {
   position: absolute;
   inset: 0;
   opacity: 0;
@@ -6558,7 +6573,8 @@ a.pp__proj-name--link:hover {
   cursor: pointer;
 }
 
-.tt-proj-task-pick__switch-slider {
+.tt-proj-task-pick__switch-slider,
+.tt-ios-toggle__slider {
   position: absolute;
   inset: 0;
   border-radius: 999px;
@@ -6566,7 +6582,8 @@ a.pp__proj-name--link:hover {
   transition: background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.tt-proj-task-pick__switch-slider::after {
+.tt-proj-task-pick__switch-slider::after,
+.tt-ios-toggle__slider::after {
   content: '';
   position: absolute;
   top: 0.12rem;
@@ -6579,15 +6596,18 @@ a.pp__proj-name--link:hover {
   transition: transform 0.18s ease;
 }
 
-.tt-proj-task-pick__switch-input:checked + .tt-proj-task-pick__switch-slider {
+.tt-proj-task-pick__switch-input:checked + .tt-proj-task-pick__switch-slider,
+.tt-ios-toggle__input:checked + .tt-ios-toggle__slider {
   background: var(--app-accent, #4f46e5);
 }
 
-.tt-proj-task-pick__switch-input:checked + .tt-proj-task-pick__switch-slider::after {
+.tt-proj-task-pick__switch-input:checked + .tt-proj-task-pick__switch-slider::after,
+.tt-ios-toggle__input:checked + .tt-ios-toggle__slider::after {
   transform: translateX(1.1rem);
 }
 
-.tt-proj-task-pick__switch-input:focus-visible + .tt-proj-task-pick__switch-slider {
+.tt-proj-task-pick__switch-input:focus-visible + .tt-proj-task-pick__switch-slider,
+.tt-ios-toggle__input:focus-visible + .tt-ios-toggle__slider {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent, #4f46e5) 25%, transparent);
 }
 
@@ -6778,7 +6798,8 @@ a.pp__proj-name--link:hover {
 }
 
 .tt-tm-fieldset--budget__grid .tt-tm-check-row,
-.tt-tm-fieldset--budget__grid .npf-skel__check-row {
+.tt-tm-fieldset--budget__grid .npf-skel__check-row,
+.tt-tm-fieldset--budget__grid .tt-ios-toggle-row {
   margin-bottom: 0;
 }
 

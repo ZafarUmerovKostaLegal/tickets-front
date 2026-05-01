@@ -876,17 +876,26 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     <fieldset className="tt-tm-fieldset tt-tm-fieldset--budget">
       <legend className="tt-tm-fieldset-legend tt-tm-fieldset-legend--budget">Параметры бюджета</legend>
       <div className="tt-tm-fieldset--budget__grid">
-        <label className="tt-tm-check-row">
-          <input type="checkbox" checked={form.budgetResetsEveryMonth} onChange={(e) => setForm((f) => ({ ...f, budgetResetsEveryMonth: e.target.checked }))} />
-          <span>Сбрасывать бюджет каждый месяц</span>
+        <label className="tt-ios-toggle-row">
+          <span className="tt-ios-toggle-row__text">Сбрасывать бюджет каждый месяц</span>
+          <span className="tt-ios-toggle">
+            <input type="checkbox" className="tt-ios-toggle__input" checked={form.budgetResetsEveryMonth} onChange={(e) => setForm((f) => ({ ...f, budgetResetsEveryMonth: e.target.checked }))} />
+            <span className="tt-ios-toggle__slider" aria-hidden />
+          </span>
         </label>
-        <label className="tt-tm-check-row">
-          <input type="checkbox" checked={form.budgetIncludesExpenses} onChange={(e) => setForm((f) => ({ ...f, budgetIncludesExpenses: e.target.checked }))} />
-          <span>В бюджет входят расходы</span>
+        <label className="tt-ios-toggle-row">
+          <span className="tt-ios-toggle-row__text">В бюджет входят расходы</span>
+          <span className="tt-ios-toggle">
+            <input type="checkbox" className="tt-ios-toggle__input" checked={form.budgetIncludesExpenses} onChange={(e) => setForm((f) => ({ ...f, budgetIncludesExpenses: e.target.checked }))} />
+            <span className="tt-ios-toggle__slider" aria-hidden />
+          </span>
         </label>
-        <label className="tt-tm-check-row tt-tm-fieldset--budget__check-wide">
-          <input type="checkbox" checked={form.sendBudgetAlerts} onChange={(e) => setForm((f) => ({ ...f, sendBudgetAlerts: e.target.checked }))} />
-          <span>Уведомления о превышении бюджета</span>
+        <label className="tt-ios-toggle-row tt-tm-fieldset--budget__check-wide">
+          <span className="tt-ios-toggle-row__text">Уведомления о превышении бюджета</span>
+          <span className="tt-ios-toggle">
+            <input type="checkbox" className="tt-ios-toggle__input" checked={form.sendBudgetAlerts} onChange={(e) => setForm((f) => ({ ...f, sendBudgetAlerts: e.target.checked }))} />
+            <span className="tt-ios-toggle__slider" aria-hidden />
+          </span>
         </label>
       </div>
       {form.sendBudgetAlerts && (<div className="tt-tm-field tt-tm-fieldset--budget__extra">
