@@ -3033,6 +3033,8 @@ export type BudgetRow = {
     budget: number;
     budget_spent: number;
     budget_remaining: number;
+    /** Процент прогресса из API (camel/snake); для hours_and_money на бэке это max(hours,money). */
+    progress_percent?: number;
     currency?: string;
     /** При budget_by === hours_and_money — лимиты по часам (если отдаёт API отдельно). */
     budget_hours_budget?: number;
@@ -3595,16 +3597,31 @@ export function finalizeBudgetReportRow(row: BudgetRow): BudgetRow {
     const mb = coerceBudgetReportNumeric(raw.budget_money_budget);
     const ms = coerceBudgetReportNumeric(raw.budget_money_spent);
     const mr = coerceBudgetReportNumeric(raw.budget_money_remaining);
+    const budgetAmount = coerceBudgetReportNumeric(raw.budgetAmount) ??
+        coerceBudgetReportNumeric(raw.budget_amount) ??
+        coerceBudgetReportNumeric(raw.budget);
+    const budgetSpent = coerceBudgetReportNumeric(raw.budgetSpent) ??
+        coerceBudgetReportNumeric(raw.budget_spent_amount) ??
+        coerceBudgetReportNumeric(raw.budget_spent);
+    const budgetRemaining = coerceBudgetReportNumeric(raw.budgetRemaining) ??
+        coerceBudgetReportNumeric(raw.budget_remaining_amount) ??
+        coerceBudgetReportNumeric(raw.budget_remaining);
+    const progressPercent = coerceBudgetReportNumeric(raw.progressPercent) ??
+        coerceBudgetReportNumeric(raw.progress_percent);
     const explicitHas = raw.has_budget ?? raw.hasBudget;
     const has_budget = explicitHas === true
         ? true
         : explicitHas === false
             ? false
-            : budget_by !== 'none' && Number.isFinite(row.budget) && row.budget > 0;
+            : budget_by !== 'none' && Number.isFinite(budgetAmount ?? row.budget) && (budgetAmount ?? row.budget) > 0;
     return {
         ...row,
         budget_by,
         has_budget,
+        ...(budgetAmount !== undefined ? { budget: budgetAmount } : {}),
+        ...(budgetSpent !== undefined ? { budget_spent: budgetSpent } : {}),
+        ...(budgetRemaining !== undefined ? { budget_remaining: budgetRemaining } : {}),
+        ...(progressPercent !== undefined ? { progress_percent: progressPercent } : {}),
         ...(hb !== undefined ? { budget_hours_budget: hb } : {}),
         ...(hs !== undefined ? { budget_hours_spent: hs } : {}),
         ...(hr !== undefined ? { budget_hours_remaining: hr } : {}),

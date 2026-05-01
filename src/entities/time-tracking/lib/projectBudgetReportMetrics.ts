@@ -42,6 +42,8 @@ export function budgetReportMoneyMetrics(r: BudgetRow): { budget: number; spent:
 export function budgetReportRowProgressPercent(r: BudgetRow): number {
     if (r.budget_by === 'none' || r.has_budget === false)
         return 0;
+    if (r.progress_percent != null && Number.isFinite(r.progress_percent))
+        return Math.max(0, Math.round(r.progress_percent));
     const hm = budgetReportMoneyMetrics(r);
     const hh = budgetReportHoursMetrics(r);
     if (r.budget_by === 'hours_and_money') {

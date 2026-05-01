@@ -683,9 +683,19 @@ export function BudgetTable({ rows, expanded, onToggle, }: {
           : r.budget_by === 'money'
             ? (cur || '—')
             : 'часы + сумма';
-      const fmtMoneyCell = (n: number | null | undefined) => n != null && Number.isFinite(n)
-        ? `${Math.round(n).toLocaleString('ru-RU')}${cur ? ` ${cur}` : ''}`
-        : '—';
+      const fmtMoneyCell = (n: number | null | undefined) => {
+        if (n == null || !Number.isFinite(n))
+          return '—';
+        const c = (cur || '').toUpperCase();
+        const fractionDigits = c === 'USD' ? 2 : c === 'UZS' ? 0 : 2;
+        const formatted = Number(n).toLocaleString('ru-RU', {
+          minimumFractionDigits: fractionDigits,
+          maximumFractionDigits: fractionDigits,
+        });
+        if (c === 'USD')
+          return `$${formatted}`;
+        return c ? `${formatted} ${c}` : formatted;
+      };
       const budgetCell = r.budget_by === 'hours_and_money'
         ? (<>
             <div>{fmtH(hh.budget)}</div>
