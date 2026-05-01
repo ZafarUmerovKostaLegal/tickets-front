@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import type { ProjectOption, } from '@pages/time-tracking/ui/timesheetProjectLoader';
 import { ReportPreviewDateTimeFilterPopover } from './ReportPreviewDateTimeFilterPopover';
 import { ReportPreviewTextFilterPopover } from './ReportPreviewTextFilterPopover';
-import { isClosedReportingWeekEditingBlockedForSubject, isWorkDateInClosedReportingPeriod, listClientTasks, type ProjectPartnerAccessRow, } from '@entities/time-tracking';
+import { isClosedReportingWeekEditingBlockedForSubject, isWorkDateInClosedReportingPeriod, listProjectTasks, type ProjectPartnerAccessRow, } from '@entities/time-tracking';
 import { formatDecimalHoursRu, formatHoursClockFromDecimalHours, } from '@shared/lib/formatTrackingHours';
 import { syncTextareaHeightToContent } from '@shared/lib/syncTextareaHeight';
 import { fmtAmtWithIso } from '@entities/time-tracking/lib/reportsFormatUtils';
@@ -231,53 +231,63 @@ function mergeLabeledOptions(base: LabeledOption[], fromRows: LabeledOption[]): 
     }
     return [...m.values()];
 }
-function buildTimeReportTaskOptionsForClient(
-    clientId: string,
-    allRows: TimeExcelPreviewRow[],
-    apiByClient: Record<string, LabeledOption[]>,
-): LabeledOption[] {
+function timeReportTaskProjectKey(clientId: string, projectId: string): string {
+    return `${clientId.trim()}\x1f${projectId.trim()}`;
+}
+function buildTimeReportTaskOptionsForProject(clientId: string, projectId: string, allRows: TimeExcelPreviewRow[], apiByProject: Record<string, LabeledOption[]>): LabeledOption[] {
     const cid = clientId.trim();
-    const fromApi = cid ? (apiByClient[cid] ?? []) : [];
+    const pid = projectId.trim();
+    const k = cid && pid ? timeReportTaskProjectKey(cid, pid) : '';
+    const fromApi = k ? (apiByProject[k] ?? []) : [];
     const fromRows = allRows
-        .filter((x) => (x.clientId?.trim() ?? '') === cid && x.taskId.trim())
+        .filter((x) => (x.clientId?.trim() ?? '') === cid && (x.projectId?.trim() ?? '') === pid && x.taskId.trim())
         .map((x) => ({
         id: x.taskId.trim(),
         label: (x.taskName || x.taskId).trim(),
     }));
     return mergeLabeledOptions(fromApi, fromRows);
 }
-function useTimeReportTaskOptionsByClientId(rows: TimeExcelPreviewRow[]) {
-    const [tasksByClientId, setTasksByClientId] = useState<Record<string, LabeledOption[]>>({});
-    const clientIdsKey = useMemo(() => [...new Set(rows.map((r) => r.clientId).map((c) => String(c ?? '').trim()).filter(Boolean))].sort().join('\0'), [rows]);
+function useTimeReportTaskOptionsByProject(rows: TimeExcelPreviewRow[]) {
+    const [tasksByProjectKey, setTasksByProjectKey] = useState<Record<string, LabeledOption[]>>({});
+    const projectPairsKey = useMemo(() => {
+        const uniq = new Set<string>();
+        for (const r of rows) {
+            const cid = String(r.clientId ?? '').trim();
+            const pid = String(r.projectId ?? '').trim();
+            if (cid && pid)
+                uniq.add(`${cid}\x1f${pid}`);
+        }
+        return [...uniq].sort().join('\0');
+    }, [rows]);
     useEffect(() => {
-        const ids = clientIdsKey ? clientIdsKey.split('\0') : [];
-        if (ids.length === 0) {
-            setTasksByClientId({});
+        const pairs = projectPairsKey ? projectPairsKey.split('\0').map((s) => s.split('\x1f')) : [];
+        if (pairs.length === 0 || pairs.some((p) => p.length !== 2)) {
+            setTasksByProjectKey({});
             return;
         }
         let cancelled = false;
         (async () => {
             const next: Record<string, LabeledOption[]> = {};
-            await Promise.all(ids.map(async (cid) => {
+            await Promise.all(pairs.map(async ([cid, pid]) => {
                 try {
-                    const list = await listClientTasks(cid);
+                    const list = await listProjectTasks(cid, pid);
                     if (cancelled)
                         return;
-                    next[cid] = list.map((t) => ({ id: t.id, label: t.name }));
+                    next[timeReportTaskProjectKey(cid, pid)] = list.map((t) => ({ id: t.id, label: t.name }));
                 }
                 catch {
                     if (!cancelled)
-                        next[cid] = [];
+                        next[timeReportTaskProjectKey(cid, pid)] = [];
                 }
             }));
             if (!cancelled)
-                setTasksByClientId(next);
+                setTasksByProjectKey(next);
         })();
         return () => {
             cancelled = true;
         };
-    }, [clientIdsKey]);
-    return tasksByClientId;
+    }, [projectPairsKey]);
+    return tasksByProjectKey;
 }
 function briefMatchesSubstr(hay: string, needle: string): boolean {
     if (!needle.trim())
@@ -563,14 +573,20 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     const [bfBill, setBfBill] = useState('');
     
     const [bfRecordedOrder, setBfRecordedOrder] = useState<'asc' | 'desc'>('asc');
-    const tasksByClientId = useTimeReportTaskOptionsByClientId(rows);
-    const taskOptionsByClientId = useMemo(() => {
-        const cids = [...new Set(rows.map((r) => r.clientId?.trim() ?? ''))];
+    const tasksByProjectKey = useTimeReportTaskOptionsByProject(rows);
+    const taskOptionsByProject = useMemo(() => {
         const m = new Map<string, LabeledOption[]>();
-        for (const cid of cids)
-            m.set(cid, buildTimeReportTaskOptionsForClient(cid, rows, tasksByClientId));
+        for (const r of rows) {
+            const cid = r.clientId?.trim() ?? '';
+            const pid = r.projectId?.trim() ?? '';
+            if (!cid || !pid)
+                continue;
+            const key = `${cid}\x1f${pid}`;
+            if (!m.has(key))
+                m.set(key, buildTimeReportTaskOptionsForProject(cid, pid, rows, tasksByProjectKey));
+        }
         return m;
-    }, [rows, tasksByClientId]);
+    }, [rows, tasksByProjectKey]);
     const employeePartnerSelectItems = useMemo((): PartnerEmployeeSelectItem[] | null => {
         if (employeePartnerPick == null || employeePartnerPick.loading)
             return null;
@@ -845,7 +861,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                   {readOnlyUi
                     ? (<span className="tt-rp-mtable__readonly">{((r.taskName || r.taskId || '').trim() || '—')}</span>)
                     : (<div className="tt-rp-mtable__brief-task">
-                      <SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByClientId.get(r.clientId?.trim() ?? '') ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>
+                      <SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByProject.get(timeReportTaskProjectKey(r.clientId?.trim() ?? '', r.projectId?.trim() ?? '')) ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>
                     </div>)}
                 </td>);
             case 'note':
@@ -1056,7 +1072,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
                   {readOnlyUi
                       ? (<span className="tt-rp-mtable__readonly">{((r.taskName || r.taskId || '').trim() || '—')}</span>)
-                      : (<SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByClientId.get(r.clientId?.trim() ?? '') ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>)}
+                      : (<SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByProject.get(timeReportTaskProjectKey(r.clientId?.trim() ?? '', r.projectId?.trim() ?? '')) ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>)}
                 </td>);
             case 'note':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--comment">

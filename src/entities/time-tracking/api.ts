@@ -996,12 +996,12 @@ export async function deleteClientContact(clientId: string, contactId: string): 
 }
 export type TimeManagerClientTaskRow = {
     id: string;
-    client_id: string;
+
+    /** Проект, к которому относится задача (ответ gateway / TT). */
+    project_id: string;
     name: string;
     default_billable_rate: string | number | null;
     billable_by_default: boolean;
-    common_for_future_projects: boolean;
-    add_to_existing_projects: boolean;
     created_at: string;
     updated_at: string | null;
 };
@@ -1009,42 +1009,60 @@ export type TimeManagerClientTaskCreatePayload = {
     name: string;
     defaultBillableRate?: number | null;
     billableByDefault?: boolean;
-    commonForFutureProjects?: boolean;
-    addToExistingProjects?: boolean;
 };
 export type TimeManagerClientTaskPatchPayload = {
     name?: string;
     defaultBillableRate?: number | null;
     billableByDefault?: boolean;
-    commonForFutureProjects?: boolean;
-    addToExistingProjects?: boolean;
 };
-export async function listClientTasks(clientId: string): Promise<TimeManagerClientTaskRow[]> {
-    const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/tasks`);
-    await throwIfNotOk(res);
-    return (await res.json()) as TimeManagerClientTaskRow[];
+function normalizeTimeManagerProjectTask(raw: unknown): TimeManagerClientTaskRow {
+    const r = raw as Record<string, unknown>;
+    const projectIdRaw = r.project_id ?? r.projectId;
+    return {
+        id: String(r.id ?? ''),
+        project_id: String(projectIdRaw ?? ''),
+        name: String(r.name ?? ''),
+        default_billable_rate: (r.default_billable_rate ?? r.defaultBillableRate ?? null) as string | number | null,
+        billable_by_default: Boolean(r.billable_by_default ?? r.billableByDefault),
+        created_at: String(r.created_at ?? r.createdAt ?? ''),
+        updated_at: r.updated_at != null
+            ? String(r.updated_at)
+            : r.updatedAt != null
+                ? String(r.updatedAt)
+                : null,
+    };
 }
-export async function getClientTask(clientId: string, taskId: string): Promise<TimeManagerClientTaskRow> {
-    const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/tasks/${encodeURIComponent(taskId)}`);
-    await throwIfNotOk(res);
-    return (await res.json()) as TimeManagerClientTaskRow;
+function projectTasksCollectionPath(clientId: string, projectId: string): string {
+    return `/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/projects/${encodeURIComponent(projectId)}/tasks`;
 }
-export async function createClientTask(clientId: string, body: TimeManagerClientTaskCreatePayload): Promise<TimeManagerClientTaskRow> {
-    const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/tasks`, {
+/** Список задач в контексте проекта (не клиента). */
+export async function listProjectTasks(clientId: string, projectId: string): Promise<TimeManagerClientTaskRow[]> {
+    const res = await apiFetch(projectTasksCollectionPath(clientId, projectId));
+    await throwIfNotOk(res);
+    const body = await res.json();
+    if (!Array.isArray(body))
+        return [];
+    return body.map(normalizeTimeManagerProjectTask);
+}
+export async function getProjectTask(clientId: string, projectId: string, taskId: string): Promise<TimeManagerClientTaskRow> {
+    const res = await apiFetch(`${projectTasksCollectionPath(clientId, projectId)}/${encodeURIComponent(taskId)}`);
+    await throwIfNotOk(res);
+    return normalizeTimeManagerProjectTask(await res.json());
+}
+export async function createProjectTask(clientId: string, projectId: string, body: TimeManagerClientTaskCreatePayload): Promise<TimeManagerClientTaskRow> {
+    const res = await apiFetch(projectTasksCollectionPath(clientId, projectId), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             name: body.name,
             defaultBillableRate: body.defaultBillableRate ?? null,
             billableByDefault: body.billableByDefault ?? true,
-            commonForFutureProjects: body.commonForFutureProjects ?? false,
-            addToExistingProjects: body.addToExistingProjects ?? false,
         }),
     });
     await throwIfNotOk(res);
-    return (await res.json()) as TimeManagerClientTaskRow;
+    return normalizeTimeManagerProjectTask(await res.json());
 }
-export async function patchClientTask(clientId: string, taskId: string, patch: TimeManagerClientTaskPatchPayload): Promise<TimeManagerClientTaskRow> {
+export async function patchProjectTask(clientId: string, projectId: string, taskId: string, patch: TimeManagerClientTaskPatchPayload): Promise<TimeManagerClientTaskRow> {
     const payload: Record<string, unknown> = {};
     if (patch.name !== undefined)
         payload.name = patch.name;
@@ -1052,20 +1070,16 @@ export async function patchClientTask(clientId: string, taskId: string, patch: T
         payload.defaultBillableRate = patch.defaultBillableRate;
     if (patch.billableByDefault !== undefined)
         payload.billableByDefault = patch.billableByDefault;
-    if (patch.commonForFutureProjects !== undefined)
-        payload.commonForFutureProjects = patch.commonForFutureProjects;
-    if (patch.addToExistingProjects !== undefined)
-        payload.addToExistingProjects = patch.addToExistingProjects;
-    const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/tasks/${encodeURIComponent(taskId)}`, {
+    const res = await apiFetch(`${projectTasksCollectionPath(clientId, projectId)}/${encodeURIComponent(taskId)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
     await throwIfNotOk(res);
-    return (await res.json()) as TimeManagerClientTaskRow;
+    return normalizeTimeManagerProjectTask(await res.json());
 }
-export async function deleteClientTask(clientId: string, taskId: string): Promise<void> {
-    const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/tasks/${encodeURIComponent(taskId)}`, { method: 'DELETE' });
+export async function deleteProjectTask(clientId: string, projectId: string, taskId: string): Promise<void> {
+    const res = await apiFetch(`${projectTasksCollectionPath(clientId, projectId)}/${encodeURIComponent(taskId)}`, { method: 'DELETE' });
     await throwIfNotOk(res);
 }
 export type TimeManagerClientExpenseCategoryRow = {
@@ -1646,6 +1660,9 @@ export type TimeManagerClientProjectCreatePayload = {
     sendBudgetAlerts?: boolean;
     budgetAlertThresholdPercent?: string | number | null;
     fixedFeeAmount?: string | number | null;
+
+    /** `auth_user_id` — сразу выдать доступ к проекту при создании (gateway → TT). */
+    initialTimeTrackingUserAuthIds?: number[];
 };
 export type TimeManagerClientProjectPatchPayload = {
     name?: string;
@@ -1707,6 +1724,9 @@ function projectCreateBody(body: TimeManagerClientProjectCreatePayload): Record<
         o.budgetAlertThresholdPercent = body.budgetAlertThresholdPercent;
     if (body.fixedFeeAmount !== undefined)
         o.fixedFeeAmount = body.fixedFeeAmount;
+    if (body.initialTimeTrackingUserAuthIds != null && body.initialTimeTrackingUserAuthIds.length > 0) {
+        o.initialTimeTrackingUserAuthIds = [...new Set(body.initialTimeTrackingUserAuthIds.filter((n) => Number.isFinite(n) && n > 0))];
+    }
     return o;
 }
 function projectPatchBody(patch: TimeManagerClientProjectPatchPayload): Record<string, unknown> {

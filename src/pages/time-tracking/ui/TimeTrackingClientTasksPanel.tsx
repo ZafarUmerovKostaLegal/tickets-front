@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useId } from 'react';
-import { listAllTimeManagerClientsMerged, listClientTasks, createClientTask, patchClientTask, deleteClientTask, isForbiddenError, type TimeManagerClientRow, type TimeManagerClientTaskRow, } from '@entities/time-tracking';
+import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listProjectTasks, createProjectTask, patchProjectTask, deleteProjectTask, isForbiddenError, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientTaskRow, } from '@entities/time-tracking';
 import { SearchableSelect, useAppDialog } from '@shared/ui';
 import { clientRowSearchText } from '@pages/time-tracking/lib/clientRowSearchText';
 import { useCurrentUser } from '@shared/hooks';
@@ -25,14 +25,6 @@ function TaskRowBadges({ t }: {
         <span className="tt-task-pill__dot" aria-hidden/>
         {t.billable_by_default ? 'Оплачиваемая' : 'Не оплачиваемая'}
       </span>
-      {t.common_for_future_projects && (<span className="tt-task-pill tt-task-pill--scope" title="Задача будет доступна в новых проектах этого клиента">
-          <span className="tt-task-pill__dot" aria-hidden/>
-          Будущие проекты
-        </span>)}
-      {t.add_to_existing_projects && (<span className="tt-task-pill tt-task-pill--scope" title="Задача уже добавлена во все текущие проекты клиента">
-          <span className="tt-task-pill__dot" aria-hidden/>
-          Текущие проекты
-        </span>)}
     </div>);
 }
 function taskInitial(name: string): string {
@@ -59,16 +51,12 @@ type TaskFormState = {
     name: string;
     defaultBillableRate: string;
     billableByDefault: boolean;
-    commonForFutureProjects: boolean;
-    addToExistingProjects: boolean;
 };
 function emptyTaskForm(): TaskFormState {
     return {
         name: '',
         defaultBillableRate: '',
         billableByDefault: true,
-        commonForFutureProjects: false,
-        addToExistingProjects: false,
     };
 }
 function rowToTaskForm(t: TimeManagerClientTaskRow): TaskFormState {
@@ -76,18 +64,20 @@ function rowToTaskForm(t: TimeManagerClientTaskRow): TaskFormState {
         name: t.name,
         defaultBillableRate: rateToInput(t.default_billable_rate),
         billableByDefault: t.billable_by_default,
-        commonForFutureProjects: t.common_for_future_projects,
-        addToExistingProjects: t.add_to_existing_projects,
     };
+}
+function projectSearchText(p: TimeManagerClientProjectRow): string {
+    return [p.name, p.code ?? '', p.id].filter(Boolean).join(' ').trim();
 }
 type TaskModalProps = {
     mode: 'create' | 'edit';
     clientId: string;
+    projectId: string;
     initial: TimeManagerClientTaskRow | null;
     onClose: () => void;
     onSaved: (row: TimeManagerClientTaskRow) => void;
 };
-function ClientTaskModal({ mode, clientId, initial, onClose, onSaved }: TaskModalProps) {
+function ClientTaskModal({ mode, clientId, projectId, initial, onClose, onSaved }: TaskModalProps) {
     const uid = useId();
     const [form, setForm] = useState<TaskFormState>(() => (initial ? rowToTaskForm(initial) : emptyTaskForm()));
     const [error, setError] = useState<string | null>(null);
@@ -112,22 +102,18 @@ function ClientTaskModal({ mode, clientId, initial, onClose, onSaved }: TaskModa
         setSaving(true);
         try {
             if (mode === 'create') {
-                const row = await createClientTask(clientId, {
+                const row = await createProjectTask(clientId, projectId, {
                     name,
                     defaultBillableRate,
                     billableByDefault: form.billableByDefault,
-                    commonForFutureProjects: form.commonForFutureProjects,
-                    addToExistingProjects: form.addToExistingProjects,
                 });
                 onSaved(row);
             }
             else if (initial) {
-                const row = await patchClientTask(clientId, initial.id, {
+                const row = await patchProjectTask(clientId, projectId, initial.id, {
                     name,
                     defaultBillableRate,
                     billableByDefault: form.billableByDefault,
-                    commonForFutureProjects: form.commonForFutureProjects,
-                    addToExistingProjects: form.addToExistingProjects,
                 });
                 onSaved(row);
             }
@@ -172,14 +158,6 @@ function ClientTaskModal({ mode, clientId, initial, onClose, onSaved }: TaskModa
               <input type="checkbox" checked={form.billableByDefault} onChange={(e) => setForm((f) => ({ ...f, billableByDefault: e.target.checked }))}/>
               <span>По умолчанию оплачиваемая задача</span>
             </label>
-            <label className="tt-tm-check-row">
-              <input type="checkbox" checked={form.commonForFutureProjects} onChange={(e) => setForm((f) => ({ ...f, commonForFutureProjects: e.target.checked }))}/>
-              <span>Общая задача для всех будущих проектов</span>
-            </label>
-            <label className="tt-tm-check-row">
-              <input type="checkbox" checked={form.addToExistingProjects} onChange={(e) => setForm((f) => ({ ...f, addToExistingProjects: e.target.checked }))}/>
-              <span>Добавить ко всем существующим проектам</span>
-            </label>
           </fieldset>
           {error && (<p className="tt-tm-field-error" role="alert">
               {error}
@@ -204,6 +182,10 @@ export function TimeTrackingClientTasksPanel() {
     const [clientsLoading, setClientsLoading] = useState(true);
     const [clientsError, setClientsError] = useState<string | null>(null);
     const [clientId, setClientId] = useState<string>('');
+    const [projects, setProjects] = useState<TimeManagerClientProjectRow[]>([]);
+    const [projectsLoading, setProjectsLoading] = useState(false);
+    const [projectsError, setProjectsError] = useState<string | null>(null);
+    const [projectId, setProjectId] = useState<string>('');
     const [tasks, setTasks] = useState<TimeManagerClientTaskRow[]>([]);
     const [tasksLoading, setTasksLoading] = useState(false);
     const [tasksError, setTasksError] = useState<string | null>(null);
@@ -235,15 +217,45 @@ export function TimeTrackingClientTasksPanel() {
     useEffect(() => {
         void loadClients();
     }, [loadClients]);
-    const loadTasks = useCallback(async (cid: string) => {
+    const loadProjectsForClient = useCallback(async (cid: string) => {
         if (!cid) {
+            setProjects([]);
+            setProjectId('');
+            return;
+        }
+        setProjectsLoading(true);
+        setProjectsError(null);
+        try {
+            const rows = await listAllClientProjectsForClientMerged(cid);
+            rows.sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
+            setProjects(rows);
+            setProjectId((prev) => {
+                if (prev && rows.some((p) => p.id === prev))
+                    return prev;
+                return rows[0]?.id ?? '';
+            });
+        }
+        catch (e) {
+            setProjects([]);
+            setProjectId('');
+            setProjectsError(e instanceof Error ? e.message : 'Не удалось загрузить проекты');
+        }
+        finally {
+            setProjectsLoading(false);
+        }
+    }, []);
+    useEffect(() => {
+        void loadProjectsForClient(clientId);
+    }, [clientId, loadProjectsForClient]);
+    const loadTasks = useCallback(async (cid: string, pid: string) => {
+        if (!cid || !pid) {
             setTasks([]);
             return;
         }
         setTasksLoading(true);
         setTasksError(null);
         try {
-            const rows = await listClientTasks(cid);
+            const rows = await listProjectTasks(cid, pid);
             rows.sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
             setTasks(rows);
         }
@@ -261,8 +273,8 @@ export function TimeTrackingClientTasksPanel() {
         }
     }, []);
     useEffect(() => {
-        void loadTasks(clientId);
-    }, [clientId, loadTasks]);
+        void loadTasks(clientId, projectId);
+    }, [clientId, projectId, loadTasks]);
     const onTaskSaved = (row: TimeManagerClientTaskRow) => {
         setTasks((prev) => {
             const idx = prev.findIndex((x) => x.id === row.id);
@@ -286,7 +298,7 @@ export function TimeTrackingClientTasksPanel() {
         if (!ok)
             return;
         try {
-            await deleteClientTask(clientId, task.id);
+            await deleteProjectTask(clientId, projectId, task.id);
             setTasks((prev) => prev.filter((t) => t.id !== task.id));
         }
         catch (e) {
@@ -294,15 +306,15 @@ export function TimeTrackingClientTasksPanel() {
         }
     };
     const selectedClient = clients.find((c) => c.id === clientId);
+    const selectedProject = projects.find((p) => p.id === projectId);
     const rateLabel = (t: TimeManagerClientTaskRow) => {
         const r = formatBillableRate(t.default_billable_rate);
         return r ? `Ставка по умолчанию: ${r} / ч` : 'Ставка по умолчанию не задана';
     };
     return (<div className="tt-settings__content tt-tasks-page">
-      <h1 className="tt-settings__page-title">Задачи по клиентам</h1>
+      <h1 className="tt-settings__page-title">Задачи по проектам</h1>
       <p className="tt-settings__desc tt-tasks-page__lead">
-        Справочник задач для выбранного клиента: ставка по умолчанию и правила применения к проектам задаются в форме
-        создания и редактирования.
+        Справочник задач для выбранного проекта: ставка по умолчанию и признак оплачиваемости задаются при создании и редактировании.
       </p>
 
       {clientsError && (<p className="tt-settings__banner-error" role="alert">
@@ -320,7 +332,15 @@ export function TimeTrackingClientTasksPanel() {
               </span>)}/>
           {!clientsLoading && clients.length === 0 && !clientsError && (<p className="tt-tasks-toolbar__hint">Сначала добавьте клиента на вкладке «Клиенты».</p>)}
         </div>
-        <button type="button" className="tt-settings__btn tt-settings__btn--primary tt-tasks-toolbar__cta" disabled={!canManage || !clientId} title={!canManage ? 'Доступно главному администратору, администратору и партнёру' : undefined} onClick={() => setModal({ mode: 'create', row: null })}>
+        <div className="tt-tasks-toolbar__client">
+          <label className="tt-tasks-toolbar__label" id="tt-task-project-lbl" htmlFor="tt-task-project-select">
+            Проект
+          </label>
+          <SearchableSelect<TimeManagerClientProjectRow> className="tt-tm-dd" buttonClassName="tt-tm-dd__btn" buttonId="tt-task-project-select" value={projectId} items={projects} getOptionValue={(p) => p.id} getOptionLabel={(p) => (p.code ? `${p.name} (${p.code})` : p.name)} getSearchText={projectSearchText} onSelect={(p) => setProjectId(p.id)} placeholder={!clientId ? 'Сначала выберите клиента' : projects.length === 0 && !projectsLoading ? 'Нет проектов' : 'Выберите проект…'} emptyListText="Нет проектов" noMatchText="Проект не найден" disabled={!clientId || projectsLoading || projects.length === 0} portalDropdown portalZIndex={11020} portalMinWidth={300} portalDropdownClassName="tsp-srch__dropdown--tall" aria-labelledby="tt-task-project-lbl"/>
+          {projectsError && (<p className="tt-tasks-toolbar__hint" role="alert">{projectsError}</p>)}
+          {!projectsError && !projectsLoading && clientId && projects.length === 0 && (<p className="tt-tasks-toolbar__hint">Сначала создайте проект у этого клиента — при создании появится набор типовых задач.</p>)}
+        </div>
+        <button type="button" className="tt-settings__btn tt-settings__btn--primary tt-tasks-toolbar__cta" disabled={!canManage || !clientId || !projectId} title={!canManage ? 'Доступно главному администратору, администратору и партнёру' : undefined} onClick={() => setModal({ mode: 'create', row: null })}>
           + Новая задача
         </button>
       </div>
@@ -333,16 +353,18 @@ export function TimeTrackingClientTasksPanel() {
           {tasksError}
         </p>)}
 
-      {!tasksError && selectedClient && (<h2 className="tt-tasks-page__list-heading">
+      {!tasksError && selectedClient && selectedProject && (<h2 className="tt-tasks-page__list-heading">
           Задачи <span className="tt-tasks-page__list-heading-client">{selectedClient.name}</span>
+          {' '}
+          <span className="tt-tasks-page__list-heading-client">· {selectedProject.name}</span>
         </h2>)}
 
       {!tasksError && (<div className="tt-settings__list tt-tasks-page__list">
           {tasksLoading && (<div className="tt-settings__list-loading" role="status">
               Загрузка задач…
             </div>)}
-          {!tasksLoading && clientId && tasks.length === 0 && (<div className="tt-settings__rates-empty tt-settings__list-empty-inner tt-tasks-page__empty">
-              Для этого клиента пока нет задач. Нажмите «Новая задача».
+          {!tasksLoading && clientId && projectId && tasks.length === 0 && (<div className="tt-settings__rates-empty tt-settings__list-empty-inner tt-tasks-page__empty">
+              Для этого проекта пока нет задач. Нажмите «Новая задача».
             </div>)}
           {!tasksLoading &&
                 tasks.map((t) => {
@@ -372,6 +394,6 @@ export function TimeTrackingClientTasksPanel() {
                 })}
         </div>)}
 
-      {modal && clientId && (<ClientTaskModal key={modal.mode === 'edit' && modal.row ? modal.row.id : 'create'} mode={modal.mode} clientId={clientId} initial={modal.row} onClose={() => setModal(null)} onSaved={onTaskSaved}/>)}
+      {modal && clientId && projectId && (<ClientTaskModal key={modal.mode === 'edit' && modal.row ? modal.row.id : 'create'} mode={modal.mode} clientId={clientId} projectId={projectId} initial={modal.row} onClose={() => setModal(null)} onSaved={onTaskSaved}/>)}
     </div>);
 }

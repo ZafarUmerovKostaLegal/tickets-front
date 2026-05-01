@@ -26,7 +26,7 @@ import {
     patchTimeEntry,
     createTimeEntry,
     deleteTimeEntry,
-    listClientTasks,
+    listProjectTasks,
     canOverrideReportPreviewWeeklyLock,
     listPartnerUsersWithProjectAccessToProject,
     listPartnerReportConfirmationsPending,
@@ -1071,9 +1071,9 @@ export function ReportPreviewPage() {
             const base = mergeTimeEntryResponseIntoRow(updated);
             let taskName = row.taskName;
             let taskId = String(base.taskId ?? row.taskId ?? '').trim();
-            if (opt.clientId) {
+            if (opt.clientId && opt.id) {
                 try {
-                    const tasks = await listClientTasks(opt.clientId);
+                    const tasks = await listProjectTasks(opt.clientId, opt.id);
                     const match = taskId
                         ? tasks.find((x) => String(x.id) === taskId)
                         : tasks[0];

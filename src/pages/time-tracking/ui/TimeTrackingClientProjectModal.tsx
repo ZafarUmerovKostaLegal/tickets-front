@@ -207,7 +207,7 @@ function parseOptionalDecimal(raw: string): string | number | null {
   const n = parseFloat(t);
   return Number.isFinite(n) ? t : null;
 }
-function buildCreatePayload(form: ProjectFormState): TimeManagerClientProjectCreatePayload {
+function buildCreatePayload(form: ProjectFormState, initialTimeTrackingUserAuthIds?: number[]): TimeManagerClientProjectCreatePayload {
   const name = form.name.trim();
   const pt = form.projectType;
   let billableRateType: string | null = null;
@@ -250,6 +250,8 @@ function buildCreatePayload(form: ProjectFormState): TimeManagerClientProjectCre
     else
       projectBillableRateAmount = null;
   }
+  const ids = (initialTimeTrackingUserAuthIds ?? []).filter((n) => Number.isFinite(n) && n > 0);
+  const uniqueIds = [...new Set(ids)];
   return {
     name,
     code: form.code.trim() || null,
@@ -268,6 +270,7 @@ function buildCreatePayload(form: ProjectFormState): TimeManagerClientProjectCre
     budgetIncludesExpenses: form.budgetIncludesExpenses,
     sendBudgetAlerts: form.sendBudgetAlerts,
     budgetAlertThresholdPercent,
+    ...(uniqueIds.length > 0 ? { initialTimeTrackingUserAuthIds: uniqueIds } : {}),
   };
 }
 export type ClientProjectModalProps = {
@@ -620,7 +623,9 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     setError(null);
     setSaving(true);
     try {
-      const body = buildCreatePayload(form);
+      const body = mode === 'create'
+        ? buildCreatePayload(form, assignedUserIds)
+        : buildCreatePayload(form);
       if (mode === 'create') {
         const row = await createClientProject(effectiveClientId, body);
         if (canManage)
@@ -832,7 +837,12 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
       </p>
     </div>)}
 
-    {canManage && (mode === 'create' || mode === 'edit') && (<ProjectMembersField assignedIds={assignedUserIds} onAssignedChange={handleAssignedChange} disabled={saving || editMembersLoading} showBillableRate={showMemberBillableRate} projectCurrency={(form.currency || 'USD').trim() || 'USD'} memberRates={memberRates} onUpdateMemberRate={(id, d) => setMemberRates((p) => ({ ...p, [id]: d }))} />)}
+    {canManage && (mode === 'create' || mode === 'edit') && (<>
+      <ProjectMembersField assignedIds={assignedUserIds} onAssignedChange={handleAssignedChange} disabled={saving || editMembersLoading} showBillableRate={showMemberBillableRate} projectCurrency={(form.currency || 'USD').trim() || 'USD'} memberRates={memberRates} onUpdateMemberRate={(id, d) => setMemberRates((p) => ({ ...p, [id]: d }))} />
+      {mode === 'create' && (<p className="tt-tm-hint" style={{ marginTop: '-0.25rem' }}>
+        Участники, выбранные до нажатия «Создать», сразу получают доступ к проекту на сервере; при необходимости профиль подтягивается из auth тем же запросом (нужна авторизация на gateway).
+      </p>)}
+    </>)}
 
     <div className="tt-tm-field">
       <label className="tt-tm-label" htmlFor={`${uid}-notes`}>

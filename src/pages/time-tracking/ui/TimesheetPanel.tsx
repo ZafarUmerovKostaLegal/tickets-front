@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useId, useRef, useReducer, useLayoutEffect, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { upsertTimeTrackingUser, listClientTasks, listTimeEntries, createTimeEntry, patchTimeEntry, deleteTimeEntry, grantTimeEntryEditUnlock, isTimeTrackingHttpError, isWorkDateInClosedReportingPeriod, isClosedReportingWeekEditingBlockedForSubject, getActiveTimeEntryEditUnlockExpiresAtIso, type TimeEntryRow, type TimeTrackingUserRow, type CreateTimeEntryBody, type PatchTimeEntryBody, } from '@entities/time-tracking';
+import { upsertTimeTrackingUser, listProjectTasks, listTimeEntries, createTimeEntry, patchTimeEntry, deleteTimeEntry, grantTimeEntryEditUnlock, isTimeTrackingHttpError, isWorkDateInClosedReportingPeriod, isClosedReportingWeekEditingBlockedForSubject, getActiveTimeEntryEditUnlockExpiresAtIso, type TimeEntryRow, type TimeTrackingUserRow, type CreateTimeEntryBody, type PatchTimeEntryBody, } from '@entities/time-tracking';
 import { canGrantTimeEntryEditUnlock, canOverrideReportPreviewWeeklyLock } from '@entities/time-tracking/model/timeTrackingAccess';
 import { loadTimesheetProjectOptions, type ProjectOption, } from './timesheetProjectLoader';
 import { useCurrentUser } from '@shared/hooks';
@@ -365,7 +365,7 @@ type EntryForm = {
     notes: string;
     billable: boolean;
 };
-function resolveInitialForm(entry: TimeEntry | undefined, defaultDate: string, projects: ProjectOption[], tasksByClientId: Record<string, ClientTaskOption[]>): EntryForm {
+function resolveInitialForm(entry: TimeEntry | undefined, defaultDate: string, projects: ProjectOption[], tasksByProjectId: Record<string, ClientTaskOption[]>): EntryForm {
     let projectId = '';
     if (entry?.projectId && projects.some((p) => p.id === entry.projectId)) {
         projectId = entry.projectId;
@@ -378,21 +378,21 @@ function resolveInitialForm(entry: TimeEntry | undefined, defaultDate: string, p
         projectId = projects[0]?.id ?? '';
     }
     const p = projects.find((x) => x.id === projectId);
-    const clientTasks = p ? (tasksByClientId[p.clientId] ?? []) : [];
+    const projectTasks = p ? (tasksByProjectId[p.id] ?? []) : [];
     let taskId = entry?.taskId ?? '';
     let task = entry?.task ?? '';
     let billable = entry?.billable ?? true;
-    if (clientTasks.length > 0) {
+    if (projectTasks.length > 0) {
         const matched = taskId
-            ? clientTasks.find((t) => t.id === taskId)
-            : clientTasks.find((t) => t.name === task);
+            ? projectTasks.find((t) => t.id === taskId)
+            : projectTasks.find((t) => t.name === task);
         if (matched) {
             taskId = matched.id;
             task = matched.name;
             billable = matched.billableByDefault;
         }
         else {
-            const first = clientTasks[0]!;
+            const first = projectTasks[0]!;
             taskId = first.id;
             task = first.name;
             billable = first.billableByDefault;
@@ -408,15 +408,15 @@ function resolveInitialForm(entry: TimeEntry | undefined, defaultDate: string, p
         billable,
     };
 }
-function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoadError, tasksByClientId, clientTasksIndexLoading, entriesSubjectAuthUserId, viewerCanOverrideWeeklyLock, onClose, onSave, }: {
+function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoadError, tasksByProjectId, projectTasksIndexLoading, entriesSubjectAuthUserId, viewerCanOverrideWeeklyLock, onClose, onSave, }: {
     entry?: TimeEntry;
     defaultDate: string;
     projects: ProjectOption[];
     projectsLoading: boolean;
     projectsLoadError: string | null;
-    tasksByClientId: Record<string, ClientTaskOption[]>;
+    tasksByProjectId: Record<string, ClientTaskOption[]>;
     
-    clientTasksIndexLoading: boolean;
+    projectTasksIndexLoading: boolean;
     entriesSubjectAuthUserId: number;
     viewerCanOverrideWeeklyLock: boolean;
     onClose: () => void;
@@ -425,7 +425,7 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
     const uid = useId();
     const notesRef = useRef<HTMLTextAreaElement>(null);
     const [saving, setSaving] = useState(false);
-    const [form, setForm] = useState<EntryForm>(() => projects.length > 0 ? resolveInitialForm(entry, defaultDate, projects, tasksByClientId) : {
+    const [form, setForm] = useState<EntryForm>(() => projects.length > 0 ? resolveInitialForm(entry, defaultDate, projects, tasksByProjectId) : {
         projectId: '',
         taskId: '',
         task: '',
@@ -453,14 +453,14 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
         el.style.height = `${el.scrollHeight}px`;
     }, [form.notes]);
     const proj = projects.find((p) => p.id === form.projectId) ?? projects[0];
-    const clientTasks = proj ? (tasksByClientId[proj.clientId] ?? []) : [];
-    const clientTasksListReady = !clientTasksIndexLoading;
+    const projectTasks = proj ? (tasksByProjectId[proj.id] ?? []) : [];
+    const projectTasksListReady = !projectTasksIndexLoading;
     const projectsByClient = useMemo(() => groupProjectsByClient(projects), [projects]);
     const flatProjects = useMemo(() => projectsByClient.flatMap(({ projects: grp }) => grp), [projectsByClient]);
     useEffect(() => {
         if (!proj)
             return;
-        const tasks = tasksByClientId[proj.clientId] ?? [];
+        const tasks = tasksByProjectId[proj.id] ?? [];
         if (tasks.length === 0)
             return;
         setForm((f) => {
@@ -476,7 +476,7 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
             const first = tasks[0]!;
             return { ...f, taskId: first.id, task: first.name, billable: first.billableByDefault };
         });
-    }, [proj?.clientId, proj?.id, tasksByClientId]);
+    }, [proj?.id, tasksByProjectId]);
     function parseHoursStrict(s: string): number {
         const clean = s.trim();
         if (!clean)
@@ -523,12 +523,12 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
             setError('Период по выбранной дате закрыт для правок. Попросите менеджера учёта времени выдать разблокировку на этот день или укажите дату в открытом периоде.');
             return;
         }
-        if (clientTasksIndexLoading) {
+        if (projectTasksIndexLoading) {
             setError('Справочник задач ещё загружается. Подождите секунду и попробуйте снова.');
             return;
         }
-        if (clientTasks.length === 0) {
-            setError('Нет задач в справочнике по клиенту этого проекта. Задайте задачи в настройках учёта времени (справочник задач клиента), затем создайте запись.');
+        if (projectTasks.length === 0) {
+            setError('Нет задач для этого проекта. Добавьте задачи в справочнике (задачи проекта) или выберите другой проект.');
             return;
         }
         if (!form.taskId.trim()) {
@@ -666,7 +666,7 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
                         <span className="tsp-srch__btn-pick-client">{p.client}</span>
                         <span className="tsp-srch__btn-pick-proj">{p.name}</span>
                     </span>)} placeholder="Проект…" emptyListText="Нет проектов" noMatchText="Ничего не найдено" onSelect={(p) => {
-                        const tasks = tasksByClientId[p.clientId] ?? [];
+                        const tasks = tasksByProjectId[p.id] ?? [];
                         if (tasks.length > 0) {
                             const match = tasks.find((t) => t.name === form.task) ?? tasks[0]!;
                             setForm((f) => ({
@@ -685,7 +685,7 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
                 </div>
 
                 <div className="tsp-m__te-field">
-                    <SearchableSelect<ClientTaskOption> portalDropdown portalZIndex={12000} portalMinWidth={260} portalDropdownClassName="tsp-srch__dropdown--tall" buttonId={`${uid}-task-btn`} value={form.taskId} items={clientTasks} getOptionValue={(t) => t.id} getOptionLabel={(t) => t.name} getSearchText={(t) => t.name} placeholder="Задача…" emptyListText="Нет задач — задайте справочник у клиента" noMatchText="Ничего не найдено" disabled={!form.projectId || formDateLocked || !clientTasksListReady || clientTasks.length === 0} onSelect={(t) => setForm((f) => ({
+                    <SearchableSelect<ClientTaskOption> portalDropdown portalZIndex={12000} portalMinWidth={260} portalDropdownClassName="tsp-srch__dropdown--tall" buttonId={`${uid}-task-btn`} value={form.taskId} items={projectTasks} getOptionValue={(t) => t.id} getOptionLabel={(t) => t.name} getSearchText={(t) => t.name} placeholder="Задача…" emptyListText="Нет задач — задайте справочник для проекта" noMatchText="Ничего не найдено" disabled={!form.projectId || formDateLocked || !projectTasksListReady || projectTasks.length === 0} onSelect={(t) => setForm((f) => ({
                         ...f,
                         taskId: t.id,
                         task: t.name,
@@ -696,8 +696,8 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
                             {t.billableByDefault ? 'Оплачиваемая' : 'Неоплачиваемая'}
                         </span>
                     </span>)} />
-                    {proj && !clientTasksListReady && (<p className="tsp-m__field-note tsp-m__field-note--tight">Загрузка справочника задач…</p>)}
-                    {proj && clientTasksListReady && clientTasks.length === 0 && (<p className="tsp-m__field-note tsp-m__field-note--tight">Нет задач в справочнике по этому клиенту — добавьте их в разделе справочников (задачи клиента), затем выберите задачу здесь.</p>)}
+                    {proj && !projectTasksListReady && (<p className="tsp-m__field-note tsp-m__field-note--tight">Загрузка справочника задач…</p>)}
+                    {proj && projectTasksListReady && projectTasks.length === 0 && (<p className="tsp-m__field-note tsp-m__field-note--tight">Нет задач для этого проекта — добавьте их в справочнике задач (выберите клиента и проект), затем обновите табель.</p>)}
                 </div>
 
                 <div className="tsp-m__row tsp-m__row--notes-time">
@@ -742,7 +742,7 @@ function EntryModal({ entry, defaultDate, projects, projectsLoading, projectsLoa
 
             <div className="tsp-m__foot tsp-m__foot--time-entry">
                 <div className="tsp-m__foot-actions">
-                    <button type="button" className="tsp-m__btn tsp-m__btn--ok" disabled={!entry?.isVoided && (saving || formDateLocked || !clientTasksListReady || clientTasks.length === 0 || !form.taskId.trim())} onClick={() => (entry?.isVoided ? onClose() : void handleSave())}>
+                    <button type="button" className="tsp-m__btn tsp-m__btn--ok" disabled={!entry?.isVoided && (saving || formDateLocked || !projectTasksListReady || projectTasks.length === 0 || !form.taskId.trim())} onClick={() => (entry?.isVoided ? onClose() : void handleSave())}>
                         {entry?.isVoided ? 'Закрыть' : saving ? 'Сохранение…' : entry ? 'Сохранить' : 'Добавить'}
                     </button>
                     <button type="button" className="tsp-m__btn tsp-m__btn--cancel" disabled={saving} onClick={onClose}>
@@ -863,8 +863,8 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         items: ProjectOption[];
         error: string | null;
     }>({ loading: true, items: [], error: null });
-    const [tasksByClientId, setTasksByClientId] = useState<Record<string, ClientTaskOption[]>>({});
-    const [clientTasksIndexLoading, setClientTasksIndexLoading] = useState(false);
+    const [tasksByProjectId, setTasksByProjectId] = useState<Record<string, ClientTaskOption[]>>({});
+    const [projectTasksIndexLoading, setProjectTasksIndexLoading] = useState(false);
     const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
     const [calendarAnchor, setCalendarAnchor] = useState<Date>(() => startOfMonth(new Date()));
     const initialTimesheetMode = readStoredTimesheetViewMode() ?? 'day';
@@ -909,16 +909,15 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     useEffect(() => {
         const opts = projectsState.items;
         if (opts.length === 0) {
-            setTasksByClientId({});
-            setClientTasksIndexLoading(false);
+            setTasksByProjectId({});
+            setProjectTasksIndexLoading(false);
             return;
         }
-        const clientIds = [...new Set(opts.map((p) => p.clientId))];
         let cancelled = false;
-        setClientTasksIndexLoading(true);
-        void Promise.all(clientIds.map(async (cid) => {
+        setProjectTasksIndexLoading(true);
+        void Promise.all(opts.map(async (p) => {
             try {
-                const tasks = await listClientTasks(cid);
+                const tasks = await listProjectTasks(p.clientId, p.id);
                 const mapped: ClientTaskOption[] = tasks
                     .filter((t) => t.name)
                     .map((t) => ({
@@ -926,18 +925,18 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                         name: t.name,
                         billableByDefault: Boolean(t.billable_by_default),
                     }));
-                return [cid, mapped] as const;
+                return [p.id, mapped] as const;
             }
             catch {
-                return [cid, [] as ClientTaskOption[]] as const;
+                return [p.id, [] as ClientTaskOption[]] as const;
             }
         })).then((pairs) => {
             if (cancelled)
                 return;
-            setTasksByClientId(Object.fromEntries(pairs));
+            setTasksByProjectId(Object.fromEntries(pairs));
         }).finally(() => {
             if (!cancelled)
-                setClientTasksIndexLoading(false);
+                setProjectTasksIndexLoading(false);
         });
         return () => {
             cancelled = true;
@@ -1992,7 +1991,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
             </div>) : null}
         </div>
 
-        {modal.open && entriesAuthUserId != null && (<EntryModal key={`${modal.date}_${modal.edit?.id ?? 'new'}`} entry={modal.edit} defaultDate={modal.date} projects={projectsState.items} projectsLoading={projectsState.loading} projectsLoadError={projectsState.error} tasksByClientId={tasksByClientId} clientTasksIndexLoading={clientTasksIndexLoading} entriesSubjectAuthUserId={entriesAuthUserId} viewerCanOverrideWeeklyLock={viewerCanOverrideWeeklyLock} onClose={closeModal} onSave={saveEntry} />)}
+        {modal.open && entriesAuthUserId != null && (<EntryModal key={`${modal.date}_${modal.edit?.id ?? 'new'}`} entry={modal.edit} defaultDate={modal.date} projects={projectsState.items} projectsLoading={projectsState.loading} projectsLoadError={projectsState.error} tasksByProjectId={tasksByProjectId} projectTasksIndexLoading={projectTasksIndexLoading} entriesSubjectAuthUserId={entriesAuthUserId} viewerCanOverrideWeeklyLock={viewerCanOverrideWeeklyLock} onClose={closeModal} onSave={saveEntry} />)}
         {grantUnlockConfirmOpen && showGrantUnlockStrip && entriesAuthUserId != null ? (<TimesheetGrantUnlockConfirm workDateYmd={activeDayYmd} busy={grantUnlockBusy} onCancel={() => {
             if (!grantUnlockBusy)
                 setGrantUnlockConfirmOpen(false);
