@@ -307,6 +307,8 @@ export function TimeTrackingClientTasksPanel() {
     };
     const selectedClient = clients.find((c) => c.id === clientId);
     const selectedProject = projects.find((p) => p.id === projectId);
+    const hasProjectsForClient = projects.length > 0;
+    const canCreateTask = canManage && Boolean(clientId) && Boolean(projectId);
     const rateLabel = (t: TimeManagerClientTaskRow) => {
         const r = formatBillableRate(t.default_billable_rate);
         return r ? `Ставка по умолчанию: ${r} / ч` : 'Ставка по умолчанию не задана';
@@ -321,8 +323,9 @@ export function TimeTrackingClientTasksPanel() {
           {clientsError}
         </p>)}
 
-      <div className="tt-tasks-toolbar">
-        <div className="tt-tasks-toolbar__client">
+      <div className="tt-tasks-page__controls">
+        <div className="tt-tasks-toolbar">
+          <div className="tt-tasks-toolbar__client">
           <label className="tt-tasks-toolbar__label" id="tt-task-client-lbl" htmlFor="tt-task-client-select">
             Клиент
           </label>
@@ -330,19 +333,28 @@ export function TimeTrackingClientTasksPanel() {
                 <span className="tt-tm-dd__opt-name">{c.name}</span>
                 {c.address ? (<span className="tt-tm-dd__opt-sub">{c.address}</span>) : c.email ? (<span className="tt-tm-dd__opt-sub">{c.email}</span>) : null}
               </span>)}/>
-          {!clientsLoading && clients.length === 0 && !clientsError && (<p className="tt-tasks-toolbar__hint">Сначала добавьте клиента на вкладке «Клиенты».</p>)}
+            {!clientsLoading && clients.length === 0 && !clientsError && (<p className="tt-tasks-toolbar__hint">Сначала добавьте клиента на вкладке «Клиенты».</p>)}
+          </div>
+          <div className="tt-tasks-toolbar__client">
+            <label className="tt-tasks-toolbar__label" id="tt-task-project-lbl" htmlFor="tt-task-project-select">
+              Проект
+            </label>
+            <SearchableSelect<TimeManagerClientProjectRow> className="tt-tm-dd" buttonClassName="tt-tm-dd__btn" buttonId="tt-task-project-select" value={projectId} items={projects} getOptionValue={(p) => p.id} getOptionLabel={(p) => (p.code ? `${p.name} (${p.code})` : p.name)} getSearchText={projectSearchText} onSelect={(p) => setProjectId(p.id)} placeholder={!clientId ? 'Сначала выберите клиента' : projects.length === 0 && !projectsLoading ? 'Нет проектов' : 'Выберите проект…'} emptyListText="Нет проектов" noMatchText="Проект не найден" disabled={!clientId || projectsLoading || projects.length === 0} portalDropdown portalZIndex={11020} portalMinWidth={300} portalDropdownClassName="tsp-srch__dropdown--tall" aria-labelledby="tt-task-project-lbl"/>
+            {projectsError && (<p className="tt-tasks-toolbar__hint" role="alert">{projectsError}</p>)}
+          </div>
+          <button type="button" className="tt-settings__btn tt-settings__btn--primary tt-tasks-toolbar__cta" disabled={!canCreateTask} title={!canManage ? 'Доступно главному администратору, администратору и партнёру' : undefined} onClick={() => setModal({ mode: 'create', row: null })}>
+            + Новая задача
+          </button>
         </div>
-        <div className="tt-tasks-toolbar__client">
-          <label className="tt-tasks-toolbar__label" id="tt-task-project-lbl" htmlFor="tt-task-project-select">
-            Проект
-          </label>
-          <SearchableSelect<TimeManagerClientProjectRow> className="tt-tm-dd" buttonClassName="tt-tm-dd__btn" buttonId="tt-task-project-select" value={projectId} items={projects} getOptionValue={(p) => p.id} getOptionLabel={(p) => (p.code ? `${p.name} (${p.code})` : p.name)} getSearchText={projectSearchText} onSelect={(p) => setProjectId(p.id)} placeholder={!clientId ? 'Сначала выберите клиента' : projects.length === 0 && !projectsLoading ? 'Нет проектов' : 'Выберите проект…'} emptyListText="Нет проектов" noMatchText="Проект не найден" disabled={!clientId || projectsLoading || projects.length === 0} portalDropdown portalZIndex={11020} portalMinWidth={300} portalDropdownClassName="tsp-srch__dropdown--tall" aria-labelledby="tt-task-project-lbl"/>
-          {projectsError && (<p className="tt-tasks-toolbar__hint" role="alert">{projectsError}</p>)}
-          {!projectsError && !projectsLoading && clientId && projects.length === 0 && (<p className="tt-tasks-toolbar__hint">Сначала создайте проект у этого клиента — при создании появится набор типовых задач.</p>)}
-        </div>
-        <button type="button" className="tt-settings__btn tt-settings__btn--primary tt-tasks-toolbar__cta" disabled={!canManage || !clientId || !projectId} title={!canManage ? 'Доступно главному администратору, администратору и партнёру' : undefined} onClick={() => setModal({ mode: 'create', row: null })}>
-          + Новая задача
-        </button>
+
+        {!projectsError && !projectsLoading && clientId && !hasProjectsForClient && (<div className="tt-tasks-page__notice">
+            <p className="tt-tasks-page__notice-title">У клиента пока нет проектов</p>
+            <p className="tt-tasks-page__notice-text">Создайте проект в разделе «Проекты», после этого появится справочник задач для выбранного проекта.</p>
+          </div>)}
+
+        {selectedClient && selectedProject && (<p className="tt-tasks-page__scope">
+            <span className="tt-tasks-page__scope-k">Контекст:</span> {selectedClient.name} · {selectedProject.name}
+          </p>)}
       </div>
 
       {!canManage && !clientsLoading && clients.length > 0 && (<p className="tt-settings__banner-info tt-tasks-page__banner" role="status">
@@ -353,11 +365,7 @@ export function TimeTrackingClientTasksPanel() {
           {tasksError}
         </p>)}
 
-      {!tasksError && selectedClient && selectedProject && (<h2 className="tt-tasks-page__list-heading">
-          Задачи <span className="tt-tasks-page__list-heading-client">{selectedClient.name}</span>
-          {' '}
-          <span className="tt-tasks-page__list-heading-client">· {selectedProject.name}</span>
-        </h2>)}
+      {!tasksError && selectedClient && selectedProject && (<h2 className="tt-tasks-page__list-heading">Задачи проекта</h2>)}
 
       {!tasksError && (<div className="tt-settings__list tt-tasks-page__list">
           {tasksLoading && (<div className="tt-settings__list-loading" role="status">

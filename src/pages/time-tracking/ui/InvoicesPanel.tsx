@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
-import { useAppDialog } from '@shared/ui';
+import { useAppDialog, useAppToast } from '@shared/ui';
 import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
@@ -162,6 +162,7 @@ function notifyReportsInvalidated() {
 }
 export function InvoicesPanel() {
     const { showAlert, showConfirm } = useAppDialog();
+    const { pushToast } = useAppToast();
     const [clients, setClients] = useState<TimeManagerClientRow[]>([]);
     const [clientsErr, setClientsErr] = useState<string | null>(null);
     const [items, setItems] = useState<InvoiceDto[]>([]);
@@ -349,6 +350,22 @@ export function InvoicesPanel() {
     useEffect(() => {
         loadClients();
     }, [loadClients]);
+    useEffect(() => {
+        if (clientsErr)
+            pushToast({ message: clientsErr, variant: 'warning' });
+    }, [clientsErr, pushToast]);
+    useEffect(() => {
+        if (listErr)
+            pushToast({ message: listErr, variant: 'error' });
+    }, [listErr, pushToast]);
+    useEffect(() => {
+        if (aggStatsErr)
+            pushToast({ message: aggStatsErr, variant: 'warning' });
+    }, [aggStatsErr, pushToast]);
+    useEffect(() => {
+        if (auditErr)
+            pushToast({ message: auditErr, variant: 'warning' });
+    }, [auditErr, pushToast]);
     useEffect(() => {
         loadList();
     }, [loadList]);
@@ -598,16 +615,6 @@ export function InvoicesPanel() {
           </button>
         </div>
       </div>
-
-      {clientsErr && (<div className="tt-inv__alert tt-inv__alert--warn" role="alert">
-          {clientsErr}
-        </div>)}
-      {listErr && (<div className="tt-inv__alert tt-inv__alert--err" role="alert">
-          {listErr}
-        </div>)}
-      {aggStatsErr && (<div className="tt-inv__alert tt-inv__alert--warn" role="alert">
-          {aggStatsErr}
-        </div>)}
 
       {!listErr && (aggStatsLoading || listStatsFromAgg) && (<div className="tt-reports__summary" aria-label="Сводка по фильтру счетов">
           {aggStatsLoading || !listStatsFromAgg ? (<div className="tt-reports__summary-card" style={{ gridColumn: '1 / -1' }}>
@@ -1163,11 +1170,9 @@ export function InvoicesPanel() {
                   <div className="tt-inv-detail__section-divider" role="presentation" aria-hidden/>
                   <h4 className="tt-inv__section-title">Аудит</h4>
                   {auditLoading ? <p className="tt-inv__muted">Загрузка истории…</p> : null}
-                  {auditErr ? (<div className="tt-inv__alert tt-inv__alert--warn" role="alert">
-                      {auditErr}
-                    </div>) : null}
+                  {!auditLoading && auditErr ? (<p className="tt-inv__muted">История изменений недоступна (см. уведомление).</p>) : null}
                   {!auditLoading && !auditErr && auditEntries.length === 0 ? (<p className="tt-inv__muted">Записей аудита нет.</p>) : null}
-                  {!auditLoading && auditEntries.length > 0 ? (<ul className="tt-inv-audit">
+                  {!auditLoading && !auditErr && auditEntries.length > 0 ? (<ul className="tt-inv-audit">
                       {auditEntries.map((a) => (<li key={a.id} className="tt-inv-audit__item">
                           <span className="tt-inv-audit__meta">
                             {new Date(a.createdAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })} · #{a.actorAuthUserId}

@@ -7165,12 +7165,20 @@ a.pp__proj-name--link:hover {
   line-height: 1.55;
 }
 
+.tt-tasks-page__controls {
+  margin: 0 0 1rem;
+  padding: 1rem 1rem 0.9rem;
+  border: 1px solid var(--app-border-soft);
+  border-radius: 12px;
+  background: var(--app-surface-soft);
+}
+
 .tt-tasks-toolbar {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
   gap: 1rem 1.25rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
 }
 
 .tt-tasks-toolbar__client {
@@ -7230,6 +7238,40 @@ a.pp__proj-name--link:hover {
 
 .tt-tasks-toolbar__cta {
   flex-shrink: 0;
+  min-width: 9.5rem;
+}
+
+.tt-tasks-page__notice {
+  margin: 0.35rem 0 0;
+  padding: 0.75rem 0.85rem;
+  border: 1px dashed var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+}
+
+.tt-tasks-page__notice-title {
+  margin: 0 0 0.2rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.tt-tasks-page__notice-text {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--app-muted);
+}
+
+.tt-tasks-page__scope {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  color: var(--app-muted);
+}
+
+.tt-tasks-page__scope-k {
+  font-weight: 600;
+  color: var(--app-text);
 }
 
 .tt-tasks-page__banner {
@@ -7553,6 +7595,14 @@ a.pp__proj-name--link:hover {
 }
 
 @media (max-width: 639px) {
+  .tt-tasks-page__controls {
+    padding: 0.85rem 0.8rem;
+  }
+
+  .tt-tasks-toolbar {
+    gap: 0.75rem;
+  }
+
   .tt-settings__list-row.tt-task-card.tt-task-card--v2 {
     flex-wrap: wrap;
     gap: 0.55rem 0.7rem;
