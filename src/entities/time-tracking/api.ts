@@ -1316,11 +1316,15 @@ export type TimeManagerClientProjectRow = {
     budgetSpentValue?: string | number | null;
     budgetRemainingValue?: string | number | null;
     budgetProgressPercent?: string | number | null;
+    loggedHoursValue?: string | number | null;
+    hasBudgetConfigured?: boolean | null;
     /** Snake_case compatibility (if serializer returns underscored keys). */
     budget_display_value?: string | number | null;
     budget_spent_value?: string | number | null;
     budget_remaining_value?: string | number | null;
     budget_progress_percent?: string | number | null;
+    logged_hours_value?: string | number | null;
+    has_budget_configured?: boolean | null;
 };
 
 

@@ -130,14 +130,20 @@ type PpStrFilterOption = {
     key: string;
 };
 
-function BudgetBar({ budget, spent }: {
-    budget: number;
-    spent: number;
+function BudgetBar({ progressPercent, budget, spent }: {
+    progressPercent?: number | null;
+    budget?: number;
+    spent?: number;
 }) {
-    const over = spent > budget;
-    const bluePct = over ? 100 : spentPct(budget, spent);
-    const redPct = over ? Math.min(((spent - budget) / budget) * 80, 45) : 0;
-    return (<div className="pp__bar-wrap" title={`Потрачено: ${fmtAmt(spent)} / Бюджет: ${fmtAmt(budget)}`}>
+    const fallbackPct = (budget != null && spent != null) ? spentPct(budget, spent) : 0;
+    const pct = Number.isFinite(progressPercent as number) ? Math.max(0, Number(progressPercent)) : fallbackPct;
+    const over = pct > 100;
+    const bluePct = Math.min(pct, 100);
+    const redPct = over ? Math.min((pct - 100) * 0.8, 45) : 0;
+    const title = Number.isFinite(progressPercent as number)
+        ? `Прогресс: ${Math.round(Number(progressPercent))}%`
+        : `Потрачено: ${fmtAmt(spent ?? 0)} / Бюджет: ${fmtAmt(budget ?? 0)}`;
+    return (<div className="pp__bar-wrap" title={title}>
       <div className="pp__bar">
         <div className="pp__bar-fill pp__bar-fill--blue" style={{ width: `${bluePct}%` }}/>
         {over && <div className="pp__bar-fill pp__bar-fill--red" style={{ width: `${redPct}%` }}/>}
@@ -435,10 +441,14 @@ export function ProjectsPanel() {
                 </div>
                 {!isCollapsed &&
                     projects.map((p) => {
+                        const hasBudgetConfigured = p.hasBudgetConfigured !== false;
                         const hasBudget = p.budget != null;
-                        const over = hasBudget && p.spent > p.budget!;
-                        const rem = hasBudget ? p.budget! - p.spent : null;
-                        const pct = hasBudget && p.budget! > 0 ? remainingPct(p.budget!, p.spent) : null;
+                        const spentVal = Number.isFinite(p.spent) ? p.spent : 0;
+                        const rem = p.remaining ?? (hasBudget ? p.budget! - spentVal : null);
+                        const over = rem != null && rem < 0;
+                        const pct = Number.isFinite(p.progressPercent as number)
+                            ? Math.round(Number(p.progressPercent))
+                            : (hasBudget && p.budget! > 0 ? remainingPct(p.budget!, spentVal) : null);
                         const typeMeta = TYPE_COLOR[p.type];
                         const isSelected = selectedIds.has(p.id);
                         const isActOpen = actionOpen === p.id;
@@ -458,13 +468,18 @@ export function ProjectsPanel() {
                           </span>
                         </span>
                         <span className="pp__td pp__td--budget">
-                          {hasBudget ? fmtAmt(p.budget!, p.currency) : <span className="pp__dash">—</span>}
+                          {!hasBudgetConfigured
+                                ? (<span className="pp__dash">Бюджет не задан</span>)
+                                : hasBudget
+                                    ? fmtAmt(p.budget!, p.currency)
+                                    : fmtAmt(0, p.currency)}
                         </span>
                         <span className="pp__td pp__td--spent">
-                          {p.spent > 0 || hasBudget ? fmtAmt(p.spent, p.currency) : <span className="pp__dash">—</span>}
+                          {fmtAmt(spentVal, p.currency)}
+                          {p.loggedHours != null ? (<span className="pp__rem-pct">({p.loggedHours.toLocaleString('ru-RU')} ч)</span>) : null}
                         </span>
                         <span className="pp__td pp__td--bar">
-                          {hasBudget && p.spent > 0 && <BudgetBar budget={p.budget!} spent={p.spent}/>}
+                          <BudgetBar progressPercent={p.progressPercent} budget={p.budget} spent={spentVal}/>
                         </span>
                         <span className={`pp__td pp__td--remaining${over ? ' pp__td--over' : ''}`}>
                           {rem != null ? (<>
@@ -476,7 +491,7 @@ export function ProjectsPanel() {
                                   ({over ? '-' : ''}
                                   {Math.abs(pct)}%)
                                 </span>)}
-                            </>) : (<span className="pp__dash">—</span>)}
+                            </>) : (<span className="pp__dash">{fmtAmt(0, p.currency)}</span>)}
                         </span>
                         <span className="pp__td pp__td--costs">
                           {p.costs > 0 ? (<span className="pp__costs-val">{fmtAmt(p.costs, p.currency)}</span>) : (<span className="pp__zero">0,00 {p.currency}</span>)}

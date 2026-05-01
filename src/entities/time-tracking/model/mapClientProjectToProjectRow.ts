@@ -16,6 +16,24 @@ function readProjectBudgetValue(p: TimeManagerClientProjectRow, ...keys: string[
     }
     return undefined;
 }
+function readProjectBudgetBool(p: TimeManagerClientProjectRow, ...keys: string[]): boolean | undefined {
+    const raw = p as Record<string, unknown>;
+    for (const key of keys) {
+        const v = raw[key];
+        if (typeof v === 'boolean')
+            return v;
+        if (typeof v === 'number')
+            return v !== 0;
+        if (typeof v === 'string') {
+            const n = v.trim().toLowerCase();
+            if (n === 'true' || n === '1')
+                return true;
+            if (n === 'false' || n === '0')
+                return false;
+        }
+    }
+    return undefined;
+}
 export function mapClientProjectToProjectRow(p: TimeManagerClientProjectRow, client: TimeManagerClientRow): ProjectRow {
     let type: ProjectType;
     if (p.project_type === 'fixed_fee')
@@ -25,8 +43,11 @@ export function mapClientProjectToProjectRow(p: TimeManagerClientProjectRow, cli
     else
         type = 'Время и материалы';
     const budgetDisplay = readProjectBudgetValue(p, 'budgetDisplayValue', 'budget_display_value');
-    const budgetSpent = readProjectBudgetValue(p, 'budgetSpentValue', 'budget_spent_value');
-    const budgetRemaining = readProjectBudgetValue(p, 'budgetRemainingValue', 'budget_remaining_value');
+    const budgetSpent = readProjectBudgetValue(p, 'budgetSpentValue', 'budget_spent_value', 'budget_spent', 'budgetSpent');
+    const budgetRemaining = readProjectBudgetValue(p, 'budgetRemainingValue', 'budget_remaining_value', 'budget_remaining', 'budgetRemaining');
+    const budgetProgress = readProjectBudgetValue(p, 'budgetProgressPercent', 'budget_progress_percent', 'progress_percent', 'progressPercent');
+    const loggedHours = readProjectBudgetValue(p, 'loggedHoursValue', 'logged_hours_value', 'hours_logged');
+    const hasBudgetConfigured = readProjectBudgetBool(p, 'hasBudgetConfigured', 'has_budget_configured', 'has_budget');
     let budget: number | undefined = budgetDisplay;
     if (p.project_type === 'fixed_fee') {
         budget = budget ?? toNum(p.budget_amount) ?? toNum(p.fixed_fee_amount);
@@ -58,9 +79,13 @@ export function mapClientProjectToProjectRow(p: TimeManagerClientProjectRow, cli
         type,
         budget,
         spent,
+        remaining: budgetRemaining,
+        progressPercent: budgetProgress,
+        loggedHours,
         costs: 0,
         currency: projectCur || clientCur || 'USD',
         status,
+        hasBudgetConfigured,
         budgetIncludesExpenses: Boolean(p.budget_includes_expenses),
         deletable: Boolean(p.deletable),
     };

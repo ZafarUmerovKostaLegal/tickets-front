@@ -9,10 +9,14 @@ export type ProjectRow = {
     type: ProjectType;
     budget?: number;
     spent: number;
+    remaining?: number;
+    progressPercent?: number;
+    loggedHours?: number;
     costs: number;
     currency: string;
     status: ProjectStatus;
     managers?: string[];
+    hasBudgetConfigured?: boolean;
     budgetIncludesExpenses?: boolean;
     deletable?: boolean;
 };
