@@ -66,6 +66,27 @@ const BUDGET_TYPE_OPTIONS: TmOpt[] = [
   { id: 'total_project_hours', label: 'Только часы', search: 'часы лимит' },
   { id: 'fees_and_hours', label: 'Сумма и часы (пакет)', search: 'пакет деньги часы' },
 ];
+const DEFAULT_PROJECT_TASK_SEED: Array<{ name: string; billableByDefault: boolean }> = [
+  { name: 'Court Hearing', billableByDefault: true },
+  { name: 'Court Hearing Preparation', billableByDefault: true },
+  { name: 'Document Review', billableByDefault: true },
+  { name: 'Document Submission', billableByDefault: true },
+  { name: 'Drafting', billableByDefault: true },
+  { name: 'Drafting Documents', billableByDefault: true },
+  { name: 'Emails', billableByDefault: true },
+  { name: 'Meetings', billableByDefault: true },
+  { name: 'My mehnat registration', billableByDefault: true },
+  { name: 'Research', billableByDefault: true },
+  { name: 'Telephone calls', billableByDefault: true },
+  { name: 'Kosta Legal Internal', billableByDefault: false },
+  { name: 'Accounting', billableByDefault: false },
+  { name: 'Business Development', billableByDefault: false },
+  { name: 'Lunch/Dinner', billableByDefault: false },
+  { name: 'Other research', billableByDefault: false },
+  { name: 'Proposals', billableByDefault: false },
+  { name: 'Publications', billableByDefault: false },
+  { name: 'Review new legislation', billableByDefault: false },
+];
 
 function getTmOptSearch(o: TmOpt): string {
   return o.search ?? o.label;
@@ -866,6 +887,19 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     </fieldset>
     {mode === 'create' && (<fieldset className="tt-tm-fieldset tt-tm-fieldset--budget">
       <legend className="tt-tm-fieldset-legend tt-tm-fieldset-legend--budget">Задачи проекта</legend>
+      <p className="tt-tm-hint">Серверный набор задач по умолчанию (создаётся автоматически при создании проекта):</p>
+      <div className="tt-tm-members__chips">
+        {DEFAULT_PROJECT_TASK_SEED.map((task) => (<div key={task.name} className="tt-tm-members__chip">
+          <div className="tt-tm-members__chip-identity">
+            <div className="tt-tm-members__chip-text">
+              <span className="tt-tm-members__opt-name">{task.name}</span>
+              <span className={`tt-task-pill${task.billableByDefault ? ' tt-task-pill--billable' : ' tt-task-pill--muted'}`}>
+                {task.billableByDefault ? 'Оплачиваемая' : 'Неоплачиваемая'}
+              </span>
+            </div>
+          </div>
+        </div>))}
+      </div>
       <div className="tt-tm-members__add-row">
         <button type="button" className="tt-tm-members__add-plus" onClick={addInitialTask} disabled={!initialTaskName.trim() || saving} title="Добавить задачу">
           +
@@ -877,7 +911,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
           }
         }} />
       </div>
-      <p className="tt-tm-members__add-hint">Эти задачи будут созданы сразу после создания проекта. Дубли по названию игнорируются.</p>
+      <p className="tt-tm-members__add-hint">Можно добавить свои задачи сверх серверного набора. Дубли по названию игнорируются.</p>
       {initialTaskNames.length > 0 && (<div className="tt-tm-members__chips">
         {initialTaskNames.map((taskName) => (<div key={taskName} className="tt-tm-members__chip">
           <div className="tt-tm-members__chip-identity">
