@@ -87,18 +87,19 @@ function computeTimePreviewRowAmountToPay(r: TimeExcelPreviewRow): number {
     const rate = Number.isFinite(r.billableRate) ? r.billableRate : 0;
     return Math.round(bh * rate * 100) / 100;
 }
-function ReportPreviewFooterHours({ decimalHours, clockTitle, decTitle, }: {
+function ReportPreviewFooterHours({ decimalHours, clockTitle, decTitle, showDecimal = true, }: {
     decimalHours: number;
     clockTitle: string;
     decTitle: string;
+    showDecimal?: boolean;
 }) {
     return (<div className="tt-rp-mtable__foot-h" title={decTitle}>
       <span className="tt-rp-mtable__foot-h-main" title={clockTitle}>
         {formatHoursClockFromDecimalHours(decimalHours)}
       </span>
-      <span className="tt-rp-mtable__foot-h-dec" aria-label={decTitle}>
+      {showDecimal ? (<span className="tt-rp-mtable__foot-h-dec" aria-label={decTitle}>
         {formatDecimalHoursRu(decimalHours)} ч
-      </span>
+      </span>) : null}
     </div>);
 }
 function TimePreviewBriefDateTimeCell({ r, onPatch, userName, weekLocked, }: {
@@ -815,7 +816,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             Итого по видимым строкам
           </div>
           {dupBh ? (<div className="tt-rp-mtable__foot-first-dup">
-            <ReportPreviewFooterHours decimalHours={totals.bh} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах"/>
+            <ReportPreviewFooterHours decimalHours={totals.bh} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах" showDecimal={false}/>
           </div>) : null}
           {dupSum ? (<div className="tt-rp-mtable__foot-first-dup tt-rp-mtable__foot-first-dup--money">
             <span className="tt-rp-mtable__sum-val tt-rp-mtable__sum-val--foot">{fmtAmtWithIso(totals.atp, totals.cur)}</span>
@@ -935,7 +936,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             case 'billHours':
                 return (<td key={`foot-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot">
                   {briefFootFirstCellLabel(colIdx)}
-                  <ReportPreviewFooterHours decimalHours={totals.bh} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах"/>
+                  <ReportPreviewFooterHours decimalHours={totals.bh} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах" showDecimal={false}/>
                 </td>);
             case 'sum':
                 return (<td key={`foot-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot tt-rp-mtable__td--sum-ro" title="Сумма к оплате по видимым строкам">
@@ -962,7 +963,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             Итого по видимым строкам
           </div>
           {dupBh ? (<div className="tt-rp-mtable__foot-first-dup">
-            <ReportPreviewFooterHours decimalHours={totals.bh} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах"/>
+            <ReportPreviewFooterHours decimalHours={totals.bh} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах" showDecimal={false}/>
           </div>) : null}
           {dupSum ? (<div className="tt-rp-mtable__foot-first-dup tt-rp-mtable__foot-first-dup--money">
             <span className="tt-rp-mtable__sum-val tt-rp-mtable__sum-val--foot">{fmtAmtWithIso(totals.atp, totals.cur)}</span>
@@ -1227,7 +1228,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             case 'billableHours':
                 return (<td key={`ff-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot">
                   {fullFootFirstCellLabel(colIdx)}
-                  <ReportPreviewFooterHours decimalHours={totals.bh} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах"/>
+                  <ReportPreviewFooterHours decimalHours={totals.bh} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах" showDecimal={false}/>
                 </td>);
             case 'isBillable':
             case 'taskBillableByDefault':

@@ -936,9 +936,8 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 
 .tt-rp-mtable--time-brief tbody .tt-rp-mtable__td--num:not(.tt-rp-mtable__td--sum-ro) {
   vertical-align: middle;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
+  display: table-cell;
+  text-align: right;
   box-sizing: border-box;
 }
 
