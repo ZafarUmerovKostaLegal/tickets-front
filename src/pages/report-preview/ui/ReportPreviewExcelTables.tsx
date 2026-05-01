@@ -36,6 +36,7 @@ import { ReportPreviewTimeBriefColumnsModal } from './ReportPreviewTimeBriefColu
 import { ReportPreviewTimeFullColumnsModal } from './ReportPreviewTimeFullColumnsModal';
 import type { LabeledOption, BudgetExcelPreviewRow, ExpenseExcelPreviewRow, TimeExcelPreviewRow, UninvoicedExcelPreviewRow, } from '../lib/previewExcelTypes';
 type PatchFn<T> = (rowKey: string, patch: Partial<T>) => void;
+const ALL_ROWS_SELECTION = '__all-visible-report-preview-rows__';
 
 type TimePreviewPartnerPickState = {
     loading: boolean;
@@ -209,15 +210,41 @@ function TimePreviewNoteTextarea({ value, disabled, ariaLabel, variant, onValue,
     return (<textarea ref={ref} className={cls} rows={variant === 'brief' ? 1 : 2} value={value} disabled={disabled} placeholder="note = description" aria-label={ariaLabel} onChange={(e) => onValue(e.target.value)}/>);
 }
 
+function isAllRowsSelection(selectedUserName: string | null | undefined): boolean {
+    return selectedUserName === ALL_ROWS_SELECTION;
+}
+function isReportRowSelected(userName: string, selectedUserName: string | null | undefined): boolean {
+    return isAllRowsSelection(selectedUserName) || selectedUserName === userName;
+}
 function rowTrClass(i: number, userName: string, selectedUserName: string | null, timeWeekLocked = false): string {
     const parts = ['tt-rp-mtable__tr--pickable'];
     if (i % 2 === 1)
         parts.push('tt-rp-mtable__tr--alt');
-    if (selectedUserName === userName)
+    if (isReportRowSelected(userName, selectedUserName))
         parts.push('tt-rp-mtable__tr--selected');
     if (timeWeekLocked)
         parts.push('tt-rp-mtable__tr--server-week-locked');
     return parts.join(' ');
+}
+function ReportPreviewSelectionControl({ rowsCount, selectedUserName, onSelectUserName, }: {
+    rowsCount: number;
+    selectedUserName?: string | null;
+    onSelectUserName?: (name: string | null) => void;
+}) {
+    if (!onSelectUserName || rowsCount <= 0)
+        return null;
+    const allSelected = isAllRowsSelection(selectedUserName);
+    const label = allSelected
+        ? `Выбраны все видимые строки: ${rowsCount}`
+        : selectedUserName
+            ? `Выбран сотрудник: ${selectedUserName}`
+            : `Можно выделить строку, сотрудника или все видимые данные`;
+    return (<div className="tt-rp-mtable-selectbar" aria-live="polite">
+      <span className="tt-rp-mtable-selectbar__text">{label}</span>
+      <button type="button" className="tt-rp-mtable-selectbar__btn" onClick={() => onSelectUserName(allSelected ? null : ALL_ROWS_SELECTION)} aria-pressed={allSelected}>
+        {allSelected ? 'Снять выделение' : 'Выделить все'}
+      </button>
+    </div>);
 }
 function mergeLabeledOptions(base: LabeledOption[], fromRows: LabeledOption[]): LabeledOption[] {
     const m = new Map<string, LabeledOption>();
@@ -1278,6 +1305,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               </button>
               </>) : null}
             </div>
+            <ReportPreviewSelectionControl rowsCount={displayRows.length} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
           </div>
           <div className="tt-rp-mtable-stats" aria-label="Сводка по видимым строкам: только оплачиваемые часы и суммы">
             <div className="tt-rp-mtable-stat tt-rp-mtable-stat--accent" title="Сумма оплачиваемых часов по видимым строкам">
@@ -1319,7 +1347,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                         return;
                     onSelectUserName(selectedUserName === r.userName ? null : r.userName);
                 }
-                : undefined} aria-selected={selectedUserName === r.userName ? true : undefined}>
+                : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
                   {visibleFullIds.map((colId) => renderFullBodyCell(colId, r, i, wk))}
                   {showEntryActions ? (<td key="actions-full" className="tt-rp-mtable__td tt-rp-mtable__td--brief-actions" onClick={(e) => e.stopPropagation()}>
                       {renderEntryRowActions(r, wk, i)}
@@ -1348,7 +1376,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                         return;
                     onSelectUserName(selectedUserName === r.userName ? null : r.userName);
                 }
-                : undefined} aria-selected={selectedUserName === r.userName ? true : undefined}>
+                : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
                   {visibleBriefIds.map((colId) => renderBriefBodyCell(colId, r, i, wk))}
                 </tr>);
             })}
@@ -1404,6 +1432,7 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
               <h2 className="tt-rp-mtable-title">Расходы</h2>
               <PreviewServerReloadBtn onRequestServerReload={onRequestServerReload} serverReloadBusy={serverReloadBusy}/>
             </div>
+            <ReportPreviewSelectionControl rowsCount={rows.length} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
             <p className="tt-rp-mtable-sub">Данные с сервера; правки только на этой странице предпросмотра.</p>
           </div>
         </header>
@@ -1431,7 +1460,7 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
                         return;
                     onSelectUserName(selectedUserName === r.userName ? null : r.userName);
                 }
-                : undefined} aria-selected={selectedUserName === r.userName ? true : undefined}>
+                : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
@@ -1475,6 +1504,7 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
               <h2 className="tt-rp-mtable-title">Не выставлено</h2>
               <PreviewServerReloadBtn onRequestServerReload={onRequestServerReload} serverReloadBusy={serverReloadBusy}/>
             </div>
+            <ReportPreviewSelectionControl rowsCount={rows.length} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
             <p className="tt-rp-mtable-sub">Данные с сервера; правки только на этой странице предпросмотра.</p>
           </div>
         </header>
@@ -1502,7 +1532,7 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
                         return;
                     onSelectUserName(selectedUserName === r.userName ? null : r.userName);
                 }
-                : undefined} aria-selected={selectedUserName === r.userName ? true : undefined}>
+                : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
@@ -1543,6 +1573,7 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null
               <h2 className="tt-rp-mtable-title">Бюджет</h2>
               <PreviewServerReloadBtn onRequestServerReload={onRequestServerReload} serverReloadBusy={serverReloadBusy}/>
             </div>
+            <ReportPreviewSelectionControl rowsCount={rows.length} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
             <p className="tt-rp-mtable-sub">Данные с сервера; правки только на этой странице предпросмотра.</p>
           </div>
         </header>
@@ -1569,7 +1600,7 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null
                         return;
                     onSelectUserName(selectedUserName === r.userName ? null : r.userName);
                 }
-                : undefined} aria-selected={selectedUserName === r.userName ? true : undefined}>
+                : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
