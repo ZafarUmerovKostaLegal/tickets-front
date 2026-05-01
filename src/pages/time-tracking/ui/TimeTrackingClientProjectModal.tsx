@@ -340,7 +340,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
   const [initialTaskNames, setInitialTaskNames] = useState<string[]>(() => [...DEFAULT_PROJECT_TASK_NAMES]);
   const [taskPickerOpen, setTaskPickerOpen] = useState(false);
   const [taskPickerDraft, setTaskPickerDraft] = useState<string[]>(() => [...DEFAULT_PROJECT_TASK_NAMES]);
-  const [taskSelectionCollapsed, setTaskSelectionCollapsed] = useState(false);
+  const [taskSelectionCollapsed, setTaskSelectionCollapsed] = useState(true);
   const [quickClientOpen, setQuickClientOpen] = useState(false);
   const [assignedUserIds, setAssignedUserIds] = useState<number[]>([]);
   const [memberRates, setMemberRates] = useState<Record<number, ProjectMemberRateDraft>>({});
