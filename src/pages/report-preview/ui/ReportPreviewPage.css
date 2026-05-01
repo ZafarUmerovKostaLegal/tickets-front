@@ -2171,6 +2171,7 @@ body[data-theme='dark'] .tt-rp-brief-th__label {
    поле визуально сливается с фоном строки, оставаясь редактируемым. */
 .tt-rp-mtable__td--num .tt-rp-mtable__input--duration {
   background: transparent !important;
+  background-color: transparent !important;
   border-color: transparent !important;
   border-width: 0 !important;
   box-shadow: none !important;
@@ -2179,19 +2180,24 @@ body[data-theme='dark'] .tt-rp-brief-th__label {
   -webkit-appearance: none;
   border-radius: 0;
   padding: 0;
-  width: auto;
-  max-width: 6.5rem;
+  width: 4.25rem !important;
+  max-width: 4.25rem;
   min-width: 0;
+  min-height: 0 !important;
   margin: 0 0 0 auto;
   line-height: 1.2;
-  height: 1.2rem;
+  height: auto;
   display: inline-block;
+  color: inherit;
+  -webkit-text-fill-color: currentColor;
+  caret-color: var(--app-accent, #4f46e5);
 }
 
 .tt-rp-mtable__td--num .tt-rp-mtable__input--duration:focus {
   background: transparent !important;
-  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 60%, var(--app-border, #e2e8f0)) !important;
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent, #4f46e5) 20%, transparent);
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 .tt-rp-mtable__select {
