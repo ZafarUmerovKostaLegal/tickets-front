@@ -979,9 +979,14 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         </div>
         <div className="tt-tm-modal__body">
           <div className="tt-proj-task-pick__list">
-            {DEFAULT_PROJECT_TASK_SEED.map((task) => (<label key={task.name} className="tt-tm-check-row">
-              <input type="checkbox" checked={taskPickerDraft.includes(task.name)} onChange={(e) => toggleTaskInDraft(task.name, e.target.checked)} />
-              <span>{task.name} <span className={`tt-task-pill${task.billableByDefault ? ' tt-task-pill--billable' : ' tt-task-pill--muted'}`}>{task.billableByDefault ? 'Оплачиваемая' : 'Неоплачиваемая'}</span></span>
+            {DEFAULT_PROJECT_TASK_SEED.map((task) => (<label key={task.name} className="tt-proj-task-pick__row">
+              <span className="tt-proj-task-pick__label">
+                {task.name} <span className={`tt-task-pill${task.billableByDefault ? ' tt-task-pill--billable' : ' tt-task-pill--muted'}`}>{task.billableByDefault ? 'Оплачиваемая' : 'Неоплачиваемая'}</span>
+              </span>
+              <span className="tt-proj-task-pick__switch">
+                <input type="checkbox" className="tt-proj-task-pick__switch-input" checked={taskPickerDraft.includes(task.name)} onChange={(e) => toggleTaskInDraft(task.name, e.target.checked)} />
+                <span className="tt-proj-task-pick__switch-slider" aria-hidden />
+              </span>
             </label>))}
           </div>
         </div>

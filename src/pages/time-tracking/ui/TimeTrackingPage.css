@@ -6518,6 +6518,71 @@ a.pp__proj-name--link:hover {
   padding-right: 0.2rem;
 }
 
+.tt-proj-task-pick__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.15rem 0;
+  cursor: pointer;
+}
+
+.tt-proj-task-pick__label {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+}
+
+.tt-proj-task-pick__switch {
+  position: relative;
+  width: 2.65rem;
+  height: 1.55rem;
+  flex-shrink: 0;
+}
+
+.tt-proj-task-pick__switch-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.tt-proj-task-pick__switch-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-muted, #94a3b8) 45%, #fff 55%);
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.tt-proj-task-pick__switch-slider::after {
+  content: '';
+  position: absolute;
+  top: 0.12rem;
+  left: 0.12rem;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.28);
+  transition: transform 0.18s ease;
+}
+
+.tt-proj-task-pick__switch-input:checked + .tt-proj-task-pick__switch-slider {
+  background: var(--app-accent, #4f46e5);
+}
+
+.tt-proj-task-pick__switch-input:checked + .tt-proj-task-pick__switch-slider::after {
+  transform: translateX(1.1rem);
+}
+
+.tt-proj-task-pick__switch-input:focus-visible + .tt-proj-task-pick__switch-slider {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent, #4f46e5) 25%, transparent);
+}
+
 .tt-tm-members__rate {
   display: flex;
   flex-direction: row;
