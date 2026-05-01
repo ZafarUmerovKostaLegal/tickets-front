@@ -1,6 +1,6 @@
 import { useState, useEffect, useId, useMemo, useRef, useCallback } from 'react';
 import { DatePicker, SearchableSelect, useAppDialog } from '@shared/ui';
-import { getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, patchHourlyRate, listUsersWithProjectAccessToProject, createProjectTask, readTimeManagerProjectBillableRateAmount, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerProjectCurrency, type HourlyRateRow, } from '@entities/time-tracking';
+import { getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, listUsersWithProjectAccessToProject, createProjectTask, readTimeManagerProjectBillableRateAmount, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerProjectCurrency, type HourlyRateRow, } from '@entities/time-tracking';
 import { suggestedNextKlProjectCode } from '@entities/time-tracking/lib/klProjectCode';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 import { QuickCreateClientModal } from './QuickCreateClientModal';
@@ -530,6 +530,55 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
   }, [mode, initial?.id, canManage]);
   async function applyProjectMemberAccessAndRates(projectId: string) {
     const useRates = (form.projectType === 'time_and_materials' || form.projectType === 'fixed_fee') && form.billableRateType === 'person_billable_rate';
+    const projectCur = (form.currency || 'USD').trim() || 'USD';
+    const now = new Date();
+    if (useRates && assignedUserIds.length > 0) {
+      const rateEnsureFailed: string[] = [];
+      for (const authUserId of assignedUserIds) {
+        const dr = memberRates[authUserId];
+        if (!dr)
+          continue;
+        const n = parseMemberAmount(dr.amount);
+        if (!Number.isFinite(n) || n <= 0)
+          continue;
+        try {
+          const rows = await listHourlyRates(authUserId, 'billable');
+          const hasActiveInProjectCurrency = rows.some((r) => {
+            const cur = (r.currency || '').trim().toUpperCase();
+            return cur === projectCur.toUpperCase() && hourlyRateEffectiveOnDate(r, now);
+          });
+          if (!hasActiveInProjectCurrency) {
+            const created = await createHourlyRate(authUserId, {
+              rateKind: 'billable',
+              amount: String(n),
+              currency: projectCur,
+              validFrom: null,
+              validTo: null,
+              projectId,
+            });
+            setMemberRates((prev) => ({
+              ...prev,
+              [authUserId]: {
+                ...(prev[authUserId] ?? { amount: String(n), currency: projectCur }),
+                amount: String(n),
+                currency: projectCur,
+                rateId: created.id,
+              },
+            }));
+          }
+        }
+        catch (e) {
+          const msg = e instanceof Error ? e.message : 'ошибка';
+          rateEnsureFailed.push(`Пользователь #${authUserId}: ${msg}`);
+        }
+      }
+      if (rateEnsureFailed.length > 0) {
+        await showAlert({
+          title: 'Проект сохранён частично',
+          message: `Не удалось подготовить ставки в валюте проекта (${projectCur}) перед назначением доступа:\n\n${rateEnsureFailed.join('\n')}`,
+        });
+      }
+    }
     const removed = editMembersBaseline.filter((id) => !assignedUserIds.includes(id));
     for (const authUserId of removed) {
       const { projectIds } = await getUserProjectAccess(authUserId);
@@ -552,40 +601,6 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         await showAlert({
           title: 'Проект сохранён частично',
           message: `Доступ сотрудникам выдан не полностью (проверьте ставки в валюте проекта и правило «минимум один партнёр» по должности в справочнике TT):\n\n${failed.join('\n')}`,
-        });
-      }
-    }
-    if (useRates && assignedUserIds.length > 0) {
-      const rateFailed: string[] = [];
-      for (const authUserId of assignedUserIds) {
-        const dr = memberRates[authUserId];
-        if (!dr)
-          continue;
-        const n = parseMemberAmount(dr.amount);
-        if (!Number.isFinite(n) || n <= 0)
-          continue;
-        const cur = (dr.currency || form.currency || 'USD').trim() || 'USD';
-        try {
-          if (dr.rateId) {
-            await patchHourlyRate(authUserId, dr.rateId, { amount: String(n), currency: cur });
-          }
-          else {
-            const created = await createHourlyRate(authUserId, { rateKind: 'billable', amount: String(n), currency: cur, validFrom: null, validTo: null, projectId });
-            setMemberRates((prev) => ({
-              ...prev,
-              [authUserId]: { ...dr, amount: String(n), currency: cur, rateId: created.id },
-            }));
-          }
-        }
-        catch (e) {
-          const msg = e instanceof Error ? e.message : 'ошибка';
-          rateFailed.push(`Пользователь #${authUserId}: ${msg}`);
-        }
-      }
-      if (rateFailed.length > 0) {
-        await showAlert({
-          title: 'Проект сохранён частично',
-          message: `Не все ставки записаны:\n\n${rateFailed.join('\n')}`,
         });
       }
     }
