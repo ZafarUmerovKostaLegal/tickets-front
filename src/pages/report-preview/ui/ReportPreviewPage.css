@@ -892,7 +892,25 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 
 .tt-rp-mtable--time-wide .tt-rp-mtable__th--comment,
 .tt-rp-mtable--time-wide .tt-rp-mtable__td--comment {
+  min-width: 16rem;
   max-width: 18rem;
+}
+
+/* Full time report: keep natural column widths and horizontal scroll.
+   This prevents unreadable "collapsed" columns when many fields are visible. */
+.tt-rp-mtable.tt-rp-mtable--time-wide {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.tt-rp-mtable--time-wide .tt-rp-mtable__th--pick,
+.tt-rp-mtable--time-wide .tt-rp-mtable__td--pick {
+  min-width: 12rem;
+}
+
+.tt-rp-mtable--time-wide .tt-rp-mtable__th--employee-head {
+  min-width: 10.5rem;
 }
 
 .tt-rp-mtable--time-wide .tt-rp-mtable__srch-btn.tsp-srch__btn {
