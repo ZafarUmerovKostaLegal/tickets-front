@@ -472,6 +472,11 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
               setMemberRates((p) => {
                 if (!assignedUserIdsRef.current.includes(authUserId))
                   return p;
+                const existing = p[authUserId];
+                // Не перетираем ставку, которую пользователь уже ввёл вручную,
+                // пока фоновой запрос на дефолтные ставки ещё выполнялся.
+                if (existing && existing.amount.trim() !== '')
+                  return p;
                 return {
                   ...p,
                   [authUserId]: {
