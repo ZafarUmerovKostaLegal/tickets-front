@@ -3333,8 +3333,10 @@ const REPORT_V2_CAMEL_TO_SNAKE: readonly [
         ['budgetBy', 'budget_by'],
         ['hasBudget', 'has_budget'],
         ['isActive', 'is_active'],
+        ['budgetAmount', 'budget'],
         ['budgetSpent', 'budget_spent'],
         ['budgetRemaining', 'budget_remaining'],
+        ['progressPercent', 'progress_percent'],
         ['budgetHoursBudget', 'budget_hours_budget'],
         ['budgetHoursSpent', 'budget_hours_spent'],
         ['budgetHoursRemaining', 'budget_hours_remaining'],
@@ -3583,7 +3585,10 @@ function coerceBudgetReportNumeric(v: unknown): number | undefined {
 /** Нормализация строки отчёта «Бюджет проектов» под контракт FRONTEND_PROJECT_BUDGET. */
 export function finalizeBudgetReportRow(row: BudgetRow): BudgetRow {
     const raw = row as Record<string, unknown>;
-    const byRaw = String(row.budget_by ?? '').toLowerCase().replace(/-/g, '_');
+    const nestedBudget = raw.budget && typeof raw.budget === 'object' && !Array.isArray(raw.budget)
+        ? raw.budget as Record<string, unknown>
+        : null;
+    const byRaw = String(row.budget_by ?? raw.budgetBy ?? nestedBudget?.budgetBy ?? '').toLowerCase().replace(/-/g, '_');
     let budget_by: BudgetRow['budget_by'] = 'none';
     if (byRaw === 'hours')
         budget_by = 'hours';
@@ -3591,29 +3596,73 @@ export function finalizeBudgetReportRow(row: BudgetRow): BudgetRow {
         budget_by = 'money';
     else if (byRaw === 'hours_and_money' || byRaw === 'hoursandmoney')
         budget_by = 'hours_and_money';
-    const hb = coerceBudgetReportNumeric(raw.budget_hours_budget);
-    const hs = coerceBudgetReportNumeric(raw.budget_hours_spent);
-    const hr = coerceBudgetReportNumeric(raw.budget_hours_remaining);
-    const mb = coerceBudgetReportNumeric(raw.budget_money_budget);
-    const ms = coerceBudgetReportNumeric(raw.budget_money_spent);
-    const mr = coerceBudgetReportNumeric(raw.budget_money_remaining);
+    const hb = coerceBudgetReportNumeric(raw.budget_hours_budget) ??
+        coerceBudgetReportNumeric(raw.budgetHoursBudget) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_hours_budget) ??
+        coerceBudgetReportNumeric(nestedBudget?.budgetHoursBudget);
+    const hs = coerceBudgetReportNumeric(raw.budget_hours_spent) ??
+        coerceBudgetReportNumeric(raw.budgetHoursSpent) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_hours_spent) ??
+        coerceBudgetReportNumeric(nestedBudget?.budgetHoursSpent);
+    const hr = coerceBudgetReportNumeric(raw.budget_hours_remaining) ??
+        coerceBudgetReportNumeric(raw.budgetHoursRemaining) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_hours_remaining) ??
+        coerceBudgetReportNumeric(nestedBudget?.budgetHoursRemaining);
+    const mb = coerceBudgetReportNumeric(raw.budget_money_budget) ??
+        coerceBudgetReportNumeric(raw.budgetMoneyBudget) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_money_budget) ??
+        coerceBudgetReportNumeric(nestedBudget?.budgetMoneyBudget);
+    const ms = coerceBudgetReportNumeric(raw.budget_money_spent) ??
+        coerceBudgetReportNumeric(raw.budgetMoneySpent) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_money_spent) ??
+        coerceBudgetReportNumeric(nestedBudget?.budgetMoneySpent);
+    const mr = coerceBudgetReportNumeric(raw.budget_money_remaining) ??
+        coerceBudgetReportNumeric(raw.budgetMoneyRemaining) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_money_remaining) ??
+        coerceBudgetReportNumeric(nestedBudget?.budgetMoneyRemaining);
     const budgetAmount = coerceBudgetReportNumeric(raw.budgetAmount) ??
         coerceBudgetReportNumeric(raw.budget_amount) ??
+        coerceBudgetReportNumeric(nestedBudget?.budgetAmount) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_amount) ??
         coerceBudgetReportNumeric(raw.budget);
     const budgetSpent = coerceBudgetReportNumeric(raw.budgetSpent) ??
         coerceBudgetReportNumeric(raw.budget_spent_amount) ??
-        coerceBudgetReportNumeric(raw.budget_spent);
+        coerceBudgetReportNumeric(raw.budget_spent) ??
+        coerceBudgetReportNumeric(nestedBudget?.budgetSpent) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_spent_amount) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_spent);
     const budgetRemaining = coerceBudgetReportNumeric(raw.budgetRemaining) ??
         coerceBudgetReportNumeric(raw.budget_remaining_amount) ??
-        coerceBudgetReportNumeric(raw.budget_remaining);
+        coerceBudgetReportNumeric(raw.budget_remaining) ??
+        coerceBudgetReportNumeric(nestedBudget?.budgetRemaining) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_remaining_amount) ??
+        coerceBudgetReportNumeric(nestedBudget?.budget_remaining);
     const progressPercent = coerceBudgetReportNumeric(raw.progressPercent) ??
-        coerceBudgetReportNumeric(raw.progress_percent);
+        coerceBudgetReportNumeric(raw.progress_percent) ??
+        coerceBudgetReportNumeric(nestedBudget?.progressPercent) ??
+        coerceBudgetReportNumeric(nestedBudget?.progress_percent);
+    if (budget_by === 'none') {
+        const hasHoursAxis = Number.isFinite(hb) || Number.isFinite(hs) || Number.isFinite(hr);
+        const hasMoneyAxis = Number.isFinite(mb) || Number.isFinite(ms) || Number.isFinite(mr)
+            || Number.isFinite(budgetAmount) || Number.isFinite(budgetSpent) || Number.isFinite(budgetRemaining);
+        budget_by = hasHoursAxis && hasMoneyAxis
+            ? 'hours_and_money'
+            : hasHoursAxis
+                ? 'hours'
+                : hasMoneyAxis
+                    ? 'money'
+                    : 'none';
+    }
     const explicitHas = raw.has_budget ?? raw.hasBudget;
     const has_budget = explicitHas === true
         ? true
         : explicitHas === false
             ? false
-            : budget_by !== 'none' && Number.isFinite(budgetAmount ?? row.budget) && (budgetAmount ?? row.budget) > 0;
+            : budget_by !== 'none' && (
+                (Number.isFinite(budgetAmount) && (budgetAmount as number) > 0)
+                || (Number.isFinite(hb) && (hb as number) > 0)
+                || (Number.isFinite(mb) && (mb as number) > 0)
+            );
     return {
         ...row,
         budget_by,
