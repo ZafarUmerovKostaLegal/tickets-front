@@ -32,9 +32,13 @@ function fmtGroupSpentByCurrency(projects: ProjectRow[]): string {
     return parts.map(([cur, sum]) => fmtAmt(sum, cur)).join(' · ');
 }
 function remainingPct(budget: number, spent: number) {
+    if (!Number.isFinite(budget) || budget <= 0)
+        return 0;
     return Math.round(((budget - spent) / budget) * 100);
 }
 function spentPct(budget: number, spent: number) {
+    if (!Number.isFinite(budget) || budget <= 0)
+        return 0;
     return Math.min((spent / budget) * 100, 100);
 }
 const PP_ACTIONS_MENU_FALLBACK_W = 96;
@@ -434,7 +438,7 @@ export function ProjectsPanel() {
                         const hasBudget = p.budget != null;
                         const over = hasBudget && p.spent > p.budget!;
                         const rem = hasBudget ? p.budget! - p.spent : null;
-                        const pct = hasBudget ? remainingPct(p.budget!, p.spent) : null;
+                        const pct = hasBudget && p.budget! > 0 ? remainingPct(p.budget!, p.spent) : null;
                         const typeMeta = TYPE_COLOR[p.type];
                         const isSelected = selectedIds.has(p.id);
                         const isActOpen = actionOpen === p.id;
@@ -457,7 +461,7 @@ export function ProjectsPanel() {
                           {hasBudget ? fmtAmt(p.budget!, p.currency) : <span className="pp__dash">—</span>}
                         </span>
                         <span className="pp__td pp__td--spent">
-                          {p.spent > 0 ? fmtAmt(p.spent, p.currency) : <span className="pp__dash">—</span>}
+                          {p.spent > 0 || hasBudget ? fmtAmt(p.spent, p.currency) : <span className="pp__dash">—</span>}
                         </span>
                         <span className="pp__td pp__td--bar">
                           {hasBudget && p.spent > 0 && <BudgetBar budget={p.budget!} spent={p.spent}/>}
