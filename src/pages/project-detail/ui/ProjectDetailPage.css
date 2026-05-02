@@ -674,7 +674,7 @@
   font-weight: 500;
   line-height: 1.5;
   color: var(--app-muted, #6b7280);
-  max-width: 42rem;
+  max-width: none;
 }
 
 .pdp__tasks-toolbar-right {

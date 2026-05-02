@@ -125,6 +125,22 @@ function fmtDashboardBudgetSpentRemaining(b: TimeManagerProjectDashboardBudget, 
         return formatDecimalHoursRu(value);
     return `${value.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${b.currency}`;
 }
+
+/** Остаток по лимиту из факта «лимит − списано», чтобы не терять перерасход, если API отдал remaining ≥ 0 при spent > budget. */
+function deriveDashboardBudgetSliceRemaining(slice: { budget: number; spent: number; remaining: number }): number {
+    const { budget, spent } = slice;
+    if (Number.isFinite(budget) && budget > 0 && Number.isFinite(spent))
+        return budget - spent;
+    return slice.remaining;
+}
+
+function deriveDashboardBudgetHeadlineRemaining(b: TimeManagerProjectDashboardBudget): number {
+    if (b.budgetBy === 'hours_and_money' && b.money)
+        return deriveDashboardBudgetSliceRemaining(b.money);
+    if (Number.isFinite(b.budget) && b.budget > 0 && Number.isFinite(b.spent))
+        return b.budget - b.spent;
+    return b.remaining;
+}
 type WeekPoint = {
     idx: number;
     dayLabel: string;
@@ -1302,57 +1318,57 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
         ? (budgetDual ? budgetDual.money.spent : apiBudget.spent)
         : spent + (budgetBurnIncludesExpenses ? expenseAmountForDisplay : 0);
     const remaining = apiBudget != null
-        ? (budgetDual ? budgetDual.money.remaining : apiBudget.remaining)
+        ? deriveDashboardBudgetHeadlineRemaining(apiBudget)
         : hasLegacyBudget
             ? project.budget! - spentForBudget
             : null;
+    const dualMoneyRemainingEff = budgetDual != null ? deriveDashboardBudgetSliceRemaining(budgetDual.money) : null;
+    const dualHoursRemainingEff = budgetDual != null ? deriveDashboardBudgetSliceRemaining(budgetDual.hours) : null;
     const budgetLimitForChart = apiBudget != null
         ? (apiBudget.budgetBy === 'money' || apiBudget.budgetBy === 'hours_and_money'
             ? (budgetDual ? budgetDual.money.budget : apiBudget.budget)
             : null)
         : project.budget ?? null;
-    const remainingPct = apiBudget != null
-        ? (budgetDual
-            ? (budgetDual.money.budget > 0
-                ? Math.round((budgetDual.money.remaining / budgetDual.money.budget) * 100)
-                : null)
-            : (apiBudget.budget > 0
-                ? Math.round((apiBudget.remaining / apiBudget.budget) * 100)
-                : null))
+    const pctDenom = apiBudget != null
+        ? (budgetDual ? budgetDual.money.budget : apiBudget.budget)
         : hasLegacyBudget
-            ? Math.round(((project.budget! - spentForBudget) / project.budget!) * 100)
+            ? project.budget!
             : null;
+    const remainingPct = pctDenom != null && pctDenom > 0 && remaining != null && remaining >= 0
+        ? Math.round((remaining / pctDenom) * 100)
+        : null;
+    const overspendPct = pctDenom != null && pctDenom > 0 && remaining != null && remaining < 0
+        ? Math.round((Math.abs(remaining) / pctDenom) * 100)
+        : null;
     const isOver = (() => {
         if (apiBudget == null)
             return remaining != null && remaining < 0;
         if (budgetDual)
-            return budgetDual.money.remaining < 0 || budgetDual.hours.remaining < 0;
+            return (dualMoneyRemainingEff != null && dualMoneyRemainingEff < 0)
+                || (dualHoursRemainingEff != null && dualHoursRemainingEff < 0);
         return remaining != null && remaining < 0;
     })();
-    const spentPct = apiBudget != null
-        ? (apiBudget.percentUsed != null && Number.isFinite(apiBudget.percentUsed)
-            ? Math.min(Math.max(apiBudget.percentUsed, 0), 100)
-            : budgetDual
-                ? (budgetDual.money.budget > 0
-                    ? Math.min((budgetDual.money.spent / budgetDual.money.budget) * 100, 100)
-                    : 0)
-                : apiBudget.budget > 0
-                    ? Math.min((apiBudget.spent / apiBudget.budget) * 100, 100)
-                    : 0)
+    const spentPct = apiBudget != null && !budgetDual
+        ? (apiBudget.budget > 0
+            ? Math.min((apiBudget.spent / apiBudget.budget) * 100, 100)
+            : 0)
         : hasLegacyBudget
             ? Math.min((spentForBudget / project.budget!) * 100, 100)
             : 0;
-    const overPct = isOver && hasBudget && apiBudget == null && hasLegacyBudget
-        ? Math.min(((spentForBudget - project.budget!) / project.budget!) * 100, 50)
-        : isOver && apiBudget != null
-            ? (budgetDual
-                ? (budgetDual.money.budget > 0
-                    ? Math.min((-budgetDual.money.remaining / budgetDual.money.budget) * 100, 50)
-                    : 0)
-                : (apiBudget.budget > 0
-                    ? Math.min((-apiBudget.remaining / apiBudget.budget) * 100, 50)
-                    : 0))
+    const singleBudgetUsedRawPct = apiBudget != null && !budgetDual && apiBudget.budget > 0
+        ? (apiBudget.spent / apiBudget.budget) * 100
+        : null;
+    const overPct = apiBudget != null && !budgetDual && apiBudget.budget > 0 && isOver
+        ? Math.min(Math.max((apiBudget.spent / apiBudget.budget) * 100 - 100, 0), 100)
+        : isOver && hasBudget && apiBudget == null && hasLegacyBudget
+            ? Math.min(((spentForBudget - project.budget!) / project.budget!) * 100, 50)
             : 0;
+    const dualMoneyUsedRawPct = budgetDual != null && budgetDual.money.budget > 0
+        ? (budgetDual.money.spent / budgetDual.money.budget) * 100
+        : null;
+    const dualHoursUsedRawPct = budgetDual != null && budgetDual.hours.budget > 0
+        ? (budgetDual.hours.spent / budgetDual.hours.budget) * 100
+        : null;
     const totalHours: number | null = dashboardOk
         ? dashboard!.totals.totalHours
         : dashboardError
@@ -1603,9 +1619,11 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
     <div className="pdp__stat-card">
             <p className="pdp__stat-label">
               Остаток бюджета
-              {remainingPct != null && (<span className={isOver ? 'pdp__stat-label-pct--over' : 'pdp__stat-label-pct'}>
-                  &nbsp;({isOver ? '' : '+'}{remainingPct}%)
-                </span>)}
+              {pctDenom != null && pctDenom > 0 && remaining != null && (overspendPct != null ? (<span className="pdp__stat-label-pct--over">
+                    &nbsp;(перерасход {overspendPct}%)
+                  </span>) : remainingPct != null ? (<span className="pdp__stat-label-pct">
+                    &nbsp;(остаток +{remainingPct}%)
+                  </span>) : null)}
               {isOver && <span className="pdp__stat-info"><IcoInfo /></span>}
             </p>
             {remaining != null ? (<p className={`pdp__stat-value${isOver ? ' pdp__stat-value--red' : ''}`}>
@@ -1622,13 +1640,13 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                       {fmtDashboardBudgetValue(apiBudget!)}
                     </span>
                   </div>
-                  {apiBudget != null && (apiBudget.percentUsedMoney != null && Number.isFinite(apiBudget.percentUsedMoney) || apiBudget.money?.percentUsed != null) && (<p className="pdp__stat-hint">
+                  {apiBudget != null && (dualMoneyUsedRawPct != null || apiBudget.percentUsedMoney != null && Number.isFinite(apiBudget.percentUsedMoney) || apiBudget.money?.percentUsed != null) && (<p className="pdp__stat-hint">
                       Использовано (деньги):{' '}
-                      {Math.round((apiBudget.percentUsedMoney ?? apiBudget.money?.percentUsed) ?? 0)}%
+                      {Math.round(dualMoneyUsedRawPct ?? (apiBudget.percentUsedMoney ?? apiBudget.money?.percentUsed) ?? 0)}%
                     </p>)}
                   <div className="pdp__budget-bar">
-                    <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${Math.min(100, budgetDual.money.budget > 0 ? (budgetDual.money.spent / budgetDual.money.budget) * 100 : 0)}%` }}/>
-                    {budgetDual.money.remaining < 0 && <div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${overPct}%` }}/>}
+                    <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${dualMoneyUsedRawPct != null ? Math.min(100, dualMoneyUsedRawPct) : Math.min(100, budgetDual.money.budget > 0 ? (budgetDual.money.spent / budgetDual.money.budget) * 100 : 0)}%` }}/>
+                    {dualMoneyUsedRawPct != null && dualMoneyUsedRawPct > 100 ? (<div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${Math.min(100, dualMoneyUsedRawPct - 100)}%` }}/>) : null}
                   </div>
                   <p className="pdp__stat-hint pdp__stat-hint--muted">
                     Потрачено (деньги):{' '}
@@ -1640,19 +1658,20 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                       {formatDecimalHoursRu(budgetDual.hours.budget)}
                     </span>
                   </div>
-                  {apiBudget != null && (apiBudget.percentUsedHours != null && Number.isFinite(apiBudget.percentUsedHours) || apiBudget.hours?.percentUsed != null) && (<p className="pdp__stat-hint">
+                  {apiBudget != null && (dualHoursUsedRawPct != null || apiBudget.percentUsedHours != null && Number.isFinite(apiBudget.percentUsedHours) || apiBudget.hours?.percentUsed != null) && (<p className="pdp__stat-hint">
                       Использовано (часы):{' '}
-                      {Math.round((apiBudget.percentUsedHours ?? apiBudget.hours?.percentUsed) ?? 0)}%
+                      {Math.round(dualHoursUsedRawPct ?? (apiBudget.percentUsedHours ?? apiBudget.hours?.percentUsed) ?? 0)}%
                     </p>)}
                   <div className="pdp__budget-bar">
-                    <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${Math.min(100, budgetDual.hours.budget > 0 ? (budgetDual.hours.spent / budgetDual.hours.budget) * 100 : 0)}%` }}/>
-                    {budgetDual.hours.remaining < 0 && <div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${Math.min(50, budgetDual.hours.budget > 0 ? (-budgetDual.hours.remaining / budgetDual.hours.budget) * 100 : 0)}%` }}/>}
+                    <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${dualHoursUsedRawPct != null ? Math.min(100, dualHoursUsedRawPct) : Math.min(100, budgetDual.hours.budget > 0 ? (budgetDual.hours.spent / budgetDual.hours.budget) * 100 : 0)}%` }}/>
+                    {dualHoursUsedRawPct != null && dualHoursUsedRawPct > 100 ? (<div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${Math.min(100, dualHoursUsedRawPct - 100)}%` }}/>) : null}
                   </div>
                   <p className="pdp__stat-hint pdp__stat-hint--muted">
                     Списано (часы): {formatDecimalHoursRu(budgetDual.hours.spent)}
                   </p>
-                  {apiBudget != null && apiBudget.percentUsed != null && (<p className="pdp__stat-hint">
-                      Ориентир по лимиту (макс. из двух): {Math.round(apiBudget.percentUsed)}%
+                  {apiBudget != null && (dualMoneyUsedRawPct != null || dualHoursUsedRawPct != null || apiBudget.percentUsed != null) && (<p className="pdp__stat-hint">
+                      Ориентир по лимиту (макс. из двух):{' '}
+                      {Math.round(Math.max(dualMoneyUsedRawPct ?? 0, dualHoursUsedRawPct ?? 0, apiBudget.percentUsed ?? 0))}%
                     </p>)}
                 </>) : (<>
                   <div className="pdp__stat-budget-row">
@@ -1665,8 +1684,9 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                         : fmtAmt(project.budget!, displayCurrency)}
                     </span>
                   </div>
-                  {apiBudget != null && apiBudget.percentUsed != null && (<p className="pdp__stat-hint">
-                      Использовано лимита: {Math.round(apiBudget.percentUsed)}%
+                  {apiBudget != null && (singleBudgetUsedRawPct != null || apiBudget.percentUsed != null && Number.isFinite(apiBudget.percentUsed)) && (<p className="pdp__stat-hint">
+                      Использовано лимита:{' '}
+                      {Math.round(singleBudgetUsedRawPct ?? apiBudget.percentUsed ?? 0)}%
                     </p>)}
                   <div className="pdp__budget-bar">
                     <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${spentPct}%` }}/>

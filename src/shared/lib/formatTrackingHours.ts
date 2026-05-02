@@ -12,14 +12,7 @@ export function decimalHoursFromElapsedMs(elapsedMs: number): number {
 export function formatDecimalHoursRu(n: number): string {
     if (!Number.isFinite(n))
         return '—';
-    if (n === 0) {
-        return (0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-    const rounded2 = Math.round(n * 100) / 100;
-    if (Math.abs(rounded2) === 0) {
-        return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
-    }
-    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 6 });
+    return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 export function formatHMS(totalSeconds: number): string {
     const s = Math.max(0, Number.isFinite(totalSeconds) ? Math.trunc(totalSeconds) : 0);
