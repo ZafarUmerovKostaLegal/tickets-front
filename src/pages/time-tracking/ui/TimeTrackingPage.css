@@ -11566,7 +11566,9 @@ a.pp__proj-name--link:hover {
     animation: none;
   }
 }
-.tt-inv-dialog--wide { width: min(100%, 920px); }
+.tt-inv-dialog--wide {
+  width: min(100%, min(1200px, 96vw));
+}
 .tt-inv-dialog__head {
   display: flex;
   align-items: flex-start;
@@ -11631,6 +11633,34 @@ a.pp__proj-name--link:hover {
 @media (max-width: 640px) {
   .tt-inv-dialog__grid--2 {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Черновик счёта: две строки полей (даты | налоги+скидка) на широкой модалке */
+.tt-inv-dialog__grid--draft-invoice {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+}
+.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(1),
+.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(2) {
+  grid-column: span 3;
+}
+.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(3),
+.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(4),
+.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(5) {
+  grid-column: span 2;
+}
+@media (max-width: 640px) {
+  .tt-inv-dialog__grid--draft-invoice {
+    grid-template-columns: 1fr;
+  }
+  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(1),
+  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(2),
+  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(3),
+  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(4),
+  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(5) {
+    grid-column: auto;
   }
 }
 
@@ -11774,7 +11804,7 @@ a.pp__proj-name--link:hover {
 }
 
 .tt-inv-dialog__scroll-table.tt-reports__table-wrap {
-  max-height: min(40vh, 280px);
+  max-height: min(48vh, 400px);
   overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -11889,6 +11919,25 @@ a.pp__proj-name--link:hover {
   margin-bottom: 1rem;
 }
 .tt-inv-draft { display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1rem; }
+.tt-inv-draft__notes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem 1rem;
+}
+.tt-inv-draft__notes label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--app-text, #1e293b);
+}
+@media (max-width: 720px) {
+  .tt-inv-draft__notes {
+    grid-template-columns: 1fr;
+  }
+}
 .tt-inv__textarea {
   width: 100%;
   box-sizing: border-box;

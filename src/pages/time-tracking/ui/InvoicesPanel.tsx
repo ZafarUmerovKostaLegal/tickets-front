@@ -1105,7 +1105,7 @@ export function InvoicesPanel() {
 
                   {invoiceCanPatchDraft(detail.status as InvoiceUiStatus) && (<div className="tt-inv-draft">
                       <p className="tt-inv-draft__hint">Редактирование только в черновике: даты, налоги и примечания — затем «Сохранить черновик».</p>
-                      <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
+                      <div className="tt-inv-dialog__grid tt-inv-dialog__grid--draft-invoice">
                         <div className="tt-inv-dialog__field">
                           <span id="inv-draft-issue-lbl" className="tt-inv-dialog__label">Дата счёта</span>
                           <DatePicker id="inv-draft-issue" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={draftIssueDate} max={draftDueDate || undefined} onChange={(iso) => setDraftIssueDate(iso)} portal portalZIndex={12100} emptyLabel="дд.мм.гггг" title="Дата счёта" showChevron aria-labelledby="inv-draft-issue-lbl"/>
@@ -1127,14 +1127,16 @@ export function InvoicesPanel() {
                           <input id="inv-disc" type="text" inputMode="decimal" className="tt-inv-dialog__control" value={draftDiscPct} onChange={(e) => setDraftDiscPct(e.target.value)} placeholder="необязательно"/>
                         </div>
                       </div>
-                      <label>
-                        Примечание для клиента
-                        <textarea className="tt-inv__textarea" rows={2} defaultValue={detail.clientNote ?? ''} id="inv-client-note"/>
-                      </label>
-                      <label>
-                        Внутреннее примечание
-                        <textarea className="tt-inv__textarea" rows={2} defaultValue={detail.internalNote ?? ''} id="inv-int-note"/>
-                      </label>
+                      <div className="tt-inv-draft__notes">
+                        <label htmlFor="inv-client-note">
+                          Примечание для клиента
+                          <textarea className="tt-inv__textarea" rows={3} defaultValue={detail.clientNote ?? ''} id="inv-client-note"/>
+                        </label>
+                        <label htmlFor="inv-int-note">
+                          Внутреннее примечание
+                          <textarea className="tt-inv__textarea" rows={3} defaultValue={detail.internalNote ?? ''} id="inv-int-note"/>
+                        </label>
+                      </div>
                       <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleSaveDraft()}>
                         Сохранить черновик
                       </button>
