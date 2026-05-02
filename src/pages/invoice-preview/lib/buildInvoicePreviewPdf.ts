@@ -1,4 +1,6 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
+import dejavuSansBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
+import dejavuSansRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
 import { KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 
 const W = 595.28;
@@ -58,6 +60,13 @@ async function rasterizeInvoiceLogoSvgToPng(svgAbsoluteUrl: string, renderWidthP
     catch {
         return null;
     }
+}
+
+async function fetchFontBytes(ttfModuleUrl: string): Promise<Uint8Array> {
+    const res = await fetch(ttfModuleUrl);
+    if (!res.ok)
+        throw new Error(`Не удалось загрузить шрифт для PDF (${res.status})`);
+    return new Uint8Array(await res.arrayBuffer());
 }
 
 function drawRichLine(page: PDFPage, x: number, y: number, parts: readonly { text: string; bold?: boolean }[], size: number, font: PDFFont, fontBold: PDFFont): number {
@@ -210,8 +219,12 @@ function drawCoverPage(
 /** Три страницы A4: первая — сопроводительное письмо, 2–3 пустые. */
 export async function buildInvoicePreviewPdfBlob(model: InvoiceCoverLetterModel): Promise<Blob> {
     const doc = await PDFDocument.create();
-    const font = await doc.embedFont(StandardFonts.Helvetica);
-    const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const [regularBytes, boldBytes] = await Promise.all([
+        fetchFontBytes(dejavuSansRegularUrl),
+        fetchFontBytes(dejavuSansBoldUrl),
+    ]);
+    const font = await doc.embedFont(regularBytes, { subset: true });
+    const fontBold = await doc.embedFont(boldBytes, { subset: true });
 
     let logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
     if (typeof window !== 'undefined') {

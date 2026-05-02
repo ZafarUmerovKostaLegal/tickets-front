@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+declare module '*.ttf?url' {
+    const src: string;
+    export default src;
+}
+
 interface ImportMetaEnv {
     readonly VITE_APP_TITLE?: string;
     readonly VITE_FAVICON_PATH?: string;
