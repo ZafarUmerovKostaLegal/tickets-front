@@ -10,3 +10,4 @@ export * from './timeEntryEditUnlockStorage';
 export * from './reportSnapshotOverrides';
 export * from './exportPartnerConfirmedSnapshotExcel';
 export * from './userFacingProjectAccessError';
+export * from './expenseReportDisplay';

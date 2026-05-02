@@ -1,9 +1,9 @@
-import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useId, } from 'react';
+import { Fragment, useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useId, } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
-import { fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, type ReportsFilterUser, type ReportPagination, type TimeRowClients, type TimeRowProjects, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, } from '@entities/time-tracking';
+import { displayReportClientLabel, displayReportProjectLabel, formatExpenseReportStatus, fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, type ReportsFilterUser, type ReportPagination, type TimeRowClients, type TimeRowProjects, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, } from '@entities/time-tracking';
 import { budgetReportHoursMetrics, budgetReportMoneyMetrics, budgetReportRowProgressPercent } from '@entities/time-tracking/lib/projectBudgetReportMetrics';
 import { ReportsSkeleton } from './ReportsSkeleton';
 import { ConfirmedPartnerReportsPanel } from './ConfirmedPartnerReportsPanel';
@@ -224,13 +224,16 @@ function buildReportRowHaystack(row: unknown): string {
   }
   push(o.user_id);
   const users = o.users;
-  if (Array.isArray(users)) {
+      if (Array.isArray(users)) {
     for (const u of users) {
       if (u && typeof u === 'object') {
         const ur = u as Record<string, unknown>;
         push(ur.user_name);
         push(ur.display_name);
         push(ur.email);
+        push(ur.status);
+        push(ur.expense_status);
+        push(ur.workflow_status);
       }
     }
   }
@@ -272,14 +275,15 @@ function ExpenseUserRows({ users, currency }: {
   currency: string;
 }) {
   return (<>
-    {users.map((u) => (<tr key={u.user_id} className="rp-table__sub-row">
+    {users.map((u, i) => (<tr key={`${u.user_id}-${i}`} className="rp-table__sub-row">
       <td className="rp-table__sub-indent">
         <span className="rp-table__sub-icon">↳</span>
-        <span>{u.user_name}</span>
+        <span>{u.user_name?.trim() ? u.user_name : `Сотрудник ${u.user_id}`}</span>
       </td>
       <td className="rp-table__num">{fmtAmt(u.total_amount, currency)}</td>
       <td className="rp-table__num">{fmtAmt(u.billable_amount, currency)}</td>
       <td className="rp-table__num">{pct(u.billable_amount, u.total_amount)}</td>
+      <td className="rp-table__status">{formatExpenseReportStatus(u.status ?? u.expense_status)}</td>
       <td />
     </tr>))}
   </>);
@@ -526,25 +530,27 @@ export function ExpenseTable({ groupBy, rows, expanded, onToggle, }: {
           <th className="rp-table__num">Всего расходов</th>
           <th className="rp-table__num">Возмещаемые</th>
           <th className="rp-table__num">Возмещаемых %</th>
+          <th>Статус</th>
           <th className="rp-table__expand-col" aria-label="Развернуть" />
         </tr>
       </thead>
       <tbody>
-        {clientRows.map((r) => {
-          const key = expenseClientsRowKey(r);
+        {clientRows.map((r, idx) => {
+          const key = expenseClientsRowKey(r, idx);
           const isOpen = expanded.has(key);
-          return (<>
-            <tr key={key} className="rp-table__group-row" onClick={() => r.users?.length && onToggle(key)}>
-              <td className="rp-table__name-cell">{r.client_name}</td>
+          return (<Fragment key={key}>
+            <tr className="rp-table__group-row" onClick={() => r.users?.length && onToggle(key)}>
+              <td className="rp-table__name-cell">{displayReportClientLabel(r.client_name, r.client_id)}</td>
               <td className="rp-table__num">{fmtAmt(r.total_amount, r.currency)}</td>
               <td className="rp-table__num">{fmtAmt(r.billable_amount, r.currency)}</td>
               <td className="rp-table__num">{pct(r.billable_amount, r.total_amount)}</td>
+              <td className="rp-table__muted">По сотрудникам</td>
               <td className="rp-table__expand-col">
                 {r.users?.length ? <button type="button" className="rp-table__expand-btn" aria-expanded={isOpen}><IcoExpand open={isOpen} /></button> : null}
               </td>
             </tr>
             {isOpen && <ExpenseUserRows users={r.users ?? []} currency={r.currency} />}
-          </>);
+          </Fragment>);
         })}
       </tbody>
     </table>);
@@ -558,6 +564,7 @@ export function ExpenseTable({ groupBy, rows, expanded, onToggle, }: {
           <th className="rp-table__num">Всего расходов</th>
           <th className="rp-table__num">Возмещаемые</th>
           <th className="rp-table__num">Возмещаемых %</th>
+          <th>Статус</th>
           <th className="rp-table__expand-col" aria-label="Развернуть" />
         </tr>
       </thead>
@@ -565,18 +572,19 @@ export function ExpenseTable({ groupBy, rows, expanded, onToggle, }: {
         {catRows.map((r, i) => {
           const key = r.expense_category_id ?? `cat-${i}`;
           const isOpen = expanded.has(key);
-          return (<>
-            <tr key={key} className="rp-table__group-row" onClick={() => r.users?.length && onToggle(key)}>
+          return (<Fragment key={key}>
+            <tr className="rp-table__group-row" onClick={() => r.users?.length && onToggle(key)}>
               <td className="rp-table__name-cell">{r.expense_category_name || '—'}</td>
               <td className="rp-table__num">{fmtAmt(r.total_amount, r.currency)}</td>
               <td className="rp-table__num">{fmtAmt(r.billable_amount, r.currency)}</td>
               <td className="rp-table__num">{pct(r.billable_amount, r.total_amount)}</td>
+              <td className="rp-table__muted">По сотрудникам</td>
               <td className="rp-table__expand-col">
                 {r.users?.length ? <button type="button" className="rp-table__expand-btn" aria-expanded={isOpen}><IcoExpand open={isOpen} /></button> : null}
               </td>
             </tr>
             {isOpen && <ExpenseUserRows users={r.users ?? []} currency={r.currency} />}
-          </>);
+          </Fragment>);
         })}
       </tbody>
     </table>);
@@ -590,26 +598,28 @@ export function ExpenseTable({ groupBy, rows, expanded, onToggle, }: {
         <th className="rp-table__num">Всего расходов</th>
         <th className="rp-table__num">Возмещаемые</th>
         <th className="rp-table__num">Возмещаемых %</th>
+        <th>Статус</th>
         <th className="rp-table__expand-col" aria-label="Развернуть" />
       </tr>
     </thead>
     <tbody>
-      {projectRows.map((r) => {
-        const key = r.project_id;
+      {projectRows.map((r, idx) => {
+        const key = expenseProjectsRowKey(r, idx);
         const isOpen = expanded.has(key);
-        return (<>
-          <tr key={key} className="rp-table__group-row" onClick={() => r.users?.length && onToggle(key)}>
-            <td className="rp-table__name-cell rp-table__name-cell--bold">{r.project_name}</td>
-            <td className="rp-table__muted">{r.client_name}</td>
+        return (<Fragment key={key}>
+          <tr className="rp-table__group-row" onClick={() => r.users?.length && onToggle(key)}>
+            <td className="rp-table__name-cell rp-table__name-cell--bold">{displayReportProjectLabel(r.project_name, r.project_id)}</td>
+            <td className="rp-table__muted">{displayReportClientLabel(r.client_name, r.client_id)}</td>
             <td className="rp-table__num">{fmtAmt(r.total_amount, r.currency)}</td>
             <td className="rp-table__num">{fmtAmt(r.billable_amount, r.currency)}</td>
             <td className="rp-table__num">{pct(r.billable_amount, r.total_amount)}</td>
+            <td className="rp-table__muted">По сотрудникам</td>
             <td className="rp-table__expand-col">
               {r.users?.length ? <button type="button" className="rp-table__expand-btn" aria-expanded={isOpen}><IcoExpand open={isOpen} /></button> : null}
             </td>
           </tr>
           {isOpen && <ExpenseUserRows users={r.users ?? []} currency={r.currency} />}
-        </>);
+        </Fragment>);
       })}
     </tbody>
   </table>);
@@ -784,12 +794,25 @@ export function BudgetTable({ rows, expanded, onToggle, }: {
     })}
   </div>);
 }
-function expenseClientsRowKey(r: ExpRowClients): string {
+function expenseClientsRowKey(r: ExpRowClients, index: number): string {
     const gid = r.report_group_id?.trim();
     if (gid)
         return gid;
+    const cid = String(r.client_id ?? '').trim();
     const cur = String(r.group_currency ?? r.currency ?? '').trim() || '—';
-    return `${r.client_id}|${cur}`;
+    if (cid)
+        return `${cid}|${cur}`;
+    return `exp-cli-${index}|${cur}`;
+}
+function expenseProjectsRowKey(r: ExpRowProjects, index: number): string {
+    const gid = r.report_group_id?.trim();
+    if (gid)
+        return gid;
+    const pid = String(r.project_id ?? '').trim();
+    const cur = String(r.group_currency ?? r.currency ?? '').trim() || '—';
+    if (pid)
+        return `${pid}|${cur}`;
+    return `exp-prj-${index}|${cur}`;
 }
 export function ReportsPanel() {
   const navigate = useNavigate();
@@ -1326,7 +1349,7 @@ export function ReportsPanel() {
     }
     if (reportType === 'expenses') {
       const g = groups?.find((x) => x.id === groupBy)?.label ?? groupBy;
-      return `Отчёт по расходам — разрез: ${g}`;
+      return `Отчёт по расходам — разрез: ${g}. Учтены заявки во всех стадиях (черновик, согласование, отклонённые и т.д.), не только проведённые в реестре; статус по строке сотрудника — в колонке «Статус» после раскрытия группы.`;
     }
     if (reportType === 'uninvoiced')
       return 'Неинвойсированные часы и расходы по проектам';

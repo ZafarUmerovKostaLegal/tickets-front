@@ -50,6 +50,8 @@ export type ExpenseExcelPreviewRow = {
     total: number;
     billable: number;
     currency: string;
+    /** Подпись стадии заявки (если API отдал статус в детализации). */
+    statusLabel: string;
 };
 export type UninvoicedExcelPreviewRow = {
     rowKey: string;

@@ -1450,6 +1450,7 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
                 </th>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--pick">Категория / разрез</th>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--comment">Комментарий</th>
+                <th className="tt-rp-mtable__th">Статус</th>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--num">Всего</th>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--num">Возмещаемые</th>
               </tr>
@@ -1469,6 +1470,9 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
                   </td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--comment">
                     <textarea className="tt-rp-mtable__input tt-rp-mtable__textarea" rows={2} value={r.comment} onChange={(e) => onPatch(r.rowKey, { comment: e.target.value })}/>
+                  </td>
+                  <td className="tt-rp-mtable__td tt-rp-mtable__td--muted" title="С сервера; если «—», поле status для строки в API не пришло.">
+                    {r.statusLabel || '—'}
                   </td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--num">
                     <input className="tt-rp-mtable__input tt-rp-mtable__input--num" type="number" step={0.01} min={0} value={r.total} onChange={(e) => {

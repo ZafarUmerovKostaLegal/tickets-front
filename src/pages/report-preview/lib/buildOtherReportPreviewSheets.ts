@@ -1,4 +1,5 @@
 import type { BudgetRow, ExpRowCategories, ExpRowClients, ExpRowProjects, ExpRowTeam, RUBBudget, RUBExpense, RUBUninvoiced, UninvoicedRow, } from '@entities/time-tracking';
+import { displayReportClientLabel, displayReportProjectLabel, } from '@entities/time-tracking';
 export type ExpenseGroup = 'clients' | 'projects' | 'categories' | 'team';
 export type ExpensePreviewLine = {
     lineKey: string;
@@ -18,7 +19,7 @@ export type ExpensePreviewSheet = {
 function linesFromExpenseUsers(users: RUBExpense[] | undefined, prefix: string): ExpensePreviewLine[] {
     return (users ?? []).map((u, i) => ({
         lineKey: `${prefix}-${u.user_id}-${i}`,
-        user_name: u.user_name,
+        user_name: u.user_name?.trim() ? u.user_name : `Сотрудник ${u.user_id}`,
         total_amount: Number(u.total_amount) || 0,
         billable_amount: Number(u.billable_amount) || 0,
     }));
@@ -44,8 +45,8 @@ export function buildExpensePreviewSheets(groupBy: ExpenseGroup, rows: ExpRowCli
     }
     if (groupBy === 'clients') {
         return (rows as ExpRowClients[]).map((r) => ({
-            sheetId: r.client_id,
-            titlePrimary: r.client_name,
+            sheetId: r.client_id || `cli-${displayReportClientLabel(r.client_name, r.client_id)}`,
+            titlePrimary: displayReportClientLabel(r.client_name, r.client_id),
             titleSecondary: '',
             total_amount: Number(r.total_amount) || 0,
             billable_amount: Number(r.billable_amount) || 0,
@@ -68,9 +69,9 @@ export function buildExpensePreviewSheets(groupBy: ExpenseGroup, rows: ExpRowCli
         });
     }
     return (rows as ExpRowProjects[]).map((r) => ({
-        sheetId: r.project_id,
-        titlePrimary: r.project_name,
-        titleSecondary: r.client_name,
+        sheetId: r.project_id || `prj-${displayReportProjectLabel(r.project_name, r.project_id)}`,
+        titlePrimary: displayReportProjectLabel(r.project_name, r.project_id),
+        titleSecondary: displayReportClientLabel(r.client_name, r.client_id),
         total_amount: Number(r.total_amount) || 0,
         billable_amount: Number(r.billable_amount) || 0,
         currency: r.currency,

@@ -2953,6 +2953,9 @@ export type RUBExpense = {
     avatar_url: string | null;
     total_amount: number;
     billable_amount: number;
+    /** Стадия заявки (черновик, согласование, отклонён и т.д.). */
+    status?: string | null;
+    expense_status?: string | null;
 };
 export type RUBUninvoiced = {
     user_id: number;
@@ -3364,7 +3367,49 @@ const REPORT_V2_CAMEL_TO_SNAKE: readonly [
         ['projectBreakdown', 'project_breakdown'],
         ['reportGroupId', 'report_group_id'],
         ['groupCurrency', 'group_currency'],
+        ['expenseStatus', 'expense_status'],
+        ['workflowStatus', 'workflow_status'],
     ];
+
+function scrubExpenseReportAggregateRow(merged: Record<string, unknown>): void {
+    if (!Array.isArray(merged.users))
+        return;
+    if ('total_hours' in merged || 'uninvoiced_hours' in merged)
+        return;
+    const ta = coerceReportNumber(merged.total_amount);
+    const ba = coerceReportNumber(merged.billable_amount);
+    if (ta === undefined && ba === undefined)
+        return;
+    if ('hours_logged' in merged && 'amount_logged' in merged && !('total_amount' in merged))
+        return;
+    if ('client_id' in merged)
+        merged.client_id = merged.client_id == null || merged.client_id === '' ? '' : String(merged.client_id).trim();
+    if ('project_id' in merged)
+        merged.project_id = merged.project_id == null || merged.project_id === '' ? '' : String(merged.project_id).trim();
+    if ('client_name' in merged)
+        merged.client_name = merged.client_name == null ? '' : String(merged.client_name).trim();
+    if ('project_name' in merged)
+        merged.project_name = merged.project_name == null ? '' : String(merged.project_name).trim();
+    if ('expense_category_name' in merged)
+        merged.expense_category_name = merged.expense_category_name == null ? '' : String(merged.expense_category_name).trim();
+}
+
+function scrubRubExpenseRollupUser(merged: Record<string, unknown>): Record<string, unknown> {
+    const uid = merged.user_id;
+    const hasUser = uid != null && (typeof uid === 'number' || typeof uid === 'string');
+    if (!hasUser || 'total_hours' in merged)
+        return merged;
+    const hasExpenseAmounts = coerceReportNumber(merged.total_amount) !== undefined
+        || coerceReportNumber(merged.billable_amount) !== undefined;
+    if (!hasExpenseAmounts)
+        return merged;
+    merged.user_name = merged.user_name == null ? '' : String(merged.user_name).trim();
+    const st = merged.status ?? merged.expense_status ?? merged.workflow_status;
+    if (st != null && String(st).trim())
+        merged.status = String(st).trim();
+    return merged;
+}
+
 function normalizeReportV2RowDeep(row: unknown): unknown {
     if (row == null || typeof row !== 'object')
         return row;
@@ -3442,7 +3487,8 @@ function normalizeReportV2RowDeep(row: unknown): unknown {
     if (Array.isArray(merged.project_breakdown)) {
         merged.project_breakdown = merged.project_breakdown.map((e) => normalizeReportEntryLogItem(e)) as unknown[];
     }
-    return merged;
+    scrubExpenseReportAggregateRow(merged);
+    return scrubRubExpenseRollupUser(merged);
 }
 function normalizeReportV2Response<T>(data: ReportResponse<T>): ReportResponse<T> {
     const p = data.pagination as unknown as Record<string, unknown>;

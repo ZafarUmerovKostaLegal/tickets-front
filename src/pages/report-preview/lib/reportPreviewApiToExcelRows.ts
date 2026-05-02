@@ -1,17 +1,20 @@
-import type {
-    BudgetRow,
-    ExpRowCategories,
-    ExpRowClients,
-    ExpRowProjects,
-    ExpRowTeam,
-    RUBBudget,
-    RUBExpense,
-    RUBTime,
-    RUBUninvoiced,
-    TimeReportEntryLogItem,
-    TimeRowClients,
-    TimeRowProjects,
-    UninvoicedRow,
+import {
+    displayReportClientLabel,
+    displayReportProjectLabel,
+    formatExpenseReportStatus,
+    type BudgetRow,
+    type ExpRowCategories,
+    type ExpRowClients,
+    type ExpRowProjects,
+    type ExpRowTeam,
+    type RUBBudget,
+    type RUBExpense,
+    type RUBTime,
+    type RUBUninvoiced,
+    type TimeReportEntryLogItem,
+    type TimeRowClients,
+    type TimeRowProjects,
+    type UninvoicedRow,
 } from '@entities/time-tracking';
 import type { ExpenseGroup, TimeGroup, } from '@entities/time-tracking/model/reportsPanelConfig';
 import {
@@ -226,6 +229,7 @@ export function flattenExpenseReportToExcelRows(groupBy: ExpenseGroup, rows: Exp
                 total: r.total_amount,
                 billable: r.billable_amount,
                 currency: r.currency,
+                statusLabel: '—',
             });
         }
         return out;
@@ -233,7 +237,7 @@ export function flattenExpenseReportToExcelRows(groupBy: ExpenseGroup, rows: Exp
     if (groupBy === 'clients') {
         for (const row of rows as ExpRowClients[]) {
             for (const u of row.users ?? []) {
-                out.push(expenseUserRow(row.client_id, row.client_name, row.currency, u));
+                out.push(expenseUserRow(row.client_id, displayReportClientLabel(row.client_name, row.client_id), row.currency, u));
             }
         }
         return out;
@@ -249,7 +253,8 @@ export function flattenExpenseReportToExcelRows(groupBy: ExpenseGroup, rows: Exp
     }
     for (const row of rows as ExpRowProjects[]) {
         for (const u of row.users ?? []) {
-            out.push(expenseUserRow(row.project_id, `${row.project_name} — ${row.client_name}`, row.currency, u));
+            const line = `${displayReportProjectLabel(row.project_name, row.project_id)} — ${displayReportClientLabel(row.client_name, row.client_id)}`;
+            out.push(expenseUserRow(row.project_id, line, row.currency, u));
         }
     }
     return out;
@@ -258,12 +263,13 @@ export function flattenExpenseReportToExcelRows(groupBy: ExpenseGroup, rows: Exp
 function expenseUserRow(categoryId: string, comment: string, currency: string, u: RUBExpense): ExpenseExcelPreviewRow {
     return {
         rowKey: `exp-${categoryId}-${u.user_id}`,
-        userName: u.user_name,
+        userName: u.user_name?.trim() ? u.user_name : `Сотрудник ${u.user_id}`,
         categoryId,
         comment,
         total: u.total_amount,
         billable: u.billable_amount,
         currency,
+        statusLabel: formatExpenseReportStatus(u.status ?? u.expense_status),
     };
 }
 
