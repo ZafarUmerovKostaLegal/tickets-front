@@ -712,7 +712,7 @@ export function InvoicesPanel() {
           <div className="tt-reports__content-actions tt-inv__filter-actions">
             <div className="tt-reports__sort-wrap">
               <label className="tt-reports__sort-label" htmlFor="tt-inv-filter-client-btn">Клиент</label>
-              <SearchableSelect className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-inv-filter-client-btn" portalDropdown portalZIndex={10050} placeholder="Клиент" emptyListText="Нет клиентов" noMatchText="Не найдено" value={clientFilter} items={clientFilterSearchItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => setClientFilter(o.id)} aria-label="Фильтр по клиенту"/>
+              <SearchableSelect className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-inv-filter-client-btn" portalDropdown portalZIndex={10050} portalMinWidth={420} placeholder="Клиент" emptyListText="Нет клиентов" noMatchText="Не найдено" value={clientFilter} items={clientFilterSearchItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => setClientFilter(o.id)} aria-label="Фильтр по клиенту"/>
             </div>
             <div className="tt-reports__sort-wrap">
               <label className="tt-reports__sort-label" htmlFor="tt-inv-filter-status">Статус</label>
@@ -720,7 +720,7 @@ export function InvoicesPanel() {
             </div>
             <div className="tt-reports__sort-wrap">
               <label className="tt-reports__sort-label" htmlFor="tt-inv-filter-project-btn">Проект</label>
-              <SearchableSelect className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-inv-filter-project-btn" portalDropdown portalZIndex={10050} placeholder="Все проекты" emptyListText="Нет проектов" noMatchText="Не найдено" value={projectFilter} items={projectFilterSearchItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => setProjectFilter(o.id)} aria-label="Фильтр по проекту: поиск по названию, коду и клиенту"/>
+              <SearchableSelect className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-inv-filter-project-btn" portalDropdown portalZIndex={10050} portalMinWidth={720} placeholder="Все проекты" emptyListText="Нет проектов" noMatchText="Не найдено" value={projectFilter} items={projectFilterSearchItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => setProjectFilter(o.id)} aria-label="Фильтр по проекту: поиск по названию, коду и клиенту"/>
             </div>
             <div className="tt-reports__sort-wrap tt-inv__filter-dates">
               <span className="tt-reports__sort-label">Дата счёта</span>
@@ -830,14 +830,14 @@ export function InvoicesPanel() {
                 <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
                   <div className="tt-inv-dialog__field">
                     <label id="tt-inv-create-client-lbl" className="tt-inv-dialog__label" htmlFor="tt-inv-create-client-btn">Клиент *</label>
-                    <SearchableSelect<TimeManagerClientRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-client-btn" portalDropdown portalZIndex={12050} portalMinWidth={300} placeholder={clientsErr ? 'Ошибка загрузки клиентов' : clients.length === 0 ? 'Загрузка клиентов…' : 'Выберите или найдите клиента'} emptyListText="Нет клиентов" noMatchText="Клиент не найден" value={createClientId} items={clients} getOptionValue={(c) => c.id} getOptionLabel={(c) => c.name} getSearchText={(c) => `${c.name} ${c.id}`.trim()} onSelect={(c) => {
+                    <SearchableSelect<TimeManagerClientRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-client-btn" portalDropdown portalZIndex={12050} portalMinWidth={400} placeholder={clientsErr ? 'Ошибка загрузки клиентов' : clients.length === 0 ? 'Загрузка клиентов…' : 'Выберите или найдите клиента'} emptyListText="Нет клиентов" noMatchText="Клиент не найден" value={createClientId} items={clients} getOptionValue={(c) => c.id} getOptionLabel={(c) => c.name} getSearchText={(c) => `${c.name} ${c.id}`.trim()} onSelect={(c) => {
                 setCreateClientId(c.id);
                 setCreateProjectId('');
             }} disabled={Boolean(clientsErr) || clients.length === 0} aria-labelledby="tt-inv-create-client-lbl"/>
                   </div>
                   <div className="tt-inv-dialog__field">
                     <label id="tt-inv-create-project-lbl" className="tt-inv-dialog__label" htmlFor="tt-inv-create-project-btn">Проект</label>
-                    <SearchableSelect<TimeManagerClientProjectRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-project-btn" portalDropdown portalZIndex={12050} portalMinWidth={300} placeholder={!createClientId ? 'Сначала выберите клиента' : projects.length === 0 ? 'Нет проектов' : 'Выберите или найдите проект'} emptyListText="Нет проектов" noMatchText="Проект не найден" value={createProjectId} items={projects} getOptionValue={(p) => p.id} getOptionLabel={(p) => p.code ? `${p.name} (${p.code})` : p.name} getSearchText={(p) => `${p.name} ${p.code ?? ''} ${p.id}`.trim()} onSelect={(p) => setCreateProjectId(p.id)} disabled={!createClientId} aria-labelledby="tt-inv-create-project-lbl"/>
+                    <SearchableSelect<TimeManagerClientProjectRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-project-btn" portalDropdown portalZIndex={12050} portalMinWidth={560} placeholder={!createClientId ? 'Сначала выберите клиента' : projects.length === 0 ? 'Нет проектов' : 'Выберите или найдите проект'} emptyListText="Нет проектов" noMatchText="Проект не найден" value={createProjectId} items={projects} getOptionValue={(p) => p.id} getOptionLabel={(p) => p.code ? `${p.name} (${p.code})` : p.name} getSearchText={(p) => `${p.name} ${p.code ?? ''} ${p.id}`.trim()} onSelect={(p) => setCreateProjectId(p.id)} disabled={!createClientId} aria-labelledby="tt-inv-create-project-lbl"/>
                   </div>
                 </div>
               </div>

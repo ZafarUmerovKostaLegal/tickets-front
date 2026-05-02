@@ -449,8 +449,10 @@ function TimeTable({ groupBy, rows, expanded, onToggle, onProjectRowPreview, pro
   const goProjectPreview = onProjectRowPreview;
   return (<div className="rp2 rp2--projects" role="table" aria-label="Отчёт: проекты">
     <div className="rp2__head" role="row">
-      <div role="columnheader">Проект</div>
-      <div role="columnheader">Клиент</div>
+      <div role="columnheader" className="rp2__head-name-stack">
+        <span className="rp2__head-name-stack-primary">Проект</span>
+        <span className="rp2__head-name-stack-secondary">Клиент</span>
+      </div>
       <div className="rp2-num" role="columnheader">Все часы</div>
       <div className="rp2-num" role="columnheader">Оплачиваемые</div>
       <div role="columnheader">Оплачиваемых %</div>
@@ -463,11 +465,13 @@ function TimeTable({ groupBy, rows, expanded, onToggle, onProjectRowPreview, pro
         const title = `Предпросмотр: отчёт по проекту «${r.project_name}» — широкая редактируемая таблица (локально)`;
         return (<div key={key} className="rp2__group rp2__group--leaf">
           <button type="button" className="rp2__group-row rp2__group-row--button" onClick={() => goProjectPreview?.(r.project_id)} disabled={!goProjectPreview || Boolean(projectRowPreviewDisabled)} title={goProjectPreview ? title : undefined} aria-label={goProjectPreview ? title : undefined}>
-            <span className="rp2__group-name rp2__group-name--bold">
-              <span className="rp2__group-dot" data-hash={key} aria-hidden />
-              <span className="rp2__group-title">{r.project_name}</span>
+            <span className="rp2__cell-name-stack">
+              <span className="rp2__group-name rp2__group-name--bold">
+                <span className="rp2__group-dot" data-hash={key} aria-hidden />
+                <span className="rp2__group-title">{r.project_name}</span>
+              </span>
+              <span className="rp2__group-sub">{r.client_name}</span>
             </span>
-            <span className="rp2__group-sub">{r.client_name}</span>
             <span className="rp2-num rp2__group-metric">{fmtH(r.total_hours)}</span>
             <span className="rp2-num rp2__group-metric">{fmtH(r.billable_hours)}</span>
             <span className="rp2__group-metric">
