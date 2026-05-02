@@ -8,5 +8,6 @@ export * from './memberWeeklyCapacity';
 export * from './summaryTeamWeeklyCapacity';
 export * from './reportsPanelConfig';
 export * from './reportPreviewTransfer';
+export * from './invoicePreviewSession';
 export * from './partnerConfirmedReports';
 export * from './timeTrackingListPageSize';

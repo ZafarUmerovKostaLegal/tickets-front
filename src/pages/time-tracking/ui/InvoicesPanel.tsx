@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { routes } from '@shared/config';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { useAppDialog, useAppToast } from '@shared/ui';
-import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 function fmtMoney(n: number, cur: string): string {
@@ -163,6 +165,9 @@ function notifyReportsInvalidated() {
 export function InvoicesPanel() {
     const { showAlert, showConfirm } = useAppDialog();
     const { pushToast } = useAppToast();
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const resumeLoadProjectIdRef = useRef<string | null>(null);
     const [clients, setClients] = useState<TimeManagerClientRow[]>([]);
     const [clientsErr, setClientsErr] = useState<string | null>(null);
     const [items, setItems] = useState<InvoiceDto[]>([]);
@@ -435,7 +440,7 @@ export function InvoicesPanel() {
         void loadAggStats();
         notifyReportsInvalidated();
     }, [loadList, loadAggStats]);
-    const loadUnbilled = useCallback(async () => {
+    const loadUnbilled = useCallback(async (opts?: { preserveSelections?: boolean }) => {
         if (!createProjectId) {
             await showAlert({ message: 'Выберите проект — невыставленные строки запрашиваются по projectId.' });
             return;
@@ -448,8 +453,16 @@ export function InvoicesPanel() {
             ]);
             setUnbilledTime(t);
             setUnbilledExp(e);
-            setSelTime(new Set());
-            setSelExp(new Set());
+            if (!opts?.preserveSelections) {
+                setSelTime(new Set());
+                setSelExp(new Set());
+            }
+            else {
+                const timeIds = new Set(t.map((r) => r.id));
+                const expIds = new Set(e.map((r) => r.id));
+                setSelTime((prev) => new Set([...prev].filter((id) => timeIds.has(id))));
+                setSelExp((prev) => new Set([...prev].filter((id) => expIds.has(id))));
+            }
         }
         catch (err) {
             await showAlert({ message: err instanceof Error ? err.message : 'Не удалось загрузить невыставленное' });
@@ -458,6 +471,70 @@ export function InvoicesPanel() {
             setUnbilledLoading(false);
         }
     }, [createProjectId, unbilledFrom, unbilledTo, showAlert]);
+    useEffect(() => {
+        if (searchParams.get('invoice_resume') !== '1')
+            return;
+        const snap = readInvoicePreviewSession();
+        setSearchParams((prev) => {
+            const p = new URLSearchParams(prev);
+            p.delete('invoice_resume');
+            return p;
+        }, { replace: true });
+        if (!snap?.form)
+            return;
+        const f = snap.form;
+        setCreateClientId(f.createClientId);
+        setCreateProjectId(f.createProjectId);
+        setUnbilledFrom(f.unbilledFrom);
+        setUnbilledTo(f.unbilledTo);
+        setIssueDate(f.issueDate);
+        setDueDate(f.dueDate);
+        setSelTime(new Set(f.selTime));
+        setSelExp(new Set(f.selExp));
+        setCreateOpen(true);
+        resumeLoadProjectIdRef.current = f.createProjectId.trim() !== '' ? f.createProjectId : null;
+    }, [searchParams, setSearchParams]);
+    useEffect(() => {
+        const want = resumeLoadProjectIdRef.current;
+        if (want == null)
+            return;
+        if (createProjectId !== want)
+            return;
+        if (projects.length === 0)
+            return;
+        if (!projects.some((p) => p.id === want)) {
+            resumeLoadProjectIdRef.current = null;
+            return;
+        }
+        resumeLoadProjectIdRef.current = null;
+        void loadUnbilled({ preserveSelections: true });
+    }, [createProjectId, projects, loadUnbilled]);
+    const openInvoicePreview = useCallback(() => {
+        const clientRow = clients.find((c) => c.id === createClientId);
+        const clientLabel = clientRow?.name?.trim();
+        const proj = projects.find((p) => p.id === createProjectId);
+        const projectLabel = proj
+            ? (proj.code ? `${proj.name} (${proj.code})` : proj.name).trim()
+            : undefined;
+        writeInvoicePreviewSession({
+            v: 1,
+            form: {
+                createClientId,
+                createProjectId,
+                unbilledFrom,
+                unbilledTo,
+                issueDate,
+                dueDate,
+                selTime: [...selTime],
+                selExp: [...selExp],
+            },
+            meta: {
+                ...(clientLabel ? { clientLabel } : {}),
+                ...(projectLabel ? { projectLabel } : {}),
+            },
+        });
+        navigate(routes.timeTrackingInvoicePreview);
+    }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, selTime, selExp, projects, navigate]);
     const handleCreate = useCallback(async () => {
         if (!createClientId) {
             await showAlert({ message: 'Выберите клиента' });
@@ -812,16 +889,15 @@ export function InvoicesPanel() {
       </div>
 
       {createOpen && (<div className="tt-inv-overlay" role="dialog" aria-modal="true" aria-labelledby="tt-inv-create-title">
-          <div className="tt-inv-dialog tt-inv-dialog--wide tt-inv-dialog--create">
+          <div className="tt-inv-dialog tt-inv-dialog--wide">
             <div className="tt-inv-dialog__head">
               <div className="tt-inv-dialog__head-main">
                 <h3 id="tt-inv-create-title">Новый счёт</h3>
-                <p className="tt-inv-dialog__sub">Клиент, проект, даты и отбор невыставленных строк</p>
+                <p className="tt-inv-dialog__sub">Клиент, проект, даты и отбор невыставленных строк. Предпросмотр печатной формы — на отдельной странице.</p>
               </div>
               <button type="button" className="tt-inv-dialog__x" onClick={() => !createBusy && setCreateOpen(false)} aria-label="Закрыть">×</button>
             </div>
-            <div className="tt-inv-dialog__body tt-inv-dialog__body--create-split">
-              <div className="tt-inv-dialog__form-col">
+            <div className="tt-inv-dialog__body">
               <div className="tt-inv-dialog__section">
                 <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
                   <div className="tt-inv-dialog__field">
@@ -952,18 +1028,11 @@ export function InvoicesPanel() {
                     </table>
                   </div>
                 </div>)}
-              </div>
-              <aside className="tt-inv-dialog__preview-col" aria-label="Предпросмотр печатной формы счёта">
-                <p className="tt-inv-dialog__preview-heading">Предпросмотр</p>
-                <p className="tt-inv-dialog__preview-note">Три страницы формата A4 (пока пустые)</p>
-                <div className="tt-inv-dialog__preview-pages">
-                  <div className="tt-inv-a4-page" aria-label="Страница 1 из 3"/>
-                  <div className="tt-inv-a4-page" aria-label="Страница 2 из 3"/>
-                  <div className="tt-inv-a4-page" aria-label="Страница 3 из 3"/>
-                </div>
-              </aside>
             </div>
             <div className="tt-inv-dialog__foot">
+              <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => void openInvoicePreview()} disabled={createBusy} title="Открыть три листа A4 и скачать Word или PDF">
+                Предпросмотр
+              </button>
               <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setCreateOpen(false)} disabled={createBusy}>Отмена</button>
               <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={() => void handleCreate()} disabled={createBusy}>
                 {createBusy ? 'Создание…' : 'Создать черновик'}

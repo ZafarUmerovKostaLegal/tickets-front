@@ -44,6 +44,7 @@ const HelpPage = lazy(() => import('@pages/help').then(m => ({ default: m.HelpPa
 const ExpensesPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesPage })));
 const ExpensesRequestsPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesRequestsPage })));
 const ExpensesReportPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesReportPage })));
+const InvoicePreviewRouteLazy = lazy(() => import('@app/InvoicePreviewRoute').then(m => ({ default: m.InvoicePreviewRoute })));
 
 function LazyFallback() {
     return (<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', minHeight: '60vh' }}>
@@ -86,6 +87,7 @@ const router = createBrowserRouter([
             { path: routes.timeTracking, element: withProtected(<TimeTrackingRoute />) },
             { path: routes.timeTrackingNewProject, element: withProtected(<TimeTrackingNewProjectPage />) },
             { path: routes.timeTrackingReportPreview, element: withProtected(<ReportPreviewRoute />) },
+            { path: routes.timeTrackingInvoicePreview, element: withProtected(<InvoicePreviewRouteLazy />) },
             { path: routes.projectDetail, element: withProtected(<ProjectDetailPage />) },
             {
                 path: routes.expenses,

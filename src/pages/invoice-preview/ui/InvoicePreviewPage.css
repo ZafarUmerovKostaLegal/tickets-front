@@ -1,0 +1,120 @@
+.tt-inv-preview {
+  min-height: 100vh;
+  background: var(--app-bg, #f1f5f9);
+  color: var(--app-text, #0f172a);
+}
+
+.tt-inv-preview .time-page__navbar.tt-inv-preview__navbar {
+  gap: 0;
+  min-height: 56px;
+  height: 56px;
+  padding: 0 1.5rem;
+  flex-wrap: nowrap;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.tt-inv-preview .time-page__navbar.tt-inv-preview__navbar .time-page__back-btn {
+  align-self: center;
+}
+
+.tt-inv-preview .time-page__navbar.tt-inv-preview__navbar .time-page__navbar-sep {
+  margin: 0 0.75rem;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.tt-inv-preview .time-page__navbar.tt-inv-preview__navbar .time-page__navbar-tabs {
+  height: 100%;
+  align-items: stretch;
+  align-self: center;
+}
+
+.tt-inv-preview .time-page__navbar.tt-inv-preview__navbar .time-page__navbar-tab {
+  min-height: 0;
+  padding: 0 0.9rem;
+  box-sizing: border-box;
+}
+
+.tt-inv-preview .time-page__navbar.tt-inv-preview__navbar .time-page__navbar-tab--active::after {
+  left: 0;
+  right: 0;
+}
+
+.tt-inv-preview__downloads {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.45rem;
+  margin-right: 0.5rem;
+}
+
+.tt-inv-preview__download-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.tt-inv-preview__main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.35rem 1.25rem 2.5rem;
+  box-sizing: border-box;
+}
+
+.tt-inv-preview__header {
+  margin-bottom: 1rem;
+}
+
+.tt-inv-preview__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.tt-inv-preview__note {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--app-muted, #64748b);
+}
+
+.tt-inv-preview__context {
+  margin: 0.5rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--app-text, #1e293b);
+}
+
+.tt-inv-preview__sheet-stack {
+  padding: 0.55rem 0.7rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--app-border, #d1d5db);
+  background: #d9dce3;
+}
+
+.tt-inv-preview__pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.4rem 0.2rem 0.5rem;
+  scrollbar-width: thin;
+}
+
+@media (max-width: 960px) {
+  .tt-inv-preview__pages {
+    flex-direction: row;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding-bottom: 0.65rem;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tt-inv-preview__pages .tt-inv-a4-page {
+    width: 180px;
+    max-width: none;
+  }
+}

@@ -10,6 +10,7 @@ export const routes = {
     timeTracking: '/time-tracking',
     timeTrackingNewProject: '/time-tracking/projects/new',
     timeTrackingReportPreview: '/time-tracking/reports/preview',
+    timeTrackingInvoicePreview: '/time-tracking/invoices/preview',
     todo: '/todo',
     admin: '/admin',
     networkDriveAccess: '/admin/network-drive',
