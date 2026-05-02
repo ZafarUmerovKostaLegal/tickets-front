@@ -11574,6 +11574,10 @@ a.pp__proj-name--link:hover {
 .tt-inv-dialog--wide {
   width: min(100%, min(1200px, 96vw));
 }
+
+.tt-inv-dialog--create.tt-inv-dialog--wide {
+  width: min(100%, min(1320px, 98vw));
+}
 .tt-inv-dialog__head {
   display: flex;
   align-items: flex-start;
@@ -11609,6 +11613,92 @@ a.pp__proj-name--link:hover {
 .tt-inv-dialog__x:hover { background: var(--app-border); color: var(--app-text); }
 .tt-inv-dialog__body {
   padding: 1.25rem 1.5rem 1.5rem;
+}
+
+/* Новый счёт: форма + предпросмотр печати (3× A4) */
+.tt-inv-dialog__body--create-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, min(38vw, 430px));
+  gap: 1.25rem 1.5rem;
+  align-items: start;
+}
+
+.tt-inv-dialog__form-col {
+  min-width: 0;
+}
+
+.tt-inv-dialog__preview-col {
+  min-width: 0;
+  padding: 0.55rem 0.7rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--app-border, #d1d5db);
+  background: #d9dce3;
+}
+
+.tt-inv-dialog__preview-heading {
+  margin: 0 0 0.15rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--app-text, #1e293b);
+}
+
+.tt-inv-dialog__preview-note {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--app-muted, #64748b);
+}
+
+.tt-inv-dialog__preview-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  max-height: min(72vh, 900px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 0.4rem 0.2rem 0.5rem;
+  scrollbar-width: thin;
+}
+
+/* Страница A4: строгое соотношение сторон ISO 210 мм × 297 мм */
+.tt-inv-a4-page {
+  width: 100%;
+  max-width: 210mm;
+  aspect-ratio: 210 / 297;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #b8bec9;
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 8px 22px rgba(15, 23, 42, 0.1);
+}
+
+@media (max-width: 960px) {
+  .tt-inv-dialog__body--create-split {
+    grid-template-columns: 1fr;
+  }
+
+  .tt-inv-dialog__preview-col {
+    order: -1;
+  }
+
+  .tt-inv-dialog__preview-pages {
+    max-height: min(36vh, 320px);
+    flex-direction: row;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding-bottom: 0.65rem;
+  }
+
+  .tt-inv-a4-page {
+    width: 180px;
+    max-width: none;
+  }
 }
 .tt-inv-dialog__foot {
   display: flex;

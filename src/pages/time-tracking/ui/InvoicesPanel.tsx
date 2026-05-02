@@ -812,7 +812,7 @@ export function InvoicesPanel() {
       </div>
 
       {createOpen && (<div className="tt-inv-overlay" role="dialog" aria-modal="true" aria-labelledby="tt-inv-create-title">
-          <div className="tt-inv-dialog tt-inv-dialog--wide">
+          <div className="tt-inv-dialog tt-inv-dialog--wide tt-inv-dialog--create">
             <div className="tt-inv-dialog__head">
               <div className="tt-inv-dialog__head-main">
                 <h3 id="tt-inv-create-title">Новый счёт</h3>
@@ -820,7 +820,8 @@ export function InvoicesPanel() {
               </div>
               <button type="button" className="tt-inv-dialog__x" onClick={() => !createBusy && setCreateOpen(false)} aria-label="Закрыть">×</button>
             </div>
-            <div className="tt-inv-dialog__body">
+            <div className="tt-inv-dialog__body tt-inv-dialog__body--create-split">
+              <div className="tt-inv-dialog__form-col">
               <div className="tt-inv-dialog__section">
                 <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
                   <div className="tt-inv-dialog__field">
@@ -951,6 +952,16 @@ export function InvoicesPanel() {
                     </table>
                   </div>
                 </div>)}
+              </div>
+              <aside className="tt-inv-dialog__preview-col" aria-label="Предпросмотр печатной формы счёта">
+                <p className="tt-inv-dialog__preview-heading">Предпросмотр</p>
+                <p className="tt-inv-dialog__preview-note">Три страницы формата A4 (пока пустые)</p>
+                <div className="tt-inv-dialog__preview-pages">
+                  <div className="tt-inv-a4-page" aria-label="Страница 1 из 3"/>
+                  <div className="tt-inv-a4-page" aria-label="Страница 2 из 3"/>
+                  <div className="tt-inv-a4-page" aria-label="Страница 3 из 3"/>
+                </div>
+              </aside>
             </div>
             <div className="tt-inv-dialog__foot">
               <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setCreateOpen(false)} disabled={createBusy}>Отмена</button>
