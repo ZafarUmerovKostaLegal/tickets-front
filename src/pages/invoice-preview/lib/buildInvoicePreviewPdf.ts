@@ -5,6 +5,61 @@ const W = 595.28;
 const H = 841.89;
 const M = 54;
 
+const INVOICE_PREVIEW_LOGO_SVG = 'KostaLegal-logo-02-black.svg';
+
+/** Абсолютный URL к файлу из `public/` (нужен для fetch → canvas → PNG при сборке PDF). */
+function resolveInvoiceLogoSvgUrl(): string {
+    if (typeof window === 'undefined')
+        return `/${INVOICE_PREVIEW_LOGO_SVG}`;
+    const baseUrl = new URL(import.meta.env.BASE_URL || '/', window.location.origin);
+    return new URL(INVOICE_PREVIEW_LOGO_SVG, baseUrl).href;
+}
+
+/** SVG из `public/` → PNG (pdf-lib не умеет SVG напрямую). */
+async function rasterizeInvoiceLogoSvgToPng(svgAbsoluteUrl: string, renderWidthPx = 560): Promise<Uint8Array | null> {
+    try {
+        const res = await fetch(svgAbsoluteUrl);
+        if (!res.ok)
+            return null;
+        const svgText = await res.text();
+        const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+        const objUrl = URL.createObjectURL(blob);
+        try {
+            const img = new Image();
+            img.decoding = 'async';
+            img.crossOrigin = 'anonymous';
+            await new Promise<void>((resolve, reject) => {
+                img.onload = () => resolve();
+                img.onerror = () => reject(new Error('logo img'));
+                img.src = objUrl;
+            });
+            const iw = Math.max(1, img.naturalWidth || img.width);
+            const ih = Math.max(1, img.naturalHeight || img.height);
+            const w = renderWidthPx;
+            const h = Math.max(1, Math.round((ih / iw) * w));
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            if (!ctx)
+                return null;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            const pngBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
+            if (!pngBlob)
+                return null;
+            return new Uint8Array(await pngBlob.arrayBuffer());
+        }
+        finally {
+            URL.revokeObjectURL(objUrl);
+        }
+    }
+    catch {
+        return null;
+    }
+}
+
 function drawRichLine(page: PDFPage, x: number, y: number, parts: readonly { text: string; bold?: boolean }[], size: number, font: PDFFont, fontBold: PDFFont): number {
     let cx = x;
     for (const p of parts) {
@@ -45,16 +100,38 @@ function wrapPlainParagraph(page: PDFPage, text: string, x: number, y: number, m
     return cy;
 }
 
-function drawCoverPage(page: PDFPage, model: InvoiceCoverLetterModel, font: PDFFont, fontBold: PDFFont): void {
-    let y = H - M;
+function drawCoverPage(
+    page: PDFPage,
+    model: InvoiceCoverLetterModel,
+    font: PDFFont,
+    fontBold: PDFFont,
+    logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null,
+): void {
+    const logoTop = H - M;
+    let lowestHeaderY = logoTop;
 
-    page.drawText(KOSTA_LEGAL_FIRM.brandName, {
-        x: M,
-        y,
-        size: 13,
-        font: fontBold,
-        color: rgb(0.06, 0.08, 0.12),
-    });
+    const logoWidthPt = 165;
+    if (logoImage) {
+        const logoHeightPt = (logoImage.height / logoImage.width) * logoWidthPt;
+        const logoBottom = logoTop - logoHeightPt;
+        page.drawImage(logoImage, {
+            x: M,
+            y: logoBottom,
+            width: logoWidthPt,
+            height: logoHeightPt,
+        });
+        lowestHeaderY = Math.min(lowestHeaderY, logoBottom);
+    }
+    else {
+        page.drawText(KOSTA_LEGAL_FIRM.brandName, {
+            x: M,
+            y: logoTop,
+            size: 13,
+            font: fontBold,
+            color: rgb(0.06, 0.08, 0.12),
+        });
+        lowestHeaderY = Math.min(lowestHeaderY, logoTop - 14);
+    }
 
     const contact = [
         KOSTA_LEGAL_FIRM.addressLine,
@@ -62,7 +139,7 @@ function drawCoverPage(page: PDFPage, model: InvoiceCoverLetterModel, font: PDFF
         KOSTA_LEGAL_FIRM.email,
         KOSTA_LEGAL_FIRM.web,
     ];
-    let cy = y;
+    let cy = logoTop;
     const fsSmall = 9;
     const muted = rgb(0.22, 0.26, 0.34);
     for (const line of contact) {
@@ -70,8 +147,9 @@ function drawCoverPage(page: PDFPage, model: InvoiceCoverLetterModel, font: PDFF
         page.drawText(line, { x: W - M - tw, y: cy, size: fsSmall, font, color: muted });
         cy -= fsSmall + 3;
     }
+    lowestHeaderY = Math.min(lowestHeaderY, cy);
 
-    y -= 78;
+    let y = lowestHeaderY - 28;
 
     page.drawText(model.letterDateDisplay, { x: M, y, size: 10, font, color: rgb(0.12, 0.14, 0.18) });
 
@@ -135,8 +213,21 @@ export async function buildInvoicePreviewPdfBlob(model: InvoiceCoverLetterModel)
     const font = await doc.embedFont(StandardFonts.Helvetica);
     const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
 
+    let logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
+    if (typeof window !== 'undefined') {
+        const pngBytes = await rasterizeInvoiceLogoSvgToPng(resolveInvoiceLogoSvgUrl(), 560);
+        if (pngBytes?.length) {
+            try {
+                logoImage = await doc.embedPng(pngBytes);
+            }
+            catch {
+                logoImage = null;
+            }
+        }
+    }
+
     const p1 = doc.addPage([W, H]);
-    drawCoverPage(p1, model, font, fontBold);
+    drawCoverPage(p1, model, font, fontBold, logoImage);
 
     doc.addPage([W, H]);
     doc.addPage([W, H]);
