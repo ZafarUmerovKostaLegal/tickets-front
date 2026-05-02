@@ -260,9 +260,12 @@ type ClientViewModalProps = {
     canManage: boolean;
     onClose: () => void;
     onEdit: (detail: TimeManagerClientRow) => void;
+    onClientUpdated?: () => void;
 };
-function ClientViewModal({ listRow, canManage, onClose, onEdit }: ClientViewModalProps) {
+function ClientViewModal({ listRow, canManage, onClose, onEdit, onClientUpdated }: ClientViewModalProps) {
     const uid = useId();
+    const { showAlert } = useAppDialog();
+    const [restoring, setRestoring] = useState(false);
     const [detail, setDetail] = useState<TimeManagerClientRow | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -317,7 +320,8 @@ function ClientViewModal({ listRow, canManage, onClose, onEdit }: ClientViewModa
               {error}
             </p>)}
           {!loading && !error && c.is_archived && (<p className="tt-tm-archived-banner" role="status">
-              Клиент в архиве.
+              Клиент в архиве. Чтобы снова видеть его в общем списке, включите «Показать архивных» над таблицей или нажмите «Из архива»
+              в строке клиента / ниже.
             </p>)}
           <ViewReadonlyField label="Название" value={c.name}/>
           <ViewReadonlyField label="Адрес" value={c.address ?? ''}/>
@@ -371,6 +375,22 @@ function ClientViewModal({ listRow, canManage, onClose, onEdit }: ClientViewModa
           <button type="button" className="tt-settings__btn tt-settings__btn--ghost" onClick={onClose}>
             Закрыть
           </button>
+          {canManage && !loading && c.is_archived && (<button type="button" className="tt-settings__btn tt-settings__btn--outline tt-settings__btn--accent-text" disabled={restoring} onClick={() => void (async () => {
+                    setRestoring(true);
+                    try {
+                        await patchTimeManagerClient(listRow.id, { isArchived: false });
+                        onClientUpdated?.();
+                        onClose();
+                    }
+                    catch (e) {
+                        await showAlert({ message: e instanceof Error ? e.message : 'Не удалось вернуть клиента из архива' });
+                    }
+                    finally {
+                        setRestoring(false);
+                    }
+                })()}>
+              {restoring ? 'Возврат…' : 'Из архива'}
+            </button>)}
           {canManage && !loading && (<button type="button" className="tt-settings__btn tt-settings__btn--primary" onClick={() => onEdit(detail ?? listRow)}>
               Редактировать
             </button>)}
@@ -624,8 +644,9 @@ function TimeManagerClientModal({ mode, initial, canManage, onClose, onSaved }: 
               Загрузка карточки клиента…
             </p>)}
           {form.isArchived && mode === 'edit' && (<p className="tt-tm-archived-banner" role="status">
-              Клиент в архиве: добавление и изменение дополнительных контактов недоступны, пока не снимете архив. Реквизиты и
-              основной контакт на карточке можно править; для проектов и задач сначала разархивируйте клиента.
+              Клиент в архиве: добавление и изменение дополнительных контактов недоступны, пока не снимете архив. Реквизиты и основной
+              контакт можно править; снимите галочку ниже и сохраните или нажмите «Из архива» в строке клиента на списке. Если клиента не
+              видно — включите «Показать архивных» над таблицей.
             </p>)}
           <div className="tt-tm-field">
             <label className="tt-tm-label" htmlFor={`${uid}-name`}>
@@ -994,6 +1015,7 @@ export function TimeTrackingClientsPanel() {
         name: string;
         is_archived: boolean;
     } | null>(null);
+    const [restoreBusyId, setRestoreBusyId] = useState<string | null>(null);
     useEffect(() => {
         const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
         return () => window.clearTimeout(t);
@@ -1032,11 +1054,12 @@ export function TimeTrackingClientsPanel() {
             }));
         }
     }, [PAGE]);
-    const loadClients = useCallback(async () => {
+    const loadClients = useCallback(async (includeArchivedOverride?: boolean) => {
+        const inc = includeArchivedOverride ?? includeArchived;
         setListLoading(true);
         setListError(null);
         try {
-            const r = await listTimeManagerClients(includeArchived, { limit: PAGE, offset: (clientsPage - 1) * PAGE });
+            const r = await listTimeManagerClients(inc, { limit: PAGE, offset: (clientsPage - 1) * PAGE });
             const rows = [...r.items].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
             setClients(rows);
             setClientsTotal(r.total);
@@ -1136,9 +1159,27 @@ export function TimeTrackingClientsPanel() {
     const clientsPagerTotal = debouncedSearch ? searchFilteredAll.length : clientsTotal;
     const clientsPagerPage = debouncedSearch ? clientsSearchPage : clientsPage;
     const listBusy = debouncedSearch ? clientsSearchLoading : listLoading;
-    const onSaved = (_row: TimeManagerClientRow) => {
+    const onSaved = useCallback((row: TimeManagerClientRow) => {
+        if (row.is_archived) {
+            setIncludeArchived(true);
+            void loadClients(true);
+            return;
+        }
         void loadClients();
-    };
+    }, [loadClients]);
+    const handleRestoreFromArchive = useCallback(async (c: TimeManagerClientRow) => {
+        setRestoreBusyId(c.id);
+        try {
+            await patchTimeManagerClient(c.id, { isArchived: false });
+            void loadClients();
+        }
+        catch (e) {
+            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось снять архив с клиента' });
+        }
+        finally {
+            setRestoreBusyId(null);
+        }
+    }, [loadClients, showAlert]);
     const handleDelete = async (id: string, name: string) => {
         const ok = await showConfirm({
             title: 'Удалить клиента?',
@@ -1332,6 +1373,9 @@ export function TimeTrackingClientsPanel() {
                                 <button type="button" className="tt-settings__row-edit tt-settings__row-edit--foot" onClick={() => setViewClient(c)}>
                                   Сведения
                                 </button>
+                                {c.is_archived && canManage && (<button type="button" className="tt-settings__row-edit tt-settings__row-edit--foot" disabled={restoreBusyId === c.id} title="Вернуть клиента из архива в активные" onClick={() => void handleRestoreFromArchive(c)}>
+                                    {restoreBusyId === c.id ? 'Возврат…' : 'Из архива'}
+                                  </button>)}
                                 <button type="button" className="tt-settings__row-edit tt-settings__row-edit--foot" disabled={!canManage} title={!canManage ? 'Недостаточно прав' : undefined} onClick={() => setModal({ mode: 'edit', row: c })}>
                                   Редактировать
                                 </button>
@@ -1435,7 +1479,7 @@ export function TimeTrackingClientsPanel() {
 
       {contactModalClient && (<AddClientContactForClientModal clientId={contactModalClient.id} clientName={contactModalClient.name} clientArchived={contactModalClient.is_archived} canManage={canManage} onClose={() => setContactModalClient(null)}/>)}
 
-      {viewClient && (<ClientViewModal listRow={viewClient} canManage={canManage} onClose={() => setViewClient(null)} onEdit={(detail) => {
+      {viewClient && (<ClientViewModal listRow={viewClient} canManage={canManage} onClose={() => setViewClient(null)} onClientUpdated={() => void loadClients()} onEdit={(detail) => {
                 setViewClient(null);
                 setModal({ mode: 'edit', row: detail });
             }}/>)}

@@ -856,6 +856,7 @@ function clientCreateJson(body: TimeManagerClientCreatePayload): Record<string, 
         contactPhone: body.contactPhone ?? null,
         contactEmail: body.contactEmail ?? null,
         isArchived: body.isArchived ?? false,
+        is_archived: body.isArchived ?? false,
     };
 }
 function clientPatchJson(patch: TimeManagerClientPatchPayload): Record<string, unknown> {
@@ -886,8 +887,10 @@ function clientPatchJson(patch: TimeManagerClientPatchPayload): Record<string, u
         payload.contactPhone = patch.contactPhone;
     if (patch.contactEmail !== undefined)
         payload.contactEmail = patch.contactEmail;
-    if (patch.isArchived !== undefined)
+    if (patch.isArchived !== undefined) {
         payload.isArchived = patch.isArchived;
+        payload.is_archived = patch.isArchived;
+    }
     return payload;
 }
 export async function listTimeManagerClients(includeArchived?: boolean): Promise<TimeManagerClientRow[]>;

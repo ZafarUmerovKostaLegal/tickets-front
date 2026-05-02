@@ -258,7 +258,6 @@ export function InvoicesPanel() {
         const by = aggStats.byEffectiveStatus;
         const n = (k: string) => by[k] ?? 0;
         return {
-            total: aggStats.totalInvoices,
             drafts: n('draft'),
             open: n('sent') + n('viewed') + n('partial_paid'),
             paid: n('paid'),
@@ -621,10 +620,6 @@ export function InvoicesPanel() {
               <span className="tt-reports__summary-label">Сводка</span>
               <span className="tt-reports__summary-value" style={{ fontSize: '0.95rem' }}>{aggStatsLoading ? 'Загрузка…' : '—'}</span>
             </div>) : (<>
-          <div className="tt-reports__summary-card">
-            <span className="tt-reports__summary-label">Всего по фильтру</span>
-            <span className="tt-reports__summary-value">{listStatsFromAgg.total}</span>
-          </div>
           <div className="tt-reports__summary-card tt-inv__summary-card--accent">
             <span className="tt-reports__summary-label">Активных</span>
             <span className="tt-reports__summary-value">{listStatsFromAgg.open}</span>
