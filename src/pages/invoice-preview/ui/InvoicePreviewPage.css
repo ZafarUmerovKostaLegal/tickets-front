@@ -85,6 +85,12 @@
   color: var(--app-text, #1e293b);
 }
 
+.tt-inv-preview__loading-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--app-muted, #64748b);
+}
+
 .tt-inv-preview__sheet-stack {
   padding: 0.55rem 0.7rem 0.75rem;
   border-radius: 10px;
@@ -99,6 +105,14 @@
   gap: 1rem;
   padding: 0.4rem 0.2rem 0.5rem;
   scrollbar-width: thin;
+}
+
+.tt-inv-preview__pages .tt-inv-a4-page--cover {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow: auto;
 }
 
 @media (max-width: 960px) {

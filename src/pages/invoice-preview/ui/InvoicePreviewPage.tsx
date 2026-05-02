@@ -1,20 +1,51 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { AppPageSettings, useAppToast } from '@shared/ui';
 import { OPEN_INVOICE_DETAIL_QUERY, readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
-import { buildBlankInvoicePreviewDocxBlob } from '../lib/buildInvoicePreviewDocx';
-import { buildBlankInvoicePreviewPdfBlob } from '../lib/buildBlankInvoicePreviewPdf';
+import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
+import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
+import { buildInvoicePreviewDocxBlob } from '../lib/buildInvoicePreviewDocx';
+import { buildInvoicePreviewPdfBlob } from '../lib/buildInvoicePreviewPdf';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
+import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
+import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import '@pages/time-tracking/ui/TimeTrackingPage.css';
 import './InvoicePreviewPage.css';
 
 const INVOICES_TAB_BACK_RESUME_CREATE = `${routes.timeTracking}?tab=invoices&invoice_resume=1`;
 
+function fallbackCoverModel(): InvoiceCoverLetterModel {
+    const iso = new Date().toISOString().slice(0, 10);
+    return buildInvoiceCoverLetterModel({
+        issueDateIso: iso,
+        clientName: 'Company Name',
+        clientAddress: null,
+        contactName: null,
+        totalAmount: null,
+        currency: 'EUR',
+    });
+}
+
 export function InvoicePreviewPage() {
     const { pushToast } = useAppToast();
     const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | null>(null);
     const session = useMemo(() => readInvoicePreviewSession(), []);
+    const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel | null>(null);
+
+    useEffect(() => {
+        let cancel = false;
+        void resolveInvoiceCoverLetterModel(session).then((m) => {
+            if (!cancel)
+                setCoverModel(m);
+        });
+        return () => {
+            cancel = true;
+        };
+    }, [session]);
+
+    const displayModel = coverModel ?? fallbackCoverModel();
+
     const subtitleParts = session?.mode === 'existing'
         ? [session.meta.invoiceNumber, session.meta.clientLabel].filter(Boolean)
         : [session?.meta.clientLabel, session?.meta.projectLabel].filter(Boolean);
@@ -41,9 +72,10 @@ export function InvoicePreviewPage() {
         : INVOICES_TAB_BACK_RESUME_CREATE;
 
     const handleDownloadWord = useCallback(async () => {
+        const model = coverModel ?? fallbackCoverModel();
         setDownloadBusy('word');
         try {
-            const blob = await buildBlankInvoicePreviewDocxBlob();
+            const blob = await buildInvoicePreviewDocxBlob(model);
             triggerBrowserDownload(blob, `${defaultFilename}.docx`);
         }
         catch (e) {
@@ -55,12 +87,13 @@ export function InvoicePreviewPage() {
         finally {
             setDownloadBusy(null);
         }
-    }, [defaultFilename, pushToast]);
+    }, [coverModel, defaultFilename, pushToast]);
 
     const handleDownloadPdf = useCallback(async () => {
+        const model = coverModel ?? fallbackCoverModel();
         setDownloadBusy('pdf');
         try {
-            const blob = await buildBlankInvoicePreviewPdfBlob();
+            const blob = await buildInvoicePreviewPdfBlob(model);
             triggerBrowserDownload(blob, `${defaultFilename}.pdf`);
         }
         catch (e) {
@@ -72,7 +105,7 @@ export function InvoicePreviewPage() {
         finally {
             setDownloadBusy(null);
         }
-    }, [defaultFilename, pushToast]);
+    }, [coverModel, defaultFilename, pushToast]);
 
     return (<div className="tt-inv-preview">
       <nav className="time-page__navbar tt-inv-preview__navbar" aria-label="Предпросмотр счёта">
@@ -108,14 +141,17 @@ export function InvoicePreviewPage() {
         <header className="tt-inv-preview__header">
           <h1 className="tt-inv-preview__title">Предпросмотр</h1>
           <p className="tt-inv-preview__note">
-            Три страницы формата A4 (пока пустые). Файлы Word и PDF содержат три пустые страницы — позже сюда подставится вёрстка счёта.
+            Первая страница — сопроводительное письмо в адрес клиента; второй и третий лист зарезервированы под счёт и приложения.
           </p>
           {subtitle && (<p className="tt-inv-preview__context">{subtitle}</p>)}
+          {!coverModel && (<p className="tt-inv-preview__loading-hint" role="status">Подтягиваем реквизиты клиента…</p>)}
         </header>
 
         <div className="tt-inv-preview__sheet-stack" aria-label="Макет печати">
           <div className="tt-inv-preview__pages">
-            <div className="tt-inv-a4-page" aria-label="Страница 1 из 3"/>
+            <div className="tt-inv-a4-page tt-inv-a4-page--cover" aria-label="Страница 1 из 3 — сопроводительное письмо">
+              <InvoiceCoverLetter model={displayModel}/>
+            </div>
             <div className="tt-inv-a4-page" aria-label="Страница 2 из 3"/>
             <div className="tt-inv-a4-page" aria-label="Страница 3 из 3"/>
           </div>

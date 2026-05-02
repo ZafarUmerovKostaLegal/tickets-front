@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { routes } from '@shared/config';
+import { buildInvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '@pages/invoice-preview/lib/invoicePreviewDownload';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { useAppDialog, useAppToast } from '@shared/ui';
-import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 function fmtMoney(n: number, cur: string): string {
@@ -566,8 +567,17 @@ export function InvoicesPanel() {
     const handleDetailDownloadPdf = useCallback(async (inv: InvoiceDto) => {
         setDetailExportBusy('pdf');
         try {
-            const { buildBlankInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildBlankInvoicePreviewPdf');
-            const blob = await buildBlankInvoicePreviewPdfBlob();
+            const client = await getTimeManagerClient(inv.clientId);
+            const model = buildInvoiceCoverLetterModel({
+                issueDateIso: inv.issueDate.slice(0, 10),
+                clientName: client.name,
+                clientAddress: client.address,
+                contactName: client.contact_name ?? null,
+                totalAmount: inv.totalAmount,
+                currency: inv.currency,
+            });
+            const { buildInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewPdf');
+            const blob = await buildInvoicePreviewPdfBlob(model);
             const base = buildInvoicePreviewExportBasename({
                 invoiceNumber: inv.invoiceNumber,
                 clientLabel: clientNameById.get(inv.clientId) ?? inv.clientId,
@@ -585,8 +595,17 @@ export function InvoicesPanel() {
     const handleDetailDownloadWord = useCallback(async (inv: InvoiceDto) => {
         setDetailExportBusy('word');
         try {
-            const { buildBlankInvoicePreviewDocxBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewDocx');
-            const blob = await buildBlankInvoicePreviewDocxBlob();
+            const client = await getTimeManagerClient(inv.clientId);
+            const model = buildInvoiceCoverLetterModel({
+                issueDateIso: inv.issueDate.slice(0, 10),
+                clientName: client.name,
+                clientAddress: client.address,
+                contactName: client.contact_name ?? null,
+                totalAmount: inv.totalAmount,
+                currency: inv.currency,
+            });
+            const { buildInvoicePreviewDocxBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewDocx');
+            const blob = await buildInvoicePreviewDocxBlob(model);
             const base = buildInvoicePreviewExportBasename({
                 invoiceNumber: inv.invoiceNumber,
                 clientLabel: clientNameById.get(inv.clientId) ?? inv.clientId,

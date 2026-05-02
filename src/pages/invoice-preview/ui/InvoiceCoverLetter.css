@@ -1,0 +1,118 @@
+/* Первая страница счёта: сопроводительное письмо Kosta Legal (англ.), чёрный текст на белом A4 */
+
+.tt-inv-cover {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 11mm 14mm 14mm;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: #111827;
+  background: #fff;
+  text-align: left;
+}
+
+.tt-inv-cover__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2.25rem;
+}
+
+.tt-inv-cover__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.tt-inv-cover__logo {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.tt-inv-cover__brand-name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+}
+
+.tt-inv-cover__firm-contact {
+  margin: 0;
+  font-style: normal;
+  font-size: 9.5px;
+  line-height: 1.35;
+  color: #475569;
+  text-align: right;
+  max-width: 17rem;
+}
+
+.tt-inv-cover__firm-contact span {
+  display: block;
+}
+
+.tt-inv-cover__letter-body {
+  font-size: 10.5px;
+}
+
+.tt-inv-cover__date {
+  margin: 0 0 1.35rem;
+}
+
+.tt-inv-cover__recipient {
+  margin-bottom: 1.35rem;
+}
+
+.tt-inv-cover__recipient-line {
+  margin: 0 0 0.15rem;
+}
+
+.tt-inv-cover__attention {
+  margin: 0 0 0.15rem;
+}
+
+.tt-inv-cover__attention-sub {
+  margin: 0 0 1.35rem;
+}
+
+.tt-inv-cover__salutation {
+  margin: 0 0 1rem;
+}
+
+.tt-inv-cover__para {
+  margin: 0 0 1rem;
+}
+
+.tt-inv-cover__para strong {
+  font-weight: 700;
+}
+
+.tt-inv-cover__closing {
+  margin: 1.75rem 0 0;
+}
+
+.tt-inv-cover__signature {
+  margin-top: 2rem;
+}
+
+.tt-inv-cover__sig-line {
+  display: block;
+  width: 11rem;
+  border-bottom: 1px solid #94a3b8;
+  margin-bottom: 0.35rem;
+}
+
+.tt-inv-cover__sig-name,
+.tt-inv-cover__sig-title {
+  margin: 0;
+}
+
+.tt-inv-cover__sig-name {
+  font-weight: 600;
+}
