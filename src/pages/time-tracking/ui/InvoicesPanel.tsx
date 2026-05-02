@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { routes } from '@shared/config';
+import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '@pages/invoice-preview/lib/invoicePreviewDownload';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { useAppDialog, useAppToast } from '@shared/ui';
-import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 function fmtMoney(n: number, cur: string): string {
@@ -208,6 +209,7 @@ export function InvoicesPanel() {
     const [payMethod, setPayMethod] = useState('');
     const [payNote, setPayNote] = useState('');
     const [actionBusy, setActionBusy] = useState(false);
+    const [detailExportBusy, setDetailExportBusy] = useState<'pdf' | 'word' | null>(null);
     const [auditEntries, setAuditEntries] = useState<InvoiceAuditEntryDto[]>([]);
     const [auditLoading, setAuditLoading] = useState(false);
     const [auditErr, setAuditErr] = useState<string | null>(null);
@@ -480,7 +482,7 @@ export function InvoicesPanel() {
             p.delete('invoice_resume');
             return p;
         }, { replace: true });
-        if (!snap?.form)
+        if (!isInvoicePreviewSessionCreate(snap))
             return;
         const f = snap.form;
         setCreateClientId(f.createClientId);
@@ -509,6 +511,17 @@ export function InvoicesPanel() {
         resumeLoadProjectIdRef.current = null;
         void loadUnbilled({ preserveSelections: true });
     }, [createProjectId, projects, loadUnbilled]);
+    useEffect(() => {
+        const oid = searchParams.get(OPEN_INVOICE_DETAIL_QUERY)?.trim();
+        if (!oid)
+            return;
+        setSearchParams((prev) => {
+            const p = new URLSearchParams(prev);
+            p.delete(OPEN_INVOICE_DETAIL_QUERY);
+            return p;
+        }, { replace: true });
+        openDetail(oid);
+    }, [searchParams, setSearchParams, openDetail]);
     const openInvoicePreview = useCallback(() => {
         const clientRow = clients.find((c) => c.id === createClientId);
         const clientLabel = clientRow?.name?.trim();
@@ -518,6 +531,7 @@ export function InvoicesPanel() {
             : undefined;
         writeInvoicePreviewSession({
             v: 1,
+            mode: 'create',
             form: {
                 createClientId,
                 createProjectId,
@@ -535,6 +549,58 @@ export function InvoicesPanel() {
         });
         navigate(routes.timeTrackingInvoicePreview);
     }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, selTime, selExp, projects, navigate]);
+    const openExistingInvoicePreview = useCallback((inv: InvoiceDto) => {
+        const clientLabel = (clientNameById.get(inv.clientId) ?? inv.clientId).trim();
+        writeInvoicePreviewSession({
+            v: 1,
+            mode: 'existing',
+            invoiceId: inv.id,
+            meta: {
+                clientLabel,
+                invoiceNumber: inv.invoiceNumber,
+                issueDateIso: inv.issueDate.slice(0, 10),
+            },
+        });
+        navigate(routes.timeTrackingInvoicePreview);
+    }, [clientNameById, navigate]);
+    const handleDetailDownloadPdf = useCallback(async (inv: InvoiceDto) => {
+        setDetailExportBusy('pdf');
+        try {
+            const { buildBlankInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildBlankInvoicePreviewPdf');
+            const blob = await buildBlankInvoicePreviewPdfBlob();
+            const base = buildInvoicePreviewExportBasename({
+                invoiceNumber: inv.invoiceNumber,
+                clientLabel: clientNameById.get(inv.clientId) ?? inv.clientId,
+                issueDateIso: inv.issueDate.slice(0, 10),
+            });
+            triggerBrowserDownload(blob, `${base}.pdf`);
+        }
+        catch (e) {
+            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось сформировать PDF' });
+        }
+        finally {
+            setDetailExportBusy(null);
+        }
+    }, [clientNameById, showAlert]);
+    const handleDetailDownloadWord = useCallback(async (inv: InvoiceDto) => {
+        setDetailExportBusy('word');
+        try {
+            const { buildBlankInvoicePreviewDocxBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewDocx');
+            const blob = await buildBlankInvoicePreviewDocxBlob();
+            const base = buildInvoicePreviewExportBasename({
+                invoiceNumber: inv.invoiceNumber,
+                clientLabel: clientNameById.get(inv.clientId) ?? inv.clientId,
+                issueDateIso: inv.issueDate.slice(0, 10),
+            });
+            triggerBrowserDownload(blob, `${base}.docx`);
+        }
+        catch (e) {
+            await showAlert({ message: e instanceof Error ? e.message : 'Не удалось сформировать Word' });
+        }
+        finally {
+            setDetailExportBusy(null);
+        }
+    }, [clientNameById, showAlert]);
     const handleCreate = useCallback(async () => {
         if (!createClientId) {
             await showAlert({ message: 'Выберите клиента' });
@@ -1085,6 +1151,17 @@ export function InvoicesPanel() {
                       <span className="tt-inv-detail-meta__k">Остаток</span>
                       <span className="tt-inv-detail-meta__v tt-inv-detail-meta__v--num tt-inv-detail-meta__v--strong">{fmtMoney(detail.balanceDue, detail.currency)}</span>
                     </div>
+                  </div>
+                  <div className="tt-inv-detail-export" role="group" aria-label="Предпросмотр и экспорт">
+                    <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={Boolean(actionBusy || detailExportBusy)} onClick={() => openExistingInvoicePreview(detail)} title="Три страницы A4 и скачивание PDF / Word">
+                      Предпросмотр
+                    </button>
+                    <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={Boolean(actionBusy || detailExportBusy)} onClick={() => void handleDetailDownloadPdf(detail)}>
+                      {detailExportBusy === 'pdf' ? 'Подготовка PDF…' : 'Скачать PDF'}
+                    </button>
+                    <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={Boolean(actionBusy || detailExportBusy)} onClick={() => void handleDetailDownloadWord(detail)}>
+                      {detailExportBusy === 'word' ? 'Подготовка Word…' : 'Скачать Word'}
+                    </button>
                   </div>
                   <div className="tt-inv-actions">
                     {invoiceCanSend(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={async () => {

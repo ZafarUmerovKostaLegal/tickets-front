@@ -2,51 +2,49 @@ import { useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { AppPageSettings, useAppToast } from '@shared/ui';
-import { readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
+import { OPEN_INVOICE_DETAIL_QUERY, readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
 import { buildBlankInvoicePreviewDocxBlob } from '../lib/buildInvoicePreviewDocx';
 import { buildBlankInvoicePreviewPdfBlob } from '../lib/buildBlankInvoicePreviewPdf';
+import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import '@pages/time-tracking/ui/TimeTrackingPage.css';
 import './InvoicePreviewPage.css';
 
-function sanitizeFilePart(raw: string): string {
-    const t = raw.replace(/[/\\?*:|"<>]/g, '_').replace(/\s+/g, '_').trim();
-    return t.slice(0, 72) || 'schet';
-}
-
-function triggerDownload(blob: Blob, filename: string): void {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-}
-
-const INVOICES_TAB_BACK = `${routes.timeTracking}?tab=invoices&invoice_resume=1`;
+const INVOICES_TAB_BACK_RESUME_CREATE = `${routes.timeTracking}?tab=invoices&invoice_resume=1`;
 
 export function InvoicePreviewPage() {
     const { pushToast } = useAppToast();
     const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | null>(null);
     const session = useMemo(() => readInvoicePreviewSession(), []);
-    const subtitleParts = [session?.meta.clientLabel, session?.meta.projectLabel].filter(Boolean);
+    const subtitleParts = session?.mode === 'existing'
+        ? [session.meta.invoiceNumber, session.meta.clientLabel].filter(Boolean)
+        : [session?.meta.clientLabel, session?.meta.projectLabel].filter(Boolean);
     const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : null;
 
     const defaultFilename = useMemo(() => {
-        const base = session?.meta.clientLabel
-            ? `Schet_${sanitizeFilePart(session.meta.clientLabel)}`
-            : 'Schet_predprosmotr';
-        const d = session?.form.issueDate?.slice(0, 10);
-        return d ? `${base}_${d.replace(/-/g, '')}` : base;
+        if (!session)
+            return 'Schet_predprosmotr';
+        if (session.mode === 'existing') {
+            return buildInvoicePreviewExportBasename({
+                invoiceNumber: session.meta.invoiceNumber,
+                clientLabel: session.meta.clientLabel,
+                issueDateIso: session.meta.issueDateIso,
+            });
+        }
+        return buildInvoicePreviewExportBasename({
+            clientLabel: session.meta.clientLabel,
+            issueDateIso: session.form.issueDate.slice(0, 10),
+        });
     }, [session]);
+
+    const backHref = session?.mode === 'existing'
+        ? `${routes.timeTracking}?tab=invoices&${OPEN_INVOICE_DETAIL_QUERY}=${encodeURIComponent(session.invoiceId)}`
+        : INVOICES_TAB_BACK_RESUME_CREATE;
 
     const handleDownloadWord = useCallback(async () => {
         setDownloadBusy('word');
         try {
             const blob = await buildBlankInvoicePreviewDocxBlob();
-            triggerDownload(blob, `${defaultFilename}.docx`);
+            triggerBrowserDownload(blob, `${defaultFilename}.docx`);
         }
         catch (e) {
             pushToast({
@@ -63,7 +61,7 @@ export function InvoicePreviewPage() {
         setDownloadBusy('pdf');
         try {
             const blob = await buildBlankInvoicePreviewPdfBlob();
-            triggerDownload(blob, `${defaultFilename}.pdf`);
+            triggerBrowserDownload(blob, `${defaultFilename}.pdf`);
         }
         catch (e) {
             pushToast({
@@ -78,7 +76,7 @@ export function InvoicePreviewPage() {
 
     return (<div className="tt-inv-preview">
       <nav className="time-page__navbar tt-inv-preview__navbar" aria-label="Предпросмотр счёта">
-        <Link to={INVOICES_TAB_BACK} className="time-page__back-btn">
+        <Link to={backHref} className="time-page__back-btn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="m15 18-6-6 6-6"/>
           </svg>

@@ -11937,6 +11937,13 @@ a.pp__proj-name--link:hover {
   gap: 0.5rem;
   margin-bottom: 1rem;
 }
+.tt-inv-detail-export {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
 .tt-inv-draft { display: flex; flex-direction: column; gap: 0.65rem; margin-bottom: 1rem; }
 .tt-inv-draft__notes {
   display: grid;
