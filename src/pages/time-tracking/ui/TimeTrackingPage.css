@@ -12936,10 +12936,10 @@ a.pp__proj-name--link:hover {
   --rp2-radius: 10px;
   --rp2-chev: 2rem;
   
-  --rp2-h1: 7.25rem;
-  --rp2-h2: 8.75rem;
-  --rp2-pct: 13rem;
-  --rp2-amount: 11.5rem;
+  --rp2-h1: 7.5rem;
+  --rp2-h2: 9rem;
+  --rp2-pct: 13.5rem;
+  --rp2-amount: 12.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
@@ -12969,7 +12969,23 @@ a.pp__proj-name--link:hover {
 }
 
 .rp2--projects .rp2__head,
-.rp2--projects .rp2__group-row,
+.rp2--projects .rp2__group-row {
+  display: grid;
+  grid-template-columns:
+    minmax(18rem, 3fr)
+    var(--rp2-h1)
+    var(--rp2-h2)
+    var(--rp2-pct)
+    minmax(var(--rp2-amount), 0.9fr);
+  align-items: center;
+  gap: 0.65rem 1.05rem;
+}
+
+.rp2--projects .rp2__head-chev,
+.rp2--projects .rp2__group-chev {
+  display: none;
+}
+
 .rp2--tasks .rp2__head,
 .rp2--tasks .rp2__group-row {
   display: grid;
@@ -12985,7 +13001,18 @@ a.pp__proj-name--link:hover {
 }
 
 
-.rp2--projects .rp2__user-head,
+.rp2--projects .rp2__user-head {
+  display: grid;
+  grid-template-columns:
+    minmax(18rem, 3fr)
+    var(--rp2-h1)
+    var(--rp2-h2)
+    var(--rp2-pct)
+    minmax(var(--rp2-amount), 0.9fr);
+  align-items: center;
+  gap: 0.65rem 1.05rem;
+}
+
 .rp2--tasks .rp2__user-head {
   display: grid;
   grid-template-columns:
