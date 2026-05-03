@@ -3,65 +3,11 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import dejavuSansBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
 import dejavuSansRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
 import { KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
+import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
 
 const W = 595.28;
 const H = 841.89;
 const M = 54;
-
-const INVOICE_PREVIEW_LOGO_SVG = 'KostaLegal-logo-02-black.svg';
-
-/** Абсолютный URL к файлу из `public/` (нужен для fetch → canvas → PNG при сборке PDF). */
-function resolveInvoiceLogoSvgUrl(): string {
-    if (typeof window === 'undefined')
-        return `/${INVOICE_PREVIEW_LOGO_SVG}`;
-    const baseUrl = new URL(import.meta.env.BASE_URL || '/', window.location.origin);
-    return new URL(INVOICE_PREVIEW_LOGO_SVG, baseUrl).href;
-}
-
-/** SVG из `public/` → PNG (pdf-lib не умеет SVG напрямую). */
-async function rasterizeInvoiceLogoSvgToPng(svgAbsoluteUrl: string, renderWidthPx = 560): Promise<Uint8Array | null> {
-    try {
-        const res = await fetch(svgAbsoluteUrl);
-        if (!res.ok)
-            return null;
-        const svgText = await res.text();
-        const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
-        const objUrl = URL.createObjectURL(blob);
-        try {
-            const img = new Image();
-            img.decoding = 'async';
-            img.crossOrigin = 'anonymous';
-            await new Promise<void>((resolve, reject) => {
-                img.onload = () => resolve();
-                img.onerror = () => reject(new Error('logo img'));
-                img.src = objUrl;
-            });
-            const iw = Math.max(1, img.naturalWidth || img.width);
-            const ih = Math.max(1, img.naturalHeight || img.height);
-            const w = renderWidthPx;
-            const h = Math.max(1, Math.round((ih / iw) * w));
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            if (!ctx)
-                return null;
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, w, h);
-            ctx.drawImage(img, 0, 0, w, h);
-            const pngBlob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), 'image/png'));
-            if (!pngBlob)
-                return null;
-            return new Uint8Array(await pngBlob.arrayBuffer());
-        }
-        finally {
-            URL.revokeObjectURL(objUrl);
-        }
-    }
-    catch {
-        return null;
-    }
-}
 
 async function fetchFontBytes(ttfModuleUrl: string): Promise<Uint8Array> {
     const res = await fetch(ttfModuleUrl);
@@ -131,16 +77,6 @@ function drawCoverPage(
             height: logoHeightPt,
         });
         lowestHeaderY = Math.min(lowestHeaderY, logoBottom);
-    }
-    else {
-        page.drawText(KOSTA_LEGAL_FIRM.brandName, {
-            x: M,
-            y: logoTop,
-            size: 13,
-            font: fontBold,
-            color: rgb(0.06, 0.08, 0.12),
-        });
-        lowestHeaderY = Math.min(lowestHeaderY, logoTop - 14);
     }
 
     const contact = [
@@ -230,10 +166,10 @@ export async function buildInvoicePreviewPdfBlob(model: InvoiceCoverLetterModel)
 
     let logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
     if (typeof window !== 'undefined') {
-        const pngBytes = await rasterizeInvoiceLogoSvgToPng(resolveInvoiceLogoSvgUrl(), 560);
-        if (pngBytes?.length) {
+        const raster = await rasterizeInvoiceCoverLogoSvg(560);
+        if (raster?.png.length) {
             try {
-                logoImage = await doc.embedPng(pngBytes);
+                logoImage = await doc.embedPng(raster.png);
             }
             catch {
                 logoImage = null;

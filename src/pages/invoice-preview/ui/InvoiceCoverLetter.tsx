@@ -15,8 +15,7 @@ export function InvoiceCoverLetter({ model }: { model: InvoiceCoverLetterModel }
     return (<div className="tt-inv-cover">
       <header className="tt-inv-cover__header">
         <div className="tt-inv-cover__brand">
-          <img className="tt-inv-cover__logo" src={logoSrc} alt="" width={56} height={56} decoding="async"/>
-          <span className="tt-inv-cover__brand-name">{KOSTA_LEGAL_FIRM.brandName}</span>
+          <img className="tt-inv-cover__logo" src={logoSrc} alt="" decoding="async"/>
         </div>
         <address className="tt-inv-cover__firm-contact">
           <span>{KOSTA_LEGAL_FIRM.addressLine}</span>

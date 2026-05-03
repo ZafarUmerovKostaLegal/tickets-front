@@ -29,18 +29,13 @@
 }
 
 .tt-inv-cover__logo {
-  width: 44px;
-  height: 44px;
+  display: block;
+  width: 132px;
+  height: auto;
+  max-height: 48px;
   flex-shrink: 0;
   object-fit: contain;
   object-position: left center;
-}
-
-.tt-inv-cover__brand-name {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  line-height: 1.15;
 }
 
 .tt-inv-cover__firm-contact {

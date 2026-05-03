@@ -2,7 +2,9 @@ import {
     AlignmentType,
     BorderStyle,
     Document,
+    ImageRun,
     Packer,
+    type ParagraphChild,
     Paragraph,
     Table,
     TableCell,
@@ -11,6 +13,7 @@ import {
     WidthType,
 } from 'docx';
 import { KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
+import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
 
 const cellBorderNil = {
     top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
@@ -32,7 +35,7 @@ function contactParagraph(text: string): Paragraph {
     });
 }
 
-function coverChildren(model: InvoiceCoverLetterModel): (Paragraph | Table)[] {
+function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: ParagraphChild[]): (Paragraph | Table)[] {
     const headerTable = new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         borders: {
@@ -50,12 +53,9 @@ function coverChildren(model: InvoiceCoverLetterModel): (Paragraph | Table)[] {
                         borders: cellBorderNil,
                         width: { size: 48, type: WidthType.PERCENTAGE },
                         children: [new Paragraph({
-                            children: [new TextRun({
-                                text: KOSTA_LEGAL_FIRM.brandName,
-                                bold: true,
-                                size: h(13),
-                                font: 'Calibri',
-                            })],
+                            children: logoHeaderRuns.length
+                                ? logoHeaderRuns
+                                : [new TextRun({ text: '\u200b', size: h(13), font: 'Calibri' })],
                         })],
                     }),
                     new TableCell({
@@ -128,6 +128,20 @@ function coverChildren(model: InvoiceCoverLetterModel): (Paragraph | Table)[] {
 
 /** Три страницы: первая — письмо, 2–3 пустые. */
 export async function buildInvoicePreviewDocxBlob(model: InvoiceCoverLetterModel): Promise<Blob> {
+    const logoRuns: ParagraphChild[] = [];
+    if (typeof window !== 'undefined') {
+        const raster = await rasterizeInvoiceCoverLogoSvg(400);
+        if (raster?.png.length && raster.widthPx > 0) {
+            const tw = 154;
+            const th = Math.max(1, Math.round((raster.heightPx / raster.widthPx) * tw));
+            logoRuns.push(new ImageRun({
+                type: 'png',
+                data: raster.png,
+                transformation: { width: tw, height: th },
+            }));
+        }
+    }
+
     const doc = new Document({
         sections: [
             {
@@ -136,7 +150,7 @@ export async function buildInvoicePreviewDocxBlob(model: InvoiceCoverLetterModel
                         margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
                     },
                 },
-                children: coverChildren(model),
+                children: coverChildren(model, logoRuns),
             },
             { properties: {}, children: [new Paragraph('')] },
             { properties: {}, children: [new Paragraph('')] },
