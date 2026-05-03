@@ -179,16 +179,18 @@ export function InvoicePreviewPage() {
       </nav>
 
       <main className="tt-inv-preview__main">
-        <header className="tt-inv-preview__header">
-          <h1 className="tt-inv-preview__title">Предпросмотр</h1>
-          <p className="tt-inv-preview__note">
-            Первая страница — сопроводительное письмо в адрес клиента; второй и третий лист зарезервированы под счёт и приложения.
-          </p>
-          {subtitle && (<p className="tt-inv-preview__context">{subtitle}</p>)}
-          {!coverModel && (<p className="tt-inv-preview__loading-hint" role="status">Подтягиваем реквизиты клиента…</p>)}
+        <header className="tt-inv-preview__meta">
+          <div className="tt-inv-preview__header">
+            <h1 className="tt-inv-preview__title">Предпросмотр</h1>
+            <p className="tt-inv-preview__note">
+              Первая страница — сопроводительное письмо в адрес клиента; второй и третий лист зарезервированы под счёт и приложения.
+            </p>
+            {subtitle && (<p className="tt-inv-preview__context">{subtitle}</p>)}
+            {!coverModel && (<p className="tt-inv-preview__loading-hint" role="status">Подтягиваем реквизиты клиента…</p>)}
+          </div>
         </header>
 
-        <div className="tt-inv-preview__viewer">
+        <div className="tt-inv-preview__viewer" aria-label="Область просмотра документа">
           <aside className="tt-inv-preview__thumbs" aria-label="Миниатюры страниц">
             {Array.from({ length: PAGE_COUNT }, (_, i) => i + 1).map((num) => (
               <button
