@@ -1,2 +1,2 @@
 export type { ExpenseAttachmentOut, ExpenseRequestOut, ExpenseListResponse, ExpenseRequestCreateBody, ExpenseRequestStatusPatchBody, CalendarDayOut, CalendarReportOut, ByDateReportOut, SummaryReportOut, DynamicsPointOut, } from './model/apiTypes';
-export { listExpenseRequests, createExpenseRequest, patchExpenseRequestStatus, fetchExpenseCalendar, fetchExpensesByDate, fetchExpensesSummary, fetchExpensesDynamics, type ListExpenseRequestsParams, type SummaryParams, } from './api';
+export { listExpenseRequests, createExpenseRequest, patchExpenseRequestStatus, fetchExpenseCalendar, fetchExpensesByDate, fetchExpensesSummary, fetchExpensesDynamics, fetchExpenseProjectTotals, type ListExpenseRequestsParams, type SummaryParams, type ExpenseProjectTotalsOut, } from './api';

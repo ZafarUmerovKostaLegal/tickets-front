@@ -1298,14 +1298,8 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
         : project.currency;
     const spent = dashboardOk ? dashboard!.totals.billableAmount : project.spent;
     const unbilled = dashboardOk ? dashboard!.totals.unbilledAmount : project.spent;
+    const expenseEquivalentTotal = dashboardOk ? dashboard!.totals.expenseEquivalentTotal : 0;
     const expenseAmountUzs = dashboardOk ? dashboard!.totals.expenseAmountUzs : 0;
-    const expenseAmountProject = dashboardOk &&
-        dashboard!.totals.expenseAmountProject != null &&
-        Number.isFinite(dashboard!.totals.expenseAmountProject)
-        ? dashboard!.totals.expenseAmountProject
-        : null;
-    const expenseAmountForDisplay = expenseAmountProject ?? expenseAmountUzs;
-    const expenseDisplayCurrency = expenseAmountProject != null ? displayCurrency : 'UZS';
     const expenseCount = dashboardOk ? dashboard!.totals.expenseCount : 0;
     const apiBudget = dashboardOk && dashboard?.budget?.hasBudget === true ? dashboard.budget : null;
     const budgetDual = apiBudget?.budgetBy === 'hours_and_money' && apiBudget.money && apiBudget.hours
@@ -1316,7 +1310,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
     const budgetBurnIncludesExpenses = apiBudget == null && hasLegacyBudget && project.budgetIncludesExpenses === true && dashboardOk;
     const spentForBudget = apiBudget != null
         ? (budgetDual ? budgetDual.money.spent : apiBudget.spent)
-        : spent + (budgetBurnIncludesExpenses ? expenseAmountForDisplay : 0);
+        : spent + (budgetBurnIncludesExpenses ? expenseEquivalentTotal : 0);
     const remaining = apiBudget != null
         ? deriveDashboardBudgetHeadlineRemaining(apiBudget)
         : hasLegacyBudget
@@ -1606,12 +1600,16 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
             </div>
           </div>
           {dashboardOk && (<div className="pdp__stat-card">
-              <p className="pdp__stat-label">Расходы ({expenseDisplayCurrency})</p>
-              <p className="pdp__stat-value">{fmtAmt(expenseAmountForDisplay, expenseDisplayCurrency)}</p>
+              <p className="pdp__stat-label">Расходы ({displayCurrency})</p>
+              <p className="pdp__stat-value">{fmtAmt(expenseEquivalentTotal, displayCurrency)}</p>
               <p className="pdp__stat-hint">
-                {expenseCount} заявок (одобрено / оплачено / закрыто)
+                Эквивалент заявок (как в модуле расходов) · {expenseCount} заявок (одобрено / оплачено / закрыто)
               </p>
-              {expenseCount === 0 && expenseAmountForDisplay === 0 ? (<p className="pdp__stat-hint pdp__stat-hint--muted">
+              {expenseAmountUzs > 0 ? (<p className="pdp__stat-hint pdp__stat-hint--muted">
+                  В сумах (UZS, без пересчёта по курсу):{' '}
+                  {fmtAmt(expenseAmountUzs, 'UZS')}
+                </p>) : null}
+              {expenseCount === 0 && expenseEquivalentTotal === 0 && expenseAmountUzs === 0 ? (<p className="pdp__stat-hint pdp__stat-hint--muted">
                   Если заявки есть, убедитесь, что в них указан этот проект и что сервис расходов доступен бэкенду
                   учёта времени.
                 </p>) : null}
@@ -1699,7 +1697,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                     </p>) : null}
                 </>)}
                 {budgetBurnIncludesExpenses && (<p className="pdp__stat-hint">
-                    В расход бюджета включена сумма расходов ({expenseDisplayCurrency}).
+                    В расход бюджета включена сумма расходов ({displayCurrency}).
                   </p>)}
               </div>)}
           </div>

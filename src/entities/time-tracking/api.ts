@@ -1365,6 +1365,12 @@ export type TimeManagerProjectDashboardTotals = {
     internalCostsComplete: boolean;
     unbilledAmount: number;
     expenseAmountUzs: number;
+    /**
+     * Сумма `equivalent_amount` по заявкам — в деньгах проекта (`GET …/dashboard` → `expense_equivalent_total`).
+     * Для отображения основной суммы расходов на карточке проекта использовать это поле, не `expenseAmountUzs`.
+     */
+    expenseEquivalentTotal: number;
+    /** @deprecated Дублирует `expenseEquivalentTotal`; оставлено для совместимости. */
     expenseAmountProject?: number;
     expenseCount: number;
 };
@@ -1462,6 +1468,7 @@ export function normalizeProjectDashboard(raw: unknown): TimeManagerProjectDashb
         internalCostsComplete: true,
         unbilledAmount: 0,
         expenseAmountUzs: 0,
+        expenseEquivalentTotal: 0,
         expenseCount: 0,
     };
     if (!raw || typeof raw !== 'object') {
@@ -1479,21 +1486,35 @@ export function normalizeProjectDashboard(raw: unknown): TimeManagerProjectDashb
     const expenseAmountUzs = dashNum(tr.expense_amount_uzs ?? tr.expenseAmountUzs);
     const uzsRaw = tr.expense_amount_uzs ?? tr.expenseAmountUzs;
     const hasExplicitUzs = uzsRaw != null && String(uzsRaw).trim() !== '';
-    let expenseAmountProject: number | undefined;
-    const expProjRaw = tr.expense_amount_project ?? tr.expenseAmountProject ?? tr.expense_amount_in_project ?? tr.expenseAmountInProject;
-    if (expProjRaw != null && String(expProjRaw).trim() !== '') {
-        const n = dashNum(expProjRaw);
-        if (Number.isFinite(n))
-            expenseAmountProject = n;
-    }
-    if (expenseAmountProject === undefined) {
+    const pickEquivFromTotals = (): number | undefined => {
+        const keys = [
+            'expense_equivalent_total',
+            'expenseEquivalentTotal',
+            'total_equivalent_amount',
+            'totalEquivalentAmount',
+            'expense_amount_project',
+            'expenseAmountProject',
+            'expense_amount_in_project',
+            'expenseAmountInProject',
+        ] as const;
+        for (const k of keys) {
+            const v = tr[k];
+            if (v != null && String(v).trim() !== '') {
+                const n = dashNum(v);
+                if (Number.isFinite(n))
+                    return n;
+            }
+        }
         const uni = tr.expense_amount ?? tr.expenseAmount;
         if (!hasExplicitUzs && uni != null && String(uni).trim() !== '') {
             const n = dashNum(uni);
             if (Number.isFinite(n))
-                expenseAmountProject = n;
+                return n;
         }
-    }
+        return undefined;
+    };
+    const equivResolved = pickEquivFromTotals();
+    const expenseEquivalentTotal = equivResolved ?? 0;
     const totals: TimeManagerProjectDashboardTotals = {
         totalHours: dashNum(tr.total_hours ?? tr.totalHours),
         billableHours: dashNum(tr.billable_hours ?? tr.billableHours),
@@ -1503,8 +1524,9 @@ export function normalizeProjectDashboard(raw: unknown): TimeManagerProjectDashb
         internalCostsComplete: dashBool(tr.internal_costs_complete ?? tr.internalCostsComplete, true),
         unbilledAmount: dashNum(tr.unbilled_amount ?? tr.unbilledAmount),
         expenseAmountUzs,
+        expenseEquivalentTotal,
+        expenseAmountProject: expenseEquivalentTotal,
         expenseCount: Math.round(dashNum(tr.expense_count ?? tr.expenseCount)),
-        ...(expenseAmountProject !== undefined ? { expenseAmountProject } : {}),
     };
     const progressRaw = o.progress_by_week ?? o.progressByWeek;
     const progressByWeek: TimeManagerProjectDashboardProgressWeek[] = Array.isArray(progressRaw)
@@ -3683,14 +3705,18 @@ function buildReportV2Qs(filters: ReportFiltersV2): string {
     p.set('dateTo', filters.dateTo);
     p.set('from', filters.dateFrom);
     p.set('to', filters.dateTo);
-    if (filters.client_id)
-        p.set('client_id', filters.client_id);
-    if (filters.project_id)
-        p.set('project_id', filters.project_id);
-    if (filters.user_id)
-        p.set('user_id', filters.user_id);
-    if (filters.task_id)
-        p.set('task_id', filters.task_id);
+    const clientId = filters.client_id?.trim();
+    if (clientId)
+        p.set('client_id', clientId);
+    const projectId = filters.project_id?.trim();
+    if (projectId)
+        p.set('project_id', projectId);
+    const uidParam = filters.user_id?.trim();
+    if (uidParam)
+        p.set('user_id', uidParam);
+    const tid = filters.task_id?.trim();
+    if (tid)
+        p.set('task_id', tid);
     if (filters.is_billable !== undefined)
         p.set('is_billable', String(filters.is_billable));
     if (filters.include_fixed_fee === false)
@@ -3957,14 +3983,15 @@ export async function exportReportV2(reportType: 'time' | 'expenses' | 'uninvoic
     p.set('to', mergedFilters.dateTo);
     if (reportType === 'time' && exportOpts?.timeExport)
         p.set('export', exportOpts.timeExport);
-    if (mergedFilters.client_id)
-        p.set('client_id', mergedFilters.client_id);
-    if (mergedFilters.project_id)
-        p.set('project_id', mergedFilters.project_id);
-    if (mergedFilters.user_id)
-        p.set('user_id', mergedFilters.user_id);
-    if (mergedFilters.task_id)
-        p.set('task_id', mergedFilters.task_id);
+    if (mergedFilters.client_id?.trim())
+        p.set('client_id', mergedFilters.client_id.trim());
+    if (mergedFilters.project_id?.trim())
+        p.set('project_id', mergedFilters.project_id.trim());
+    const uidExport = mergedFilters.user_id?.trim();
+    if (uidExport)
+        p.set('user_id', uidExport);
+    if (mergedFilters.task_id?.trim())
+        p.set('task_id', mergedFilters.task_id.trim());
     if (mergedFilters.is_billable !== undefined)
         p.set('is_billable', String(mergedFilters.is_billable));
     if (mergedFilters.include_fixed_fee === false)
