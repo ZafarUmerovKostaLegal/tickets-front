@@ -21,12 +21,12 @@ function ensureTightFullLogoViewBoxIfIllustratorPage(svgText: string): string {
         /<svg([^>]*)\bviewBox\s*=\s*["']\s*0\s+0\s+595\.?\d*\s+841\.?\d*\s*["']/i;
     if (!fullPage.test(svgText))
         return svgText;
-    let s = svgText.replace(/\bviewBox\s*=\s*["'][^"']*["']/i, `viewBox="79 311 439 212"`);
+    let s = svgText.replace(/\bviewBox\s*=\s*["'][^"']*["']/i, `viewBox="79 311 439 219"`);
     s = s.replace(/\s+style\s*=\s*"[^"]*enable-background[^"]*"/gi, '');
     if (!/\bpreserveAspectRatio\s*=/.test(s))
         s = s.replace('<svg', '<svg preserveAspectRatio="xMidYMid meet"');
     if (!/\swidth\s*=\s*"[\d.]/.test(s))
-        s = s.replace('<svg', '<svg width="439" height="212" ');
+        s = s.replace('<svg', '<svg width="439" height="219" ');
     return s;
 }
 

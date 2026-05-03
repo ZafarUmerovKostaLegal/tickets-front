@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Full wordmark: red mark + black KOSTA LEGAL (Illustrator canvas cropped to logo bounds). -->
-<svg version="1.1" id="!;>9_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
-	 width="439" height="212" viewBox="79 311 439 212" preserveAspectRatio="xMidYMid meet" xml:space="preserve">
+<!-- viewBox bottom was 523 but outer ring reaches y≈525; +6 units padding against stroke/AA clipping -->
+<svg version="1.1" id="KostaLegal-letterhead" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="439" height="219" viewBox="79 311 439 219" preserveAspectRatio="xMidYMid meet" xml:space="preserve">
 <style type="text/css">
 	.st0{fill:#E6282C;}
 </style>
