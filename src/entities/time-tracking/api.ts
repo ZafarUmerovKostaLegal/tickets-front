@@ -2492,6 +2492,10 @@ export type InvoiceLineDto = {
     lineTotal: number;
     timeEntryId: string | null;
     expenseRequestId: string | null;
+    /** ISO дата работы — с бэка для строк времени (без лишних GET time-entry) */
+    timeEntryWorkDate?: string | null;
+    /** Автор записи времени для сводки/инициалов */
+    timeAuthorAuthUserId?: number | null;
 };
 export type InvoicePaymentDto = {
     id: string;
@@ -2826,6 +2830,26 @@ function normalizeInvoiceLineDto(raw: unknown, fallbackIdx: number): InvoiceLine
     const timeEntryPick = pickStr('timeEntryId', 'time_entry_id', 'timeEntryID') || null;
     const expensePick = pickStr('expenseRequestId', 'expense_request_id', 'expenseId', 'expense_id') || null;
 
+    const wdRaw = pickStr('timeEntryWorkDate', 'time_entry_work_date');
+    const wdSlice = wdRaw.slice(0, 10);
+    const timeEntryWorkDate = /^\d{4}-\d{2}-\d{2}$/.test(wdSlice) ? wdSlice : undefined;
+
+    let timeAuthorAuthUserId: number | undefined = undefined;
+    for (const k of ['timeAuthorAuthUserId', 'time_author_auth_user_id'] as const) {
+        const v = r[k];
+        if (typeof v === 'number' && Number.isFinite(v)) {
+            timeAuthorAuthUserId = Math.trunc(v);
+            break;
+        }
+        if (typeof v === 'string' && v.trim() !== '') {
+            const n = Number(v.trim());
+            if (Number.isFinite(n)) {
+                timeAuthorAuthUserId = Math.trunc(n);
+                break;
+            }
+        }
+    }
+
     const lineKindExplicit = lk && lk !== '' ? lk : 'other';
 
     let lineKindResolved = lineKindExplicit;
@@ -2848,6 +2872,8 @@ function normalizeInvoiceLineDto(raw: unknown, fallbackIdx: number): InvoiceLine
         lineTotal: pickNum('lineTotal', 'line_total', 'total', 'amount', 'billable_amount'),
         timeEntryId: timeEntryPick,
         expenseRequestId: expensePick,
+        ...(timeEntryWorkDate !== undefined ? { timeEntryWorkDate } : {}),
+        ...(timeAuthorAuthUserId !== undefined ? { timeAuthorAuthUserId } : {}),
     };
 }
 

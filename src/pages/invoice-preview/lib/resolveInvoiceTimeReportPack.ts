@@ -260,12 +260,26 @@ export async function resolveInvoiceTimeReportPack(
             const amt = lineAmount(ln);
 
             if (kind === 'time') {
-                const entry = ln.timeEntryId ? await getEntry(ln.timeEntryId) : null;
-                const authId = entry?.auth_user_id ?? null;
+                const embeddedIso = ln.timeEntryWorkDate?.trim().slice(0, 10);
+                let workIso = embeddedIso && /^\d{4}-\d{2}-\d{2}$/.test(embeddedIso) ? embeddedIso : null;
+                let authId =
+                    ln.timeAuthorAuthUserId != null && Number.isFinite(Number(ln.timeAuthorAuthUserId))
+                        ? Math.trunc(Number(ln.timeAuthorAuthUserId))
+                        : null;
+
+                let entry: TimeEntryRow | null = null;
+                if ((authId == null || !workIso) && ln.timeEntryId?.trim())
+                    entry = await getEntry(ln.timeEntryId);
+                if (authId == null && entry?.auth_user_id != null)
+                    authId = entry.auth_user_id;
+                const fromEntry = entry?.work_date?.trim().slice(0, 10) ?? '';
+                if (!workIso && /^\d{4}-\d{2}-\d{2}$/.test(fromEntry))
+                    workIso = fromEntry;
+
                 const u = authId != null ? userByAuthId(users, authId) : null;
                 const hours = numHoursFromLine(ln);
                 details.push({
-                    date: entry ? dateDisplayFromIso(entry.work_date) : '—',
+                    date: workIso ? dateDisplayFromIso(workIso) : '—',
                     initials: u ? initialsFromUser(u) : '—',
                     task: '',
                     description: desc,
