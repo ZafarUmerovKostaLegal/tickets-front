@@ -30,9 +30,10 @@
 
 .tt-inv-cover__logo {
   display: block;
-  width: 88px;
+  width: 100%;
+  max-width: 220px;
   height: auto;
-  max-height: 130px;
+  max-height: 56px;
   flex-shrink: 0;
   object-fit: contain;
   object-position: left center;

@@ -1,4 +1,4 @@
-import invoiceLetterheadMarkSvgUrl from '../../../assets/brand/KostaLegal-letterhead-mark-red.svg?url';
+import invoiceLetterheadFullSvgUrl from '../../../assets/brand/KostaLegal-logo-letterhead-full.svg?url';
 
 export type InvoiceCoverRasterizedLogo = {
     png: Uint8Array;
@@ -6,11 +6,11 @@ export type InvoiceCoverRasterizedLogo = {
     heightPx: number;
 };
 
-/** URL знака для письма (Vite-бандл: не импортировать файлы из `public/` через `import`). */
+/** Полный SVG логотип (знак + KOSTA LEGAL) через Vite-бандл. */
 export function resolveInvoiceCoverLogoSvgHref(): string {
     if (typeof window === 'undefined')
-        return invoiceLetterheadMarkSvgUrl;
-    return new URL(invoiceLetterheadMarkSvgUrl, window.location.href).href;
+        return invoiceLetterheadFullSvgUrl;
+    return new URL(invoiceLetterheadFullSvgUrl, window.location.href).href;
 }
 
 async function fetchInvoiceCoverLogoSvgMarkup(): Promise<string | null> {
@@ -27,24 +27,22 @@ async function fetchInvoiceCoverLogoSvgMarkup(): Promise<string | null> {
     }
 }
 
-/**
- * Если в SVG снова окажется полноразмерный лист Illustrator, ограничиваем рамкой под знак.
- */
-function ensureTightMarkViewBoxIfFullPageCanvas(svgText: string): string {
+/** Если снова экспорт на весь лист A4 из Illustrator — подменяем разумный viewBox полного лого. */
+function ensureTightFullLogoViewBoxIfIllustratorPage(svgText: string): string {
     const fullPage =
         /<svg([^>]*)\bviewBox\s*=\s*["']\s*0\s+0\s+595\.?\d*\s+841\.?\d*\s*["']/i;
     if (!fullPage.test(svgText))
         return svgText;
-    let s = svgText.replace(/\bviewBox\s*=\s*["'][^"']*["']/i, `viewBox="84 314 146 218"`);
+    let s = svgText.replace(/\bviewBox\s*=\s*["'][^"']*["']/i, `viewBox="79 311 439 212"`);
     s = s.replace(/\s+style\s*=\s*"[^"]*enable-background[^"]*"/gi, '');
     if (!/\bpreserveAspectRatio\s*=/.test(s))
         s = s.replace('<svg', '<svg preserveAspectRatio="xMidYMid meet"');
     if (!/\swidth\s*=\s*"[\d.]/.test(s))
-        s = s.replace('<svg', '<svg width="146" height="218" ');
+        s = s.replace('<svg', '<svg width="439" height="212" ');
     return s;
 }
 
-/** SVG → PNG с альфой для pdf-lib / docx. */
+/** SVG → PNG с альфой для pdf-lib / docx. Светлый фон у письма белый; альфа без лишней «плашки». */
 export async function rasterizeInvoiceCoverLogoSvg(renderWidthPx: number): Promise<InvoiceCoverRasterizedLogo | null> {
     if (typeof document === 'undefined')
         return null;
@@ -52,7 +50,7 @@ export async function rasterizeInvoiceCoverLogoSvg(renderWidthPx: number): Promi
         const markupRaw = await fetchInvoiceCoverLogoSvgMarkup();
         if (!markupRaw)
             return null;
-        const svgText = ensureTightMarkViewBoxIfFullPageCanvas(markupRaw);
+        const svgText = ensureTightFullLogoViewBoxIfIllustratorPage(markupRaw);
 
         const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
         const objUrl = URL.createObjectURL(blob);

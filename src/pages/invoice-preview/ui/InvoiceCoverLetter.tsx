@@ -1,4 +1,4 @@
-import letterheadMarkSvgUrl from '../../../assets/brand/KostaLegal-letterhead-mark-red.svg?url';
+import letterheadFullLogoUrl from '../../../assets/brand/KostaLegal-logo-letterhead-full.svg?url';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { KOSTA_LEGAL_FIRM } from '../lib/invoiceCoverLetterModel';
 import './InvoiceCoverLetter.css';
@@ -8,7 +8,7 @@ export function InvoiceCoverLetter({ model }: { model: InvoiceCoverLetterModel }
     return (<div className="tt-inv-cover">
       <header className="tt-inv-cover__header">
         <div className="tt-inv-cover__brand">
-          <img className="tt-inv-cover__logo" src={letterheadMarkSvgUrl} alt="" decoding="async"/>
+          <img className="tt-inv-cover__logo" src={letterheadFullLogoUrl} alt="" decoding="async"/>
         </div>
         <address className="tt-inv-cover__firm-contact">
           <span>{KOSTA_LEGAL_FIRM.addressLine}</span>
