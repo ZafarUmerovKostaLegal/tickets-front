@@ -226,10 +226,14 @@ export async function fetchExpenseProjectTotals(projectId: string, params?: {
     const q = new URLSearchParams();
     const from = params?.dateFrom?.trim().slice(0, 10);
     const to = params?.dateTo?.trim().slice(0, 10);
-    if (from)
+    if (from) {
         q.set('date_from', from);
-    if (to)
+        q.set('dateFrom', from);
+    }
+    if (to) {
         q.set('date_to', to);
+        q.set('dateTo', to);
+    }
     const sig = signal ?? AbortSignal.timeout(TIMEOUT_MS);
     const qs = q.toString() ? `?${q}` : '';
     let res: Response;

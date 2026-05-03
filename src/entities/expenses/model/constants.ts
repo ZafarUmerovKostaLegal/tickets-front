@@ -19,7 +19,7 @@ export const STATUS_META: Record<ExpenseStatus, {
     revision_required: { label: 'На доработке' },
     approved: { label: 'Одобрено' },
     rejected: { label: 'Отклонено' },
-    paid: { label: 'Выплачено' },
+    paid: { label: 'Выплачено автору' },
     closed: { label: 'Закрыто' },
     not_reimbursable: { label: 'Невозмещаемый' },
     withdrawn: { label: 'Отозвана' },

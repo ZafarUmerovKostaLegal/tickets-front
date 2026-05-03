@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
-import { displayReportClientLabel, displayReportProjectLabel, formatExpenseReportStatus, fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, type ReportsFilterUser, type ReportPagination, type TimeRowClients, type TimeRowProjects, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, } from '@entities/time-tracking';
+import { displayReportClientLabel, displayReportProjectLabel, formatExpenseReportStatus, formatExpenseReportStatusHint, fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, type ReportsFilterUser, type ReportPagination, type TimeRowClients, type TimeRowProjects, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, } from '@entities/time-tracking';
 import { budgetReportHoursMetrics, budgetReportMoneyMetrics, budgetReportRowProgressPercent } from '@entities/time-tracking/lib/projectBudgetReportMetrics';
 import { ReportsSkeleton } from './ReportsSkeleton';
 import { ConfirmedPartnerReportsPanel } from './ConfirmedPartnerReportsPanel';
@@ -283,7 +283,9 @@ function ExpenseUserRows({ users, currency }: {
       <td className="rp-table__num">{fmtAmt(u.total_amount, currency)}</td>
       <td className="rp-table__num">{fmtAmt(u.billable_amount, currency)}</td>
       <td className="rp-table__num">{pct(u.billable_amount, u.total_amount)}</td>
-      <td className="rp-table__status">{formatExpenseReportStatus(u.status ?? u.expense_status)}</td>
+      <td className="rp-table__status" title={formatExpenseReportStatusHint(u.status ?? u.expense_status)}>
+        {formatExpenseReportStatus(u.status ?? u.expense_status)}
+      </td>
       <td />
     </tr>))}
   </>);
@@ -1718,6 +1720,9 @@ export function ReportsPanel() {
                 ? 'Нет данных за период и выбранные фильтры.'
                 : 'Нет данных за выбранный период.'}
             </p>
+            {isExpenseLikeReportType(reportType) && !tableSearchQ ? (<p className="tt-reports__empty-hint" style={{ marginTop: '0.75rem', fontSize: '0.9rem', opacity: 0.85 }}>
+                Убедитесь, что период включает даты заявок (expense_date). В DevTools проверьте ответ API: число строк в pagination.total_entries и массив results.
+              </p>) : null}
           </>)}
         </div>) : reportType === 'time' ? (<TimeTable groupBy={groupBy as TimeGroup} rows={sortedTimeTableRows ?? []} expanded={expandedRows} onToggle={toggleRow} onProjectRowPreview={groupBy === 'projects' ? openTimeProjectPreview : undefined} projectRowPreviewDisabled={groupBy === 'projects' ? tableDataLoading : undefined} onClientRowPreview={groupBy === 'clients' ? openTimeClientPreview : undefined} clientRowPreviewDisabled={groupBy === 'clients' ? tableDataLoading : undefined} />) : isExpenseLikeReportType(reportType) ? (<ExpenseTable groupBy={groupBy as ExpenseGroup} rows={filteredTableRows as (ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam)[]} expanded={expandedRows} onToggle={toggleRow} />) : reportType === 'uninvoiced' ? (<UninvoicedTable rows={filteredTableRows as UninvoicedRow[]} expanded={expandedRows} onToggle={toggleRow} />) : (<BudgetTable rows={filteredTableRows as BudgetRow[]} expanded={expandedRows} onToggle={toggleRow} />)}
       </div>

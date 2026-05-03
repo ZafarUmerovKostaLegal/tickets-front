@@ -522,7 +522,7 @@ export function InvoicesPanel() {
             if (isForbiddenError(err)) {
                 const msg = err instanceof Error ? err.message.trim() : '';
                 setUnbilledPartnerBlockReason(
-                    msg || 'Для этого проекта и периода нет полного подтверждения партнёров. Сначала завершите подписание отчёта партнёрами.',
+                    msg || 'Не удалось загрузить невыставленное (доступ ограничен). Проверьте права и период. Создание счёта может по-прежнему требовать полного подтверждения партнёров и полей периода биллинга — см. сообщение при сохранении счёта.',
                 );
             }
             else {
@@ -730,7 +730,7 @@ export function InvoicesPanel() {
         catch (e) {
             const base = e instanceof Error ? e.message : 'Ошибка создания счёта';
             const hint = isForbiddenError(e)
-                ? ' Вероятно, нет полного подтверждения партнёров за выбранный период — завершите подписание отчёта.'
+                ? ' Вероятно, нет полного подтверждения партнёров за выбранный период или не совпали поля периода биллинга (`partnerBillingPeriodFrom` / `To`) с подтверждённым интервалом.'
                 : '';
             await showAlert({ message: `${base}${hint}` });
         }
@@ -1124,6 +1124,9 @@ export function InvoicesPanel() {
                 <p className="tt-inv-dialog__section-title">Невыставленные строки</p>
                 <p className="tt-inv-dialog__section-desc">
                   Выберите проект, период и нажмите «Загрузить», чтобы отобрать невыставленное время и расходы для включения в счёт.
+                </p>
+                <p className="tt-inv-dialog__section-desc" style={{ marginTop: '0.35rem' }}>
+                  Расходы в этом списке — только <strong>возмещаемые</strong> к клиенту (`is_reimbursable`). Невозмещаемые заявки сюда не попадают.
                 </p>
                 <div className="tt-inv-dialog__period-bar">
                   <div className="tt-inv-dialog__field">

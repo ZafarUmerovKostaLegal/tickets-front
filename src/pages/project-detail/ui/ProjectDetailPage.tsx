@@ -1603,7 +1603,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
               <p className="pdp__stat-label">Расходы ({displayCurrency})</p>
               <p className="pdp__stat-value">{fmtAmt(expenseEquivalentTotal, displayCurrency)}</p>
               <p className="pdp__stat-hint">
-                Эквивалент заявок (как в модуле расходов) · {expenseCount} заявок (одобрено / оплачено / закрыто)
+                Эквивалент заявок (как в модуле расходов) · {expenseCount} заявок (одобрено / оплачено / закрыто) · период как у фильтра дат выше
               </p>
               {expenseAmountUzs > 0 ? (<p className="pdp__stat-hint pdp__stat-hint--muted">
                   В сумах (UZS, без пересчёта по курсу):{' '}

@@ -11,6 +11,14 @@ export function formatExpenseReportStatus(status: string | null | undefined): st
     return STATUS_LOOKUP[s]?.label ?? s;
 }
 
+/** Пояснение для подсказки в отчётах TT (не путать с оплатой счёта клиентом). */
+export function formatExpenseReportStatusHint(status: string | null | undefined): string | undefined {
+    const s = String(status ?? '').trim().toLowerCase();
+    if (s === 'paid')
+        return 'Внутренняя выплата автору заявки, не оплата счёта клиентом (см. раздел «Счета»).';
+    return undefined;
+}
+
 export function displayReportProjectLabel(projectName: string | null | undefined, projectId: string | null | undefined): string {
     const name = projectName != null ? String(projectName).trim() : '';
     if (name)
