@@ -147,13 +147,29 @@ export function InvoicePreviewPage() {
           {!coverModel && (<p className="tt-inv-preview__loading-hint" role="status">Подтягиваем реквизиты клиента…</p>)}
         </header>
 
-        <div className="tt-inv-preview__sheet-stack" aria-label="Макет печати">
-          <div className="tt-inv-preview__pages">
-            <div className="tt-inv-a4-page tt-inv-a4-page--cover" aria-label="Страница 1 из 3 — сопроводительное письмо">
-              <InvoiceCoverLetter model={displayModel}/>
+        <div className="tt-inv-preview__viewer">
+          <aside className="tt-inv-preview__thumbs" aria-label="Миниатюры страниц">
+            {[1, 2, 3].map((num) => (
+              <button
+                key={num}
+                type="button"
+                className={`tt-inv-preview__thumb${num === 1 ? ' tt-inv-preview__thumb--active' : ''}`}
+                aria-current={num === 1 ? 'page' : undefined}
+                aria-label={`Страница ${num} из 3${num === 1 ? ', сопроводительное письмо' : ''}`}
+              >
+                <span className="tt-inv-preview__thumb-sheet" aria-hidden/>
+                <span className="tt-inv-preview__thumb-num">{num}</span>
+              </button>
+            ))}
+          </aside>
+          <div className="tt-inv-preview__sheet-stack" aria-label="Макет печати">
+            <div className="tt-inv-preview__pages">
+              <div className="tt-inv-a4-page tt-inv-a4-page--cover" aria-label="Страница 1 из 3 — сопроводительное письмо">
+                <InvoiceCoverLetter model={displayModel}/>
+              </div>
+              <div className="tt-inv-a4-page" aria-label="Страница 2 из 3"/>
+              <div className="tt-inv-a4-page" aria-label="Страница 3 из 3"/>
             </div>
-            <div className="tt-inv-a4-page" aria-label="Страница 2 из 3"/>
-            <div className="tt-inv-a4-page" aria-label="Страница 3 из 3"/>
           </div>
         </div>
       </main>

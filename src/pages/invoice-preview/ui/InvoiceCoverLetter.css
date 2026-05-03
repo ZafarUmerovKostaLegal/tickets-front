@@ -1,15 +1,15 @@
-/* Первая страница счёта: сопроводительное письмо Kosta Legal (англ.), чёрный текст на белом A4 */
+/* Страница письма: белый лист как в PDF/Word, типографика в духе приложения (Montserrat из body). */
 
 .tt-inv-cover {
   box-sizing: border-box;
   width: 100%;
   height: 100%;
   padding: 11mm 14mm 14mm;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 10.5px;
-  line-height: 1.45;
-  color: #111827;
-  background: #fff;
+  line-height: 1.52;
+  color: var(--tt-inv-paper-ink, #0f172a);
+  background: var(--tt-inv-paper, #ffffff);
   text-align: left;
 }
 
@@ -18,7 +18,9 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 2.25rem;
+  margin-bottom: 2.1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.18);
 }
 
 .tt-inv-cover__brand {
@@ -43,8 +45,8 @@
   margin: 0;
   font-style: normal;
   font-size: 9.5px;
-  line-height: 1.35;
-  color: #475569;
+  line-height: 1.4;
+  color: var(--tt-inv-paper-muted, #64748b);
   text-align: right;
   max-width: 17rem;
 }
@@ -55,14 +57,15 @@
 
 .tt-inv-cover__letter-body {
   font-size: 10.5px;
+  color: var(--tt-inv-paper-ink);
 }
 
 .tt-inv-cover__date {
-  margin: 0 0 1.35rem;
+  margin: 0 0 1.25rem;
 }
 
 .tt-inv-cover__recipient {
-  margin-bottom: 1.35rem;
+  margin-bottom: 1.25rem;
 }
 
 .tt-inv-cover__recipient-line {
@@ -74,7 +77,7 @@
 }
 
 .tt-inv-cover__attention-sub {
-  margin: 0 0 1.35rem;
+  margin: 0 0 1.25rem;
 }
 
 .tt-inv-cover__salutation {
@@ -87,10 +90,11 @@
 
 .tt-inv-cover__para strong {
   font-weight: 700;
+  color: var(--tt-inv-paper-strong, #0f172a);
 }
 
 .tt-inv-cover__closing {
-  margin: 1.75rem 0 0;
+  margin: 1.65rem 0 0;
 }
 
 .tt-inv-cover__signature {
@@ -100,7 +104,7 @@
 .tt-inv-cover__sig-line {
   display: block;
   width: 11rem;
-  border-bottom: 1px solid #94a3b8;
+  border-bottom: 1px solid rgba(var(--app-accent-rgb, 79, 70, 229), 0.35);
   margin-bottom: 0.35rem;
 }
 
@@ -110,5 +114,5 @@
 }
 
 .tt-inv-cover__sig-name {
-  font-weight: 600;
+  font-weight: 700;
 }
