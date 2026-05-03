@@ -20,8 +20,6 @@ import {
     fetchAllUninvoicedReportRows,
     fetchAllBudgetReportRows,
     isTimeTrackingHttpError,
-    canGrantTimeEntryEditUnlock,
-    grantTimeEntryEditUnlock,
     isClosedReportingWeekEditingBlockedForSubject,
     patchTimeEntry,
     createTimeEntry,
@@ -608,7 +606,6 @@ export function ReportPreviewPage() {
     const [timeEntrySaveUI, setTimeEntrySaveUI] = useState<'idle' | 'saving' | 'saved' | 'err'>(() => 'idle');
     const [timeEntrySaveMessage, setTimeEntrySaveMessage] = useState<string | null>(null);
     const [timeEntryActionPendingRowKey, setTimeEntryActionPendingRowKey] = useState<string | null>(null);
-    const [editUnlockPendingCompoundKey, setEditUnlockPendingCompoundKey] = useState<string | null>(null);
     useLayoutEffect(() => {
         timeExcelRowsRef.current = timeExcelRows;
     }, [timeExcelRows]);
@@ -1246,34 +1243,6 @@ export function ReportPreviewPage() {
             setTimeEntryActionPendingRowKey(null);
         }
     }, [canOverrideWeeklyLock, rangeFrom, rangeTo, showAlert]);
-    const handleGrantEditUnlock = useCallback(async (authUserId: number, workDateYmd: string) => {
-        const wd = workDateYmd.trim().slice(0, 10);
-        const compound = `${authUserId}:${wd}`;
-        setEditUnlockPendingCompoundKey(compound);
-        setTimeEntrySaveMessage(null);
-        try {
-            const out = await grantTimeEntryEditUnlock(authUserId, wd);
-            const until = new Date(out.expiresAt).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
-            setTimeEntrySaveUI('saved');
-            setTimeEntrySaveMessage(`Разблокировка активна до ${until}`);
-            setTimeout(() => {
-                setTimeEntrySaveUI((u) => (u === 'saved' ? 'idle' : u));
-                setTimeEntrySaveMessage((m) => (typeof m === 'string' && m.startsWith('Разблокировка активна') ? null : m));
-            }, 4200);
-        }
-        catch (e) {
-            const msg = isTimeTrackingHttpError(e)
-                ? e.message
-                : e instanceof Error
-                    ? e.message
-                    : 'Не удалось выдать разблокировку';
-            setTimeEntrySaveUI('err');
-            setTimeEntrySaveMessage(msg);
-        }
-        finally {
-            setEditUnlockPendingCompoundKey(null);
-        }
-    }, []);
     const patchExpenseExcel = useCallback((rowKey: string, patch: Partial<ExpenseExcelPreviewRow>) => {
         setExpenseExcelRows((prev) => prev.map((r) => (r.rowKey === rowKey ? { ...r, ...patch } : r)));
     }, []);
@@ -1399,7 +1368,7 @@ export function ReportPreviewPage() {
             const showTimeLiveTitle = xferSnapshot.groupBy !== 'projects';
             return (<>
           {showTimeLiveTitle ? (<p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>) : null}
-          <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={partnerConfirmedReadOnly ? undefined : setSelectedUserName} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDeleteTimeEntry} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onGrantEditUnlock={partnerConfirmedReadOnly || !user ? undefined : handleGrantEditUnlock} canGrantEditUnlockForTarget={partnerConfirmedReadOnly || !user ? undefined : (tid) => canGrantTimeEntryEditUnlock(user, tid)} editUnlockPendingCompoundKey={partnerConfirmedReadOnly ? null : editUnlockPendingCompoundKey} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={partnerConfirmedReadOnly ? null : timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick}/>
+          <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={partnerConfirmedReadOnly ? undefined : setSelectedUserName} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDeleteTimeEntry} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={partnerConfirmedReadOnly ? null : timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick}/>
         </>);
         }
         if (xferSnapshot.reportType === 'expenses') {
