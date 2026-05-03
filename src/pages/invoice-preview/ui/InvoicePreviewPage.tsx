@@ -39,11 +39,14 @@ export function InvoicePreviewPage() {
     const [activePage, setActivePage] = useState(1);
 
     const scrollToPage = useCallback((page: number) => {
-        const i = page - 1;
-        const el = pageRefs.current[i];
-        if (!el)
+        const root = sheetStackRef.current;
+        const el = pageRefs.current[page - 1];
+        if (!root || !el)
             return;
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const rootRect = root.getBoundingClientRect();
+        const elRect = el.getBoundingClientRect();
+        const nextTop = root.scrollTop + (elRect.top - rootRect.top) - 8;
+        root.scrollTo({ top: Math.max(0, nextTop), behavior: 'smooth' });
         setActivePage(page);
     }, []);
 
@@ -148,6 +151,9 @@ export function InvoicePreviewPage() {
         }
     }, [coverModel, defaultFilename, pushToast]);
 
+    const toolbarTitle = subtitle ?? defaultFilename;
+    const pdfToolbarTip = 'Первая страница — сопроводительное письмо; второй и третий лист — под счёт и приложения.';
+
     return (<div className="tt-inv-preview">
       <nav className="time-page__navbar tt-inv-preview__navbar" aria-label="Предпросмотр счёта">
         <Link to={backHref} className="time-page__back-btn">
@@ -179,17 +185,6 @@ export function InvoicePreviewPage() {
       </nav>
 
       <main className="tt-inv-preview__main">
-        <header className="tt-inv-preview__meta">
-          <div className="tt-inv-preview__header">
-            <h1 className="tt-inv-preview__title">Предпросмотр</h1>
-            <p className="tt-inv-preview__note">
-              Первая страница — сопроводительное письмо в адрес клиента; второй и третий лист зарезервированы под счёт и приложения.
-            </p>
-            {subtitle && (<p className="tt-inv-preview__context">{subtitle}</p>)}
-            {!coverModel && (<p className="tt-inv-preview__loading-hint" role="status">Подтягиваем реквизиты клиента…</p>)}
-          </div>
-        </header>
-
         <div className="tt-inv-preview__viewer" aria-label="Область просмотра документа">
           <aside className="tt-inv-preview__thumbs" aria-label="Миниатюры страниц">
             {Array.from({ length: PAGE_COUNT }, (_, i) => i + 1).map((num) => (
@@ -206,31 +201,43 @@ export function InvoicePreviewPage() {
               </button>
             ))}
           </aside>
-          <div ref={sheetStackRef} className="tt-inv-preview__sheet-stack" aria-label="Макет печати">
-            <div className="tt-inv-preview__pages">
-              <div
-                ref={(el) => {
-                    pageRefs.current[0] = el;
-                }}
-                className="tt-inv-a4-page tt-inv-a4-page--cover"
-                aria-label={`Страница 1 из ${PAGE_COUNT} — сопроводительное письмо`}
-              >
-                <InvoiceCoverLetter model={displayModel}/>
+
+          <div className="tt-inv-preview__stage">
+            <div className="tt-inv-preview__pdf-toolbar" role="toolbar" aria-label="Просмотр документа" title={pdfToolbarTip}>
+              <div className="tt-inv-preview__pdf-toolbar-meta">
+                <span className="tt-inv-preview__pdf-toolbar-doc" title={toolbarTitle}>{toolbarTitle}</span>
+                {!coverModel ? <span className="tt-inv-preview__pdf-toolbar-status" role="status">Загрузка…</span> : null}
               </div>
-              <div
-                ref={(el) => {
+              <div className="tt-inv-preview__pdf-toolbar-pages" aria-live="polite">
+                страница {activePage}&nbsp;/&nbsp;{PAGE_COUNT}
+              </div>
+            </div>
+            <div ref={sheetStackRef} className="tt-inv-preview__sheet-stack" aria-label="Документ, прокрутка колёсиком мыши или жестами">
+              <div className="tt-inv-preview__pages">
+                <div
+                  ref={(el) => {
+                    pageRefs.current[0] = el;
+                  }}
+                  className="tt-inv-a4-page tt-inv-a4-page--cover"
+                  aria-label={`Страница 1 из ${PAGE_COUNT} — сопроводительное письмо`}
+                >
+                  <InvoiceCoverLetter model={displayModel}/>
+                </div>
+                <div
+                  ref={(el) => {
                     pageRefs.current[1] = el;
-                }}
-                className="tt-inv-a4-page"
-                aria-label={`Страница 2 из ${PAGE_COUNT}`}
-              />
-              <div
-                ref={(el) => {
+                  }}
+                  className="tt-inv-a4-page"
+                  aria-label={`Страница 2 из ${PAGE_COUNT}`}
+                />
+                <div
+                  ref={(el) => {
                     pageRefs.current[2] = el;
-                }}
-                className="tt-inv-a4-page"
-                aria-label={`Страница 3 из ${PAGE_COUNT}`}
-              />
+                  }}
+                  className="tt-inv-a4-page"
+                  aria-label={`Страница 3 из ${PAGE_COUNT}`}
+                />
+              </div>
             </div>
           </div>
         </div>

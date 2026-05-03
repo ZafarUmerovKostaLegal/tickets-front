@@ -8,12 +8,13 @@ import { InvoicePreviewPage } from '@pages/invoice-preview';
 export function InvoicePreviewRoute() {
     const { user, loading } = useCurrentUser();
     if (loading) {
-        return (<div className="tt-inv-preview" role="status" aria-live="polite" aria-label="Загрузка профиля">
+        return (<div className="invoice-preview-route" role="status" aria-live="polite" aria-label="Загрузка профиля">
         <div style={{
                 display: 'flex',
+                flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
-                minHeight: '40vh',
+                minHeight: 0,
                 color: 'var(--app-muted, #64748b)',
             }}>
           Загрузка…
@@ -23,5 +24,7 @@ export function InvoicePreviewRoute() {
     if (!user || !canAccessTimeTracking(user)) {
         return <Navigate to={routes.home} replace/>;
     }
-    return <InvoicePreviewPage />;
+    return (<div className="invoice-preview-route">
+      <InvoicePreviewPage />
+    </div>);
 }

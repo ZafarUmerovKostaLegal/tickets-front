@@ -3,7 +3,8 @@
 .tt-inv-cover {
   box-sizing: border-box;
   width: 100%;
-  height: 100%;
+  height: auto;
+  min-height: 100%;
   padding: 11mm 14mm 14mm;
   font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 10.5px;
