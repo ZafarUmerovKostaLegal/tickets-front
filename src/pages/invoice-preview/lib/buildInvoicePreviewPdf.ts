@@ -1,3 +1,4 @@
+import fontkit from '@pdf-lib/fontkit';
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import dejavuSansBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
 import dejavuSansRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
@@ -219,6 +220,7 @@ function drawCoverPage(
 /** Три страницы A4: первая — сопроводительное письмо, 2–3 пустые. */
 export async function buildInvoicePreviewPdfBlob(model: InvoiceCoverLetterModel): Promise<Blob> {
     const doc = await PDFDocument.create();
+    doc.registerFontkit(fontkit);
     const [regularBytes, boldBytes] = await Promise.all([
         fetchFontBytes(dejavuSansRegularUrl),
         fetchFontBytes(dejavuSansBoldUrl),
