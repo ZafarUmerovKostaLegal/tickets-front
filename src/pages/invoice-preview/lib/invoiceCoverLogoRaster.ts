@@ -1,4 +1,4 @@
-import invoiceLetterheadFullSvgUrl from '../../../assets/brand/KostaLegal-logo-letterhead-full.svg?url';
+import invoiceLetterheadFullSvgRaw from '../../../assets/brand/KostaLegal-logo-letterhead-full.svg?raw';
 
 export type InvoiceCoverRasterizedLogo = {
     png: Uint8Array;
@@ -6,25 +6,21 @@ export type InvoiceCoverRasterizedLogo = {
     heightPx: number;
 };
 
-/** Полный SVG логотип (знак + KOSTA LEGAL) через Vite-бандл. */
-export function resolveInvoiceCoverLogoSvgHref(): string {
-    if (typeof window === 'undefined')
-        return invoiceLetterheadFullSvgUrl;
-    return new URL(invoiceLetterheadFullSvgUrl, window.location.href).href;
-}
+export type RasterizeInvoiceLogoOptions = {
+    /**
+     * Word в тёмной теме может рисовать страницу тёмным; чёрный текст лого тогда не виден.
+     * Белая подложка под PNG сохраняет читаемость в DOCX.
+     */
+    opaqueBackground?: boolean;
+};
 
-async function fetchInvoiceCoverLogoSvgMarkup(): Promise<string | null> {
-    const url = resolveInvoiceCoverLogoSvgHref();
-    try {
-        const res = await fetch(url, { credentials: 'same-origin', cache: 'force-cache' });
-        if (!res.ok)
-            return null;
-        const text = await res.text();
-        return text.includes('<svg') ? text : null;
-    }
-    catch {
-        return null;
-    }
+async function svgMarkupSource(): Promise<string | null> {
+    const trimmed = invoiceLetterheadFullSvgRaw.trim();
+    if (trimmed.includes('<svg'))
+        return trimmed;
+
+    /** Запас на случай пустого сырья в нестандартной сборке. */
+    return null;
 }
 
 /** Если снова экспорт на весь лист A4 из Illustrator — подменяем разумный viewBox полного лого. */
@@ -42,12 +38,15 @@ function ensureTightFullLogoViewBoxIfIllustratorPage(svgText: string): string {
     return s;
 }
 
-/** SVG → PNG с альфой для pdf-lib / docx. Светлый фон у письма белый; альфа без лишней «плашки». */
-export async function rasterizeInvoiceCoverLogoSvg(renderWidthPx: number): Promise<InvoiceCoverRasterizedLogo | null> {
+/** SVG из бандла → PNG для pdf-lib / docx (`?raw`: без fetch, чтобы лого попадало в экспорт всегда). */
+export async function rasterizeInvoiceCoverLogoSvg(
+    renderWidthPx: number,
+    options?: RasterizeInvoiceLogoOptions,
+): Promise<InvoiceCoverRasterizedLogo | null> {
     if (typeof document === 'undefined')
         return null;
     try {
-        const markupRaw = await fetchInvoiceCoverLogoSvgMarkup();
+        let markupRaw = await svgMarkupSource();
         if (!markupRaw)
             return null;
         const svgText = ensureTightFullLogoViewBoxIfIllustratorPage(markupRaw);
@@ -70,10 +69,17 @@ export async function rasterizeInvoiceCoverLogoSvg(renderWidthPx: number): Promi
             const canvas = document.createElement('canvas');
             canvas.width = w;
             canvas.height = h;
-            const ctx = canvas.getContext('2d', { alpha: true });
+            const opaque = Boolean(options?.opaqueBackground);
+            const ctx = canvas.getContext('2d', { alpha: !opaque });
             if (!ctx)
                 return null;
-            ctx.clearRect(0, 0, w, h);
+            if (opaque) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, w, h);
+            }
+            else {
+                ctx.clearRect(0, 0, w, h);
+            }
             ctx.drawImage(img, 0, 0, w, h);
             const pngBlob = await new Promise<Blob | null>((resolve) =>
                 canvas.toBlob((b) => resolve(b), 'image/png'),
