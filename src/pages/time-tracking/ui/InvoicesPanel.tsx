@@ -10,7 +10,8 @@ import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludi
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 function fmtMoney(n: number, cur: string): string {
-    return `${n.toLocaleString('ru-RU', { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}`;
+    const x = typeof n === 'number' && Number.isFinite(n) ? n : 0;
+    return `${x.toLocaleString('ru-RU', { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}`;
 }
 function invoiceLineKindSlug(ln: InvoiceLineDto): string {
     const k = (ln.lineKind ?? '').toLowerCase().trim();
@@ -824,18 +825,25 @@ export function InvoicesPanel() {
         const paidAtPayload = buildPaidAtForPaymentApi(String(payAt));
         setActionBusy(true);
         try {
-            const inv = await registerInvoicePayment(detailId, {
+            const posted = await registerInvoicePayment(detailId, {
                 ...(amountPayload !== undefined ? { amount: amountPayload } : {}),
                 ...(paidAtPayload !== undefined ? { paidAt: paidAtPayload } : {}),
                 paymentMethod: payMethod.trim() || null,
                 note: payNote.trim() || null,
             });
-            setDetail(inv);
+            let next: InvoiceDto;
+            try {
+                next = await getInvoice(detailId, true);
+            }
+            catch {
+                next = posted;
+            }
+            setDetail(next);
             setPayOpen(false);
-            await loadList({ silent: true, invoiceResponsePatch: inv });
+            await loadList({ silent: true, invoiceResponsePatch: next });
             void loadAggStats();
             notifyReportsInvalidated();
-            if (inv.requiresPaymentConfirmationDocument === true)
+            if (next.requiresPaymentConfirmationDocument === true)
                 pushToast({ message: 'Укажите ссылку или id документа, подтверждающего оплату.', variant: 'warning' });
         }
         catch (e) {
@@ -853,13 +861,20 @@ export function InvoicesPanel() {
             return;
         setActionBusy(true);
         try {
-            const inv = await registerInvoicePayment(detailId, {});
-            setDetail(inv);
+            const posted = await registerInvoicePayment(detailId, {});
+            let next: InvoiceDto;
+            try {
+                next = await getInvoice(detailId, true);
+            }
+            catch {
+                next = posted;
+            }
+            setDetail(next);
             setPayOpen(false);
-            await loadList({ silent: true, invoiceResponsePatch: inv });
+            await loadList({ silent: true, invoiceResponsePatch: next });
             void loadAggStats();
             notifyReportsInvalidated();
-            if (inv.requiresPaymentConfirmationDocument === true)
+            if (next.requiresPaymentConfirmationDocument === true)
                 pushToast({ message: 'Укажите ссылку или id документа, подтверждающего оплату.', variant: 'warning' });
         }
         catch (e) {
@@ -879,10 +894,17 @@ export function InvoicesPanel() {
         }
         setActionBusy(true);
         try {
-            const inv = await submitInvoicePaymentConfirmation(detailId, { documentUrl: url });
-            setDetail(inv);
-            setPaymentConfirmDocUrl(inv.paymentConfirmationDocumentUrl?.trim() ?? url);
-            await loadList({ silent: true, invoiceResponsePatch: inv });
+            const posted = await submitInvoicePaymentConfirmation(detailId, { documentUrl: url });
+            let next: InvoiceDto;
+            try {
+                next = await getInvoice(detailId, true);
+            }
+            catch {
+                next = posted;
+            }
+            setDetail(next);
+            setPaymentConfirmDocUrl(next.paymentConfirmationDocumentUrl?.trim() ?? url);
+            await loadList({ silent: true, invoiceResponsePatch: next });
             void loadAggStats();
             notifyReportsInvalidated();
             pushToast({ message: 'Подтверждение оплаты сохранено.', variant: 'info' });

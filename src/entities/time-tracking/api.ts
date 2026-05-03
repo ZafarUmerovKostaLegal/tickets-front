@@ -3054,6 +3054,81 @@ function pickInvoicePartnerDateSlice(o: Record<string, unknown>, keys: readonly 
     return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undefined;
 }
 
+const INV_MONEY_TOLERANCE = 0.03;
+
+/** Деньги корня счёта: camelCase / snake_case (Rails и др.). */
+function coalesceInvoiceMoney(...vals: unknown[]): number {
+    for (const v of vals) {
+        if (typeof v === 'number' && Number.isFinite(v))
+            return v;
+        if (typeof v === 'string' && v.trim() !== '') {
+            const n = Number(String(v).replace(/\s/g, '').replace(/\u00a0/g, '').replace(',', '.'));
+            if (Number.isFinite(n))
+                return n;
+        }
+    }
+    return 0;
+}
+
+function normalizeInvoicePaymentsArray(o: Record<string, unknown>): InvoicePaymentDto[] {
+    const paymentsSrc = o.payments
+        ?? o.invoice_payments
+        ?? o.invoicePayments
+        ?? o.InvoicePayments;
+    const arr = Array.isArray(paymentsSrc) ? paymentsSrc : [];
+    return arr.map((row, idx): InvoicePaymentDto => {
+        const r = (row != null && typeof row === 'object' ? row : {}) as Record<string, unknown>;
+        const idRaw = r.id ?? r.payment_id ?? r.paymentId;
+        const id = typeof idRaw === 'string' && idRaw.trim()
+            ? idRaw.trim()
+            : typeof idRaw === 'number' && Number.isFinite(idRaw)
+                ? String(Math.trunc(idRaw))
+                : `payment-${idx}`;
+        let recordedByAuthUserId = 0;
+        for (const k of ['recordedByAuthUserId', 'recorded_by_auth_user_id', 'authUserId', 'auth_user_id'] as const) {
+            const v = r[k];
+            if (typeof v === 'number' && Number.isFinite(v)) {
+                recordedByAuthUserId = Math.trunc(v);
+                break;
+            }
+            if (typeof v === 'string' && v.trim() !== '') {
+                const n = Number(v.trim());
+                if (Number.isFinite(n)) {
+                    recordedByAuthUserId = Math.trunc(n);
+                    break;
+                }
+            }
+        }
+        const pickPaymentStr = (...keys: string[]): string => {
+            for (const k of keys) {
+                const v = r[k];
+                if (v == null || v === '')
+                    continue;
+                const s = String(v).trim();
+                if (s.length)
+                    return s;
+            }
+            return '';
+        };
+        const paidAt = pickPaymentStr('paidAt', 'paid_at');
+        const createdAt = pickPaymentStr('createdAt', 'created_at');
+        const pmRaw = r.paymentMethod ?? r.payment_method;
+        const paymentMethod = pmRaw == null ? null : (String(pmRaw).trim() || null);
+        const noteRaw = r.note ?? r.description ?? null;
+        const note = noteRaw != null ? (String(noteRaw).trim() || null) : null;
+        const amount = coalesceInvoiceMoney(r.amount, r.payment_amount, r.paymentAmount);
+        return {
+            id,
+            amount,
+            paymentMethod,
+            note,
+            recordedByAuthUserId,
+            paidAt,
+            createdAt,
+        };
+    });
+}
+
 /** Приводит полный объект счёта к ожидаемому клиентом виду (особенно `lines`). */
 function normalizeInvoiceDto(raw: unknown): InvoiceDto {
     if (!raw || typeof raw !== 'object')
@@ -3079,9 +3154,36 @@ function normalizeInvoiceDto(raw: unknown): InvoiceDto {
             : undefined;
     const pcDocUrl = pickInvoicePartnerStr(o, ['paymentConfirmationDocumentUrl', 'payment_confirmation_document_url']);
     const pcRecAt = pickInvoicePartnerStr(o, ['paymentConfirmationRecordedAt', 'payment_confirmation_recorded_at']);
+
+    const paymentsNorm = normalizeInvoicePaymentsArray(o);
+    const paidFromPayments = paymentsNorm.reduce((sum, p) => sum + (Number.isFinite(p.amount) ? p.amount : 0), 0);
+    const totalAmount = coalesceInvoiceMoney(o.totalAmount, o.total_amount, invoice.totalAmount);
+    let amountPaid = coalesceInvoiceMoney(o.amountPaid, o.amount_paid, invoice.amountPaid);
+    if (paidFromPayments > 1e-9)
+        amountPaid = Math.max(amountPaid, paidFromPayments);
+    let balanceDue = coalesceInvoiceMoney(o.balanceDue, o.balance_due, invoice.balanceDue);
+    const impliedBal = Math.max(0, totalAmount - amountPaid);
+    if (totalAmount > 1e-9 && Math.abs(balanceDue - impliedBal) > INV_MONEY_TOLERANCE)
+        balanceDue = impliedBal;
+
+    let statusPick: InvoiceUiStatus = invoice.status;
+    const effRaw = o.status ?? o.effective_status ?? o.effectiveStatus;
+    if (typeof effRaw === 'string' && effRaw.trim())
+        statusPick = effRaw.trim() as InvoiceUiStatus;
+    let storedPick = invoice.storedStatus;
+    const stRaw = o.storedStatus ?? o.stored_status;
+    if (typeof stRaw === 'string' && stRaw.trim())
+        storedPick = stRaw.trim();
+
     return {
         ...invoice,
         lines,
+        status: statusPick,
+        storedStatus: storedPick,
+        totalAmount,
+        amountPaid,
+        balanceDue,
+        ...(paymentsNorm.length > 0 ? { payments: paymentsNorm } : {}),
         ...(pf ? { partnerBillingPeriodFrom: pf } : {}),
         ...(pt ? { partnerBillingPeriodTo: pt } : {}),
         ...(pcs ? { partnerConfirmationSnapshotId: pcs } : {}),
