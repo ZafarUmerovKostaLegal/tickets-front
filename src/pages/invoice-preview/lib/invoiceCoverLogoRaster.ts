@@ -6,23 +6,74 @@ export type InvoiceCoverRasterizedLogo = {
     heightPx: number;
 };
 
-/** URL для загрузки SVG того же актива, что в `public/`, но с путём от Vite (надёжно в dev/prod). */
+/** URL из Vite-бандла (хэшированный путь после build). */
 export function resolveInvoiceCoverLogoSvgHref(): string {
     if (typeof window === 'undefined')
         return invoiceCoverLogoSvgUrl;
     return new URL(invoiceCoverLogoSvgUrl, window.location.href).href;
 }
 
-/** SVG из бандла / `public` → PNG для pdf-lib / docx (вектор напряму не везде поддерживается). */
+/** Тот же файл из `public/`, когда fetch по бандлу не срабатывает (Tauri и т.п.). */
+function resolvePublicFolderLogoHref(): string | null {
+    if (typeof window === 'undefined')
+        return null;
+    const origin = window.location.origin;
+    const base = import.meta.env.BASE_URL || '/';
+    return new URL('KostaLegal-logo-02-black.svg', `${origin}${base.endsWith('/') ? base : `${base}/`}`).href;
+}
+
+async function fetchInvoiceCoverLogoSvgMarkup(): Promise<string | null> {
+    const urls = [resolveInvoiceCoverLogoSvgHref(), resolvePublicFolderLogoHref()].filter(
+        (u): u is string => typeof u === 'string',
+    );
+    // Уникальные URL (vite и public иногда совпадают)
+    const seen = new Set<string>();
+    const ordered = urls.filter((u) => !seen.has(u) && seen.add(u));
+
+    for (const url of ordered) {
+        try {
+            const res = await fetch(url, { credentials: 'same-origin', cache: 'force-cache' });
+            if (!res.ok)
+                continue;
+            const text = await res.text();
+            if (text.includes('<svg'))
+                return text;
+        }
+        catch {
+            /* пробуем следующий */
+        }
+    }
+    return null;
+}
+
+/**
+ * Если в SVG снова окажется полностраничный viewBox Illustrator, подменяем на обрезку под лого
+ * (см. `public/KostaLegal-logo-02-black.svg`).
+ */
+function ensureTightLogoViewBoxIfFullPageCanvas(svgText: string): string {
+    const fullPage =
+        /<svg([^>]*)\bviewBox\s*=\s*["']\s*0\s+0\s+595\.?\d*\s+841\.?\d*\s*["']/i;
+    if (!fullPage.test(svgText))
+        return svgText;
+    let s = svgText.replace(/\bviewBox\s*=\s*["'][^"']*["']/i, `viewBox="79 311 439 212"`);
+    s = s.replace(/\s+style\s*=\s*"[^"]*enable-background[^"]*"/gi, '');
+    if (!/\bpreserveAspectRatio\s*=/.test(s))
+        s = s.replace('<svg', '<svg preserveAspectRatio="xMidYMid meet"');
+    if (!/\swidth\s*=\s*"[\d.]/.test(s))
+        s = s.replace('<svg', '<svg width="439" height="212" ');
+    return s;
+}
+
+/** SVG из `public`/бандла → PNG для pdf-lib / docx. */
 export async function rasterizeInvoiceCoverLogoSvg(renderWidthPx: number): Promise<InvoiceCoverRasterizedLogo | null> {
     if (typeof document === 'undefined')
         return null;
     try {
-        const href = resolveInvoiceCoverLogoSvgHref();
-        const res = await fetch(href);
-        if (!res.ok)
+        const markupRaw = await fetchInvoiceCoverLogoSvgMarkup();
+        if (!markupRaw)
             return null;
-        const svgText = await res.text();
+        const svgText = ensureTightLogoViewBoxIfFullPageCanvas(markupRaw);
+
         const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
         const objUrl = URL.createObjectURL(blob);
         try {

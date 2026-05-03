@@ -10,6 +10,7 @@ import {
     TableCell,
     TableRow,
     TextRun,
+    VerticalAlignTable,
     WidthType,
 } from 'docx';
 import { KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
@@ -51,8 +52,10 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
                 children: [
                     new TableCell({
                         borders: cellBorderNil,
+                        verticalAlign: VerticalAlignTable.TOP,
                         width: { size: 48, type: WidthType.PERCENTAGE },
                         children: [new Paragraph({
+                            spacing: { after: 120 },
                             children: logoHeaderRuns.length
                                 ? logoHeaderRuns
                                 : [new TextRun({ text: '\u200b', size: h(13), font: 'Calibri' })],
@@ -60,6 +63,7 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
                     }),
                     new TableCell({
                         borders: cellBorderNil,
+                        verticalAlign: VerticalAlignTable.TOP,
                         width: { size: 52, type: WidthType.PERCENTAGE },
                         children: [
                             contactParagraph(KOSTA_LEGAL_FIRM.addressLine),
@@ -130,9 +134,10 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
 export async function buildInvoicePreviewDocxBlob(model: InvoiceCoverLetterModel): Promise<Blob> {
     const logoRuns: ParagraphChild[] = [];
     if (typeof window !== 'undefined') {
-        const raster = await rasterizeInvoiceCoverLogoSvg(400);
+        const raster = await rasterizeInvoiceCoverLogoSvg(800);
         if (raster?.png.length && raster.widthPx > 0) {
-            const tw = 154;
+            /* Размеры в «условных пикселях» области рисунка в документе (после обрезки SVG лого читаемо). */
+            const tw = 388;
             const th = Math.max(1, Math.round((raster.heightPx / raster.widthPx) * tw));
             logoRuns.push(new ImageRun({
                 type: 'png',

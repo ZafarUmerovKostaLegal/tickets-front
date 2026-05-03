@@ -66,7 +66,8 @@ function drawCoverPage(
     const logoTop = H - M;
     let lowestHeaderY = logoTop;
 
-    const logoWidthPt = 165;
+    /* Ширина логотипа в пунктах A4 после обрезанного SVG (полноценный блок шапки). */
+    const logoWidthPt = 268;
     if (logoImage) {
         const logoHeightPt = (logoImage.height / logoImage.width) * logoWidthPt;
         const logoBottom = logoTop - logoHeightPt;
@@ -166,7 +167,8 @@ export async function buildInvoicePreviewPdfBlob(model: InvoiceCoverLetterModel)
 
     let logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
     if (typeof window !== 'undefined') {
-        const raster = await rasterizeInvoiceCoverLogoSvg(560);
+        /* Высокое разрешение растра — затем масштаб в PDF сохраняет чёткость. */
+        const raster = await rasterizeInvoiceCoverLogoSvg(960);
         if (raster?.png.length) {
             try {
                 logoImage = await doc.embedPng(raster.png);
