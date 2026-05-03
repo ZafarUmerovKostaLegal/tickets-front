@@ -12026,6 +12026,32 @@ a.pp__proj-name--link:hover {
   line-height: 1.45;
 }
 .tt-inv-pay label { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.5rem; font-size: 0.8125rem; font-weight: 600; }
+.tt-inv-pay-confirm {
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  background: color-mix(in srgb, #fbbf24 10%, var(--app-surface-soft, #f8fafc));
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, var(--app-border, #e5e7eb));
+}
+.tt-inv-pay-confirm__hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--app-muted, #64748b);
+  line-height: 1.45;
+}
+.tt-inv-pay-confirm label { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.5rem; font-size: 0.8125rem; font-weight: 600; }
+.tt-inv-pay-confirm__actions { margin-top: 0.35rem; margin-bottom: 0; }
+.tt-inv-pay-confirm__saved {
+  margin: 0.65rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  word-break: break-word;
+}
+.tt-inv-pay-confirm__saved code {
+  font-size: 0.78rem;
+}
+
 .tt-inv-payments { margin: 0; padding-left: 1.1rem; font-size: 0.875rem; color: var(--app-text); }
 
 .tt-inv--skeleton .tt-inv-skel {

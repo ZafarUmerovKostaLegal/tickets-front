@@ -2571,6 +2571,10 @@ export type InvoiceDto = {
     partnerBillingPeriodFrom?: string | null;
     partnerBillingPeriodTo?: string | null;
     partnerConfirmationSnapshotId?: string | null;
+
+    requiresPaymentConfirmationDocument?: boolean;
+    paymentConfirmationDocumentUrl?: string | null;
+    paymentConfirmationRecordedAt?: string | null;
 };
 export type UnbilledTimeEntryDto = {
     id: string;
@@ -2676,6 +2680,10 @@ export type InvoicePaymentInput = {
     paidAt?: string | null;
     paymentMethod?: string | null;
     note?: string | null;
+};
+export type InvoicePaymentConfirmationInput = {
+    documentUrl?: string;
+    document_url?: string;
 };
 export type InvoiceAuditEntryDto = {
     id: string;
@@ -3003,12 +3011,23 @@ function normalizeInvoiceDto(raw: unknown): InvoiceDto {
     const pf = pickInvoicePartnerDateSlice(o, ['partnerBillingPeriodFrom', 'partner_billing_period_from']);
     const pt = pickInvoicePartnerDateSlice(o, ['partnerBillingPeriodTo', 'partner_billing_period_to']);
     const pcs = pickInvoicePartnerStr(o, ['partnerConfirmationSnapshotId', 'partner_confirmation_snapshot_id', 'reportSnapshotId', 'report_snapshot_id']);
+    const rpcdRaw = o.requiresPaymentConfirmationDocument ?? o.requires_payment_confirmation_document;
+    const requiresPaymentConfirmationDocument = rpcdRaw === true || rpcdRaw === 'true'
+        ? true
+        : rpcdRaw === false || rpcdRaw === 'false'
+            ? false
+            : undefined;
+    const pcDocUrl = pickInvoicePartnerStr(o, ['paymentConfirmationDocumentUrl', 'payment_confirmation_document_url']);
+    const pcRecAt = pickInvoicePartnerStr(o, ['paymentConfirmationRecordedAt', 'payment_confirmation_recorded_at']);
     return {
         ...invoice,
         lines,
         ...(pf ? { partnerBillingPeriodFrom: pf } : {}),
         ...(pt ? { partnerBillingPeriodTo: pt } : {}),
         ...(pcs ? { partnerConfirmationSnapshotId: pcs } : {}),
+        ...(requiresPaymentConfirmationDocument !== undefined ? { requiresPaymentConfirmationDocument } : {}),
+        ...(pcDocUrl ? { paymentConfirmationDocumentUrl: pcDocUrl } : {}),
+        ...(pcRecAt ? { paymentConfirmationRecordedAt: pcRecAt } : {}),
     };
 }
 
@@ -3077,6 +3096,18 @@ export async function registerInvoicePayment(id: string, body: InvoicePaymentInp
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
+    });
+    await throwIfNotOk(res);
+    return normalizeInvoiceDto(await res.json());
+}
+export async function submitInvoicePaymentConfirmation(id: string, body: InvoicePaymentConfirmationInput): Promise<InvoiceDto> {
+    const documentUrl = String(body.documentUrl ?? body.document_url ?? '').trim();
+    if (!documentUrl)
+        throw new Error('Не указана ссылка на документ подтверждения оплаты.');
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/payment-confirmation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentUrl }),
     });
     await throwIfNotOk(res);
     return normalizeInvoiceDto(await res.json());

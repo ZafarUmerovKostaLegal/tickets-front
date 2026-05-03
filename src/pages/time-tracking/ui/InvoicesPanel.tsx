@@ -6,7 +6,7 @@ import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '@page
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { useAppDialog, useAppToast } from '@shared/ui';
-import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 function fmtMoney(n: number, cur: string): string {
@@ -79,10 +79,6 @@ async function invoicePreviewMetaForExisting(inv: InvoiceDto, clientLabel: strin
     }
     return meta;
 }
-function formatDatetimeLocalInput(d = new Date()): string {
-    const pad = (n: number) => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 function parseMoneyRu(raw: string): number {
     const t = raw.replace(/\s/g, '').replace(/\u00a0/g, '').trim();
     if (!t)
@@ -96,6 +92,18 @@ function parseMoneyRu(raw: string): number {
     if (t.includes(','))
         return Number.parseFloat(t.replace(',', '.'));
     return Number.parseFloat(t);
+}
+/** Дата/время оплаты для API: ISO при разборимом браузером вводе, иначе строка как ввёл пользователь (ДД.MM.ГГГГ ЧЧ:ММ). */
+function buildPaidAtForPaymentApi(raw: string): string | undefined {
+    const t = raw.trim();
+    if (!t)
+        return undefined;
+    if (/^\d{2}\.\d{2}\.\d{4}/.test(t))
+        return t;
+    const d = new Date(t);
+    if (!Number.isNaN(d.getTime()))
+        return d.toISOString();
+    return t;
 }
 function parseOptionalPercentField(raw: string): number | null | undefined {
     const t = raw.trim();
@@ -269,9 +277,10 @@ export function InvoicesPanel() {
     const [createBusy, setCreateBusy] = useState(false);
     const [payOpen, setPayOpen] = useState(false);
     const [payAmount, setPayAmount] = useState('');
-    const [payAt, setPayAt] = useState(() => formatDatetimeLocalInput());
+    const [payAt, setPayAt] = useState('');
     const [payMethod, setPayMethod] = useState('');
     const [payNote, setPayNote] = useState('');
+    const [paymentConfirmDocUrl, setPaymentConfirmDocUrl] = useState('');
     const [actionBusy, setActionBusy] = useState(false);
     const [detailExportBusy, setDetailExportBusy] = useState<'pdf' | 'word' | null>(null);
     const [auditEntries, setAuditEntries] = useState<InvoiceAuditEntryDto[]>([]);
@@ -486,6 +495,9 @@ export function InvoicesPanel() {
             canceled = true;
         };
     }, [detailId, detail?.updatedAt, detail?.status]);
+    useEffect(() => {
+        setPaymentConfirmDocUrl('');
+    }, [detailId]);
     useEffect(() => {
         if (!detail || detail.status !== 'draft')
             return;
@@ -765,31 +777,22 @@ export function InvoicesPanel() {
     const handlePayment = useCallback(async () => {
         if (!detailId || !detail)
             return;
-        const trimmedAmount = String(payAmount).trim();
-        let amount: number | undefined;
+        const trimmedAmount = String(payAmount).replace(/\s/g, '').replace(/\u00a0/g, '').trim();
+        let amountPayload: number | string | undefined;
         if (trimmedAmount !== '') {
-            const n = parseMoneyRu(String(payAmount));
+            const n = parseMoneyRu(trimmedAmount);
             if (!Number.isFinite(n) || n <= 0) {
                 await showAlert({ message: 'Некорректная сумма. Очистите поле, чтобы списать весь остаток, или введите число (например 216 или 216,50).' });
                 return;
             }
-            amount = n;
+            amountPayload = /,/.test(trimmedAmount) ? trimmedAmount.replace(/\s/g, '') : n;
         }
-        const trimmedAt = String(payAt).trim();
-        let paidAtIso: string | undefined;
-        if (trimmedAt !== '') {
-            const d = new Date(trimmedAt);
-            if (Number.isNaN(d.getTime())) {
-                await showAlert({ message: 'Некорректная дата оплаты. Очистите поле, чтобы использовать текущий момент на сервере.' });
-                return;
-            }
-            paidAtIso = d.toISOString();
-        }
+        const paidAtPayload = buildPaidAtForPaymentApi(String(payAt));
         setActionBusy(true);
         try {
             const inv = await registerInvoicePayment(detailId, {
-                ...(amount !== undefined ? { amount } : {}),
-                ...(paidAtIso !== undefined ? { paidAt: paidAtIso } : {}),
+                ...(amountPayload !== undefined ? { amount: amountPayload } : {}),
+                ...(paidAtPayload !== undefined ? { paidAt: paidAtPayload } : {}),
                 paymentMethod: payMethod.trim() || null,
                 note: payNote.trim() || null,
             });
@@ -798,6 +801,8 @@ export function InvoicesPanel() {
             await loadList({ silent: true });
             void loadAggStats();
             notifyReportsInvalidated();
+            if (inv.requiresPaymentConfirmationDocument === true)
+                pushToast({ message: 'Укажите ссылку или id документа, подтверждающего оплату.', variant: 'warning' });
         }
         catch (e) {
             await showAlert({ message: e instanceof Error ? e.message : 'Ошибка' });
@@ -805,7 +810,7 @@ export function InvoicesPanel() {
         finally {
             setActionBusy(false);
         }
-    }, [detailId, detail, payAmount, payAt, payMethod, payNote, loadList, loadAggStats, showAlert]);
+    }, [detailId, detail, payAmount, payAt, payMethod, payNote, loadList, loadAggStats, showAlert, pushToast]);
     const handleFullPaymentNow = useCallback(async () => {
         if (!detailId || !detail)
             return;
@@ -820,6 +825,8 @@ export function InvoicesPanel() {
             await loadList({ silent: true });
             void loadAggStats();
             notifyReportsInvalidated();
+            if (inv.requiresPaymentConfirmationDocument === true)
+                pushToast({ message: 'Укажите ссылку или id документа, подтверждающего оплату.', variant: 'warning' });
         }
         catch (e) {
             await showAlert({ message: e instanceof Error ? e.message : 'Ошибка' });
@@ -827,7 +834,32 @@ export function InvoicesPanel() {
         finally {
             setActionBusy(false);
         }
-    }, [detailId, detail, loadList, loadAggStats, showAlert]);
+    }, [detailId, detail, loadList, loadAggStats, showAlert, pushToast]);
+    const handleSubmitPaymentConfirmation = useCallback(async () => {
+        if (!detailId)
+            return;
+        const url = paymentConfirmDocUrl.trim();
+        if (!url) {
+            await showAlert({ message: 'Введите ссылку на документ или внутренний идентификатор файла.' });
+            return;
+        }
+        setActionBusy(true);
+        try {
+            const inv = await submitInvoicePaymentConfirmation(detailId, { documentUrl: url });
+            setDetail(inv);
+            setPaymentConfirmDocUrl(inv.paymentConfirmationDocumentUrl?.trim() ?? url);
+            await loadList({ silent: true });
+            void loadAggStats();
+            notifyReportsInvalidated();
+            pushToast({ message: 'Подтверждение оплаты сохранено.', variant: 'info' });
+        }
+        catch (e) {
+            await showAlert({ message: e instanceof Error ? e.message : 'Ошибка' });
+        }
+        finally {
+            setActionBusy(false);
+        }
+    }, [detailId, paymentConfirmDocUrl, loadList, loadAggStats, showAlert, pushToast]);
     const handleSaveDraft = useCallback(async () => {
         if (!detail || detail.status !== 'draft')
             return;
@@ -1347,6 +1379,42 @@ export function InvoicesPanel() {
                       <span className="tt-inv-detail-meta__v tt-inv-detail-meta__v--num tt-inv-detail-meta__v--strong">{fmtMoney(detail.balanceDue, detail.currency)}</span>
                     </div>
                   </div>
+                  {(detail.requiresPaymentConfirmationDocument === true || Boolean(detail.paymentConfirmationDocumentUrl?.trim())) && (<div className="tt-inv-pay-confirm" role="region" aria-label="Подтверждение оплаты">
+                      {detail.requiresPaymentConfirmationDocument === true ? (<>
+                          <h4 className="tt-inv__section-title">Документ подтверждения оплаты</h4>
+                          <p className="tt-inv-pay-confirm__hint">
+                            После полной оплаты нужно зафиксировать ссылку на подтверждающий документ (файл хранится вне системы счетов TT).
+                          </p>
+                          <label>
+                            Ссылка или id документа
+                            <input className="tt-inv__input" value={paymentConfirmDocUrl} onChange={(e) => setPaymentConfirmDocUrl(e.target.value)} placeholder="https://… или внутренний id" autoComplete="off"/>
+                          </label>
+                          <div className="tt-inv-actions tt-inv-pay-confirm__actions">
+                            <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleSubmitPaymentConfirmation()}>
+                              Сохранить подтверждение
+                            </button>
+                          </div>
+                        </>) : null}
+                      {detail.paymentConfirmationDocumentUrl?.trim() ? (() => {
+                          const u = detail.paymentConfirmationDocumentUrl!.trim();
+                          const recRaw = detail.paymentConfirmationRecordedAt?.trim();
+                          let recLabel = '';
+                          if (recRaw) {
+                              const d = new Date(recRaw);
+                              recLabel = Number.isNaN(d.getTime())
+                                  ? recRaw
+                                  : d.toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' });
+                          }
+                          return (<p className="tt-inv-pay-confirm__saved">
+                              Зафиксировано{recLabel ? ` · ${recLabel}` : ''}
+                              {' · '}
+                              {/^https?:\/\//i.test(u)
+                                  ? (<a href={u} target="_blank" rel="noopener noreferrer">{u}</a>)
+                                  : <code>{u}</code>}
+                            </p>);
+                      })() : null}
+                    </div>)}
+
                   <div className="tt-inv-detail-export" role="group" aria-label="Предпросмотр и экспорт">
                     <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={Boolean(actionBusy || detailExportBusy)} onClick={() => openExistingInvoicePreview(detail)} title="Три страницы A4 и скачивание PDF / Word">
                       Предпросмотр
@@ -1395,7 +1463,7 @@ export function InvoicesPanel() {
                         </button>
                         <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={() => {
                         setPayAmount(detail.balanceDue > 1e-9 ? String(detail.balanceDue).replace('.', ',') : '');
-                        setPayAt(formatDatetimeLocalInput());
+                        setPayAt('');
                         setPayOpen(true);
                     }}>
                           Частичная оплата…
@@ -1492,15 +1560,15 @@ export function InvoicesPanel() {
                   {payOpen && (<div className="tt-inv-pay">
                       <h4 className="tt-inv__section-title">Платёж</h4>
                       <p className="tt-inv-pay__hint">
-                        Пустая сумма — спишется весь остаток. Пустая дата — время оплаты «сейчас» (UTC на сервере).
+                        Пустая сумма — спишется весь остаток. Пустая дата/время — на сервер фиксируется текущий момент (UTC). Допустимо: ISO 8601 или текст «03.05.2026 15:30». Сумму с запятой удобнее передать как строку — при вводе с «,» она уходит в API строкой.
                       </p>
                       <label>
                         Сумма (необяз.)
                         <input className="tt-inv__input" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder="Весь остаток, если пусто"/>
                       </label>
                       <label>
-                        Дата и время (необяз.)
-                        <input type="datetime-local" className="tt-inv__input" value={payAt} onChange={(e) => setPayAt(e.target.value)}/>
+                        Дата и время оплаты (необяз.)
+                        <input type="text" className="tt-inv__input" value={payAt} onChange={(e) => setPayAt(e.target.value)} placeholder="Напр. 03.05.2026 15:30 или оставьте пустым"/>
                       </label>
                       <label>
                         Способ (необяз.)
