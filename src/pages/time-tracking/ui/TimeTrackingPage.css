@@ -13321,6 +13321,83 @@ a.pp__proj-name--link:hover {
 .rp2__body > .rp2__group:nth-child(7n+7) .rp2__group-dot { background: #14b8a6; }
 
 
+.rp2__group-name--with-partner {
+  flex-wrap: wrap;
+  row-gap: 0.35rem;
+  white-space: normal;
+}
+
+.rp2__group-row--partner-confirmed:not(:disabled):hover {
+  background: color-mix(in srgb, #10b981 11%, transparent) !important;
+}
+.rp2__group-row--partner-invoiced:not(:disabled):hover {
+  background: color-mix(in srgb, #6366f1 13%, transparent) !important;
+}
+.rp2--clients .rp2__group-row--partner-confirmed:not(:disabled),
+.rp2--clients .rp2__client-preview-btn.rp2__group-row--partner-confirmed:not(:disabled) {
+  background: color-mix(in srgb, #10b981 7%, var(--rp2-surface-soft, transparent));
+}
+.rp2--clients .rp2__group-row--partner-invoiced:not(:disabled),
+.rp2--clients .rp2__client-preview-btn.rp2__group-row--partner-invoiced:not(:disabled) {
+  background: color-mix(in srgb, #6366f1 9%, var(--rp2-surface-soft, transparent));
+}
+.rp2--projects .rp2__group-row--partner-confirmed:not(:disabled) {
+  background: color-mix(in srgb, #10b981 7%, transparent);
+}
+.rp2--projects .rp2__group-row--partner-invoiced:not(:disabled) {
+  background: color-mix(in srgb, #6366f1 9%, transparent);
+}
+
+.rp2__body .rp2__group-dot.rp2__group-dot--partner-confirmed {
+  box-shadow:
+    0 0 0 2px var(--rp2-surface, var(--app-bg, #fff)),
+    0 0 0 4px rgba(16, 185, 129, 0.45);
+}
+.rp2__body .rp2__group-dot.rp2__group-dot--partner-invoiced {
+  box-shadow:
+    0 0 0 2px var(--rp2-surface, var(--app-bg, #fff)),
+    0 0 0 4px rgba(99, 102, 241, 0.5);
+}
+
+.rp-partner-chip {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 0.12rem 0.42rem;
+  border-radius: 999px;
+  line-height: 1.25;
+}
+.rp-partner-chip--confirmed {
+  color: #065f46;
+  background: color-mix(in srgb, #10b981 16%, transparent);
+  border: 1px solid color-mix(in srgb, #10b981 35%, transparent);
+}
+.rp-partner-chip--invoiced {
+  color: #312e81;
+  background: color-mix(in srgb, #6366f1 18%, transparent);
+  border: 1px solid color-mix(in srgb, #6366f1 38%, transparent);
+}
+
+.tt-reports__partner-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  margin-top: 0.45rem;
+  width: 100%;
+}
+.tt-reports__partner-legend-note {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--rp2-muted, #64748b) 88%, var(--rp2-text, #0f172a) 12%);
+  flex-basis: 100%;
+}
+
+
 .rp2__group--open::before {
   content: '';
   position: absolute;

@@ -2377,6 +2377,8 @@ export type PartnerReportConfirmationRequest = {
     submittedByAuthUserId: number;
     requiredPartnerAuthUserIds: number[];
     pendingPartnerAuthUserIds: number[];
+    /** Если бэкенд отдаёт — счёт, созданный из этого подтверждённого периода. */
+    invoiceId?: string;
     signatures: PartnerReportConfirmationSignature[];
     createdAt: string;
     updatedAt: string | null;
@@ -2410,6 +2412,10 @@ export function parsePartnerReportConfirmationRequest(raw: unknown): PartnerRepo
     const reqArr = o.requiredPartnerAuthUserIds ?? o.required_partner_auth_user_ids;
     const pendArr = o.pendingPartnerAuthUserIds ?? o.pending_partner_auth_user_ids;
     const sigRaw = Array.isArray(o.signatures) ? o.signatures : [];
+    const invoiceIdRaw = o.invoiceId ?? o.invoice_id ?? o.linkedInvoiceId ?? o.linked_invoice_id;
+    const invoiceId = invoiceIdRaw != null && String(invoiceIdRaw).trim()
+        ? String(invoiceIdRaw).trim()
+        : undefined;
     const requiredPartnerAuthUserIds = (Array.isArray(reqArr) ? reqArr : []).map(readPartnerConfirmNum).filter((x): x is number => x != null);
     const pendingPartnerAuthUserIds = (Array.isArray(pendArr) ? pendArr : []).map(readPartnerConfirmNum).filter((x): x is number => x != null);
     const signatures = sigRaw.map(parsePartnerReportConfirmationSignature).filter((x): x is PartnerReportConfirmationSignature => x != null);
@@ -2428,6 +2434,7 @@ export function parsePartnerReportConfirmationRequest(raw: unknown): PartnerRepo
         signatures,
         createdAt: String(o.createdAt ?? o.created_at ?? ''),
         updatedAt: updatedRaw == null || updatedRaw === '' ? null : String(updatedRaw),
+        ...(invoiceId ? { invoiceId } : {}),
     };
 }
 function parsePartnerReportConfirmationRequestList(raw: unknown): PartnerReportConfirmationRequest[] {
@@ -2560,6 +2567,10 @@ export type InvoiceDto = {
     updatedAt: string | null;
     lines?: InvoiceLineDto[];
     payments?: InvoicePaymentDto[];
+
+    partnerBillingPeriodFrom?: string | null;
+    partnerBillingPeriodTo?: string | null;
+    partnerConfirmationSnapshotId?: string | null;
 };
 export type UnbilledTimeEntryDto = {
     id: string;
@@ -2811,12 +2822,20 @@ function readPartnerConfirmationBlocked(o: Record<string, unknown>): boolean {
     return v === true || v === 'true';
 }
 export async function listInvoices(params?: InvoiceListParams): Promise<InvoicesListResponse> {
+    const normalizeItem = (row: unknown): InvoiceDto => {
+        try {
+            return normalizeInvoiceDto(row);
+        }
+        catch {
+            return row as InvoiceDto;
+        }
+    };
     const res = await apiFetch(`/api/v1/time-tracking/invoices${buildInvoiceListQs(params ?? {})}`);
     await throwIfNotOk(res);
     const raw = await res.json();
     if (Array.isArray(raw)) {
         return {
-            items: raw as InvoiceDto[],
+            items: raw.map(normalizeItem),
             limit: params?.limit ?? raw.length,
             offset: params?.offset ?? 0,
             partnerConfirmationBlocked: false,
@@ -2826,7 +2845,8 @@ export async function listInvoices(params?: InvoiceListParams): Promise<Invoices
         return { items: [], limit: params?.limit ?? 0, offset: params?.offset ?? 0, partnerConfirmationBlocked: false };
     const o = raw as Record<string, unknown>;
     const itemsRaw = o.items;
-    const items = Array.isArray(itemsRaw) ? itemsRaw as InvoiceDto[] : [];
+    const itemsRawArr = Array.isArray(itemsRaw) ? itemsRaw : [];
+    const items = itemsRawArr.map(normalizeItem);
     const limit = typeof o.limit === 'number' ? o.limit : Number(o.limit) || (params?.limit ?? 0);
     const offset = typeof o.offset === 'number' ? o.offset : Number(o.offset) || (params?.offset ?? 0);
     const tcRaw = o.totalCount ?? o.total_count;
@@ -2948,6 +2968,24 @@ function normalizeInvoiceLineDto(raw: unknown, fallbackIdx: number): InvoiceLine
     };
 }
 
+function pickInvoicePartnerStr(o: Record<string, unknown>, keys: readonly string[]): string | undefined {
+    for (const k of keys) {
+        const v = o[k];
+        if (v == null || v === '')
+            continue;
+        const s = String(v).trim();
+        if (s)
+            return s;
+    }
+    return undefined;
+}
+
+function pickInvoicePartnerDateSlice(o: Record<string, unknown>, keys: readonly string[]): string | undefined {
+    const raw = pickInvoicePartnerStr(o, keys);
+    const s = raw ? raw.trim().slice(0, 10) : '';
+    return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : undefined;
+}
+
 /** Приводит полный объект счёта к ожидаемому клиентом виду (особенно `lines`). */
 function normalizeInvoiceDto(raw: unknown): InvoiceDto {
     if (!raw || typeof raw !== 'object')
@@ -2962,7 +3000,16 @@ function normalizeInvoiceDto(raw: unknown): InvoiceDto {
         ?? o.invoiceLines;
     const linesArr = Array.isArray(linesSrc) ? linesSrc : [];
     const lines = linesArr.map((row, idx) => normalizeInvoiceLineDto(row, idx));
-    return { ...invoice, lines };
+    const pf = pickInvoicePartnerDateSlice(o, ['partnerBillingPeriodFrom', 'partner_billing_period_from']);
+    const pt = pickInvoicePartnerDateSlice(o, ['partnerBillingPeriodTo', 'partner_billing_period_to']);
+    const pcs = pickInvoicePartnerStr(o, ['partnerConfirmationSnapshotId', 'partner_confirmation_snapshot_id', 'reportSnapshotId', 'report_snapshot_id']);
+    return {
+        ...invoice,
+        lines,
+        ...(pf ? { partnerBillingPeriodFrom: pf } : {}),
+        ...(pt ? { partnerBillingPeriodTo: pt } : {}),
+        ...(pcs ? { partnerConfirmationSnapshotId: pcs } : {}),
+    };
 }
 
 export async function createInvoice(body: InvoiceCreateInput): Promise<InvoiceDto> {

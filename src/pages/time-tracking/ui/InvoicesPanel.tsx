@@ -240,6 +240,30 @@ export function InvoicesPanel() {
     const [unbilledExp, setUnbilledExp] = useState<UnbilledExpenseEntryDto[]>([]);
     const [selTime, setSelTime] = useState<Set<string>>(() => new Set());
     const [selExp, setSelExp] = useState<Set<string>>(() => new Set());
+    const timeSelectAllRef = useRef<HTMLInputElement>(null);
+    const expSelectAllRef = useRef<HTMLInputElement>(null);
+    useEffect(() => {
+        const ti = timeSelectAllRef.current;
+        if (ti) {
+            const n = unbilledTime.length;
+            if (n === 0)
+                ti.indeterminate = false;
+            else {
+                const c = unbilledTime.filter((x) => selTime.has(x.id)).length;
+                ti.indeterminate = c > 0 && c < n;
+            }
+        }
+        const ei = expSelectAllRef.current;
+        if (ei) {
+            const n = unbilledExp.length;
+            if (n === 0)
+                ei.indeterminate = false;
+            else {
+                const c = unbilledExp.filter((x) => selExp.has(x.id)).length;
+                ei.indeterminate = c > 0 && c < n;
+            }
+        }
+    }, [unbilledTime, unbilledExp, selTime, selExp]);
     const [unbilledPartnerBlockReason, setUnbilledPartnerBlockReason] = useState<string | null>(null);
     const [unbilledLoading, setUnbilledLoading] = useState(false);
     const [createBusy, setCreateBusy] = useState(false);
@@ -1169,7 +1193,20 @@ export function InvoicesPanel() {
                     <table className="tt-inv-mini tt-inv-mini--in-dialog">
                       <thead>
                         <tr>
-                          <th />
+                          <th scope="col">
+                            <input ref={timeSelectAllRef} type="checkbox" aria-label="Выбрать всё время" checked={unbilledTime.length > 0 && unbilledTime.every((t) => selTime.has(t.id))} onChange={() => {
+                                setSelTime((prev) => {
+                                    const ids = unbilledTime.map((t) => t.id);
+                                    const allOn = ids.length > 0 && ids.every((id) => prev.has(id));
+                                    if (allOn) {
+                                        const n = new Set(prev);
+                                        ids.forEach((id) => n.delete(id));
+                                        return n;
+                                    }
+                                    return new Set([...prev, ...ids]);
+                                });
+                            }}/>
+                          </th>
                           <th>Дата</th>
                           <th title="Длительность в формате Ч:ММ">Длит.</th>
                           <th title="Часы (×1.00 ставка для строки счёта)">Часы</th>
@@ -1211,7 +1248,20 @@ export function InvoicesPanel() {
                     <table className="tt-inv-mini tt-inv-mini--in-dialog">
                       <thead>
                         <tr>
-                          <th />
+                          <th scope="col">
+                            <input ref={expSelectAllRef} type="checkbox" aria-label="Выбрать все расходы" checked={unbilledExp.length > 0 && unbilledExp.every((x) => selExp.has(x.id))} onChange={() => {
+                                setSelExp((prev) => {
+                                    const ids = unbilledExp.map((x) => x.id);
+                                    const allOn = ids.length > 0 && ids.every((id) => prev.has(id));
+                                    if (allOn) {
+                                        const n = new Set(prev);
+                                        ids.forEach((id) => n.delete(id));
+                                        return n;
+                                    }
+                                    return new Set([...prev, ...ids]);
+                                });
+                            }}/>
+                          </th>
                           <th>Дата</th>
                           <th>Сумма USD</th>
                           <th>Статус</th>

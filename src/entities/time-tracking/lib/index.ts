@@ -3,6 +3,7 @@ export * from './reportsPeriodRange';
 export * from './reportsPrefsStorage';
 export * from './reportsFormatUtils';
 export * from './timeReportRows';
+export * from './timeReportPartnerBadges';
 export * from './timeReportEntryLogFormat';
 export * from './klProjectCode';
 export * from './weeklyReportingLock';

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
-import { displayReportClientLabel, displayReportProjectLabel, formatExpenseReportStatus, formatExpenseReportStatusHint, fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, type ReportsFilterUser, type ReportPagination, type TimeRowClients, type TimeRowProjects, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, } from '@entities/time-tracking';
+import { displayReportClientLabel, displayReportProjectLabel, formatExpenseReportStatus, formatExpenseReportStatusHint, fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, listPartnerReportConfirmationsConfirmed, listInvoices, type ReportsFilterUser, type ReportPagination, type TimeRowClients, type TimeRowProjects, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, type PartnerReportConfirmationRequest, type InvoiceDto, } from '@entities/time-tracking';
 import { budgetReportHoursMetrics, budgetReportMoneyMetrics, budgetReportRowProgressPercent } from '@entities/time-tracking/lib/projectBudgetReportMetrics';
 import { ReportsSkeleton } from './ReportsSkeleton';
 import { ConfirmedPartnerReportsPanel } from './ConfirmedPartnerReportsPanel';
@@ -25,8 +25,9 @@ import {
   isExpenseLikeReportType,
   coerceGroupByForType,
 } from '@entities/time-tracking/model/reportsPanelConfig';
-import { isoDateLocal, periodToDates, formatPeriodLabel, formatIsoRangeTitle } from '@entities/time-tracking/lib/reportsPeriodRange';
+import { PARTNER_CONFIRMED_REPORTS_INVALIDATE_EVENT } from '@entities/time-tracking/model/partnerConfirmedReports';
 import { readReportsPrefsFromStorage, writeReportsPrefsToStorage, readInitialReportsRangeState } from '@entities/time-tracking/lib/reportsPrefsStorage';
+import { isoDateLocal, periodToDates, formatPeriodLabel, formatIsoRangeTitle } from '@entities/time-tracking/lib/reportsPeriodRange';
 import {
   fmtH,
   fmtAmt,
@@ -35,6 +36,7 @@ import {
   pct,
 } from '@entities/time-tracking/lib/reportsFormatUtils';
 import { sortTimeReportRowsForDisplay, timeReportPhysicalRowKey, } from '@entities/time-tracking/lib/timeReportRows';
+import { badgeForProjectInReportWindow, buildClientPartnerBadgeMap, type TimeReportPartnerRowBadge, type TimeReportPartnerConfSlice, } from '@entities/time-tracking/lib/timeReportPartnerBadges';
 import { IcoExpand, PctBar, TimeUserRows } from './reportsDetailWidgets';
 const IcoChevLeft = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
   <path d="M15 18l-6-6 6-6" />
@@ -374,7 +376,17 @@ function BudgetUserSubRows({ users, row }: {
     })}
   </div>);
 }
-function TimeTable({ groupBy, rows, expanded, onToggle, onProjectRowPreview, projectRowPreviewDisabled, onClientRowPreview, clientRowPreviewDisabled, }: {
+function partnerRowBadgeClasses(badge: TimeReportPartnerRowBadge): {
+  row: string;
+  dot: string;
+} {
+    if (badge === 'invoiced')
+        return { row: ' rp2__group-row--partner-invoiced', dot: ' rp2__group-dot--partner-invoiced' };
+    if (badge === 'confirmed')
+        return { row: ' rp2__group-row--partner-confirmed', dot: ' rp2__group-dot--partner-confirmed' };
+    return { row: '', dot: '' };
+}
+function TimeTable({ groupBy, rows, expanded, onToggle, onProjectRowPreview, projectRowPreviewDisabled, onClientRowPreview, clientRowPreviewDisabled, partnerProjectBadge, partnerClientBadge, }: {
   groupBy: TimeGroup;
   rows: (TimeRowClients | TimeRowProjects)[];
   expanded: Set<string>;
@@ -383,6 +395,8 @@ function TimeTable({ groupBy, rows, expanded, onToggle, onProjectRowPreview, pro
   projectRowPreviewDisabled?: boolean;
   onClientRowPreview?: (clientId: string) => void;
   clientRowPreviewDisabled?: boolean;
+  partnerProjectBadge?: (projectId: string) => TimeReportPartnerRowBadge;
+  partnerClientBadge?: (clientId: string) => TimeReportPartnerRowBadge;
 }) {
   if (groupBy === 'clients') {
     const clientRows = rows as TimeRowClients[];
@@ -405,13 +419,22 @@ function TimeTable({ groupBy, rows, expanded, onToggle, onProjectRowPreview, pro
             ? `Предпросмотр: отчёт по клиенту «${r.client_name}» — широкая редактируемая таблица (локально)`
             : undefined;
           const clientPreviewOff = !goClientPreview || Boolean(clientRowPreviewDisabled);
+          const cliBadge = partnerClientBadge?.(r.client_id) ?? 'none';
+          const cliClasses = partnerRowBadgeClasses(cliBadge);
+          const cliPartnerNote = cliBadge === 'invoiced'
+            ? ' Пересечение с подтверждённым партнёром периодом выставлен в счёт.'
+            : cliBadge === 'confirmed'
+              ? ' Пересечение с периодом, подтверждённым партнёром.'
+              : '';
+          const clientAria = goClientPreview ? `${prevTitle ?? ''}${cliPartnerNote}`.trim() : undefined;
           return (<div key={key} className={`rp2__group${isOpen ? ' rp2__group--open' : ''}${canToggle ? '' : ' rp2__group--leaf'}`}>
             {canToggle ? (<>
               <div className="rp2__group-row rp2__group-row--split" role="row">
-                <button type="button" className="rp2__client-preview-btn" onClick={() => goClientPreview?.(r.client_id)} disabled={clientPreviewOff} title={goClientPreview ? prevTitle : undefined} aria-label={goClientPreview ? prevTitle : undefined}>
-                  <span className="rp2__group-name">
-                    <span className="rp2__group-dot" data-hash={key} aria-hidden />
+                <button type="button" className={`rp2__client-preview-btn${cliClasses.row}`} onClick={() => goClientPreview?.(r.client_id)} disabled={clientPreviewOff} title={goClientPreview ? clientAria : undefined} aria-label={goClientPreview ? clientAria : undefined}>
+                  <span className={`rp2__group-name${cliBadge !== 'none' ? ' rp2__group-name--with-partner' : ''}`}>
+                    <span className={`rp2__group-dot${cliClasses.dot}`} data-hash={key} aria-hidden />
                     <span className="rp2__group-title">{r.client_name}</span>
+                    {cliBadge !== 'none' ? (<span className={cliBadge === 'invoiced' ? 'rp-partner-chip rp-partner-chip--invoiced' : 'rp-partner-chip rp-partner-chip--confirmed'}>{cliBadge === 'invoiced' ? 'Счёт выставлен' : 'Партнёр подтвердил'}</span>) : null}
                     {r.users?.length ? (<span className="rp2-tag rp2-tag--count">{r.users.length}</span>) : null}
                   </span>
                   <span className="rp2-num rp2__group-metric">{fmtH(r.total_hours)}</span>
@@ -429,10 +452,11 @@ function TimeTable({ groupBy, rows, expanded, onToggle, onProjectRowPreview, pro
                   </span>
                 </button>
               </div>
-            </>) : (<button type="button" className="rp2__group-row rp2__group-row--button" onClick={() => goClientPreview?.(r.client_id)} disabled={clientPreviewOff} title={goClientPreview ? prevTitle : undefined} aria-label={goClientPreview ? prevTitle : undefined}>
-              <span className="rp2__group-name">
-                <span className="rp2__group-dot" data-hash={key} aria-hidden />
+            </>) : (<button type="button" className={`rp2__group-row rp2__group-row--button${cliClasses.row}`} onClick={() => goClientPreview?.(r.client_id)} disabled={clientPreviewOff} title={goClientPreview ? clientAria : undefined} aria-label={goClientPreview ? clientAria : undefined}>
+              <span className={`rp2__group-name${cliBadge !== 'none' ? ' rp2__group-name--with-partner' : ''}`}>
+                <span className={`rp2__group-dot${cliClasses.dot}`} data-hash={key} aria-hidden />
                 <span className="rp2__group-title">{r.client_name}</span>
+                {cliBadge !== 'none' ? (<span className={cliBadge === 'invoiced' ? 'rp-partner-chip rp-partner-chip--invoiced' : 'rp-partner-chip rp-partner-chip--confirmed'}>{cliBadge === 'invoiced' ? 'Счёт выставлен' : 'Партнёр подтвердил'}</span>) : null}
                 {r.users?.length ? (<span className="rp2-tag rp2-tag--count">{r.users.length}</span>) : null}
               </span>
               <span className="rp2-num rp2__group-metric">{fmtH(r.total_hours)}</span>
@@ -469,12 +493,21 @@ function TimeTable({ groupBy, rows, expanded, onToggle, onProjectRowPreview, pro
       {projectRows.map((r) => {
         const key = r.project_id;
         const title = `Предпросмотр: отчёт по проекту «${r.project_name}» — широкая редактируемая таблица (локально)`;
+        const pjBadge = partnerProjectBadge?.(r.project_id) ?? 'none';
+        const pjClasses = partnerRowBadgeClasses(pjBadge);
+        const pjPartnerNote = pjBadge === 'invoiced'
+          ? ' Пересечение с подтверждённым партнёром периодом выставлен в счёт.'
+          : pjBadge === 'confirmed'
+            ? ' Пересечение с периодом, подтверждённым партнёром.'
+            : '';
+        const pjAria = goProjectPreview ? `${title}${pjPartnerNote}`.trim() : undefined;
         return (<div key={key} className="rp2__group rp2__group--leaf">
-          <button type="button" className="rp2__group-row rp2__group-row--button" onClick={() => goProjectPreview?.(r.project_id)} disabled={!goProjectPreview || Boolean(projectRowPreviewDisabled)} title={goProjectPreview ? title : undefined} aria-label={goProjectPreview ? title : undefined}>
+          <button type="button" className={`rp2__group-row rp2__group-row--button${pjClasses.row}`} onClick={() => goProjectPreview?.(r.project_id)} disabled={!goProjectPreview || Boolean(projectRowPreviewDisabled)} title={goProjectPreview ? pjAria : undefined} aria-label={goProjectPreview ? pjAria : undefined}>
             <span className="rp2__cell-name-stack">
-              <span className="rp2__group-name rp2__group-name--bold">
-                <span className="rp2__group-dot" data-hash={key} aria-hidden />
+              <span className={`rp2__group-name rp2__group-name--bold${pjBadge !== 'none' ? ' rp2__group-name--with-partner' : ''}`}>
+                <span className={`rp2__group-dot${pjClasses.dot}`} data-hash={key} aria-hidden />
                 <span className="rp2__group-title">{r.project_name}</span>
+                {pjBadge !== 'none' ? (<span className={pjBadge === 'invoiced' ? 'rp-partner-chip rp-partner-chip--invoiced' : 'rp-partner-chip rp-partner-chip--confirmed'}>{pjBadge === 'invoiced' ? 'Счёт выставлен' : 'Партнёр подтвердил'}</span>) : null}
               </span>
               <span className="rp2__group-sub">{r.client_name}</span>
             </span>
@@ -918,6 +951,10 @@ export function ReportsPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [partnerConfirmedList, setPartnerConfirmedList] = useState<PartnerReportConfirmationRequest[]>([]);
+  const [invoicesForPartnerHints, setInvoicesForPartnerHints] = useState<InvoiceDto[]>([]);
+  const [hintProjectMirror, setHintProjectMirror] = useState<TimeRowProjects[]>([]);
+  const [partnerHintsLoadFailed, setPartnerHintsLoadFailed] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [reportsSection, setReportsSection] = useState<'build' | 'partner-confirmed'>('build');
   const [exportBusy, setExportBusy] = useState(false);
@@ -1007,6 +1044,73 @@ export function ReportsPanel() {
         setReportPageSizeMax(null);
       });
   }, []);
+
+  const reloadPartnerReportHints = useCallback(() => {
+    void (async () => {
+      try {
+        const [conf, invResp] = await Promise.all([
+          listPartnerReportConfirmationsConfirmed(),
+          listInvoices({ limit: 800, offset: 0 }),
+        ]);
+        setPartnerConfirmedList(Array.isArray(conf) ? conf : []);
+        setInvoicesForPartnerHints(invResp.items ?? []);
+        setPartnerHintsLoadFailed(false);
+      }
+      catch {
+        setPartnerConfirmedList([]);
+        setInvoicesForPartnerHints([]);
+        setPartnerHintsLoadFailed(true);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (reportType !== 'time') {
+      setHintProjectMirror([]);
+      return;
+    }
+    reloadPartnerReportHints();
+  }, [reportType, reloadPartnerReportHints]);
+
+  useEffect(() => {
+    const handler = (): void => {
+      reloadPartnerReportHints();
+    };
+    window.addEventListener(PARTNER_CONFIRMED_REPORTS_INVALIDATE_EVENT, handler);
+    return () => window.removeEventListener(PARTNER_CONFIRMED_REPORTS_INVALIDATE_EVENT, handler);
+  }, [reloadPartnerReportHints]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (reportType !== 'time' || groupBy !== 'clients') {
+      setHintProjectMirror([]);
+      return;
+    }
+    if (!dateFrom || !dateTo || dateFrom > dateTo || partnerConfirmedList.length === 0) {
+      setHintProjectMirror([]);
+      return;
+    }
+    const filtersBase: Omit<ReportFiltersV2, 'page' | 'per_page'> = {
+      dateFrom,
+      dateTo,
+      user_id: selectedUserIds.length ? selectedUserIds.join(',') : undefined,
+      include_fixed_fee: includeFixed,
+      pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,
+    };
+    void fetchAllTimeReportProjectRows(filtersBase)
+      .then((rows) => {
+        if (!cancelled)
+          setHintProjectMirror(rows as TimeRowProjects[]);
+      })
+      .catch(() => {
+        if (!cancelled)
+          setHintProjectMirror([]);
+      });
+    return (): void => {
+      cancelled = true;
+    };
+  }, [reportType, groupBy, dateFrom, dateTo, selectedUserIds, includeFixed, reportPageSizeMax, partnerConfirmedList.length]);
+
   useEffect(() => {
     writeReportsPrefsToStorage({
       v: 1,
@@ -1113,6 +1217,55 @@ export function ReportsPanel() {
       return null;
     return sortTimeReportRowsForDisplay(groupBy as TimeGroup, filteredTableRows as (TimeRowClients | TimeRowProjects)[]);
   }, [reportType, groupBy, filteredTableRows]);
+  const partnerConfSlices = useMemo((): TimeReportPartnerConfSlice[] => partnerConfirmedList.map((c) => ({
+    projectId: c.projectId,
+    dateFrom: c.dateFrom,
+    dateTo: c.dateTo,
+    snapshotId: c.snapshotId,
+    ...(c.invoiceId ? { invoiceId: c.invoiceId } : {}),
+  })), [partnerConfirmedList]);
+
+  const partnerProjectBadgeMap = useMemo(() => {
+    if (reportType !== 'time' || groupBy !== 'projects' || !dateFrom || !dateTo || dateFrom > dateTo)
+      return null;
+    const rows = sortedTimeTableRows;
+    if (!rows?.length)
+      return null;
+    const out = new Map<string, TimeReportPartnerRowBadge>();
+    for (const row of rows as TimeRowProjects[]) {
+      const pid = String(row.project_id ?? '').trim();
+      if (!pid)
+        continue;
+      const b = badgeForProjectInReportWindow({
+        projectId: pid,
+        windowFrom: dateFrom,
+        windowTo: dateTo,
+        confirmations: partnerConfSlices,
+        invoices: invoicesForPartnerHints,
+      });
+      if (b !== 'none')
+        out.set(pid, b);
+    }
+    return out.size ? out : null;
+  }, [reportType, groupBy, sortedTimeTableRows, dateFrom, dateTo, partnerConfSlices, invoicesForPartnerHints]);
+
+  const partnerClientBadgeMap = useMemo(() => {
+    if (reportType !== 'time' || groupBy !== 'clients' || !dateFrom || !dateTo || dateFrom > dateTo)
+      return null;
+    if (!hintProjectMirror.length)
+      return null;
+    const m = buildClientPartnerBadgeMap({
+      projectRows: hintProjectMirror,
+      windowFrom: dateFrom,
+      windowTo: dateTo,
+      confirmations: partnerConfSlices,
+      invoices: invoicesForPartnerHints,
+    });
+    return m.size > 0 ? m : null;
+  }, [reportType, groupBy, hintProjectMirror, dateFrom, dateTo, partnerConfSlices, invoicesForPartnerHints]);
+
+  const partnerProjectBadgeFn = useCallback((projectId: string) => partnerProjectBadgeMap?.get(String(projectId ?? '').trim()) ?? 'none', [partnerProjectBadgeMap]);
+  const partnerClientBadgeFn = useCallback((clientId: string) => partnerClientBadgeMap?.get(String(clientId ?? '').trim()) ?? 'none', [partnerClientBadgeMap]);
   const tableDataLoading = loading || (Boolean(tableSearchQ) && searchFullLoading);
   const tableSearchPlaceholder = useMemo(() => {
     if (reportType === 'time') {
@@ -1680,6 +1833,11 @@ export function ReportsPanel() {
       <div className="tt-reports__content-header">
         <div className="tt-reports__breakdown-label" role="status">
           <span className="tt-reports__breakdown-hint">{breakdownHint}</span>
+          {reportType === 'time' && partnerConfirmedList.length > 0 && !partnerHintsLoadFailed ? (<span className="tt-reports__partner-legend" role="note">
+              <span className="rp-partner-chip rp-partner-chip--confirmed" aria-hidden>Партнёр подтвердил</span>
+              <span className="rp-partner-chip rp-partner-chip--invoiced" aria-hidden>Счёт выставлен</span>
+              <span className="tt-reports__partner-legend-note">Строки с пересечением дат отчёта и подтверждённого партнёром периода.</span>
+            </span>) : null}
           {tableDataLoading && <span className="tt-reports__loading-pulse tt-reports__breakdown-status">обновление…</span>}
         </div>
         <div className="tt-reports__content-header-right">
@@ -1724,7 +1882,7 @@ export function ReportsPanel() {
                 Убедитесь, что период включает даты заявок (expense_date). В DevTools проверьте ответ API: число строк в pagination.total_entries и массив results.
               </p>) : null}
           </>)}
-        </div>) : reportType === 'time' ? (<TimeTable groupBy={groupBy as TimeGroup} rows={sortedTimeTableRows ?? []} expanded={expandedRows} onToggle={toggleRow} onProjectRowPreview={groupBy === 'projects' ? openTimeProjectPreview : undefined} projectRowPreviewDisabled={groupBy === 'projects' ? tableDataLoading : undefined} onClientRowPreview={groupBy === 'clients' ? openTimeClientPreview : undefined} clientRowPreviewDisabled={groupBy === 'clients' ? tableDataLoading : undefined} />) : isExpenseLikeReportType(reportType) ? (<ExpenseTable groupBy={groupBy as ExpenseGroup} rows={filteredTableRows as (ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam)[]} expanded={expandedRows} onToggle={toggleRow} />) : reportType === 'uninvoiced' ? (<UninvoicedTable rows={filteredTableRows as UninvoicedRow[]} expanded={expandedRows} onToggle={toggleRow} />) : (<BudgetTable rows={filteredTableRows as BudgetRow[]} expanded={expandedRows} onToggle={toggleRow} />)}
+        </div>) : reportType === 'time' ? (<TimeTable groupBy={groupBy as TimeGroup} rows={sortedTimeTableRows ?? []} expanded={expandedRows} onToggle={toggleRow} onProjectRowPreview={groupBy === 'projects' ? openTimeProjectPreview : undefined} projectRowPreviewDisabled={groupBy === 'projects' ? tableDataLoading : undefined} onClientRowPreview={groupBy === 'clients' ? openTimeClientPreview : undefined} clientRowPreviewDisabled={groupBy === 'clients' ? tableDataLoading : undefined} partnerProjectBadge={partnerProjectBadgeMap ? partnerProjectBadgeFn : undefined} partnerClientBadge={partnerClientBadgeMap ? partnerClientBadgeFn : undefined} />) : isExpenseLikeReportType(reportType) ? (<ExpenseTable groupBy={groupBy as ExpenseGroup} rows={filteredTableRows as (ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam)[]} expanded={expandedRows} onToggle={toggleRow} />) : reportType === 'uninvoiced' ? (<UninvoicedTable rows={filteredTableRows as UninvoicedRow[]} expanded={expandedRows} onToggle={toggleRow} />) : (<BudgetTable rows={filteredTableRows as BudgetRow[]} expanded={expandedRows} onToggle={toggleRow} />)}
       </div>
 
 
