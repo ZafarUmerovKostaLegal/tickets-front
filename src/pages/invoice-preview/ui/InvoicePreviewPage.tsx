@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { AppPageSettings, useAppToast } from '@shared/ui';
 import { OPEN_INVOICE_DETAIL_QUERY, readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
@@ -36,8 +36,9 @@ const PAGE_COUNT = 3;
 
 export function InvoicePreviewPage() {
     const { pushToast } = useAppToast();
+    const location = useLocation();
     const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | null>(null);
-    const session = useMemo(() => readInvoicePreviewSession(), []);
+    const session = useMemo(() => readInvoicePreviewSession(), [location.key, location.pathname]);
     const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel | null>(null);
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
     const sheetStackRef = useRef<HTMLDivElement>(null);

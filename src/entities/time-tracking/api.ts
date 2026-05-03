@@ -2787,6 +2787,87 @@ export async function getInvoicesAggregatedStats(params?: Omit<InvoiceListParams
     const raw = await res.json();
     return parseInvoicesAggregatedStats(raw);
 }
+
+/** Нормализует строки счёта из ответа API (camelCase / snake_case, разные имена массива). */
+function normalizeInvoiceLineDto(raw: unknown, fallbackIdx: number): InvoiceLineDto {
+    const r = (raw != null && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+    const pickStr = (...keys: string[]): string => {
+        for (const k of keys) {
+            const v = r[k];
+            if (v == null || v === '')
+                continue;
+            const s = String(v).trim();
+            if (s.length)
+                return s;
+        }
+        return '';
+    };
+    const pickNum = (...keys: string[]): number => {
+        for (const k of keys) {
+            const v = r[k];
+            if (typeof v === 'number' && Number.isFinite(v))
+                return v;
+            if (typeof v === 'string' && v.trim() !== '') {
+                const n = Number(v.replace(',', '.'));
+                if (Number.isFinite(n))
+                    return n;
+            }
+        }
+        return 0;
+    };
+    const id = pickStr('id', 'lineId', 'line_id');
+    const lk = pickStr('lineKind', 'line_kind', 'kind', 'lineType', 'line_type').toLowerCase();
+    const descRaw = r.description ?? r.line_description ?? r.lineDescription;
+    let description: string | null = null;
+    if (typeof descRaw === 'string')
+        description = descRaw.trim() || null;
+    else if (descRaw != null)
+        description = String(descRaw).trim() || null;
+    const timeEntryPick = pickStr('timeEntryId', 'time_entry_id', 'timeEntryID') || null;
+    const expensePick = pickStr('expenseRequestId', 'expense_request_id', 'expenseId', 'expense_id') || null;
+
+    const lineKindExplicit = lk && lk !== '' ? lk : 'other';
+
+    let lineKindResolved = lineKindExplicit;
+    if (timeEntryPick || lineKindExplicit === 'time')
+        lineKindResolved = 'time';
+    else if (expensePick || lineKindExplicit === 'expense')
+        lineKindResolved = 'expense';
+    else if (lineKindExplicit === 'manual')
+        lineKindResolved = 'manual';
+
+    const sortRaw = r.sortOrder ?? r.sort_order ?? fallbackIdx;
+
+    return {
+        id: id.length ? id : `line-${fallbackIdx}`,
+        sortOrder: typeof sortRaw === 'number' && Number.isFinite(sortRaw) ? sortRaw : Number(sortRaw) || fallbackIdx,
+        lineKind: lineKindResolved,
+        description,
+        quantity: pickNum('quantity', 'qty', 'hours_quantity'),
+        unitAmount: pickNum('unitAmount', 'unit_amount', 'rate', 'hourly_rate'),
+        lineTotal: pickNum('lineTotal', 'line_total', 'total', 'amount', 'billable_amount'),
+        timeEntryId: timeEntryPick,
+        expenseRequestId: expensePick,
+    };
+}
+
+/** Приводит полный объект счёта к ожидаемому клиентом виду (особенно `lines`). */
+function normalizeInvoiceDto(raw: unknown): InvoiceDto {
+    if (!raw || typeof raw !== 'object')
+        throw new Error('Invoice API: в ответе нет объекта счёта');
+    const invoice = raw as InvoiceDto;
+    const o = raw as Record<string, unknown>;
+    const linesSrc = o.lines
+        ?? o.line_items
+        ?? o.lineItems
+        ?? o.LineItems
+        ?? o.invoice_lines
+        ?? o.invoiceLines;
+    const linesArr = Array.isArray(linesSrc) ? linesSrc : [];
+    const lines = linesArr.map((row, idx) => normalizeInvoiceLineDto(row, idx));
+    return { ...invoice, lines };
+}
+
 export async function createInvoice(body: InvoiceCreateInput): Promise<InvoiceDto> {
     const res = await apiFetch('/api/v1/time-tracking/invoices', {
         method: 'POST',
@@ -2794,13 +2875,13 @@ export async function createInvoice(body: InvoiceCreateInput): Promise<InvoiceDt
         body: JSON.stringify(body),
     });
     await throwIfNotOk(res);
-    return res.json() as Promise<InvoiceDto>;
+    return normalizeInvoiceDto(await res.json());
 }
 export async function getInvoice(id: string, includePayments = true): Promise<InvoiceDto> {
     const qs = includePayments ? '?includePayments=true' : '?includePayments=false';
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}${qs}`);
     await throwIfNotOk(res);
-    return res.json() as Promise<InvoiceDto>;
+    return normalizeInvoiceDto(await res.json());
 }
 export async function getInvoiceAudit(id: string): Promise<InvoiceAuditEntryDto[]> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/audit`);
@@ -2814,7 +2895,7 @@ export async function patchInvoice(id: string, body: InvoicePatchInput): Promise
         body: JSON.stringify(body),
     });
     await throwIfNotOk(res);
-    return res.json() as Promise<InvoiceDto>;
+    return normalizeInvoiceDto(await res.json());
 }
 export async function sendInvoice(id: string): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/send`, {
@@ -2823,7 +2904,7 @@ export async function sendInvoice(id: string): Promise<InvoiceDto> {
         body: '{}',
     });
     await throwIfNotOk(res);
-    return res.json() as Promise<InvoiceDto>;
+    return normalizeInvoiceDto(await res.json());
 }
 export async function markInvoiceViewed(id: string): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/mark-viewed`, {
@@ -2832,7 +2913,7 @@ export async function markInvoiceViewed(id: string): Promise<InvoiceDto> {
         body: '{}',
     });
     await throwIfNotOk(res);
-    return res.json() as Promise<InvoiceDto>;
+    return normalizeInvoiceDto(await res.json());
 }
 export async function registerInvoicePayment(id: string, body: InvoicePaymentInput = {}): Promise<InvoiceDto> {
     const payload: Record<string, unknown> = {};
@@ -2854,7 +2935,7 @@ export async function registerInvoicePayment(id: string, body: InvoicePaymentInp
         body: JSON.stringify(payload),
     });
     await throwIfNotOk(res);
-    return res.json() as Promise<InvoiceDto>;
+    return normalizeInvoiceDto(await res.json());
 }
 export async function cancelInvoice(id: string): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/cancel`, {
@@ -2863,7 +2944,7 @@ export async function cancelInvoice(id: string): Promise<InvoiceDto> {
         body: '{}',
     });
     await throwIfNotOk(res);
-    return res.json() as Promise<InvoiceDto>;
+    return normalizeInvoiceDto(await res.json());
 }
 export async function deleteDraftInvoice(id: string): Promise<void> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}`, { method: 'DELETE' });
