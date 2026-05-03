@@ -93,7 +93,7 @@ function parseMoneyRu(raw: string): number {
         return Number.parseFloat(t.replace(',', '.'));
     return Number.parseFloat(t);
 }
-/** Дата/время оплаты для API: ISO при разборимом браузером вводе, иначе строка как ввёл пользователь (ДД.MM.ГГГГ ЧЧ:ММ). */
+/** Дата/время оплаты для API: ISO при разборимом браузером вводе, иначе как в FRONTEND (ДД.MM.ГГГГ или ДД.MM.ГГГГ ЧЧ:ММ). */
 function buildPaidAtForPaymentApi(raw: string): string | undefined {
     const t = raw.trim();
     if (!t)
@@ -104,6 +104,25 @@ function buildPaidAtForPaymentApi(raw: string): string | undefined {
     if (!Number.isNaN(d.getTime()))
         return d.toISOString();
     return t;
+}
+/** Сливает поля счёта из ответа POST оплаты/подтверждения в строку текущего листинга (status, остаток, платежи). */
+function applyInvoiceMutationToListRows(list: InvoiceDto[], inv: InvoiceDto): InvoiceDto[] {
+    return list.map((row) => {
+        if (row.id !== inv.id)
+            return row;
+        return {
+            ...row,
+            status: inv.status,
+            storedStatus: inv.storedStatus,
+            totalAmount: inv.totalAmount,
+            amountPaid: inv.amountPaid,
+            balanceDue: inv.balanceDue,
+            ...(inv.payments !== undefined ? { payments: inv.payments } : {}),
+            requiresPaymentConfirmationDocument: inv.requiresPaymentConfirmationDocument,
+            paymentConfirmationDocumentUrl: inv.paymentConfirmationDocumentUrl,
+            paymentConfirmationRecordedAt: inv.paymentConfirmationRecordedAt,
+        };
+    });
 }
 function parseOptionalPercentField(raw: string): number | null | undefined {
     const t = raw.trim();
@@ -358,8 +377,11 @@ export function InvoicesPanel() {
     }, []);
     const loadList = useCallback((opts?: {
         silent?: boolean;
+        /** Ответ мутации (оплата, подтверждение): подмешиваем в список, если листинг ещё «отстаёт». */
+        invoiceResponsePatch?: InvoiceDto;
     }) => {
         const silent = Boolean(opts?.silent);
+        const invoiceResponsePatch = opts?.invoiceResponsePatch;
         if (!silent)
             setListLoading(true);
         setListErr(null);
@@ -376,7 +398,10 @@ export function InvoicesPanel() {
             ...billingGate,
         })
             .then((r) => {
-            setItems(r.items);
+            let rows = r.items;
+            if (invoiceResponsePatch)
+                rows = applyInvoiceMutationToListRows(rows, invoiceResponsePatch);
+            setItems(rows);
             setPartnerListBlocked(r.partnerConfirmationBlocked === true);
             setInvoiceListTotalCount(typeof r.totalCount === 'number' ? r.totalCount : null);
         })
@@ -798,7 +823,7 @@ export function InvoicesPanel() {
             });
             setDetail(inv);
             setPayOpen(false);
-            await loadList({ silent: true });
+            await loadList({ silent: true, invoiceResponsePatch: inv });
             void loadAggStats();
             notifyReportsInvalidated();
             if (inv.requiresPaymentConfirmationDocument === true)
@@ -822,7 +847,7 @@ export function InvoicesPanel() {
             const inv = await registerInvoicePayment(detailId, {});
             setDetail(inv);
             setPayOpen(false);
-            await loadList({ silent: true });
+            await loadList({ silent: true, invoiceResponsePatch: inv });
             void loadAggStats();
             notifyReportsInvalidated();
             if (inv.requiresPaymentConfirmationDocument === true)
@@ -848,7 +873,7 @@ export function InvoicesPanel() {
             const inv = await submitInvoicePaymentConfirmation(detailId, { documentUrl: url });
             setDetail(inv);
             setPaymentConfirmDocUrl(inv.paymentConfirmationDocumentUrl?.trim() ?? url);
-            await loadList({ silent: true });
+            await loadList({ silent: true, invoiceResponsePatch: inv });
             void loadAggStats();
             notifyReportsInvalidated();
             pushToast({ message: 'Подтверждение оплаты сохранено.', variant: 'info' });

@@ -6,7 +6,7 @@ import { formatDecimalHoursRu } from '@shared/lib/formatTrackingHours';
 import { useCurrentUser } from '@shared/hooks';
 import { AppPageSettings, useAppDialog } from '@shared/ui';
 import { canAccessTimeTracking, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
-import { listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPending, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, isForbiddenError, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, canManageTimeManagerClients, readTimeManagerProjectBillableRateAmount, notifyPartnerConfirmedReportsListInvalidate, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, } from '@entities/time-tracking';
+import { INVOICE_STATUS_LABELS, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPending, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, isForbiddenError, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, canManageTimeManagerClients, readTimeManagerProjectBillableRateAmount, notifyPartnerConfirmedReportsListInvalidate, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, } from '@entities/time-tracking';
 import { ClientProjectModal } from '@pages/time-tracking/ui/TimeTrackingClientProjectModal';
 import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
 import { memberWeeklyCapacityHours } from '@entities/time-tracking/model/memberWeeklyCapacity';
@@ -1792,7 +1792,9 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                           {fmtAmt(inv.amount, inv.currency || displayCurrency)}
                         </td>
                         <td className="pdp__tasks-td pdp__tasks-td--name">
-                          {inv.status ?? '—'}
+                          {inv.status
+                    ? (INVOICE_STATUS_LABELS[inv.status] ?? inv.status)
+                    : '—'}
                         </td>
                       </tr>))}
                   </tbody>

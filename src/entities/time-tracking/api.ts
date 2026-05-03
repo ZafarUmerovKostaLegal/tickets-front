@@ -2807,7 +2807,7 @@ export async function fetchUnbilledTimeEntries(params: {
         dateFrom: params.dateFrom,
         dateTo: params.dateTo,
     });
-    const res = await apiFetch(`/api/v1/time-tracking/invoices/unbilled-time?${qs}`);
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/unbilled-time?${qs}`, invoiceApiFetchInit);
     await throwIfNotOk(res);
     return res.json() as Promise<UnbilledTimeEntryDto[]>;
 }
@@ -2821,7 +2821,7 @@ export async function fetchUnbilledExpenses(params: {
         dateFrom: params.dateFrom,
         dateTo: params.dateTo,
     });
-    const res = await apiFetch(`/api/v1/time-tracking/invoices/unbilled-expenses?${qs}`);
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/unbilled-expenses?${qs}`, invoiceApiFetchInit);
     await throwIfNotOk(res);
     return res.json() as Promise<UnbilledExpenseEntryDto[]>;
 }
@@ -2829,6 +2829,10 @@ function readPartnerConfirmationBlocked(o: Record<string, unknown>): boolean {
     const v = o.partnerConfirmationBlocked ?? o.partner_confirmation_blocked;
     return v === true || v === 'true';
 }
+
+/** Сервер для счётов отдаёт Cache-Control: no-store; не берём данные счетов из кэша fetch. */
+const invoiceApiFetchInit: RequestInit = { cache: 'no-store' };
+
 export async function listInvoices(params?: InvoiceListParams): Promise<InvoicesListResponse> {
     const normalizeItem = (row: unknown): InvoiceDto => {
         try {
@@ -2838,7 +2842,7 @@ export async function listInvoices(params?: InvoiceListParams): Promise<Invoices
             return row as InvoiceDto;
         }
     };
-    const res = await apiFetch(`/api/v1/time-tracking/invoices${buildInvoiceListQs(params ?? {})}`);
+    const res = await apiFetch(`/api/v1/time-tracking/invoices${buildInvoiceListQs(params ?? {})}`, invoiceApiFetchInit);
     await throwIfNotOk(res);
     const raw = await res.json();
     if (Array.isArray(raw)) {
@@ -2871,7 +2875,7 @@ export async function listInvoices(params?: InvoiceListParams): Promise<Invoices
     };
 }
 export async function getInvoicesAggregatedStats(params?: Omit<InvoiceListParams, 'limit' | 'offset' | 'includeTotalCount'>): Promise<InvoicesAggregatedStats> {
-    const res = await apiFetch(`/api/v1/time-tracking/invoices/stats${buildInvoiceStatsQs(params ?? {})}`);
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/stats${buildInvoiceStatsQs(params ?? {})}`, invoiceApiFetchInit);
     await throwIfNotOk(res);
     const raw = await res.json();
     return parseInvoicesAggregatedStats(raw);
@@ -3033,6 +3037,7 @@ function normalizeInvoiceDto(raw: unknown): InvoiceDto {
 
 export async function createInvoice(body: InvoiceCreateInput): Promise<InvoiceDto> {
     const res = await apiFetch('/api/v1/time-tracking/invoices', {
+        ...invoiceApiFetchInit,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -3042,17 +3047,18 @@ export async function createInvoice(body: InvoiceCreateInput): Promise<InvoiceDt
 }
 export async function getInvoice(id: string, includePayments = true): Promise<InvoiceDto> {
     const qs = includePayments ? '?includePayments=true' : '?includePayments=false';
-    const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}${qs}`);
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}${qs}`, invoiceApiFetchInit);
     await throwIfNotOk(res);
     return normalizeInvoiceDto(await res.json());
 }
 export async function getInvoiceAudit(id: string): Promise<InvoiceAuditEntryDto[]> {
-    const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/audit`);
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/audit`, invoiceApiFetchInit);
     await throwIfNotOk(res);
     return res.json() as Promise<InvoiceAuditEntryDto[]>;
 }
 export async function patchInvoice(id: string, body: InvoicePatchInput): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}`, {
+        ...invoiceApiFetchInit,
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -3062,6 +3068,7 @@ export async function patchInvoice(id: string, body: InvoicePatchInput): Promise
 }
 export async function sendInvoice(id: string): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/send`, {
+        ...invoiceApiFetchInit,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: '{}',
@@ -3071,6 +3078,7 @@ export async function sendInvoice(id: string): Promise<InvoiceDto> {
 }
 export async function markInvoiceViewed(id: string): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/mark-viewed`, {
+        ...invoiceApiFetchInit,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: '{}',
@@ -3093,6 +3101,7 @@ export async function registerInvoicePayment(id: string, body: InvoicePaymentInp
         payload.note = body.note;
     }
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/payments`, {
+        ...invoiceApiFetchInit,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -3105,15 +3114,17 @@ export async function submitInvoicePaymentConfirmation(id: string, body: Invoice
     if (!documentUrl)
         throw new Error('Не указана ссылка на документ подтверждения оплаты.');
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/payment-confirmation`, {
+        ...invoiceApiFetchInit,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentUrl }),
+        body: JSON.stringify({ documentUrl, document_url: documentUrl }),
     });
     await throwIfNotOk(res);
     return normalizeInvoiceDto(await res.json());
 }
 export async function cancelInvoice(id: string): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/cancel`, {
+        ...invoiceApiFetchInit,
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: '{}',
@@ -3122,7 +3133,10 @@ export async function cancelInvoice(id: string): Promise<InvoiceDto> {
     return normalizeInvoiceDto(await res.json());
 }
 export async function deleteDraftInvoice(id: string): Promise<void> {
-    const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}`, {
+        ...invoiceApiFetchInit,
+        method: 'DELETE',
+    });
     await throwIfNotOk(res);
 }
 export type ReportPagination = {
