@@ -1,3 +1,4 @@
+import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
 import {
     AlignmentType,
     BorderStyle,
@@ -6,14 +7,31 @@ import {
     Packer,
     type ParagraphChild,
     Paragraph,
+    ShadingType,
     Table,
+    TableBorders,
     TableCell,
+    TableLayoutType,
     TableRow,
     TextRun,
     VerticalAlignTable,
     WidthType,
 } from 'docx';
 import { KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
+import {
+    INVOICE_PAYMENT_DISCLAIMER,
+    TIME_REPORT_DETAIL_ROWS,
+    TIME_REPORT_SUMMARY_ROWS,
+    type InvoicePreviewPackInput,
+    packCaseDetailLine,
+    packCurrencyCode,
+    packFirmBankingLines,
+    packInvoiceNumberDisplay,
+    packResolveDueIso,
+    packResolveIssueIso,
+    packUppercaseRibbonDate,
+    packZeroCommaAmount,
+} from './invoicePreviewPackShared';
 import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
 
 const cellBorderNil = {
@@ -131,8 +149,468 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
     return body;
 }
 
-/** Три страницы: первая — письмо, 2–3 пустые. */
-export async function buildInvoicePreviewDocxBlob(model: InvoiceCoverLetterModel): Promise<Blob> {
+function mmToTwip(mm: number): number {
+    return Math.round((mm * 72 / 25.4) * 20);
+}
+
+/** Поля секций: левый 30 мм, правый 12 мм (10–15), верх/низ 20 мм */
+const PAGE_MARGIN_TWIPS = {
+    top: mmToTwip(20),
+    right: mmToTwip(12),
+    bottom: mmToTwip(20),
+    left: mmToTwip(30),
+} as const;
+const INV_RED = '9B1B30';
+
+const cellBorderGrid = {
+    top: { style: BorderStyle.SINGLE, size: 1, color: 'DADADA' },
+    bottom: { style: BorderStyle.SINGLE, size: 1, color: 'DADADA' },
+    left: { style: BorderStyle.SINGLE, size: 1, color: 'DADADA' },
+    right: { style: BorderStyle.SINGLE, size: 1, color: 'DADADA' },
+} as const;
+
+function pctWidths(weights: readonly number[]): number[] {
+    const s = weights.reduce((a, b) => a + b, 0);
+    const floored = weights.map((w) => Math.floor((100 * w) / s));
+    const diff = 100 - floored.reduce((a, b) => a + b, 0);
+    floored[floored.length - 1] = (floored[floored.length - 1] ?? 1) + diff;
+    return floored;
+}
+
+function trHeadCell(txt: string, pct: number): TableCell {
+    return new TableCell({
+        borders: cellBorderGrid,
+        width: { size: pct, type: WidthType.PERCENTAGE },
+        shading: { type: ShadingType.SOLID, fill: INV_RED, color: INV_RED },
+        verticalAlign: VerticalAlignTable.CENTER,
+        children: [new Paragraph({
+            children: [new TextRun({ text: txt, bold: true, color: 'FFFFFF', size: h(8), font: 'Calibri' })],
+        })],
+    });
+}
+
+function trBodyCell(pct: number): TableCell {
+    return new TableCell({
+        borders: cellBorderGrid,
+        width: { size: pct, type: WidthType.PERCENTAGE },
+        children: [new Paragraph({
+            spacing: {},
+            children: [new TextRun({ text: '\u00a0', size: h(18), font: 'Calibri' })],
+        })],
+    });
+}
+
+/** Лист time report (соответствует превью: две таблицы + номер страницы). */
+function timeReportDocxBlocks(model: InvoiceCoverLetterModel): (Paragraph | Table)[] {
+    const cur = packCurrencyCode(model);
+    const amountHdr = cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`;
+    const DW = pctWidths([11, 9, 14, 36, 10, 12]);
+    const SW = pctWidths([9, 26, 26, 13, 13, 13]);
+
+    const detailHeader = new TableRow({
+        children: [
+            trHeadCell('Date', DW[0] ?? 11),
+            trHeadCell('Initials', DW[1] ?? 9),
+            trHeadCell('Task', DW[2] ?? 14),
+            trHeadCell('Description', DW[3] ?? 36),
+            trHeadCell('Hours', DW[4] ?? 10),
+            trHeadCell(amountHdr, DW[5] ?? 12),
+        ],
+    });
+    const detailBodyRows: TableRow[] = [];
+    for (let i = 0; i < TIME_REPORT_DETAIL_ROWS; i++) {
+        detailBodyRows.push(new TableRow({
+            children: [
+                trBodyCell(DW[0] ?? 11),
+                trBodyCell(DW[1] ?? 9),
+                trBodyCell(DW[2] ?? 14),
+                trBodyCell(DW[3] ?? 36),
+                trBodyCell(DW[4] ?? 10),
+                trBodyCell(DW[5] ?? 12),
+            ],
+        }));
+    }
+    detailBodyRows.push(new TableRow({
+        children: [
+            new TableCell({
+                borders: cellBorderGrid,
+                columnSpan: 4,
+                children: [new Paragraph({
+                    children: [new TextRun({ text: 'Total', bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
+                })],
+            }),
+            new TableCell({
+                borders: cellBorderGrid,
+                width: { size: DW[4]!, type: WidthType.PERCENTAGE },
+                children: [new Paragraph({ children: [new TextRun({ text: '\u00a0', size: h(10), font: 'Calibri' })] })],
+            }),
+            new TableCell({
+                borders: cellBorderGrid,
+                width: { size: DW[5]!, type: WidthType.PERCENTAGE },
+                children: [new Paragraph({ children: [new TextRun({ text: '\u00a0', size: h(10), font: 'Calibri' })] })],
+            }),
+        ],
+    }));
+
+    const summaryHeader = new TableRow({
+        children: [
+            trHeadCell('Initials', SW[0] ?? 9),
+            trHeadCell('Name', SW[1] ?? 26),
+            trHeadCell('Title', SW[2] ?? 26),
+            trHeadCell('Hours', SW[3] ?? 13),
+            trHeadCell('Hourly rate', SW[4] ?? 13),
+            trHeadCell(`Total price (${cur})`, SW[5] ?? 13),
+        ],
+    });
+    const summaryBodyRows: TableRow[] = [];
+    for (let i = 0; i < TIME_REPORT_SUMMARY_ROWS; i++) {
+        summaryBodyRows.push(new TableRow({
+            children: [
+                trBodyCell(SW[0] ?? 9),
+                trBodyCell(SW[1] ?? 26),
+                trBodyCell(SW[2] ?? 26),
+                trBodyCell(SW[3] ?? 13),
+                trBodyCell(SW[4] ?? 13),
+                trBodyCell(SW[5] ?? 13),
+            ],
+        }));
+    }
+    summaryBodyRows.push(new TableRow({
+        children: [
+            new TableCell({
+                borders: cellBorderGrid,
+                columnSpan: 3,
+                children: [new Paragraph({
+                    children: [new TextRun({ text: 'Total', bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
+                })],
+            }),
+            new TableCell({
+                borders: cellBorderGrid,
+                width: { size: SW[3]!, type: WidthType.PERCENTAGE },
+                children: [new Paragraph({ children: [new TextRun({ text: '\u00a0', size: h(10), font: 'Calibri' })] })],
+            }),
+            new TableCell({
+                borders: cellBorderGrid,
+                width: { size: SW[4]!, type: WidthType.PERCENTAGE },
+                children: [new Paragraph({ children: [new TextRun({ text: '\u00a0', size: h(10), font: 'Calibri' })] })],
+            }),
+            new TableCell({
+                borders: cellBorderGrid,
+                width: { size: SW[5]!, type: WidthType.PERCENTAGE },
+                verticalAlign: VerticalAlignTable.CENTER,
+                children: [new Paragraph({
+                    alignment: AlignmentType.RIGHT,
+                    children: [new TextRun({ text: cur, bold: true, color: INV_RED, size: h(9), font: 'Calibri' })],
+                })],
+            }),
+        ],
+    }));
+
+    const tableOpts = {
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        layout: TableLayoutType.FIXED,
+        margins: { top: 40, bottom: 40 },
+    };
+
+    const detailTbl = new Table({
+        ...tableOpts,
+        rows: [detailHeader, ...detailBodyRows],
+    });
+    const sumTbl = new Table({
+        ...tableOpts,
+        rows: [summaryHeader, ...summaryBodyRows],
+    });
+
+    return [
+        new Paragraph({
+            spacing: { after: 60 },
+            children: [new TextRun({ text: 'Private and confidential', color: '6B7380', size: h(11), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            spacing: { after: 120 },
+            border: { bottom: { style: BorderStyle.SINGLE, color: INV_RED, size: 10, space: 1 } },
+            children: [new TextRun({ text: '\u200b', size: h(10), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            spacing: { after: 160 },
+            children: [new TextRun({
+                text: `TIME REPORT FOR SERVICES PROVIDED IN ${model.servicesMonthYear.toUpperCase()}`,
+                bold: true,
+                size: h(13),
+                font: 'Calibri',
+                color: '100814',
+            })],
+        }),
+        detailTbl,
+        new Paragraph({
+            spacing: { before: 260, after: 120 },
+            children: [new TextRun({ text: 'Summary of services', bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
+        }),
+        sumTbl,
+        new Paragraph({
+            spacing: { before: 360 },
+            border: { top: { style: BorderStyle.SINGLE, color: INV_RED, size: 12, space: 2 } },
+            children: [new TextRun({ text: '\u200b', size: h(10), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            spacing: { before: 60 },
+            alignment: AlignmentType.RIGHT,
+            children: [new TextRun({ text: '2', bold: true, color: INV_RED, size: h(12), font: 'Calibri' })],
+        }),
+    ];
+}
+
+function invoiceRibbonTable(leftText: string, rightText: string): Table {
+    const redCell = (widthPct: number, align: (typeof AlignmentType)[keyof typeof AlignmentType], text: string): TableCell =>
+        new TableCell({
+            borders: cellBorderNil,
+            width: { size: widthPct, type: WidthType.PERCENTAGE },
+            shading: { type: ShadingType.SOLID, fill: INV_RED, color: INV_RED },
+            margins: { top: 72, bottom: 72, left: 112, right: 112 },
+            children: [new Paragraph({
+                alignment: align,
+                children: [new TextRun({ text, bold: true, color: 'FFFFFF', size: h(11), font: 'Calibri' })],
+            })],
+        });
+    return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        layout: TableLayoutType.FIXED,
+        borders: TableBorders.NONE,
+        rows: [
+            new TableRow({
+                children: [
+                    redCell(53, AlignmentType.LEFT, leftText),
+                    redCell(47, AlignmentType.RIGHT, rightText),
+                ],
+            }),
+        ],
+    });
+}
+/** Лист legal invoice — структура как в InvoiceLegalInvoicePage. */
+function legalInvoiceDocxBlocks(
+    model: InvoiceCoverLetterModel,
+    session: InvoicePreviewSessionV1 | null,
+    logoRuns: ParagraphChild[],
+): (Paragraph | Table)[] {
+    const issueIso = packResolveIssueIso(session);
+    const dueIso = packResolveDueIso(session, issueIso);
+    const ribbonIssue = packUppercaseRibbonDate(issueIso);
+    const dueBanner = packUppercaseRibbonDate(dueIso);
+    const invNo = packInvoiceNumberDisplay(session);
+    const caseLine = packCaseDetailLine(session);
+    const cur = packCurrencyCode(model);
+    const zeroLine = packZeroCommaAmount(model);
+    const svcLine = `Legal services rendered in ${model.servicesMonthYear}`;
+
+    const firmParas = [
+        new Paragraph({
+            spacing: { after: 40 },
+            children: [new TextRun({ text: `${KOSTA_LEGAL_FIRM.brandName} LF`, bold: true, color: INV_RED, size: h(12), font: 'Calibri' })],
+        }),
+        ...[KOSTA_LEGAL_FIRM.addressLine, ...packFirmBankingLines(cur)].map((txt) =>
+            new Paragraph({
+                spacing: { after: 35 },
+                children: [new TextRun({ text: txt, color: '100814', size: h(9), font: 'Calibri' })],
+            })),
+    ];
+
+    const masthead = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: TableBorders.NONE,
+        rows: [
+            new TableRow({
+                children: [
+                    new TableCell({
+                        borders: cellBorderNil,
+                        width: { size: 55, type: WidthType.PERCENTAGE },
+                        children: firmParas,
+                    }),
+                    new TableCell({
+                        borders: cellBorderNil,
+                        verticalAlign: VerticalAlignTable.TOP,
+                        width: { size: 45, type: WidthType.PERCENTAGE },
+                        children: [new Paragraph({
+                            alignment: AlignmentType.RIGHT,
+                            children: logoRuns.length ? logoRuns : [new TextRun({ text: '\u200b', size: h(13), font: 'Calibri' })],
+                        })],
+                    }),
+                ],
+            }),
+        ],
+    });
+
+    const ribbon = invoiceRibbonTable(`INVOICE No. ${invNo}`, ribbonIssue);
+
+    /** Bill to + Case panels */
+    const billChildren: Paragraph[] = [
+        new Paragraph({
+            spacing: { after: 80 },
+            children: [new TextRun({ text: 'Bill to', bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            spacing: { after: 40 },
+            children: [new TextRun({ text: model.recipientCompany, bold: true, size: h(11), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            spacing: { after: 30 },
+            children: [new TextRun({ text: 'Address:', color: '707784', size: h(9), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            spacing: { after: 30 },
+            children: [new TextRun({ text: model.recipientAddressLines[0], size: h(9), font: 'Calibri' })],
+        }),
+    ];
+    if (model.recipientAddressLines[1]) {
+        billChildren.push(new Paragraph({
+            spacing: { after: 40 },
+            children: [new TextRun({ text: model.recipientAddressLines[1], size: h(9), font: 'Calibri' })],
+        }));
+    }
+    billChildren.push(
+        new Paragraph({
+            spacing: { after: 30 },
+            children: [new TextRun({ text: 'Bank name:', color: '707784', size: h(9), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            spacing: { after: 30 },
+            children: [new TextRun({ text: '—', color: '707784', size: h(9), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            spacing: { after: 30 },
+            children: [new TextRun({ text: 'SWIFT:', color: '707784', size: h(9), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            children: [new TextRun({ text: '—', color: '707784', size: h(9), font: 'Calibri' })],
+        }),
+    );
+
+    const caseChildren: Paragraph[] = [
+        new Paragraph({
+            spacing: { after: 80 },
+            children: [new TextRun({ text: 'Case details', bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            children: [new TextRun({ text: caseLine, size: h(10), font: 'Calibri' })],
+        }),
+    ];
+
+    const panels = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        borders: TableBorders.NONE,
+        rows: [
+            new TableRow({
+                children: [
+                    new TableCell({
+                        borders: cellBorderNil,
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        children: billChildren,
+                    }),
+                    new TableCell({
+                        borders: cellBorderNil,
+                        width: { size: 50, type: WidthType.PERCENTAGE },
+                        children: caseChildren,
+                    }),
+                ],
+            }),
+        ],
+    });
+
+    const svcHead = new TableRow({
+        children: [
+            trHeadCell('Description', 72),
+            trHeadCell(`Total (${cur})`, 28),
+        ],
+    });
+    const svcBody = new TableRow({
+        children: [
+            new TableCell({
+                borders: cellBorderGrid,
+                width: { size: 72, type: WidthType.PERCENTAGE },
+                children: [new Paragraph({
+                    children: [new TextRun({ text: svcLine, size: h(10), font: 'Calibri' })],
+                })],
+            }),
+            new TableCell({
+                borders: cellBorderGrid,
+                width: { size: 28, type: WidthType.PERCENTAGE },
+                verticalAlign: VerticalAlignTable.CENTER,
+                children: [new Paragraph({
+                    alignment: AlignmentType.RIGHT,
+                    children: [new TextRun({ text: model.totalFormatted, bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
+                })],
+            }),
+        ],
+    });
+    const svcTbl = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        layout: TableLayoutType.FIXED,
+        rows: [svcHead, svcBody],
+    });
+
+    const totals: Paragraph[] = [
+        new Paragraph({
+            spacing: { before: 200 },
+            alignment: AlignmentType.RIGHT,
+            children: [
+                new TextRun({ text: 'SUBTOTAL: ', bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
+                new TextRun({ text: model.totalFormatted, bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
+            ],
+        }),
+        new Paragraph({
+            alignment: AlignmentType.RIGHT,
+            children: [
+                new TextRun({ text: 'VAT: ', bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
+                new TextRun({ text: zeroLine, color: INV_RED, size: h(10), font: 'Calibri' }),
+            ],
+        }),
+        new Paragraph({
+            alignment: AlignmentType.RIGHT,
+            children: [
+                new TextRun({ text: 'Extra expenses: ', bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
+                new TextRun({ text: zeroLine, color: INV_RED, size: h(10), font: 'Calibri' }),
+            ],
+        }),
+        new Paragraph({
+            alignment: AlignmentType.RIGHT,
+            spacing: { after: 120 },
+            children: [
+                new TextRun({ text: `TOTAL DUE BY ${dueBanner}: `, bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
+                new TextRun({ text: model.totalFormatted, bold: true, color: INV_RED, size: h(12), font: 'Calibri' }),
+            ],
+        }),
+    ];
+
+    return [
+        masthead,
+        new Paragraph({
+            spacing: { before: 200, after: 120 },
+            children: [new TextRun({ text: '\u200b', size: h(8), font: 'Calibri' })],
+        }),
+        ribbon,
+        new Paragraph({
+            spacing: { before: 200, after: 120 },
+            children: [new TextRun({ text: '\u200b', size: h(8), font: 'Calibri' })],
+        }),
+        panels,
+        new Paragraph({
+            spacing: { before: 220, after: 120 },
+            children: [new TextRun({ text: '\u200b', size: h(8), font: 'Calibri' })],
+        }),
+        svcTbl,
+        ...totals,
+        new Paragraph({
+            spacing: { before: 160 },
+            children: [new TextRun({ text: 'Thank you for your business!', bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
+        }),
+        new Paragraph({
+            spacing: { before: 200 },
+            children: [new TextRun({ text: INVOICE_PAYMENT_DISCLAIMER, size: h(8), font: 'Calibri', color: '404040' })],
+        }),
+    ];
+}
+
+/** Три страницы: письмо; time report; invoice. */
+export async function buildInvoicePreviewDocxBlob({ model, session }: InvoicePreviewPackInput): Promise<Blob> {
     const logoRuns: ParagraphChild[] = [];
     if (typeof window !== 'undefined') {
         const raster = await rasterizeInvoiceCoverLogoSvg(420);
@@ -147,18 +625,28 @@ export async function buildInvoicePreviewDocxBlob(model: InvoiceCoverLetterModel
         }
     }
 
+    const sectionPage = {
+        properties: {
+            page: {
+                margin: PAGE_MARGIN_TWIPS,
+            },
+        },
+    };
+
     const doc = new Document({
         sections: [
             {
-                properties: {
-                    page: {
-                        margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
-                    },
-                },
+                ...sectionPage,
                 children: coverChildren(model, logoRuns),
             },
-            { properties: {}, children: [new Paragraph('')] },
-            { properties: {}, children: [new Paragraph('')] },
+            {
+                ...sectionPage,
+                children: timeReportDocxBlocks(model),
+            },
+            {
+                ...sectionPage,
+                children: legalInvoiceDocxBlocks(model, session, logoRuns),
+            },
         ],
     });
     return Packer.toBlob(doc);

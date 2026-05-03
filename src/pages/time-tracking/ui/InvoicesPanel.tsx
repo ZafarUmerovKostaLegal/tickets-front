@@ -6,7 +6,7 @@ import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '@page
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { useAppDialog, useAppToast } from '@shared/ui';
-import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 function fmtMoney(n: number, cur: string): string {
@@ -41,6 +41,26 @@ function fmtDisplayDate(iso: string): string {
     if (Number.isNaN(d.getTime()))
         return iso;
     return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+async function invoicePreviewMetaForExisting(inv: InvoiceDto, clientLabel: string): Promise<InvoicePreviewMeta> {
+    const meta: InvoicePreviewMeta = {
+        clientLabel,
+        invoiceNumber: inv.invoiceNumber,
+        issueDateIso: inv.issueDate.slice(0, 10),
+        dueDateIso: inv.dueDate.slice(0, 10),
+    };
+    if (!inv.projectId?.trim())
+        return meta;
+    try {
+        const rows = await listAllClientProjectsForClientMerged(inv.clientId);
+        const p = rows.find((r) => r.id === inv.projectId);
+        if (p)
+            meta.projectLabel = (p.code ? `${p.name} (${p.code})` : p.name).trim();
+    }
+    catch {
+        //
+    }
+    return meta;
 }
 function formatDatetimeLocalInput(d = new Date()): string {
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -551,19 +571,23 @@ export function InvoicesPanel() {
         navigate(routes.timeTrackingInvoicePreview);
     }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, selTime, selExp, projects, navigate]);
     const openExistingInvoicePreview = useCallback((inv: InvoiceDto) => {
-        const clientLabel = (clientNameById.get(inv.clientId) ?? inv.clientId).trim();
-        writeInvoicePreviewSession({
-            v: 1,
-            mode: 'existing',
-            invoiceId: inv.id,
-            meta: {
-                clientLabel,
-                invoiceNumber: inv.invoiceNumber,
-                issueDateIso: inv.issueDate.slice(0, 10),
-            },
-        });
-        navigate(routes.timeTrackingInvoicePreview);
-    }, [clientNameById, navigate]);
+        void (async () => {
+            try {
+                const clientLabel = (clientNameById.get(inv.clientId) ?? inv.clientId).trim();
+                const meta = await invoicePreviewMetaForExisting(inv, clientLabel);
+                writeInvoicePreviewSession({
+                    v: 1,
+                    mode: 'existing',
+                    invoiceId: inv.id,
+                    meta,
+                });
+                navigate(routes.timeTrackingInvoicePreview);
+            }
+            catch (e) {
+                await showAlert({ message: e instanceof Error ? e.message : 'Не удалось открыть предпросмотр' });
+            }
+        })();
+    }, [clientNameById, navigate, showAlert]);
     const handleDetailDownloadPdf = useCallback(async (inv: InvoiceDto) => {
         setDetailExportBusy('pdf');
         try {
@@ -576,8 +600,12 @@ export function InvoicesPanel() {
                 totalAmount: inv.totalAmount,
                 currency: inv.currency,
             });
+            const clientLabel = (clientNameById.get(inv.clientId) ?? inv.clientId).trim();
+            const meta = await invoicePreviewMetaForExisting(inv, clientLabel);
+            const previewSession = { v: 1 as const, mode: 'existing' as const, invoiceId: inv.id, meta };
+
             const { buildInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewPdf');
-            const blob = await buildInvoicePreviewPdfBlob(model);
+            const blob = await buildInvoicePreviewPdfBlob({ model, session: previewSession });
             const base = buildInvoicePreviewExportBasename({
                 invoiceNumber: inv.invoiceNumber,
                 clientLabel: clientNameById.get(inv.clientId) ?? inv.clientId,
@@ -604,8 +632,12 @@ export function InvoicesPanel() {
                 totalAmount: inv.totalAmount,
                 currency: inv.currency,
             });
+            const clientLabel = (clientNameById.get(inv.clientId) ?? inv.clientId).trim();
+            const meta = await invoicePreviewMetaForExisting(inv, clientLabel);
+            const previewSession = { v: 1 as const, mode: 'existing' as const, invoiceId: inv.id, meta };
+
             const { buildInvoicePreviewDocxBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewDocx');
-            const blob = await buildInvoicePreviewDocxBlob(model);
+            const blob = await buildInvoicePreviewDocxBlob({ model, session: previewSession });
             const base = buildInvoicePreviewExportBasename({
                 invoiceNumber: inv.invoiceNumber,
                 clientLabel: clientNameById.get(inv.clientId) ?? inv.clientId,

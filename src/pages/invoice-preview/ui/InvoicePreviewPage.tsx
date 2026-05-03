@@ -121,7 +121,7 @@ export function InvoicePreviewPage() {
         const model = coverModel ?? fallbackCoverModel();
         setDownloadBusy('word');
         try {
-            const blob = await buildInvoicePreviewDocxBlob(model);
+            const blob = await buildInvoicePreviewDocxBlob({ model, session });
             triggerBrowserDownload(blob, `${defaultFilename}.docx`);
         }
         catch (e) {
@@ -133,13 +133,13 @@ export function InvoicePreviewPage() {
         finally {
             setDownloadBusy(null);
         }
-    }, [coverModel, defaultFilename, pushToast]);
+    }, [coverModel, defaultFilename, pushToast, session]);
 
     const handleDownloadPdf = useCallback(async () => {
         const model = coverModel ?? fallbackCoverModel();
         setDownloadBusy('pdf');
         try {
-            const blob = await buildInvoicePreviewPdfBlob(model);
+            const blob = await buildInvoicePreviewPdfBlob({ model, session });
             triggerBrowserDownload(blob, `${defaultFilename}.pdf`);
         }
         catch (e) {
@@ -151,7 +151,7 @@ export function InvoicePreviewPage() {
         finally {
             setDownloadBusy(null);
         }
-    }, [coverModel, defaultFilename, pushToast]);
+    }, [coverModel, defaultFilename, pushToast, session]);
 
     const toolbarTitle = subtitle ?? defaultFilename;
     const pdfToolbarTip = 'Лист 1 — сопроводительное письмо; лист 2 — отчёт времени; лист 3 — счёт (invoice).';

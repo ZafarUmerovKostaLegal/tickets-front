@@ -1,8 +1,6 @@
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
+import { TIME_REPORT_DETAIL_ROWS, TIME_REPORT_SUMMARY_ROWS } from '../lib/invoicePreviewPackShared';
 import './InvoiceTimeReportPage.css';
-
-const DETAIL_ROWS = 14;
-const SUMMARY_ROWS = 5;
 
 export type InvoiceTimeReportPageProps = {
     model: InvoiceCoverLetterModel;
@@ -41,7 +39,7 @@ export function InvoiceTimeReportPage({ model, pageNumber }: InvoiceTimeReportPa
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">
-            {Array.from({ length: DETAIL_ROWS }, (_, i) => (
+            {Array.from({ length: TIME_REPORT_DETAIL_ROWS }, (_, i) => (
               <tr key={i}>
                 <td className="tt-inv-tr__cell--empty">&nbsp;</td>
                 <td className="tt-inv-tr__cell--empty">&nbsp;</td>
@@ -76,7 +74,7 @@ export function InvoiceTimeReportPage({ model, pageNumber }: InvoiceTimeReportPa
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">
-            {Array.from({ length: SUMMARY_ROWS }, (_, i) => (
+            {Array.from({ length: TIME_REPORT_SUMMARY_ROWS }, (_, i) => (
               <tr key={i}>
                 <td className="tt-inv-tr__cell--empty">&nbsp;</td>
                 <td className="tt-inv-tr__cell--empty">&nbsp;</td>

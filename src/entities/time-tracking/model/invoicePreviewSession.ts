@@ -19,6 +19,8 @@ export type InvoicePreviewMeta = {
     invoiceNumber?: string;
     /** ISO YYYY-MM-DD для имени файла */
     issueDateIso?: string;
+    /** ISO YYYY-MM-DD срок оплаты (для листа invoice) */
+    dueDateIso?: string;
 };
 
 /** Новый счёт из формы создания */
@@ -68,6 +70,8 @@ function parseMeta(raw: unknown): InvoicePreviewMeta {
         meta.invoiceNumber = m.invoiceNumber.trim();
     if (typeof m.issueDateIso === 'string' && /^\d{4}-\d{2}-\d{2}/.test(m.issueDateIso))
         meta.issueDateIso = m.issueDateIso.slice(0, 10);
+    if (typeof m.dueDateIso === 'string' && /^\d{4}-\d{2}-\d{2}/.test(m.dueDateIso))
+        meta.dueDateIso = m.dueDateIso.slice(0, 10);
     return meta;
 }
 

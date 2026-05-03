@@ -4,7 +4,7 @@
   box-sizing: border-box;
   position: relative;
   width: 100%;
-  padding: 10mm 12mm calc(14mm + 40px);
+  padding: 20mm 12mm calc(20mm + 40px) 30mm;
   font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 9.5px;
   line-height: 1.35;
