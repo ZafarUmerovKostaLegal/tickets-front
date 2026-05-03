@@ -2881,6 +2881,62 @@ export async function getInvoicesAggregatedStats(params?: Omit<InvoiceListParams
     return parseInvoicesAggregatedStats(raw);
 }
 
+const INVOICE_AGGR_BALANCE_EPS = 1e-6;
+const INVOICE_AGGR_PAGE = 500;
+const INVOICE_AGGR_MAX_OFFSET = 250_000;
+
+/**
+ * Деньги и счётчики по фильтру без отменённых счетов (эффективный `status`).
+ * Нужен для таблицы «Суммы по валютам», если /stats включает canceled.
+ */
+export async function aggregateInvoicesMoneyExcludingCanceled(params?: Omit<InvoiceListParams, 'limit' | 'offset' | 'includeTotalCount'>): Promise<{
+    byCurrency: Record<string, InvoicesStatsCurrencyRow>;
+    unpaidInvoicesCount: number;
+    openBalanceDue: number;
+}> {
+    const p = params ?? {};
+    const byCurrency: Record<string, InvoicesStatsCurrencyRow> = {};
+    let unpaidInvoicesCount = 0;
+    let openBalanceDue = 0;
+    let offset = 0;
+    for (;;) {
+        const r = await listInvoices({
+            ...p,
+            limit: INVOICE_AGGR_PAGE,
+            offset,
+            includeTotalCount: false,
+        });
+        for (const inv of r.items) {
+            const st = String(inv.status ?? '').toLowerCase();
+            if (st === 'canceled' || st === 'cancelled')
+                continue;
+            const cur = (inv.currency && inv.currency.trim()) ? inv.currency.trim() : 'UZS';
+            const prev = byCurrency[cur] ?? {
+                count: 0,
+                totalAmount: 0,
+                amountPaid: 0,
+                balanceDue: 0,
+            };
+            prev.count += 1;
+            prev.totalAmount += Number(inv.totalAmount) || 0;
+            prev.amountPaid += Number(inv.amountPaid) || 0;
+            prev.balanceDue += Number(inv.balanceDue) || 0;
+            byCurrency[cur] = prev;
+            const bd = Number(inv.balanceDue) || 0;
+            if (bd > INVOICE_AGGR_BALANCE_EPS) {
+                unpaidInvoicesCount += 1;
+                openBalanceDue += bd;
+            }
+        }
+        if (r.items.length < INVOICE_AGGR_PAGE)
+            break;
+        offset += INVOICE_AGGR_PAGE;
+        if (offset > INVOICE_AGGR_MAX_OFFSET)
+            break;
+    }
+    return { byCurrency, unpaidInvoicesCount, openBalanceDue };
+}
+
 /** Нормализует строки счёта из ответа API (camelCase / snake_case, разные имена массива). */
 function normalizeInvoiceLineDto(raw: unknown, fallbackIdx: number): InvoiceLineDto {
     const r = (raw != null && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
