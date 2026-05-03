@@ -701,11 +701,18 @@ export function InvoicesPanel() {
             await showAlert({ message: 'Отметьте хотя бы одну запись времени или расход' });
             return;
         }
+        const billProjectId = createProjectId.trim();
+        if (!billProjectId) {
+            await showAlert({
+                message: 'Выберите проект: для счёта по времени и расходам нужен projectId и период, проверяемый по подтверждению партнёров.',
+            });
+            return;
+        }
         setCreateBusy(true);
         try {
             await createInvoice({
                 clientId: createClientId,
-                projectId: createProjectId || null,
+                projectId: billProjectId,
                 issueDate,
                 dueDate,
                 timeEntryIds: [...selTime],
@@ -721,7 +728,11 @@ export function InvoicesPanel() {
             notifyReportsInvalidated();
         }
         catch (e) {
-            await showAlert({ message: e instanceof Error ? e.message : 'Ошибка создания счёта' });
+            const base = e instanceof Error ? e.message : 'Ошибка создания счёта';
+            const hint = isForbiddenError(e)
+                ? ' Вероятно, нет полного подтверждения партнёров за выбранный период — завершите подписание отчёта.'
+                : '';
+            await showAlert({ message: `${base}${hint}` });
         }
         finally {
             setCreateBusy(false);

@@ -4,6 +4,7 @@ import {
     fetchUnbilledExpenses,
     fetchUnbilledTimeEntries,
     getInvoice,
+    isForbiddenError,
     listTimeTrackingUsers,
     type InvoiceLineDto,
     type TimeEntryRow,
@@ -152,10 +153,16 @@ function buildSummaryAndTotals(
     };
 }
 
+export type ResolveInvoiceTimeReportPackOptions = {
+    /** 403 на unbilled при предпросмотре черновика — нет полного подтверждения партнёров за период. */
+    onPartnerConfirmationBlocked?: (message: string) => void;
+};
+
 /** Заполняет данные листа Time Report из черновика/сохранённого счёта. */
 export async function resolveInvoiceTimeReportPack(
     session: InvoicePreviewSessionV1 | null,
     model: InvoiceCoverLetterModel,
+    options?: ResolveInvoiceTimeReportPackOptions,
 ): Promise<InvoiceTimeReportPack> {
     const currency = packCurrencyCode(model);
     const empty = emptyInvoiceTimeReportPack(currency);
@@ -172,18 +179,31 @@ export async function resolveInvoiceTimeReportPack(
             if (!pid)
                 return empty;
 
-            const [timeRows, expRows] = await Promise.all([
-                fetchUnbilledTimeEntries({
-                    projectId: pid,
-                    dateFrom: f.unbilledFrom.slice(0, 10),
-                    dateTo: f.unbilledTo.slice(0, 10),
-                }).catch(() => [] as UnbilledTimeEntryDto[]),
-                fetchUnbilledExpenses({
-                    projectId: pid,
-                    dateFrom: f.unbilledFrom.slice(0, 10),
-                    dateTo: f.unbilledTo.slice(0, 10),
-                }).catch(() => [] as UnbilledExpenseEntryDto[]),
-            ]);
+            let timeRows: UnbilledTimeEntryDto[];
+            let expRows: UnbilledExpenseEntryDto[];
+            try {
+                [timeRows, expRows] = await Promise.all([
+                    fetchUnbilledTimeEntries({
+                        projectId: pid,
+                        dateFrom: f.unbilledFrom.slice(0, 10),
+                        dateTo: f.unbilledTo.slice(0, 10),
+                    }),
+                    fetchUnbilledExpenses({
+                        projectId: pid,
+                        dateFrom: f.unbilledFrom.slice(0, 10),
+                        dateTo: f.unbilledTo.slice(0, 10),
+                    }),
+                ]);
+            }
+            catch (e: unknown) {
+                if (isForbiddenError(e)) {
+                    const fallback = 'Для этого проекта и периода нет полного подтверждения партнёров. Сначала завершите подписание отчёта партнёрами.';
+                    const msg = e instanceof Error && e.message.trim().length ? e.message.trim() : fallback;
+                    options?.onPartnerConfirmationBlocked?.(msg);
+                    return empty;
+                }
+                throw e;
+            }
 
             const selT = new Set(f.selTime);
             const selE = new Set(f.selExp);
@@ -238,18 +258,27 @@ export async function resolveInvoiceTimeReportPack(
         const details: BuildingDetail[] = [];
 
         const entryCache = new Map<string, TimeEntryRow | null>();
-        async function getEntry(id: string | null | undefined): Promise<TimeEntryRow | null> {
+        async function getEntry(id: string | null | undefined, preferredAuthUserId: number | null): Promise<TimeEntryRow | null> {
             const k = (id ?? '').trim();
             if (!k)
                 return null;
             if (entryCache.has(k))
                 return entryCache.get(k) ?? null;
             let found: TimeEntryRow | null = null;
-            for (const u of users) {
-                const row = await fetchTimeEntry(u.id, k);
-                if (row) {
-                    found = row;
-                    break;
+            const hint = preferredAuthUserId != null && Number.isFinite(preferredAuthUserId)
+                ? Math.trunc(preferredAuthUserId)
+                : null;
+            if (hint != null)
+                found = await fetchTimeEntry(hint, k);
+            if (!found) {
+                for (const u of users) {
+                    if (hint != null && u.id === hint)
+                        continue;
+                    const row = await fetchTimeEntry(u.id, k);
+                    if (row) {
+                        found = row;
+                        break;
+                    }
                 }
             }
             entryCache.set(k, found);
@@ -271,7 +300,7 @@ export async function resolveInvoiceTimeReportPack(
 
                 let entry: TimeEntryRow | null = null;
                 if ((authId == null || !workIso) && ln.timeEntryId?.trim())
-                    entry = await getEntry(ln.timeEntryId);
+                    entry = await getEntry(ln.timeEntryId, authId);
                 if (authId == null && entry?.auth_user_id != null)
                     authId = entry.auth_user_id;
                 const fromEntry = entry?.work_date?.trim().slice(0, 10) ?? '';

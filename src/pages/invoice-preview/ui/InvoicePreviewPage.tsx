@@ -71,14 +71,19 @@ export function InvoicePreviewPage() {
 
     useEffect(() => {
         let cancel = false;
-        void resolveInvoiceTimeReportPack(session, displayModel).then((p) => {
+        void resolveInvoiceTimeReportPack(session, displayModel, {
+            onPartnerConfirmationBlocked(message) {
+                if (!cancel)
+                    pushToast({ message, variant: 'warning' });
+            },
+        }).then((p) => {
             if (!cancel)
                 setTimeReportPack(p);
         });
         return () => {
             cancel = true;
         };
-    }, [session, displayModel]);
+    }, [session, displayModel, pushToast]);
 
     const timeReportFallback = useMemo(
         () => emptyInvoiceTimeReportPack(packCurrencyCode(displayModel)),
