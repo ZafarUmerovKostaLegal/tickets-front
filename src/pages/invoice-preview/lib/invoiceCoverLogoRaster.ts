@@ -6,14 +6,6 @@ export type InvoiceCoverRasterizedLogo = {
     heightPx: number;
 };
 
-export type RasterizeInvoiceLogoOptions = {
-    /**
-     * Word в тёмной теме может рисовать страницу тёмным; чёрный текст лого тогда не виден.
-     * Белая подложка под PNG сохраняет читаемость в DOCX.
-     */
-    opaqueBackground?: boolean;
-};
-
 async function svgMarkupSource(): Promise<string | null> {
     const trimmed = invoiceLetterheadFullSvgRaw.trim();
     if (trimmed.includes('<svg'))
@@ -38,11 +30,8 @@ function ensureTightFullLogoViewBoxIfIllustratorPage(svgText: string): string {
     return s;
 }
 
-/** SVG из бандла → PNG для pdf-lib / docx (`?raw`: без fetch, чтобы лого попадало в экспорт всегда). */
-export async function rasterizeInvoiceCoverLogoSvg(
-    renderWidthPx: number,
-    options?: RasterizeInvoiceLogoOptions,
-): Promise<InvoiceCoverRasterizedLogo | null> {
+/** SVG из бандла → PNG с прозрачностью для pdf-lib и docx (`?raw`, без fetch). */
+export async function rasterizeInvoiceCoverLogoSvg(renderWidthPx: number): Promise<InvoiceCoverRasterizedLogo | null> {
     if (typeof document === 'undefined')
         return null;
     try {
@@ -69,17 +58,10 @@ export async function rasterizeInvoiceCoverLogoSvg(
             const canvas = document.createElement('canvas');
             canvas.width = w;
             canvas.height = h;
-            const opaque = Boolean(options?.opaqueBackground);
-            const ctx = canvas.getContext('2d', { alpha: !opaque });
+            const ctx = canvas.getContext('2d', { alpha: true });
             if (!ctx)
                 return null;
-            if (opaque) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, w, h);
-            }
-            else {
-                ctx.clearRect(0, 0, w, h);
-            }
+            ctx.clearRect(0, 0, w, h);
             ctx.drawImage(img, 0, 0, w, h);
             const pngBlob = await new Promise<Blob | null>((resolve) =>
                 canvas.toBlob((b) => resolve(b), 'image/png'),
