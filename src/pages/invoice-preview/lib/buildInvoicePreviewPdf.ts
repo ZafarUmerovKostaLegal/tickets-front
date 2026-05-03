@@ -17,6 +17,8 @@ import {
     packUppercaseRibbonDate,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
+import type { InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
 
@@ -195,6 +197,50 @@ function colLayout(tableLeft: number, tableW: number, weights: readonly number[]
     return { widths, xs };
 }
 
+function clipPdfCellText(txt: string, maxW: number, font: PDFFont, size: number): string {
+    const t = txt.trim();
+    if (!t || maxW <= 2)
+        return '';
+    if (font.widthOfTextAtSize(t, size) <= maxW)
+        return t;
+    const ell = '\u2026';
+    let n = t.length;
+    while (n > 0 && font.widthOfTextAtSize(`${t.slice(0, n)}${ell}`, size) > maxW)
+        n--;
+    return n > 0 ? `${t.slice(0, n)}${ell}` : ell;
+}
+
+function paintTimeReportBody(
+    page: PDFPage,
+    rows: readonly (readonly string[])[],
+    yHeaderBot: number,
+    rowH: number,
+    bodyRowCount: number,
+    xs: readonly number[],
+    widths: readonly number[],
+    font: PDFFont,
+    rightAlignedCols: ReadonlySet<number>,
+): void {
+    const fsBody = 6.7;
+    for (let r = 0; r < bodyRowCount && r < rows.length; r++) {
+        const cols = rows[r];
+        if (!cols)
+            continue;
+        const yRow = yHeaderBot - (r + 0.78) * rowH;
+        for (let c = 0; c < cols.length && c < xs.length; c++) {
+            let raw = (cols[c] ?? '').trim();
+            if (!raw)
+                continue;
+            const cw = Math.max(8, widths[c]! - 4);
+            const clip = clipPdfCellText(raw, cw, font, fsBody);
+            let xDraw = xs[c]! + 2;
+            if (rightAlignedCols.has(c))
+                xDraw = xs[c]! + widths[c]! - 2 - font.widthOfTextAtSize(clip, fsBody);
+            page.drawText(clip, { x: xDraw, y: yRow, size: fsBody, font, color: BODY });
+        }
+    }
+}
+
 /** Таблица time report: красный thead, сетка, строка Total (как в превью). */
 function drawTimeReportGridTable(
     page: PDFPage,
@@ -207,7 +253,15 @@ function drawTimeReportGridTable(
         bodyRows: number;
         footerKind: 'detail' | 'summary';
         summaryCurrency: string | null;
+        font: PDFFont;
         fontBold: PDFFont;
+        /** Тексты ячеек body: по строкам × колонкам */
+        bodyTexts?: readonly (readonly string[])[] | null;
+        rightAlignedBodyCols?: ReadonlySet<number>;
+        footerTotals?: {
+            detail?: { hours: string; amount: string };
+            summary?: { hours: string; hourly: string; amount: string };
+        } | null;
     },
 ): number {
     const {
@@ -220,6 +274,10 @@ function drawTimeReportGridTable(
         footerKind,
         summaryCurrency,
         fontBold,
+        font,
+        bodyTexts,
+        rightAlignedBodyCols,
+        footerTotals,
     } = opts;
     const headerH = 20;
     const rowH = 14;
@@ -274,38 +332,122 @@ function drawTimeReportGridTable(
         });
     }
 
-    const yFoot = tableBottom + 5;
-    if (footerKind === 'detail') {
-        page.drawText('Total', { x: xs[0]! + 3, y: yFoot, size: 8, font: fontBold, color: TR_RED });
+    if (bodyTexts?.length && rightAlignedBodyCols) {
+        paintTimeReportBody(page, bodyTexts, yHeaderBot, rowH, bodyRows, xs, widths, font, rightAlignedBodyCols);
     }
-    else {
-        page.drawText('Total', { x: xs[0]! + 3, y: yFoot, size: 8, font: fontBold, color: TR_RED });
-        if (summaryCurrency) {
-            const lastI = xs.length - 1;
-            const lastW = widths[lastI]!;
-            const tw = fontBold.widthOfTextAtSize(summaryCurrency, 8);
-            page.drawText(summaryCurrency, {
-                x: xs[lastI]! + lastW - 4 - tw,
+
+    const yFoot = tableBottom + 5;
+    const fsFoot = 8;
+    page.drawText('Total', { x: xs[0]! + 3, y: yFoot, size: fsFoot, font: fontBold, color: TR_RED });
+
+    if (footerKind === 'detail' && footerTotals?.detail) {
+        const { hours, amount } = footerTotals.detail;
+        const hi = 4;
+        const ai = 5;
+        if (hours?.trim()) {
+            const cw = widths[hi] ?? 45;
+            const clip = clipPdfCellText(hours.trim(), cw - 6, fontBold, fsFoot);
+            page.drawText(clip, {
+                x: xs[hi]! + cw - fontBold.widthOfTextAtSize(clip, fsFoot) - 4,
                 y: yFoot,
-                size: 8,
+                size: fsFoot,
+                font: fontBold,
+                color: TR_RED,
+            });
+        }
+        if (amount?.trim()) {
+            const cw = widths[ai] ?? 50;
+            const clip = clipPdfCellText(amount.trim(), cw - 6, fontBold, fsFoot);
+            page.drawText(clip, {
+                x: xs[ai]! + cw - fontBold.widthOfTextAtSize(clip, fsFoot) - 4,
+                y: yFoot,
+                size: fsFoot,
                 font: fontBold,
                 color: TR_RED,
             });
         }
     }
 
+    if (footerKind === 'summary' && footerTotals?.summary) {
+        const { hours, hourly, amount } = footerTotals.summary;
+        const hci = 3;
+        const rci = 4;
+        const aci = 5;
+
+        const putRight = (text: string, colIndex: number) => {
+            if (!text?.trim())
+                return;
+            const cw = widths[colIndex] ?? 40;
+            const clip = clipPdfCellText(text.trim(), cw - 6, fontBold, fsFoot);
+            page.drawText(clip, {
+                x: xs[colIndex]! + cw - fontBold.widthOfTextAtSize(clip, fsFoot) - 4,
+                y: yFoot,
+                size: fsFoot,
+                font: fontBold,
+                color: TR_RED,
+            });
+        };
+
+        putRight(hours ?? '', hci);
+        putRight(hourly ?? '', rci);
+
+        let amtDraw = amount?.trim();
+        if (!amtDraw && summaryCurrency)
+            amtDraw = summaryCurrency;
+
+        putRight(amtDraw ?? '', aci);
+    }
+
+    if (footerKind === 'summary' && !footerTotals?.summary?.amount?.trim() && summaryCurrency) {
+        const lastI = xs.length - 1;
+        const lastW = widths[lastI]!;
+        const tw = fontBold.widthOfTextAtSize(summaryCurrency, fsFoot);
+        page.drawText(summaryCurrency, {
+            x: xs[lastI]! + lastW - 4 - tw,
+            y: yFoot,
+            size: fsFoot,
+            font: fontBold,
+            color: TR_RED,
+        });
+    }
+
     return tableBottom;
 }
 
-/** Упрощённая версия заголовков + пустые строки + строка Total (соответствует превью). */
-function drawTimeReportPdfPage(page: PDFPage, model: InvoiceCoverLetterModel, font: PDFFont, fontBold: PDFFont, pageTag: number): void {
+/** Страница time report из данных счёта. */
+function drawTimeReportPdfPage(
+    page: PDFPage,
+    model: InvoiceCoverLetterModel,
+    pack: InvoiceTimeReportPack,
+    font: PDFFont,
+    fontBold: PDFFont,
+    pageTag: number,
+): void {
+    const detailBody = pack.detailSlots.map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.amount] as const);
+    const summaryBody = pack.summarySlots.map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
     let yTop = H - MT - 4;
-    page.drawText('Private and confidential', {
-        x: ML,
-        y: yTop,
-        size: 10,
+    const confLabel = 'Private and confidential';
+    const fsConf = 9;
+    const cw = font.widthOfTextAtSize(confLabel, fsConf);
+    const padConfX = 6;
+    const padConfY = 4;
+    const boxW = cw + padConfX * 2;
+    const boxH = fsConf + padConfY * 2;
+    const boxX = W - MR - boxW;
+    const boxBottom = yTop - boxH + 4;
+    page.drawRectangle({
+        x: boxX,
+        y: boxBottom,
+        width: boxW,
+        height: boxH,
+        color: TR_RED,
+    });
+    page.drawText(confLabel, {
+        x: boxX + padConfX,
+        y: boxBottom + fsConf - 2,
+        size: fsConf,
         font,
-        color: MUTED_TEXT,
+        color: rgb(1, 1, 1),
     });
     yTop -= 16;
     page.drawLine({
@@ -321,7 +463,7 @@ function drawTimeReportPdfPage(page: PDFPage, model: InvoiceCoverLetterModel, fo
         y: yTop,
         size: 12,
         font: fontBold,
-        color: CORP_TEXT,
+        color: TR_RED,
     });
     yTop -= 22;
 
@@ -337,7 +479,16 @@ function drawTimeReportPdfPage(page: PDFPage, model: InvoiceCoverLetterModel, fo
         bodyRows: TIME_REPORT_DETAIL_ROWS,
         footerKind: 'detail',
         summaryCurrency: null,
+        font,
         fontBold,
+        bodyTexts: detailBody,
+        rightAlignedBodyCols: new Set([4, 5]),
+        footerTotals: {
+            detail: {
+                hours: pack.detailTotalHoursDisplay,
+                amount: pack.detailTotalAmountDisplay,
+            },
+        },
     });
 
     let yMid = yAfterDetail - 16;
@@ -359,7 +510,17 @@ function drawTimeReportPdfPage(page: PDFPage, model: InvoiceCoverLetterModel, fo
         bodyRows: TIME_REPORT_SUMMARY_ROWS,
         footerKind: 'summary',
         summaryCurrency: cur,
+        font,
         fontBold,
+        bodyTexts: summaryBody,
+        rightAlignedBodyCols: new Set([3, 4, 5]),
+        footerTotals: {
+            summary: {
+                hours: pack.summaryGrandHoursDisplay,
+                hourly: '—',
+                amount: pack.summaryGrandAmountDisplay || cur,
+            },
+        },
     });
 
     const footerLine = MB + 28;
@@ -601,8 +762,10 @@ export async function buildInvoicePreviewPdfBlob({ model, session }: InvoicePrev
     const p1 = doc.addPage([W, H]);
     drawCoverPage(p1, model, font, fontBold, logoImage);
 
+    const timeReport = await resolveInvoiceTimeReportPack(session, model);
+
     const p2 = doc.addPage([W, H]);
-    drawTimeReportPdfPage(p2, model, font, fontBold, 2);
+    drawTimeReportPdfPage(p2, model, timeReport, font, fontBold, 2);
 
     const p3 = doc.addPage([W, H]);
     drawLegalInvoicePdfPage(p3, model, session, font, fontBold, logoImage);

@@ -30,7 +30,7 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--tt-inv-tr-red-dark);
+  color: #ffffff;
   background: var(--tt-inv-tr-red);
   line-height: 1.2;
 }
@@ -79,8 +79,12 @@
 }
 
 .tt-inv-tr__thead th:last-child,
+.tt-inv-tr__thead th:nth-child(5):nth-last-child(2),
 .tt-inv-tr__tbody td:last-child,
-.tt-inv-tr__tfoot td:last-child {
+.tt-inv-tr__tbody td:nth-child(5):nth-last-child(2),
+.tt-inv-tr__tbody td.tt-inv-tr__cell--num,
+.tt-inv-tr__tfoot td:last-child,
+.tt-inv-tr__tfoot td.tt-inv-tr__cell--num {
   text-align: right;
 }
 
@@ -106,8 +110,12 @@
   padding: 0.45rem 0.35rem 0;
   font-size: 9px;
   font-weight: 700;
-  color: var(--tt-inv-paper-strong, #0f172a);
+  color: var(--tt-inv-tr-red);
   border-bottom: none;
+}
+
+.tt-inv-tr__tfoot td.tt-inv-tr__tfoot-num {
+  color: var(--tt-inv-tr-red);
 }
 
 .tt-inv-tr__subtitle {
@@ -153,7 +161,6 @@
 }
 
 .tt-inv-tr__currency-foot {
-  text-align: right;
-  font-weight: 600;
-  color: #475569;
+  font-weight: 700;
+  color: var(--tt-inv-tr-red);
 }

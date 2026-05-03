@@ -32,7 +32,9 @@ import {
     packUppercaseRibbonDate,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
+import type { InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
+import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 
 const cellBorderNil = {
     top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
@@ -189,19 +191,41 @@ function trHeadCell(txt: string, pct: number): TableCell {
     });
 }
 
-function trBodyCell(pct: number): TableCell {
+type DocParaAlign = (typeof AlignmentType)[keyof typeof AlignmentType];
+
+function trBodyTextCell(txt: string, pct: number, align: DocParaAlign): TableCell {
+    const t = txt.trim();
     return new TableCell({
         borders: cellBorderGrid,
         width: { size: pct, type: WidthType.PERCENTAGE },
+        verticalAlign: VerticalAlignTable.TOP,
         children: [new Paragraph({
+            alignment: align,
             spacing: {},
-            children: [new TextRun({ text: '\u00a0', size: h(18), font: 'Calibri' })],
+            children: [
+                new TextRun({ text: t.length ? t : '\u00a0', size: h(9), font: 'Calibri', color: '475569' }),
+            ],
+        })],
+    });
+}
+
+function trFootValueCell(txt: string, pct: number, align: DocParaAlign): TableCell {
+    const t = txt.trim();
+    return new TableCell({
+        borders: cellBorderGrid,
+        width: { size: pct, type: WidthType.PERCENTAGE },
+        verticalAlign: VerticalAlignTable.CENTER,
+        children: [new Paragraph({
+            alignment: align,
+            children: [
+                new TextRun({ text: t.length ? t : '\u00a0', bold: true, color: INV_RED, size: h(9), font: 'Calibri' }),
+            ],
         })],
     });
 }
 
 /** Лист time report (соответствует превью: две таблицы + номер страницы). */
-function timeReportDocxBlocks(model: InvoiceCoverLetterModel): (Paragraph | Table)[] {
+function timeReportDocxBlocks(model: InvoiceCoverLetterModel, pack: InvoiceTimeReportPack): (Paragraph | Table)[] {
     const cur = packCurrencyCode(model);
     const amountHdr = cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`;
     const DW = pctWidths([11, 9, 14, 36, 10, 12]);
@@ -219,14 +243,15 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel): (Paragraph | Tabl
     });
     const detailBodyRows: TableRow[] = [];
     for (let i = 0; i < TIME_REPORT_DETAIL_ROWS; i++) {
+        const r = pack.detailSlots[i]!;
         detailBodyRows.push(new TableRow({
             children: [
-                trBodyCell(DW[0] ?? 11),
-                trBodyCell(DW[1] ?? 9),
-                trBodyCell(DW[2] ?? 14),
-                trBodyCell(DW[3] ?? 36),
-                trBodyCell(DW[4] ?? 10),
-                trBodyCell(DW[5] ?? 12),
+                trBodyTextCell(r.date, DW[0]!, AlignmentType.LEFT),
+                trBodyTextCell(r.initials, DW[1]!, AlignmentType.LEFT),
+                trBodyTextCell(r.task, DW[2]!, AlignmentType.LEFT),
+                trBodyTextCell(r.description, DW[3]!, AlignmentType.LEFT),
+                trBodyTextCell(r.hours, DW[4]!, AlignmentType.RIGHT),
+                trBodyTextCell(r.amount, DW[5]!, AlignmentType.RIGHT),
             ],
         }));
     }
@@ -239,16 +264,8 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel): (Paragraph | Tabl
                     children: [new TextRun({ text: 'Total', bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
                 })],
             }),
-            new TableCell({
-                borders: cellBorderGrid,
-                width: { size: DW[4]!, type: WidthType.PERCENTAGE },
-                children: [new Paragraph({ children: [new TextRun({ text: '\u00a0', size: h(10), font: 'Calibri' })] })],
-            }),
-            new TableCell({
-                borders: cellBorderGrid,
-                width: { size: DW[5]!, type: WidthType.PERCENTAGE },
-                children: [new Paragraph({ children: [new TextRun({ text: '\u00a0', size: h(10), font: 'Calibri' })] })],
-            }),
+            trFootValueCell(pack.detailTotalHoursDisplay, DW[4]!, AlignmentType.RIGHT),
+            trFootValueCell(pack.detailTotalAmountDisplay, DW[5]!, AlignmentType.RIGHT),
         ],
     }));
 
@@ -264,17 +281,21 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel): (Paragraph | Tabl
     });
     const summaryBodyRows: TableRow[] = [];
     for (let i = 0; i < TIME_REPORT_SUMMARY_ROWS; i++) {
+        const r = pack.summarySlots[i]!;
         summaryBodyRows.push(new TableRow({
             children: [
-                trBodyCell(SW[0] ?? 9),
-                trBodyCell(SW[1] ?? 26),
-                trBodyCell(SW[2] ?? 26),
-                trBodyCell(SW[3] ?? 13),
-                trBodyCell(SW[4] ?? 13),
-                trBodyCell(SW[5] ?? 13),
+                trBodyTextCell(r.initials, SW[0]!, AlignmentType.LEFT),
+                trBodyTextCell(r.name, SW[1]!, AlignmentType.LEFT),
+                trBodyTextCell(r.title, SW[2]!, AlignmentType.LEFT),
+                trBodyTextCell(r.hours, SW[3]!, AlignmentType.RIGHT),
+                trBodyTextCell(r.hourlyRate, SW[4]!, AlignmentType.RIGHT),
+                trBodyTextCell(r.totalPrice, SW[5]!, AlignmentType.RIGHT),
             ],
         }));
     }
+
+    const sumGrandAmt = pack.summaryGrandAmountDisplay.trim().length ? pack.summaryGrandAmountDisplay : cur;
+
     summaryBodyRows.push(new TableRow({
         children: [
             new TableCell({
@@ -284,25 +305,9 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel): (Paragraph | Tabl
                     children: [new TextRun({ text: 'Total', bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
                 })],
             }),
-            new TableCell({
-                borders: cellBorderGrid,
-                width: { size: SW[3]!, type: WidthType.PERCENTAGE },
-                children: [new Paragraph({ children: [new TextRun({ text: '\u00a0', size: h(10), font: 'Calibri' })] })],
-            }),
-            new TableCell({
-                borders: cellBorderGrid,
-                width: { size: SW[4]!, type: WidthType.PERCENTAGE },
-                children: [new Paragraph({ children: [new TextRun({ text: '\u00a0', size: h(10), font: 'Calibri' })] })],
-            }),
-            new TableCell({
-                borders: cellBorderGrid,
-                width: { size: SW[5]!, type: WidthType.PERCENTAGE },
-                verticalAlign: VerticalAlignTable.CENTER,
-                children: [new Paragraph({
-                    alignment: AlignmentType.RIGHT,
-                    children: [new TextRun({ text: cur, bold: true, color: INV_RED, size: h(9), font: 'Calibri' })],
-                })],
-            }),
+            trFootValueCell(pack.summaryGrandHoursDisplay, SW[3]!, AlignmentType.RIGHT),
+            trFootValueCell('—', SW[4]!, AlignmentType.RIGHT),
+            trFootValueCell(sumGrandAmt, SW[5]!, AlignmentType.RIGHT),
         ],
     }));
 
@@ -321,11 +326,41 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel): (Paragraph | Tabl
         rows: [summaryHeader, ...summaryBodyRows],
     });
 
+    const confidentialRow = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        layout: TableLayoutType.FIXED,
+        borders: TableBorders.NONE,
+        rows: [
+            new TableRow({
+                children: [
+                    new TableCell({
+                        borders: cellBorderNil,
+                        width: { size: 74, type: WidthType.PERCENTAGE },
+                        children: [new Paragraph({ children: [new TextRun({ text: '\u200b', size: h(2), font: 'Calibri' })] })],
+                    }),
+                    new TableCell({
+                        borders: cellBorderNil,
+                        width: { size: 26, type: WidthType.PERCENTAGE },
+                        shading: { type: ShadingType.SOLID, fill: INV_RED, color: INV_RED },
+                        margins: { top: 52, bottom: 52, left: 90, right: 90 },
+                        children: [new Paragraph({
+                            alignment: AlignmentType.CENTER,
+                            children: [new TextRun({
+                                text: 'Private and confidential',
+                                bold: true,
+                                color: 'FFFFFF',
+                                size: h(8),
+                                font: 'Calibri',
+                            })],
+                        })],
+                    }),
+                ],
+            }),
+        ],
+    });
+
     return [
-        new Paragraph({
-            spacing: { after: 60 },
-            children: [new TextRun({ text: 'Private and confidential', color: '6B7380', size: h(11), font: 'Calibri' })],
-        }),
+        confidentialRow,
         new Paragraph({
             spacing: { after: 120 },
             border: { bottom: { style: BorderStyle.SINGLE, color: INV_RED, size: 10, space: 1 } },
@@ -338,7 +373,7 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel): (Paragraph | Tabl
                 bold: true,
                 size: h(13),
                 font: 'Calibri',
-                color: '100814',
+                color: INV_RED,
             })],
         }),
         detailTbl,
@@ -625,6 +660,8 @@ export async function buildInvoicePreviewDocxBlob({ model, session }: InvoicePre
         }
     }
 
+    const timeReportPack = await resolveInvoiceTimeReportPack(session, model);
+
     const sectionPage = {
         properties: {
             page: {
@@ -641,7 +678,7 @@ export async function buildInvoicePreviewDocxBlob({ model, session }: InvoicePre
             },
             {
                 ...sectionPage,
-                children: timeReportDocxBlocks(model),
+                children: timeReportDocxBlocks(model, timeReportPack),
             },
             {
                 ...sectionPage,

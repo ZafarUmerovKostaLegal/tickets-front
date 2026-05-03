@@ -5,10 +5,13 @@ import { AppPageSettings, useAppToast } from '@shared/ui';
 import { OPEN_INVOICE_DETAIL_QUERY, readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
+import { emptyInvoiceTimeReportPack, type InvoiceTimeReportPack } from '../lib/invoiceTimeReportModel';
 import { buildInvoicePreviewDocxBlob } from '../lib/buildInvoicePreviewDocx';
 import { buildInvoicePreviewPdfBlob } from '../lib/buildInvoicePreviewPdf';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
+import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
+import { resolveInvoiceTimeReportPack } from '../lib/resolveInvoiceTimeReportPack';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import { InvoiceTimeReportPage } from './InvoiceTimeReportPage';
 import { InvoiceLegalInvoicePage } from './InvoiceLegalInvoicePage';
@@ -36,9 +39,12 @@ export function InvoicePreviewPage() {
     const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | null>(null);
     const session = useMemo(() => readInvoicePreviewSession(), []);
     const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel | null>(null);
+    const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activePage, setActivePage] = useState(1);
+
+    const displayModel = useMemo(() => coverModel ?? fallbackCoverModel(), [coverModel]);
 
     const scrollToPage = useCallback((page: number) => {
         const root = sheetStackRef.current;
@@ -63,7 +69,22 @@ export function InvoicePreviewPage() {
         };
     }, [session]);
 
-    const displayModel = coverModel ?? fallbackCoverModel();
+    useEffect(() => {
+        let cancel = false;
+        void resolveInvoiceTimeReportPack(session, displayModel).then((p) => {
+            if (!cancel)
+                setTimeReportPack(p);
+        });
+        return () => {
+            cancel = true;
+        };
+    }, [session, displayModel]);
+
+    const timeReportFallback = useMemo(
+        () => emptyInvoiceTimeReportPack(packCurrencyCode(displayModel)),
+        [displayModel],
+    );
+    const resolvedTimeReportPack = timeReportPack ?? timeReportFallback;
 
     useEffect(() => {
         const root = sheetStackRef.current;
@@ -209,7 +230,7 @@ export function InvoicePreviewPage() {
                       : num === 2
                         ? (
                             <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--timerpt">
-                              <InvoiceTimeReportPage model={displayModel} pageNumber={2}/>
+                              <InvoiceTimeReportPage model={displayModel} pack={resolvedTimeReportPack} pageNumber={2}/>
                             </div>
                           )
                         : num === 3
@@ -256,7 +277,7 @@ export function InvoicePreviewPage() {
                   className="tt-inv-a4-page tt-inv-a4-page--timerpt"
                   aria-label={`Страница 2 из ${PAGE_COUNT} — time report`}
                 >
-                  <InvoiceTimeReportPage model={displayModel} pageNumber={2}/>
+                  <InvoiceTimeReportPage model={displayModel} pack={resolvedTimeReportPack} pageNumber={2}/>
                 </div>
                 <div
                   ref={(el) => {

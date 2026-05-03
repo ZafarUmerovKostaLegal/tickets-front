@@ -1,23 +1,20 @@
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
-import { TIME_REPORT_DETAIL_ROWS, TIME_REPORT_SUMMARY_ROWS } from '../lib/invoicePreviewPackShared';
+import type { InvoiceTimeReportPack } from '../lib/invoiceTimeReportModel';
+import { packCurrencyCode, TIME_REPORT_DETAIL_ROWS, TIME_REPORT_SUMMARY_ROWS } from '../lib/invoicePreviewPackShared';
 import './InvoiceTimeReportPage.css';
 
 export type InvoiceTimeReportPageProps = {
     model: InvoiceCoverLetterModel;
+    pack: InvoiceTimeReportPack;
     /** Номер листа в пакете (в превью — 2) */
     pageNumber: number;
 };
 
-function currencyCodeFromTotal(totalFormatted: string): string {
-    const raw = totalFormatted.trim().split(/\s+/)[0];
-    const tok = raw?.replace(/[^A-Za-z]/g, '').toUpperCase();
-    return tok && tok.length ? tok : 'EUR';
-}
-
-export function InvoiceTimeReportPage({ model, pageNumber }: InvoiceTimeReportPageProps) {
+export function InvoiceTimeReportPage({ model, pack, pageNumber }: InvoiceTimeReportPageProps) {
     const monthYearUpper = model.servicesMonthYear.toUpperCase();
-    const cur = currencyCodeFromTotal(model.totalFormatted);
+    const cur = packCurrencyCode(model);
     const amountHeader = cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`;
+    const sumGrandAmt = pack.summaryGrandAmountDisplay.trim().length ? pack.summaryGrandAmountDisplay : cur;
 
     return (<div className="tt-inv-tr">
       <div className="tt-inv-tr__top">
@@ -39,22 +36,26 @@ export function InvoiceTimeReportPage({ model, pageNumber }: InvoiceTimeReportPa
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">
-            {Array.from({ length: TIME_REPORT_DETAIL_ROWS }, (_, i) => (
-              <tr key={i}>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-              </tr>
-            ))}
+            {Array.from({ length: TIME_REPORT_DETAIL_ROWS }, (_, i) => {
+                const r = pack.detailSlots[i]!;
+                const empty = !([r.date, r.initials, r.task, r.description, r.hours, r.amount].some((c) => String(c).trim().length > 0));
+                return (
+                    <tr key={i}>
+                      <td className={empty ? 'tt-inv-tr__cell--empty' : undefined}>{r.date || '\u00a0'}</td>
+                      <td className={empty ? 'tt-inv-tr__cell--empty' : undefined}>{r.initials || '\u00a0'}</td>
+                      <td className={empty ? 'tt-inv-tr__cell--empty' : undefined}>{r.task || '\u00a0'}</td>
+                      <td className={empty ? 'tt-inv-tr__cell--empty' : undefined}>{r.description || '\u00a0'}</td>
+                      <td className={`tt-inv-tr__cell--num${empty ? ' tt-inv-tr__cell--empty' : ''}`}>{r.hours || '\u00a0'}</td>
+                      <td className={`tt-inv-tr__cell--num${empty ? ' tt-inv-tr__cell--empty' : ''}`}>{r.amount || '\u00a0'}</td>
+                    </tr>
+                );
+            })}
           </tbody>
           <tfoot className="tt-inv-tr__tfoot">
             <tr>
               <td colSpan={4}>Total</td>
-              <td aria-hidden style={{ border: 'none' }}/>
-              <td aria-hidden style={{ border: 'none' }}/>
+              <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{pack.detailTotalHoursDisplay || '\u00a0'}</td>
+              <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{pack.detailTotalAmountDisplay || '\u00a0'}</td>
             </tr>
           </tfoot>
         </table>
@@ -74,23 +75,27 @@ export function InvoiceTimeReportPage({ model, pageNumber }: InvoiceTimeReportPa
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">
-            {Array.from({ length: TIME_REPORT_SUMMARY_ROWS }, (_, i) => (
-              <tr key={i}>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-                <td className="tt-inv-tr__cell--empty">&nbsp;</td>
-              </tr>
-            ))}
+            {Array.from({ length: TIME_REPORT_SUMMARY_ROWS }, (_, i) => {
+                const r = pack.summarySlots[i]!;
+                const empty = !([r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice].some((c) => String(c).trim().length > 0));
+                return (
+                    <tr key={i}>
+                      <td className={empty ? 'tt-inv-tr__cell--empty' : undefined}>{r.initials || '\u00a0'}</td>
+                      <td className={empty ? 'tt-inv-tr__cell--empty' : undefined}>{r.name || '\u00a0'}</td>
+                      <td className={empty ? 'tt-inv-tr__cell--empty' : undefined}>{r.title || '\u00a0'}</td>
+                      <td className={`tt-inv-tr__cell--num${empty ? ' tt-inv-tr__cell--empty' : ''}`}>{r.hours || '\u00a0'}</td>
+                      <td className={`tt-inv-tr__cell--num${empty ? ' tt-inv-tr__cell--empty' : ''}`}>{r.hourlyRate || '\u00a0'}</td>
+                      <td className={`tt-inv-tr__cell--num${empty ? ' tt-inv-tr__cell--empty' : ''}`}>{r.totalPrice || '\u00a0'}</td>
+                    </tr>
+                );
+            })}
           </tbody>
           <tfoot className="tt-inv-tr__tfoot">
             <tr>
               <td colSpan={3}>Total</td>
-              <td aria-hidden style={{ border: 'none' }}/>
-              <td aria-hidden style={{ border: 'none' }}/>
-              <td className="tt-inv-tr__currency-foot">{cur}</td>
+              <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{pack.summaryGrandHoursDisplay || '\u00a0'}</td>
+              <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">—</td>
+              <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num tt-inv-tr__currency-foot">{sumGrandAmt}</td>
             </tr>
           </tfoot>
         </table>
