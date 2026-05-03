@@ -469,6 +469,25 @@ export async function patchTimeEntry(authUserId: number, entryId: string, patch:
     return normalizeTimeEntryRow((await res.json()) as TimeEntryRow);
 }
 
+/** GET одной записи по владельцу (для подстановки в time report по timeEntryId из строки счёта). */
+export async function fetchTimeEntry(authUserId: number, entryId: string): Promise<TimeEntryRow | null> {
+    const uid = String(entryId ?? '').trim();
+    if (!uid)
+        return null;
+    let res = await apiFetch(`/api/v1/time-tracking/users/${authUserId}/time-entries/${encodeURIComponent(uid)}`, {
+        method: 'GET',
+    });
+    if (res.status === 404) {
+        res = await apiFetch(`/api/v1/users/${authUserId}/time-entries/${encodeURIComponent(uid)}`, {
+            method: 'GET',
+        });
+    }
+    if (res.status === 404)
+        return null;
+    await throwIfNotOk(res);
+    return normalizeTimeEntryRow((await res.json()) as TimeEntryRow);
+}
+
 export type TimeEntryEditUnlockGrantOut = {
     authUserId: number;
     workDate: string;
