@@ -2,8 +2,11 @@ import { useState, useMemo, useRef, useEffect, useLayoutEffect, useId } from 're
 import { createPortal } from 'react-dom';
 import { useCurrentUser } from '@shared/hooks';
 import { listProjectExpenseCategories, type ProjectExpenseCategoryRow, } from '@entities/time-tracking';
-import { createExpense, fetchExchangeRate, fetchExpenses, submitExpense, uploadAttachment, } from '@entities/expenses/model/expensesApi';
+import { createExpense, fetchExpenses, submitExpense, uploadAttachment, } from '@entities/expenses/model/expensesApi';
 import type { ExpenseRequest, ListParams } from '@entities/expenses/model/types';
+import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
+import { computeAmountUzsForApi } from '@entities/expenses/model/expenseCurrency';
+import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import { EXPENSE_STATUS_META, EXPENSE_CATEGORY_META } from '@entities/time-tracking/model/constants';
 import type { ExpenseCategory, ExpenseStatus, ExpenseRow } from '@entities/time-tracking/model/types';
 import { hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
@@ -40,7 +43,7 @@ function mapExpenseTypeToCategory(t: string): ExpenseCategory {
         return 'Прочее';
     return 'Прочее';
 }
-function expenseRequestToExpenseRow(req: ExpenseRequest, projectLine: string): ExpenseRow {
+function expenseRequestToExpenseRow(req: ExpenseRequest, projectLine: string, projectCurrencyCode: string): ExpenseRow {
     const author = req.createdBy?.displayName?.trim() ||
         req.createdBy?.email?.trim() ||
         `Пользователь ${req.createdByUserId}`;
@@ -48,6 +51,15 @@ function expenseRequestToExpenseRow(req: ExpenseRequest, projectLine: string): E
     const initials = parts.length >= 2
         ? `${parts[0]!.charAt(0)}${parts[parts.length - 1]!.charAt(0)}`.toUpperCase()
         : (parts[0]?.charAt(0).toUpperCase() ?? '?');
+    const uzsAmt = asExpenseNumber(req.amountUzs);
+    const eqBook = asExpenseNumber(req.equivalentAmount);
+    const rate = asExpenseNumber(req.exchangeRate);
+    /** Эквивалент для биллинга: бэкенд заполняет по курсу; иначе UZS÷курс ЦБ за дату сохранения. */
+    const bookFallbackUsd = rate > 0 ? uzsAmt / rate : uzsAmt;
+    const cur = (projectCurrencyCode || 'USD').trim().toUpperCase() || 'USD';
+    const uzsRounded = uzsAmt > 0 ? Math.round(uzsAmt) : 0;
+    const amountBookNonUzs = eqBook > 0 ? eqBook : bookFallbackUsd;
+
     return {
         id: req.id,
         date: req.expenseDate.slice(0, 10),
@@ -55,8 +67,9 @@ function expenseRequestToExpenseRow(req: ExpenseRequest, projectLine: string): E
         initials,
         category: mapExpenseTypeToCategory(req.expenseType),
         description: req.description?.trim() || req.businessPurpose?.trim() || '—',
-        amount: req.amountUzs,
-        currency: 'UZS',
+        amount: cur === 'UZS' ? (uzsRounded > 0 ? uzsRounded : amountBookNonUzs) : amountBookNonUzs,
+        currency: cur,
+        paidInUzs: cur !== 'UZS' ? (uzsRounded > 0 ? uzsRounded : undefined) : undefined,
         status: mapApiExpenseStatusToTt(req.status),
         billable: req.isReimbursable,
         project: projectLine || undefined,
@@ -108,7 +121,33 @@ function fmtRowDate(dateStr: string) {
     };
 }
 function fmtAmt(n: number, cur = 'UZS') {
-    return `${n.toLocaleString('ru-RU')} ${cur}`;
+    const c = cur.trim().toUpperCase();
+    const useDecimals = /^USD|EUR|GBP|RUB$/.test(c);
+    const opts = useDecimals
+        ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } as const
+        : { maximumFractionDigits: 2 } as const;
+    return `${n.toLocaleString('ru-RU', opts)} ${cur}`;
+}
+/** Подсказка: введённая сумма в сумах → эквивалент в валюте проекта по курсу ЦБ. */
+function projectBookHintFromUzs(parsed: CbuParsed | null, uzsInput: string, projectCurRaw: string): string | null {
+    if (!parsed || !(parsed.uzsPerUsd > 0))
+        return null;
+    const amt = parseFloat(String(uzsInput).replace(/\s/g, '').replace(',', '.'));
+    if (!Number.isFinite(amt) || amt <= 0)
+        return null;
+    const p = projectCurRaw.trim().toUpperCase() || 'USD';
+    const equivUsd = amt / parsed.uzsPerUsd;
+    if (p === 'UZS')
+        return `В журнале проекта: ${Math.round(amt).toLocaleString('ru-RU')} UZS`;
+    if (p === 'USD') {
+        return `В учёте проекта (эквивалент): ≈ ${equivUsd.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD`;
+    }
+    const k = foreignUnitsPerUsd(parsed, p);
+    if (k == null || k <= 0) {
+        return `По курсу ЦБ за дату расхода ≈ ${equivUsd.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD (нет курса ${p} в ЦБ — уточните у администратора)`;
+    }
+    const inProj = equivUsd * k;
+    return `В учёте проекта (эквивалент): ≈ ${inProj.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${p} (курс ЦБ за дату расхода)`;
 }
 function weekStatus(statuses: ExpenseStatus[]): ExpenseStatus {
     if (statuses.some(s => s === 'pending'))
@@ -157,6 +196,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         }
         return m;
     }, [projectOpts]);
+    const journalCurrencyCode = useMemo(() => (projectOpts.find((x) => x.id === journalProjectId)?.currency ?? 'USD').trim(), [projectOpts, journalProjectId]);
     useEffect(() => {
         if (userLoading || !currentUser) {
             setProjectOpts([]);
@@ -221,6 +261,9 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
     const [listVersion, setListVersion] = useState(0);
     const [formBusy, setFormBusy] = useState(false);
     const [formErr, setFormErr] = useState<string | null>(null);
+    const [formCbu, setFormCbu] = useState<CbuParsed | null>(null);
+    const [formCbuErr, setFormCbuErr] = useState<string | null>(null);
+    const [formCbuLoading, setFormCbuLoading] = useState(false);
     useEffect(() => {
         if (!formProject) {
             setExpenseCategories([]);
@@ -297,7 +340,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             const rows = res.items
                 .filter((r) => r.projectId === pid)
                 .map((r) => expenseRequestToExpenseRow(r, projectLineById.get(r.projectId ?? '') ||
-                (r.projectId ? `Проект ${String(r.projectId).slice(0, 8)}…` : '—')));
+                (r.projectId ? `Проект ${String(r.projectId).slice(0, 8)}…` : '—'), journalCurrencyCode));
             setListRows(rows);
         })
             .catch((e: unknown) => {
@@ -322,6 +365,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         projectsLoading,
         journalProjectId,
         projectLineById,
+        journalCurrencyCode,
         managedExpenseAuthorId,
         isTtManager,
         listVersion,
@@ -352,6 +396,35 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             document.body.style.overflow = '';
         };
     }, [detailExp]);
+    useEffect(() => {
+        if (!showForm || !formDate.trim()) {
+            setFormCbu(null);
+            setFormCbuErr(null);
+            setFormCbuLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setFormCbuLoading(true);
+        setFormCbuErr(null);
+        void fetchCbuParsedForDate(formDate.trim().slice(0, 10))
+            .then((parsed) => {
+                if (!cancelled)
+                    setFormCbu(parsed);
+            })
+            .catch((e: unknown) => {
+                if (!cancelled) {
+                    setFormCbu(null);
+                    setFormCbuErr(e instanceof Error ? e.message : 'Не удалось загрузить курс ЦБ');
+                }
+            })
+            .finally(() => {
+                if (!cancelled)
+                    setFormCbuLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [showForm, formDate]);
     function openForm() {
         setFormErr(null);
         setFormDate(todayStr);
@@ -405,11 +478,20 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             setFormErr('Для возмещаемого расхода приложите документ для оплаты');
             return;
         }
+        if (formCbuLoading) {
+            setFormErr('Подождите загрузки курса ЦБ для выбранной даты расхода.');
+            return;
+        }
+        if (!formCbu || !(formCbu.uzsPerUsd > 0)) {
+            setFormErr(formCbuErr ?? 'Не удалось получить официальный курс UZS к USD (ЦБ РУз) на эту дату. Проверьте дату или сеть.');
+            return;
+        }
         setFormBusy(true);
         try {
-            const { rate } = await fetchExchangeRate(formDate);
-            if (!rate || rate <= 0) {
-                setFormErr('Не удалось получить курс UZS/USD на выбранную дату');
+            const amountNorm = formAmount.replace(/\s/g, '').replace(',', '.').trim();
+            const amountUzsForApi = Math.round(computeAmountUzsForApi('UZS', amountNorm, String(formCbu.uzsPerUsd), ''));
+            if (!amountUzsForApi || amountUzsForApi <= 0) {
+                setFormErr('Укажите корректную сумму в сумах');
                 return;
             }
             const description = formNotes.trim() || 'Расход (учёт времени)';
@@ -418,8 +500,8 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
                 description,
                 expenseDate: formDate,
                 paymentDeadline: null as string | null,
-                amountUzs: Math.round(amt),
-                exchangeRate: rate,
+                amountUzs: amountUzsForApi,
+                exchangeRate: formCbu.uzsPerUsd,
                 expenseType,
                 isReimbursable: formBillable,
                 projectId: formProject.trim(),
@@ -483,6 +565,8 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         const p = projectOpts.find((x) => x.id === journalProjectId);
         return p?.color ?? 'var(--app-accent, #4f46e5)';
     }, [journalProjectId, projectOpts]);
+    const formProjectCurrency = useMemo(() => (projectOpts.find((p) => p.id === formProject)?.currency ?? 'USD').trim().toUpperCase() || 'USD', [projectOpts, formProject]);
+    const formPaymentBookHint = useMemo(() => projectBookHintFromUzs(formCbu, formAmount, formProjectCurrency), [formCbu, formAmount, formProjectCurrency]);
     const isEmpty = listRows.length === 0;
     const showListSkeleton = userLoading || projectsLoading || (Boolean(journalProjectId) && listLoading);
     const canPickProject = !projectsLoading && projectOpts.length > 0;
@@ -530,8 +614,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
                 : 'Выберите проект…'} emptyListText={projectsLoading ? 'Загрузка…' : 'Нет доступных проектов'} noMatchText="Проект не найден" value={canPickProject ? journalProjectId : ''} items={canPickProject ? journalOptionsSorted : []} getOptionValue={(p) => p.id} getOptionLabel={expenseJournalProjectLabel} getSearchText={(p) => `${p.name} ${p.client}`.replace(/\s+/g, ' ').trim()} onSelect={(p) => setJournalProjectId(p.id)} aria-describedby={journalProjectHintId}/>
                 </div>
                 <p id={journalProjectHintId} className="tt-exp-panel__project-scope-hint">
-                  Список и новая заявка привязаны к выбранному проекту; категории расхода берутся из учёта времени по этому
-                  проекту. В выпадающем списке есть поиск по названию проекта и клиенту.
+                  Список и новая заявка привязаны к выбранному проекту; суммы в списке — в валюте этого проекта (фактические суммы UZS вводятся в форме расхода). Категории расходов из учёта времени по этому проекту. В выпадающем списке есть поиск по названию проекта и клиенту.
                 </p>
                 {projectsErr && (<p className="tt-exp-panel__project-scope-err" role="alert">
                     {projectsErr}
@@ -655,6 +738,9 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
                 <div className="exp__form-col exp__form-col--date">
                   <label className="exp__form-label">Дата</label>
                   <input type="date" className="exp__form-input" value={formDate} disabled={formBusy} onChange={(e) => setFormDate(e.target.value)}/>
+                  {formCbuLoading && (<p className="exp__form-hint">Загрузка курса ЦБ для конвертации в валюту проекта…</p>)}
+                  {formCbuErr && !formCbuLoading && (<p className="exp__form-hint exp__form-hint--err" role="status">{formCbuErr}</p>)}
+                  {formCbu != null && !formCbuLoading && !formCbuErr && (<p className="exp__form-hint">Используется курс ЦБ РУз на эту дату для перевода сум в валюту проекта.</p>)}
                 </div>
 
                 <div className="exp__form-col exp__form-col--middle">
@@ -741,11 +827,12 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
               </label>
 
               <div className="exp__form-amount-bottom">
-                <label className="exp__form-label" htmlFor={expenseFormAmountFieldId}>Сумма</label>
+                <label className="exp__form-label" htmlFor={expenseFormAmountFieldId}>Сумма фактической оплаты в сумах (UZS)</label>
                 <div className="exp__form-amount-wrap">
                   <span className="exp__form-amount-cur">UZS</span>
-                  <input id={expenseFormAmountFieldId} type="number" className="exp__form-amount-input" placeholder="0" min="0" step="1" value={formAmount} disabled={formBusy} onChange={(e) => setFormAmount(e.target.value)}/>
+                  <input id={expenseFormAmountFieldId} type="number" className="exp__form-amount-input" placeholder="Например, 124000" min="0" step="1" value={formAmount} disabled={formBusy} onChange={(e) => setFormAmount(e.target.value)}/>
                 </div>
+                {formPaymentBookHint ? (<p className="exp__form-hint">{formPaymentBookHint}</p>) : (<p className="exp__form-hint">В журнале и в биллинге учитывается эквивалент в валюте проекта ({formProjectCurrency}).</p>)}
               </div>
 
               {formErr && (<p className="exp__form-hint exp__form-hint--err" role="alert">
@@ -753,7 +840,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
                 </p>)}
 
               <div className="exp__form-actions">
-                <button type="submit" className="exp__form-save" disabled={formBusy}>
+                <button type="submit" className="exp__form-save" disabled={formBusy || formCbuLoading || !formCbu}>
                   {formBusy ? 'Отправка…' : 'Сохранить расход'}
                 </button>
                 <button type="button" className="exp__form-cancel" onClick={cancelForm} disabled={formBusy}>
@@ -788,7 +875,10 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             </div>
 
             <div className="exp__detail-amount-hero">
-              <span className="exp__detail-amount">{fmtAmt(detailExp.amount, detailExp.currency)}</span>
+              <div className="exp__detail-amount-stack">
+                <span className="exp__detail-amount">{fmtAmt(detailExp.amount, detailExp.currency)}</span>
+                {detailExp.paidInUzs != null ? (<span className="exp__detail-amount-caption">Фактическая оплата: {detailExp.paidInUzs.toLocaleString('ru-RU')} UZS</span>) : null}
+              </div>
               <span className="exp__detail-status" style={{
                     color: EXPENSE_STATUS_META[detailExp.status].color,
                     background: EXPENSE_STATUS_META[detailExp.status].bg,

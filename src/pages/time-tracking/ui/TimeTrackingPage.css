@@ -3359,6 +3359,19 @@
   flex-shrink: 0;
 }
 
+.exp__detail-amount-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.exp__detail-amount-caption {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--app-muted, #6b7280);
+}
+
 .exp__detail-amount {
   font-size: 1.625rem;
   font-weight: 800;

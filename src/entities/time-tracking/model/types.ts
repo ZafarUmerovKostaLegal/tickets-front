@@ -35,6 +35,8 @@ export type ExpenseRow = {
     project?: string;
     client?: string;
     billable?: boolean;
+    /** Фактическая оплата в UZS при отображении суммы в валюте проекта. */
+    paidInUzs?: number;
 };
 export type TimeUserRow = {
     id: string;
