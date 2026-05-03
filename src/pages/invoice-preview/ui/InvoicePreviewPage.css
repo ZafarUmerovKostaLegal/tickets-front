@@ -196,7 +196,8 @@
 }
 
 .tt-inv-preview__thumb-doc--letter,
-.tt-inv-preview__thumb-doc--timerpt {
+.tt-inv-preview__thumb-doc--timerpt,
+.tt-inv-preview__thumb-doc--invoice {
   min-height: calc(var(--tt-inv-thumb-doc-w) * 297 / 210);
 }
 
@@ -323,7 +324,7 @@
   min-height: min-content;
 }
 
-.tt-inv-preview .tt-inv-a4-page:not(.tt-inv-a4-page--cover):not(.tt-inv-a4-page--timerpt) {
+.tt-inv-preview .tt-inv-a4-page:not(.tt-inv-a4-page--cover):not(.tt-inv-a4-page--timerpt):not(.tt-inv-a4-page--invoice) {
   width: 100%;
   max-width: 210mm;
   aspect-ratio: 210 / 297;
@@ -331,7 +332,8 @@
 }
 
 .tt-inv-preview .tt-inv-a4-page--cover,
-.tt-inv-preview .tt-inv-a4-page--timerpt {
+.tt-inv-preview .tt-inv-a4-page--timerpt,
+.tt-inv-preview .tt-inv-a4-page--invoice {
   width: 100%;
   max-width: 210mm;
   aspect-ratio: auto;
@@ -355,8 +357,21 @@
   overflow: visible;
 }
 
-.tt-inv-preview__pages .tt-inv-a4-page--cover,
-.tt-inv-preview__pages .tt-inv-a4-page--timerpt {
+.tt-inv-preview .tt-inv-a4-page--timerpt,
+.tt-inv-preview .tt-inv-a4-page--invoice {
+  display: flex;
+  flex-direction: column;
+}
+
+.tt-inv-preview .tt-inv-a4-page--timerpt > .tt-inv-tr,
+.tt-inv-preview .tt-inv-a4-page--invoice > .tt-inv-li {
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  min-height: 0;
+}
+
+.tt-inv-preview__pages .tt-inv-a4-page--cover {
   display: block;
 }
 

@@ -1,0 +1,252 @@
+/* Третий лист — счёт, светлый фон, коралловые акценты */
+
+.tt-inv-li {
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+  padding: 9mm 12mm calc(13mm + 5.5rem);
+  font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 10px;
+  line-height: 1.42;
+  color: var(--tt-inv-paper-ink, #0f172a);
+  background: var(--tt-inv-paper, #ffffff);
+  display: flex;
+  flex-direction: column;
+  --tt-inv-li-coral: #e8928c;
+  --tt-inv-li-coral-dark: #1a0506;
+}
+
+.tt-inv-li__masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.tt-inv-li__firm-blurb {
+  flex: 1;
+  min-width: 0;
+}
+
+.tt-inv-li__firm-name {
+  margin: 0 0 0.2rem;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #1e293b;
+}
+
+.tt-inv-li__firm-line {
+  margin: 0.05rem 0 0;
+  font-size: 8px;
+  line-height: 1.45;
+  color: #64748b;
+}
+
+.tt-inv-li__brand {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
+.tt-inv-li__logo {
+  display: block;
+  width: 100%;
+  max-width: 150px;
+  height: auto;
+  max-height: 40px;
+  object-fit: contain;
+  object-position: right top;
+}
+
+.tt-inv-li__ribbon {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.42rem 0.65rem;
+  box-sizing: border-box;
+  background: var(--tt-inv-li-coral);
+  border-radius: 1px;
+}
+
+.tt-inv-li__ribbon-no,
+.tt-inv-li__ribbon-date {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  color: var(--tt-inv-li-coral-dark);
+  white-space: nowrap;
+}
+
+.tt-inv-li__ribbon-date {
+  text-align: right;
+}
+
+.tt-inv-li__panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.75rem;
+  padding-top: 0.65rem;
+  margin-bottom: 0.95rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.tt-inv-li__panel-h {
+  margin: 0 0 0.45rem;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.tt-inv-li__panel-strong {
+  margin: 0 0 0.35rem;
+  font-weight: 700;
+  font-size: 10px;
+  color: #0f172a;
+}
+
+.tt-inv-li__panel-label {
+  margin: 0.45rem 0 0.1rem;
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.tt-inv-li__panel-muted {
+  margin: 0;
+  font-size: 9px;
+  color: #64748b;
+}
+
+.tt-inv-li__muted-dash {
+  color: #94a3b8;
+}
+
+.tt-inv-li__panel-text {
+  margin: 0;
+  font-size: 9.5px;
+  color: #0f172a;
+}
+
+@media (max-width: 620px) {
+  .tt-inv-li__panels {
+    grid-template-columns: 1fr;
+  }
+
+  .tt-inv-li__panel--right {
+    border-top: 1px dashed #f1f5f9;
+    padding-top: 0.85rem;
+  }
+}
+
+.tt-inv-li__svc-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin-bottom: 1rem;
+  font-family: inherit;
+}
+
+.tt-inv-li__svc-table thead tr {
+  background: #eef2f6;
+}
+
+.tt-inv-li__svc-table th {
+  padding: 0.35rem 0.45rem;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #334155;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tt-inv-li__svc-table .tt-inv-li__th-total {
+  text-align: right;
+}
+
+.tt-inv-li__svc-table td {
+  padding: 0.45rem;
+  font-size: 9.5px;
+  vertical-align: top;
+  border-bottom: 2px solid var(--tt-inv-li-coral);
+}
+
+.tt-inv-li__svc-amt {
+  text-align: right;
+  white-space: nowrap;
+  font-weight: 700;
+}
+
+.tt-inv-li__totals {
+  align-self: flex-end;
+  text-align: right;
+  margin-bottom: 1.35rem;
+  max-width: 15rem;
+  font-size: 9.5px;
+  line-height: 1.55;
+}
+
+.tt-inv-li__total-line {
+  margin: 0.12rem 0;
+  font-weight: 600;
+}
+
+.tt-inv-li__total-label {
+  letter-spacing: 0.06em;
+  font-weight: 800;
+  font-size: 8.5px;
+}
+
+.tt-inv-li__total-due {
+  margin-top: 0.55rem;
+  padding: 0.5rem 0.65rem;
+  background: rgba(232, 146, 140, 0.28);
+  border-radius: 2px;
+  font-weight: 800;
+}
+
+.tt-inv-li__total-due-label {
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+}
+
+.tt-inv-li__total-due-amt {
+  border-bottom: 2px solid var(--tt-inv-li-coral);
+  padding-bottom: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tt-inv-li__thanks {
+  margin: 0 0 0.85rem;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.tt-inv-li__bottom {
+  position: absolute;
+  left: 12mm;
+  right: 12mm;
+  bottom: 10mm;
+}
+
+.tt-inv-li__disclaimer {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+  font-size: 8px;
+  line-height: 1.5;
+  color: #64748b;
+}

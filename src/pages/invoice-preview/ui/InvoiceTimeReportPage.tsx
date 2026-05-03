@@ -98,12 +98,11 @@ export function InvoiceTimeReportPage({ model, pageNumber }: InvoiceTimeReportPa
         </table>
       </div>
 
-      <div className="tt-inv-tr__gap" aria-hidden />
-      <div className="tt-inv-tr__bottom">
+      <footer className="tt-inv-tr__bottom">
         <div className="tt-inv-tr__bottom-line" aria-hidden />
         <div className="tt-inv-tr__bottom-meta">
           <span className="tt-inv-tr__page-box">{pageNumber}</span>
         </div>
-      </div>
+      </footer>
     </div>);
 }

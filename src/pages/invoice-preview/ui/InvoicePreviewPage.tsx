@@ -11,6 +11,7 @@ import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../li
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import { InvoiceTimeReportPage } from './InvoiceTimeReportPage';
+import { InvoiceLegalInvoicePage } from './InvoiceLegalInvoicePage';
 import '@pages/time-tracking/ui/TimeTrackingPage.css';
 import './InvoicePreviewPage.css';
 
@@ -153,7 +154,7 @@ export function InvoicePreviewPage() {
     }, [coverModel, defaultFilename, pushToast]);
 
     const toolbarTitle = subtitle ?? defaultFilename;
-    const pdfToolbarTip = 'Первая страница — сопроводительное письмо; второй и третий лист — под счёт и приложения.';
+    const pdfToolbarTip = 'Лист 1 — сопроводительное письмо; лист 2 — отчёт времени; лист 3 — счёт (invoice).';
 
     return (<div className="tt-inv-preview">
       <nav className="time-page__navbar tt-inv-preview__navbar" aria-label="Предпросмотр счёта">
@@ -194,7 +195,7 @@ export function InvoicePreviewPage() {
                 type="button"
                 className={`tt-inv-preview__thumb${num === activePage ? ' tt-inv-preview__thumb--active' : ''}`}
                 aria-current={num === activePage ? 'page' : undefined}
-                aria-label={`Страница ${num} из ${PAGE_COUNT}${num === 1 ? ', сопроводительное письмо' : num === 2 ? ', time report' : ''}`}
+                aria-label={`Страница ${num} из ${PAGE_COUNT}${num === 1 ? ', сопроводительное письмо' : num === 2 ? ', time report' : num === 3 ? ', счёт' : ''}`}
                 onClick={() => scrollToPage(num)}
               >
                 <span className="tt-inv-preview__thumb-sheet" aria-hidden>
@@ -211,9 +212,15 @@ export function InvoicePreviewPage() {
                               <InvoiceTimeReportPage model={displayModel} pageNumber={2}/>
                             </div>
                           )
-                        : (
-                            <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--blank" aria-hidden/>
-                          )}
+                        : num === 3
+                          ? (
+                              <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--invoice">
+                                <InvoiceLegalInvoicePage model={displayModel} session={session}/>
+                              </div>
+                            )
+                          : (
+                              <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--blank" aria-hidden/>
+                            )}
                   </span>
                 </span>
                 <span className="tt-inv-preview__thumb-num">{num}</span>
@@ -255,9 +262,11 @@ export function InvoicePreviewPage() {
                   ref={(el) => {
                     pageRefs.current[2] = el;
                   }}
-                  className="tt-inv-a4-page"
-                  aria-label={`Страница 3 из ${PAGE_COUNT}`}
-                />
+                  className="tt-inv-a4-page tt-inv-a4-page--invoice"
+                  aria-label={`Страница 3 из ${PAGE_COUNT} — счёт`}
+                >
+                  <InvoiceLegalInvoicePage model={displayModel} session={session}/>
+                </div>
               </div>
             </div>
           </div>

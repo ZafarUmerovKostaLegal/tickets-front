@@ -2,9 +2,9 @@
 
 .tt-inv-tr {
   box-sizing: border-box;
+  position: relative;
   width: 100%;
-  min-height: 100%;
-  padding: 10mm 12mm 14mm;
+  padding: 10mm 12mm calc(14mm + 40px);
   font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   font-size: 9.5px;
   line-height: 1.35;
@@ -117,21 +117,20 @@
   color: var(--tt-inv-tr-red);
 }
 
-.tt-inv-tr__gap {
-  flex: 1;
-  flex-grow: 1;
-  min-height: 0.5rem;
-}
+/* Подвал всегда у нижнего края листа (при недозаполненном содержании) */
 
 .tt-inv-tr__bottom {
-  margin-top: auto;
-  flex-shrink: 0;
+  position: absolute;
+  left: 12mm;
+  right: 12mm;
+  bottom: 11mm;
 }
 
 .tt-inv-tr__bottom-line {
-  height: 2px;
+  height: 1px;
   background: var(--tt-inv-tr-red);
-  margin-bottom: 0.45rem;
+  margin: 0 0 0.42rem;
+  border: none;
 }
 
 .tt-inv-tr__bottom-meta {
@@ -149,7 +148,7 @@
   font-size: 9px;
   font-weight: 800;
   color: var(--tt-inv-tr-red-dark);
-  border: 2px solid var(--tt-inv-tr-red);
+  border: 1px solid var(--tt-inv-tr-red);
   background: rgba(155, 27, 48, 0.06);
 }
 
