@@ -135,9 +135,9 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
 export async function buildInvoicePreviewDocxBlob(model: InvoiceCoverLetterModel): Promise<Blob> {
     const logoRuns: ParagraphChild[] = [];
     if (typeof window !== 'undefined') {
-        const raster = await rasterizeInvoiceCoverLogoSvg(680, { opaqueBackground: true });
+        const raster = await rasterizeInvoiceCoverLogoSvg(560, { opaqueBackground: true });
         if (raster?.png.length && raster.widthPx > 0) {
-            const tw = 322;
+            const tw = 252;
             const th = Math.max(1, Math.round((raster.heightPx / raster.widthPx) * tw));
             logoRuns.push(new ImageRun({
                 type: 'png',

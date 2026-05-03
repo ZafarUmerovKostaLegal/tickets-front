@@ -66,8 +66,8 @@ function drawCoverPage(
     const logoTop = H - M;
     let lowestHeaderY = logoTop;
 
-    /** Полное словесное лого (~2:1), без гигантской плашки по сравнению с контактами. */
-    const logoWidthPt = 228;
+    /** Полное словесное лого (~2:1), компактнее строки контактов. */
+    const logoWidthPt = 178;
     if (logoImage) {
         const logoHeightPt = (logoImage.height / logoImage.width) * logoWidthPt;
         const logoBottom = logoTop - logoHeightPt;
@@ -167,7 +167,7 @@ export async function buildInvoicePreviewPdfBlob(model: InvoiceCoverLetterModel)
 
     let logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
     if (typeof window !== 'undefined') {
-        const raster = await rasterizeInvoiceCoverLogoSvg(760);
+        const raster = await rasterizeInvoiceCoverLogoSvg(640);
         if (raster?.png.length) {
             try {
                 logoImage = await doc.embedPng(raster.png);
