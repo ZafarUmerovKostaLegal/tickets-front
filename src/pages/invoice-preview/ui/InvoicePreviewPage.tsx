@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { AppPageSettings, useAppToast } from '@shared/ui';
@@ -27,11 +27,25 @@ function fallbackCoverModel(): InvoiceCoverLetterModel {
     });
 }
 
+const PAGE_COUNT = 3;
+
 export function InvoicePreviewPage() {
     const { pushToast } = useAppToast();
     const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | null>(null);
     const session = useMemo(() => readInvoicePreviewSession(), []);
     const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel | null>(null);
+    const sheetStackRef = useRef<HTMLDivElement>(null);
+    const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const [activePage, setActivePage] = useState(1);
+
+    const scrollToPage = useCallback((page: number) => {
+        const i = page - 1;
+        const el = pageRefs.current[i];
+        if (!el)
+            return;
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setActivePage(page);
+    }, []);
 
     useEffect(() => {
         let cancel = false;
@@ -45,6 +59,33 @@ export function InvoicePreviewPage() {
     }, [session]);
 
     const displayModel = coverModel ?? fallbackCoverModel();
+
+    useEffect(() => {
+        const root = sheetStackRef.current;
+        if (!root)
+            return;
+        const els = pageRefs.current.filter((n): n is HTMLDivElement => n != null);
+        if (els.length === 0)
+            return;
+
+        const obs = new IntersectionObserver(
+            (entries) => {
+                const best = entries
+                    .filter((e) => e.isIntersecting && e.intersectionRatio > 0)
+                    .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+                if (!best?.target)
+                    return;
+                const idx = els.indexOf(best.target as HTMLDivElement);
+                if (idx >= 0)
+                    setActivePage(idx + 1);
+            },
+            { root, rootMargin: '-8% 0px -35% 0px', threshold: [0.1, 0.25, 0.45, 0.65, 0.85] },
+        );
+
+        for (const el of els)
+            obs.observe(el);
+        return () => obs.disconnect();
+    }, [coverModel]);
 
     const subtitleParts = session?.mode === 'existing'
         ? [session.meta.invoiceNumber, session.meta.clientLabel].filter(Boolean)
@@ -149,26 +190,45 @@ export function InvoicePreviewPage() {
 
         <div className="tt-inv-preview__viewer">
           <aside className="tt-inv-preview__thumbs" aria-label="Миниатюры страниц">
-            {[1, 2, 3].map((num) => (
+            {Array.from({ length: PAGE_COUNT }, (_, i) => i + 1).map((num) => (
               <button
                 key={num}
                 type="button"
-                className={`tt-inv-preview__thumb${num === 1 ? ' tt-inv-preview__thumb--active' : ''}`}
-                aria-current={num === 1 ? 'page' : undefined}
-                aria-label={`Страница ${num} из 3${num === 1 ? ', сопроводительное письмо' : ''}`}
+                className={`tt-inv-preview__thumb${num === activePage ? ' tt-inv-preview__thumb--active' : ''}`}
+                aria-current={num === activePage ? 'page' : undefined}
+                aria-label={`Страница ${num} из ${PAGE_COUNT}${num === 1 ? ', сопроводительное письмо' : ''}`}
+                onClick={() => scrollToPage(num)}
               >
                 <span className="tt-inv-preview__thumb-sheet" aria-hidden/>
                 <span className="tt-inv-preview__thumb-num">{num}</span>
               </button>
             ))}
           </aside>
-          <div className="tt-inv-preview__sheet-stack" aria-label="Макет печати">
+          <div ref={sheetStackRef} className="tt-inv-preview__sheet-stack" aria-label="Макет печати">
             <div className="tt-inv-preview__pages">
-              <div className="tt-inv-a4-page tt-inv-a4-page--cover" aria-label="Страница 1 из 3 — сопроводительное письмо">
+              <div
+                ref={(el) => {
+                    pageRefs.current[0] = el;
+                }}
+                className="tt-inv-a4-page tt-inv-a4-page--cover"
+                aria-label={`Страница 1 из ${PAGE_COUNT} — сопроводительное письмо`}
+              >
                 <InvoiceCoverLetter model={displayModel}/>
               </div>
-              <div className="tt-inv-a4-page" aria-label="Страница 2 из 3"/>
-              <div className="tt-inv-a4-page" aria-label="Страница 3 из 3"/>
+              <div
+                ref={(el) => {
+                    pageRefs.current[1] = el;
+                }}
+                className="tt-inv-a4-page"
+                aria-label={`Страница 2 из ${PAGE_COUNT}`}
+              />
+              <div
+                ref={(el) => {
+                    pageRefs.current[2] = el;
+                }}
+                className="tt-inv-a4-page"
+                aria-label={`Страница 3 из ${PAGE_COUNT}`}
+              />
             </div>
           </div>
         </div>

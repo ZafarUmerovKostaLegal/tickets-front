@@ -1,5 +1,8 @@
 .tt-inv-preview {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--app-bg, #f8fafc);
   color: var(--app-text, #0f172a);
   /* Контент письма на «бумаге» как в экспорте; хром интерфейса — из темы */
@@ -63,13 +66,20 @@
 }
 
 .tt-inv-preview__main {
-  max-width: min(960px, 100%);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+  max-width: min(1100px, 100%);
   margin: 0 auto;
-  padding: 1.25rem 1.25rem 2.75rem;
+  padding: 1.25rem 1.25rem 1.25rem;
   box-sizing: border-box;
 }
 
 .tt-inv-preview__header {
+  flex-shrink: 0;
   margin-bottom: 1.15rem;
   padding-bottom: 0.85rem;
   border-bottom: 1px solid var(--app-border-soft, #f1f5f9);
@@ -126,19 +136,23 @@ body[data-theme='dark'] .tt-inv-preview__context {
 }
 
 .tt-inv-preview__viewer {
+  flex: 1;
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 1rem;
+  min-height: 0;
 }
 
 .tt-inv-preview__thumbs {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.65rem;
   flex-shrink: 0;
+  align-self: stretch;
   width: 4.75rem;
-  padding: 0.35rem 0.45rem;
+  padding: 0.5rem 0.45rem;
   border-radius: 10px;
   border: 1px solid var(--app-border, #e2e8f0);
   background: var(--app-surface, #ffffff);
@@ -155,10 +169,15 @@ body[data-theme='dark'] .tt-inv-preview__context {
   margin: 0;
   border: none;
   background: transparent;
-  cursor: default;
+  cursor: pointer;
   color: var(--app-muted);
   border-radius: 8px;
   padding-bottom: 0.15rem;
+}
+
+.tt-inv-preview__thumb:focus-visible {
+  outline: 2px solid var(--app-accent, #4f46e5);
+  outline-offset: 2px;
 }
 
 .tt-inv-preview__thumb-sheet {
@@ -198,6 +217,11 @@ body[data-theme='dark'] .tt-inv-preview__context {
 .tt-inv-preview__sheet-stack {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 0.85rem 0.95rem 1rem;
   border-radius: 12px;
   border: 1px solid var(--app-border);
@@ -207,6 +231,7 @@ body[data-theme='dark'] .tt-inv-preview__context {
     var(--app-bg, #f8fafc) 100%
   );
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  scrollbar-width: thin;
 }
 
 .tt-inv-preview__pages {
@@ -215,7 +240,6 @@ body[data-theme='dark'] .tt-inv-preview__context {
   align-items: center;
   gap: 1rem;
   padding: 0.35rem 0.05rem 0.45rem;
-  scrollbar-width: thin;
 }
 
 /* Лист как в экспорте, тени и обводка в палитре приложения */
@@ -233,6 +257,7 @@ body[data-theme='dark'] .tt-inv-preview__context {
     0 1px 2px rgba(15, 23, 42, 0.05),
     0 10px 32px rgba(15, 23, 42, 0.1),
     0 0 0 1px rgba(var(--app-accent-rgb, 79, 70, 229), 0.04);
+  scroll-margin-block-start: 0.5rem;
 }
 
 .tt-inv-preview__pages .tt-inv-a4-page--cover {
@@ -246,16 +271,19 @@ body[data-theme='dark'] .tt-inv-preview__context {
 @media (max-width: 960px) {
   .tt-inv-preview__viewer {
     flex-direction: column;
+    gap: 0.75rem;
   }
 
   .tt-inv-preview__thumbs {
     flex-direction: row;
     justify-content: center;
+    align-self: center;
     width: auto;
     max-width: 100%;
+    flex-wrap: wrap;
     overflow-x: auto;
     gap: 0.75rem;
-    padding: 0.45rem;
+    padding: 0.45rem 0.6rem;
   }
 
   .tt-inv-preview__thumb-sheet {
@@ -263,18 +291,13 @@ body[data-theme='dark'] .tt-inv-preview__context {
   }
 
   .tt-inv-preview__pages {
-    flex-direction: row;
-    justify-content: flex-start;
-    overflow-x: auto;
-    overflow-y: hidden;
-    align-items: flex-start;
-    gap: 0.85rem;
-    padding-bottom: 0.65rem;
-    -webkit-overflow-scrolling: touch;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
   }
 
-  .tt-inv-preview__pages .tt-inv-a4-page {
-    width: 180px;
-    max-width: none;
+  .tt-inv-preview .tt-inv-a4-page {
+    max-width: 210mm;
+    width: 100%;
   }
 }
