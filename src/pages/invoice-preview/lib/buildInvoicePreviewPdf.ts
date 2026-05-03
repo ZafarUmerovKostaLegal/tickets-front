@@ -5,8 +5,6 @@ import dejavuSansBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
 import dejavuSansRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
 import {
     INVOICE_PAYMENT_DISCLAIMER,
-    TIME_REPORT_DETAIL_ROWS,
-    TIME_REPORT_SUMMARY_ROWS,
     type InvoicePreviewPackInput,
     packCaseDetailLine,
     packCurrencyCode,
@@ -17,7 +15,8 @@ import {
     packUppercaseRibbonDate,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
-import type { InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import type { InvoiceTimeReportDetailRow, InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
@@ -210,6 +209,47 @@ function clipPdfCellText(txt: string, maxW: number, font: PDFFont, size: number)
     return n > 0 ? `${t.slice(0, n)}${ell}` : ell;
 }
 
+/** Итоги в ячейке: без обрезки «…», чуть уменьшаем кегль при нехватке ширины. */
+function drawRightFitPdfBold(
+    page: PDFPage,
+    text: string,
+    xCellLeft: number,
+    cellW: number,
+    yBaseline: number,
+    fontBold: PDFFont,
+): void {
+    const t = text.trim();
+    if (!t.length)
+        return;
+    const padOuter = 4;
+    const maxW = Math.max(4, cellW - padOuter * 2);
+    let fs = 8;
+    const minFs = 5;
+    while (fs >= minFs) {
+        if (fontBold.widthOfTextAtSize(t, fs) <= maxW) {
+            const tw = fontBold.widthOfTextAtSize(t, fs);
+            page.drawText(t, {
+                x: xCellLeft + cellW - padOuter - tw,
+                y: yBaseline,
+                size: fs,
+                font: fontBold,
+                color: TR_RED,
+            });
+            return;
+        }
+        fs -= 0.5;
+    }
+    const clip = clipPdfCellText(t, maxW, fontBold, minFs);
+    const tw = fontBold.widthOfTextAtSize(clip, minFs);
+    page.drawText(clip, {
+        x: xCellLeft + cellW - padOuter - tw,
+        y: yBaseline,
+        size: minFs,
+        font: fontBold,
+        color: TR_RED,
+    });
+}
+
 function paintTimeReportBody(
     page: PDFPage,
     rows: readonly (readonly string[])[],
@@ -262,6 +302,8 @@ function drawTimeReportGridTable(
             detail?: { hours: string; amount: string };
             summary?: { hours: string; hourly: string; amount: string };
         } | null;
+        /** Для detail: есть ли строка Total с суммами (промежуточные страницы — false). */
+        showInnerTotal?: boolean;
     },
 ): number {
     const {
@@ -278,12 +320,16 @@ function drawTimeReportGridTable(
         bodyTexts,
         rightAlignedBodyCols,
         footerTotals,
+        showInnerTotal,
     } = opts;
     const headerH = 20;
     const rowH = 14;
     const { xs, widths } = colLayout(tableLeft, tableW, colWeights);
     const yHeaderBot = yTopPdf - headerH;
-    const tableBottom = yHeaderBot - rowH * (bodyRows + 1);
+    const innerFootLines = footerKind === 'detail'
+        ? (showInnerTotal !== false ? 1 : 0)
+        : 1;
+    const tableBottom = yHeaderBot - rowH * (bodyRows + innerFootLines);
 
     page.drawRectangle({
         x: tableLeft,
@@ -313,7 +359,7 @@ function drawTimeReportGridTable(
         borderColor: GRID_LINE,
     });
 
-    for (let i = 1; i <= bodyRows + 1; i++) {
+    for (let i = 1; i <= bodyRows + innerFootLines; i++) {
         const yy = yHeaderBot - i * rowH;
         page.drawLine({
             start: { x: tableLeft, y: yy },
@@ -337,94 +383,53 @@ function drawTimeReportGridTable(
     }
 
     const yFoot = tableBottom + 5;
-    const fsFoot = 8;
-    page.drawText('Total', { x: xs[0]! + 3, y: yFoot, size: fsFoot, font: fontBold, color: TR_RED });
+    if (innerFootLines > 0) {
+        const fsTot = 8;
+        page.drawText('Total', { x: xs[0]! + 3, y: yFoot, size: fsTot, font: fontBold, color: TR_RED });
 
-    if (footerKind === 'detail' && footerTotals?.detail) {
-        const { hours, amount } = footerTotals.detail;
-        const hi = 4;
-        const ai = 5;
-        if (hours?.trim()) {
-            const cw = widths[hi] ?? 45;
-            const clip = clipPdfCellText(hours.trim(), cw - 6, fontBold, fsFoot);
-            page.drawText(clip, {
-                x: xs[hi]! + cw - fontBold.widthOfTextAtSize(clip, fsFoot) - 4,
-                y: yFoot,
-                size: fsFoot,
-                font: fontBold,
-                color: TR_RED,
-            });
+        if (footerKind === 'detail' && footerTotals?.detail) {
+            const { hours, amount } = footerTotals.detail;
+            const hi = 4;
+            const ai = 5;
+            if (hours?.trim())
+                drawRightFitPdfBold(page, hours, xs[hi]!, widths[hi]!, yFoot, fontBold);
+            if (amount?.trim())
+                drawRightFitPdfBold(page, amount, xs[ai]!, widths[ai]!, yFoot, fontBold);
         }
-        if (amount?.trim()) {
-            const cw = widths[ai] ?? 50;
-            const clip = clipPdfCellText(amount.trim(), cw - 6, fontBold, fsFoot);
-            page.drawText(clip, {
-                x: xs[ai]! + cw - fontBold.widthOfTextAtSize(clip, fsFoot) - 4,
-                y: yFoot,
-                size: fsFoot,
-                font: fontBold,
-                color: TR_RED,
-            });
+
+        if (footerKind === 'summary' && footerTotals?.summary) {
+            const { hours, hourly, amount } = footerTotals.summary;
+            const hci = 3;
+            const rci = 4;
+            const aci = 5;
+
+            if (hours?.trim())
+                drawRightFitPdfBold(page, hours, xs[hci]!, widths[hci]!, yFoot, fontBold);
+            if (hourly?.trim())
+                drawRightFitPdfBold(page, hourly, xs[rci]!, widths[rci]!, yFoot, fontBold);
+
+            let amtDraw = amount?.trim();
+            if (!amtDraw && summaryCurrency)
+                amtDraw = summaryCurrency;
+
+            if (amtDraw?.trim())
+                drawRightFitPdfBold(page, amtDraw, xs[aci]!, widths[aci]!, yFoot, fontBold);
         }
-    }
 
-    if (footerKind === 'summary' && footerTotals?.summary) {
-        const { hours, hourly, amount } = footerTotals.summary;
-        const hci = 3;
-        const rci = 4;
-        const aci = 5;
-
-        const putRight = (text: string, colIndex: number) => {
-            if (!text?.trim())
-                return;
-            const cw = widths[colIndex] ?? 40;
-            const clip = clipPdfCellText(text.trim(), cw - 6, fontBold, fsFoot);
-            page.drawText(clip, {
-                x: xs[colIndex]! + cw - fontBold.widthOfTextAtSize(clip, fsFoot) - 4,
-                y: yFoot,
-                size: fsFoot,
-                font: fontBold,
-                color: TR_RED,
-            });
-        };
-
-        putRight(hours ?? '', hci);
-        putRight(hourly ?? '', rci);
-
-        let amtDraw = amount?.trim();
-        if (!amtDraw && summaryCurrency)
-            amtDraw = summaryCurrency;
-
-        putRight(amtDraw ?? '', aci);
-    }
-
-    if (footerKind === 'summary' && !footerTotals?.summary?.amount?.trim() && summaryCurrency) {
-        const lastI = xs.length - 1;
-        const lastW = widths[lastI]!;
-        const tw = fontBold.widthOfTextAtSize(summaryCurrency, fsFoot);
-        page.drawText(summaryCurrency, {
-            x: xs[lastI]! + lastW - 4 - tw,
-            y: yFoot,
-            size: fsFoot,
-            font: fontBold,
-            color: TR_RED,
-        });
+        if (footerKind === 'summary' && !footerTotals?.summary?.amount?.trim() && summaryCurrency) {
+            const lastI = xs.length - 1;
+            const lastW = widths[lastI]!;
+            drawRightFitPdfBold(page, summaryCurrency, xs[lastI]!, lastW, yFoot, fontBold);
+        }
     }
 
     return tableBottom;
 }
 
-/** Страница time report из данных счёта. */
-function drawTimeReportPdfPage(
-    page: PDFPage,
-    model: InvoiceCoverLetterModel,
-    pack: InvoiceTimeReportPack,
-    font: PDFFont,
-    fontBold: PDFFont,
-    pageTag: number,
-): void {
-    const detailBody = pack.detailSlots.map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.amount] as const);
-    const summaryBody = pack.summarySlots.map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [11, 8, 11, 28, 11, 16] as const;
+const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 26, 26, 13, 13, 13] as const;
+
+function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, font: PDFFont, fontBold: PDFFont, continuation: boolean): number {
     let yTop = H - MT - 4;
     const confLabel = 'Private and confidential';
     const fsConf = 9;
@@ -457,7 +462,8 @@ function drawTimeReportPdfPage(
         color: TR_RED,
     });
     yTop -= 12;
-    const title = `TIME REPORT FOR SERVICES PROVIDED IN ${model.servicesMonthYear.toUpperCase()}`;
+    const titleBase = `TIME REPORT FOR SERVICES PROVIDED IN ${model.servicesMonthYear.toUpperCase()}`;
+    const title = continuation ? `${titleBase} — CONTINUED` : titleBase;
     page.drawText(title, {
         x: ML,
         y: yTop,
@@ -466,63 +472,10 @@ function drawTimeReportPdfPage(
         color: TR_RED,
     });
     yTop -= 22;
+    return yTop;
+}
 
-    const tableW = W - ML - MR;
-    const cur = packCurrencyCode(model);
-    const amountHdr = cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`;
-    const yAfterDetail = drawTimeReportGridTable(page, {
-        tableLeft: ML,
-        tableW,
-        yTopPdf: yTop,
-        colWeights: [11, 9, 14, 36, 10, 12],
-        headers: ['Date', 'Initials', 'Task', 'Description', 'Hours', amountHdr],
-        bodyRows: TIME_REPORT_DETAIL_ROWS,
-        footerKind: 'detail',
-        summaryCurrency: null,
-        font,
-        fontBold,
-        bodyTexts: detailBody,
-        rightAlignedBodyCols: new Set([4, 5]),
-        footerTotals: {
-            detail: {
-                hours: pack.detailTotalHoursDisplay,
-                amount: pack.detailTotalAmountDisplay,
-            },
-        },
-    });
-
-    let yMid = yAfterDetail - 16;
-    page.drawText('Summary of services', {
-        x: ML,
-        y: yMid,
-        size: 11,
-        font: fontBold,
-        color: TR_RED,
-    });
-    yMid -= 18;
-
-    drawTimeReportGridTable(page, {
-        tableLeft: ML,
-        tableW,
-        yTopPdf: yMid,
-        colWeights: [9, 26, 26, 13, 13, 13],
-        headers: ['Initials', 'Name', 'Title', 'Hours', 'Hourly rate', `Total price (${cur})`],
-        bodyRows: TIME_REPORT_SUMMARY_ROWS,
-        footerKind: 'summary',
-        summaryCurrency: cur,
-        font,
-        fontBold,
-        bodyTexts: summaryBody,
-        rightAlignedBodyCols: new Set([3, 4, 5]),
-        footerTotals: {
-            summary: {
-                hours: pack.summaryGrandHoursDisplay,
-                hourly: '—',
-                amount: pack.summaryGrandAmountDisplay || cur,
-            },
-        },
-    });
-
+function drawTimeReportBandFooter(page: PDFPage, fontBold: PDFFont, pageTag: number): void {
     const footerLine = MB + 28;
     page.drawLine({
         start: { x: ML, y: footerLine },
@@ -549,6 +502,95 @@ function drawTimeReportPdfPage(
         font: fontBold,
         color: TR_RED,
     });
+}
+
+/** Один лист Time Report: чанк детальных строк; summary только на последнем чанке. */
+function drawSingleTimeReportPdfPage(
+    page: PDFPage,
+    model: InvoiceCoverLetterModel,
+    pack: InvoiceTimeReportPack,
+    font: PDFFont,
+    fontBold: PDFFont,
+    pageTag: number,
+    slice: InvoiceTimeReportDetailRow[],
+    opts: {
+        continuation: boolean;
+        showDetailTotals: boolean;
+        showSummarySection: boolean;
+    },
+): void {
+    const yGridTop = drawTimeReportBandHeader(page, model, font, fontBold, opts.continuation);
+    const detailBody = slice.map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.amount] as const);
+    const tableW = W - ML - MR;
+    const cur = packCurrencyCode(model);
+    const amountHdr = cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`;
+    const nRows = Math.max(slice.length, 1);
+
+    const yAfterDetail = drawTimeReportGridTable(page, {
+        tableLeft: ML,
+        tableW,
+        yTopPdf: yGridTop,
+        colWeights: TIME_REPORT_PDF_DETAIL_WEIGHTS,
+        headers: ['Date', 'Initials', 'Task', 'Description', 'Hours', amountHdr],
+        bodyRows: nRows,
+        footerKind: 'detail',
+        summaryCurrency: null,
+        font,
+        fontBold,
+        bodyTexts: detailBody.length ? detailBody : [['', '', '', '', '', '']],
+        rightAlignedBodyCols: new Set([4, 5]),
+        showInnerTotal: opts.showDetailTotals,
+        footerTotals: opts.showDetailTotals
+            ? {
+                detail: {
+                    hours: pack.detailTotalHoursDisplay,
+                    amount: pack.detailTotalAmountDisplay,
+                },
+            }
+            : null,
+    });
+
+    if (!opts.showSummarySection) {
+        drawTimeReportBandFooter(page, fontBold, pageTag);
+        return;
+    }
+
+    const summaryBody = pack.summarySlots.map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
+    const summaryRows = Math.max(summaryBody.length, 1);
+
+    let yMid = yAfterDetail - 16;
+    page.drawText('Summary of services', {
+        x: ML,
+        y: yMid,
+        size: 11,
+        font: fontBold,
+        color: TR_RED,
+    });
+    yMid -= 18;
+
+    drawTimeReportGridTable(page, {
+        tableLeft: ML,
+        tableW,
+        yTopPdf: yMid,
+        colWeights: TIME_REPORT_PDF_SUMMARY_WEIGHTS,
+        headers: ['Initials', 'Name', 'Title', 'Hours', 'Hourly rate', `Total price (${cur})`],
+        bodyRows: summaryRows,
+        footerKind: 'summary',
+        summaryCurrency: cur,
+        font,
+        fontBold,
+        bodyTexts: summaryBody.length ? summaryBody : [['', '', '', '', '', '']],
+        rightAlignedBodyCols: new Set([3, 4, 5]),
+        footerTotals: {
+            summary: {
+                hours: pack.summaryGrandHoursDisplay,
+                hourly: '—',
+                amount: pack.summaryGrandAmountDisplay || cur,
+            },
+        },
+    });
+
+    drawTimeReportBandFooter(page, fontBold, pageTag);
 }
 
 function drawLegalInvoicePdfPage(
@@ -763,12 +805,22 @@ export async function buildInvoicePreviewPdfBlob({ model, session }: InvoicePrev
     drawCoverPage(p1, model, font, fontBold, logoImage);
 
     const timeReport = await resolveInvoiceTimeReportPack(session, model);
+    const detailChunks = splitDetailRowsForPagedTimeReport(timeReport.detailSlots);
 
-    const p2 = doc.addPage([W, H]);
-    drawTimeReportPdfPage(p2, model, timeReport, font, fontBold, 2);
+    let trPageTag = 2;
+    for (let i = 0; i < detailChunks.length; i++) {
+        const lastChunk = i === detailChunks.length - 1;
+        const pTr = doc.addPage([W, H]);
+        drawSingleTimeReportPdfPage(pTr, model, timeReport, font, fontBold, trPageTag, detailChunks[i]!, {
+            continuation: i > 0,
+            showDetailTotals: lastChunk,
+            showSummarySection: lastChunk,
+        });
+        trPageTag++;
+    }
 
-    const p3 = doc.addPage([W, H]);
-    drawLegalInvoicePdfPage(p3, model, session, font, fontBold, logoImage);
+    const pInv = doc.addPage([W, H]);
+    drawLegalInvoicePdfPage(pInv, model, session, font, fontBold, logoImage);
 
     const bytes = await doc.save();
     const copy = new Uint8Array(bytes.byteLength);

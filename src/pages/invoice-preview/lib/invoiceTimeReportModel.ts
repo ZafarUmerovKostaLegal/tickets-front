@@ -30,7 +30,7 @@ export type InvoiceTimeReportPack = {
     summaryGrandAmountDisplay: string;
 };
 
-function emptyDetailRow(): InvoiceTimeReportDetailRow {
+export function emptyDetailRow(): InvoiceTimeReportDetailRow {
     return { date: '', initials: '', task: '', description: '', hours: '', amount: '' };
 }
 
@@ -57,18 +57,35 @@ export function formatTimeReportHours(n: number): string {
     return s || '0';
 }
 
+function detailRowIsTrailingEmpty(row: InvoiceTimeReportDetailRow): boolean {
+    return ![row.date, row.initials, row.task, row.description, row.hours, row.amount].some((c) => String(c).trim().length > 0);
+}
+
+/** Убирает пустые строки снизу (после данных). */
+export function trimTrailingEmptyDetailSlots(rows: readonly InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {
+    const out = [...rows];
+    while (out.length > 0 && detailRowIsTrailingEmpty(out[out.length - 1]!))
+        out.pop();
+    return out;
+}
+
+/** Все строки счёта для документов без обрезки по лимиту листа. */
+export function finalizeDetailSlots(rows: InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {
+    return trimTrailingEmptyDetailSlots(rows);
+}
+
 export function padDetailRows(rows: InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {
     const out = [...rows];
     while (out.length < TIME_REPORT_DETAIL_ROWS)
         out.push(emptyDetailRow());
-    return out.slice(0, TIME_REPORT_DETAIL_ROWS);
+    return out;
 }
 
 export function padSummaryRows(rows: InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow[] {
     const out = [...rows];
     while (out.length < TIME_REPORT_SUMMARY_ROWS)
         out.push(emptySummaryRow());
-    return out.slice(0, TIME_REPORT_SUMMARY_ROWS);
+    return out;
 }
 
 export function formatTimeReportAmount(amount: number, currency: string): string {

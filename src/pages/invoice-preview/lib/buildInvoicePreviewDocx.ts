@@ -20,8 +20,6 @@ import {
 import { KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import {
     INVOICE_PAYMENT_DISCLAIMER,
-    TIME_REPORT_DETAIL_ROWS,
-    TIME_REPORT_SUMMARY_ROWS,
     type InvoicePreviewPackInput,
     packCaseDetailLine,
     packCurrencyCode,
@@ -32,7 +30,8 @@ import {
     packUppercaseRibbonDate,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
-import type { InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import type { InvoiceTimeReportDetailRow, InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
 import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 
@@ -224,92 +223,60 @@ function trFootValueCell(txt: string, pct: number, align: DocParaAlign): TableCe
     });
 }
 
-/** Лист time report (соответствует превью: две таблицы + номер страницы). */
-function timeReportDocxBlocks(model: InvoiceCoverLetterModel, pack: InvoiceTimeReportPack): (Paragraph | Table)[] {
+type TimeReportDocxChunkOpts = {
+    continuation: boolean;
+    pageNumStr: string;
+    isLastChunk: boolean;
+};
+
+/** Одна секция time report (чанк детализации; Total + Summary только на последнем чанке). */
+function timeReportDocxSectionChildren(
+    model: InvoiceCoverLetterModel,
+    pack: InvoiceTimeReportPack,
+    detailChunk: readonly InvoiceTimeReportDetailRow[],
+    opts: TimeReportDocxChunkOpts,
+): (Paragraph | Table)[] {
     const cur = packCurrencyCode(model);
     const amountHdr = cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`;
-    const DW = pctWidths([11, 9, 14, 36, 10, 12]);
+    const DW = pctWidths([11, 8, 11, 28, 11, 16]);
     const SW = pctWidths([9, 26, 26, 13, 13, 13]);
 
     const detailHeader = new TableRow({
         children: [
             trHeadCell('Date', DW[0] ?? 11),
-            trHeadCell('Initials', DW[1] ?? 9),
-            trHeadCell('Task', DW[2] ?? 14),
-            trHeadCell('Description', DW[3] ?? 36),
-            trHeadCell('Hours', DW[4] ?? 10),
-            trHeadCell(amountHdr, DW[5] ?? 12),
+            trHeadCell('Initials', DW[1] ?? 8),
+            trHeadCell('Task', DW[2] ?? 11),
+            trHeadCell('Description', DW[3] ?? 28),
+            trHeadCell('Hours', DW[4] ?? 11),
+            trHeadCell(amountHdr, DW[5] ?? 16),
         ],
     });
-    const detailBodyRows: TableRow[] = [];
-    for (let i = 0; i < TIME_REPORT_DETAIL_ROWS; i++) {
-        const r = pack.detailSlots[i]!;
+    const detailBodyRows: TableRow[] = detailChunk.map((r) => new TableRow({
+        children: [
+            trBodyTextCell(r.date, DW[0]!, AlignmentType.LEFT),
+            trBodyTextCell(r.initials, DW[1]!, AlignmentType.LEFT),
+            trBodyTextCell(r.task, DW[2]!, AlignmentType.LEFT),
+            trBodyTextCell(r.description, DW[3]!, AlignmentType.LEFT),
+            trBodyTextCell(r.hours, DW[4]!, AlignmentType.RIGHT),
+            trBodyTextCell(r.amount, DW[5]!, AlignmentType.RIGHT),
+        ],
+    }));
+
+    if (opts.isLastChunk) {
         detailBodyRows.push(new TableRow({
             children: [
-                trBodyTextCell(r.date, DW[0]!, AlignmentType.LEFT),
-                trBodyTextCell(r.initials, DW[1]!, AlignmentType.LEFT),
-                trBodyTextCell(r.task, DW[2]!, AlignmentType.LEFT),
-                trBodyTextCell(r.description, DW[3]!, AlignmentType.LEFT),
-                trBodyTextCell(r.hours, DW[4]!, AlignmentType.RIGHT),
-                trBodyTextCell(r.amount, DW[5]!, AlignmentType.RIGHT),
+                new TableCell({
+                    borders: cellBorderGrid,
+                    columnSpan: 4,
+                    children: [new Paragraph({
+                        children: [new TextRun({ text: 'Total', bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
+                    })],
+                }),
+                trFootValueCell(pack.detailTotalHoursDisplay, DW[4]!, AlignmentType.RIGHT),
+                trFootValueCell(pack.detailTotalAmountDisplay, DW[5]!, AlignmentType.RIGHT),
             ],
         }));
     }
-    detailBodyRows.push(new TableRow({
-        children: [
-            new TableCell({
-                borders: cellBorderGrid,
-                columnSpan: 4,
-                children: [new Paragraph({
-                    children: [new TextRun({ text: 'Total', bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
-                })],
-            }),
-            trFootValueCell(pack.detailTotalHoursDisplay, DW[4]!, AlignmentType.RIGHT),
-            trFootValueCell(pack.detailTotalAmountDisplay, DW[5]!, AlignmentType.RIGHT),
-        ],
-    }));
-
-    const summaryHeader = new TableRow({
-        children: [
-            trHeadCell('Initials', SW[0] ?? 9),
-            trHeadCell('Name', SW[1] ?? 26),
-            trHeadCell('Title', SW[2] ?? 26),
-            trHeadCell('Hours', SW[3] ?? 13),
-            trHeadCell('Hourly rate', SW[4] ?? 13),
-            trHeadCell(`Total price (${cur})`, SW[5] ?? 13),
-        ],
-    });
-    const summaryBodyRows: TableRow[] = [];
-    for (let i = 0; i < TIME_REPORT_SUMMARY_ROWS; i++) {
-        const r = pack.summarySlots[i]!;
-        summaryBodyRows.push(new TableRow({
-            children: [
-                trBodyTextCell(r.initials, SW[0]!, AlignmentType.LEFT),
-                trBodyTextCell(r.name, SW[1]!, AlignmentType.LEFT),
-                trBodyTextCell(r.title, SW[2]!, AlignmentType.LEFT),
-                trBodyTextCell(r.hours, SW[3]!, AlignmentType.RIGHT),
-                trBodyTextCell(r.hourlyRate, SW[4]!, AlignmentType.RIGHT),
-                trBodyTextCell(r.totalPrice, SW[5]!, AlignmentType.RIGHT),
-            ],
-        }));
-    }
-
-    const sumGrandAmt = pack.summaryGrandAmountDisplay.trim().length ? pack.summaryGrandAmountDisplay : cur;
-
-    summaryBodyRows.push(new TableRow({
-        children: [
-            new TableCell({
-                borders: cellBorderGrid,
-                columnSpan: 3,
-                children: [new Paragraph({
-                    children: [new TextRun({ text: 'Total', bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
-                })],
-            }),
-            trFootValueCell(pack.summaryGrandHoursDisplay, SW[3]!, AlignmentType.RIGHT),
-            trFootValueCell('—', SW[4]!, AlignmentType.RIGHT),
-            trFootValueCell(sumGrandAmt, SW[5]!, AlignmentType.RIGHT),
-        ],
-    }));
 
     const tableOpts = {
         width: { size: 100, type: WidthType.PERCENTAGE },
@@ -320,10 +287,6 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel, pack: InvoiceTimeR
     const detailTbl = new Table({
         ...tableOpts,
         rows: [detailHeader, ...detailBodyRows],
-    });
-    const sumTbl = new Table({
-        ...tableOpts,
-        rows: [summaryHeader, ...summaryBodyRows],
     });
 
     const confidentialRow = new Table({
@@ -359,7 +322,10 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel, pack: InvoiceTimeR
         ],
     });
 
-    return [
+    const titleBase = `TIME REPORT FOR SERVICES PROVIDED IN ${model.servicesMonthYear.toUpperCase()}`;
+    const titleText = opts.continuation ? `${titleBase} — CONTINUED` : titleBase;
+
+    const out: (Paragraph | Table)[] = [
         confidentialRow,
         new Paragraph({
             spacing: { after: 120 },
@@ -369,7 +335,7 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel, pack: InvoiceTimeR
         new Paragraph({
             spacing: { after: 160 },
             children: [new TextRun({
-                text: `TIME REPORT FOR SERVICES PROVIDED IN ${model.servicesMonthYear.toUpperCase()}`,
+                text: titleText,
                 bold: true,
                 size: h(13),
                 font: 'Calibri',
@@ -377,11 +343,62 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel, pack: InvoiceTimeR
             })],
         }),
         detailTbl,
-        new Paragraph({
-            spacing: { before: 260, after: 120 },
-            children: [new TextRun({ text: 'Summary of services', bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
-        }),
-        sumTbl,
+    ];
+
+    if (opts.isLastChunk) {
+        const summaryHeader = new TableRow({
+            children: [
+                trHeadCell('Initials', SW[0] ?? 9),
+                trHeadCell('Name', SW[1] ?? 26),
+                trHeadCell('Title', SW[2] ?? 26),
+                trHeadCell('Hours', SW[3] ?? 13),
+                trHeadCell('Hourly rate', SW[4] ?? 13),
+                trHeadCell(`Total price (${cur})`, SW[5] ?? 13),
+            ],
+        });
+        const summaryDataRows: TableRow[] = pack.summarySlots.map((r) => new TableRow({
+            children: [
+                trBodyTextCell(r.initials, SW[0]!, AlignmentType.LEFT),
+                trBodyTextCell(r.name, SW[1]!, AlignmentType.LEFT),
+                trBodyTextCell(r.title, SW[2]!, AlignmentType.LEFT),
+                trBodyTextCell(r.hours, SW[3]!, AlignmentType.RIGHT),
+                trBodyTextCell(r.hourlyRate, SW[4]!, AlignmentType.RIGHT),
+                trBodyTextCell(r.totalPrice, SW[5]!, AlignmentType.RIGHT),
+            ],
+        }));
+
+        const sumGrandAmt = pack.summaryGrandAmountDisplay.trim().length ? pack.summaryGrandAmountDisplay : cur;
+
+        summaryDataRows.push(new TableRow({
+            children: [
+                new TableCell({
+                    borders: cellBorderGrid,
+                    columnSpan: 3,
+                    children: [new Paragraph({
+                        children: [new TextRun({ text: 'Total', bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
+                    })],
+                }),
+                trFootValueCell(pack.summaryGrandHoursDisplay, SW[3]!, AlignmentType.RIGHT),
+                trFootValueCell('—', SW[4]!, AlignmentType.RIGHT),
+                trFootValueCell(sumGrandAmt, SW[5]!, AlignmentType.RIGHT),
+            ],
+        }));
+
+        const sumTbl = new Table({
+            ...tableOpts,
+            rows: [summaryHeader, ...summaryDataRows],
+        });
+
+        out.push(
+            new Paragraph({
+                spacing: { before: 260, after: 120 },
+                children: [new TextRun({ text: 'Summary of services', bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
+            }),
+            sumTbl,
+        );
+    }
+
+    out.push(
         new Paragraph({
             spacing: { before: 360 },
             border: { top: { style: BorderStyle.SINGLE, color: INV_RED, size: 12, space: 2 } },
@@ -390,9 +407,11 @@ function timeReportDocxBlocks(model: InvoiceCoverLetterModel, pack: InvoiceTimeR
         new Paragraph({
             spacing: { before: 60 },
             alignment: AlignmentType.RIGHT,
-            children: [new TextRun({ text: '2', bold: true, color: INV_RED, size: h(12), font: 'Calibri' })],
+            children: [new TextRun({ text: opts.pageNumStr, bold: true, color: INV_RED, size: h(12), font: 'Calibri' })],
         }),
-    ];
+    );
+
+    return out;
 }
 
 function invoiceRibbonTable(leftText: string, rightText: string): Table {
@@ -644,7 +663,7 @@ function legalInvoiceDocxBlocks(
     ];
 }
 
-/** Три страницы: письмо; time report; invoice. */
+/** Страницы: письмо; один или несколько листов time report; invoice. */
 export async function buildInvoicePreviewDocxBlob({ model, session }: InvoicePreviewPackInput): Promise<Blob> {
     const logoRuns: ParagraphChild[] = [];
     if (typeof window !== 'undefined') {
@@ -661,6 +680,7 @@ export async function buildInvoicePreviewDocxBlob({ model, session }: InvoicePre
     }
 
     const timeReportPack = await resolveInvoiceTimeReportPack(session, model);
+    const trChunks = splitDetailRowsForPagedTimeReport(timeReportPack.detailSlots);
 
     const sectionPage = {
         properties: {
@@ -670,16 +690,22 @@ export async function buildInvoicePreviewDocxBlob({ model, session }: InvoicePre
         },
     };
 
+    const timeReportSections = trChunks.map((chunk, i, arr) => ({
+        ...sectionPage,
+        children: timeReportDocxSectionChildren(model, timeReportPack, chunk, {
+            continuation: i > 0,
+            pageNumStr: String(2 + i),
+            isLastChunk: i === arr.length - 1,
+        }),
+    }));
+
     const doc = new Document({
         sections: [
             {
                 ...sectionPage,
                 children: coverChildren(model, logoRuns),
             },
-            {
-                ...sectionPage,
-                children: timeReportDocxBlocks(model, timeReportPack),
-            },
+            ...timeReportSections,
             {
                 ...sectionPage,
                 children: legalInvoiceDocxBlocks(model, session, logoRuns),

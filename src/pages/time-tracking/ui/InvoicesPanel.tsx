@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { routes } from '@shared/config';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { routes, getProjectDetailUrl } from '@shared/config';
 import { buildInvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '@pages/invoice-preview/lib/invoicePreviewDownload';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
@@ -41,6 +41,23 @@ function fmtDisplayDate(iso: string): string {
     if (Number.isNaN(d.getTime()))
         return iso;
     return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+/** Три query-параметра из FRONTEND_INVOICE_PARTNER_CONFIRMATION §3 (только при полном наборе). */
+function invoiceListPartnerBillingGateOpts(projectFilter: string, listDateFrom: string, listDateTo: string): {
+    partnerBillingProjectId?: string;
+    partnerBillingPeriodFrom?: string;
+    partnerBillingPeriodTo?: string;
+} {
+    const pid = projectFilter.trim();
+    const from = listDateFrom.trim().slice(0, 10);
+    const to = listDateTo.trim().slice(0, 10);
+    if (!pid || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to))
+        return {};
+    return {
+        partnerBillingProjectId: pid,
+        partnerBillingPeriodFrom: from,
+        partnerBillingPeriodTo: to,
+    };
 }
 async function invoicePreviewMetaForExisting(inv: InvoiceDto, clientLabel: string): Promise<InvoicePreviewMeta> {
     const meta: InvoicePreviewMeta = {
@@ -195,6 +212,7 @@ export function InvoicesPanel() {
     const [items, setItems] = useState<InvoiceDto[]>([]);
     const [listLoading, setListLoading] = useState(true);
     const [listErr, setListErr] = useState<string | null>(null);
+    const [partnerListBlocked, setPartnerListBlocked] = useState(false);
     const [statusFilter, setStatusFilter] = useState<string>('');
     const [clientFilter, setClientFilter] = useState<string>('');
     const [projectFilter, setProjectFilter] = useState('');
@@ -222,6 +240,7 @@ export function InvoicesPanel() {
     const [unbilledExp, setUnbilledExp] = useState<UnbilledExpenseEntryDto[]>([]);
     const [selTime, setSelTime] = useState<Set<string>>(() => new Set());
     const [selExp, setSelExp] = useState<Set<string>>(() => new Set());
+    const [unbilledPartnerBlockReason, setUnbilledPartnerBlockReason] = useState<string | null>(null);
     const [unbilledLoading, setUnbilledLoading] = useState(false);
     const [createBusy, setCreateBusy] = useState(false);
     const [payOpen, setPayOpen] = useState(false);
@@ -311,6 +330,7 @@ export function InvoicesPanel() {
         if (!silent)
             setListLoading(true);
         setListErr(null);
+        const billingGate = invoiceListPartnerBillingGateOpts(projectFilter, listDateFrom, listDateTo);
         return listInvoices({
             status: statusFilter || undefined,
             clientId: clientFilter || undefined,
@@ -320,13 +340,16 @@ export function InvoicesPanel() {
             limit: INV_PAGE,
             offset: (invoiceListPage - 1) * INV_PAGE,
             includeTotalCount: true,
+            ...billingGate,
         })
             .then((r) => {
             setItems(r.items);
+            setPartnerListBlocked(r.partnerConfirmationBlocked === true);
             setInvoiceListTotalCount(typeof r.totalCount === 'number' ? r.totalCount : null);
         })
             .catch((e: unknown) => {
             setItems([]);
+            setPartnerListBlocked(false);
             setInvoiceListTotalCount(null);
             setListErr(isForbiddenError(e) ? 'Нет доступа к счетам (нужна роль просмотра отчётов).' : (e instanceof Error ? e.message : 'Ошибка'));
         })
@@ -338,12 +361,14 @@ export function InvoicesPanel() {
     const loadAggStats = useCallback(() => {
         setAggStatsLoading(true);
         setAggStatsErr(null);
+        const billingGate = invoiceListPartnerBillingGateOpts(projectFilter, listDateFrom, listDateTo);
         return getInvoicesAggregatedStats({
             status: statusFilter || undefined,
             clientId: clientFilter || undefined,
             projectId: projectFilter || undefined,
             dateFrom: listDateFrom || undefined,
             dateTo: listDateTo || undefined,
+            ...billingGate,
         })
             .then((s) => {
             setAggStats(s);
@@ -359,6 +384,9 @@ export function InvoicesPanel() {
     useEffect(() => {
         setInvoiceListPage(1);
     }, [statusFilter, clientFilter, projectFilter, listDateFrom, listDateTo]);
+    useEffect(() => {
+        setUnbilledPartnerBlockReason(null);
+    }, [unbilledFrom, unbilledTo, createProjectId]);
     useEffect(() => {
         void loadAggStats();
     }, [loadAggStats]);
@@ -470,6 +498,7 @@ export function InvoicesPanel() {
         }
         setUnbilledLoading(true);
         try {
+            setUnbilledPartnerBlockReason(null);
             const [t, e] = await Promise.all([
                 fetchUnbilledTimeEntries({ projectId: createProjectId, dateFrom: unbilledFrom, dateTo: unbilledTo }),
                 fetchUnbilledExpenses({ projectId: createProjectId, dateFrom: unbilledFrom, dateTo: unbilledTo }),
@@ -487,8 +516,19 @@ export function InvoicesPanel() {
                 setSelExp((prev) => new Set([...prev].filter((id) => expIds.has(id))));
             }
         }
-        catch (err) {
-            await showAlert({ message: err instanceof Error ? err.message : 'Не удалось загрузить невыставленное' });
+        catch (err: unknown) {
+            setUnbilledTime([]);
+            setUnbilledExp([]);
+            if (isForbiddenError(err)) {
+                const msg = err instanceof Error ? err.message.trim() : '';
+                setUnbilledPartnerBlockReason(
+                    msg || 'Для этого проекта и периода нет полного подтверждения партнёров. Сначала завершите подписание отчёта партнёрами.',
+                );
+            }
+            else {
+                setUnbilledPartnerBlockReason(null);
+                await showAlert({ message: err instanceof Error ? err.message : 'Не удалось загрузить невыставленное' });
+            }
         }
         finally {
             setUnbilledLoading(false);
@@ -670,6 +710,8 @@ export function InvoicesPanel() {
                 dueDate,
                 timeEntryIds: [...selTime],
                 expenseIds: [...selExp],
+                partnerBillingPeriodFrom: unbilledFrom.trim().slice(0, 10),
+                partnerBillingPeriodTo: unbilledTo.trim().slice(0, 10),
             });
             setCreateOpen(false);
             setSelTime(new Set());
@@ -684,7 +726,7 @@ export function InvoicesPanel() {
         finally {
             setCreateBusy(false);
         }
-    }, [createClientId, createProjectId, issueDate, dueDate, selTime, selExp, loadList, loadAggStats, showAlert]);
+    }, [createClientId, createProjectId, issueDate, dueDate, selTime, selExp, unbilledFrom, unbilledTo, loadList, loadAggStats, showAlert]);
     const handlePayment = useCallback(async () => {
         if (!detailId || !detail)
             return;
@@ -795,6 +837,7 @@ export function InvoicesPanel() {
         setCreateProjectId('');
         setUnbilledTime([]);
         setUnbilledExp([]);
+        setUnbilledPartnerBlockReason(null);
     }
     return (<div className="tt-inv">
       <div className="tt-reports__type-block">
@@ -899,6 +942,9 @@ export function InvoicesPanel() {
               </span>)}
           </div>
           <div className="tt-reports__content-actions tt-inv__filter-actions">
+            {!listErr && Object.keys(invoiceListPartnerBillingGateOpts(projectFilter, listDateFrom, listDateTo)).length > 0 && (<p className="tt-inv__list-hint tt-inv__billing-gate-hint" style={{ width: '100%', flexBasis: '100%', margin: '0 0 0.35rem' }}>
+                Если выбраны проект и обе даты счёта, список отражает подтверждение партнёрами: без полной подписи счета за этим периодом могут не показываться.
+              </p>)}
             <div className="tt-reports__sort-wrap">
               <label className="tt-reports__sort-label" htmlFor="tt-inv-filter-client-btn">Клиент</label>
               <SearchableSelect className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-inv-filter-client-btn" portalDropdown portalZIndex={10050} portalMinWidth={420} placeholder="Клиент" emptyListText="Нет клиентов" noMatchText="Не найдено" value={clientFilter} items={clientFilterSearchItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => setClientFilter(o.id)} aria-label="Фильтр по клиенту"/>
@@ -940,6 +986,25 @@ export function InvoicesPanel() {
           {listLoading ? (<div className="tt-inv__loading" role="status" aria-live="polite" aria-busy="true">
               <div className="tt-inv__loading-spinner"/>
               <span>Загрузка счетов…</span>
+            </div>) : items.length === 0 && partnerListBlocked ? (<div className="tt-inv__empty tt-inv__empty--gate">
+              <IcoInvoiceEmpty />
+              <h3 className="tt-inv__empty-title">Счета по выбранному периоду недоступны</h3>
+              <p className="tt-inv__empty-text">
+                Нет полного подтверждения партнёров за этот проект и даты счёта — бэкенд не показывает счета в этом контексте. Сначала завершите подписание отчёта партнёрами за тот же период, что и фильтр, либо измените фильтры.
+              </p>
+              <p className="tt-inv__empty-actions">
+                <Link className="tt-reports__btn tt-reports__btn--outline" to={`${routes.timeTracking}?tab=reports`}>
+                  Раздел «Отчёты»
+                </Link>
+                {projectFilter.trim() !== '' ? (
+                    <Link className="tt-reports__btn tt-reports__btn--outline" to={getProjectDetailUrl(projectFilter.trim())}>
+                      Карточка проекта
+                    </Link>
+                ) : null}
+                <button type="button" className="tt-reports__btn tt-reports__btn--accent tt-reports__btn--icon" onClick={openCreateModal}>
+                  <IcoPlus /> Новый счёт
+                </button>
+              </p>
             </div>) : items.length === 0 ? (<div className="tt-inv__empty">
               <IcoInvoiceEmpty />
               <h3 className="tt-inv__empty-title">Пока нет счетов</h3>
@@ -1066,6 +1131,21 @@ export function InvoicesPanel() {
                   </div>
                 </div>
               </div>
+
+              {unbilledPartnerBlockReason ? (<div className="tt-inv-dialog__section tt-inv-dialog__partner-gate" role="alert">
+                  <p className="tt-inv-dialog__section-desc" style={{ marginBottom: '0.75rem' }}>{unbilledPartnerBlockReason}</p>
+                  <p style={{ margin: 0 }} className="tt-inv-dialog__section-desc">
+                    <Link className="tt-inv-dialog__partner-gate-link" to={`${routes.timeTracking}?tab=reports`}>Открыть раздел «Отчёты»</Link>
+                    {createProjectId.trim() !== '' ? (
+                            <>
+                              {' '}·{' '}
+                              <Link className="tt-inv-dialog__partner-gate-link" to={getProjectDetailUrl(createProjectId.trim())}>
+                                Карточка проекта
+                              </Link>
+                            </>
+                        ) : null}
+                  </p>
+              </div>) : null}
 
               {unbilledTime.length > 0 && (<div className="tt-inv-dialog__subsection">
                   <h4 className="tt-inv__section-title">

@@ -11524,6 +11524,29 @@ a.pp__proj-name--link:hover {
   color: var(--app-muted, #64748b);
 }
 
+.tt-inv__empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.tt-inv-dialog__partner-gate {
+  border: 1px solid rgba(155, 27, 48, 0.35);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: rgba(155, 27, 48, 0.06);
+}
+
+.tt-inv-dialog__partner-gate-link {
+  color: var(--app-accent, #4f46e5);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 @keyframes tt-inv-overlay-in {
   from {
     opacity: 0;

@@ -12,12 +12,13 @@ import {
     type UnbilledTimeEntryDto,
 } from '@entities/time-tracking';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
+import { parseTimeEntryDescriptionLines } from './parseTimeEntryDescriptionLines';
 import { packCurrencyCode } from './invoicePreviewPackShared';
 import {
     emptyInvoiceTimeReportPack,
+    finalizeDetailSlots,
     formatTimeReportAmount,
     formatTimeReportHours,
-    padDetailRows,
     padSummaryRows,
     type InvoiceTimeReportDetailRow,
     type InvoiceTimeReportPack,
@@ -194,11 +195,12 @@ export async function resolveInvoiceTimeReportPack(
                 const h = Number.isFinite(hrs) ? hrs : 0;
                 const amt = Number(e.billableAmount);
                 const a = Number.isFinite(amt) ? amt : 0;
+                const { taskLine, notes } = parseTimeEntryDescriptionLines(e.description ?? null);
                 details.push({
                     date: dateDisplayFromIso(e.workDate),
                     initials: u ? initialsFromUser(u) : String(e.authUserId).slice(0, 3),
-                    task: '',
-                    description: (e.description ?? '').trim() || '—',
+                    task: taskLine,
+                    description: notes.trim().length ? notes : (taskLine || (e.description ?? '').trim() || '—'),
                     hours: formatTimeReportHours(h),
                     amount: formatTimeReportAmount(a, currency),
                     authId: e.authUserId,
@@ -226,7 +228,7 @@ export async function resolveInvoiceTimeReportPack(
             const tail = buildSummaryAndTotals(details, users, currency);
             return {
                 currency,
-                detailSlots: padDetailRows(details.map(toPublicRow)),
+                detailSlots: details.length ? finalizeDetailSlots(details.map(toPublicRow)) : empty.detailSlots,
                 ...tail,
             };
         }
@@ -278,10 +280,11 @@ export async function resolveInvoiceTimeReportPack(
 
                 const u = authId != null ? userByAuthId(users, authId) : null;
                 const hours = numHoursFromLine(ln);
+                const { taskLine } = parseTimeEntryDescriptionLines(entry?.description ?? null);
                 details.push({
                     date: workIso ? dateDisplayFromIso(workIso) : '—',
                     initials: u ? initialsFromUser(u) : '—',
-                    task: '',
+                    task: taskLine || '',
                     description: desc,
                     hours: hours > 0 ? formatTimeReportHours(hours) : '',
                     amount: formatTimeReportAmount(amt, currency),
@@ -309,7 +312,7 @@ export async function resolveInvoiceTimeReportPack(
         const tail = buildSummaryAndTotals(details, users, currency);
         return {
             currency,
-            detailSlots: padDetailRows(details.map(toPublicRow)),
+            detailSlots: details.length ? finalizeDetailSlots(details.map(toPublicRow)) : empty.detailSlots,
             ...tail,
         };
     }

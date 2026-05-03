@@ -160,7 +160,19 @@
   background: rgba(155, 27, 48, 0.06);
 }
 
+.tt-inv-tr__cell--amount,
+.tt-inv-tr__tfoot .tt-inv-tr__cell--amount {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: none;
+}
+
 .tt-inv-tr__currency-foot {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: none;
   font-weight: 700;
   color: var(--tt-inv-tr-red);
 }

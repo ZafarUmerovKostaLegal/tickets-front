@@ -2565,12 +2565,18 @@ export type InvoiceListParams = {
     offset?: number;
     
     includeTotalCount?: boolean;
+    /** Тройка параметров биллинга: при полном наборе бэкенд может вернуть пустой список без подтверждения партнёров (§ FRONTEND_INVOICE_PARTNER_CONFIRMATION). */
+    partnerBillingProjectId?: string;
+    partnerBillingPeriodFrom?: string;
+    partnerBillingPeriodTo?: string;
 };
 export type InvoicesListResponse = {
     items: InvoiceDto[];
     limit: number;
     offset: number;
     totalCount?: number;
+    /** Список пуст сознательно: нет fully_confirmed по проекту и периоду. */
+    partnerConfirmationBlocked?: boolean;
 };
 export type InvoicesStatsCurrencyRow = {
     count: number;
@@ -2615,6 +2621,9 @@ export type InvoiceCreateInput = {
     timeEntryIds?: string[];
     expenseIds?: string[];
     lines?: InvoiceLineCreateInput[];
+    /** Совпадают с dateFrom/dateTo подтверждённого отчёта при наличии time/expense/project lines (camelCase для API). */
+    partnerBillingPeriodFrom?: string;
+    partnerBillingPeriodTo?: string;
 };
 export type InvoicePatchInput = {
     issueDate?: string;
@@ -2658,6 +2667,12 @@ function buildInvoiceListQs(p: InvoiceListParams): string {
         qs.set('offset', String(p.offset));
     if (p.includeTotalCount)
         qs.set('includeTotalCount', 'true');
+    if (p.partnerBillingProjectId?.trim())
+        qs.set('partnerBillingProjectId', p.partnerBillingProjectId.trim());
+    if (p.partnerBillingPeriodFrom?.trim())
+        qs.set('partnerBillingPeriodFrom', p.partnerBillingPeriodFrom.trim().slice(0, 10));
+    if (p.partnerBillingPeriodTo?.trim())
+        qs.set('partnerBillingPeriodTo', p.partnerBillingPeriodTo.trim().slice(0, 10));
     const s = qs.toString();
     return s ? `?${s}` : '';
 }
@@ -2673,6 +2688,12 @@ function buildInvoiceStatsQs(p: Omit<InvoiceListParams, 'limit' | 'offset' | 'in
         qs.set('dateFrom', p.dateFrom);
     if (p.dateTo)
         qs.set('dateTo', p.dateTo);
+    if (p.partnerBillingProjectId?.trim())
+        qs.set('partnerBillingProjectId', p.partnerBillingProjectId.trim());
+    if (p.partnerBillingPeriodFrom?.trim())
+        qs.set('partnerBillingPeriodFrom', p.partnerBillingPeriodFrom.trim().slice(0, 10));
+    if (p.partnerBillingPeriodTo?.trim())
+        qs.set('partnerBillingPeriodTo', p.partnerBillingPeriodTo.trim().slice(0, 10));
     const s = qs.toString();
     return s ? `?${s}` : '';
 }
@@ -2761,6 +2782,10 @@ export async function fetchUnbilledExpenses(params: {
     await throwIfNotOk(res);
     return res.json() as Promise<UnbilledExpenseEntryDto[]>;
 }
+function readPartnerConfirmationBlocked(o: Record<string, unknown>): boolean {
+    const v = o.partnerConfirmationBlocked ?? o.partner_confirmation_blocked;
+    return v === true || v === 'true';
+}
 export async function listInvoices(params?: InvoiceListParams): Promise<InvoicesListResponse> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices${buildInvoiceListQs(params ?? {})}`);
     await throwIfNotOk(res);
@@ -2770,10 +2795,11 @@ export async function listInvoices(params?: InvoiceListParams): Promise<Invoices
             items: raw as InvoiceDto[],
             limit: params?.limit ?? raw.length,
             offset: params?.offset ?? 0,
+            partnerConfirmationBlocked: false,
         };
     }
     if (!raw || typeof raw !== 'object')
-        return { items: [], limit: params?.limit ?? 0, offset: params?.offset ?? 0 };
+        return { items: [], limit: params?.limit ?? 0, offset: params?.offset ?? 0, partnerConfirmationBlocked: false };
     const o = raw as Record<string, unknown>;
     const itemsRaw = o.items;
     const items = Array.isArray(itemsRaw) ? itemsRaw as InvoiceDto[] : [];
@@ -2783,7 +2809,14 @@ export async function listInvoices(params?: InvoiceListParams): Promise<Invoices
     const totalCount = tcRaw != null && String(tcRaw).trim() !== '' && Number.isFinite(Number(tcRaw))
         ? Number(tcRaw)
         : undefined;
-    return { items, limit, offset, ...(totalCount != null ? { totalCount } : {}) };
+    const partnerConfirmationBlocked = readPartnerConfirmationBlocked(o);
+    return {
+        items,
+        limit,
+        offset,
+        ...(totalCount != null ? { totalCount } : {}),
+        ...(partnerConfirmationBlocked ? { partnerConfirmationBlocked: true } : {}),
+    };
 }
 export async function getInvoicesAggregatedStats(params?: Omit<InvoiceListParams, 'limit' | 'offset' | 'includeTotalCount'>): Promise<InvoicesAggregatedStats> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/stats${buildInvoiceStatsQs(params ?? {})}`);

@@ -10,6 +10,7 @@ import { buildInvoicePreviewDocxBlob } from '../lib/buildInvoicePreviewDocx';
 import { buildInvoicePreviewPdfBlob } from '../lib/buildInvoicePreviewPdf';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
+import { splitDetailRowsForPagedTimeReport } from '../lib/invoiceTimeReportChunking';
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
 import { resolveInvoiceTimeReportPack } from '../lib/resolveInvoiceTimeReportPack';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
@@ -31,8 +32,6 @@ function fallbackCoverModel(): InvoiceCoverLetterModel {
         currency: 'EUR',
     });
 }
-
-const PAGE_COUNT = 3;
 
 export function InvoicePreviewPage() {
     const { pushToast } = useAppToast();
@@ -87,6 +86,16 @@ export function InvoicePreviewPage() {
     );
     const resolvedTimeReportPack = timeReportPack ?? timeReportFallback;
 
+    const timeReportChunks = useMemo(
+        () => splitDetailRowsForPagedTimeReport(resolvedTimeReportPack.detailSlots),
+        [resolvedTimeReportPack.detailSlots],
+    );
+    const pageCount = 1 + timeReportChunks.length + 1;
+
+    useEffect(() => {
+        setActivePage((prev) => (prev > pageCount ? pageCount : prev));
+    }, [pageCount]);
+
     useEffect(() => {
         const root = sheetStackRef.current;
         if (!root)
@@ -112,7 +121,7 @@ export function InvoicePreviewPage() {
         for (const el of els)
             obs.observe(el);
         return () => obs.disconnect();
-    }, [coverModel]);
+    }, [coverModel, pageCount]);
 
     const subtitleParts = session?.mode === 'existing'
         ? [session.meta.invoiceNumber, session.meta.clientLabel].filter(Boolean)
@@ -176,7 +185,8 @@ export function InvoicePreviewPage() {
     }, [coverModel, defaultFilename, pushToast, session]);
 
     const toolbarTitle = subtitle ?? defaultFilename;
-    const pdfToolbarTip = 'Лист 1 — сопроводительное письмо; лист 2 — отчёт времени; лист 3 — счёт (invoice).';
+    const trRangeEnd = 1 + timeReportChunks.length;
+    const pdfToolbarTip = `Лист 1 — сопроводительное письмо; листы 2–${trRangeEnd} — отчёт времени${timeReportChunks.length > 1 ? ' (продолжение при большом объёме)' : ''}; лист ${pageCount} — счёт (invoice).`;
 
     return (<div className="tt-inv-preview">
       <nav className="time-page__navbar tt-inv-preview__navbar" aria-label="Предпросмотр счёта">
@@ -211,43 +221,55 @@ export function InvoicePreviewPage() {
       <main className="tt-inv-preview__main">
         <div className="tt-inv-preview__viewer" aria-label="Область просмотра документа">
           <aside className="tt-inv-preview__thumbs" aria-label="Миниатюры страниц">
-            {Array.from({ length: PAGE_COUNT }, (_, i) => i + 1).map((num) => (
-              <button
-                key={num}
-                type="button"
-                className={`tt-inv-preview__thumb${num === activePage ? ' tt-inv-preview__thumb--active' : ''}`}
-                aria-current={num === activePage ? 'page' : undefined}
-                aria-label={`Страница ${num} из ${PAGE_COUNT}${num === 1 ? ', сопроводительное письмо' : num === 2 ? ', time report' : num === 3 ? ', счёт' : ''}`}
-                onClick={() => scrollToPage(num)}
-              >
-                <span className="tt-inv-preview__thumb-sheet" aria-hidden>
-                  <span className="tt-inv-preview__thumb-scale">
-                    {num === 1
-                      ? (
-                          <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--letter">
-                            <InvoiceCoverLetter model={displayModel}/>
-                          </div>
-                        )
-                      : num === 2
-                        ? (
-                            <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--timerpt">
-                              <InvoiceTimeReportPage model={displayModel} pack={resolvedTimeReportPack} pageNumber={2}/>
-                            </div>
-                          )
-                        : num === 3
+            {Array.from({ length: pageCount }, (_, i) => i + 1).map((num) => {
+                const kind = num === 1 ? 'сопроводительное письмо' : num === pageCount ? 'счёт' : 'time report';
+                const thumbTrIdx = num >= 2 && num < pageCount ? num - 2 : null;
+                return (
+                  <button
+                    key={num}
+                    type="button"
+                    className={`tt-inv-preview__thumb${num === activePage ? ' tt-inv-preview__thumb--active' : ''}`}
+                    aria-current={num === activePage ? 'page' : undefined}
+                    aria-label={`Страница ${num} из ${pageCount}, ${kind}`}
+                    onClick={() => scrollToPage(num)}
+                  >
+                    <span className="tt-inv-preview__thumb-sheet" aria-hidden>
+                      <span className="tt-inv-preview__thumb-scale">
+                        {num === 1
                           ? (
-                              <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--invoice">
-                                <InvoiceLegalInvoicePage model={displayModel} session={session}/>
+                              <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--letter">
+                                <InvoiceCoverLetter model={displayModel}/>
                               </div>
                             )
-                          : (
-                              <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--blank" aria-hidden/>
-                            )}
-                  </span>
-                </span>
-                <span className="tt-inv-preview__thumb-num">{num}</span>
-              </button>
-            ))}
+                          : thumbTrIdx !== null && timeReportChunks[thumbTrIdx]
+                            ? (
+                                <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--timerpt">
+                                  <InvoiceTimeReportPage
+                                    model={displayModel}
+                                    pack={resolvedTimeReportPack}
+                                    pageNumber={2 + thumbTrIdx}
+                                    detailRows={timeReportChunks[thumbTrIdx]}
+                                    continuation={thumbTrIdx > 0}
+                                    showDetailTotalRow={thumbTrIdx === timeReportChunks.length - 1}
+                                    showSummarySection={thumbTrIdx === timeReportChunks.length - 1}
+                                  />
+                                </div>
+                              )
+                            : num === pageCount
+                              ? (
+                                  <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--invoice">
+                                    <InvoiceLegalInvoicePage model={displayModel} session={session}/>
+                                  </div>
+                                )
+                              : (
+                                  <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--blank" aria-hidden/>
+                                )}
+                      </span>
+                    </span>
+                    <span className="tt-inv-preview__thumb-num">{num}</span>
+                  </button>
+                );
+            })}
           </aside>
 
           <div className="tt-inv-preview__stage">
@@ -257,7 +279,7 @@ export function InvoicePreviewPage() {
                 {!coverModel ? <span className="tt-inv-preview__pdf-toolbar-status" role="status">Загрузка…</span> : null}
               </div>
               <div className="tt-inv-preview__pdf-toolbar-pages" aria-live="polite">
-                страница {activePage}&nbsp;/&nbsp;{PAGE_COUNT}
+                страница {activePage}&nbsp;/&nbsp;{pageCount}
               </div>
             </div>
             <div ref={sheetStackRef} className="tt-inv-preview__sheet-stack" aria-label="Документ, прокрутка колёсиком мыши или жестами">
@@ -267,25 +289,36 @@ export function InvoicePreviewPage() {
                     pageRefs.current[0] = el;
                   }}
                   className="tt-inv-a4-page tt-inv-a4-page--cover"
-                  aria-label={`Страница 1 из ${PAGE_COUNT} — сопроводительное письмо`}
+                  aria-label={`Страница 1 из ${pageCount} — сопроводительное письмо`}
                 >
                   <InvoiceCoverLetter model={displayModel}/>
                 </div>
+                {timeReportChunks.map((chunk, i) => (
+                  <div
+                    key={`tr-${i}`}
+                    ref={(el) => {
+                      pageRefs.current[1 + i] = el;
+                    }}
+                    className="tt-inv-a4-page tt-inv-a4-page--timerpt"
+                    aria-label={`Страница ${2 + i} из ${pageCount} — time report${i > 0 ? ', продолжение' : ''}`}
+                  >
+                    <InvoiceTimeReportPage
+                      model={displayModel}
+                      pack={resolvedTimeReportPack}
+                      pageNumber={2 + i}
+                      detailRows={chunk}
+                      continuation={i > 0}
+                      showDetailTotalRow={i === timeReportChunks.length - 1}
+                      showSummarySection={i === timeReportChunks.length - 1}
+                    />
+                  </div>
+                ))}
                 <div
                   ref={(el) => {
-                    pageRefs.current[1] = el;
-                  }}
-                  className="tt-inv-a4-page tt-inv-a4-page--timerpt"
-                  aria-label={`Страница 2 из ${PAGE_COUNT} — time report`}
-                >
-                  <InvoiceTimeReportPage model={displayModel} pack={resolvedTimeReportPack} pageNumber={2}/>
-                </div>
-                <div
-                  ref={(el) => {
-                    pageRefs.current[2] = el;
+                    pageRefs.current[1 + timeReportChunks.length] = el;
                   }}
                   className="tt-inv-a4-page tt-inv-a4-page--invoice"
-                  aria-label={`Страница 3 из ${PAGE_COUNT} — счёт`}
+                  aria-label={`Страница ${pageCount} из ${pageCount} — счёт`}
                 >
                   <InvoiceLegalInvoicePage model={displayModel} session={session}/>
                 </div>
