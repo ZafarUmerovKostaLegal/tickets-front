@@ -2518,6 +2518,8 @@ export type InvoiceLineDto = {
     timeEntryWorkDate?: string | null;
     /** Автор записи времени для сводки/инициалов */
     timeAuthorAuthUserId?: number | null;
+    /** ISO дата заявки расхода (не путать с timeEntryWorkDate) */
+    expenseDate?: string | null;
 };
 export type InvoicePaymentDto = {
     id: string;
@@ -2889,6 +2891,19 @@ function normalizeInvoiceLineDto(raw: unknown, fallbackIdx: number): InvoiceLine
     const wdSlice = wdRaw.slice(0, 10);
     const timeEntryWorkDate = /^\d{4}-\d{2}-\d{2}$/.test(wdSlice) ? wdSlice : undefined;
 
+    const expDateRaw = pickStr(
+        'expenseDate',
+        'expense_date',
+        'expenseExpenseDate',
+        'expense_expense_date',
+        'expenseRequestDate',
+        'expense_request_date',
+        'incurred_date',
+        'incurredDate',
+    );
+    const expSlice = expDateRaw.slice(0, 10);
+    const expenseDate = /^\d{4}-\d{2}-\d{2}$/.test(expSlice) ? expSlice : undefined;
+
     let timeAuthorAuthUserId: number | undefined = undefined;
     for (const k of ['timeAuthorAuthUserId', 'time_author_auth_user_id'] as const) {
         const v = r[k];
@@ -2929,6 +2944,7 @@ function normalizeInvoiceLineDto(raw: unknown, fallbackIdx: number): InvoiceLine
         expenseRequestId: expensePick,
         ...(timeEntryWorkDate !== undefined ? { timeEntryWorkDate } : {}),
         ...(timeAuthorAuthUserId !== undefined ? { timeAuthorAuthUserId } : {}),
+        ...(expenseDate !== undefined ? { expenseDate } : {}),
     };
 }
 

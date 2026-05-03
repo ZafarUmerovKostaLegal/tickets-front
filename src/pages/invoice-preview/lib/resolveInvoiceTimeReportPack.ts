@@ -12,6 +12,7 @@ import {
     type UnbilledExpenseEntryDto,
     type UnbilledTimeEntryDto,
 } from '@entities/time-tracking';
+import { fetchExpenseById } from '@entities/expenses/model/expensesApi';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { parseTimeEntryDescriptionLines } from './parseTimeEntryDescriptionLines';
 import { packCurrencyCode } from './invoicePreviewPackShared';
@@ -285,6 +286,29 @@ export async function resolveInvoiceTimeReportPack(
             return found;
         }
 
+        const expenseIsoByRequestId = new Map<string, string | null>();
+        async function resolveExpenseLineDateIso(ln: InvoiceLineDto): Promise<string | null> {
+            const embedded = ln.expenseDate?.trim().slice(0, 10);
+            if (embedded && /^\d{4}-\d{2}-\d{2}$/.test(embedded))
+                return embedded;
+            const rid = ln.expenseRequestId?.trim();
+            if (!rid)
+                return null;
+            if (expenseIsoByRequestId.has(rid))
+                return expenseIsoByRequestId.get(rid) ?? null;
+            try {
+                const req = await fetchExpenseById(rid);
+                const iso = req.expenseDate?.trim().slice(0, 10) ?? '';
+                const ok = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+                expenseIsoByRequestId.set(rid, ok);
+                return ok;
+            }
+            catch {
+                expenseIsoByRequestId.set(rid, null);
+                return null;
+            }
+        }
+
         for (const ln of lines) {
             const kind = lineKind(ln);
             const desc = (ln.description ?? '').trim() || '—';
@@ -322,8 +346,22 @@ export async function resolveInvoiceTimeReportPack(
                     amtNum: amt,
                 });
             }
+            else if (kind === 'expense') {
+                const workIso = await resolveExpenseLineDateIso(ln);
+                details.push({
+                    date: workIso ? dateDisplayFromIso(workIso) : '—',
+                    initials: '—',
+                    task: 'Expense',
+                    description: desc,
+                    hours: '',
+                    amount: formatTimeReportAmount(amt, currency),
+                    authId: null,
+                    hoursNum: 0,
+                    amtNum: amt,
+                });
+            }
             else {
-                const taskLabel = kind === 'expense' ? 'Expense' : kind === 'manual' ? 'Manual' : 'Other';
+                const taskLabel = kind === 'manual' ? 'Manual' : 'Other';
                 details.push({
                     date: '—',
                     initials: '—',

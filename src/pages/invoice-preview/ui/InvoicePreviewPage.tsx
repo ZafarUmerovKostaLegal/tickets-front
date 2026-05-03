@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { AppPageSettings, useAppToast } from '@shared/ui';
@@ -20,6 +20,12 @@ import '@pages/time-tracking/ui/TimeTrackingPage.css';
 import './InvoicePreviewPage.css';
 
 const INVOICES_TAB_BACK_RESUME_CREATE = `${routes.timeTracking}?tab=invoices&invoice_resume=1`;
+
+/** Логическая ширина листа A4 в окне предпросмотра (соответствует ~210mm при типичном dpi карты CSS). */
+const INV_PREVIEW_PAGE_BASE_PX = 794;
+const SHEET_ZOOM_MIN = 50;
+const SHEET_ZOOM_MAX = 250;
+const SHEET_ZOOM_STEP = 10;
 
 function fallbackCoverModel(): InvoiceCoverLetterModel {
     const iso = new Date().toISOString().slice(0, 10);
@@ -43,8 +49,13 @@ export function InvoicePreviewPage() {
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activePage, setActivePage] = useState(1);
+    const [sheetZoomPct, setSheetZoomPct] = useState(100);
 
     const displayModel = useMemo(() => coverModel ?? fallbackCoverModel(), [coverModel]);
+
+    const pagesZoomStyle = useMemo(() => ({
+        zoom: `${sheetZoomPct}%`,
+    } as CSSProperties), [sheetZoomPct]);
 
     const scrollToPage = useCallback((page: number) => {
         const root = sheetStackRef.current;
@@ -128,6 +139,24 @@ export function InvoicePreviewPage() {
         return () => obs.disconnect();
     }, [coverModel, pageCount]);
 
+    const zoomOut = useCallback(() => {
+        setSheetZoomPct((z) => Math.max(SHEET_ZOOM_MIN, z - SHEET_ZOOM_STEP));
+    }, []);
+    const zoomIn = useCallback(() => {
+        setSheetZoomPct((z) => Math.min(SHEET_ZOOM_MAX, z + SHEET_ZOOM_STEP));
+    }, []);
+    const zoomReset = useCallback(() => setSheetZoomPct(100), []);
+    const zoomFitWidth = useCallback(() => {
+        const el = sheetStackRef.current;
+        if (!el)
+            return;
+        const cs = window.getComputedStyle(el);
+        const px = Number.parseFloat(cs.paddingLeft) + Number.parseFloat(cs.paddingRight);
+        const cw = Math.max(0, el.clientWidth - (Number.isFinite(px) ? px : 48));
+        const next = Math.round((cw / INV_PREVIEW_PAGE_BASE_PX) * 100);
+        setSheetZoomPct(Math.min(SHEET_ZOOM_MAX, Math.max(SHEET_ZOOM_MIN, next)));
+    }, []);
+
     const subtitleParts = session?.mode === 'existing'
         ? [session.meta.invoiceNumber, session.meta.clientLabel].filter(Boolean)
         : [session?.meta.clientLabel, session?.meta.projectLabel].filter(Boolean);
@@ -191,7 +220,7 @@ export function InvoicePreviewPage() {
 
     const toolbarTitle = subtitle ?? defaultFilename;
     const trRangeEnd = 1 + timeReportChunks.length;
-    const pdfToolbarTip = `Лист 1 — сопроводительное письмо; листы 2–${trRangeEnd} — отчёт времени${timeReportChunks.length > 1 ? ' (продолжение при большом объёме)' : ''}; лист ${pageCount} — счёт (invoice).`;
+    const pdfToolbarTip = `Лист 1 — сопроводительное письмо; листы 2–${trRangeEnd} — отчёт времени${timeReportChunks.length > 1 ? ' (продолжение при большом объёме)' : ''}; лист ${pageCount} — счёт (invoice). Масштаб: кнопки − / +, «По ширине» подгоняет лист к окну.`;
 
     return (<div className="tt-inv-preview">
       <nav className="time-page__navbar tt-inv-preview__navbar" aria-label="Предпросмотр счёта">
@@ -283,12 +312,51 @@ export function InvoicePreviewPage() {
                 <span className="tt-inv-preview__pdf-toolbar-doc" title={toolbarTitle}>{toolbarTitle}</span>
                 {!coverModel ? <span className="tt-inv-preview__pdf-toolbar-status" role="status">Загрузка…</span> : null}
               </div>
+              <div className="tt-inv-preview__pdf-toolbar-zoom" role="group" aria-label="Масштаб страницы документа">
+                <button
+                  type="button"
+                  className="tt-inv-preview__pdf-toolbar-zoom-btn"
+                  onClick={zoomOut}
+                  disabled={sheetZoomPct <= SHEET_ZOOM_MIN}
+                  aria-label="Уменьшить масштаб страницы"
+                  title="Уменьшить"
+                >
+                  −
+                </button>
+                <span className="tt-inv-preview__pdf-toolbar-zoom-val" aria-live="polite">{sheetZoomPct}%</span>
+                <button
+                  type="button"
+                  className="tt-inv-preview__pdf-toolbar-zoom-btn"
+                  onClick={zoomIn}
+                  disabled={sheetZoomPct >= SHEET_ZOOM_MAX}
+                  aria-label="Увеличить масштаб страницы"
+                  title="Увеличить"
+                >
+                  +
+                </button>
+                <button
+                  type="button"
+                  className="tt-inv-preview__pdf-toolbar-zoom-btn tt-inv-preview__pdf-toolbar-zoom-btn--narrow"
+                  onClick={zoomReset}
+                  title="Масштаб 100%"
+                >
+                  100%
+                </button>
+                <button
+                  type="button"
+                  className="tt-inv-preview__pdf-toolbar-zoom-btn tt-inv-preview__pdf-toolbar-zoom-btn--narrow"
+                  onClick={zoomFitWidth}
+                  title="Подогнать ширину листа к окну просмотра"
+                >
+                  По ширине
+                </button>
+              </div>
               <div className="tt-inv-preview__pdf-toolbar-pages" aria-live="polite">
                 страница {activePage}&nbsp;/&nbsp;{pageCount}
               </div>
             </div>
             <div ref={sheetStackRef} className="tt-inv-preview__sheet-stack" aria-label="Документ, прокрутка колёсиком мыши или жестами">
-              <div className="tt-inv-preview__pages">
+              <div className="tt-inv-preview__pages" style={pagesZoomStyle}>
                 <div
                   ref={(el) => {
                     pageRefs.current[0] = el;
