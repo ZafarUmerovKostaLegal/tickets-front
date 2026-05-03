@@ -10,6 +10,7 @@ import { buildInvoicePreviewPdfBlob } from '../lib/buildInvoicePreviewPdf';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
+import { InvoiceTimeReportPage } from './InvoiceTimeReportPage';
 import '@pages/time-tracking/ui/TimeTrackingPage.css';
 import './InvoicePreviewPage.css';
 
@@ -193,10 +194,28 @@ export function InvoicePreviewPage() {
                 type="button"
                 className={`tt-inv-preview__thumb${num === activePage ? ' tt-inv-preview__thumb--active' : ''}`}
                 aria-current={num === activePage ? 'page' : undefined}
-                aria-label={`Страница ${num} из ${PAGE_COUNT}${num === 1 ? ', сопроводительное письмо' : ''}`}
+                aria-label={`Страница ${num} из ${PAGE_COUNT}${num === 1 ? ', сопроводительное письмо' : num === 2 ? ', time report' : ''}`}
                 onClick={() => scrollToPage(num)}
               >
-                <span className="tt-inv-preview__thumb-sheet" aria-hidden/>
+                <span className="tt-inv-preview__thumb-sheet" aria-hidden>
+                  <span className="tt-inv-preview__thumb-scale">
+                    {num === 1
+                      ? (
+                          <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--letter">
+                            <InvoiceCoverLetter model={displayModel}/>
+                          </div>
+                        )
+                      : num === 2
+                        ? (
+                            <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--timerpt">
+                              <InvoiceTimeReportPage model={displayModel} pageNumber={2}/>
+                            </div>
+                          )
+                        : (
+                            <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--blank" aria-hidden/>
+                          )}
+                  </span>
+                </span>
                 <span className="tt-inv-preview__thumb-num">{num}</span>
               </button>
             ))}
@@ -227,9 +246,11 @@ export function InvoicePreviewPage() {
                   ref={(el) => {
                     pageRefs.current[1] = el;
                   }}
-                  className="tt-inv-a4-page"
-                  aria-label={`Страница 2 из ${PAGE_COUNT}`}
-                />
+                  className="tt-inv-a4-page tt-inv-a4-page--timerpt"
+                  aria-label={`Страница 2 из ${PAGE_COUNT} — time report`}
+                >
+                  <InvoiceTimeReportPage model={displayModel} pageNumber={2}/>
+                </div>
                 <div
                   ref={(el) => {
                     pageRefs.current[2] = el;

@@ -1,4 +1,4 @@
-/* Изолированный маршрут: как встроенный просмотр PDF в браузере — высота viewport, один скролл у полотна */
+/* Изолированный маршрут: высота viewport, один скролл у полотна документа */
 .invoice-preview-route {
   box-sizing: border-box;
   width: 100%;
@@ -28,11 +28,17 @@
   --tt-inv-paper-ink: #0f172a;
   --tt-inv-paper-muted: #64748b;
   --tt-inv-paper-strong: #0f172a;
-  --tt-inv-shell-sidebar: color-mix(in srgb, #232323 90%, var(--app-accent, #4f46e5) 10%);
-  --tt-inv-shell-toolbar: color-mix(in srgb, #2a2a2a 88%, var(--app-accent, #4f46e5) 12%);
-  --tt-inv-shell-stage: color-mix(in srgb, #3d3d3d 84%, var(--app-accent, #4f46e5) 16%);
-  --tt-inv-shell-divider: rgba(0, 0, 0, 0.45);
-  --tt-inv-shell-divider-soft: rgba(255, 255, 255, 0.08);
+  /* Светлая «бумага» просмотрщика одинаково в светлой/тёмной теме приложения */
+  --tt-inv-shell-sidebar: #f9fafb;
+  --tt-inv-shell-toolbar: #ffffff;
+  --tt-inv-shell-stage: #eef2f6;
+  --tt-inv-shell-divider: #e2e8f0;
+  --tt-inv-shell-doc-text: #0f172a;
+  --tt-inv-shell-muted-text: #64748b;
+  /* Миниатюра ~108px слот под масштаб от «логической» страницы 794px (= 210mm @ 96dpi) */
+  --tt-inv-thumb-slot-w: 108px;
+  --tt-inv-thumb-doc-w: 794px;
+  --tt-inv-thumb-scale: calc(var(--tt-inv-thumb-slot-w) / var(--tt-inv-thumb-doc-w));
 }
 
 .tt-inv-preview .time-page__navbar.tt-inv-preview__navbar {
@@ -89,7 +95,6 @@
   white-space: nowrap;
 }
 
-/* Под навбаром приложения — только просмотрщик документа */
 .tt-inv-preview__main {
   flex: 1;
   display: flex;
@@ -111,7 +116,7 @@
   width: 100%;
 }
 
-/* Колонка миниатюр ~как во встроенном PDF (узкая колонка, не участвует в скролле документа) */
+/* Колонка миниатюр: содержимое через scale-превью, без скролла документа */
 .tt-inv-preview__thumbs {
   flex-shrink: 0;
   display: flex;
@@ -127,7 +132,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-color: rgba(15, 23, 42, 0.18) transparent;
 }
 
 .tt-inv-preview__thumbs::-webkit-scrollbar {
@@ -137,7 +142,7 @@
 }
 
 .tt-inv-preview__thumbs::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.14);
   border-radius: 4px;
 }
 
@@ -152,7 +157,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .tt-inv-preview__thumb:focus-visible {
@@ -160,37 +165,64 @@
   outline-offset: 3px;
 }
 
+/* Вьюпорт миниатюры: клип масштабированного содержимого */
 .tt-inv-preview__thumb-sheet {
   display: block;
-  width: 100%;
-  max-width: 6.75rem;
+  position: relative;
+  width: var(--tt-inv-thumb-slot-w);
   aspect-ratio: 210 / 297;
-  border-radius: 2px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: linear-gradient(165deg, #ffffff 0%, #dcdcdc 100%);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--tt-inv-shell-divider);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+    0 1px 2px rgba(15, 23, 42, 0.05),
+    0 4px 12px rgba(15, 23, 42, 0.06);
+  background: var(--tt-inv-paper);
+  pointer-events: none;
+}
+
+/* Масштабирование «полного» макета A4 (~794 CSS px) до ширины слота */
+.tt-inv-preview__thumb-scale {
+  display: block;
+  width: var(--tt-inv-thumb-doc-w);
+  transform-origin: top left;
+  transform: scale(var(--tt-inv-thumb-scale));
+}
+
+.tt-inv-preview__thumb-doc {
+  box-sizing: border-box;
+  width: var(--tt-inv-thumb-doc-w);
+  background: var(--tt-inv-paper);
+}
+
+.tt-inv-preview__thumb-doc--letter,
+.tt-inv-preview__thumb-doc--timerpt {
+  min-height: calc(var(--tt-inv-thumb-doc-w) * 297 / 210);
+}
+
+.tt-inv-preview__thumb-doc--blank {
+  min-height: calc(var(--tt-inv-thumb-doc-w) * 297 / 210);
+  border-right: none;
 }
 
 .tt-inv-preview__thumb-num {
   font-size: 0.6875rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--tt-inv-shell-muted-text);
 }
 
 .tt-inv-preview__thumb--active .tt-inv-preview__thumb-sheet {
-  outline: none;
-  border: 2px solid var(--app-accent, #4f46e5);
+  border-color: var(--app-accent, #4f46e5);
   box-shadow:
-    0 0 0 1px rgba(var(--app-accent-rgb, 79, 70, 229), 0.5),
-    0 4px 18px rgba(var(--app-accent-rgb, 79, 70, 229), 0.35),
-    0 2px 10px rgba(0, 0, 0, 0.55);
+    0 0 0 2px rgba(var(--app-accent-rgb, 79, 70, 229), 0.25),
+    0 6px 20px rgba(var(--app-accent-rgb, 79, 70, 229), 0.12),
+    0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .tt-inv-preview__thumb--active .tt-inv-preview__thumb-num {
-  color: #ffffff;
+  color: var(--app-accent);
+  font-weight: 700;
 }
 
 .tt-inv-preview__stage {
@@ -203,7 +235,6 @@
   background: var(--tt-inv-shell-stage);
 }
 
-/* Тёмная панель как у Chrome PDF: имя документа и текущая страница */
 .tt-inv-preview__pdf-toolbar {
   flex-shrink: 0;
   display: flex;
@@ -214,7 +245,7 @@
   padding: 0 1rem 0 0.875rem;
   box-sizing: border-box;
   background: var(--tt-inv-shell-toolbar);
-  border-bottom: 1px solid var(--tt-inv-shell-divider-soft);
+  border-bottom: 1px solid var(--tt-inv-shell-divider);
 }
 
 .tt-inv-preview__pdf-toolbar-meta {
@@ -226,8 +257,8 @@
 
 .tt-inv-preview__pdf-toolbar-doc {
   font-size: 0.8125rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.88);
+  font-weight: 600;
+  color: var(--tt-inv-shell-doc-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -236,7 +267,7 @@
 .tt-inv-preview__pdf-toolbar-status {
   flex-shrink: 0;
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--tt-inv-shell-muted-text);
 }
 
 .tt-inv-preview__pdf-toolbar-pages {
@@ -244,7 +275,7 @@
   font-size: 0.8125rem;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--tt-inv-shell-muted-text);
 }
 
 .tt-inv-preview__sheet-stack {
@@ -258,7 +289,7 @@
   padding: 1.25rem 1.25rem 2.5rem;
   box-sizing: border-box;
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-color: rgba(15, 23, 42, 0.2) transparent;
 }
 
 .tt-inv-preview__sheet-stack::-webkit-scrollbar {
@@ -272,14 +303,14 @@
 }
 
 .tt-inv-preview__sheet-stack::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.12);
   border-radius: 5px;
-  border: 2px solid transparent;
+  border: 3px solid transparent;
   background-clip: padding-box;
 }
 
 .tt-inv-preview__sheet-stack::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.34);
+  background: rgba(15, 23, 42, 0.2);
   background-clip: padding-box;
 }
 
@@ -292,15 +323,15 @@
   min-height: min-content;
 }
 
-.tt-inv-preview .tt-inv-a4-page:not(.tt-inv-a4-page--cover) {
+.tt-inv-preview .tt-inv-a4-page:not(.tt-inv-a4-page--cover):not(.tt-inv-a4-page--timerpt) {
   width: 100%;
   max-width: 210mm;
   aspect-ratio: 210 / 297;
   flex-shrink: 0;
 }
 
-/* Первая страница без внутренней прокрутки — как один лист в PDF, высота по контенту (не менее A4) */
-.tt-inv-preview .tt-inv-a4-page--cover {
+.tt-inv-preview .tt-inv-a4-page--cover,
+.tt-inv-preview .tt-inv-a4-page--timerpt {
   width: 100%;
   max-width: 210mm;
   aspect-ratio: auto;
@@ -309,25 +340,31 @@
   min-height: 297mm;
 }
 
+
+
 .tt-inv-preview .tt-inv-a4-page {
   box-sizing: border-box;
   background: var(--tt-inv-paper);
   color: var(--tt-inv-paper-ink);
-  border: 1px solid rgba(0, 0, 0, 0.14);
-  border-radius: 1px;
+  border: 1px solid var(--tt-inv-shell-divider);
+  border-radius: 2px;
   box-shadow:
-    0 2px 0 rgba(255, 255, 255, 0.04) inset,
-    0 4px 14px rgba(0, 0, 0, 0.35),
-    0 22px 56px rgba(0, 0, 0, 0.45);
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 14px 40px rgba(15, 23, 42, 0.07);
   scroll-margin-block-start: 1rem;
   overflow: visible;
 }
 
-.tt-inv-preview__pages .tt-inv-a4-page--cover {
+.tt-inv-preview__pages .tt-inv-a4-page--cover,
+.tt-inv-preview__pages .tt-inv-a4-page--timerpt {
   display: block;
 }
 
 @media (max-width: 960px) {
+  .tt-inv-preview {
+    --tt-inv-thumb-slot-w: 88px;
+  }
+
   .tt-inv-preview__viewer {
     flex-direction: column;
   }
@@ -349,10 +386,6 @@
   .tt-inv-preview__thumb {
     flex: 0 0 auto;
     width: auto;
-  }
-
-  .tt-inv-preview__thumb-sheet {
-    max-width: 3.75rem;
   }
 
   .tt-inv-preview__pdf-toolbar-doc {
