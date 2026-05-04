@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AppBackButton, AppPageSettings } from '@shared/ui';
 import './CorrespondencePage.css';
 
@@ -52,13 +53,6 @@ const STEPS = [
     { key: 'proc', title: 'Обработка', hint: 'Подготовка ответа', icon: 'gear' as const },
     { key: 'reply', title: 'Ответ', hint: 'Письмо отправлено', icon: 'send' as const },
     { key: 'arch', title: 'Архив', hint: 'Документ в архиве', icon: 'box' as const },
-];
-
-const RECENT = [
-    { key: '1', tone: 'blue' as const, text: 'Зарегистрировано входящее письмо от ООО «Ромашка»', time: '10:15' },
-    { key: '2', tone: 'orange' as const, text: 'Документ BX-2024/0455 передан на согласование', time: '09:42' },
-    { key: '3', tone: 'green' as const, text: 'Исходящее письмо отправлено контрагенту', time: 'Вчера 16:30' },
-    { key: '4', tone: 'blue' as const, text: 'Обновлён ответственный по BX-2024/0452', time: 'Вчера 11:05' },
 ];
 
 const TABLE_TABS = [
@@ -200,20 +194,21 @@ export function CorrespondencePage() {
         ['--corr-header-offset' as string]: `${headerOffset}px`,
     }), [headerOffset]);
 
-    return (<div className="corr" style={corrRootStyle}>
-      <header ref={headerRef} className="corr__header">
-        <div className="corr__header-inner">
-          <div className="corr__header-start">
-            <AppBackButton className="app-back-btn"/>
-            <div>
-              <h1 className="corr__title">Управление корреспонденцией</h1>
-              <p className="corr__subtitle">Контроль и обработка входящих, исходящих и внутренних писем и документов</p>
+    return (<>
+      {createPortal(<header ref={headerRef} className="corr__header">
+            <div className="corr__header-inner">
+              <div className="corr__header-start">
+                <AppBackButton className="app-back-btn"/>
+                <div>
+                  <h1 className="corr__title">Управление корреспонденцией</h1>
+                  <p className="corr__subtitle">Контроль и обработка входящих, исходящих и внутренних писем и документов</p>
+                </div>
+              </div>
+              <AppPageSettings/>
             </div>
-          </div>
-          <AppPageSettings/>
-        </div>
-      </header>
+          </header>, document.body)}
 
+      <div className="corr" style={corrRootStyle}>
       <div className="corr__body">
         <main className="corr__main">
           <div className="corr__content">
@@ -365,25 +360,8 @@ export function CorrespondencePage() {
             <button type="button" className="corr__btn corr__btn--outline corr__btn--block">Создать ответ</button>
             <button type="button" className="corr__btn corr__btn--outline corr__btn--block">Отправить документ</button>
           </div>
-          <div className="corr__aside-block corr__aside-block--feed">
-            <h2 className="corr__aside-title">Последние действия</h2>
-            <ul className="corr__feed" role="list">
-              {RECENT.map((e) => (<li key={e.key} className="corr__feed-item">
-                  <span className={`corr__feed-dot corr__feed-dot--${e.tone}`}/>
-                  <div className="corr__feed-body">
-                    <p className="corr__feed-text">{e.text}</p>
-                    <time className="corr__feed-time">{e.time}</time>
-                  </div>
-                </li>))}
-            </ul>
-            <button type="button" className="corr__feed-all">
-              Все действия
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            </button>
-          </div>
         </aside>
       </div>
-    </div>);
+      </div>
+    </>);
 }
