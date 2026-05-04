@@ -33,6 +33,7 @@ const NetworkDriveAccessPage = lazy(() => import('@pages/network-drive').then(m 
 const AttendancePage = lazy(() => import('@pages/attendance').then(m => ({ default: m.AttendancePage })));
 const VacationSchedulePage = lazy(() => import('@pages/vacation-schedule').then(m => ({ default: m.VacationSchedulePage })));
 const CallSchedulePage = lazy(() => import('@pages/call-schedule').then(m => ({ default: m.CallSchedulePage })));
+const CorrespondencePage = lazy(() => import('@pages/correspondence').then(m => ({ default: m.CorrespondencePage })));
 const InventoryPage = lazy(() => import('@pages/inventory').then(m => ({ default: m.InventoryPage })));
 const ProjectDetailPage = lazy(() => import('@pages/project-detail').then(m => ({ default: m.ProjectDetailPage })));
 const TimeTrackingNewProjectPage = lazy(() => import('@pages/time-tracking/ui/TimeTrackingNewProjectPage').then(m => ({ default: m.TimeTrackingNewProjectPage })));
@@ -83,6 +84,7 @@ const router = createBrowserRouter([
             { path: routes.attendance, element: withProtected(<AttendancePage />) },
             { path: routes.vacationSchedule, element: withProtected(<VacationSchedulePage />) },
             { path: routes.callSchedule, element: withProtected(<CallSchedulePage />) },
+            { path: routes.correspondence, element: withProtected(<CorrespondencePage />) },
             { path: routes.inventory, element: withProtected(<InventoryPage />) },
             { path: routes.timeTracking, element: withProtected(<TimeTrackingRoute />) },
             { path: routes.timeTrackingNewProject, element: withProtected(<TimeTrackingNewProjectPage />) },

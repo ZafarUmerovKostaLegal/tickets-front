@@ -23,6 +23,7 @@ export const routes = {
     rules: '/rules',
     help: '/help',
     callSchedule: '/call-schedule',
+    correspondence: '/correspondence',
 } as const;
 export function getTicketDetailUrl(uuid: string): string {
     return `/ticket/${uuid}`;

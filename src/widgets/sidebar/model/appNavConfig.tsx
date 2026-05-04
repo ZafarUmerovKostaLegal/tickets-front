@@ -5,7 +5,7 @@ import type { User } from '@entities/user';
 import { canAccessExpensesSection } from '@entities/expenses/model/expenseModeration';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
 import { canAccessAdminPanel, isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
-import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, } from '../ui/SidebarIcons';
+import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconMailInbox, } from '../ui/SidebarIcons';
 
 export type AppNavItemDef = {
     to: string;
@@ -23,6 +23,7 @@ export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { to: routes.expenses, label: 'Расходы', icon: IconWallet },
     { to: routes.todo, label: 'Список дел', icon: IconList },
     { to: routes.tickets, label: 'Заявки', icon: IconTicket },
+    { to: routes.correspondence, label: 'Корреспонденция', icon: IconMailInbox },
     { to: routes.vacationSchedule, label: 'График отпусков', icon: IconCalendarCheck },
     { to: routes.inventory, label: 'Инвентаризация', icon: IconBox },
     { to: routes.admin, label: 'Админ-панель', icon: IconGear },
@@ -45,6 +46,7 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
             item.label === 'Расходы' ||
             item.label === 'Список дел' ||
             item.label === 'Заявки' ||
+            item.label === 'Корреспонденция' ||
             item.label === 'График отпусков' ||
             item.label === 'Посещаемость' ||
             item.label === 'Правила' ||
