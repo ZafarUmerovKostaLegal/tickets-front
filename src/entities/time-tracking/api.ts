@@ -3076,7 +3076,7 @@ export function mergeInvoiceDtoAfterPayment(posted: InvoiceDto, fetched: Invoice
         return fetched;
     if (pr > fr)
         return posted;
-    return fetched;
+    return posted;
 }
 
 /** Деньги корня счёта: camelCase / snake_case (Rails и др.). */
@@ -3152,7 +3152,6 @@ function normalizeInvoicePaymentsArray(o: Record<string, unknown>): InvoicePayme
     });
 }
 
-/** Приводит полный объект счёта к ожидаемому клиентом виду (особенно `lines`). */
 function normalizeInvoiceDto(raw: unknown): InvoiceDto {
     if (!raw || typeof raw !== 'object')
         throw new Error('Invoice API: в ответе нет объекта счёта');
