@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppBackButton, AppPageSettings } from '@shared/ui';
 import './CorrespondencePage.css';
 
@@ -182,22 +182,40 @@ export function CorrespondencePage() {
     const rangeStart = totalForTab === 0 ? 0 : isAllTab ? 1 : (page - 1) * PAGE_SIZE + 1;
     const rangeEnd = totalForTab === 0 ? 0 : isAllTab ? Math.min(MOCK_ROWS.length, PAGE_SIZE, totalForTab) : Math.min(page * PAGE_SIZE, totalForTab);
 
-    return (<div className="corr">
+    const headerRef = useRef<HTMLElement | null>(null);
+    const [headerOffset, setHeaderOffset] = useState(88);
+    useLayoutEffect(() => {
+        const el = headerRef.current;
+        if (!el)
+            return;
+        const sync = () => setHeaderOffset(el.getBoundingClientRect().height);
+        sync();
+        const ro = new ResizeObserver(sync);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+
+    const corrRootStyle = useMemo(() => ({
+        paddingTop: headerOffset,
+        ['--corr-header-offset' as string]: `${headerOffset}px`,
+    }), [headerOffset]);
+
+    return (<div className="corr" style={corrRootStyle}>
+      <header ref={headerRef} className="corr__header">
+        <div className="corr__header-inner">
+          <div className="corr__header-start">
+            <AppBackButton className="app-back-btn"/>
+            <div>
+              <h1 className="corr__title">Управление корреспонденцией</h1>
+              <p className="corr__subtitle">Контроль и обработка входящих, исходящих и внутренних писем и документов</p>
+            </div>
+          </div>
+          <AppPageSettings/>
+        </div>
+      </header>
+
       <div className="corr__body">
         <main className="corr__main">
-          <header className="corr__header">
-            <div className="corr__header-inner">
-              <div className="corr__header-start">
-                <AppBackButton className="app-back-btn"/>
-                <div>
-                  <h1 className="corr__title">Управление корреспонденцией</h1>
-                  <p className="corr__subtitle">Контроль и обработка входящих, исходящих и внутренних писем и документов</p>
-                </div>
-              </div>
-              <AppPageSettings/>
-            </div>
-          </header>
-
           <div className="corr__content">
             <section className="corr__stats" aria-label="Показатели">
               {STATS.map((s) => (<article key={s.key} className={`corr__stat corr__stat--${s.deltaVariant}`}>
