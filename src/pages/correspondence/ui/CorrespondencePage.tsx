@@ -47,14 +47,6 @@ const STATUS_BADGE: Record<DocStatus, { label: string; className: string }> = {
     done: { label: 'Завершено', className: 'corr__badge corr__badge--status-done' },
 };
 
-const STEPS = [
-    { key: 'reg', title: 'Регистрация', hint: 'Входящий документ зарегистрирован', icon: 'doc' as const },
-    { key: 'dist', title: 'Распределение', hint: 'Назначен ответственный', icon: 'users' as const },
-    { key: 'proc', title: 'Обработка', hint: 'Подготовка ответа', icon: 'gear' as const },
-    { key: 'reply', title: 'Ответ', hint: 'Письмо отправлено', icon: 'send' as const },
-    { key: 'arch', title: 'Архив', hint: 'Документ в архиве', icon: 'box' as const },
-];
-
 const TABLE_TABS = [
     { key: 'all', label: 'Все' },
     { key: 'new', label: 'Новые' },
@@ -89,38 +81,6 @@ function StatIcon({ name }: { name: 'inbox' | 'send' | 'users' | 'clock' }) {
     return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <circle cx="12" cy="12" r="10"/>
       <polyline points="12 6 12 12 16 14"/>
-    </svg>);
-}
-
-function StepIcon({ name }: { name: 'doc' | 'users' | 'gear' | 'send' | 'box' }) {
-    if (name === 'doc') {
-        return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-          <polyline points="14 2 14 8 20 8"/>
-        </svg>);
-    }
-    if (name === 'users') {
-        return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-        </svg>);
-    }
-    if (name === 'gear') {
-        return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <circle cx="12" cy="12" r="3"/>
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </svg>);
-    }
-    if (name === 'send') {
-        return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-          <line x1="22" y1="2" x2="11" y2="13"/>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-        </svg>);
-    }
-    return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-      <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-      <line x1="12" y1="22.08" x2="12" y2="12"/>
     </svg>);
 }
 
@@ -321,26 +281,6 @@ export function CorrespondencePage() {
                   </button>
                 </nav>)}
               </footer>
-            </section>
-
-            <section className="corr__steps" aria-labelledby="corr-steps-heading">
-              <h2 id="corr-steps-heading" className="corr__steps-title">Этапы обработки документа</h2>
-              <ol className="corr__steps-list">
-                {STEPS.map((step, i) => (<li key={step.key} className="corr__step-item">
-                    {i > 0 && (<span className="corr__step-arrow" aria-hidden>
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="9 18 15 12 9 6"/>
-                        </svg>
-                      </span>)}
-                    <div className="corr__step-card">
-                      <div className="corr__step-icon">
-                        <StepIcon name={step.icon}/>
-                      </div>
-                      <span className="corr__step-title">{step.title}</span>
-                      <span className="corr__step-hint">{step.hint}</span>
-                    </div>
-                  </li>))}
-              </ol>
             </section>
           </div>
         </main>
