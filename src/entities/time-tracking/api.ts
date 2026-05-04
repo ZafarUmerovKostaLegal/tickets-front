@@ -3401,6 +3401,10 @@ export type TimeReportEntryLogItem = {
     voided_by_auth_user_id?: number | null;
     void_kind?: string | null;
     is_voided?: boolean | null;
+    
+    expense_request_id?: string | null;
+    entry_kind?: string | null;
+    line_kind?: string | null;
 };
 
 export type TimeReportEntryLine = TimeReportEntryLogItem;
@@ -3428,6 +3432,9 @@ export type RUBExpense = {
     /** Стадия заявки (черновик, согласование, отклонён и т.д.). */
     status?: string | null;
     expense_status?: string | null;
+    /** Если API отдаёт разрез по проекту внутри строки пользователя. */
+    project_id?: string | null;
+    project_name?: string | null;
 };
 export type RUBUninvoiced = {
     user_id: number;
@@ -3581,6 +3588,10 @@ const REPORT_ENTRY_LOG_CAMEL_TO_SNAKE: readonly [
         ['voidedByAuthUserId', 'voided_by_auth_user_id'],
         ['voidKind', 'void_kind'],
         ['isVoided', 'is_voided'],
+        ['expenseRequestId', 'expense_request_id'],
+        ['expenseId', 'expense_id'],
+        ['entryKind', 'entry_kind'],
+        ['lineKind', 'line_kind'],
     ];
 const REPORT_ENTRY_LOG_NEST_KEYS = [
     'time_entry',

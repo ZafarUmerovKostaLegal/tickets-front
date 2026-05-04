@@ -21,6 +21,7 @@ import {
     deriveBillableAmountForEntry,
     deriveBillableHoursForEntry,
     entryBillableTriState,
+    entryTaskLabel,
 } from '@entities/time-tracking/lib/timeReportEntryLogFormat';
 import type {
     BudgetExcelPreviewRow,
@@ -87,6 +88,7 @@ function buildTimeExcelRow(params: {
     const cName = str(it.client_name) || parentClientName;
     const tid = str(it.task_id);
     const tname = str(it.task_name);
+    const taskTitle = entryTaskLabel(it, undefined, parentProjectId || parentProjectName ? { id: parentProjectId, name: parentProjectName } : undefined);
     const entryId = str(it.id) || str(it.time_entry_id);
     const rowKey = entryId
         ? `e-${entryId}`
@@ -131,7 +133,7 @@ function buildTimeExcelRow(params: {
         projectName: pName,
         projectCode: str(it.project_code) || entryString(it, ['project_code', 'projectCode']),
         taskId: tid || (tname ? `task:${tname.slice(0, 24)}` : ''),
-        taskName: tname,
+        taskName: taskTitle,
         note,
         description: note,
         hours: Number.isFinite(it.hours) ? it.hours : 0,
@@ -217,6 +219,19 @@ export function flattenTimeReportToExcelRows(groupBy: TimeGroup, rows: (TimeRowC
     return out;
 }
 
+function expenseExcelComment(coreLine: string | undefined, u: RUBExpense): string {
+    const projLine = displayReportProjectLabel(u.project_name, u.project_id);
+    const core = (coreLine ?? '').trim();
+    const hasProj = projLine !== 'Проект не в учёте времени';
+    if (hasProj && core)
+        return `Расход · ${projLine} — ${core}`;
+    if (hasProj)
+        return `Расход · ${projLine}`;
+    if (core)
+        return `Расход — ${core}`;
+    return 'Расход';
+}
+
 export function flattenExpenseReportToExcelRows(groupBy: ExpenseGroup, rows: ExpRowClients[] | ExpRowProjects[] | ExpRowCategories[] | ExpRowTeam[],): ExpenseExcelPreviewRow[] {
     const out: ExpenseExcelPreviewRow[] = [];
     if (groupBy === 'team') {
@@ -237,7 +252,7 @@ export function flattenExpenseReportToExcelRows(groupBy: ExpenseGroup, rows: Exp
     if (groupBy === 'clients') {
         for (const row of rows as ExpRowClients[]) {
             for (const u of row.users ?? []) {
-                out.push(expenseUserRow(row.client_id, displayReportClientLabel(row.client_name, row.client_id), row.currency, u));
+                out.push(expenseUserRow(row.client_id, expenseExcelComment(displayReportClientLabel(row.client_name, row.client_id), u), row.currency, u));
             }
         }
         return out;
@@ -246,7 +261,7 @@ export function flattenExpenseReportToExcelRows(groupBy: ExpenseGroup, rows: Exp
         for (const row of rows as ExpRowCategories[]) {
             const cid = row.expense_category_id ?? `cat:${row.expense_category_name}`;
             for (const u of row.users ?? []) {
-                out.push(expenseUserRow(cid, row.expense_category_name, row.currency, u));
+                out.push(expenseUserRow(cid, expenseExcelComment(row.expense_category_name || '—', u), row.currency, u));
             }
         }
         return out;
@@ -254,7 +269,7 @@ export function flattenExpenseReportToExcelRows(groupBy: ExpenseGroup, rows: Exp
     for (const row of rows as ExpRowProjects[]) {
         for (const u of row.users ?? []) {
             const line = `${displayReportProjectLabel(row.project_name, row.project_id)} — ${displayReportClientLabel(row.client_name, row.client_id)}`;
-            out.push(expenseUserRow(row.project_id, line, row.currency, u));
+            out.push(expenseUserRow(row.project_id, expenseExcelComment(line, u), row.currency, u));
         }
     }
     return out;

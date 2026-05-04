@@ -1,4 +1,5 @@
 import type { TimeReportEntryLogItem } from '@entities/time-tracking';
+import { displayReportProjectLabel } from '@entities/time-tracking/lib/expenseReportDisplay';
 
 export type TimeEntryLogGroupContext = {
     project_name?: string | null;
@@ -13,6 +14,55 @@ export type UserBillableRollup = {
 };
 
 export type TimeEntryLogGroupBy = 'clients' | 'projects';
+
+export type EntryTaskParentProject = {
+    id: string;
+    name: string;
+};
+
+export function isTimeReportExpenseEntry(it: TimeReportEntryLogItem): boolean {
+    const er = it.expense_request_id;
+    if (er != null && String(er).trim())
+        return true;
+    const r = it as Record<string, unknown>;
+    const pickId = (): boolean => {
+        for (const k of ['expense_request_id', 'expenseRequestId', 'expense_id', 'expenseId']) {
+            const v = r[k];
+            if (v != null && String(v).trim())
+                return true;
+        }
+        return false;
+    };
+    if (pickId())
+        return true;
+    const kind = String(it.entry_kind ?? it.line_kind ?? r.entryKind ?? r.line_kind ?? r.record_kind ?? r.recordKind ?? '').trim().toLowerCase();
+    return kind === 'expense';
+}
+
+function rawTaskLabelFromEntry(it: TimeReportEntryLogItem, ctx?: TimeEntryLogGroupContext): string {
+    const r = it as Record<string, unknown>;
+    const nameKeys = [
+        'taskName',
+        'task_name',
+        'task_title',
+        'task_summary',
+        'task_label',
+        'activity_name',
+        'ticket_title',
+    ];
+    for (const k of nameKeys) {
+        const v = r[k];
+        if (typeof v === 'string' && v.trim())
+            return v.trim();
+    }
+    const fromCtx = (it.task_name ?? ctx?.task_name ?? '').trim();
+    if (fromCtx)
+        return fromCtx;
+    const tid = it.task_id ?? (typeof r.task_id === 'string' ? r.task_id : undefined);
+    if (tid)
+        return `#${String(tid).replace(/-/g, '').slice(0, 8)}`;
+    return '—';
+}
 
 export function entryBillableTriState(it: TimeReportEntryLogItem): boolean | null {
     const r = it as Record<string, unknown>;
@@ -55,29 +105,17 @@ export function entryComment(it: TimeReportEntryLogItem): string {
     return uniq.join(' — ');
 }
 
-export function entryTaskLabel(it: TimeReportEntryLogItem, ctx?: TimeEntryLogGroupContext): string {
-    const r = it as Record<string, unknown>;
-    const nameKeys = [
-        'taskName',
-        'task_name',
-        'task_title',
-        'task_summary',
-        'task_label',
-        'activity_name',
-        'ticket_title',
-    ];
-    for (const k of nameKeys) {
-        const v = r[k];
-        if (typeof v === 'string' && v.trim())
-            return v.trim();
-    }
-    const fromCtx = (it.task_name ?? ctx?.task_name ?? '').trim();
-    if (fromCtx)
-        return fromCtx;
-    const tid = it.task_id ?? (typeof r.task_id === 'string' ? r.task_id : undefined);
-    if (tid)
-        return `#${String(tid).replace(/-/g, '').slice(0, 8)}`;
-    return '—';
+export function entryTaskLabel(it: TimeReportEntryLogItem, ctx?: TimeEntryLogGroupContext, fallbackProject?: EntryTaskParentProject | null): string {
+    if (!isTimeReportExpenseEntry(it))
+        return rawTaskLabelFromEntry(it, ctx);
+    const pn = (it.project_name ?? fallbackProject?.name ?? '').trim();
+    const pid = String(it.project_id ?? fallbackProject?.id ?? '').trim();
+    const projLine = displayReportProjectLabel(pn || null, pid || null);
+    const raw = rawTaskLabelFromEntry(it, ctx);
+    const hasProj = projLine !== 'Проект не в учёте времени';
+    if (hasProj)
+        return raw && raw !== '—' ? `Расход · ${projLine} — ${raw}` : `Расход · ${projLine}`;
+    return raw && raw !== '—' ? `Расход — ${raw}` : 'Расход';
 }
 
 export function deriveBillableHoursForEntry(it: TimeReportEntryLogItem, userRollup: UserBillableRollup | null | undefined): number | null {
