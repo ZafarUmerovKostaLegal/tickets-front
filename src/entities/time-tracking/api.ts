@@ -3056,6 +3056,29 @@ function pickInvoicePartnerDateSlice(o: Record<string, unknown>, keys: readonly 
 
 const INV_MONEY_TOLERANCE = 0.03;
 
+/**
+ * После POST оплаты часто делают повторный GET; если GET отдал устаревшие суммы (кэш/сессия БД),
+ * UI остаётся прежним. Сравниваем два DTO и берём более полный ответ.
+ */
+export function mergeInvoiceDtoAfterPayment(posted: InvoiceDto, fetched: InvoiceDto): InvoiceDto {
+    const pa = Number(posted.amountPaid);
+    const fa = Number(fetched.amountPaid);
+    const pp = posted.payments?.length ?? 0;
+    const fp = fetched.payments?.length ?? 0;
+    if (fa > pa + INV_MONEY_TOLERANCE || fp > pp)
+        return fetched;
+    if (pa > fa + INV_MONEY_TOLERANCE || pp > fp)
+        return posted;
+    const rank = (s: string) => (s === 'paid' ? 3 : s === 'partial_paid' ? 2 : s === 'overdue' ? 1 : 0);
+    const pr = rank(String(posted.status));
+    const fr = rank(String(fetched.status));
+    if (fr > pr)
+        return fetched;
+    if (pr > fr)
+        return posted;
+    return fetched;
+}
+
 /** Деньги корня счёта: camelCase / snake_case (Rails и др.). */
 function coalesceInvoiceMoney(...vals: unknown[]): number {
     for (const v of vals) {

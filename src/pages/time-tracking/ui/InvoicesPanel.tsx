@@ -6,7 +6,7 @@ import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '@page
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { useAppDialog, useAppToast } from '@shared/ui';
-import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 function fmtMoney(n: number, cur: string): string {
@@ -831,9 +831,10 @@ export function InvoicesPanel() {
                 paymentMethod: payMethod.trim() || null,
                 note: payNote.trim() || null,
             });
-            let next: InvoiceDto;
+            let next: InvoiceDto = posted;
             try {
-                next = await getInvoice(detailId, true);
+                const refreshed = await getInvoice(detailId, true);
+                next = mergeInvoiceDtoAfterPayment(posted, refreshed);
             }
             catch {
                 next = posted;
@@ -862,9 +863,10 @@ export function InvoicesPanel() {
         setActionBusy(true);
         try {
             const posted = await registerInvoicePayment(detailId, {});
-            let next: InvoiceDto;
+            let next: InvoiceDto = posted;
             try {
-                next = await getInvoice(detailId, true);
+                const refreshed = await getInvoice(detailId, true);
+                next = mergeInvoiceDtoAfterPayment(posted, refreshed);
             }
             catch {
                 next = posted;
@@ -895,9 +897,10 @@ export function InvoicesPanel() {
         setActionBusy(true);
         try {
             const posted = await submitInvoicePaymentConfirmation(detailId, { documentUrl: url });
-            let next: InvoiceDto;
+            let next: InvoiceDto = posted;
             try {
-                next = await getInvoice(detailId, true);
+                const refreshed = await getInvoice(detailId, true);
+                next = mergeInvoiceDtoAfterPayment(posted, refreshed);
             }
             catch {
                 next = posted;
