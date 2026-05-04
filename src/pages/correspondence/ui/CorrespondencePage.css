@@ -3,6 +3,8 @@
   min-height: 100dvh;
   background: var(--app-bg);
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
 .corr__body {
@@ -10,6 +12,7 @@
   align-items: stretch;
   max-width: 1920px;
   margin: 0 auto;
+  width: 100%;
   min-height: calc(100vh - var(--corr-header-offset, 88px));
   min-height: calc(100dvh - var(--corr-header-offset, 88px));
 }
@@ -664,20 +667,51 @@ span.corr__page-num:hover {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  overflow: hidden;
 }
 
 @media (min-width: 1024px) {
-  .corr__body {
-    flex-direction: row;
+  .corr {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
   }
 
+  .corr__body {
+    flex: 1;
+    flex-direction: row;
+    align-items: stretch;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .corr__main {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    width: 100%;
+    box-sizing: border-box;
+    padding-right: 300px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* Вне потока: не участвует в прокрутке main */
   .corr__aside {
+    position: fixed;
+    top: var(--corr-header-offset, 88px);
+    bottom: 0;
+    right: max(0px, calc((100vw - 1920px) / 2));
     width: 300px;
+    z-index: 50;
+    margin: 0;
     border-top: none;
     border-left: 1px solid var(--app-border);
     padding: 1.5rem 1.25rem 2rem;
-    min-height: calc(100vh - var(--corr-header-offset, 88px));
-    min-height: calc(100dvh - var(--corr-header-offset, 88px));
+    overflow: hidden;
+    box-shadow: -4px 0 18px rgba(15, 23, 42, 0.04);
   }
 }
 
@@ -685,6 +719,8 @@ span.corr__page-num:hover {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 .corr__aside-title {
