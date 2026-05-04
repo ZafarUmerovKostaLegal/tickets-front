@@ -1,6 +1,7 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AppBackButton, AppPageSettings } from '@shared/ui';
+import { CorrespondenceAsideSkeleton, CorrespondenceHeaderTitleSkeleton, CorrespondenceMainSkeleton, } from './CorrespondenceSkeleton';
 import './CorrespondencePage.css';
 
 const STATS = [
@@ -119,6 +120,12 @@ function filterRows(tab: (typeof TABLE_TABS)[number]['key'], rows: Row[]): Row[]
 }
 
 export function CorrespondencePage() {
+    const [pageReady, setPageReady] = useState(false);
+    useEffect(() => {
+        const t = window.setTimeout(() => setPageReady(true), 650);
+        return () => window.clearTimeout(t);
+    }, []);
+
     const [tableTab, setTableTab] = useState<(typeof TABLE_TABS)[number]['key']>('all');
     const [page, setPage] = useState(1);
     const filtered = useMemo(() => filterRows(tableTab, MOCK_ROWS), [tableTab]);
@@ -159,10 +166,10 @@ export function CorrespondencePage() {
             <div className="corr__header-inner">
               <div className="corr__header-start">
                 <AppBackButton className="app-back-btn"/>
-                <div>
-                  <h1 className="corr__title">Управление корреспонденцией</h1>
-                  <p className="corr__subtitle">Контроль и обработка входящих, исходящих и внутренних писем и документов</p>
-                </div>
+                {pageReady ? (<div>
+                    <h1 className="corr__title">Управление корреспонденцией</h1>
+                    <p className="corr__subtitle">Контроль и обработка входящих, исходящих и внутренних писем и документов</p>
+                  </div>) : (<CorrespondenceHeaderTitleSkeleton/>)}
               </div>
               <AppPageSettings/>
             </div>
@@ -172,6 +179,7 @@ export function CorrespondencePage() {
       <div className="corr__body">
         <main className="corr__main">
           <div className="corr__content">
+            {pageReady ? (<>
             <section className="corr__stats" aria-label="Показатели">
               {STATS.map((s) => (<article key={s.key} className={`corr__stat corr__stat--${s.deltaVariant}`}>
                   <div className={`corr__stat-icon-wrap corr__stat-icon-wrap--${s.deltaVariant}`}>
@@ -282,11 +290,12 @@ export function CorrespondencePage() {
                 </nav>)}
               </footer>
             </section>
+            </>) : (<CorrespondenceMainSkeleton/>)}
           </div>
         </main>
 
         <aside className="corr__aside" aria-label="Боковая панель">
-          <div className="corr__aside-block">
+          {pageReady ? (<div className="corr__aside-block">
             <h2 className="corr__aside-title">Быстрые действия</h2>
             <button type="button" className="corr__btn corr__btn--primary corr__btn--block">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -299,7 +308,7 @@ export function CorrespondencePage() {
             </button>
             <button type="button" className="corr__btn corr__btn--outline corr__btn--block">Создать ответ</button>
             <button type="button" className="corr__btn corr__btn--outline corr__btn--block">Отправить документ</button>
-          </div>
+          </div>) : (<CorrespondenceAsideSkeleton/>)}
         </aside>
       </div>
       </div>
