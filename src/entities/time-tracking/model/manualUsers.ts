@@ -1,7 +1,6 @@
 import type { User } from '@entities/user';
 import type { TimeTrackingUserRow } from '@entities/time-tracking/api';
 
-
 export const MANUAL_TT_USER_AUTH_ID_FLOOR = 2_000_000_000;
 
 export function isManualTtAuthUserId(authUserId: number): boolean {

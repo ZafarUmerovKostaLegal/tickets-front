@@ -18,7 +18,6 @@ function pickNumNullable(raw: Record<string, unknown>, snake: string, camel: str
     return Number.isFinite(n) ? n : null;
 }
 
-
 export function normalizeNotificationItem(raw: Record<string, unknown>): NotificationItem | null {
     const uuid = (pickStr(raw, 'uuid', 'uuid') ?? '').trim();
     if (!uuid)
@@ -44,7 +43,6 @@ export function normalizeNotificationItem(raw: Record<string, unknown>): Notific
 export function notificationTypeKey(item: NotificationItem): string {
     return (item.notification_type ?? '').trim().toLowerCase();
 }
-
 
 export function parseBoardTitleFromNotificationDescription(description: string): string | null {
     const m = /доску «([^»]+)»/i.exec(description);

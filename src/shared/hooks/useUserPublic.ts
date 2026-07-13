@@ -25,7 +25,6 @@ function snapshotEqual(a: Map<number, UserPublic>, b: Map<number, UserPublic>): 
     return true;
 }
 
-
 export function useUserPublic(ids: readonly number[]): Map<number, UserPublic> {
     const normalizedIds = useMemo(() => {
         const seen = new Set<number>();

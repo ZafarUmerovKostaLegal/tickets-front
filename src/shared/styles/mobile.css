@@ -1,6 +1,5 @@
 
 
-
 :root {
   --app-safe-top-js: 0px;
   --app-safe-bottom-js: 0px;
@@ -12,7 +11,6 @@
   --mob-safe-right:  max(env(safe-area-inset-right, 0px), var(--app-safe-right-js));
   --mob-tap-min: 44px;
 }
-
 
 @media (max-width: 768px) {
   :root {
@@ -26,7 +24,6 @@
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
   }
-
 
   .home-page,
   .home-page--hub,
@@ -50,7 +47,6 @@
     padding-bottom: var(--mob-safe-bottom);
   }
 
-
   .page-transition:has(> .todo-page) {
     height: 100dvh;
     max-height: 100dvh;
@@ -69,7 +65,6 @@
     overflow: hidden !important;
   }
 
-
   .kd-tg {
     height: calc(100dvh - var(--mob-safe-bottom));
     max-height: calc(100dvh - var(--mob-safe-bottom));
@@ -82,11 +77,9 @@
     max-height: calc(100dvh - var(--mob-safe-bottom));
   }
 
-
   .time-page {
     min-height: calc(100dvh - var(--mob-safe-bottom));
   }
-
 
   .lp {
     padding-top: max(0.75rem, var(--mob-safe-top));
@@ -97,7 +90,6 @@
   }
 }
 
-
 @media (max-width: 768px) {
 
   button:not([hidden]),
@@ -105,7 +97,6 @@
   a:not([hidden]) {
     min-height: var(--mob-tap-min);
   }
-
 
   .kd-tg__icon-btn,
   .app-back-btn,
@@ -129,7 +120,6 @@
     justify-content: center;
   }
 
-
   .contacts-row,
   .inv-row,
   .ap-user-row,
@@ -138,7 +128,6 @@
   .pp__tr {
     min-height: 48px;
   }
-
 
   input[type='text'],
   input[type='email'],
@@ -151,16 +140,14 @@
   textarea,
   select {
     min-height: var(--mob-tap-min);
-    font-size: 16px; /* prevents iOS auto-zoom */
+    font-size: 16px;
   }
-
 
   .tsp-srch__input,
   .kd-tg__search,
   .kd-tg__composer-input {
     font-size: 16px;
   }
-
 
   .todo-card__checkbox {
     min-height: 18px !important;
@@ -169,14 +156,11 @@
     height: 18px !important;
   }
 
-
   .todo-column__action {
     min-height: 0 !important;
     min-width: 0 !important;
   }
 }
-
-
 
 @media (max-width: 768px) {
 
@@ -200,7 +184,6 @@
     gap: 0.5rem;
   }
 
-
   .help-page__title,
   .att__title,
   .expenses-page__title,
@@ -216,7 +199,6 @@
     font-size: 1.125rem;
     line-height: 1.25;
   }
-
 
   .help-page__subtitle,
   .att__subtitle,
@@ -247,7 +229,6 @@
     font-size: 1rem;
   }
 }
-
 
 @media (max-width: 600px) {
   .app-dlg {
@@ -281,7 +262,6 @@
     border-radius: 12px;
   }
 }
-
 
 @media (max-width: 600px) {
   .tsp-srch__dropdown--portal {
@@ -320,7 +300,6 @@
   }
 }
 
-
 @media (max-width: 600px) {
   .date-picker-portal {
     position: fixed !important;
@@ -335,7 +314,6 @@
     animation: dlg-slide-up 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }
-
 
 @media (max-width: 768px) {
   .contacts-page {
@@ -357,13 +335,11 @@
     font-size: 0.8125rem;
   }
 
-
   .contacts-page__content {
     overflow-x: hidden;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
-
 
   .contacts-table-wrap {
     overflow-x: auto;
@@ -383,7 +359,6 @@
   }
 }
 
-
 @media (max-width: 768px) {
 
   .time-page__header {
@@ -399,7 +374,6 @@
     font-size: 1.125rem;
   }
 
-
   .time-page__tabbar {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -411,7 +385,6 @@
     display: none;
   }
 
-
   .time-users__summary {
     flex-wrap: wrap;
   }
@@ -421,12 +394,10 @@
     min-width: 140px;
   }
 
-
   .time-users__toolbar {
     flex-wrap: wrap;
     gap: 0.5rem;
   }
-
 
   .time-users__table-section {
     overflow-x: auto;
@@ -444,7 +415,6 @@
   }
 }
 
-
 @media (max-width: 768px) {
   .expenses-page {
     overflow-x: hidden;
@@ -460,7 +430,6 @@
     min-width: 560px;
   }
 
-
   .expenses-form-panels {
     flex-direction: column;
   }
@@ -469,7 +438,6 @@
     width: 100% !important;
   }
 }
-
 
 @media (max-width: 768px) {
   .ticket-detail {
@@ -488,7 +456,6 @@
     padding-top: 1rem;
   }
 
-
   .ticket-detail__meta-grid {
     grid-template-columns: 1fr 1fr;
     gap: 0.65rem;
@@ -500,7 +467,6 @@
     grid-template-columns: 1fr;
   }
 }
-
 
 @media (max-width: 768px) {
   .vacation-schedule-grid-wrap,
@@ -519,7 +485,6 @@
   }
 }
 
-
 @media (max-width: 768px) {
   .inv__table-wrap {
     overflow-x: auto;
@@ -531,7 +496,6 @@
   }
 }
 
-
 @media (max-width: 768px) {
   .ap__table-wrap {
     overflow-x: auto;
@@ -542,7 +506,6 @@
     min-width: 520px;
   }
 }
-
 
 @media (max-width: 480px) {
   .home-page__main--hub {
@@ -587,23 +550,18 @@
   }
 }
 
-
 @media (max-width: 768px) {
 
   .kd-tg__composer {
     padding-bottom: max(0.65rem, calc(var(--mob-safe-bottom) + 0.25rem));
   }
 
-
   .kd-tg__modal-backdrop {
     padding-bottom: max(1rem, var(--mob-safe-bottom));
   }
 }
 
-
 @media (max-width: 1024px) {
-
-
 
   .page-transition:has(> .todo-page) {
     height: 100dvh;
@@ -630,7 +588,6 @@
     background: var(--todo-header-bg, var(--todo-surface2));
   }
 
-
   .todo-page__main {
     display: flex !important;
     flex-direction: column !important;
@@ -641,7 +598,6 @@
     padding: 0.5rem 0.5rem 0 !important;
     width: 100%;
   }
-
 
   .todo-columns {
     flex-direction: row !important;
@@ -664,7 +620,6 @@
     touch-action: pan-x pan-y;
     overscroll-behavior-x: contain;
   }
-
 
   .todo-column {
     flex: 0 0 min(300px, 82vw) !important;
@@ -698,7 +653,6 @@
     padding-right: 0.5rem !important;
   }
 
-
   .todo-column__cards > .todo-card {
     flex: 0 0 auto !important;
     flex-shrink: 0 !important;
@@ -715,11 +669,9 @@
     touch-action: none !important;
   }
 
-
   .todo-card__title {
     overflow-wrap: anywhere !important;
   }
-
 
   .todo-card {
     width: 100%;
@@ -733,28 +685,23 @@
     align-self: stretch;
   }
 
-
   .todo-boards-bar {
     padding: 0;
   }
-
 
   .todo-page__header {
     padding: 0.5rem 0.75rem !important;
     min-height: 48px;
   }
 
-
   .todo-card {
     padding: 0.625rem 0.75rem;
   }
-
 
   .todo-column--card-drop-target {
     outline: 2px solid var(--todo-accent);
     outline-offset: -2px;
   }
-
 
   .todo-card-drag-preview,
   .todo-column-drag-preview {
@@ -765,14 +712,12 @@
     transform: scale(0.97);
   }
 
-
   .todo-page__header-btn--planner {
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
   }
   .todo-page__header-btn--planner span { display: none; }
-
 
   .todo-boards-bar {
     position: relative;
@@ -793,7 +738,6 @@
     justify-content: center;
     min-height: var(--mob-tap-min);
   }
-
 
   .cal-event-backdrop,
   .todo-add-card-modal-backdrop,
@@ -821,7 +765,6 @@
     animation: mob-sheet-up 0.24s cubic-bezier(0.4, 0, 0.2, 1) !important;
   }
 
-
   .cal-event-modal::before,
   .todo-add-card-modal::before,
   .todo-board-picker::before,
@@ -842,7 +785,6 @@
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }
-
 
 @media (max-width: 640px) {
   .todo-planner {
@@ -865,7 +807,6 @@
   }
 }
 
-
 @media (max-width: 768px) {
 
   .todo-page__header .app-back-btn {
@@ -881,14 +822,12 @@
   }
 }
 
-
 @media (max-width: 480px) {
 
   .todo-page__header .app-home-logo,
   .todo-page__header .app-home-logo__sep {
     display: none !important;
   }
-
 
   .todo-page__header .app-back-btn .app-back-btn__label {
     display: none !important;
@@ -899,7 +838,6 @@
     padding: 0 !important;
     justify-content: center !important;
   }
-
 
   .todo-page__nav-center {
     flex: 1 1 auto !important;
@@ -913,7 +851,6 @@
     display: none !important;
   }
 
-
   .todo-page__header-btn {
     width: 36px !important;
     height: 36px !important;
@@ -922,11 +859,9 @@
     min-width: 36px !important;
   }
 
-
   .todo-page__header-btn--planner {
     display: none !important;
   }
-
 
   .todo-boards-bar__nav-item > span:not(.todo-boards-bar__toggle-icon) {
     display: none !important;
@@ -944,14 +879,12 @@
     gap: 0.25rem !important;
   }
 
-
   .todo-column {
     flex: 0 0 min(280px, 82vw) !important;
     width: min(280px, 82vw) !important;
     min-width: min(280px, 82vw) !important;
     max-width: min(280px, 82vw) !important;
   }
-
 
   .todo-column--collapsed {
     flex: 0 0 44px !important;
@@ -960,7 +893,6 @@
     max-width: 44px !important;
   }
 }
-
 
 @media (max-width: 768px) {
   .pp__header {
@@ -986,7 +918,6 @@
   }
 }
 
-
 @media (max-width: 600px) {
 
   .kd-tg__modal-backdrop {
@@ -1010,7 +941,6 @@
     padding-bottom: max(1.1rem, var(--mob-safe-bottom));
   }
 
-
   .modal-overlay,
   .modal-backdrop {
     align-items: flex-end !important;
@@ -1031,9 +961,6 @@
   }
 }
 
-
-
-
 @media (max-width: 768px) {
   .project-detail-page__layout {
     flex-direction: column;
@@ -1050,14 +977,12 @@
   }
 }
 
-
 @media (max-width: 768px) {
   .csched-page__schedule-wrap {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
 }
-
 
 @media (max-width: 768px) {
   .ndrive__explorer-layout {
@@ -1078,7 +1003,6 @@
   }
 }
 
-
 @media (max-width: 768px) {
 
   .card,
@@ -1088,13 +1012,11 @@
     min-width: 0;
   }
 
-
   table {
     display: block;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
   }
-
 
   p,
   li,
@@ -1104,23 +1026,19 @@
     word-break: break-word;
   }
 
-
   .form-row--mobile-stack {
     flex-direction: column !important;
     gap: 0.75rem !important;
   }
-
 
   .btn--mobile-full {
     width: 100% !important;
     justify-content: center !important;
   }
 
-
   .mob-hidden {
     display: none !important;
   }
-
 
   .mob-only {
     display: block !important;
@@ -1133,7 +1051,6 @@
   }
 
 }
-
 
 @media (max-width: 768px) {
   .kd-tg__chat-scroll,
@@ -1149,7 +1066,6 @@
     overscroll-behavior: contain;
   }
 }
-
 
 @media (prefers-reduced-motion: reduce) {
   @keyframes dlg-slide-up {

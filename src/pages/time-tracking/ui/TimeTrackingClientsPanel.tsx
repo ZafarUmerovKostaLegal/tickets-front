@@ -1077,7 +1077,7 @@ export function TimeTrackingClientsPanel() {
                     items = applyBudgetMetricsToProjects(items, metrics);
                 }
                 catch {
-                    /* metrics optional */
+                    
                 }
             }
             setClientProjects((prev) => ({

@@ -18,7 +18,6 @@ function clampNum(val: unknown, min: number, max: number, fallback: number): num
     return Math.max(min, Math.min(max, Math.floor(val)));
 }
 
-
 export async function listNotificationsRest(params: ListNotificationsParams = {}): Promise<NotificationItem[]> {
     const skip = clampNum(params.skip, 0, Number.MAX_SAFE_INTEGER, DEFAULT_SKIP);
     const limit = clampNum(params.limit, 1, MAX_LIMIT, DEFAULT_LIMIT);
@@ -36,7 +35,7 @@ export async function listNotificationsRest(params: ListNotificationsParams = {}
             if (typeof j.detail === 'string')
                 msg = j.detail;
         }
-        catch { /* ignore */ }
+        catch {  }
         throw new Error(msg);
     }
     const raw = text.trim() ? (JSON.parse(text) as unknown) : [];

@@ -20,7 +20,6 @@ function Icon({ children, ...props }: IconProps & { children: ReactNode }) {
     );
 }
 
-
 export function KlAiIconSpellCheck(props: IconProps) {
     return (
         <Icon {...props}>
@@ -30,7 +29,6 @@ export function KlAiIconSpellCheck(props: IconProps) {
         </Icon>
     );
 }
-
 
 export function KlAiIconScale(props: IconProps) {
     return (
@@ -44,7 +42,6 @@ export function KlAiIconScale(props: IconProps) {
     );
 }
 
-
 export function KlAiIconMegaphone(props: IconProps) {
     return (
         <Icon {...props}>
@@ -53,7 +50,6 @@ export function KlAiIconMegaphone(props: IconProps) {
         </Icon>
     );
 }
-
 
 export function KlAiIconScanText(props: IconProps) {
     return (
@@ -69,7 +65,6 @@ export function KlAiIconScanText(props: IconProps) {
     );
 }
 
-
 export function KlAiIconMessageReply(props: IconProps) {
     return (
         <Icon {...props}>
@@ -79,7 +74,6 @@ export function KlAiIconMessageReply(props: IconProps) {
         </Icon>
     );
 }
-
 
 export function KlAiIconFileSearch(props: IconProps) {
     return (
@@ -92,7 +86,6 @@ export function KlAiIconFileSearch(props: IconProps) {
     );
 }
 
-
 export function KlAiIconPenLine(props: IconProps) {
     return (
         <Icon {...props}>
@@ -101,7 +94,6 @@ export function KlAiIconPenLine(props: IconProps) {
         </Icon>
     );
 }
-
 
 export function KlAiIconLayoutTemplate(props: IconProps) {
     return (

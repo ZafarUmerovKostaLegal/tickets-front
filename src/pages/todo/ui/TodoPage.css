@@ -659,7 +659,6 @@
   box-shadow: none;
 }
 
-
 .todo-members__modal *::-webkit-scrollbar {
   display: block;
   width: 6px;
@@ -733,8 +732,6 @@
 .todo-page__header {
   animation: todoHeaderSlide 0.5s cubic-bezier(.22,1,.36,1) 0.1s both;
 }
-
-
 
 .todo-columns {
   animation: todoColumnPop 0.5s cubic-bezier(.22,1,.36,1) 0.3s both;
@@ -921,7 +918,6 @@
   min-width: 0;
   gap: 0.5rem;
 }
-
 
 .todo-page__nav-title {
   display: none;
@@ -1208,7 +1204,6 @@
   color: var(--todo-accent);
   background: color-mix(in srgb, var(--todo-accent) 6%, transparent);
 }
-
 
 .todo-boards-bar-portal-root {
   position: relative;
@@ -2034,7 +2029,6 @@
   pointer-events: none;
 }
 
-
 .todo-planner {
   position: fixed;
   top: 0;
@@ -2098,9 +2092,7 @@
 
 .todo-planner__collapse-btn svg { width: 16px; height: 16px; }
 
-
 .todo-planner__collapse-btn { display: none; }
-
 
 .todo-planner__mobile-close {
   display: inline-flex;
@@ -2118,9 +2110,7 @@
 }
 .todo-planner__mobile-close:hover { background: var(--todo-border); color: var(--todo-text); }
 
-
 .todo-planner__month-nav { order: -1; }
-
 
 .todo-page__planner-backdrop {
   display: block;
@@ -2136,7 +2126,6 @@
   opacity: 1;
   visibility: visible;
 }
-
 
 .todo-page__header-btn--planner { display: inline-flex; }
 
@@ -2256,7 +2245,7 @@
 .todo-planner__calendar {
   flex-shrink: 0;
   padding: 0.25rem 0;
-  
+
   --tp-cal-fg: color-mix(in srgb, var(--todo-text) 97%, var(--todo-border));
   --tp-cal-fg-soft: color-mix(in srgb, var(--todo-text) 88%, var(--todo-border));
   --tp-cal-fg-muted: color-mix(in srgb, var(--todo-text) 76%, var(--todo-border));
@@ -2310,7 +2299,6 @@
 .todo-planner__day--muted:hover {
   color: var(--tp-cal-fg-soft);
 }
-
 
 .todo-planner__day--weekend {
   color: color-mix(in srgb, var(--tp-cal-fg) 78%, var(--todo-accent));
@@ -2993,7 +2981,7 @@
   cursor: grab;
   user-select: none;
   flex-shrink: 0;
-  touch-action: none; /* required for pointer-events drag on touch */
+  touch-action: none;
 }
 
 .todo-column__head:active { cursor: grabbing; }
@@ -3905,7 +3893,6 @@
   color: #ef4444;
 }
 
-
 .tcm-backdrop {
   position: fixed;
   inset: 0;
@@ -3936,7 +3923,6 @@
   animation: todo-modal-scale-in 0.2s cubic-bezier(0.34, 1.4, 0.64, 1);
   overflow: hidden;
 }
-
 
 @media (max-width: 600px) {
   .tcm-backdrop {
@@ -3997,7 +3983,6 @@
     justify-content: center;
   }
 }
-
 
 .tcm__header {
   display: flex;
@@ -4169,14 +4154,12 @@
 
 .tcm__icon-btn svg { width: 15px; height: 15px; }
 
-
 .tcm__body {
   display: flex;
   flex: 1;
   min-height: 0;
   overflow: hidden;
 }
-
 
 .tcm__main {
   flex: 1;
@@ -4192,7 +4175,6 @@
 
 .tcm__main::-webkit-scrollbar { width: 4px; }
 .tcm__main::-webkit-scrollbar-thumb { background: var(--todo-border); border-radius: 2px; }
-
 
 .tcm__title-row {
   display: flex;
@@ -4274,7 +4256,6 @@
   box-sizing: border-box;
 }
 
-
 .tcm__meta-row {
   display: flex;
   flex-wrap: wrap;
@@ -4343,7 +4324,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 
 .tcm__toolbar {
   display: flex;
@@ -4637,7 +4617,6 @@
   color: #ef4444;
 }
 
-
 .tcm__section { display: flex; flex-direction: column; gap: 0.5rem; }
 
 .tcm__section-label {
@@ -4653,7 +4632,6 @@
 }
 
 .tcm__section-label svg { width: 14px; height: 14px; flex-shrink: 0; }
-
 
 .tcm__desc-wrap {
   border: 1px solid var(--todo-border);
@@ -4684,7 +4662,6 @@
 }
 
 .tcm__desc::placeholder { color: var(--todo-muted); opacity: 0.7; }
-
 
 .tcm__aside {
   width: 268px;
@@ -4717,7 +4694,6 @@
 }
 
 .tcm__aside-heading svg { width: 14px; height: 14px; }
-
 
 .tcm__comment-compose {
   display: flex;
@@ -4793,7 +4769,6 @@
 
 .tcm__comment-send svg { width: 12px; height: 12px; }
 
-
 .tcm__activity-feed {
   display: flex;
   flex-direction: column;
@@ -4839,7 +4814,6 @@
   color: var(--todo-muted);
   letter-spacing: 0.01em;
 }
-
 
 .tcm__aside-footer {
   padding: 0.875rem 1.125rem;
@@ -5525,7 +5499,6 @@
   scrollbar-color: var(--todo-border) transparent;
 }
 
-
 .todo-column__cards > .todo-card {
   flex: 0 0 auto;
   height: auto;
@@ -5660,7 +5633,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 
 .todo-card__row {
   display: flex;
@@ -5928,8 +5900,6 @@
   transition: opacity 0.2s ease 0.2s;
 }
 
-
-
 @media (max-width: 768px) {
   .todo-page__header {
     padding: var(--mob-safe-top) 0.75rem 0;
@@ -5986,7 +5956,6 @@
   .todo-boards-bar {
     padding: 0 0.5rem;
   }
-
 
   .todo-card {
     padding: 0.5rem 0.65rem;

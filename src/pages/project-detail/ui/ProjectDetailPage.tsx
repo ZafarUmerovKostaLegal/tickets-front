@@ -158,7 +158,6 @@ function fmtDashboardBudgetSpentRemaining(b: TimeManagerProjectDashboardBudget, 
     return `${value.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${b.currency}`;
 }
 
-
 function deriveDashboardBudgetSliceRemaining(slice: { budget: number; spent: number; remaining: number }): number {
     const { budget, spent } = slice;
     if (Number.isFinite(budget) && budget > 0 && Number.isFinite(spent))

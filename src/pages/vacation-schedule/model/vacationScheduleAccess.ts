@@ -16,17 +16,14 @@ export function canImportVacationSchedule(user: User | null | undefined): boolea
     return canEditVacationSchedule(user);
 }
 
-
 export function canViewVacationManualEntryDocs(user: User | null | undefined): boolean {
     return canEditVacationSchedule(user);
 }
-
 
 export function canDecideVacationLeaveRequests(user: User | null | undefined): boolean {
     const k = normalizeOrgRoleKey(user?.role);
     return k.includes('партнер') || k.includes('partner');
 }
-
 
 export function canViewVacationAttendanceStats(user: User | null | undefined): boolean {
     const k = normalizeOrgRoleKey(user?.role);

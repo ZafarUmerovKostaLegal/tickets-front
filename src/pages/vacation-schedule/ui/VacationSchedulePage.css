@@ -39,7 +39,7 @@
   box-sizing: border-box;
 }
 
-/* Full-bleed: override shared app-page-layout gutters */
+
 .vacation-schedule-page__header {
   padding-inline: 0.75rem;
   width: 100%;

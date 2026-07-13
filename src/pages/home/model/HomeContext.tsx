@@ -209,7 +209,7 @@ export function HomeProvider({ children }: HomeProviderProps) {
                 }
             }
             catch {
-                /* fall back to per-user fetches below */
+                
             }
             const missing = ids.filter((id) => !names[id]);
             if (missing.length > 0) {

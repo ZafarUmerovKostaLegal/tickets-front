@@ -12,7 +12,6 @@ html[data-platform='desktop'] body.app-shell--desktop #root {
   min-height: 100vh;
 }
 
-
 html[data-platform='desktop'] * {
   scrollbar-width: thin;
   scrollbar-color: color-mix(in srgb, var(--app-muted) 55%, transparent) transparent;

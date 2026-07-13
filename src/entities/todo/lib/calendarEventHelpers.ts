@@ -117,7 +117,6 @@ export function formatCalendarEventTime(ev: CalendarEvent): string {
     return parts.join(' – ');
 }
 
-
 export function formatCalendarEventCellLabel(ev: CalendarEvent): { time: string; subject: string } {
     const subject = ev.subject?.trim() || 'Событие';
     if (calendarEventUsesAllDayDates(ev))

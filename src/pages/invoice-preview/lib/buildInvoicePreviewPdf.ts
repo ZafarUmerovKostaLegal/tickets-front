@@ -39,7 +39,6 @@ function mmToPt(mm: number): number {
     return (mm * 72) / 25.4;
 }
 
-
 const ML = mmToPt(30);
 const MR = mmToPt(12);
 const MT = mmToPt(20);
@@ -190,7 +189,6 @@ function clipPdfCellText(txt: string, maxW: number, font: PDFFont, size: number)
     return n > 0 ? `${t.slice(0, n)}${ell}` : ell;
 }
 
-
 function drawRightFitPdfBold(
     page: PDFPage,
     text: string,
@@ -261,7 +259,6 @@ function paintTimeReportBody(
         }
     }
 }
-
 
 function drawTimeReportGridTable(
     page: PDFPage,
@@ -485,7 +482,6 @@ function drawTimeReportBandFooter(page: PDFPage, fontBold: PDFFont, pageTag: num
     });
 }
 
-
 function drawSingleTimeReportPdfPage(
     page: PDFPage,
     model: InvoiceCoverLetterModel,
@@ -653,7 +649,6 @@ function drawLegalInvoicePdfPage(
     let yPanels = yRibbonBot - 18;
     const splitX = ML + (W - ML - MR) * 0.52;
 
-
     page.drawText('Bill to', { x: ML, y: yPanels, size: 9, font: fontBold, color: TR_RED });
     let yBill = yPanels - 13;
     page.drawText(model.recipientCompany, { x: ML, y: yBill, size: 9, font: fontBold, color: BODY });
@@ -673,7 +668,6 @@ function drawLegalInvoicePdfPage(
     page.drawText('SWIFT:', { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
     yBill -= 10;
     page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
-
 
     page.drawText('Case details', { x: splitX, y: yPanels, size: 9, font: fontBold, color: TR_RED });
     const yCaseFloor = wrapPlainParagraph(page, caseLine, splitX, yPanels - 13, W - MR - splitX - 6, 8, font, 11);
@@ -759,7 +753,6 @@ function drawLegalInvoicePdfPage(
 
     yTot = wrapPlainParagraph(page, paymentDisclaimer, ML, yTot, W - ML - MR, 7, font, 9);
 }
-
 
 export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput): Promise<Blob> {
     const { model, session, timeReportPack: timeReportOverride, legalOverrides, selectedPageNumbers } = input;

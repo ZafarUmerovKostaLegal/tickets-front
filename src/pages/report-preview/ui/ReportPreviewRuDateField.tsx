@@ -12,7 +12,6 @@ type ReportPreviewRuDateFieldProps = {
     variant?: 'brief' | 'table' | 'dialog';
 };
 
-
 export function ReportPreviewRuDateField({
     value,
     onChange,

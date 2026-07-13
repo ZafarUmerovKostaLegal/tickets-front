@@ -121,7 +121,6 @@ export function entryTaskLabel(it: TimeReportEntryLogItem, ctx?: TimeEntryLogGro
     return raw && raw !== '—' ? `Расход — ${raw}` : 'Расход';
 }
 
-
 export function resolveReportBillableHours(
     billableHours: number,
     amountToPay: number,

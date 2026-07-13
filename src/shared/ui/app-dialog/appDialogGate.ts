@@ -22,11 +22,9 @@ export function registerAppDialogHandlers(next: AppDialogHandlers | null): void 
     handlers = next;
 }
 
-
 export function showAlert(opts: ShowAlertOptions): Promise<void> {
     return handlers?.showAlert(opts) ?? Promise.resolve();
 }
-
 
 export function showConfirm(opts: ShowConfirmOptions): Promise<boolean> {
     return handlers?.showConfirm(opts) ?? Promise.resolve(false);

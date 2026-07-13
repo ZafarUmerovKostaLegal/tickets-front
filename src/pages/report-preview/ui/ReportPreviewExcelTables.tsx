@@ -195,7 +195,6 @@ function TimePreviewReadonlyText({ value, }: {
     return (<span className="tt-rp-mtable__readonly" title={display === '—' ? undefined : display}>{display}</span>);
 }
 
-
 const TIME_PREVIEW_NOTE_AUTOSIZE_MAX_FULL_PX = 200;
 
 function TimePreviewNoteTextarea({ value, disabled, ariaLabel, variant, onValue, }: {
@@ -398,10 +397,8 @@ type TimeReportPersistenceProps = {
     timeEntryActionPendingRowKey?: string | null;
     onDownloadExcel?: (visibleRows: TimeExcelPreviewRow[]) => void | Promise<void>;
     downloadExcelBusy?: boolean;
-    /** Briefly highlight a restored / undone row. */
-    flashRowKey?: string | null;
-    /** Ctrl/⌘+D: open duplicate dialog for this row key, then clear via onHotkeyDuplicateConsumed. */
-    hotkeyDuplicateRowKey?: string | null;
+        flashRowKey?: string | null;
+        hotkeyDuplicateRowKey?: string | null;
     onHotkeyDuplicateConsumed?: () => void;
     onActiveTimeRowKey?: (rowKey: string) => void;
     canUndo?: boolean;
@@ -589,15 +586,14 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
 }
 export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, }: {
     projectTitle: string;
-    
+
     viewMode?: 'brief' | 'full';
     rows: TimeExcelPreviewRow[];
     onPatch: PatchFn<TimeExcelPreviewRow>;
     employeePartnerPick?: TimePreviewEmployeePickState | null;
 
     readOnly?: boolean;
-    /** Extra UI inside the sticky totals footer (e.g. partner sign). */
-    footerExtras?: ReactNode;
+        footerExtras?: ReactNode;
 } & UserRowSelectionProps & PreviewServerReloadProps & TimeReportPersistenceProps) {
     const isFull = viewMode === 'full';
     const readOnlyUi = Boolean(readOnly);
@@ -654,7 +650,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     const [bfTask, setBfTask] = useState('');
     const [bfNote, setBfNote] = useState('');
     const [bfBill, setBfBill] = useState('');
-    
+
     const [bfRecordedOrder, setBfRecordedOrder] = useState<'asc' | 'desc'>('asc');
     useEffect(() => {
         if (!hotkeyDuplicateRowKey)

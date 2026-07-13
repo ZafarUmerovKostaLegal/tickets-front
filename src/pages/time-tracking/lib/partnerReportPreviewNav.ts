@@ -14,7 +14,6 @@ async function reportPreviewPerPage(): Promise<number> {
     }
 }
 
-
 export async function openForReviewReportPreview(r: PartnerReportConfirmationRequest, navigate: NavigateFunction): Promise<void> {
     const perPage = await reportPreviewPerPage();
     writeReportPreviewTransfer({
@@ -33,7 +32,6 @@ export async function openForReviewReportPreview(r: PartnerReportConfirmationReq
     });
     navigate(routes.timeTrackingReportPreview);
 }
-
 
 export async function openConfirmedPartnerReportPreview(
     r: PartnerReportConfirmationRequest,

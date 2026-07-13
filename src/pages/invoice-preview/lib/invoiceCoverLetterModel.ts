@@ -67,7 +67,6 @@ function servicesMonthYearEn(isoYmd: string): string {
     return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
-
 export function formatCoverLetterTotal(amount: number | null, currency: string): string {
     const cur = (currency || 'EUR').trim().toUpperCase() || 'EUR';
     if (amount == null || !Number.isFinite(amount))

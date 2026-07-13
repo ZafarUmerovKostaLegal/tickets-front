@@ -11,10 +11,8 @@ async function svgMarkupSource(): Promise<string | null> {
     if (trimmed.includes('<svg'))
         return trimmed;
 
-
     return null;
 }
-
 
 function ensureTightFullLogoViewBoxIfIllustratorPage(svgText: string): string {
     const fullPage =
@@ -29,7 +27,6 @@ function ensureTightFullLogoViewBoxIfIllustratorPage(svgText: string): string {
         s = s.replace('<svg', '<svg width="439" height="219" ');
     return s;
 }
-
 
 export async function rasterizeInvoiceCoverLogoSvg(renderWidthPx: number): Promise<InvoiceCoverRasterizedLogo | null> {
     if (typeof document === 'undefined')

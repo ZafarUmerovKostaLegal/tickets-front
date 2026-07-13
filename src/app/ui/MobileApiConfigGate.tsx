@@ -6,7 +6,6 @@ type MobileApiConfigGateProps = {
     children: ReactNode;
 };
 
-
 export function MobileApiConfigGate({ children }: MobileApiConfigGateProps) {
     if (!isTauriAndroidBuild() || getApiBaseUrl()) {
         return <>{children}</>;

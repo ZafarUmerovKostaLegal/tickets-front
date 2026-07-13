@@ -4,7 +4,7 @@ import type { TimeTrackingPageMessages } from '../timeTrackingPageMessages';
 import { contactsPageMessages } from '../contactsPageMessages';
 import type { ContactsPageMessages } from '../contactsPageMessages';
 
-/** Filled asynchronously via ensureTimeTrackingPageMessages — keeps TT catalog out of the initial bundle. */
+
 const timeTrackingPageStub = {} as TimeTrackingPageMessages;
 
 export const ruMessages: Messages = {

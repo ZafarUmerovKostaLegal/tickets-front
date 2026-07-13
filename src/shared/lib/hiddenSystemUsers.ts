@@ -5,7 +5,6 @@ const HIDDEN_LOCAL_PARTS: ReadonlyArray<string> = [
     'info',
 ];
 
-
 const HIDDEN_EMAILS: ReadonlySet<string> = new Set([
     'admin@local',
 ]);
@@ -39,7 +38,6 @@ export function isHiddenSystemUserEmail(email: string | null | undefined): boole
         return true;
     return HIDDEN_LOCAL_PARTS.includes(localPart(normalized));
 }
-
 
 export function isHiddenSystemUser(user: {
     email?: string | null;

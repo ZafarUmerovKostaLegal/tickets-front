@@ -103,7 +103,7 @@ export async function loadTimesheetProjectOptionsForMove(user: User, locale: App
         }
     }
     catch {
-        /* fallback to scoped list */
+        
     }
     return loadTimesheetProjectOptions(user, locale);
 }

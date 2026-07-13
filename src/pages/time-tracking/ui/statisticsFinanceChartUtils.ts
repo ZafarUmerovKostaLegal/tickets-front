@@ -28,7 +28,7 @@ export type FinanceChartRow = {
     paid: number;
     ratePerHour: number;
     currency: string;
-    /** paid / accrued * 100; 0 when accrued is 0 and paid is 0 */
+    
     collectionRatio: number;
 };
 
@@ -176,7 +176,7 @@ export function sortFinanceRows(
     });
 }
 
-/** Keep top N rows; bucket the rest into an "Other" row when n > 0 and rows exceed n. */
+
 export function applyFinanceTopN(
     rows: readonly FinanceChartRow[],
     topN: FinanceTopN,

@@ -34,19 +34,16 @@ function writeStorage<T>(storageKey: string, entry: Entry<T>): void {
 function removeStorage(storageKey: string): void {
     try {
         localStorage.removeItem(storageKey);
-    } catch { /* ignore */ }
+    } catch {  }
 }
 
 export type QueryCache<T> = {
 
     get(key: string): T | undefined;
 
-
     fetch(key: string, loader: () => Promise<T>): Promise<T>;
 
-
     prime(key: string, value: T): void;
-
 
     invalidate(key?: string): void;
 };
@@ -101,7 +98,7 @@ export function createQueryCache<T>(options: QueryCacheOptions): QueryCache<T> {
                         store.set(key, stored);
                         return stored.value;
                     }
-                    store.set(key, stored); // keep stale for get() callers during bg refresh
+                    store.set(key, stored);
                     void (async () => {
                         try {
                             const fresh = await loader();

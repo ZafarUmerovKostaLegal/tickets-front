@@ -7,12 +7,10 @@ export type {
     CorrRow,
 } from '@entities/correspondence';
 
-
 export type IncomingRegisterPayload = Omit<RegisterIncomingBody, 'docType'> & {
     partnerName: string;
     type: CorrDocType;
 };
-
 
 export type OutgoingRegisterPayload = Omit<RegisterOutgoingBody, 'docType'> & {
     type: CorrDocType;

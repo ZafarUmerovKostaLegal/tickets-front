@@ -647,7 +647,6 @@
   color: var(--app-accent);
 }
 
-
 .tt-reports__btn--accent {
   background: var(--app-accent, #4f46e5);
   color: #fff;

@@ -100,7 +100,7 @@ export function KostaDailyComposerPicker({
 
     const filteredPackStickers = useMemo(() => {
         const q = query.trim().toLowerCase();
-        if (!q) return null; // use packs
+        if (!q) return null;
         return CHAT_STICKERS.filter((s) =>
             s.label.toLowerCase().includes(q) || s.glyph.includes(q) || s.id.includes(q));
     }, [query]);
@@ -128,7 +128,7 @@ export function KostaDailyComposerPicker({
     return (
         <div className="kd-tg__picker" role="dialog" aria-label="Выбор эмодзи, стикеров и GIF">
 
-            {/* ── Top search bar ── */}
+            {}
             <div className="kd-tg__picker-toolbar">
                 <label className="kd-tg__picker-search">
                     <span className="kd-tg__picker-search-icon" aria-hidden><IconSearch /></span>
@@ -143,11 +143,11 @@ export function KostaDailyComposerPicker({
                 </label>
             </div>
 
-            {/* ── Scroll body ── */}
+            {}
             <div className="kd-tg__picker-body" role="tabpanel">
                 <div className="kd-tg__picker-scroll" ref={scrollRef}>
 
-                    {/* EMOJI */}
+                    {}
                     {tab === 'emoji' ? (
                         filteredEmojiGroups.length === 0
                             ? <p className="kd-tg__picker-empty">Ничего не найдено</p>
@@ -170,7 +170,7 @@ export function KostaDailyComposerPicker({
                             ))
                     ) : null}
 
-                    {/* STICKERS */}
+                    {}
                     {tab === 'sticker' ? (
                         filteredPackStickers ? (
 
@@ -193,7 +193,7 @@ export function KostaDailyComposerPicker({
                         ) : (
 
                             <>
-                                {/* Recent stickers pack */}
+                                {}
                                 {recentStickers.length > 0 && (
                                     <section className="kd-tg__picker-section"
                                         ref={(node) => { packSectionRefs.current['recent'] = node; }}>
@@ -214,7 +214,7 @@ export function KostaDailyComposerPicker({
                                         </div>
                                     </section>
                                 )}
-                                {/* Regular packs */}
+                                {}
                                 {CHAT_STICKER_PACKS.map((pack) => (
                                     <section key={pack.id} className="kd-tg__picker-section"
                                         ref={(node) => { packSectionRefs.current[pack.id] = node; }}>
@@ -244,7 +244,7 @@ export function KostaDailyComposerPicker({
                         )
                     ) : null}
 
-                    {/* GIF */}
+                    {}
                     {tab === 'gif' ? (
                         filteredGifs.length === 0
                             ? <p className="kd-tg__picker-empty">GIF не найдены</p>
@@ -269,7 +269,7 @@ export function KostaDailyComposerPicker({
                 </div>
             </div>
 
-            {/* ── Bottom navigation bar ── */}
+            {}
             <div className="kd-tg__picker-footer">
                 {tab === 'emoji' && !query.trim() ? (
 

@@ -981,7 +981,7 @@ function EntryModal({ entry, clone, defaultDate, projects, projectsLoading, proj
                             weekEnd: r.weekEnd,
                         })));
                     })
-                    .catch(() => { /* keep local deadline lock */ });
+                    .catch(() => {  });
             }
             setWeeklyLockHint(is409);
             setError(/\b503\b|Service Unavailable|недоступен.*курс|FX|ЦБ/i.test(m)

@@ -121,7 +121,7 @@ type ProjectMembersFieldProps = {
     projectName?: string;
     memberRates: Record<number, ProjectMemberRateDraft>;
     onUpdateMemberRate: (userId: number, draft: ProjectMemberRateDraft) => void;
-    /** Edit mode only: allow changing project rate from a specific date. */
+    
     allowChangeRateFromDate?: boolean;
     onChangeRateFromDate?: (userId: number, data: ProjectMemberChangeRateFromData) => void | Promise<void>;
 };

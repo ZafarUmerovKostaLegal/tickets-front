@@ -15,7 +15,6 @@ export function formatDecimalHoursRu(n: number): string {
     return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-
 export function formatReportBillableHoursRu(n: number): string {
     if (!Number.isFinite(n))
         return '—';
@@ -61,7 +60,6 @@ export function sumDecimalHoursForMinuteDisplay(values: readonly number[]): numb
     return totalMinutes / 60;
 }
 
-
 export function sanitizeColonHoursInput(raw: string): string {
     let v = raw.replace(/[^\d:]/g, '');
     const colon = v.indexOf(':');
@@ -72,7 +70,6 @@ export function sanitizeColonHoursInput(raw: string): string {
     }
     return v.replace(/\D/g, '').slice(0, 3);
 }
-
 
 export function parseStrictDurationInputToDecimalHours(s: string): number | null {
     const clean = s.trim();

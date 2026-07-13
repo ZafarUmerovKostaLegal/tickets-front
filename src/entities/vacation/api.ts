@@ -461,7 +461,6 @@ export async function postVacationScheduleImport(formData: FormData): Promise<Va
     return res.json() as Promise<VacationScheduleImportResultApi>;
 }
 
-
 export type VacationLeaveKindApi = {
     kind_code: number;
     kind: VacationLeaveRequestKind;
@@ -634,7 +633,6 @@ function coerceVacationLeaveRequestApi(raw: unknown): VacationLeaveRequestApi | 
     };
 }
 
-
 export async function getVacationLeaveKinds(): Promise<VacationLeaveKindApi[]> {
     const res = await vacationApiFetch('/api/v1/vacations/leave-kinds');
     if (res.status === 401)
@@ -648,7 +646,6 @@ export async function getVacationLeaveKinds(): Promise<VacationLeaveKindApi[]> {
         .map((item) => coerceLeaveKindApi(item))
         .filter((x): x is VacationLeaveKindApi => x != null);
 }
-
 
 function coerceVacationLeaveBalanceApi(raw: unknown): VacationLeaveBalanceApi | null {
     if (!raw || typeof raw !== 'object')
@@ -677,7 +674,6 @@ function coerceVacationLeaveBalanceApi(raw: unknown): VacationLeaveBalanceApi | 
     };
 }
 
-
 export async function getVacationLeaveBalance(year?: number): Promise<VacationLeaveBalanceApi> {
     const q = year != null ? `?year=${encodeURIComponent(String(year))}` : '';
     const res = await vacationApiFetch(`/api/v1/vacations/leave-balance${q}`);
@@ -690,7 +686,6 @@ export async function getVacationLeaveBalance(year?: number): Promise<VacationLe
         throw new Error('Не удалось получить баланс отпуска.');
     return out;
 }
-
 
 export async function getVacationPartners(): Promise<VacationPartnerApi[]> {
     const res = await vacationApiFetch('/api/v1/vacations/partners');
@@ -705,7 +700,6 @@ export async function getVacationPartners(): Promise<VacationPartnerApi[]> {
         .map((item) => coerceVacationPartnerApi(item))
         .filter((x): x is VacationPartnerApi => x != null);
 }
-
 
 export async function createVacationLeaveRequest(body: CreateVacationLeaveRequestBody): Promise<VacationLeaveRequestApi> {
     const payload: Record<string, unknown> = {
@@ -732,7 +726,6 @@ export async function createVacationLeaveRequest(body: CreateVacationLeaveReques
     return out;
 }
 
-
 export async function listVacationLeaveRequests(options?: ListVacationLeaveRequestsOptions): Promise<VacationLeaveRequestApi[]> {
     const q = new URLSearchParams();
     if (options?.scope)
@@ -758,7 +751,6 @@ export async function listVacationLeaveRequests(options?: ListVacationLeaveReque
         .filter((x): x is VacationLeaveRequestApi => x != null);
 }
 
-
 export async function getVacationLeaveRequest(id: number): Promise<VacationLeaveRequestApi | null> {
     const res = await vacationApiFetch(`/api/v1/vacations/leave-requests/${id}`);
     if (res.status === 401)
@@ -769,7 +761,6 @@ export async function getVacationLeaveRequest(id: number): Promise<VacationLeave
         await throwVacationRequestError(res);
     return coerceVacationLeaveRequestApi(await res.json());
 }
-
 
 export async function approveVacationLeaveRequest(id: number, decisionReason?: string | null): Promise<VacationLeaveRequestApi> {
     const body: Record<string, unknown> = {};
@@ -808,7 +799,6 @@ export async function declineVacationLeaveRequest(id: number, decisionReason?: s
     return out;
 }
 
-
 export async function cancelVacationLeaveRequest(id: number): Promise<void> {
     const res = await vacationApiFetch(`/api/v1/vacations/leave-requests/${id}`, { method: 'DELETE' });
     if (res.status === 401)
@@ -818,7 +808,6 @@ export async function cancelVacationLeaveRequest(id: number): Promise<void> {
     if (!res.ok)
         await throwVacationRequestError(res);
 }
-
 
 export async function fetchVacationLeaveRequestPdfBlob(id: number): Promise<Blob> {
     const res = await vacationApiFetch(`/api/v1/vacations/leave-requests/${id}/pdf`);
@@ -916,8 +905,6 @@ export async function deleteVacationAbsenceDay(absenceDayId: number): Promise<vo
         await throwVacationRequestError(res);
 }
 
-
-
 export const VACATION_MANUAL_ENTRY_MAX_FILE_BYTES = 25 * 1024 * 1024;
 export const VACATION_MANUAL_ENTRY_MAX_FILES = 20;
 export const VACATION_MANUAL_ENTRY_ALLOWED_EXTENSIONS = [
@@ -1008,7 +995,6 @@ function coerceManualEntryApi(raw: unknown): VacationManualEntryApi | null {
     };
 }
 
-
 export async function createVacationManualEntry(input: CreateVacationManualEntryInput): Promise<VacationManualEntryApi> {
     const fd = new FormData();
     fd.append('employeeId', String(input.employeeId));
@@ -1036,7 +1022,6 @@ export async function createVacationManualEntry(input: CreateVacationManualEntry
     return out;
 }
 
-
 export async function listVacationManualEntries(options?: ListVacationManualEntriesOptions): Promise<VacationManualEntryApi[]> {
     const q = new URLSearchParams();
     if (options?.year != null)
@@ -1060,7 +1045,6 @@ export async function listVacationManualEntries(options?: ListVacationManualEntr
         .filter((x): x is VacationManualEntryApi => x != null);
 }
 
-
 export async function getVacationManualEntry(id: number): Promise<VacationManualEntryApi | null> {
     const res = await vacationApiFetch(`/api/v1/vacations/schedule/manual-entries/${id}`);
     if (res.status === 401)
@@ -1071,7 +1055,6 @@ export async function getVacationManualEntry(id: number): Promise<VacationManual
         await throwVacationRequestError(res);
     return coerceManualEntryApi(await res.json());
 }
-
 
 export async function addVacationManualEntryDocuments(id: number, files: File[]): Promise<VacationManualEntryApi> {
     const fd = new FormData();
@@ -1091,7 +1074,6 @@ export async function addVacationManualEntryDocuments(id: number, files: File[])
     return out;
 }
 
-
 export async function fetchVacationManualEntryDocumentBlob(entryId: number, docId: number): Promise<Blob> {
     const res = await vacationApiFetch(`/api/v1/vacations/schedule/manual-entries/${entryId}/documents/${docId}/download`);
     if (res.status === 401)
@@ -1100,7 +1082,6 @@ export async function fetchVacationManualEntryDocumentBlob(entryId: number, docI
         await throwVacationRequestError(res);
     return res.blob();
 }
-
 
 export async function deleteVacationManualEntryDocument(entryId: number, docId: number): Promise<void> {
     const res = await vacationApiFetch(`/api/v1/vacations/schedule/manual-entries/${entryId}/documents/${docId}`, { method: 'DELETE' });
@@ -1111,7 +1092,6 @@ export async function deleteVacationManualEntryDocument(entryId: number, docId: 
     if (!res.ok)
         await throwVacationRequestError(res);
 }
-
 
 export async function deleteVacationManualEntry(id: number): Promise<void> {
     const res = await vacationApiFetch(`/api/v1/vacations/schedule/manual-entries/${id}`, { method: 'DELETE' });

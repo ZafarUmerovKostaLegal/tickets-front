@@ -231,7 +231,7 @@ export function MonthlyPartnerArchivePanel({ embedded = false }: {
                     updates.set(row.projectId, buildPartnerReportDisplayMetaFromSnapshot(snapshot, row));
                 }
                 catch {
-                    /* ignore */
+                    
                 }
             }
             if (cancelled || updates.size === 0)

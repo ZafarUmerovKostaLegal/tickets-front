@@ -20,7 +20,6 @@ import './InvoicePreviewPage.css';
 
 const INVOICES_TAB_BACK_RESUME_CREATE = `${routes.timeTracking}?tab=invoices&invoice_resume=1`;
 
-
 const INV_PREVIEW_PAGE_BASE_PX = 794;
 const SHEET_ZOOM_MIN = 50;
 const SHEET_ZOOM_MAX = 250;
@@ -99,7 +98,6 @@ export function InvoicePreviewPage() {
     const togglePageEdit = useCallback(() => {
         setEditMode((on) => !on);
     }, []);
-
 
     const editingPage = editMode ? activePage : null;
 

@@ -36,7 +36,6 @@ export function saveHubTileOrder(userId: number, order: HubTileId[]): void {
     }
 }
 
-
 export function mergeHubTileOrder<T extends { id: HubTileId }>(
     tiles: T[],
     savedIds: HubTileId[] | null,
@@ -70,7 +69,6 @@ export function reorderHubTileIds(order: HubTileId[], dragId: HubTileId, targetI
     return next;
 }
 
-/** Reorder tiles inside one hub section without disturbing other sections in the saved list. */
 export function reorderHubTilesInSection(
     order: HubTileId[],
     sectionTileIds: readonly HubTileId[],

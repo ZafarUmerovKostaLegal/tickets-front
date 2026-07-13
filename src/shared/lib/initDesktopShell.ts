@@ -6,7 +6,6 @@ export function isDesktopApp(): boolean {
     return isTauri() && !isTauriMobileBuild();
 }
 
-
 export async function initDesktopShell(): Promise<void> {
     if (!isTauri())
         return;

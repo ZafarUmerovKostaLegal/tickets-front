@@ -1,7 +1,6 @@
 import type { InvoiceUiStatus } from './api';
 import type { TimeTrackingT } from '@shared/i18n/timeTrackingLabelHelpers';
 
-
 export const INVOICE_STATUS_LABELS: Record<string, string> = {
     draft: 'Черновик',
     sent: 'Отправлен',

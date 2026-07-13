@@ -47,12 +47,10 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
     return response;
 }
 
-
 export async function fetchGatewayLive(): Promise<boolean> {
     const res = await apiFetch('/live', { skipAuth: true, skipAuthRedirectOn401: true });
     return res.ok;
 }
-
 
 export async function fetchTodosHealthThroughGateway(): Promise<boolean> {
     const res = await apiFetch('/health/todos', { skipAuth: true, skipAuthRedirectOn401: true });
@@ -88,7 +86,6 @@ function normalizePublicMediaPath(pathOrUrl: string): string {
         return `/api/v1/media${raw}`;
     return raw.startsWith('/') ? raw : `/${raw}`;
 }
-
 
 export function getPublicGatewayAssetUrl(pathOrUrl: string | null | undefined): string | null {
     const raw = (pathOrUrl ?? '').trim();

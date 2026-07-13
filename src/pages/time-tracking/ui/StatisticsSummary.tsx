@@ -47,7 +47,7 @@ function useAnimatedDonutPercent(target: number): number {
 
 type Props = {
     kpi: StatisticsLaborKpi;
-    /** When true, show accrued + paid financial cards (finance tab). */
+    
     financeMode?: boolean;
 };
 

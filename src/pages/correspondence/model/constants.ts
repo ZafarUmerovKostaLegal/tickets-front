@@ -2,14 +2,12 @@ import type { CorrDirection, CorrDocStatus, CorrDocType } from './types';
 
 export const CORR_SCAN_MAX_BYTES = 15 * 1024 * 1024;
 
-
 export const CORR_SCAN_ACCEPT = '*/*';
 
 export const CORR_DIRECTION_TABS: { key: CorrDirection; label: string }[] = [
     { key: 'incoming', label: 'Входящая корреспонденция' },
     { key: 'outgoing', label: 'Исходящая корреспонденция' },
 ];
-
 
 export const CORR_SHELL_NAV_TABS: { key: CorrDirection; label: string }[] = [
     { key: 'incoming', label: 'Входящие' },

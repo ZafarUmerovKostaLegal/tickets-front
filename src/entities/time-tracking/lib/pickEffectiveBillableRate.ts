@@ -1,4 +1,4 @@
-/** Pick the billable hourly rate that should display/apply for a project today. */
+
 
 import type { HourlyRateRow } from '../api';
 
@@ -50,10 +50,7 @@ export type EffectiveBillableRatePick = {
     source: 'project' | 'global';
 };
 
-/**
- * Mirrors backend pick_billable_rate_for_entry:
- * project-scoped rates that cover `when` win; otherwise global.
- */
+
 export function pickEffectiveBillableRateForProject(
     rows: HourlyRateRow[],
     projectId: string,

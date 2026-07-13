@@ -83,7 +83,6 @@ export function movePage(doc: PDFDocument, from: number, to: number): void {
     reorderPages(doc, order);
 }
 
-
 export async function reorderPages(doc: PDFDocument, order: number[]): Promise<PDFDocument> {
     const next = await PDFDocument.create();
     const copied = await next.copyPages(doc, order);

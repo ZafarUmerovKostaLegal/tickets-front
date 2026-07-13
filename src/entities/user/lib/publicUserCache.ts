@@ -94,7 +94,6 @@ function collectMissing(userIds: readonly number[]): number[] {
     return out;
 }
 
-
 export async function ensurePublicUsersLoaded(userIds: readonly number[]): Promise<void> {
     const toLoad = collectMissing(userIds);
     if (toLoad.length === 0) {
@@ -130,7 +129,6 @@ export async function ensurePublicUsersLoaded(userIds: readonly number[]): Promi
             inflight.delete(id);
     }
 }
-
 
 export async function loadPublicUsersByIds(userIds: readonly number[]): Promise<Map<number, UserPublic>> {
     await ensurePublicUsersLoaded(userIds);

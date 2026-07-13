@@ -507,7 +507,6 @@ body[data-theme='dark'] .corr-shell {
   width: 100%;
 }
 
-
 .corr-shell__kpi-row {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -551,7 +550,6 @@ body[data-theme='dark'] .corr-shell {
 .corr-shell__kpi--pending .corr-shell__kpi-val { color: #b45309; }
 .corr-shell__kpi--rejected .corr-shell__kpi-val { color: #b91c1c; }
 .corr-shell__kpi--approved .corr-shell__kpi-val { color: #15803d; }
-
 
 .corr-shell__section {
   margin-bottom: 1.25rem;
@@ -671,7 +669,6 @@ body[data-theme='dark'] .corr-shell {
   border-radius: 999px;
 }
 
-
 .corr-shell__toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -731,7 +728,6 @@ body[data-theme='dark'] .corr-shell {
   border-radius: 999px;
   background: color-mix(in srgb, currentColor 12%, transparent);
 }
-
 
 .corr-shell__table-wrap {
   background: var(--app-surface, #fff);
@@ -863,7 +859,6 @@ body[data-theme='dark'] .corr-shell {
   white-space: nowrap;
 }
 
-
 .corr-shell__empty {
   display: flex;
   flex-direction: column;
@@ -918,7 +913,6 @@ body[data-theme='dark'] .corr-shell {
     transform: none;
   }
 }
-
 
 .corr-skel__kpi-row {
   display: grid;

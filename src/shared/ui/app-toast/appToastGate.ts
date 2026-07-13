@@ -17,7 +17,6 @@ export function registerAppToastHandlers(next: AppToastHandlers | null): void {
     handlers = next;
 }
 
-
 export function showToast(opts: PushToastOptions): void {
     handlers?.pushToast(opts);
 }

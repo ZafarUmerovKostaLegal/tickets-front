@@ -5,7 +5,7 @@
   min-height: 100dvh;
   display: flex;
   background: var(--app-bg);
-  
+
   --exp-card-id-color: #2563eb;
   --exp-card-money-bg: #f4f7f9;
   --exp-card-money-border: #e4eaf0;
@@ -123,7 +123,7 @@ body[data-theme='dark'] .expenses-page {
     overflow-x: visible;
     overflow-y: auto;
   }
-  
+
   .expenses-page__header {
     display: flex;
     flex-direction: column;
@@ -212,7 +212,6 @@ body[data-theme='dark'] .expenses-page {
   }
 }
 
-
 .exp-create-btn {
   display: inline-flex;
   align-items: center;
@@ -240,7 +239,6 @@ body[data-theme='dark'] .expenses-page {
   .exp-create-btn { width: 38px; padding: 0; justify-content: center; }
   .exp-create-btn svg { width: 18px; height: 18px; }
 }
-
 
 .exp-toolbar {
   display: flex;
@@ -300,7 +298,6 @@ body[data-theme='dark'] .expenses-page {
   flex: 2 1 0;
   min-width: 0;
 }
-
 
 .exp-filter {
   position: relative;
@@ -384,7 +381,6 @@ body[data-theme='dark'] .expenses-page {
   font-weight: 600;
 }
 
-
 .exp-filter__dot {
   width: 8px;
   height: 8px;
@@ -415,7 +411,6 @@ body[data-theme='dark'] .expenses-page {
   white-space: nowrap;
 }
 .exp-filters-reset:hover { border-color: #ef4444; color: #ef4444; }
-
 
 .exp-stats-row {
   display: grid;
@@ -600,7 +595,6 @@ body[data-theme='dark'] .expenses-page {
   }
 }
 
-
 .exp-status {
   display: inline-flex;
   align-items: center;
@@ -624,7 +618,6 @@ body[data-theme='dark'] .expenses-page {
 .exp-status--closed           { background: rgba(203, 213, 225, 0.25); color: #94a3b8; }
 .exp-status--not_reimbursable { background: rgba(148, 163, 184, 0.12); color: #64748b; }
 .exp-status--withdrawn        { background: rgba(148, 163, 184, 0.1);  color: #94a3b8; }
-
 
 .expenses-page .exp-card .exp-status--pending_approval {
   background: rgba(242, 153, 74, 0.16);
@@ -654,7 +647,6 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
 .exp-reimb--reimbursable     { color: var(--app-accent, #4f46e5); }
 .exp-reimb--non_reimbursable { color: #94a3b8; }
 
-
 .exp-table {
   padding: 0 2rem 2rem;
   overflow-x: auto;
@@ -665,7 +657,7 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
 .exp-table__row {
   display: grid;
   column-gap: 0.375rem;
-  
+
   grid-template-columns:
     100px minmax(0, 1fr) minmax(120px, 168px) minmax(100px, 112px) minmax(100px, 118px) minmax(100px, 122px)
     minmax(118px, 132px) minmax(104px, 168px) minmax(96px, 112px) minmax(168px, 1fr) 52px;
@@ -712,7 +704,6 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
   white-space: nowrap;
   overflow: hidden;
 }
-
 
 .exp-table__th--expdate,
 .exp-table__th--paydue,
@@ -1043,7 +1034,6 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
   color: #fff;
 }
 
-
 .exp-table__actions {
   display: flex;
   flex-wrap: wrap;
@@ -1154,15 +1144,12 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
   display: block;
 }
 
-
-
 .exp-cards:not(.exp-cards--grid) {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   padding: 0 0.875rem 1.5rem;
 }
-
 
 .expenses-page .exp-cards--grid {
   display: grid;
@@ -1231,7 +1218,6 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
 .expenses-page .exp-card:hover {
   box-shadow: 0 6px 20px rgba(15, 23, 42, 0.09);
 }
-
 
 .expenses-page .exp-card--draft { border-left-color: #94a3b8; }
 .expenses-page .exp-card--pending_approval { border-left-color: var(--exp-card-stripe-pending); }
@@ -1321,7 +1307,6 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
   line-height: 1.35;
 }
 
-
 .exp-card__facts {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1365,7 +1350,6 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
   gap: 0.45rem;
   margin: 0.5rem 0;
 }
-
 
 .exp-card__money {
   display: grid;
@@ -1667,7 +1651,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   border-top: none;
 }
 
-
 .exp-card__ft > .exp-card__ft-user:first-child {
   margin-top: 0;
   padding-top: 0;
@@ -1787,7 +1770,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   }
 }
 
-
 .exp-empty {
   display: flex;
   flex-direction: column;
@@ -1850,7 +1832,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   }
 }
 
-
 .exp-panel-overlay {
   position: fixed;
   inset: 0;
@@ -1864,7 +1845,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   background: rgba(0, 0, 0, 0.35);
   pointer-events: auto;
 }
-
 
 .exp-panel {
   position: fixed;
@@ -1919,7 +1899,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   line-height: 1.35;
 }
 
-
 .exp-panel__hd {
   flex-shrink: 0;
   display: flex;
@@ -1973,7 +1952,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   pointer-events: none;
 }
 
-
 .exp-panel__body {
   flex: 1;
   overflow-y: auto;
@@ -1982,7 +1960,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   flex-direction: column;
   gap: 1.5rem;
 }
-
 
 .exp-panel__ft {
   flex-shrink: 0;
@@ -2196,7 +2173,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   border-color: var(--app-accent, #4f46e5);
 }
 
-
 .exp-form-collapsible {
   display: grid;
   grid-template-rows: 0fr;
@@ -2254,7 +2230,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   color: var(--app-accent, #4f46e5);
   border-radius: 6px;
 }
-
 
 .exp-form-field {
   display: flex;
@@ -2369,7 +2344,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   cursor: pointer;
 }
 
-
 .exp-form-input-wrap {
   display: flex;
   align-items: stretch;
@@ -2452,7 +2426,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   cursor: default;
 }
 
-
 .exp-form-hint {
   margin: 0;
   font-size: 0.75rem;
@@ -2465,7 +2438,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   font-weight: 500;
   color: #ef4444;
 }
-
 
 .exp-searchable {
   position: relative;
@@ -2611,7 +2583,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 .exp-form-field--err .exp-searchable__btn {
   border-color: #ef4444;
 }
-
 
 .exp-form-field--project .exp-project-picker {
   margin-top: 0.35rem;
@@ -2846,7 +2817,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   }
 }
 
-
 .exp-form-switch-row {
   display: flex;
   align-items: center;
@@ -2881,7 +2851,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   color: var(--app-accent, #4f46e5);
 }
 
-
 .exp-form-switch {
   flex-shrink: 0;
   position: relative;
@@ -2909,7 +2878,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   cursor: not-allowed;
 }
 
-
 .exp-form-switch__thumb {
   position: absolute;
   top: 3px;
@@ -2925,7 +2893,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 .exp-form-switch--on .exp-form-switch__thumb {
   transform: translateX(20px);
 }
-
 
 .exp-form-file-zone {
   display: flex;
@@ -2951,7 +2918,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 .exp-form-file-zone__icon { width: 32px; height: 32px; color: var(--app-muted, #94a3b8); }
 .exp-form-file-zone__label { font-size: 0.875rem; font-weight: 600; color: var(--app-text); }
 .exp-form-file-zone__hint { font-size: 0.75rem; color: var(--app-muted, #94a3b8); }
-
 
 .exp-form-file-list {
   list-style: none;
@@ -3050,7 +3016,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   text-align: center;
   padding: 0.75rem 0;
 }
-
 
 .exp-attach-preview-backdrop {
   position: fixed;
@@ -3266,7 +3231,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   }
 }
 
-
 .exp-panel-btn {
   display: inline-flex;
   align-items: center;
@@ -3324,7 +3288,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   border-color: transparent;
 }
 .exp-panel-btn--ghost:hover { color: var(--app-text); }
-
 
 .exp-filters-toggle {
   display: none;
@@ -3400,7 +3363,7 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   }
   .exp-search {
     min-height: 44px;
-    font-size: 16px; 
+    font-size: 16px;
   }
   .exp-filters {
     flex: 1 1 auto;
@@ -3491,7 +3454,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   }
 }
 
-
 @media (max-width: 1280px) and (min-width: 769px) {
   .exp-table { padding: 0 1.25rem 2rem; }
   .exp-table__row {
@@ -3522,7 +3484,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   .exp-table__td--type { display: none; }
 }
 
-
 @keyframes exp-shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position: 400px 0; }
@@ -3542,19 +3503,15 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   flex-shrink: 0;
 }
 
-
 .exp-table__row--skel {
   pointer-events: none;
   cursor: default;
 }
 .exp-table__row--skel:hover { background: var(--app-surface) !important; }
 
-
 .exp-table__td--desc { display: flex; flex-direction: column; gap: 6px; justify-content: center; }
 
-
 .exp-table__row--skel .exp-table__td--status .exp-skel { border-radius: 20px; }
-
 
 .exp-card--skel {
   pointer-events: none;
@@ -3564,7 +3521,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   gap: 8px;
 }
 .exp-card--skel:hover { border-color: var(--app-border) !important; box-shadow: none !important; }
-
 
 .exp-service-err {
   display: flex;
@@ -3637,7 +3593,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   }
 }
 
-
 .exp-error-banner {
   display: flex;
   align-items: center;
@@ -3677,7 +3632,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   }
 }
 
-
 .exp-report-btn {
   display: inline-flex;
   align-items: center;
@@ -3707,7 +3661,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   .exp-report-btn { width: 38px; padding: 0; justify-content: center; }
 }
 
-
 .exp-report-page {
   box-sizing: border-box;
   width: 100%;
@@ -3716,7 +3669,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   padding: var(--app-page-padding-y, 1.5rem) var(--app-page-padding-x, 2rem)
     var(--app-page-content-padding-bottom, 2rem);
 }
-
 
 .exp-report-page .tt-reports__header {
   display: flex;
@@ -4398,7 +4350,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   }
 }
 
-
 .exp-report-hero--visual {
   position: relative;
   overflow: hidden;
@@ -4625,7 +4576,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   color: #fff;
 }
 
-
 .rep-overlay {
   position: fixed;
   inset: 0;
@@ -4682,7 +4632,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   }
 }
 
-
 .rep-modal__hd {
   display: flex;
   align-items: center;
@@ -4736,7 +4685,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 .rep-modal__close svg { width: 15px; height: 15px; }
 .rep-modal__close:hover { background: var(--app-border); color: var(--app-text); }
 
-
 .rep-modal__body {
   flex: 1;
   overflow-y: auto;
@@ -4745,7 +4693,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   flex-direction: column;
   gap: 1.125rem;
 }
-
 
 .rep-modal__ft {
   flex-shrink: 0;
@@ -4773,7 +4720,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   gap: 0.5rem;
 }
 
-
 .rep-field {
   display: flex;
   flex-direction: column;
@@ -4799,7 +4745,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   font-size: 0.8125rem;
   color: #dc2626;
 }
-
 
 .rep-report-all-row {
   margin-top: 0.125rem;
@@ -4854,7 +4799,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   font-weight: 500;
 }
 
-
 .rep-radio-row {
   display: flex;
   gap: 0.5rem;
@@ -4894,7 +4838,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   font-weight: 600;
 }
 
-
 .rep-check {
   display: flex;
   align-items: center;
@@ -4924,7 +4867,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 }
 
 .rep-check--on { color: var(--app-accent, #4f46e5); font-weight: 600; }
-
 
 .rep-btn {
   display: inline-flex;
@@ -4958,7 +4900,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 }
 .rep-btn--ghost:not(:disabled):hover { color: var(--app-text); }
 
-
 .rep-spinner {
   animation: rep-spin 0.8s linear infinite;
   width: 15px !important;
@@ -4971,7 +4912,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   .rep-modal__actions { justify-content: flex-end; }
   .rep-date-row { flex-direction: column; }
 }
-
 
 @keyframes exp-shimmer {
   0%   { background-position: -600px 0; }
@@ -5022,7 +4962,6 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   justify-content: space-between;
   margin-bottom: 0;
 }
-
 
 .exp-tt-toolbar {
   width: 100%;

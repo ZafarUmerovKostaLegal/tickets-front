@@ -64,7 +64,7 @@ type Props = {
     rows: FinanceChartRow[];
     seriesMode: FinanceChartSeriesMode;
     allowMetricToggle?: boolean;
-    /** Enable «Сбор %» metric (paid/accrued). Default true for money-capable modes. */
+    
     allowCollectionMetric?: boolean;
     emptyText: string;
     table: ReactNode;

@@ -10,7 +10,7 @@ export type VacationScheduleEmployeeRow = {
     systemOnly?: boolean;
     systemUserId?: number;
     email?: string | null;
-    /** Partner org role — show vacation marks, hide attendance. */
+    
     isPartner?: boolean;
 };
 export const VACATION_ABSENCE_KINDS = ['annual', 'sick', 'dayoff', 'business', 'remote', 'red_pass'] as const;
@@ -29,7 +29,7 @@ export const VACATION_ABSENCE_LEGEND: ReadonlyArray<{
     ];
 export const VACATION_KIND_COLORS: Record<VacationAbsenceKind, string> = Object.fromEntries(VACATION_ABSENCE_LEGEND.map((x) => [x.kind, x.color])) as Record<VacationAbsenceKind, string>;
 
-/** Short ledger seals (as in the attendance register mock). */
+
 export const VACATION_KIND_SEALS: Record<VacationAbsenceKind, string> = {
     annual: 'О',
     sick: 'Б',
@@ -39,7 +39,7 @@ export const VACATION_KIND_SEALS: Record<VacationAbsenceKind, string> = {
     red_pass: '!',
 };
 
-/** Bright seal colors that need dark letter ink for contrast. */
+
 const VACATION_KIND_SEAL_DARK_INK: ReadonlySet<VacationAbsenceKind> = new Set(['remote', 'business']);
 
 export function vacationKindSeal(kind: VacationAbsenceKind): string {
@@ -323,7 +323,7 @@ type VacationScheduleMergedUser = VacationScheduleUserOrgRef & {
     desktop_background: null;
 };
 
-/** Ensure vacation partners appear in the schedule user pool (colleagues sync may omit them). */
+
 export function mergeUsersWithVacationPartners(
     users: ReadonlyArray<VacationScheduleUserOrgRef>,
     partners: ReadonlyArray<VacationPartnerUserRef>,

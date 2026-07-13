@@ -680,7 +680,7 @@ export function KostaDailyPage() {
     const handleCopyMessage = useCallback((text: string) => {
         const plain = text.trim();
         if (plain && navigator.clipboard?.writeText)
-            void navigator.clipboard.writeText(plain).catch(() => { /* ignore */ });
+            void navigator.clipboard.writeText(plain).catch(() => {  });
         setCtxMenu(null);
     }, []);
 

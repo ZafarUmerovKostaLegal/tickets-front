@@ -54,7 +54,6 @@ const cellBorderNil = {
     right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
 } as const;
 
-
 function h(pt: number): number {
     return Math.round(pt * 2);
 }
@@ -158,7 +157,6 @@ function mmToTwip(mm: number): number {
     return Math.round((mm * 72 / 25.4) * 20);
 }
 
-
 const PAGE_MARGIN_TWIPS = {
     top: mmToTwip(20),
     right: mmToTwip(12),
@@ -232,7 +230,6 @@ type TimeReportDocxChunkOpts = {
     pageNumStr: string;
     isLastChunk: boolean;
 };
-
 
 function timeReportDocxSectionChildren(
     model: InvoiceCoverLetterModel,
@@ -501,7 +498,6 @@ function legalInvoiceDocxBlocks(
 
     const ribbon = invoiceRibbonTable(`INVOICE No. ${invNo}`, ribbonIssue);
 
-
     const billChildren: Paragraph[] = [
         new Paragraph({
             spacing: { after: 80 },
@@ -668,7 +664,6 @@ function legalInvoiceDocxBlocks(
         }),
     ];
 }
-
 
 export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput): Promise<Blob> {
     const { model, session, timeReportPack: timeReportOverride, legalOverrides, selectedPageNumbers } = input;

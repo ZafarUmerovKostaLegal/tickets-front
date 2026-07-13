@@ -78,7 +78,6 @@ export function removeVacationAbsenceBasis(cellKey: string, prevMap?: StoreShape
     return setVacationAbsenceBasis(cellKey, null, prevMap);
 }
 
-
 export function pruneVacationAbsenceBasisForYear(year: number, markKeys: Set<string>, prevMap?: StoreShape): StoreShape {
     const map = prevMap ?? loadVacationAbsenceBasisMap();
     let changed = false;

@@ -27,7 +27,7 @@ export function applyStatisticsLaborScope(
     rows: StatisticsLaborDetailRow[],
     scope: StatisticsLaborScope,
 ): StatisticsLaborDetailRow[] {
-    // Partner/team-leader scope is enforced on the API via team membership.
+    
     if (scope.mode === 'lawyer' && scope.lawyerId)
         return rows.filter((r) => r.lawyer_id === scope.lawyerId);
     return rows;

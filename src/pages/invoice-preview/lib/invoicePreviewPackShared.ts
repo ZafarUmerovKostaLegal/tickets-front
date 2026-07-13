@@ -33,7 +33,6 @@ export function packResolveDueIso(session: InvoicePreviewSessionV1 | null, issue
     return issueIso;
 }
 
-
 export function packUppercaseRibbonDate(isoYmd: string): string {
     if (!isoYmd || !/^\d{4}-\d{2}-\d{2}$/.test(isoYmd))
         return '—';

@@ -116,7 +116,6 @@
   width: 100%;
 }
 
-
 .tt-inv-preview__thumbs {
   flex-shrink: 0;
   display: flex;
@@ -302,7 +301,6 @@
   outline-offset: 3px;
 }
 
-
 .tt-inv-preview__thumb-sheet {
   display: block;
   position: relative;
@@ -317,7 +315,6 @@
   background: var(--tt-inv-paper);
   pointer-events: none;
 }
-
 
 .tt-inv-preview__thumb-scale {
   display: block;
@@ -623,8 +620,6 @@
   box-sizing: border-box;
   min-height: 297mm;
 }
-
-
 
 .tt-inv-preview .tt-inv-a4-page {
   position: relative;

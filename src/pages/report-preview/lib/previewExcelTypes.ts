@@ -38,9 +38,9 @@ export type TimeExcelPreviewRow = {
     externalReferenceUrl: string;
     invoiceId: string;
     invoiceNumber: string;
-    
+
     isVoided: boolean;
-    
+
     voidKind: 'rejected' | 'reallocated' | null;
 };
 export type ExpenseExcelPreviewRow = {

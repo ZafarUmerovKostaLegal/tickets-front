@@ -14,7 +14,6 @@ export function isParticipantBoardRole(role: string | null | undefined): boolean
     return normalizeBoardRole(role) === 'participant';
 }
 
-
 export function canEditKanbanStructure(role: string | null | undefined): boolean {
     const r = normalizeBoardRole(role);
     return r === 'owner' || r === 'editor';

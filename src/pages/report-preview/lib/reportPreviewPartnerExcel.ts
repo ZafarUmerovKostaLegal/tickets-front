@@ -10,7 +10,6 @@ import type { TimeExcelPreviewRow } from './previewExcelTypes';
 import type { AuthUserExportProfile } from './reportPreviewEmployeeInitials';
 import { buildReportExportPositionRateRows } from './reportPreviewPositionRates';
 
-
 export function timePreviewRowsForPageExport(displayRows: TimeExcelPreviewRow[]): TimeExcelPreviewRow[] {
     if (displayRows.length === 0)
         return displayRows;

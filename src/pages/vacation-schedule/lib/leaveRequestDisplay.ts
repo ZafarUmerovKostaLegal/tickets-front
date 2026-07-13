@@ -64,7 +64,6 @@ function pad2(n: number): string {
     return n < 10 ? `0${n}` : String(n);
 }
 
-
 export function formatRuDate(iso: string | null | undefined): string {
     if (!iso)
         return '';
@@ -74,7 +73,6 @@ export function formatRuDate(iso: string | null | undefined): string {
         return iso;
     return `${m[3]}.${m[2]}.${m[1]}`;
 }
-
 
 export function formatRuDateLong(iso: string | null | undefined): string {
     if (!iso)
@@ -88,7 +86,6 @@ export function formatRuDateLong(iso: string | null | undefined): string {
     return `${day} ${month} ${m[1]}`;
 }
 
-
 export function formatRuRange(dateFrom: string, dateTo: string): string {
     if (!dateFrom || !dateTo)
         return [formatRuDate(dateFrom), formatRuDate(dateTo)].filter(Boolean).join(' — ');
@@ -101,7 +98,6 @@ export function formatRuRange(dateFrom: string, dateTo: string): string {
     }
     return `${formatRuDate(dateFrom)} — ${formatRuDate(dateTo)}`;
 }
-
 
 export function countCalendarDaysInclusive(dateFrom: string, dateTo: string): number {
     const from = dateFrom.trim().slice(0, 10);
@@ -127,7 +123,6 @@ export function ruDaysWord(n: number): string {
         return RU_DAY_FORMS[1]!;
     return RU_DAY_FORMS[2]!;
 }
-
 
 export function formatTimestampShort(iso: string | null | undefined): string {
     if (!iso)

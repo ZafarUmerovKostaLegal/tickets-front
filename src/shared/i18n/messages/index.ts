@@ -32,7 +32,7 @@ export function isTimeTrackingPageMessagesReady(locale: AppLocale): boolean {
     return ttLoaded.has(locale);
 }
 
-/** Dynamically loads the large time-tracking message catalogs (kept off the critical startup path). */
+
 export async function ensureTimeTrackingPageMessages(locale: AppLocale): Promise<void> {
     if (ttLoaded.has(locale))
         return;

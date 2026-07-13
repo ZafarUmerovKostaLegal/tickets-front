@@ -14,7 +14,6 @@ function fallbackInput() {
     };
 }
 
-
 export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSessionV1 | null): Promise<InvoiceCoverLetterModel> {
     if (!session)
         return buildInvoiceCoverLetterModel(fallbackInput());

@@ -1,6 +1,5 @@
 import type { BudgetRow } from '../api';
 
-
 export function budgetReportHoursMetrics(r: BudgetRow): { budget: number; spent: number; remaining: number } {
     if (r.budget_by === 'none')
         return { budget: 0, spent: 0, remaining: 0 };
@@ -19,7 +18,6 @@ export function budgetReportHoursMetrics(r: BudgetRow): { budget: number; spent:
     return { budget: 0, spent: 0, remaining: 0 };
 }
 
-
 export function budgetReportMoneyMetrics(r: BudgetRow): { budget: number; spent: number; remaining: number } {
     if (r.budget_by === 'none')
         return { budget: 0, spent: 0, remaining: 0 };
@@ -37,7 +35,6 @@ export function budgetReportMoneyMetrics(r: BudgetRow): { budget: number; spent:
         return { budget: r.budget, spent: r.budget_spent, remaining: r.budget_remaining };
     return { budget: 0, spent: 0, remaining: 0 };
 }
-
 
 export function budgetReportRowProgressPercent(r: BudgetRow): number {
     if (r.budget_by === 'none' || r.has_budget === false)

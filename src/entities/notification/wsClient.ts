@@ -9,7 +9,6 @@ export { normalizeNotificationItem, parseBoardTitleFromNotificationDescription, 
 
 const pushListeners = new Set<(item: NotificationItem) => void>();
 
-
 export function subscribeNotificationPush(handler: (item: NotificationItem) => void): () => void {
     pushListeners.add(handler);
     return () => {

@@ -14,11 +14,9 @@ export function CorrespondenceHeaderTitleSkeleton({ compact = false }: { compact
     </div>);
 }
 
-
 export function CorrespondenceHubSkeleton() {
     return <CorrespondenceListSkeleton />;
 }
-
 
 export function CorrespondenceListSkeleton() {
     return (<div className="corr-skel corr-skel--list" aria-busy="true" aria-label="Загрузка списка">
@@ -43,7 +41,6 @@ export function CorrespondenceListSkeleton() {
     </div>);
 }
 
-
 export function CorrespondenceComposeSkeleton() {
     return (<div className="corr-skel corr-skel--compose" aria-busy="true" aria-label="Загрузка формы">
         <div className="corr-skel__compose-paper" aria-hidden>
@@ -62,7 +59,6 @@ export function CorrespondenceComposeSkeleton() {
         </div>
     </div>);
 }
-
 
 export function CorrespondencePreviewSkeleton() {
     return (<div className="corr-skel corr-skel--preview" aria-busy="true" aria-label="Загрузка документа">
@@ -87,7 +83,6 @@ export function CorrespondencePreviewSkeleton() {
     </div>);
 }
 
-
 export function CorrespondenceInboxSkeleton() {
     return (<div className="corr-skel corr-skel--inbox" aria-busy="true" aria-label="Загрузка входящих">
         <div className="corr-skel__inbox-list" aria-hidden>
@@ -107,9 +102,7 @@ export function CorrespondenceInboxSkeleton() {
     </div>);
 }
 
-
 export const CorrespondenceMainSkeleton = CorrespondenceHubSkeleton;
-
 
 export function CorrespondenceRegistrySkeleton({ rows = 6 }: { rows?: number }) {
     return (<div className="corr-skel corr-skel--registry" aria-busy="true" aria-label="Загрузка реестра">
@@ -163,7 +156,6 @@ export function CorrespondenceRegistrySkeleton({ rows = 6 }: { rows?: number }) 
         </div>
     </div>);
 }
-
 
 export function CorrespondenceRegistrySkeletonLegacy() {
     return <CorrespondenceListSkeleton />;

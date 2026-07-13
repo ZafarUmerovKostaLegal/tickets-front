@@ -347,7 +347,7 @@ body[data-theme='dark'] .header-user-menu__item:hover {
   }
 }
 
-/* Legacy alias — old pages may still reference in-card */
+
 .header-user-menu--in-card {
   margin-left: 0;
   padding-left: 0;

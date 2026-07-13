@@ -19,7 +19,6 @@ function excelNum2(n: number): number {
     return Math.round(n * 100) / 100;
 }
 
-
 function consistentExcelMoneyLine(hoursRaw: number, rateRaw: number): { hours: number; rate: number; amount: number } {
     const hours = excelNum2(hoursRaw);
     const rate = excelNum2(rateRaw);
@@ -294,7 +293,6 @@ function pickBool(d: Record<string, unknown>, ...keys: string[]): boolean {
     return false;
 }
 
-
 function fmtDateDdMmYyyy(iso: string): string {
     const s = iso.trim().slice(0, 10);
     if (!s)
@@ -380,7 +378,6 @@ function normalizeExportJsonToSnapshotRows(parsed: unknown): ReportSnapshotRow[]
     return [];
 }
 
-
 export async function loadSnapshotRowsForPartnerExcel(snapshotId: string, snapshot: ReportSnapshot): Promise<ReportSnapshotRow[]> {
     const sid = snapshotId.trim();
     if (!sid)
@@ -400,7 +397,6 @@ export async function loadSnapshotRowsForPartnerExcel(snapshotId: string, snapsh
     }
     return [];
 }
-
 
 async function loadSnapshotRowsFromJsonExport(snapshotId: string): Promise<ReportSnapshotRow[]> {
     const sid = snapshotId.trim();
@@ -476,7 +472,6 @@ type DetailLine = {
     fullName: string;
     title: string;
 };
-
 
 export type PartnerConfirmedExcelFallbackRow = {
     rowKind: 'entry' | 'aggregate';
@@ -569,7 +564,6 @@ export type PartnerConfirmedSnapshotExcelResult = {
     blob: Blob;
     filename: string;
 };
-
 
 export async function buildPartnerConfirmedSnapshotExcel(snapshot: ReportSnapshot, opts?: {
 

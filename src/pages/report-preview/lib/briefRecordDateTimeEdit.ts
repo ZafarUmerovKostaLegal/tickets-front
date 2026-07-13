@@ -18,11 +18,9 @@ export function getLocalYmdAndHmFromIso(iso: string): { ymd: string; hm: string 
     return { ymd, hm };
 }
 
-
 export function getLocalYmdFromIso(iso: string): string | null {
     return getLocalYmdAndHmFromIso(iso)?.ymd ?? null;
 }
-
 
 export function localYmdAndHmToIso(ymd: string, hm: string): string {
     const dPart = ymd.slice(0, 10);
@@ -52,8 +50,6 @@ export function formatRuHmFromIso(iso: string): string {
         return '—';
     return t.hm;
 }
-
-
 
 export function recordedAtSortKeyMs(r: TimeExcelPreviewRow): number | null {
     if (r.rowKind === 'aggregate')

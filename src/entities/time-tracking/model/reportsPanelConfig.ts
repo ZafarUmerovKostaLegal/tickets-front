@@ -58,7 +58,6 @@ export const PERIOD_OPTIONS: {
     { id: 'all', label: 'За всё время' },
 ];
 
-
 export const PER_PAGE = 100;
 export const REPORTS_PREFS_STORAGE_KEY = 'tt-reports-preferences-v1';
 
@@ -81,7 +80,6 @@ export type ReportsPrefsStored = {
 export function isReportTypeV2(x: unknown): x is ReportTypeV2 {
     return x === 'time' || x === 'expenses' || x === 'uninvoiced' || x === 'project-budget';
 }
-
 
 export function migrateStoredReportType(stored: unknown): ReportTypeV2 {
     if (stored === 'confirmed-expenses')

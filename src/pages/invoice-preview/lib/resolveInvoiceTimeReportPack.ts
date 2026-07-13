@@ -162,7 +162,6 @@ export type ResolveInvoiceTimeReportPackOptions = {
     onPartnerConfirmationBlocked?: (message: string) => void;
 };
 
-
 export async function resolveInvoiceTimeReportPack(
     session: InvoicePreviewSessionV1 | null,
     model: InvoiceCoverLetterModel,

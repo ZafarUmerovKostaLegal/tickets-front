@@ -16,10 +16,8 @@ export type ReportPreviewPeriodState = {
 export type ReportPreviewTransferExtras = {
     partnerConfirmationSnapshotId?: string;
     period?: ReportPreviewPeriodState;
-    /** Where to navigate after partner sign / leaving preview (path + search). */
-    returnTo?: string;
-    /** Preview opened from «Сформированные для проверки» — period/dates are fixed. */
-    forReviewPreview?: boolean;
+        returnTo?: string;
+        forReviewPreview?: boolean;
 };
 export type ReportPreviewTransferV2 = ({
     v: 2;

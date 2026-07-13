@@ -10,7 +10,7 @@ type ProvidersProps = {
     children?: ReactNode;
 };
 
-/** Mount always-on widgets after first paint so they don't compete with route boot. */
+
 function DeferredBackgroundWidgets() {
     const [ready, setReady] = useState(false);
     useEffect(() => {

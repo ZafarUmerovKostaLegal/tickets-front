@@ -23,14 +23,12 @@ export type InvoicePreviewMeta = {
     dueDateIso?: string;
 };
 
-
 export type InvoicePreviewSessionCreateV1 = {
     v: 1;
     mode: 'create';
     form: InvoicePreviewFormDraftV1;
     meta: InvoicePreviewMeta;
 };
-
 
 export type InvoicePreviewSessionExistingV1 = {
     v: 1;

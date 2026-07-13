@@ -7,7 +7,7 @@ type Props = {
     fallback?: ReactNode;
 };
 
-/** Gates TT / report / project screens until the large timeTrackingPage catalog is loaded. */
+
 export function EnsureTimeTrackingI18n({ children, fallback = null }: Props) {
     const { locale } = useI18n();
     const [ready, setReady] = useState(() => isTimeTrackingPageMessagesReady(locale));

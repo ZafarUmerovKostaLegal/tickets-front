@@ -12,7 +12,6 @@ function joinClasses(...parts: (string | false | undefined)[]): string {
     return parts.filter(Boolean).join(' ');
 }
 
-
 export function AppHomeLogo({ className, withSeparator = false }: AppHomeLogoProps) {
     const navigate = useNavigate();
     const { t } = useI18n();

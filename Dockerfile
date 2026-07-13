@@ -10,7 +10,6 @@ ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
     CYPRESS_INSTALL_BINARY=0 \
     NODE_OPTIONS="--max-old-space-size=8192"
 
-# Slim web-only manifests (no Tauri CLI / Playwright / Vitest).
 COPY package.docker.json ./package.json
 COPY package-lock.docker.json ./package-lock.json
 RUN npm ci

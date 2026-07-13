@@ -12,7 +12,6 @@ export function buildTodoUserByIdMap(users: readonly User[]): Map<number, User> 
     return m;
 }
 
-
 export function publicUserAsUser(userId: number, pub: UserPublic): User {
     return {
         id: pub.id || userId,

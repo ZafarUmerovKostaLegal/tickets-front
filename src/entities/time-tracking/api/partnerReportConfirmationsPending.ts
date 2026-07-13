@@ -1,6 +1,6 @@
 import { apiFetch } from '@shared/api';
 
-/** Minimal row shape for the partner "for review" badge (home / TT tabs). */
+
 export type PartnerPendingBadgeRow = {
     pendingPartnerAuthUserIds: number[];
 };
@@ -37,10 +37,7 @@ function parsePartnerPendingBadgeList(raw: unknown): PartnerPendingBadgeRow[] {
         .filter((x): x is PartnerPendingBadgeRow => x != null);
 }
 
-/**
- * Lightweight pending-confirmations fetch for badge counts.
- * Kept outside monolith.ts so home/hub does not pull the full TT API module.
- */
+
 export async function listPartnerReportConfirmationsPendingForBadge(options?: {
     scope?: PartnerPendingListScope;
 }): Promise<PartnerPendingBadgeRow[]> {

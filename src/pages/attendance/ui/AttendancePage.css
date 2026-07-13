@@ -8,7 +8,6 @@
   box-sizing: border-box;
 }
 
-
 .att__sidebar-wrap {
   position: sticky;
   top: 0;
@@ -40,7 +39,6 @@
   box-sizing: border-box;
 }
 
-/* Full-bleed page: override shared app-page-layout gutters */
 .att__header {
   padding-inline: 1rem;
   width: 100%;
@@ -80,7 +78,6 @@
 @media (min-width: 769px) {
   .att__menu-btn { display: none; }
 }
-
 
 .att__header-actions {
   display: flex;
@@ -1060,7 +1057,6 @@ body[data-theme='dark'] .att__arrival-badge--absent {
   justify-content: center;
 }
 
-
 .att-modal--explain-photo {
   z-index: 200;
 }
@@ -1469,7 +1465,6 @@ body[data-theme='dark'] .att-modal__error {
     letter-spacing: 0.04em;
   }
 
-
   .att__table .att__td-name {
     display: block;
     grid-template-columns: none;
@@ -1485,7 +1480,6 @@ body[data-theme='dark'] .att-modal__error {
   .att__table .att__td-name::before {
     display: none;
   }
-
 
   .att__table .att__td-date {
     position: absolute;
@@ -1504,7 +1498,6 @@ body[data-theme='dark'] .att-modal__error {
   .att__table .att__td-date::before {
     display: none;
   }
-
 
   .att__table td:last-child {
     padding-bottom: 0;

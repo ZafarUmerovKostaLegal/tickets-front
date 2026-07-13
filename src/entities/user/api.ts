@@ -35,7 +35,6 @@ async function _fetchPositionsFromApi(): Promise<string[]> {
     return raw.filter((x): x is string => typeof x === 'string' && x.trim().length > 0);
 }
 
-
 export async function getPositions(): Promise<string[]> {
     return _positionsCache.fetch('positions', _fetchPositionsFromApi);
 }

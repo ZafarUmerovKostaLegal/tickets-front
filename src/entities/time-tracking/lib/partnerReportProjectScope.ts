@@ -17,7 +17,6 @@ import type {
 } from '../api';
 import type { GroupByV2, ReportTypeV2 } from '../model/reportsPanelConfig';
 
-
 export function shouldScopeReportsToPartnerProjects(role?: string | null, position?: string | null): boolean {
     const k = normalizeOrgRoleKey(role);
     if (k.includes('администратор'))
@@ -69,7 +68,6 @@ export function collectMyParticipatingProjectIds(
     }
     return ids;
 }
-
 
 export function collectPartnerProjectIds(projects: TimeManagerClientProjectRow[], authUserId: number): Set<string> {
     return collectMyParticipatingProjectIds(projects, authUserId);

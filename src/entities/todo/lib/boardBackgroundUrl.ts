@@ -2,7 +2,6 @@ import { getApiBaseUrl } from '@shared/config';
 
 const MEDIA_API_PREFIX = '/api/v1/media/';
 
-
 export function toTodoBoardBackgroundMediaApiPath(pathOrUrl: string | null | undefined): string | null {
     const raw = (pathOrUrl ?? '').trim();
     if (!raw)
@@ -41,7 +40,6 @@ export function toTodoBoardBackgroundMediaApiPath(pathOrUrl: string | null | und
     return null;
 }
 
-
 export const normalizeBoardBackgroundMediaPath = toTodoBoardBackgroundMediaApiPath;
 
 export function pickBoardBackgroundApiPath(
@@ -55,7 +53,6 @@ export function pickBoardBackgroundApiPath(
     return toTodoBoardBackgroundMediaApiPath(summary?.background_url);
 }
 
-
 export function resolveBoardBackgroundDisplayUrl(pathOrUrl: string | null | undefined): string | null {
     const mediaPath = toTodoBoardBackgroundMediaApiPath(pathOrUrl);
     if (!mediaPath)
@@ -65,7 +62,6 @@ export function resolveBoardBackgroundDisplayUrl(pathOrUrl: string | null | unde
     const base = getApiBaseUrl().replace(/\/+$/, '');
     return base ? `${base}${mediaPath}` : mediaPath;
 }
-
 
 export function boardBackgroundStorageKey(mediaApiPath: string): string | null {
     const normalized = toTodoBoardBackgroundMediaApiPath(mediaApiPath);

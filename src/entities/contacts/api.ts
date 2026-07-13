@@ -54,7 +54,6 @@ async function throwIfNotOk(res: Response): Promise<Response> {
     throw new ContactsHttpError(res.status, msg);
 }
 
-
 export async function listContactsColleagues(): Promise<TimeTrackingUserRow[]> {
     const res = await apiFetch(`${CONTACTS_PREFIX}/colleagues`);
     await throwIfNotOk(res);
@@ -65,7 +64,6 @@ export async function listContactsColleagues(): Promise<TimeTrackingUserRow[]> {
         .map((item) => normalizeTimeTrackingUserRow(item))
         .filter((x): x is TimeTrackingUserRow => x != null);
 }
-
 
 export async function listColleaguesAsUsers(): Promise<User[]> {
     const rows = await listContactsColleagues();
@@ -145,7 +143,6 @@ async function mergeContactsClientPages(
     }
     return acc;
 }
-
 
 export async function listAllContactsClientsMerged(includeArchived = false): Promise<TimeManagerClientRow[]> {
     const acc = await mergeContactsClientPages((offset) =>

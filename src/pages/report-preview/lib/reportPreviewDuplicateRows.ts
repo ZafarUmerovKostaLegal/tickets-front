@@ -81,7 +81,6 @@ export function buildTimePreviewDuplicateRowKeySet(rows: TimeExcelPreviewRow[]):
     return dupKeys;
 }
 
-/** Убрать дубликаты из превью отчёта (оставить самую раннюю запись в группе). */
 export function deduplicateTimeExcelPreviewRows(rows: TimeExcelPreviewRow[]): TimeExcelPreviewRow[] {
     const aggregates: TimeExcelPreviewRow[] = [];
     const entries: TimeExcelPreviewRow[] = [];

@@ -1,6 +1,5 @@
 import type { PeriodGranularity } from '@entities/time-tracking/model/reportsPanelConfig';
 
-
 export const REPORTS_ALL_TIME_DATE_FROM = '2000-01-01';
 
 export function reportsAllTimeDateTo(reference = new Date()): string {

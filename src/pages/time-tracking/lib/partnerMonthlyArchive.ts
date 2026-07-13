@@ -15,7 +15,7 @@ export type MonthlyArchiveYearFolder = {
     reportCount: number;
 };
 
-/** Группировка по dateTo (конец периода отчёта). */
+
 export function monthKeyFromDateTo(dateTo: string): MonthlyArchiveMonthKey | null {
     const iso = String(dateTo ?? '').trim().slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(iso))

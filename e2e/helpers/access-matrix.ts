@@ -22,7 +22,7 @@ export const ROUTE_ACCESS_MATRIX: RouteAccessExpectation[] = [
     { path: '/kosta-legal-ai', persona: 'employee', expectUrl: /\/kosta-legal-ai$/ },
     { path: '/expenses/exp-draft-1', persona: 'employee', expectUrl: /\/expenses\/exp-draft-1$/ },
 
-    // ——— Сотрудник: запрещено guard'ами ———
+    
     { path: '/admin', persona: 'employee', expectUrl: /\/home$/ },
     { path: '/attendance', persona: 'employee', expectUrl: /\/home$/ },
     { path: '/accounting', persona: 'employee', expectUrl: /\/home$/ },
@@ -31,15 +31,15 @@ export const ROUTE_ACCESS_MATRIX: RouteAccessExpectation[] = [
     { path: '/expenses/report', persona: 'employee', expectUrl: /\/expenses/ },
     { path: '/admin/network-drive', persona: 'employee', expectUrl: /\/home$/ },
 
-    // ——— Сотрудник: доступно по прямому URL (только скрыто в nav) ———
+    
     { path: '/inventory', persona: 'employee', expectUrl: /\/inventory$/ },
     { path: '/call-schedule', persona: 'employee', expectUrl: /\/call-schedule$/ },
     { path: '/time-tracking/reports/preview', persona: 'employee', expectUrl: /\/time-tracking\/reports\/preview$/ },
 
-    // ——— Без учёта времени ———
+    
     { path: '/time-tracking', persona: 'noTimeTracking', expectUrl: /\/home$/ },
 
-    // ——— Администратор ———
+    
     { path: '/admin', persona: 'admin', expectUrl: /\/admin$/ },
     { path: '/attendance', persona: 'admin', expectUrl: /\/attendance$/ },
     { path: '/accounting', persona: 'admin', expectUrl: /\/accounting$/ },
@@ -50,13 +50,13 @@ export const ROUTE_ACCESS_MATRIX: RouteAccessExpectation[] = [
     { path: '/expenses/report', persona: 'admin', expectUrl: /\/expenses\/report$/ },
     { path: '/admin/user/1', persona: 'admin', expectUrl: /\/admin\/user\/1$/ },
 
-    // ——— Партнёр ———
+    
     { path: '/admin', persona: 'partner', expectUrl: /\/admin$/ },
     { path: '/attendance', persona: 'partner', expectUrl: /\/attendance$/ },
     { path: '/accounting', persona: 'partner', expectUrl: /\/home$/ },
     { path: '/contacts', persona: 'partner', expectUrl: /\/home$/ },
 
-    // ——— Менеджер учёта времени ———
+    
     { path: '/time-tracking/projects/new', persona: 'manager', expectUrl: /\/time-tracking\/projects\/new$/ },
     { path: '/time-tracking/reports/preview', persona: 'manager', expectUrl: /\/time-tracking\/reports\/preview$/ },
     { path: '/time-tracking/invoices/preview', persona: 'manager', expectUrl: /\/time-tracking\/invoices\/preview$/ },

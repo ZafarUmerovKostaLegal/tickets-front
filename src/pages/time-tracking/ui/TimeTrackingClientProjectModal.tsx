@@ -43,10 +43,10 @@ function memberRateIsDirty(dr: ProjectMemberRateDraft | undefined): boolean {
   if (dr.source === 'none')
     return true;
   if (dr.source === 'global') {
-    // Only promote global → project override when the user actually edited the amount/currency.
+    
     return !(Number.isFinite(baseAmt) && amt === baseAmt && cur === baseCur);
   }
-  // Existing project override: sync when amount/currency changed.
+  
   return !(Number.isFinite(baseAmt) && amt === baseAmt && cur === baseCur);
 }
 
@@ -751,8 +751,8 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         let putOptions: { projectBillableHourlyAmountsByProjectId?: Record<string, string> } | undefined;
         if (useRates) {
           const dr = memberRates[authUserId];
-          // Only write a project-scoped override when the amount was edited (or no rate yet).
-          // Unchanged global display must NOT create a sticky project override.
+          
+          
           if (dr && memberRateIsDirty(dr)) {
             const n = parseMemberAmount(dr.amount);
             if (Number.isFinite(n) && n > 0) {
@@ -778,7 +778,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
             .replace('{details}', failed.join('\n')),
         });
       }
-      // Refresh baselines so a second save does not re-promote rates.
+      
       if (useRates) {
         const refreshed: Record<number, ProjectMemberRateDraft> = { ...memberRates };
         for (const authUserId of assignedUserIds) {

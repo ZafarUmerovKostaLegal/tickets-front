@@ -1,4 +1,4 @@
-/** Primary modifier: Ctrl on Windows/Linux, ⌘ on macOS. */
+
 export function isPrimaryModifierPressed(e: Pick<KeyboardEvent, 'ctrlKey' | 'metaKey'>): boolean {
     return Boolean(e.metaKey || e.ctrlKey);
 }
@@ -38,10 +38,7 @@ export function isEditableKeyboardTarget(target: EventTarget | null): boolean {
 
 export type ReportPreviewHotkeyAction = 'undo' | 'save' | 'duplicate';
 
-/**
- * Resolves preview hotkeys. Returns null when the event should be left to the browser.
- * Duplicate is skipped while typing in editable fields; undo/save still apply.
- */
+
 export function resolveReportPreviewHotkey(
     e: KeyboardEvent,
     opts?: { allowWhileEditing?: boolean },

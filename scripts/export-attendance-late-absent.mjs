@@ -14,7 +14,7 @@ function parseArgs(argv) {
     from: process.env.DATE_FROM || '2026-06-01',
     to: process.env.DATE_TO || '2026-06-19',
     out: process.env.OUTPUT || '',
-    base: (process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || 'http://localhost:1234').replace(/\/+$/, ''),
+    base: (process.env.API_BASE_URL || process.env.VITE_API_BASE_URL || 'http:
     token: process.env.AUTH_TOKEN || process.env.API_TOKEN || '',
     concurrency: 4,
   };

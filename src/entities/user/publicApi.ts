@@ -9,7 +9,6 @@ function sortPartnersByLabel(rows: UserPublic[]): UserPublic[] {
     return [...rows].sort((a, b) => compareRuLabels(userPickerSortLabel(a), userPickerSortLabel(b)));
 }
 
-
 export async function listPartners(): Promise<UserPublic[]> {
     const res = await apiFetch('/api/v1/users/partners');
     if (res.status === 401)
@@ -32,7 +31,6 @@ export async function listPartners(): Promise<UserPublic[]> {
     return [];
 }
 
-
 export async function getUserPublic(userId: number): Promise<UserPublic | null> {
     if (!Number.isFinite(userId) || userId <= 0)
         return null;
@@ -47,7 +45,6 @@ export async function getUserPublic(userId: number): Promise<UserPublic | null> 
         throw new Error('Не удалось загрузить пользователя');
     return normalizeUserPublic(await res.json());
 }
-
 
 async function fetchUsersPublicChunk(ids: number[], includeArchived: boolean): Promise<UsersPublicBatchResponse> {
     if (ids.length === 0)
@@ -69,7 +66,6 @@ async function fetchUsersPublicChunk(ids: number[], includeArchived: boolean): P
         throw new Error('Не удалось загрузить пользователей');
     return normalizeUsersPublicBatch(await res.json());
 }
-
 
 export async function getUsersPublic(ids: readonly number[], includeArchived = true): Promise<UsersPublicBatchResponse> {
     const unique: number[] = [];

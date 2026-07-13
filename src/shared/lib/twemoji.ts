@@ -15,7 +15,6 @@ const PARSE_OPTIONS = {
     }),
 };
 
-
 export function twemojiHtml(text: string): string {
     const raw = twemoji.parse(text, PARSE_OPTIONS) as string;
     return DOMPurify.sanitize(raw, {
@@ -23,7 +22,6 @@ export function twemojiHtml(text: string): string {
         ALLOWED_ATTR: ['src', 'alt', 'class', 'loading', 'decoding', 'draggable'],
     });
 }
-
 
 export function twemojiSingleHtml(emoji: string): string {
     return twemojiHtml(emoji);

@@ -1284,7 +1284,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             (attachPreview.server || attachPreview.localFile || attachPreview.previewObjectUrl))} onClose={closeAttachPreview} onOpenExternal={openAttachmentExternal}/>
       <div className={`exp-panel-overlay${isOpen ? ' exp-panel-overlay--open' : ''}`} aria-hidden/>
       <aside className={`exp-panel${isOpen ? ' exp-panel--open' : ''}${formAsyncBusy ? ' exp-panel--async-busy' : ''}`} aria-modal aria-busy={formAsyncBusy} aria-label={title}>
-        
+
         <div className="exp-panel__hd">
           <div className="exp-panel__hd-left">
             {isView && editingRequest && (<span className={`exp-status exp-status--${editingRequest.status}`}>
@@ -1299,10 +1299,8 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
           </button>
         </div>
 
-        
         <div className="exp-panel__body" ref={bodyRef}>
 
-          
           <div className="exp-form-block">
             <p className="exp-form-block__title">Основная информация</p>
 
@@ -1400,7 +1398,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
               </div>)}
           </div>
 
-          
           <div className="exp-form-block">
             <p className="exp-form-block__title">Финансы</p>
 
@@ -1493,7 +1490,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             </div>
           </div>
 
-          
           {showAdditionalSection && (<div className="exp-form-block">
               <p className="exp-form-block__title">Дополнительно</p>
               <p className="exp-form-hint" style={{ margin: '-0.35rem 0 0.75rem 0' }}>
@@ -1632,7 +1628,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
               </div>
             </div>)}
 
-          
           {(() => {
             const allAtt = editingRequest?.attachments ?? [];
             const serverPaymentDoc = allAtt.filter(a => a.attachmentKind === 'payment_document');
@@ -1818,7 +1813,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         })()}
         </div>
 
-        
           {!isView ? (<div className="exp-panel__ft">
             <button type="button" className="exp-panel-btn exp-panel-btn--ghost" onClick={onClose} disabled={formAsyncBusy}>
               Отмена

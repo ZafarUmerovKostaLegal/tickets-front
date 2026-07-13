@@ -219,7 +219,6 @@ export type FetchChatMessagesResult = {
     has_more: boolean;
 };
 
-
 export const CHAT_MESSAGES_MAX_LIMIT = 100;
 
 export async function fetchChatMessages(
@@ -242,7 +241,6 @@ export async function fetchChatMessages(
         has_more: boolField(raw, 'has_more', 'hasMore'),
     };
 }
-
 
 const CHAT_MESSAGES_FETCH_MAX_PAGES = 500;
 

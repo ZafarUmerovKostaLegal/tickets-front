@@ -8,7 +8,6 @@ function isKostalegalProductionHost(hostname: string): boolean {
     return h === 'kostalegal.com' || h.endsWith('.kostalegal.com');
 }
 
-
 export function upgradeUrlToPageSecurity(url: string): string {
     const u = url.trim();
     if (!u)

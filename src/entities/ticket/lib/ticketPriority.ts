@@ -7,7 +7,6 @@ const EN_SLUG_TO_RU: Record<string, string> = {
     critical: 'Критический',
 };
 
-
 export function normalizeTicketPriorityForApi(priority: string, priorities: PriorityItem[] = []): string {
     const raw = priority.trim();
     if (!raw)
@@ -39,7 +38,6 @@ export function resolveDefaultTicketPriority(priorities: PriorityItem[] = []): s
     }
     return 'Средний';
 }
-
 
 export function coerceTicketFormPriority(current: string, priorities: PriorityItem[]): string {
     const normalized = normalizeTicketPriorityForApi(current, priorities);

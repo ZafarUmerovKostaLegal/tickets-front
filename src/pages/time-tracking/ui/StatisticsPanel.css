@@ -1437,7 +1437,6 @@
   filter: drop-shadow(0 1px 3px rgba(15, 23, 42, 0.2));
 }
 
-
 .tt-statistics__grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1984,5 +1983,4 @@
     width: 100%;
   }
 }
-
 

@@ -242,15 +242,6 @@
   box-sizing: border-box;
 }
 
-
-/*
- * Z-index bands (scrollport):
- * 1–9   — scrolling day/month headers & cells (slide under sticky cols)
- * 10–14 — sticky body right (payroll / Всего)
- * 16–17 — sticky body left (№ / ФИО)
- * 30–36 — sticky thead left/right
- * 40    — thead stacking context above tbody
- */
 .vac-cont__table thead {
   position: relative;
   z-index: 40;
@@ -264,7 +255,7 @@
 .vac-cont__table {
   --vac-num-w: 2.25rem;
   --vac-name-w: clamp(11rem, 13vw, 17rem);
-  /* Stretch day cells to fill the viewport window (~1.5 months visible on typical screens). */
+
   --vac-day-w: clamp(1.35rem, calc((100vw - 18rem) / 42), 2.15rem);
   --vac-month-sum-w: 2.5rem;
   --vac-year-sum-w: 2.85rem;
@@ -275,7 +266,6 @@
   --vac-h2: 1.55rem;
   --vac-row-h: 1.95rem;
 
-  /* Theme tokens — light defaults; dark overrides on body[data-theme=dark] */
   --vac-border: #ededed;
   --vac-border-strong: #e0e0e0;
   --vac-surface: #ffffff;
@@ -315,7 +305,6 @@
 
   --vac-sticky-overlap: 5px;
 }
-
 
 .vac-cont__sticky-corner {
   position: sticky;
@@ -363,7 +352,7 @@
 .vac-cont__month-sum-head {
   position: sticky;
   top: 0;
-  /* Must stay below sticky №/ФИО so «Кол-во» slides under, not over. */
+
   z-index: 5;
   width: var(--vac-month-sum-w);
   min-width: var(--vac-month-sum-w);
@@ -379,7 +368,6 @@
   font-weight: 600;
   color: var(--app-muted, #64748b);
 }
-
 
 .vac-cont__pr-head {
   position: sticky;
@@ -949,7 +937,6 @@ body[data-theme='dark'] .vac-cont__attendance-float-tip {
   display: flex;
 }
 
-
 .vac-cont tbody .vac-cont__body-row:nth-child(even) .vac-cont__cell {
   background-color: var(--vac-stripe);
 }
@@ -988,7 +975,6 @@ body[data-theme='dark'] .vac-cont__attendance-float-tip {
   background-color: var(--vac-stripe-sick-money);
 }
 
-
 .vac-cont__th-day--today {
   color: var(--vac-today-text);
   font-weight: 900;
@@ -998,12 +984,10 @@ body[data-theme='dark'] .vac-cont__attendance-float-tip {
   background-color: var(--vac-today-cell) !important;
 }
 
-
 .vac-cont__cell--selected {
   box-shadow: inset 0 0 0 2px var(--vac-selected-ring) !important;
   z-index: 3;
 }
-
 
 .vac-cont tbody .vac-cont__body-row:hover .vac-cont__cell:not(.vac-cont__cell--marked) {
   background-color: var(--vac-hover-cell);
@@ -1057,7 +1041,6 @@ body[data-theme='dark'] .vac-cont__attendance-float-tip {
   }
 }
 
-
 body[data-theme='dark'] .vac-cont__table {
   --vac-border: #2d333b;
   --vac-border-strong: #3d4450;
@@ -1098,14 +1081,11 @@ body[data-theme='dark'] .vac-cont__table {
   color: var(--app-text);
 }
 
-
 body[data-theme='dark'] .vac-cont__scroll {
   background: var(--app-surface);
   border-color: var(--app-border);
 }
 
-
-/* Sticky header band: soft surface so it reads as a chrome strip */
 body[data-theme='dark'] .vac-cont__sticky-corner,
 body[data-theme='dark'] .vac-cont__month-title,
 body[data-theme='dark'] .vac-cont__month-sum-head,
@@ -1145,7 +1125,6 @@ body[data-theme='dark'] .vac-cont__month-title--boundary {
   box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.06);
 }
 
-/* tbody sticky columns stay on cell surface (not soft header band) */
 body[data-theme='dark'] .vac-cont tbody .vac-cont__sticky-num,
 body[data-theme='dark'] .vac-cont tbody .vac-cont__sticky-name {
   background-color: var(--vac-sticky-fill);
@@ -1174,7 +1153,6 @@ body[data-theme='dark'] .vac-cont tbody .vac-cont__body-row:nth-child(even) .vac
     4px 0 14px -6px rgba(0, 0, 0, 0.25);
 }
 
-
 body[data-theme='dark'] .vac-cont tbody .vac-cont__body-row:hover .vac-cont__sticky-num {
   box-shadow:
     -14px 0 0 0 var(--vac-hover-cell),
@@ -1192,7 +1170,6 @@ body[data-theme='dark'] .vac-cont tbody tr:hover .vac-cont__cell:not(.vac-cont__
   filter: none;
 }
 
-
 body[data-theme='dark'] .vac-cont__name-btn {
   color: #93c5fd;
   text-decoration-color: rgba(147, 197, 253, 0.35);
@@ -1200,7 +1177,6 @@ body[data-theme='dark'] .vac-cont__name-btn {
 body[data-theme='dark'] .vac-cont__name-btn:hover {
   text-decoration-color: rgba(147, 197, 253, 0.8);
 }
-
 
 body[data-theme='dark'] .vac-cont__legend-item {
   border-color: var(--app-border);
@@ -1230,7 +1206,6 @@ body[data-theme='dark'] .vac-cont__swatch--clear {
   color: var(--app-text);
   border-color: var(--app-border);
 }
-
 
 .vac-cont__body-row--system-only .vac-cont__sticky-num,
 .vac-cont__body-row--system-only .vac-cont__sticky-name {

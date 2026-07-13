@@ -208,7 +208,6 @@ function disconnect(): void {
     isConnecting = false;
 }
 
-
 export function connectChatWs(): () => void {
     subscribers += 1;
     if (subscribers === 1)

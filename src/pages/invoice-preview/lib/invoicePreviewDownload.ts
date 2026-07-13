@@ -23,7 +23,6 @@ export type InvoiceExportBasenameInput = {
     issueDateIso?: string | null;
 };
 
-
 export function buildInvoicePreviewExportBasename(input: InvoiceExportBasenameInput): string {
     const num = input.invoiceNumber?.trim();
     if (num)

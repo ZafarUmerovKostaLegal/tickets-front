@@ -9,7 +9,6 @@ export function hasFullTimeTrackingTabs(user: User | null | undefined): boolean 
     return user?.time_tracking_role === 'manager';
 }
 
-
 export function canViewTimeTrackingReports(user: User | null | undefined): boolean {
     if (!user)
         return false;
@@ -17,11 +16,9 @@ export function canViewTimeTrackingReports(user: User | null | undefined): boole
     return flag !== false;
 }
 
-
 export function canViewTimeTrackingStatistics(user: User | null | undefined): boolean {
     return canViewTimeTrackingReports(user);
 }
-
 
 export function canManageTimeTrackingOrgUsers(user: User | null | undefined): boolean {
     if (!user)
@@ -31,7 +28,6 @@ export function canManageTimeTrackingOrgUsers(user: User | null | undefined): bo
     return canManageTimeManagerClients(user.role);
 }
 
-
 export function canManageTimeTrackingClients(user: User | null | undefined): boolean {
     if (!user)
         return false;
@@ -39,7 +35,6 @@ export function canManageTimeTrackingClients(user: User | null | undefined): boo
         return true;
     return canManageTimeManagerClients(user.role);
 }
-
 
 export function canManageHourlyRates(user: User | null | undefined): boolean {
     if (!user)
@@ -56,7 +51,6 @@ function isAdministratorOrgRole(role: string | null | undefined): boolean {
     return rk.includes('администратор') || rk.includes('administrator') || rk === 'admin';
 }
 
-
 export function canViewAllForReviewReports(user: User | null | undefined): boolean {
     if (!user || !canViewTimeTrackingReports(user))
         return false;
@@ -71,7 +65,6 @@ export function canViewAllForReviewReports(user: User | null | undefined): boole
     return false;
 }
 
-
 export function canOverrideReportPreviewWeeklyLock(user: User | null | undefined): boolean {
     if (!user)
         return false;
@@ -85,7 +78,6 @@ export function canOverrideReportPreviewWeeklyLock(user: User | null | undefined
         return true;
     return false;
 }
-
 
 export function canGrantTimeEntryEditUnlock(viewer: User | null | undefined, targetAuthUserId: number): boolean {
     if (!viewer || !Number.isFinite(targetAuthUserId))

@@ -43,7 +43,6 @@ export const CHAT_EMOJI_GROUPS: { title: string; items: string[] }[] = [
     },
 ];
 
-
 export const CHAT_EMOJI_KEYWORDS: Record<string, string> = {
     '👍': 'лайк плюс да класс ок',
     '👎': 'минус нет дизлайк',
@@ -155,7 +154,6 @@ export const CHAT_STICKER_PACKS: ChatStickerPack[] = [
     },
 ];
 
-
 export const CHAT_STICKERS: ChatStickerDef[] = CHAT_STICKER_PACKS.flatMap((p) => p.stickers);
 
 export const CHAT_GIFS: ChatGifDef[] = [
@@ -197,5 +195,5 @@ export function pushRecentSticker(stickerId: string): void {
         const next = [stickerId, ...prev].slice(0, MAX_RECENT);
         localStorage.setItem(RECENT_STICKERS_KEY, JSON.stringify(next));
     }
-    catch { /* ignore */ }
+    catch {  }
 }

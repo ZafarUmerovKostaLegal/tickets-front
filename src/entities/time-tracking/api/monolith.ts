@@ -4857,7 +4857,7 @@ export type ReportFiltersV2 = {
 
     partner_auth_user_id?: number;
 
-    /** Фильтр предпросмотра: показывать только участников команды партнёра. */
+    
     team_filter_enabled?: boolean;
     team_filter_partner_auth_user_id?: number;
     team_id?: string;

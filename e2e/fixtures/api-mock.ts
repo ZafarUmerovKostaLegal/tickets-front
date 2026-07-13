@@ -72,7 +72,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Auth
+    
     if (path === '/api/v1/users/me' && method === 'GET') {
         await json(route, options.user);
         return;
@@ -82,7 +82,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Users
+    
     if (path === '/api/v1/users' && method === 'GET') {
         await json(route, [options.user]);
         return;
@@ -108,7 +108,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Tickets
+    
     if (path === '/api/v1/tickets/statuses') {
         await json(route, TICKET_STATUSES);
         return;
@@ -134,7 +134,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Notifications
+    
     if (path.startsWith('/api/v1/notifications')) {
         if (method === 'GET')
             await emptyList(route);
@@ -143,7 +143,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Todo
+    
     if (path === '/api/v1/todos/boards') {
         await json(route, TODO_BOARDS_LIST);
         return;
@@ -171,7 +171,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Chat
+    
     if (path === '/api/v1/chat/rooms') {
         await json(route, CHAT_ROOMS);
         return;
@@ -188,7 +188,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Expenses
+    
     if (path === '/api/v1/expense-types') {
         await json(route, EXPENSE_TYPES);
         return;
@@ -205,7 +205,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Time tracking
+    
     if (path.startsWith('/api/v1/time-tracking/')) {
         if (path === '/api/v1/time-tracking/clients' && method === 'GET') {
             await json(route, [TT_CLIENT]);
@@ -257,7 +257,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Vacation
+    
     if (path.startsWith('/api/v1/vacations/')) {
         if (path.includes('employees') && method === 'GET')
             await json(route, { items: [], year: new Date().getFullYear() });
@@ -268,7 +268,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Attendance
+    
     if (path.startsWith('/api/v1/attendance/')) {
         if (path.includes('report/daily'))
             await json(route, DAILY_ATTENDANCE_REPORT);
@@ -283,7 +283,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Inventory
+    
     if (path.startsWith('/api/v1/inventory')) {
         if (method === 'GET')
             await emptyList(route);
@@ -292,13 +292,13 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Contacts
+    
     if (path.startsWith('/api/v1/contacts')) {
         await emptyList(route);
         return;
     }
 
-    // Correspondence
+    
     if (path === '/api/v1/correspondence/stats') {
         await json(route, { incomingTotal: 0, outgoingTotal: 0, approvalTotal: 0, incomingNewTotal: 0 });
         return;
@@ -311,7 +311,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Call schedule
+    
     if (path.startsWith('/api/v1/call-schedule/')) {
         if (path.endsWith('/calendars'))
             await json(route, { items: [{ id: 'primary', name: 'Календарь', is_default: true }] });
@@ -322,19 +322,19 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
 
-    // Media
+    
     if (path.startsWith('/api/v1/media/')) {
         await route.fulfill({ status: 404, body: 'not found' });
         return;
     }
 
-    // CBU exchange rates
+    
     if (path.startsWith('/cbu-json')) {
         await json(route, [{ Ccy: 'USD', Rate: '12500', Date: '2024-06-01' }]);
         return;
     }
 
-    // Default: empty success for mutating, empty list for GET
+    
     if (method === 'GET')
         await emptyList(route);
     else
@@ -350,7 +350,7 @@ export async function installApiMocks(page: Page, options: ApiMockOptions): Prom
 
     await page.routeWebSocket(/\/api\/v1\/.*\/ws/, (ws) => {
         ws.onMessage(() => {
-            // Ignore client messages in e2e
+            
         });
     });
 }

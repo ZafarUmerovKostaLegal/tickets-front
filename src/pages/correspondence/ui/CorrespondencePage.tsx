@@ -13,7 +13,6 @@ import {
 import './CorrespondencePage.css';
 import './CorrespondenceShell.css';
 
-
 export type DocType = 'letter' | 'contract' | 'note';
 export type LetterStatus = 'draft' | 'pending_review' | 'rejected' | 'approved';
 
@@ -91,7 +90,6 @@ function useScreenTransition(initial: Screen) {
     return { screen, loading, navigate };
 }
 
-
 export const MOCK_PARTNERS: MockPartner[] = [
     { id: 1, name: 'Иванов Иван Иванович', position: 'Старший партнёр' },
     { id: 2, name: 'Петрова Анна Сергеевна', position: 'Партнёр' },
@@ -151,7 +149,6 @@ const INITIAL_LETTERS: MockLetter[] = [
     },
 ];
 
-
 export const DOC_TYPE_META: Record<DocType, { label: string; plural: string; writeLabel: string; color: string }> = {
     letter: { label: 'Письмо', plural: 'Письма', writeLabel: 'Написать письмо', color: 'blue' },
     contract: { label: 'Договор', plural: 'Договоры', writeLabel: 'Создать договор', color: 'green' },
@@ -164,7 +161,6 @@ export const STATUS_META: Record<LetterStatus, { label: string; cls: string }> =
     rejected: { label: 'Отклонено', cls: 'corr-n__badge--rejected' },
     approved: { label: 'Подтверждено', cls: 'corr-n__badge--approved' },
 };
-
 
 export function formatDateRu(iso: string): string {
     const d = new Date(`${iso}T12:00:00`);
@@ -183,7 +179,6 @@ function nextRegistryNum(letters: MockLetter[], docType: DocType): string {
         .map(l => { const m = l.registryNumber.match(/\/(\d+)$/); return m ? parseInt(m[1], 10) : 0; });
     return `${prefix}-${year}/${String(Math.max(0, ...nums) + 1).padStart(3, '0')}`;
 }
-
 
 export function IcoMailWrite() {
     return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -310,7 +305,6 @@ function SendToPartnerModal({ onClose, onSend }: {
     );
 }
 
-
 function RejectModal({ onClose, onReject }: {
     onClose: () => void;
     onReject: (reason: string) => void;
@@ -343,7 +337,6 @@ function RejectModal({ onClose, onReject }: {
     );
 }
 
-
 function buildCorrespondenceNavTabs(
     active: CorrespondenceMainTab,
     onNavigate: (screen: Screen) => void,
@@ -367,7 +360,6 @@ function MailboxView({ tab, onNavigate }: {
         />
     );
 }
-
 
 function LetterComposeView({ editingLetter, letters, loading, onBack, onPreview }: {
     editingLetter?: MockLetter;
@@ -651,7 +643,6 @@ function initialMailboxScreen(searchParams: URLSearchParams): Screen {
         ? { kind: 'outgoing' }
         : { kind: 'incoming' };
 }
-
 
 export function CorrespondencePage() {
     const [searchParams, setSearchParams] = useSearchParams();

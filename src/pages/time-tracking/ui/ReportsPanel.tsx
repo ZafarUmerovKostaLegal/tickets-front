@@ -1043,8 +1043,7 @@ export function ReportsPanel() {
       include_fixed_fee: reportType === 'time' ? includeFixed : undefined,
       pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,
     });
-    /** Cap remote pages so table search does not download the entire year into memory. */
-    const searchFetchOpts = { maxPages: 6 } as const;
+        const searchFetchOpts = { maxPages: 6 } as const;
     void (async () => {
       try {
         let out: AnyRow[] = [];
@@ -1926,7 +1925,6 @@ export function ReportsPanel() {
       </button>) : null}
     </div>
 
-
     <div className="tt-reports__summary">
       {kpi.kind === 'time' && (<>
         <div className="tt-reports__summary-card">
@@ -2133,13 +2131,11 @@ export function ReportsPanel() {
       </>)}
     </div>
 
-
     {groups && (<nav className="tt-reports__group-nav" role="tablist">
       {groups.map((g) => (<button key={g.id} type="button" role="tab" aria-selected={groupBy === g.id} className={`tt-reports__group-tab${groupBy === g.id ? ' tt-reports__group-tab--active' : ''}`} onClick={() => changeGroupBy(g.id)}>
         {ttReportGroupLabel(g.id, t)}
       </button>))}
     </nav>)}
-
 
     <div className="tt-reports__content">
       <div className="tt-reports__content-header">
@@ -2212,7 +2208,6 @@ export function ReportsPanel() {
           </>)}
         </div>) : reportType === 'time' ? (<TimeTable groupBy={groupBy as TimeGroup} rows={sortedTimeTableRows ?? []} expanded={expandedRows} onToggle={toggleRow} onProjectRowPreview={groupBy === 'projects' ? openTimeProjectPreview : undefined} projectRowPreviewDisabled={groupBy === 'projects' ? tableDataLoading : undefined} onClientRowPreview={groupBy === 'clients' ? openTimeClientPreview : undefined} clientRowPreviewDisabled={groupBy === 'clients' ? tableDataLoading : undefined} partnerProjectBadge={partnerProjectBadgeMap ? partnerProjectBadgeFn : undefined} partnerClientBadge={partnerClientBadgeMap ? partnerClientBadgeFn : undefined} />) : isExpenseLikeReportType(reportType) ? (<ExpenseTable groupBy={groupBy as ExpenseGroup} rows={filteredTableRows as (ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam)[]} expanded={expandedRows} onToggle={toggleRow} />) : reportType === 'uninvoiced' ? (<UninvoicedTable rows={filteredTableRows as UninvoicedRow[]} expanded={expandedRows} onToggle={toggleRow} />) : (<BudgetTable rows={filteredTableRows as BudgetRow[]} expanded={expandedRows} onToggle={toggleRow} />)}
       </div>
-
 
       {pagination && pagination.total_pages > 1 && !tableSearchQ && (<div className="tt-reports__pagination">
         <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={!pagination.previous_page} onClick={() => setPage((p) => p - 1)}>

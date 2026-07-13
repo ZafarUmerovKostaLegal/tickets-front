@@ -21,7 +21,6 @@ export function isPartnerOrgRole(role: string | null | undefined, position?: str
 
 const ADMIN_PANEL_ACCESS_ROLE_KEYS = new Set(['Главный администратор', 'Администратор'].map(normalizeOrgRoleKey));
 
-
 export function canAccessAdminPanel(role: string | null | undefined, position?: string | null): boolean {
     const k = normalizeOrgRoleKey(role);
     if (ADMIN_PANEL_ACCESS_ROLE_KEYS.has(k))
@@ -29,11 +28,9 @@ export function canAccessAdminPanel(role: string | null | undefined, position?: 
     return isPartnerOrgRole(role, position);
 }
 
-
 export function canAccessAdminOnlyModules(role: string | null | undefined): boolean {
     return ADMIN_PANEL_ACCESS_ROLE_KEYS.has(normalizeOrgRoleKey(role));
 }
-
 
 export function canAccessAttendance(role: string | null | undefined, position?: string | null): boolean {
     const k = normalizeOrgRoleKey(role);

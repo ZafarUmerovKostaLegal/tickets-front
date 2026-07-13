@@ -1,4 +1,4 @@
-/** Default list page size for time-tracking tables (matches TIME_TRACKING_LIST_PAGE_SIZE). */
+
 const DEFAULT_LIST_PAGE_SIZE = 24;
 
 type PaginationProps = {

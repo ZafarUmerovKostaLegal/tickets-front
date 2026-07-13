@@ -11,7 +11,6 @@ export function formatExpenseReportStatus(status: string | null | undefined): st
     return STATUS_LOOKUP[s]?.label ?? s;
 }
 
-
 export function formatExpenseReportStatusHint(status: string | null | undefined): string | undefined {
     const s = String(status ?? '').trim().toLowerCase();
     if (s === 'paid')

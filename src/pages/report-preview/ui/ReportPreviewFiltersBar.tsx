@@ -34,7 +34,7 @@ export type ReportPreviewFiltersBarProps = {
     customRangeActive: boolean;
     onResetCustomRange: () => void;
     disabled?: boolean;
-    /** Hide period navigation, granularity and date pickers (keep team / employees). */
+    
     hidePeriodControls?: boolean;
     teamFilter?: Omit<ReportPreviewTeamFilterProps, 'disabled'>;
 };

@@ -1,7 +1,6 @@
 import { type ReactElement, type RefObject, useLayoutEffect } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
-
 export const VIRTUAL_TABLE_MIN_ROWS = 12;
 
 const VIRTUAL_TABLE_OVERSCAN = 10;

@@ -5,7 +5,6 @@
 @import './header-user-menu.css';
 @import './mobile.css';
 
-
 img.twemoji {
   display: inline-block;
   width: 1.2em;
@@ -15,7 +14,6 @@ img.twemoji {
   object-fit: contain;
   user-select: none;
 }
-
 
 .twemoji-wrap img.twemoji {
   width: 100%;
@@ -45,7 +43,7 @@ img.twemoji {
   --app-border-soft: #f1f5f9;
 
   --app-text: #0f172a;
-  
+
   --app-fg: #0f172a;
   --app-text-strong: #0f172a;
   --app-text-dim: #334155;
@@ -136,7 +134,6 @@ code {
   font-family: inherit;
 }
 
-
 input,
 textarea,
 select,
@@ -216,7 +213,6 @@ body[data-theme='dark'] {
 
   --icon-primary: #e2e8f0;
 
-  
   --app-fg: #e2e8f0;
   --app-muted-bg: #1e293b;
   --app-link: #93c5fd;
@@ -446,7 +442,6 @@ body[data-theme='dark'] .inv__mini-btn:hover {
   min-height: 100%;
   animation: page-fade-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-
 
 @keyframes page-fade-slide-in {
   from {

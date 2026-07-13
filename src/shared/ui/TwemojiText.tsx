@@ -6,7 +6,6 @@ interface TwemojiTextProps {
     className?: string;
 }
 
-
 export const TwemojiText = memo(function TwemojiText({ text, className }: TwemojiTextProps) {
     const html = twemojiHtml(text);
     return (
@@ -24,7 +23,6 @@ interface TwemojiEmojiProps {
     className?: string;
     title?: string;
 }
-
 
 export const TwemojiEmoji = memo(function TwemojiEmoji({
     emoji,

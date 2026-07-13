@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = Number(process.env.PW_PORT) || 5173;
 const baseURL = `http://127.0.0.1:${PORT}`;
 
-/** Кол-во параллельных браузерных контекстов (нагрузка на одну машину) */
+
 function resolveWorkers(): number | undefined {
     if (process.env.PW_WORKERS) {
         const n = Number(process.env.PW_WORKERS);

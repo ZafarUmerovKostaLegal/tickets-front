@@ -80,7 +80,6 @@ body[data-theme='dark'] .kd-tg {
   --kd-tg-shadow-md: 0 2px 6px rgba(0, 0, 0, 0.25), 0 18px 34px -14px rgba(0, 0, 0, 0.5);
 }
 
-
 .page-transition:has(> .kd-tg) {
   height: 100dvh;
   max-height: 100dvh;
@@ -91,7 +90,6 @@ body[data-theme='dark'] .kd-tg {
   height: 100%;
   max-height: 100%;
 }
-
 
 .kd-tg__sidebar {
   flex: 0 0 var(--kd-tg-sidebar-w);
@@ -536,7 +534,6 @@ body[data-theme='dark'] .kd-tg {
   height: 0;
 }
 
-
 .kd-tg__chat-pane {
   flex: 1;
   min-width: 0;
@@ -737,7 +734,6 @@ body[data-theme='dark'] .kd-tg__search-mark {
 .kd-tg__icon-btn--mobile-only {
   display: none;
 }
-
 
 .kd-tg__chat-scroll {
   position: relative;
@@ -954,7 +950,6 @@ body[data-theme='dark'] .kd-tg__bubble--in {
   background: transparent !important;
 }
 
-
 .kd-tg__bubble-sticker {
   display: block;
   width: 7rem;
@@ -967,12 +962,10 @@ body[data-theme='dark'] .kd-tg__bubble--in {
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.18));
 }
 
-
 @keyframes kd-sticker-enter {
   from { opacity: 0; transform: scale(0.5) rotate(-8deg); }
   to   { opacity: 1; transform: scale(1) rotate(0deg); }
 }
-
 
 .kd-tg__sticker--bounce {
   animation: kd-sticker-enter 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both,
@@ -1195,7 +1188,6 @@ body[data-theme='dark'] .kd-tg__bubble--out .kd-tg__bubble-meta {
   opacity: 0.9;
 }
 
-
 .kd-tg__composer {
   position: relative;
   z-index: 5;
@@ -1308,7 +1300,6 @@ body[data-theme='dark'] .kd-tg__composer {
   margin-bottom: 0.25rem;
 }
 
-
 .kd-tg__row-actions {
   position: absolute;
   top: 50%;
@@ -1367,7 +1358,6 @@ body[data-theme='dark'] .kd-tg__composer {
   height: 15px;
 }
 
-
 .kd-tg__reaction-picker {
   position: absolute;
   bottom: calc(100% + 8px);
@@ -1416,7 +1406,6 @@ body[data-theme='dark'] .kd-tg__composer {
 .kd-tg__reaction-picker-btn:hover {
   transform: scale(1.35) translateY(-2px);
 }
-
 
 .kd-tg__reactions {
   display: flex;
@@ -1506,7 +1495,6 @@ body[data-theme='dark'] .kd-tg__row--out .kd-tg__reaction {
 .kd-tg__row--out .kd-tg__reaction--mine .kd-tg__reaction-count {
   color: #fff;
 }
-
 
 .kd-tg__ctx-overlay {
   --kd-tg-head-bg: #ffffff;
@@ -1633,7 +1621,6 @@ body[data-theme='dark'] .kd-tg__ctx-overlay {
 .kd-tg__bubble--ctx-active {
   box-shadow: 0 0 0 2px var(--kd-tg-blue);
 }
-
 
 .kd-tg__lightbox {
   position: fixed;
@@ -1875,7 +1862,6 @@ body[data-theme='dark'] .kd-tg__ctx-overlay {
   width: 16px;
   height: 16px;
 }
-
 
 .kd-tg__picker {
   --kd-tg-picker-bg: var(--kd-tg-head-bg);
@@ -2129,7 +2115,6 @@ body[data-theme='dark'] .kd-tg__picker {
   object-fit: contain;
 }
 
-
 .kd-tg__picker-cell--sticker {
   aspect-ratio: 1;
   display: flex;
@@ -2159,7 +2144,6 @@ body[data-theme='dark'] .kd-tg__picker {
   user-select: none;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
 }
-
 
 .kd-tg__picker-pack-icon {
   margin-right: 0.35rem;
@@ -2219,7 +2203,6 @@ body[data-theme='dark'] .kd-tg__picker {
   transition: background 0.12s ease, color 0.12s ease;
 }
 
-
 .kd-tg__picker-footer-tab {
   font-size: 0.6875rem;
   font-weight: 700;
@@ -2237,7 +2220,6 @@ body[data-theme='dark'] .kd-tg__picker {
   background: color-mix(in srgb, var(--kd-tg-blue) 18%, transparent);
   color: var(--kd-tg-blue);
 }
-
 
 .kd-tg__picker-pack-nav {
   display: flex;
@@ -2311,7 +2293,6 @@ body[data-theme='dark'] .kd-tg__picker {
   border: 0;
 }
 
-
 @media (max-width: 860px) {
   .kd-tg__chat-search-meta {
     display: none;
@@ -2362,7 +2343,6 @@ body[data-theme='dark'] .kd-tg__picker {
     display: flex;
   }
 }
-
 
 .kd-tg--loading .kd-tg__search,
 .kd-tg--loading .kd-tg__sidebar-tab {
@@ -2576,7 +2556,6 @@ body[data-theme='dark'] .kd-tg-skel {
 .kd-tg-skel-list--chats .kd-tg-skel-chat-row:nth-child(3) .kd-tg-skel { animation-delay: 0.1s; }
 .kd-tg-skel-list--members .kd-tg-skel-member-row:nth-child(odd) .kd-tg-skel { opacity: 0.92; }
 
-
 .kd-tg__chat-section {
   padding: 0.75rem 1rem 0.375rem;
   font-size: 0.66rem;
@@ -2591,7 +2570,6 @@ body[data-theme='dark'] .kd-tg-skel {
   border-bottom: 1px solid var(--kd-tg-border);
   margin-bottom: 0.15rem;
 }
-
 
 .kd-tg__poll {
   display: flex;
@@ -2729,7 +2707,6 @@ body[data-theme='dark'] .kd-tg-skel {
 .kd-tg__poll-close-btn:hover {
   background: color-mix(in srgb, var(--kd-tg-accent, #3390ec) 12%, transparent);
 }
-
 
 .kd-tg__modal-backdrop {
   position: fixed;
@@ -3234,7 +3211,6 @@ body[data-theme='dark'] .kd-tg-skel {
   box-shadow: none;
 }
 
-
 .kd-tg__composer--readonly {
   justify-content: center;
   padding: 0.75rem 1rem;
@@ -3246,7 +3222,6 @@ body[data-theme='dark'] .kd-tg-skel {
   font-size: 0.82rem;
   color: var(--kd-tg-muted);
 }
-
 
 .kd-tg__modal--members .kd-tg__modal-body {
   display: flex;

@@ -2,7 +2,6 @@
 
 export type TimeReportPartnerRowBadge = 'none' | 'confirmed' | 'invoiced';
 
-
 export type TimeReportPartnerConfSlice = {
     projectId: string;
     dateFrom: string;
@@ -10,7 +9,6 @@ export type TimeReportPartnerConfSlice = {
     snapshotId: string;
     invoiceId?: string;
 };
-
 
 export type TimeReportInvoicePartnerSlice = {
     id: string;
@@ -24,7 +22,6 @@ export type TimeReportInvoicePartnerSlice = {
 function sliceIso(d: string): string {
     return String(d ?? '').trim().slice(0, 10);
 }
-
 
 export function reportDateRangesOverlap(a1: string, a2: string, b1: string, b2: string): boolean {
     const x1 = sliceIso(a1);
@@ -79,7 +76,6 @@ export function badgeForProjectInReportWindow(opts: {
     }
     return 'confirmed';
 }
-
 
 export function maxPartnerBadge(a: TimeReportPartnerRowBadge, b: TimeReportPartnerRowBadge): TimeReportPartnerRowBadge {
     const rk = (x: TimeReportPartnerRowBadge) => (x === 'invoiced' ? 2 : x === 'confirmed' ? 1 : 0);

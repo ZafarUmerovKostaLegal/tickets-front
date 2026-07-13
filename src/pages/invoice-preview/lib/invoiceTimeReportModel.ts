@@ -1,7 +1,6 @@
 import { TIME_REPORT_DETAIL_ROWS, TIME_REPORT_SUMMARY_ROWS } from './invoicePreviewPackShared';
 import { formatCoverLetterTotal } from './invoiceCoverLetterModel';
 
-
 export type InvoiceTimeReportDetailRow = {
     date: string;
     initials: string;
@@ -61,14 +60,12 @@ function detailRowIsTrailingEmpty(row: InvoiceTimeReportDetailRow): boolean {
     return ![row.date, row.initials, row.task, row.description, row.hours, row.amount].some((c) => String(c).trim().length > 0);
 }
 
-
 export function trimTrailingEmptyDetailSlots(rows: readonly InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {
     const out = [...rows];
     while (out.length > 0 && detailRowIsTrailingEmpty(out[out.length - 1]!))
         out.pop();
     return out;
 }
-
 
 export function finalizeDetailSlots(rows: InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {
     return trimTrailingEmptyDetailSlots(rows);

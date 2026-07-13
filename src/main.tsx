@@ -14,7 +14,7 @@ import { stripLegacyReloadQueryParams } from '@app/lib/staleBundleError';
 injectPublicEnv();
 stripLegacyReloadQueryParams();
 if (reconcileDesktopAuthCallbackLocation()) {
-    // OAuth callback landed on the web host — bounce back into the desktop app origin.
+    
 }
 else {
     applyTheme(getInitialTheme());

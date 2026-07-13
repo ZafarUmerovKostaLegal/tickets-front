@@ -90,7 +90,6 @@ export type PatchCorrespondenceBody = {
     comment?: string;
 };
 
-
 export type CorrRow = {
     id: string;
     registryNumber: string;

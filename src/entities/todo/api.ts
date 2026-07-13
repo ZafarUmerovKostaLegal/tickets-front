@@ -239,7 +239,6 @@ async function readBoardResponse(res: Response): Promise<TodoBoard> {
     return parseBoardJsonText(text);
 }
 
-
 export function pickPreferredTodoBoardId(data: TodoBoardsListResult): number | null {
     const items = data.items;
     if (!items.length)
@@ -270,7 +269,6 @@ async function _fetchTodoBoardsListFromApi(): Promise<TodoBoardsListResult> {
 export async function fetchTodoBoardsList(): Promise<TodoBoardsListResult> {
     return _boardsListCache.fetch(BOARDS_LIST_KEY, _fetchTodoBoardsListFromApi);
 }
-
 
 export async function putTodoBoardCurrent(boardId: number): Promise<TodoBoard> {
     const res = await apiFetch(`${TODOS}/boards/current`, {
@@ -303,7 +301,6 @@ export async function deleteTodoBoardBackground(boardId: number): Promise<TodoBo
     return fetchTodoBoardById(boardId);
 }
 
-
 export async function fetchTodoBoardCurrent(): Promise<TodoBoard> {
     const res = await apiFetch(`${TODOS}/boards/current`);
     if (res.ok)
@@ -320,11 +317,9 @@ export async function fetchTodoBoardById(boardId: number): Promise<TodoBoard> {
     return readBoardResponse(res);
 }
 
-
 export async function fetchTodoBoard(): Promise<TodoBoard> {
     return fetchTodoBoardCurrent();
 }
-
 
 export type CreateTodoBoardBody = {
     title?: string;
@@ -354,7 +349,6 @@ export async function createTodoBoard(body: CreateTodoBoardBody): Promise<TodoBo
     _boardsListCache.invalidate();
     return board;
 }
-
 
 export async function deleteTodoBoard(boardId: number): Promise<void> {
     const res = await apiFetch(todoBoardPath(boardId), { method: 'DELETE' });
@@ -401,7 +395,6 @@ async function readInvitesListResponse(res: Response): Promise<TodoBoardInvite[]
     return items.map((x) => parseTodoBoardInvite(x as Record<string, unknown>));
 }
 
-
 export async function fetchMyTodoInvites(): Promise<TodoBoardInvite[]> {
     const res = await apiFetch(`${TODOS}/invites`);
     return readInvitesListResponse(res);
@@ -426,7 +419,6 @@ export async function revokeTodoInvite(inviteId: number): Promise<void> {
         throw parseHttpError(res.status, text);
 }
 
-
 export async function fetchTodoBoardInvites(boardId: number): Promise<TodoBoardInvite[]> {
     const res = await apiFetch(`${todoBoardPath(boardId)}/invites`);
     return readInvitesListResponse(res);
@@ -437,7 +429,6 @@ export type CreateTodoBoardInvitesBody = {
     role?: 'editor' | 'viewer';
     message?: string | null;
 };
-
 
 export async function createTodoBoardInvites(boardId: number, body: CreateTodoBoardInvitesBody): Promise<TodoBoardInvite[]> {
     const res = await apiFetch(`${todoBoardPath(boardId)}/invites`, {
@@ -479,7 +470,6 @@ async function readMembersListResponse(res: Response): Promise<TodoBoardMembersL
     return { items: items.map((x) => parseTodoBoardMember(x as Record<string, unknown>)) };
 }
 
-
 export async function fetchTodoBoardMembers(boardId: number): Promise<TodoBoardMembersList> {
     const res = await apiFetch(`${todoBoardPath(boardId)}/members`);
     return readMembersListResponse(res);
@@ -490,7 +480,6 @@ export type AddTodoBoardMembersBody = {
     role?: 'editor' | 'viewer';
     instant?: boolean;
 };
-
 
 export async function addTodoBoardMembers(boardId: number, body: AddTodoBoardMembersBody): Promise<TodoBoardMembersList> {
     const res = await apiFetch(`${todoBoardPath(boardId)}/members`, {
@@ -505,7 +494,6 @@ export async function addTodoBoardMembers(boardId: number, body: AddTodoBoardMem
     return readMembersListResponse(res);
 }
 
-
 export async function patchTodoBoardMemberRole(boardId: number, memberUserId: number, role: 'editor' | 'viewer'): Promise<TodoBoardMembersList> {
     const res = await apiFetch(`${todoBoardPath(boardId)}/members/${memberUserId}`, {
         method: 'PATCH',
@@ -514,7 +502,6 @@ export async function patchTodoBoardMemberRole(boardId: number, memberUserId: nu
     });
     return readMembersListResponse(res);
 }
-
 
 export async function removeTodoBoardMember(boardId: number, memberUserId: number): Promise<TodoBoardMembersList> {
     const res = await apiFetch(`${todoBoardPath(boardId)}/members/${memberUserId}`, { method: 'DELETE' });
@@ -694,7 +681,6 @@ export async function postTodoCardComment(boardId: number, cardId: number, body:
     });
     return readBoardResponse(res);
 }
-
 
 export function findNewestCardInColumn(board: TodoBoard, columnId: number): TodoBoardCard | null {
     const col = board.columns.find((c) => c.id === columnId);

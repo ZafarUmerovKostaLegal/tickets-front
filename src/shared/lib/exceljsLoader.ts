@@ -9,7 +9,7 @@ export type ExcelJSLib = {
 
 let cache: ExcelJSLib | null = null;
 
-/** Browser-safe zip output for exceljs (default nodebuffer fails in WebView). */
+
 export const EXCELJS_BROWSER_WRITE_OPTIONS = {
     zip: { type: 'arraybuffer' as const },
 };
@@ -36,7 +36,7 @@ function excelBufferByteLength(buffer: ArrayBuffer | Uint8Array | Buffer | null 
 
 export async function writeExcelWorkbookBuffer(wb: Workbook): Promise<ArrayBuffer | Uint8Array | Buffer> {
     await loadExcelJS();
-    // exceljs typings omit JSZip `type`; runtime zip-stream defaults to nodebuffer (browser-unsafe).
+    
     const buffer = await wb.xlsx.writeBuffer(EXCELJS_BROWSER_WRITE_OPTIONS as Parameters<Workbook['xlsx']['writeBuffer']>[0]) as ArrayBuffer | Uint8Array | Buffer | null;
     if (excelBufferByteLength(buffer) < 64)
         throw new Error('Excel export produced an empty or invalid file.');

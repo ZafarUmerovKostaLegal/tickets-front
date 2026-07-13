@@ -35,7 +35,6 @@ export function reportCacheInvalidateAll(): void {
     _store.clear();
 }
 
-
 export function reportCacheInvalidatePrefix(prefix: string): void {
     for (const key of _store.keys()) {
         if (key.startsWith(prefix)) _store.delete(key);

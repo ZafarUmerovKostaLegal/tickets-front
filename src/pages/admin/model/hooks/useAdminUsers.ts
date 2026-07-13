@@ -23,7 +23,7 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
                 if (!cancelled && list.length > 0)
                     setApiPositions(list);
             })
-            .catch(() => { /* оставляем фоллбэк */ });
+            .catch(() => {  });
         return () => {
             cancelled = true;
         };

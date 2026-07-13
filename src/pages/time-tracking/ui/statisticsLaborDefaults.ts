@@ -8,7 +8,6 @@ function formatYmd(d: Date): string {
     return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
-
 export function defaultStatisticsLaborFilters(): StatisticsLaborFilters {
     const today = new Date();
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);

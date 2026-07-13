@@ -39,7 +39,6 @@ export function buildTimeEntryDescription(task: string, notes: string): string |
     return `${t}\n${n}`;
 }
 
-
 export function parseTimeEntryDescription(raw: string | null | undefined): { taskLine: string; notes: string } {
     const s = (raw ?? '').trim();
     if (!s.length)
@@ -49,7 +48,6 @@ export function parseTimeEntryDescription(raw: string | null | undefined): { tas
         return { taskLine: s, notes: '' };
     return { taskLine: s.slice(0, idx).trim(), notes: s.slice(idx + 1).trim() };
 }
-
 
 export function resolveTimeEntryNotesOnly(raw: string | null | undefined, taskName?: string | null): string {
     const { taskLine, notes } = parseTimeEntryDescription(raw);

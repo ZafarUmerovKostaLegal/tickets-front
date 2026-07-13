@@ -188,7 +188,6 @@ export function mergeTimeEntryResponseIntoRow(tr: TimeEntryRow, rowContext?: Pic
     return o;
 }
 
-
 export function syncTimeEntryServerOwnersFromRows(ownerByEntryId: Map<string, number>, rows: TimeExcelPreviewRow[]): void {
     ownerByEntryId.clear();
     for (const r of rows) {
@@ -214,7 +213,6 @@ export function serverAuthUserIdForTimeEntry(ownerByEntryId: Map<string, number>
         return fallback;
     return ownerByEntryId.get(id) ?? fallback;
 }
-
 
 export async function reassignTimeExcelPreviewRowToUser(row: TimeExcelPreviewRow, targetAuthUserId: number, serverAuthUserId: number): Promise<TimeExcelPreviewRow> {
     if (targetAuthUserId === serverAuthUserId)

@@ -43,7 +43,6 @@ function pruneExpired(m: Record<string, string>, nowMs: number): void {
     }
 }
 
-
 export function recordTimeEntryEditUnlockExpiry(authUserId: number, workDateYmd: string, expiresAtIso: string): void {
     const k = compoundKey(authUserId, workDateYmd);
     const nextMs = parseIsoMs(expiresAtIso);
@@ -78,7 +77,6 @@ export function isWorkDateTemporarilyUnlockedForSubject(authUserId: number, work
     return getActiveTimeEntryEditUnlockExpiresAtIso(authUserId, workDateYmd, now) != null;
 }
 
-
 export function isClosedReportingWeekEditingBlockedForSubject(subjectAuthUserId: number, workDateYmd: string, viewerCanOverrideWeeklyLock: boolean, now = new Date()): boolean {
     const wd = workDateYmd.trim().slice(0, 10);
     if (viewerCanOverrideWeeklyLock)
@@ -94,7 +92,6 @@ export function isClosedReportingWeekEditingBlockedForSubject(subjectAuthUserId:
         return false;
     return true;
 }
-
 
 export function absorbTimeEntryRowEditUnlockHint(row: {
     auth_user_id: number;
