@@ -7,7 +7,8 @@ ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
     NPM_CONFIG_AUDIT=false \
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PUPPETEER_SKIP_DOWNLOAD=1 \
-    CYPRESS_INSTALL_BINARY=0
+    CYPRESS_INSTALL_BINARY=0 \
+    NODE_OPTIONS="--max-old-space-size=8192"
 
 # Slim web-only manifests (no Tauri CLI / Playwright / Vitest).
 COPY package.docker.json ./package.json
