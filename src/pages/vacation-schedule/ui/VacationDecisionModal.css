@@ -1,0 +1,65 @@
+.vac-dec-modal__dialog {
+  max-width: 540px;
+}
+
+.vac-dec-modal__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.vac-dec-modal__lead {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--app-text, #0f172a);
+}
+
+.vac-dec-modal__muted {
+  color: var(--app-muted, #64748b);
+  font-weight: 500;
+}
+
+.vac-dec-modal__meta {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--app-text, #0f172a);
+}
+
+.vac-dec-modal__reason-given {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--app-muted, #475569);
+  background: var(--app-surface-soft, #f8fafc);
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+}
+
+.vac-dec-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-dec-modal__submit--approve {
+  background: #16a34a;
+}
+
+.vac-dec-modal__submit--approve:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.vac-dec-modal__submit--decline {
+  background: #b91c1c;
+}
+
+.vac-dec-modal__submit--decline:hover:not(:disabled) {
+  background: #991b1b;
+}

@@ -1,0 +1,11 @@
+{
+  "build": {
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeBuildCommand": "npm run build:android"
+  },
+  "app": {
+    "security": {
+      "freezePrototype": false
+    }
+  }
+}

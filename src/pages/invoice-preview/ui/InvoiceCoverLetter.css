@@ -1,0 +1,165 @@
+
+
+.tt-inv-cover {
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  min-height: 100%;
+  padding: 20mm 12mm 20mm 30mm;
+  font-family: var(--app-font-family);
+  font-size: 10.5px;
+  line-height: 1.52;
+  color: var(--tt-inv-paper-ink, #0f172a);
+  background: var(--tt-inv-paper, #ffffff);
+  text-align: left;
+}
+
+.tt-inv-cover__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 2.1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(100, 116, 139, 0.18);
+}
+
+.tt-inv-cover__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.tt-inv-cover__logo {
+  display: block;
+  width: 100%;
+  max-width: 146px;
+  height: auto;
+  max-height: 36px;
+  flex-shrink: 0;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.tt-inv-cover__firm-contact {
+  margin: 0;
+  font-style: normal;
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: var(--tt-inv-paper-muted, #64748b);
+  text-align: right;
+  max-width: 17rem;
+}
+
+.tt-inv-cover__firm-contact span {
+  display: block;
+}
+
+.tt-inv-cover__letter-body {
+  font-size: 10.5px;
+  color: var(--tt-inv-paper-ink);
+}
+
+.tt-inv-cover__date {
+  margin: 0 0 1.25rem;
+}
+
+.tt-inv-cover__recipient {
+  margin-bottom: 1.25rem;
+}
+
+.tt-inv-cover__recipient-line {
+  margin: 0 0 0.15rem;
+}
+
+.tt-inv-cover__attention {
+  margin: 0 0 0.15rem;
+}
+
+.tt-inv-cover__attention-sub {
+  margin: 0 0 1.25rem;
+}
+
+.tt-inv-cover__salutation {
+  margin: 0 0 1rem;
+}
+
+.tt-inv-cover__para {
+  margin: 0 0 1rem;
+}
+
+.tt-inv-cover__para strong {
+  font-weight: 700;
+  color: var(--tt-inv-paper-strong, #0f172a);
+}
+
+.tt-inv-cover__closing {
+  margin: 1.65rem 0 0;
+}
+
+.tt-inv-cover__signature {
+  margin-top: 2rem;
+}
+
+.tt-inv-cover__sig-line {
+  display: block;
+  width: 11rem;
+  border-bottom: 1px solid rgba(var(--app-accent-rgb, 79, 70, 229), 0.35);
+  margin-bottom: 0.35rem;
+}
+
+.tt-inv-cover__sig-name,
+.tt-inv-cover__sig-title {
+  margin: 0;
+}
+
+.tt-inv-cover__sig-name {
+  font-weight: 700;
+}
+
+.tt-inv-cover--editable .tt-inv-cover__field {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  padding: 0.12rem 0.28rem;
+  font: inherit;
+  color: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 6%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--app-accent, #4f46e5) 35%, transparent);
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.tt-inv-cover--editable .tt-inv-cover__field:focus {
+  outline: none;
+  border-style: solid;
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 10%, #fff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent, #4f46e5) 22%, transparent);
+}
+
+.tt-inv-cover--editable .tt-inv-cover__field--para {
+  display: block;
+  width: 100%;
+  min-height: 3.2rem;
+  margin-bottom: 1rem;
+  padding: 0.35rem 0.45rem;
+  line-height: 1.52;
+}
+
+.tt-inv-cover--editable .tt-inv-cover__attention .tt-inv-cover__field,
+.tt-inv-cover--editable .tt-inv-cover__salutation .tt-inv-cover__field {
+  width: auto;
+  min-width: 8rem;
+  display: inline-block;
+  vertical-align: baseline;
+}
+
+.tt-inv-cover--editable .tt-inv-cover__date .tt-inv-cover__field {
+  width: auto;
+  min-width: 10rem;
+  display: inline-block;
+}

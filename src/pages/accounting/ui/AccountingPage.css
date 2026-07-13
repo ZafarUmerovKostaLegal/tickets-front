@@ -1,0 +1,234 @@
+.acct-page {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--app-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.acct-page__main {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.acct-page__header {
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
+}
+
+.acct-page__content {
+  flex: 1;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.acct-page__hub {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 720px) {
+  .acct-page__hub {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
+  }
+}
+
+.acct-page__hub-tile {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  width: 100%;
+  padding: 1.35rem 1.25rem;
+  text-align: left;
+  text-decoration: none;
+  font-family: inherit;
+  color: inherit;
+  cursor: pointer;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  box-sizing: border-box;
+}
+
+.acct-page__hub-tile:hover {
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.1);
+  border-color: color-mix(in srgb, var(--app-accent) 22%, var(--app-border));
+  transform: translateY(-2px);
+}
+
+.acct-page__hub-tile:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
+.acct-page__hub-tile--active {
+  border-color: color-mix(in srgb, var(--app-accent) 35%, var(--app-border));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acct-page__hub-tile {
+    transition: none;
+  }
+
+  .acct-page__hub-tile:hover {
+    transform: none;
+  }
+}
+
+.acct-page__hub-tile-icon {
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.acct-page__hub-tile-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.acct-page__hub-tile-icon--green {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+}
+
+.acct-page__hub-tile-icon--blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #2563eb;
+}
+
+.acct-page__hub-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.acct-page__hub-tile-label {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--app-text);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.acct-page__hub-tile-hint {
+  font-size: 0.8125rem;
+  color: var(--app-muted);
+  line-height: 1.35;
+}
+
+.acct-page__hub-tile-chevron {
+  flex-shrink: 0;
+  align-self: center;
+  color: var(--app-muted);
+  opacity: 0.7;
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.acct-page__hub-tile:hover .acct-page__hub-tile-chevron {
+  color: var(--app-accent);
+  transform: translateX(2px);
+}
+
+.acct-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding: 0.4rem var(--app-page-padding-x, 1rem) 0.15rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+  flex-shrink: 0;
+}
+
+.acct-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 0.85rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--app-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  position: relative;
+}
+
+.acct-tabs__tab:hover {
+  color: var(--app-text);
+  background: var(--app-surface-soft, #f1f5f9);
+}
+
+.acct-tabs__tab--on {
+  color: var(--app-accent);
+  font-weight: 700;
+}
+
+.acct-tabs__tab--on::after {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: -1px;
+  height: 2px;
+  background: var(--app-accent);
+  border-radius: 2px;
+}
+
+.acct-page__content--invoices {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding-top: 0.5rem;
+  gap: 0;
+}
+
+.acct-page__invoices-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.acct-page__invoices-wrap .tt-inv--accounting {
+  padding-top: 0;
+}
+
+.acct-page__invoices-wrap .tt-inv__head-row {
+  align-items: flex-start;
+}
+
+.acct-page__invoices-wrap .tt-inv__readonly-badge {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 0.3rem 0.65rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-muted);
+  background: var(--app-surface-soft, #f1f5f9);
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+}

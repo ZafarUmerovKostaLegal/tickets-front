@@ -1,0 +1,77 @@
+
+
+.expenses-nested-layout {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  
+  overflow-x: visible;
+}
+
+.expenses-route-view {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation-duration: 0.4s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+
+.expenses-route-view--none {
+  animation: none;
+}
+
+.expenses-route-view--from-right {
+  animation-name: exp-route-in-from-right;
+}
+
+.expenses-route-view--from-left {
+  animation-name: exp-route-in-from-left;
+}
+
+.expenses-route-view--fade {
+  animation-name: exp-route-fade-in;
+  animation-duration: 0.32s;
+}
+
+@keyframes exp-route-in-from-right {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes exp-route-in-from-left {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes exp-route-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expenses-route-view {
+    animation: none !important;
+  }
+}

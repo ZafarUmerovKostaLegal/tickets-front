@@ -1,0 +1,123 @@
+.vac-me__req {
+  color: #ef4444;
+}
+
+.vac-me__cat-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+  font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, monospace;
+  font-size: 0.55rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.16);
+}
+
+.vac-me__cat-dot--dark-ink {
+  color: #1e293b;
+}
+
+.vac-me__files {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+}
+
+.vac-me__add-files {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px dashed var(--app-border, #cbd5e1);
+  border-radius: 9px;
+  background: var(--app-surface-2, #f8fafc);
+  color: var(--app-text, #1f2937);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.vac-me__add-files:hover:not(:disabled) {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.vac-me__add-files:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.vac-me__add-files svg {
+  width: 16px;
+  height: 16px;
+}
+
+.vac-me__files-hint {
+  font-size: 0.78rem;
+  color: var(--app-text-muted, #64748b);
+}
+
+.vac-me__file-list {
+  list-style: none;
+  margin: 0.65rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.vac-me__file {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+}
+
+.vac-me__file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.vac-me__file-size {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  color: var(--app-text-muted, #64748b);
+}
+
+.vac-me__file-del {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--app-text-muted, #64748b);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.vac-me__file-del:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.vac-me__file-del:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

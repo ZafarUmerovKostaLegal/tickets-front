@@ -1,0 +1,48 @@
+export type ApiRouteSpec = {
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+    path: string;
+    module: string;
+};
+
+export const FRONTEND_API_ROUTES: ApiRouteSpec[] = [
+    { module: 'user', method: 'GET', path: '/api/v1/users/me' },
+    { module: 'user', method: 'GET', path: '/api/v1/users' },
+    { module: 'user', method: 'GET', path: '/api/v1/users/partners' },
+    { module: 'user', method: 'GET', path: '/api/v1/positions' },
+    { module: 'ticket', method: 'GET', path: '/api/v1/tickets' },
+    { module: 'ticket', method: 'POST', path: '/api/v1/tickets' },
+    { module: 'ticket', method: 'GET', path: '/api/v1/tickets/statuses' },
+    { module: 'ticket', method: 'GET', path: '/api/v1/tickets/priorities' },
+    { module: 'notification', method: 'GET', path: '/api/v1/notifications' },
+    { module: 'todo', method: 'GET', path: '/api/v1/todos/boards' },
+    { module: 'todo', method: 'GET', path: '/api/v1/todos/boards/current' },
+    { module: 'todo', method: 'GET', path: '/api/v1/todos/calendar/status' },
+    { module: 'chat', method: 'GET', path: '/api/v1/chat/rooms' },
+    { module: 'expenses', method: 'GET', path: '/api/v1/expenses' },
+    { module: 'expenses', method: 'GET', path: '/api/v1/expense-types' },
+    { module: 'expenses', method: 'GET', path: '/api/v1/exchange-rates' },
+    { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/users' },
+    { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/clients' },
+    { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/projects' },
+    { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/reports/meta' },
+    { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/reports/partner-confirmations/pending' },
+    { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/reports/partner-confirmations/confirmed' },
+    { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/invoices' },
+    { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/statistics/labor/meta' },
+    { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/teams' },
+    { module: 'vacation', method: 'GET', path: '/api/v1/vacations/schedule/employees' },
+    { module: 'vacation', method: 'GET', path: '/api/v1/vacations/leave-requests' },
+    { module: 'vacation', method: 'GET', path: '/api/v1/vacations/leave-kinds' },
+    { module: 'vacation', method: 'GET', path: '/api/v1/vacations/partners' },
+    { module: 'attendance', method: 'GET', path: '/api/v1/attendance/report/daily' },
+    { module: 'attendance', method: 'GET', path: '/api/v1/attendance/report/range' },
+    { module: 'attendance', method: 'GET', path: '/api/v1/attendance/settings/workday' },
+    { module: 'inventory', method: 'GET', path: '/api/v1/inventory/items' },
+    { module: 'inventory', method: 'GET', path: '/api/v1/inventory/categories' },
+    { module: 'correspondence', method: 'GET', path: '/api/v1/correspondence/stats' },
+    { module: 'correspondence', method: 'GET', path: '/api/v1/correspondence' },
+    { module: 'contacts', method: 'GET', path: '/api/v1/contacts/colleagues' },
+    { module: 'contacts', method: 'GET', path: '/api/v1/contacts/clients' },
+    { module: 'call-schedule', method: 'GET', path: '/api/v1/call-schedule/calendars' },
+    { module: 'call-schedule', method: 'GET', path: '/api/v1/call-schedule/events' },
+];

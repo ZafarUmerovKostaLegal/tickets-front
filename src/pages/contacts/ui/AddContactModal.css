@@ -1,0 +1,105 @@
+.tt-tm-modal.tt-tm-modal--contacts-add {
+  width: min(860px, 96vw);
+  max-width: min(860px, 96vw);
+  max-height: min(90vh, 720px);
+}
+
+.tt-tm-modal--contacts-add .tt-tm-modal__head {
+  align-items: flex-start;
+}
+
+.tt-tm-modal--contacts-add .tt-tm-modal__head > div:first-child {
+  min-width: 0;
+  padding-right: 0.5rem;
+}
+
+.tt-tm-modal--contacts-add .tt-tm-modal__body {
+  padding: 1rem 1.25rem 1.15rem;
+  gap: 0;
+}
+
+.contacts-add-modal__subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--app-muted);
+}
+
+.contacts-add-modal__split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 300px);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.contacts-add-modal__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.contacts-add-modal__form .tt-tm-dd {
+  width: 100%;
+}
+
+.contacts-add-modal__form .tt-tm-dd__btn {
+  width: 100%;
+}
+
+.contacts-add-modal__form .tt-tm-label {
+  min-height: auto;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.contacts-add-modal__field-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+  align-items: start;
+}
+
+.contacts-add-modal__form .tt-tm-hint {
+  margin: 0;
+}
+
+.contacts-add-modal__preview {
+  position: sticky;
+  top: 0;
+  padding: 0.875rem;
+  border-radius: 12px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface-soft, #f8fafc);
+}
+
+.contacts-add-modal__preview .contacts-card {
+  box-shadow: none;
+}
+
+.contacts-add-modal__preview .contacts-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.contacts-card--preview .contacts-card__subtitle {
+  color: var(--app-muted);
+}
+
+.contacts-card--preview .contacts-card__rows:empty {
+  display: none;
+}
+
+@media (max-width: 720px) {
+  .contacts-add-modal__split {
+    grid-template-columns: 1fr;
+  }
+
+  .contacts-add-modal__preview {
+    position: static;
+  }
+
+  .contacts-add-modal__field-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,211 @@
+.vac-imp-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1250;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.vac-imp-modal__dialog {
+  width: 100%;
+  max-width: 440px;
+  max-height: min(90vh, 640px);
+  display: flex;
+  flex-direction: column;
+  background: var(--app-surface, #fff);
+  border-radius: 14px;
+  border: 1px solid var(--app-border, #e2e8f0);
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+  overflow: hidden;
+}
+
+.vac-imp-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1rem 0.75rem;
+  border-bottom: 1px solid var(--app-border, #e2e8f0);
+  flex-shrink: 0;
+}
+
+.vac-imp-modal__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--app-fg, #0f172a);
+}
+
+.vac-imp-modal__x {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: var(--app-muted-bg, #f1f5f9);
+  color: var(--app-fg, #334155);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.vac-imp-modal__x:hover:not(:disabled) {
+  background: #e2e8f0;
+}
+
+.vac-imp-modal__x:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.vac-imp-modal__body {
+  padding: 0.85rem 1rem 1.1rem;
+  overflow-y: auto;
+}
+
+.vac-imp-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.35rem;
+}
+
+.vac-imp-modal__btn-secondary {
+  padding: 0.45rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: var(--app-fg, #334155);
+  cursor: pointer;
+}
+
+.vac-imp-modal__btn-secondary:hover:not(:disabled) {
+  background: var(--app-muted-bg, #f8fafc);
+}
+
+.vac-imp-modal__btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+
+.vac-imp__warn {
+  margin: 0 0 0.65rem;
+  padding: 0.55rem 0.65rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--app-fg, #78350f);
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+}
+
+.vac-imp__hint {
+  margin: 0 0 0.85rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-imp__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.vac-imp__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.vac-imp__lbl {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--app-fg, #334155);
+}
+
+.vac-imp__inp {
+  padding: 0.4rem 0.55rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+}
+
+.vac-imp__file {
+  font-size: 0.8125rem;
+}
+
+.vac-imp__err {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+.vac-imp__ok {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #15803d;
+}
+
+.vac-imp__btn {
+  padding: 0.45rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--app-accent, #2563eb);
+  color: #fff;
+}
+
+.vac-imp__btn:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.vac-imp__btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+
+body[data-theme='dark'] .vac-imp-modal__x {
+  background: var(--app-surface-soft);
+  color: var(--app-muted);
+}
+body[data-theme='dark'] .vac-imp-modal__x:hover:not(:disabled) {
+  background: var(--app-border);
+  color: var(--app-text);
+}
+
+body[data-theme='dark'] .vac-imp-modal__btn-secondary {
+  background: var(--app-surface-soft);
+  border-color: var(--app-border);
+  color: var(--app-text);
+}
+body[data-theme='dark'] .vac-imp-modal__btn-secondary:hover:not(:disabled) {
+  background: var(--app-border);
+}
+
+body[data-theme='dark'] .vac-imp__warn {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+}
+
+body[data-theme='dark'] .vac-imp__inp {
+  background: var(--field-bg);
+  border-color: var(--field-border);
+  color: var(--app-text);
+}

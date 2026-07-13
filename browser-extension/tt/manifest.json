@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Kosta Legal — Time Tracking",
+  "version": "0.1.0",
+  "description": "Таймер учёта времени Kosta Legal: старт, пауза и стоп с любой вкладки.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Kosta Legal TT"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["storage", "alarms"],
+  "host_permissions": [
+    "http://localhost:5173/*",
+    "http://127.0.0.1:5173/*",
+    "https://*.kostalegal.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost:5173/*",
+        "http://127.0.0.1:5173/*",
+        "https://*.kostalegal.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

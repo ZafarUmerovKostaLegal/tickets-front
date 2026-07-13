@@ -1,0 +1,379 @@
+.vacation-schedule-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  max-width: none;
+  display: flex;
+  background: var(--app-bg, #f1f5f9);
+  box-sizing: border-box;
+}
+
+.vacation-schedule-page__sidebar-wrap {
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .vacation-schedule-page__sidebar-wrap {
+    width: 0;
+    min-width: 0;
+    overflow: visible;
+    position: absolute;
+    pointer-events: none;
+  }
+}
+
+.vacation-schedule-page__main {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  max-height: 100vh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Full-bleed: override shared app-page-layout gutters */
+.vacation-schedule-page__header {
+  padding-inline: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.vacation-schedule-page__header-start {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.vacation-schedule-page__header-start .vacation-schedule-page__title {
+  min-width: 0;
+}
+
+.vacation-schedule-page__menu-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: var(--app-surface-soft);
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--app-text);
+  transition: background 0.15s;
+}
+
+.vacation-schedule-page__menu-btn:hover {
+  background: var(--app-border);
+}
+
+@media (min-width: 769px) {
+  .vacation-schedule-page__menu-btn {
+    display: none;
+  }
+}
+
+.vacation-schedule-page__title {
+  margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--app-text);
+  letter-spacing: -0.025em;
+}
+
+.vac-page-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  flex-shrink: 0;
+  font-family: inherit;
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1;
+  color: var(--app-accent, #4f46e5);
+  background: var(--app-surface, #fff);
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.vac-page-add-btn:hover {
+  border-color: var(--app-accent, #4f46e5);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface, #fff));
+}
+
+.vac-page-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.vac-page-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 38px;
+  padding: 0 1rem;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--app-text, #334155);
+  background: var(--app-surface, #fff);
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.vac-page-menu__trigger:hover,
+.vac-page-menu__trigger--open {
+  border-color: var(--app-accent, #4f46e5);
+  color: var(--app-accent, #4f46e5);
+  background: var(--app-accent-focus, rgba(79, 70, 229, 0.08));
+}
+
+.vac-page-menu__chev {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.vac-page-menu__trigger--open .vac-page-menu__chev {
+  transform: rotate(180deg);
+}
+
+.vac-page-menu__dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 120;
+  min-width: 240px;
+  padding: 4px;
+  background: var(--app-surface, #fff);
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+}
+
+.vac-page-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--app-text, #334155);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.vac-page-menu__item svg {
+  flex-shrink: 0;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-page-menu__item:hover {
+  background: var(--app-bg, #f8fafc);
+  color: var(--app-accent, #4f46e5);
+}
+
+.vac-page-menu__item:hover svg {
+  color: var(--app-accent, #4f46e5);
+}
+
+.vac-page-menu__item--accent {
+  font-weight: 600;
+}
+
+.vac-page-menu__item--accent svg {
+  color: var(--app-accent, #4f46e5);
+}
+
+.vac-page-menu__sep {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--app-border, #e2e8f0);
+}
+
+.vac-page-menu__item--check {
+  gap: 0.5rem;
+}
+
+.vac-page-menu__check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--app-accent, #4f46e5);
+}
+
+.vac-page-menu__item--checked {
+  font-weight: 600;
+}
+
+.vac-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  flex-wrap: wrap;
+  padding: 0.35rem 0.75rem 0;
+  border-bottom: 1px solid var(--app-border, #e2e8f0);
+  background: var(--app-surface, #fff);
+}
+
+.vac-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 0.95rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--app-muted, #64748b);
+  background: var(--app-surface-soft, #f1f5f9);
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, box-shadow 0.12s, border-color 0.12s;
+  position: relative;
+  top: 1px;
+}
+
+.vac-tabs__tab:hover {
+  color: var(--app-text, #0f172a);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface-soft, #f1f5f9));
+}
+
+.vac-tabs__tab--on {
+  color: #fff;
+  font-weight: 700;
+  background: var(--app-accent, #4f46e5);
+  border-color: var(--app-accent, #4f46e5);
+}
+
+.vac-tabs__tab--on::after {
+  display: none;
+}
+
+.vacation-schedule-page__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+.vacation-schedule-page__content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.vacation-schedule-page__content::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--app-text, #0f172a) 28%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.vacation-schedule-page__content::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--app-text, #0f172a) 42%, transparent);
+  background-clip: padding-box;
+}
+
+.vacation-schedule-page__inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+
+.vacation-schedule-page__inner .vac-lr-panel {
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.vacation-schedule-page__inner .vac-att-stats {
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .vacation-schedule-page__main {
+    max-height: none;
+    min-height: 100dvh;
+  }
+
+  .vacation-schedule-page__header {
+    height: auto;
+    min-height: 64px;
+    padding: 0.625rem 0.875rem;
+  }
+
+  .vacation-schedule-page__title {
+    font-size: 1.25rem;
+  }
+}
+
+body[data-theme='dark'] .vac-tabs {
+  background: var(--app-surface, #0f172a);
+  border-bottom-color: var(--app-border, #334155);
+}
+
+body[data-theme='dark'] .vac-tabs__tab {
+  background: var(--app-surface-soft, #1e293b);
+  border-color: var(--app-border, #334155);
+  color: var(--app-muted, #94a3b8);
+}
+
+body[data-theme='dark'] .vac-tabs__tab:hover {
+  color: var(--app-text, #e2e8f0);
+}
+
+body[data-theme='dark'] .vac-tabs__tab--on {
+  color: #fff;
+  background: var(--app-accent, #4f46e5);
+  border-color: var(--app-accent, #4f46e5);
+}
+
+body[data-theme='dark'] .vac-cont__hint-mini b {
+  color: var(--app-text, #e2e8f0);
+}
+
+body[data-theme='dark'] .vac-cont__legend-cap {
+  border-right-color: var(--app-border, #334155);
+}

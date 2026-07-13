@@ -1,0 +1,488 @@
+
+.ndrive-exp {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  border: none;
+  border-radius: 0;
+  background: var(--app-surface, #fff);
+  padding: 0;
+  margin: 0;
+}
+
+.ndrive-exp__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.ndrive-exp__empty {
+  flex: 1;
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--app-muted, #6b6b6b);
+  background: #fafafa;
+  border-top: 1px solid #e8e8e8;
+}
+
+.ndrive-exp__toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--app-border, #d1d5db);
+  background: var(--app-surface, #fff);
+  flex-shrink: 0;
+}
+
+.ndrive-exp__toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.ndrive-exp__err {
+  margin: 0.5rem 0.75rem 0;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.75rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+
+.ndrive-useracc {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--app-surface-soft, #f3f4f6) 40%, var(--app-surface, #fff)) 0,
+    var(--app-surface, #fff) 120px
+  );
+}
+
+.ndrive-useracc__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid var(--app-border, #e5e7eb);
+  background: var(--app-surface, #fff);
+  flex-shrink: 0;
+}
+
+.ndrive-useracc__toolbar--top {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.65rem;
+}
+
+.ndrive-useracc__lookup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ndrive-useracc__lookup-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-muted, #6b7280);
+}
+
+.ndrive-useracc__lookup-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.ndrive-useracc__lookup-input {
+  flex: 1;
+  min-width: min(100%, 220px);
+  box-sizing: border-box;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.875rem;
+  border-radius: 8px;
+  border: 1px solid var(--app-border, #d1d5db);
+  background: var(--app-bg, #fff);
+  color: var(--app-text);
+}
+
+.ndrive-useracc__lookup-input:focus {
+  outline: none;
+  border-color: var(--app-accent, #6366f1);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent, #6366f1) 22%, transparent);
+}
+
+.ndrive-useracc__lookup-input:disabled {
+  opacity: 0.65;
+}
+
+.ndrive-useracc__lookup-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--app-muted, #6b7280);
+}
+
+.ndrive-useracc__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-accent, #6366f1) 7%, var(--app-surface-soft, #f3f4f6));
+  border: 1px solid color-mix(in srgb, var(--app-accent, #6366f1) 18%, var(--app-border));
+}
+
+.ndrive-useracc__progress-bar {
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--app-accent, #6366f1),
+    color-mix(in srgb, var(--app-accent, #6366f1) 40%, #fff)
+  );
+  background-size: 200% 100%;
+  animation: ndrive-useracc-progress-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes ndrive-useracc-progress-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.ndrive-useracc__progress-text {
+  font-size: 0.8125rem;
+  color: var(--app-text);
+}
+
+.ndrive-useracc__stat {
+  font-size: 0.8125rem;
+  color: var(--app-muted, #6b7280);
+}
+
+.ndrive-useracc__aside-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 0;
+}
+
+.ndrive-useracc__aside-title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-muted, #6b7280);
+}
+
+.ndrive-useracc__aside-note {
+  margin: 0;
+  padding: 0 0.75rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--app-muted, #6b7280);
+  line-height: 1.4;
+}
+
+.ndrive-useracc__result-heading {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--app-muted, #6b7280);
+}
+
+.ndrive-useracc__result-name {
+  color: var(--app-text);
+  font-weight: 700;
+}
+
+.ndrive-useracc__split {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.ndrive-useracc__aside {
+  width: min(320px, 38vw);
+  min-width: 220px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--app-border, #e5e7eb);
+  background: var(--app-surface, #fff);
+}
+
+.ndrive-useracc__filter-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.65rem 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--app-border, #e5e7eb);
+}
+
+.ndrive-useracc__filter-text {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-muted, #6b7280);
+}
+
+.ndrive-useracc__filter-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.8125rem;
+  border-radius: 8px;
+  border: 1px solid var(--app-border, #d1d5db);
+  background: var(--app-bg, #fff);
+  color: var(--app-text);
+}
+
+.ndrive-useracc__filter-input:focus {
+  outline: none;
+  border-color: var(--app-accent, #6366f1);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent, #6366f1) 22%, transparent);
+}
+
+.ndrive-useracc__user-list {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.ndrive-useracc__user-btn {
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  margin-bottom: 0.25rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  color: var(--app-text);
+  transition:
+    background 0.12s,
+    border-color 0.12s;
+}
+
+.ndrive-useracc__user-btn:hover {
+  background: var(--app-surface-soft, #f3f4f6);
+}
+
+.ndrive-useracc__user-btn--active {
+  background: color-mix(in srgb, var(--app-accent, #6366f1) 10%, var(--app-surface, #fff));
+  border-color: color-mix(in srgb, var(--app-accent, #6366f1) 35%, var(--app-border));
+}
+
+.ndrive-useracc__user-name {
+  display: block;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.ndrive-useracc__user-login {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--app-muted, #6b7280);
+}
+
+.ndrive-useracc__empty-aside {
+  margin: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--app-muted, #6b7280);
+}
+
+.ndrive-useracc__main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.85rem 1rem 1.25rem;
+  background: var(--app-surface, #fff);
+}
+
+.ndrive-useracc__placeholder {
+  min-height: 12rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1.5rem;
+  font-size: 0.875rem;
+  color: var(--app-muted, #6b7280);
+  border: 1px dashed var(--app-border, #d1d5db);
+  border-radius: 12px;
+  background: var(--app-surface-soft, #f9fafb);
+}
+
+.ndrive-useracc__tree-wrap {
+  border: 1px solid var(--app-border, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem 1.1rem 1.1rem;
+  background: var(--app-surface, #fff);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, #000 4%, transparent),
+    0 6px 20px color-mix(in srgb, #000 4%, transparent);
+}
+
+.ndrive-useracc__tree-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.ndrive-useracc__root-note {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--app-muted, #6b7280);
+  line-height: 1.45;
+}
+
+.ndrive-useracc__root-code {
+  font-size: 0.75rem;
+  word-break: break-all;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  background: var(--app-surface-soft, #f3f4f6);
+}
+
+.ndrive-useracc__only-root {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--app-muted, #6b7280);
+  font-style: italic;
+}
+
+.ndrive-useracc__tree-root,
+.ndrive-useracc__tree-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ndrive-useracc__tree-root {
+  margin-top: 0.25rem;
+}
+
+.ndrive-useracc__tree-li {
+  margin: 0;
+}
+
+.ndrive-useracc__tree-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 0.35rem 0.25rem;
+  border-radius: 6px;
+  transition: background 0.1s;
+}
+
+.ndrive-useracc__tree-row:hover {
+  background: color-mix(in srgb, var(--app-accent, #6366f1) 6%, transparent);
+}
+
+.ndrive-useracc__tree-toggle {
+  flex-shrink: 0;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: var(--app-surface-soft, #f3f4f6);
+  color: var(--app-muted);
+  font-size: 0.65rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ndrive-useracc__tree-toggle:hover {
+  background: color-mix(in srgb, var(--app-accent, #6366f1) 12%, var(--app-surface-soft, #f3f4f6));
+}
+
+.ndrive-useracc__tree-toggle-spacer {
+  width: 1.5rem;
+  flex-shrink: 0;
+}
+
+.ndrive-useracc__tree-folder {
+  flex-shrink: 0;
+  width: 18px;
+  height: 14px;
+  margin-top: 0.2rem;
+  border-radius: 2px 2px 3px 3px;
+  background: color-mix(in srgb, var(--app-accent, #6366f1) 20%, var(--app-surface, #fff));
+  border: 1px solid color-mix(in srgb, var(--app-accent, #6366f1) 40%, var(--app-border));
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--app-accent, #6366f1) 10%, transparent);
+}
+
+.ndrive-useracc__tree-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.ndrive-useracc__tree-seg {
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--app-text);
+  line-height: 1.3;
+}
+
+.ndrive-useracc__tree-unc {
+  font-size: 0.6875rem;
+  color: var(--app-muted, #6b7280);
+  word-break: break-all;
+  line-height: 1.35;
+}
+
+@media (max-width: 720px) {
+  .ndrive-useracc__split {
+    flex-direction: column;
+  }
+
+  .ndrive-useracc__aside {
+    width: 100%;
+    min-width: 0;
+    max-height: min(42vh, 280px);
+    border-right: none;
+    border-bottom: 1px solid var(--app-border, #e5e7eb);
+  }
+}

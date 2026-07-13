@@ -1,0 +1,2 @@
+
+export const TIME_TRACKING_LIST_PAGE_SIZE = 24;

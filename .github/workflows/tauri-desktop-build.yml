@@ -1,0 +1,87 @@
+name: Tauri desktop build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tauri-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: ''
+            target_label: windows-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            target_label: macos-aarch64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            target_label: macos-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Tauri
+        shell: bash
+        env:
+          TAURI_TARGET: ${{ matrix.target }}
+        run: |
+          if [ -n "$TAURI_TARGET" ]; then
+            npx tauri build --target "$TAURI_TARGET"
+          else
+            npx tauri build
+          fi
+
+      - name: Upload Windows bundle
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-windows
+          path: |
+            src-tauri/target/release/bundle/msi/**
+            src-tauri/target/release/bundle/nsis/**
+          if-no-files-found: warn
+
+      - name: Upload macOS bundle
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundle-${{ matrix.target_label }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/**
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/**
+          if-no-files-found: warn

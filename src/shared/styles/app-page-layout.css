@@ -1,0 +1,285 @@
+
+:root {
+  --app-page-padding-x: 2rem;
+  --app-page-padding-y: 1.5rem;
+  --app-page-header-height: 64px;
+  --app-page-header-gap: 0.75rem;
+  --app-page-header-inner-gap: 1rem;
+  --app-page-content-gap: 1.5rem;
+  --app-page-content-padding-bottom: 2rem;
+  --app-page-title-size: 1.375rem;
+  --app-page-subtitle-size: 0.8125rem;
+}
+
+@media (max-width: 1200px) {
+  :root {
+    --app-page-padding-x: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --app-page-padding-x: 1rem;
+    --app-page-padding-y: 1rem;
+  }
+}
+
+
+.help-page__header,
+.att__header,
+.expenses-page__header,
+.rules-page__header,
+.inv__header,
+.ap__header,
+.ndrive__header,
+.vacation-schedule-page__header,
+.csched-page__header,
+.corr__header,
+.acct-page__header,
+.contacts-page__header,
+.td-page__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--app-page-header-gap);
+  padding: 0 var(--app-page-padding-x);
+  height: var(--app-page-header-height);
+  min-height: var(--app-page-header-height);
+  box-sizing: border-box;
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.help-page__header-inner,
+.att__header-inner,
+.expenses-page__header-inner,
+.rules-page__header-inner,
+.inv__header-inner,
+.ap__header-inner,
+.ndrive__header-inner,
+.corr__header-inner,
+.acct-page__header-inner,
+.contacts-page__header-inner,
+.td-page__header-inner {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-page-header-inner-gap);
+  min-width: 0;
+}
+
+.help-page__header-start,
+.att__header-start,
+.expenses-page__header-start,
+.rules-page__header-start,
+.inv__header-start,
+.ap__header-start,
+.ndrive__header-start,
+.vacation-schedule-page__header-start,
+.csched-page__header-start,
+.corr__header-start,
+.acct-page__header-start,
+.contacts-page__header-start,
+.td-page__header-start {
+  display: flex;
+  align-items: center;
+  gap: var(--app-page-header-gap);
+  min-width: 0;
+}
+
+.help-page__header-start,
+.att__header-start,
+.rules-page__header-start,
+.ap__header-start,
+.ndrive__header-start,
+.expenses-page__header-start,
+.vacation-schedule-page__header-start,
+.csched-page__header-start,
+.corr__header-start,
+.acct-page__header-start,
+.contacts-page__header-start,
+.td-page__header-start {
+  flex: 1;
+}
+
+.corr__header-start > div,
+.acct-page__header-start > div,
+.contacts-page__header-start > div,
+.td-page__header-start > div {
+  min-width: 0;
+}
+
+.help-page__title,
+.att__title,
+.expenses-page__title,
+.rules-page__title,
+.inv__title,
+.ap__title,
+.ndrive__title,
+.vacation-schedule-page__title,
+.csched-page__title,
+.corr__title,
+.acct-page__title,
+.contacts-page__title,
+.td-page__title {
+  margin: 0;
+  font-size: var(--app-page-title-size);
+  font-weight: 700;
+  color: var(--app-text);
+  letter-spacing: -0.025em;
+}
+
+.help-page__subtitle,
+.att__subtitle,
+.rules-page__subtitle,
+.inv__subtitle,
+.ap__subtitle,
+.ndrive__subtitle,
+.corr__subtitle,
+.acct-page__subtitle,
+.contacts-page__subtitle {
+  margin: 0.125rem 0 0;
+  font-size: var(--app-page-subtitle-size);
+  color: var(--app-muted);
+  line-height: 1.35;
+}
+
+
+.help-page__content,
+.att__content,
+.ap__content,
+.inv__content,
+.ndrive__content,
+.rules-page__content,
+.corr__content,
+.acct-page__content,
+.contacts-page__content,
+.td-page__content {
+  box-sizing: border-box;
+  padding: var(--app-page-padding-y) var(--app-page-padding-x) var(--app-page-content-padding-bottom);
+}
+
+.att__content,
+.ap__content,
+.inv__content,
+.ndrive__content,
+.corr__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-page-content-gap);
+}
+
+.acct-page__content,
+.contacts-page__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-page-content-gap);
+}
+
+@media (max-width: 768px) {
+  .help-page__header,
+  .att__header,
+  .expenses-page__header,
+  .rules-page__header,
+  .inv__header,
+  .ap__header,
+  .ndrive__header,
+  .vacation-schedule-page__header,
+  .csched-page__header,
+  .corr__header,
+  .acct-page__header,
+  .contacts-page__header,
+  .td-page__header {
+    padding-top: var(--mob-safe-top);
+    min-height: calc(var(--app-page-header-height) + var(--mob-safe-top));
+    height: auto;
+    box-sizing: border-box;
+  }
+
+  .acct-page__main {
+    max-height: none;
+    min-height: 100dvh;
+  }
+
+  .acct-page__header {
+    height: auto;
+    min-height: calc(var(--app-page-header-height) + var(--mob-safe-top));
+  }
+
+  .acct-page__title {
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+
+  .acct-page__content {
+    padding-bottom: calc(var(--app-page-content-padding-bottom) + var(--mob-safe-bottom));
+  }
+
+  .contacts-page__main {
+    max-height: none;
+    min-height: 100dvh;
+  }
+
+  .contacts-page__header {
+    height: auto;
+    min-height: calc(var(--app-page-header-height) + var(--mob-safe-top));
+  }
+
+  .contacts-page__title {
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+
+  .contacts-page__content {
+    padding-bottom: calc(var(--app-page-content-padding-bottom) + var(--mob-safe-bottom));
+  }
+
+  .td-page__main {
+    max-height: none;
+    min-height: 100dvh;
+  }
+
+  .td-page__header {
+    height: auto;
+    min-height: calc(var(--app-page-header-height) + var(--mob-safe-top));
+  }
+
+  .td-page__title {
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+
+  .td-page__content {
+    padding-bottom: calc(var(--app-page-content-padding-bottom) + var(--mob-safe-bottom));
+  }
+
+  .corr__main {
+    max-height: none;
+    min-height: 100dvh;
+  }
+
+  .corr__header {
+    height: auto;
+    min-height: calc(var(--app-page-header-height) + var(--mob-safe-top));
+  }
+
+  .corr__title {
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+
+  .corr__content {
+    padding-bottom: calc(var(--app-page-content-padding-bottom) + var(--mob-safe-bottom));
+  }
+}
+
+.corr__aside {
+  padding: var(--app-page-padding-y) var(--app-page-padding-x) var(--app-page-content-padding-bottom);
+}
+
+@media (min-width: 1024px) {
+  .corr__aside {
+    padding: var(--app-page-padding-y) var(--app-page-padding-x) var(--app-page-content-padding-bottom);
+  }
+}

@@ -1,0 +1,668 @@
+.vac-vsg__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem 0.55rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding: 0.3rem 0.15rem 0.4rem;
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--app-border, #e2e8f0);
+  background: transparent;
+}
+
+.vac-vsg__bar-spacer {
+  flex: 1;
+  min-width: 0.35rem;
+}
+
+.vac-vsg__today-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.45rem;
+  min-width: 0;
+}
+
+.vac-vsg__today-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  padding: 0.18rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1.2;
+  border-radius: 999px;
+  border: 1px solid #ededed;
+  background: #fff;
+  color: var(--app-muted, #64748b);
+  white-space: nowrap;
+}
+
+.vac-vsg__today-chip strong {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--app-fg, #0f172a);
+}
+
+.vac-vsg__today-chip--purple {
+  border-color: #C084FC;
+  background: #F3E8FF;
+}
+
+.vac-vsg__today-chip--rose {
+  border-color: #F472B6;
+  background: #FCE7F3;
+}
+
+.vac-vsg__today-chip--sky {
+  border-color: #60A5FA;
+  background: #DBEAFE;
+}
+
+.vac-vsg__today-chip--green {
+  border-color: #4ADE80;
+  background: #DCFCE7;
+}
+
+.vac-vsg__today-muted {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-vsg__extras {
+  flex-shrink: 0;
+}
+
+.vac-vsg__extras-summary {
+  list-style: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--app-muted, #64748b);
+  user-select: none;
+}
+
+.vac-vsg__extras-summary::-webkit-details-marker {
+  display: none;
+}
+
+.vac-vsg__extras-summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.35rem;
+  transition: transform 0.15s ease;
+}
+
+.vac-vsg__extras[open] .vac-vsg__extras-summary::before {
+  transform: rotate(90deg);
+}
+
+.vac-vsg__extras[open] .vac-vsg__extras-summary {
+  color: var(--app-fg, #0f172a);
+  margin-bottom: 0.45rem;
+}
+
+.vac-vsg__extras-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.vac-vsg__table-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+.vac-vsg__payroll-expand {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #ededed;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #fafbfc 0%, #fff 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+}
+
+.vac-vsg__stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+@media (max-width: 1100px) {
+  .vac-vsg__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .vac-vsg__stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .vac-vsg__stats {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vac-vsg__extras .vac-vsg__stat-card {
+  padding: 0.45rem 0.65rem;
+  border-radius: 10px;
+}
+
+.vac-vsg__extras .vac-vsg__stat-icon {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+}
+
+.vac-vsg__extras .vac-vsg__stat-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.vac-vsg__extras .vac-vsg__stat-value {
+  font-size: 1.125rem;
+}
+
+.vac-vsg__stat-card {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 14px;
+  border: 1px solid #ededed;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.vac-vsg__stat-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vac-vsg__stat-icon--slate {
+  background: color-mix(in srgb, #64748b 12%, #fff);
+  color: #475569;
+}
+
+.vac-vsg__stat-icon--purple {
+  background: #EDE9FE;
+  color: #7C3AED;
+}
+
+.vac-vsg__stat-icon--rose {
+  background: #FBCFE8;
+  color: #BE185D;
+}
+
+.vac-vsg__stat-icon--sky {
+  background: #BFDBFE;
+  color: #1D4ED8;
+}
+
+.vac-vsg__stat-icon--green {
+  background: #BBF7D0;
+  color: #15803D;
+}
+
+.vac-vsg__stat-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.vac-vsg__stat-value {
+  font-size: 1.375rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--app-fg, #0f172a);
+}
+
+.vac-vsg__stat-sub {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--app-muted, #64748b);
+  line-height: 1.2;
+}
+
+.vac-vsg__year-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--app-muted, #64748b);
+  font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, monospace;
+}
+
+.vac-vsg__year-input {
+  width: 5.5rem;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: var(--app-fg, #0f172a);
+}
+
+.vac-vsg__year-apply {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  cursor: pointer;
+}
+
+.vac-vsg__year-apply:hover {
+  background: var(--app-muted-bg, #f1f5f9);
+}
+
+.vac-vsg__employee-search {
+  width: min(14rem, 100%);
+  padding: 0.35rem 0.55rem;
+  font-size: 0.8125rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: var(--app-fg, #0f172a);
+}
+
+.vac-vsg__employee-search-count {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--app-muted, #64748b);
+  white-space: nowrap;
+}
+
+.vac-vsg__attendance-status {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--app-muted, #64748b);
+  white-space: nowrap;
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+}
+
+.vac-vsg__search-empty {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-vsg__toolbar-spacer {
+  flex: 1;
+  min-width: 0.25rem;
+}
+
+.vac-vsg__edit-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.38rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1.5px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: var(--app-muted, #64748b);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.vac-vsg__edit-mode-btn svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.vac-vsg__edit-mode-btn:hover {
+  border-color: #f59e0b;
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.vac-vsg__edit-mode-btn--on {
+  background: #fffbeb;
+  border-color: #f59e0b;
+  color: #92400e;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+}
+
+.vac-vsg__edit-mode-btn--on:hover {
+  background: #fef3c7;
+  border-color: #d97706;
+}
+
+.vac-vsg__manual-entry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.38rem 0.8rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: var(--app-accent, #7c3aed);
+  color: #fff;
+  cursor: pointer;
+  transition: filter 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.vac-vsg__manual-entry-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.vac-vsg__manual-entry-btn:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+.vac-vsg__add-emp-btn {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: var(--app-fg, #0f172a);
+  cursor: pointer;
+}
+
+.vac-vsg__add-emp-btn:hover {
+  background: var(--app-muted-bg, #f1f5f9);
+}
+
+.vac-vsg__mutation-err {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #b91c1c;
+  flex-shrink: 0;
+}
+
+.vac-vsg__err-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.vac-vsg__retry {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: var(--app-accent, #2563eb);
+  color: #fff;
+  cursor: pointer;
+}
+
+.vac-vsg__retry:hover {
+  filter: brightness(1.05);
+}
+
+.vac-vsg__import-btn {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--app-accent, #7c3aed);
+  color: #fff;
+}
+
+.vac-vsg__import-btn:hover {
+  filter: brightness(1.06);
+}
+
+@media (max-width: 640px) {
+  .vac-vsg__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .vac-vsg__toolbar-spacer {
+    display: none;
+  }
+
+  .vac-vsg__add-emp-btn,
+  .vac-vsg__import-btn {
+    width: 100%;
+  }
+}
+
+.vac-vsg__payroll-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid color-mix(in srgb, #7c3aed 22%, var(--app-border, #e2e8f0));
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #7c3aed 6%, var(--app-surface-soft, #f8fafc)),
+    var(--app-surface, #fff)
+  );
+  flex-shrink: 0;
+}
+
+.vac-vsg__payroll-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--app-fg, #0f172a);
+  cursor: pointer;
+  user-select: none;
+}
+
+.vac-vsg__payroll-toggle input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--app-accent, #7c3aed);
+}
+
+.vac-vsg__payroll-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem 1rem;
+}
+
+.vac-vsg__payroll-fields--modal {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.vac-vsg__payroll-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-vsg__payroll-input {
+  min-width: 7rem;
+  padding: 0.3rem 0.45rem;
+  font-size: 0.8125rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: var(--app-fg, #0f172a);
+}
+
+.vac-vsg__payroll-input--narrow {
+  min-width: 4.5rem;
+  max-width: 6rem;
+}
+
+.vac-vsg__payroll-note {
+  margin: 0;
+  font-size: 0.625rem;
+  line-height: 1.45;
+  color: var(--app-muted, #64748b);
+}
+
+
+body[data-theme='dark'] .vac-vsg__year-input,
+body[data-theme='dark'] .vac-vsg__employee-search,
+body[data-theme='dark'] .vac-vsg__year-apply,
+body[data-theme='dark'] .vac-vsg__add-emp-btn {
+  background: var(--app-surface-soft);
+  border-color: var(--app-border);
+  color: var(--app-text);
+}
+body[data-theme='dark'] .vac-vsg__year-apply:hover,
+body[data-theme='dark'] .vac-vsg__add-emp-btn:hover {
+  background: var(--app-border);
+}
+
+body[data-theme='dark'] .vac-vsg__edit-mode-btn {
+  background: var(--app-surface-soft);
+  border-color: var(--app-border);
+  color: var(--app-muted);
+}
+body[data-theme='dark'] .vac-vsg__edit-mode-btn:hover {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: #d97706;
+  color: #fcd34d;
+}
+body[data-theme='dark'] .vac-vsg__edit-mode-btn--on {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: #d97706;
+  color: #fcd34d;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+}
+body[data-theme='dark'] .vac-vsg__edit-mode-btn--on:hover {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: #f59e0b;
+}
+
+body[data-theme='dark'] .vac-vsg {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 4px 24px -4px rgba(0, 0, 0, 0.3);
+  border-color: var(--app-border);
+}
+
+body[data-theme='dark'] .vac-vsg__toolbar {
+  border-top-color: var(--app-border);
+}
+
+body[data-theme='dark'] .vac-vsg__stat-card {
+  background: var(--app-surface-soft);
+  border-color: var(--app-border);
+  box-shadow: none;
+}
+
+body[data-theme='dark'] .vac-vsg__stat-value {
+  color: var(--app-text);
+}
+
+body[data-theme='dark'] .vac-vsg__stat-sub {
+  color: var(--app-muted);
+}
+
+body[data-theme='dark'] .vac-vsg__payroll-expand {
+  background: var(--app-surface-soft);
+  border-color: var(--app-border);
+  box-shadow: none;
+}
+
+body[data-theme='dark'] .vac-vsg__year-input:focus,
+body[data-theme='dark'] .vac-vsg__year-input:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 1px;
+}
+
+body[data-theme='dark'] .vac-vsg__mutation-err {
+  color: #fca5a5;
+}
+
+body[data-theme='dark'] .vac-vsg__bar {
+  background: transparent;
+  border-bottom-color: var(--app-border, #334155);
+}
+
+body[data-theme='dark'] .vac-vsg__year-label {
+  color: var(--app-muted, #94a3b8);
+}
+
+body[data-theme='dark'] .vac-vsg__payroll-panel {
+  border-color: var(--app-border);
+  background: linear-gradient(180deg, color-mix(in srgb, #a78bfa 10%, var(--app-surface-soft)), var(--app-surface));
+}
+
+body[data-theme='dark'] .vac-vsg__payroll-toggle {
+  color: var(--app-text);
+}
+
+body[data-theme='dark'] .vac-vsg__payroll-input {
+  background: var(--app-surface-soft);
+  border-color: var(--app-border);
+  color: var(--app-text);
+}
+
+body[data-theme='dark'] .vac-vsg__payroll-note {
+  color: var(--app-muted);
+}
+
+.vac-vsg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+  padding: 0.4rem 0.5rem 0.35rem;
+  background: var(--app-surface, #ffffff);
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.vac-vsg__error {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #b91c1c;
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .vac-vsg {
+    padding: 0.35rem 0.4rem 0.45rem;
+  }
+}

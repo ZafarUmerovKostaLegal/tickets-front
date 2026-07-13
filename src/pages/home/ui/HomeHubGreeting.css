@@ -1,0 +1,69 @@
+.home-hub-greeting {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0 0 1.75rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 1px solid var(--hub-divider, #e8eaee);
+}
+
+.home-hub-greeting__text {
+    min-width: 0;
+}
+
+.home-hub-greeting__title {
+    margin: 0;
+    font-family: var(--app-font-family);
+    font-size: clamp(1.65rem, 3.5vw, 2.35rem);
+    font-weight: 400;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    color: var(--hub-heading, #1a1f2e);
+}
+
+.home-hub-greeting__subtitle {
+    margin: 0.45rem 0 0;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: var(--hub-muted, #6b7280);
+    max-width: 36rem;
+}
+
+.home-hub-greeting__date {
+    flex-shrink: 0;
+    margin-top: 0.35rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--hub-muted, #6b7280);
+    white-space: nowrap;
+}
+
+body[data-theme='dark'] .home-hub-greeting {
+    --hub-divider: var(--app-border);
+    --hub-heading: var(--app-text);
+    --hub-muted: var(--app-muted);
+}
+
+@media (max-width: 640px) {
+    .home-hub-greeting {
+        flex-direction: column;
+        gap: 0.35rem;
+        margin-bottom: 0.9rem;
+        padding-bottom: 0.85rem;
+    }
+
+    .home-hub-greeting__title {
+        font-size: 1.5rem;
+    }
+
+    .home-hub-greeting__subtitle {
+        font-size: 0.8125rem;
+        margin-top: 0.3rem;
+    }
+
+    .home-hub-greeting__date {
+        margin-top: 0;
+        font-size: 0.8125rem;
+    }
+}
