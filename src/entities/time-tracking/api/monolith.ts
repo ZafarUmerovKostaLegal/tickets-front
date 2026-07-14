@@ -3659,6 +3659,8 @@ export type PartnerReportConfirmationRequest = {
     dateTo: string;
     title: string;
     status: string;
+    /** Приоритет проверки: red | yellow | green (задаётся отправителем/менеджером). */
+    reviewPriority: 'red' | 'yellow' | 'green';
     submittedByAuthUserId: number;
     requiredPartnerAuthUserIds: number[];
     pendingPartnerAuthUserIds: number[];
@@ -3675,6 +3677,15 @@ export type PartnerReportConfirmationRequest = {
     createdAt: string;
     updatedAt: string | null;
 };
+
+export type PartnerReviewPriority = PartnerReportConfirmationRequest['reviewPriority'];
+
+function normalizePartnerReviewPriority(raw: unknown): PartnerReviewPriority {
+    const v = String(raw ?? '').trim().toLowerCase();
+    if (v === 'red' || v === 'yellow' || v === 'green')
+        return v;
+    return 'yellow';
+}
 function readPartnerConfirmNum(v: unknown): number | null {
     const n = Number(v);
     return Number.isFinite(n) ? n : null;
@@ -3795,6 +3806,7 @@ export function parsePartnerReportConfirmationRequest(raw: unknown): PartnerRepo
         dateTo,
         title: String(o.title ?? ''),
         status: String(o.status ?? ''),
+        reviewPriority: normalizePartnerReviewPriority(o.reviewPriority ?? o.review_priority),
         submittedByAuthUserId,
         requiredPartnerAuthUserIds,
         pendingPartnerAuthUserIds,
@@ -3823,8 +3835,44 @@ function parsePartnerReportConfirmationRequestList(raw: unknown): PartnerReportC
 
 export type PartnerPendingListScope = 'mine' | 'all';
 
-const partnerConfirmationsPendingInflight = new Map<PartnerPendingListScope, Promise<PartnerReportConfirmationRequest[]>>();
+export type PartnerPendingListPage = {
+    items: PartnerReportConfirmationRequest[];
+    page: number;
+    pageSize: number;
+    total: number;
+};
+
+export function parsePartnerPendingListPage(raw: unknown): PartnerPendingListPage {
+    if (Array.isArray(raw)) {
+        const items = parsePartnerReportConfirmationRequestList(raw);
+        return { items, page: 1, pageSize: Math.max(items.length, 1), total: items.length };
+    }
+    if (!raw || typeof raw !== 'object')
+        return { items: [], page: 1, pageSize: 50, total: 0 };
+    const o = raw as Record<string, unknown>;
+    const items = parsePartnerReportConfirmationRequestList(o.items ?? o.results ?? []);
+    const page = Math.max(1, Math.trunc(Number(o.page) || 1));
+    const pageSize = Math.max(1, Math.min(200, Math.trunc(Number(o.pageSize ?? o.page_size) || 50)));
+    const totalRaw = Number(o.total);
+    const total = Number.isFinite(totalRaw) ? Math.max(0, Math.trunc(totalRaw)) : items.length;
+    return { items, page, pageSize, total };
+}
+
+const partnerConfirmationsPendingInflight = new Map<string, Promise<PartnerPendingListPage>>();
 let partnerConfirmationsConfirmedInflight: Promise<PartnerReportConfirmationRequest[]> | null = null;
+
+function pendingListCacheKey(options?: {
+    scope?: PartnerPendingListScope;
+    priority?: PartnerReviewPriority | null;
+    page?: number;
+    pageSize?: number;
+}): string {
+    const scope = options?.scope === 'all' ? 'all' : 'mine';
+    const priority = options?.priority ?? '';
+    const page = Math.max(1, Math.trunc(options?.page ?? 1));
+    const pageSize = Math.max(1, Math.min(200, Math.trunc(options?.pageSize ?? 50)));
+    return `${scope}|${priority}|${page}|${pageSize}`;
+}
 
 export function invalidatePartnerReportConfirmationsCache(): void {
     partnerConfirmationsPendingInflight.clear();
@@ -3834,21 +3882,67 @@ export function invalidatePartnerReportConfirmationsCache(): void {
 
 export async function listPartnerReportConfirmationsPending(options?: {
     scope?: PartnerPendingListScope;
-}): Promise<PartnerReportConfirmationRequest[]> {
+    priority?: PartnerReviewPriority | null;
+    page?: number;
+    pageSize?: number;
+}): Promise<PartnerPendingListPage> {
     const scope: PartnerPendingListScope = options?.scope === 'all' ? 'all' : 'mine';
-    if (!partnerConfirmationsPendingInflight.has(scope)) {
-        const qs = scope === 'all' ? '?scope=all' : '';
+    const page = Math.max(1, Math.trunc(options?.page ?? 1));
+    const pageSize = Math.max(1, Math.min(200, Math.trunc(options?.pageSize ?? 50)));
+    const priority = options?.priority ?? null;
+    const key = pendingListCacheKey({ scope, priority, page, pageSize });
+    if (!partnerConfirmationsPendingInflight.has(key)) {
+        const params = new URLSearchParams();
+        if (scope === 'all')
+            params.set('scope', 'all');
+        if (priority)
+            params.set('priority', priority);
+        params.set('page', String(page));
+        params.set('pageSize', String(pageSize));
+        const qs = params.toString();
         const inflight = (async () => {
-            const res = await apiFetch(`/api/v1/time-tracking/reports/partner-confirmations/pending${qs}`);
+            const res = await apiFetch(`/api/v1/time-tracking/reports/partner-confirmations/pending?${qs}`);
             await reportsThrowIfNotOk(res);
-            return parsePartnerReportConfirmationRequestList(await res.json());
+            return parsePartnerPendingListPage(await res.json());
         })().catch((err) => {
-            partnerConfirmationsPendingInflight.delete(scope);
+            partnerConfirmationsPendingInflight.delete(key);
             throw err;
         });
-        partnerConfirmationsPendingInflight.set(scope, inflight);
+        partnerConfirmationsPendingInflight.set(key, inflight);
     }
-    return partnerConfirmationsPendingInflight.get(scope)!;
+    return partnerConfirmationsPendingInflight.get(key)!;
+}
+
+/** Первая страница (до 200) — для поиска заявки по проекту/периоду вне панели «на проверке». */
+export async function listPartnerReportConfirmationsPendingItems(options?: {
+    scope?: PartnerPendingListScope;
+}): Promise<PartnerReportConfirmationRequest[]> {
+    const page = await listPartnerReportConfirmationsPending({
+        scope: options?.scope,
+        page: 1,
+        pageSize: 200,
+    });
+    return page.items;
+}
+
+export async function patchPartnerReportConfirmationPriority(
+    requestId: string,
+    reviewPriority: PartnerReviewPriority,
+): Promise<PartnerReportConfirmationRequest> {
+    const rid = String(requestId ?? '').trim();
+    if (!rid)
+        throw new Error('Не указан запрос подтверждения');
+    const res = await apiFetch(`/api/v1/time-tracking/reports/partner-confirmations/${encodeURIComponent(rid)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reviewPriority }),
+    });
+    await reportsThrowIfNotOk(res);
+    const parsed = parsePartnerReportConfirmationRequest(await res.json());
+    if (!parsed)
+        throw new TimeTrackingHttpError(500, 'Некорректный ответ сервера');
+    invalidatePartnerReportConfirmationsCache();
+    return parsed;
 }
 export type PartnerConfirmedListFilters = {
     dateFrom?: string;

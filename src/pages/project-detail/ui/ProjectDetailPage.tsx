@@ -9,7 +9,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, DatePicker, SearchableSelect } from '@shared/ui';
 import { periodToDates } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { canAccessTimeTracking, canManageTimeTrackingClients, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
-import { INVOICE_STATUS_LABELS, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPending, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, readTimeManagerProjectBillableRateAmount, notifyPartnerConfirmedReportsListInvalidate, exportReportV2, TIME_TRACKING_PROJECT_RECORDS_LANGUAGES, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, type ReportFiltersV2, type TimeManagerProjectRecordsLanguage, } from '@entities/time-tracking';
+import { INVOICE_STATUS_LABELS, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPendingItems, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, readTimeManagerProjectBillableRateAmount, notifyPartnerConfirmedReportsListInvalidate, exportReportV2, TIME_TRACKING_PROJECT_RECORDS_LANGUAGES, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, type ReportFiltersV2, type TimeManagerProjectRecordsLanguage, } from '@entities/time-tracking';
 import { writeReportPreviewTransfer, type ReportPreviewTransferV2 } from '@entities/time-tracking/model/reportPreviewTransfer';
 import { ClientProjectModal } from '@pages/time-tracking/ui/TimeTrackingClientProjectModal';
 import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
@@ -891,7 +891,7 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
         }
         setListsLoad('loading');
         void Promise.all([
-            listPartnerReportConfirmationsPending(),
+            listPartnerReportConfirmationsPendingItems(),
             listPartnerReportConfirmationsConfirmed(),
         ]).then(([p, c]) => {
             if (!cancelled) {
@@ -922,7 +922,7 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
     const fullyConfirmed = confirmedForProject?.status === 'fully_confirmed';
     const refreshConfirmationLists = async () => {
         const [p, c] = await Promise.all([
-            listPartnerReportConfirmationsPending(),
+            listPartnerReportConfirmationsPendingItems(),
             listPartnerReportConfirmationsConfirmed(),
         ]);
         setPendingReqs(p);

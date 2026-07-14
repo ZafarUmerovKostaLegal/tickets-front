@@ -30,11 +30,21 @@ function parsePartnerPendingBadgeRow(raw: unknown): PartnerPendingBadgeRow | nul
 }
 
 function parsePartnerPendingBadgeList(raw: unknown): PartnerPendingBadgeRow[] {
-    if (!Array.isArray(raw))
-        return [];
-    return raw
-        .map(parsePartnerPendingBadgeRow)
-        .filter((x): x is PartnerPendingBadgeRow => x != null);
+    if (Array.isArray(raw)) {
+        return raw
+            .map(parsePartnerPendingBadgeRow)
+            .filter((x): x is PartnerPendingBadgeRow => x != null);
+    }
+    if (raw && typeof raw === 'object') {
+        const o = raw as Record<string, unknown>;
+        const items = o.items ?? o.results;
+        if (Array.isArray(items)) {
+            return items
+                .map(parsePartnerPendingBadgeRow)
+                .filter((x): x is PartnerPendingBadgeRow => x != null);
+        }
+    }
+    return [];
 }
 
 
@@ -43,9 +53,14 @@ export async function listPartnerReportConfirmationsPendingForBadge(options?: {
 }): Promise<PartnerPendingBadgeRow[]> {
     const scope: PartnerPendingListScope = options?.scope === 'all' ? 'all' : 'mine';
     if (!pendingInflight.has(scope)) {
-        const qs = scope === 'all' ? '?scope=all' : '';
+        const params = new URLSearchParams();
+        if (scope === 'all')
+            params.set('scope', 'all');
+        params.set('page', '1');
+        params.set('pageSize', '200');
+        const qs = params.toString();
         const inflight = (async () => {
-            const res = await apiFetch(`/api/v1/time-tracking/reports/partner-confirmations/pending${qs}`);
+            const res = await apiFetch(`/api/v1/time-tracking/reports/partner-confirmations/pending?${qs}`);
             if (!res.ok)
                 throw new Error(`HTTP ${res.status}`);
             return parsePartnerPendingBadgeList(await res.json());

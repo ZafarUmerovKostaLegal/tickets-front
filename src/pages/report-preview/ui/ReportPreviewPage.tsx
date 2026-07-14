@@ -41,7 +41,7 @@ import {
     listPartnerUsersWithProjectAccessToProject,
     listUsersWithProjectAccessToProjectForPick,
     listTimeTrackingUsers,
-    listPartnerReportConfirmationsPending,
+    listPartnerReportConfirmationsPendingItems,
     listPartnerReportConfirmationsConfirmed,
     confirmPartnerReportConfirmation,
     submitPartnerReportConfirmationFromPreview,
@@ -391,7 +391,7 @@ function ReportPreviewManagerSubmitBar({ projectId, dateFrom, dateTo }: {
     const pid = projectId.trim();
     const reloadLists = useCallback(async () => {
         const [p, c] = await Promise.all([
-            listPartnerReportConfirmationsPending(),
+            listPartnerReportConfirmationsPendingItems(),
             listPartnerReportConfirmationsConfirmed(),
         ]);
         setPendingReqs(p);
@@ -524,7 +524,7 @@ function ReportPreviewPartnerSignFooter({ projectId, dateFrom, dateTo, userId, r
         }
         setListsLoad('loading');
         void Promise.all([
-            listPartnerReportConfirmationsPending(),
+            listPartnerReportConfirmationsPendingItems(),
             listPartnerReportConfirmationsConfirmed(),
         ]).then(([p, c]) => {
             if (!cancelled) {
@@ -576,7 +576,7 @@ function ReportPreviewPartnerSignFooter({ projectId, dateFrom, dateTo, userId, r
             rpSavePartnerConfirmSession(pid, df, dt, out);
             setSessionSnapshot(out);
             const [p, c] = await Promise.all([
-                listPartnerReportConfirmationsPending(),
+                listPartnerReportConfirmationsPendingItems(),
                 listPartnerReportConfirmationsConfirmed(),
             ]);
             setPendingReqs(p);
@@ -678,7 +678,7 @@ function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, sharedPa
         }
         setListsLoad('loading');
         void Promise.all([
-            listPartnerReportConfirmationsPending(),
+            listPartnerReportConfirmationsPendingItems(),
             listPartnerReportConfirmationsConfirmed(),
         ]).then(([p, c]) => {
             if (!cancelled) {
@@ -708,7 +708,7 @@ function ReportPreviewPartnerBar({ projectId, dateFrom, dateTo, userId, sharedPa
     const fullyConfirmed = confirmedForProject?.status === 'fully_confirmed';
     const refreshLists = async () => {
         const [p, c] = await Promise.all([
-            listPartnerReportConfirmationsPending(),
+            listPartnerReportConfirmationsPendingItems(),
             listPartnerReportConfirmationsConfirmed(),
         ]);
         setPendingReqs(p);

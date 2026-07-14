@@ -8,9 +8,11 @@ import {
     listPartnerConfirmationComments,
     listPartnerReportConfirmationsPending,
     notifyPartnerConfirmedReportsListInvalidate,
+    patchPartnerReportConfirmationPriority,
     type PartnerConfirmedReportComment,
     type PartnerPendingListScope,
     type PartnerReportConfirmationRequest,
+    type PartnerReviewPriority,
     type ReportsFilterUser,
     type TimeManagerClientProjectRow,
 } from '@entities/time-tracking';
@@ -26,6 +28,11 @@ import {
     type PartnerReportClientMeta,
 } from '@entities/time-tracking/lib/partnerReportDisplayLookups';
 import { PARTNER_CONFIRMED_REPORTS_INVALIDATE_EVENT } from '@entities/time-tracking/model/partnerConfirmedReports';
+import {
+    FOR_REVIEW_PRIORITY_ORDER,
+    forReviewPriority,
+    type ForReviewPriority,
+} from '@entities/time-tracking/lib/forReviewPriority';
 import { canViewAllForReviewReports } from '@entities/time-tracking/model/timeTrackingAccess';
 import { openForReviewReportPreview } from '@pages/time-tracking/lib/partnerReportPreviewNav';
 import {
@@ -44,6 +51,8 @@ import {
 } from './PartnerConfirmedCommentsDrawer';
 import { PartnerReportEmptyBadge, partnerReportIsEmpty } from './PartnerReportEmptyBadge';
 import { PartnerReportsListLoading } from './PartnerReportsListLoading';
+
+const FOR_REVIEW_PAGE_SIZE = 50;
 
 const IcoRefresh = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
     <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
@@ -172,6 +181,9 @@ function PartnerInitialsCell({ row, usersById, locale, signedTitle, pendingTitle
 }
 
 const FOR_REVIEW_LIST_SCOPE_KEY = 'tt-for-review-list-scope';
+const FOR_REVIEW_PRIORITY_FILTER_KEY = 'tt-for-review-priority-filter';
+
+type ForReviewPriorityFilter = 'all' | ForReviewPriority;
 
 function readForReviewListScope(): PartnerPendingListScope {
     try {
@@ -185,12 +197,32 @@ function readForReviewListScope(): PartnerPendingListScope {
     return 'mine';
 }
 
+function readForReviewPriorityFilter(): ForReviewPriorityFilter {
+    try {
+        const raw = sessionStorage.getItem(FOR_REVIEW_PRIORITY_FILTER_KEY);
+        if (raw === 'all' || raw === 'red' || raw === 'yellow' || raw === 'green')
+            return raw;
+    }
+    catch {
+
+    }
+    return 'all';
+}
+
 export function ForReviewReportsPanel() {
     const navigate = useNavigate();
     const { user } = useCurrentUser();
     const { showAlert, showConfirm } = useAppDialog();
     const { t, locale } = useI18n();
     const [rows, setRows] = useState<PartnerReportConfirmationRequest[]>([]);
+    const [total, setTotal] = useState(0);
+    const [page, setPage] = useState(1);
+    const [priorityTotals, setPriorityTotals] = useState<Record<ForReviewPriority | 'all', number>>({
+        all: 0,
+        red: 0,
+        yellow: 0,
+        green: 0,
+    });
     const [loading, setLoading] = useState(true);
     const [refreshBusy, setRefreshBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -201,6 +233,7 @@ export function ForReviewReportsPanel() {
     const [usersById, setUsersById] = useState<Map<number, PartnerUserMeta>>(new Map());
     const [confirmBusyId, setConfirmBusyId] = useState<string | null>(null);
     const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
+    const [priorityBusyId, setPriorityBusyId] = useState<string | null>(null);
     const [drawerComments, setDrawerComments] = useState<PartnerConfirmedReportComment[]>([]);
     const [commentsDrawerRow, setCommentsDrawerRow] = useState<PartnerReportConfirmationRequest | null>(null);
     const [commentComposeDraft, setCommentComposeDraft] = useState('');
@@ -213,7 +246,9 @@ export function ForReviewReportsPanel() {
         const saved = readForReviewListScope();
         return saved === 'all' ? 'all' : 'mine';
     });
+    const [priorityFilter, setPriorityFilter] = useState<ForReviewPriorityFilter>(readForReviewPriorityFilter);
     const effectiveScope: PartnerPendingListScope = canViewAll && listScope === 'all' ? 'all' : 'mine';
+    const pageCount = Math.max(1, Math.ceil(total / FOR_REVIEW_PAGE_SIZE) || 1);
 
     const usersByIdLabels = useMemo(() => {
         const map = new Map<number, string>();
@@ -332,6 +367,15 @@ export function ForReviewReportsPanel() {
         }
     }, [canViewAll, listScope]);
 
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(FOR_REVIEW_PRIORITY_FILTER_KEY, priorityFilter);
+        }
+        catch {
+
+        }
+    }, [priorityFilter]);
+
     const loadMeta = useCallback(() => {
         void Promise.all([
             loadPartnerReportDisplayLookups(),
@@ -360,24 +404,57 @@ export function ForReviewReportsPanel() {
             setRefreshBusy(true);
         setError(null);
         try {
-            const list = await listPartnerReportConfirmationsPending({ scope: effectiveScope });
-            const sorted = [...(Array.isArray(list) ? list : [])].sort((a, b) => {
-                const ta = Date.parse(a.createdAt);
-                const tb = Date.parse(b.createdAt);
-                if (Number.isFinite(ta) && Number.isFinite(tb) && ta !== tb)
-                    return tb - ta;
-                return b.id.localeCompare(a.id);
+            const priority = priorityFilter === 'all' ? null : priorityFilter;
+            const [pageResult, allTotal, redTotal, yellowTotal, greenTotal] = await Promise.all([
+                listPartnerReportConfirmationsPending({
+                    scope: effectiveScope,
+                    priority,
+                    page,
+                    pageSize: FOR_REVIEW_PAGE_SIZE,
+                }),
+                listPartnerReportConfirmationsPending({
+                    scope: effectiveScope,
+                    page: 1,
+                    pageSize: 1,
+                }),
+                listPartnerReportConfirmationsPending({
+                    scope: effectiveScope,
+                    priority: 'red',
+                    page: 1,
+                    pageSize: 1,
+                }),
+                listPartnerReportConfirmationsPending({
+                    scope: effectiveScope,
+                    priority: 'yellow',
+                    page: 1,
+                    pageSize: 1,
+                }),
+                listPartnerReportConfirmationsPending({
+                    scope: effectiveScope,
+                    priority: 'green',
+                    page: 1,
+                    pageSize: 1,
+                }),
+            ]);
+            const list = Array.isArray(pageResult.items) ? pageResult.items : [];
+            setRows(list);
+            setTotal(pageResult.total);
+            setPriorityTotals({
+                all: allTotal.total,
+                red: redTotal.total,
+                yellow: yellowTotal.total,
+                green: greenTotal.total,
             });
-            setRows(sorted);
             setClientNamesById((prev) => {
                 const next = new Map(prev);
-                enrichPartnerReportClientNamesFromRows(next, sorted);
+                enrichPartnerReportClientNamesFromRows(next, list);
                 return next;
             });
-            hydrateCommentsForRows(sorted);
+            hydrateCommentsForRows(list);
         }
         catch (e) {
             setRows([]);
+            setTotal(0);
             setError(e instanceof Error ? e.message : t('timeTrackingPage.reports.forReview.loadFailed'));
         }
         finally {
@@ -386,7 +463,7 @@ export function ForReviewReportsPanel() {
             else
                 setRefreshBusy(false);
         }
-    }, [effectiveScope, hydrateCommentsForRows, t]);
+    }, [effectiveScope, hydrateCommentsForRows, page, priorityFilter, t]);
 
     useEffect(() => {
         loadMeta();
@@ -395,6 +472,11 @@ export function ForReviewReportsPanel() {
     useEffect(() => {
         void fetchPending();
     }, [fetchPending]);
+
+    useEffect(() => {
+        if (page > pageCount)
+            setPage(pageCount);
+    }, [page, pageCount]);
 
     useEffect(() => {
         const onInv = () => {
@@ -423,6 +505,7 @@ export function ForReviewReportsPanel() {
                     return `${meta?.initials ?? ''} ${meta?.label ?? ''} ${id}`;
                 })
                 .join(' ');
+            const priority = forReviewPriority(r);
             const hay = [
                 resolveProjectLabel(r),
                 resolveClientLabel(r),
@@ -434,12 +517,42 @@ export function ForReviewReportsPanel() {
                 r.id,
                 r.projectId,
                 partnerHay,
+                t(`timeTrackingPage.reports.forReview.priority.${priority}`),
             ].join(' ').toLowerCase();
             return hay.includes(q);
         });
-    }, [locale, query, resolveClientLabel, resolveProjectLabel, usersById]);
+    }, [locale, query, resolveClientLabel, resolveProjectLabel, t, usersById]);
 
     const filtered = useMemo(() => filterRows(rows), [filterRows, rows]);
+
+    const hasActivePriorityFilter = priorityFilter !== 'all';
+
+    const canSetPriority = useCallback((r: PartnerReportConfirmationRequest) => {
+        const uid = user?.id;
+        if (uid == null)
+            return false;
+        return r.submittedByAuthUserId === uid || canViewAll;
+    }, [canViewAll, user?.id]);
+
+    const changePriority = useCallback(async (r: PartnerReportConfirmationRequest, next: PartnerReviewPriority) => {
+        if (priorityBusyId != null || forReviewPriority(r) === next || !canSetPriority(r))
+            return;
+        setPriorityBusyId(r.id);
+        try {
+            const updated = await patchPartnerReportConfirmationPriority(r.id, next);
+            setRows((list) => list.map((row) => (row.id === r.id ? { ...row, ...updated } : row)));
+            notifyPartnerConfirmedReportsListInvalidate();
+            await fetchPending({ silent: true });
+        }
+        catch (e) {
+            await showAlert({
+                message: e instanceof Error ? e.message : t('timeTrackingPage.reports.forReview.priorityChangeFailed'),
+            });
+        }
+        finally {
+            setPriorityBusyId(null);
+        }
+    }, [canSetPriority, fetchPending, priorityBusyId, showAlert, t]);
 
     const openReportPreviewForRow = useCallback((r: PartnerReportConfirmationRequest) => {
         void openForReviewReportPreview(r, navigate);
@@ -514,17 +627,25 @@ export function ForReviewReportsPanel() {
         ? t('timeTrackingPage.reports.forReview.loading')
         : t('timeTrackingPage.reports.forReview.count')
             .replace('{filtered}', String(filtered.length))
-            .replace('{total}', String(rows.length));
+            .replace('{total}', String(total));
 
     const columnLabels = useMemo(() => ({
         project: t('timeTrackingPage.reports.forReview.columns.project'),
         client: t('timeTrackingPage.reports.forReview.columns.client'),
         period: t('timeTrackingPage.reports.forReview.columns.period'),
+        priority: t('timeTrackingPage.reports.forReview.columns.priority'),
         partners: t('timeTrackingPage.reports.forReview.columns.partners'),
         createdAt: t('timeTrackingPage.reports.forReview.columns.createdAt'),
         comments: t('timeTrackingPage.reports.partnerConfirmed.columns.comments'),
         actions: t('timeTrackingPage.reports.forReview.columns.actions'),
     }), [t]);
+
+    const priorityTabLabel = useCallback((key: ForReviewPriorityFilter) => {
+        const label = t(`timeTrackingPage.reports.forReview.priorityFilter.${key}`);
+        return t('timeTrackingPage.reports.forReview.priorityFilter.count')
+            .replace('{label}', label)
+            .replace('{count}', String(priorityTotals[key]));
+    }, [priorityTotals, t]);
 
     const renderTable = (list: PartnerReportConfirmationRequest[]) => (<div className="tt-reports__table-wrap tt-reports__table-wrap--scroll-x tt-partner-confirmed__table-wrap">
         <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly tt-partner-confirmed__table--for-review" aria-label={t('timeTrackingPage.reports.forReview.tableAria')}>
@@ -533,6 +654,7 @@ export function ForReviewReportsPanel() {
                     <th scope="col">{columnLabels.client}</th>
                     <th scope="col">{columnLabels.project}</th>
                     <th scope="col">{columnLabels.period}</th>
+                    <th scope="col">{columnLabels.priority}</th>
                     <th scope="col">{columnLabels.partners}</th>
                     <th scope="col">{columnLabels.createdAt}</th>
                     <th scope="col">{columnLabels.comments}</th>
@@ -541,12 +663,15 @@ export function ForReviewReportsPanel() {
             </thead>
             <tbody>
                 {list.map((r) => {
+                    const priority = forReviewPriority(r);
                     const canConfirm = user?.id != null && r.pendingPartnerAuthUserIds.includes(user.id);
                     const canDelete = user?.id != null
                         && (r.submittedByAuthUserId === user.id || canViewAll);
+                    const allowPriorityEdit = canSetPriority(r);
                     const confirmBusy = confirmBusyId === r.id;
                     const deleteBusy = deleteBusyId === r.id;
-                    const actionsBusy = confirmBusyId != null || deleteBusyId != null;
+                    const priorityBusy = priorityBusyId === r.id;
+                    const actionsBusy = confirmBusyId != null || deleteBusyId != null || priorityBusyId != null;
                     const commentsCount = r.commentsCount ?? 0;
                     const commentsPreview = r.lastComment?.text?.trim() || null;
                     const commentsCountLabel = partnerConfirmedCommentsCountLabel(commentsCount, locale, {
@@ -570,6 +695,41 @@ export function ForReviewReportsPanel() {
                             </span>
                         </td>
                         <td className="tt-partner-confirmed__td-period" data-label={columnLabels.period}>{formatIsoRangeTitle(r.dateFrom, r.dateTo, { prefix: false, locale: localeTag(locale) })}</td>
+                        <td className="tt-partner-confirmed__td-priority" data-label={columnLabels.priority}>
+                            {allowPriorityEdit ? (
+                                <label className="tt-for-review__priority-edit">
+                                    <span className="visually-hidden">{t('timeTrackingPage.reports.forReview.priorityChangeAria')}</span>
+                                    <select
+                                      className={`tt-for-review__priority-select tt-for-review__priority-select--${priority}`}
+                                      value={priority}
+                                      disabled={actionsBusy}
+                                      onChange={(e) => {
+                                          const next = e.target.value as PartnerReviewPriority;
+                                          if (next === 'red' || next === 'yellow' || next === 'green')
+                                              void changePriority(r, next);
+                                      }}
+                                      title={priorityBusy
+                                          ? t('timeTrackingPage.reports.forReview.priorityChangeBusy')
+                                          : t('timeTrackingPage.reports.forReview.priorityChangeTitle')}
+                                      aria-label={t('timeTrackingPage.reports.forReview.priorityChangeAria')}
+                                    >
+                                        {FOR_REVIEW_PRIORITY_ORDER.map((key) => (
+                                            <option key={key} value={key}>
+                                                {t(`timeTrackingPage.reports.forReview.priority.${key}`)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            ) : (
+                                <span
+                                  className={`tt-for-review__priority-badge tt-for-review__priority-badge--${priority}`}
+                                  title={t(`timeTrackingPage.reports.forReview.priority.${priority}Title`)}
+                                >
+                                    <span className={`tt-for-review__priority-dot tt-for-review__priority-dot--${priority}`} aria-hidden />
+                                    {t(`timeTrackingPage.reports.forReview.priority.${priority}`)}
+                                </span>
+                            )}
+                        </td>
                         <td className="tt-partner-confirmed__td-partners" data-label={columnLabels.partners}>
                             <PartnerInitialsCell
                               row={r}
@@ -617,14 +777,35 @@ export function ForReviewReportsPanel() {
         {canViewAll ? (<div className="tt-reports__type-block tt-reports__partner-scope tt-partner-confirmed__scope" role="group" aria-label={t('timeTrackingPage.reports.forReview.listScope.aria')}>
             <p className="tt-reports__type-block-title">{t('timeTrackingPage.reports.forReview.listScope.aria')}</p>
             <div className="tt-reports__type-nav">
-                <button type="button" className={`tt-reports__type-tab${effectiveScope === 'mine' ? ' tt-reports__type-tab--active' : ''}`} aria-pressed={effectiveScope === 'mine'} onClick={() => setListScope('mine')}>
+                <button type="button" className={`tt-reports__type-tab${effectiveScope === 'mine' ? ' tt-reports__type-tab--active' : ''}`} aria-pressed={effectiveScope === 'mine'} onClick={() => { setListScope('mine'); setPage(1); }}>
                     {t('timeTrackingPage.reports.forReview.listScope.mine')}
                 </button>
-                <button type="button" className={`tt-reports__type-tab${effectiveScope === 'all' ? ' tt-reports__type-tab--active' : ''}`} aria-pressed={effectiveScope === 'all'} onClick={() => setListScope('all')}>
+                <button type="button" className={`tt-reports__type-tab${effectiveScope === 'all' ? ' tt-reports__type-tab--active' : ''}`} aria-pressed={effectiveScope === 'all'} onClick={() => { setListScope('all'); setPage(1); }}>
                     {t('timeTrackingPage.reports.forReview.listScope.all')}
                 </button>
             </div>
         </div>) : null}
+
+        <div className="tt-reports__type-block tt-for-review__priority-filters" role="group" aria-label={t('timeTrackingPage.reports.forReview.priorityFilter.aria')}>
+            <p className="tt-reports__type-block-title">{t('timeTrackingPage.reports.forReview.priorityFilter.aria')}</p>
+            <div className="tt-reports__type-nav">
+                <button type="button" className={`tt-reports__type-tab${priorityFilter === 'all' ? ' tt-reports__type-tab--active' : ''}`} aria-pressed={priorityFilter === 'all'} onClick={() => { setPriorityFilter('all'); setPage(1); }}>
+                    {priorityTabLabel('all')}
+                </button>
+                {FOR_REVIEW_PRIORITY_ORDER.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={`tt-reports__type-tab${priorityFilter === key ? ' tt-reports__type-tab--active' : ''}`}
+                      aria-pressed={priorityFilter === key}
+                      onClick={() => { setPriorityFilter(key); setPage(1); }}
+                    >
+                        <span className={`tt-for-review__priority-dot tt-for-review__priority-dot--${key}`} aria-hidden />
+                        {priorityTabLabel(key)}
+                    </button>
+                ))}
+            </div>
+        </div>
 
         <div className="tt-partner-confirmed__toolbar">
             <label className="tt-partner-confirmed__search-label" htmlFor="tt-for-review-search">
@@ -645,15 +826,48 @@ export function ForReviewReportsPanel() {
 
         {error ? (<p className="tt-reports__table-err tt-partner-confirmed__err" role="alert">{error}</p>) : null}
 
-        {loading ? (<PartnerReportsListLoading label={t('timeTrackingPage.reports.forReview.loading')} columns={7} />) : null}
+        {loading ? (<PartnerReportsListLoading label={t('timeTrackingPage.reports.forReview.loading')} columns={8} />) : null}
 
-        {!loading && !error && rows.length === 0 ? (<p className="tt-partner-confirmed__empty">{effectiveScope === 'all'
-            ? t('timeTrackingPage.reports.forReview.emptyAll')
-            : t('timeTrackingPage.reports.forReview.empty')}</p>) : null}
+        {!loading && !error && total === 0 ? (<p className="tt-partner-confirmed__empty">{hasActivePriorityFilter
+            ? t('timeTrackingPage.reports.forReview.noFilterMatch')
+            : effectiveScope === 'all'
+                ? t('timeTrackingPage.reports.forReview.emptyAll')
+                : t('timeTrackingPage.reports.forReview.empty')}</p>) : null}
 
-        {!loading && !error && rows.length > 0 ? renderTable(filtered) : null}
+        {!loading && !error && total > 0 && filtered.length > 0 ? renderTable(filtered) : null}
 
-        {!loading && query.trim() && filtered.length === 0 && rows.length > 0 ? (<p className="tt-partner-confirmed__empty">{t('timeTrackingPage.reports.forReview.noSearchMatch')}</p>) : null}
+        {!loading && filtered.length === 0 && total > 0 ? (<p className="tt-partner-confirmed__empty">{query.trim()
+            ? t('timeTrackingPage.reports.forReview.noSearchMatch')
+            : hasActivePriorityFilter
+                ? t('timeTrackingPage.reports.forReview.noFilterMatch')
+                : t('timeTrackingPage.reports.forReview.noSearchMatch')}</p>) : null}
+
+        {!loading && !error && total > FOR_REVIEW_PAGE_SIZE ? (
+            <div className="tt-for-review__pager" role="navigation" aria-label={t('timeTrackingPage.reports.forReview.pagerAria')}>
+                <button
+                  type="button"
+                  className="tt-reports__btn tt-reports__btn--outline"
+                  disabled={page <= 1 || refreshBusy}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                    {t('timeTrackingPage.reports.forReview.pagerPrev')}
+                </button>
+                <span className="tt-for-review__pager-status">
+                    {t('timeTrackingPage.reports.forReview.pagerStatus')
+                        .replace('{page}', String(page))
+                        .replace('{pages}', String(pageCount))
+                        .replace('{total}', String(total))}
+                </span>
+                <button
+                  type="button"
+                  className="tt-reports__btn tt-reports__btn--outline"
+                  disabled={page >= pageCount || refreshBusy}
+                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                >
+                    {t('timeTrackingPage.reports.forReview.pagerNext')}
+                </button>
+            </div>
+        ) : null}
 
         <PartnerConfirmedCommentsDrawer open={commentsDrawerRow != null} row={commentsDrawerRow} projectLabel={commentsDrawerRow ? resolveProjectLabel(commentsDrawerRow) : ''} clientLabel={commentsDrawerRow ? resolveClientLabel(commentsDrawerRow) : ''} periodLabel={commentsDrawerRow ? formatIsoRangeTitle(commentsDrawerRow.dateFrom, commentsDrawerRow.dateTo, { prefix: false, locale: localeTag(locale) }) : ''} comments={drawerComments} usersById={usersByIdLabels} locale={locale} draft={commentComposeDraft} onDraftChange={setCommentComposeDraft} onAdd={addCommentForOpenRow} onClose={closeCommentsDrawer} currentUserId={user?.id ?? null} loading={commentsLoading} submitting={commentsSubmitting} error={commentsError} allowCompose labels={{
             title: t('timeTrackingPage.reports.partnerConfirmed.commentsDrawerTitle'),

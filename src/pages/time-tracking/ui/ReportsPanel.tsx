@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { isHiddenSystemUser } from '@shared/lib';
-import { displayReportClientLabel, displayReportProjectLabel, formatExpenseReportStatus, formatExpenseReportStatusHint, fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllTimeReportTaskRows, fetchAllTimeReportTeamRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, listPartnerReportConfirmationsConfirmed, listPartnerReportConfirmationsPending, fetchAllInvoices, listAllClientProjectsMerged, getUserProjectAccess, submitPartnerReportConfirmationFromPreview, notifyPartnerConfirmedReportsListInvalidate, type ReportsFilterUser, type ReportPagination, type ReportTotals, type TimeRowClients, type TimeRowProjects, type TimeRowTasks, type TimeRowTeam, type TimeReportRow, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, type PartnerReportConfirmationRequest, type InvoiceDto, } from '@entities/time-tracking';
+import { displayReportClientLabel, displayReportProjectLabel, formatExpenseReportStatus, formatExpenseReportStatusHint, fetchReportsMeta, fetchReportsUsersForFilter, fetchTimeReport, fetchExpenseReport, fetchUninvoicedReport, fetchBudgetReport, fetchAllTimeReportClientRows, fetchAllTimeReportProjectRows, fetchAllTimeReportTaskRows, fetchAllTimeReportTeamRows, fetchAllExpenseReportRows, fetchAllUninvoicedReportRows, fetchAllBudgetReportRows, exportReportV2, isTimeTrackingHttpError, listPartnerReportConfirmationsConfirmed, listPartnerReportConfirmationsPendingItems, fetchAllInvoices, listAllClientProjectsMerged, getUserProjectAccess, submitPartnerReportConfirmationFromPreview, notifyPartnerConfirmedReportsListInvalidate, type ReportsFilterUser, type ReportPagination, type ReportTotals, type TimeRowClients, type TimeRowProjects, type TimeRowTasks, type TimeRowTeam, type TimeReportRow, type ExpRowClients, type ExpRowProjects, type ExpRowCategories, type ExpRowTeam, type UninvoicedRow, type BudgetRow, type ReportFiltersV2, type RUBExpense, type RUBUninvoiced, type RUBBudget, type PartnerReportConfirmationRequest, type InvoiceDto, } from '@entities/time-tracking';
 import { budgetReportHoursMetrics, budgetReportMoneyMetrics, budgetReportRowProgressPercent } from '@entities/time-tracking/lib/projectBudgetReportMetrics';
 import { ReportsSkeleton } from './ReportsSkeleton';
 import { ConfirmedPartnerReportsPanel } from './ConfirmedPartnerReportsPanel';
@@ -1139,7 +1139,7 @@ export function ReportsPanel() {
       try {
         const [conf, pending] = await Promise.all([
           listPartnerReportConfirmationsConfirmed(),
-          listPartnerReportConfirmationsPending(),
+          listPartnerReportConfirmationsPendingItems(),
         ]);
         const confList = Array.isArray(conf) ? conf : [];
         const pendingList = Array.isArray(pending) ? pending : [];
