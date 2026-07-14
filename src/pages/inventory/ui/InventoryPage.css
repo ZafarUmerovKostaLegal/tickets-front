@@ -1573,16 +1573,32 @@ body[data-theme='dark'] .inv__class-badge--E { color: #cbd5e1; background: rgba(
   }
 
   .inv__table td {
-    display: grid;
-    grid-template-columns: minmax(4.5rem, 7.5rem) minmax(0, 1fr);
-    gap: 0.5rem 1rem;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
     padding: 0.35rem 0;
     border: none;
     font-size: 0.8125rem;
-    min-width: 0;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
     word-break: normal;
     overflow-wrap: break-word;
+    box-sizing: border-box;
+  }
+
+  .inv__table th,
+  .inv__table .inv__col--name,
+  .inv__table .inv__col--cat,
+  .inv__table .inv__col--class,
+  .inv__table .inv__col--invno,
+  .inv__table .inv__col--status,
+  .inv__table .inv__col--assigned,
+  .inv__table .inv__col--open {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
   }
 
   .inv__table td:first-child { padding-top: 0; }
@@ -1675,7 +1691,6 @@ body[data-theme='dark'] .inv__class-badge--E { color: #cbd5e1; background: rgba(
 
   .inv__table tbody tr { padding: 0.75rem 0.875rem; }
   .inv__table td {
-    grid-template-columns: 1fr;
     font-size: 0.75rem;
     gap: 0.2rem;
   }

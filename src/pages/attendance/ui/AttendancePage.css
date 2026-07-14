@@ -1435,16 +1435,19 @@ body[data-theme='dark'] .att-modal__error {
   }
 
   .att__table td {
-    display: grid;
-    grid-template-columns: minmax(4.5rem, 7.5rem) minmax(0, 1fr);
-    gap: 0.5rem 1rem;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
     padding: 0.35rem 0;
     border: none;
     font-size: 0.8125rem;
-    min-width: 0;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
     word-break: normal;
     overflow-wrap: break-word;
+    box-sizing: border-box;
   }
 
   .att__table tbody tr {
@@ -1655,7 +1658,6 @@ body[data-theme='dark'] .att-modal__error {
   }
 
   .att__table td {
-    grid-template-columns: 1fr;
     gap: 0.2rem;
     padding: 0.25rem 0;
     font-size: 0.75rem;

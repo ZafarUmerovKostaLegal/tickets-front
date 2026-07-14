@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     createPartnerConfirmationComment,
     deletePartnerReportConfirmation,
+    revokePartnerReportConfirmationSignature,
     getReportSnapshot,
     isForbiddenError,
     fetchAllInvoices,
@@ -106,6 +107,19 @@ function canDeletePartnerConfirmedRow(
     return r.submittedByAuthUserId === userId || canManageAll;
 }
 
+function canRevokePartnerSignature(
+    r: PartnerReportConfirmationRequest,
+    partnerAuthUserId: number,
+    userId: number | null | undefined,
+    canManageAll: boolean,
+): boolean {
+    if (userId == null)
+        return false;
+    if (r.submittedByAuthUserId === userId || canManageAll)
+        return true;
+    return partnerAuthUserId === userId;
+}
+
 function fmtIsoDateShort(iso: string | null | undefined, locale: 'ru' | 'en'): string {
     if (!iso?.trim())
         return '—';
@@ -120,19 +134,62 @@ function fmtIsoDateShort(iso: string | null | undefined, locale: 'ru' | 'en'): s
     }
 }
 
-function PartnerSignaturesList({ signatures, usersById, locale, }: {
+function PartnerSignaturesList({
+    signatures,
+    usersById,
+    locale,
+    canRevoke,
+    revokeDisabledReason,
+    revokeBusyPartnerId,
+    revokeTitle,
+    revokeAria,
+    revokeBusyLabel,
+    onRevoke,
+}: {
     signatures: PartnerReportConfirmationRequest['signatures'];
     usersById: Map<number, string>;
     locale: 'ru' | 'en';
+    canRevoke: (partnerAuthUserId: number) => boolean;
+    revokeDisabledReason: string | null;
+    revokeBusyPartnerId: number | null;
+    revokeTitle: (partnerName: string) => string;
+    revokeAria: string;
+    revokeBusyLabel: string;
+    onRevoke: (partnerAuthUserId: number, partnerName: string) => void;
 }) {
     if (signatures.length === 0)
         return <span className="tt-partner-confirmed__empty-cell">—</span>;
     return (<ul className="tt-partner-confirmed__sig-list">
-        {signatures.map((s, i) => (<li key={`${s.partnerAuthUserId}-${s.confirmedAt}-${i}`} className="tt-partner-confirmed__sig-item">
-            <span className="tt-partner-confirmed__sig-name">{userLabel(usersById, s.partnerAuthUserId)}</span>
-            <span className="tt-partner-confirmed__sig-sep" aria-hidden>·</span>
-            <span className="tt-partner-confirmed__sig-when">{fmtIsoDateShort(s.confirmedAt, locale)}</span>
-        </li>))}
+        {signatures.map((s, i) => {
+            const name = userLabel(usersById, s.partnerAuthUserId);
+            const showRevoke = canRevoke(s.partnerAuthUserId);
+            const busy = revokeBusyPartnerId === s.partnerAuthUserId;
+            const blocked = Boolean(revokeDisabledReason);
+            const title = busy
+                ? revokeBusyLabel
+                : blocked
+                    ? (revokeDisabledReason ?? '')
+                    : revokeTitle(name);
+            return (
+                <li key={`${s.partnerAuthUserId}-${s.confirmedAt}-${i}`} className="tt-partner-confirmed__sig-item">
+                    <span className="tt-partner-confirmed__sig-name">{name}</span>
+                    <span className="tt-partner-confirmed__sig-sep" aria-hidden>·</span>
+                    <span className="tt-partner-confirmed__sig-when">{fmtIsoDateShort(s.confirmedAt, locale)}</span>
+                    {showRevoke ? (
+                        <button
+                            type="button"
+                            className="tt-partner-confirmed__sig-revoke"
+                            disabled={busy || blocked || revokeBusyPartnerId != null}
+                            onClick={() => onRevoke(s.partnerAuthUserId, name)}
+                            title={title}
+                            aria-label={busy ? revokeBusyLabel : revokeAria}
+                        >
+                            {busy ? '…' : '×'}
+                        </button>
+                    ) : null}
+                </li>
+            );
+        })}
     </ul>);
 }
 
@@ -203,6 +260,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
     const [exportBusySnapshotId, setExportBusySnapshotId] = useState<string | null>(null);
     const [invoiceBusyId, setInvoiceBusyId] = useState<string | null>(null);
     const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
+    const [revokeBusyKey, setRevokeBusyKey] = useState<string | null>(null);
     const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
     const [drawerComments, setDrawerComments] = useState<PartnerConfirmedReportComment[]>([]);
     const [commentsDrawerRow, setCommentsDrawerRow] = useState<PartnerReportConfirmationRequest | null>(null);
@@ -659,6 +717,70 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         t,
     ]);
 
+    const revokeSignature = useCallback(async (
+        r: PartnerReportConfirmationRequest,
+        partnerAuthUserId: number,
+        partnerName: string,
+    ) => {
+        const uid = currentUser?.id;
+        if (uid == null || revokeBusyKey != null || deleteBusyId != null || invoiceBusyId != null)
+            return;
+        if (!canRevokePartnerSignature(r, partnerAuthUserId, uid, canManageAll))
+            return;
+        const linkedInvoice = findInvoiceForPartnerConfirmedRow(r, invoices);
+        if (linkedInvoice) {
+            await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureBlockedInvoice') });
+            return;
+        }
+        const ok = await showConfirm({
+            title: t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureConfirmTitle'),
+            message: t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureConfirmMessage').replace('{name}', partnerName),
+            confirmLabel: t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureConfirmLabel'),
+            variant: 'danger',
+        });
+        if (!ok)
+            return;
+        const busyKey = `${r.id}:${partnerAuthUserId}`;
+        setRevokeBusyKey(busyKey);
+        try {
+            const updated = await revokePartnerReportConfirmationSignature(r.id, partnerAuthUserId);
+            notifyPartnerConfirmedReportsListInvalidate();
+            const patch = (list: PartnerReportConfirmationRequest[]) => list.map((row) => (
+                row.id === updated.id ? updated : row
+            ));
+            setRows(patch);
+            setArchiveRows(patch);
+            setCommentsDrawerRow((prev) => (prev && prev.id === updated.id ? updated : prev));
+            await fetchConfirmed({ silent: true });
+            if (archiveOpen)
+                await fetchArchive();
+        }
+        catch (e) {
+            const forbidden = isForbiddenError(e);
+            await showAlert({
+                message: forbidden
+                    ? t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureForbidden')
+                    : (e instanceof Error ? e.message : t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureFailed')),
+            });
+        }
+        finally {
+            setRevokeBusyKey(null);
+        }
+    }, [
+        archiveOpen,
+        canManageAll,
+        currentUser?.id,
+        deleteBusyId,
+        fetchArchive,
+        fetchConfirmed,
+        invoiceBusyId,
+        invoices,
+        revokeBusyKey,
+        showAlert,
+        showConfirm,
+        t,
+    ]);
+
     const countLabel = loading
         ? t('timeTrackingPage.reports.partnerConfirmed.loading')
         : t('timeTrackingPage.reports.partnerConfirmed.count')
@@ -707,8 +829,12 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                     const canGenerateInvoice = isFullyConfirmed(r);
                     const canDelete = canDeletePartnerConfirmedRow(r, currentUser?.id, canManageAll);
                     const deleteBusy = deleteBusyId === r.id;
-                    const actionsBusy = deleteBusyId != null || invoiceBusyId != null || exportBusySnapshotId != null;
+                    const actionsBusy = deleteBusyId != null || invoiceBusyId != null || exportBusySnapshotId != null || revokeBusyKey != null;
                     const deleteBlockedByInvoice = Boolean(linkedInvoice);
+                    const revokeBlockedByInvoice = Boolean(linkedInvoice);
+                    const rowRevokeBusyPartnerId = revokeBusyKey?.startsWith(`${r.id}:`)
+                        ? Number(revokeBusyKey.slice(r.id.length + 1))
+                        : null;
                     const deleteTitle = !canDelete
                         ? t('timeTrackingPage.reports.partnerConfirmed.deleteForbidden')
                         : deleteBlockedByInvoice
@@ -749,7 +875,22 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                     </td>
                     <td className="tt-partner-confirmed__td-period" data-label={columnLabels.period}>{formatIsoRangeTitle(r.dateFrom, r.dateTo, { prefix: false, locale: localeTag(locale) })}</td>
                     <td className="tt-partner-confirmed__cell-multiline tt-partner-confirmed__td-partners" data-label={columnLabels.partners}>
-                        <PartnerSignaturesList signatures={r.signatures} usersById={usersById} locale={locale} />
+                        <PartnerSignaturesList
+                            signatures={r.signatures}
+                            usersById={usersById}
+                            locale={locale}
+                            canRevoke={(partnerAuthUserId) => canRevokePartnerSignature(r, partnerAuthUserId, currentUser?.id, canManageAll)}
+                            revokeDisabledReason={revokeBlockedByInvoice
+                                ? t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureBlockedInvoice')
+                                : null}
+                            revokeBusyPartnerId={Number.isFinite(rowRevokeBusyPartnerId) ? rowRevokeBusyPartnerId : null}
+                            revokeTitle={(name) => t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureTitle').replace('{name}', name)}
+                            revokeAria={t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureAria')}
+                            revokeBusyLabel={t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureBusy')}
+                            onRevoke={(partnerAuthUserId, partnerName) => {
+                                void revokeSignature(r, partnerAuthUserId, partnerName);
+                            }}
+                        />
                     </td>
                     <td className="tt-partner-confirmed__td-comments" data-label={columnLabels.comments}>
                         <PartnerConfirmedCommentsCell count={commentsCount} preview={commentsPreview} countLabel={commentsCountLabel} openLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsOpen').replace('{project}', resolveProjectLabel(r))} emptyLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsCountZero')} onOpen={() => openCommentsDrawer(r)} />

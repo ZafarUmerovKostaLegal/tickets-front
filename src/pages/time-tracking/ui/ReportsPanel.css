@@ -1763,6 +1763,28 @@
   white-space: nowrap;
 }
 
+.tt-partner-confirmed__sig-revoke {
+  margin-left: 0.1rem;
+  border: 0;
+  background: transparent;
+  color: var(--app-muted, #64748b);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0 0.15rem;
+  border-radius: 4px;
+}
+
+.tt-partner-confirmed__sig-revoke:hover:not(:disabled) {
+  color: #b91c1c;
+  background: color-mix(in srgb, #fee2e2 70%, transparent);
+}
+
+.tt-partner-confirmed__sig-revoke:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .tt-partner-confirmed__name-list {
   gap: 0.2rem;
   font-size: 0.8125rem;
@@ -2312,6 +2334,9 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
     display: flex;
     flex-direction: column;
     position: relative;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 1rem 1.125rem;
     margin: 0;
     border-radius: 12px;
@@ -2326,16 +2351,29 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
     background: transparent;
   }
 
+  /* Kill desktop column % / fixed widths — they crush card rows */
+  .tt-partner-confirmed__table--confirmed th,
+  .tt-partner-confirmed__table--confirmed td,
+  .tt-partner-confirmed__table--for-review th,
+  .tt-partner-confirmed__table--for-review td,
+  .tt-partner-confirmed__table--confirmed .tt-partner-confirmed__th-actions,
+  .tt-partner-confirmed__table--confirmed .tt-partner-confirmed__td-actions,
+  .tt-partner-confirmed__table--for-review .tt-partner-confirmed__th-actions,
+  .tt-partner-confirmed__table--for-review .tt-partner-confirmed__td-actions {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
   .tt-partner-confirmed__table td {
-    display: grid;
-    grid-template-columns: minmax(4.5rem, 7.5rem) minmax(0, 1fr);
-    gap: 0.35rem 0.75rem;
-    align-items: start;
-    padding: 0.3rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    padding: 0.35rem 0;
     border: none;
     font-size: 0.8125rem;
-    max-width: none;
-    min-width: 0;
+    box-sizing: border-box;
     white-space: normal;
     word-break: normal;
     overflow-wrap: break-word;
@@ -2348,6 +2386,9 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
 
   .tt-partner-confirmed__table td::before {
     content: attr(data-label);
+    display: block;
+    width: 100%;
+    flex: 0 0 auto;
     font-size: 0.6875rem;
     font-weight: 600;
     color: var(--app-muted, #6b7280);
@@ -2358,8 +2399,9 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
 
   .tt-partner-confirmed__td-period,
   .tt-partner-confirmed__td-nowrap {
+    white-space: normal !important;
     word-break: normal;
-    overflow-wrap: normal;
+    overflow-wrap: break-word;
   }
 
   .tt-partner-confirmed__project-cell {
@@ -2367,6 +2409,7 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
     align-items: flex-start;
     gap: 0.35rem;
     min-width: 0;
+    width: 100%;
   }
 
   .tt-partner-confirmed__empty-badge {
@@ -2375,7 +2418,6 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
 
   .tt-partner-confirmed__td-primary {
     display: block;
-    grid-template-columns: none;
     padding: 0 0 0.625rem;
     margin-bottom: 0.35rem;
     border-bottom: 1px solid var(--app-border, #e2e8f0);
@@ -2411,12 +2453,14 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
   .tt-partner-confirmed__sig-item {
     border-radius: 10px;
     width: 100%;
+    box-sizing: border-box;
   }
 
   .tt-partner-confirmed__comments-btn {
     padding: 0.55rem 0.65rem;
     width: 100%;
     min-width: 0;
+    box-sizing: border-box;
   }
 
   .tt-partner-confirmed__comments-btn-preview {
@@ -2432,17 +2476,12 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
     flex-direction: column;
     align-items: stretch;
     gap: 0.35rem;
-    grid-template-columns: none;
-  }
-
-  .tt-partner-confirmed__td-comments::before,
-  .tt-partner-confirmed__td-partners::before {
-    display: block;
   }
 
   .tt-partner-confirmed__td-actions {
-    display: block;
-    grid-template-columns: none;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
     padding-top: 0.625rem;
     margin-top: 0.35rem;
     border-top: 1px solid var(--app-border, #e2e8f0);
@@ -2470,16 +2509,6 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
 }
 
 @media (max-width: 640px) {
-  .tt-partner-confirmed__table td {
-    grid-template-columns: 1fr;
-    gap: 0.2rem;
-  }
-
-  .tt-partner-confirmed__td-period,
-  .tt-partner-confirmed__td-nowrap {
-    white-space: normal;
-  }
-
   .tt-partner-confirmed__table--readonly tbody tr {
     padding: 0.875rem 1rem;
   }

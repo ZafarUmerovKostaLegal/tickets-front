@@ -3955,6 +3955,28 @@ export async function deletePartnerReportConfirmation(requestId: string): Promis
     invalidatePartnerReportConfirmationsCache();
 }
 
+export async function revokePartnerReportConfirmationSignature(
+    requestId: string,
+    partnerAuthUserId: number,
+): Promise<PartnerReportConfirmationRequest> {
+    const rid = String(requestId ?? '').trim();
+    const pid = Number(partnerAuthUserId);
+    if (!rid)
+        throw new Error('Не указан запрос подтверждения');
+    if (!Number.isFinite(pid) || pid <= 0)
+        throw new Error('Не указан партнёр');
+    const res = await apiFetch(
+        `/api/v1/time-tracking/reports/partner-confirmations/${encodeURIComponent(rid)}/signatures/${encodeURIComponent(String(pid))}`,
+        { method: 'DELETE' },
+    );
+    await reportsThrowIfNotOk(res);
+    const parsed = parsePartnerReportConfirmationRequest(await res.json());
+    if (!parsed)
+        throw new TimeTrackingHttpError(500, 'Некорректный ответ сервера');
+    invalidatePartnerReportConfirmationsCache();
+    return parsed;
+}
+
 export async function listPartnerConfirmationComments(requestId: string): Promise<PartnerConfirmedReportComment[]> {
     const rid = String(requestId ?? '').trim();
     if (!rid)
