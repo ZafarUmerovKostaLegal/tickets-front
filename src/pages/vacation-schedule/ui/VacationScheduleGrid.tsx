@@ -76,6 +76,7 @@ export function VacationScheduleGrid({ onHeaderActionsChange, externalRefreshTok
     const [payrollModalOpen, setPayrollModalOpen] = useState(false);
     const [basisByCell, setBasisByCell] = useState<Record<string, VacationAbsenceBasis>>(() => loadVacationAbsenceBasisMap());
     const [employeeSearch, setEmployeeSearch] = useState('');
+    const [tableExpanded, setTableExpanded] = useState(false);
     const filteredEmployees = useMemo(() => {
         const q = employeeSearch.trim().toLowerCase();
         if (!q)
@@ -350,7 +351,25 @@ export function VacationScheduleGrid({ onHeaderActionsChange, externalRefreshTok
         });
         return () => onHeaderActionsChange?.(null);
     }, [canEditSchedule, onHeaderActionsChange, payrollPrefs.showColumns, setPayrollShowColumns]);
-    return (<div className="vac-vsg">
+
+    useEffect(() => {
+        if (!tableExpanded)
+            return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape')
+                setTableExpanded(false);
+        };
+        document.addEventListener('keydown', onKey);
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            document.removeEventListener('keydown', onKey);
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [tableExpanded]);
+
+    return (<div className={`vac-vsg${tableExpanded ? ' vac-vsg--expanded' : ''}`}>
+      <div className={`vac-vsg__expand-shell${tableExpanded ? ' vac-vsg__expand-shell--on' : ''}`}>
       <div className="vac-vsg__bar">
         <label className="vac-vsg__year-label" htmlFor="vac-year-input" title="Год графика (2000–2100)">
           Год
@@ -386,6 +405,32 @@ export function VacationScheduleGrid({ onHeaderActionsChange, externalRefreshTok
         ) : null}
 
         <span className="vac-vsg__bar-spacer" aria-hidden/>
+
+        <button
+          type="button"
+          className={`vac-vsg__expand-btn${tableExpanded ? ' vac-vsg__expand-btn--on' : ''}`}
+          onClick={() => setTableExpanded((v) => !v)}
+          title={tableExpanded ? 'Свернуть таблицу' : 'Растянуть таблицу на весь экран'}
+          aria-label={tableExpanded ? 'Свернуть таблицу' : 'Растянуть таблицу на весь экран'}
+          aria-pressed={tableExpanded}
+        >
+          {tableExpanded ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <polyline points="4 14 10 14 10 20"/>
+              <polyline points="20 10 14 10 14 4"/>
+              <line x1="14" y1="10" x2="21" y2="3"/>
+              <line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <polyline points="15 3 21 3 21 9"/>
+              <polyline points="9 21 3 21 3 15"/>
+              <line x1="21" y1="3" x2="14" y2="10"/>
+              <line x1="3" y1="21" x2="10" y2="14"/>
+            </svg>
+          )}
+          {tableExpanded ? 'Свернуть' : 'Растянуть'}
+        </button>
 
         {canEditSchedule && (<button type="button" className="vac-vsg__manual-entry-btn" onClick={() => setManualEntryOpen(true)} title="Внести запись в график вручную с документом-основанием">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -435,6 +480,7 @@ export function VacationScheduleGrid({ onHeaderActionsChange, externalRefreshTok
                 visible: payrollPrefs.showColumns,
                 params: payrollPrefs.params,
             }}/>)}
+      </div>
       </div>
 
       <VacationPayrollSettingsModal open={payrollModalOpen} onClose={() => setPayrollModalOpen(false)} params={payrollPrefs.params} onSave={patchPayrollParams}/>

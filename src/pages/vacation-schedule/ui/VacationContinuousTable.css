@@ -231,10 +231,25 @@
   background-clip: padding-box;
 }
 
+.vac-cont__scroll--scrolling .vac-cont__cell,
+.vac-cont__scroll--scrolling .vac-cont__cell-btn {
+  pointer-events: none !important;
+  transition: none !important;
+}
+
+.vac-cont__scroll--scrolling tbody tr:hover .vac-cont__cell:not(.vac-cont__cell--selected):not(.vac-cont__cell--marked),
+.vac-cont__scroll--scrolling .vac-cont__cell:hover,
+.vac-cont__scroll--scrolling .vac-cont__cell--viewable:hover,
+.vac-cont__scroll--scrolling tbody .vac-cont__body-row:hover .vac-cont__cell:not(.vac-cont__cell--marked) {
+  filter: none !important;
+  box-shadow: none !important;
+}
+
 .vac-cont__table {
   width: max-content;
   min-width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: fixed;
   font-size: 0.75rem;
   color: var(--app-text, #0f172a);

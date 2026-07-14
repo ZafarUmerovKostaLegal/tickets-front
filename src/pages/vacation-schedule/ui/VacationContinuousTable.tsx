@@ -1,5 +1,5 @@
 import type { CSSProperties, MouseEvent, ReactNode } from 'react';
-import { memo, useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual';
 import { buildUserKindYearCounts, formatPayrollMoney, sickPayTotal, vacationPayTotal, type VacationPayrollParams, } from '../lib/vacationPayrollFormulas';
@@ -71,10 +71,10 @@ type VacationDayCellProps = {
 };
 function BasisPin() {
     return (<span className="vac-cont__basis-pin" aria-hidden>
-      <svg className="vac-cont__basis-pin-svg" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M6 3.5V3a2 2 0 114 0v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
-        <path d="M6 3.5h4V8a2 2 0 01-1.25 1.86L8 10.25V14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-      </svg>
+        <svg className="vac-cont__basis-pin-svg" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 3.5V3a2 2 0 114 0v.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" fill="none" />
+            <path d="M6 3.5h4V8a2 2 0 01-1.25 1.86L8 10.25V14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
     </span>);
 }
 function AbsenceMarkVisual({
@@ -150,18 +150,18 @@ const VacationDayCell = memo(function VacationDayCell({ kind, attendance, kindCo
     const overlays = (
         <>
             {markVisual}
-            {attendance ? <span className="vac-cont__attendance-dot" aria-hidden/> : null}
-            {hasBasis && kind ? <BasisPin/> : null}
+            {attendance ? <span className="vac-cont__attendance-dot" aria-hidden /> : null}
+            {hasBasis && kind ? <BasisPin /> : null}
         </>
     );
     if (!interactive) {
         return (<td role="gridcell" title={title} className={cls} {...hoverHandlers}>
-          {overlays}
+            {overlays}
         </td>);
     }
     return (<td role="gridcell" className={cls} {...hoverHandlers}>
-      <button type="button" className="vac-cont__cell-btn" title={title} aria-label={title} onClick={(e) => onActivate?.(e)}/>
-      {overlays}
+        <button type="button" className="vac-cont__cell-btn" title={title} aria-label={title} onClick={(e) => onActivate?.(e)} />
+        {overlays}
     </td>);
 });
 
@@ -348,7 +348,7 @@ const VacationBodyRow = memo(function VacationBodyRow({
                 const attendanceHoverTip = attendance
                     ? attendance.status === 'late'
                         ? vacationAttendanceLateTooltip(attendance.firstEventTime, attendanceWorkday)
-                            ?? (attendance.firstEventTime ? `Опоздание (приход ${attendance.firstEventTime})` : 'Опоздание')
+                        ?? (attendance.firstEventTime ? `Опоздание (приход ${attendance.firstEventTime})` : 'Опоздание')
                         : [
                             'Отсутствие — нет отметки прохода',
                             attendance.explanationText ? `Объяснение: ${attendance.explanationText}` : null,
@@ -582,6 +582,30 @@ export function VacationContinuousTable({ year, employees, marks, attendanceMark
         rowVirtualizer.measure();
     }, [rowVirtualizer, rowH, employees.length]);
 
+    useEffect(() => {
+        const el = scrollContainerRef.current;
+        if (!el)
+            return;
+        let stopTimer: number | undefined;
+        const onScroll = () => {
+            if (!el.classList.contains('vac-cont__scroll--scrolling'))
+                el.classList.add('vac-cont__scroll--scrolling');
+            if (stopTimer != null)
+                window.clearTimeout(stopTimer);
+            stopTimer = window.setTimeout(() => {
+                el.classList.remove('vac-cont__scroll--scrolling');
+                stopTimer = undefined;
+            }, 140);
+        };
+        el.addEventListener('scroll', onScroll, { passive: true });
+        return () => {
+            el.removeEventListener('scroll', onScroll);
+            if (stopTimer != null)
+                window.clearTimeout(stopTimer);
+            el.classList.remove('vac-cont__scroll--scrolling');
+        };
+    }, [employees.length]);
+
     useLayoutEffect(() => {
         didScrollToMonthRef.current = false;
     }, [year]);
@@ -623,205 +647,205 @@ export function VacationContinuousTable({ year, employees, marks, attendanceMark
         + 1;
 
     const legendStrip = (<div className="vac-cont__legend-wrap">
-      <span className="vac-cont__legend-cap">Ключ к отметкам</span>
-      <ul className="vac-cont__legend" aria-label="Виды отсутствия и посещаемость">
-        {legendItems.map((item) => (<li key={`${item.kind}-${item.kindCode}`} className="vac-cont__legend-item">
-            <span
-              className={`vac-cont__legend-seal${vacationKindSealUsesDarkInk(item.kind) ? ' vac-cont__seal-ink--dark' : ''}`}
-              style={{ backgroundColor: item.color }}
-              aria-hidden
-            >
-              {item.seal}
-            </span>
-            <span className="vac-cont__legend-label">{item.label}</span>
-          </li>))}
-        {showAttendanceLegend ? (<>
-            <li className="vac-cont__legend-item vac-cont__legend-item--attendance">
-              <span className="vac-cont__legend-seal vac-cont__legend-seal--icon" aria-hidden>⏱</span>
-              <span className="vac-cont__legend-label">Опоздание</span>
-            </li>
-            <li className="vac-cont__legend-item vac-cont__legend-item--attendance">
-              <span className="vac-cont__legend-seal vac-cont__legend-seal--icon" aria-hidden>✕</span>
-              <span className="vac-cont__legend-label">Отсутствие</span>
-            </li>
-          </>) : null}
-      </ul>
+        <span className="vac-cont__legend-cap">Ключ к отметкам</span>
+        <ul className="vac-cont__legend" aria-label="Виды отсутствия и посещаемость">
+            {legendItems.map((item) => (<li key={`${item.kind}-${item.kindCode}`} className="vac-cont__legend-item">
+                <span
+                    className={`vac-cont__legend-seal${vacationKindSealUsesDarkInk(item.kind) ? ' vac-cont__seal-ink--dark' : ''}`}
+                    style={{ backgroundColor: item.color }}
+                    aria-hidden
+                >
+                    {item.seal}
+                </span>
+                <span className="vac-cont__legend-label">{item.label}</span>
+            </li>))}
+            {showAttendanceLegend ? (<>
+                <li className="vac-cont__legend-item vac-cont__legend-item--attendance">
+                    <span className="vac-cont__legend-seal vac-cont__legend-seal--icon" aria-hidden>⏱</span>
+                    <span className="vac-cont__legend-label">Опоздание</span>
+                </li>
+                <li className="vac-cont__legend-item vac-cont__legend-item--attendance">
+                    <span className="vac-cont__legend-seal vac-cont__legend-seal--icon" aria-hidden>✕</span>
+                    <span className="vac-cont__legend-label">Отсутствие</span>
+                </li>
+            </>) : null}
+        </ul>
     </div>);
 
     if (employees.length === 0) {
         return (<div className="vac-cont vac-cont--dense">
-        {legendStrip}
-        <p className="vac-cont__empty">За выбранный год график пока пуст.</p>
-        {emptyStateImportHint && (<p className="vac-cont__empty-hint">
-            Сотрудники появляются в графике автоматически после согласования заявки. Подать новую заявку — кнопка «+» в шапке.
-          </p>)}
-      </div>);
+            {legendStrip}
+            <p className="vac-cont__empty">За выбранный год график пока пуст.</p>
+            {emptyStateImportHint && (<p className="vac-cont__empty-hint">
+                Сотрудники появляются в графике автоматически после согласования заявки. Подать новую заявку — кнопка «+» в шапке.
+            </p>)}
+        </div>);
     }
 
     return (<div className="vac-cont vac-cont--dense">
-      {legendStrip}
-      <div className="vac-cont__scroll" ref={scrollContainerRef}>
-        <table className="vac-cont__table" role="grid" ref={tableRef}>
-          <thead>
-            <tr>
-              <th className="vac-cont__sticky-corner" colSpan={2} scope="colgroup">
-                {year}
-              </th>
-              <VirtualColPad width={padLeft} as="th" />
-              {renderMonthHeaderSegs(virtualCols, colSegs)}
-              <VirtualColPad width={padRight} as="th" />
-              {payroll?.visible && (<>
-                  <th className="vac-cont__pr-head vac-cont__pr-head--vac vac-cont__pr-head--vac-d" rowSpan={3} scope="col" title="Календарные дни с видом «ежегодный отпуск» за год">
-                    <span className="vac-cont__head-vertical">Отп. дн.</span>
-                  </th>
-                  <th className="vac-cont__pr-head vac-cont__pr-head--vac vac-cont__pr-head--money vac-cont__pr-head--vac-m" rowSpan={3} scope="col" title="Оценка: дни отпуска × (зарплата/29,3) × коэфф. отпуска">
-                    <span className="vac-cont__head-vertical">Отп. ₽</span>
-                  </th>
-                  <th className="vac-cont__pr-head vac-cont__pr-head--sick vac-cont__pr-head--sick-d" rowSpan={3} scope="col" title="Дни с видом «болезнь» за год">
-                    <span className="vac-cont__head-vertical">Бол. дн.</span>
-                  </th>
-                  <th className="vac-cont__pr-head vac-cont__pr-head--sick vac-cont__pr-head--money vac-cont__pr-head--sick-m" rowSpan={3} scope="col" title="Оценка: дни болезни × (зарплата/29,3) × ставка больничного">
-                    <span className="vac-cont__head-vertical">Бол. ₽</span>
-                  </th>
-                </>)}
-              <th className="vac-cont__year-sum-head" rowSpan={3} scope="col">
-                <span className="vac-cont__head-vertical vac-cont__head-vertical--wide">Всего</span>
-              </th>
-            </tr>
-            <tr>
-              <th className="vac-cont__sticky-num" rowSpan={2} scope="col">
-                №
-              </th>
-              <th className="vac-cont__sticky-name" rowSpan={2} scope="col">
-                ФИО сотрудника
-              </th>
-              <VirtualColPad width={padLeft} as="th" />
-              {virtualCols.map((v) => {
-                  const seg = colSegs[v.index]!;
-                  if (seg.type === 'monthSum')
-                      return null;
-                  const col = dayColumns[seg.dayColIndex]!;
-                  const meta = dayMeta[col.colIndex]!;
-                  const isToday = todayInfo?.monthIndex === col.monthIndex && todayInfo?.day === col.day;
-                  return (
-                      <th
-                          key={`d-${col.colIndex}`}
-                          scope="col"
-                          className={[
-                              'vac-cont__th-day',
-                              meta.wknd && 'vac-cont__th-day--weekend',
-                              meta.monthStart && 'vac-cont__th-day--month-start',
-                              isToday && 'vac-cont__th-day--today',
-                          ].filter(Boolean).join(' ')}
-                      >
-                          {col.day}
-                      </th>
-                  );
-              })}
-              <VirtualColPad width={padRight} as="th" />
-            </tr>
-            <tr>
-              <VirtualColPad width={padLeft} as="th" />
-              {virtualCols.map((v) => {
-                  const seg = colSegs[v.index]!;
-                  if (seg.type === 'monthSum')
-                      return null;
-                  const col = dayColumns[seg.dayColIndex]!;
-                  const meta = dayMeta[col.colIndex]!;
-                  return (
-                      <th
-                          key={`w-${col.colIndex}`}
-                          scope="col"
-                          className={[
-                              'vac-cont__th-wd',
-                              meta.wknd && 'vac-cont__th-wd--weekend',
-                              meta.monthStart && 'vac-cont__th-wd--month-start',
-                          ].filter(Boolean).join(' ')}
-                      >
-                          {vacationWeekdayShortRu(year, col.monthIndex, col.day)}
-                      </th>
-                  );
-              })}
-              <VirtualColPad width={padRight} as="th" />
-            </tr>
-          </thead>
-          <tbody>
-            {padTop > 0 ? (
-                <tr className="vac-cont__virtual-spacer" aria-hidden>
-                    <td colSpan={bodyColSpan} style={{ height: padTop, padding: 0, border: 'none', lineHeight: 0 }} />
-                </tr>
-            ) : null}
-            {virtualRows.map((vRow) => {
-                const emp = employees[vRow.index]!;
-                return (
-                    <VacationBodyRow
-                        key={emp.id}
-                        emp={emp}
-                        userIndex={vRow.index}
-                        year={year}
-                        marks={marks}
-                        attendanceMarks={attendanceMarks}
-                        attendanceWorkday={attendanceWorkday}
-                        kindColors={kindColors}
-                        dayColumns={dayColumns}
-                        dayMeta={dayMeta}
-                        colSegs={colSegs}
-                        virtualCols={virtualCols}
-                        padLeft={padLeft}
-                        padRight={padRight}
-                        userStats={userStats}
-                        kindYearCounts={kindYearCounts}
-                        runEdgesByUser={runEdgesByUser}
-                        payroll={payroll}
-                        basisByCell={basisByCell}
-                        selectedKey={selectedKey}
-                        todayInfo={todayInfo}
-                        readOnlyDays={readOnlyDays}
-                        markedCellsClickable={markedCellsClickable}
-                        onEmployeeClick={onEmployeeClick}
-                        onDayCellClick={onDayCellClick}
-                        onAttendanceHover={showAttendanceFloatTip}
-                        onAttendanceHoverEnd={hideAttendanceFloatTip}
-                    />
-                );
-            })}
-            {padBottom > 0 ? (
-                <tr className="vac-cont__virtual-spacer" aria-hidden>
-                    <td colSpan={bodyColSpan} style={{ height: padBottom, padding: 0, border: 'none', lineHeight: 0 }} />
-                </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-      <p className="vac-cont__hint-mini">
-        <span className="vac-cont__hint-icon" aria-hidden>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2"/>
-            <path d="M8 7.2V11M8 4.9v.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-          </svg>
-        </span>
-        <span>
-          <b>Примечание.</b> Наведите на отметку дня — дата, ФИО и вид отсутствия.
-          {showAttendanceLegend && ' По опозданию и отсутствию — время события.'}
-          {markedCellsClickable && ' Клик по отметке — документы-основания периода.'}
-          {!readOnlyDays && ' В режиме редактирования клик по дню меняет вид или снимает отметку.'}
-          {' '}Столбцы «Кол-во» и «Всего» — число дней отсутствия за месяц и за год.
-          {payroll?.visible &&
-              ' Колонки «Отп.» / «Бол.» — ориентировочный расчёт (не замена бухучёту).'}
-        </span>
-      </p>
-      {attendanceFloatTip && typeof document !== 'undefined' ? createPortal(
-          <div
-              className="vac-cont__attendance-float-tip"
-              role="tooltip"
-              style={{
-                  left: attendanceFloatTip.x,
-                  top: attendanceFloatTip.y,
-              }}
-          >
-              {attendanceFloatTip.text}
-          </div>,
-          document.body,
-      ) : null}
+        {legendStrip}
+        <div className="vac-cont__scroll" ref={scrollContainerRef}>
+            <table className="vac-cont__table" role="grid" ref={tableRef}>
+                <thead>
+                    <tr>
+                        <th className="vac-cont__sticky-corner" colSpan={2} scope="colgroup">
+                            {year}
+                        </th>
+                        <VirtualColPad width={padLeft} as="th" />
+                        {renderMonthHeaderSegs(virtualCols, colSegs)}
+                        <VirtualColPad width={padRight} as="th" />
+                        {payroll?.visible && (<>
+                            <th className="vac-cont__pr-head vac-cont__pr-head--vac vac-cont__pr-head--vac-d" rowSpan={3} scope="col" title="Календарные дни с видом «ежегодный отпуск» за год">
+                                <span className="vac-cont__head-vertical">Отп. дн.</span>
+                            </th>
+                            <th className="vac-cont__pr-head vac-cont__pr-head--vac vac-cont__pr-head--money vac-cont__pr-head--vac-m" rowSpan={3} scope="col" title="Оценка: дни отпуска × (зарплата/29,3) × коэфф. отпуска">
+                                <span className="vac-cont__head-vertical">Отп. ₽</span>
+                            </th>
+                            <th className="vac-cont__pr-head vac-cont__pr-head--sick vac-cont__pr-head--sick-d" rowSpan={3} scope="col" title="Дни с видом «болезнь» за год">
+                                <span className="vac-cont__head-vertical">Бол. дн.</span>
+                            </th>
+                            <th className="vac-cont__pr-head vac-cont__pr-head--sick vac-cont__pr-head--money vac-cont__pr-head--sick-m" rowSpan={3} scope="col" title="Оценка: дни болезни × (зарплата/29,3) × ставка больничного">
+                                <span className="vac-cont__head-vertical">Бол. ₽</span>
+                            </th>
+                        </>)}
+                        <th className="vac-cont__year-sum-head" rowSpan={3} scope="col">
+                            <span className="vac-cont__head-vertical vac-cont__head-vertical--wide">Всего</span>
+                        </th>
+                    </tr>
+                    <tr>
+                        <th className="vac-cont__sticky-num" rowSpan={2} scope="col">
+                            №
+                        </th>
+                        <th className="vac-cont__sticky-name" rowSpan={2} scope="col">
+                            ФИО сотрудника
+                        </th>
+                        <VirtualColPad width={padLeft} as="th" />
+                        {virtualCols.map((v) => {
+                            const seg = colSegs[v.index]!;
+                            if (seg.type === 'monthSum')
+                                return null;
+                            const col = dayColumns[seg.dayColIndex]!;
+                            const meta = dayMeta[col.colIndex]!;
+                            const isToday = todayInfo?.monthIndex === col.monthIndex && todayInfo?.day === col.day;
+                            return (
+                                <th
+                                    key={`d-${col.colIndex}`}
+                                    scope="col"
+                                    className={[
+                                        'vac-cont__th-day',
+                                        meta.wknd && 'vac-cont__th-day--weekend',
+                                        meta.monthStart && 'vac-cont__th-day--month-start',
+                                        isToday && 'vac-cont__th-day--today',
+                                    ].filter(Boolean).join(' ')}
+                                >
+                                    {col.day}
+                                </th>
+                            );
+                        })}
+                        <VirtualColPad width={padRight} as="th" />
+                    </tr>
+                    <tr>
+                        <VirtualColPad width={padLeft} as="th" />
+                        {virtualCols.map((v) => {
+                            const seg = colSegs[v.index]!;
+                            if (seg.type === 'monthSum')
+                                return null;
+                            const col = dayColumns[seg.dayColIndex]!;
+                            const meta = dayMeta[col.colIndex]!;
+                            return (
+                                <th
+                                    key={`w-${col.colIndex}`}
+                                    scope="col"
+                                    className={[
+                                        'vac-cont__th-wd',
+                                        meta.wknd && 'vac-cont__th-wd--weekend',
+                                        meta.monthStart && 'vac-cont__th-wd--month-start',
+                                    ].filter(Boolean).join(' ')}
+                                >
+                                    {vacationWeekdayShortRu(year, col.monthIndex, col.day)}
+                                </th>
+                            );
+                        })}
+                        <VirtualColPad width={padRight} as="th" />
+                    </tr>
+                </thead>
+                <tbody>
+                    {padTop > 0 ? (
+                        <tr className="vac-cont__virtual-spacer" aria-hidden>
+                            <td colSpan={bodyColSpan} style={{ height: padTop, padding: 0, border: 'none', lineHeight: 0 }} />
+                        </tr>
+                    ) : null}
+                    {virtualRows.map((vRow) => {
+                        const emp = employees[vRow.index]!;
+                        return (
+                            <VacationBodyRow
+                                key={emp.id}
+                                emp={emp}
+                                userIndex={vRow.index}
+                                year={year}
+                                marks={marks}
+                                attendanceMarks={attendanceMarks}
+                                attendanceWorkday={attendanceWorkday}
+                                kindColors={kindColors}
+                                dayColumns={dayColumns}
+                                dayMeta={dayMeta}
+                                colSegs={colSegs}
+                                virtualCols={virtualCols}
+                                padLeft={padLeft}
+                                padRight={padRight}
+                                userStats={userStats}
+                                kindYearCounts={kindYearCounts}
+                                runEdgesByUser={runEdgesByUser}
+                                payroll={payroll}
+                                basisByCell={basisByCell}
+                                selectedKey={selectedKey}
+                                todayInfo={todayInfo}
+                                readOnlyDays={readOnlyDays}
+                                markedCellsClickable={markedCellsClickable}
+                                onEmployeeClick={onEmployeeClick}
+                                onDayCellClick={onDayCellClick}
+                                onAttendanceHover={showAttendanceFloatTip}
+                                onAttendanceHoverEnd={hideAttendanceFloatTip}
+                            />
+                        );
+                    })}
+                    {padBottom > 0 ? (
+                        <tr className="vac-cont__virtual-spacer" aria-hidden>
+                            <td colSpan={bodyColSpan} style={{ height: padBottom, padding: 0, border: 'none', lineHeight: 0 }} />
+                        </tr>
+                    ) : null}
+                </tbody>
+            </table>
+        </div>
+        <p className="vac-cont__hint-mini">
+            <span className="vac-cont__hint-icon" aria-hidden>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
+                    <path d="M8 7.2V11M8 4.9v.01" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+            </span>
+            <span>
+                <b>Примечание.</b> Наведите на отметку дня — дата, ФИО и вид отсутствия.
+                {showAttendanceLegend && ' По опозданию и отсутствию — время события.'}
+                {markedCellsClickable && ' Клик по отметке — документы-основания периода.'}
+                {!readOnlyDays && ' В режиме редактирования клик по дню меняет вид или снимает отметку.'}
+                {' '}Столбцы «Кол-во» и «Всего» — число дней отсутствия за месяц и за год.
+                {payroll?.visible &&
+                    ' Колонки «Отп.» / «Бол.» — ориентировочный расчёт (не замена бухучёту).'}
+            </span>
+        </p>
+        {attendanceFloatTip && typeof document !== 'undefined' ? createPortal(
+            <div
+                className="vac-cont__attendance-float-tip"
+                role="tooltip"
+                style={{
+                    left: attendanceFloatTip.x,
+                    top: attendanceFloatTip.y,
+                }}
+            >
+                {attendanceFloatTip.text}
+            </div>,
+            document.body,
+        ) : null}
     </div>);
 }

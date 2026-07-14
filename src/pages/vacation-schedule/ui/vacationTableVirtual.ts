@@ -46,5 +46,5 @@ export function readCssLenPx(el: Element, varName: string, fallbackRem: number):
     return Number.isFinite(n) ? n : remToPx(fallbackRem);
 }
 
-export const VAC_COL_OVERSCAN = 12;
-export const VAC_ROW_OVERSCAN = 8;
+export const VAC_COL_OVERSCAN = 6;
+export const VAC_ROW_OVERSCAN = 5;
