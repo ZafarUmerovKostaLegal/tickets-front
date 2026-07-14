@@ -1111,6 +1111,7 @@ export const timeTrackingPageExtraMessages = {
             deleteConfirmLabel: 'Удалить',
             revokeSignatureTitle: 'Откатить подпись: {name}',
             revokeSignatureAria: 'Откатить подпись',
+            revokeSignatureAction: 'Откатить',
             revokeSignatureBusy: 'Откат…',
             revokeSignatureFailed: 'Не удалось откатить подпись',
             revokeSignatureForbidden: 'Откатить подпись может отправитель, администратор или сам подписавший партнёр',

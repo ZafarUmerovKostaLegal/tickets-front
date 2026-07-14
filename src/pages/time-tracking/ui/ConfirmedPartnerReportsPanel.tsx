@@ -102,9 +102,10 @@ function canDeletePartnerConfirmedRow(
     userId: number | null | undefined,
     canManageAll: boolean,
 ): boolean {
-    if (userId == null)
+    const uid = Number(userId);
+    if (!Number.isFinite(uid) || uid <= 0)
         return false;
-    return r.submittedByAuthUserId === userId || canManageAll;
+    return Number(r.submittedByAuthUserId) === uid || canManageAll;
 }
 
 function canRevokePartnerSignature(
@@ -113,11 +114,12 @@ function canRevokePartnerSignature(
     userId: number | null | undefined,
     canManageAll: boolean,
 ): boolean {
-    if (userId == null)
+    const uid = Number(userId);
+    if (!Number.isFinite(uid) || uid <= 0)
         return false;
-    if (r.submittedByAuthUserId === userId || canManageAll)
+    if (Number(r.submittedByAuthUserId) === uid || canManageAll)
         return true;
-    return partnerAuthUserId === userId;
+    return Number(partnerAuthUserId) === uid;
 }
 
 function fmtIsoDateShort(iso: string | null | undefined, locale: 'ru' | 'en'): string {
@@ -144,6 +146,7 @@ function PartnerSignaturesList({
     revokeTitle,
     revokeAria,
     revokeBusyLabel,
+    revokeActionLabel,
     onRevoke,
 }: {
     signatures: PartnerReportConfirmationRequest['signatures'];
@@ -155,6 +158,7 @@ function PartnerSignaturesList({
     revokeTitle: (partnerName: string) => string;
     revokeAria: string;
     revokeBusyLabel: string;
+    revokeActionLabel: string;
     onRevoke: (partnerAuthUserId: number, partnerName: string) => void;
 }) {
     if (signatures.length === 0)
@@ -172,19 +176,25 @@ function PartnerSignaturesList({
                     : revokeTitle(name);
             return (
                 <li key={`${s.partnerAuthUserId}-${s.confirmedAt}-${i}`} className="tt-partner-confirmed__sig-item">
-                    <span className="tt-partner-confirmed__sig-name">{name}</span>
-                    <span className="tt-partner-confirmed__sig-sep" aria-hidden>·</span>
-                    <span className="tt-partner-confirmed__sig-when">{fmtIsoDateShort(s.confirmedAt, locale)}</span>
+                    <span className="tt-partner-confirmed__sig-main">
+                        <span className="tt-partner-confirmed__sig-name">{name}</span>
+                        <span className="tt-partner-confirmed__sig-sep" aria-hidden>·</span>
+                        <span className="tt-partner-confirmed__sig-when">{fmtIsoDateShort(s.confirmedAt, locale)}</span>
+                    </span>
                     {showRevoke ? (
                         <button
                             type="button"
                             className="tt-partner-confirmed__sig-revoke"
-                            disabled={busy || blocked || revokeBusyPartnerId != null}
-                            onClick={() => onRevoke(s.partnerAuthUserId, name)}
+                            disabled={busy || blocked || (revokeBusyPartnerId != null && !busy)}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onRevoke(s.partnerAuthUserId, name);
+                            }}
                             title={title}
-                            aria-label={busy ? revokeBusyLabel : revokeAria}
+                            aria-label={busy ? revokeBusyLabel : `${revokeAria}: ${name}`}
                         >
-                            {busy ? '…' : '×'}
+                            {busy ? revokeBusyLabel : revokeActionLabel}
                         </button>
                     ) : null}
                 </li>
@@ -887,6 +897,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                             revokeTitle={(name) => t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureTitle').replace('{name}', name)}
                             revokeAria={t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureAria')}
                             revokeBusyLabel={t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureBusy')}
+                            revokeActionLabel={t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureAction')}
                             onRevoke={(partnerAuthUserId, partnerName) => {
                                 void revokeSignature(r, partnerAuthUserId, partnerName);
                             }}

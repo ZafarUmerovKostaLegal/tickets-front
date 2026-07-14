@@ -1113,6 +1113,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             deleteConfirmLabel: 'Delete',
             revokeSignatureTitle: 'Revoke signature: {name}',
             revokeSignatureAria: 'Revoke signature',
+            revokeSignatureAction: 'Revoke',
             revokeSignatureBusy: 'Revoking…',
             revokeSignatureFailed: 'Could not revoke signature',
             revokeSignatureForbidden: 'Only the submitter, an administrator, or the signing partner can revoke a signature',
