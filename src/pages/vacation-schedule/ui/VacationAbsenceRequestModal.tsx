@@ -38,9 +38,22 @@ type Props = {
 
 const FALLBACK_KINDS: VacationLeaveKindApi[] = [
     { kind_code: 1, kind: 'annual_vacation', label_ru: 'Ежегодный отпуск', color_hex: '#E8D5F2', color_text_hex: '#4A148C' },
+    { kind_code: 2, kind: 'sick_leave', label_ru: 'Больничный', color_hex: '#FF1493', color_text_hex: '#880E4F' },
     { kind_code: 3, kind: 'day_off', label_ru: 'Day Off (нерабочий)', color_hex: '#81D4FA', color_text_hex: '#01579B' },
     { kind_code: 5, kind: 'remote_work', label_ru: 'Дистанционный режим', color_hex: '#FFF59D', color_text_hex: '#F57F17' },
 ];
+
+function mergeLeaveKinds(apiList: VacationLeaveKindApi[]): VacationLeaveKindApi[] {
+    const byKind = new Map(apiList.map((k) => [k.kind, k]));
+    const merged: VacationLeaveKindApi[] = [];
+    for (const fb of FALLBACK_KINDS) {
+        merged.push(byKind.get(fb.kind) ?? fb);
+        byKind.delete(fb.kind);
+    }
+    for (const extra of byKind.values())
+        merged.push(extra);
+    return merged;
+}
 
 function yearFromIso(iso: string): number | null {
     const m = /^(\d{4})-/.exec(iso.trim());
@@ -58,6 +71,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
     const [kind, setKind] = useState<VacationLeaveRequestKind>('annual_vacation');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
+    const [reason, setReason] = useState('');
     const [partnerId, setPartnerId] = useState('');
     const [partners, setPartners] = useState<PartnerOption[]>([]);
     const [partnersLoading, setPartnersLoading] = useState(false);
@@ -77,6 +91,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
         setKind('annual_vacation');
         setDateFrom('');
         setDateTo('');
+        setReason('');
         setPartnerId('');
         setError(null);
         setSubmitting(false);
@@ -91,7 +106,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
             .then((list) => {
                 if (cancelled || list.length === 0)
                     return;
-                setKinds(list);
+                setKinds(mergeLeaveKinds(list));
             })
             .catch(() => {
             });
@@ -229,6 +244,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                 date_from: dateFrom.slice(0, 10),
                 date_to: dateTo.slice(0, 10),
                 partner_user_id: partner.userId,
+                reason: reason.trim() || null,
             });
             pushToast({
                 variant: 'success',
@@ -243,7 +259,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
         finally {
             setSubmitting(false);
         }
-    }, [user, dateFrom, dateTo, dayCount, partners, partnerId, kind, balance, onClose, onSubmitted, pushToast]);
+    }, [user, dateFrom, dateTo, dayCount, partners, partnerId, kind, balance, reason, onClose, onSubmitted, pushToast]);
 
     if (!open)
         return null;
@@ -432,6 +448,19 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                         <p className="vac-req-modal__tip">
                             Партнёр получит PDF с кнопками «Утвердить» / «Отклонить». После approve дни появятся в графике.
                         </p>
+                    </fieldset>
+
+                    <fieldset className="vac-req-modal__section">
+                        <legend className="vac-req-modal__legend">Комментарий</legend>
+                        <textarea
+                            className="vac-req-modal__reason"
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            placeholder="Необязательно — для партнёра в заявке и PDF"
+                            rows={3}
+                            maxLength={500}
+                            disabled={submitting}
+                        />
                     </fieldset>
 
                     {error && (

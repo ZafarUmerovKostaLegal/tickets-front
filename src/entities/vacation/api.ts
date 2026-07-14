@@ -471,6 +471,7 @@ export type VacationLeaveKindApi = {
 
 export const VACATION_LEAVE_REQUEST_KINDS = [
     'annual_vacation',
+    'sick_leave',
     'day_off',
     'remote_work',
 ] as const;

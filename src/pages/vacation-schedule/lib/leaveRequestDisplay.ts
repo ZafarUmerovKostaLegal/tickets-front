@@ -7,6 +7,7 @@ import type {
 
 const KIND_LABEL_FALLBACK: Record<VacationLeaveRequestKind, string> = {
     annual_vacation: 'Ежегодный отпуск',
+    sick_leave: 'Больничный',
     day_off: 'Day Off (нерабочий)',
     remote_work: 'Дистанционный режим',
 };

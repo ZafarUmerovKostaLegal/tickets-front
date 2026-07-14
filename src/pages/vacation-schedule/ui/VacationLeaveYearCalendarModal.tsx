@@ -24,6 +24,7 @@ const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as con
 
 const LEAVE_KIND_TO_UI: Record<VacationLeaveRequestKind, VacationAbsenceKind> = {
     annual_vacation: 'annual',
+    sick_leave: 'sick',
     day_off: 'dayoff',
     remote_work: 'remote',
 };
