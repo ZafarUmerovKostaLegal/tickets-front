@@ -276,6 +276,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
   const [unbilledTo, setUnbilledTo] = useState(lastOfMonthIso());
   const [issueDate, setIssueDate] = useState(todayIso());
   const [dueDate, setDueDate] = useState(addDaysIso(30));
+  const [createInvoiceNumber, setCreateInvoiceNumber] = useState('');
   const [unbilledTime, setUnbilledTime] = useState<UnbilledTimeEntryDto[]>([]);
   const [unbilledExp, setUnbilledExp] = useState<UnbilledExpenseEntryDto[]>([]);
   const [selTime, setSelTime] = useState<Set<string>>(() => new Set());
@@ -652,6 +653,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     setUnbilledTo(f.unbilledTo);
     setIssueDate(f.issueDate);
     setDueDate(f.dueDate);
+    setCreateInvoiceNumber((f.invoiceNumber ?? '').trim());
     setSelTime(new Set(f.selTime));
     setSelExp(new Set(f.selExp));
     setCreateOpen(true);
@@ -702,14 +704,16 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
         dueDate,
         selTime: [...selTime],
         selExp: [...selExp],
+        ...(createInvoiceNumber.trim() ? { invoiceNumber: createInvoiceNumber.trim() } : {}),
       },
       meta: {
         ...(clientLabel ? { clientLabel } : {}),
         ...(projectLabel ? { projectLabel } : {}),
+        ...(createInvoiceNumber.trim() ? { invoiceNumber: createInvoiceNumber.trim() } : {}),
       },
     });
     navigate(routes.timeTrackingInvoicePreview);
-  }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, selTime, selExp, projects, navigate]);
+  }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, createInvoiceNumber, selTime, selExp, projects, navigate]);
   const openExistingInvoicePreview = useCallback((inv: InvoiceDto) => {
     void (async () => {
       try {
@@ -810,17 +814,20 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     }
     setCreateBusy(true);
     try {
+      const manualNumber = createInvoiceNumber.trim();
       await createInvoice({
         clientId: createClientId,
         projectId: billProjectId,
         issueDate,
         dueDate,
+        ...(manualNumber ? { invoiceNumber: manualNumber } : {}),
         timeEntryIds: [...selTime],
         expenseIds: [...selExp],
         partnerBillingPeriodFrom: unbilledFrom.trim().slice(0, 10),
         partnerBillingPeriodTo: unbilledTo.trim().slice(0, 10),
       });
       setCreateOpen(false);
+      setCreateInvoiceNumber('');
       setSelTime(new Set());
       setSelExp(new Set());
       loadList();
@@ -828,7 +835,9 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       notifyReportsInvalidated();
     }
     catch (e) {
-      const base = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.createFailed');
+      const raw = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.createFailed');
+      const conflict = /409|уже существует|already exists/i.test(raw);
+      const base = conflict ? t('timeTrackingPage.invoices.errors.invoiceNumberConflict') : raw;
       const hint = isForbiddenError(e)
         ? t('timeTrackingPage.invoices.errors.partnerConfirmHint')
         : '';
@@ -837,7 +846,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     finally {
       setCreateBusy(false);
     }
-  }, [createClientId, createProjectId, issueDate, dueDate, selTime, selExp, unbilledFrom, unbilledTo, loadList, loadAggStats, showAlert, t]);
+  }, [createClientId, createProjectId, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledFrom, unbilledTo, loadList, loadAggStats, showAlert, t]);
   const handlePayment = useCallback(async () => {
     if (!detailId || !detail)
       return;
@@ -992,6 +1001,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     setCreateOpen(true);
     setCreateClientId('');
     setCreateProjectId('');
+    setCreateInvoiceNumber('');
     setUnbilledTime([]);
     setUnbilledExp([]);
     setUnbilledPartnerBlockReason(null);
@@ -1282,6 +1292,25 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
               <div className="tt-inv-dialog__field">
                 <span id="tt-inv-due-date-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.dueDate')}</span>
                 <DatePicker id="tt-inv-due-date" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={dueDate} min={issueDate || undefined} onChange={(iso) => setDueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.dueDate')} showChevron aria-labelledby="tt-inv-due-date-lbl" />
+              </div>
+            </div>
+            <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2" style={{ marginTop: '0.75rem' }}>
+              <div className="tt-inv-dialog__field">
+                <label className="tt-inv-dialog__label" htmlFor="tt-inv-create-number">{t('timeTrackingPage.invoices.createDialog.invoiceNumber')}</label>
+                <input
+                  id="tt-inv-create-number"
+                  type="text"
+                  className="tt-inv-dialog__control"
+                  value={createInvoiceNumber}
+                  onChange={(e) => setCreateInvoiceNumber(e.target.value)}
+                  placeholder={t('timeTrackingPage.invoices.createDialog.invoiceNumberPlaceholder')}
+                  maxLength={64}
+                  autoComplete="off"
+                  disabled={createBusy}
+                />
+                <p className="tt-inv-dialog__section-desc" style={{ marginTop: '0.35rem', marginBottom: 0 }}>
+                  {t('timeTrackingPage.invoices.createDialog.invoiceNumberHint')}
+                </p>
               </div>
             </div>
           </div>

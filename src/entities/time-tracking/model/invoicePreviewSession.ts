@@ -11,6 +11,8 @@ export type InvoicePreviewFormDraftV1 = {
     dueDate: string;
     selTime: string[];
     selExp: string[];
+    /** Опциональный ручной номер счёта; пусто = авто */
+    invoiceNumber?: string;
 };
 
 export type InvoicePreviewMeta = {
@@ -52,7 +54,8 @@ function isFormDraft(o: unknown): o is InvoicePreviewFormDraftV1 {
         && typeof r.issueDate === 'string'
         && typeof r.dueDate === 'string'
         && Array.isArray(selTime) && selTime.every((x) => typeof x === 'string')
-        && Array.isArray(selExp) && selExp.every((x) => typeof x === 'string');
+        && Array.isArray(selExp) && selExp.every((x) => typeof x === 'string')
+        && (r.invoiceNumber === undefined || typeof r.invoiceNumber === 'string');
 }
 
 function parseMeta(raw: unknown): InvoicePreviewMeta {

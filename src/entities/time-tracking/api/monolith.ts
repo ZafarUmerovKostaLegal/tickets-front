@@ -4124,6 +4124,7 @@ export type InvoiceCreateInput = {
     projectId?: string | null;
     issueDate: string;
     dueDate: string;
+    invoiceNumber?: string | null;
     currency?: string | null;
     taxPercent?: number | null;
     tax2Percent?: number | null;
