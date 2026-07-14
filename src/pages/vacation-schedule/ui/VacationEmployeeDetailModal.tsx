@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useAppDialog } from '@shared/ui';
 import {
@@ -7,14 +7,29 @@ import {
     deleteVacationManualEntryDocument,
     deleteVacationScheduleEmployee,
     getVacationScheduleEmployee,
+    listVacationAttendanceMarkers,
     listVacationManualEntries,
     patchVacationScheduleEmployee,
+    type VacationAttendanceMarkerApi,
     type VacationManualEntryApi,
 } from '@entities/vacation';
 import type { User } from '@entities/user';
 import { listColleaguesAsUsers } from '@entities/contacts';
+import { fetchWorkdaySettings, workdayDtoToSettings } from '@entities/attendance';
+import { DEFAULT_WORKDAY_SETTINGS, type WorkdaySettings } from '@shared/lib/attendanceSettings';
 import { isHiddenSystemUser } from '@shared/lib';
-import { apiAbsenceKindToUi, vacationKindHumanLabel, VACATION_MONTH_NAMES, } from '../lib/vacationScheduleModel';
+import { ruDaysWord } from '../lib/leaveRequestDisplay';
+import {
+    apiAbsenceKindToUi,
+    formatVacationLateMinutes,
+    formatVacationLateMinutesTotal,
+    vacationAttendanceArrivalClock,
+    vacationAttendanceLateMinutes,
+    vacationDayIsWeekendRu,
+    vacationKindHumanLabel,
+    VACATION_MONTH_NAMES,
+    type VacationAttendanceWorkday,
+} from '../lib/vacationScheduleModel';
 import { VacationDocLightbox, type VacationDocLightboxTarget } from './VacationDocLightbox';
 import './VacationEmployeeDetailModal.css';
 
@@ -29,6 +44,80 @@ function formatIsoDateRu(iso: string): string {
         return iso;
     return `${d} ${VACATION_MONTH_NAMES[mo - 1]} ${y}`;
 }
+
+function parseIsoParts(iso: string): { year: number; monthIndex: number; day: number } | null {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso.trim());
+    if (!m)
+        return null;
+    const year = Number(m[1]);
+    const monthIndex = Number(m[2]) - 1;
+    const day = Number(m[3]);
+    if (!Number.isFinite(year) || monthIndex < 0 || monthIndex > 11 || day < 1 || day > 31)
+        return null;
+    return { year, monthIndex, day };
+}
+
+type AttendanceDayRow = {
+    date: string;
+    status: 'late' | 'absent';
+    minutes: number | null;
+    arrival: string | null;
+    explanation: string | null;
+};
+
+type AttendanceSummary = {
+    lateCount: number;
+    absentCount: number;
+    lateMinutesTotal: number;
+    days: AttendanceDayRow[];
+};
+
+function summarizeAttendanceForUser(
+    markers: VacationAttendanceMarkerApi[],
+    appUserId: number,
+    year: number,
+    workday: VacationAttendanceWorkday,
+): AttendanceSummary {
+    const days: AttendanceDayRow[] = [];
+    let lateCount = 0;
+    let absentCount = 0;
+    let lateMinutesTotal = 0;
+    for (const marker of markers) {
+        if (marker.app_user_id !== appUserId)
+            continue;
+        const parts = parseIsoParts(marker.date);
+        if (!parts || parts.year !== year)
+            continue;
+        if (vacationDayIsWeekendRu(year, parts.monthIndex, parts.day))
+            continue;
+        if (marker.status === 'late') {
+            lateCount += 1;
+            const minutes = vacationAttendanceLateMinutes(marker.first_event_time, workday);
+            if (minutes != null && minutes > 0)
+                lateMinutesTotal += minutes;
+            days.push({
+                date: marker.date,
+                status: 'late',
+                minutes,
+                arrival: vacationAttendanceArrivalClock(marker.first_event_time),
+                explanation: marker.explanation_text,
+            });
+        }
+        else if (marker.status === 'absent') {
+            absentCount += 1;
+            days.push({
+                date: marker.date,
+                status: 'absent',
+                minutes: null,
+                arrival: null,
+                explanation: marker.explanation_text,
+            });
+        }
+    }
+    days.sort((a, b) => a.date.localeCompare(b.date));
+    return { lateCount, absentCount, lateMinutesTotal, days };
+}
+
 type Props = {
     employeeId: number;
     year: number;
@@ -68,6 +157,21 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
     const [linkOptions, setLinkOptions] = useState<LinkOption[]>([]);
     const [selectedLinkUserId, setSelectedLinkUserId] = useState('');
     const [linkSaving, setLinkSaving] = useState(false);
+    const [workdaySettings, setWorkdaySettings] = useState<WorkdaySettings>(DEFAULT_WORKDAY_SETTINGS);
+    const [attendance, setAttendance] = useState<AttendanceSummary | null>(null);
+    const [attendanceLoading, setAttendanceLoading] = useState(false);
+    const [attendanceError, setAttendanceError] = useState<string | null>(null);
+
+    const absenceByKind = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const d of days) {
+            const ui = apiAbsenceKindToUi(d.kind);
+            const label = ui ? vacationKindHumanLabel(ui) : d.kind;
+            map.set(label, (map.get(label) ?? 0) + 1);
+        }
+        return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ru'));
+    }, [days]);
+
     const load = useCallback(() => {
         setLoading(true);
         setError(null);
@@ -120,6 +224,47 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
             cancelled = true;
         };
     }, [canEdit]);
+
+    useEffect(() => {
+        let cancelled = false;
+        if (authUserId == null || authUserId <= 0) {
+            setAttendance(null);
+            setAttendanceError(null);
+            setAttendanceLoading(false);
+            return;
+        }
+        setAttendanceLoading(true);
+        setAttendanceError(null);
+        const from = `${year}-01-01`;
+        const today = new Date();
+        const to = year === today.getFullYear()
+            ? `${year}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+            : `${year}-12-31`;
+        void Promise.all([
+            listVacationAttendanceMarkers(from, to),
+            fetchWorkdaySettings().then(workdayDtoToSettings).catch(() => DEFAULT_WORKDAY_SETTINGS),
+        ])
+            .then(([markers, workday]) => {
+                if (cancelled)
+                    return;
+                setWorkdaySettings(workday);
+                setAttendance(summarizeAttendanceForUser(markers, authUserId, year, workday));
+            })
+            .catch((e: unknown) => {
+                if (cancelled)
+                    return;
+                setAttendance(null);
+                setAttendanceError(e instanceof Error ? e.message : 'Не удалось загрузить посещаемость');
+            })
+            .finally(() => {
+                if (!cancelled)
+                    setAttendanceLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [authUserId, year]);
+
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape')
@@ -266,6 +411,109 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
                     {plannedNote?.trim() && (<p className="vac-emp-card__note">
                         <span className="vac-emp-card__note-lbl">Период:</span> {plannedNote}
                     </p>)}
+
+                    <section className="vac-emp-card__summary" aria-label="Сводка за год">
+                        <h3 className="vac-emp-card__sub">Сводка</h3>
+                        <div className="vac-emp-card__kpis">
+                            <article className="vac-emp-card__kpi">
+                                <span className="vac-emp-card__kpi-label">В графике</span>
+                                <strong className="vac-emp-card__kpi-value">{days.length}</strong>
+                                <span className="vac-emp-card__kpi-sub">{ruDaysWord(days.length)} отсутствий</span>
+                            </article>
+                            <article className="vac-emp-card__kpi vac-emp-card__kpi--late">
+                                <span className="vac-emp-card__kpi-label">Опоздания</span>
+                                <strong className="vac-emp-card__kpi-value">
+                                    {authUserId == null
+                                        ? '—'
+                                        : attendanceLoading
+                                            ? '…'
+                                            : (attendance?.lateCount ?? 0)}
+                                </strong>
+                                <span className="vac-emp-card__kpi-sub">
+                                    {authUserId == null
+                                        ? 'нужна связка'
+                                        : attendanceLoading
+                                            ? 'загрузка…'
+                                            : formatVacationLateMinutesTotal(attendance?.lateMinutesTotal ?? 0)}
+                                </span>
+                            </article>
+                            <article className="vac-emp-card__kpi vac-emp-card__kpi--absent">
+                                <span className="vac-emp-card__kpi-label">Без прохода</span>
+                                <strong className="vac-emp-card__kpi-value">
+                                    {authUserId == null
+                                        ? '—'
+                                        : attendanceLoading
+                                            ? '…'
+                                            : (attendance?.absentCount ?? 0)}
+                                </strong>
+                                <span className="vac-emp-card__kpi-sub">рабочих дней</span>
+                            </article>
+                            <article className="vac-emp-card__kpi">
+                                <span className="vac-emp-card__kpi-label">Сред. опозд.</span>
+                                <strong className="vac-emp-card__kpi-value vac-emp-card__kpi-value--sm">
+                                    {authUserId == null || !attendance || attendance.lateCount === 0
+                                        ? '—'
+                                        : formatVacationLateMinutesTotal(
+                                            Math.round(attendance.lateMinutesTotal / attendance.lateCount),
+                                        )}
+                                </strong>
+                                <span className="vac-emp-card__kpi-sub">на одно опоздание</span>
+                            </article>
+                        </div>
+                        {absenceByKind.length > 0 && (
+                            <ul className="vac-emp-card__kind-totals" aria-label="По видам отсутствий">
+                                {absenceByKind.map(([label, count]) => (
+                                    <li key={label} className="vac-emp-card__kind-total">
+                                        <span className="vac-emp-card__kind-total-label">{label}</span>
+                                        <span className="vac-emp-card__kind-total-count">{count} {ruDaysWord(count)}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        {authUserId == null && (
+                            <p className="vac-emp-card__hint">
+                                Привяжите пользователя системы — появятся опоздания и отсутствия по проходам.
+                            </p>
+                        )}
+                        {attendanceError && (
+                            <p className="vac-emp-card__hint vac-emp-card__hint--err">{attendanceError}</p>
+                        )}
+                        {!attendanceLoading && attendance && attendance.days.length > 0 && (
+                            <details className="vac-emp-card__att-details">
+                                <summary>
+                                    Детали посещаемости ({attendance.days.length})
+                                </summary>
+                                <ul className="vac-emp-card__att-list">
+                                    {attendance.days.map((row) => (
+                                        <li key={`${row.date}-${row.status}`} className={`vac-emp-card__att-li vac-emp-card__att-li--${row.status}`}>
+                                            <span className="vac-emp-card__att-date">{formatIsoDateRu(row.date)}</span>
+                                            <span className="vac-emp-card__att-status">
+                                                {row.status === 'late'
+                                                    ? (row.minutes != null && row.minutes > 0
+                                                        ? `Опоздание +${formatVacationLateMinutes(row.minutes)}`
+                                                        : 'Опоздание')
+                                                    : 'Без прохода'}
+                                            </span>
+                                            {row.arrival && (
+                                                <span className="vac-emp-card__att-meta">приход {row.arrival}</span>
+                                            )}
+                                            {row.explanation?.trim() && (
+                                                <span className="vac-emp-card__att-meta" title={row.explanation}>
+                                                    {row.explanation.trim()}
+                                                </span>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <p className="vac-emp-card__hint">
+                                    Норма прихода: {workdaySettings.startTime}
+                                    {workdaySettings.lateMinutes > 0 ? ` (+${workdaySettings.lateMinutes} мин)` : ''}.
+                                    До сегодняшнего дня в {year} г.
+                                </p>
+                            </details>
+                        )}
+                    </section>
+
                     {canEdit && (<div className="vac-emp-card__link-box">
                         <label className="vac-emp-card__link-label" htmlFor="vac-emp-auth-link">
                             Связка с пользователем системы

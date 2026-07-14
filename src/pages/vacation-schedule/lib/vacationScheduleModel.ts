@@ -477,6 +477,18 @@ export function formatVacationLateMinutes(minutes: number): string {
     }
     return `${minutes}м`;
 }
+
+/** Readable total for dashboards / employee detail (e.g. «1 ч 30 мин»). */
+export function formatVacationLateMinutesTotal(minutes: number): string {
+    if (!(minutes > 0))
+        return '0 мин';
+    if (minutes >= 60) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return m > 0 ? `${h} ч ${m} мин` : `${h} ч`;
+    }
+    return `${minutes} мин`;
+}
 export function vacationAttendanceLateLabel(firstEventTime: string | null | undefined, workday: VacationAttendanceWorkday): string | null {
     const minutes = vacationAttendanceLateMinutes(firstEventTime, workday);
     if (minutes == null || minutes <= 0)
