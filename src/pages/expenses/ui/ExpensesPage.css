@@ -2381,30 +2381,37 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   white-space: nowrap;
 }
 
-.exp-form-currency-select {
+.exp-form-currency-searchable {
   flex-shrink: 0;
   min-width: 6.75rem;
   max-width: 9rem;
-  margin: 0;
-  padding: 0 1.5rem 0 0.65rem;
-  border: none;
-  border-left: 1px solid var(--app-border);
-  border-radius: 0;
-  background-color: var(--app-surface-soft, #f8fafc);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.4rem center;
-  background-size: 12px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  font-family: inherit;
-  color: var(--app-text, #334155);
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
+  align-self: stretch;
 }
 
-.exp-form-currency-select:disabled {
+.exp-form-currency-searchable .exp-form-currency-select,
+.exp-form-input-wrap .exp-form-currency-select.exp-searchable__btn {
+  height: 100%;
+  min-height: 0;
+  min-width: 6.75rem;
+  max-width: 9rem;
+  margin: 0;
+  padding: 0 0.5rem 0 0.65rem;
+  border: none !important;
+  border-left: 1px solid var(--app-border) !important;
+  border-radius: 0 !important;
+  background: var(--app-surface-soft, #f8fafc);
+  box-shadow: none !important;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.exp-form-currency-searchable .exp-searchable__btn-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.exp-form-currency-select:disabled,
+.exp-form-input-wrap .exp-form-currency-select.exp-searchable__btn:disabled {
   cursor: not-allowed;
   opacity: 0.75;
 }
@@ -2498,6 +2505,23 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   border: 1px solid var(--app-border, #e2e8f0);
   border-radius: 12px;
   box-shadow: 0 10px 40px rgba(15, 23, 42, 0.12);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.exp-searchable__dropdown--portal {
+  position: fixed;
+  right: auto;
+  top: auto;
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.22);
+}
+
+.exp-searchable__dropdown--portal .exp-searchable__list {
+  max-height: none;
+  flex: 1;
+  min-height: 0;
 }
 
 .exp-searchable__search {

@@ -836,6 +836,34 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         return null;
     }, [values.projectId, expenseClientsProjects]);
     const showAdditionalSection = useMemo(() => values.expenseType === EXPENSE_TYPE_CLIENT, [values.expenseType]);
+    const expenseTypeItems = useMemo(() => [...EXPENSE_TYPES], []);
+    const partnerSubtypeItems = useMemo(() => [...PARTNER_EXPENSE_CATEGORIES], []);
+    const partnerUserItems = useMemo(() => {
+        type PartnerPick = { id: string; label: string; search: string };
+        const rows: PartnerPick[] = [{ id: '', label: 'Не указан', search: 'не указан' }];
+        for (const p of partnerOptions) {
+            const label = p.display_name?.trim() || p.email || `User #${p.id}`;
+            rows.push({
+                id: String(p.id),
+                label,
+                search: `${label} ${p.email ?? ''} ${p.id}`.toLowerCase(),
+            });
+        }
+        return rows;
+    }, [partnerOptions]);
+    const paymentMethodItems = useMemo(() => [
+        { value: '', label: 'Не указан', search: 'не указан' },
+        ...PAYMENT_METHODS.map(m => ({ value: m.value, label: m.label, search: m.label.toLowerCase() })),
+    ], []);
+    const currencyItems = useMemo(() => [...EXPENSE_CURRENCIES], []);
+    const expenseCategoryItems = useMemo(() => [
+        { id: '', name: 'Не указана', search: 'не указана' },
+        ...expenseProjectCategories.map(c => ({
+            id: c.id,
+            name: c.name,
+            search: `${c.name} ${c.id}`.toLowerCase(),
+        })),
+    ], [expenseProjectCategories]);
     const handleDeleteServerAttachment = useCallback(async (attId: string) => {
         if (!editingRequest || !onExpenseSnapshotUpdated)
             return;
@@ -1319,10 +1347,26 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
 
             <div className={`exp-form-field${errors.expenseType ? ' exp-form-field--err' : ''}`}>
               <label className="exp-form-label">Тип расхода <span className="exp-form-req">*</span></label>
-              <select className="exp-form-select" value={values.expenseType} onChange={e => set('expenseType', e.target.value)} disabled={isView}>
-                <option value="">Выберите тип</option>
-                {EXPENSE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-              </select>
+              {isView ? (
+                <p className="exp-form-static">
+                  {expenseTypeItems.find(t => t.value === values.expenseType)?.label || values.expenseType || '—'}
+                </p>
+              ) : (
+                <ExpenseSearchableSelect
+                  portalDropdown
+                  placeholder="Выберите тип"
+                  emptyListText="Нет типов"
+                  noMatchText="Тип не найден"
+                  value={values.expenseType}
+                  items={expenseTypeItems}
+                  getOptionValue={t => t.value}
+                  getOptionLabel={t => t.label}
+                  getSearchText={t => t.label}
+                  onSelect={t => set('expenseType', t.value)}
+                  aria-invalid={Boolean(errors.expenseType)}
+                  aria-label="Тип расхода"
+                />
+              )}
               {errors.expenseType && <p className="exp-form-err-msg" data-err>{errors.expenseType}</p>}
             </div>
 
@@ -1334,12 +1378,22 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     {values.expenseSubtype
                     ? getPartnerExpenseSubtypeLabel(values.expenseSubtype) || values.expenseSubtype
                     : '—'}
-                  </p>) : (<select className="exp-form-select" value={values.expenseSubtype} onChange={e => set('expenseSubtype', e.target.value)}>
-                    <option value="">Выберите категорию</option>
-                    {PARTNER_EXPENSE_CATEGORIES.map(c => (<option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>))}
-                  </select>)}
+                  </p>) : (
+                  <ExpenseSearchableSelect
+                    portalDropdown
+                    placeholder="Выберите категорию"
+                    emptyListText="Нет категорий"
+                    noMatchText="Категория не найдена"
+                    value={values.expenseSubtype}
+                    items={partnerSubtypeItems}
+                    getOptionValue={c => c.value}
+                    getOptionLabel={c => c.label}
+                    getSearchText={c => c.label}
+                    onSelect={c => set('expenseSubtype', c.value)}
+                    aria-invalid={Boolean(errors.expenseSubtype)}
+                    aria-label="Категория расхода партнёра"
+                  />
+                )}
                 {!isView && (<p className="exp-form-hint" style={{ marginTop: '0.35rem' }}>
                     Расход записывается сразу в статус <strong>«Одобрено»</strong> — согласование не требуется. Можно указать дату задним числом.
                   </p>)}
@@ -1352,12 +1406,23 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     {editingRequest?.partnerUser?.displayName?.trim()
                         || editingRequest?.partnerUser?.email?.trim()
                         || '—'}
-                  </p>) : (<select className="exp-form-select" value={values.partnerUserId} onChange={e => set('partnerUserId', e.target.value)} disabled={partnersLoad === 'loading'}>
-                    <option value="">Не указан</option>
-                    {partnerOptions.map(p => (<option key={p.id} value={String(p.id)}>
-                        {p.display_name?.trim() || p.email || `User #${p.id}`}
-                      </option>))}
-                  </select>)}
+                  </p>) : (
+                  <ExpenseSearchableSelect
+                    portalDropdown
+                    placeholder={partnersLoad === 'loading' ? 'Загрузка…' : 'Не указан'}
+                    emptyListText="Партнёры не найдены"
+                    noMatchText="Партнёр не найден"
+                    value={values.partnerUserId}
+                    items={partnerUserItems}
+                    getOptionValue={p => p.id}
+                    getOptionLabel={p => p.label}
+                    getSearchText={p => p.search}
+                    disabled={partnersLoad === 'loading'}
+                    onSelect={p => set('partnerUserId', p.id)}
+                    aria-invalid={Boolean(errors.partnerUserId)}
+                    aria-label="Партнёр"
+                  />
+                )}
                 {!isView && (<p className="exp-form-hint" style={{ marginTop: '0.35rem' }}>
                     Необязательно: укажите партнёра, за которого фиксируется расход.
                   </p>)}
@@ -1432,9 +1497,20 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
               <label className="exp-form-label">Сумма <span className="exp-form-req">*</span></label>
               <div className="exp-form-input-wrap">
                 <input type="number" min={0} className="exp-form-input" placeholder="0" value={values.amountUzs} onChange={e => set('amountUzs', e.target.value)} disabled={isView}/>
-                <select className="exp-form-currency-select" value={values.amountCurrency} onChange={e => setCurrency(e.target.value as ExpenseAmountCurrency)} disabled={isView} aria-label="Валюта суммы">
-                  {EXPENSE_CURRENCIES.map(c => (<option key={c.value} value={c.value}>{c.label}</option>))}
-                </select>
+                <ExpenseSearchableSelect
+                  portalDropdown
+                  className="exp-form-currency-searchable"
+                  buttonClassName="exp-form-currency-select"
+                  placeholder="Валюта"
+                  value={values.amountCurrency}
+                  items={currencyItems}
+                  getOptionValue={c => c.value}
+                  getOptionLabel={c => c.label}
+                  getSearchText={c => `${c.label} ${c.value}`}
+                  disabled={isView}
+                  onSelect={c => setCurrency(c.value as ExpenseAmountCurrency)}
+                  aria-label="Валюта суммы"
+                />
               </div>
               {errors.amountUzs && <p className="exp-form-err-msg" data-err>{errors.amountUzs}</p>}
             </div>
@@ -1465,10 +1541,25 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
 
             <div className="exp-form-field">
               <label className="exp-form-label">Способ оплаты</label>
-              <select className="exp-form-select" value={values.paymentMethod} onChange={e => set('paymentMethod', e.target.value)} disabled={isView}>
-                <option value="">Не указан</option>
-                {PAYMENT_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
+              {isView ? (
+                <p className="exp-form-static">
+                  {paymentMethodItems.find(m => m.value === values.paymentMethod)?.label || values.paymentMethod || '—'}
+                </p>
+              ) : (
+                <ExpenseSearchableSelect
+                  portalDropdown
+                  placeholder="Не указан"
+                  emptyListText="Нет вариантов"
+                  noMatchText="Не найдено"
+                  value={values.paymentMethod}
+                  items={paymentMethodItems}
+                  getOptionValue={m => m.value}
+                  getOptionLabel={m => m.label}
+                  getSearchText={m => m.search}
+                  onSelect={m => set('paymentMethod', m.value)}
+                  aria-label="Способ оплаты"
+                />
+              )}
             </div>
 
             <div className="exp-form-field">
@@ -1539,7 +1630,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
 
                           <div className="exp-project-picker__field">
                             <label className="exp-form-label">Клиент</label>
-                            <ExpenseSearchableSelect<TimeManagerClientRow> disabled={expenseClientsFlat.length === 0} placeholder="Выберите клиента" emptyListText="Нет клиентов" noMatchText="Клиент не найден" value={expenseProjectClientId} items={expenseClientsFlat} getOptionValue={c => c.id} getOptionLabel={c => c.name} getSearchText={c => c.name} onSelect={handleExpenseClientPick}/>
+                            <ExpenseSearchableSelect<TimeManagerClientRow> portalDropdown disabled={expenseClientsFlat.length === 0} placeholder="Выберите клиента" emptyListText="Нет клиентов" noMatchText="Клиент не найден" value={expenseProjectClientId} items={expenseClientsFlat} getOptionValue={c => c.id} getOptionLabel={c => c.name} getSearchText={c => c.name} onSelect={handleExpenseClientPick}/>
                           </div>
 
                           <p className="exp-form-hint exp-project-picker__combo-hint">
@@ -1552,7 +1643,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                               Проект
                               {values.isReimbursable === true && <span className="exp-form-req"> *</span>}
                             </label>
-                            <ExpenseSearchableSelect<ExpenseProjectPickRow> disabled={expenseProjectRowsFlat.length === 0} placeholder="Выберите проект" emptyListText="Нет проектов" noMatchText="Проект не найден" value={values.projectId} items={expenseProjectRowsFlat} getOptionValue={r => r.project.id} getOptionLabel={r => `${r.project.name} (${r.client.name})`} getSearchText={r => `${r.client.name} ${r.project.name} ${r.project.code ?? ''}`} filterItems={filterExpenseProjectRows} onSelect={handleExpenseProjectPick} aria-invalid={Boolean(errors.projectId)} renderOption={row => (<span className="exp-searchable__opt-rich">
+                            <ExpenseSearchableSelect<ExpenseProjectPickRow> portalDropdown disabled={expenseProjectRowsFlat.length === 0} placeholder="Выберите проект" emptyListText="Нет проектов" noMatchText="Проект не найден" value={values.projectId} items={expenseProjectRowsFlat} getOptionValue={r => r.project.id} getOptionLabel={r => `${r.project.name} (${r.client.name})`} getSearchText={r => `${r.client.name} ${r.project.name} ${r.project.code ?? ''}`} filterItems={filterExpenseProjectRows} onSelect={handleExpenseProjectPick} aria-invalid={Boolean(errors.projectId)} renderOption={row => (<span className="exp-searchable__opt-rich">
                                   <ExpenseProjectCardBody project={row.project}/>
                                   <span className="exp-searchable__opt-client">{row.client.name}</span>
                                 </span>)}/>
@@ -1589,18 +1680,25 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                       {expenseCategoriesError}
                     </p>) : expenseProjectCategories.length === 0 ? (<p className="exp-form-hint">
                       Для этого проекта не настроены категории расходов — поле можно оставить пустым.
-                    </p>) : (<select className="exp-form-input" value={values.expenseCategoryId} onChange={(e) => {
-                        const v = e.target.value;
-                        setValues((prev) => ({ ...prev, expenseCategoryId: v }));
+                    </p>) : (<ExpenseSearchableSelect
+                      portalDropdown
+                      placeholder="Выберите категорию…"
+                      emptyListText="Нет категорий"
+                      noMatchText="Категория не найдена"
+                      value={values.expenseCategoryId}
+                      items={expenseCategoryItems}
+                      getOptionValue={c => c.id}
+                      getOptionLabel={c => c.name}
+                      getSearchText={c => c.search}
+                      onSelect={(c) => {
+                        setValues((prev) => ({ ...prev, expenseCategoryId: c.id }));
                         if (errors.expenseCategoryId) {
                             setErrors((prev) => ({ ...prev, expenseCategoryId: undefined }));
                         }
-                    }} aria-invalid={Boolean(errors.expenseCategoryId)}>
-                      <option value="">Выберите категорию…</option>
-                      {expenseProjectCategories.map((c) => (<option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>))}
-                    </select>)}
+                      }}
+                      aria-invalid={Boolean(errors.expenseCategoryId)}
+                      aria-label="Категория расхода"
+                    />)}
                   {errors.expenseCategoryId && (<p className="exp-form-err-msg" data-err>
                       {errors.expenseCategoryId}
                     </p>)}
