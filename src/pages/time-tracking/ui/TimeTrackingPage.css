@@ -2502,9 +2502,29 @@
 
 .exp__detail-val {
   flex: 1;
+  min-width: 0;
   font-size: 0.875rem;
   color: var(--app-text, #374151);
   line-height: 1.5;
+  overflow-wrap: break-word;
+  word-break: normal;
+}
+
+@media (max-width: 640px) {
+  .exp__detail-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    padding: 0.65rem 1rem;
+  }
+
+  .exp__detail-label {
+    width: auto;
+    flex-shrink: 1;
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
 }
 
 .exp__detail-cat-tag {

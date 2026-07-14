@@ -858,6 +858,18 @@ body[data-theme='dark'] .ap__kpi-card--violet .ap__kpi-icon {
   opacity: 0.5;
 }
 
+.ap__user-card-lbl {
+  font-size: var(--user-card-lbl-font-size);
+  font-weight: var(--user-card-lbl-font-weight);
+  color: var(--user-card-lbl-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  align-self: center;
+  line-height: 1.25;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 .ap__user-card-row {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
@@ -865,6 +877,7 @@ body[data-theme='dark'] .ap__kpi-card--violet .ap__kpi-icon {
   column-gap: 0.75rem;
   row-gap: 0.25rem;
   font-size: var(--user-card-row-font-size);
+  min-width: 0;
 }
 
 .ap__user-card-row .ap__role-dd {
@@ -876,17 +889,6 @@ body[data-theme='dark'] .ap__kpi-card--violet .ap__kpi-icon {
 .ap__user-card-row--muted {
   font-size: 0.75rem;
   color: var(--app-muted);
-}
-
-.ap__user-card-lbl {
-  font-size: var(--user-card-lbl-font-size);
-  font-weight: var(--user-card-lbl-font-weight);
-  color: var(--user-card-lbl-color);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  align-self: center;
-  line-height: 1.25;
-  white-space: nowrap;
 }
 
 .ap__role-trigger--card {
@@ -2152,6 +2154,16 @@ body[data-theme='dark'] .ap__kpi-card--violet .ap__kpi-icon {
 
   .ap__user-card {
     padding: 0.875rem;
+  }
+
+  .ap__user-card-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 0.2rem;
+  }
+
+  .ap__user-card-lbl {
+    white-space: normal;
   }
 
   .ap__modal {

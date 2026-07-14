@@ -1023,11 +1023,41 @@
   td,
   th {
     overflow-wrap: break-word;
-    word-break: break-word;
+    word-break: normal;
+  }
+
+  /* Shared label|value stack helpers */
+  .app-kv {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 0.35rem 0.75rem;
+    align-items: start;
+    min-width: 0;
+  }
+
+  .app-kv__label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--app-muted, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.35;
+  }
+
+  .app-kv__value {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  .app-kv--stack {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
   }
 
   .form-row--mobile-stack {
     flex-direction: column !important;
+    align-items: stretch !important;
     gap: 0.75rem !important;
   }
 
@@ -1042,6 +1072,13 @@
 
   .mob-only {
     display: block !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-kv {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
   }
 }
 

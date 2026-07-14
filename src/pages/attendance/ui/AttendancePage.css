@@ -1436,12 +1436,15 @@ body[data-theme='dark'] .att-modal__error {
 
   .att__table td {
     display: grid;
-    grid-template-columns: 100px 1fr;
+    grid-template-columns: minmax(4.5rem, 7.5rem) minmax(0, 1fr);
     gap: 0.5rem 1rem;
     align-items: center;
     padding: 0.35rem 0;
     border: none;
     font-size: 0.8125rem;
+    min-width: 0;
+    word-break: normal;
+    overflow-wrap: break-word;
   }
 
   .att__table tbody tr {
@@ -1652,9 +1655,10 @@ body[data-theme='dark'] .att-modal__error {
   }
 
   .att__table td {
-    grid-template-columns: 85px 1fr;
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
     padding: 0.25rem 0;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
   }
 
   .att__table .att__td-name {
@@ -1683,8 +1687,7 @@ body[data-theme='dark'] .att-modal__error {
 
 @media (max-width: 360px) {
   .att__table td {
-    grid-template-columns: 75px 1fr;
-    font-size: 0.625rem;
+    font-size: 0.6875rem;
   }
 
   .att__table .att__td-name {

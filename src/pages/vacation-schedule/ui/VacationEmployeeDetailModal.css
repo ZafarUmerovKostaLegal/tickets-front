@@ -244,6 +244,7 @@
   border-radius: 8px;
   font-size: 0.75rem;
   background: var(--app-surface-soft, #f8fafc);
+  min-width: 0;
 }
 
 .vac-emp-card__att-li--late {
@@ -257,11 +258,22 @@
 .vac-emp-card__att-date {
   font-weight: 600;
   color: var(--app-text, #0f172a);
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .vac-emp-card__att-status {
   font-weight: 600;
   color: var(--app-text, #334155);
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .vac-emp-card__att-li {
+    grid-template-columns: 1fr;
+    gap: 0.15rem;
+  }
 }
 
 .vac-emp-card__att-meta {
