@@ -1,7 +1,6 @@
 import { createPortal } from 'react-dom';
 import { formatDateOnly } from '@shared/lib/formatDate';
 import type { User } from '@entities/user';
-import { useCurrentUser } from '@shared/hooks';
 import { useAppDialog, useAppToast } from '@shared/ui';
 import { queueBirthdayGreeting } from '@widgets/birthday-postcard';
 import { getPositionMeta } from '../model/constants';
@@ -72,7 +71,6 @@ type UserCardProps = {
   TT_POSITIONS: readonly string[];
 };
 export function UserCard({ user: u, savingUserId, openRoleDropdown, setOpenRoleDropdown, roleMenuPos, setRoleMenuPos, roleTriggerRef, roleMenuRef, openTTDropdown, setOpenTTDropdown, ttMenuPos, setTTMenuPos, ttTriggerRef, ttMenuRef, openPosDropdown, setOpenPosDropdown, posMenuPos, setPosMenuPos, posTriggerRef, posMenuRef, onRoleChange, onTTRoleChange, onPositionChange, onToggleBlocked, onToggleArchived, KNOWN_ROLES, ROLE_META, TT_ROLE_OPTIONS, TT_POSITIONS, }: UserCardProps) {
-  const { user: me } = useCurrentUser();
   const { showConfirm } = useAppDialog();
   const { pushToast } = useAppToast();
   const statusKey = u.is_archived ? 'archived' : u.is_blocked ? 'blocked' : 'active';
@@ -96,7 +94,7 @@ export function UserCard({ user: u, savingUserId, openRoleDropdown, setOpenRoleD
       recipientEmail: u.email,
       recipientUserId: u.id,
       recipientName: u.display_name?.trim() || u.email,
-      senderName: me?.display_name?.trim() || 'Команда Kosta Legal',
+      senderName: 'команда Kosta Legal',
     });
     pushToast({
       variant: 'success',
