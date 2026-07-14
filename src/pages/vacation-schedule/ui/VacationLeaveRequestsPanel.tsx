@@ -242,60 +242,52 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                 <ul className="vac-lr-panel__list">
                     {items.map((req) => {
                         const tone = leaveStatusTone(req.status);
+                        const statusLabel = leaveStatusLabel(req.status);
                         const kindLabel = leaveKindLabel(req.kind, kinds);
                         const range = formatRuRange(req.date_from, req.date_to);
+                        const personLabel = isMine
+                            ? (req.partner_full_name || req.partner_email || `#${req.partner_user_id}`)
+                            : (req.employee_full_name || req.employee_email || `#${req.employee_user_id}`);
+                        const personRole = isMine ? 'Согласующий' : 'Сотрудник';
+                        const personPosition = !isMine ? req.employee_position : null;
                         const canDecide = mode === 'to_decide' && req.status === 'pending';
                         const canCancel = isMine && req.status === 'pending';
                         const busy = busyId === req.id;
                         return (
-                            <li key={req.id} className="vac-lr-card">
-                                <div className="vac-lr-card__head">
-                                    <div className="vac-lr-card__title-row">
-                                        <span className="vac-lr-card__kind">{kindLabel}</span>
-                                        <span
-                                            className={`vac-lr-card__status vac-lr-card__status--${tone}`}
-                                            title={req.decision_reason ?? undefined}
-                                        >
-                                            {leaveStatusLabel(req.status)}
-                                        </span>
-                                    </div>
+                            <li key={req.id} className={`vac-lr-card vac-lr-card--${tone}`}>
+                                <div className="vac-lr-card__top">
+                                    <span
+                                        className={`vac-lr-card__status vac-lr-card__status--${tone}`}
+                                        title={req.decision_reason ? `${statusLabel}: ${req.decision_reason}` : statusLabel}
+                                    >
+                                        <i className="vac-lr-card__status-dot" aria-hidden />
+                                        <span className="vac-lr-card__status-text">{statusLabel}</span>
+                                    </span>
+                                    <span className="vac-lr-card__kind">{kindLabel}</span>
                                     <span className="vac-lr-card__id">#{req.id}</span>
                                 </div>
 
-                                <div className="vac-lr-card__grid">
-                                    <div className="vac-lr-card__cell">
-                                        <span className="vac-lr-card__label">Период</span>
-                                        <span className="vac-lr-card__value">
-                                            {range} <span className="vac-lr-card__muted">({req.days_count} {ruDaysWord(req.days_count)})</span>
+                                <div className="vac-lr-card__hero">
+                                    <div className="vac-lr-card__person">
+                                        <span className="vac-lr-card__person-role">{personRole}</span>
+                                        <strong className="vac-lr-card__person-name">{personLabel}</strong>
+                                        {personPosition ? (
+                                            <span className="vac-lr-card__person-pos">{personPosition}</span>
+                                        ) : null}
+                                    </div>
+                                    <div className="vac-lr-card__period">
+                                        <span className="vac-lr-card__period-dates">{range}</span>
+                                        <span className="vac-lr-card__days">
+                                            {req.days_count} {ruDaysWord(req.days_count)}
                                         </span>
                                     </div>
-                                    {!isMine && (
-                                        <div className="vac-lr-card__cell">
-                                            <span className="vac-lr-card__label">Сотрудник</span>
-                                            <span className="vac-lr-card__value">
-                                                {req.employee_full_name || req.employee_email || `#${req.employee_user_id}`}
-                                                {req.employee_position ? <span className="vac-lr-card__muted"> · {req.employee_position}</span> : null}
-                                            </span>
-                                        </div>
-                                    )}
-                                    {isMine && (
-                                        <div className="vac-lr-card__cell">
-                                            <span className="vac-lr-card__label">Согласующий</span>
-                                            <span className="vac-lr-card__value">
-                                                {req.partner_full_name || req.partner_email || `#${req.partner_user_id}`}
-                                            </span>
-                                        </div>
-                                    )}
-                                    <div className="vac-lr-card__cell">
-                                        <span className="vac-lr-card__label">Отправлено</span>
-                                        <span className="vac-lr-card__value vac-lr-card__muted">{formatTimestampShort(req.created_at)}</span>
-                                    </div>
-                                    {req.decision_at && (
-                                        <div className="vac-lr-card__cell">
-                                            <span className="vac-lr-card__label">Решение</span>
-                                            <span className="vac-lr-card__value vac-lr-card__muted">{formatTimestampShort(req.decision_at)}</span>
-                                        </div>
-                                    )}
+                                </div>
+
+                                <div className="vac-lr-card__meta">
+                                    <span>Отправлено {formatTimestampShort(req.created_at)}</span>
+                                    {req.decision_at ? (
+                                        <span>Решение {formatTimestampShort(req.decision_at)}</span>
+                                    ) : null}
                                 </div>
 
                                 {req.reason && (
