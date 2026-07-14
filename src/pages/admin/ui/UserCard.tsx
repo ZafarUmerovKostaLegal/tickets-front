@@ -1,6 +1,9 @@
 import { createPortal } from 'react-dom';
 import { formatDateOnly } from '@shared/lib/formatDate';
 import type { User } from '@entities/user';
+import { useCurrentUser } from '@shared/hooks';
+import { useAppDialog, useAppToast } from '@shared/ui';
+import { queueBirthdayGreeting } from '@widgets/birthday-postcard';
 import { getPositionMeta } from '../model/constants';
 import type { KnownRole } from '../model/constants';
 type UserCardProps = {
@@ -69,6 +72,9 @@ type UserCardProps = {
   TT_POSITIONS: readonly string[];
 };
 export function UserCard({ user: u, savingUserId, openRoleDropdown, setOpenRoleDropdown, roleMenuPos, setRoleMenuPos, roleTriggerRef, roleMenuRef, openTTDropdown, setOpenTTDropdown, ttMenuPos, setTTMenuPos, ttTriggerRef, ttMenuRef, openPosDropdown, setOpenPosDropdown, posMenuPos, setPosMenuPos, posTriggerRef, posMenuRef, onRoleChange, onTTRoleChange, onPositionChange, onToggleBlocked, onToggleArchived, KNOWN_ROLES, ROLE_META, TT_ROLE_OPTIONS, TT_POSITIONS, }: UserCardProps) {
+  const { user: me } = useCurrentUser();
+  const { showConfirm } = useAppDialog();
+  const { pushToast } = useAppToast();
   const statusKey = u.is_archived ? 'archived' : u.is_blocked ? 'blocked' : 'active';
   const statusLabel = u.is_archived ? 'Архив' : u.is_blocked ? 'Заблокирован' : 'Активен';
   const isSaving = savingUserId === u.id;
@@ -78,6 +84,25 @@ export function UserCard({ user: u, savingUserId, openRoleDropdown, setOpenRoleD
   const posOptions = currPos && !TT_POSITIONS.includes(currPos)
     ? [currPos, ...TT_POSITIONS]
     : TT_POSITIONS;
+  const handleSendBirthday = async () => {
+    const ok = await showConfirm({
+      title: 'Поздравить с днём рождения?',
+      message: `Фирменная открытка откроется у «${u.display_name?.trim() || u.email}» при входе в систему (поверх интерфейса, с фанфарами).`,
+      confirmLabel: 'Отправить открытку',
+    });
+    if (!ok)
+      return;
+    queueBirthdayGreeting({
+      recipientEmail: u.email,
+      recipientUserId: u.id,
+      recipientName: u.display_name?.trim() || u.email,
+      senderName: me?.display_name?.trim() || 'Команда Kosta Legal',
+    });
+    pushToast({
+      variant: 'success',
+      message: `Поздравление для ${u.email} поставлено в очередь.`,
+    });
+  };
   const handleRoleClick = (e: React.MouseEvent) => {
     if (isSaving)
       return;
@@ -203,6 +228,15 @@ export function UserCard({ user: u, savingUserId, openRoleDropdown, setOpenRoleD
       </div>
     </div>
     <div className="ap__user-card-actions">
+      <button
+        type="button"
+        className="ap__act-btn ap__act-btn--birthday"
+        disabled={isSaving || u.is_archived}
+        title="Отправить фирменную открытку с днём рождения"
+        onClick={() => void handleSendBirthday()}
+      >
+        С ДР
+      </button>
       <button type="button" className={`ap__act-btn ${u.is_blocked ? 'ap__act-btn--success' : 'ap__act-btn--warn'}`} disabled={isSaving} onClick={() => onToggleBlocked(u)}>
         {u.is_blocked ? 'Разблокировать' : 'Заблокировать'}
       </button>

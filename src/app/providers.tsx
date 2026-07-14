@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { AppRouter } from './router';
+import { BirthdayPostcardHost } from '@widgets/birthday-postcard';
 import { CalendarReminder } from '@widgets/calendar-reminder';
 import { ChatNotificationHost } from '@widgets/chat-notification';
 import { GlobalTimerWidget } from '@widgets/global-timer';
@@ -54,6 +55,7 @@ export function Providers({ children }: ProvidersProps) {
         <AppDialogProvider>
             <AppToastProvider>
                 {children ?? <AppRouter />}
+                <BirthdayPostcardHost />
                 <DeferredBackgroundWidgets />
             </AppToastProvider>
         </AppDialogProvider>

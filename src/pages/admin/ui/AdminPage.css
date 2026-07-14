@@ -1241,6 +1241,17 @@ body[data-theme='dark'] .ap__kpi-card--violet .ap__kpi-icon {
   color: var(--app-text);
 }
 
+.ap__act-btn--birthday {
+  background: color-mix(in srgb, #d4af6e 18%, var(--app-surface, #fff));
+  color: #8a6a2a;
+  border-color: color-mix(in srgb, #d4af6e 50%, var(--app-border, #e2e8f0));
+}
+
+.ap__act-btn--birthday:hover:not(:disabled) {
+  background: color-mix(in srgb, #d4af6e 30%, var(--app-surface, #fff));
+  color: #6b521c;
+}
+
 .ap__pill {
   display: inline-flex;
   align-items: center;
