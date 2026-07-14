@@ -361,10 +361,6 @@
   scrollbar-gutter: stable;
 }
 
-.vacation-schedule-page__inner .vac-att-stats {
-  min-height: 0;
-}
-
 @media (max-width: 768px) {
   .vacation-schedule-page__main {
     max-height: none;

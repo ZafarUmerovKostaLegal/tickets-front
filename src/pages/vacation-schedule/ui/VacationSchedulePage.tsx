@@ -1,24 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { useCurrentUser } from '@shared/hooks';
-import { canDecideVacationLeaveRequests, canViewVacationAttendanceStats } from '../model/vacationScheduleAccess';
+import { canDecideVacationLeaveRequests } from '../model/vacationScheduleAccess';
 import { VacationAbsenceRequestModal } from './VacationAbsenceRequestModal';
-import { VacationAttendanceStatsPanel } from './VacationAttendanceStatsPanel';
 import { VacationScheduleGrid, type VacationScheduleHeaderActions } from './VacationScheduleGrid';
 import { VacationScheduleHeaderMenu } from './VacationScheduleHeaderMenu';
 import { VacationLeaveRequestsPanel } from './VacationLeaveRequestsPanel';
 import './VacationSchedulePage.css';
 
-type Tab = 'schedule' | 'mine' | 'to_decide' | 'stats';
+type Tab = 'schedule' | 'mine' | 'to_decide';
 
 export function VacationSchedulePage() {
     const { user, loading } = useCurrentUser();
     const canDecideRequests = useMemo(
         () => !loading && canDecideVacationLeaveRequests(user),
-        [loading, user],
-    );
-    const canViewAttendanceStats = useMemo(
-        () => !loading && canViewVacationAttendanceStats(user),
         [loading, user],
     );
     const [activeTab, setActiveTab] = useState<Tab>('schedule');
@@ -31,15 +26,12 @@ export function VacationSchedulePage() {
     useEffect(() => {
         if (!canDecideRequests && activeTab === 'to_decide')
             setActiveTab('schedule');
-        if (!canViewAttendanceStats && activeTab === 'stats')
-            setActiveTab('schedule');
-    }, [canDecideRequests, canViewAttendanceStats, activeTab]);
+    }, [canDecideRequests, activeTab]);
 
     const tabs: ReadonlyArray<{ id: Tab; label: string; visible: boolean }> = [
         { id: 'schedule', label: 'График', visible: true },
         { id: 'mine', label: 'Мои заявки', visible: true },
         { id: 'to_decide', label: 'На согласование', visible: canDecideRequests },
-        { id: 'stats', label: 'Статистика', visible: canViewAttendanceStats },
     ];
 
     return (
@@ -113,9 +105,6 @@ export function VacationSchedulePage() {
                                 refreshToken={refreshToken}
                                 onScheduleMayHaveChanged={bumpRefresh}
                             />
-                        )}
-                        {activeTab === 'stats' && canViewAttendanceStats && (
-                            <VacationAttendanceStatsPanel externalRefreshToken={refreshToken} />
                         )}
                     </div>
                 </div>
