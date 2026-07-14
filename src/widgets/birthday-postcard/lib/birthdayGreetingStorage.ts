@@ -11,8 +11,8 @@ export type BirthdayGreetingPayload = {
     consumedAt: string | null;
 };
 
-/** Demo / QA: always show postcard for this account on login. */
-export const BIRTHDAY_DEMO_FORCE_EMAIL = 'zumerov@kostalegal.com';
+/** Demo / QA: set an email to force postcard on login. Empty = disabled. */
+export const BIRTHDAY_DEMO_FORCE_EMAIL = '';
 
 export const DEFAULT_BIRTHDAY_MESSAGE =
     'Сегодня ваш день — и пусть он будет таким же ярким, как вы в работе: '
@@ -89,9 +89,9 @@ export function consumeBirthdayGreeting(id: string): void {
 }
 
 export function isBirthdayDemoForceEmail(email: string | null | undefined): boolean {
-    if (!email)
+    if (!email || !BIRTHDAY_DEMO_FORCE_EMAIL)
         return false;
-    return normEmail(email) === BIRTHDAY_DEMO_FORCE_EMAIL;
+    return normEmail(email) === normEmail(BIRTHDAY_DEMO_FORCE_EMAIL);
 }
 
 export function buildDemoBirthdayGreeting(user: {
