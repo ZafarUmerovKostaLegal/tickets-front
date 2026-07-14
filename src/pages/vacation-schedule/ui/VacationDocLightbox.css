@@ -28,6 +28,11 @@
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
 }
 
+.vac-doc-lb__frame--pdf {
+  max-width: min(1080px, 100%);
+  height: min(92vh, 900px);
+}
+
 .vac-doc-lb__head {
   display: flex;
   align-items: center;
@@ -119,9 +124,20 @@
 
 .vac-doc-lb__iframe {
   width: 100%;
-  height: 80vh;
+  height: 100%;
+  min-height: 70vh;
   border: none;
   background: #fff;
+}
+
+.vac-doc-lb__frame--pdf .vac-doc-lb__body {
+  flex: 1;
+  align-items: stretch;
+}
+
+.vac-doc-lb__frame--pdf .vac-doc-lb__iframe {
+  min-height: 0;
+  height: 100%;
 }
 
 .vac-doc-lb__msg {

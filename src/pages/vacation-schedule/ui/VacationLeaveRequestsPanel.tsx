@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     cancelVacationLeaveRequest,
-    fetchVacationLeaveRequestPdfBlob,
     getVacationLeaveKinds,
     listVacationLeaveRequests,
     type VacationLeaveKindApi,
@@ -18,6 +17,7 @@ import {
     ruDaysWord,
 } from '../lib/leaveRequestDisplay';
 import { VacationDecisionModal } from './VacationDecisionModal';
+import { VacationLeavePdfPreview } from './VacationLeavePdfPreview';
 import { VacationLeaveYearCalendarModal } from './VacationLeaveYearCalendarModal';
 import './VacationLeaveRequestsPanel.css';
 
@@ -64,6 +64,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         decision: 'approve' | 'decline';
     } | null>(null);
     const [calendarRequest, setCalendarRequest] = useState<VacationLeaveRequestApi | null>(null);
+    const [pdfRequest, setPdfRequest] = useState<VacationLeaveRequestApi | null>(null);
     const [busyId, setBusyId] = useState<number | null>(null);
 
     useEffect(() => {
@@ -134,27 +135,6 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
             acc[it.status] += 1;
         return acc;
     }, [items]);
-
-    const handleDownloadPdf = useCallback(async (req: VacationLeaveRequestApi) => {
-        setBusyId(req.id);
-        try {
-            const blob = await fetchVacationLeaveRequestPdfBlob(req.id);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `leave_request_${req.id}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.setTimeout(() => URL.revokeObjectURL(url), 4000);
-        }
-        catch (e) {
-            pushToast({ variant: 'error', message: toastErrorMessage(e, 'Не удалось скачать PDF.') });
-        }
-        finally {
-            setBusyId(null);
-        }
-    }, [pushToast]);
 
     const handleCancel = useCallback(async (req: VacationLeaveRequestApi) => {
         if (req.status !== 'pending')
@@ -321,10 +301,9 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                                     <button
                                         type="button"
                                         className="vac-lr-card__btn vac-lr-card__btn--ghost"
-                                        onClick={() => void handleDownloadPdf(req)}
-                                        disabled={busy}
+                                        onClick={() => setPdfRequest(req)}
                                     >
-                                        {busy ? 'Подготовка…' : 'Скачать PDF'}
+                                        PDF
                                     </button>
                                     {canCancel && (
                                         <button
@@ -373,6 +352,12 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                 request={calendarRequest}
                 onClose={() => setCalendarRequest(null)}
             />
+            {pdfRequest ? (
+                <VacationLeavePdfPreview
+                    request={pdfRequest}
+                    onClose={() => setPdfRequest(null)}
+                />
+            ) : null}
         </div>
     );
 }

@@ -248,11 +248,12 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
     if (!open)
         return null;
 
-    const daysHint = dateFrom && dateTo
-        ? dayCount > 0
-            ? `Календарных ${ruDaysWord(dayCount)}: ${dayCount}`
-            : 'Укажите корректный период'
-        : 'Дни посчитаются автоматически';
+    const periodValid = Boolean(dateFrom && dateTo && dayCount > 0);
+    const daysMeta = !dateFrom || !dateTo
+        ? 'Дни посчитаются автоматически'
+        : dayCount > 0
+            ? 'Календарные дни'
+            : 'Укажите корректный период';
 
     const ruleHint = kind === 'annual_vacation' && balance
         ? (balance.continuous_14_satisfied
@@ -280,38 +281,39 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                                 <p className="vac-req-modal__hint">Загрузка баланса отпуска…</p>
                             ) : balance ? (
                                 <>
-                                    <p className="vac-req-modal__balance-title">
-                                        Ежегодный отпуск · {balance.year}
-                                    </p>
-                                    <dl className="vac-req-modal__balance-grid">
-                                        <div>
-                                            <dt>Положено</dt>
-                                            <dd>{balance.entitled_days}</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Использовано</dt>
-                                            <dd>{balance.used_days}</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Остаток</dt>
-                                            <dd>{balance.remaining_days}</dd>
-                                        </div>
+                                    <div className="vac-req-modal__balance-top">
+                                        <p className="vac-req-modal__balance-title">
+                                            Ежегодный отпуск · {balance.year}
+                                        </p>
                                         {!balance.continuous_14_satisfied && (
-                                            <div>
-                                                <dt>Дробные</dt>
-                                                <dd>
-                                                    {balance.flexible_days_remaining}/{balance.flexible_days_max}
-                                                </dd>
-                                            </div>
+                                            <span className="vac-req-modal__flex-pill" title="Оставшиеся дробные дни">
+                                                Дробные {balance.flexible_days_remaining}/{balance.flexible_days_max}
+                                            </span>
                                         )}
-                                    </dl>
+                                    </div>
+                                    <div className="vac-req-modal__balance-main">
+                                        <div className="vac-req-modal__balance-hero">
+                                            <span className="vac-req-modal__balance-hero-label">Остаток</span>
+                                            <span className="vac-req-modal__balance-hero-value">{balance.remaining_days}</span>
+                                        </div>
+                                        <dl className="vac-req-modal__balance-side">
+                                            <div>
+                                                <dt>Положено</dt>
+                                                <dd>{balance.entitled_days}</dd>
+                                            </div>
+                                            <div>
+                                                <dt>Использовано</dt>
+                                                <dd>{balance.used_days}</dd>
+                                            </div>
+                                        </dl>
+                                    </div>
                                     {balance.pending_days > 0 && (
-                                        <p className="vac-req-modal__hint">
+                                        <p className="vac-req-modal__hint vac-req-modal__hint--tight">
                                             В ожидании согласования: {balance.pending_days} дн. (уже учтены в остатке).
                                         </p>
                                     )}
                                     {ruleHint && (
-                                        <p className="vac-req-modal__hint">{ruleHint}</p>
+                                        <p className="vac-req-modal__rule">{ruleHint}</p>
                                     )}
                                 </>
                             ) : (
@@ -335,7 +337,12 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                                         checked={kind === item.kind}
                                         onChange={() => setKind(item.kind)}
                                     />
-                                    <span>{leaveKindLabel(item.kind, kinds)}</span>
+                                    <span
+                                        className="vac-req-modal__cat-dot"
+                                        style={{ background: item.color_hex || 'var(--app-accent, #4f46e5)' }}
+                                        aria-hidden
+                                    />
+                                    <span className="vac-req-modal__cat-label">{leaveKindLabel(item.kind, kinds)}</span>
                                 </label>
                             ))}
                         </div>
@@ -387,9 +394,14 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                                 />
                             </div>
                         </div>
-                        <p className="vac-req-modal__days" aria-live="polite">
-                            {daysHint}
-                        </p>
+                        <div className="vac-req-modal__period-meta" aria-live="polite">
+                            {periodValid ? (
+                                <span className="vac-req-modal__days-pill">{dayCount} {ruDaysWord(dayCount)}</span>
+                            ) : null}
+                            <span className={`vac-req-modal__days-hint${periodValid ? '' : ' vac-req-modal__days-hint--alone'}`}>
+                                {daysMeta}
+                            </span>
+                        </div>
                     </fieldset>
 
                     <fieldset className="vac-req-modal__section">
@@ -417,26 +429,24 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                                 />
                             )}
                         </label>
+                        <p className="vac-req-modal__tip">
+                            Партнёр получит PDF с кнопками «Утвердить» / «Отклонить». После approve дни появятся в графике.
+                        </p>
                     </fieldset>
-
-                    <p className="vac-req-modal__note">
-                        Партнёр получит письмо с PDF-заявкой и кнопками «Утвердить»/«Отклонить». После approve дни отсутствия появятся в графике, а остаток отпуска обновится автоматически.
-                    </p>
 
                     {error && (
                         <p className="vac-req-modal__error" role="alert">
                             {error}
                         </p>
                     )}
-
-                    <div className="vac-imp-modal__actions">
-                        <button type="button" className="vac-imp-modal__btn-secondary" onClick={onClose} disabled={submitting}>
-                            Отмена
-                        </button>
-                        <button type="submit" className="vac-req-modal__submit" disabled={submitting || partnersLoading}>
-                            {submitting ? 'Отправка…' : 'Отправить партнёру'}
-                        </button>
-                    </div>
+                </div>
+                <div className="vac-req-modal__footer">
+                    <button type="button" className="vac-imp-modal__btn-secondary" onClick={onClose} disabled={submitting}>
+                        Отмена
+                    </button>
+                    <button type="submit" className="vac-req-modal__submit" disabled={submitting || partnersLoading}>
+                        {submitting ? 'Отправка…' : 'Отправить партнёру'}
+                    </button>
                 </div>
             </form>
         </div>,

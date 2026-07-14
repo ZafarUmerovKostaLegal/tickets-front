@@ -381,9 +381,19 @@
 .vac-lr-card__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 0.4rem;
   margin-top: auto;
   padding: 0.15rem 1.05rem 0.95rem;
+}
+
+.vac-lr-card__actions .vac-lr-card__btn--approve,
+.vac-lr-card__actions .vac-lr-card__btn--decline {
+  margin-left: 0;
+}
+
+.vac-lr-card__actions .vac-lr-card__btn--approve {
+  margin-left: auto;
 }
 
 .vac-lr-card__btn {

@@ -89,7 +89,7 @@ function buildMonthCells(year: number, monthIndex: number): Array<{ day: number 
         cells.push({ day: null, iso: null });
     for (let d = 1; d <= total; d += 1)
         cells.push({ day: d, iso: isoDay(year, monthIndex, d) });
-    while (cells.length % 7 !== 0)
+    while (cells.length < 42)
         cells.push({ day: null, iso: null });
     return cells;
 }
@@ -287,20 +287,14 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
 
     const stats = useMemo(() => {
         const byKind: Partial<Record<VacationAbsenceKind, number>> = {};
-        let total = 0;
-        let requestDays = 0;
         const monthCounts = Array.from({ length: 12 }, () => 0);
         for (const [iso, mark] of Object.entries(visibleMarks)) {
-            total += 1;
             byKind[mark.kind] = (byKind[mark.kind] ?? 0) + 1;
-            if (mark.inRequest)
-                requestDays += 1;
             const mo = Number(iso.slice(5, 7)) - 1;
             if (mo >= 0 && mo < 12)
                 monthCounts[mo] += 1;
         }
-        const peakMonth = monthCounts.reduce((best, n, i) => (n > monthCounts[best] ? i : best), 0);
-        return { byKind, total, requestDays, monthCounts, peakMonth };
+        return { byKind, monthCounts };
     }, [visibleMarks]);
 
     const usedKinds = useMemo(() => {
@@ -316,7 +310,6 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
         : undefined;
 
     const today = todayIso();
-    const maxMonthCount = Math.max(1, ...stats.monthCounts);
 
     const scrollToMonth = (monthIndex: number) => {
         setFocusMonth(monthIndex);
@@ -398,46 +391,6 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
 
                         {!loading && !error && (
                             <>
-                                <div className="vac-yr-cal__kpis" aria-label="Сводка за год">
-                                    <article className="vac-yr-cal__kpi">
-                                        <span>Всего отметок</span>
-                                        <strong>{stats.total}</strong>
-                                    </article>
-                                    <article className="vac-yr-cal__kpi vac-yr-cal__kpi--accent">
-                                        <span>В заявке</span>
-                                        <strong>{stats.requestDays}</strong>
-                                    </article>
-                                    <article className="vac-yr-cal__kpi">
-                                        <span>Периодов</span>
-                                        <strong>{runs.length}</strong>
-                                    </article>
-                                    <article className="vac-yr-cal__kpi">
-                                        <span>Пик</span>
-                                        <strong>{VACATION_MONTH_NAMES[stats.peakMonth]}</strong>
-                                        <em>{stats.monthCounts[stats.peakMonth]} дн.</em>
-                                    </article>
-                                </div>
-
-                                <div className="vac-yr-cal__timeline" aria-label="Нагрузка по месяцам">
-                                    {stats.monthCounts.map((count, monthIndex) => {
-                                        const height = count === 0 ? 8 : Math.max(12, Math.round((count / maxMonthCount) * 48));
-                                        const active = focusMonth === monthIndex;
-                                        const hasRequest = isRequestYear && monthIndex === requestMonth;
-                                        return (
-                                            <button
-                                                key={monthIndex}
-                                                type="button"
-                                                className={`vac-yr-cal__tl-col${active ? ' vac-yr-cal__tl-col--on' : ''}${hasRequest ? ' vac-yr-cal__tl-col--req' : ''}`}
-                                                onClick={() => scrollToMonth(monthIndex)}
-                                                title={`${VACATION_MONTH_NAMES[monthIndex]}: ${count} дн.`}
-                                            >
-                                                <span className="vac-yr-cal__tl-bar" style={{ height }} />
-                                                <span className="vac-yr-cal__tl-label">{VACATION_MONTH_NAMES[monthIndex].slice(0, 3)}</span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-
                                 <div className="vac-yr-cal__legend" aria-label="Легенда и фильтр">
                                     <span className="vac-yr-cal__legend-item vac-yr-cal__legend-item--request">
                                         <i />
@@ -478,14 +431,13 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
                                                     'vac-yr-cal__month',
                                                     isFocus ? ' vac-yr-cal__month--focus' : '',
                                                     hasRequest ? ' vac-yr-cal__month--request' : '',
-                                                    monthCount > 0 ? ' vac-yr-cal__month--has' : '',
                                                 ].join('')}
                                             >
                                                 <div className="vac-yr-cal__month-head">
                                                     <h3 className="vac-yr-cal__month-title">{VACATION_MONTH_NAMES[monthIndex]}</h3>
-                                                    {monthCount > 0 ? (
-                                                        <span className="vac-yr-cal__month-count">{monthCount}</span>
-                                                    ) : null}
+                                                    <span className={`vac-yr-cal__month-count${monthCount > 0 ? '' : ' vac-yr-cal__month-count--empty'}`}>
+                                                        {monthCount > 0 ? monthCount : ''}
+                                                    </span>
                                                 </div>
                                                 <div className="vac-yr-cal__weekdays">
                                                     {WEEKDAYS.map((w) => (
@@ -528,12 +480,7 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
                                                                     ? `${formatRuDate(cell.iso)} · ${vacationKindHumanLabel(mark.kind)}${mark.inRequest ? ' · заявка' : ''}`
                                                                     : formatRuDate(cell.iso)}
                                                             >
-                                                                <span className="vac-yr-cal__day-num">{cell.day}</span>
-                                                                {mark ? (
-                                                                    <span className="vac-yr-cal__day-seal" aria-hidden>
-                                                                        {VACATION_KIND_SEALS[mark.kind]}
-                                                                    </span>
-                                                                ) : null}
+                                                                {cell.day}
                                                             </button>
                                                         );
                                                     })}
@@ -576,7 +523,7 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
                                     )}
                                     {selectedRun && selectedRun.days > 1 ? (
                                         <p className="vac-yr-cal__side-run">
-                                            Период: {formatRuRange(selectedRun.from, selectedRun.to)}
+                                            {formatRuRange(selectedRun.from, selectedRun.to)}
                                             {' · '}
                                             {selectedRun.days} {ruDaysWord(selectedRun.days)}
                                         </p>
@@ -614,30 +561,6 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
                                     ))}
                                 </ul>
                             )}
-                        </section>
-
-                        <section className="vac-yr-cal__side-card vac-yr-cal__side-card--soft">
-                            <h3 className="vac-yr-cal__side-title">По видам</h3>
-                            <ul className="vac-yr-cal__kind-bars">
-                                {usedKinds.map((k) => {
-                                    const n = stats.byKind[k.kind] ?? 0;
-                                    const pct = stats.total > 0 ? Math.round((n / stats.total) * 100) : 0;
-                                    return (
-                                        <li key={k.kind}>
-                                            <div className="vac-yr-cal__kind-row">
-                                                <span>{k.label}</span>
-                                                <strong>{n}</strong>
-                                            </div>
-                                            <div className="vac-yr-cal__kind-track">
-                                                <span style={{ width: `${pct}%`, background: k.color }} />
-                                            </div>
-                                        </li>
-                                    );
-                                })}
-                                {usedKinds.length === 0 ? (
-                                    <li className="vac-yr-cal__side-empty">Нет данных</li>
-                                ) : null}
-                            </ul>
                         </section>
                     </aside>
                 </div>
