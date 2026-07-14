@@ -239,47 +239,80 @@
 
 .vac-tabs {
   display: flex;
-  align-items: flex-end;
-  gap: 2px;
+  align-items: center;
+  gap: 0.3rem;
   flex-wrap: wrap;
-  padding: 0.35rem 0.75rem 0;
-  border-bottom: 1px solid var(--app-border, #e2e8f0);
-  background: var(--app-surface, #fff);
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  margin: 0.75rem 1.15rem 0.65rem;
+  padding: 0.3rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-surface, #fff) 72%, var(--app-border, #e2e8f0));
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  box-sizing: border-box;
 }
 
 .vac-tabs__tab {
+  appearance: none;
   display: inline-flex;
   align-items: center;
-  height: 34px;
-  padding: 0 0.95rem;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0.5rem 1.05rem;
   font-family: inherit;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
+  line-height: 1.2;
   color: var(--app-muted, #64748b);
-  background: var(--app-surface-soft, #f1f5f9);
-  border: 1px solid var(--app-border, #e2e8f0);
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
   cursor: pointer;
-  transition: background 0.12s, color 0.12s, box-shadow 0.12s, border-color 0.12s;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
   position: relative;
-  top: 1px;
+  white-space: nowrap;
 }
 
 .vac-tabs__tab:hover {
   color: var(--app-text, #0f172a);
-  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface-soft, #f1f5f9));
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, transparent);
 }
 
 .vac-tabs__tab--on {
-  color: #fff;
+  color: var(--app-text, #0f172a);
   font-weight: 700;
-  background: var(--app-accent, #4f46e5);
-  border-color: var(--app-accent, #4f46e5);
+  background: var(--app-surface, #fff);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 0 0 1px color-mix(in srgb, var(--app-accent, #4f46e5) 18%, transparent);
 }
 
 .vac-tabs__tab--on::after {
-  display: none;
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0.28rem;
+  width: 1.1rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--app-accent, #4f46e5);
+  transform: translateX(-50%);
+}
+
+@media (max-width: 640px) {
+  .vac-tabs {
+    width: auto;
+    max-width: none;
+    margin-inline: 0.85rem;
+  }
+
+  .vac-tabs__tab {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-inline: 0.75rem;
+    font-size: 0.8125rem;
+  }
 }
 
 .vacation-schedule-page__content {
@@ -350,24 +383,27 @@
 }
 
 body[data-theme='dark'] .vac-tabs {
-  background: var(--app-surface, #0f172a);
-  border-bottom-color: var(--app-border, #334155);
+  background: color-mix(in srgb, var(--app-surface, #0f172a) 70%, var(--app-border, #334155));
+  border-color: var(--app-border, #334155);
+  box-shadow: none;
 }
 
 body[data-theme='dark'] .vac-tabs__tab {
-  background: var(--app-surface-soft, #1e293b);
-  border-color: var(--app-border, #334155);
+  background: transparent;
   color: var(--app-muted, #94a3b8);
 }
 
 body[data-theme='dark'] .vac-tabs__tab:hover {
   color: var(--app-text, #e2e8f0);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 14%, transparent);
 }
 
 body[data-theme='dark'] .vac-tabs__tab--on {
-  color: #fff;
-  background: var(--app-accent, #4f46e5);
-  border-color: var(--app-accent, #4f46e5);
+  color: var(--app-text, #f8fafc);
+  background: var(--app-surface, #1e293b);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 0 0 1px color-mix(in srgb, var(--app-accent, #4f46e5) 35%, transparent);
 }
 
 body[data-theme='dark'] .vac-cont__hint-mini b {
