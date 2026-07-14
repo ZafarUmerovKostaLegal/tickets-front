@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import type { BirthdayGreetingPayload } from '../lib/birthdayGreetingStorage';
 import { playBirthdayFanfare } from '../lib/playBirthdayFanfare';
@@ -10,6 +10,17 @@ type Props = {
 };
 
 type Stage = 'envelope' | 'card' | 'open';
+
+const FIREWORK_ORIGINS = [
+    { left: '18%', top: '22%' },
+    { left: '78%', top: '18%' },
+    { left: '50%', top: '12%' },
+    { left: '28%', top: '48%' },
+    { left: '72%', top: '42%' },
+    { left: '50%', top: '58%' },
+] as const;
+
+const SPARK_ANGLES = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
 
 function politeGreetingName(fullName: string): string {
     const parts = fullName.trim().split(/\s+/).filter(Boolean);
@@ -26,6 +37,8 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
     const [reveal, setReveal] = useState(false);
     const [noAnim, setNoAnim] = useState(false);
     const [burst, setBurst] = useState(false);
+    const [fireworks, setFireworks] = useState(false);
+    const fireworkKey = useMemo(() => (fireworks ? String(Date.now()) : '0'), [fireworks]);
 
     useEffect(() => {
         const prev = document.body.style.overflow;
@@ -51,11 +64,15 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
             setBurst(true);
             playBirthdayFanfare();
         }, 980);
-        window.setTimeout(() => setCoverOpen(true), 1580);
+        window.setTimeout(() => {
+            setCoverOpen(true);
+            setFireworks(true);
+        }, 1580);
         window.setTimeout(() => {
             setReveal(true);
             setStage('open');
         }, 2480);
+        window.setTimeout(() => setFireworks(false), 4200);
     }, [stage]);
 
     const replay = useCallback(() => {
@@ -66,6 +83,7 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
         setCoverOpen(false);
         setReveal(false);
         setBurst(false);
+        setFireworks(false);
         requestAnimationFrame(() => {
             requestAnimationFrame(() => setNoAnim(false));
         });
@@ -88,6 +106,7 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
                 noAnim ? 'bday-pc--no-anim' : '',
                 burst ? 'bday-pc--burst' : '',
                 stage === 'open' ? 'bday-pc--open' : '',
+                coverOpen ? 'bday-pc--cover-open' : '',
             ].filter(Boolean).join(' ')}
             role="dialog"
             aria-modal="true"
@@ -102,16 +121,45 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
 
             {burst ? (
                 <div className="bday-pc__confetti" aria-hidden>
-                    {Array.from({ length: 36 }, (_, i) => (
+                    {Array.from({ length: 42 }, (_, i) => (
                         <span
                             key={i}
                             className={`bday-pc__piece bday-pc__piece--${i % 6}`}
                             style={{
-                                left: `${4 + (i * 2.6) % 92}%`,
+                                left: `${4 + (i * 2.35) % 92}%`,
                                 animationDelay: `${(i % 12) * 0.05}s`,
                                 animationDuration: `${2.4 + (i % 5) * 0.25}s`,
                             }}
                         />
+                    ))}
+                </div>
+            ) : null}
+
+            {fireworks ? (
+                <div className="bday-pc__fireworks" key={fireworkKey} aria-hidden>
+                    {FIREWORK_ORIGINS.map((origin, oi) => (
+                        <div
+                            key={oi}
+                            className={`bday-pc__fw-burst bday-pc__fw-burst--${oi % 3}`}
+                            style={{
+                                left: origin.left,
+                                top: origin.top,
+                                animationDelay: `${oi * 0.18}s`,
+                            }}
+                        >
+                            <span className="bday-pc__fw-flash" />
+                            {SPARK_ANGLES.map((angle, si) => (
+                                <span
+                                    key={si}
+                                    className={`bday-pc__fw-spark bday-pc__fw-spark--${(oi + si) % 5}`}
+                                    style={{
+                                        ['--fw-angle' as string]: `${angle}deg`,
+                                        ['--fw-dist' as string]: `${58 + (si % 4) * 14}px`,
+                                        animationDelay: `${oi * 0.18 + (si % 3) * 0.03}s`,
+                                    }}
+                                />
+                            ))}
+                        </div>
                     ))}
                 </div>
             ) : null}
@@ -128,9 +176,23 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
                                 <div className="bday-pc__env-shadow" aria-hidden />
                                 <div className="bday-pc__letter-peek" aria-hidden />
                                 <div className="bday-pc__env-body" aria-hidden>
-                                    <span className="bday-pc__env-monogram">KL</span>
+                                    <div className="bday-pc__env-liner" />
+                                    <div className="bday-pc__env-address">
+                                        <span className="bday-pc__env-to">Для</span>
+                                        <span className="bday-pc__env-name">{name}</span>
+                                    </div>
+                                    <img
+                                        className="bday-pc__env-logo"
+                                        src="/logo.svg"
+                                        alt=""
+                                        width={28}
+                                        height={40}
+                                        draggable={false}
+                                    />
                                 </div>
-                                <div className={`bday-pc__env-flap${flapOpen ? ' bday-pc__env-flap--open' : ''}`} aria-hidden />
+                                <div className={`bday-pc__env-flap${flapOpen ? ' bday-pc__env-flap--open' : ''}`} aria-hidden>
+                                    <span className="bday-pc__env-flap-edge" />
+                                </div>
                                 <button
                                     type="button"
                                     className={`bday-pc__seal${sealCrack ? ' bday-pc__seal--crack' : ''}`}
@@ -138,15 +200,14 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
                                     onClick={openCard}
                                     onKeyDown={onSealKey}
                                 >
-                                    <svg viewBox="0 0 24 24" fill="none" aria-hidden>
-                                        <path
-                                            d="M12 3c1.2 2 1.2 4-0.3 5.4C13.6 9 15 10.8 15 12.8c0 2.6-2 4.2-3 5.2 -1-1-3-2.6-3-5.2 0-2 1.4-3.8 3.3-4.4C10.8 7 10.8 5 12 3Z"
-                                            stroke="currentColor"
-                                            strokeWidth="0.9"
-                                            fill="rgba(255,255,255,0.12)"
-                                            strokeLinejoin="round"
-                                        />
-                                    </svg>
+                                    <img
+                                        className="bday-pc__seal-logo"
+                                        src="/logo.svg"
+                                        alt=""
+                                        width={26}
+                                        height={38}
+                                        draggable={false}
+                                    />
                                     <span className="bday-pc__seal-ring" aria-hidden />
                                 </button>
                             </div>
@@ -174,13 +235,19 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
                             </div>
 
                             <div className={`bday-pc__cover${coverOpen ? ' bday-pc__cover--open' : ''}`}>
-                                <div className="bday-pc__cover-pattern" aria-hidden />
-                                <p className="bday-pc__cover-sub">Kosta Legal</p>
-                                <h2 className="bday-pc__cover-title">С Днём Рождения</h2>
-                                <svg className="bday-pc__flourish" viewBox="0 0 90 18" aria-hidden>
-                                    <path d="M2 9 C 20 -2, 30 20, 45 9 C 60 -2, 70 20, 88 9" />
-                                </svg>
-                                <p className="bday-pc__cover-badge">открытка</p>
+                                <div className="bday-pc__cover-face bday-pc__cover-face--front">
+                                    <div className="bday-pc__cover-pattern" aria-hidden />
+                                    <p className="bday-pc__cover-sub">Kosta Legal</p>
+                                    <h2 className="bday-pc__cover-title">С Днём Рождения</h2>
+                                    <svg className="bday-pc__flourish" viewBox="0 0 90 18" aria-hidden>
+                                        <path d="M2 9 C 20 -2, 30 20, 45 9 C 60 -2, 70 20, 88 9" />
+                                    </svg>
+                                    <p className="bday-pc__cover-badge">открытка</p>
+                                </div>
+                                <div className="bday-pc__cover-face bday-pc__cover-face--inside" aria-hidden>
+                                    <div className="bday-pc__cover-inside-deco" />
+                                    <span className="bday-pc__cover-inside-mark">KL</span>
+                                </div>
                             </div>
 
                             <span className="bday-pc__sparkle" style={{ left: '12%', top: '68%', animationDelay: '0s' }} aria-hidden />

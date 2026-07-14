@@ -1,16 +1,16 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap');
-
 .bday-pc {
-  --bday-paper: color-mix(in srgb, var(--app-surface, #fff) 88%, #f5efe4);
-  --bday-paper-deep: color-mix(in srgb, var(--app-surface-soft, #f8fafc) 70%, #efe4ce);
+  /* Brand from logo.svg: #E6282C */
+  --bday-brand: #e6282c;
+  --bday-brand-deep: #b41f23;
+  --bday-brand-dark: #8a1619;
+  --bday-brand-soft: #fbe8e8;
+  --bday-brand-mist: #f7d4d5;
+  --bday-paper: #fffaf8;
+  --bday-paper-deep: #f6ebe8;
   --bday-ink: var(--app-text, #0f172a);
   --bday-ink-soft: var(--app-muted, #64748b);
-  --bday-accent: var(--app-accent, #4f46e5);
-  --bday-gold: color-mix(in srgb, var(--app-accent, #4f46e5) 35%, #b8924a);
-  --bday-gold-light: color-mix(in srgb, var(--app-accent, #4f46e5) 18%, #e4cf9a);
-  --bday-wax: color-mix(in srgb, var(--app-accent, #4f46e5) 55%, #7e2f35);
-  --bday-wax-dark: color-mix(in srgb, var(--app-accent, #4f46e5) 40%, #4a1520);
-  --bday-sage: color-mix(in srgb, var(--app-accent, #4f46e5) 25%, #6b7f63);
+  --bday-wax: var(--bday-brand);
+  --bday-wax-dark: var(--bday-brand-dark);
 
   position: fixed;
   inset: 0;
@@ -21,11 +21,11 @@
   padding: 1.25rem;
   box-sizing: border-box;
   background:
-    radial-gradient(ellipse 90% 70% at 50% -10%, color-mix(in srgb, var(--app-accent, #4f46e5) 18%, transparent), transparent 60%),
-    color-mix(in srgb, var(--app-bg, #f1f5f9) 72%, #0f172a);
+    radial-gradient(ellipse 80% 60% at 50% 15%, color-mix(in srgb, var(--bday-brand) 16%, transparent), transparent 62%),
+    color-mix(in srgb, var(--app-bg, #f8fafc) 78%, #1c1917);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  font-family: 'EB Garamond', Georgia, serif;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
   color: var(--bday-ink);
   overflow: hidden;
   animation: bday-pc-fade 0.4s ease;
@@ -47,7 +47,7 @@
   width: min(520px, 90vw);
   height: min(520px, 90vw);
   border-radius: 50%;
-  background: radial-gradient(circle, color-mix(in srgb, var(--app-accent, #4f46e5) 28%, transparent), transparent 68%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--bday-brand) 30%, transparent), transparent 68%);
   filter: blur(8px);
   opacity: 0.55;
   animation: bday-pc-glow 5s ease-in-out infinite;
@@ -79,7 +79,7 @@
   height: 180px;
   left: 8%;
   top: 18%;
-  background: color-mix(in srgb, var(--app-accent, #4f46e5) 40%, transparent);
+  background: color-mix(in srgb, var(--bday-brand) 38%, transparent);
 }
 
 .bday-pc__orb--b {
@@ -87,7 +87,7 @@
   height: 220px;
   right: 6%;
   bottom: 12%;
-  background: color-mix(in srgb, #f59e0b 35%, transparent);
+  background: color-mix(in srgb, #f4a261 32%, transparent);
   animation-delay: -3s;
 }
 
@@ -96,7 +96,7 @@
   height: 140px;
   left: 45%;
   bottom: 8%;
-  background: color-mix(in srgb, #ec4899 28%, transparent);
+  background: color-mix(in srgb, var(--bday-brand-deep) 26%, transparent);
   animation-delay: -5.5s;
 }
 
@@ -124,11 +124,11 @@
   animation-fill-mode: both;
 }
 
-.bday-pc__piece--0 { background: var(--app-accent, #4f46e5); }
-.bday-pc__piece--1 { background: #f59e0b; border-radius: 50%; width: 7px; height: 7px; }
-.bday-pc__piece--2 { background: #22c55e; }
-.bday-pc__piece--3 { background: #ec4899; border-radius: 50%; }
-.bday-pc__piece--4 { background: #38bdf8; }
+.bday-pc__piece--0 { background: var(--bday-brand); }
+.bday-pc__piece--1 { background: #f4a261; border-radius: 50%; width: 7px; height: 7px; }
+.bday-pc__piece--2 { background: var(--bday-brand-deep); }
+.bday-pc__piece--3 { background: #f7d4d5; border-radius: 50%; }
+.bday-pc__piece--4 { background: #1c1917; }
 .bday-pc__piece--5 { background: #eab308; transform: rotate(45deg); }
 
 @keyframes bday-pc-fall {
@@ -137,14 +137,98 @@
   100% { opacity: 0; transform: translateY(110vh) rotate(720deg); }
 }
 
+.bday-pc__fireworks {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.bday-pc__fw-burst {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  animation: bday-pc-fw-burst-in 0.15s ease forwards;
+}
+
+.bday-pc__fw-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, color-mix(in srgb, var(--bday-brand) 70%, #fff) 45%, transparent 70%);
+  box-shadow: 0 0 28px 8px color-mix(in srgb, var(--bday-brand) 45%, transparent);
+  animation: bday-pc-fw-flash 0.85s ease-out forwards;
+}
+
+.bday-pc__fw-burst--1 .bday-pc__fw-flash {
+  background: radial-gradient(circle, #fff 0%, #f4a261 45%, transparent 70%);
+  box-shadow: 0 0 28px 8px rgba(244, 162, 97, 0.5);
+}
+
+.bday-pc__fw-burst--2 .bday-pc__fw-flash {
+  background: radial-gradient(circle, #fff 0%, #f7d4d5 45%, transparent 70%);
+  box-shadow: 0 0 28px 8px rgba(230, 40, 44, 0.35);
+}
+
+.bday-pc__fw-spark {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: bday-pc-fw-spark 1.15s cubic-bezier(0.15, 0.75, 0.25, 1) forwards;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.bday-pc__fw-spark--0 { background: #e6282c; color: #e6282c; }
+.bday-pc__fw-spark--1 { background: #f4a261; color: #f4a261; width: 4px; height: 10px; border-radius: 2px; }
+.bday-pc__fw-spark--2 { background: #b41f23; color: #b41f23; }
+.bday-pc__fw-spark--3 { background: #fff7f5; color: #fff7f5; }
+.bday-pc__fw-spark--4 { background: #1c1917; color: #1c1917; width: 3px; height: 9px; border-radius: 1px; }
+
+@keyframes bday-pc-fw-burst-in {
+  to { opacity: 1; }
+}
+
+@keyframes bday-pc-fw-flash {
+  0% { transform: translate(-50%, -50%) scale(0.2); opacity: 1; }
+  40% { transform: translate(-50%, -50%) scale(2.2); opacity: 0.9; }
+  100% { transform: translate(-50%, -50%) scale(0.4); opacity: 0; }
+}
+
+@keyframes bday-pc-fw-spark {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--fw-angle)) translateY(0) scale(0.4);
+  }
+  12% { opacity: 1; }
+  70% {
+    opacity: 0.85;
+    transform: rotate(var(--fw-angle)) translateY(calc(var(--fw-dist) * -1)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--fw-angle)) translateY(calc(var(--fw-dist) * -1.35)) scale(0.2);
+  }
+}
+
 .bday-pc__frame {
   position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.15rem;
-  width: min(100%, 400px);
+  gap: 1.25rem;
+  width: min(100%, 920px);
   animation: bday-pc-frame-in 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -155,12 +239,12 @@
 
 .bday-pc__eyebrow {
   margin: 0;
-  font-family: inherit;
-  font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.28em;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--app-accent, #4f46e5) 70%, #fff);
+  color: color-mix(in srgb, var(--bday-brand) 55%, #fff);
   opacity: 0.95;
   transition: opacity 0.55s ease, transform 0.55s ease;
 }
@@ -172,9 +256,14 @@
 
 .bday-pc__theater {
   position: relative;
-  width: min(90vw, 340px);
-  height: 470px;
+  width: min(94vw, 880px);
+  height: min(72vh, 620px);
   display: grid;
+  transition: width 0.9s ease;
+}
+
+.bday-pc--cover-open .bday-pc__theater {
+  width: min(96vw, 920px);
 }
 
 .bday-pc__env-scene,
@@ -203,9 +292,9 @@
 
 .bday-pc__envelope {
   position: relative;
-  width: 280px;
-  height: 190px;
-  perspective: 900px;
+  width: min(92vw, 440px);
+  height: min(58vw, 290px);
+  perspective: 1100px;
   animation: bday-pc-float 3.4s ease-in-out infinite;
 }
 
@@ -215,17 +304,17 @@
 
 @keyframes bday-pc-float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-7px); }
+  50% { transform: translateY(-8px); }
 }
 
 .bday-pc__env-shadow {
   position: absolute;
-  bottom: -18px;
-  left: 8%;
-  width: 84%;
-  height: 22px;
-  background: radial-gradient(ellipse at center, rgba(15, 23, 42, 0.28), transparent 70%);
-  filter: blur(2px);
+  bottom: -22px;
+  left: 6%;
+  width: 88%;
+  height: 28px;
+  background: radial-gradient(ellipse at center, rgba(28, 25, 23, 0.32), transparent 70%);
+  filter: blur(3px);
   animation: bday-pc-shadow 3.4s ease-in-out infinite;
 }
 
@@ -236,37 +325,56 @@
 
 .bday-pc__letter-peek {
   position: absolute;
-  left: 18%;
-  right: 18%;
-  top: 28%;
-  height: 52%;
-  border-radius: 3px 3px 0 0;
-  background: linear-gradient(180deg, var(--app-surface, #fff), var(--bday-paper-deep));
-  border: 1px solid color-mix(in srgb, var(--app-accent, #4f46e5) 18%, var(--app-border, #e2e8f0));
-  box-shadow: 0 8px 18px -12px rgba(15, 23, 42, 0.35);
-  transform: translateY(10px);
-  opacity: 0.35;
+  left: 14%;
+  right: 14%;
+  top: 24%;
+  height: 58%;
+  border-radius: 4px 4px 0 0;
+  background:
+    linear-gradient(180deg, #fff 0%, var(--bday-brand-soft) 100%);
+  border: 1px solid color-mix(in srgb, var(--bday-brand) 22%, #e7e0dc);
+  box-shadow: 0 10px 22px -12px rgba(28, 25, 23, 0.35);
+  transform: translateY(12px);
+  opacity: 0.4;
   transition: transform 0.7s ease 0.15s, opacity 0.5s ease;
   z-index: 1;
 }
 
 .bday-pc__envelope--open .bday-pc__letter-peek {
-  transform: translateY(-18px);
-  opacity: 0.9;
+  transform: translateY(-22px);
+  opacity: 0.95;
 }
 
 .bday-pc__env-body {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(145deg, color-mix(in srgb, var(--app-accent, #4f46e5) 8%, #fffdf8), var(--bday-paper-deep));
-  border: 1px solid color-mix(in srgb, var(--app-accent, #4f46e5) 22%, var(--app-border, #e2e8f0));
-  border-radius: 10px;
+    linear-gradient(160deg, #fffefd 0%, var(--bday-paper) 42%, var(--bday-paper-deep) 100%);
+  border: 1.5px solid color-mix(in srgb, var(--bday-brand) 28%, #ddd4d0);
+  border-radius: 14px;
   box-shadow:
-    0 18px 40px -18px rgba(15, 23, 42, 0.4),
-    0 0 0 1px color-mix(in srgb, #fff 40%, transparent) inset;
+    0 22px 48px -20px rgba(28, 25, 23, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.65) inset,
+    inset 0 -18px 36px -24px color-mix(in srgb, var(--bday-brand) 12%, transparent);
   z-index: 2;
   overflow: hidden;
+}
+
+.bday-pc__env-liner {
+  position: absolute;
+  inset: 10px 10px 38%;
+  border-radius: 8px 8px 0 0;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--bday-brand) 10%, transparent), transparent 55%),
+    repeating-linear-gradient(
+      -18deg,
+      transparent,
+      transparent 7px,
+      color-mix(in srgb, var(--bday-brand) 7%, transparent) 7px,
+      color-mix(in srgb, var(--bday-brand) 7%, transparent) 8px
+    );
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 .bday-pc__env-body::before {
@@ -275,22 +383,63 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 62%;
+  height: 58%;
   background:
-    linear-gradient(135deg, transparent 49.5%, color-mix(in srgb, var(--app-accent, #4f46e5) 12%, transparent) 50%, transparent 50.5%),
-    linear-gradient(45deg, transparent 49.5%, color-mix(in srgb, var(--app-accent, #4f46e5) 12%, transparent) 50%, transparent 50.5%);
+    linear-gradient(135deg, transparent 49.2%, color-mix(in srgb, var(--bday-brand) 18%, transparent) 50%, transparent 50.8%),
+    linear-gradient(45deg, transparent 49.2%, color-mix(in srgb, var(--bday-brand) 18%, transparent) 50%, transparent 50.8%);
+  opacity: 0.95;
 }
 
-.bday-pc__env-monogram {
+.bday-pc__env-body::after {
+  content: '';
   position: absolute;
-  right: 0.7rem;
-  bottom: 0.55rem;
-  font-family: inherit;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: color-mix(in srgb, var(--app-accent, #4f46e5) 55%, transparent);
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bday-brand) 8%, transparent);
+  pointer-events: none;
+}
+
+.bday-pc__env-address {
+  position: absolute;
+  left: 1.15rem;
+  bottom: 1.15rem;
+  top: auto;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-width: 48%;
+}
+
+.bday-pc__env-to {
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--bday-brand) 70%, #64748b);
+}
+
+.bday-pc__env-name {
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--bday-ink);
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bday-pc__env-logo {
+  position: absolute;
+  right: 0.95rem;
+  bottom: 0.95rem;
+  width: 22px;
+  height: auto;
+  opacity: 0.8;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .bday-pc__env-flap {
@@ -298,15 +447,27 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 52%;
-  background: linear-gradient(160deg, #fffdf9, color-mix(in srgb, var(--app-accent, #4f46e5) 10%, #efe4ce));
+  height: 54%;
+  background:
+    linear-gradient(175deg, #fff 0%, var(--bday-brand-soft) 55%, color-mix(in srgb, var(--bday-brand) 12%, #f3e4e0) 100%);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   transform-origin: top center;
   transform: rotateX(0deg);
   transition: transform 1s cubic-bezier(0.6, 0.1, 0.3, 1);
   backface-visibility: hidden;
   z-index: 3;
-  border-bottom: 1px solid color-mix(in srgb, var(--app-accent, #4f46e5) 20%, transparent);
+  filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--bday-brand) 15%, transparent));
+}
+
+.bday-pc__env-flap-edge {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 100%;
+  height: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--bday-brand) 45%, transparent), transparent);
+  opacity: 0.7;
 }
 
 .bday-pc__env-flap--open {
@@ -317,19 +478,20 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 70px;
-  height: 70px;
+  width: 84px;
+  height: 84px;
   transform: translate(-50%, -50%);
   border: none;
   padding: 0;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--app-accent, #4f46e5) 70%, #fff), var(--bday-wax) 58%, var(--bday-wax-dark));
-  color: #f8fafc;
+    radial-gradient(circle at 32% 28%, #ff6b6e, var(--bday-wax) 48%, var(--bday-wax-dark) 100%);
+  color: #fff;
   box-shadow:
-    0 8px 20px -4px color-mix(in srgb, var(--app-accent, #4f46e5) 45%, transparent),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.25),
-    inset 0 2px 3px rgba(255, 255, 255, 0.2);
+    0 10px 28px -6px color-mix(in srgb, var(--bday-brand) 55%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--bday-brand-soft) 80%, #fff),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.28),
+    inset 0 3px 4px rgba(255, 255, 255, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -341,31 +503,35 @@
 
 .bday-pc__seal:hover {
   box-shadow:
-    0 10px 26px -4px color-mix(in srgb, var(--app-accent, #4f46e5) 55%, transparent),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.25),
-    inset 0 2px 3px rgba(255, 255, 255, 0.25);
-  transform: translate(-50%, -50%) scale(1.05);
+    0 14px 32px -6px color-mix(in srgb, var(--bday-brand) 65%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--bday-brand-soft) 90%, #fff),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.28),
+    inset 0 3px 4px rgba(255, 255, 255, 0.32);
+  transform: translate(-50%, -50%) scale(1.06);
 }
 
-.bday-pc__seal svg {
-  width: 30px;
-  height: 30px;
+.bday-pc__seal-logo {
+  width: 28px;
+  height: auto;
   position: relative;
   z-index: 1;
+  filter: brightness(0) invert(1);
+  opacity: 0.95;
+  pointer-events: none;
 }
 
 .bday-pc__seal-ring {
   position: absolute;
-  inset: -6px;
+  inset: -7px;
   border-radius: 50%;
-  border: 1.5px dashed color-mix(in srgb, var(--app-accent, #4f46e5) 45%, #fff);
-  opacity: 0.55;
-  animation: bday-pc-spin 12s linear infinite;
+  border: 1.5px dashed color-mix(in srgb, var(--bday-brand) 55%, #fff);
+  opacity: 0.65;
+  animation: bday-pc-spin 14s linear infinite;
 }
 
 @keyframes bday-pc-seal-pulse {
   0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.08); }
+  50% { filter: brightness(1.07); }
 }
 
 @keyframes bday-pc-spin {
@@ -380,14 +546,14 @@
 }
 
 .bday-pc__hint {
-  margin: 1.35rem 0 0;
+  margin: 1.5rem 0 0;
   text-align: center;
-  font-family: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: color-mix(in srgb, #fff 78%, var(--app-accent, #4f46e5));
-  opacity: 0.85;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, #fff 82%, var(--bday-brand));
+  opacity: 0.88;
   transition: opacity 0.45s ease, transform 0.45s ease;
   animation: bday-pc-hint 2.2s ease-in-out infinite;
 }
@@ -418,26 +584,32 @@
 
 .bday-pc__card {
   position: relative;
-  width: 300px;
-  height: 440px;
-  perspective: 1400px;
+  width: min(86vw, 420px);
+  height: min(68vh, 580px);
+  margin-left: min(20vw, 200px);
+  perspective: 1800px;
+  transition: margin-left 0.9s cubic-bezier(0.65, 0, 0.32, 1);
+}
+
+.bday-pc:not(.bday-pc--cover-open) .bday-pc__card {
+  margin-left: 0;
 }
 
 .bday-pc__card-back {
   position: absolute;
   inset: 0;
-  border-radius: 14px;
+  border-radius: 16px;
   background:
     linear-gradient(165deg, var(--app-surface, #fff) 0%, var(--bday-paper-deep) 100%);
-  border: 1px solid color-mix(in srgb, var(--app-accent, #4f46e5) 16%, var(--app-border, #e2e8f0));
+  border: 1px solid color-mix(in srgb, var(--bday-brand) 16%, var(--app-border, #e2e8f0));
   box-shadow:
-    0 28px 60px -24px rgba(15, 23, 42, 0.45),
+    0 32px 70px -22px rgba(15, 23, 42, 0.48),
     0 0 0 1px color-mix(in srgb, #fff 50%, transparent) inset;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2.35rem 1.85rem;
+  padding: clamp(1.75rem, 3vw, 2.75rem) clamp(1.5rem, 2.5vw, 2.35rem);
   text-align: center;
   overflow: hidden;
 }
@@ -464,22 +636,67 @@
 .bday-pc__cover {
   position: absolute;
   inset: 0;
-  border-radius: 14px;
+  border-radius: 16px;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  transition: transform 1.15s cubic-bezier(0.65, 0, 0.32, 1);
+  z-index: 5;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.bday-pc__cover-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 16px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border: 1px solid color-mix(in srgb, var(--bday-brand) 22%, var(--app-border, #e2e8f0));
+  overflow: hidden;
+}
+
+.bday-pc__cover-face--front {
   background:
-    linear-gradient(155deg, var(--app-surface, #fff) 0%, color-mix(in srgb, var(--app-accent, #4f46e5) 8%, #f4ead6) 100%);
-  border: 1px solid color-mix(in srgb, var(--app-accent, #4f46e5) 22%, var(--app-border, #e2e8f0));
+    linear-gradient(155deg, var(--app-surface, #fff) 0%, color-mix(in srgb, var(--bday-brand) 8%, #f4ead6) 100%);
   box-shadow: 0 24px 50px -20px rgba(15, 23, 42, 0.4);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  padding: 1.85rem;
-  transform-origin: left center;
-  transform-style: preserve-3d;
-  transition: transform 1.15s cubic-bezier(0.65, 0, 0.32, 1);
-  z-index: 5;
-  overflow: hidden;
+  gap: 0.85rem;
+  padding: 2rem;
+}
+
+.bday-pc__cover-face--inside {
+  transform: rotateY(180deg);
+  background:
+    linear-gradient(160deg, var(--bday-paper-deep), color-mix(in srgb, var(--bday-brand) 10%, var(--app-surface, #fff)));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #fff 40%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bday-pc__cover-inside-deco {
+  position: absolute;
+  inset: 1.25rem;
+  border-radius: 12px;
+  border: 1px dashed color-mix(in srgb, var(--bday-brand) 28%, transparent);
+  background-image:
+    radial-gradient(circle at 20% 30%, color-mix(in srgb, var(--bday-brand) 22%, transparent) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 70% 60%, color-mix(in srgb, var(--bday-brand) 18%, transparent) 0 1.5px, transparent 2px);
+  background-size: 36px 36px, 28px 28px;
+  opacity: 0.7;
+}
+
+.bday-pc__cover-inside-mark {
+  position: relative;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: color-mix(in srgb, var(--bday-brand) 40%, transparent);
 }
 
 .bday-pc__cover-pattern {
@@ -487,26 +704,25 @@
   inset: 0;
   opacity: 0.12;
   background-image:
-    radial-gradient(circle at 20% 30%, var(--app-accent, #4f46e5) 0 1.5px, transparent 2px),
-    radial-gradient(circle at 70% 60%, var(--app-accent, #4f46e5) 0 1.5px, transparent 2px),
-    radial-gradient(circle at 45% 80%, var(--app-accent, #4f46e5) 0 1.2px, transparent 2px);
+    radial-gradient(circle at 20% 30%, var(--bday-brand) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 70% 60%, var(--bday-brand) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 45% 80%, var(--bday-brand) 0 1.2px, transparent 2px);
   background-size: 42px 42px, 36px 36px, 28px 28px;
   pointer-events: none;
 }
 
 .bday-pc__cover--open {
-  transform: rotateY(-155deg);
-  box-shadow: -12px 10px 30px -18px rgba(15, 23, 42, 0.35);
+  transform: rotateY(-160deg);
 }
 
 .bday-pc__cover-title {
   margin: 0;
   position: relative;
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-style: italic;
-  font-weight: 600;
-  font-size: 1.9rem;
-  letter-spacing: -0.01em;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
+  font-style: normal;
+  font-weight: 700;
+  font-size: clamp(1.65rem, 3.5vw, 2.1rem);
+  letter-spacing: -0.02em;
   color: var(--bday-ink);
   animation: bday-pc-title-sway 3.8s ease-in-out infinite;
 }
@@ -519,12 +735,12 @@
 .bday-pc__cover-sub {
   margin: 0;
   position: relative;
-  font-family: inherit;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.3em;
   text-transform: uppercase;
-  color: var(--app-accent, #4f46e5);
+  color: var(--bday-brand);
   opacity: 0.85;
 }
 
@@ -533,14 +749,14 @@
   position: relative;
   padding: 0.2rem 0.55rem;
   border-radius: 999px;
-  font-family: inherit;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--app-accent, #4f46e5);
-  background: color-mix(in srgb, var(--app-accent, #4f46e5) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--app-accent, #4f46e5) 22%, transparent);
+  color: var(--bday-brand);
+  background: color-mix(in srgb, var(--bday-brand) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bday-brand) 22%, transparent);
 }
 
 .bday-pc__flourish {
@@ -551,7 +767,7 @@
 
 .bday-pc__flourish path {
   fill: none;
-  stroke: var(--app-accent, #4f46e5);
+  stroke: var(--bday-brand);
   stroke-width: 1.35;
   stroke-dasharray: 140;
   stroke-dashoffset: 140;
@@ -564,12 +780,12 @@
 
 .bday-pc__inside-eyebrow {
   margin: 0;
-  font-family: inherit;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.28em;
   text-transform: uppercase;
-  color: var(--app-accent, #4f46e5);
+  color: var(--bday-brand);
   opacity: 0;
   transform: translateY(10px);
   transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
@@ -577,9 +793,9 @@
 
 .bday-pc__to-name {
   margin: 0.7rem 0 0.35rem;
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: clamp(1.65rem, 5vw, 2rem);
-  font-weight: 600;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
+  font-size: clamp(1.75rem, 4vw, 2.2rem);
+  font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--bday-ink);
   opacity: 0;
@@ -601,23 +817,23 @@
 .bday-pc__divider span {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--app-accent, #4f46e5) 45%, transparent), transparent);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--bday-brand) 45%, transparent), transparent);
 }
 
 .bday-pc__divider i {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--app-accent, #4f46e5);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent, #4f46e5) 18%, transparent);
+  background: var(--bday-brand);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bday-brand) 18%, transparent);
 }
 
 .bday-pc__message {
   margin: 0;
-  font-size: 1.02rem;
-  line-height: 1.62;
+  font-size: clamp(1.05rem, 2.2vw, 1.2rem);
+  line-height: 1.65;
   color: var(--bday-ink-soft);
-  max-width: 16rem;
+  max-width: 22rem;
   opacity: 0;
   transform: translateY(12px);
   transition: opacity 0.75s ease 0.32s, transform 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.32s;
@@ -625,9 +841,10 @@
 
 .bday-pc__from-wrap {
   margin-top: 1.25rem;
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-style: italic;
-  font-size: 1.12rem;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
+  font-style: normal;
+  font-size: 0.95rem;
+  font-weight: 500;
   color: var(--bday-ink);
   opacity: 0;
   transform: translateY(12px);
@@ -635,8 +852,9 @@
 }
 
 .bday-pc__from-name {
-  color: var(--app-accent, #4f46e5);
-  font-style: italic;
+  color: var(--bday-brand);
+  font-weight: 600;
+  font-style: normal;
 }
 
 .bday-pc__card-back--reveal .bday-pc__inside-eyebrow,
@@ -657,8 +875,8 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--app-accent, #4f46e5);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--app-accent, #4f46e5) 55%, transparent);
+  background: var(--bday-brand);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--bday-brand) 55%, transparent);
   opacity: 0;
   pointer-events: none;
 }
@@ -698,12 +916,12 @@
 .bday-pc__replay {
   background: none;
   border: none;
-  font-family: inherit;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: color-mix(in srgb, #fff 72%, var(--app-accent, #4f46e5));
+  color: color-mix(in srgb, #fff 72%, var(--bday-brand));
   cursor: pointer;
   padding: 0.4rem 0.25rem;
   transition: color 0.2s ease, transform 0.2s ease;
@@ -718,32 +936,66 @@
   border: none;
   border-radius: 10px;
   padding: 0.55rem 1.2rem;
-  font-family: inherit;
+  font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #fff;
-  background: var(--app-accent, #4f46e5);
+  background: var(--bday-brand);
   cursor: pointer;
-  box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--app-accent, #4f46e5) 65%, transparent);
+  box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--bday-brand) 65%, transparent);
   transition: filter 0.15s ease, transform 0.15s ease;
 }
 
 .bday-pc__done:hover {
-  filter: brightness(1.06);
+  filter: brightness(1.05);
+  background: var(--bday-brand-deep);
   transform: translateY(-1px);
 }
 
-@media (max-width: 380px) {
-  .bday-pc__theater { height: 430px; }
-  .bday-pc__card { width: 270px; height: 410px; }
-  .bday-pc__envelope { width: 250px; height: 175px; }
+@media (max-width: 640px) {
+  .bday-pc__theater {
+    width: min(96vw, 420px);
+    height: min(70vh, 560px);
+  }
+
+  .bday-pc--cover-open .bday-pc__theater {
+    width: min(96vw, 420px);
+  }
+
+  .bday-pc__card {
+    width: min(90vw, 340px);
+    height: min(62vh, 500px);
+    margin-left: 0 !important;
+  }
+
+  .bday-pc__cover--open {
+    transform: rotateY(-105deg);
+  }
+
+  .bday-pc__envelope {
+    width: min(92vw, 360px);
+    height: 240px;
+  }
+
+  .bday-pc__seal {
+    width: 74px;
+    height: 74px;
+  }
+
+  .bday-pc__env-address {
+    max-width: 46%;
+  }
+
+  .bday-pc__message {
+    max-width: 18rem;
+  }
 }
 
 body[data-theme='dark'] .bday-pc {
   --bday-paper: color-mix(in srgb, var(--app-surface, #1e293b) 85%, #334155);
   --bday-paper-deep: color-mix(in srgb, var(--app-surface-soft, #0f172a) 80%, #1e293b);
   background:
-    radial-gradient(ellipse 90% 70% at 50% -10%, color-mix(in srgb, var(--app-accent, #818cf8) 22%, transparent), transparent 60%),
+    radial-gradient(ellipse 90% 70% at 50% -10%, color-mix(in srgb, var(--bday-brand) 22%, transparent), transparent 60%),
     color-mix(in srgb, var(--app-bg, #0f172a) 88%, #000);
 }
 
@@ -767,8 +1019,17 @@ body[data-theme='dark'] .bday-pc__message {
   .bday-pc__hint,
   .bday-pc__piece,
   .bday-pc__sparkle,
-  .bday-pc__cover-title {
+  .bday-pc__cover-title,
+  .bday-pc__fw-burst,
+  .bday-pc__fw-flash,
+  .bday-pc__fw-spark {
     animation: none !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .bday-pc__fw-burst,
+  .bday-pc__fw-flash,
+  .bday-pc__fw-spark {
+    opacity: 0 !important;
   }
 }

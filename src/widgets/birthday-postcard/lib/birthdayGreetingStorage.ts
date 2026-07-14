@@ -15,9 +15,10 @@ export type BirthdayGreetingPayload = {
 export const BIRTHDAY_DEMO_FORCE_EMAIL = 'zumerov@kostalegal.com';
 
 export const DEFAULT_BIRTHDAY_MESSAGE =
-    'Команда Kosta Legal поздравляет вас с днём рождения! '
-    + 'Желаем здоровья, сил и удачи во всех начинаниях. '
-    + 'Спасибо, что вы с нами — пусть этот год будет тёплым и успешным.';
+    'Сегодня ваш день — и пусть он будет таким же ярким, как вы в работе: '
+    + 'смелым в решениях, тёплым с людьми и щедрым на удачные моменты. '
+    + 'Мы рядом, болеем за вас и рады, что Kosta Legal — это и вы. '
+    + 'Пусть впереди будет больше поводов улыбнуться.';
 
 function normEmail(email: string): string {
     return email.trim().toLowerCase();
