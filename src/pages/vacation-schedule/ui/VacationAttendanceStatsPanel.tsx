@@ -49,6 +49,21 @@ function sortIndicator(active: boolean, dir: 'asc' | 'desc'): string {
     return dir === 'asc' ? '↑' : '↓';
 }
 
+function StatsEmpty({ title, subtitle }: { title: string; subtitle?: string }) {
+    return (
+        <div className="vac-att-stats__empty-state" role="status">
+            <span className="vac-att-stats__empty-icon" aria-hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 3v18h18" />
+                    <path d="M7 14l3-3 3 2 5-6" />
+                </svg>
+            </span>
+            <p className="vac-att-stats__empty-title">{title}</p>
+            {subtitle ? <p className="vac-att-stats__empty-sub">{subtitle}</p> : null}
+        </div>
+    );
+}
+
 export function VacationAttendanceStatsPanel({ externalRefreshToken = 0 }: VacationAttendanceStatsPanelProps) {
     const currentYear = new Date().getFullYear();
     const [year, setYear] = useState(() => clampYear(currentYear));
@@ -200,38 +215,46 @@ export function VacationAttendanceStatsPanel({ externalRefreshToken = 0 }: Vacat
 
     const refetch = () => setLoadToken((t) => t + 1);
 
+    const avgLateDisplay = totals.lateCount > 0
+        ? formatVacationLateMinutesTotal(Math.round(totals.lateMinutesTotal / totals.lateCount))
+        : '—';
+
     return (
         <div className="vac-att-stats">
             <header className="vac-att-stats__header">
-                <div className="vac-att-stats__bar">
-                    <label className="vac-att-stats__year-label" htmlFor="vac-att-stats-year" title="Год (2000–2100)">
-                        Год
-                    </label>
-                    <input
-                        id="vac-att-stats-year"
-                        className="vac-att-stats__year-input"
-                        type="number"
-                        min={2000}
-                        max={2100}
-                        value={yearInput}
-                        onChange={(e) => setYearInput(e.target.value)}
-                        onBlur={() => applyYearFromInput()}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                                e.preventDefault();
-                                applyYearFromInput();
-                            }
-                        }}
-                    />
-                    <button type="button" className="vac-att-stats__year-apply" onClick={() => applyYearFromInput()}>
-                        Показать
-                    </button>
+                <div className="vac-att-stats__header-main">
+                    <div className="vac-att-stats__header-copy">
+                        <p className="vac-att-stats__period">{periodLabel}</p>
+                        <p className="vac-att-stats__bar-hint">
+                            Как в отчёте посещаемости · начало дня {workdaySettings.startTime}
+                            {workdaySettings.lateMinutes > 0 ? ` (+${workdaySettings.lateMinutes} мин)` : ''}
+                        </p>
+                    </div>
+                    <div className="vac-att-stats__bar">
+                        <label className="vac-att-stats__year-label" htmlFor="vac-att-stats-year" title="Год (2000–2100)">
+                            Год
+                        </label>
+                        <input
+                            id="vac-att-stats-year"
+                            className="vac-att-stats__year-input"
+                            type="number"
+                            min={2000}
+                            max={2100}
+                            value={yearInput}
+                            onChange={(e) => setYearInput(e.target.value)}
+                            onBlur={() => applyYearFromInput()}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    applyYearFromInput();
+                                }
+                            }}
+                        />
+                        <button type="button" className="vac-att-stats__year-apply" onClick={() => applyYearFromInput()}>
+                            Показать
+                        </button>
+                    </div>
                 </div>
-                <p className="vac-att-stats__period">{periodLabel}</p>
-                <p className="vac-att-stats__bar-hint">
-                    Как в отчёте посещаемости · начало дня {workdaySettings.startTime}
-                    {workdaySettings.lateMinutes > 0 ? ` (+${workdaySettings.lateMinutes} мин)` : ''}
-                </p>
             </header>
 
             {loadError && (
@@ -246,7 +269,7 @@ export function VacationAttendanceStatsPanel({ externalRefreshToken = 0 }: Vacat
             {loading && !loadError && (
                 <div className="vac-att-stats__skeleton" aria-busy="true" aria-label="Загрузка статистики">
                     <div className="vac-att-stats__skeleton-kpis">
-                        <span /><span /><span />
+                        <span /><span /><span /><span />
                     </div>
                     <div className="vac-att-stats__skeleton-chart" />
                     <div className="vac-att-stats__skeleton-table" />
@@ -257,30 +280,62 @@ export function VacationAttendanceStatsPanel({ externalRefreshToken = 0 }: Vacat
                 <>
                     <div className="vac-att-stats__kpis">
                         <article className="vac-att-stats__kpi vac-att-stats__kpi--late">
-                            <span className="vac-att-stats__kpi-label">Опоздания</span>
-                            <strong className="vac-att-stats__kpi-value">{totals.lateCount.toLocaleString('ru-RU')}</strong>
-                            <span className="vac-att-stats__kpi-sub">
-                                {formatVacationLateMinutesTotal(totals.lateMinutesTotal)} суммарно
+                            <span className="vac-att-stats__kpi-icon" aria-hidden>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M12 7v5l3 2" />
+                                </svg>
                             </span>
+                            <div className="vac-att-stats__kpi-body">
+                                <span className="vac-att-stats__kpi-label">Опоздания</span>
+                                <strong className="vac-att-stats__kpi-value">{totals.lateCount.toLocaleString('ru-RU')}</strong>
+                                <span className="vac-att-stats__kpi-sub">
+                                    {formatVacationLateMinutesTotal(totals.lateMinutesTotal)} суммарно
+                                </span>
+                            </div>
                         </article>
                         <article className="vac-att-stats__kpi vac-att-stats__kpi--absent">
-                            <span className="vac-att-stats__kpi-label">Отсутствия</span>
-                            <strong className="vac-att-stats__kpi-value">{totals.absentCount.toLocaleString('ru-RU')}</strong>
-                            <span className="vac-att-stats__kpi-sub">без отметки прохода</span>
+                            <span className="vac-att-stats__kpi-icon" aria-hidden>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="8" r="3.5" />
+                                    <path d="M5 19c1.5-3.5 4-5 7-5s5.5 1.5 7 5" />
+                                    <path d="M16.5 6.5l4 4M20.5 6.5l-4 4" />
+                                </svg>
+                            </span>
+                            <div className="vac-att-stats__kpi-body">
+                                <span className="vac-att-stats__kpi-label">Отсутствия</span>
+                                <strong className="vac-att-stats__kpi-value">{totals.absentCount.toLocaleString('ru-RU')}</strong>
+                                <span className="vac-att-stats__kpi-sub">без отметки прохода</span>
+                            </div>
                         </article>
-                        <article className="vac-att-stats__kpi">
-                            <span className="vac-att-stats__kpi-label">С нарушениями</span>
-                            <strong className="vac-att-stats__kpi-value">{totals.employeesAffected.toLocaleString('ru-RU')}</strong>
-                            <span className="vac-att-stats__kpi-sub">из {employees.length} в графике</span>
+                        <article className="vac-att-stats__kpi vac-att-stats__kpi--affected">
+                            <span className="vac-att-stats__kpi-icon" aria-hidden>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" />
+                                    <path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" />
+                                </svg>
+                            </span>
+                            <div className="vac-att-stats__kpi-body">
+                                <span className="vac-att-stats__kpi-label">С нарушениями</span>
+                                <strong className="vac-att-stats__kpi-value">{totals.employeesAffected.toLocaleString('ru-RU')}</strong>
+                                <span className="vac-att-stats__kpi-sub">из {employees.length} в графике</span>
+                            </div>
                         </article>
                         <article className="vac-att-stats__kpi vac-att-stats__kpi--avg">
-                            <span className="vac-att-stats__kpi-label">Среднее опоздание</span>
-                            <strong className="vac-att-stats__kpi-value">
-                                {totals.lateCount > 0
-                                    ? formatVacationLateMinutesTotal(Math.round(totals.lateMinutesTotal / totals.lateCount))
-                                    : '—'}
-                            </strong>
-                            <span className="vac-att-stats__kpi-sub">на одно опоздание</span>
+                            <span className="vac-att-stats__kpi-icon" aria-hidden>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M4 19V5" />
+                                    <path d="M4 19h16" />
+                                    <path d="M8 15l3-4 3 2 4-6" />
+                                </svg>
+                            </span>
+                            <div className="vac-att-stats__kpi-body">
+                                <span className="vac-att-stats__kpi-label">Среднее опоздание</span>
+                                <strong className={`vac-att-stats__kpi-value${totals.lateCount === 0 ? ' vac-att-stats__kpi-value--muted' : ''}`}>
+                                    {avgLateDisplay}
+                                </strong>
+                                <span className="vac-att-stats__kpi-sub">на одно опоздание</span>
+                            </div>
                         </article>
                     </div>
 
@@ -296,7 +351,10 @@ export function VacationAttendanceStatsPanel({ externalRefreshToken = 0 }: Vacat
 
                     <section className="vac-att-stats__table-wrap">
                         <div className="vac-att-stats__table-head">
-                            <h2 className="vac-att-stats__card-title">Рейтинг сотрудников</h2>
+                            <div>
+                                <h2 className="vac-att-stats__card-title">Рейтинг сотрудников</h2>
+                                <p className="vac-att-stats__card-sub">Сортировка и поиск по нарушениям посещаемости</p>
+                            </div>
                             <div className="vac-att-stats__table-tools">
                                 <input
                                     type="search"
@@ -312,9 +370,15 @@ export function VacationAttendanceStatsPanel({ externalRefreshToken = 0 }: Vacat
                             </div>
                         </div>
                         {employeeStats.length === 0 ? (
-                            <p className="vac-att-stats__empty">Нарушений посещаемости за период не зафиксировано.</p>
+                            <StatsEmpty
+                                title="Нарушений посещаемости за период не зафиксировано"
+                                subtitle="Когда появятся опоздания или отсутствия, рейтинг заполнится автоматически"
+                            />
                         ) : tableRows.length === 0 ? (
-                            <p className="vac-att-stats__empty">Никого не найдено по запросу «{search}».</p>
+                            <StatsEmpty
+                                title={`Никого не найдено по запросу «${search}»`}
+                                subtitle="Попробуйте изменить поисковый запрос"
+                            />
                         ) : (
                             <div className="vac-att-stats__table-scroll">
                                 <table className="vac-att-stats__table">
