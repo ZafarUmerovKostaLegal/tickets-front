@@ -18,7 +18,12 @@ import {
     ruDaysWord,
 } from '../lib/leaveRequestDisplay';
 import { VacationDecisionModal } from './VacationDecisionModal';
+import { VacationLeaveYearCalendarModal } from './VacationLeaveYearCalendarModal';
 import './VacationLeaveRequestsPanel.css';
+
+function employeeTitleFromReq(req: VacationLeaveRequestApi): string {
+    return req.employee_full_name || req.employee_email || `Сотрудник #${req.employee_user_id}`;
+}
 
 type Mode = 'mine' | 'to_decide';
 
@@ -58,6 +63,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         request: VacationLeaveRequestApi;
         decision: 'approve' | 'decline';
     } | null>(null);
+    const [calendarRequest, setCalendarRequest] = useState<VacationLeaveRequestApi | null>(null);
     const [busyId, setBusyId] = useState<number | null>(null);
 
     useEffect(() => {
@@ -254,54 +260,62 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                         const canCancel = isMine && req.status === 'pending';
                         const busy = busyId === req.id;
                         return (
-                            <li key={req.id} className={`vac-lr-card vac-lr-card--${tone}`}>
-                                <div className="vac-lr-card__top">
-                                    <span
-                                        className={`vac-lr-card__status vac-lr-card__status--${tone}`}
-                                        title={req.decision_reason ? `${statusLabel}: ${req.decision_reason}` : statusLabel}
-                                    >
-                                        <i className="vac-lr-card__status-dot" aria-hidden />
-                                        <span className="vac-lr-card__status-text">{statusLabel}</span>
-                                    </span>
-                                    <span className="vac-lr-card__kind">{kindLabel}</span>
-                                    <span className="vac-lr-card__id">#{req.id}</span>
-                                </div>
-
-                                <div className="vac-lr-card__hero">
-                                    <div className="vac-lr-card__person">
-                                        <span className="vac-lr-card__person-role">{personRole}</span>
-                                        <strong className="vac-lr-card__person-name">{personLabel}</strong>
-                                        {personPosition ? (
-                                            <span className="vac-lr-card__person-pos">{personPosition}</span>
-                                        ) : null}
-                                    </div>
-                                    <div className="vac-lr-card__period">
-                                        <span className="vac-lr-card__period-dates">{range}</span>
-                                        <span className="vac-lr-card__days">
-                                            {req.days_count} {ruDaysWord(req.days_count)}
+                            <li key={req.id} className={`vac-lr-card vac-lr-card--${tone} vac-lr-card--clickable`}>
+                                <button
+                                    type="button"
+                                    className="vac-lr-card__open"
+                                    onClick={() => setCalendarRequest(req)}
+                                    aria-label={`Календарь отметок: ${employeeTitleFromReq(req)}, заявка #${req.id}`}
+                                >
+                                    <div className="vac-lr-card__top">
+                                        <span
+                                            className={`vac-lr-card__status vac-lr-card__status--${tone}`}
+                                            title={req.decision_reason ? `${statusLabel}: ${req.decision_reason}` : statusLabel}
+                                        >
+                                            <i className="vac-lr-card__status-dot" aria-hidden />
+                                            <span className="vac-lr-card__status-text">{statusLabel}</span>
                                         </span>
+                                        <span className="vac-lr-card__kind">{kindLabel}</span>
+                                        <span className="vac-lr-card__id">#{req.id}</span>
                                     </div>
-                                </div>
 
-                                <div className="vac-lr-card__meta">
-                                    <span>Отправлено {formatTimestampShort(req.created_at)}</span>
-                                    {req.decision_at ? (
-                                        <span>Решение {formatTimestampShort(req.decision_at)}</span>
-                                    ) : null}
-                                </div>
+                                    <div className="vac-lr-card__hero">
+                                        <div className="vac-lr-card__person">
+                                            <span className="vac-lr-card__person-role">{personRole}</span>
+                                            <strong className="vac-lr-card__person-name">{personLabel}</strong>
+                                            {personPosition ? (
+                                                <span className="vac-lr-card__person-pos">{personPosition}</span>
+                                            ) : null}
+                                        </div>
+                                        <div className="vac-lr-card__period">
+                                            <span className="vac-lr-card__period-dates">{range}</span>
+                                            <span className="vac-lr-card__days">
+                                                {req.days_count} {ruDaysWord(req.days_count)}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                                {req.reason && (
-                                    <p className="vac-lr-card__reason">
-                                        <span className="vac-lr-card__reason-tag">Комментарий</span>
-                                        {req.reason}
-                                    </p>
-                                )}
-                                {req.decision_reason && req.status !== 'pending' && (
-                                    <p className="vac-lr-card__reason vac-lr-card__reason--decision">
-                                        <span className="vac-lr-card__reason-tag">Резолюция</span>
-                                        {req.decision_reason}
-                                    </p>
-                                )}
+                                    <div className="vac-lr-card__meta">
+                                        <span>Отправлено {formatTimestampShort(req.created_at)}</span>
+                                        {req.decision_at ? (
+                                            <span>Решение {formatTimestampShort(req.decision_at)}</span>
+                                        ) : null}
+                                        <span className="vac-lr-card__calendar-hint">Календарь года →</span>
+                                    </div>
+
+                                    {req.reason && (
+                                        <p className="vac-lr-card__reason">
+                                            <span className="vac-lr-card__reason-tag">Комментарий</span>
+                                            {req.reason}
+                                        </p>
+                                    )}
+                                    {req.decision_reason && req.status !== 'pending' && (
+                                        <p className="vac-lr-card__reason vac-lr-card__reason--decision">
+                                            <span className="vac-lr-card__reason-tag">Резолюция</span>
+                                            {req.decision_reason}
+                                        </p>
+                                    )}
+                                </button>
 
                                 <div className="vac-lr-card__actions">
                                     <button
@@ -353,6 +367,11 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                 request={decisionState?.request ?? null}
                 decision={decisionState?.decision ?? 'approve'}
                 onDecided={handleDecisionApplied}
+            />
+            <VacationLeaveYearCalendarModal
+                open={calendarRequest != null}
+                request={calendarRequest}
+                onClose={() => setCalendarRequest(null)}
             />
         </div>
     );
