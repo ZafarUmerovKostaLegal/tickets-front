@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
     confirmPartnerReportConfirmation,
@@ -82,6 +83,150 @@ const IcoSpinner = () => (<svg className="tt-partner-confirmed__btn-spinner" wid
     <circle cx="12" cy="12" r="10" opacity="0.22" />
     <path d="M12 2a10 10 0 0 1 10 10" />
 </svg>);
+
+const IcoChevDown = () => (<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <polyline points="6 9 12 15 18 9" />
+</svg>);
+
+type ForReviewPrioritySelectProps = {
+    value: ForReviewPriority;
+    disabled?: boolean;
+    busy?: boolean;
+    labels: Record<ForReviewPriority, string>;
+    titles: Record<ForReviewPriority, string>;
+    changeTitle: string;
+    changeAria: string;
+    busyLabel: string;
+    onChange: (next: PartnerReviewPriority) => void;
+};
+
+function ForReviewPrioritySelect({
+    value,
+    disabled = false,
+    busy = false,
+    labels,
+    titles,
+    changeTitle,
+    changeAria,
+    busyLabel,
+    onChange,
+}: ForReviewPrioritySelectProps) {
+    const listId = useId();
+    const [open, setOpen] = useState(false);
+    const [menuBox, setMenuBox] = useState<{ top: number; left: number; width: number } | null>(null);
+    const wrapRef = useRef<HTMLDivElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!open)
+            return;
+        const onDoc = (e: MouseEvent) => {
+            const t = e.target as Node;
+            if (wrapRef.current?.contains(t) || menuRef.current?.contains(t))
+                return;
+            setOpen(false);
+        };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+                setOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onDoc);
+        document.addEventListener('keydown', onKey, true);
+        return () => {
+            document.removeEventListener('mousedown', onDoc);
+            document.removeEventListener('keydown', onKey, true);
+        };
+    }, [open]);
+
+    useLayoutEffect(() => {
+        if (!open) {
+            setMenuBox(null);
+            return;
+        }
+        const update = () => {
+            const el = wrapRef.current;
+            if (!el)
+                return;
+            const r = el.getBoundingClientRect();
+            const width = Math.max(r.width, 168);
+            let left = r.left;
+            if (left + width > window.innerWidth - 8)
+                left = Math.max(8, window.innerWidth - 8 - width);
+            setMenuBox({ top: r.bottom + 4, left, width });
+        };
+        update();
+        window.addEventListener('resize', update);
+        window.addEventListener('scroll', update, true);
+        return () => {
+            window.removeEventListener('resize', update);
+            window.removeEventListener('scroll', update, true);
+        };
+    }, [open]);
+
+    return (
+        <div
+            ref={wrapRef}
+            className="tt-for-review__priority-dd"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+        >
+            <button
+                type="button"
+                className={`tt-for-review__priority-trigger tt-for-review__priority-trigger--${value}${open ? ' tt-for-review__priority-trigger--open' : ''}`}
+                disabled={disabled || busy}
+                aria-expanded={open}
+                aria-haspopup="listbox"
+                aria-controls={open ? listId : undefined}
+                aria-label={changeAria}
+                title={busy ? busyLabel : changeTitle}
+                onClick={() => {
+                    if (disabled || busy)
+                        return;
+                    setOpen((v) => !v);
+                }}
+            >
+                <span className={`tt-for-review__priority-dot tt-for-review__priority-dot--${value}`} aria-hidden />
+                <span className="tt-for-review__priority-trigger-label">{labels[value]}</span>
+                <span className="tt-for-review__priority-chev" aria-hidden><IcoChevDown /></span>
+            </button>
+            {open && menuBox && !disabled
+                ? createPortal(
+                    <div
+                        ref={menuRef}
+                        id={listId}
+                        className="tt-for-review__priority-menu"
+                        role="listbox"
+                        aria-label={changeAria}
+                        style={{ top: menuBox.top, left: menuBox.left, minWidth: menuBox.width }}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {FOR_REVIEW_PRIORITY_ORDER.map((key) => (
+                            <button
+                                key={key}
+                                type="button"
+                                role="option"
+                                aria-selected={key === value}
+                                className={`tt-for-review__priority-opt tt-for-review__priority-opt--${key}${key === value ? ' tt-for-review__priority-opt--active' : ''}`}
+                                title={titles[key]}
+                                onClick={() => {
+                                    setOpen(false);
+                                    if (key !== value)
+                                        onChange(key);
+                                }}
+                            >
+                                <span className={`tt-for-review__priority-dot tt-for-review__priority-dot--${key}`} aria-hidden />
+                                <span>{labels[key]}</span>
+                            </button>
+                        ))}
+                    </div>,
+                    document.body,
+                )
+                : null}
+        </div>
+    );
+}
 
 function fmtIsoWhen(iso: string | null | undefined, locale: 'ru' | 'en'): string {
     if (!iso?.trim())
@@ -647,6 +792,18 @@ export function ForReviewReportsPanel() {
             .replace('{count}', String(priorityTotals[key]));
     }, [priorityTotals, t]);
 
+    const priorityLabels = useMemo(() => ({
+        red: t('timeTrackingPage.reports.forReview.priority.red'),
+        yellow: t('timeTrackingPage.reports.forReview.priority.yellow'),
+        green: t('timeTrackingPage.reports.forReview.priority.green'),
+    }), [t]);
+
+    const priorityTitles = useMemo(() => ({
+        red: t('timeTrackingPage.reports.forReview.priority.redTitle'),
+        yellow: t('timeTrackingPage.reports.forReview.priority.yellowTitle'),
+        green: t('timeTrackingPage.reports.forReview.priority.greenTitle'),
+    }), [t]);
+
     const renderTable = (list: PartnerReportConfirmationRequest[]) => (<div className="tt-reports__table-wrap tt-reports__table-wrap--scroll-x tt-partner-confirmed__table-wrap">
         <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly tt-partner-confirmed__table--for-review" aria-label={t('timeTrackingPage.reports.forReview.tableAria')}>
             <thead>
@@ -680,7 +837,21 @@ export function ForReviewReportsPanel() {
                         few: t('timeTrackingPage.reports.partnerConfirmed.commentsCountFew'),
                         many: t('timeTrackingPage.reports.partnerConfirmed.commentsCountMany'),
                     });
-                    return (<tr key={r.id}>
+                    const openRow = () => openReportPreviewForRow(r);
+                    return (<tr
+                        key={r.id}
+                        className="tt-partner-confirmed__row tt-partner-confirmed__row--clickable"
+                        tabIndex={0}
+                        role="link"
+                        title={t('timeTrackingPage.reports.forReview.previewTitle')}
+                        onClick={openRow}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                openRow();
+                            }
+                        }}
+                    >
                         <td className="tt-partner-confirmed__td-client" data-label={columnLabels.client}>{resolveClientLabel(r)}</td>
                         <td className="tt-partner-confirmed__cell-title tt-partner-confirmed__td-primary" data-label={columnLabels.project}>
                             <span className="tt-partner-confirmed__project-cell">
@@ -697,29 +868,17 @@ export function ForReviewReportsPanel() {
                         <td className="tt-partner-confirmed__td-period" data-label={columnLabels.period}>{formatIsoRangeTitle(r.dateFrom, r.dateTo, { prefix: false, locale: localeTag(locale) })}</td>
                         <td className="tt-partner-confirmed__td-priority" data-label={columnLabels.priority}>
                             {allowPriorityEdit ? (
-                                <label className="tt-for-review__priority-edit">
-                                    <span className="visually-hidden">{t('timeTrackingPage.reports.forReview.priorityChangeAria')}</span>
-                                    <select
-                                      className={`tt-for-review__priority-select tt-for-review__priority-select--${priority}`}
-                                      value={priority}
-                                      disabled={actionsBusy}
-                                      onChange={(e) => {
-                                          const next = e.target.value as PartnerReviewPriority;
-                                          if (next === 'red' || next === 'yellow' || next === 'green')
-                                              void changePriority(r, next);
-                                      }}
-                                      title={priorityBusy
-                                          ? t('timeTrackingPage.reports.forReview.priorityChangeBusy')
-                                          : t('timeTrackingPage.reports.forReview.priorityChangeTitle')}
-                                      aria-label={t('timeTrackingPage.reports.forReview.priorityChangeAria')}
-                                    >
-                                        {FOR_REVIEW_PRIORITY_ORDER.map((key) => (
-                                            <option key={key} value={key}>
-                                                {t(`timeTrackingPage.reports.forReview.priority.${key}`)}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
+                                <ForReviewPrioritySelect
+                                    value={priority}
+                                    disabled={actionsBusy && !priorityBusy}
+                                    busy={priorityBusy}
+                                    labels={priorityLabels}
+                                    titles={priorityTitles}
+                                    changeTitle={t('timeTrackingPage.reports.forReview.priorityChangeTitle')}
+                                    changeAria={t('timeTrackingPage.reports.forReview.priorityChangeAria')}
+                                    busyLabel={t('timeTrackingPage.reports.forReview.priorityChangeBusy')}
+                                    onChange={(next) => void changePriority(r, next)}
+                                />
                             ) : (
                                 <span
                                   className={`tt-for-review__priority-badge tt-for-review__priority-badge--${priority}`}
@@ -740,10 +899,20 @@ export function ForReviewReportsPanel() {
                             />
                         </td>
                         <td className="tt-partner-confirmed__td-nowrap" data-label={columnLabels.createdAt}>{fmtIsoWhen(r.createdAt, locale)}</td>
-                        <td className="tt-partner-confirmed__td-comments" data-label={columnLabels.comments}>
+                        <td
+                            className="tt-partner-confirmed__td-comments"
+                            data-label={columnLabels.comments}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                        >
                             <PartnerConfirmedCommentsCell count={commentsCount} preview={commentsPreview} countLabel={commentsCountLabel} openLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsOpen').replace('{project}', resolveProjectLabel(r))} emptyLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsCountZero')} onOpen={() => openCommentsDrawer(r)} />
                         </td>
-                        <td className="tt-partner-confirmed__actions-cell tt-partner-confirmed__td-actions" data-label={columnLabels.actions}>
+                        <td
+                            className="tt-partner-confirmed__actions-cell tt-partner-confirmed__td-actions"
+                            data-label={columnLabels.actions}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => e.stopPropagation()}
+                        >
                             <div className="tt-partner-confirmed__actions" role="group" aria-label={columnLabels.actions}>
                                 <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn tt-partner-confirmed__icon-btn--primary" onClick={() => openReportPreviewForRow(r)} title={t('timeTrackingPage.reports.forReview.previewTitle')} aria-label={t('timeTrackingPage.reports.forReview.previewAria')}>
                                     <IcoEye />
