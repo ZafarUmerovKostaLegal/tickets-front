@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { getMe, invalidatePublicUserCache } from '@entities/user';
 import type { User } from '@entities/user';
-import { useSessionCookieOnly } from '@shared/config';
+import { isSessionCookieOnly } from '@shared/config';
 import { isTauriAndroidBuild } from '@shared/config/tauriPlatform';
 import { isAuthenticated, setSessionCookieHint } from '@shared/lib/auth';
 type UserSnapshot = {
@@ -38,7 +38,7 @@ export function refreshCurrentUser(): Promise<User | null> {
     inFlight = null;
     return getMe()
         .then((data) => {
-        if (useSessionCookieOnly() && data) {
+        if (isSessionCookieOnly() && data) {
             setSessionCookieHint(true);
         }
         snapshot = { user: data, loading: false, error: null };
@@ -64,7 +64,7 @@ function ensureUserLoaded() {
         return;
     inFlight = getMe()
         .then((data) => {
-        if (useSessionCookieOnly() && data) {
+        if (isSessionCookieOnly() && data) {
             setSessionCookieHint(true);
         }
         snapshot = { user: data, loading: false, error: null };

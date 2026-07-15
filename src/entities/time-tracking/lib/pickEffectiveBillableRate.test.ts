@@ -38,4 +38,25 @@ describe('pickEffectiveBillableRateForProject', () => {
         expect(pick?.source).toBe('global');
         expect(pick?.row.id).toBe('global');
     });
+
+    it('returns null when no rates are available', () => {
+        expect(pickEffectiveBillableRateForProject([], 'p1', 'USD', new Date('2026-07-10T12:00:00Z'))).toBeNull();
+    });
+
+    it('falls back across currency when no matching currency exists', () => {
+        const rows = [rate({ id: 'eur', amount: 100, currency: 'EUR', project_id: 'p1' })];
+        const pick = pickEffectiveBillableRateForProject(rows, 'p1', 'USD', new Date('2026-07-10T12:00:00Z'));
+        expect(pick?.row.id).toBe('eur');
+        expect(pick?.source).toBe('project');
+    });
+
+    it('uses closed project interval when asOf falls inside it', () => {
+        const rows = [
+            rate({ id: 'closed', amount: 110, project_id: 'p1', valid_from: '2026-01-01', valid_to: '2026-06-30' }),
+            rate({ id: 'global', amount: 80, project_id: null }),
+        ];
+        const pick = pickEffectiveBillableRateForProject(rows, 'p1', 'USD', new Date('2026-03-15T12:00:00Z'));
+        expect(pick?.source).toBe('project');
+        expect(pick?.row.id).toBe('closed');
+    });
 });

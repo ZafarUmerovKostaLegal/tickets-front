@@ -1,4 +1,4 @@
-import { getApiBaseUrl, getAzureLoginUrl, upgradeUrlToPageSecurity, useSessionCookieOnly } from '@shared/config';
+import { getApiBaseUrl, getAzureLoginUrl, upgradeUrlToPageSecurity, isSessionCookieOnly } from '@shared/config';
 import { getAccessToken, removeAccessToken, setSessionCookieHint } from '@shared/lib/auth';
 import { clearClientSessionSecrets } from '@shared/lib/authSessionCleanup';
 import { assertSafeRelativeApiPath, assertTrustedApiFetchPathOrUrl, } from '@shared/lib/trustedApiFetchUrl';
@@ -38,7 +38,7 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
         if (!skipAuthRedirectOn401) {
             setSessionCookieHint(false);
             clearClientSessionSecrets();
-            if (!useSessionCookieOnly()) {
+            if (!isSessionCookieOnly()) {
                 window.location.href = getAzureLoginUrl() || '/api/v1/auth/azure/login';
             }
         }

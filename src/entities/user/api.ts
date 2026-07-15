@@ -1,5 +1,5 @@
 import { apiFetch } from '@shared/api';
-import { useSessionCookieOnly } from '@shared/config';
+import { isSessionCookieOnly } from '@shared/config';
 import { removeAccessToken, setSessionCookieHint } from '@shared/lib/auth';
 import { createQueryCache } from '@shared/lib/queryCache';
 import { clearClientSessionSecrets } from '@shared/lib/authSessionCleanup';
@@ -46,7 +46,7 @@ export async function getMe(): Promise<User> {
     const res = await apiFetch('/api/v1/users/me', { skipAuthRedirectOn401: true });
     if (res.status === 401) {
         removeAccessToken();
-        if (useSessionCookieOnly())
+        if (isSessionCookieOnly())
             setSessionCookieHint(false);
         clearClientSessionSecrets();
         throw new Error('Не авторизован');

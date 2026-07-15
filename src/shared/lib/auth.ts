@@ -1,6 +1,6 @@
 import { closeTicketsWs } from '@entities/ticket/ticketsWs';
 import { resetNotificationsClient } from '@entities/notification/wsClient';
-import { getApiBaseUrl, getAzureLogoutUrl, getAzureLoginUrl, useSessionCookieOnly } from '@shared/config';
+import { getApiBaseUrl, getAzureLogoutUrl, getAzureLoginUrl, isSessionCookieOnly } from '@shared/config';
 import { clearClientSessionSecrets } from './authSessionCleanup';
 const TOKEN_KEY = 'access_token';
 const SESSION_COOKIE_HINT = 'kl_session_cookie_ok';
@@ -16,14 +16,14 @@ export function hasSessionCookieHint(): boolean {
     return localStorage.getItem(SESSION_COOKIE_HINT) === '1';
 }
 export function getAccessToken(): string | null {
-    if (useSessionCookieOnly()) {
+    if (isSessionCookieOnly()) {
         localStorage.removeItem(TOKEN_KEY);
         return null;
     }
     return localStorage.getItem(TOKEN_KEY);
 }
 export function setAccessToken(token: string): void {
-    if (useSessionCookieOnly()) {
+    if (isSessionCookieOnly()) {
         localStorage.removeItem(TOKEN_KEY);
         return;
     }
@@ -51,7 +51,7 @@ export async function logout(): Promise<void> {
     catch {
     }
     const base = getApiBaseUrl();
-    if (useSessionCookieOnly() && base) {
+    if (isSessionCookieOnly() && base) {
         try {
             await fetch(`${base.replace(/\/+$/, '')}/api/v1/auth/azure/session/logout`, {
                 method: 'POST',

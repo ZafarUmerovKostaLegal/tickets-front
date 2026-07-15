@@ -50,7 +50,7 @@ function render(state: ExtensionState): void {
                </button>`}
         </div>
         <footer class="tt-ext__foot">
-          <a href="${auth.apiBase}/time-tracking" target="_blank" rel="noopener">Открыть расписание</a>
+          <a href="${safeTimeTrackingHref(auth.apiBase)}" target="_blank" rel="noopener">Открыть расписание</a>
         </footer>
       </div>`;
 
@@ -60,7 +60,20 @@ function render(state: ExtensionState): void {
 }
 
 function escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** Only allow http(s) origins; never inject raw apiBase into href. */
+function safeTimeTrackingHref(apiBase: string): string {
+    try {
+        const u = new URL(apiBase);
+        if (u.protocol !== 'https:' && u.protocol !== 'http:')
+            return 'https://tickets.kostalegal.com/time-tracking';
+        return `${u.origin}/time-tracking`;
+    }
+    catch {
+        return 'https://tickets.kostalegal.com/time-tracking';
+    }
 }
 
 function formatTodayHours(h: number): string {

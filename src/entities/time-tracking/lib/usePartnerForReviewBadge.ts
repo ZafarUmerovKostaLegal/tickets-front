@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCurrentUser } from '@shared/hooks';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
-import { listPartnerReportConfirmationsPendingForBadge } from '../api/partnerReportConfirmationsPending';
+import { fetchPartnerForReviewBadgeCount } from '../api/partnerReportConfirmationsPending';
 import { PARTNER_CONFIRMED_REPORTS_INVALIDATE_EVENT } from '../model/partnerConfirmedReportsEvents';
 import { canViewTimeTrackingReports } from '../model/timeTrackingAccess';
-import { countPartnerForReviewPendingSignature, formatPartnerForReviewBadge } from './partnerForReviewReports';
+import { formatPartnerForReviewBadge } from './partnerForReviewReports';
 
 export function usePartnerForReviewBadge(enabled = true): {
     count: number;
@@ -23,8 +23,7 @@ export function usePartnerForReviewBadge(enabled = true): {
             return;
         }
         try {
-            const list = await listPartnerReportConfirmationsPendingForBadge();
-            setCount(countPartnerForReviewPendingSignature(list, user.id));
+            setCount(await fetchPartnerForReviewBadgeCount());
         }
         catch {
 

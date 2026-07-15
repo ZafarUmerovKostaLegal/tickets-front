@@ -25,10 +25,10 @@ describe('desktop auth env', () => {
         vi.unstubAllEnvs();
     });
 
-    it('useSessionCookieOnly returns false for Tauri desktop even when env prefers cookies', async () => {
+    it('isSessionCookieOnly returns false for Tauri desktop even when env prefers cookies', async () => {
         vi.stubEnv('VITE_USE_SESSION_COOKIE', 'true');
-        const { useSessionCookieOnly } = await import('./env');
-        expect(useSessionCookieOnly()).toBe(false);
+        const { isSessionCookieOnly } = await import('./env');
+        expect(isSessionCookieOnly()).toBe(false);
     });
 
     it('getAzureLoginUrl adds redirect_uri for the app callback', async () => {

@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import DOMPurify from 'dompurify';
 import { AppBackButton, AppHomeLogo } from '@shared/ui';
 import { routes } from '@shared/config';
+import { stripHtmlToText } from '@shared/lib/sanitizeHtml';
 import { createTodoBoard, createTodoCard, createTodoColumn, deleteTodoBoardBackground, deleteTodoCard, deleteTodoColumn, fetchTodoBoardById, fetchTodoBoardCurrent, fetchTodoBoardsList, findNewestCardInColumn, patchTodoCard, patchTodoColumn, pickPreferredTodoBoardId, putTodoBoardCurrent, reorderTodoCardsInColumn, reorderTodoColumns, uploadTodoBoardBackground, type CreateTodoBoardBody, type PatchTodoCardPayload, type TodoBoard, type TodoBoardLabel, type TodoBoardSummary, } from '@entities/todo';
 import { boardBackgroundStorageKey, pickBoardBackgroundApiPath, resolveBoardBackgroundDisplayUrl, } from '@entities/todo/lib/boardBackgroundUrl';
 import { fetchMediaBlob } from '@shared/api';
@@ -288,7 +288,7 @@ export function TodoPage() {
             .replace(/\s(?:src|href|poster)\s*=\s*"cid:[^"]*"/gi, ' ')
             .replace(/\s(?:src|href|poster)\s*=\s*'cid:[^']*'/gi, ' ')
             .replace(/\surl\(\s*(["']?)cid:[^)"']+\1\s*\)/gi, ' url(none)');
-        const text = DOMPurify.sanitize(preclean, { ALLOWED_TAGS: [] });
+        const text = stripHtmlToText(preclean);
         return text.replace(/\s+/g, ' ').trim();
     }, []);
     const calendarCardsByColumn = useMemo(() => {

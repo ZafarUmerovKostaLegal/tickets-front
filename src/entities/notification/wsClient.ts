@@ -1,5 +1,5 @@
 import { getAccessToken } from '@shared/lib/auth';
-import { getNotificationsWsUrl, useSessionCookieOnly } from '@shared/config';
+import { getNotificationsWsUrl, isSessionCookieOnly } from '@shared/config';
 import { normalizeNotificationItem } from './normalize';
 import { archiveNotificationRest, listNotificationsRest } from './restApi';
 import type { NotificationItem } from './types';
@@ -70,7 +70,7 @@ export class NotificationsWSClient {
         const url = getNotificationsWsUrl();
         if (!url)
             throw new Error('WebSocket URL недоступен (нет window / origin)');
-        if (!useSessionCookieOnly()) {
+        if (!isSessionCookieOnly()) {
             const t = (this.getToken() || '').replace(/^Bearer\s+/i, '').trim();
             if (t) {
                 const sep = url.includes('?') ? '&' : '?';
@@ -195,7 +195,7 @@ export class NotificationsWSClient {
         });
     }
     send(action: string, payload: Record<string, unknown> = {}): Promise<unknown> {
-        const sessionOnly = useSessionCookieOnly();
+        const sessionOnly = isSessionCookieOnly();
         const token = this.getToken();
         if (!sessionOnly && !token?.trim()) {
             return Promise.reject(new Error('No access token'));

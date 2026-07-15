@@ -11,6 +11,7 @@ export const TwemojiText = memo(function TwemojiText({ text, className }: Twemoj
     return (
         <span
             className={className}
+            // eslint-disable-next-line no-restricted-syntax -- html from twemojiHtml → sanitizeHtml
             dangerouslySetInnerHTML={{ __html: html }}
         />
     );
@@ -46,6 +47,7 @@ export const TwemojiEmoji = memo(function TwemojiEmoji({
                 overflow: 'hidden',
                 lineHeight: 1,
             }}
+            // eslint-disable-next-line no-restricted-syntax -- html from twemojiHtml → sanitizeHtml
             dangerouslySetInnerHTML={{ __html: html }}
         />
     );

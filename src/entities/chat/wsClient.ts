@@ -1,5 +1,5 @@
 import { getAccessToken } from '@shared/lib/auth';
-import { getChatWsUrl, useSessionCookieOnly } from '@shared/config';
+import { getChatWsUrl, isSessionCookieOnly } from '@shared/config';
 import { parseChatReactions } from './api';
 import type { ChatReaction } from './types';
 
@@ -62,7 +62,7 @@ function getWsUrl(): string {
     const url = getChatWsUrl();
     if (!url)
         throw new Error('WebSocket URL недоступен');
-    if (!useSessionCookieOnly()) {
+    if (!isSessionCookieOnly()) {
         const t = (getAccessToken() || '').replace(/^Bearer\s+/i, '').trim();
         if (t) {
             const sep = url.includes('?') ? '&' : '?';
@@ -141,7 +141,7 @@ function parseEvent(data: Record<string, unknown>): ChatWsEvent | null {
 function connect(): void {
     if (isConnecting || typeof window === 'undefined')
         return;
-    const sessionOnly = useSessionCookieOnly();
+    const sessionOnly = isSessionCookieOnly();
     const token = getAccessToken()?.trim();
     if (!sessionOnly && !token)
         return;

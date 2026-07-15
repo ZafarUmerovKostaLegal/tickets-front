@@ -1,6 +1,6 @@
 import { apiFetch } from '@shared/api';
 import { getAccessToken } from '@shared/lib/auth';
-import { getTicketsWsUrl, useSessionCookieOnly } from '@shared/config';
+import { getTicketsWsUrl, isSessionCookieOnly } from '@shared/config';
 import type { Ticket, Comment, StatusItem, PriorityItem, TicketsParams } from './model/types';
 import { buildTicketsPayload } from './lib/query';
 import { BASE } from './lib/constants';
@@ -96,7 +96,7 @@ function connect(token: string | null): Promise<WebSocket> {
     }));
 }
 async function ensureSocket(): Promise<WebSocket> {
-    const sessionOnly = useSessionCookieOnly();
+    const sessionOnly = isSessionCookieOnly();
     const token = getAccessToken()?.trim() || null;
     if (!sessionOnly && !token)
         throw new Error('Нет токена авторизации для WebSocket');
@@ -119,7 +119,7 @@ async function ensureSocket(): Promise<WebSocket> {
 export async function connectTicketsWsWhenReady(): Promise<void> {
     if (typeof window === 'undefined')
         return;
-    if (!useSessionCookieOnly() && !getAccessToken()?.trim())
+    if (!isSessionCookieOnly() && !getAccessToken()?.trim())
         return;
     try {
         await ensureSocket();
@@ -134,7 +134,7 @@ export function subscribeTicketsWsPush(handler: (msg: Record<string, unknown>) =
     };
 }
 export async function sendRequest<T>(action: string, payload: Record<string, unknown> = {}): Promise<T> {
-    const sessionOnly = useSessionCookieOnly();
+    const sessionOnly = isSessionCookieOnly();
     const token = getAccessToken()?.trim();
     if (!sessionOnly && !token)
         return Promise.reject(new Error('Нет токена авторизации для WebSocket'));

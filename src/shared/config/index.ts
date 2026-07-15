@@ -1,5 +1,5 @@
 export { routes, getTicketDetailUrl, getUserEditUrl, getProjectDetailUrl, getTimeTrackingNewProjectUrl, getExpensesOpenUrl, } from './routes';
-export { getApiBaseUrl, getAuthCallbackUrl, getAzureLoginUrl, getAzureLogoutUrl, getTicketsWsUrl, getNotificationsWsUrl, getChatWsUrl, getAttendanceApiBase, upgradeUrlToPageSecurity, AUTH_ERROR_AUTH_FAILED, useSessionCookieOnly, } from './env';
+export { getApiBaseUrl, getAuthCallbackUrl, getAzureLoginUrl, getAzureLogoutUrl, getTicketsWsUrl, getNotificationsWsUrl, getChatWsUrl, getAttendanceApiBase, upgradeUrlToPageSecurity, AUTH_ERROR_AUTH_FAILED, isSessionCookieOnly, } from './env';
 export { isTauriDesktopClient } from './desktopClient';
 export { injectPublicEnv } from './injectPublicEnv';
 export {

@@ -550,46 +550,27 @@ export function ForReviewReportsPanel() {
         setError(null);
         try {
             const priority = priorityFilter === 'all' ? null : priorityFilter;
-            const [pageResult, allTotal, redTotal, yellowTotal, greenTotal] = await Promise.all([
-                listPartnerReportConfirmationsPending({
-                    scope: effectiveScope,
-                    priority,
-                    page,
-                    pageSize: FOR_REVIEW_PAGE_SIZE,
-                }),
-                listPartnerReportConfirmationsPending({
-                    scope: effectiveScope,
-                    page: 1,
-                    pageSize: 1,
-                }),
-                listPartnerReportConfirmationsPending({
-                    scope: effectiveScope,
-                    priority: 'red',
-                    page: 1,
-                    pageSize: 1,
-                }),
-                listPartnerReportConfirmationsPending({
-                    scope: effectiveScope,
-                    priority: 'yellow',
-                    page: 1,
-                    pageSize: 1,
-                }),
-                listPartnerReportConfirmationsPending({
-                    scope: effectiveScope,
-                    priority: 'green',
-                    page: 1,
-                    pageSize: 1,
-                }),
-            ]);
+            const pageResult = await listPartnerReportConfirmationsPending({
+                scope: effectiveScope,
+                priority,
+                page,
+                pageSize: FOR_REVIEW_PAGE_SIZE,
+            });
             const list = Array.isArray(pageResult.items) ? pageResult.items : [];
             setRows(list);
             setTotal(pageResult.total);
-            setPriorityTotals({
-                all: allTotal.total,
-                red: redTotal.total,
-                yellow: yellowTotal.total,
-                green: greenTotal.total,
-            });
+            const counts = pageResult.priorityCounts;
+            if (counts) {
+                setPriorityTotals({
+                    all: counts.all,
+                    red: counts.red,
+                    yellow: counts.yellow,
+                    green: counts.green,
+                });
+            }
+            else if (priorityFilter === 'all') {
+                setPriorityTotals((prev) => ({ ...prev, all: pageResult.total }));
+            }
             setClientNamesById((prev) => {
                 const next = new Map(prev);
                 enrichPartnerReportClientNamesFromRows(next, list);

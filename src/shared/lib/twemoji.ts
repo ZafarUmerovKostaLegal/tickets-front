@@ -1,6 +1,5 @@
-
 import twemoji from 'twemoji';
-import DOMPurify from 'dompurify';
+import { sanitizeHtml } from './sanitizeHtml';
 
 const TWEMOJI_BASE = `${import.meta.env.BASE_URL}twemoji/`;
 
@@ -17,10 +16,7 @@ const PARSE_OPTIONS = {
 
 export function twemojiHtml(text: string): string {
     const raw = twemoji.parse(text, PARSE_OPTIONS) as string;
-    return DOMPurify.sanitize(raw, {
-        ALLOWED_TAGS: ['img', 'span'],
-        ALLOWED_ATTR: ['src', 'alt', 'class', 'loading', 'decoding', 'draggable'],
-    });
+    return sanitizeHtml(raw, 'twemoji');
 }
 
 export function twemojiSingleHtml(emoji: string): string {
