@@ -2217,7 +2217,7 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 
 .tt-rp-mtable.tt-rp-mtable--time-brief {
   width: 100%;
-  min-width: max(100%, 68rem);
+  min-width: 100%;
   table-layout: fixed;
 }
 
@@ -2346,7 +2346,7 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 .tt-rp-mtable.tt-rp-mtable--time-brief {
   display: table;
   width: 100%;
-  min-width: min(100%, 80rem);
+  min-width: 100%;
   table-layout: fixed;
   border-collapse: collapse;
 }
@@ -2354,14 +2354,7 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 .tt-rp-mtable--time-brief .tt-rp-mtable__td--brief-date,
 .tt-rp-mtable--time-brief .tt-rp-mtable__td--brief-time {
   vertical-align: middle;
-}
-
-.tt-rp-mtable--time-brief .tt-rp-mtable__td--brief-date {
-  min-width: 8.75rem;
-}
-
-.tt-rp-mtable--time-brief .tt-rp-mtable__td--brief-time {
-  min-width: 7rem;
+  min-width: 0;
 }
 
 .tt-rp-brief-dt--date-only,
@@ -2479,9 +2472,13 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
   border-radius: 8px;
 }
 
+.tt-rp-mtable--time-brief .tt-rp-mtable__th--pick,
 .tt-rp-mtable--time-brief .tt-rp-mtable__td--pick,
+.tt-rp-mtable--time-brief .tt-rp-mtable__th--comment,
 .tt-rp-mtable--time-brief .tt-rp-mtable__td--comment {
   vertical-align: middle;
+  min-width: 0;
+  max-width: none;
 }
 
 .tt-rp-mtable--time-brief tbody .tt-rp-mtable__td--num:not(.tt-rp-mtable__td--sum-ro) {
@@ -2541,36 +2538,22 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
   letter-spacing: 0;
 }
 
-.tt-rp-mtable--time-brief .tt-rp-mtable__th--employee-head {
-  width: 13%;
+.tt-rp-mtable--time-brief .tt-rp-mtable__th--employee-head,
+.tt-rp-mtable--time-brief .tt-rp-mtable__th--brief-date,
+.tt-rp-mtable--time-brief .tt-rp-mtable__th--brief-time,
+.tt-rp-mtable--time-brief .tt-rp-mtable__th--pick,
+.tt-rp-mtable--time-brief .tt-rp-mtable__th--comment,
+.tt-rp-mtable--time-brief .tt-rp-brief-th--num,
+.tt-rp-mtable--time-brief .tt-rp-brief-th--sum {
+  width: auto;
+  min-width: 0;
 }
 
-.tt-rp-mtable--time-brief .tt-rp-mtable__th--brief-date {
-  width: 10%;
-  min-width: 8.75rem;
-}
-
-.tt-rp-mtable--time-brief .tt-rp-mtable__th--brief-time {
-  width: 8%;
-  min-width: 7rem;
-}
-
-.tt-rp-mtable--time-brief .tt-rp-mtable__th--pick {
-  width: 13%;
-}
-
-.tt-rp-mtable--time-brief .tt-rp-mtable__th--comment {
-  width: 16%;
-}
-
-.tt-rp-mtable--time-brief .tt-rp-brief-th--num {
-  width: 7.5%;
-  min-width: 5.25rem;
+.tt-rp-mtable--time-brief .tt-rp-brief-th--num .tt-rp-brief-th__row {
+  justify-content: flex-end;
 }
 
 .tt-rp-mtable--time-brief .tt-rp-brief-th--sum {
-  width: 12%;
-  min-width: 9.5rem;
   text-align: right;
 }
 
@@ -2589,10 +2572,6 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
   max-width: none;
   overflow: visible;
   text-overflow: clip;
-}
-
-.tt-rp-mtable--time-brief .tt-rp-mtable__th--comment {
-  width: 22%;
 }
 
 .tt-rp-mtable .tt-rp-mtable__th--brief-actions {
@@ -3392,8 +3371,8 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 
 .tt-rp-mtable--time-brief .tt-rp-mtable__th--comment,
 .tt-rp-mtable--time-brief .tt-rp-mtable__td--comment {
-  min-width: 10rem;
-  max-width: 22rem;
+  min-width: 0;
+  max-width: none;
 }
 
 .tt-rp-mtable__td--readonly {

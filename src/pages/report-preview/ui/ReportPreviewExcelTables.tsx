@@ -26,9 +26,11 @@ import {
 } from '../lib/briefRecordDateTimeEdit';
 import {
     TIME_BRIEF_COLUMN_ORDER_DEFAULT,
+    briefColumnColWidth,
     loadBriefColumnsFromStorage,
     loadBriefColumnsRemember,
     normalizeBriefColumnsForUi,
+    resolveBriefFlexColumnId,
     saveBriefColumnsRemember,
     saveBriefColumnsToStorage,
     type TimeBriefColumnId,
@@ -880,6 +882,14 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     const dockSum = fmtAmtWithIso(totals.atp, totals.cur);
     const briefTableColSpan = visibleBriefIds.length + (showRowSelect ? 1 : 0);
     const fullTableColSpan = visibleFullIds.length + (showEntryActions ? 1 : 0) + (showRowSelect ? 1 : 0);
+    const briefFlexColId = resolveBriefFlexColumnId(visibleBriefIds);
+    const briefColGroup = (<colgroup>
+      {showRowSelect ? <col style={{ width: '2.5rem' }} /> : null}
+      {visibleBriefIds.map((colId) => {
+          const w = briefColumnColWidth(colId, briefFlexColId);
+          return w ? <col key={colId} style={{ width: w }} /> : <col key={colId} />;
+      })}
+    </colgroup>);
     const renderFullDataRow = (i: number, measure: VirtualTableRowMeasureProps): ReactElement => {
         const r = displayRows[i];
         const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
@@ -1418,6 +1428,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={displayRows.length} colSpan={fullTableColSpan} estimateRowHeight={56} renderRow={renderFullDataRow}/>
             </tbody>
           </table>) : (<table className="tt-rp-mtable tt-rp-mtable--time-brief">
+            {briefColGroup}
             <thead>
               <tr>
                 <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={displayRows.length}/>

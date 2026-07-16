@@ -141,3 +141,44 @@ export function normalizeBriefColumnsForUi(
         return fallback;
     return next;
 }
+
+const BRIEF_FLEX_COLUMN_PRIORITY: TimeBriefColumnId[] = ['note', 'task', 'employee', 'recordDate'];
+
+/** Column that should absorb leftover table width among currently visible ones. */
+export function resolveBriefFlexColumnId(visibleIds: readonly TimeBriefColumnId[]): TimeBriefColumnId | null {
+    for (const id of BRIEF_FLEX_COLUMN_PRIORITY) {
+        if (visibleIds.includes(id))
+            return id;
+    }
+    return visibleIds[0] ?? null;
+}
+
+/** Fixed widths for brief `<colgroup>`; `undefined` = flex (takes remaining space). */
+export function briefColumnColWidth(
+    colId: TimeBriefColumnId,
+    flexColId: TimeBriefColumnId | null = 'note',
+): string | undefined {
+    if (flexColId != null && colId === flexColId)
+        return undefined;
+    switch (colId) {
+        case 'employee':
+            return '12rem';
+        case 'recordDate':
+            return '9rem';
+        case 'recordTime':
+            return '7.25rem';
+        case 'task':
+            return '13rem';
+        case 'note':
+            return '16rem';
+        case 'workHours':
+        case 'billHours':
+            return '6.75rem';
+        case 'sum':
+            return '9.5rem';
+        case 'actions':
+            return '6.85rem';
+        default:
+            return undefined;
+    }
+}
