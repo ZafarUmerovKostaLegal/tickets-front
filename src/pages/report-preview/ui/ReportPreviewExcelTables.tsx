@@ -1535,7 +1535,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               </div>) : (<PreviewExcelDownloadBtn onDownloadExcel={onDownloadExcel} downloadExcelBusy={downloadExcelBusy} exportRows={rowsForTotals}/>)}
             </div>
           </div>
-        </header>        </header>
+        </header>
         <ReportPreviewTimeBriefColumnsModal open={!readOnlyUi && !isFull && briefColumnsModalOpen} onClose={() => setBriefColumnsModalOpen(false)} includeActionsColumn={showActionsColumn} activeOrderedIds={visibleBriefIds} onChange={setBriefColumnIds}/>
         <ReportPreviewTimeFullColumnsModal open={Boolean(!readOnlyUi && isFull && fullColumnsModalOpen)} onClose={() => setFullColumnsModalOpen(false)} activeOrderedIds={visibleFullIds} onChange={setFullColumnIds}/>
         <ReportPreviewHotkeysHelpModal open={hotkeysHelpOpen} onClose={() => setHotkeysHelpOpen(false)} showDuplicate={Boolean(onDuplicateTimeEntry)}/>
