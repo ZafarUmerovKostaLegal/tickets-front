@@ -27,7 +27,9 @@ import {
 import {
     TIME_BRIEF_COLUMN_ORDER_DEFAULT,
     loadBriefColumnsFromStorage,
+    loadBriefColumnsRemember,
     normalizeBriefColumnsForUi,
+    saveBriefColumnsRemember,
     saveBriefColumnsToStorage,
     type TimeBriefColumnId,
 } from '../lib/timeBriefReportColumns';
@@ -613,6 +615,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             showActionsColumn,
         );
     });
+    const [briefColumnsRemember, setBriefColumnsRemember] = useState(() => loadBriefColumnsRemember());
 
     useEffect(() => {
         const loaded = loadBriefColumnsFromStorage(showActionsColumn);
@@ -620,13 +623,22 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             setBriefColumnIds(normalizeBriefColumnsForUi(loaded, showActionsColumn));
         }
         else {
-            setBriefColumnIds(normalizeBriefColumnsForUi([...TIME_BRIEF_COLUMN_ORDER_DEFAULT], showActionsColumn));
+            setBriefColumnIds((prev) => normalizeBriefColumnsForUi(prev.length ? prev : [...TIME_BRIEF_COLUMN_ORDER_DEFAULT], showActionsColumn));
         }
     }, [showActionsColumn]);
 
     useEffect(() => {
+        if (!briefColumnsRemember)
+            return;
         saveBriefColumnsToStorage(normalizeBriefColumnsForUi(briefColumnIds, showActionsColumn));
-    }, [briefColumnIds, showActionsColumn]);
+    }, [briefColumnIds, showActionsColumn, briefColumnsRemember]);
+
+    const onBriefColumnsRememberChange = (enabled: boolean) => {
+        setBriefColumnsRemember(enabled);
+        saveBriefColumnsRemember(enabled);
+        if (enabled)
+            saveBriefColumnsToStorage(normalizeBriefColumnsForUi(briefColumnIds, showActionsColumn));
+    };
 
     const visibleBriefIds = useMemo(
         () => normalizeBriefColumnsForUi(briefColumnIds, showActionsColumn),
@@ -1385,7 +1397,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             </div>
           </div>
         </header>
-        <ReportPreviewTimeBriefColumnsModal open={!readOnlyUi && !isFull && briefColumnsModalOpen} onClose={() => setBriefColumnsModalOpen(false)} includeActionsColumn={showActionsColumn} activeOrderedIds={visibleBriefIds} onChange={setBriefColumnIds}/>
+        <ReportPreviewTimeBriefColumnsModal open={!readOnlyUi && !isFull && briefColumnsModalOpen} onClose={() => setBriefColumnsModalOpen(false)} includeActionsColumn={showActionsColumn} activeOrderedIds={visibleBriefIds} onChange={setBriefColumnIds} rememberEnabled={briefColumnsRemember} onRememberEnabledChange={onBriefColumnsRememberChange}/>
         <ReportPreviewTimeFullColumnsModal open={Boolean(!readOnlyUi && isFull && fullColumnsModalOpen)} onClose={() => setFullColumnsModalOpen(false)} activeOrderedIds={visibleFullIds} onChange={setFullColumnIds}/>
         <ReportPreviewHotkeysHelpModal open={hotkeysHelpOpen} onClose={() => setHotkeysHelpOpen(false)} showDuplicate={Boolean(onDuplicateTimeEntry)}/>
         <div ref={tableScrollRef} className="tt-rp-mtable-scroll tt-rp-mtable-scroll--sticky-x">
@@ -1410,7 +1422,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               </tr>
             </thead>
             <tbody>
-              <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={displayRows.length} colSpan={briefTableColSpan} estimateRowHeight={52} renderRow={renderBriefDataRow}/>
+              <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={displayRows.length} colSpan={briefTableColSpan} estimateRowHeight={40} renderRow={renderBriefDataRow}/>
             </tbody>
           </table>)}
         </div>

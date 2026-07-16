@@ -36,9 +36,7 @@ export const TIME_BRIEF_COLUMN_ORDER_DEFAULT: TimeBriefColumnId[] = [
 ];
 
 export const TIME_BRIEF_COLUMNS_STORAGE_KEY = 'tt-rp-time-brief-columns-v2';
-
-const BRIEF_PREFIX_COLUMNS: TimeBriefColumnId[] = ['employee', 'recordDate', 'recordTime', 'task', 'note'];
-const BRIEF_TRAILING_COLUMNS: TimeBriefColumnId[] = ['workHours', 'billHours', 'sum', 'actions'];
+export const TIME_BRIEF_COLUMNS_REMEMBER_KEY = 'tt-rp-time-brief-columns-remember-v1';
 
 function isBriefColumnId(x: unknown): x is TimeBriefColumnId {
     return (
@@ -67,23 +65,6 @@ function expandLegacyBriefColumnIds(raw: unknown[]): unknown[] {
     return out;
 }
 
-function normalizeBriefTrailingColumns(ids: TimeBriefColumnId[], includeActionsColumn: boolean): TimeBriefColumnId[] {
-    const trailingPool = includeActionsColumn
-        ? BRIEF_TRAILING_COLUMNS
-        : BRIEF_TRAILING_COLUMNS.filter((id) => id !== 'actions');
-    const prefix = ids.filter((id) => BRIEF_PREFIX_COLUMNS.includes(id));
-    let trailing = trailingPool.filter((id) => ids.includes(id));
-    if (!trailing.includes('workHours') && trailing.some((id) => id === 'billHours' || id === 'sum')) {
-        const bhIdx = trailing.indexOf('billHours');
-        if (bhIdx >= 0)
-            trailing.splice(bhIdx, 0, 'workHours');
-        else
-            trailing.unshift('workHours');
-    }
-    trailing = trailingPool.filter((id) => trailing.includes(id));
-    return [...prefix, ...trailing];
-}
-
 export function sanitizeBriefColumnIds(raw: unknown[]): TimeBriefColumnId[] {
     const seen = new Set<TimeBriefColumnId>();
     const out: TimeBriefColumnId[] = [];
@@ -94,6 +75,27 @@ export function sanitizeBriefColumnIds(raw: unknown[]): TimeBriefColumnId[] {
         out.push(x);
     }
     return out;
+}
+
+export function loadBriefColumnsRemember(): boolean {
+    try {
+        const v = localStorage.getItem(TIME_BRIEF_COLUMNS_REMEMBER_KEY);
+        if (v === null)
+            return true;
+        return v === '1';
+    }
+    catch {
+        return true;
+    }
+}
+
+export function saveBriefColumnsRemember(enabled: boolean): void {
+    try {
+        localStorage.setItem(TIME_BRIEF_COLUMNS_REMEMBER_KEY, enabled ? '1' : '0');
+    }
+    catch {
+        /* ignore quota / private mode */
+    }
 }
 
 export function loadBriefColumnsFromStorage(includeActionsColumn: boolean): TimeBriefColumnId[] | null {
@@ -108,12 +110,8 @@ export function loadBriefColumnsFromStorage(includeActionsColumn: boolean): Time
         let ids = sanitizeBriefColumnIds(parsed);
         if (!includeActionsColumn)
             ids = ids.filter((id) => id !== 'actions');
-        const rest = TIME_BRIEF_COLUMN_ORDER_DEFAULT.filter(
-            (id) => includeActionsColumn || id !== 'actions',
-        ).filter((id) => !ids.includes(id));
-        ids = normalizeBriefTrailingColumns([...ids, ...rest], includeActionsColumn);
         if (ids.length === 0)
-            return TIME_BRIEF_COLUMN_ORDER_DEFAULT.filter((id) => includeActionsColumn || id !== 'actions');
+            return null;
         return ids;
     }
     catch {
@@ -126,7 +124,7 @@ export function saveBriefColumnsToStorage(ids: TimeBriefColumnId[]): void {
         localStorage.setItem(TIME_BRIEF_COLUMNS_STORAGE_KEY, JSON.stringify(ids));
     }
     catch {
-        
+        /* ignore */
     }
 }
 
@@ -141,5 +139,5 @@ export function normalizeBriefColumnsForUi(
     const fallback = TIME_BRIEF_COLUMN_ORDER_DEFAULT.filter((id) => includeActionsColumn || id !== 'actions');
     if (next.length === 0)
         return fallback;
-    return normalizeBriefTrailingColumns(next, includeActionsColumn);
+    return next;
 }

@@ -1,6 +1,8 @@
-import { useEffect, useId } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+    loadBriefColumnsRemember,
+    saveBriefColumnsRemember,
     TIME_BRIEF_COLUMN_LABELS,
     TIME_BRIEF_COLUMN_ORDER_DEFAULT,
     type TimeBriefColumnId,
@@ -12,6 +14,9 @@ export type BriefColumnPickerProps = {
     includeActionsColumn: boolean;
     activeOrderedIds: TimeBriefColumnId[];
     onChange: (next: TimeBriefColumnId[]) => void;
+    /** When set, shows «remember for next reports» and reports toggles. */
+    rememberEnabled?: boolean;
+    onRememberEnabledChange?: (enabled: boolean) => void;
 };
 
 function BriefColumnPickerContent(p: BriefColumnPickerProps & {
@@ -49,9 +54,20 @@ type ModalProps = BriefColumnPickerProps & {
     onClose: () => void;
 };
 
-export function ReportPreviewTimeBriefColumnsModal({ open, onClose, includeActionsColumn, activeOrderedIds, onChange, }: ModalProps) {
+export function ReportPreviewTimeBriefColumnsModal({ open, onClose, includeActionsColumn, activeOrderedIds, onChange, rememberEnabled, onRememberEnabledChange, }: ModalProps) {
     const uid = useId();
+    const rememberId = `${uid}-remember`;
     const pool = TIME_BRIEF_COLUMN_ORDER_DEFAULT.filter((id) => (includeActionsColumn ? true : id !== 'actions'));
+    const [localRemember, setLocalRemember] = useState(() => loadBriefColumnsRemember());
+    const remember = rememberEnabled ?? localRemember;
+    const setRemember = (next: boolean) => {
+        if (onRememberEnabledChange)
+            onRememberEnabledChange(next);
+        else {
+            setLocalRemember(next);
+            saveBriefColumnsRemember(next);
+        }
+    };
     const includeAll = () => {
         onChange([...pool]);
     };
@@ -59,13 +75,15 @@ export function ReportPreviewTimeBriefColumnsModal({ open, onClose, includeActio
     useEffect(() => {
         if (!open)
             return;
+        if (rememberEnabled == null)
+            setLocalRemember(loadBriefColumnsRemember());
         const h = (e: KeyboardEvent) => {
             if (e.key === 'Escape')
                 onClose();
         };
         document.addEventListener('keydown', h);
         return () => { document.removeEventListener('keydown', h); };
-    }, [open, onClose]);
+    }, [open, onClose, rememberEnabled]);
 
     if (!open)
         return null;
@@ -89,6 +107,15 @@ export function ReportPreviewTimeBriefColumnsModal({ open, onClose, includeActio
           <BriefColumnPickerContent includeActionsColumn={includeActionsColumn} activeOrderedIds={activeOrderedIds} onChange={onChange} toolbarSlot="modal-header"/>
         </div>
         <div className="tt-rp-brief-columns-modal__foot">
+          <label className="tt-rp-brief-columns-modal__remember" htmlFor={rememberId}>
+            <input
+              id={rememberId}
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+            />
+            <span>Запомнить для следующих отчётов</span>
+          </label>
           <button type="button" className="tt-rp-brief-columns-modal__done" onClick={onClose}>
             Готово
           </button>

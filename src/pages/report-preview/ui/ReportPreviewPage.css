@@ -853,7 +853,7 @@ body[data-theme='dark'] .tt-rp-preview__toolbar-chip--ghost {
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 0;
   align-items: stretch;
-  max-height: min(14rem, 42vh);
+  max-height: min(18rem, 48vh);
   border: 1px solid var(--app-border, #e2e8f0);
   border-radius: 10px;
   overflow: hidden;
@@ -933,14 +933,46 @@ body[data-theme='dark'] .tt-rp-brief-columns__list::-webkit-scrollbar-thumb {
   text-align: center;
 }
 
+.tt-rp-brief-columns__li {
+  list-style: none;
+  margin: 0 0 0.2rem;
+  padding: 0;
+  border-radius: 7px;
+}
+
+.tt-rp-brief-columns__li--over {
+  box-shadow: inset 0 2px 0 0 color-mix(in srgb, var(--app-accent, #4f46e5) 55%, transparent);
+}
+
+.tt-rp-brief-columns__li--dragging {
+  opacity: 0.45;
+}
+
+.tt-rp-brief-columns__dropzone {
+  list-style: none;
+  min-height: 0.55rem;
+  margin: 0;
+  padding: 0;
+}
+
+.tt-rp-brief-columns__dropzone--over {
+  min-height: 1.6rem;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-accent, #4f46e5) 35%, transparent);
+}
+
+.tt-rp-brief-columns__pane--drop {
+  outline: 1px dashed color-mix(in srgb, var(--app-accent, #4f46e5) 40%, transparent);
+  outline-offset: -2px;
+}
+
 .tt-rp-brief-columns__item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.3rem;
   width: 100%;
-  margin-bottom: 0.2rem;
-  padding: 0.35rem 0.45rem;
+  padding: 0.3rem 0.35rem 0.3rem 0.25rem;
   border-radius: 7px;
   font: inherit;
   font-size: 0.75rem;
@@ -948,18 +980,18 @@ body[data-theme='dark'] .tt-rp-brief-columns__list::-webkit-scrollbar-thumb {
   color: var(--app-text, #0f172a);
   background: var(--app-surface-soft, #f8fafc);
   border: 1px solid transparent;
-  cursor: pointer;
+  cursor: grab;
   box-sizing: border-box;
+  user-select: none;
 }
 
-.tt-rp-brief-columns__item:hover:not(:disabled) {
+.tt-rp-brief-columns__item:active {
+  cursor: grabbing;
+}
+
+.tt-rp-brief-columns__item:hover {
   border-color: var(--app-border, #e2e8f0);
   background: var(--app-surface, #fff);
-}
-
-.tt-rp-brief-columns__item:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
 }
 
 .tt-rp-brief-columns__item--active {
@@ -967,16 +999,71 @@ body[data-theme='dark'] .tt-rp-brief-columns__list::-webkit-scrollbar-thumb {
   border-color: #bfdbfe;
 }
 
-.tt-rp-brief-columns__item-label {
+.tt-rp-brief-columns__grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.1rem;
+  color: var(--app-muted, #94a3b8);
+}
+
+.tt-rp-brief-columns__item-main {
   flex: 1 1 auto;
   min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tt-rp-brief-columns__item-main:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tt-rp-brief-columns__item-label {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tt-rp-brief-columns__item-hint-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  color: var(--app-muted, #64748b);
+}
+
+.tt-rp-brief-columns__item-hint-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--app-border, #e2e8f0) 55%, transparent);
+  color: var(--app-text, #0f172a);
+}
+
+.tt-rp-brief-columns__item-hint-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .tt-rp-brief-columns__item-hint {
-  flex-shrink: 0;
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--app-muted, #64748b);
+  line-height: 1;
 }
 
 .tt-rp-mtable__foot-summary {
@@ -2201,7 +2288,7 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 
 .tt-rp-mtable--time-brief tbody .tt-rp-mtable__td,
 .tt-rp-mtable--time-brief thead .tt-rp-brief-th {
-  padding: 0.35rem 0.45rem;
+  padding: 0.15rem 0.35rem;
 }
 
 .tt-rp-mtable--time-brief tbody .tt-rp-mtable__td {
@@ -2214,11 +2301,12 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 .tt-rp-mtable--time-brief .tt-rp-mtable__srch-btn.tsp-srch__btn,
 .tt-rp-mtable--time-brief .tt-rp-mtable__td--num .tt-rp-mtable__input--duration {
   box-sizing: border-box;
-  min-height: 2rem;
-  height: 2rem;
-  padding: 0.25rem 0.4rem;
+  min-height: 1.75rem;
+  height: 1.75rem;
+  max-height: 1.75rem;
+  padding: 0.15rem 0.35rem;
   font-size: 0.8125rem;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .tt-rp-mtable--time-brief .tt-rp-mtable__textarea--brief {
@@ -2229,6 +2317,12 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 .tt-rp-mtable--time-brief .tt-rp-mtable__srch-btn.tsp-srch__btn {
   display: inline-flex;
   align-items: center;
+  justify-content: space-between;
+  padding-top: 0;
+  padding-bottom: 0;
+  min-height: 1.75rem;
+  height: 1.75rem;
+  max-height: 1.75rem;
 }
 
 .tt-rp-mtable--time-brief .tt-rp-mtable__srch-btn .tsp-srch__btn-text {
@@ -2236,18 +2330,22 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   word-break: normal;
-  line-height: 1.25;
+  line-height: 1.2;
   max-width: 100%;
 }
 
+.tt-rp-mtable--time-brief .tt-rp-mtable__srch-btn .tsp-srch__chev {
+  margin-top: 0;
+}
+
 .tt-rp-mtable--time-brief tbody .tt-rp-mtable__td--brief-actions {
-  padding: 0.3rem 0.25rem;
+  padding: 0.1rem 0.2rem;
   vertical-align: middle;
 }
 
 .tt-rp-mtable--time-brief .tt-rp-mtable__row-act {
-  width: 1.7rem;
-  height: 1.7rem;
+  width: 1.55rem;
+  height: 1.55rem;
 }
 
 .tt-rp-mtable--time-brief .tt-rp-brief-dt__row--inline {
@@ -2261,15 +2359,17 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 }
 
 .tt-rp-mtable--time-brief .tt-rp-brief-dt__input {
-  min-height: 2rem;
-  height: 2rem;
+  min-height: 1.75rem;
+  height: 1.75rem;
+  max-height: 1.75rem;
 }
 
 .tt-rp-mtable--time-brief .tt-rp-brief-dt__date-picker .ttp__btn,
 .tt-rp-mtable--time-brief .tt-rp-brief-dt__date-btn.ttp__btn {
-  min-height: 2rem;
-  height: 2rem;
-  padding: 0.25rem 0.4rem;
+  min-height: 1.75rem;
+  height: 1.75rem;
+  max-height: 1.75rem;
+  padding: 0.15rem 0.35rem;
 }
 
 .tt-rp-mtable--time-brief .tt-rp-brief-dt__hint {
@@ -2317,8 +2417,8 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 .tt-rp-mtable--time-brief tbody .tt-rp-mtable__readonly {
   display: inline-flex;
   align-items: center;
-  min-height: 2rem;
-  line-height: 1.25;
+  min-height: 1.75rem;
+  line-height: 1.2;
 }
 
 .tt-rp-mtable--time-brief thead .tt-rp-brief-th {
@@ -2710,15 +2810,33 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 
 .tt-rp-brief-columns-modal__foot {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
   padding: 0.65rem 1rem 1rem;
   border-top: 1px solid var(--app-border, #e2e8f0);
   flex-shrink: 0;
 }
 
-.tt-rp-brief-columns-modal__done {
+.tt-rp-brief-columns-modal__remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
   margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--app-text, #334155);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tt-rp-brief-columns-modal__remember input {
+  margin: 0;
+}
+
+.tt-rp-brief-columns-modal__done {
+  margin: 0 0 0 auto;
   padding: 0.45rem 1rem;
   font: inherit;
   font-size: 0.875rem;
@@ -2984,9 +3102,10 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 .tt-rp-mtable--time-brief .tt-rp-brief-dt__input,
 .tt-rp-mtable--time-brief .tt-rp-brief-dt__date-picker .ttp__btn,
 .tt-rp-mtable--time-brief .tt-rp-brief-dt__date-btn.ttp__btn {
-  min-height: 2rem;
-  height: 2rem;
-  padding: 0.25rem 0.4rem;
+  min-height: 1.75rem;
+  height: 1.75rem;
+  max-height: 1.75rem;
+  padding: 0.15rem 0.35rem;
 }
 
 .tt-rp-brief-dt__date-picker .ttp__btn:hover:not(:disabled),
