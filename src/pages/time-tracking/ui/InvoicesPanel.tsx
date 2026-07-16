@@ -9,7 +9,7 @@ import { useAppDialog, useAppToast } from '@shared/ui';
 import { useI18n, ttInvoiceSendActionLabel, ttInvoiceStatusLabel, type TimeTrackingT } from '@shared/i18n';
 import { localeTag } from '@shared/i18n/ticketUi';
 import type { AppLocale } from '@shared/i18n/types';
-import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listPartnerReportConfirmationsConfirmed, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listPartnerReportConfirmationsConfirmed, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, type PartnerReportConfirmationRequest, } from '@entities/time-tracking';
 import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
@@ -249,6 +249,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
   const [clients, setClients] = useState<TimeManagerClientRow[]>([]);
   const [activeProjectsAll, setActiveProjectsAll] = useState<TimeManagerClientProjectRow[]>([]);
   const [clientIdsWithActiveProjects, setClientIdsWithActiveProjects] = useState<Set<string>>(() => new Set());
+  const [confirmedReportsForCreate, setConfirmedReportsForCreate] = useState<PartnerReportConfirmationRequest[]>([]);
   const [confirmedProjectIdsForCreate, setConfirmedProjectIdsForCreate] = useState<Set<string>>(() => new Set());
   const [confirmedClientIdsForCreate, setConfirmedClientIdsForCreate] = useState<Set<string>>(() => new Set());
   const [clientsErr, setClientsErr] = useState<string | null>(null);
@@ -503,18 +504,12 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
   }, [loadClients]);
   useEffect(() => {
     let cancelled = false;
-    const dateFrom = unbilledFrom.trim().slice(0, 10);
-    const dateTo = unbilledTo.trim().slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(dateTo)) {
-      setConfirmedProjectIdsForCreate(new Set());
-      setConfirmedClientIdsForCreate(new Set());
-      return;
-    }
-    void listPartnerReportConfirmationsConfirmed({ dateFrom, dateTo })
+    void listPartnerReportConfirmationsConfirmed()
       .then((rows) => {
         if (cancelled)
           return;
         const confirmed = rows.filter((r) => String(r.status ?? '').trim().toLowerCase() === 'fully_confirmed');
+        setConfirmedReportsForCreate(confirmed);
         const projectIds = new Set(confirmed.map((r) => String(r.projectId ?? '').trim()).filter(Boolean));
         const clientIds = new Set<string>();
         for (const p of activeProjectsAll) {
@@ -527,13 +522,35 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       .catch(() => {
         if (cancelled)
           return;
+        setConfirmedReportsForCreate([]);
         setConfirmedProjectIdsForCreate(new Set());
         setConfirmedClientIdsForCreate(new Set());
       });
     return () => {
       cancelled = true;
     };
-  }, [activeProjectsAll, unbilledFrom, unbilledTo]);
+  }, [activeProjectsAll]);
+  useEffect(() => {
+    const pid = createProjectId.trim();
+    if (!pid)
+      return;
+    const candidates = confirmedReportsForCreate.filter((r) => String(r.projectId ?? '').trim() === pid);
+    if (candidates.length === 0)
+      return;
+    const latest = candidates.reduce((best, r) => {
+      const bestTo = String(best.dateTo ?? '').slice(0, 10);
+      const curTo = String(r.dateTo ?? '').slice(0, 10);
+      return curTo > bestTo ? r : best;
+    }, candidates[0]!);
+    const nextFrom = String(latest.dateFrom ?? '').slice(0, 10);
+    const nextTo = String(latest.dateTo ?? '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nextFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(nextTo))
+      return;
+    if (unbilledFrom !== nextFrom)
+      setUnbilledFrom(nextFrom);
+    if (unbilledTo !== nextTo)
+      setUnbilledTo(nextTo);
+  }, [createProjectId, confirmedReportsForCreate, unbilledFrom, unbilledTo]);
   useEffect(() => {
     if (clientsErr)
       pushToast({ message: clientsErr, variant: 'warning' });
@@ -635,7 +652,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     const to = toRaw.trim().slice(0, 10);
     if (!projectId || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to))
       return false;
-    const rows = await listPartnerReportConfirmationsConfirmed({ dateFrom: from, dateTo: to });
+    const rows = await listPartnerReportConfirmationsConfirmed();
     return rows.some((r) =>
       String(r.projectId ?? '').trim() === projectId
       && String(r.dateFrom ?? '').slice(0, 10) === from
