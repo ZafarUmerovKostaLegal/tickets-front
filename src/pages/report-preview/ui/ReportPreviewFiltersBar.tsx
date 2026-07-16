@@ -1,20 +1,25 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { ReportsFilterUser } from '@entities/time-tracking';
 import type { PeriodGranularity } from '@entities/time-tracking/model/reportsPanelConfig';
 import { PERIOD_OPTIONS } from '@entities/time-tracking/model/reportsPanelConfig';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { useI18n, ttReportPeriodLabel } from '@shared/i18n';
+import { formatIsoDateLabel } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { ReportsUserFilterDropdown } from '@pages/time-tracking/ui/ReportsUserFilterDropdown';
 import { ReportPreviewTeamFilter, type ReportPreviewTeamFilterProps } from './ReportPreviewTeamFilter';
 
-const IcoChevLeft = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+const IcoChevLeft = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden>
   <path d="M15 18l-6-6 6-6" />
 </svg>);
-const IcoChevRight = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+const IcoChevRight = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" aria-hidden>
   <path d="M9 18l6-6-6-6" />
 </svg>);
 const IcoChevDown = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
   <path d="M6 9l6 6 6-6" />
+</svg>);
+const IcoCal = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <rect x="3" y="4" width="18" height="18" rx="2" />
+  <path d="M16 2v4M8 2v4M3 10h18" />
 </svg>);
 
 export type ReportPreviewFiltersBarProps = {
@@ -34,9 +39,10 @@ export type ReportPreviewFiltersBarProps = {
     customRangeActive: boolean;
     onResetCustomRange: () => void;
     disabled?: boolean;
-    
     hidePeriodControls?: boolean;
     teamFilter?: Omit<ReportPreviewTeamFilterProps, 'disabled'>;
+    /** Status / confirm actions — same controls, placed in the hero row like the reference UI. */
+    actionsSlot?: ReactNode;
 };
 
 export function ReportPreviewFiltersBar({
@@ -58,10 +64,12 @@ export function ReportPreviewFiltersBar({
     disabled = false,
     hidePeriodControls = false,
     teamFilter,
+    actionsSlot,
 }: ReportPreviewFiltersBarProps) {
     const { t } = useI18n();
     const rangeId = useId();
     const [periodDropdown, setPeriodDropdown] = useState(false);
+    const [datesOpen, setDatesOpen] = useState(false);
     const periodDropdownRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         if (!periodDropdown || hidePeriodControls)
@@ -74,55 +82,72 @@ export function ReportPreviewFiltersBar({
         document.addEventListener('mousedown', h);
         return () => document.removeEventListener('mousedown', h);
     }, [periodDropdown, hidePeriodControls]);
-    return (<div className={`tt-rp-preview__filters${hidePeriodControls ? ' tt-rp-preview__filters--period-locked' : ''}`}>
-        <div className="tt-reports__header tt-rp-preview__filters-header">
-            <div className="tt-reports__header-left">
-                {hidePeriodControls ? (<h2 className="tt-reports__period-title">{periodTitle}</h2>) : (<>
-                    <button type="button" className="tt-reports__nav-btn" onClick={onPrevPeriod} disabled={disabled || periodGranularity === 'all'} aria-label={t('timeTrackingPage.reports.header.prevPeriod')}>
-                        <IcoChevLeft />
-                    </button>
-                    <h2 className="tt-reports__period-title">{periodTitle}</h2>
-                    <button type="button" className="tt-reports__nav-btn" onClick={onNextPeriod} disabled={disabled || periodGranularity === 'all'} aria-label={t('timeTrackingPage.reports.header.nextPeriod')}>
-                        <IcoChevRight />
-                    </button>
-                </>)}
-            </div>
-            <div className="tt-reports__header-right">
-                {usersError ? (<p className="tt-reports__users-filter-err" role="status">{usersError}</p>) : null}
-                {teamFilter ? (<ReportPreviewTeamFilter {...teamFilter} disabled={disabled} />) : null}
-                <ReportsUserFilterDropdown users={users} selected={selectedUserIds} onChange={onSelectedUserIdsChange} disabled={disabled} />
-                {!hidePeriodControls ? (<div className="tt-reports__period-dropdown-wrap" ref={periodDropdownRef}>
-                    <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--dropdown" disabled={disabled} onClick={() => !disabled && setPeriodDropdown((v) => !v)} aria-expanded={periodDropdown}>
-                        {ttReportPeriodLabel(periodGranularity, t)} <IcoChevDown />
-                    </button>
-                    {periodDropdown && !disabled && (<div className="tt-reports__period-dropdown" role="listbox">
-                        {PERIOD_OPTIONS.map((opt) => (<button key={opt.id} type="button" role="option" aria-selected={periodGranularity === opt.id} className={`tt-reports__period-opt${periodGranularity === opt.id ? ' tt-reports__period-opt--active' : ''}`} onClick={() => {
-                            onPeriodGranularityChange(opt.id);
-                            setPeriodDropdown(false);
-                        }}>
-                            {ttReportPeriodLabel(opt.id, t)}
-                        </button>))}
-                    </div>)}
-                </div>) : null}
-            </div>
+
+    const periodChipLabel = `${formatIsoDateLabel(dateFrom)} — ${formatIsoDateLabel(dateTo)}`;
+
+    return (<div className={`tt-rp-preview__filters tt-rp-preview__filters--hero${hidePeriodControls ? ' tt-rp-preview__filters--period-locked' : ''}`}>
+      <div className="tt-rp-preview__hero">
+        <div className="tt-rp-preview__hero-title-row">
+          {hidePeriodControls ? (<h2 className="tt-rp-preview__hero-title">{periodTitle}</h2>) : (<>
+              <button type="button" className="tt-rp-preview__hero-nav" onClick={onPrevPeriod} disabled={disabled || periodGranularity === 'all'} aria-label={t('timeTrackingPage.reports.header.prevPeriod')}>
+                <IcoChevLeft />
+              </button>
+              <h2 className="tt-rp-preview__hero-title">{periodTitle}</h2>
+              <button type="button" className="tt-rp-preview__hero-nav" onClick={onNextPeriod} disabled={disabled || periodGranularity === 'all'} aria-label={t('timeTrackingPage.reports.header.nextPeriod')}>
+                <IcoChevRight />
+              </button>
+            </>)}
         </div>
-        {!hidePeriodControls ? (<div className="tt-reports__date-range tt-rp-preview__filters-dates" aria-label={t('timeTrackingPage.reports.dateRange.aria')}>
-            <span className="tt-reports__date-range-title">{t('timeTrackingPage.reports.dateRange.title')}</span>
+
+        <div className="tt-rp-preview__hero-row">
+          <div className="tt-rp-preview__hero-filters">
+            {!hidePeriodControls ? (<button type="button" className={`tt-rp-preview__period-chip${datesOpen || customRangeActive ? ' tt-rp-preview__period-chip--active' : ''}`} disabled={disabled} onClick={() => !disabled && setDatesOpen((v) => !v)} aria-expanded={datesOpen} title={t('timeTrackingPage.reports.dateRange.aria')}>
+                <IcoCal />
+                <span>{periodChipLabel}</span>
+              </button>) : (<span className="tt-rp-preview__period-chip tt-rp-preview__period-chip--static">
+                <IcoCal />
+                <span>{periodChipLabel}</span>
+              </span>)}
+
+            {usersError ? (<p className="tt-reports__users-filter-err" role="status">{usersError}</p>) : null}
+            {teamFilter ? (<ReportPreviewTeamFilter {...teamFilter} disabled={disabled} />) : null}
+            <ReportsUserFilterDropdown users={users} selected={selectedUserIds} onChange={onSelectedUserIdsChange} disabled={disabled} />
+
+            {!hidePeriodControls ? (<div className="tt-reports__period-dropdown-wrap" ref={periodDropdownRef}>
+                <button type="button" className="tt-rp-preview__ghost-dd" disabled={disabled} onClick={() => !disabled && setPeriodDropdown((v) => !v)} aria-expanded={periodDropdown}>
+                  {ttReportPeriodLabel(periodGranularity, t)} <IcoChevDown />
+                </button>
+                {periodDropdown && !disabled && (<div className="tt-reports__period-dropdown" role="listbox">
+                    {PERIOD_OPTIONS.map((opt) => (<button key={opt.id} type="button" role="option" aria-selected={periodGranularity === opt.id} className={`tt-reports__period-opt${periodGranularity === opt.id ? ' tt-reports__period-opt--active' : ''}`} onClick={() => {
+                        onPeriodGranularityChange(opt.id);
+                        setPeriodDropdown(false);
+                    }}>
+                        {ttReportPeriodLabel(opt.id, t)}
+                      </button>))}
+                  </div>)}
+              </div>) : null}
+          </div>
+
+          {actionsSlot ? (<div className="tt-rp-preview__hero-actions">{actionsSlot}</div>) : null}
+        </div>
+
+        {!hidePeriodControls && datesOpen ? (<div className="tt-rp-preview__dates-panel" aria-label={t('timeTrackingPage.reports.dateRange.aria')}>
             <div className="tt-reports__date-field">
-                <span className="tt-reports__date-field-label" id={`${rangeId}-from`}>
-                    {t('timeTrackingPage.reports.dateRange.from')}
-                </span>
-                <DatePicker value={dateFrom} max={dateTo} onChange={onDateFromChange} disabled={disabled} aria-labelledby={`${rangeId}-from`} portal buttonClassName="tt-reports__date-picker-btn" />
+              <span className="tt-reports__date-field-label" id={`${rangeId}-from`}>
+                {t('timeTrackingPage.reports.dateRange.from')}
+              </span>
+              <DatePicker value={dateFrom} max={dateTo} onChange={onDateFromChange} disabled={disabled} aria-labelledby={`${rangeId}-from`} portal buttonClassName="tt-reports__date-picker-btn" />
             </div>
             <div className="tt-reports__date-field">
-                <span className="tt-reports__date-field-label" id={`${rangeId}-to`}>
-                    {t('timeTrackingPage.reports.dateRange.to')}
-                </span>
-                <DatePicker value={dateTo} min={dateFrom} onChange={onDateToChange} disabled={disabled} aria-labelledby={`${rangeId}-to`} portal buttonClassName="tt-reports__date-picker-btn" />
+              <span className="tt-reports__date-field-label" id={`${rangeId}-to`}>
+                {t('timeTrackingPage.reports.dateRange.to')}
+              </span>
+              <DatePicker value={dateTo} min={dateFrom} onChange={onDateToChange} disabled={disabled} aria-labelledby={`${rangeId}-to`} portal buttonClassName="tt-reports__date-picker-btn" />
             </div>
             {customRangeActive && !disabled ? (<button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={onResetCustomRange}>
                 {t('timeTrackingPage.reports.dateRange.backToPeriod').replace('{period}', ttReportPeriodLabel(periodGranularity, t).toLowerCase())}
-            </button>) : null}
-        </div>) : null}
+              </button>) : null}
+          </div>) : null}
+      </div>
     </div>);
 }

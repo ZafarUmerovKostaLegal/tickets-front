@@ -1583,8 +1583,8 @@ export function ReportPreviewPage() {
         return null;
     })();
     return (<div className="tt-rp-preview tt-rp-preview--fill">
-        <ReportPreviewNavBar projectSlot={navProjectSlot} timeReportViewSlot={timeReportViewToggle ?? undefined} extrasSlot={navbarExtrasSlot} />
-        {xferSnapshot && rangeFrom && rangeTo ? (<ReportPreviewFiltersBar periodTitle={periodTitle} periodGranularity={periodGranularity} onPeriodGranularityChange={onPreviewPeriodGranularityChange} onPrevPeriod={onPreviewPrevPeriod} onNextPeriod={onPreviewNextPeriod} users={usersForEmployeeFilter} usersError={usersForFilterError} selectedUserIds={selectedUserIds} onSelectedUserIdsChange={setSelectedUserIds} dateFrom={rangeFrom} dateTo={rangeTo} onDateFromChange={onPreviewFrom} onDateToChange={onPreviewTo} customRangeActive={customRangeActive} onResetCustomRange={onPreviewResetCustomRange} disabled={partnerConfirmedReadOnly} hidePeriodControls={hidePeriodControls} teamFilter={{
+        <ReportPreviewNavBar projectSlot={navProjectSlot} timeReportViewSlot={timeReportViewToggle ?? undefined} />
+        {xferSnapshot && rangeFrom && rangeTo ? (<ReportPreviewFiltersBar periodTitle={periodTitle} periodGranularity={periodGranularity} onPeriodGranularityChange={onPreviewPeriodGranularityChange} onPrevPeriod={onPreviewPrevPeriod} onNextPeriod={onPreviewNextPeriod} users={usersForEmployeeFilter} usersError={usersForFilterError} selectedUserIds={selectedUserIds} onSelectedUserIdsChange={setSelectedUserIds} dateFrom={rangeFrom} dateTo={rangeTo} onDateFromChange={onPreviewFrom} onDateToChange={onPreviewTo} customRangeActive={customRangeActive} onResetCustomRange={onPreviewResetCustomRange} disabled={partnerConfirmedReadOnly} hidePeriodControls={hidePeriodControls} actionsSlot={navbarExtrasSlot} teamFilter={{
             teams: teamsCatalog,
             teamsLoading: teamsCatalogLoading,
             teamsError: teamsCatalogError,
