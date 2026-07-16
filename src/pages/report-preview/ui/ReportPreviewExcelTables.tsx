@@ -84,90 +84,94 @@ function timePreviewRowsForTotals(displayRows: TimeExcelPreviewRow[]): TimeExcel
 function formatReportPreviewDurationHours(hours: number): string {
     return formatDecimalHoursAsHm(Number.isFinite(hours) ? hours : 0);
 }
-function ReportPreviewFooterHours({ decimalHours, clockTitle, decTitle, showDecimal = true, }: {
-    decimalHours: number;
-    clockTitle: string;
-    decTitle: string;
-    showDecimal?: boolean;
-}) {
-    return (<div className="tt-rp-mtable__foot-h" title={decTitle}>
-      <span className="tt-rp-mtable__foot-h-main" title={clockTitle}>
-        {formatDecimalHoursAsHm(decimalHours)}
-      </span>
-      {showDecimal ? (<span className="tt-rp-mtable__foot-h-dec" aria-label={decTitle}>
-        {formatReportBillableHoursRu(decimalHours)} ч
-      </span>) : null}
-    </div>);
+function ruEntriesWord(n: number): string {
+    const abs = Math.abs(n) % 100;
+    const last = abs % 10;
+    if (abs > 10 && abs < 20)
+        return 'записей';
+    if (last === 1)
+        return 'запись';
+    if (last >= 2 && last <= 4)
+        return 'записи';
+    return 'записей';
 }
-function TimePreviewBriefDateTimeCell({ r, onPatch, userName, weekLocked, }: {
-    r: TimeExcelPreviewRow;
-    onPatch: PatchFn<TimeExcelPreviewRow>;
-    userName: string;
-    weekLocked: boolean;
-}) {
-    const u = useId();
-    const idWd = `${u}-wd`;
-    const idRt = `${u}-rt`;
-    if (r.rowKind === 'aggregate' || !r.workDate.trim()) {
-        return (<span className="tt-rp-mtable__td--muted" title="Для агрегата нет одной даты/времени записи">—</span>);
-    }
+function briefRowDateTimeParts(r: TimeExcelPreviewRow): {
+    wd: string;
+    timeHm: string;
+    recLocalYmd: string | null;
+    dayMismatch: boolean;
+    effectiveDate: string;
+} | null {
+    if (r.rowKind === 'aggregate' || !r.workDate.trim())
+        return null;
     const wd = r.workDate.slice(0, 10);
     const parsed = getLocalYmdAndHmFromIso(r.recordedAt);
     const timeHm = parsed?.hm ?? '12:00';
     const recLocalYmd = getLocalYmdFromIso(r.recordedAt);
     const dayMismatch = Boolean(recLocalYmd && recLocalYmd !== wd);
-    const effectiveDate = recLocalYmd ?? wd;
+    return { wd, timeHm, recLocalYmd, dayMismatch, effectiveDate: recLocalYmd ?? wd };
+}
+function TimePreviewBriefDateCell({ r, onPatch, weekLocked, }: {
+    r: TimeExcelPreviewRow;
+    onPatch: PatchFn<TimeExcelPreviewRow>;
+    weekLocked: boolean;
+}) {
+    const u = useId();
+    const idWd = `${u}-wd`;
+    const parts = briefRowDateTimeParts(r);
+    if (!parts) {
+        return (<span className="tt-rp-mtable__td--muted" title="Для агрегата нет одной даты записи">—</span>);
+    }
     const onDateChange = (ymd: string) => {
-        const nextIso = localYmdAndHmToIso(ymd, timeHm);
-        onPatch(r.rowKey, { workDate: ymd, recordedAt: nextIso });
+        onPatch(r.rowKey, { workDate: ymd, recordedAt: localYmdAndHmToIso(ymd, parts.timeHm) });
     };
-    const onTimeChange = (hm: string) => {
-        onPatch(r.rowKey, { recordedAt: localYmdAndHmToIso(effectiveDate, hm) });
-    };
-    const recordedInSystemLabel = recLocalYmd
-        ? `Записано в системе: ${formatRuYmd(recLocalYmd)}, ${formatRuHmFromIso(r.recordedAt)}`
-        : `Записано в системе: ${r.recordedAt}`;
-    return (<div className="tt-rp-brief-dt">
-      <div className="tt-rp-brief-dt__row tt-rp-brief-dt__row--inline">
-        <div className="tt-rp-brief-dt__cell tt-rp-brief-dt__cell--date">
-          <span className="tt-rp-brief-dt__label--sr" id={idWd}>
-            Дата работы
-          </span>
-          <ReportPreviewRuDateField id={idWd} variant="brief" value={wd} onChange={onDateChange} aria-labelledby={idWd} title={weekLocked ? 'Неделя по дате закрыта — можно сменить дату на день из открытого периода' : undefined}/>
-        </div>
-        <span className="tt-rp-brief-dt__sep" aria-hidden>
-          |
-        </span>
-        <div className="tt-rp-brief-dt__cell tt-rp-brief-dt__cell--time">
-          <span className="tt-rp-brief-dt__label--sr" id={idRt}>
-            Время записи
-          </span>
-          <input className="tt-rp-brief-dt__input tt-rp-brief-dt__input--time" type="time" lang="ru" step={60} value={timeHm} onChange={(e) => onTimeChange(e.target.value)} onInput={(e) => onTimeChange(e.currentTarget.value)} title={r.recordedAt.trim() ? `ISO: ${r.recordedAt}` : undefined} aria-labelledby={idRt} aria-label={`Время записи, ${userName}`}/>
-        </div>
-        <div className="tt-rp-brief-dt__cell tt-rp-brief-dt__cell--info">
-          {dayMismatch ? (<button type="button" className="tt-rp-brief-dt__sysinfo" title={recordedInSystemLabel} aria-label={recordedInSystemLabel}>
-              <span className="tt-rp-brief-dt__sysinfo-icon" aria-hidden>
-                i
-              </span>
-            </button>) : (<span className="tt-rp-brief-dt__sysinfo-spacer" aria-hidden />)}
-        </div>
-      </div>
+    return (<div className="tt-rp-brief-dt tt-rp-brief-dt--date-only">
+      <span className="tt-rp-brief-dt__label--sr" id={idWd}>Дата записи</span>
+      <ReportPreviewRuDateField id={idWd} variant="brief" value={parts.wd} onChange={onDateChange} aria-labelledby={idWd} title={weekLocked ? 'Неделя по дате закрыта — можно сменить дату на день из открытого периода' : undefined}/>
       {weekLocked ? (<p className="tt-rp-brief-dt__hint tt-rp-brief-dt__hint--lock" role="status">
-          Неделя по дате закрыта (сдача: понедельник, 12:00, Ташкент). Можно сменить <strong>дату работы</strong>, <strong>время записи</strong> или <strong>удалить</strong> запись.
+          Неделя по дате закрыта. Можно сменить дату, время или удалить запись.
         </p>) : null}
     </div>);
 }
-function TimePreviewBriefDateTimeReadonly({ r }: {
+function TimePreviewBriefTimeCell({ r, onPatch, userName, }: {
     r: TimeExcelPreviewRow;
+    onPatch: PatchFn<TimeExcelPreviewRow>;
+    userName: string;
 }) {
-    if (r.rowKind === 'aggregate' || !r.workDate.trim()) {
-        return (<span className="tt-rp-mtable__td--muted" title="Для агрегата нет одной даты/времени записи">—</span>);
+    const u = useId();
+    const idRt = `${u}-rt`;
+    const parts = briefRowDateTimeParts(r);
+    if (!parts) {
+        return (<span className="tt-rp-mtable__td--muted" title="Для агрегата нет одного времени записи">—</span>);
     }
-    const wd = r.workDate.slice(0, 10);
-    const hm = formatRuHmFromIso(r.recordedAt);
-    const dateRu = formatRuYmd(wd);
+    const onTimeChange = (hm: string) => {
+        onPatch(r.rowKey, { recordedAt: localYmdAndHmToIso(parts.effectiveDate, hm) });
+    };
+    const recordedInSystemLabel = parts.recLocalYmd
+        ? `Записано в системе: ${formatRuYmd(parts.recLocalYmd)}, ${formatRuHmFromIso(r.recordedAt)}`
+        : `Записано в системе: ${r.recordedAt}`;
+    return (<div className="tt-rp-brief-dt tt-rp-brief-dt--time-only">
+      <span className="tt-rp-brief-dt__label--sr" id={idRt}>Время записи</span>
+      <div className="tt-rp-brief-dt__time-wrap">
+        <input className="tt-rp-brief-dt__input tt-rp-brief-dt__input--time" type="time" lang="ru" step={60} value={parts.timeHm} onChange={(e) => onTimeChange(e.target.value)} onInput={(e) => onTimeChange(e.currentTarget.value)} title={r.recordedAt.trim() ? `ISO: ${r.recordedAt}` : undefined} aria-labelledby={idRt} aria-label={`Время записи, ${userName}`}/>
+        {parts.dayMismatch ? (<button type="button" className="tt-rp-brief-dt__sysinfo" title={recordedInSystemLabel} aria-label={recordedInSystemLabel}>
+            <span className="tt-rp-brief-dt__sysinfo-icon" aria-hidden>i</span>
+          </button>) : null}
+      </div>
+    </div>);
+}
+function TimePreviewBriefDateReadonly({ r }: { r: TimeExcelPreviewRow; }) {
+    if (r.rowKind === 'aggregate' || !r.workDate.trim()) {
+        return (<span className="tt-rp-mtable__td--muted" title="Для агрегата нет одной даты записи">—</span>);
+    }
+    return (<span className="tt-rp-mtable__readonly">{formatRuYmd(r.workDate.slice(0, 10))}</span>);
+}
+function TimePreviewBriefTimeReadonly({ r }: { r: TimeExcelPreviewRow; }) {
+    if (r.rowKind === 'aggregate' || !r.workDate.trim()) {
+        return (<span className="tt-rp-mtable__td--muted" title="Для агрегата нет одного времени записи">—</span>);
+    }
     const title = r.recordedAt.trim() ? `ISO: ${r.recordedAt}` : undefined;
-    return (<span className="tt-rp-mtable__readonly" title={title}>{`${dateRu}, ${hm}`}</span>);
+    return (<span className="tt-rp-mtable__readonly" title={title}>{formatRuHmFromIso(r.recordedAt)}</span>);
 }
 function RpBool({ checked, ariaLabel, onChange, disabled = false, }: {
     checked: boolean;
@@ -253,13 +257,6 @@ function ReportRowSelectCell({ userName, selectedUserName, onSelectUserName, }: 
                 onSelectUserName(null);
         }}/>
     </td>);
-}
-function ReportRowSelectFootCell({ onSelectUserName, }: {
-    onSelectUserName?: (name: string | null) => void;
-}) {
-    if (!onSelectUserName)
-        return null;
-    return (<td className="tt-rp-mtable__td tt-rp-mtable__td--foot tt-rp-mtable__td--select" aria-hidden/>);
 }
 function mergeLabeledOptions(base: LabeledOption[], fromRows: LabeledOption[]): LabeledOption[] {
     const m = new Map<string, LabeledOption>();
@@ -864,19 +861,11 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         max: '2099-12-31',
     };
     const tableScrollRef = useRef<HTMLDivElement>(null);
-    const tfootRef = useRef<HTMLTableSectionElement>(null);
-    const [footerSpacerPx, setFooterSpacerPx] = useState(0);
-    useLayoutEffect(() => {
-        const el = tfootRef.current;
-        if (!el || typeof ResizeObserver === 'undefined')
-            return;
-        const update = () => setFooterSpacerPx(el.offsetHeight);
-        update();
-        const ro = new ResizeObserver(update);
-        ro.observe(el);
-        return () => ro.disconnect();
-    }, [isFull, tableFullscreen, displayRows.length, footerExtras]);
     const showRowSelect = Boolean(onSelectUserName);
+    const entriesCount = rowsForTotals.length;
+    const dockHours = formatReportPreviewDurationHours(totals.hDisplay);
+    const dockBillable = formatReportPreviewDurationHours(totals.bhDisplay);
+    const dockSum = fmtAmtWithIso(totals.atp, totals.cur);
     const briefTableColSpan = visibleBriefIds.length + (showRowSelect ? 1 : 0);
     const fullTableColSpan = visibleFullIds.length + (showEntryActions ? 1 : 0) + (showRowSelect ? 1 : 0);
     const renderFullDataRow = (i: number, measure: VirtualTableRowMeasureProps): ReactElement => {
@@ -951,28 +940,6 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         </div>);
     };
 
-    const briefFootFirstCellLabel = (colIdx: number): ReactNode => {
-        if (colIdx !== 0)
-            return null;
-        const dupWork = !visibleBriefIds.includes('workHours');
-        const dupBh = !visibleBriefIds.includes('billHours');
-        const dupSum = !visibleBriefIds.includes('sum');
-        return (<>
-          <div className="tt-rp-mtable__foot-summary" role="note">
-            <span className="tt-rp-mtable__foot-summary-label">Итого по видимым строкам</span>
-          </div>
-          {dupWork ? (<div className="tt-rp-mtable__foot-first-dup">
-            <ReportPreviewFooterHours decimalHours={totals.hDisplay} clockTitle="Сумма отработанных часов (ч:мм) по видимым строкам" decTitle="Сумма отработанных часов в десятичных часах" showDecimal={false}/>
-          </div>) : null}
-          {dupBh ? (<div className="tt-rp-mtable__foot-first-dup">
-            <ReportPreviewFooterHours decimalHours={totals.bhDisplay} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах" showDecimal={false}/>
-          </div>) : null}
-          {dupSum ? (<div className="tt-rp-mtable__foot-first-dup tt-rp-mtable__foot-first-dup--money">
-            <span className="tt-rp-mtable__sum-val tt-rp-mtable__sum-val--foot">{fmtAmtWithIso(totals.atp, totals.cur)}</span>
-          </div>) : null}
-        </>);
-    };
-
     const renderBriefHeaderCell = (colId: TimeBriefColumnId): ReactNode => {
         switch (colId) {
             case 'employee':
@@ -982,11 +949,17 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                     {readOnlyUi ? null : employeeColumnFilterSlot}
                   </div>
                 </th>);
-            case 'datetime':
-                return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--brief-when tt-rp-brief-th">
+            case 'recordDate':
+                return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--brief-date tt-rp-brief-th">
                   <div className="tt-rp-brief-th__row">
-                    <span className="tt-rp-brief-th__label">Дата и время записи</span>
+                    <span className="tt-rp-brief-th__label">Дата записи</span>
                     {readOnlyUi ? null : (<ReportPreviewDateTimeFilterPopover whenQuery={bfWhen} onWhenQueryChange={setBfWhen} recordedOrder={bfRecordedOrder} onRecordedOrderChange={setBfRecordedOrder}/>)}
+                  </div>
+                </th>);
+            case 'recordTime':
+                return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--brief-time tt-rp-brief-th">
+                  <div className="tt-rp-brief-th__row">
+                    <span className="tt-rp-brief-th__label">Время записи</span>
                   </div>
                 </th>);
             case 'task':
@@ -999,8 +972,8 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             case 'note':
                 return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--comment tt-rp-brief-th">
                   <div className="tt-rp-brief-th__row">
-                    <span className="tt-rp-brief-th__label" title="Поле заметки и описания (как в данных)">Заметка, описание</span>
-                    {readOnlyUi ? null : (<ReportPreviewTextFilterPopover aria-label="Фильтр: заметка и описание" title="Поиск по тексту" value={bfNote} onChange={setBfNote} placeholder="Текст…" hint="По note и description строки."/>)}
+                    <span className="tt-rp-brief-th__label" title="Поле заметки и описания (как в данных)">Описание</span>
+                    {readOnlyUi ? null : (<ReportPreviewTextFilterPopover aria-label="Фильтр: описание" title="Поиск по тексту" value={bfNote} onChange={setBfNote} placeholder="Текст…" hint="По note и description строки."/>)}
                   </div>
                 </th>);
             case 'workHours':
@@ -1035,9 +1008,13 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         switch (colId) {
             case 'employee':
                 return renderEmployeeBodyCell(colId, r, i, wk);
-            case 'datetime':
-                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--brief-dt">
-                  {readOnlyUi ? (<TimePreviewBriefDateTimeReadonly r={r}/>) : (<TimePreviewBriefDateTimeCell r={r} onPatch={onPatch} userName={r.userName} weekLocked={wk}/>)}
+            case 'recordDate':
+                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--brief-date">
+                  {readOnlyUi ? (<TimePreviewBriefDateReadonly r={r}/>) : (<TimePreviewBriefDateCell r={r} onPatch={onPatch} weekLocked={wk}/>)}
+                </td>);
+            case 'recordTime':
+                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--brief-time">
+                  {readOnlyUi ? (<TimePreviewBriefTimeReadonly r={r}/>) : (<TimePreviewBriefTimeCell r={r} onPatch={onPatch} userName={r.userName}/>)}
                 </td>);
             case 'task':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
@@ -1091,63 +1068,6 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             default:
                 return null;
         }
-    };
-
-    const renderBriefFooterCell = (colId: TimeBriefColumnId, colIdx: number): ReactNode => {
-        switch (colId) {
-            case 'employee':
-            case 'datetime':
-            case 'task':
-            case 'note':
-                return (<td key={`foot-${colId}-${colIdx}`} className={`tt-rp-mtable__td tt-rp-mtable__td--foot ${colIdx === 0 ? 'tt-rp-mtable__td--foot-label' : 'tt-rp-mtable__td--muted'}`}>
-                  {colIdx === 0 ? briefFootFirstCellLabel(colIdx) : '—'}
-                </td>);
-            case 'workHours':
-                return (<td key={`foot-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot">
-                  {briefFootFirstCellLabel(colIdx)}
-                  <ReportPreviewFooterHours decimalHours={totals.hDisplay} clockTitle="Сумма отработанных часов (ч:мм) по видимым строкам" decTitle="Сумма отработанных часов в десятичных часах" showDecimal={false}/>
-                </td>);
-            case 'billHours':
-                return (<td key={`foot-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot">
-                  {briefFootFirstCellLabel(colIdx)}
-                  <ReportPreviewFooterHours decimalHours={totals.bhDisplay} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах" showDecimal={false}/>
-                </td>);
-            case 'sum':
-                return (<td key={`foot-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot tt-rp-mtable__td--sum-ro" title="Сумма к оплате по видимым строкам">
-                  {briefFootFirstCellLabel(colIdx)}
-                  <span className="tt-rp-mtable__sum-val tt-rp-mtable__sum-val--foot">{fmtAmtWithIso(totals.atp, totals.cur)}</span>
-                </td>);
-            case 'actions':
-                return (<td key={`foot-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--brief-actions tt-rp-mtable__td--brief-actions--foot" aria-hidden="true"/>);
-            default:
-                return null;
-        }
-    };
-
-    const fullFootFirstCellLabel = (colIdx: number): ReactNode => {
-        if (colIdx !== 0)
-            return null;
-        const dupBh = !visibleFullIds.includes('billableHours');
-        const dupSum = !visibleFullIds.includes('amountToPay');
-        const dupCost = !visibleFullIds.includes('costAmount');
-        const dupSrc = !visibleFullIds.includes('sourceEntryCount');
-        const dupCur = !visibleFullIds.includes('currency');
-        return (<>
-          <div className="tt-rp-mtable__foot-summary" role="note">
-            <span className="tt-rp-mtable__foot-summary-label">Итого по видимым строкам</span>
-          </div>
-          {dupBh ? (<div className="tt-rp-mtable__foot-first-dup">
-            <ReportPreviewFooterHours decimalHours={totals.bhDisplay} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах" showDecimal={false}/>
-          </div>) : null}
-          {dupSum ? (<div className="tt-rp-mtable__foot-first-dup tt-rp-mtable__foot-first-dup--money">
-            <span className="tt-rp-mtable__sum-val tt-rp-mtable__sum-val--foot">{fmtAmtWithIso(totals.atp, totals.cur)}</span>
-          </div>) : null}
-          {dupCost ? (<div className="tt-rp-mtable__foot-first-dup tt-rp-mtable__foot-first-dup--money">
-            <span className="tt-rp-mtable__sum-val tt-rp-mtable__sum-val--foot">{fmtAmtWithIso(totals.cost, totals.cur)}</span>
-          </div>) : null}
-          {dupSrc ? (<div className="tt-rp-mtable__foot-first-dup">{totals.src}</div>) : null}
-          {dupCur ? (<div className="tt-rp-mtable__foot-first-dup">{totals.cur}</div>) : null}
-        </>);
     };
 
     const renderFullHeaderCell = (colId: TimeFullColumnId): ReactNode => {
@@ -1380,99 +1300,28 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         }
     };
 
-    const renderFullFooterCell = (colId: TimeFullColumnId, colIdx: number): ReactNode => {
-        const labelOnly = (): ReactNode => (<td key={`ff-${colId}-${colIdx}`} className={`tt-rp-mtable__td tt-rp-mtable__td--foot ${colIdx === 0 ? 'tt-rp-mtable__td--foot-label' : 'tt-rp-mtable__td--muted'}`}>
-          {colIdx === 0 ? fullFootFirstCellLabel(colIdx) : '—'}
-        </td>);
-        switch (colId) {
-            case 'rn':
-            case 'employee':
-            case 'authUserId':
-            case 'employeePosition':
-            case 'workDate':
-            case 'recordedAt':
-            case 'clientId':
-            case 'clientName':
-            case 'projectId':
-            case 'projectName':
-            case 'projectCode':
-            case 'task':
-            case 'note':
-                return labelOnly();
-            case 'billableHours':
-                return (<td key={`ff-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot">
-                  {fullFootFirstCellLabel(colIdx)}
-                  <ReportPreviewFooterHours decimalHours={totals.bhDisplay} clockTitle="Сумма оплачиваемых часов (ч:мм) по видимым строкам" decTitle="Сумма оплачиваемых часов в десятичных часах" showDecimal={false}/>
-                </td>);
-            case 'isBillable':
-            case 'taskBillableByDefault':
-            case 'isInvoiced':
-            case 'isPaid':
-            case 'isWeekSubmitted':
-            case 'billableRate':
-            case 'costRate':
-                return labelOnly();
-            case 'amountToPay':
-                return (<td key={`ff-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot">
-                  {fullFootFirstCellLabel(colIdx)}
-                  <span className="tt-rp-mtable__sum-val tt-rp-mtable__sum-val--foot">{fmtAmtWithIso(totals.atp, totals.cur)}</span>
-                </td>);
-            case 'costAmount':
-                return (<td key={`ff-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot">
-                  {fullFootFirstCellLabel(colIdx)}
-                  <span className="tt-rp-mtable__sum-val tt-rp-mtable__sum-val--foot">{fmtAmtWithIso(totals.cost, totals.cur)}</span>
-                </td>);
-            case 'sourceEntryCount':
-                return (<td key={`ff-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot" title="Сумма sourceEntryCount по видимым строкам">
-                  {fullFootFirstCellLabel(colIdx)}
-                  {totals.src}
-                </td>);
-            case 'currency':
-                return (<td key={`ff-${colId}-${colIdx}`} className="tt-rp-mtable__td tt-rp-mtable__td--foot">
-                  {fullFootFirstCellLabel(colIdx)}
-                  {totals.cur}
-                </td>);
-            case 'externalReferenceUrl':
-            case 'invoiceId':
-            case 'invoiceNumber':
-                return labelOnly();
-            default:
-                return null;
-        }
-    };
-
     const tableBlock = (<div className={`tt-rp-mtable-wrap${tableFullscreen ? ' tt-rp-mtable-wrap--fullscreen' : ''}`}>
       <div className="tt-rp-mtable-card">
-        <header className="tt-rp-mtable-head tt-rp-mtable-head--calm">
-          <div className="tt-rp-mtable-head__top">
-            <div className="tt-rp-mtable-head-text">
-              <div className="tt-rp-mtable-title-row">
-                <h2 className="tt-rp-mtable-title">{projectTitle}</h2>
-                {readOnlyUi ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--ro" title="Редактирование недоступно">
-                    Только просмотр
-                  </span>) : timeSave?.ui === 'saving'
-                    ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--saving" title="Сохранение на сервер">
-                        Сохранение…
-                      </span>)
-                    : timeSave?.ui === 'saved'
-                        ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--ok" title={timeSave.message ?? 'Сохранено в API'}>
-                            Сохранено
-                          </span>)
-                        : timeSave?.ui === 'err'
-                            ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--err" title={timeSave.message ?? 'Ошибка'} role="status">
-                                Ошибка
-                              </span>)
-                            : null}
-              </div>
+        <header className="tt-rp-mtable-head tt-rp-mtable-head--calm tt-rp-mtable-head--composed">
+          <div className="tt-rp-mtable-toolbar tt-rp-mtable-toolbar--calm tt-rp-mtable-toolbar--composed" role="toolbar" aria-label="Действия отчёта">
+            <div className="tt-rp-mtable-title-row">
+              <h2 className="tt-rp-mtable-title">{projectTitle}</h2>
+              {readOnlyUi ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--ro" title="Редактирование недоступно">
+                  Только просмотр
+                </span>) : timeSave?.ui === 'saving'
+                  ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--saving" title="Сохранение на сервер">
+                      Сохранение…
+                    </span>)
+                  : timeSave?.ui === 'saved'
+                      ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--ok" title={timeSave.message ?? 'Сохранено в API'}>
+                          Сохранено
+                        </span>)
+                      : timeSave?.ui === 'err'
+                          ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--err" title={timeSave.message ?? 'Ошибка'} role="status">
+                              Ошибка
+                            </span>)
+                          : null}
             </div>
-            <div className="tt-rp-mtable-head__aside">
-              <button type="button" className="tt-rp-mtable-fullscreen-btn" onClick={() => setTableFullscreen((v) => !v)} title={tableFullscreen ? 'Свернуть таблицу' : 'Развернуть таблицу на весь экран'} aria-label={tableFullscreen ? 'Свернуть таблицу' : 'Развернуть таблицу на весь экран'} aria-pressed={tableFullscreen}>
-                <IcoTableFullscreen exit={tableFullscreen} />
-              </button>
-            </div>
-          </div>
-
-          <div className="tt-rp-mtable-toolbar tt-rp-mtable-toolbar--calm" role="toolbar" aria-label="Действия отчёта">
             <label className="tt-rp-mtable-search">
               <span className="tt-rp-mtable-search__ico" aria-hidden>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
@@ -1530,6 +1379,9 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                     </button>) : null}
                 </div>) : null}
               </div>) : (<PreviewExcelDownloadBtn onDownloadExcel={onDownloadExcel} downloadExcelBusy={downloadExcelBusy} exportRows={rowsForTotals}/>)}
+              <button type="button" className="tt-rp-mtable-fullscreen-btn" onClick={() => setTableFullscreen((v) => !v)} title={tableFullscreen ? 'Свернуть таблицу' : 'Развернуть таблицу на весь экран'} aria-label={tableFullscreen ? 'Свернуть таблицу' : 'Развернуть таблицу на весь экран'} aria-pressed={tableFullscreen}>
+                <IcoTableFullscreen exit={tableFullscreen} />
+              </button>
             </div>
           </div>
         </header>
@@ -1549,22 +1401,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             </thead>
             <tbody>
               <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={displayRows.length} colSpan={fullTableColSpan} estimateRowHeight={56} renderRow={renderFullDataRow}/>
-              {footerSpacerPx > 0 ? (<tr className="tt-rp-mtable__foot-spacer" aria-hidden>
-                <td colSpan={fullTableColSpan} style={{ height: footerSpacerPx, padding: 0, border: 'none' }}/>
-              </tr>) : null}
             </tbody>
-            <tfoot ref={tfootRef}>
-              <tr className="tt-rp-mtable__foot">
-                <ReportRowSelectFootCell onSelectUserName={onSelectUserName}/>
-                {visibleFullIds.map((colId, colIdx) => renderFullFooterCell(colId, colIdx))}
-                {showEntryActions ? (<td key="full-actions-foot" className="tt-rp-mtable__td tt-rp-mtable__td--foot tt-rp-mtable__td--brief-actions" aria-hidden/>) : null}
-              </tr>
-              {footerExtras ? (<tr className="tt-rp-mtable__foot-sign">
-                <td colSpan={fullTableColSpan} className="tt-rp-mtable__td tt-rp-mtable__td--foot-sign">
-                  {footerExtras}
-                </td>
-              </tr>) : null}
-            </tfoot>
           </table>) : (<table className="tt-rp-mtable tt-rp-mtable--time-brief">
             <thead>
               <tr>
@@ -1574,23 +1411,21 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             </thead>
             <tbody>
               <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={displayRows.length} colSpan={briefTableColSpan} estimateRowHeight={52} renderRow={renderBriefDataRow}/>
-              {footerSpacerPx > 0 ? (<tr className="tt-rp-mtable__foot-spacer" aria-hidden>
-                <td colSpan={briefTableColSpan} style={{ height: footerSpacerPx, padding: 0, border: 'none' }}/>
-              </tr>) : null}
             </tbody>
-            <tfoot ref={tfootRef}>
-              <tr className="tt-rp-mtable__foot">
-                <ReportRowSelectFootCell onSelectUserName={onSelectUserName}/>
-                {visibleBriefIds.map((colId, colIdx) => renderBriefFooterCell(colId, colIdx))}
-              </tr>
-              {footerExtras ? (<tr className="tt-rp-mtable__foot-sign">
-                <td colSpan={briefTableColSpan} className="tt-rp-mtable__td tt-rp-mtable__td--foot-sign">
-                  {footerExtras}
-                </td>
-              </tr>) : null}
-            </tfoot>
           </table>)}
         </div>
+        <footer className="tt-rp-mtable-dock" role="contentinfo" aria-label="Итоги отчёта">
+          <div className="tt-rp-mtable-dock__stats">
+            <span className="tt-rp-mtable-dock__stat">Итого за неделю: <strong>{entriesCount} {ruEntriesWord(entriesCount)}</strong></span>
+            <span className="tt-rp-mtable-dock__stat">Отработано: <strong>{dockHours}</strong></span>
+            <span className="tt-rp-mtable-dock__stat">Оплачиваемые часы: <strong>{dockBillable}</strong></span>
+            <span className="tt-rp-mtable-dock__stat">Сумма: <strong>{dockSum}</strong></span>
+          </div>
+          {footerExtras ? (<>
+            <span className="tt-rp-mtable-dock__sep" aria-hidden />
+            <div className="tt-rp-mtable-dock__aside">{footerExtras}</div>
+          </>) : null}
+        </footer>
       </div>
     </div>);
 

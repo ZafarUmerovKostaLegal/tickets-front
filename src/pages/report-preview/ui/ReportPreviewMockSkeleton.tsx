@@ -31,14 +31,20 @@ export function ReportPreviewMockSkeleton({ variant, label = 'Загрузка�
                   <th className="tt-rp-mtable__th tt-rp-mtable__th--employee-head tt-rp-brief-th">
                     <Bar className="tt-rp-skel-bar--th"/>
                   </th>
-                  <th className="tt-rp-mtable__th tt-rp-mtable__th--brief-when tt-rp-brief-th">
+                  <th className="tt-rp-mtable__th tt-rp-mtable__th--brief-date tt-rp-brief-th">
                     <Bar className="tt-rp-skel-bar--th"/>
+                  </th>
+                  <th className="tt-rp-mtable__th tt-rp-mtable__th--brief-time tt-rp-brief-th">
+                    <Bar className="tt-rp-skel-bar--th tt-rp-skel-bar--th-short"/>
                   </th>
                   <th className="tt-rp-mtable__th tt-rp-mtable__th--pick tt-rp-brief-th">
                     <Bar className="tt-rp-skel-bar--th tt-rp-skel-bar--th-short"/>
                   </th>
                   <th className="tt-rp-mtable__th tt-rp-mtable__th--comment tt-rp-brief-th">
                     <Bar className="tt-rp-skel-bar--th"/>
+                  </th>
+                  <th className="tt-rp-mtable__th tt-rp-mtable__th--num tt-rp-brief-th tt-rp-brief-th--num">
+                    <Bar className="tt-rp-skel-bar--th tt-rp-skel-bar--th-num"/>
                   </th>
                   <th className="tt-rp-mtable__th tt-rp-mtable__th--num tt-rp-brief-th tt-rp-brief-th--num">
                     <Bar className="tt-rp-skel-bar--th tt-rp-skel-bar--th-num"/>
@@ -56,14 +62,20 @@ export function ReportPreviewMockSkeleton({ variant, label = 'Загрузка�
                     <td className="tt-rp-mtable__td">
                       <Bar className="tt-rp-skel-bar--cell"/>
                     </td>
-                    <td className="tt-rp-mtable__td tt-rp-mtable__td--brief-dt">
+                    <td className="tt-rp-mtable__td tt-rp-mtable__td--brief-date">
                       <Bar className="tt-rp-skel-bar--cell tt-rp-skel-bar--cell-mid"/>
+                    </td>
+                    <td className="tt-rp-mtable__td tt-rp-mtable__td--brief-time">
+                      <Bar className="tt-rp-skel-bar--cell tt-rp-skel-bar--cell-num"/>
                     </td>
                     <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
                       <Bar className="tt-rp-skel-bar--cell tt-rp-skel-bar--cell-tall"/>
                     </td>
                     <td className="tt-rp-mtable__td tt-rp-mtable__td--comment">
                       <Bar className="tt-rp-skel-bar--cell tt-rp-skel-bar--cell-comment"/>
+                    </td>
+                    <td className="tt-rp-mtable__td tt-rp-mtable__td--num">
+                      <Bar className="tt-rp-skel-bar--cell tt-rp-skel-bar--cell-num"/>
                     </td>
                     <td className="tt-rp-mtable__td tt-rp-mtable__td--num">
                       <Bar className="tt-rp-skel-bar--cell tt-rp-skel-bar--cell-num"/>
@@ -84,6 +96,10 @@ export function ReportPreviewMockSkeleton({ variant, label = 'Загрузка�
                   <td className="tt-rp-mtable__td" aria-hidden/>
                   <td className="tt-rp-mtable__td" aria-hidden/>
                   <td className="tt-rp-mtable__td" aria-hidden/>
+                  <td className="tt-rp-mtable__td" aria-hidden/>
+                  <td className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot">
+                    <Bar className="tt-rp-skel-bar--cell tt-rp-skel-bar--cell-num"/>
+                  </td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--num tt-rp-mtable__td--foot">
                     <Bar className="tt-rp-skel-bar--cell tt-rp-skel-bar--cell-num"/>
                   </td>

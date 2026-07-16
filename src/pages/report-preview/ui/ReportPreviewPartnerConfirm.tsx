@@ -222,7 +222,6 @@ export function ReportPreviewPartnerSignFooter({ projectId, dateFrom, dateTo, us
     }, [userId, confirmedForProject, pendingForProject, sessionSnapshot]);
     const fullyConfirmed = confirmedForProject?.status === 'fully_confirmed';
     const canPartnerSign = !fullyConfirmed && !mySig;
-    const periodLabel = formatIsoRangeTitle(df, dt, { prefix: false });
     const handlePartnerConfirmSubmit = async () => {
         if (confirmBusy || userId == null || !canPartnerSign || listsLoad !== 'ok')
             return;
@@ -265,13 +264,18 @@ export function ReportPreviewPartnerSignFooter({ projectId, dateFrom, dateTo, us
     };
     if (userId == null || !pid || !canPartnerSign)
         return null;
-    return (<div className="tt-rp-preview__partner-sign-strip" role="region" aria-label="Подпись отчёта">
-        <div className="tt-rp-preview__partner-sign-strip-text">
-            <span className="tt-rp-preview__partner-sign-strip-title">Нужна ваша подпись</span>
-            <span className="tt-rp-preview__partner-sign-strip-hint">{periodLabel}</span>
-        </div>
+    return (<div className="tt-rp-preview__partner-sign-aside" role="group" aria-label="Подпись отчёта">
+        <span className="tt-rp-preview__partner-sign-status">
+          <span className="tt-rp-preview__partner-sign-status-ico" aria-hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden>
+              <circle cx="12" cy="12" r="10" fill="#22c55e"/>
+              <path d="M8.5 12.5l2.2 2.2 4.8-5" stroke="#fff" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+          Готово к подписи
+        </span>
         <button type="button" className="tt-rp-preview__partner-sign-btn" onClick={() => void handlePartnerConfirmSubmit()} disabled={confirmBusy || listsLoad !== 'ok'}>
-            {confirmBusy ? 'Отправка…' : listsLoad !== 'ok' ? 'Загрузка…' : 'Подписать'}
+            {confirmBusy ? 'Отправка…' : listsLoad !== 'ok' ? 'Загрузка…' : 'Подписать отчёт'}
         </button>
     </div>);
 }

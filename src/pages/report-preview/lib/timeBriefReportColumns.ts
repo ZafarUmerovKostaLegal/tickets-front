@@ -1,8 +1,8 @@
 
-
 export type TimeBriefColumnId =
     | 'employee'
-    | 'datetime'
+    | 'recordDate'
+    | 'recordTime'
     | 'task'
     | 'note'
     | 'workHours'
@@ -12,9 +12,10 @@ export type TimeBriefColumnId =
 
 export const TIME_BRIEF_COLUMN_LABELS: Record<TimeBriefColumnId, string> = {
     employee: 'Сотрудник',
-    datetime: 'Дата и время записи',
+    recordDate: 'Дата записи',
+    recordTime: 'Время записи',
     task: 'Задача',
-    note: 'Заметка, описание',
+    note: 'Описание',
     workHours: 'Отработано',
     billHours: 'Оплач. часы',
     sum: 'Сумма',
@@ -24,7 +25,8 @@ export const TIME_BRIEF_COLUMN_LABELS: Record<TimeBriefColumnId, string> = {
 
 export const TIME_BRIEF_COLUMN_ORDER_DEFAULT: TimeBriefColumnId[] = [
     'employee',
-    'datetime',
+    'recordDate',
+    'recordTime',
     'task',
     'note',
     'workHours',
@@ -33,15 +35,16 @@ export const TIME_BRIEF_COLUMN_ORDER_DEFAULT: TimeBriefColumnId[] = [
     'actions',
 ];
 
-export const TIME_BRIEF_COLUMNS_STORAGE_KEY = 'tt-rp-time-brief-columns-v1';
+export const TIME_BRIEF_COLUMNS_STORAGE_KEY = 'tt-rp-time-brief-columns-v2';
 
-const BRIEF_PREFIX_COLUMNS: TimeBriefColumnId[] = ['employee', 'datetime', 'task', 'note'];
+const BRIEF_PREFIX_COLUMNS: TimeBriefColumnId[] = ['employee', 'recordDate', 'recordTime', 'task', 'note'];
 const BRIEF_TRAILING_COLUMNS: TimeBriefColumnId[] = ['workHours', 'billHours', 'sum', 'actions'];
 
 function isBriefColumnId(x: unknown): x is TimeBriefColumnId {
     return (
         x === 'employee'
-        || x === 'datetime'
+        || x === 'recordDate'
+        || x === 'recordTime'
         || x === 'task'
         || x === 'note'
         || x === 'workHours'
@@ -49,6 +52,19 @@ function isBriefColumnId(x: unknown): x is TimeBriefColumnId {
         || x === 'sum'
         || x === 'actions'
     );
+}
+
+/** Expand legacy combined `datetime` column into date + time. */
+function expandLegacyBriefColumnIds(raw: unknown[]): unknown[] {
+    const out: unknown[] = [];
+    for (const x of raw) {
+        if (x === 'datetime') {
+            out.push('recordDate', 'recordTime');
+            continue;
+        }
+        out.push(x);
+    }
+    return out;
 }
 
 function normalizeBriefTrailingColumns(ids: TimeBriefColumnId[], includeActionsColumn: boolean): TimeBriefColumnId[] {
@@ -71,7 +87,7 @@ function normalizeBriefTrailingColumns(ids: TimeBriefColumnId[], includeActionsC
 export function sanitizeBriefColumnIds(raw: unknown[]): TimeBriefColumnId[] {
     const seen = new Set<TimeBriefColumnId>();
     const out: TimeBriefColumnId[] = [];
-    for (const x of raw) {
+    for (const x of expandLegacyBriefColumnIds(raw)) {
         if (!isBriefColumnId(x) || seen.has(x))
             continue;
         seen.add(x);
@@ -82,7 +98,8 @@ export function sanitizeBriefColumnIds(raw: unknown[]): TimeBriefColumnId[] {
 
 export function loadBriefColumnsFromStorage(includeActionsColumn: boolean): TimeBriefColumnId[] | null {
     try {
-        const s = localStorage.getItem(TIME_BRIEF_COLUMNS_STORAGE_KEY);
+        const s = localStorage.getItem(TIME_BRIEF_COLUMNS_STORAGE_KEY)
+            ?? localStorage.getItem('tt-rp-time-brief-columns-v1');
         if (!s)
             return null;
         const parsed = JSON.parse(s) as unknown;
