@@ -217,10 +217,8 @@ function isReportRowSelected(userName: string, selectedUserName: string | null |
 function timeEntryFlashTrModifier(rowKey: string, flashRowKey: string | null | undefined): string {
     return flashRowKey && flashRowKey === rowKey ? ' tt-rp-mtable__tr--flash-restored' : '';
 }
-function rowTrClass(i: number, userName: string, selectedUserName: string | null, timeWeekLocked = false): string {
+function rowTrClass(_i: number, userName: string, selectedUserName: string | null, timeWeekLocked = false): string {
     const parts = ['tt-rp-mtable__tr--pickable'];
-    if (i % 2 === 1)
-        parts.push('tt-rp-mtable__tr--alt');
     if (isReportRowSelected(userName, selectedUserName))
         parts.push('tt-rp-mtable__tr--selected');
     if (timeWeekLocked)
