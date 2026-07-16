@@ -3,6 +3,7 @@ import {
     normalizeTimeManagerClient,
     normalizeTimeManagerContact,
     normalizeTimeTrackingUserRow,
+    unwrapTimeTrackingListArray,
     type PaginatedResult,
     type TimeManagerClientContactCreatePayload,
     type TimeManagerClientContactPatchPayload,
@@ -161,9 +162,10 @@ export async function listContactsClientContacts(clientId: string): Promise<Time
     );
     await throwIfNotOk(res);
     const raw = await res.json();
-    if (!Array.isArray(raw))
+    const arr = unwrapTimeTrackingListArray(raw);
+    if (!arr)
         return [];
-    return raw.map(normalizeTimeManagerContact).filter((x): x is TimeManagerClientContactRow => x != null);
+    return arr.map(normalizeTimeManagerContact).filter((x): x is TimeManagerClientContactRow => x != null);
 }
 
 export async function createContactsClientContact(

@@ -254,9 +254,10 @@ export async function listClientContacts(clientId: string): Promise<TimeManagerC
     const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/contacts`);
     await throwIfNotOk(res);
     const raw = await res.json();
-    if (!Array.isArray(raw))
+    const arr = unwrapTimeTrackingListArray(raw);
+    if (!arr)
         return [];
-    return raw.map(normalizeTimeManagerContact).filter((x): x is TimeManagerClientContactRow => x != null);
+    return arr.map(normalizeTimeManagerContact).filter((x): x is TimeManagerClientContactRow => x != null);
 }
 export async function createClientContact(clientId: string, body: TimeManagerClientContactCreatePayload): Promise<TimeManagerClientContactRow> {
     const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/contacts`, {
