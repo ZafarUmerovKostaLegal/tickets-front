@@ -14,7 +14,7 @@ import { computeAmountUzsForApi } from '@entities/expenses/model/expenseCurrency
 import { buildExpensesListParams, EXPENSES_LIST_PAGE_SIZE, } from '@entities/expenses/model/expensesListParams';
 import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/model/coerceExpense';
 import { getUser } from '@entities/user';
-import { formatExpenseAuthorLabel, mergeExpenseAuthorFromCache, needsAuthorEnrichment, formatPartnerUserLabel, } from '@entities/expenses/model/expenseAuthor';
+import { formatExpenseApprovedByLabel, formatExpenseAuthorLabel, mergeExpenseAuthorFromCache, needsAuthorEnrichment, formatPartnerUserLabel, } from '@entities/expenses/model/expenseAuthor';
 import { canViewExpensesRequestsAndReport } from '@entities/expenses/model/expenseModeration';
 import { getCloseExpenseUi, isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, showOwnPendingModerationBlockedHint, resolveExpensePanelMode, showPayExpenseAction, showPendingApprovalModeration, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
 import { ExpensesPageBoundary } from './ExpensesPageBoundary';
@@ -223,6 +223,9 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
       </div>
       <div className="exp-table__td exp-table__td--author" role="cell">
         <span className="exp-table__author">{formatExpenseAuthorLabel(req)}</span>
+      </div>
+      <div className="exp-table__td exp-table__td--approvedby" role="cell">
+        <span className="exp-table__author">{formatExpenseApprovedByLabel(req)}</span>
       </div>
       <div className="exp-table__td exp-table__td--expdate" role="cell">
         {fmtExpenseDateCell(req.expenseDate)}
@@ -474,6 +477,9 @@ function SkeletonTableBody({ rowCount = 10 }: {
             <div className="exp-table__td exp-table__td--author">
               <SkeletonCell w="88%" h={12}/>
             </div>
+            <div className="exp-table__td exp-table__td--approvedby">
+              <SkeletonCell w="88%" h={12}/>
+            </div>
             <div className="exp-table__td exp-table__td--expdate">
               <SkeletonCell w={54} h={12}/>
             </div>
@@ -661,12 +667,34 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             try {
                 const n = normalizeExpenseRequest(r as ExpenseRequest);
                 if (!needsAuthorEnrichment(n))
-                    continue;
+                    {
+                        const approvedId = n.approvedByUserId ?? null;
+                        const approvedKnown = approvedId != null
+                            && (
+                                n.approvedBy?.displayName?.trim()
+                                || n.approvedBy?.email?.trim()
+                            );
+                        if (approvedId != null && approvedId > 0 && !approvedKnown && !authorFetchStartedRef.current.has(approvedId)) {
+                            authorFetchStartedRef.current.add(approvedId);
+                            pending.push(approvedId);
+                        }
+                        continue;
+                    }
                 const id = n.createdByUserId;
-                if (authorFetchStartedRef.current.has(id))
-                    continue;
-                authorFetchStartedRef.current.add(id);
-                pending.push(id);
+                if (!authorFetchStartedRef.current.has(id)) {
+                    authorFetchStartedRef.current.add(id);
+                    pending.push(id);
+                }
+                const approvedId = n.approvedByUserId ?? null;
+                const approvedKnown = approvedId != null
+                    && (
+                        n.approvedBy?.displayName?.trim()
+                        || n.approvedBy?.email?.trim()
+                    );
+                if (approvedId != null && approvedId > 0 && !approvedKnown && !authorFetchStartedRef.current.has(approvedId)) {
+                    authorFetchStartedRef.current.add(approvedId);
+                    pending.push(approvedId);
+                }
             }
             catch {
             }
@@ -1020,7 +1048,22 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             .map(r => {
             try {
                 const n = normalizeExpenseRequest(r);
-                return mergeExpenseAuthorFromCache(n, authorCache);
+                const withAuthor = mergeExpenseAuthorFromCache(n, authorCache);
+                const approvedId = withAuthor.approvedByUserId ?? null;
+                const approvedCached = approvedId != null ? authorCache[approvedId] : undefined;
+                if (approvedCached && !(withAuthor.approvedBy?.displayName?.trim() || withAuthor.approvedBy?.email?.trim())) {
+                    return {
+                        ...withAuthor,
+                        approvedBy: {
+                            id: approvedId ?? approvedCached.id,
+                            displayName: approvedCached.displayName ?? null,
+                            email: approvedCached.email ?? null,
+                            picture: approvedCached.picture ?? null,
+                            position: approvedCached.position ?? null,
+                        },
+                    };
+                }
+                return withAuthor;
             }
             catch {
                 return null;
@@ -1272,6 +1315,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                           </div>
                           <div className="exp-table__th exp-table__th--author" role="columnheader">
                             Автор
+                          </div>
+                          <div className="exp-table__th exp-table__th--approvedby" role="columnheader">
+                            Одобрил
                           </div>
                           <div className="exp-table__th exp-table__th--expdate" role="columnheader">
                             Дата расхода

@@ -50,6 +50,8 @@ export interface ExpenseRequest {
     updatedAt: string;
     submittedAt: string | null;
     approvedAt: string | null;
+    approvedByUserId?: number | null;
+    approvedBy?: ExpenseCreatedBy;
     rejectedAt: string | null;
     paidAt: string | null;
     paidByUserId?: number | null;

@@ -86,6 +86,17 @@ export function formatExpensePaidByLabel(req: ExpenseRequest): string {
     return '—';
 }
 
+export function formatExpenseApprovedByLabel(req: ExpenseRequest): string {
+    const ab = req.approvedBy;
+    if (ab?.displayName)
+        return ab.displayName;
+    if (ab?.email)
+        return ab.email;
+    if (req.approvedByUserId != null)
+        return `Пользователь #${req.approvedByUserId}`;
+    return '—';
+}
+
 export function formatPartnerUserLabel(req: ExpenseRequest): string {
     const p = req.partnerUser;
     if (p?.displayName?.trim())

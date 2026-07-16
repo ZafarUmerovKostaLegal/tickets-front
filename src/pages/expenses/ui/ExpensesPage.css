@@ -659,10 +659,10 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
   column-gap: 0.375rem;
 
   grid-template-columns:
-    100px minmax(0, 1fr) minmax(120px, 168px) minmax(100px, 112px) minmax(100px, 118px) minmax(100px, 122px)
+    100px minmax(0, 1fr) minmax(120px, 168px) minmax(120px, 168px) minmax(100px, 112px) minmax(100px, 118px) minmax(100px, 122px)
     minmax(118px, 132px) minmax(104px, 168px) minmax(96px, 112px) minmax(168px, 1fr) 52px;
   align-items: center;
-  min-width: 1292px;
+  min-width: 1410px;
 }
 
 .exp-table__row--head {
@@ -749,6 +749,10 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
 .exp-table__th--desc, .exp-table__td--desc { min-width: 0; }
 
 .exp-table__th--author, .exp-table__td--author {
+  min-width: 0;
+}
+
+.exp-table__th--approvedby, .exp-table__td--approvedby {
   min-width: 0;
 }
 
@@ -3482,8 +3486,8 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   .exp-table { padding: 0 1.25rem 2rem; }
   .exp-table__row {
     grid-template-columns:
-      96px minmax(0, 1fr) minmax(100px, 120px) minmax(100px, 108px) minmax(108px, 124px) minmax(100px, 118px) minmax(68px, 82px) minmax(84px, 98px) minmax(140px, 1fr) 52px;
-    min-width: 1080px;
+      96px minmax(0, 1fr) minmax(100px, 120px) minmax(100px, 120px) minmax(100px, 108px) minmax(108px, 124px) minmax(100px, 118px) minmax(68px, 82px) minmax(84px, 98px) minmax(140px, 1fr) 52px;
+    min-width: 1188px;
   }
   .exp-table__th--reimb,
   .exp-table__td--reimb { display: none; }
@@ -3492,8 +3496,8 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 @media (max-width: 1060px) and (min-width: 769px) {
   .exp-table__row {
     grid-template-columns:
-      92px minmax(0, 1fr) minmax(96px, 112px) minmax(96px, 106px) minmax(104px, 120px) minmax(96px, 112px) minmax(66px, 78px) minmax(80px, 94px) minmax(136px, 1fr) 52px;
-    min-width: 1000px;
+      92px minmax(0, 1fr) minmax(96px, 112px) minmax(96px, 112px) minmax(96px, 106px) minmax(104px, 120px) minmax(96px, 112px) minmax(66px, 78px) minmax(80px, 94px) minmax(136px, 1fr) 52px;
+    min-width: 1096px;
   }
 }
 
@@ -3501,8 +3505,8 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   .exp-table { padding: 0 0.875rem 2rem; }
   .exp-table__row {
     grid-template-columns:
-      88px minmax(0, 1fr) minmax(92px, 108px) minmax(96px, 106px) minmax(104px, 118px) minmax(108px, 148px) minmax(72px, 86px) minmax(120px, 1fr) 52px;
-    min-width: 852px;
+      88px minmax(0, 1fr) minmax(92px, 108px) minmax(92px, 108px) minmax(96px, 106px) minmax(104px, 118px) minmax(108px, 148px) minmax(72px, 86px) minmax(120px, 1fr) 52px;
+    min-width: 944px;
   }
   .exp-table__th--type,
   .exp-table__td--type { display: none; }

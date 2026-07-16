@@ -52,6 +52,13 @@ export function normalizeExpenseRequest(r: ExpenseRequest): ExpenseRequest {
     const partnerUser = partnerUserRaw != null
         ? normalizeCreatedBy(partnerUserRaw, partnerUserId ?? 0)
         : undefined;
+    const approvedByUserIdRaw = pickNumericField(x, 'approvedByUserId', 'approved_by_user_id');
+    const approvedByUserIdNum = Math.trunc(asExpenseNumber(approvedByUserIdRaw, NaN));
+    const approvedByUserId = Number.isFinite(approvedByUserIdNum) && approvedByUserIdNum > 0 ? approvedByUserIdNum : null;
+    const approvedByRaw = x.approvedBy ?? x.approved_by ?? x.approver ?? x.moderatedBy ?? x.moderated_by;
+    const approvedBy = approvedByRaw != null
+        ? normalizeCreatedBy(approvedByRaw, approvedByUserId ?? 0)
+        : undefined;
     return {
         ...r,
         createdByUserId: Number.isFinite(createdByUserId) ? createdByUserId : r.createdByUserId,
@@ -59,6 +66,8 @@ export function normalizeExpenseRequest(r: ExpenseRequest): ExpenseRequest {
         isReimbursable,
         expenseSubtype,
         expenseCategoryId,
+        approvedByUserId,
+        ...(approvedBy ? { approvedBy } : {}),
         partnerUserId,
         ...(partnerUser ? { partnerUser } : {}),
         amountUzs: asExpenseNumber(pickNumericField(x, 'amountUzs', 'amount_uzs')),
