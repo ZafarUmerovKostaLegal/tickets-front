@@ -339,6 +339,46 @@
   border: 1px solid color-mix(in srgb, #ef4444 38%, transparent);
 }
 
+.tt-reports__ctx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+}
+
+.tt-reports__ctx-menu {
+  position: fixed;
+  min-width: 11.5rem;
+  max-width: min(18rem, calc(100vw - 1rem));
+  padding: 0.3rem 0;
+  background: var(--app-surface, #fff);
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.16);
+  z-index: 12001;
+  box-sizing: border-box;
+}
+
+.tt-reports__ctx-item {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.85rem;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  text-align: left;
+  color: var(--app-text, #0f172a);
+  cursor: pointer;
+}
+
+.tt-reports__ctx-item:hover,
+.tt-reports__ctx-item:focus-visible {
+  background: var(--app-surface-soft, #f8fafc);
+  outline: none;
+}
+
 .tt-reports__partner-legend {
   display: flex;
   flex-wrap: wrap;

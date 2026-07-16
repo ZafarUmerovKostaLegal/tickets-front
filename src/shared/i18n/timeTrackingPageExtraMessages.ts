@@ -907,6 +907,8 @@ export const timeTrackingPageExtraMessages = {
             empty: 'Нет данных за выбранный период.',
             hoursAndAmount: 'часы + сумма',
             hours: 'часы',
+            contextOpen: 'Открыть',
+            contextOpenNewTab: 'Открыть в отдельной вкладке',
         },
         searchPlaceholders: {
             projectClientCode: 'Проект, клиент, код…',

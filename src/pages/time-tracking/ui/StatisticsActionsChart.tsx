@@ -15,6 +15,12 @@ import { StatisticsChartAnchor } from './StatisticsRechartsPortalTooltip';
 import type { StatisticsDailyPoint } from './statisticsChartTypes';
 import { formatChartHours, niceAxisMax } from './statisticsChartLayout';
 import {
+    CHART_BILLABLE_COLOR,
+    CHART_BILLABLE_FILL,
+    CHART_NON_BILLABLE_COLOR,
+    CHART_NON_BILLABLE_FILL,
+} from './statisticsChartColors';
+import {
     ACTIVE_DOT,
     CHART_CROSSHAIR_CURSOR,
     CHART_TOOLTIP,
@@ -93,10 +99,10 @@ export function StatisticsActionsChart({ data, title, hint }: ActionsChartProps)
 
     const series = useMemo(() => {
         const items = [
-            { key: SERIES_BILLABLE, label: t(`${s}.series.billable`), color: '#ef4444' },
+            { key: SERIES_BILLABLE, label: t(`${s}.series.billable`), color: CHART_BILLABLE_COLOR },
         ];
         if (hasNonBillable)
-            items.push({ key: SERIES_NON_BILLABLE, label: t(`${s}.series.nonBillable`), color: '#22c55e' });
+            items.push({ key: SERIES_NON_BILLABLE, label: t(`${s}.series.nonBillable`), color: CHART_NON_BILLABLE_COLOR });
         return items;
     }, [hasNonBillable, t, s]);
 
@@ -209,12 +215,12 @@ export function StatisticsActionsChart({ data, title, hint }: ActionsChartProps)
                                             dataKey="secondary"
                                             name={t(`${s}.series.nonBillable`)}
                                             stackId="hours"
-                                            stroke="#22c55e"
-                                            fill="rgba(34, 197, 94, 0.28)"
+                                            stroke={CHART_NON_BILLABLE_COLOR}
+                                            fill={CHART_NON_BILLABLE_FILL}
                                             strokeWidth={2}
                                             strokeOpacity={activeSeries && activeSeries !== SERIES_NON_BILLABLE ? 0.3 : 1}
                                             dot={false}
-                                            activeDot={{ ...ACTIVE_DOT, fill: '#22c55e', stroke: '#22c55e' }}
+                                            activeDot={{ ...ACTIVE_DOT, fill: CHART_NON_BILLABLE_COLOR, stroke: CHART_NON_BILLABLE_COLOR }}
                                             {...LINE_ANIMATION}
                                         />
                                     ) : null}
@@ -224,12 +230,12 @@ export function StatisticsActionsChart({ data, title, hint }: ActionsChartProps)
                                             dataKey="primary"
                                             name={t(`${s}.series.billable`)}
                                             stackId="hours"
-                                            stroke="#ef4444"
-                                            fill="rgba(239, 68, 68, 0.35)"
+                                            stroke={CHART_BILLABLE_COLOR}
+                                            fill={CHART_BILLABLE_FILL}
                                             strokeWidth={2}
                                             strokeOpacity={activeSeries && activeSeries !== SERIES_BILLABLE ? 0.3 : 1}
                                             dot={false}
-                                            activeDot={{ ...ACTIVE_DOT, fill: '#ef4444', stroke: '#ef4444' }}
+                                            activeDot={{ ...ACTIVE_DOT, fill: CHART_BILLABLE_COLOR, stroke: CHART_BILLABLE_COLOR }}
                                             {...LINE_ANIMATION}
                                         />
                                     ) : null}

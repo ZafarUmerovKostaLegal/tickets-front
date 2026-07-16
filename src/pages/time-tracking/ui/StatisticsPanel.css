@@ -555,7 +555,7 @@
 }
 
 .tt-statistics__split-dot--nonbillable {
-  background: color-mix(in srgb, var(--app-accent, #4f46e5) 22%, var(--app-border, #e2e8f0));
+  background: #d6d9f3;
 }
 
 .tt-statistics__split-value {
@@ -1548,11 +1548,11 @@
 }
 
 .tt-statistics__bar-list-swatch--billable {
-  background: #ef4444;
+  background: var(--app-accent, #4f46e5);
 }
 
 .tt-statistics__bar-list-swatch--nonbillable {
-  background: #22c55e;
+  background: #d6d9f3;
 }
 
 .tt-statistics__bar-list {
@@ -1644,11 +1644,11 @@
 }
 
 .tt-statistics__bar-list-fill--billable {
-  background: #ef4444;
+  background: var(--app-accent, #4f46e5);
 }
 
 .tt-statistics__bar-list-fill--nonbillable {
-  background: #22c55e;
+  background: #d6d9f3;
 }
 
 .tt-statistics__bar-list-total {

@@ -3,6 +3,8 @@ import { parseIsoDateLocal, periodToDates, REPORTS_ALL_TIME_DATE_FROM, isoDateLo
 import { readInitialReportsRangeState } from '@entities/time-tracking/lib/reportsPrefsStorage';
 import { isPeriodGranularity, type PeriodGranularity } from './reportsPanelConfig';
 export const REPORT_PREVIEW_TRANSFER_KEY = 'tt-report-preview-v1';
+export const REPORT_PREVIEW_TRANSFER_PARAM = 'ttPreviewTransfer';
+const REPORT_PREVIEW_TRANSFER_LOCAL_PREFIX = 'tt-rp-xfer-';
 export type ReportPreviewReportType = 'time' | 'expenses' | 'uninvoiced' | 'project-budget';
 export type ReportPreviewTimeGroup = 'clients' | 'projects' | 'tasks' | 'team';
 export type ReportPreviewExpenseGroup = 'clients' | 'projects' | 'categories' | 'team';
@@ -165,6 +167,104 @@ export function writeReportPreviewTransfer(payload: ReportPreviewTransferV2): vo
     catch {
     }
 }
+
+/** Store payload for a new browser tab (sessionStorage is not shared between tabs). */
+export function buildReportPreviewTransferUrl(payload: ReportPreviewTransferV2, previewPath: string): string {
+    const id = `${REPORT_PREVIEW_TRANSFER_LOCAL_PREFIX}${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    try {
+        localStorage.setItem(id, JSON.stringify(payload));
+    }
+    catch {
+        writeReportPreviewTransfer(payload);
+        return previewPath;
+    }
+    const sep = previewPath.includes('?') ? '&' : '?';
+    return `${previewPath}${sep}${REPORT_PREVIEW_TRANSFER_PARAM}=${encodeURIComponent(id)}`;
+}
+
+function parseReportPreviewTransferJson(raw: string): ReportPreviewTransferPayload | null {
+    const o = JSON.parse(raw) as unknown;
+    if (!o || typeof o !== 'object')
+        return null;
+    const rec = o as Record<string, unknown>;
+    if (!rec.filters || typeof rec.filters !== 'object')
+        return null;
+    const f = rec.filters as Record<string, unknown>;
+    const filters = coerceReportFiltersPeriod(f);
+    if (!filters)
+        return null;
+    const snapExtras = transferExtrasFromUnknown(rec);
+    if (rec.v === 2 && typeof rec.reportType === 'string') {
+        const rt = rec.reportType;
+        if (rt === 'time' && typeof rec.groupBy === 'string') {
+            const gbRaw = rec.groupBy as string;
+            const groupBy: ReportPreviewTimeGroup = gbRaw === 'clients' || gbRaw === 'projects' || gbRaw === 'tasks' || gbRaw === 'team'
+                ? gbRaw
+                : 'projects';
+            return {
+                v: 2,
+                reportType: 'time',
+                groupBy,
+                filters,
+                ...snapExtras,
+            };
+        }
+        if (rt === 'expenses' && typeof rec.groupBy === 'string') {
+            return {
+                v: 2,
+                reportType: 'expenses',
+                groupBy: rec.groupBy as ReportPreviewExpenseGroup,
+                filters,
+                ...snapExtras,
+            };
+        }
+        if (rt === 'confirmed-expenses' && typeof rec.groupBy === 'string') {
+            return {
+                v: 2,
+                reportType: 'expenses',
+                groupBy: rec.groupBy as ReportPreviewExpenseGroup,
+                filters: { ...filters, confirmed_payment_only: true },
+                ...snapExtras,
+            };
+        }
+        if (rt === 'uninvoiced') {
+            return { v: 2, reportType: 'uninvoiced', filters, ...snapExtras };
+        }
+        if (rt === 'project-budget') {
+            return { v: 2, reportType: 'project-budget', filters, ...snapExtras };
+        }
+    }
+    if (rec.v === 1) {
+        return { v: 1, filters, ...snapExtras };
+    }
+    return null;
+}
+
+function readReportPreviewTransferFromLocalParam(): ReportPreviewTransferPayload | null {
+    if (typeof window === 'undefined')
+        return null;
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const transferId = params.get(REPORT_PREVIEW_TRANSFER_PARAM)?.trim() ?? '';
+        if (!transferId.startsWith(REPORT_PREVIEW_TRANSFER_LOCAL_PREFIX))
+            return null;
+        const raw = localStorage.getItem(transferId);
+        localStorage.removeItem(transferId);
+        if (!raw)
+            return null;
+        const parsed = parseReportPreviewTransferJson(raw);
+        if (parsed) {
+            const url = new URL(window.location.href);
+            url.searchParams.delete(REPORT_PREVIEW_TRANSFER_PARAM);
+            const next = `${url.pathname}${url.search}${url.hash}`;
+            window.history.replaceState(window.history.state, '', next);
+        }
+        return parsed;
+    }
+    catch {
+        return null;
+    }
+}
 function coerceReportFiltersPeriod(f: Record<string, unknown>): ReportFiltersV2 | null {
     const dateFrom = (typeof f.dateFrom === 'string' && f.dateFrom.trim()) ||
         (typeof f.from === 'string' && f.from.trim()) ||
@@ -180,65 +280,14 @@ function coerceReportFiltersPeriod(f: Record<string, unknown>): ReportFiltersV2 
     return { ...(rest as unknown as ReportFiltersV2), dateFrom, dateTo };
 }
 export function readReportPreviewTransfer(): ReportPreviewTransferPayload | null {
+    const fromLocalParam = readReportPreviewTransferFromLocalParam();
+    if (fromLocalParam)
+        return fromLocalParam;
     try {
         const raw = sessionStorage.getItem(REPORT_PREVIEW_TRANSFER_KEY);
         if (!raw)
             return null;
-        const o = JSON.parse(raw) as unknown;
-        if (!o || typeof o !== 'object')
-            return null;
-        const rec = o as Record<string, unknown>;
-        if (!rec.filters || typeof rec.filters !== 'object')
-            return null;
-        const f = rec.filters as Record<string, unknown>;
-        const filters = coerceReportFiltersPeriod(f);
-        if (!filters)
-            return null;
-        const snapExtras = transferExtrasFromUnknown(rec);
-        if (rec.v === 2 && typeof rec.reportType === 'string') {
-            const rt = rec.reportType;
-            if (rt === 'time' && typeof rec.groupBy === 'string') {
-                const gbRaw = rec.groupBy as string;
-                const groupBy: ReportPreviewTimeGroup = gbRaw === 'clients' || gbRaw === 'projects' || gbRaw === 'tasks' || gbRaw === 'team'
-                    ? gbRaw
-                    : 'projects';
-                return {
-                    v: 2,
-                    reportType: 'time',
-                    groupBy,
-                    filters,
-                    ...snapExtras,
-                };
-            }
-            if (rt === 'expenses' && typeof rec.groupBy === 'string') {
-                return {
-                    v: 2,
-                    reportType: 'expenses',
-                    groupBy: rec.groupBy as ReportPreviewExpenseGroup,
-                    filters,
-                    ...snapExtras,
-                };
-            }
-            if (rt === 'confirmed-expenses' && typeof rec.groupBy === 'string') {
-                return {
-                    v: 2,
-                    reportType: 'expenses',
-                    groupBy: rec.groupBy as ReportPreviewExpenseGroup,
-                    filters: { ...filters, confirmed_payment_only: true },
-                    ...snapExtras,
-                };
-            }
-            if (rt === 'uninvoiced') {
-                return { v: 2, reportType: 'uninvoiced', filters, ...snapExtras };
-            }
-            if (rt === 'project-budget') {
-                return { v: 2, reportType: 'project-budget', filters, ...snapExtras };
-            }
-        }
-        if (rec.v === 1) {
-            return { v: 1, filters, ...snapExtras };
-        }
-        return null;
+        return parseReportPreviewTransferJson(raw);
     }
     catch {
         return null;

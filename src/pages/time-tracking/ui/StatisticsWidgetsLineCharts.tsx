@@ -15,6 +15,7 @@ import { useI18n } from '@shared/i18n';
 import { StatisticsWidgetEmpty } from './StatisticsWidgetEmpty';
 import { StatisticsChartAnchor } from './StatisticsRechartsPortalTooltip';
 import { formatChartHours, niceAxisMax } from './statisticsChartLayout';
+import { CHART_BILLABLE_COLOR, CHART_NON_BILLABLE_COLOR } from './statisticsChartColors';
 import type { DateLinePoint, MultiLinePoint, SimpleLinePoint } from './statisticsChartTypes';
 import {
     ACTIVE_DOT,
@@ -34,8 +35,8 @@ import {
 } from './statisticsInteractiveCharts';
 
 const TIMELINE_COLORS = {
-    primary: '#ef4444',
-    secondary: '#22c55e',
+    primary: CHART_BILLABLE_COLOR,
+    secondary: CHART_NON_BILLABLE_COLOR,
     tertiary: '#3b82f6',
 } as const;
 
@@ -171,8 +172,8 @@ export function StatisticsHoursPerDayChart({ data }: { data: DateLinePoint[] }) 
     const series = useMemo(() => (
         hasDual
             ? [
-                { key: 'billable', label: t(`${w}.billable`), color: '#4f46e5' },
-                { key: 'nonBillable', label: t(`${w}.nonBillable`), color: '#94a3b8' },
+                { key: 'billable', label: t(`${w}.billable`), color: CHART_BILLABLE_COLOR },
+                { key: 'nonBillable', label: t(`${w}.nonBillable`), color: CHART_NON_BILLABLE_COLOR },
                 { key: 'value', label: t(`${w}.total`), color: '#0ea5e9' },
             ]
             : [{ key: 'value', label: t(`${s}.chartHoursSeries`), color: '#3b82f6' }]
@@ -292,11 +293,11 @@ export function StatisticsHoursPerDayChart({ data }: { data: DateLinePoint[] }) 
                                 type="monotone"
                                 dataKey="billable"
                                 name={t(`${w}.billable`)}
-                                stroke="#4f46e5"
+                                stroke={CHART_BILLABLE_COLOR}
                                 strokeWidth={2}
                                 strokeOpacity={lineOpacity(activeSeries, 'billable')}
-                                dot={{ r: 2.5, fill: '#4f46e5', stroke: '#fff', strokeWidth: 1 }}
-                                activeDot={{ ...ACTIVE_DOT, fill: '#4f46e5', stroke: '#4f46e5' }}
+                                dot={{ r: 2.5, fill: CHART_BILLABLE_COLOR, stroke: '#fff', strokeWidth: 1 }}
+                                activeDot={{ ...ACTIVE_DOT, fill: CHART_BILLABLE_COLOR, stroke: CHART_BILLABLE_COLOR }}
                                 {...LINE_ANIMATION}
                             />
                         ) : null}
@@ -305,11 +306,11 @@ export function StatisticsHoursPerDayChart({ data }: { data: DateLinePoint[] }) 
                                 type="monotone"
                                 dataKey="nonBillable"
                                 name={t(`${w}.nonBillable`)}
-                                stroke="#94a3b8"
+                                stroke={CHART_NON_BILLABLE_COLOR}
                                 strokeWidth={2}
                                 strokeOpacity={lineOpacity(activeSeries, 'nonBillable')}
-                                dot={{ r: 2.5, fill: '#94a3b8', stroke: '#fff', strokeWidth: 1 }}
-                                activeDot={{ ...ACTIVE_DOT, fill: '#94a3b8', stroke: '#94a3b8' }}
+                                dot={{ r: 2.5, fill: CHART_NON_BILLABLE_COLOR, stroke: '#fff', strokeWidth: 1 }}
+                                activeDot={{ ...ACTIVE_DOT, fill: CHART_NON_BILLABLE_COLOR, stroke: CHART_NON_BILLABLE_COLOR }}
                                 {...LINE_ANIMATION}
                             />
                         ) : null}

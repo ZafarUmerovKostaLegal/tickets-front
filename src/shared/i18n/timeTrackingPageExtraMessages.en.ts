@@ -909,6 +909,8 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             empty: 'No data for the selected period.',
             hoursAndAmount: 'hours + amount',
             hours: 'hours',
+            contextOpen: 'Open',
+            contextOpenNewTab: 'Open in new tab',
         },
         searchPlaceholders: {
             projectClientCode: 'Project, client, code…',

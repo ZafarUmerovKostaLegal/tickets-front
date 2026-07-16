@@ -12,7 +12,8 @@ import { ForReviewReportsPanel } from './ForReviewReportsPanel';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { useAppDialog } from '@shared/ui';
 import { useI18n, ttReportGroupLabel, ttReportPeriodLabel, ttReportTypeLabel } from '@shared/i18n';
-import { writeReportPreviewTransfer, type ReportPreviewTransferV2, type ReportPreviewTimeGroup, type ReportPreviewPeriodState, } from '@entities/time-tracking/model/reportPreviewTransfer';
+import { writeReportPreviewTransfer, buildReportPreviewTransferUrl, type ReportPreviewTransferV2, type ReportPreviewTimeGroup, type ReportPreviewPeriodState, } from '@entities/time-tracking/model/reportPreviewTransfer';
+import { ReportsRowContextMenu, type ReportsRowContextMenuState } from './ReportsRowContextMenu';
 import {
   type ReportTypeV2,
   type TimeGroup,
@@ -326,6 +327,7 @@ export function ReportsPanel() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [exportBusy, setExportBusy] = useState(false);
   const [submitForReviewBusy, setSubmitForReviewBusy] = useState(false);
+  const [rowContextMenu, setRowContextMenu] = useState<ReportsRowContextMenuState | null>(null);
   const [reportPageSizeMax, setReportPageSizeMax] = useState<number | null>(null);
   const effectivePerPage = useMemo(() => {
     const cap = reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : 5000;
@@ -988,12 +990,12 @@ export function ReportsPanel() {
     writeReportPreviewTransfer(payload);
     navigate(routes.timeTrackingReportPreview);
   }
-  function openTimeProjectPreview(projectId: string) {
+  function buildTimeProjectPreviewPayload(projectId: string): ReportPreviewTransferV2 | null {
     if (tableDataLoading)
-      return;
+      return null;
     const trimmed = String(projectId ?? '').trim();
     if (!trimmed)
-      return;
+      return null;
     const period = buildPreviewTransferPeriod();
     const filters: ReportFiltersV2 = withPartnerReportScope({
       dateFrom,
@@ -1005,22 +1007,20 @@ export function ReportsPanel() {
       page: 1,
       per_page: effectivePerPage,
     });
-    const payload: ReportPreviewTransferV2 = {
+    return {
       v: 2,
       reportType: 'time',
       groupBy: 'projects',
       filters,
       period,
     };
-    writeReportPreviewTransfer(payload);
-    navigate(routes.timeTrackingReportPreview);
   }
-  function openTimeClientPreview(clientId: string) {
+  function buildTimeClientPreviewPayload(clientId: string): ReportPreviewTransferV2 | null {
     if (tableDataLoading)
-      return;
+      return null;
     const trimmed = String(clientId ?? '').trim();
     if (!trimmed)
-      return;
+      return null;
     const period = buildPreviewTransferPeriod();
     const filters: ReportFiltersV2 = withPartnerReportScope({
       dateFrom,
@@ -1032,16 +1032,50 @@ export function ReportsPanel() {
       page: 1,
       per_page: effectivePerPage,
     });
-    const payload: ReportPreviewTransferV2 = {
+    return {
       v: 2,
       reportType: 'time',
       groupBy: 'clients',
       filters,
       period,
     };
+  }
+  function openTimeProjectPreview(projectId: string) {
+    const payload = buildTimeProjectPreviewPayload(projectId);
+    if (!payload)
+      return;
     writeReportPreviewTransfer(payload);
     navigate(routes.timeTrackingReportPreview);
   }
+  function openTimeProjectPreviewInNewTab(projectId: string) {
+    const payload = buildTimeProjectPreviewPayload(projectId);
+    if (!payload)
+      return;
+    const url = buildReportPreviewTransferUrl(payload, routes.timeTrackingReportPreview);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+  function openTimeClientPreview(clientId: string) {
+    const payload = buildTimeClientPreviewPayload(clientId);
+    if (!payload)
+      return;
+    writeReportPreviewTransfer(payload);
+    navigate(routes.timeTrackingReportPreview);
+  }
+  function openTimeClientPreviewInNewTab(clientId: string) {
+    const payload = buildTimeClientPreviewPayload(clientId);
+    if (!payload)
+      return;
+    const url = buildReportPreviewTransferUrl(payload, routes.timeTrackingReportPreview);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+  const handleRowContextMenu = useCallback((kind: ReportsRowContextMenuState['kind'], clientX: number, clientY: number, id: string) => {
+    if (tableDataLoading)
+      return;
+    const trimmed = String(id ?? '').trim();
+    if (!trimmed)
+      return;
+    setRowContextMenu({ x: clientX, y: clientY, kind, id: trimmed });
+  }, [tableDataLoading]);
   async function handleExport(format: 'csv' | 'xlsx') {
     if (exportBusy)
       return;
@@ -1251,7 +1285,7 @@ export function ReportsPanel() {
               const nonBillPct = 100 - billPct;
               return (<svg viewBox="0 0 36 36" className="tt-reports__pie">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--app-accent,#4f46e5)" strokeWidth="3" strokeDasharray={`${billPct} ${100 - billPct}`} strokeDashoffset="0" transform="rotate(-90 18 18)" />
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(37,99,235,0.25)" strokeWidth="3" strokeDasharray={`${nonBillPct} ${100 - nonBillPct}`} strokeDashoffset={-billPct} transform="rotate(-90 18 18)" />
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#d6d9f3" strokeWidth="3" strokeDasharray={`${nonBillPct} ${100 - nonBillPct}`} strokeDashoffset={-billPct} transform="rotate(-90 18 18)" />
                 <text x="18" y="21.5" textAnchor="middle" fontSize="8" fill="currentColor">{Math.round(billPct)}%</text>
               </svg>);
             })()}
@@ -1313,7 +1347,7 @@ export function ReportsPanel() {
             <div className="tt-reports__pie-wrap">
               <svg viewBox="0 0 36 36" className="tt-reports__pie">
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--app-accent,#4f46e5)" strokeWidth="3" strokeDasharray={`${billPct} ${100 - billPct}`} strokeDashoffset="0" transform="rotate(-90 18 18)" />
-                <circle cx="18" cy="18" r="15.9" fill="none" stroke="rgba(37,99,235,0.25)" strokeWidth="3" strokeDasharray={`${100 - billPct} ${billPct}`} strokeDashoffset={-billPct} transform="rotate(-90 18 18)" />
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="#d6d9f3" strokeWidth="3" strokeDasharray={`${100 - billPct} ${billPct}`} strokeDashoffset={-billPct} transform="rotate(-90 18 18)" />
                 <text x="18" y="21.5" textAnchor="middle" fontSize="8" fill="currentColor">{Math.round(billPct)}%</text>
               </svg>
             </div>
@@ -1525,8 +1559,20 @@ export function ReportsPanel() {
                 {t('timeTrackingPage.reports.content.expensesEmptyHint')}
               </p>) : null}
           </>)}
-        </div>) : reportType === 'time' ? (<TimeTable groupBy={groupBy as TimeGroup} rows={sortedTimeTableRows ?? []} expanded={expandedRows} onToggle={toggleRow} onProjectRowPreview={groupBy === 'projects' ? openTimeProjectPreview : undefined} projectRowPreviewDisabled={groupBy === 'projects' ? tableDataLoading : undefined} onClientRowPreview={groupBy === 'clients' ? openTimeClientPreview : undefined} clientRowPreviewDisabled={groupBy === 'clients' ? tableDataLoading : undefined} partnerProjectBadge={partnerProjectBadgeMap ? partnerProjectBadgeFn : undefined} partnerClientBadge={partnerClientBadgeMap ? partnerClientBadgeFn : undefined} />) : isExpenseLikeReportType(reportType) ? (<ExpenseTable groupBy={groupBy as ExpenseGroup} rows={filteredTableRows as (ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam)[]} expanded={expandedRows} onToggle={toggleRow} />) : reportType === 'uninvoiced' ? (<UninvoicedTable rows={filteredTableRows as UninvoicedRow[]} expanded={expandedRows} onToggle={toggleRow} />) : (<BudgetTable rows={filteredTableRows as BudgetRow[]} expanded={expandedRows} onToggle={toggleRow} />)}
+        </div>) : reportType === 'time' ? (<TimeTable groupBy={groupBy as TimeGroup} rows={sortedTimeTableRows ?? []} expanded={expandedRows} onToggle={toggleRow} onProjectRowPreview={groupBy === 'projects' ? openTimeProjectPreview : undefined} projectRowPreviewDisabled={groupBy === 'projects' ? tableDataLoading : undefined} onClientRowPreview={groupBy === 'clients' ? openTimeClientPreview : undefined} clientRowPreviewDisabled={groupBy === 'clients' ? tableDataLoading : undefined} onProjectRowContextMenu={groupBy === 'projects' && !tableDataLoading ? (x, y, id) => handleRowContextMenu('project', x, y, id) : undefined} onClientRowContextMenu={groupBy === 'clients' && !tableDataLoading ? (x, y, id) => handleRowContextMenu('client', x, y, id) : undefined} partnerProjectBadge={partnerProjectBadgeMap ? partnerProjectBadgeFn : undefined} partnerClientBadge={partnerClientBadgeMap ? partnerClientBadgeFn : undefined} />) : isExpenseLikeReportType(reportType) ? (<ExpenseTable groupBy={groupBy as ExpenseGroup} rows={filteredTableRows as (ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam)[]} expanded={expandedRows} onToggle={toggleRow} />) : reportType === 'uninvoiced' ? (<UninvoicedTable rows={filteredTableRows as UninvoicedRow[]} expanded={expandedRows} onToggle={toggleRow} />) : (<BudgetTable rows={filteredTableRows as BudgetRow[]} expanded={expandedRows} onToggle={toggleRow} />)}
       </div>
+
+      <ReportsRowContextMenu menu={rowContextMenu} onClose={() => setRowContextMenu(null)} onOpen={(kind, id) => {
+        if (kind === 'project')
+          openTimeProjectPreview(id);
+        else
+          openTimeClientPreview(id);
+    }} onOpenNewTab={(kind, id) => {
+        if (kind === 'project')
+          openTimeProjectPreviewInNewTab(id);
+        else
+          openTimeClientPreviewInNewTab(id);
+    }} openLabel={t('timeTrackingPage.reports.table.contextOpen')} openNewTabLabel={t('timeTrackingPage.reports.table.contextOpenNewTab')} />
 
       {pagination && pagination.total_pages > 1 && !tableSearchQ && (<div className="tt-reports__pagination">
         <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={!pagination.previous_page} onClick={() => setPage((p) => p - 1)}>

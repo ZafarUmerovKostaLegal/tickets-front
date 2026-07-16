@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, type MouseEvent } from 'react';
 import { displayReportProjectLabel, type TimeRowClients, type TimeRowProjects, type TimeRowTasks, type TimeRowTeam, type TimeReportRow, } from '@entities/time-tracking';
 import { useI18n } from '@shared/i18n';
 import { fmtH, fmtAmtWithIso } from '@entities/time-tracking/lib/reportsFormatUtils';
@@ -17,7 +17,14 @@ function partnerRowBadgeClasses(badge: TimeReportPartnerRowBadge): {
         return { row: ' rp2__group-row--partner-confirmed', dot: ' rp2__group-dot--partner-confirmed' };
     return { row: '', dot: '' };
 }
-export const TimeTable = memo(function TimeTable({ groupBy, rows, expanded, onToggle, onProjectRowPreview, projectRowPreviewDisabled, onClientRowPreview, clientRowPreviewDisabled, partnerProjectBadge, partnerClientBadge, }: {
+function reportRowContextMenuHandler(e: MouseEvent, onContextMenu: ((clientX: number, clientY: number, id: string) => void) | undefined, id: string, disabled: boolean): void {
+    if (!onContextMenu || disabled)
+        return;
+    e.preventDefault();
+    e.stopPropagation();
+    onContextMenu(e.clientX, e.clientY, id);
+}
+export const TimeTable = memo(function TimeTable({ groupBy, rows, expanded, onToggle, onProjectRowPreview, projectRowPreviewDisabled, onClientRowPreview, clientRowPreviewDisabled, onProjectRowContextMenu, onClientRowContextMenu, partnerProjectBadge, partnerClientBadge, }: {
   groupBy: TimeGroup;
   rows: TimeReportRow[];
   expanded: Set<string>;
@@ -26,6 +33,8 @@ export const TimeTable = memo(function TimeTable({ groupBy, rows, expanded, onTo
   projectRowPreviewDisabled?: boolean;
   onClientRowPreview?: (clientId: string) => void;
   clientRowPreviewDisabled?: boolean;
+  onProjectRowContextMenu?: (clientX: number, clientY: number, projectId: string) => void;
+  onClientRowContextMenu?: (clientX: number, clientY: number, clientId: string) => void;
   partnerProjectBadge?: (projectId: string) => TimeReportPartnerRowBadge;
   partnerClientBadge?: (clientId: string) => TimeReportPartnerRowBadge;
 }) {
@@ -62,7 +71,7 @@ export const TimeTable = memo(function TimeTable({ groupBy, rows, expanded, onTo
           return (<div key={key} className={`rp2__group${isOpen ? ' rp2__group--open' : ''}${canToggle ? '' : ' rp2__group--leaf'}`}>
             {canToggle ? (<>
               <div className="rp2__group-row rp2__group-row--split" role="row">
-                <button type="button" className={`rp2__client-preview-btn${cliClasses.row}`} onClick={() => goClientPreview?.(r.client_id)} disabled={clientPreviewOff} title={goClientPreview ? clientAria : undefined} aria-label={goClientPreview ? clientAria : undefined}>
+                <button type="button" className={`rp2__client-preview-btn${cliClasses.row}`} onClick={() => goClientPreview?.(r.client_id)} disabled={clientPreviewOff} title={goClientPreview ? clientAria : undefined} aria-label={goClientPreview ? clientAria : undefined} onContextMenu={(e) => reportRowContextMenuHandler(e, onClientRowContextMenu, r.client_id, clientPreviewOff)}>
                   <span className={`rp2__group-name${cliBadge !== 'none' ? ' rp2__group-name--with-partner' : ''}`}>
                     <span className={`rp2__group-dot${cliClasses.dot}`} data-hash={key} aria-hidden />
                     <span className="rp2__group-title">{r.client_name}</span>
@@ -84,7 +93,7 @@ export const TimeTable = memo(function TimeTable({ groupBy, rows, expanded, onTo
                   </span>
                 </button>
               </div>
-            </>) : (<button type="button" className={`rp2__group-row rp2__group-row--button${cliClasses.row}`} onClick={() => goClientPreview?.(r.client_id)} disabled={clientPreviewOff} title={goClientPreview ? clientAria : undefined} aria-label={goClientPreview ? clientAria : undefined}>
+            </>) : (<button type="button" className={`rp2__group-row rp2__group-row--button${cliClasses.row}`} onClick={() => goClientPreview?.(r.client_id)} disabled={clientPreviewOff} title={goClientPreview ? clientAria : undefined} aria-label={goClientPreview ? clientAria : undefined} onContextMenu={(e) => reportRowContextMenuHandler(e, onClientRowContextMenu, r.client_id, clientPreviewOff)}>
               <span className={`rp2__group-name${cliBadge !== 'none' ? ' rp2__group-name--with-partner' : ''}`}>
                 <span className={`rp2__group-dot${cliClasses.dot}`} data-hash={key} aria-hidden />
                 <span className="rp2__group-title">{r.client_name}</span>
@@ -216,7 +225,7 @@ export const TimeTable = memo(function TimeTable({ groupBy, rows, expanded, onTo
             : '';
         const pjAria = goProjectPreview ? `${title}${pjPartnerNote}`.trim() : undefined;
         return (<div key={key} className="rp2__group rp2__group--leaf">
-          <button type="button" className={`rp2__group-row rp2__group-row--button${pjClasses.row}`} onClick={() => goProjectPreview?.(r.project_id)} disabled={!goProjectPreview || Boolean(projectRowPreviewDisabled)} title={goProjectPreview ? pjAria : undefined} aria-label={goProjectPreview ? pjAria : undefined}>
+          <button type="button" className={`rp2__group-row rp2__group-row--button${pjClasses.row}`} onClick={() => goProjectPreview?.(r.project_id)} disabled={!goProjectPreview || Boolean(projectRowPreviewDisabled)} title={goProjectPreview ? pjAria : undefined} aria-label={goProjectPreview ? pjAria : undefined} onContextMenu={(e) => reportRowContextMenuHandler(e, onProjectRowContextMenu, r.project_id, !goProjectPreview || Boolean(projectRowPreviewDisabled))}>
             <span className={`rp2__group-name rp2__group-name--bold${pjBadge !== 'none' ? ' rp2__group-name--with-partner' : ''}`}>
               <span className={`rp2__group-dot${pjClasses.dot}`} data-hash={key} aria-hidden />
               <span className="rp2__group-title">{r.project_name}</span>

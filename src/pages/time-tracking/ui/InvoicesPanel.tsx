@@ -1029,7 +1029,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     </div>
 
     {!listErr && (aggStatsLoading || listStatsFromAgg) && (<div className="tt-reports__summary" aria-label={t('timeTrackingPage.invoices.summary.aria')}>
-      {aggStatsLoading || !listStatsFromAgg ? (<div className="tt-reports__summary-card" style={{ gridColumn: '1 / -1' }}>
+      {aggStatsLoading || !listStatsFromAgg ? (<div className="tt-reports__summary-card tt-reports__summary-card--full">
         <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.summary.label')}</span>
         <span className="tt-reports__summary-value" style={{ fontSize: '0.95rem' }}>{aggStatsLoading ? t('timeTrackingPage.common.loading') : '—'}</span>
       </div>) : (<>
