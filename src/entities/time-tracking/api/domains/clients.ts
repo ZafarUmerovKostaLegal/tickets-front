@@ -66,9 +66,9 @@ export function normalizeTimeManagerContact(raw: unknown): TimeManagerClientCont
         return null;
     return {
         id,
-        name: readStr(o.name) ?? '',
-        phone: readStr(o.phone),
-        email: readStr(o.email),
+        name: readStr(o.name ?? o.contactName ?? o.contact_name) ?? '',
+        phone: readStr(o.phone ?? o.contactPhone ?? o.contact_phone),
+        email: readStr(o.email ?? o.contactEmail ?? o.contact_email),
         sort_order: readNumOrNull(o.sortOrder ?? o.sort_order),
     };
 }

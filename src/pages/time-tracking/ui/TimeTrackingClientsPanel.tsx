@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, useId, useLayoutEffe
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatedLink, SearchableSelect, useAppDialog } from '@shared/ui';
-import { listTimeManagerClients, listClientProjects, getTimeManagerClient, createTimeManagerClient, patchTimeManagerClient, deleteTimeManagerClient, createClientContact, patchClientContact, deleteClientContact, fetchProjectsBudgetMetrics, applyBudgetMetricsToProjects, patchClientProject, deleteClientProject, isForbiddenError, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientContactRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
+import { listTimeManagerClients, listClientProjects, getTimeManagerClient, createTimeManagerClient, patchTimeManagerClient, deleteTimeManagerClient, listClientContacts, createClientContact, patchClientContact, deleteClientContact, fetchProjectsBudgetMetrics, applyBudgetMetricsToProjects, patchClientProject, deleteClientProject, isForbiddenError, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientContactRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { Pagination } from '@shared/ui/Pagination';
 import { clientRowSearchText } from '@pages/time-tracking/lib/clientRowSearchText';
@@ -490,8 +490,16 @@ function TimeManagerClientModal({ mode, initial, canManage, onClose, onSaved }: 
         if (!clientId)
             return;
         try {
-            const row = await getTimeManagerClient(clientId);
-            setExtraContacts(row.extra_contacts ?? []);
+            const [row, listed] = await Promise.all([
+                getTimeManagerClient(clientId),
+                listClientContacts(clientId).catch(() => [] as TimeManagerClientContactRow[]),
+            ]);
+            const byId = new Map<string, TimeManagerClientContactRow>();
+            for (const c of [...(row.extra_contacts ?? []), ...listed]) {
+                if (c?.id)
+                    byId.set(c.id, c);
+            }
+            setExtraContacts([...byId.values()]);
         }
         catch {
         }

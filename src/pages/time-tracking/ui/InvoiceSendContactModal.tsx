@@ -4,6 +4,7 @@ import {
     listClientContacts,
     type TimeManagerClientContactRow,
 } from '@entities/time-tracking';
+import { listContactsClientContacts } from '@entities/contacts';
 import { useI18n } from '@shared/i18n';
 import { AddClientContactForClientModal } from './AddClientContactForClientModal';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
@@ -28,6 +29,30 @@ export type InvoiceSendContactModalProps = {
 
 function optionHasEmail(opt: ContactOption): boolean {
     return Boolean(opt.email?.trim());
+}
+
+function mergeContactRows(...lists: TimeManagerClientContactRow[][]): TimeManagerClientContactRow[] {
+    const byId = new Map<string, TimeManagerClientContactRow>();
+    for (const list of lists) {
+        for (const row of list) {
+            const id = String(row.id ?? '').trim();
+            if (!id)
+                continue;
+            const prev = byId.get(id);
+            if (!prev) {
+                byId.set(id, row);
+                continue;
+            }
+            byId.set(id, {
+                ...prev,
+                ...row,
+                name: row.name.trim() || prev.name,
+                email: row.email?.trim() || prev.email,
+                phone: row.phone?.trim() || prev.phone,
+            });
+        }
+    }
+    return [...byId.values()];
 }
 
 function buildOptions(
@@ -63,6 +88,16 @@ function buildOptions(
 function pickDefaultKey(options: ContactOption[]): string {
     const withEmail = options.find(optionHasEmail);
     return withEmail?.key ?? '';
+}
+
+async function loadExtraContacts(clientId: string, embedded: TimeManagerClientContactRow[] | undefined): Promise<TimeManagerClientContactRow[]> {
+    const settled = await Promise.allSettled([
+        listClientContacts(clientId),
+        listContactsClientContacts(clientId),
+    ]);
+    const fromTt = settled[0].status === 'fulfilled' ? settled[0].value : [];
+    const fromContacts = settled[1].status === 'fulfilled' ? settled[1].value : [];
+    return mergeContactRows(fromTt, fromContacts, embedded ?? []);
 }
 
 export function InvoiceSendContactModal({
@@ -104,16 +139,14 @@ export function InvoiceSendContactModal({
         setLoading(true);
         setLoadError(null);
         try {
-            const [client, contacts] = await Promise.all([
-                getTimeManagerClient(clientId),
-                listClientContacts(clientId),
-            ]);
+            const client = await getTimeManagerClient(clientId);
             setClientArchived(Boolean(client.is_archived));
+            const extras = await loadExtraContacts(clientId, client.extra_contacts);
             applyLoaded(
                 client.contact_name,
-                client.contact_email,
-                client.contact_phone,
-                contacts.length > 0 ? contacts : (client.extra_contacts ?? []),
+                client.contact_email ?? client.email,
+                client.contact_phone ?? client.phone,
+                extras,
                 preferKey,
             );
         }
