@@ -17,7 +17,7 @@ RUN npm ci
 COPY scripts/copy-twemoji-assets.mjs scripts/copy-twemoji-assets.mjs
 RUN node scripts/copy-twemoji-assets.mjs
 
-COPY index.html vite.config.ts tsconfig.json ./
+COPY index.html vite.config.ts tsconfig.json tsconfig.build.json ./
 COPY public ./public
 COPY scripts ./scripts
 COPY src ./src
