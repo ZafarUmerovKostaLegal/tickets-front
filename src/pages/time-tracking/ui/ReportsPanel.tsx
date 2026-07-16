@@ -1274,20 +1274,26 @@ export function ReportsPanel() {
           </div>
         </div>
         {kpi.billableByCurrency.length === 0 ? (<div className="tt-reports__summary-card tt-reports__summary-amount">
-          <span className="tt-reports__summary-label tt-reports__summary-label--stack">
-            <span className="tt-reports__summary-label-primary">{t('timeTrackingPage.reports.kpi.billableAmount')}</span>
-          </span>
+          <span className="tt-reports__summary-label">{t('timeTrackingPage.reports.kpi.billableAmount')}</span>
           <span className="tt-reports__summary-value">—</span>
-        </div>) : (kpi.billableByCurrency.map((bc) => (<div key={bc.currency} className="tt-reports__summary-card tt-reports__summary-amount">
-          <span className="tt-reports__summary-label tt-reports__summary-label--stack">
+        </div>) : kpi.billableByCurrency.length === 1 ? (<div className="tt-reports__summary-card tt-reports__summary-amount">
+          <span className="tt-reports__summary-label tt-reports__summary-label--inline">
             <span className="tt-reports__summary-label-primary">{t('timeTrackingPage.reports.kpi.billableAmount')}</span>
-            <span className="tt-reports__summary-label-accent">{bc.currency}</span>
+            <span className="tt-reports__summary-label-accent">{kpi.billableByCurrency[0]!.currency}</span>
           </span>
-          <span className="tt-reports__summary-value">{fmtAmtWithIso(bc.amount, bc.currency)}</span>
-        </div>)))}
-        {reportType === 'time' && kpi.billableByCurrency.length > 1 && (<p className="tt-reports__summary-footnote">
-          {t('timeTrackingPage.reports.kpi.multiCurrencyFootnote')}
-        </p>)}
+          <span className="tt-reports__summary-value">{fmtAmtWithIso(kpi.billableByCurrency[0]!.amount, kpi.billableByCurrency[0]!.currency)}</span>
+        </div>) : (<div className="tt-reports__summary-card tt-reports__summary-amount tt-reports__summary-amount--multi">
+          <span className="tt-reports__summary-label">{t('timeTrackingPage.reports.kpi.billableAmount')}</span>
+          <ul className="tt-reports__summary-currencies">
+            {kpi.billableByCurrency.map((bc) => (<li key={bc.currency} className="tt-reports__summary-currency-row">
+              <span className="tt-reports__summary-label-accent">{bc.currency}</span>
+              <span className="tt-reports__summary-currency-amt">{fmtAmtWithIso(bc.amount, bc.currency)}</span>
+            </li>))}
+          </ul>
+          {reportType === 'time' ? (<p className="tt-reports__summary-footnote tt-reports__summary-footnote--in-card">
+            {t('timeTrackingPage.reports.kpi.multiCurrencyFootnote')}
+          </p>) : null}
+        </div>)}
         {reportType === 'time' && (<div className="tt-reports__summary-options" role="group" aria-label={t('timeTrackingPage.reports.kpi.timeOptionsAria')}>
           <label className="tt-reports__summary-check">
             <input type="checkbox" checked={includeFixed} onChange={(e) => { setIncludeFixed(e.target.checked); setPage(1); }} />
