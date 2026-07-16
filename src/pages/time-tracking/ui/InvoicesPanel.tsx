@@ -247,7 +247,10 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const resumeLoadProjectIdRef = useRef<string | null>(null);
   const [clients, setClients] = useState<TimeManagerClientRow[]>([]);
+  const [activeProjectsAll, setActiveProjectsAll] = useState<TimeManagerClientProjectRow[]>([]);
   const [clientIdsWithActiveProjects, setClientIdsWithActiveProjects] = useState<Set<string>>(() => new Set());
+  const [confirmedProjectIdsForCreate, setConfirmedProjectIdsForCreate] = useState<Set<string>>(() => new Set());
+  const [confirmedClientIdsForCreate, setConfirmedClientIdsForCreate] = useState<Set<string>>(() => new Set());
   const [clientsErr, setClientsErr] = useState<string | null>(null);
   const [items, setItems] = useState<InvoiceDto[]>([]);
   const [listLoading, setListLoading] = useState(true);
@@ -330,8 +333,8 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     return m;
   }, [clients]);
   const clientsForCreate = useMemo(
-    () => clients.filter((c) => clientIdsWithActiveProjects.has(c.id)),
-    [clients, clientIdsWithActiveProjects],
+    () => clients.filter((c) => clientIdsWithActiveProjects.has(c.id) && confirmedClientIdsForCreate.has(c.id)),
+    [clients, clientIdsWithActiveProjects, confirmedClientIdsForCreate],
   );
   const clientFilterSearchItems = useMemo(() => [{ id: '', name: t('timeTrackingPage.common.allClients'), search: t('timeTrackingPage.invoices.filters.allClientsSearch') }, ...clients.map((c) => ({
     id: c.id,
@@ -388,12 +391,15 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       listAllClientProjectsMerged(false),
     ])
       .then(([clientRows, projectRows]) => {
+        const activeProjects = projectRows.filter((p) => isActiveTimeManagerProjectRow(p));
         setClients(clientRows.filter(isActiveTimeManagerClientRow));
-        setClientIdsWithActiveProjects(collectClientIdsFromProjects(projectRows));
+        setActiveProjectsAll(activeProjects);
+        setClientIdsWithActiveProjects(collectClientIdsFromProjects(activeProjects));
         setClientsErr(null);
       })
       .catch((e: unknown) => {
         setClients([]);
+        setActiveProjectsAll([]);
         setClientIdsWithActiveProjects(new Set());
         setClientsErr(isForbiddenError(e) ? t('timeTrackingPage.invoices.errors.noClientAccess') : (e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic')));
       });
@@ -496,6 +502,39 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     loadClients();
   }, [loadClients]);
   useEffect(() => {
+    let cancelled = false;
+    const dateFrom = unbilledFrom.trim().slice(0, 10);
+    const dateTo = unbilledTo.trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(dateTo)) {
+      setConfirmedProjectIdsForCreate(new Set());
+      setConfirmedClientIdsForCreate(new Set());
+      return;
+    }
+    void listPartnerReportConfirmationsConfirmed({ dateFrom, dateTo })
+      .then((rows) => {
+        if (cancelled)
+          return;
+        const confirmed = rows.filter((r) => String(r.status ?? '').trim().toLowerCase() === 'fully_confirmed');
+        const projectIds = new Set(confirmed.map((r) => String(r.projectId ?? '').trim()).filter(Boolean));
+        const clientIds = new Set<string>();
+        for (const p of activeProjectsAll) {
+          if (projectIds.has(String(p.id)))
+            clientIds.add(String(p.client_id));
+        }
+        setConfirmedProjectIdsForCreate(projectIds);
+        setConfirmedClientIdsForCreate(clientIds);
+      })
+      .catch(() => {
+        if (cancelled)
+          return;
+        setConfirmedProjectIdsForCreate(new Set());
+        setConfirmedClientIdsForCreate(new Set());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeProjectsAll, unbilledFrom, unbilledTo]);
+  useEffect(() => {
     if (clientsErr)
       pushToast({ message: clientsErr, variant: 'warning' });
   }, [clientsErr, pushToast]);
@@ -520,9 +559,9 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       return;
     }
     listAllClientProjectsForClientMerged(createClientId)
-      .then((rows) => setProjects(rows.filter((p) => isActiveTimeManagerProjectRow(p))))
+      .then((rows) => setProjects(rows.filter((p) => isActiveTimeManagerProjectRow(p) && confirmedProjectIdsForCreate.has(String(p.id)))))
       .catch(() => setProjects([]));
-  }, [createClientId]);
+  }, [createClientId, confirmedProjectIdsForCreate]);
   useEffect(() => {
     if (createClientId && !clientsForCreate.some((c) => c.id === createClientId))
       setCreateClientId('');
