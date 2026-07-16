@@ -233,23 +233,25 @@ function rowTrClass(i: number, userName: string, selectedUserName: string | null
         parts.push('tt-rp-mtable__tr--server-week-locked');
     return parts.join(' ');
 }
-function ReportPreviewSelectionControl({ rowsCount, selectedUserName, onSelectUserName, }: {
+function ReportPreviewSelectionControl({ rowsCount, selectedUserName, onSelectUserName, variant = 'bar', }: {
     rowsCount: number;
     selectedUserName?: string | null;
     onSelectUserName?: (name: string | null) => void;
+    variant?: 'bar' | 'inline';
 }) {
     if (!onSelectUserName || rowsCount <= 0)
         return null;
     const allSelected = isAllRowsSelection(selectedUserName);
+    const hasActive = allSelected || Boolean(selectedUserName);
     const label = allSelected
-        ? `Выбраны все видимые строки: ${rowsCount}`
+        ? `Выбраны все: ${rowsCount}`
         : selectedUserName
-            ? `Выбран сотрудник: ${selectedUserName}`
-            : 'Выделение строк';
-    return (<div className="tt-rp-mtable-selectbar" aria-live="polite">
+            ? `Выбран: ${selectedUserName}`
+            : 'Выделение';
+    return (<div className={`tt-rp-mtable-selectbar${variant === 'inline' ? ' tt-rp-mtable-selectbar--inline' : ''}${hasActive ? ' tt-rp-mtable-selectbar--active' : ''}`} aria-live="polite">
       <span className="tt-rp-mtable-selectbar__text">{label}</span>
       <button type="button" className="tt-rp-mtable-selectbar__btn" onClick={() => onSelectUserName(allSelected ? null : ALL_ROWS_SELECTION)} aria-pressed={allSelected}>
-        {allSelected ? 'Снять выделение' : 'Выделить все'}
+        {allSelected ? 'Снять' : 'Все'}
       </button>
     </div>);
 }
@@ -651,8 +653,29 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     const [bfNote, setBfNote] = useState('');
     const [bfBill, setBfBill] = useState('');
     const [toolbarSearch, setToolbarSearch] = useState('');
+    const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+    const moreMenuRef = useRef<HTMLDivElement>(null);
 
     const [bfRecordedOrder, setBfRecordedOrder] = useState<'asc' | 'desc'>('asc');
+    useEffect(() => {
+        if (!moreMenuOpen)
+            return;
+        const onDoc = (e: Event) => {
+            if (moreMenuRef.current?.contains(e.target as Node))
+                return;
+            setMoreMenuOpen(false);
+        };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape')
+                setMoreMenuOpen(false);
+        };
+        document.addEventListener('mousedown', onDoc);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onDoc);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [moreMenuOpen]);
     useEffect(() => {
         if (!hotkeyDuplicateRowKey)
             return;
@@ -1438,7 +1461,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
 
     const tableBlock = (<div className={`tt-rp-mtable-wrap${tableFullscreen ? ' tt-rp-mtable-wrap--fullscreen' : ''}`}>
       <div className="tt-rp-mtable-card">
-        <header className="tt-rp-mtable-head tt-rp-mtable-head--focus">
+        <header className="tt-rp-mtable-head tt-rp-mtable-head--calm">
           <div className="tt-rp-mtable-head__top">
             <div className="tt-rp-mtable-head-text">
               <div className="tt-rp-mtable-title-row">
@@ -1459,6 +1482,41 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                               </span>)
                             : null}
               </div>
+              <div className="tt-rp-kpi tt-rp-kpi--inline" aria-label="Сводка по отчёту">
+                <span className="tt-rp-kpi__chip" title="Записей">
+                  <span className="tt-rp-kpi__val">{rowsForTotals.length}</span>
+                  <span className="tt-rp-kpi__lbl">зап.</span>
+                </span>
+                <span className="tt-rp-kpi__sep" aria-hidden>·</span>
+                <span className="tt-rp-kpi__chip" title="Отработано">
+                  <span className="tt-rp-kpi__val">{formatDecimalHoursAsHm(totals.hDisplay)}</span>
+                  <span className="tt-rp-kpi__lbl">отраб.</span>
+                </span>
+                <span className="tt-rp-kpi__sep" aria-hidden>·</span>
+                <span className="tt-rp-kpi__chip" title="Оплачиваемые часы">
+                  <span className="tt-rp-kpi__val">{formatDecimalHoursAsHm(totals.bhDisplay)}</span>
+                  <span className="tt-rp-kpi__lbl">опл.</span>
+                </span>
+                <span className="tt-rp-kpi__sep" aria-hidden>·</span>
+                <span className="tt-rp-kpi__chip" title="Сумма">
+                  <span className="tt-rp-kpi__val">{fmtAmtWithIso(totals.atp, totals.cur)}</span>
+                </span>
+                <span className="tt-rp-kpi__sep" aria-hidden>·</span>
+                <span className="tt-rp-kpi__chip tt-rp-kpi__chip--fill" title={`Заполнение отчёта: ${reportFillPct}%`}>
+                  <span className="tt-rp-kpi__val">{reportFillPct}%</span>
+                  <span className="tt-rp-kpi__mini-bar" aria-hidden>
+                    <span className="tt-rp-kpi__mini-bar-fill" style={{ width: `${reportFillPct}%` }}/>
+                  </span>
+                </span>
+                {headerPositionShares.length > 0 ? (<>
+                  <span className="tt-rp-kpi__sep" aria-hidden>·</span>
+                  <span className="tt-rp-kpi__roles" aria-label="Доля по должностям">
+                    {headerPositionShares.map((share) => (<span key={share.position} className="tt-rp-kpi__role" title={`${share.position}: ${formatDecimalHoursAsHm(share.billableHours)} (${share.percent}%)`}>
+                      {share.percent}% {share.position}
+                    </span>))}
+                  </span>
+                </>) : null}
+              </div>
             </div>
             <div className="tt-rp-mtable-head__aside">
               <button type="button" className="tt-rp-mtable-fullscreen-btn" onClick={() => setTableFullscreen((v) => !v)} title={tableFullscreen ? 'Свернуть таблицу' : 'Развернуть таблицу на весь экран'} aria-label={tableFullscreen ? 'Свернуть таблицу' : 'Развернуть таблицу на весь экран'} aria-pressed={tableFullscreen}>
@@ -1467,78 +1525,68 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             </div>
           </div>
 
-          <div className="tt-rp-kpi" aria-label="Сводка по отчёту">
-            <div className="tt-rp-kpi__card">
-              <span className="tt-rp-kpi__lbl">Записей</span>
-              <span className="tt-rp-kpi__val">{rowsForTotals.length}</span>
-            </div>
-            <div className="tt-rp-kpi__card">
-              <span className="tt-rp-kpi__lbl">Отработано</span>
-              <span className="tt-rp-kpi__val">{formatDecimalHoursAsHm(totals.hDisplay)}</span>
-            </div>
-            <div className="tt-rp-kpi__card">
-              <span className="tt-rp-kpi__lbl">Оплачиваемые часы</span>
-              <span className="tt-rp-kpi__val">{formatDecimalHoursAsHm(totals.bhDisplay)}</span>
-            </div>
-            <div className="tt-rp-kpi__card">
-              <span className="tt-rp-kpi__lbl">Сумма</span>
-              <span className="tt-rp-kpi__val">{fmtAmtWithIso(totals.atp, totals.cur)}</span>
-            </div>
-            <div className="tt-rp-kpi__card tt-rp-kpi__card--fill">
-              <span className="tt-rp-kpi__lbl">Заполнение отчёта</span>
-              <span className="tt-rp-kpi__val">{reportFillPct}%</span>
-              <span className="tt-rp-kpi__bar" aria-hidden>
-                <span className="tt-rp-kpi__bar-fill" style={{ width: `${reportFillPct}%` }}/>
-              </span>
-            </div>
-          </div>
-
-          <div className="tt-rp-mtable-toolbar tt-rp-mtable-toolbar--focus" role="toolbar" aria-label="Действия отчёта">
+          <div className="tt-rp-mtable-toolbar tt-rp-mtable-toolbar--calm" role="toolbar" aria-label="Действия отчёта">
             <label className="tt-rp-mtable-search">
               <span className="tt-rp-mtable-search__ico" aria-hidden>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3-3"/></svg>
               </span>
               <input type="search" className="tt-rp-mtable-search__input" value={toolbarSearch} onChange={(e) => setToolbarSearch(e.target.value)} placeholder="Поиск по записям…" autoComplete="off" spellCheck={false} />
             </label>
-            {!readOnlyUi ? (<>
-              <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn" onClick={() => {
-                    if (isFull)
-                        setFullColumnsModalOpen(true);
-                    else
-                        setBriefColumnsModalOpen(true);
-                }} title="Настроить видимые колонки таблицы">
-                Колонки
-              </button>
-              {onAddTimeEntry ? (<button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-mtable-toolbar__btn--add" onClick={() => void onAddTimeEntry()} disabled={Boolean(serverReloadBusy || timeSave?.ui === 'saving' || timeEntryActionPendingRowKey != null)} title="Создать новую запись времени">
-                  + Добавить запись
-                </button>) : null}
-              <div className="tt-rp-mtable-toolbar__more">
-                <PreviewServerReloadBtn onRequestServerReload={onRequestServerReload} serverReloadBusy={serverReloadBusy}/>
-                {onUndo ? (<button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn" onClick={() => void onUndo()} disabled={!canUndo || Boolean(serverReloadBusy || timeSave?.ui === 'saving' || timeEntryActionPendingRowKey != null)} title={`Отменить последнее изменение (${formatPrimaryShortcut('Z')})`}>
-                    Отмена
-                  </button>) : null}
-                {onSaveNow ? (<button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn" onClick={() => void onSaveNow()} disabled={Boolean(serverReloadBusy || timeSave?.ui === 'saving')} title={`Сохранить все отложенные правки сейчас (${formatPrimaryShortcut('S')})`}>
-                    Сохранить
-                  </button>) : null}
-                <PreviewExcelDownloadBtn onDownloadExcel={onDownloadExcel} downloadExcelBusy={downloadExcelBusy} exportRows={rowsForTotals}/>
-                {(onUndo || onSaveNow || onDuplicateTimeEntry) ? (<button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn" onClick={() => setHotkeysHelpOpen(true)} title="Инструкция по горячим клавишам">
-                    Ещё
-                  </button>) : null}
-              </div>
-            </>) : (<>
-              <PreviewExcelDownloadBtn onDownloadExcel={onDownloadExcel} downloadExcelBusy={downloadExcelBusy} exportRows={rowsForTotals}/>
-            </>)}
+            {!readOnlyUi && onAddTimeEntry ? (<button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-mtable-toolbar__btn--add" onClick={() => void onAddTimeEntry()} disabled={Boolean(serverReloadBusy || timeSave?.ui === 'saving' || timeEntryActionPendingRowKey != null)} title="Создать новую запись времени">
+                + Добавить
+              </button>) : null}
+            <div className="tt-rp-mtable-toolbar__trail">
+              <ReportPreviewSelectionControl variant="inline" rowsCount={displayRows.length} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
+              {!readOnlyUi ? (<div className="tt-rp-mtable-more" ref={moreMenuRef}>
+                <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-mtable-more__btn" onClick={() => setMoreMenuOpen((v) => !v)} aria-expanded={moreMenuOpen} aria-haspopup="menu" title="Дополнительные действия">
+                  Ещё
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden><path d="M6 9l6 6 6-6"/></svg>
+                </button>
+                {moreMenuOpen ? (<div className="tt-rp-mtable-more__menu" role="menu">
+                  <button type="button" role="menuitem" className="tt-rp-mtable-more__item" onClick={() => {
+                        setMoreMenuOpen(false);
+                        if (isFull)
+                            setFullColumnsModalOpen(true);
+                        else
+                            setBriefColumnsModalOpen(true);
+                    }}>
+                    Колонки
+                  </button>
+                  {onRequestServerReload ? (<button type="button" role="menuitem" className="tt-rp-mtable-more__item" disabled={Boolean(serverReloadBusy)} onClick={() => {
+                        setMoreMenuOpen(false);
+                        onRequestServerReload();
+                    }}>
+                      {serverReloadBusy ? 'Обновление…' : 'Обновить с сервера'}
+                    </button>) : null}
+                  {onUndo ? (<button type="button" role="menuitem" className="tt-rp-mtable-more__item" disabled={!canUndo || Boolean(serverReloadBusy || timeSave?.ui === 'saving' || timeEntryActionPendingRowKey != null)} onClick={() => {
+                        setMoreMenuOpen(false);
+                        void onUndo();
+                    }}>
+                      Отмена ({formatPrimaryShortcut('Z')})
+                    </button>) : null}
+                  {onSaveNow ? (<button type="button" role="menuitem" className="tt-rp-mtable-more__item" disabled={Boolean(serverReloadBusy || timeSave?.ui === 'saving')} onClick={() => {
+                        setMoreMenuOpen(false);
+                        void onSaveNow();
+                    }}>
+                      Сохранить ({formatPrimaryShortcut('S')})
+                    </button>) : null}
+                  {onDownloadExcel ? (<button type="button" role="menuitem" className="tt-rp-mtable-more__item" disabled={Boolean(downloadExcelBusy)} onClick={() => {
+                        setMoreMenuOpen(false);
+                        void onDownloadExcel(rowsForTotals);
+                    }}>
+                      {downloadExcelBusy ? 'Excel…' : 'Скачать Excel'}
+                    </button>) : null}
+                  {(onUndo || onSaveNow || onDuplicateTimeEntry) ? (<button type="button" role="menuitem" className="tt-rp-mtable-more__item" onClick={() => {
+                        setMoreMenuOpen(false);
+                        setHotkeysHelpOpen(true);
+                    }}>
+                      Горячие клавиши
+                    </button>) : null}
+                </div>) : null}
+              </div>) : (<PreviewExcelDownloadBtn onDownloadExcel={onDownloadExcel} downloadExcelBusy={downloadExcelBusy} exportRows={rowsForTotals}/>)}
+            </div>
           </div>
-
-          {headerPositionShares.length > 0 ? (<div className="tt-rp-mtable-stats tt-rp-mtable-stats--compact" aria-label="Оплачиваемые часы и доля по должностям">
-            {headerPositionShares.map((share) => (<div key={share.position} className="tt-rp-mtable-stat tt-rp-mtable-stat--position" title={`${share.position}: ${formatDecimalHoursAsHm(share.billableHours)} (${share.percent}% оплачиваемых часов)`}>
-              <span className="tt-rp-mtable-stat__val">{share.percent}%</span>
-              <span className="tt-rp-mtable-stat__hrs">{formatDecimalHoursAsHm(share.billableHours)}</span>
-              <span className="tt-rp-mtable-stat__lbl">{share.position}</span>
-            </div>))}
-          </div>) : null}
-          <ReportPreviewSelectionControl rowsCount={displayRows.length} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
-        </header>
+        </header>        </header>
         <ReportPreviewTimeBriefColumnsModal open={!readOnlyUi && !isFull && briefColumnsModalOpen} onClose={() => setBriefColumnsModalOpen(false)} includeActionsColumn={showActionsColumn} activeOrderedIds={visibleBriefIds} onChange={setBriefColumnIds}/>
         <ReportPreviewTimeFullColumnsModal open={Boolean(!readOnlyUi && isFull && fullColumnsModalOpen)} onClose={() => setFullColumnsModalOpen(false)} activeOrderedIds={visibleFullIds} onChange={setFullColumnIds}/>
         <ReportPreviewHotkeysHelpModal open={hotkeysHelpOpen} onClose={() => setHotkeysHelpOpen(false)} showDuplicate={Boolean(onDuplicateTimeEntry)}/>

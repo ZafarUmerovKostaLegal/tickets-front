@@ -1118,6 +1118,211 @@ body[data-theme='dark'] .tt-rp-preview__partner-sign-strip {
   background: var(--app-surface, #fff);
 }
 
+.tt-rp-mtable-head--calm {
+  gap: 0.55rem;
+  padding: 0.7rem 1rem 0.65rem;
+  background: var(--app-surface, #fff);
+}
+
+.tt-rp-mtable-head--calm .tt-rp-mtable-title {
+  font-size: 1rem;
+}
+
+.tt-rp-mtable-head--calm .tt-rp-mtable-head-text {
+  gap: 0.35rem;
+}
+
+.tt-rp-mtable-head--calm .tt-rp-mtable-fullscreen-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.tt-rp-kpi--inline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.35rem;
+  width: auto;
+  max-width: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+  color: var(--app-muted, #64748b);
+}
+
+.tt-rp-kpi--inline .tt-rp-kpi__chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.28rem;
+  min-width: 0;
+  padding: 0;
+  border: none;
+}
+
+.tt-rp-kpi--inline .tt-rp-kpi__sep {
+  color: color-mix(in srgb, var(--app-muted, #94a3b8) 70%, transparent);
+  font-weight: 500;
+  user-select: none;
+}
+
+.tt-rp-kpi--inline .tt-rp-kpi__lbl {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--app-muted, #94a3b8);
+}
+
+.tt-rp-kpi--inline .tt-rp-kpi__val {
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--app-text, #334155);
+}
+
+.tt-rp-kpi__chip--fill {
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tt-rp-kpi__mini-bar {
+  display: inline-block;
+  width: 2.5rem;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, #22c55e 18%, var(--app-surface-soft, #f1f5f9));
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.tt-rp-kpi__mini-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #22c55e;
+}
+
+.tt-rp-kpi__roles {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.4rem;
+}
+
+.tt-rp-kpi__role {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--app-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.tt-rp-mtable-toolbar--calm {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.5rem;
+  width: 100%;
+}
+
+.tt-rp-mtable-toolbar--calm .tt-rp-mtable-search {
+  flex: 1 1 12rem;
+  max-width: 18rem;
+  min-height: 2.1rem;
+}
+
+.tt-rp-mtable-toolbar__trail {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-inline-start: auto;
+}
+
+.tt-rp-mtable-more {
+  position: relative;
+}
+
+.tt-rp-mtable-more__btn {
+  gap: 0.3rem;
+}
+
+.tt-rp-mtable-more__menu {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  right: 0;
+  z-index: 40;
+  min-width: 12.5rem;
+  padding: 0.3rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--app-surface, #fff);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+}
+
+.tt-rp-mtable-more__item {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--app-text, #0f172a);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-align: start;
+  cursor: pointer;
+}
+
+.tt-rp-mtable-more__item:hover:not(:disabled) {
+  background: var(--app-surface-soft, #f8fafc);
+}
+
+.tt-rp-mtable-more__item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.tt-rp-mtable-selectbar--inline {
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  gap: 0.35rem;
+  max-width: min(100%, 16rem);
+}
+
+.tt-rp-mtable-selectbar--inline .tt-rp-mtable-selectbar__text {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: var(--app-muted, #94a3b8);
+}
+
+.tt-rp-mtable-selectbar--inline .tt-rp-mtable-selectbar__btn {
+  padding: 0.2rem 0.45rem;
+  font-size: 0.6875rem;
+  border-radius: 6px;
+  background: transparent;
+}
+
+.tt-rp-mtable-selectbar--inline:not(.tt-rp-mtable-selectbar--active) .tt-rp-mtable-selectbar__text {
+  opacity: 0.85;
+}
+
+.tt-rp-mtable-selectbar--active .tt-rp-mtable-selectbar__text {
+  color: var(--app-text, #334155);
+  font-weight: 650;
+}
+
+body[data-theme='dark'] .tt-rp-mtable-more__menu {
+  background: var(--app-surface, #1e293b);
+  border-color: var(--app-border, #334155);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+}
+
 .tt-rp-mtable-toolbar--focus {
   display: flex;
   align-items: center;
@@ -2018,7 +2223,7 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
   padding-bottom: 0.5rem;
 }
 
-.tt-rp-mtable-head .tt-rp-mtable-selectbar {
+.tt-rp-mtable-head .tt-rp-mtable-selectbar:not(.tt-rp-mtable-selectbar--inline) {
   padding: 0.3rem 0.55rem;
   border-radius: 8px;
 }
