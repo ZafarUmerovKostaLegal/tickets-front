@@ -168,6 +168,14 @@ export function writeReportPreviewTransfer(payload: ReportPreviewTransferV2): vo
     }
 }
 
+function persistReportPreviewTransferToSession(payload: ReportPreviewTransferPayload): void {
+    try {
+        sessionStorage.setItem(REPORT_PREVIEW_TRANSFER_KEY, JSON.stringify(payload));
+    }
+    catch {
+    }
+}
+
 /** Store payload for a new browser tab (sessionStorage is not shared between tabs). */
 export function buildReportPreviewTransferUrl(payload: ReportPreviewTransferV2, previewPath: string): string {
     const id = `${REPORT_PREVIEW_TRANSFER_LOCAL_PREFIX}${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
@@ -249,11 +257,12 @@ function readReportPreviewTransferFromLocalParam(): ReportPreviewTransferPayload
         if (!transferId.startsWith(REPORT_PREVIEW_TRANSFER_LOCAL_PREFIX))
             return null;
         const raw = localStorage.getItem(transferId);
-        localStorage.removeItem(transferId);
         if (!raw)
             return null;
         const parsed = parseReportPreviewTransferJson(raw);
         if (parsed) {
+            persistReportPreviewTransferToSession(parsed);
+            localStorage.removeItem(transferId);
             const url = new URL(window.location.href);
             url.searchParams.delete(REPORT_PREVIEW_TRANSFER_PARAM);
             const next = `${url.pathname}${url.search}${url.hash}`;

@@ -18,18 +18,24 @@ export function fmtAmtWithIso(n: number | undefined | null, cur: string | null |
     const code = String(cur ?? '').trim().toUpperCase();
     if (!code || !/^[A-Z]{3}$/.test(code))
         return fmtAmt(n, cur ?? '');
-    const maxFd = code === 'UZS' || code === 'JPY' ? 0 : 2;
-    try {
-        return new Intl.NumberFormat('ru-RU', {
-            style: 'currency',
-            currency: code,
-            minimumFractionDigits: maxFd === 0 ? 0 : 2,
-            maximumFractionDigits: maxFd,
-        }).format(n);
+
+    // UZS: amount first, ISO code after (ru-RU)
+    if (code === 'UZS') {
+        try {
+            return new Intl.NumberFormat('ru-RU', {
+                style: 'currency',
+                currency: 'UZS',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0,
+            }).format(n);
+        }
+        catch {
+            return `${n.toLocaleString('ru-RU', { maximumFractionDigits: 0 })} UZS`;
+        }
     }
-    catch {
-        return fmtAmt(n, cur ?? '');
-    }
+
+    // Foreign currencies: symbol before amount
+    return formatBillableMoney(n, code);
 }
 
 export function sortCurrencyBuckets<T extends {

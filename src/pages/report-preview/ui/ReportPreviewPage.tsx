@@ -1450,7 +1450,6 @@ export function ReportPreviewPage() {
         }
     }, [timePreviewTableTitle, timeExcelDownloadBusy, showAlert, authUserExportProfilesById, selectedProjectId, projectMembersForEmployeePick, projectItemsForSelect, rangeFrom, rangeTo, xferSnapshot]);
     const liveTitle = xferSnapshot ? previewLiveTitle(xferSnapshot) : '';
-    const xferExists = readReportPreviewTransfer() != null;
     const partnerConfirmedReadOnly = Boolean(xferSnapshot?.partnerConfirmationSnapshotId?.trim());
     const forReviewPreviewLocked = Boolean(xferSnapshot?.forReviewPreview) || Boolean(xferSnapshot?.returnTo?.includes('reportsSection=for-review'));
     const hidePeriodControls = partnerConfirmedReadOnly || forReviewPreviewLocked;
@@ -1510,7 +1509,7 @@ export function ReportPreviewPage() {
             </div>
         </div>);
     }
-    if (!xferExists && !xferSnapshot) {
+    if (xferHydrated && !xferSnapshot) {
         return (<div className="tt-rp-preview">
             <ReportPreviewNavBar />
             <div className="tt-rp-preview__main">
