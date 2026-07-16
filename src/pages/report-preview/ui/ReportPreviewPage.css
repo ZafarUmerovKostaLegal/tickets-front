@@ -1249,7 +1249,10 @@ body[data-theme='dark'] .tt-rp-mtable-dock__stat strong {
 .tt-rp-mtable-toolbar--composed .tt-rp-mtable-title-row {
   flex: 0 1 auto;
   min-width: 0;
-  max-width: min(22rem, 32vw);
+  max-width: min(26rem, 38vw);
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .tt-rp-mtable-toolbar--composed .tt-rp-mtable-title {
@@ -1260,6 +1263,113 @@ body[data-theme='dark'] .tt-rp-mtable-dock__stat strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+}
+
+/* Fixed-size save status — no layout jump when state changes */
+.tt-rp-mtable-save-ind {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  box-sizing: border-box;
+  width: 6.75rem;
+  height: 1.35rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  color: transparent;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: color 0.15s, background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.tt-rp-mtable-save-ind__dot {
+  flex-shrink: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.tt-rp-mtable-save-ind__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tt-rp-mtable-save-ind--idle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tt-rp-mtable-save-ind--saving {
+  color: #b45309;
+  background: #fef3c7;
+  border-color: #fcd34d;
+}
+
+.tt-rp-mtable-save-ind--saving .tt-rp-mtable-save-ind__dot {
+  opacity: 1;
+  animation: tt-rp-mtable-save-pulse 0.9s ease-in-out infinite;
+}
+
+.tt-rp-mtable-save-ind--saved {
+  color: #047857;
+  background: #d1fae5;
+  border-color: #6ee7b7;
+}
+
+.tt-rp-mtable-save-ind--saved .tt-rp-mtable-save-ind__dot {
+  opacity: 1;
+}
+
+.tt-rp-mtable-save-ind--err {
+  color: #b91c1c;
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.tt-rp-mtable-save-ind--err .tt-rp-mtable-save-ind__dot {
+  opacity: 1;
+}
+
+.tt-rp-mtable-save-ind--ro {
+  color: var(--app-muted, #64748b);
+  background: var(--app-surface-soft, #f1f5f9);
+  border-color: var(--app-border, #e2e8f0);
+}
+
+.tt-rp-mtable-save-ind--ro .tt-rp-mtable-save-ind__dot {
+  opacity: 1;
+}
+
+@keyframes tt-rp-mtable-save-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+body[data-theme='dark'] .tt-rp-mtable-save-ind--saving {
+  color: #fcd34d;
+  background: color-mix(in srgb, #92400e 28%, var(--app-surface, #1e293b));
+  border-color: color-mix(in srgb, #f59e0b 40%, transparent);
+}
+
+body[data-theme='dark'] .tt-rp-mtable-save-ind--saved {
+  color: #6ee7b7;
+  background: color-mix(in srgb, #065f46 30%, var(--app-surface, #1e293b));
+  border-color: color-mix(in srgb, #34d399 35%, transparent);
+}
+
+body[data-theme='dark'] .tt-rp-mtable-save-ind--err {
+  color: #fca5a5;
+  background: color-mix(in srgb, #991b1b 28%, var(--app-surface, #1e293b));
+  border-color: color-mix(in srgb, #f87171 35%, transparent);
 }
 
 .tt-rp-mtable-toolbar--calm .tt-rp-mtable-search {
@@ -1503,12 +1613,8 @@ body[data-theme='dark'] .tt-rp-mtable-more__menu {
 .tt-rp-mtable-title-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.tt-rp-mtable-title-row .tt-rp-mtable-badge {
+  gap: 0.4rem;
+  flex-wrap: nowrap;
   min-width: 0;
 }
 

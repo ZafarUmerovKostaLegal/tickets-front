@@ -1318,21 +1318,24 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
           <div className="tt-rp-mtable-toolbar tt-rp-mtable-toolbar--calm tt-rp-mtable-toolbar--composed" role="toolbar" aria-label="Действия отчёта">
             <div className="tt-rp-mtable-title-row">
               <h2 className="tt-rp-mtable-title">{projectTitle}</h2>
-              {readOnlyUi ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--ro" title="Редактирование недоступно">
-                  Только просмотр
-                </span>) : timeSave?.ui === 'saving'
-                  ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--saving" title="Сохранение на сервер">
-                      Сохранение…
-                    </span>)
-                  : timeSave?.ui === 'saved'
-                      ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--ok" title={timeSave.message ?? 'Сохранено в API'}>
-                          Сохранено
-                        </span>)
-                      : timeSave?.ui === 'err'
-                          ? (<span className="tt-rp-mtable-badge tt-rp-mtable-badge--err" title={timeSave.message ?? 'Ошибка'} role="status">
-                              Ошибка
-                            </span>)
-                          : null}
+              {(() => {
+                  const saveUi = readOnlyUi ? 'ro' : (timeSave?.ui ?? 'idle');
+                  const title = readOnlyUi
+                      ? 'Редактирование недоступно'
+                      : saveUi === 'saving'
+                          ? 'Сохранение на сервер…'
+                          : saveUi === 'saved'
+                              ? (timeSave?.message ?? 'Сохранено')
+                              : saveUi === 'err'
+                                  ? (timeSave?.message ?? 'Ошибка сохранения')
+                                  : 'Нет несохранённых изменений';
+                  return (<span className={`tt-rp-mtable-save-ind tt-rp-mtable-save-ind--${saveUi}`} title={title} role="status" aria-live="polite" aria-label={title}>
+                    <span className="tt-rp-mtable-save-ind__dot" aria-hidden />
+                    <span className="tt-rp-mtable-save-ind__text">
+                      {saveUi === 'ro' ? 'Просмотр' : saveUi === 'saving' ? 'Сохранение…' : saveUi === 'saved' ? 'Сохранено' : saveUi === 'err' ? 'Ошибка' : ''}
+                    </span>
+                  </span>);
+              })()}
             </div>
             <label className="tt-rp-mtable-search">
               <span className="tt-rp-mtable-search__ico" aria-hidden>
