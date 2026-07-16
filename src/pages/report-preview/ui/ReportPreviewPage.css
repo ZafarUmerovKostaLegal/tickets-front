@@ -748,19 +748,6 @@ body[data-theme='dark'] .tt-rp-preview__toolbar-chip--ghost {
   text-align: center;
 }
 
-.tt-rp-preview__save-err {
-  margin: 0.35rem 0 0;
-  padding: 0.4rem 0.6rem;
-  max-width: 40rem;
-  font-size: 0.8rem;
-  line-height: 1.4;
-  color: #b91c1c;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  border-radius: 6px;
-  box-sizing: border-box;
-}
-
 .tt-rp-preview__no-table-wrap {
   display: flex;
   flex-direction: column;

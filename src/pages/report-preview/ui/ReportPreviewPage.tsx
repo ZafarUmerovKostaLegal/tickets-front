@@ -57,6 +57,7 @@ import { coerceGroupByForType, type ExpenseGroup, type TimeGroup, type PeriodGra
 import { formatIsoRangeTitle, formatPeriodLabel, periodToDates, } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { useI18n } from '@shared/i18n';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
+import { showToast } from '@shared/ui/app-toast';
 import { loadTimesheetProjectOptionsForMove, type ProjectOption, } from '@pages/time-tracking/ui/timesheetProjectLoader';
 import { sortTimeReportRowsForDisplay } from '@entities/time-tracking/lib/timeReportRows';
 import { deduplicateTimeExcelPreviewRows } from '../lib/reportPreviewDuplicateRows';
@@ -196,6 +197,16 @@ export function ReportPreviewPage() {
                 clearTimeout(flashRestoredTimerRef.current);
         };
     }, []);
+    useEffect(() => {
+        if (timeEntrySaveUI !== 'err' || !timeEntrySaveMessage)
+            return;
+        showToast({ message: timeEntrySaveMessage, variant: 'error' });
+    }, [timeEntrySaveUI, timeEntrySaveMessage]);
+    useEffect(() => {
+        if (!reportError)
+            return;
+        showToast({ message: reportError, variant: 'error' });
+    }, [reportError]);
     const bumpEditHistory = useCallback(() => {
         setEditHistoryVersion((v) => v + 1);
     }, []);
@@ -1545,8 +1556,6 @@ export function ReportPreviewPage() {
             return (<p className="tt-rp-preview__muted tt-rp-preview__no-table-msg">Укажите период (даты «С» и «По»).</p>);
         if (reportLoading && !reportHasTableData)
             return (<ReportPreviewMockSkeleton variant="generic" label="Загрузка отчёта…" />);
-        if (reportError)
-            return (<div className="tt-reports__table-err" role="alert">{reportError}</div>);
         if (xferSnapshot.reportType === 'time') {
             if (timeExcelRows.length === 0 && !reportLoading)
                 return reportPreviewEmptyBlock(rangeFrom, rangeTo);
@@ -1601,11 +1610,6 @@ export function ReportPreviewPage() {
             <div className={`tt-rp-preview__live${xferSnapshot && (xferSnapshot.reportType === 'time' || xferSnapshot.reportType === 'expenses' || xferSnapshot.reportType === 'uninvoiced' || xferSnapshot.reportType === 'project-budget') ? ' tt-rp-preview__live--sheet' : ''}${reportLoading && reportHasTableData ? ' tt-rp-preview__live--busy' : ''}`}>
                 {mainBody}
             </div>
-            {timeEntrySaveUI === 'err' && timeEntrySaveMessage
-                ? (<p className="tt-rp-preview__save-err" role="alert">
-                    {timeEntrySaveMessage}
-                </p>)
-                : null}
         </div>
     </div>);
 }
