@@ -1072,36 +1072,10 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
             </p>) : null}
           </div>);
         })()}
+        {aggStats?.isCapped ? (<p className="tt-inv__list-hint" role="note" style={{ flexBasis: '100%', margin: '0.25rem 0 0' }}>
+          {t('timeTrackingPage.invoices.summary.cappedHint').replace('{cap}', String(aggStats.cappedAt ?? 50000))}
+        </p>) : null}
       </>)}
-    </div>)}
-
-    {!listErr && aggStats && Object.keys(aggStats.byCurrency).length > 0 && (<div className="tt-inv__currency-table-wrap" style={{ marginBottom: '1rem' }}>
-      <p className="tt-reports__breakdown-label" style={{ marginBottom: '0.5rem' }}>{t('timeTrackingPage.invoices.currencyTable.title')}</p>
-      <div className="tt-reports__table-wrap">
-        <table className="tt-reports__table tt-inv__data-table">
-          <thead>
-            <tr>
-              <th scope="col">{t('timeTrackingPage.invoices.currencyTable.currency')}</th>
-              <th scope="col" className="tt-inv__th-num">{t('timeTrackingPage.invoices.currencyTable.count')}</th>
-              <th scope="col" className="tt-inv__th-num">{t('timeTrackingPage.invoices.currencyTable.amount')}</th>
-              <th scope="col" className="tt-inv__th-num">{t('timeTrackingPage.invoices.currencyTable.paid')}</th>
-              <th scope="col" className="tt-inv__th-num">{t('timeTrackingPage.invoices.currencyTable.balance')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(aggStats.byCurrency).sort(([a], [b]) => a.localeCompare(b)).map(([cur, row]) => (<tr key={cur}>
-              <td>{cur}</td>
-              <td className="tt-inv__td-num">{row.count}</td>
-              <td className="tt-inv__td-num">{fmtMoney(row.totalAmount, cur, locale)}</td>
-              <td className="tt-inv__td-num">{fmtMoney(row.amountPaid, cur, locale)}</td>
-              <td className="tt-inv__td-num">{fmtMoney(row.balanceDue, cur, locale)}</td>
-            </tr>))}
-          </tbody>
-        </table>
-      </div>
-      {aggStats.isCapped ? (<p className="tt-inv__list-hint" role="note">
-        {t('timeTrackingPage.invoices.summary.cappedHint').replace('{cap}', String(aggStats.cappedAt ?? 50000))}
-      </p>) : null}
     </div>)}
 
     <div className="tt-reports__content">

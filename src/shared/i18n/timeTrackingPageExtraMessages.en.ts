@@ -1267,7 +1267,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             canceled: 'Canceled',
             withBalance: 'With balance due',
             totalBalance: 'Total balance due',
-            multiCurrencyHint: 'Sum across all currencies without exchange rate; see table below by currency.',
+            multiCurrencyHint: 'Sum across all currencies without exchange rate.',
             cappedHint: 'Summary capped ({cap}+ invoices); amounts are approximate.',
         },
         currencyTable: {

@@ -1265,7 +1265,7 @@ export const timeTrackingPageExtraMessages = {
             canceled: 'Отменено',
             withBalance: 'С остатком к оплате',
             totalBalance: 'Суммарный остаток к оплате',
-            multiCurrencyHint: 'Сумма по всем валютам без пересчёта курса; по валютам см. таблицу ниже.',
+            multiCurrencyHint: 'Сумма по всем валютам без пересчёта курса.',
             cappedHint: 'Сводка ограничена ({cap}+ счетов); суммы ориентировочные.',
         },
         currencyTable: {
