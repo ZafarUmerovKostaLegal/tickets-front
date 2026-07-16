@@ -15,7 +15,6 @@ import {
     computeTimePreviewRowAmountToPay,
     timePreviewRowsForPageExport,
 } from '../lib/reportPreviewPartnerExcel';
-import { buildReportPreviewPositionShare } from '../lib/reportPreviewPositionShare';
 import { buildTimePreviewDuplicateRowKeySet, TIME_PREVIEW_DUPLICATE_ROW_TITLE, } from '../lib/reportPreviewDuplicateRows';
 import {
     formatRuHmFromIso,
@@ -851,21 +850,6 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             cur: displayRows[0]?.currency ?? rows[0]?.currency ?? '—',
         };
     }, [rowsForTotals, displayRows, rows]);
-    const positionShares = useMemo(
-        () => buildReportPreviewPositionShare(rowsForTotals),
-        [rowsForTotals],
-    );
-    const positionSharesRef = useRef(positionShares);
-    if (!serverReloadBusy)
-        positionSharesRef.current = positionShares;
-    const headerPositionShares = serverReloadBusy ? positionSharesRef.current : positionShares;
-    const reportFillPct = useMemo(() => {
-        const n = rowsForTotals.length;
-        if (!n)
-            return 0;
-        const filled = rowsForTotals.filter((r) => String(r.description ?? r.note ?? r.taskName ?? '').trim()).length;
-        return Math.round((filled / n) * 100);
-    }, [rowsForTotals]);
     const moveDialogBusy = Boolean(moveTargetRow && timeEntryActionPendingRowKey === moveTargetRow.rowKey);
     const duplicateDialogBusy = Boolean(duplicateTargetRow && timeEntryActionPendingRowKey === duplicateTargetRow.rowKey);
     const dupBounds = timeEntryWorkDateBounds ?? {
@@ -1481,41 +1465,6 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                                 Ошибка
                               </span>)
                             : null}
-              </div>
-              <div className="tt-rp-kpi tt-rp-kpi--inline" aria-label="Сводка по отчёту">
-                <span className="tt-rp-kpi__chip" title="Записей">
-                  <span className="tt-rp-kpi__val">{rowsForTotals.length}</span>
-                  <span className="tt-rp-kpi__lbl">зап.</span>
-                </span>
-                <span className="tt-rp-kpi__sep" aria-hidden>·</span>
-                <span className="tt-rp-kpi__chip" title="Отработано">
-                  <span className="tt-rp-kpi__val">{formatDecimalHoursAsHm(totals.hDisplay)}</span>
-                  <span className="tt-rp-kpi__lbl">отраб.</span>
-                </span>
-                <span className="tt-rp-kpi__sep" aria-hidden>·</span>
-                <span className="tt-rp-kpi__chip" title="Оплачиваемые часы">
-                  <span className="tt-rp-kpi__val">{formatDecimalHoursAsHm(totals.bhDisplay)}</span>
-                  <span className="tt-rp-kpi__lbl">опл.</span>
-                </span>
-                <span className="tt-rp-kpi__sep" aria-hidden>·</span>
-                <span className="tt-rp-kpi__chip" title="Сумма">
-                  <span className="tt-rp-kpi__val">{fmtAmtWithIso(totals.atp, totals.cur)}</span>
-                </span>
-                <span className="tt-rp-kpi__sep" aria-hidden>·</span>
-                <span className="tt-rp-kpi__chip tt-rp-kpi__chip--fill" title={`Заполнение отчёта: ${reportFillPct}%`}>
-                  <span className="tt-rp-kpi__val">{reportFillPct}%</span>
-                  <span className="tt-rp-kpi__mini-bar" aria-hidden>
-                    <span className="tt-rp-kpi__mini-bar-fill" style={{ width: `${reportFillPct}%` }}/>
-                  </span>
-                </span>
-                {headerPositionShares.length > 0 ? (<>
-                  <span className="tt-rp-kpi__sep" aria-hidden>·</span>
-                  <span className="tt-rp-kpi__roles" aria-label="Доля по должностям">
-                    {headerPositionShares.map((share) => (<span key={share.position} className="tt-rp-kpi__role" title={`${share.position}: ${formatDecimalHoursAsHm(share.billableHours)} (${share.percent}%)`}>
-                      {share.percent}% {share.position}
-                    </span>))}
-                  </span>
-                </>) : null}
               </div>
             </div>
             <div className="tt-rp-mtable-head__aside">
