@@ -30,6 +30,7 @@ function row(partial: Partial<PartnerReportConfirmationRequest> = {}): PartnerRe
         createdAt: '2026-07-09T10:00:00.000Z',
         updatedAt: null,
         ...partial,
+        reviewPriority: partial.reviewPriority ?? 'green',
     };
 }
 

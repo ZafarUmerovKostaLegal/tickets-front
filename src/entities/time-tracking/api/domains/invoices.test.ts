@@ -3,8 +3,6 @@ import { coalesceInvoiceMoney, mergeInvoiceDtoAfterPayment, type InvoiceDto, typ
 
 function payment(partial: Partial<InvoicePaymentDto> & Pick<InvoicePaymentDto, 'id' | 'amount'>): InvoicePaymentDto {
     return {
-        id: partial.id,
-        amount: partial.amount,
         paymentMethod: null,
         note: null,
         recordedByAuthUserId: 1,
@@ -16,7 +14,6 @@ function payment(partial: Partial<InvoicePaymentDto> & Pick<InvoicePaymentDto, '
 
 function invoice(partial: Partial<InvoiceDto> & Pick<InvoiceDto, 'id'>): InvoiceDto {
     return {
-        id: partial.id,
         clientId: 'c1',
         projectId: 'p1',
         invoiceNumber: 'INV-1',

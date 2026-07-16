@@ -1,5 +1,5 @@
 import { useState, useEffect, useId } from 'react';
-import { createClientContact } from '@entities/time-tracking';
+import { createClientContact, type TimeManagerClientContactRow } from '@entities/time-tracking';
 import { useI18n } from '@shared/i18n';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 
@@ -9,9 +9,10 @@ export type AddClientContactForClientModalProps = {
     clientArchived: boolean;
     canManage: boolean;
     onClose: () => void;
+    onCreated?: (row: TimeManagerClientContactRow) => void;
 };
 
-export function AddClientContactForClientModal({ clientId, clientName, clientArchived, canManage, onClose, }: AddClientContactForClientModalProps) {
+export function AddClientContactForClientModal({ clientId, clientName, clientArchived, canManage, onClose, onCreated }: AddClientContactForClientModalProps) {
     const { t } = useI18n();
     const uid = useId();
     const [name, setName] = useState('');
@@ -36,11 +37,12 @@ export function AddClientContactForClientModal({ clientId, clientName, clientArc
         setError(null);
         setSaving(true);
         try {
-            await createClientContact(clientId, {
+            const row = await createClientContact(clientId, {
                 name: n,
                 phone: phone.trim() || null,
                 email: email.trim() || null,
             });
+            onCreated?.(row);
             onClose();
         }
         catch (e) {

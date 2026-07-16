@@ -13,6 +13,7 @@ import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludi
 import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
+import { InvoiceSendContactModal } from './InvoiceSendContactModal';
 
 function fmtMoney(n: number, cur: string, locale: AppLocale): string {
   const x = typeof n === 'number' && Number.isFinite(n) ? n : 0;
@@ -319,6 +320,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
   const [payNote, setPayNote] = useState('');
   const [paymentConfirmDocUrl, setPaymentConfirmDocUrl] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
+  const [sendContactOpen, setSendContactOpen] = useState(false);
   const [detailExportBusy, setDetailExportBusy] = useState<'pdf' | 'word' | null>(null);
   const [draftIssueDate, setDraftIssueDate] = useState('');
   const [draftDueDate, setDraftDueDate] = useState('');
@@ -1339,9 +1341,6 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
 
           <div className="tt-inv-dialog__section tt-inv-dialog__section--callout">
             <p className="tt-inv-dialog__section-title">{t('timeTrackingPage.invoices.createDialog.unbilledSectionTitle')}</p>
-            <p className="tt-inv-dialog__section-desc">
-              {t('timeTrackingPage.invoices.createDialog.unbilledSectionDesc')}
-            </p>
             <p className="tt-inv-dialog__section-desc" style={{ marginTop: '0.35rem' }}>
               {t('timeTrackingPage.invoices.createDialog.unbilledReimbursableNote')}
             </p>
@@ -1593,19 +1592,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
               </button>
             </div>
             {!readOnly && (<div className="tt-inv-actions">
-              {invoiceCanSend(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={async () => {
-                setActionBusy(true);
-                try {
-                  await sendInvoice(detail.id);
-                  await refreshDetail(detail.id);
-                }
-                catch (e) {
-                  await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
-                }
-                finally {
-                  setActionBusy(false);
-                }
-              }}>
+              {invoiceCanSend(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => setSendContactOpen(true)}>
                 {ttInvoiceSendActionLabel(detail.status as InvoiceUiStatus, t)}
               </button>)}
               {invoiceCanMarkViewed(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {
@@ -1789,5 +1776,31 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
         </div>
       </div>
     </div>)}
+    {sendContactOpen && detail && !readOnly && (
+      <InvoiceSendContactModal
+        clientId={detail.clientId}
+        clientName={clientNameById.get(detail.clientId) ?? detail.clientId}
+        invoiceLabel={detail.invoiceNumber || detail.id}
+        onClose={() => {
+          if (!actionBusy)
+            setSendContactOpen(false);
+        }}
+        onConfirm={async () => {
+          setActionBusy(true);
+          try {
+            await sendInvoice(detail.id);
+            setSendContactOpen(false);
+            await refreshDetail(detail.id);
+          }
+          catch (e) {
+            await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
+            throw e;
+          }
+          finally {
+            setActionBusy(false);
+          }
+        }}
+      />
+    )}
   </div>);
 }

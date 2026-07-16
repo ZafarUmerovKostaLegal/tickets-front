@@ -20,6 +20,7 @@ function row(partial: Partial<PartnerReportConfirmationRequest> = {}): PartnerRe
         projectName: 'Legal services',
         clientName: 'Nur Bukhara Solar',
         ...partial,
+        reviewPriority: partial.reviewPriority ?? 'green',
     };
 }
 
