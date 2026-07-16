@@ -30,8 +30,9 @@ async function parseBody(res: Response): Promise<Record<string, unknown> | null>
         return null;
     }
 }
-export async function connectOutlookCalendar(): Promise<void> {
-    const res = await apiFetch('/api/v1/todos/calendar/connect', {
+export async function connectOutlookCalendar(options?: { forceConsent?: boolean }): Promise<void> {
+    const qs = options?.forceConsent ? '?force_consent=true' : '';
+    const res = await apiFetch(`/api/v1/todos/calendar/connect${qs}`, {
         redirect: 'manual',
         headers: { Accept: 'application/json' },
     });
@@ -66,6 +67,28 @@ export async function connectOutlookCalendar(): Promise<void> {
         throw new Error(detail ?? 'Внутренняя ошибка сервера. Проверьте логи контейнера todos.');
     }
     throw new Error(detail ?? 'Не удалось начать подключение календаря');
+}
+
+/** Disconnect then start OAuth with prompt=consent (required after Mail.ReadWrite scope expansion). */
+export async function reconnectOutlookCalendar(): Promise<void> {
+    try {
+        await apiFetch('/api/v1/todos/calendar/disconnect', { method: 'DELETE' });
+    }
+    catch {
+        // Still try to reconnect even if disconnect fails (e.g. already disconnected).
+    }
+    await connectOutlookCalendar({ forceConsent: true });
+}
+
+export async function disconnectOutlookCalendar(): Promise<void> {
+    const res = await apiFetch('/api/v1/todos/calendar/disconnect', { method: 'DELETE' });
+    if (res.status === 401)
+        throw new Error('Требуется авторизация');
+    if (!res.ok) {
+        const body = await parseBody(res);
+        const detail = typeof body?.detail === 'string' ? body.detail : null;
+        throw new Error(detail ?? 'Не удалось отключить Outlook');
+    }
 }
 export type CalendarStatusResult = {
     connected: boolean;

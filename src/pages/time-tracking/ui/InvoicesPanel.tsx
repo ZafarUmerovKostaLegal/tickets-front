@@ -9,7 +9,7 @@ import { useAppDialog, useAppToast } from '@shared/ui';
 import { useI18n, ttInvoiceSendActionLabel, ttInvoiceStatusLabel, type TimeTrackingT } from '@shared/i18n';
 import { localeTag } from '@shared/i18n/ticketUi';
 import type { AppLocale } from '@shared/i18n/types';
-import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listPartnerReportConfirmationsConfirmed, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, type PartnerReportConfirmationRequest, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, createInvoice, patchInvoice, sendInvoice, createInvoiceOutlookDraft, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listPartnerReportConfirmationsConfirmed, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, type PartnerReportConfirmationRequest, } from '@entities/time-tracking';
 import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
@@ -18,6 +18,16 @@ import { InvoiceSendContactModal } from './InvoiceSendContactModal';
 function fmtMoney(n: number, cur: string, locale: AppLocale): string {
   const x = typeof n === 'number' && Number.isFinite(n) ? n : 0;
   return `${x.toLocaleString(localeTag(locale), { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}`;
+}
+
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buf = await blob.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk)
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  return btoa(binary);
 }
 function invoiceLineKindSlug(ln: InvoiceLineDto): string {
   const k = (ln.lineKind ?? '').toLowerCase().trim();
@@ -1785,15 +1795,69 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
           if (!actionBusy)
             setSendContactOpen(false);
         }}
-        onConfirm={async () => {
+        onConfirm={async (contact) => {
           setActionBusy(true);
           try {
+            const client = await getTimeManagerClient(detail.clientId);
+            const model = buildInvoiceCoverLetterModel({
+              issueDateIso: detail.issueDate.slice(0, 10),
+              clientName: client.name,
+              clientAddress: client.address,
+              contactName: client.contact_name ?? null,
+              totalAmount: detail.totalAmount,
+              currency: detail.currency,
+            });
+            const clientLabel = (clientNameById.get(detail.clientId) ?? detail.clientId).trim();
+            const meta = await invoicePreviewMetaForExisting(detail, clientLabel);
+            const previewSession = { v: 1 as const, mode: 'existing' as const, invoiceId: detail.id, meta };
+            const { buildInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewPdf');
+            const blob = await buildInvoicePreviewPdfBlob({ model, session: previewSession });
+            const pdfBase64 = await blobToBase64(blob);
+            const invoiceLabel = detail.invoiceNumber || detail.id;
+            const amountLabel = fmtMoney(detail.totalAmount, detail.currency, locale);
+            const nameSuffix = contact.name
+              ? t('timeTrackingPage.invoices.sendDialog.nameSuffix').replace('{name}', contact.name)
+              : '';
+            const subject = t('timeTrackingPage.invoices.sendDialog.mailSubject').replace('{invoice}', invoiceLabel);
+            const bodyHtml = t('timeTrackingPage.invoices.sendDialog.mailBodyHtml')
+              .replaceAll('{nameSuffix}', nameSuffix)
+              .replaceAll('{invoice}', invoiceLabel)
+              .replaceAll('{amount}', amountLabel);
+            const bodyText = t('timeTrackingPage.invoices.sendDialog.mailBodyText')
+              .replaceAll('{nameSuffix}', nameSuffix)
+              .replaceAll('{invoice}', invoiceLabel)
+              .replaceAll('{amount}', amountLabel);
+            const pdfFileName = `${buildInvoicePreviewExportBasename({
+              invoiceNumber: detail.invoiceNumber,
+              clientLabel,
+              issueDateIso: detail.issueDate.slice(0, 10),
+            })}.pdf`;
+
+            const draft = await createInvoiceOutlookDraft(detail.id, {
+              toEmail: contact.email,
+              toName: contact.name || null,
+              subject,
+              bodyHtml,
+              bodyText,
+              pdfBase64,
+              pdfFileName,
+            });
+
+            const opened = window.open(draft.webLink, '_blank', 'noopener,noreferrer');
+            if (!opened)
+              await showAlert({ message: t('timeTrackingPage.invoices.errors.outlookOpenFailed') });
+
             await sendInvoice(detail.id);
             setSendContactOpen(false);
             await refreshDetail(detail.id);
           }
           catch (e) {
-            await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
+            const msg = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic');
+            const lower = msg.toLowerCase();
+            if (lower.includes('не подключ') || lower.includes('not connected') || lower.includes('mail.readwrite'))
+              await showAlert({ message: t('timeTrackingPage.invoices.errors.outlookNotConnected') });
+            else
+              await showAlert({ message: msg || t('timeTrackingPage.invoices.errors.outlookDraftFailed') });
             throw e;
           }
           finally {

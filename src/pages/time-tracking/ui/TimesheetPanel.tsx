@@ -1443,7 +1443,8 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                         disabled={!outlookCalendar.statusChecked}
                     >
                         {t('timeTrackingPage.timesheet.connectCalendar')}
-                    </button>) : outlookCalendar.connected && outlookCalendar.calendars.length > 0 ? (
+                    </button>) : (<>
+                        {outlookCalendar.calendars.length > 0 ? (
                         <OutlookCalendarSelect
                             value={outlookCalendar.calendarId}
                             onChange={outlookCalendar.setCalendarId}
@@ -1455,7 +1456,17 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                             allCalendarsLabel={t('timeTrackingPage.timesheet.calendarAll')}
                             disabled={!outlookCalendar.statusChecked}
                         />
-                    ) : null}
+                        ) : null}
+                        <button
+                            type="button"
+                            className="tsp__cal-outlook-connect tsp__cal-outlook-reconnect"
+                            onClick={outlookCalendar.reconnect}
+                            disabled={!outlookCalendar.statusChecked}
+                            title={t('timeTrackingPage.timesheet.reconnectCalendarTitle')}
+                        >
+                            {t('timeTrackingPage.timesheet.reconnectCalendar')}
+                        </button>
+                    </>)}
                     {outlookCalendar.connectError ? (<span className="tsp__cal-outlook-err" role="alert">{outlookCalendar.connectError}</span>) : null}
                     {outlookCalendar.eventsError ? (<span className="tsp__cal-outlook-err" role="alert">
                         {outlookCalendar.eventsError === 'events_partial_failed'

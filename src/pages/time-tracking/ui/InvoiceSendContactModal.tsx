@@ -5,6 +5,7 @@ import {
     type TimeManagerClientContactRow,
 } from '@entities/time-tracking';
 import { listContactsClientContacts } from '@entities/contacts';
+import { getCalendarStatus, reconnectOutlookCalendar } from '@entities/todo/lib/calendarApi';
 import { useI18n } from '@shared/i18n';
 import { AddClientContactForClientModal } from './AddClientContactForClientModal';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
@@ -19,12 +20,17 @@ type ContactOption = {
     isPrimary?: boolean;
 };
 
+export type InvoiceSendSelectedContact = {
+    email: string;
+    name: string;
+};
+
 export type InvoiceSendContactModalProps = {
     clientId: string;
     clientName: string;
     invoiceLabel: string;
     onClose: () => void;
-    onConfirm: () => void | Promise<void>;
+    onConfirm: (contact: InvoiceSendSelectedContact) => void | Promise<void>;
 };
 
 function optionHasEmail(opt: ContactOption): boolean {
@@ -116,6 +122,19 @@ export function InvoiceSendContactModal({
     const [clientArchived, setClientArchived] = useState(false);
     const [addOpen, setAddOpen] = useState(false);
     const [sending, setSending] = useState(false);
+    const [outlookConnected, setOutlookConnected] = useState<boolean | null>(null);
+    const [outlookBusy, setOutlookBusy] = useState(false);
+    const [outlookError, setOutlookError] = useState<string | null>(null);
+
+    const refreshOutlookStatus = useCallback(async () => {
+        try {
+            const st = await getCalendarStatus();
+            setOutlookConnected(st.connected);
+        }
+        catch {
+            setOutlookConnected(false);
+        }
+    }, []);
 
     const applyLoaded = useCallback((
         primaryName: string | null | undefined,
@@ -165,6 +184,10 @@ export function InvoiceSendContactModal({
     }, [reload]);
 
     useEffect(() => {
+        void refreshOutlookStatus();
+    }, [refreshOutlookStatus]);
+
+    useEffect(() => {
         if (addOpen)
             return;
         const onKey = (e: KeyboardEvent) => {
@@ -178,12 +201,27 @@ export function InvoiceSendContactModal({
     const selected = options.find((o) => o.key === selectedKey);
     const canConfirm = Boolean(selected && optionHasEmail(selected) && !loading && !sending);
 
+    const handleReconnectOutlook = async () => {
+        setOutlookError(null);
+        setOutlookBusy(true);
+        try {
+            await reconnectOutlookCalendar();
+        }
+        catch (e) {
+            setOutlookError(e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.outlookNotConnected'));
+            setOutlookBusy(false);
+        }
+    };
+
     const handleConfirm = async () => {
-        if (!canConfirm)
+        if (!canConfirm || !selected?.email)
             return;
         setSending(true);
         try {
-            await onConfirm();
+            await onConfirm({
+                email: selected.email.trim(),
+                name: selected.name.trim(),
+            });
         }
         finally {
             setSending(false);
@@ -214,6 +252,29 @@ export function InvoiceSendContactModal({
               {t('timeTrackingPage.invoices.sendDialog.invoiceLabel').replace('{invoice}', invoiceLabel)}
             </p>
             <p className="tt-tm-hint">{t('timeTrackingPage.invoices.sendDialog.hint')}</p>
+
+            <div className="tt-inv-send-contact__outlook" role="group" aria-label={t('timeTrackingPage.invoices.sendDialog.outlookAria')}>
+              <p className="tt-tm-hint">
+                {outlookConnected === null
+                    ? t('timeTrackingPage.invoices.sendDialog.outlookChecking')
+                    : outlookConnected
+                        ? t('timeTrackingPage.invoices.sendDialog.outlookConnected')
+                        : t('timeTrackingPage.invoices.sendDialog.outlookDisconnected')}
+              </p>
+              <button
+                type="button"
+                className="tt-settings__btn tt-settings__btn--ghost"
+                disabled={outlookBusy || sending}
+                onClick={() => void handleReconnectOutlook()}
+              >
+                {outlookBusy
+                    ? t('timeTrackingPage.invoices.sendDialog.outlookConnecting')
+                    : outlookConnected
+                        ? t('timeTrackingPage.invoices.sendDialog.outlookReconnect')
+                        : t('timeTrackingPage.invoices.sendDialog.outlookConnect')}
+              </button>
+              {outlookError && (<p className="tt-tm-field-error" role="alert">{outlookError}</p>)}
+            </div>
 
             {loading && (<p className="tt-tm-hint" role="status">{t('timeTrackingPage.invoices.sendDialog.loading')}</p>)}
             {loadError && (<p className="tt-tm-field-error" role="alert">{loadError}</p>)}

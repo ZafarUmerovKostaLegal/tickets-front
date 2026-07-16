@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     CALENDAR_NOT_CONNECTED_MSG,
     connectOutlookCalendar,
+    reconnectOutlookCalendar,
     getCalendarEvents,
     getCalendarStatus,
     getOutlookCalendars,
@@ -268,6 +269,14 @@ export function useTimesheetOutlookCalendar({
         });
     }, []);
 
+    const reconnect = useCallback(() => {
+        setConnectError(null);
+        reconnectOutlookCalendar().catch((err) => {
+            const msg = err instanceof Error ? err.message : 'Не удалось переподключить календарь';
+            setConnectError(msg);
+        });
+    }, []);
+
     const getEventsForDateKey = useCallback((key: string) => eventsByDateKey.get(key) ?? [], [eventsByDateKey]);
 
     return {
@@ -284,6 +293,7 @@ export function useTimesheetOutlookCalendar({
         getEventsForDateKey,
         loading,
         connect,
+        reconnect,
         refreshEvents: loadEvents,
         dateKey: calendarDateKey,
         allCalendarsId: OUTLOOK_CALENDAR_ALL_ID,

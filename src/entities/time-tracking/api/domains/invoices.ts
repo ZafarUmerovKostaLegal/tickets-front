@@ -745,6 +745,62 @@ export async function sendInvoice(id: string): Promise<InvoiceDto> {
     await throwIfNotOk(res);
     return normalizeInvoiceDto(await res.json());
 }
+
+export type InvoiceOutlookDraftInput = {
+    toEmail: string;
+    toName?: string | null;
+    subject: string;
+    bodyHtml?: string | null;
+    bodyText?: string | null;
+    pdfBase64: string;
+    pdfFileName?: string | null;
+};
+
+export type InvoiceOutlookDraftResult = {
+    webLink: string;
+    messageId: string | null;
+};
+
+export async function createInvoiceOutlookDraft(
+    invoiceId: string,
+    body: InvoiceOutlookDraftInput,
+): Promise<InvoiceOutlookDraftResult> {
+    const payload: Record<string, unknown> = {
+        toEmail: String(body.toEmail ?? '').trim(),
+        subject: String(body.subject ?? '').trim(),
+        pdfBase64: String(body.pdfBase64 ?? '').trim(),
+    };
+    const toName = body.toName != null ? String(body.toName).trim() : '';
+    if (toName)
+        payload.toName = toName;
+    if (body.bodyHtml != null && String(body.bodyHtml).trim() !== '')
+        payload.bodyHtml = String(body.bodyHtml);
+    if (body.bodyText != null && String(body.bodyText).trim() !== '')
+        payload.bodyText = String(body.bodyText);
+    if (body.pdfFileName != null && String(body.pdfFileName).trim() !== '')
+        payload.pdfFileName = String(body.pdfFileName).trim();
+
+    const res = await apiFetch(
+        `/api/v1/time-tracking/invoices/${encodeURIComponent(invoiceId)}/outlook-draft`,
+        {
+            ...invoiceApiFetchInit,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        },
+    );
+    await throwIfNotOk(res);
+    const raw = await res.json();
+    const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+    const webLink = typeof o.webLink === 'string' ? o.webLink.trim() : '';
+    if (!webLink)
+        throw new Error('Outlook draft response missing webLink');
+    return {
+        webLink,
+        messageId: o.messageId != null ? String(o.messageId) : null,
+    };
+}
+
 export async function markInvoiceViewed(id: string): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/mark-viewed`, {
         ...invoiceApiFetchInit,

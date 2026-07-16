@@ -349,6 +349,8 @@ export const timeTrackingPageMessagesEn: TimeTrackingPageMessages = {
         employeeEntriesAccessHint:
             ' (no access to this employee’s entries — check shared projects in time tracking.)',
         connectCalendar: 'Connect calendar',
+        reconnectCalendar: 'Reconnect',
+        reconnectCalendarTitle: 'Reconnect Outlook with mail permissions (Mail.ReadWrite)',
         calendarShow: 'Show',
         calendarDefault: 'Primary',
         calendarAll: 'All calendars',

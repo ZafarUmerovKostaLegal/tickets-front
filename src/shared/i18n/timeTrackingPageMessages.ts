@@ -348,6 +348,8 @@ export const timeTrackingPageMessages = {
         employeeEntriesAccessHint:
             ' (нет доступа к записям этого сотрудника — проверьте общие проекты в учёте времени.)',
         connectCalendar: 'Подключить календарь',
+        reconnectCalendar: 'Переподключить',
+        reconnectCalendarTitle: 'Переподключить Outlook с правами на почту (Mail.ReadWrite)',
         calendarShow: 'Показать',
         calendarDefault: 'Основной',
         calendarAll: 'Все календари',
