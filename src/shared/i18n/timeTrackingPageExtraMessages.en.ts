@@ -1460,6 +1460,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             selectProjectUnbilled: 'Select a project — unbilled lines are requested by projectId.',
             unbilledLoadFailed: 'Could not load unbilled items',
             unbilledAccessLimited: 'Could not load unbilled items (access limited). Check permissions and period. Creating an invoice may still require full partner confirmation and billing period fields — see message when saving.',
+            confirmedOnlyRequired: 'Invoice can only be generated from a fully confirmed report for the selected project and period.',
             previewFailed: 'Could not open preview',
             pdfFailed: 'Could not generate PDF',
             wordFailed: 'Could not generate Word',

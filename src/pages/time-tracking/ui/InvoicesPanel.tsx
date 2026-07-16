@@ -9,7 +9,7 @@ import { useAppDialog, useAppToast } from '@shared/ui';
 import { useI18n, ttInvoiceSendActionLabel, ttInvoiceStatusLabel, type TimeTrackingT } from '@shared/i18n';
 import { localeTag } from '@shared/i18n/ticketUi';
 import type { AppLocale } from '@shared/i18n/types';
-import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listPartnerReportConfirmationsConfirmed, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, } from '@entities/time-tracking';
 import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
@@ -590,6 +590,19 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     void loadAggStats();
     notifyReportsInvalidated();
   }, [loadList, loadAggStats]);
+  const requireFullyConfirmedPeriod = useCallback(async (projectIdRaw: string, fromRaw: string, toRaw: string): Promise<boolean> => {
+    const projectId = projectIdRaw.trim();
+    const from = fromRaw.trim().slice(0, 10);
+    const to = toRaw.trim().slice(0, 10);
+    if (!projectId || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to))
+      return false;
+    const rows = await listPartnerReportConfirmationsConfirmed({ dateFrom: from, dateTo: to });
+    return rows.some((r) =>
+      String(r.projectId ?? '').trim() === projectId
+      && String(r.dateFrom ?? '').slice(0, 10) === from
+      && String(r.dateTo ?? '').slice(0, 10) === to
+      && String(r.status ?? '').trim().toLowerCase() === 'fully_confirmed');
+  }, []);
   const loadUnbilled = useCallback(async (opts?: { preserveSelections?: boolean }) => {
     if (!createProjectId) {
       await showAlert({ message: t('timeTrackingPage.invoices.errors.selectProjectUnbilled') });
@@ -598,19 +611,27 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     setUnbilledLoading(true);
     try {
       setUnbilledPartnerBlockReason(null);
-      const [t, e] = await Promise.all([
+      const allowed = await requireFullyConfirmedPeriod(createProjectId, unbilledFrom, unbilledTo);
+      if (!allowed) {
+        const msg = t('timeTrackingPage.invoices.errors.confirmedOnlyRequired');
+        setUnbilledTime([]);
+        setUnbilledExp([]);
+        setUnbilledPartnerBlockReason(msg);
+        return;
+      }
+      const [timeRows, expRows] = await Promise.all([
         fetchUnbilledTimeEntries({ projectId: createProjectId, dateFrom: unbilledFrom, dateTo: unbilledTo }),
         fetchUnbilledExpenses({ projectId: createProjectId, dateFrom: unbilledFrom, dateTo: unbilledTo }),
       ]);
-      setUnbilledTime(t);
-      setUnbilledExp(e);
+      setUnbilledTime(timeRows);
+      setUnbilledExp(expRows);
       if (!opts?.preserveSelections) {
         setSelTime(new Set());
         setSelExp(new Set());
       }
       else {
-        const timeIds = new Set(t.map((r) => r.id));
-        const expIds = new Set(e.map((r) => r.id));
+        const timeIds = new Set(timeRows.map((r) => r.id));
+        const expIds = new Set(expRows.map((r) => r.id));
         setSelTime((prev) => new Set([...prev].filter((id) => timeIds.has(id))));
         setSelExp((prev) => new Set([...prev].filter((id) => expIds.has(id))));
       }
@@ -632,7 +653,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     finally {
       setUnbilledLoading(false);
     }
-  }, [createProjectId, unbilledFrom, unbilledTo, showAlert, t]);
+  }, [createProjectId, unbilledFrom, unbilledTo, requireFullyConfirmedPeriod, showAlert, t]);
   useEffect(() => {
     if (readOnly)
       return;
@@ -812,6 +833,13 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       });
       return;
     }
+    const confirmedAllowed = await requireFullyConfirmedPeriod(billProjectId, unbilledFrom, unbilledTo);
+    if (!confirmedAllowed) {
+      const msg = t('timeTrackingPage.invoices.errors.confirmedOnlyRequired');
+      setUnbilledPartnerBlockReason(msg);
+      await showAlert({ message: msg });
+      return;
+    }
     setCreateBusy(true);
     try {
       const manualNumber = createInvoiceNumber.trim();
@@ -846,7 +874,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     finally {
       setCreateBusy(false);
     }
-  }, [createClientId, createProjectId, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledFrom, unbilledTo, loadList, loadAggStats, showAlert, t]);
+  }, [createClientId, createProjectId, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledFrom, unbilledTo, requireFullyConfirmedPeriod, loadList, loadAggStats, showAlert, t]);
   const handlePayment = useCallback(async () => {
     if (!detailId || !detail)
       return;
