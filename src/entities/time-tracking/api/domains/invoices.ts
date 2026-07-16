@@ -792,12 +792,21 @@ export async function createInvoiceOutlookDraft(
     await throwIfNotOk(res);
     const raw = await res.json();
     const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
-    const webLink = typeof o.webLink === 'string' ? o.webLink.trim() : '';
+    let webLink = typeof o.webLink === 'string' ? o.webLink.trim() : '';
+    const messageId = o.messageId != null ? String(o.messageId) : null;
+    // Client-side safety: Graph webLink opens drafts in read mode; force compose.
+    if (messageId && (!webLink || webLink.includes('/deeplink/read/'))) {
+        const q = encodeURIComponent(messageId);
+        webLink = `https://outlook.office.com/mail/deeplink/compose/${q}?ItemID=${q}&exvsurl=1`;
+    }
+    else if (webLink.includes('/deeplink/read/')) {
+        webLink = webLink.replace('/deeplink/read/', '/deeplink/compose/');
+    }
     if (!webLink)
         throw new Error('Outlook draft response missing webLink');
     return {
         webLink,
-        messageId: o.messageId != null ? String(o.messageId) : null,
+        messageId,
     };
 }
 
