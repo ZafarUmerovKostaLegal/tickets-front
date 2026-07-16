@@ -3314,9 +3314,36 @@ body[data-theme='dark'] .tt-rp-brief-th__label {
   background: var(--app-surface-soft, #fafbfc);
 }
 
+.tt-rp-mtable__th--select,
+.tt-rp-mtable__td--select {
+  width: 2.5rem;
+  min-width: 2.5rem;
+  max-width: 2.75rem;
+  padding-left: 0.55rem;
+  padding-right: 0.35rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.tt-rp-mtable__th--select {
+  position: sticky;
+  left: 0;
+  z-index: 7;
+}
+
+.tt-rp-mtable__td--select {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: inherit;
+}
+
+.tt-rp-mtable tbody tr.tt-rp-mtable__tr--selected .tt-rp-mtable__td--select {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 10%, var(--app-surface, #fff));
+}
+
 .tt-rp-mtable__tr--pickable {
-  cursor: pointer;
-  transition: background-color 0.12s ease;
+  cursor: default;
 }
 
 .tt-rp-mtable__tr--server-week-locked .tt-rp-mtable__td {

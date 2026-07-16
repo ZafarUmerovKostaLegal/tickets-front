@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type MouseEvent, type ReactElement, type ReactNode, } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactElement, type ReactNode, } from 'react';
 import { VirtualizedTableRows, type VirtualTableRowMeasureProps } from '@shared/ui/VirtualizedTableRows';
 import { createPortal } from 'react-dom';
 import type { ProjectOption, } from '@pages/time-tracking/ui/timesheetProjectLoader';
@@ -77,11 +77,6 @@ function timeEntryVoidTrModifier(r: TimeExcelPreviewRow): string {
 }
 function timeEntryDuplicateTrModifier(isDuplicate: boolean): string {
     return isDuplicate ? ' tt-rp-mtable__tr--duplicate' : '';
-}
-function isInteractiveCellTarget(target: EventTarget | null): boolean {
-    if (!(target instanceof Element))
-        return false;
-    return Boolean(target.closest('input, textarea, button, select, a, label, .tsp-srch'));
 }
 function timePreviewRowsForTotals(displayRows: TimeExcelPreviewRow[]): TimeExcelPreviewRow[] {
     return timePreviewRowsForPageExport(displayRows);
@@ -232,27 +227,41 @@ function rowTrClass(i: number, userName: string, selectedUserName: string | null
         parts.push('tt-rp-mtable__tr--server-week-locked');
     return parts.join(' ');
 }
-function ReportPreviewSelectionControl({ rowsCount, selectedUserName, onSelectUserName, variant = 'bar', }: {
-    rowsCount: number;
+function ReportRowSelectHeader({ selectedUserName, onSelectUserName, rowsCount, }: {
     selectedUserName?: string | null;
     onSelectUserName?: (name: string | null) => void;
-    variant?: 'bar' | 'inline';
+    rowsCount: number;
 }) {
     if (!onSelectUserName || rowsCount <= 0)
         return null;
     const allSelected = isAllRowsSelection(selectedUserName);
-    const hasActive = allSelected || Boolean(selectedUserName);
-    const label = allSelected
-        ? `Выбраны все: ${rowsCount}`
-        : selectedUserName
-            ? `Выбран: ${selectedUserName}`
-            : 'Выделение';
-    return (<div className={`tt-rp-mtable-selectbar${variant === 'inline' ? ' tt-rp-mtable-selectbar--inline' : ''}${hasActive ? ' tt-rp-mtable-selectbar--active' : ''}`} aria-live="polite">
-      <span className="tt-rp-mtable-selectbar__text">{label}</span>
-      <button type="button" className="tt-rp-mtable-selectbar__btn" onClick={() => onSelectUserName(allSelected ? null : ALL_ROWS_SELECTION)} aria-pressed={allSelected}>
-        {allSelected ? 'Снять' : 'Все'}
-      </button>
-    </div>);
+    return (<th className="tt-rp-mtable__th tt-rp-mtable__th--select" scope="col">
+      <RpBool checked={allSelected} ariaLabel={allSelected ? 'Снять выделение со всех строк' : 'Выделить все видимые строки'} onChange={(checked) => onSelectUserName(checked ? ALL_ROWS_SELECTION : null)}/>
+    </th>);
+}
+function ReportRowSelectCell({ userName, selectedUserName, onSelectUserName, }: {
+    userName: string;
+    selectedUserName?: string | null;
+    onSelectUserName?: (name: string | null) => void;
+}) {
+    if (!onSelectUserName)
+        return null;
+    const selected = isReportRowSelected(userName, selectedUserName);
+    return (<td className="tt-rp-mtable__td tt-rp-mtable__td--select" onClick={(e) => e.stopPropagation()}>
+      <RpBool checked={selected} ariaLabel={selected ? `Снять выделение: ${userName}` : `Выделить: ${userName}`} onChange={(checked) => {
+            if (checked)
+                onSelectUserName(userName);
+            else if (isAllRowsSelection(selectedUserName) || selectedUserName === userName)
+                onSelectUserName(null);
+        }}/>
+    </td>);
+}
+function ReportRowSelectFootCell({ onSelectUserName, }: {
+    onSelectUserName?: (name: string | null) => void;
+}) {
+    if (!onSelectUserName)
+        return null;
+    return (<td className="tt-rp-mtable__td tt-rp-mtable__td--foot tt-rp-mtable__td--select" aria-hidden/>);
 }
 function mergeLabeledOptions(base: LabeledOption[], fromRows: LabeledOption[]): LabeledOption[] {
     const m = new Map<string, LabeledOption>();
@@ -869,19 +878,15 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         ro.observe(el);
         return () => ro.disconnect();
     }, [isFull, tableFullscreen, displayRows.length, footerExtras]);
-    const briefTableColSpan = visibleBriefIds.length;
-    const fullTableColSpan = visibleFullIds.length + (showEntryActions ? 1 : 0);
+    const showRowSelect = Boolean(onSelectUserName);
+    const briefTableColSpan = visibleBriefIds.length + (showRowSelect ? 1 : 0);
+    const fullTableColSpan = visibleFullIds.length + (showEntryActions ? 1 : 0) + (showRowSelect ? 1 : 0);
     const renderFullDataRow = (i: number, measure: VirtualTableRowMeasureProps): ReactElement => {
         const r = displayRows[i];
         const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.userName, selectedUserName, wk)}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} onClick={onSelectUserName
-            ? (e: MouseEvent<HTMLTableRowElement>) => {
-                if (isInteractiveCellTarget(e.target))
-                    return;
-                onSelectUserName(selectedUserName === r.userName ? null : r.userName);
-            }
-            : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.userName, selectedUserName, wk)}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
+            <ReportRowSelectCell userName={r.userName} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
             {visibleFullIds.map((colId) => renderFullBodyCell(colId, r, i, wk))}
             {showEntryActions ? (<td key="actions-full" className="tt-rp-mtable__td tt-rp-mtable__td--brief-actions" onClick={(e) => e.stopPropagation()}>
                 {renderEntryRowActions(r, wk, i)}
@@ -892,13 +897,8 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const r = displayRows[i];
         const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.userName, selectedUserName, wk)}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} onClick={onSelectUserName
-            ? (e: MouseEvent<HTMLTableRowElement>) => {
-                if (isInteractiveCellTarget(e.target))
-                    return;
-                onSelectUserName(selectedUserName === r.userName ? null : r.userName);
-            }
-            : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.userName, selectedUserName, wk)}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
+            <ReportRowSelectCell userName={r.userName} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
             {visibleBriefIds.map((colId) => renderBriefBodyCell(colId, r, i, wk))}
         </tr>);
     };
@@ -1485,7 +1485,6 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 + Добавить
               </button>) : null}
             <div className="tt-rp-mtable-toolbar__trail">
-              <ReportPreviewSelectionControl variant="inline" rowsCount={displayRows.length} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
               {!readOnlyUi ? (<div className="tt-rp-mtable-more" ref={moreMenuRef}>
                 <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-mtable-more__btn" onClick={() => setMoreMenuOpen((v) => !v)} aria-expanded={moreMenuOpen} aria-haspopup="menu" title="Дополнительные действия">
                   Ещё
@@ -1543,6 +1542,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
           {isFull ? (<table className="tt-rp-mtable tt-rp-mtable--time-wide">
             <thead>
               <tr>
+                <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={displayRows.length}/>
                 {visibleFullIds.map((colId) => renderFullHeaderCell(colId))}
                 {showEntryActions ? (<th key="actions-full" className="tt-rp-mtable__th tt-rp-mtable__th--brief-actions" scope="col">
                     Действия
@@ -1557,6 +1557,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             </tbody>
             <tfoot ref={tfootRef}>
               <tr className="tt-rp-mtable__foot">
+                <ReportRowSelectFootCell onSelectUserName={onSelectUserName}/>
                 {visibleFullIds.map((colId, colIdx) => renderFullFooterCell(colId, colIdx))}
                 {showEntryActions ? (<td key="full-actions-foot" className="tt-rp-mtable__td tt-rp-mtable__td--foot tt-rp-mtable__td--brief-actions" aria-hidden/>) : null}
               </tr>
@@ -1569,6 +1570,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
           </table>) : (<table className="tt-rp-mtable tt-rp-mtable--time-brief">
             <thead>
               <tr>
+                <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={displayRows.length}/>
                 {visibleBriefIds.map((colId) => renderBriefHeaderCell(colId))}
               </tr>
             </thead>
@@ -1580,6 +1582,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             </tbody>
             <tfoot ref={tfootRef}>
               <tr className="tt-rp-mtable__foot">
+                <ReportRowSelectFootCell onSelectUserName={onSelectUserName}/>
                 {visibleBriefIds.map((colId, colIdx) => renderBriefFooterCell(colId, colIdx))}
               </tr>
               {footerExtras ? (<tr className="tt-rp-mtable__foot-sign">
@@ -1632,13 +1635,8 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
     }))), [rows]);
     const renderRow = (i: number, measure: VirtualTableRowMeasureProps): ReactElement => {
         const r = rows[i];
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.userName, selectedUserName)} onClick={onSelectUserName
-            ? (e: MouseEvent<HTMLTableRowElement>) => {
-                if (isInteractiveCellTarget(e.target))
-                    return;
-                onSelectUserName(selectedUserName === r.userName ? null : r.userName);
-            }
-            : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.userName, selectedUserName)} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
+                  <ReportRowSelectCell userName={r.userName} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
@@ -1664,6 +1662,7 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
                   </td>
                 </tr>);
     };
+    const expenseColSpan = 7 + (onSelectUserName ? 1 : 0);
     return (<div className="tt-rp-mtable-wrap">
       <div className="tt-rp-mtable-card">
         <header className="tt-rp-mtable-head">
@@ -1672,7 +1671,6 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
               <h2 className="tt-rp-mtable-title">Расходы</h2>
               <PreviewServerReloadBtn onRequestServerReload={onRequestServerReload} serverReloadBusy={serverReloadBusy}/>
             </div>
-            <ReportPreviewSelectionControl rowsCount={rows.length} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
             <p className="tt-rp-mtable-sub">Данные с сервера; правки только на этой странице предпросмотра.</p>
           </div>
         </header>
@@ -1680,6 +1678,7 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
           <table className="tt-rp-mtable tt-rp-mtable--wide">
             <thead>
               <tr>
+                <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={rows.length}/>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--rn">#</th>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--employee-head">
                   <div className="tt-rp-mtable__th-employee">
@@ -1695,7 +1694,7 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
               </tr>
             </thead>
             <tbody>
-              <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={rows.length} colSpan={7} estimateRowHeight={72} renderRow={renderRow}/>
+              <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={rows.length} colSpan={expenseColSpan} estimateRowHeight={72} renderRow={renderRow}/>
             </tbody>
           </table>
         </div>
@@ -1713,13 +1712,8 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
     }))), [rows]);
     const renderRow = (i: number, measure: VirtualTableRowMeasureProps): ReactElement => {
         const r = rows[i];
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.userName, selectedUserName)} onClick={onSelectUserName
-            ? (e: MouseEvent<HTMLTableRowElement>) => {
-                if (isInteractiveCellTarget(e.target))
-                    return;
-                onSelectUserName(selectedUserName === r.userName ? null : r.userName);
-            }
-            : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.userName, selectedUserName)} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
+                  <ReportRowSelectCell userName={r.userName} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
@@ -1739,6 +1733,7 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
                   </td>
                 </tr>);
     };
+    const uninvoicedColSpan = 6 + (onSelectUserName ? 1 : 0);
     return (<div className="tt-rp-mtable-wrap">
       <div className="tt-rp-mtable-card">
         <header className="tt-rp-mtable-head">
@@ -1747,7 +1742,6 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
               <h2 className="tt-rp-mtable-title">Не выставлено</h2>
               <PreviewServerReloadBtn onRequestServerReload={onRequestServerReload} serverReloadBusy={serverReloadBusy}/>
             </div>
-            <ReportPreviewSelectionControl rowsCount={rows.length} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
             <p className="tt-rp-mtable-sub">Данные с сервера; правки только на этой странице предпросмотра.</p>
           </div>
         </header>
@@ -1755,6 +1749,7 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
           <table className="tt-rp-mtable tt-rp-mtable--wide">
             <thead>
               <tr>
+                <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={rows.length}/>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--rn">#</th>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--employee-head">
                   <div className="tt-rp-mtable__th-employee">
@@ -1769,7 +1764,7 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
               </tr>
             </thead>
             <tbody>
-              <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={rows.length} colSpan={6} estimateRowHeight={72} renderRow={renderRow}/>
+              <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={rows.length} colSpan={uninvoicedColSpan} estimateRowHeight={72} renderRow={renderRow}/>
             </tbody>
           </table>
         </div>
@@ -1787,13 +1782,8 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null
     }))), [rows]);
     const renderRow = (i: number, measure: VirtualTableRowMeasureProps): ReactElement => {
         const r = rows[i];
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.userName, selectedUserName)} onClick={onSelectUserName
-            ? (e: MouseEvent<HTMLTableRowElement>) => {
-                if (isInteractiveCellTarget(e.target))
-                    return;
-                onSelectUserName(selectedUserName === r.userName ? null : r.userName);
-            }
-            : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.userName, selectedUserName)} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
+                  <ReportRowSelectCell userName={r.userName} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
@@ -1810,6 +1800,7 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null
                   </td>
                 </tr>);
     };
+    const budgetColSpan = 5 + (onSelectUserName ? 1 : 0);
     return (<div className="tt-rp-mtable-wrap">
       <div className="tt-rp-mtable-card">
         <header className="tt-rp-mtable-head">
@@ -1818,7 +1809,6 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null
               <h2 className="tt-rp-mtable-title">Бюджет</h2>
               <PreviewServerReloadBtn onRequestServerReload={onRequestServerReload} serverReloadBusy={serverReloadBusy}/>
             </div>
-            <ReportPreviewSelectionControl rowsCount={rows.length} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
             <p className="tt-rp-mtable-sub">Данные с сервера; правки только на этой странице предпросмотра.</p>
           </div>
         </header>
@@ -1826,6 +1816,7 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null
           <table className="tt-rp-mtable tt-rp-mtable--wide">
             <thead>
               <tr>
+                <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={rows.length}/>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--rn">#</th>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--employee-head">
                   <div className="tt-rp-mtable__th-employee">
@@ -1839,7 +1830,7 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null
               </tr>
             </thead>
             <tbody>
-              <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={rows.length} colSpan={5} estimateRowHeight={56} renderRow={renderRow}/>
+              <VirtualizedTableRows scrollRef={tableScrollRef} rowCount={rows.length} colSpan={budgetColSpan} estimateRowHeight={56} renderRow={renderRow}/>
             </tbody>
           </table>
         </div>
