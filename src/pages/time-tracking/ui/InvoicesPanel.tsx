@@ -9,7 +9,7 @@ import { useAppDialog, useAppToast } from '@shared/ui';
 import { useI18n, ttInvoiceSendActionLabel, ttInvoiceStatusLabel, type TimeTrackingT } from '@shared/i18n';
 import { localeTag } from '@shared/i18n/ticketUi';
 import type { AppLocale } from '@shared/i18n/types';
-import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, getInvoiceAudit, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listPartnerReportConfirmationsConfirmed, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type InvoiceAuditEntryDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, type PartnerReportConfirmationRequest, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, createInvoice, patchInvoice, sendInvoice, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listPartnerReportConfirmationsConfirmed, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, type PartnerReportConfirmationRequest, } from '@entities/time-tracking';
 import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
@@ -320,9 +320,6 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
   const [paymentConfirmDocUrl, setPaymentConfirmDocUrl] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
   const [detailExportBusy, setDetailExportBusy] = useState<'pdf' | 'word' | null>(null);
-  const [auditEntries, setAuditEntries] = useState<InvoiceAuditEntryDto[]>([]);
-  const [auditLoading, setAuditLoading] = useState(false);
-  const [auditErr, setAuditErr] = useState<string | null>(null);
   const [draftIssueDate, setDraftIssueDate] = useState('');
   const [draftDueDate, setDraftDueDate] = useState('');
   const [draftTaxPct, setDraftTaxPct] = useState('');
@@ -564,10 +561,6 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       pushToast({ message: aggStatsErr, variant: 'warning' });
   }, [aggStatsErr, pushToast]);
   useEffect(() => {
-    if (auditErr)
-      pushToast({ message: auditErr, variant: 'warning' });
-  }, [auditErr, pushToast]);
-  useEffect(() => {
     loadList();
   }, [loadList]);
   useEffect(() => {
@@ -585,35 +578,6 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     if (createProjectId && !projects.some((p) => p.id === createProjectId))
       setCreateProjectId('');
   }, [createClientId, createProjectId, clientsForCreate, projects]);
-  useEffect(() => {
-    if (!detailId) {
-      setAuditEntries([]);
-      setAuditErr(null);
-      setAuditLoading(false);
-      return;
-    }
-    let canceled = false;
-    setAuditLoading(true);
-    setAuditErr(null);
-    void getInvoiceAudit(detailId)
-      .then((rows) => {
-        if (!canceled)
-          setAuditEntries(rows);
-      })
-      .catch((e) => {
-        if (!canceled) {
-          setAuditEntries([]);
-          setAuditErr(e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.auditLoadFailed'));
-        }
-      })
-      .finally(() => {
-        if (!canceled)
-          setAuditLoading(false);
-      });
-    return () => {
-      canceled = true;
-    };
-  }, [detailId, detail?.updatedAt, detail?.status, t]);
   useEffect(() => {
     setPaymentConfirmDocUrl('');
   }, [detailId]);
@@ -1384,11 +1348,11 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
             <div className="tt-inv-dialog__period-bar">
               <div className="tt-inv-dialog__field">
                 <span id="tt-inv-unbill-from-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.fromLabel')}</span>
-                <DatePicker id="tt-inv-unbill-from" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledFrom} max={unbilledTo || undefined} onChange={(iso) => setUnbilledFrom(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledFrom')} showChevron aria-labelledby="tt-inv-unbill-from-lbl" />
+                <DatePicker id="tt-inv-unbill-from" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledFrom} max={unbilledTo || undefined} onChange={() => {}} disabled portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledFrom')} showChevron aria-labelledby="tt-inv-unbill-from-lbl" />
               </div>
               <div className="tt-inv-dialog__field">
                 <span id="tt-inv-unbill-to-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.toLabel')}</span>
-                <DatePicker id="tt-inv-unbill-to" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledTo} min={unbilledFrom || undefined} onChange={(iso) => setUnbilledTo(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledTo')} showChevron aria-labelledby="tt-inv-unbill-to-lbl" />
+                <DatePicker id="tt-inv-unbill-to" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledTo} min={unbilledFrom || undefined} onChange={() => {}} disabled portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledTo')} showChevron aria-labelledby="tt-inv-unbill-to-lbl" />
               </div>
               <div className="tt-inv-dialog__period-action">
                 <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" onClick={() => void loadUnbilled()} disabled={unbilledLoading || !createProjectId} title={!createProjectId ? t('timeTrackingPage.invoices.createDialog.selectProjectFirst') : t('timeTrackingPage.invoices.createDialog.loadUnbilledTitle')}>
@@ -1785,21 +1749,6 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
                 <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={() => void handlePayment()} disabled={actionBusy}>{t('timeTrackingPage.invoices.payment.recordPayment')}</button>
               </div>
             </div>)}
-
-            <div className="tt-inv-detail__section-divider" role="presentation" aria-hidden />
-            <h4 className="tt-inv__section-title">{t('timeTrackingPage.invoices.detail.audit')}</h4>
-            {auditLoading ? <p className="tt-inv__muted">{t('timeTrackingPage.invoices.detail.auditLoading')}</p> : null}
-            {!auditLoading && auditErr ? (<p className="tt-inv__muted">{t('timeTrackingPage.invoices.detail.auditUnavailable')}</p>) : null}
-            {!auditLoading && !auditErr && auditEntries.length === 0 ? (<p className="tt-inv__muted">{t('timeTrackingPage.invoices.detail.auditEmpty')}</p>) : null}
-            {!auditLoading && !auditErr && auditEntries.length > 0 ? (<ul className="tt-inv-audit">
-              {auditEntries.map((a) => (<li key={a.id} className="tt-inv-audit__item">
-                <span className="tt-inv-audit__meta">
-                  {new Date(a.createdAt).toLocaleString(localeTag(locale), { dateStyle: 'short', timeStyle: 'short' })} · #{a.actorAuthUserId}
-                </span>
-                <span className="tt-inv-audit__action">{a.action}</span>
-                {a.detail ? <span className="tt-inv-audit__detail">{a.detail}</span> : null}
-              </li>))}
-            </ul>) : null}
 
             <div className="tt-inv-detail__section-divider" role="presentation" aria-hidden />
             <h4 className="tt-inv__section-title">{t('timeTrackingPage.invoices.detail.linesTitle')}</h4>
