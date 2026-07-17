@@ -5445,6 +5445,17 @@ a.pp__proj-name--link:hover {
   background: rgba(217, 119, 6, 0.08);
 }
 
+.tt-inv-outlook-wait {
+  margin: 0.65rem 0 0;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #334155;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
 .tt-inv-send-contact__outlook .tt-tm-hint {
   margin: 0;
 }

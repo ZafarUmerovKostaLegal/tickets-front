@@ -11,6 +11,7 @@ export {
     patchInvoice,
     sendInvoice,
     createInvoiceOutlookDraft,
+    getInvoiceOutlookDraftStatus,
     markInvoiceViewed,
     registerInvoicePayment,
     mergeInvoiceDtoAfterPayment,
@@ -34,4 +35,6 @@ export {
     type InvoiceAuditEntryDto,
     type InvoiceOutlookDraftInput,
     type InvoiceOutlookDraftResult,
+    type InvoiceOutlookDraftStatusResult,
+    type InvoiceOutlookDraftDeliveryState,
 } from './monolith';

@@ -9,7 +9,7 @@ import { useAppDialog, useAppToast } from '@shared/ui';
 import { useI18n, ttInvoiceSendActionLabel, ttInvoiceStatusLabel, type TimeTrackingT } from '@shared/i18n';
 import { localeTag } from '@shared/i18n/ticketUi';
 import type { AppLocale } from '@shared/i18n/types';
-import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, createInvoice, patchInvoice, sendInvoice, createInvoiceOutlookDraft, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listPartnerReportConfirmationsConfirmed, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, type PartnerReportConfirmationRequest, } from '@entities/time-tracking';
+import { listInvoices, getInvoicesAggregatedStats, aggregateInvoicesMoneyExcludingCanceled, getInvoice, createInvoice, patchInvoice, sendInvoice, createInvoiceOutlookDraft, getInvoiceOutlookDraftStatus, markInvoiceViewed, registerInvoicePayment, submitInvoicePaymentConfirmation, cancelInvoice, deleteDraftInvoice, fetchUnbilledTimeEntries, fetchUnbilledExpenses, listPartnerReportConfirmationsConfirmed, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, listAllClientProjectsForClientMerged, listAllClientProjectsForPicker, isForbiddenError, getTimeManagerClient, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, writeInvoicePreviewSession, readInvoicePreviewSession, OPEN_INVOICE_DETAIL_QUERY, isInvoicePreviewSessionCreate, mergeInvoiceDtoAfterPayment, type InvoiceDto, type InvoiceLineDto, type TimeManagerClientRow, type TimeManagerClientProjectRow, type UnbilledTimeEntryDto, type UnbilledExpenseEntryDto, type InvoicePatchInput, type InvoiceUiStatus, type InvoicesAggregatedStats, type InvoicePreviewMeta, type PartnerReportConfirmationRequest, } from '@entities/time-tracking';
 import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
@@ -36,6 +36,38 @@ function escapeHtml(value: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+/** Outlook compose in a centered popup (not a new browser tab). */
+function openOutlookComposePopup(url: string): Window | null {
+  const href = String(url ?? '').trim();
+  if (!href || typeof window === 'undefined')
+    return null;
+  const availW = window.screen?.availWidth || window.innerWidth || 1200;
+  const availH = window.screen?.availHeight || window.innerHeight || 900;
+  const width = Math.min(1100, Math.max(720, Math.floor(availW * 0.72)));
+  const height = Math.min(900, Math.max(640, Math.floor(availH * 0.85)));
+  const left = Math.max(0, Math.floor((availW - width) / 2) + (window.screenLeft || window.screenX || 0));
+  const top = Math.max(0, Math.floor((availH - height) / 2) + (window.screenTop || window.screenY || 0));
+  const features = [
+    'popup=yes',
+    `width=${width}`,
+    `height=${height}`,
+    `left=${left}`,
+    `top=${top}`,
+    'scrollbars=yes',
+    'resizable=yes',
+  ].join(',');
+  const popup = window.open(href, 'kostaOutlookInvoiceCompose', features);
+  // Soft noopener: do not keep a strong reference chain to the app window.
+  try {
+    if (popup)
+      popup.opener = null;
+  }
+  catch {
+    /* ignore cross-origin */
+  }
+  return popup;
 }
 function invoiceLineKindSlug(ln: InvoiceLineDto): string {
   const k = (ln.lineKind ?? '').toLowerCase().trim();
@@ -339,6 +371,8 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
   const [paymentConfirmDocUrl, setPaymentConfirmDocUrl] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
   const [sendContactOpen, setSendContactOpen] = useState(false);
+  const [outlookSendWait, setOutlookSendWait] = useState<{ invoiceId: string; label: string } | null>(null);
+  const outlookWaitAbortRef = useRef<AbortController | null>(null);
   const [detailExportBusy, setDetailExportBusy] = useState<'pdf' | 'word' | null>(null);
   const [draftIssueDate, setDraftIssueDate] = useState('');
   const [draftDueDate, setDraftDueDate] = useState('');
@@ -630,6 +664,95 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     void loadAggStats();
     notifyReportsInvalidated();
   }, [loadList, loadAggStats]);
+
+  useEffect(() => () => {
+    outlookWaitAbortRef.current?.abort();
+  }, []);
+
+  const trackOutlookSendAndMarkInvoice = useCallback(async (opts: {
+    invoiceId: string;
+    messageId: string;
+    subject: string;
+    label: string;
+  }) => {
+    outlookWaitAbortRef.current?.abort();
+    const ac = new AbortController();
+    outlookWaitAbortRef.current = ac;
+    setOutlookSendWait({ invoiceId: opts.invoiceId, label: opts.label });
+    pushToast({
+      message: t('timeTrackingPage.invoices.sendDialog.outlookWaitingSend').replace('{invoice}', opts.label),
+      variant: 'info',
+    });
+
+    const createdAfter = new Date(Date.now() - 120_000).toISOString();
+    const startedAt = Date.now();
+    let missingSince: number | null = null;
+    const maxMs = 15 * 60_000;
+    const missingGraceMs = 90_000;
+    const pollMs = 3000;
+
+    const sleep = (ms: number) => new Promise<void>((resolve) => {
+      const timer = window.setTimeout(() => resolve(), ms);
+      ac.signal.addEventListener('abort', () => {
+        window.clearTimeout(timer);
+        resolve();
+      }, { once: true });
+    });
+
+    try {
+      while (!ac.signal.aborted && Date.now() - startedAt < maxMs) {
+        const st = await getInvoiceOutlookDraftStatus(opts.invoiceId, {
+          messageId: opts.messageId,
+          subject: opts.subject,
+          createdAfter,
+        });
+        if (ac.signal.aborted)
+          return;
+        if (st.state === 'sent') {
+          await sendInvoice(opts.invoiceId);
+          await refreshDetail(opts.invoiceId);
+          pushToast({
+            message: t('timeTrackingPage.invoices.sendDialog.outlookSentStatusUpdated').replace('{invoice}', opts.label),
+            variant: 'info',
+          });
+          return;
+        }
+        if (st.state === 'missing') {
+          if (missingSince == null)
+            missingSince = Date.now();
+          else if (Date.now() - missingSince >= missingGraceMs) {
+            pushToast({
+              message: t('timeTrackingPage.invoices.sendDialog.outlookDraftDiscarded').replace('{invoice}', opts.label),
+              variant: 'warning',
+            });
+            return;
+          }
+        }
+        else {
+          missingSince = null;
+        }
+        await sleep(pollMs);
+      }
+      if (!ac.signal.aborted) {
+        pushToast({
+          message: t('timeTrackingPage.invoices.sendDialog.outlookWaitTimeout').replace('{invoice}', opts.label),
+          variant: 'warning',
+        });
+      }
+    }
+    catch (e) {
+      if (ac.signal.aborted)
+        return;
+      const msg = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic');
+      pushToast({ message: msg, variant: 'error' });
+    }
+    finally {
+      if (outlookWaitAbortRef.current === ac) {
+        outlookWaitAbortRef.current = null;
+        setOutlookSendWait(null);
+      }
+    }
+  }, [pushToast, refreshDetail, t]);
   const requireFullyConfirmedPeriod = useCallback(async (projectIdRaw: string, fromRaw: string, toRaw: string): Promise<boolean> => {
     const projectId = projectIdRaw.trim();
     const from = fromRaw.trim().slice(0, 10);
@@ -1609,9 +1732,16 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
                 {detailExportBusy === 'word' ? t('timeTrackingPage.invoices.detail.preparingWord') : t('timeTrackingPage.invoices.detail.downloadWord')}
               </button>
             </div>
+            {outlookSendWait && outlookSendWait.invoiceId === detail.id && (
+              <p className="tt-inv-outlook-wait" role="status">
+                {t('timeTrackingPage.invoices.sendDialog.outlookWaitingBanner').replace('{invoice}', outlookSendWait.label)}
+              </p>
+            )}
             {!readOnly && (<div className="tt-inv-actions">
-              {invoiceCanSend(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => setSendContactOpen(true)}>
-                {ttInvoiceSendActionLabel(detail.status as InvoiceUiStatus, t)}
+              {invoiceCanSend(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy || Boolean(outlookSendWait && outlookSendWait.invoiceId === detail.id)} onClick={() => setSendContactOpen(true)}>
+                {outlookSendWait && outlookSendWait.invoiceId === detail.id
+                  ? t('timeTrackingPage.invoices.sendDialog.outlookWaitingShort')
+                  : ttInvoiceSendActionLabel(detail.status as InvoiceUiStatus, t)}
               </button>)}
               {invoiceCanMarkViewed(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {
                 setActionBusy(true);
@@ -1851,13 +1981,31 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
               pdfFileName,
             });
 
-            const opened = window.open(draft.webLink, '_blank', 'noopener,noreferrer');
+            const opened = openOutlookComposePopup(draft.webLink);
             if (!opened)
               await showAlert({ message: t('timeTrackingPage.invoices.errors.outlookOpenFailed') });
 
-            await sendInvoice(detail.id);
+            // Close modal right away — do not hang on "Готовим письмо…" while user sends in Outlook.
             setSendContactOpen(false);
-            await refreshDetail(detail.id);
+
+            const messageId = (draft.messageId || '').trim();
+            if (!messageId) {
+              // Cannot track Graph message — fall back to marking sent after draft open.
+              await sendInvoice(detail.id);
+              await refreshDetail(detail.id);
+              pushToast({
+                message: t('timeTrackingPage.invoices.sendDialog.outlookSentStatusUpdated').replace('{invoice}', invoiceLabel),
+                variant: 'info',
+              });
+              return;
+            }
+
+            void trackOutlookSendAndMarkInvoice({
+              invoiceId: detail.id,
+              messageId,
+              subject,
+              label: invoiceLabel,
+            });
           }
           catch (e) {
             const msg = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic');

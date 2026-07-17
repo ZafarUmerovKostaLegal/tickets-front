@@ -810,6 +810,47 @@ export async function createInvoiceOutlookDraft(
     };
 }
 
+export type InvoiceOutlookDraftDeliveryState = 'pending' | 'sent' | 'missing';
+
+export type InvoiceOutlookDraftStatusResult = {
+    state: InvoiceOutlookDraftDeliveryState;
+    sentDateTime: string | null;
+};
+
+export async function getInvoiceOutlookDraftStatus(
+    invoiceId: string,
+    opts: { messageId: string; subject?: string | null; createdAfter?: string | null },
+): Promise<InvoiceOutlookDraftStatusResult> {
+    const messageId = String(opts.messageId ?? '').trim();
+    if (!messageId)
+        throw new Error('messageId is required');
+    const qs = new URLSearchParams();
+    qs.set('messageId', messageId);
+    const subject = opts.subject != null ? String(opts.subject).trim() : '';
+    if (subject)
+        qs.set('subject', subject);
+    const createdAfter = opts.createdAfter != null ? String(opts.createdAfter).trim() : '';
+    if (createdAfter)
+        qs.set('createdAfter', createdAfter);
+
+    const res = await apiFetch(
+        `/api/v1/time-tracking/invoices/${encodeURIComponent(invoiceId)}/outlook-draft-status?${qs.toString()}`,
+        { ...invoiceApiFetchInit, method: 'GET' },
+    );
+    await throwIfNotOk(res);
+    const raw = await res.json();
+    const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+    const stateRaw = typeof o.state === 'string' ? o.state.trim().toLowerCase() : '';
+    const state: InvoiceOutlookDraftDeliveryState =
+        stateRaw === 'sent' || stateRaw === 'missing' || stateRaw === 'pending'
+            ? stateRaw
+            : 'pending';
+    return {
+        state,
+        sentDateTime: typeof o.sentDateTime === 'string' ? o.sentDateTime : null,
+    };
+}
+
 export async function markInvoiceViewed(id: string): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/mark-viewed`, {
         ...invoiceApiFetchInit,
