@@ -12,6 +12,7 @@ export * from './weeklySubmittedWeeks';
 export * from './timeEntryEditUnlockStorage';
 export * from './reportSnapshotOverrides';
 export * from './exportPartnerConfirmedSnapshotExcel';
+export * from './exportProjectsListExcel';
 export * from './reportEmployeeInitials';
 export * from './reportEmployeePosition';
 export * from './userFacingProjectAccessError';

@@ -12,6 +12,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { canManageTimeTrackingClients } from '@entities/time-tracking/model/timeTrackingAccess';
 import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
 import { buildProjectArchiveTogglePatch, buildProjectPauseTogglePatch } from '@entities/time-tracking/lib/projectArchiveRestore';
+import { exportProjectsListExcel } from '@entities/time-tracking/lib/exportProjectsListExcel';
 import type { ProjectRow, ProjectStatus, ProjectType } from '@entities/time-tracking/model/types';
 import { getProjectDetailUrl, getTimeTrackingNewProjectUrl } from '@shared/config';
 import { useI18n, ttProjectStatusLabel, ttProjectTypeLabel, ttProjectPluralWord } from '@shared/i18n';
@@ -83,6 +84,11 @@ const IcoFolder = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 const IcoSearch = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <circle cx="11" cy="11" r="8"/>
     <path d="m21 21-4.35-4.35"/>
+  </svg>);
+const IcoDownload = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+    <polyline points="7 10 12 15 17 10"/>
+    <line x1="12" y1="15" x2="12" y2="3"/>
   </svg>);
 function matchesProjectSearch(p: ProjectRow, query: string): boolean {
     const q = query.trim().toLowerCase();
@@ -199,6 +205,7 @@ export function ProjectsPanel() {
     const actionRef = useRef<HTMLDivElement>(null);
     const menuPortalRef = useRef<HTMLDivElement>(null);
     const [actionBusy, setActionBusy] = useState(false);
+    const [exportBusy, setExportBusy] = useState(false);
     const [contactModalClient, setContactModalClient] = useState<{
         id: string;
         name: string;
@@ -443,6 +450,53 @@ export function ProjectsPanel() {
             return n;
         });
     }
+    const partnerExportReady = Boolean(partnerFilter && partnerFilter !== PP_PARTNER_FILTER_NONE);
+    const handleExportPartnerProjects = useCallback(async () => {
+        if (!partnerExportReady) {
+            showToast({ message: t('timeTrackingPage.projects.exportPartnerHint'), variant: 'warning' });
+            return;
+        }
+        if (filtered.length === 0) {
+            showToast({ message: t('timeTrackingPage.projects.exportPartnerEmpty'), variant: 'warning' });
+            return;
+        }
+        const partnerLabel = partnerOptions.find((o) => o.key === partnerFilter)?.label
+            || partnerFilter;
+        setExportBusy(true);
+        try {
+            const file = await exportProjectsListExcel({
+                projects: filtered,
+                partnerLabel,
+                columnLabels: {
+                    client: t('timeTrackingPage.projects.exportCols.client'),
+                    project: t('timeTrackingPage.projects.exportCols.project'),
+                    type: t('timeTrackingPage.projects.exportCols.type'),
+                    status: t('timeTrackingPage.projects.exportCols.status'),
+                    budget: t('timeTrackingPage.projects.exportCols.budget'),
+                    spent: t('timeTrackingPage.projects.exportCols.spent'),
+                    remaining: t('timeTrackingPage.projects.exportCols.remaining'),
+                    currency: t('timeTrackingPage.projects.exportCols.currency'),
+                    hours: t('timeTrackingPage.projects.exportCols.hours'),
+                    sheetName: t('timeTrackingPage.projects.exportPartnerSheet'),
+                },
+                statusLabel: (status) => ttProjectStatusLabel(status, t),
+                typeLabel: (type) => ttProjectTypeLabel(type, t),
+            });
+            showToast({
+                message: t('timeTrackingPage.projects.exportPartnerDone').replace('{file}', file),
+                variant: 'info',
+            });
+        }
+        catch (e) {
+            const msg = e instanceof Error && e.message === 'empty'
+                ? t('timeTrackingPage.projects.exportPartnerEmpty')
+                : (e instanceof Error ? e.message : t('timeTrackingPage.projects.exportPartnerFailed'));
+            showToast({ message: msg || t('timeTrackingPage.projects.exportPartnerFailed'), variant: 'error' });
+        }
+        finally {
+            setExportBusy(false);
+        }
+    }, [filtered, partnerExportReady, partnerFilter, partnerOptions, t]);
     function goToNewProject() {
         navigate(getTimeTrackingNewProjectUrl(fixedClientIdForCreate));
     }
@@ -473,6 +527,24 @@ export function ProjectsPanel() {
           {managers.length > 0 && (<SearchableSelect<PpStrFilterOption> className={`tsp-srch--pp${managerFilter ? ' tsp-srch--pp--active' : ''}`} buttonId={managerFilterBtnId} value={managerFilter} items={managerFilterOptions} getOptionValue={(o) => o.key} getOptionLabel={(o) => (o.key ? o.key : t('timeTrackingPage.common.allManagers'))} getSearchText={(o) => (o.key || t('timeTrackingPage.common.allManagers').toLowerCase())} onSelect={(o) => setManagerFilter(o.key)} portalDropdown portalZIndex={5000} portalMinWidth={240} portalDropdownClassName="tsp-srch__dropdown--tall" placeholder={t('timeTrackingPage.projects.filterByManager')} emptyListText={t('timeTrackingPage.projects.noManagers')} noMatchText={t('timeTrackingPage.common.noMatch')} renderButtonContent={(o) => (<span>
                 {o.key ? o.key : t('timeTrackingPage.projects.filterByManager')}
               </span>)}/>)}
+          {partnerOptions.length > 0 && (
+            <button
+              type="button"
+              className="pp__export-btn"
+              disabled={exportBusy || !partnerExportReady || filtered.length === 0}
+              title={!partnerExportReady
+                ? t('timeTrackingPage.projects.exportPartnerHint')
+                : filtered.length === 0
+                  ? t('timeTrackingPage.projects.exportPartnerEmpty')
+                  : undefined}
+              onClick={() => void handleExportPartnerProjects()}
+            >
+              <IcoDownload />
+              {exportBusy
+                ? t('timeTrackingPage.common.loading')
+                : t('timeTrackingPage.projects.exportPartnerList')}
+            </button>
+          )}
           <button type="button" className="pp__new-btn" disabled={!canManage} title={!canManage
             ? t('timeTrackingPage.common.manageRoleHint')
             : undefined} onClick={goToNewProject}>
