@@ -2,8 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
     INVOICE_REGISTRY_SHEETS,
+    INVOICE_REGISTRY_STATUSES,
     clearInvoiceRegistryOverrides,
     getInvoiceRegistrySheet,
+    isInvoiceRegistryStatus,
     loadInvoiceRegistryRows,
     writeInvoiceRegistryOverrides,
     type InvoiceRegistryRow,
@@ -39,7 +41,7 @@ function IcoFullscreen({ exit }: { exit?: boolean }) {
 function emptyRow(year: InvoiceRegistryYearId, keys: string[], index: number): InvoiceRegistryRow {
     const row: InvoiceRegistryRow = { id: `${year}-new-${Date.now()}-${index}` };
     for (const k of keys)
-        row[k] = '';
+        row[k] = k === 'statusNote' ? 'Черновик' : '';
     return row;
 }
 
@@ -47,6 +49,8 @@ function RegistryEditableCell({
     value,
     ariaLabel,
     wide,
+    editor = 'text',
+    readOnly,
     active,
     onActivate,
     onChange,
@@ -55,6 +59,8 @@ function RegistryEditableCell({
     value: string;
     ariaLabel: string;
     wide?: boolean;
+    editor?: 'text' | 'status';
+    readOnly?: boolean;
     active: boolean;
     onActivate: () => void;
     onChange: (next: string) => void;
@@ -62,12 +68,42 @@ function RegistryEditableCell({
 }) {
     const ref = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
     useEffect(() => {
-        if (active && ref.current) {
+        if (active && editor === 'text' && ref.current) {
             ref.current.focus();
             if ('select' in ref.current)
                 ref.current.select();
         }
-    }, [active]);
+    }, [active, editor]);
+
+    if (editor === 'status') {
+        const known = isInvoiceRegistryStatus(value);
+        const selectValue = known ? value : value ? '__legacy__' : '';
+        return (
+            <td className="tt-inv-reg__td tt-inv-reg__td--status">
+                <select
+                    className={`tt-inv-reg__select${known || !value ? '' : ' tt-inv-reg__select--legacy'}`}
+                    value={selectValue}
+                    aria-label={ariaLabel}
+                    disabled={readOnly}
+                    title={value || undefined}
+                    onChange={(e) => {
+                        const next = e.target.value;
+                        if (next === '__legacy__')
+                            return;
+                        onChange(next);
+                    }}
+                >
+                    <option value="">{'—'}</option>
+                    {INVOICE_REGISTRY_STATUSES.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                    ))}
+                    {!known && value ? (
+                        <option value="__legacy__">{value}</option>
+                    ) : null}
+                </select>
+            </td>
+        );
+    }
 
     if (!active) {
         return (
@@ -201,15 +237,6 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
         });
     }, [year, columnKeys, persist]);
 
-    const deleteRow = useCallback((rowId: string) => {
-        setRows((prev) => {
-            const next = prev.filter((r) => r.id !== rowId);
-            persist(next);
-            return next;
-        });
-        setFocus(null);
-    }, [persist]);
-
     const resetToSeed = useCallback(() => {
         clearInvoiceRegistryOverrides(year);
         setLoading(true);
@@ -320,7 +347,6 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                     <table className="tt-inv-reg__table" role="grid">
                         <thead>
                             <tr>
-                                {!readOnly && <th className="tt-inv-reg__th tt-inv-reg__th--actions" scope="col" />}
                                 {columns.map((col) => (
                                     <th
                                         key={col.key}
@@ -338,26 +364,13 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                                 <tr>
                                     <td
                                         className="tt-inv-reg__empty-cell"
-                                        colSpan={columns.length + (readOnly ? 0 : 1)}
+                                        colSpan={columns.length}
                                     >
                                         {t('timeTrackingPage.invoices.registry.noRows')}
                                     </td>
                                 </tr>
                             ) : filteredRows.map((row, idx) => (
                                 <tr key={row.id} className="tt-inv-reg__tr">
-                                    {!readOnly && (
-                                        <td className="tt-inv-reg__td tt-inv-reg__td--actions">
-                                            <button
-                                                type="button"
-                                                className="tt-inv-reg__del"
-                                                aria-label={t('timeTrackingPage.invoices.registry.deleteRow')}
-                                                title={t('timeTrackingPage.invoices.registry.deleteRow')}
-                                                onClick={() => deleteRow(row.id)}
-                                            >
-                                                ×
-                                            </button>
-                                        </td>
-                                    )}
                                     {columns.map((col) => {
                                         const val = row[col.key] ?? '';
                                         const active = focus?.rowId === row.id && focus.key === col.key;
@@ -366,10 +379,12 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                                                 key={col.key}
                                                 value={val}
                                                 wide={col.wide}
-                                                active={!readOnly && active}
+                                                editor={col.editor}
+                                                readOnly={readOnly}
+                                                active={!readOnly && active && col.editor !== 'status'}
                                                 ariaLabel={`${col.label}, ${t('timeTrackingPage.invoices.registry.rowN').replace('{n}', String(idx + 1))}`}
                                                 onActivate={() => {
-                                                    if (!readOnly)
+                                                    if (!readOnly && col.editor !== 'status')
                                                         setFocus({ rowId: row.id, key: col.key });
                                                 }}
                                                 onChange={(next) => patchCell(row.id, col.key, next)}

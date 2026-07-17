@@ -17,6 +17,8 @@ export type InvoiceRegistryColumnDef = {
     /** Excel header (RU) — shown 1:1 in the table */
     label: string;
     wide?: boolean;
+    /** Dropdown editor (fixed status list) */
+    editor?: 'text' | 'status';
 };
 
 export type InvoiceRegistrySheetMeta = {

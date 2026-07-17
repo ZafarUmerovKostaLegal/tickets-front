@@ -1,7 +1,7 @@
 import type { InvoiceRegistryColumnDef, InvoiceRegistrySheetMeta, InvoiceRegistryYearId } from './types';
 
 const COL_2026: InvoiceRegistryColumnDef[] = [
-    { key: 'seqNo', label: 'Порядковый номер инвойса внутри фирмы' },
+    { key: 'seqNo', label: '№' },
     { key: 'billedTo', label: 'Кому выставлено', wide: true },
     { key: 'currency', label: 'Валюта' },
     { key: 'amount', label: 'Выставленная сумма' },
@@ -10,13 +10,13 @@ const COL_2026: InvoiceRegistryColumnDef[] = [
     { key: 'issueDate', label: 'Дата выставления' },
     { key: 'dueOrPayment', label: 'Предполагаемая дата оплаты', wide: true },
     { key: 'clientNumber', label: 'Номер инвойса для Клиента' },
-    { key: 'statusNote', label: 'Статус для выставления', wide: true },
+    { key: 'statusNote', label: 'Статус', editor: 'status' },
     { key: 'advanceFee', label: 'Пред.вознаграждение', wide: true },
     { key: 'balance', label: 'Остаток' },
 ];
 
 const COL_2025: InvoiceRegistryColumnDef[] = [
-    { key: 'seqNo', label: 'Порядковый номер инвойса' },
+    { key: 'seqNo', label: '№' },
     { key: 'billedTo', label: 'Кому выставлено', wide: true },
     { key: 'currency', label: 'Валюта' },
     { key: 'amount', label: 'Выставленная сумма' },
@@ -25,13 +25,13 @@ const COL_2025: InvoiceRegistryColumnDef[] = [
     { key: 'issueDate', label: 'Дата выставления' },
     { key: 'dueOrPayment', label: 'Дата оплаты', wide: true },
     { key: 'clientNumber', label: 'Номер' },
-    { key: 'statusNote', label: 'Примечание', wide: true },
+    { key: 'statusNote', label: 'Статус', editor: 'status' },
     { key: 'advanceFee', label: 'Пред.вознаграждение', wide: true },
     { key: 'balance', label: 'Остаток' },
 ];
 
 const COL_2024: InvoiceRegistryColumnDef[] = [
-    { key: 'seqNo', label: 'Порядковый номер инвойса' },
+    { key: 'seqNo', label: '№' },
     { key: 'billedTo', label: 'Кому выставлено', wide: true },
     { key: 'currency', label: 'Валюта' },
     { key: 'amount', label: 'Сумма' },
@@ -39,7 +39,7 @@ const COL_2024: InvoiceRegistryColumnDef[] = [
     { key: 'issueDate', label: 'Дата выставления' },
     { key: 'dueOrPayment', label: 'Дата оплаты', wide: true },
     { key: 'clientNumber', label: 'Номер' },
-    { key: 'statusNote', label: 'Примечание', wide: true },
+    { key: 'statusNote', label: 'Статус', editor: 'status' },
     { key: 'advanceFee', label: 'Пред.вознаграждение', wide: true },
     { key: 'balance', label: 'Остаток' },
 ];
@@ -53,7 +53,7 @@ const COL_2023: InvoiceRegistryColumnDef[] = [
     { key: 'amount', label: 'Сумма' },
     { key: 'currency', label: 'Валюта' },
     { key: 'details', label: 'Детали', wide: true },
-    { key: 'statusNote', label: 'Примечание', wide: true },
+    { key: 'statusNote', label: 'Статус', editor: 'status' },
 ];
 
 const COL_2022: InvoiceRegistryColumnDef[] = [

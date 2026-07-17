@@ -188,6 +188,44 @@
   outline-offset: 0;
 }
 
+.tt-inv-reg__td--status {
+  min-width: 11.5rem;
+  max-width: 16rem;
+  padding: 0.2rem 0.35rem;
+  cursor: default;
+}
+
+.tt-inv-reg__select {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 6px;
+  padding: 0.28rem 0.4rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  color: inherit;
+  background: var(--app-surface, #fff);
+  cursor: pointer;
+}
+
+.tt-inv-reg__select:focus {
+  outline: 2px solid color-mix(in srgb, var(--app-accent, #4f46e5) 35%, transparent);
+  outline-offset: 0;
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 45%, var(--app-border, #e2e8f0));
+}
+
+.tt-inv-reg__select--legacy {
+  color: #b45309;
+  border-color: color-mix(in srgb, #f59e0b 45%, var(--app-border, #e2e8f0));
+}
+
+.tt-inv-reg__select:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .tt-inv-reg__del {
   border: none;
   background: transparent;
