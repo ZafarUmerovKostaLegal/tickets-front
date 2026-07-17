@@ -15,6 +15,7 @@ import {
     computeTimePreviewRowAmountToPay,
     timePreviewRowsForPageExport,
 } from '../lib/reportPreviewPartnerExcel';
+import { buildReportPreviewPositionShare } from '../lib/reportPreviewPositionShare';
 import { buildTimePreviewDuplicateRowKeySet, TIME_PREVIEW_DUPLICATE_ROW_TITLE, } from '../lib/reportPreviewDuplicateRows';
 import {
     formatRuHmFromIso,
@@ -868,6 +869,14 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             cur: displayRows[0]?.currency ?? rows[0]?.currency ?? '—',
         };
     }, [rowsForTotals, displayRows, rows]);
+    const positionShares = useMemo(
+        () => buildReportPreviewPositionShare(rowsForTotals),
+        [rowsForTotals],
+    );
+    const positionSharesRef = useRef(positionShares);
+    if (!serverReloadBusy)
+        positionSharesRef.current = positionShares;
+    const headerPositionShares = serverReloadBusy ? positionSharesRef.current : positionShares;
     const moveDialogBusy = Boolean(moveTargetRow && timeEntryActionPendingRowKey === moveTargetRow.rowKey);
     const duplicateDialogBusy = Boolean(duplicateTargetRow && timeEntryActionPendingRowKey === duplicateTargetRow.rowKey);
     const dupBounds = timeEntryWorkDateBounds ?? {
@@ -1409,6 +1418,21 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               </button>
             </div>
           </div>
+          {headerPositionShares.length > 0 ? (
+            <div className="tt-rp-mtable-position-shares" aria-label="Доля по должностям">
+              {headerPositionShares.map((share) => (
+                <span
+                  key={share.position}
+                  className="tt-rp-mtable-position-shares__item"
+                  title={`${share.position}: ${formatDecimalHoursAsHm(share.billableHours)} (${share.percent}%)`}
+                >
+                  <strong>{share.percent}%</strong>
+                  {' '}
+                  {share.position}
+                </span>
+              ))}
+            </div>
+          ) : null}
         </header>
         <ReportPreviewTimeBriefColumnsModal open={!readOnlyUi && !isFull && briefColumnsModalOpen} onClose={() => setBriefColumnsModalOpen(false)} includeActionsColumn={showActionsColumn} activeOrderedIds={visibleBriefIds} onChange={setBriefColumnIds} rememberEnabled={briefColumnsRemember} onRememberEnabledChange={onBriefColumnsRememberChange}/>
         <ReportPreviewTimeFullColumnsModal open={Boolean(!readOnlyUi && isFull && fullColumnsModalOpen)} onClose={() => setFullColumnsModalOpen(false)} activeOrderedIds={visibleFullIds} onChange={setFullColumnIds}/>
@@ -1446,6 +1470,18 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             <span className="tt-rp-mtable-dock__stat">Отработано: <strong>{dockHours}</strong></span>
             <span className="tt-rp-mtable-dock__stat">Оплачиваемые часы: <strong>{dockBillable}</strong></span>
             <span className="tt-rp-mtable-dock__stat">Сумма: <strong>{dockSum}</strong></span>
+            {headerPositionShares.length > 0 ? (
+              <span className="tt-rp-mtable-dock__stat tt-rp-mtable-dock__stat--roles" aria-label="Доля по должностям">
+                {headerPositionShares.map((share, i) => (
+                  <span key={share.position}>
+                    {i > 0 ? <span className="tt-rp-mtable-dock__role-sep" aria-hidden> · </span> : null}
+                    <span title={`${share.position}: ${formatDecimalHoursAsHm(share.billableHours)} (${share.percent}%)`}>
+                      <strong>{share.percent}%</strong> {share.position}
+                    </span>
+                  </span>
+                ))}
+              </span>
+            ) : null}
           </div>
           {footerExtras ? (<>
             <span className="tt-rp-mtable-dock__sep" aria-hidden />

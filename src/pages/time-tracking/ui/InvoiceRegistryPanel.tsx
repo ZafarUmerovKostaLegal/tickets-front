@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
     INVOICE_REGISTRY_SHEETS,
@@ -16,6 +16,162 @@ import { showToast } from '@shared/ui/app-toast';
 import './InvoiceRegistryPanel.css';
 
 type FocusCell = { rowId: string; key: string } | null;
+
+const STATUS_EMPTY = '';
+
+function statusToneClass(value: string): string {
+    if (value === 'Черновик')
+        return 'tt-inv-reg-status--draft';
+    if (value === 'На согласовании с Клиентом')
+        return 'tt-inv-reg-status--review';
+    if (value === 'Выставлен')
+        return 'tt-inv-reg-status--issued';
+    if (value === 'Оплачен')
+        return 'tt-inv-reg-status--paid';
+    if (value)
+        return 'tt-inv-reg-status--legacy';
+    return 'tt-inv-reg-status--empty';
+}
+
+function RegistryStatusDropdown({
+    value,
+    ariaLabel,
+    readOnly,
+    onChange,
+}: {
+    value: string;
+    ariaLabel: string;
+    readOnly?: boolean;
+    onChange: (next: string) => void;
+}) {
+    const uid = useId();
+    const listId = `${uid}-list`;
+    const [open, setOpen] = useState(false);
+    const btnRef = useRef<HTMLButtonElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+    const known = isInvoiceRegistryStatus(value);
+    const label = value || '—';
+
+    const options = useMemo(() => {
+        const base: { value: string; label: string }[] = [
+            { value: STATUS_EMPTY, label: '—' },
+            ...INVOICE_REGISTRY_STATUSES.map((s) => ({ value: s, label: s })),
+        ];
+        if (value && !known)
+            base.push({ value, label: value });
+        return base;
+    }, [value, known]);
+
+    const updatePos = useCallback(() => {
+        const btn = btnRef.current;
+        if (!btn)
+            return;
+        const r = btn.getBoundingClientRect();
+        const width = Math.max(r.width, 220);
+        const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
+        const below = r.bottom + 4;
+        const menuH = Math.min(280, 44 + options.length * 36);
+        const top = below + menuH > window.innerHeight - 8
+            ? Math.max(8, r.top - menuH - 4)
+            : below;
+        setMenuPos({ top, left, width });
+    }, [options.length]);
+
+    useLayoutEffect(() => {
+        if (!open)
+            return;
+        updatePos();
+    }, [open, updatePos]);
+
+    useEffect(() => {
+        if (!open)
+            return;
+        const onScroll = () => updatePos();
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape')
+                setOpen(false);
+        };
+        const onPointer = (e: PointerEvent) => {
+            const t = e.target as Node;
+            if (btnRef.current?.contains(t) || menuRef.current?.contains(t))
+                return;
+            setOpen(false);
+        };
+        window.addEventListener('resize', onScroll);
+        window.addEventListener('scroll', onScroll, true);
+        document.addEventListener('keydown', onKey);
+        document.addEventListener('pointerdown', onPointer, true);
+        return () => {
+            window.removeEventListener('resize', onScroll);
+            window.removeEventListener('scroll', onScroll, true);
+            document.removeEventListener('keydown', onKey);
+            document.removeEventListener('pointerdown', onPointer, true);
+        };
+    }, [open, updatePos]);
+
+    return (
+        <div className="tt-inv-reg-status">
+            <button
+                ref={btnRef}
+                type="button"
+                className={`tt-inv-reg-status__btn ${statusToneClass(value)}${open ? ' tt-inv-reg-status__btn--open' : ''}`}
+                aria-label={ariaLabel}
+                aria-expanded={open}
+                aria-haspopup="listbox"
+                aria-controls={open ? listId : undefined}
+                disabled={readOnly}
+                title={value || undefined}
+                onClick={() => {
+                    if (readOnly)
+                        return;
+                    setOpen((v) => !v);
+                }}
+            >
+                <span className="tt-inv-reg-status__label">{label}</span>
+                <span className="tt-inv-reg-status__chev" aria-hidden>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </span>
+            </button>
+            {open && !readOnly && menuPos && createPortal(
+                <div
+                    ref={menuRef}
+                    id={listId}
+                    className="tt-inv-reg-status__menu"
+                    role="listbox"
+                    style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
+                >
+                    {options.map((opt) => {
+                        const selected = opt.value === value || (!value && opt.value === STATUS_EMPTY);
+                        const isLegacyOpt = Boolean(opt.value && !isInvoiceRegistryStatus(opt.value) && opt.value !== STATUS_EMPTY);
+                        return (
+                            <button
+                                key={opt.value || '__empty'}
+                                type="button"
+                                role="option"
+                                aria-selected={selected}
+                                className={`tt-inv-reg-status__opt${selected ? ' tt-inv-reg-status__opt--active' : ''}${isLegacyOpt ? ' tt-inv-reg-status__opt--legacy' : ''}`}
+                                onClick={() => {
+                                    if (isLegacyOpt)
+                                        return;
+                                    onChange(opt.value);
+                                    setOpen(false);
+                                }}
+                            >
+                                <span className={`tt-inv-reg-status__dot ${statusToneClass(opt.value)}`} aria-hidden />
+                                {opt.label}
+                            </button>
+                        );
+                    })}
+                </div>,
+                document.body,
+            )}
+        </div>
+    );
+}
 
 function IcoFullscreen({ exit }: { exit?: boolean }) {
     if (exit) {
@@ -76,31 +232,14 @@ function RegistryEditableCell({
     }, [active, editor]);
 
     if (editor === 'status') {
-        const known = isInvoiceRegistryStatus(value);
-        const selectValue = known ? value : value ? '__legacy__' : '';
         return (
             <td className="tt-inv-reg__td tt-inv-reg__td--status">
-                <select
-                    className={`tt-inv-reg__select${known || !value ? '' : ' tt-inv-reg__select--legacy'}`}
-                    value={selectValue}
-                    aria-label={ariaLabel}
-                    disabled={readOnly}
-                    title={value || undefined}
-                    onChange={(e) => {
-                        const next = e.target.value;
-                        if (next === '__legacy__')
-                            return;
-                        onChange(next);
-                    }}
-                >
-                    <option value="">{'—'}</option>
-                    {INVOICE_REGISTRY_STATUSES.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                    ))}
-                    {!known && value ? (
-                        <option value="__legacy__">{value}</option>
-                    ) : null}
-                </select>
+                <RegistryStatusDropdown
+                    value={value}
+                    ariaLabel={ariaLabel}
+                    readOnly={readOnly}
+                    onChange={onChange}
+                />
             </td>
         );
     }

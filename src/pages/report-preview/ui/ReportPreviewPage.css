@@ -1113,6 +1113,45 @@ body[data-theme='dark'] .tt-rp-brief-columns__list::-webkit-scrollbar-thumb {
   font-variant-numeric: tabular-nums;
 }
 
+.tt-rp-mtable-dock__stat--roles {
+  color: var(--app-muted, #64748b);
+}
+
+.tt-rp-mtable-dock__role-sep {
+  color: color-mix(in srgb, var(--app-muted, #94a3b8) 80%, transparent);
+}
+
+.tt-rp-mtable-position-shares {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+  padding: 0.45rem 1rem 0.55rem;
+  border-top: 1px solid color-mix(in srgb, var(--app-border, #e2e8f0) 75%, transparent);
+  background: var(--app-surface, #fff);
+}
+
+.tt-rp-mtable-position-shares__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--app-muted, #64748b);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tt-rp-mtable-position-shares__item strong {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--app-text, #0f172a);
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
 .tt-rp-mtable-dock__sep {
   width: 1px;
   align-self: stretch;

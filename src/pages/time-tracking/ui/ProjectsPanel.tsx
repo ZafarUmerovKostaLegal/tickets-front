@@ -13,6 +13,7 @@ import { canManageTimeTrackingClients } from '@entities/time-tracking/model/time
 import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
 import { buildProjectArchiveTogglePatch, buildProjectPauseTogglePatch } from '@entities/time-tracking/lib/projectArchiveRestore';
 import { exportProjectsListExcel } from '@entities/time-tracking/lib/exportProjectsListExcel';
+import { readInitialProjectsFilters, writeProjectsFiltersToStorage } from '@entities/time-tracking/lib/projectsFiltersStorage';
 import type { ProjectRow, ProjectStatus, ProjectType } from '@entities/time-tracking/model/types';
 import { getProjectDetailUrl, getTimeTrackingNewProjectUrl } from '@shared/config';
 import { useI18n, ttProjectStatusLabel, ttProjectTypeLabel, ttProjectPluralWord } from '@shared/i18n';
@@ -185,11 +186,12 @@ export function ProjectsPanel() {
     const [loadError, setLoadError] = useState<string | null>(null);
     const [apiProjects, setApiProjects] = useState<TimeManagerClientProjectRow[]>([]);
     const [apiClients, setApiClients] = useState<TimeManagerClientRow[]>([]);
-    const [statusFilter, setStatusFilter] = useState<ProjectStatus | ''>('active');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [clientFilter, setClientFilter] = useState('');
-    const [managerFilter, setManagerFilter] = useState('');
-    const [partnerFilter, setPartnerFilter] = useState('');
+    const initialFilters = useMemo(() => readInitialProjectsFilters(), []);
+    const [statusFilter, setStatusFilter] = useState<ProjectStatus | ''>(initialFilters.statusFilter);
+    const [searchQuery, setSearchQuery] = useState(initialFilters.searchQuery);
+    const [clientFilter, setClientFilter] = useState(initialFilters.clientFilter);
+    const [managerFilter, setManagerFilter] = useState(initialFilters.managerFilter);
+    const [partnerFilter, setPartnerFilter] = useState(initialFilters.partnerFilter);
     const [partnerOptions, setPartnerOptions] = useState<PpPartnerFilterOption[]>([]);
     const [projectsTablePage, setProjectsTablePage] = useState(1);
     const PAGE = TIME_TRACKING_LIST_PAGE_SIZE;
@@ -276,6 +278,15 @@ export function ProjectsPanel() {
     useEffect(() => {
         setProjectsTablePage(1);
     }, [statusFilter, clientFilter, managerFilter, partnerFilter, searchQuery]);
+    useEffect(() => {
+        writeProjectsFiltersToStorage({
+            statusFilter,
+            searchQuery,
+            clientFilter,
+            managerFilter,
+            partnerFilter,
+        });
+    }, [statusFilter, searchQuery, clientFilter, managerFilter, partnerFilter]);
     const clientNames = useMemo(() => [...new Set(rows.map((p) => p.client))].sort(), [rows]);
     const managers = useMemo(() => {
         const all = rows.flatMap((p) => p.managers ?? []);
