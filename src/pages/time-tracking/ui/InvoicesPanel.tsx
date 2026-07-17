@@ -29,6 +29,14 @@ async function blobToBase64(blob: Blob): Promise<string> {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
   return btoa(binary);
 }
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 function invoiceLineKindSlug(ln: InvoiceLineDto): string {
   const k = (ln.lineKind ?? '').toLowerCase().trim();
   if (k === 'time' || Boolean(ln.timeEntryId))
@@ -1820,9 +1828,9 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
               : '';
             const subject = t('timeTrackingPage.invoices.sendDialog.mailSubject').replace('{invoice}', invoiceLabel);
             const bodyHtml = t('timeTrackingPage.invoices.sendDialog.mailBodyHtml')
-              .replaceAll('{nameSuffix}', nameSuffix)
-              .replaceAll('{invoice}', invoiceLabel)
-              .replaceAll('{amount}', amountLabel);
+              .replaceAll('{nameSuffix}', escapeHtml(nameSuffix))
+              .replaceAll('{invoice}', escapeHtml(invoiceLabel))
+              .replaceAll('{amount}', escapeHtml(amountLabel));
             const bodyText = t('timeTrackingPage.invoices.sendDialog.mailBodyText')
               .replaceAll('{nameSuffix}', nameSuffix)
               .replaceAll('{invoice}', invoiceLabel)
