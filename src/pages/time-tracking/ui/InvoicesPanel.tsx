@@ -1197,27 +1197,72 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     setUnbilledExp([]);
     setUnbilledPartnerBlockReason(null);
   }
+  const invoicesSubTab = searchParams.get('invTab') === 'registry' ? 'registry' : 'list';
+  const selectInvoicesSubTab = useCallback((tab: 'list' | 'registry') => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'registry')
+        next.set('invTab', 'registry');
+      else
+        next.delete('invTab');
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
   return (<div className={`tt-inv${accountingEmbed ? ' tt-inv--accounting' : ''}`}>
     <div className="tt-reports__type-block">
       {!accountingEmbed && (
         <p className="tt-reports__type-block-title" id="tt-inv-page-title">{t('timeTrackingPage.invoices.title')}</p>
       )}
-      <div className="tt-inv__head-row">
-        <p className="tt-inv__lede" id={accountingEmbed ? 'tt-inv-page-title' : undefined}>
-          {accountingEmbed
-            ? t('timeTrackingPage.invoices.introReadonly')
-            : t('timeTrackingPage.invoices.introFull')}
-        </p>
-        {!readOnly && (
-          <button type="button" className="tt-reports__btn tt-reports__btn--accent tt-reports__btn--icon" onClick={openCreateModal}>
-            <IcoPlus /> {t('timeTrackingPage.invoices.newInvoice')}
-          </button>
-        )}
-        {readOnly && (
-          <span className="tt-inv__readonly-badge" role="status">{t('timeTrackingPage.invoices.readonlyBadge')}</span>
-        )}
-      </div>
+      <nav className="tt-reports__type-nav" role="tablist" aria-labelledby="tt-inv-page-title">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={invoicesSubTab === 'list'}
+          className={`tt-reports__type-tab${invoicesSubTab === 'list' ? ' tt-reports__type-tab--active' : ''}`}
+          onClick={() => selectInvoicesSubTab('list')}
+        >
+          {t('timeTrackingPage.invoices.tabs.list')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={invoicesSubTab === 'registry'}
+          className={`tt-reports__type-tab${invoicesSubTab === 'registry' ? ' tt-reports__type-tab--active' : ''}`}
+          onClick={() => selectInvoicesSubTab('registry')}
+        >
+          {t('timeTrackingPage.invoices.tabs.registry')}
+        </button>
+      </nav>
+      {invoicesSubTab === 'list' && (
+        <div className="tt-inv__head-row">
+          <p className="tt-inv__lede" id={accountingEmbed ? 'tt-inv-page-title' : undefined}>
+            {accountingEmbed
+              ? t('timeTrackingPage.invoices.introReadonly')
+              : t('timeTrackingPage.invoices.introFull')}
+          </p>
+          {!readOnly && (
+            <button type="button" className="tt-reports__btn tt-reports__btn--accent tt-reports__btn--icon" onClick={openCreateModal}>
+              <IcoPlus /> {t('timeTrackingPage.invoices.newInvoice')}
+            </button>
+          )}
+          {readOnly && (
+            <span className="tt-inv__readonly-badge" role="status">{t('timeTrackingPage.invoices.readonlyBadge')}</span>
+          )}
+        </div>
+      )}
+      {invoicesSubTab === 'registry' && (
+        <p className="tt-inv__lede">{t('timeTrackingPage.invoices.registry.intro')}</p>
+      )}
     </div>
+
+    {invoicesSubTab === 'registry' ? (
+      <div className="tt-inv-registry" role="tabpanel" aria-label={t('timeTrackingPage.invoices.tabs.registry')}>
+        <div className="tt-inv-registry__empty">
+          <p className="tt-inv-registry__empty-title">{t('timeTrackingPage.invoices.registry.emptyTitle')}</p>
+          <p className="tt-inv-registry__empty-text">{t('timeTrackingPage.invoices.registry.emptyText')}</p>
+        </div>
+      </div>
+    ) : (<>
 
     {!listErr && (aggStatsLoading || listStatsFromAgg) && (<div className="tt-reports__summary" aria-label={t('timeTrackingPage.invoices.summary.aria')}>
       {aggStatsLoading || !listStatsFromAgg ? (<div className="tt-reports__summary-card tt-reports__summary-card--full">
@@ -1421,6 +1466,8 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
         </div>)}
       </div>
     </div>
+
+    </>)}
 
     {createOpen && !readOnly && (<div className="tt-inv-overlay" role="dialog" aria-modal="true" aria-labelledby="tt-inv-create-title">
       <div className="tt-inv-dialog tt-inv-dialog--wide">

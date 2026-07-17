@@ -1257,6 +1257,15 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
     },
     invoices: {
         title: 'Invoices',
+        tabs: {
+            list: 'Invoice list',
+            registry: 'Invoice registry',
+        },
+        registry: {
+            intro: 'Invoice registry — a summary table (Excel data will be imported later).',
+            emptyTitle: 'Registry is empty for now',
+            emptyText: 'Excel data will be moved here in a later step.',
+        },
         introReadonly: 'View invoices from time tracking: filters, summary, and invoice card. Changes and new invoices — in “Time tracking”.',
         introFull: 'Issue invoices by client and project: drafts, sending, payments, and balances in one list. Select a row to open the card.',
         newInvoice: 'New invoice',

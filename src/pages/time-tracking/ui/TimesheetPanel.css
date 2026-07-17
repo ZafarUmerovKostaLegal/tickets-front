@@ -3523,6 +3523,36 @@
   color: var(--app-muted, #64748b);
 }
 
+.tt-inv-registry {
+  margin-top: 0.75rem;
+}
+
+.tt-inv-registry__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+  padding: 1.5rem 1.25rem;
+  border: 1px dashed var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--app-surface, #fff);
+}
+
+.tt-inv-registry__empty-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--app-text, #0f172a);
+}
+
+.tt-inv-registry__empty-text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--app-muted, #64748b);
+  max-width: 36rem;
+}
+
 .tt-inv__summary-card--accent {
   border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 38%, var(--app-border, #e5e7eb));
   background: color-mix(in srgb, var(--app-accent, #4f46e5) 6%, var(--app-surface, #fff));
