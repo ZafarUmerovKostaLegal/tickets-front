@@ -4,7 +4,7 @@ import {
     type PeriodGranularity,
     isPeriodGranularity,
 } from '@entities/time-tracking/model/reportsPanelConfig';
-import { parseIsoDateLocal, periodToDates } from './reportsPeriodRange';
+import { parseIsoDateLocal, periodToDates, clampReportsDateRange } from './reportsPeriodRange';
 
 export function readReportsPrefsFromStorage(): Partial<ReportsPrefsStored> | null {
     if (typeof window === 'undefined')
@@ -52,11 +52,12 @@ export function readInitialReportsRangeState(): {
         /^\d{4}-\d{2}-\d{2}$/.test(saved.rangeDateFrom) &&
         /^\d{4}-\d{2}-\d{2}$/.test(saved.rangeDateTo));
     if (cr && saved?.rangeDateFrom && saved?.rangeDateTo) {
+        const clamped = clampReportsDateRange(saved.rangeDateFrom, saved.rangeDateTo);
         return {
             periodDate,
             periodGranularity,
-            dateFrom: saved.rangeDateFrom,
-            dateTo: saved.rangeDateTo,
+            dateFrom: clamped.dateFrom,
+            dateTo: clamped.dateTo,
             customRangeActive: true,
         };
     }

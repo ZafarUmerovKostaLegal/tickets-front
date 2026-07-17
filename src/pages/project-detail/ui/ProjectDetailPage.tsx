@@ -7,7 +7,7 @@ import { formatDecimalHoursRu } from '@shared/lib/formatTrackingHours';
 import { waitForAppFonts } from '@shared/lib/waitForAppFonts';
 import { useCurrentUser } from '@shared/hooks';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, DatePicker, SearchableSelect } from '@shared/ui';
-import { periodToDates } from '@entities/time-tracking/lib/reportsPeriodRange';
+import { periodToDates, reportsAllTimeDateFrom, reportsAllTimeDateTo } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { canAccessTimeTracking, canManageTimeTrackingClients, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
 import { INVOICE_STATUS_LABELS, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPendingItems, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, readTimeManagerProjectBillableRateAmount, notifyPartnerConfirmedReportsListInvalidate, exportReportV2, TIME_TRACKING_PROJECT_RECORDS_LANGUAGES, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, type ReportFiltersV2, type TimeManagerProjectRecordsLanguage, } from '@entities/time-tracking';
 import { writeReportPreviewTransfer, type ReportPreviewTransferV2 } from '@entities/time-tracking/model/reportPreviewTransfer';
@@ -77,11 +77,10 @@ function fullProjectTeamPeriod(): {
     from: string;
     to: string;
 } {
-    const to = new Date();
-    const pad = (x: number) => String(x).padStart(2, '0');
+    const now = new Date();
     return {
-        from: '2000-01-01',
-        to: `${to.getFullYear()}-${pad(to.getMonth() + 1)}-${pad(to.getDate())}`,
+        from: reportsAllTimeDateFrom(now),
+        to: reportsAllTimeDateTo(now),
     };
 }
 type PdpPeriodPresetId = 'week' | 'month' | 'quarter' | 'year' | 'all';

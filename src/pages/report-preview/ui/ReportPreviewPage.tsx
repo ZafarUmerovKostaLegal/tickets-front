@@ -53,6 +53,7 @@ import {
 } from '../lib/reportPreviewActiveEmployees';
 import { readReportPreviewTransfer, normalizeReportPreviewTransfer, resolveReportPreviewPeriodState, type ReportPreviewTransferV2, } from '@entities/time-tracking/model/reportPreviewTransfer';
 import { hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
+import { notifyPartnerConfirmedReportsListInvalidate } from '@entities/time-tracking/model/partnerConfirmedReports';
 import { coerceGroupByForType, type ExpenseGroup, type TimeGroup, type PeriodGranularity, } from '@entities/time-tracking/model/reportsPanelConfig';
 import { formatIsoRangeTitle, formatPeriodLabel, periodToDates, } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { useI18n } from '@shared/i18n';
@@ -897,9 +898,14 @@ export function ReportPreviewPage() {
         }
     }, [schedulePersistTimeEntry, canOverrideWeeklyLock, authUserExportProfilesById, bumpEditHistory]);
     const handleDeleteTimeEntry = useCallback(async (rowKey: string) => {
+        const fromConfirmedReport = Boolean(xferSnapshot?.partnerConfirmationSnapshotId?.trim());
         const confirmed = await showConfirm({
-            title: 'Удалить запись времени?',
-            message: 'Сразу после удаления можно вернуть запись через «Отмена» или Ctrl/⌘+Z. После обновления с сервера отмена недоступна.',
+            title: fromConfirmedReport
+                ? 'Удалить запись из подтверждённого отчёта?'
+                : 'Удалить запись времени?',
+            message: fromConfirmedReport
+                ? 'Подтверждение партнёров по этому проекту и периоду будет сброшено: отчёт вернётся «на проверку», партнёрам нужно будет подтвердить снова. Отмена после обновления с сервера недоступна.'
+                : 'Сразу после удаления можно вернуть запись через «Отмена» или Ctrl/⌘+Z. После обновления с сервера отмена недоступна.',
             variant: 'danger',
             confirmLabel: 'Удалить',
         });
@@ -929,13 +935,17 @@ export function ReportPreviewPage() {
             const afterDelete = await deleteTimeEntry(serverOwner, entryId);
             deletedTimeEntryIdsRef.current.add(entryId);
             timeEntryServerOwnerByEntryIdRef.current.delete(entryId);
-            pushDeleteUndo(editHistoryRef.current, rowKey, snapshot);
-            bumpEditHistory();
+            if (!fromConfirmedReport) {
+                pushDeleteUndo(editHistoryRef.current, rowKey, snapshot);
+                bumpEditHistory();
+            }
             setTimeExcelRows((prev) => {
                 const next = prev.filter((r) => r.rowKey !== rowKey);
                 timeExcelRowsRef.current = next;
                 return next;
             });
+            if (fromConfirmedReport)
+                notifyPartnerConfirmedReportsListInvalidate();
             setTimeEntrySaveUI('saved');
             setTimeEntrySaveMessage(afterDelete == null ? 'Запись удалена' : 'Запись снята с учёта');
             setTimeout(() => {
@@ -957,7 +967,7 @@ export function ReportPreviewPage() {
             timeEntryPersistSkipRowKeysRef.current.delete(rowKey);
             setTimeEntryActionPendingRowKey(null);
         }
-    }, [bumpEditHistory, showAlert, showConfirm]);
+    }, [bumpEditHistory, showAlert, showConfirm, xferSnapshot?.partnerConfirmationSnapshotId]);
     const handleMoveTimeEntryToProject = useCallback(async (rowKey: string, newProjectId: string) => {
         const row = timeExcelRowsRef.current.find((r) => r.rowKey === rowKey);
         if (!row || row.rowKind !== 'entry' || !row.timeEntryId?.trim())
@@ -1561,7 +1571,7 @@ export function ReportPreviewPage() {
             const showTimeLiveTitle = xferSnapshot.groupBy !== 'projects';
             return (<>
                 {showTimeLiveTitle ? (<p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>) : null}
-                <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={partnerConfirmedReadOnly ? undefined : setSelectedUserName} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDeleteTimeEntry} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={partnerConfirmedReadOnly ? null : timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick} onDownloadExcel={handleDownloadTimeExcel} downloadExcelBusy={timeExcelDownloadBusy} footerExtras={partnerSignFooterExtras} flashRowKey={partnerConfirmedReadOnly ? null : flashRestoredRowKey} hotkeyDuplicateRowKey={partnerConfirmedReadOnly ? null : hotkeyDuplicateRowKey} onHotkeyDuplicateConsumed={partnerConfirmedReadOnly ? undefined : clearHotkeyDuplicateRowKey} onActiveTimeRowKey={partnerConfirmedReadOnly ? undefined : setActiveTimeRowKey} canUndo={!partnerConfirmedReadOnly && canUndoTimeEdit} onUndo={partnerConfirmedReadOnly ? undefined : undoLastTimeEdit} onSaveNow={partnerConfirmedReadOnly ? undefined : flushAllPendingTimeEntrySaves} />
+                <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={partnerConfirmedReadOnly ? undefined : setSelectedUserName} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick} onDownloadExcel={handleDownloadTimeExcel} downloadExcelBusy={timeExcelDownloadBusy} footerExtras={partnerSignFooterExtras} flashRowKey={partnerConfirmedReadOnly ? null : flashRestoredRowKey} hotkeyDuplicateRowKey={partnerConfirmedReadOnly ? null : hotkeyDuplicateRowKey} onHotkeyDuplicateConsumed={partnerConfirmedReadOnly ? undefined : clearHotkeyDuplicateRowKey} onActiveTimeRowKey={partnerConfirmedReadOnly ? undefined : setActiveTimeRowKey} canUndo={!partnerConfirmedReadOnly && canUndoTimeEdit} onUndo={partnerConfirmedReadOnly ? undefined : undoLastTimeEdit} onSaveNow={partnerConfirmedReadOnly ? undefined : flushAllPendingTimeEntrySaves} />
             </>);
         }
         if (xferSnapshot.reportType === 'expenses') {

@@ -37,7 +37,7 @@ import {
 import { PARTNER_CONFIRMED_REPORTS_INVALIDATE_EVENT } from '@entities/time-tracking/model/partnerConfirmedReports';
 import { hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
 import { readReportsPrefsFromStorage, writeReportsPrefsToStorage, readInitialReportsRangeState } from '@entities/time-tracking/lib/reportsPrefsStorage';
-import { isoDateLocal, parseIsoDateLocal, periodToDates, formatPeriodLabel, formatIsoRangeTitle } from '@entities/time-tracking/lib/reportsPeriodRange';
+import { isoDateLocal, parseIsoDateLocal, periodToDates, formatPeriodLabel, formatIsoRangeTitle, clampReportsDateRange } from '@entities/time-tracking/lib/reportsPeriodRange';
 import {
   fmtH,
   fmtAmt,
@@ -228,6 +228,14 @@ export function ReportsPanel() {
     setDateFrom(presetRange.dateFrom);
     setDateTo(presetRange.dateTo);
   }, [presetRange.dateFrom, presetRange.dateTo, customRangeActive]);
+  // Legacy prefs / manual ranges may still hold 2000-01-01 → today; clamp to API max.
+  useEffect(() => {
+    const clamped = clampReportsDateRange(dateFrom, dateTo);
+    if (clamped.dateFrom !== dateFrom || clamped.dateTo !== dateTo) {
+      setDateFrom(clamped.dateFrom);
+      setDateTo(clamped.dateTo);
+    }
+  }, [dateFrom, dateTo]);
   const periodTitle = useMemo(() => {
     if (customRangeActive)
       return formatIsoRangeTitle(dateFrom, dateTo);
@@ -583,9 +591,10 @@ export function ReportsPanel() {
       setInitialLoading(false);
       return;
     }
+    const range = clampReportsDateRange(dateFrom, dateTo);
     const filters: ReportFiltersV2 = withPartnerReportScope({
-      dateFrom,
-      dateTo,
+      dateFrom: range.dateFrom,
+      dateTo: range.dateTo,
       user_id: selectedUserIds.length ? selectedUserIds.join(',') : undefined,
       include_fixed_fee: reportType === 'time' ? includeFixed : undefined,
       pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,

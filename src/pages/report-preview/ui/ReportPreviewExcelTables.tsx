@@ -607,7 +607,11 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
 } & UserRowSelectionProps & PreviewServerReloadProps & TimeReportPersistenceProps) {
     const isFull = viewMode === 'full';
     const readOnlyUi = Boolean(readOnly);
-    const showEntryActions = !readOnlyUi && !isFull && (Boolean(onDeleteTimeEntry) || Boolean(onMoveTimeEntryToProject) || Boolean(onDuplicateTimeEntry) || Boolean(onGrantEditUnlock));
+    // In confirmed (read-only) preview still show delete when handler is provided.
+    const showEntryActions = !isFull && (
+        Boolean(onDeleteTimeEntry)
+        || (!readOnlyUi && (Boolean(onMoveTimeEntryToProject) || Boolean(onDuplicateTimeEntry) || Boolean(onGrantEditUnlock)))
+    );
     const showActionsColumn = Boolean(showEntryActions);
     const [briefColumnIds, setBriefColumnIds] = useState<TimeBriefColumnId[]>(() => {
         const loaded = loadBriefColumnsFromStorage(showActionsColumn);
