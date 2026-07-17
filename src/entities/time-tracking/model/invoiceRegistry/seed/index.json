@@ -1,0 +1,147 @@
+[
+  {
+    "year": "2026",
+    "sheetName": "Инвойс 2026",
+    "file": "year-2026.json",
+    "count": 499,
+    "keys": [
+      "seqNo",
+      "billedTo",
+      "currency",
+      "amount",
+      "details",
+      "partner",
+      "issueDate",
+      "dueOrPayment",
+      "clientNumber",
+      "statusNote",
+      "advanceFee",
+      "balance"
+    ]
+  },
+  {
+    "year": "2025",
+    "sheetName": "Инвойс 2025",
+    "file": "year-2025.json",
+    "count": 499,
+    "keys": [
+      "seqNo",
+      "billedTo",
+      "currency",
+      "amount",
+      "details",
+      "partner",
+      "issueDate",
+      "dueOrPayment",
+      "clientNumber",
+      "statusNote",
+      "advanceFee",
+      "balance"
+    ]
+  },
+  {
+    "year": "2024",
+    "sheetName": "Инвойс 2024",
+    "file": "year-2024.json",
+    "count": 376,
+    "keys": [
+      "seqNo",
+      "billedTo",
+      "currency",
+      "amount",
+      "details",
+      "issueDate",
+      "dueOrPayment",
+      "clientNumber",
+      "statusNote",
+      "advanceFee",
+      "balance"
+    ]
+  },
+  {
+    "year": "2023",
+    "sheetName": "Инвойс 2023",
+    "file": "year-2023.json",
+    "count": 242,
+    "keys": [
+      "seqNo",
+      "issueDate",
+      "dueOrPayment",
+      "clientNumber",
+      "billedTo",
+      "amount",
+      "currency",
+      "details",
+      "statusNote"
+    ]
+  },
+  {
+    "year": "2022",
+    "sheetName": "Инвойс 2022",
+    "file": "year-2022.json",
+    "count": 201,
+    "keys": [
+      "seqNo",
+      "issueDate",
+      "dueOrPayment",
+      "clientNumber",
+      "billedTo",
+      "amount",
+      "currency",
+      "details"
+    ]
+  },
+  {
+    "year": "2021",
+    "sheetName": "Инвойс 2021",
+    "file": "year-2021.json",
+    "count": 227,
+    "keys": [
+      "seqNo",
+      "issueDate",
+      "dueOrPayment",
+      "clientNumber",
+      "billedTo",
+      "amount",
+      "currency",
+      "details",
+      "uzbSia"
+    ]
+  },
+  {
+    "year": "2020",
+    "sheetName": "Инвойс 2020",
+    "file": "year-2020.json",
+    "count": 140,
+    "keys": [
+      "seqNo",
+      "issueDate",
+      "dueOrPayment",
+      "clientNumber",
+      "billedTo",
+      "amount",
+      "currency",
+      "details",
+      "uzbSia"
+    ]
+  },
+  {
+    "year": "checklist",
+    "sheetName": "check list",
+    "file": "year-checklist.json",
+    "count": 79,
+    "keys": [
+      "seqNo",
+      "billedTo",
+      "proposal",
+      "contractDraft",
+      "contractSigned",
+      "addAgreement",
+      "invoice",
+      "actStamp",
+      "issued",
+      "received",
+      "comments"
+    ]
+  }
+]

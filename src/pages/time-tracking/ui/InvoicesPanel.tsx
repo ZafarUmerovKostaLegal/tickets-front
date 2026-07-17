@@ -14,6 +14,7 @@ import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTim
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 import { InvoiceSendContactModal } from './InvoiceSendContactModal';
+import { InvoiceRegistryPanel } from './InvoiceRegistryPanel';
 
 function fmtMoney(n: number, cur: string, locale: AppLocale): string {
   const x = typeof n === 'number' && Number.isFinite(n) ? n : 0;
@@ -1256,12 +1257,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     </div>
 
     {invoicesSubTab === 'registry' ? (
-      <div className="tt-inv-registry" role="tabpanel" aria-label={t('timeTrackingPage.invoices.tabs.registry')}>
-        <div className="tt-inv-registry__empty">
-          <p className="tt-inv-registry__empty-title">{t('timeTrackingPage.invoices.registry.emptyTitle')}</p>
-          <p className="tt-inv-registry__empty-text">{t('timeTrackingPage.invoices.registry.emptyText')}</p>
-        </div>
-      </div>
+      <InvoiceRegistryPanel readOnly={readOnly} />
     ) : (<>
 
     {!listErr && (aggStatsLoading || listStatsFromAgg) && (<div className="tt-reports__summary" aria-label={t('timeTrackingPage.invoices.summary.aria')}>
