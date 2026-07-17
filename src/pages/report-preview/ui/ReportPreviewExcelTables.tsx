@@ -13,6 +13,7 @@ import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { PREVIEW_CATEGORY_OPTIONS, PREVIEW_TASK_OPTIONS, } from '../lib/previewFormOptions';
 import {
     computeTimePreviewRowAmountToPay,
+    recomputeTimePreviewRowAmountToPay,
     timePreviewRowsForPageExport,
 } from '../lib/reportPreviewPartnerExcel';
 import { buildReportPreviewPositionShare } from '../lib/reportPreviewPositionShare';
@@ -1074,7 +1075,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                     : (<DecimalDurationInput className="tt-rp-mtable__input tt-rp-mtable__input--duration" valueHours={Number.isFinite(r.hours) ? r.hours : 0} onCommit={(hours) => {
                     if (r.isBillable) {
                         const next = { ...r, hours, billableHours: hours };
-                        onPatch(r.rowKey, { hours, billableHours: hours, amountToPay: computeTimePreviewRowAmountToPay(next) });
+                        onPatch(r.rowKey, { hours, billableHours: hours, amountToPay: recomputeTimePreviewRowAmountToPay(next) });
                     }
                     else {
                         onPatch(r.rowKey, { hours });
@@ -1086,7 +1087,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                   {readOnlyUi
                     ? (<span className="tt-rp-mtable__readonly">{formatReportPreviewDurationHours(r.billableHours)}</span>)
                     : (<DecimalDurationInput className="tt-rp-mtable__input tt-rp-mtable__input--duration" valueHours={Number.isFinite(r.billableHours) ? r.billableHours : 0} onCommit={(bh) => {
-                    const atp = computeTimePreviewRowAmountToPay({ ...r, billableHours: bh });
+                    const atp = recomputeTimePreviewRowAmountToPay({ ...r, billableHours: bh });
                     onPatch(r.rowKey, { billableHours: bh, amountToPay: atp });
                 }} disabled={wk} aria-label={`Оплачиваемые часы, ${r.userName}`}/>)}
                 </td>);
@@ -1244,7 +1245,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                   {readOnlyUi
                       ? (<span className="tt-rp-mtable__readonly">{formatReportPreviewDurationHours(r.billableHours)}</span>)
                       : (<DecimalDurationInput className="tt-rp-mtable__input tt-rp-mtable__input--duration" valueHours={Number.isFinite(r.billableHours) ? r.billableHours : 0} onCommit={(bh) => {
-                    const atp = computeTimePreviewRowAmountToPay({ ...r, billableHours: bh });
+                    const atp = recomputeTimePreviewRowAmountToPay({ ...r, billableHours: bh });
                     onPatch(r.rowKey, { billableHours: bh, amountToPay: atp });
                 }} disabled={wk} aria-label={`Оплачиваемые часы, ${r.userName}`}/>)}
                 </td>);
@@ -1253,7 +1254,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                   {readOnlyUi ? (<span className="tt-rp-mtable__readonly">{r.isBillable ? 'Да' : 'Нет'}</span>) : (<RpBool checked={r.isBillable} ariaLabel={`isBillable, ${r.userName}`} disabled={wk} onChange={(v) => {
                     const newBh = v ? r.hours : r.billableHours;
                     const next: TimeExcelPreviewRow = { ...r, isBillable: v, billableHours: newBh };
-                    onPatch(r.rowKey, { isBillable: v, billableHours: newBh, amountToPay: computeTimePreviewRowAmountToPay(next) });
+                    onPatch(r.rowKey, { isBillable: v, billableHours: newBh, amountToPay: recomputeTimePreviewRowAmountToPay(next) });
                 }}/>)}
                 </td>);
             case 'taskBillableByDefault':
@@ -1279,7 +1280,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                     const rate = Number.isFinite(v) ? v : 0;
                     onPatch(r.rowKey, {
                         billableRate: rate,
-                        amountToPay: computeTimePreviewRowAmountToPay({ ...r, billableRate: rate }),
+                        amountToPay: recomputeTimePreviewRowAmountToPay({ ...r, billableRate: rate }),
                     });
                 }} disabled={wk} aria-label={`billableRate, ${r.userName}`}/>)}
                 </td>);

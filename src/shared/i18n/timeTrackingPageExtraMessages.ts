@@ -1498,6 +1498,7 @@ export const timeTrackingPageExtraMessages = {
             durationTitle: 'Длительность в формате Ч:ММ',
             hours: 'Часы',
             hoursTitle: 'Часы (×1.00 ставка для строки счёта)',
+            packageCovered: 'в пакете',
         },
         detail: {
             loading: 'Загрузка…',
@@ -1516,6 +1517,7 @@ export const timeTrackingPageExtraMessages = {
             partialPayment: 'Частичная оплата…',
             cancelInvoice: 'Отменить счёт',
             deleteDraft: 'Удалить черновик',
+            deleteCanceled: 'Удалить отменённый',
             draftEditHint: 'Редактирование только в черновике: даты, налоги и примечания — затем «Сохранить черновик».',
             exportAria: 'Предпросмотр и экспорт',
             previewTitle: 'Три страницы A4 и скачивание PDF / Word',
@@ -1571,7 +1573,9 @@ export const timeTrackingPageExtraMessages = {
             cancelMessage: 'Счёт будет отменён. Продолжить?',
             cancelConfirm: 'Отменить счёт',
             deleteDraftTitle: 'Удалить черновик?',
-            deleteDraftMessage: 'Черновик будет удалён без возможности восстановления.',
+            deleteDraftMessage: 'Черновик будет удалён без возможности восстановления. Записи времени снова станут доступны для выставления.',
+            deleteCanceledTitle: 'Удалить отменённый счёт?',
+            deleteCanceledMessage: 'Отменённый счёт будет удалён без возможности восстановления. Записи времени снова станут доступны для выставления.',
             deleteConfirm: 'Удалить',
         },
         errors: {

@@ -1,7 +1,6 @@
 import {
     createInvoice,
-    fetchUnbilledExpenses,
-    fetchUnbilledTimeEntries,
+    fetchPartnerInvoicePreview,
     type InvoiceDto,
     type PartnerReportConfirmationRequest,
 } from '@entities/time-tracking';
@@ -25,9 +24,19 @@ export function findInvoiceForPartnerConfirmedRow(
     r: PartnerReportConfirmationRequest,
     invoices: readonly InvoiceDto[],
 ): InvoiceDto | null {
+    const active = invoices.filter((inv) => {
+        const st = String(inv.status ?? '').trim().toLowerCase();
+        return st !== 'canceled' && st !== 'cancelled';
+    });
+    const reqId = String(r.id ?? '').trim();
+    if (reqId) {
+        const byReq = active.find((inv) => String(inv.partnerConfirmationRequestId ?? '').trim() === reqId);
+        if (byReq)
+            return byReq;
+    }
     const snap = String(r.snapshotId ?? '').trim();
     if (snap) {
-        const bySnap = invoices.find((inv) => String(inv.partnerConfirmationSnapshotId ?? '').trim() === snap);
+        const bySnap = active.find((inv) => String(inv.partnerConfirmationSnapshotId ?? '').trim() === snap);
         if (bySnap)
             return bySnap;
     }
@@ -36,7 +45,7 @@ export function findInvoiceForPartnerConfirmedRow(
     const projectId = String(r.projectId ?? '').trim();
     if (!projectId || !pf || !pt)
         return null;
-    return invoices.find((inv) => {
+    return active.find((inv) => {
         if (String(inv.projectId ?? '').trim() !== projectId)
             return false;
         return sliceIsoDate(String(inv.partnerBillingPeriodFrom ?? '')) === pf
@@ -51,9 +60,22 @@ export class PartnerConfirmedInvoiceNoLinesError extends Error {
     }
 }
 
+export class PartnerConfirmedInvoiceMismatchError extends Error {
+    readonly expectedSubtotal: number;
+    readonly currency: string;
+
+    constructor(expectedSubtotal: number, currency: string, message?: string) {
+        super(message || 'INVOICE_SUBTOTAL_MISMATCH');
+        this.name = 'PartnerConfirmedInvoiceMismatchError';
+        this.expectedSubtotal = expectedSubtotal;
+        this.currency = currency;
+    }
+}
+
 export async function generateInvoiceFromPartnerConfirmedReport(args: {
     row: PartnerReportConfirmationRequest;
     clientId: string;
+    currency?: string | null;
 }): Promise<InvoiceDto> {
     const { row, clientId } = args;
     const projectId = String(row.projectId ?? '').trim();
@@ -62,24 +84,45 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
     if (!clientId.trim() || !projectId || !dateFrom || !dateTo)
         throw new Error('INVALID_PARTNER_CONFIRMED_ROW');
 
-    const [timeEntries, expenses] = await Promise.all([
-        fetchUnbilledTimeEntries({ projectId, dateFrom, dateTo }),
-        fetchUnbilledExpenses({ projectId, dateFrom, dateTo }),
-    ]);
+    const issueDate = todayIso();
+    const preview = await fetchPartnerInvoicePreview({
+        projectId,
+        dateFrom,
+        dateTo,
+        clientId: clientId.trim(),
+        currency: args.currency?.trim() || undefined,
+        issueDate,
+    });
 
-    const timeEntryIds = timeEntries.map((x) => x.id);
-    const expenseIds = expenses.map((x) => x.id);
-    if (timeEntryIds.length === 0 && expenseIds.length === 0)
+    const timeEntryIds = preview.timeEntryIds;
+    const expenseIds = preview.expenseIds;
+    const hasPackage = preview.packageFeeSubtotal > 1e-9;
+    if (timeEntryIds.length === 0 && expenseIds.length === 0 && !hasPackage)
         throw new PartnerConfirmedInvoiceNoLinesError();
 
-    return createInvoice({
-        clientId: clientId.trim(),
-        projectId,
-        issueDate: todayIso(),
-        dueDate: addDaysIso(30),
-        timeEntryIds,
-        expenseIds,
-        partnerBillingPeriodFrom: dateFrom,
-        partnerBillingPeriodTo: dateTo,
-    });
+    try {
+        return await createInvoice({
+            clientId: clientId.trim(),
+            projectId,
+            issueDate,
+            dueDate: addDaysIso(30),
+            currency: preview.currency,
+            timeEntryIds,
+            expenseIds,
+            partnerBillingPeriodFrom: dateFrom,
+            partnerBillingPeriodTo: dateTo,
+            partnerConfirmationRequestId: String(row.id ?? '').trim() || undefined,
+        });
+    }
+    catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (msg.includes('INVOICE_SUBTOTAL_MISMATCH') || msg.includes('не совпала')) {
+            throw new PartnerConfirmedInvoiceMismatchError(
+                preview.expectedSubtotal,
+                preview.currency,
+                msg,
+            );
+        }
+        throw e;
+    }
 }

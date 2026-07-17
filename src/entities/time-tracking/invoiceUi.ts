@@ -34,8 +34,9 @@ export function invoiceCanRegisterPayment(status: InvoiceUiStatus, balanceDue: n
 export function invoiceCanCancel(status: InvoiceUiStatus): boolean {
     return status !== 'canceled' && status !== 'draft';
 }
+/** Черновик или отменённый счёт без платежей (проверка платежей — на API). */
 export function invoiceCanDeleteDraft(status: InvoiceUiStatus): boolean {
-    return status === 'draft';
+    return status === 'draft' || status === 'canceled';
 }
 export function invoiceCanPatchDraft(status: InvoiceUiStatus): boolean {
     return status === 'draft';

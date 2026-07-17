@@ -1,6 +1,7 @@
 import {
     buildPartnerConfirmedSnapshotExcel,
     fetchAllTimeReportProjectRows,
+    fetchPartnerInvoicePreview,
     getReportSnapshot,
     isTimeTrackingHttpError,
     listUsersWithProjectAccessToProjectForPick,
@@ -130,15 +131,31 @@ export async function exportPartnerConfirmedReportExcel(row: PartnerReportConfir
             || live.rows.find((r) => r.projectName.trim())?.projectName
             || '';
         const title = [clientName, projectName].filter(Boolean).join(' — ') || row.title.trim() || 'Report';
+        let invoiceTotal: number | undefined;
+        let invoiceCurrency = currency;
+        try {
+            const preview = await fetchPartnerInvoicePreview({
+                projectId: pid,
+                dateFrom: df,
+                dateTo: dt,
+                clientId: String(row.clientId ?? '').trim() || undefined,
+            });
+            invoiceTotal = preview.expectedSubtotal;
+            invoiceCurrency = preview.currency || currency;
+        }
+        catch {
+            invoiceTotal = undefined;
+        }
         const { blob, filename } = await buildReportPreviewPartnerExcel(title, live.rows, {
             projectId: pid,
-            currency,
+            currency: invoiceCurrency,
             profilesByAuthUserId: live.profiles,
             projectMembers: live.projectMembers,
             clientName,
             projectName,
             dateFrom: df,
             dateTo: dt,
+            totalForInvoiceAmount: invoiceTotal,
         });
         downloadBlob(blob, filename);
         return;

@@ -18,6 +18,9 @@ export type InvoiceLineDto = {
     timeAuthorAuthUserId?: number | null;
 
     expenseDate?: string | null;
+    sourceCurrency?: string | null;
+    sourceAmount?: number | null;
+    fxRate?: number | null;
 };
 export type InvoicePaymentDto = {
     id: string;
@@ -62,6 +65,7 @@ export type InvoiceDto = {
     partnerBillingPeriodFrom?: string | null;
     partnerBillingPeriodTo?: string | null;
     partnerConfirmationSnapshotId?: string | null;
+    partnerConfirmationRequestId?: string | null;
 
     requiresPaymentConfirmationDocument?: boolean;
     paymentConfirmationDocumentUrl?: string | null;
@@ -72,11 +76,16 @@ export type UnbilledTimeEntryDto = {
     authUserId: number;
     workDate: string;
     hours: number;
+    billableHours?: number;
     roundedHours?: number;
     durationSeconds?: number;
     description: string | null;
     billableAmount: number;
     currency: string;
+    sourceCurrency?: string;
+    packageCovered?: boolean;
+    coveredHours?: number | null;
+    overageHours?: number | null;
 };
 export type UnbilledExpenseEntryDto = {
     id: string;
@@ -84,6 +93,37 @@ export type UnbilledExpenseEntryDto = {
     description: string | null;
     equivalentAmount: number;
     status: string;
+};
+export type PartnerInvoicePreviewDto = {
+    currency: string;
+    expectedSubtotal: number;
+    timeSubtotal: number;
+    expenseSubtotal: number;
+    packageFeeSubtotal: number;
+    timeEntryIds: string[];
+    expenseIds: string[];
+    lines: Array<{
+        lineKind: string;
+        description: string;
+        quantity: number;
+        unitAmount: number;
+        lineTotal: number;
+        sourceCurrency: string;
+        sourceAmount: number;
+        fxRate: number;
+        timeEntryId?: string | null;
+        expenseRequestId?: string | null;
+        packageMonth?: string | null;
+    }>;
+    fxUsed: Array<{
+        sourceAmount: number;
+        sourceCurrency: string;
+        targetCurrency: string;
+        fxRate: number;
+        convertedAmount: number;
+    }>;
+    projectCurrency: string;
+    droppedDuplicateCount: number;
 };
 export type InvoiceListParams = {
     clientId?: string;
@@ -155,6 +195,7 @@ export type InvoiceCreateInput = {
 
     partnerBillingPeriodFrom?: string;
     partnerBillingPeriodTo?: string;
+    partnerConfirmationRequestId?: string;
 };
 export type InvoicePatchInput = {
     issueDate?: string;
@@ -316,6 +357,58 @@ export async function fetchUnbilledExpenses(params: {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/unbilled-expenses?${qs}`, invoiceApiFetchInit);
     await throwIfNotOk(res);
     return res.json() as Promise<UnbilledExpenseEntryDto[]>;
+}
+
+export async function fetchPartnerInvoicePreview(params: {
+    projectId: string;
+    dateFrom: string;
+    dateTo: string;
+    currency?: string;
+    issueDate?: string;
+    clientId?: string;
+}): Promise<PartnerInvoicePreviewDto> {
+    const qs = new URLSearchParams({
+        projectId: params.projectId,
+        dateFrom: params.dateFrom,
+        dateTo: params.dateTo,
+    });
+    if (params.currency?.trim())
+        qs.set('currency', params.currency.trim().toUpperCase());
+    if (params.issueDate?.trim())
+        qs.set('issueDate', params.issueDate.trim().slice(0, 10));
+    if (params.clientId?.trim())
+        qs.set('clientId', params.clientId.trim());
+    const res = await apiFetch(
+        `/api/v1/time-tracking/invoices/from-partner-period/preview?${qs}`,
+        invoiceApiFetchInit,
+    );
+    await throwIfNotOk(res);
+    const raw = await res.json() as Record<string, unknown>;
+    return {
+        currency: String(raw.currency ?? 'USD'),
+        expectedSubtotal: dashNum(raw.expectedSubtotal ?? raw.expected_subtotal),
+        timeSubtotal: dashNum(raw.timeSubtotal ?? raw.time_subtotal),
+        expenseSubtotal: dashNum(raw.expenseSubtotal ?? raw.expense_subtotal),
+        packageFeeSubtotal: dashNum(raw.packageFeeSubtotal ?? raw.package_fee_subtotal),
+        timeEntryIds: Array.isArray(raw.timeEntryIds)
+            ? (raw.timeEntryIds as unknown[]).map(String)
+            : Array.isArray(raw.time_entry_ids)
+                ? (raw.time_entry_ids as unknown[]).map(String)
+                : [],
+        expenseIds: Array.isArray(raw.expenseIds)
+            ? (raw.expenseIds as unknown[]).map(String)
+            : Array.isArray(raw.expense_ids)
+                ? (raw.expense_ids as unknown[]).map(String)
+                : [],
+        lines: Array.isArray(raw.lines) ? raw.lines as PartnerInvoicePreviewDto['lines'] : [],
+        fxUsed: Array.isArray(raw.fxUsed)
+            ? raw.fxUsed as PartnerInvoicePreviewDto['fxUsed']
+            : Array.isArray(raw.fx_used)
+                ? raw.fx_used as PartnerInvoicePreviewDto['fxUsed']
+                : [],
+        projectCurrency: String(raw.projectCurrency ?? raw.project_currency ?? 'USD'),
+        droppedDuplicateCount: dashNum(raw.droppedDuplicateCount ?? raw.dropped_duplicate_count),
+    };
 }
 export function readPartnerConfirmationBlocked(o: Record<string, unknown>): boolean {
     const v = o.partnerConfirmationBlocked ?? o.partner_confirmation_blocked;
@@ -513,6 +606,15 @@ export function normalizeInvoiceLineDto(raw: unknown, fallbackIdx: number): Invo
         lineKindResolved = 'manual';
 
     const sortRaw = r.sortOrder ?? r.sort_order ?? fallbackIdx;
+    const sourceCurrency = pickStr('sourceCurrency', 'source_currency') || null;
+    const sourceAmountRaw = r.sourceAmount ?? r.source_amount;
+    const sourceAmount = sourceAmountRaw != null && String(sourceAmountRaw).trim() !== ''
+        ? pickNum('sourceAmount', 'source_amount')
+        : null;
+    const fxRateRaw = r.fxRate ?? r.fx_rate;
+    const fxRate = fxRateRaw != null && String(fxRateRaw).trim() !== ''
+        ? pickNum('fxRate', 'fx_rate')
+        : null;
 
     return {
         id: id.length ? id : `line-${fallbackIdx}`,
@@ -527,6 +629,9 @@ export function normalizeInvoiceLineDto(raw: unknown, fallbackIdx: number): Invo
         ...(timeEntryWorkDate !== undefined ? { timeEntryWorkDate } : {}),
         ...(timeAuthorAuthUserId !== undefined ? { timeAuthorAuthUserId } : {}),
         ...(expenseDate !== undefined ? { expenseDate } : {}),
+        ...(sourceCurrency ? { sourceCurrency } : {}),
+        ...(sourceAmount != null ? { sourceAmount } : {}),
+        ...(fxRate != null ? { fxRate } : {}),
     };
 }
 
@@ -657,6 +762,7 @@ export function normalizeInvoiceDto(raw: unknown): InvoiceDto {
     const pf = pickInvoicePartnerDateSlice(o, ['partnerBillingPeriodFrom', 'partner_billing_period_from']);
     const pt = pickInvoicePartnerDateSlice(o, ['partnerBillingPeriodTo', 'partner_billing_period_to']);
     const pcs = pickInvoicePartnerStr(o, ['partnerConfirmationSnapshotId', 'partner_confirmation_snapshot_id', 'reportSnapshotId', 'report_snapshot_id']);
+    const pcr = pickInvoicePartnerStr(o, ['partnerConfirmationRequestId', 'partner_confirmation_request_id']);
     const rpcdRaw = o.requiresPaymentConfirmationDocument ?? o.requires_payment_confirmation_document;
     const requiresPaymentConfirmationDocument = rpcdRaw === true || rpcdRaw === 'true'
         ? true
@@ -698,6 +804,7 @@ export function normalizeInvoiceDto(raw: unknown): InvoiceDto {
         ...(pf ? { partnerBillingPeriodFrom: pf } : {}),
         ...(pt ? { partnerBillingPeriodTo: pt } : {}),
         ...(pcs ? { partnerConfirmationSnapshotId: pcs } : {}),
+        ...(pcr ? { partnerConfirmationRequestId: pcr } : {}),
         ...(requiresPaymentConfirmationDocument !== undefined ? { requiresPaymentConfirmationDocument } : {}),
         ...(pcDocUrl ? { paymentConfirmationDocumentUrl: pcDocUrl } : {}),
         ...(pcRecAt ? { paymentConfirmationRecordedAt: pcRecAt } : {}),

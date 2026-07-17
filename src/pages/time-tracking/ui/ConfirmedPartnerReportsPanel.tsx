@@ -35,6 +35,7 @@ import {
 import {
     findInvoiceForPartnerConfirmedRow,
     generateInvoiceFromPartnerConfirmedReport,
+    PartnerConfirmedInvoiceMismatchError,
     PartnerConfirmedInvoiceNoLinesError,
 } from '@pages/time-tracking/lib/partnerConfirmedInvoice';
 import { openConfirmedPartnerReportPreview } from '@pages/time-tracking/lib/partnerReportPreviewNav';
@@ -647,6 +648,12 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         catch (e) {
             if (e instanceof PartnerConfirmedInvoiceNoLinesError) {
                 await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.invoiceNoLines') });
+                return;
+            }
+            if (e instanceof PartnerConfirmedInvoiceMismatchError) {
+                await showAlert({
+                    message: `${t('timeTrackingPage.reports.partnerConfirmed.invoiceFailed')}: ${e.message}`,
+                });
                 return;
             }
             const base = e instanceof Error ? e.message : t('timeTrackingPage.reports.partnerConfirmed.invoiceFailed');

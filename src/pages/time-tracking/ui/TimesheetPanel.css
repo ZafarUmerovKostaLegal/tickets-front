@@ -3925,14 +3925,45 @@
 }
 
 .tt-inv__th-action {
-  width: 3rem;
+  width: 5.5rem;
   padding-left: 0.25rem !important;
   padding-right: 0.75rem !important;
 }
 
 .tt-inv__td-action {
   text-align: right;
-  width: 3rem;
+  width: 5.5rem;
+}
+
+.tt-inv__row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.tt-inv__row-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: color-mix(in srgb, #b91c1c 75%, var(--app-muted, #64748b));
+  cursor: pointer;
+}
+
+.tt-inv__row-delete:hover:not(:disabled) {
+  background: color-mix(in srgb, #b91c1c 12%, transparent);
+  color: #b91c1c;
+}
+
+.tt-inv__row-delete:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .tt-inv__td-strong {

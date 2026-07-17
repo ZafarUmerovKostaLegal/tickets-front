@@ -1500,6 +1500,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             durationTitle: 'Duration in H:MM format',
             hours: 'Hours',
             hoursTitle: 'Hours (×1.00 rate for invoice line)',
+            packageCovered: 'package-covered',
         },
         detail: {
             loading: 'Loading…',
@@ -1518,6 +1519,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             partialPayment: 'Partial payment…',
             cancelInvoice: 'Cancel invoice',
             deleteDraft: 'Delete draft',
+            deleteCanceled: 'Delete canceled',
             draftEditHint: 'Draft-only editing: dates, taxes, and notes — then “Save draft”.',
             exportAria: 'Preview and export',
             previewTitle: 'Three A4 pages and PDF / Word download',
@@ -1573,7 +1575,9 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             cancelMessage: 'The invoice will be canceled. Continue?',
             cancelConfirm: 'Cancel invoice',
             deleteDraftTitle: 'Delete draft?',
-            deleteDraftMessage: 'The draft will be deleted permanently.',
+            deleteDraftMessage: 'The draft will be deleted permanently. Time entries will become available for billing again.',
+            deleteCanceledTitle: 'Delete canceled invoice?',
+            deleteCanceledMessage: 'The canceled invoice will be deleted permanently. Time entries will become available for billing again.',
             deleteConfirm: 'Delete',
         },
         errors: {

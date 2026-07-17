@@ -75,7 +75,7 @@ import {
 } from '../lib/reportPreviewApiToExcelRows';
 import { mergeTimeEntryResponseIntoRow, persistTimeExcelPreviewRow, previewRowAfterCreate, registerTimeEntryServerOwner, resolveTaskForTargetProject, serverAuthUserIdForTimeEntry, syncTimeEntryServerOwnersFromRows, taskIdForApi, timeExcelPreviewRowToCreateBody, } from '../lib/reportPreviewTimeEntrySave';
 import { applyTimePreviewRowPatch, fetchBillableRateForPreviewRow, previewRowNeedsAsyncBillableRateFetch, } from '../lib/reportPreviewRowPatch';
-import { computeTimePreviewRowAmountToPay } from '../lib/reportPreviewPartnerExcel';
+import { recomputeTimePreviewRowAmountToPay } from '../lib/reportPreviewPartnerExcel';
 import { isDateTimeOnlyPreviewPatch, localYmdAndHmToIso, } from '../lib/briefRecordDateTimeEdit';
 import {
     canUndo as editHistoryCanUndo,
@@ -887,7 +887,7 @@ export function ReportPreviewPage() {
                     const nextRow = {
                         ...row,
                         billableRate: rate,
-                        amountToPay: computeTimePreviewRowAmountToPay({ ...row, billableRate: rate }),
+                        amountToPay: recomputeTimePreviewRowAmountToPay({ ...row, billableRate: rate }),
                     };
                     const next = prev.map((r) => (r.rowKey === rowKey ? nextRow : r));
                     timeExcelRowsRef.current = next;

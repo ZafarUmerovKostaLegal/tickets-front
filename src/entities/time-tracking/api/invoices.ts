@@ -1,6 +1,7 @@
 export {
     fetchUnbilledTimeEntries,
     fetchUnbilledExpenses,
+    fetchPartnerInvoicePreview,
     listInvoices,
     fetchAllInvoices,
     getInvoicesAggregatedStats,
@@ -24,6 +25,7 @@ export {
     type InvoicePaymentDto,
     type UnbilledTimeEntryDto,
     type UnbilledExpenseEntryDto,
+    type PartnerInvoicePreviewDto,
     type InvoiceListParams,
     type InvoicesListResponse,
     type InvoicesAggregatedStats,

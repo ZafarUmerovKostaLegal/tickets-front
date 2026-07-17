@@ -23,6 +23,22 @@ export function computeTimePreviewRowAmountToPay(r: TimeExcelPreviewRow): number
         return 0;
     if (!r.isBillable)
         return 0;
+    // Prefer server package-aware amount (including 0 for package-covered hours).
+    if (typeof r.amountToPay === 'number' && Number.isFinite(r.amountToPay))
+        return Math.round(r.amountToPay * 100) / 100;
+    const bh = Number.isFinite(r.billableHours) ? r.billableHours : 0;
+    const rate = Number.isFinite(r.billableRate) ? r.billableRate : 0;
+    const hours = Math.round(bh * 100) / 100;
+    const rateR = Math.round(rate * 100) / 100;
+    return Math.round(hours * rateR * 100) / 100;
+}
+
+/** Hours×rate recompute for in-preview edits (does not prefer stored amountToPay). */
+export function recomputeTimePreviewRowAmountToPay(r: TimeExcelPreviewRow): number {
+    if (r.isVoided)
+        return 0;
+    if (!r.isBillable)
+        return 0;
     const bh = Number.isFinite(r.billableHours) ? r.billableHours : 0;
     const rate = Number.isFinite(r.billableRate) ? r.billableRate : 0;
     const hours = Math.round(bh * 100) / 100;
@@ -76,6 +92,8 @@ export async function buildReportPreviewPartnerExcel(
         projectName?: string;
         dateFrom?: string;
         dateTo?: string;
+        /** Prefer invoice-ready total (time + package + expenses in settlement currency). */
+        totalForInvoiceAmount?: number;
     },
 ) {
     const rowsForExport = timePreviewRowsForPageExport(visiblePageRows);
@@ -91,7 +109,10 @@ export async function buildReportPreviewPartnerExcel(
             projectMembers: opts.projectMembers,
         });
     }
-    const totalForInvoiceAmount = rowsForExport.reduce((acc, row) => acc + computeTimePreviewRowAmountToPay(row), 0);
+    const summed = rowsForExport.reduce((acc, row) => acc + computeTimePreviewRowAmountToPay(row), 0);
+    const totalForInvoiceAmount = opts?.totalForInvoiceAmount != null && Number.isFinite(opts.totalForInvoiceAmount)
+        ? opts.totalForInvoiceAmount
+        : summed;
     const labels = resolveReportDownloadLabelsFromExcelRows(rowsForExport, {
         clientName: opts?.clientName,
         projectName: opts?.projectName,

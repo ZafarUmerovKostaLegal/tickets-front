@@ -199,6 +199,9 @@ const IcoRefresh = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="
 const IcoChevRight = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
   <path d="M9 18l6-6-6-6" />
 </svg>);
+const IcoTrash = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+</svg>);
 const IcoChevDown = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
   <path d="M6 9l6 6 6-6" />
 </svg>);
@@ -659,6 +662,39 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     setDetailId(null);
     setDetail(null);
   }, []);
+  const deleteInvoiceById = useCallback(async (inv: InvoiceDto, opts?: { closeIfDetail?: boolean }) => {
+    const isCanceled = inv.status === 'canceled';
+    if (!await showConfirm({
+      title: isCanceled
+        ? t('timeTrackingPage.invoices.confirm.deleteCanceledTitle')
+        : t('timeTrackingPage.invoices.confirm.deleteDraftTitle'),
+      message: isCanceled
+        ? t('timeTrackingPage.invoices.confirm.deleteCanceledMessage')
+        : t('timeTrackingPage.invoices.confirm.deleteDraftMessage'),
+      variant: 'danger',
+      confirmLabel: t('timeTrackingPage.invoices.confirm.deleteConfirm'),
+    }))
+      return false;
+    setActionBusy(true);
+    try {
+      await deleteDraftInvoice(inv.id);
+      if (opts?.closeIfDetail)
+        closeDetail();
+      else if (detailId === inv.id)
+        closeDetail();
+      loadList();
+      void loadAggStats();
+      notifyReportsInvalidated();
+      return true;
+    }
+    catch (e) {
+      await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
+      return false;
+    }
+    finally {
+      setActionBusy(false);
+    }
+  }, [closeDetail, detailId, loadAggStats, loadList, showAlert, showConfirm, t]);
   const refreshDetail = useCallback(async (id: string) => {
     const inv = await getInvoice(id, true);
     setDetail(inv);
@@ -1008,12 +1044,15 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     setCreateBusy(true);
     try {
       const manualNumber = createInvoiceNumber.trim();
+      const clientRow = clients.find((c) => c.id === createClientId);
+      const currency = String(clientRow?.currency ?? '').trim().toUpperCase() || undefined;
       await createInvoice({
         clientId: createClientId,
         projectId: billProjectId,
         issueDate,
         dueDate,
         ...(manualNumber ? { invoiceNumber: manualNumber } : {}),
+        ...(currency ? { currency } : {}),
         timeEntryIds: [...selTime],
         expenseIds: [...selExp],
         partnerBillingPeriodFrom: unbilledFrom.trim().slice(0, 10),
@@ -1445,6 +1484,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
             <tbody>
               {items.map((inv) => {
                 const badgeClass = INVOICE_STATUS_BADGE_CLASS[inv.status] ?? 'tt-inv__badge--neutral';
+                const canDelete = !readOnly && invoiceCanDeleteDraft(inv.status as InvoiceUiStatus);
                 return (<tr key={inv.id} className="tt-inv__row" tabIndex={0} onClick={() => openDetail(inv.id)} onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -1463,9 +1503,30 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
                     </span>
                   </td>
                   <td className="tt-inv__td-action">
-                    <span className="tt-inv__row-cta" aria-hidden>
-                      <IcoChevRight />
-                    </span>
+                    <div className="tt-inv__row-actions">
+                      {canDelete ? (
+                        <button
+                          type="button"
+                          className="tt-inv__row-delete"
+                          disabled={actionBusy}
+                          title={inv.status === 'canceled'
+                            ? t('timeTrackingPage.invoices.detail.deleteCanceled')
+                            : t('timeTrackingPage.invoices.detail.deleteDraft')}
+                          aria-label={inv.status === 'canceled'
+                            ? t('timeTrackingPage.invoices.detail.deleteCanceled')
+                            : t('timeTrackingPage.invoices.detail.deleteDraft')}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void deleteInvoiceById(inv);
+                          }}
+                        >
+                          <IcoTrash />
+                        </button>
+                      ) : null}
+                      <span className="tt-inv__row-cta" aria-hidden>
+                        <IcoChevRight />
+                      </span>
+                    </div>
                   </td>
                 </tr>);
               })}
@@ -1630,7 +1691,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
                       <td>{x.workDate}</td>
                       <td>{formatHM(seconds)}</td>
                       <td>{Number(x.hours).toFixed(2)}</td>
-                      <td>{fmtMoney(x.billableAmount, x.currency, locale)}</td>
+                      <td>{fmtMoney(x.billableAmount, x.currency, locale)}{x.packageCovered ? ` (${t('timeTrackingPage.invoices.createDialog.packageCovered')})` : ''}</td>
                       <td>{x.description ?? '—'}</td>
                     </tr>);
                   })}
@@ -1856,30 +1917,12 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
               }}>
                 {t('timeTrackingPage.invoices.detail.cancelInvoice')}
               </button>)}
-              {invoiceCanDeleteDraft(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {
-                if (!await showConfirm({
-                  title: t('timeTrackingPage.invoices.confirm.deleteDraftTitle'),
-                  message: t('timeTrackingPage.invoices.confirm.deleteDraftMessage'),
-                  variant: 'danger',
-                  confirmLabel: t('timeTrackingPage.invoices.confirm.deleteConfirm'),
-                }))
-                  return;
-                setActionBusy(true);
-                try {
-                  await deleteDraftInvoice(detail.id);
-                  closeDetail();
-                  loadList();
-                  void loadAggStats();
-                  notifyReportsInvalidated();
-                }
-                catch (e) {
-                  await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
-                }
-                finally {
-                  setActionBusy(false);
-                }
+              {invoiceCanDeleteDraft(detail.status as InvoiceUiStatus) && (<button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={() => {
+                void deleteInvoiceById(detail, { closeIfDetail: true });
               }}>
-                {t('timeTrackingPage.invoices.detail.deleteDraft')}
+                {detail.status === 'canceled'
+                  ? t('timeTrackingPage.invoices.detail.deleteCanceled')
+                  : t('timeTrackingPage.invoices.detail.deleteDraft')}
               </button>)}
             </div>)}
 
@@ -1972,7 +2015,12 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
                     <td>{ln.description ?? '—'}</td>
                     <td>{ln.quantity}</td>
                     <td>{ln.unitAmount}</td>
-                    <td>{ln.lineTotal}</td>
+                    <td>
+                      {fmtMoney(ln.lineTotal, detail.currency, locale)}
+                      {ln.sourceCurrency && ln.sourceCurrency !== detail.currency && ln.sourceAmount != null
+                          ? ` (${fmtMoney(ln.sourceAmount, ln.sourceCurrency, locale)})`
+                          : ''}
+                    </td>
                   </tr>))}
                 </tbody>
               </table>

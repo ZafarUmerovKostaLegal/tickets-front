@@ -1,7 +1,7 @@
 import { createProjectTask, createTimeEntry, deleteTimeEntry, patchTimeEntry, type CreateTimeEntryBody, type PatchTimeEntryBody, type TimeEntryRow, type TimeEntryVoidKind, } from '@entities/time-tracking';
 import { invalidateProjectTasksCache, listProjectTasksCached } from '@entities/time-tracking/lib/projectTasksCache';
 import { resolveTimeEntryNotesOnly } from '@entities/time-tracking/lib/timesheetTimerPersist';
-import { computeTimePreviewRowAmountToPay } from './reportPreviewPartnerExcel';
+import { recomputeTimePreviewRowAmountToPay } from './reportPreviewPartnerExcel';
 import { fetchBillableRateForPreviewRow, resolveBillableRateFromSiblingRows, } from './reportPreviewRowPatch';
 import type { TimeExcelPreviewRow, } from './previewExcelTypes';
 
@@ -264,7 +264,7 @@ export async function persistTimeExcelPreviewRow(row: TimeExcelPreviewRow, serve
     return {
         row: {
             ...savedRow,
-            amountToPay: computeTimePreviewRowAmountToPay(savedRow),
+            amountToPay: recomputeTimePreviewRowAmountToPay(savedRow),
         },
         serverAuthUserId: row.authUserId,
     };
@@ -303,7 +303,7 @@ export function previewRowAfterCreate(template: TimeExcelPreviewRow, tr: TimeEnt
         : next;
     return {
         ...withRate,
-        amountToPay: computeTimePreviewRowAmountToPay(withRate),
+        amountToPay: recomputeTimePreviewRowAmountToPay(withRate),
     };
 }
 
@@ -322,5 +322,5 @@ export async function enrichTimePreviewRowBillableRate(row: TimeExcelPreviewRow,
     if (rate <= 0 || rate === row.billableRate)
         return row;
     const next = { ...row, billableRate: rate };
-    return { ...next, amountToPay: computeTimePreviewRowAmountToPay(next) };
+    return { ...next, amountToPay: recomputeTimePreviewRowAmountToPay(next) };
 }

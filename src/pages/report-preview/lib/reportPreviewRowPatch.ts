@@ -1,5 +1,5 @@
 import { listHourlyRates, pickEffectiveBillableRateForProject, parseHourlyRateAmount, type HourlyRateRow } from '@entities/time-tracking';
-import { computeTimePreviewRowAmountToPay } from './reportPreviewPartnerExcel';
+import { recomputeTimePreviewRowAmountToPay } from './reportPreviewPartnerExcel';
 import type { TimeExcelPreviewRow } from './previewExcelTypes';
 
 function pickBillableRateFromHourlyRates(rows: HourlyRateRow[], projectId: string, currency: string): number | null {
@@ -64,7 +64,7 @@ export function applyTimePreviewRowPatch(row: TimeExcelPreviewRow, patch: Partia
         merged.hours = patch.billableHours;
     const needsRecalc = authChanged || AMOUNT_RECALC_PATCH_KEYS.some((k) => k in patch);
     if (needsRecalc)
-        merged.amountToPay = computeTimePreviewRowAmountToPay(merged);
+        merged.amountToPay = recomputeTimePreviewRowAmountToPay(merged);
     return merged;
 }
 
