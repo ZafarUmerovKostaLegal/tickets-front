@@ -2,6 +2,7 @@ import { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { formatHoursClockFromDecimalHours } from '@shared/lib/formatTrackingHours';
 import { useI18n } from '@shared/i18n';
+import './TimesheetModals.css';
 
 export type TimesheetDeleteEntry = {
     id: string;
@@ -51,7 +52,7 @@ export function TimesheetGrantUnlockConfirm({ workDateYmd, busy, onCancel, onCon
         <div className="tsp-cfm__modal" onClick={(e) => e.stopPropagation()}>
             <div className="tsp-cfm__head">
                 <div className="tsp-cfm__ico tsp-cfm__ico--unlock" aria-hidden>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                         <path d="M9 12l2 2 4-4" />
                     </svg>
@@ -61,7 +62,7 @@ export function TimesheetGrantUnlockConfirm({ workDateYmd, busy, onCancel, onCon
                     <p className="tsp-cfm__sub">{t('timeTrackingPage.grantUnlockConfirm.sub')}</p>
                 </div>
                 <button type="button" className="tsp-cfm__close" onClick={onCancel} disabled={busy} aria-label={t('timeTrackingPage.close')}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
                         <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
@@ -123,7 +124,7 @@ export function TimesheetDeleteConfirm({ entry, busy, onCancel, onConfirm }: Tim
         <div className="tsp-cfm__modal" onClick={(e) => e.stopPropagation()}>
             <div className="tsp-cfm__head">
                 <div className="tsp-cfm__ico" aria-hidden>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M12 9v4M12 17h.01" />
                         <path d="M10.3 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.7 3.86a2 2 0 00-3.4 0z" />
                     </svg>
@@ -133,7 +134,7 @@ export function TimesheetDeleteConfirm({ entry, busy, onCancel, onConfirm }: Tim
                     <p className="tsp-cfm__sub">{t('timeTrackingPage.deleteConfirm.sub')}</p>
                 </div>
                 <button type="button" className="tsp-cfm__close" onClick={onCancel} disabled={busy} aria-label={t('timeTrackingPage.close')}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
                         <line x1="6" y1="6" x2="18" y2="18" />
                     </svg>
