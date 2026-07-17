@@ -1280,6 +1280,8 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             savedLocally: 'saved locally',
             noRows: 'No rows match the current filter',
             rowN: 'row {n}',
+            enterFullscreen: 'Expand table to full screen',
+            exitFullscreen: 'Exit full screen',
         },
         introReadonly: 'View invoices from time tracking: filters, summary, and invoice card. Changes and new invoices — in “Time tracking”.',
         introFull: 'Issue invoices by client and project: drafts, sending, payments, and balances in one list. Select a row to open the card.',

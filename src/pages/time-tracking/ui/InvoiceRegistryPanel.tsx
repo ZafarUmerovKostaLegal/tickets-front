@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
     INVOICE_REGISTRY_SHEETS,
     clearInvoiceRegistryOverrides,
@@ -13,6 +14,27 @@ import { showToast } from '@shared/ui/app-toast';
 import './InvoiceRegistryPanel.css';
 
 type FocusCell = { rowId: string; key: string } | null;
+
+function IcoFullscreen({ exit }: { exit?: boolean }) {
+    if (exit) {
+        return (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M8 3v3a2 2 0 0 1-2 2H3"/>
+                <path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
+                <path d="M3 16h3a2 2 0 0 1 2 2v3"/>
+                <path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+            </svg>
+        );
+    }
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M8 3H5a2 2 0 0 0-2 2v3"/>
+            <path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+            <path d="M3 16v3a2 2 0 0 0 2 2h3"/>
+            <path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+        </svg>
+    );
+}
 
 function emptyRow(year: InvoiceRegistryYearId, keys: string[], index: number): InvoiceRegistryRow {
     const row: InvoiceRegistryRow = { id: `${year}-new-${Date.now()}-${index}` };
@@ -115,6 +137,7 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
     const [dirty, setDirty] = useState(false);
     const [focus, setFocus] = useState<FocusCell>(null);
     const [search, setSearch] = useState('');
+    const [fullscreen, setFullscreen] = useState(false);
     const sheet = useMemo(() => getInvoiceRegistrySheet(year), [year]);
     const columns = sheet.columns;
     const columnKeys = useMemo(() => columns.map((c) => c.key), [columns]);
@@ -202,8 +225,26 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
             .finally(() => setLoading(false));
     }, [year, t]);
 
-    return (
-        <div className="tt-inv-reg" role="tabpanel" aria-label={t('timeTrackingPage.invoices.tabs.registry')}>
+    useEffect(() => {
+        if (!fullscreen)
+            return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && !focus) {
+                e.preventDefault();
+                setFullscreen(false);
+            }
+        };
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        window.addEventListener('keydown', onKey);
+        return () => {
+            document.body.style.overflow = prevOverflow;
+            window.removeEventListener('keydown', onKey);
+        };
+    }, [fullscreen, focus]);
+
+    const panel = (
+        <div className={`tt-inv-reg${fullscreen ? ' tt-inv-reg--fullscreen' : ''}`} role="tabpanel" aria-label={t('timeTrackingPage.invoices.tabs.registry')}>
             <div className="tt-inv-reg__toolbar">
                 <nav className="tt-reports__type-nav tt-inv-reg__year-nav" role="tablist" aria-label={t('timeTrackingPage.invoices.registry.yearTabsAria')}>
                     {INVOICE_REGISTRY_SHEETS.map((s) => (
@@ -246,6 +287,20 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                             </button>
                         </>
                     )}
+                    <button
+                        type="button"
+                        className="tt-inv-reg__fullscreen-btn"
+                        onClick={() => setFullscreen((v) => !v)}
+                        title={fullscreen
+                            ? t('timeTrackingPage.invoices.registry.exitFullscreen')
+                            : t('timeTrackingPage.invoices.registry.enterFullscreen')}
+                        aria-label={fullscreen
+                            ? t('timeTrackingPage.invoices.registry.exitFullscreen')
+                            : t('timeTrackingPage.invoices.registry.enterFullscreen')}
+                        aria-pressed={fullscreen}
+                    >
+                        <IcoFullscreen exit={fullscreen} />
+                    </button>
                 </div>
             </div>
 
@@ -330,4 +385,8 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
             )}
         </div>
     );
+
+    if (fullscreen && typeof document !== 'undefined')
+        return createPortal(panel, document.body);
+    return panel;
 }
