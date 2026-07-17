@@ -15,6 +15,7 @@ import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/time
 import { formatHM } from '@shared/lib/formatTrackingHours';
 import { InvoiceSendContactModal } from './InvoiceSendContactModal';
 import { InvoiceRegistryPanel } from './InvoiceRegistryPanel';
+import { InvoiceRegistryStatisticsPanel } from './InvoiceRegistryStatisticsPanel';
 
 function fmtMoney(n: number, cur: string, locale: AppLocale): string {
   const x = typeof n === 'number' && Number.isFinite(n) ? n : 0;
@@ -1198,12 +1199,18 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     setUnbilledExp([]);
     setUnbilledPartnerBlockReason(null);
   }
-  const invoicesSubTab = searchParams.get('invTab') === 'registry' ? 'registry' : 'list';
-  const selectInvoicesSubTab = useCallback((tab: 'list' | 'registry') => {
+  const invoicesSubTab = searchParams.get('invTab') === 'registry'
+    ? 'registry'
+    : searchParams.get('invTab') === 'statistics'
+      ? 'statistics'
+      : 'list';
+  const selectInvoicesSubTab = useCallback((tab: 'list' | 'registry' | 'statistics') => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (tab === 'registry')
         next.set('invTab', 'registry');
+      else if (tab === 'statistics')
+        next.set('invTab', 'statistics');
       else
         next.delete('invTab');
       return next;
@@ -1233,6 +1240,15 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
         >
           {t('timeTrackingPage.invoices.tabs.registry')}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={invoicesSubTab === 'statistics'}
+          className={`tt-reports__type-tab${invoicesSubTab === 'statistics' ? ' tt-reports__type-tab--active' : ''}`}
+          onClick={() => selectInvoicesSubTab('statistics')}
+        >
+          {t('timeTrackingPage.invoices.tabs.statistics')}
+        </button>
       </nav>
       {invoicesSubTab === 'list' && (
         <div className="tt-inv__head-row">
@@ -1254,10 +1270,15 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       {invoicesSubTab === 'registry' && (
         <p className="tt-inv__lede">{t('timeTrackingPage.invoices.registry.intro')}</p>
       )}
+      {invoicesSubTab === 'statistics' && (
+        <p className="tt-inv__lede">{t('timeTrackingPage.invoices.statistics.intro')}</p>
+      )}
     </div>
 
     {invoicesSubTab === 'registry' ? (
       <InvoiceRegistryPanel readOnly={readOnly} />
+    ) : invoicesSubTab === 'statistics' ? (
+      <InvoiceRegistryStatisticsPanel />
     ) : (<>
 
     {!listErr && (aggStatsLoading || listStatsFromAgg) && (<div className="tt-reports__summary" aria-label={t('timeTrackingPage.invoices.summary.aria')}>
