@@ -5440,6 +5440,11 @@ a.pp__proj-name--link:hover {
   border-radius: 8px;
 }
 
+.tt-inv-send-contact__outlook--warn {
+  border-color: rgba(217, 119, 6, 0.45);
+  background: rgba(217, 119, 6, 0.08);
+}
+
 .tt-inv-send-contact__outlook .tt-tm-hint {
   margin: 0;
 }

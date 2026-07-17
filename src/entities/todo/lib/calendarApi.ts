@@ -45,14 +45,14 @@ export async function connectOutlookCalendar(options?: { forceConsent?: boolean 
         const loc = res.headers.get('Location');
         if (loc) {
             const u = assertHttpsMicrosoftOAuthRedirectUrl(loc);
-            window.location.href = u.toString();
+            window.location.assign(u.toString());
             return;
         }
     }
     const data = await parseBody(res);
     if (data?.url && typeof data.url === 'string') {
         const u = assertHttpsMicrosoftOAuthRedirectUrl(data.url);
-        window.location.href = u.toString();
+        window.location.assign(u.toString());
         return;
     }
     if (res.ok) {
@@ -71,11 +71,16 @@ export async function connectOutlookCalendar(options?: { forceConsent?: boolean 
 
 /** Disconnect then start OAuth with prompt=consent (required after Mail.ReadWrite scope expansion). */
 export async function reconnectOutlookCalendar(): Promise<void> {
-    try {
-        await apiFetch('/api/v1/todos/calendar/disconnect', { method: 'DELETE' });
-    }
-    catch {
-        // Still try to reconnect even if disconnect fails (e.g. already disconnected).
+    const disc = await apiFetch('/api/v1/todos/calendar/disconnect', { method: 'DELETE' });
+    // 404/405 = old gateway without disconnect route — still force consent on connect.
+    if (!disc.ok && disc.status !== 404 && disc.status !== 405 && disc.status !== 409) {
+        const body = await parseBody(disc);
+        const detail = typeof body?.detail === 'string' ? body.detail : null;
+        if (disc.status === 401)
+            throw new Error('Требуется авторизация');
+        // Non-fatal for other errors: continue to consent flow.
+        if (detail)
+            console.warn('[Outlook] disconnect:', detail);
     }
     await connectOutlookCalendar({ forceConsent: true });
 }
@@ -92,6 +97,8 @@ export async function disconnectOutlookCalendar(): Promise<void> {
 }
 export type CalendarStatusResult = {
     connected: boolean;
+    /** False when calendar token exists but Mail.ReadWrite is missing. */
+    mailReady?: boolean;
     detail?: string;
 };
 export async function getCalendarStatus(): Promise<CalendarStatusResult> {
@@ -103,14 +110,17 @@ export async function getCalendarStatus(): Promise<CalendarStatusResult> {
     if (!res.ok) {
         const body = await parseBody(res);
         const detail = typeof body?.detail === 'string' ? body.detail : undefined;
-        return { connected: false, detail };
+        return { connected: false, mailReady: false, detail };
     }
     const data = (await res.json()) as {
         connected?: boolean;
+        mailReady?: boolean;
         detail?: unknown;
     };
+    const connected = !!data?.connected;
     return {
-        connected: !!data?.connected,
+        connected,
+        mailReady: typeof data?.mailReady === 'boolean' ? data.mailReady : undefined,
         detail: typeof data?.detail === 'string' ? data.detail : undefined,
     };
 }

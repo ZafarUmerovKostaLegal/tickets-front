@@ -123,6 +123,7 @@ export function InvoiceSendContactModal({
     const [addOpen, setAddOpen] = useState(false);
     const [sending, setSending] = useState(false);
     const [outlookConnected, setOutlookConnected] = useState<boolean | null>(null);
+    const [outlookMailReady, setOutlookMailReady] = useState<boolean | null>(null);
     const [outlookBusy, setOutlookBusy] = useState(false);
     const [outlookError, setOutlookError] = useState<string | null>(null);
 
@@ -130,9 +131,11 @@ export function InvoiceSendContactModal({
         try {
             const st = await getCalendarStatus();
             setOutlookConnected(st.connected);
+            setOutlookMailReady(typeof st.mailReady === 'boolean' ? st.mailReady : null);
         }
         catch {
             setOutlookConnected(false);
+            setOutlookMailReady(false);
         }
     }, []);
 
@@ -253,13 +256,17 @@ export function InvoiceSendContactModal({
             </p>
             <p className="tt-tm-hint">{t('timeTrackingPage.invoices.sendDialog.hint')}</p>
 
-            <div className="tt-inv-send-contact__outlook" role="group" aria-label={t('timeTrackingPage.invoices.sendDialog.outlookAria')}>
+            <div className={`tt-inv-send-contact__outlook${outlookConnected && outlookMailReady === false ? ' tt-inv-send-contact__outlook--warn' : ''}`} role="group" aria-label={t('timeTrackingPage.invoices.sendDialog.outlookAria')}>
               <p className="tt-tm-hint">
                 {outlookConnected === null
                     ? t('timeTrackingPage.invoices.sendDialog.outlookChecking')
-                    : outlookConnected
-                        ? t('timeTrackingPage.invoices.sendDialog.outlookConnected')
-                        : t('timeTrackingPage.invoices.sendDialog.outlookDisconnected')}
+                    : !outlookConnected
+                        ? t('timeTrackingPage.invoices.sendDialog.outlookDisconnected')
+                        : outlookMailReady === false
+                            ? t('timeTrackingPage.invoices.sendDialog.outlookMailNotReady')
+                            : outlookMailReady === true
+                                ? t('timeTrackingPage.invoices.sendDialog.outlookConnected')
+                                : t('timeTrackingPage.invoices.sendDialog.outlookConnectedUnknownMail')}
               </p>
               <button
                 type="button"
@@ -269,9 +276,9 @@ export function InvoiceSendContactModal({
               >
                 {outlookBusy
                     ? t('timeTrackingPage.invoices.sendDialog.outlookConnecting')
-                    : outlookConnected
-                        ? t('timeTrackingPage.invoices.sendDialog.outlookReconnect')
-                        : t('timeTrackingPage.invoices.sendDialog.outlookConnect')}
+                    : !outlookConnected || outlookMailReady === false
+                        ? t('timeTrackingPage.invoices.sendDialog.outlookConnect')
+                        : t('timeTrackingPage.invoices.sendDialog.outlookReconnect')}
               </button>
               {outlookError && (<p className="tt-tm-field-error" role="alert">{outlookError}</p>)}
             </div>
