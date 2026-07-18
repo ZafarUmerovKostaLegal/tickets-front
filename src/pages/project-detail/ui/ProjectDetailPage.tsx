@@ -3,7 +3,7 @@ import { useParams, useNavigate, Navigate, useSearchParams, type NavigateFunctio
 import { listColleaguesAsUsers } from '@entities/contacts';
 import { routes, getProjectDetailUrl } from '@shared/config';
 import { useI18n } from '@shared/i18n';
-import { formatDecimalHoursRu } from '@shared/lib/formatTrackingHours';
+import { formatDecimalHoursAsHm } from '@shared/lib/formatTrackingHours';
 import { waitForAppFonts } from '@shared/lib/waitForAppFonts';
 import { useCurrentUser } from '@shared/hooks';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, DatePicker, SearchableSelect } from '@shared/ui';
@@ -144,7 +144,7 @@ function fmtDashboardBudgetValue(b: TimeManagerProjectDashboardBudget): string {
     if (b.budgetBy === 'hours_and_money' && b.money)
         return `${b.money.budget.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${b.currency}`;
     if (b.budgetBy === 'hours')
-        return formatDecimalHoursRu(b.budget);
+        return formatDecimalHoursAsHm(b.budget);
     return `${b.budget.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${b.currency}`;
 }
 function fmtDashboardBudgetSpentRemaining(b: TimeManagerProjectDashboardBudget, value: number): string {
@@ -153,7 +153,7 @@ function fmtDashboardBudgetSpentRemaining(b: TimeManagerProjectDashboardBudget, 
     if (b.budgetBy === 'hours_and_money' && b.money)
         return `${value.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${b.currency}`;
     if (b.budgetBy === 'hours')
-        return formatDecimalHoursRu(value);
+        return formatDecimalHoursAsHm(value);
     return `${value.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${b.currency}`;
 }
 
@@ -450,8 +450,8 @@ function renderTaskTableRows(rows: TaskRow[], expanded: Set<string>, toggle: (id
               </td>
               <td className="pdp__tasks-td pdp__tasks-td--hours">
                 {r.hours > 0 ? (<button type="button" className="pdp__tasks-hours-link" onClick={() => r.expandable && toggle(r.id)}>
-                    {formatDecimalHoursRu(r.hours)}
-                  </button>) : (<span className="pdp__tasks-zero">{formatDecimalHoursRu(0)}</span>)}
+                    {formatDecimalHoursAsHm(r.hours)}
+                  </button>) : (<span className="pdp__tasks-zero">{formatDecimalHoursAsHm(0)}</span>)}
               </td>
               <td className="pdp__tasks-td pdp__tasks-td--amt">
                 {r.billableAmt > 0 ? (<span className="pdp__tasks-num">{fmtMoney(Math.round(r.billableAmt), r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
@@ -472,8 +472,8 @@ function renderTaskTableRows(rows: TaskRow[], expanded: Set<string>, toggle: (id
               </td>
               <td className="pdp__tasks-td pdp__tasks-td--hours pdp__tasks-td--detail">
                 {m.hours > 0 && onOpenMemberReport && isLinkableMemberUserId(m.userId) ? (<button type="button" className="pdp__tasks-hours-link" title="Открыть детальный отчёт по сотруднику и задаче" onClick={() => onOpenMemberReport(r.id, m.userId)}>
-                    {formatDecimalHoursRu(m.hours)}
-                  </button>) : (<span className="pdp__tasks-num">{formatDecimalHoursRu(m.hours)}</span>)}
+                    {formatDecimalHoursAsHm(m.hours)}
+                  </button>) : (<span className="pdp__tasks-num">{formatDecimalHoursAsHm(m.hours)}</span>)}
               </td>
               <td className="pdp__tasks-td pdp__tasks-td--amt pdp__tasks-td--detail">
                 {m.billableAmt > 0 ? (<span className="pdp__tasks-num">{fmtMoney(Math.round(m.billableAmt), r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
@@ -634,8 +634,8 @@ function TasksPanel({ rows, nonBillableRows, totalHours, totalAmt, currency, per
                   </td>
                   <td className="pdp__tasks-td pdp__tasks-td--hours">
                     {totalHours > 0 ? (<button type="button" className="pdp__tasks-hours-link pdp__tasks-hours-link--bold">
-                        {formatDecimalHoursRu(totalHours)}
-                      </button>) : (<span className="pdp__tasks-zero">{formatDecimalHoursRu(totalHours)}</span>)}
+                        {formatDecimalHoursAsHm(totalHours)}
+                      </button>) : (<span className="pdp__tasks-zero">{formatDecimalHoursAsHm(totalHours)}</span>)}
                   </td>
                   <td className="pdp__tasks-td pdp__tasks-td--amt">
                     <strong className="pdp__tasks-num">{fmtMoney(Math.round(totalAmt), currency)}</strong>
@@ -706,7 +706,7 @@ function TasksPanel({ rows, nonBillableRows, totalHours, totalAmt, currency, per
                   </td>
                   <td className="pdp__tasks-td pdp__tasks-td--hours">
                     <span className={nonBillTotal > 0 ? 'pdp__tasks-hours-link' : 'pdp__tasks-zero'}>
-                      {formatDecimalHoursRu(nonBillTotal)}
+                      {formatDecimalHoursAsHm(nonBillTotal)}
                     </span>
                   </td>
                   <td className="pdp__tasks-td pdp__tasks-td--amt">
@@ -1774,19 +1774,19 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
     <div className="pdp__stat-card">
             <p className="pdp__stat-label">Всего часов</p>
             <p className="pdp__stat-value">
-              {displayTotalHours != null ? formatDecimalHoursRu(displayTotalHours) : '—'}
+              {displayTotalHours != null ? formatDecimalHoursAsHm(displayTotalHours) : '—'}
             </p>
             <div className="pdp__stat-rows">
               <div className="pdp__stat-row">
                 <span>Оплачиваемые</span>
                 <span className="pdp__stat-row-val">
-                  {displayBillableHours != null ? formatDecimalHoursRu(displayBillableHours) : '—'}
+                  {displayBillableHours != null ? formatDecimalHoursAsHm(displayBillableHours) : '—'}
                 </span>
               </div>
               <div className="pdp__stat-row">
                 <span>Неоплачиваемые</span>
                 <span className="pdp__stat-row-val">
-                  {displayNonBillHours != null ? formatDecimalHoursRu(displayNonBillHours) : '—'}
+                  {displayNonBillHours != null ? formatDecimalHoursAsHm(displayNonBillHours) : '—'}
                 </span>
               </div>
             </div>
@@ -1845,7 +1845,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                   <div className="pdp__stat-budget-row" style={{ marginTop: '0.65rem' }}>
                     <span className="pdp__stat-budget-label">Лимит (часы) за период</span>
                     <span className="pdp__stat-budget-val">
-                      {formatDecimalHoursRu(budgetDual.hours.budget)}
+                      {formatDecimalHoursAsHm(budgetDual.hours.budget)}
                     </span>
                   </div>
                   {apiBudget != null && (dualHoursUsedRawPct != null || apiBudget.percentUsedHours != null && Number.isFinite(apiBudget.percentUsedHours) || apiBudget.hours?.percentUsed != null) && (<p className="pdp__stat-hint">
@@ -1857,7 +1857,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                     {dualHoursUsedRawPct != null && dualHoursUsedRawPct > 100 ? (<div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${Math.min(100, dualHoursUsedRawPct - 100)}%` }}/>) : null}
                   </div>
                   <p className="pdp__stat-hint pdp__stat-hint--muted">
-                    Списано (часы): {formatDecimalHoursRu(budgetDual.hours.spent)}
+                    Списано (часы): {formatDecimalHoursAsHm(budgetDual.hours.spent)}
                   </p>
                   {apiBudget != null && (dualMoneyUsedRawPct != null || dualHoursUsedRawPct != null || apiBudget.percentUsed != null) && (<p className="pdp__stat-hint">
                       Ориентир по лимиту (макс. из двух):{' '}
