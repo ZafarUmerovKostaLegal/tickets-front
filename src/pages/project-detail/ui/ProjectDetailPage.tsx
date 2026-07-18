@@ -43,7 +43,7 @@ function navigateBackToProjects(navigate: NavigateFunction) {
     }
 }
 function fmtAmt(n: number, cur = 'UZS') {
-    return `${n.toLocaleString('ru-RU', { useGrouping: true, maximumFractionDigits: 2 })} ${cur}`;
+    return `${n.toLocaleString('ru-RU', { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}`;
 }
 function fmtMoney(n: number, cur: string) {
     return `${n.toLocaleString('ru-RU', { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}`;
@@ -65,13 +65,9 @@ function defaultProjectTeamPeriod(): {
     from: string;
     to: string;
 } {
-    const to = new Date();
-    const from = new Date(to.getFullYear(), to.getMonth(), 1);
-    const pad = (x: number) => String(x).padStart(2, '0');
-    return {
-        from: `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`,
-        to: `${to.getFullYear()}-${pad(to.getMonth() + 1)}-${pad(to.getDate())}`,
-    };
+    // Align with reports: full current calendar month (not month-to-date).
+    const { dateFrom, dateTo } = periodToDates(new Date(), 'month');
+    return { from: dateFrom, to: dateTo };
 }
 function fullProjectTeamPeriod(): {
     from: string;
@@ -100,8 +96,7 @@ function periodPresetToRange(id: PdpPeriodPresetId): {
 } {
     if (id === 'all')
         return fullProjectTeamPeriod();
-    if (id === 'month')
-        return defaultProjectTeamPeriod();
+    // Same calendar bounds as Reports «Этот месяц/неделя/…» (full period, not MTD).
     const { dateFrom, dateTo } = periodToDates(new Date(), id);
     return { from: dateFrom, to: dateTo };
 }
@@ -454,11 +449,11 @@ function renderTaskTableRows(rows: TaskRow[], expanded: Set<string>, toggle: (id
                   </button>) : (<span className="pdp__tasks-zero">{formatDecimalHoursAsHm(0)}</span>)}
               </td>
               <td className="pdp__tasks-td pdp__tasks-td--amt">
-                {r.billableAmt > 0 ? (<span className="pdp__tasks-num">{fmtMoney(Math.round(r.billableAmt), r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
+                {r.billableAmt > 0 ? (<span className="pdp__tasks-num">{fmtMoney(r.billableAmt, r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
               </td>
               <td className="pdp__tasks-td pdp__tasks-td--costs">
                 <span className="pdp__tasks-cost-with-icon">
-                  {r.costs > 0 ? (<span className="pdp__tasks-num">{fmtMoney(Math.round(r.costs), r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
+                  {r.costs > 0 ? (<span className="pdp__tasks-num">{fmtMoney(r.costs, r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
                   <span className="pdp__tasks-warn-slot pdp__tasks-warn-slot--empty" aria-hidden/>
                 </span>
               </td>
@@ -476,11 +471,11 @@ function renderTaskTableRows(rows: TaskRow[], expanded: Set<string>, toggle: (id
                   </button>) : (<span className="pdp__tasks-num">{formatDecimalHoursAsHm(m.hours)}</span>)}
               </td>
               <td className="pdp__tasks-td pdp__tasks-td--amt pdp__tasks-td--detail">
-                {m.billableAmt > 0 ? (<span className="pdp__tasks-num">{fmtMoney(Math.round(m.billableAmt), r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
+                {m.billableAmt > 0 ? (<span className="pdp__tasks-num">{fmtMoney(m.billableAmt, r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
               </td>
               <td className="pdp__tasks-td pdp__tasks-td--costs pdp__tasks-td--detail">
                 <span className="pdp__tasks-cost-with-icon">
-                  {m.costs > 0 ? (<span className="pdp__tasks-num">{fmtMoney(Math.round(m.costs), r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
+                  {m.costs > 0 ? (<span className="pdp__tasks-num">{fmtMoney(m.costs, r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
                   <span className="pdp__tasks-warn-slot pdp__tasks-warn-slot--empty" aria-hidden/>
                 </span>
               </td>
@@ -638,13 +633,13 @@ function TasksPanel({ rows, nonBillableRows, totalHours, totalAmt, currency, per
                       </button>) : (<span className="pdp__tasks-zero">{formatDecimalHoursAsHm(totalHours)}</span>)}
                   </td>
                   <td className="pdp__tasks-td pdp__tasks-td--amt">
-                    <strong className="pdp__tasks-num">{fmtMoney(Math.round(totalAmt), currency)}</strong>
+                    <strong className="pdp__tasks-num">{fmtMoney(totalAmt, currency)}</strong>
                   </td>
                   <td className="pdp__tasks-td pdp__tasks-td--costs">
                     <span className="pdp__tasks-cost-with-icon">
                       <strong className="pdp__tasks-num">
                         {billableTotalCosts > 0
-            ? fmtMoney(Math.round(billableTotalCosts), currency)
+            ? fmtMoney(billableTotalCosts, currency)
             : fmtMoney(0, currency)}
                       </strong>
                       <span className="pdp__tasks-warn-slot">
@@ -711,13 +706,13 @@ function TasksPanel({ rows, nonBillableRows, totalHours, totalAmt, currency, per
                   </td>
                   <td className="pdp__tasks-td pdp__tasks-td--amt">
                     <strong className="pdp__tasks-num">
-                      {nonBillTotalAmt > 0 ? fmtMoney(Math.round(nonBillTotalAmt), currency) : fmtMoney(0, currency)}
+                      {nonBillTotalAmt > 0 ? fmtMoney(nonBillTotalAmt, currency) : fmtMoney(0, currency)}
                     </strong>
                   </td>
                   <td className="pdp__tasks-td pdp__tasks-td--costs">
                     <span className="pdp__tasks-cost-with-icon">
                       <strong className="pdp__tasks-num">
-                        {nonBillTotalCosts > 0 ? fmtMoney(Math.round(nonBillTotalCosts), currency) : fmtMoney(0, currency)}
+                        {nonBillTotalCosts > 0 ? fmtMoney(nonBillTotalCosts, currency) : fmtMoney(0, currency)}
                       </strong>
                       <span className="pdp__tasks-warn-slot pdp__tasks-warn-slot--empty" aria-hidden/>
                     </span>

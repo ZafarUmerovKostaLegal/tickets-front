@@ -39,6 +39,14 @@ describe('pickEffectiveBillableRateForProject', () => {
         expect(pick?.row.id).toBe('global');
     });
 
+    it('falls back to other project rate when no global', () => {
+        const rows = [rate({ id: 'other', amount: 150, project_id: 'other', currency: 'EUR' })];
+        const pick = pickEffectiveBillableRateForProject(rows, 'gor', 'EUR', new Date('2026-07-15T12:00:00Z'));
+        expect(pick?.source).toBe('other_project');
+        expect(pick?.row.id).toBe('other');
+        expect(Number(pick?.row.amount)).toBe(150);
+    });
+
     it('returns null when no rates are available', () => {
         expect(pickEffectiveBillableRateForProject([], 'p1', 'USD', new Date('2026-07-10T12:00:00Z'))).toBeNull();
     });

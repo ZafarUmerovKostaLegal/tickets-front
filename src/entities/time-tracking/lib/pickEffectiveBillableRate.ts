@@ -47,7 +47,7 @@ function pickFromPool(pool: HourlyRateRow[], projectCurrency: string, when: Date
 
 export type EffectiveBillableRatePick = {
     row: HourlyRateRow;
-    source: 'project' | 'global';
+    source: 'project' | 'global' | 'other_project';
 };
 
 
@@ -68,6 +68,14 @@ export function pickEffectiveBillableRateForProject(
     const globalPick = pickFromPool(globalRows, projectCurrency, when);
     if (globalPick)
         return { row: globalPick, source: 'global' };
+    // Legacy: user often has only project-scoped rates from other projects.
+    const otherRows = rows.filter((r) => {
+        const rid = rateProjectId(r);
+        return rid != null && rid !== pid;
+    });
+    const otherPick = pickFromPool(otherRows, projectCurrency, when);
+    if (otherPick)
+        return { row: otherPick, source: 'other_project' };
     return null;
 }
 
