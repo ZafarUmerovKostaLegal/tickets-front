@@ -488,7 +488,7 @@ function renderTaskTableRows(rows: TaskRow[], expanded: Set<string>, toggle: (id
         return [mainRow, ...detailRows];
     });
 }
-function TasksPanel({ rows, nonBillableRows, totalHours, totalAmt, currency, periodSubtitle, breakdownHint, onOpenMemberReport, activePeriodPresetId, activePeriodPresetLabel, onSelectPeriodPreset, onExport, exportBusy, }: {
+function TasksPanel({ rows, nonBillableRows, totalHours, totalAmt, currency, periodSubtitle, breakdownHint, onOpenMemberReport, onPreviewEntries, activePeriodPresetId, activePeriodPresetLabel, onSelectPeriodPreset, onExport, exportBusy, }: {
     rows: TaskRow[];
     nonBillableRows: TaskRow[];
     totalHours: number;
@@ -497,6 +497,7 @@ function TasksPanel({ rows, nonBillableRows, totalHours, totalAmt, currency, per
     periodSubtitle?: string;
     breakdownHint?: string;
     onOpenMemberReport?: (taskId: string, userId: string) => void;
+    onPreviewEntries?: () => void;
     activePeriodPresetId?: PdpPeriodPresetId;
     activePeriodPresetLabel: string;
     onSelectPeriodPreset: (id: PdpPeriodPresetId) => void;
@@ -540,6 +541,13 @@ function TasksPanel({ rows, nonBillableRows, totalHours, totalAmt, currency, per
           <span className="pdp__tasks-subheading">{periodSubtitle ?? 'За всё время'}</span>
         </div>
         <div className="pdp__tasks-toolbar-right">
+          {onPreviewEntries ? (<button type="button" className="pdp__tasks-preview-btn" onClick={onPreviewEntries} title="Открыть предпросмотр всех записей проекта за выбранный период">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              Предпросмотр записей
+            </button>) : null}
           <div className="pdp__period-preset-wrap" ref={periodMenuRef}>
             <button type="button" className={`pdp__tasks-filter-btn${periodMenuOpen ? ' pdp__tasks-filter-btn--open' : ''}`} onClick={() => setPeriodMenuOpen((v) => !v)} aria-expanded={periodMenuOpen} aria-haspopup="menu">
               {activePeriodPresetLabel}
@@ -1083,6 +1091,18 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
             project_id: project.id,
             user_id: uid,
             task_id: tid || undefined,
+            page: 1,
+            per_page: 100,
+        };
+        const payload: ReportPreviewTransferV2 = { v: 2, reportType: 'time', groupBy: 'projects', filters };
+        writeReportPreviewTransfer(payload);
+        navigate(routes.timeTrackingReportPreview);
+    }, [project.id, detailPeriod.from, detailPeriod.to, navigate]);
+    const openProjectPeriodReport = useCallback(() => {
+        const filters: ReportFiltersV2 = {
+            dateFrom: detailPeriod.from.slice(0, 10),
+            dateTo: detailPeriod.to.slice(0, 10),
+            project_id: project.id,
             page: 1,
             per_page: 100,
         };
@@ -1906,7 +1926,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
               </button>))}
           </nav>
 
-          {detailTab === 'tasks' && (<TasksPanel rows={displayTaskData.billable} nonBillableRows={displayTaskData.nonBillable} totalHours={displayBillableHours ?? 0} totalAmt={displayBillableAmount} currency={displayCurrency} periodSubtitle={tasksPanelSubtitle} breakdownHint={tasksBreakdownHint} onOpenMemberReport={openMemberDetailReport} activePeriodPresetId={activePeriodPreset?.id} activePeriodPresetLabel={activePeriodPreset?.label ?? (formatDetailPeriodLabel(detailPeriod) || 'Период')} onSelectPeriodPreset={handleTasksPeriodPreset} onExport={(format) => void handleTasksExport(format)} exportBusy={tasksExportBusy}/>)}
+          {detailTab === 'tasks' && (<TasksPanel rows={displayTaskData.billable} nonBillableRows={displayTaskData.nonBillable} totalHours={displayBillableHours ?? 0} totalAmt={displayBillableAmount} currency={displayCurrency} periodSubtitle={tasksPanelSubtitle} breakdownHint={tasksBreakdownHint} onOpenMemberReport={openMemberDetailReport} onPreviewEntries={openProjectPeriodReport} activePeriodPresetId={activePeriodPreset?.id} activePeriodPresetLabel={activePeriodPreset?.label ?? (formatDetailPeriodLabel(detailPeriod) || 'Период')} onSelectPeriodPreset={handleTasksPeriodPreset} onExport={(format) => void handleTasksExport(format)} exportBusy={tasksExportBusy}/>)}
 
           {detailTab === 'team' &&
             (projectTeamLoad === 'loading' ? (<div className="pdp__detail-loading" role="status">

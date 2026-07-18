@@ -1043,6 +1043,29 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
+.pdp__tasks-preview-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.95rem;
+  background: var(--app-accent, #4f46e5);
+  border: 1px solid var(--app-accent, #4f46e5);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.14s, box-shadow 0.14s, filter 0.14s;
+  white-space: nowrap;
+}
+.pdp__tasks-preview-btn svg { width: 15px; height: 15px; color: currentColor; }
+.pdp__tasks-preview-btn:hover { filter: brightness(1.05); }
+.pdp__tasks-preview-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
 .pdp__tasks-table {
   width: 100%;
   table-layout: fixed;
