@@ -1471,7 +1471,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         </div>
         <footer className="tt-rp-mtable-dock" role="contentinfo" aria-label="Итоги отчёта">
           <div className="tt-rp-mtable-dock__stats">
-            <span className="tt-rp-mtable-dock__stat">Итого за неделю: <strong>{entriesCount} {ruEntriesWord(entriesCount)}</strong></span>
+            <span className="tt-rp-mtable-dock__stat">Итого: <strong>{entriesCount} {ruEntriesWord(entriesCount)}</strong></span>
             <span className="tt-rp-mtable-dock__stat">Отработано: <strong>{dockHours}</strong></span>
             <span className="tt-rp-mtable-dock__stat">Оплачиваемые часы: <strong>{dockBillable}</strong></span>
             <span className="tt-rp-mtable-dock__stat">Сумма: <strong>{dockSum}</strong></span>
