@@ -11,7 +11,6 @@ import {
     listPartnerReportConfirmationsConfirmed,
     listTimeTrackingUsers,
     notifyPartnerConfirmedReportsListInvalidate,
-    OPEN_INVOICE_DETAIL_QUERY,
     type InvoiceDto,
     type PartnerConfirmedReportComment,
     type PartnerReportConfirmationRequest,
@@ -47,7 +46,7 @@ import {
 } from '@pages/time-tracking/lib/partnerConfirmationCommentsSummary';
 import { useI18n } from '@shared/i18n';
 import { localeTag } from '@shared/i18n/ticketUi';
-import { routes } from '@shared/config';
+import { getInvoiceDetailUrl } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
@@ -621,7 +620,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
     }, [navigate]);
 
     const openInvoiceForRow = useCallback((invoiceId: string) => {
-        navigate(`${routes.timeTracking}?tab=invoices&${OPEN_INVOICE_DETAIL_QUERY}=${encodeURIComponent(invoiceId)}`);
+        navigate(getInvoiceDetailUrl(invoiceId));
     }, [navigate]);
 
     const generateInvoiceForRow = useCallback(async (r: PartnerReportConfirmationRequest) => {

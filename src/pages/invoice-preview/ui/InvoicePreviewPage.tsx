@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useLocation } from 'react-router-dom';
-import { routes } from '@shared/config';
+import { getInvoiceCreateUrl, getInvoiceDetailUrl } from '@shared/config';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppToast } from '@shared/ui';
-import { OPEN_INVOICE_DETAIL_QUERY, readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
+import { readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { emptyInvoiceTimeReportPack, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
@@ -17,8 +17,6 @@ import { InvoiceTimeReportPage } from './InvoiceTimeReportPage';
 import { InvoiceLegalInvoicePage } from './InvoiceLegalInvoicePage';
 import '@pages/time-tracking/ui/TimePageShell.css';
 import './InvoicePreviewPage.css';
-
-const INVOICES_TAB_BACK_RESUME_CREATE = `${routes.timeTracking}?tab=invoices&invoice_resume=1`;
 
 const INV_PREVIEW_PAGE_BASE_PX = 794;
 const SHEET_ZOOM_MIN = 50;
@@ -270,8 +268,8 @@ export function InvoicePreviewPage() {
     }, [session]);
 
     const backHref = session?.mode === 'existing'
-        ? `${routes.timeTracking}?tab=invoices&${OPEN_INVOICE_DETAIL_QUERY}=${encodeURIComponent(session.invoiceId)}`
-        : INVOICES_TAB_BACK_RESUME_CREATE;
+        ? getInvoiceDetailUrl(session.invoiceId)
+        : getInvoiceCreateUrl({ resume: true });
 
     const exportInput = useMemo(() => ({
         model: coverModel ?? fallbackCoverModel(),

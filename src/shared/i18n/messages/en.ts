@@ -133,6 +133,8 @@ export const enMessages = {
         newProject: 'New project',
         reportPreview: 'Report preview',
         invoicePreview: 'Invoice preview',
+        invoiceCreate: 'New invoice',
+        invoiceDetail: 'Invoice',
         user: 'User',
         expensesRequests: 'Expense requests',
         expensesReport: 'Expense report',

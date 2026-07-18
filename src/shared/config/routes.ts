@@ -11,6 +11,8 @@ export const routes = {
     timeTrackingNewProject: '/time-tracking/projects/new',
     timeTrackingReportPreview: '/time-tracking/reports/preview',
     timeTrackingInvoicePreview: '/time-tracking/invoices/preview',
+    timeTrackingInvoiceCreate: '/time-tracking/invoices/new',
+    timeTrackingInvoiceDetail: '/time-tracking/invoices/:invoiceId',
     todo: '/todo',
     admin: '/admin',
     networkDriveAccess: '/admin/network-drive',
@@ -47,4 +49,21 @@ export function getTimeTrackingNewProjectUrl(clientId?: string | null): string {
 }
 export function getExpensesOpenUrl(expenseId: string): string {
     return `/expenses/${encodeURIComponent(expenseId)}`;
+}
+export function getInvoiceCreateUrl(opts?: { resume?: boolean }): string {
+    const base = routes.timeTrackingInvoiceCreate;
+    if (opts?.resume)
+        return `${base}?resume=1`;
+    return base;
+}
+export function getInvoiceDetailUrl(invoiceId: string, opts?: { variant?: 'accounting' }): string {
+    const base = `/time-tracking/invoices/${encodeURIComponent(invoiceId)}`;
+    if (opts?.variant === 'accounting')
+        return `${base}?variant=accounting`;
+    return base;
+}
+export function getInvoicesListUrl(opts?: { variant?: 'accounting' }): string {
+    if (opts?.variant === 'accounting')
+        return routes.accounting;
+    return `${routes.timeTracking}?tab=invoices`;
 }

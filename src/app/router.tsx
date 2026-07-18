@@ -42,6 +42,8 @@ const AccountingPage = lazy(() => import('@pages/accounting').then(m => ({ defau
 const InventoryPage = lazy(() => import('@pages/inventory').then(m => ({ default: m.InventoryPage })));
 const ProjectDetailPage = lazy(() => import('@pages/project-detail').then(m => ({ default: m.ProjectDetailPage })));
 const TimeTrackingNewProjectPage = lazy(() => import('@pages/time-tracking/ui/TimeTrackingNewProjectPage').then(m => ({ default: m.TimeTrackingNewProjectPage })));
+const InvoiceCreatePage = lazy(() => import('@pages/time-tracking/ui/InvoiceCreatePage').then(m => ({ default: m.InvoiceCreatePage })));
+const InvoiceDetailPage = lazy(() => import('@pages/time-tracking/ui/InvoiceDetailPage').then(m => ({ default: m.InvoiceDetailPage })));
 const TicketDetailPage = lazy(() => import('@pages/ticket-detail').then(m => ({ default: m.TicketDetailPage })));
 const UserEditPage = lazy(() => import('@pages/user-edit').then(m => ({ default: m.UserEditPage })));
 const TodoPage = lazy(() => import('@pages/todo').then(m => ({ default: m.TodoPage })));
@@ -109,6 +111,8 @@ const router = createBrowserRouter([
             { path: routes.timeTrackingNewProject, element: withProtected(<EnsureTimeTrackingI18n fallback={<LazyFallback />}><TimeTrackingNewProjectPage /></EnsureTimeTrackingI18n>) },
             { path: routes.timeTrackingReportPreview, element: withProtected(<ReportPreviewRoute />) },
             { path: routes.timeTrackingInvoicePreview, element: withProtected(<InvoicePreviewRouteLazy />) },
+            { path: routes.timeTrackingInvoiceCreate, element: withProtected(<EnsureTimeTrackingI18n fallback={<LazyFallback />}><InvoiceCreatePage /></EnsureTimeTrackingI18n>) },
+            { path: routes.timeTrackingInvoiceDetail, element: withProtected(<EnsureTimeTrackingI18n fallback={<LazyFallback />}><InvoiceDetailPage /></EnsureTimeTrackingI18n>) },
             { path: routes.projectDetail, element: withProtected(<EnsureTimeTrackingI18n fallback={<LazyFallback />}><ProjectDetailPage /></EnsureTimeTrackingI18n>) },
             {
                 path: routes.expenses,

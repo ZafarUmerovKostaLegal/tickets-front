@@ -56,6 +56,10 @@ export function resolvePageTitleSection(pathname: string, search: string, t: (ke
         return t('pageTitle.reportPreview');
     if (path.startsWith('/time-tracking/invoices/preview'))
         return t('pageTitle.invoicePreview');
+    if (path === routes.timeTrackingInvoiceCreate)
+        return t('pageTitle.invoiceCreate');
+    if (path.startsWith('/time-tracking/invoices/'))
+        return t('pageTitle.invoiceDetail');
 
     if (path.startsWith('/ticket/'))
         return t('pageTitle.ticket');

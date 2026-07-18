@@ -135,6 +135,8 @@ export const ruMessages: Messages = {
         newProject: 'Новый проект',
         reportPreview: 'Предпросмотр отчёта',
         invoicePreview: 'Предпросмотр счёта',
+        invoiceCreate: 'Новый счёт',
+        invoiceDetail: 'Счёт',
         user: 'Пользователь',
         expensesRequests: 'Заявки на расходы',
         expensesReport: 'Отчёт по расходам',
@@ -694,6 +696,8 @@ export type Messages = {
         | 'newProject'
         | 'reportPreview'
         | 'invoicePreview'
+        | 'invoiceCreate'
+        | 'invoiceDetail'
         | 'user'
         | 'expensesRequests'
         | 'expensesReport',

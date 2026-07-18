@@ -1,0 +1,73 @@
+.time-page--invoice-sub .time-page__content.tt-inv-page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tt-inv-page__header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tt-inv-page__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--app-text);
+  letter-spacing: -0.02em;
+}
+
+.tt-inv-page__sub {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--app-muted);
+}
+
+.tt-inv-page__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.tt-inv-page__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--app-border);
+  position: sticky;
+  bottom: 0;
+  background: var(--app-bg, #fff);
+  padding-bottom: 0.5rem;
+  z-index: 2;
+}
+
+.tt-inv-page__table-wrap {
+  max-height: min(52vh, 480px);
+  overflow: auto;
+}
+
+.tt-inv-detail-meta--page {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+@media (max-width: 720px) {
+  .time-page--invoice-sub .time-page__content.tt-inv-page {
+    padding: 1rem 1rem 2rem;
+  }
+
+  .tt-inv-page__foot {
+    justify-content: stretch;
+  }
+
+  .tt-inv-page__foot .tt-reports__btn {
+    flex: 1 1 auto;
+  }
+}

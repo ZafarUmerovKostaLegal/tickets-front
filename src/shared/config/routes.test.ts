@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
     getExpensesOpenUrl,
+    getInvoiceCreateUrl,
+    getInvoiceDetailUrl,
+    getInvoicesListUrl,
     getProjectDetailUrl,
     getTicketDetailUrl,
     getTimeTrackingNewProjectUrl,
@@ -29,6 +32,15 @@ describe('routes helpers', () => {
 
     it('getExpensesOpenUrl кодирует id', () => {
         expect(getExpensesOpenUrl('exp/1')).toBe('/expenses/exp%2F1');
+    });
+
+    it('getInvoiceCreateUrl и getInvoiceDetailUrl', () => {
+        expect(getInvoiceCreateUrl()).toBe(routes.timeTrackingInvoiceCreate);
+        expect(getInvoiceCreateUrl({ resume: true })).toBe(`${routes.timeTrackingInvoiceCreate}?resume=1`);
+        expect(getInvoiceDetailUrl('abc/1')).toBe('/time-tracking/invoices/abc%2F1');
+        expect(getInvoiceDetailUrl('id1', { variant: 'accounting' })).toBe('/time-tracking/invoices/id1?variant=accounting');
+        expect(getInvoicesListUrl()).toBe(`${routes.timeTracking}?tab=invoices`);
+        expect(getInvoicesListUrl({ variant: 'accounting' })).toBe(routes.accounting);
     });
 });
 

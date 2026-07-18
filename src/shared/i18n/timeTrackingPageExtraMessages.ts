@@ -1255,6 +1255,13 @@ export const timeTrackingPageExtraMessages = {
     },
     invoices: {
         title: 'Счета',
+        backToInvoices: 'К счетам',
+        createPage: {
+            navAria: 'Создание счёта',
+        },
+        detailPage: {
+            navAria: 'Карточка счёта',
+        },
         tabs: {
             list: 'Список счетов',
             registry: 'Реестр инвойсов',
