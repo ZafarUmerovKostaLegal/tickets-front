@@ -183,12 +183,18 @@ export function HomeProvider({ children }: HomeProviderProps) {
             (n.description && n.description.toLowerCase().includes(q)));
     }, [notifications, notificationSearch]);
     const filteredTickets = useMemo(() => {
-        if (!searchQuery.trim())
-            return tickets;
         const q = searchQuery.trim().toLowerCase();
-        return tickets.filter((t) => t.theme.toLowerCase().includes(q) ||
-            (t.description && t.description.toLowerCase().includes(q)));
-    }, [tickets, searchQuery]);
+        return tickets.filter((t) => {
+            if (filterStatus && t.status !== filterStatus)
+                return false;
+            if (filterPriority && t.priority !== filterPriority)
+                return false;
+            if (!q)
+                return true;
+            return t.theme.toLowerCase().includes(q) ||
+                (t.description && t.description.toLowerCase().includes(q));
+        });
+    }, [tickets, searchQuery, filterStatus, filterPriority]);
     useEffect(() => {
         if (tickets.length === 0) {
             setCreatorNames({});
@@ -328,12 +334,24 @@ export function HomeProvider({ children }: HomeProviderProps) {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [filterPriorityOpen]);
-    const fetchTicketsForHome = useCallback(() => getTickets({
-        limit: 50,
-        include_archived: false,
-        ...(filterStatus ? { status: filterStatus } : {}),
-        ...(filterPriority ? { priority: filterPriority } : {}),
-    }), [filterStatus, filterPriority]);
+    // Full list without status/priority — stats must stay stable when filters change.
+    const fetchTicketsForHome = useCallback(async () => {
+        const pageSize = 200;
+        const all: Ticket[] = [];
+        let skip = 0;
+        for (;;) {
+            const batch = await getTickets({
+                skip,
+                limit: pageSize,
+                include_archived: false,
+            });
+            all.push(...batch);
+            if (batch.length < pageSize)
+                break;
+            skip += pageSize;
+        }
+        return all;
+    }, []);
     const loadTickets = useCallback(async () => {
         setTicketsLoading(true);
         setTicketsError(null);
