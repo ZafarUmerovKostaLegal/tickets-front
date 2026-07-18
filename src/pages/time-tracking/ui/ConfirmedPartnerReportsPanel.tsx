@@ -31,6 +31,7 @@ import {
     loadPartnerReportDisplayLookups,
     type PartnerReportClientMeta,
 } from '@entities/time-tracking/lib/partnerReportDisplayLookups';
+import { initialsFromDisplayName } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import {
     findInvoiceForPartnerConfirmedRow,
     generateInvoiceFromPartnerConfirmedReport,
@@ -166,6 +167,7 @@ function PartnerSignaturesList({
     return (<ul className="tt-partner-confirmed__sig-list">
         {signatures.map((s, i) => {
             const name = userLabel(usersById, s.partnerAuthUserId);
+            const initials = initialsFromDisplayName(name) || name;
             const showRevoke = canRevoke(s.partnerAuthUserId);
             const busy = revokeBusyPartnerId === s.partnerAuthUserId;
             const blocked = Boolean(revokeDisabledReason);
@@ -177,7 +179,7 @@ function PartnerSignaturesList({
             return (
                 <li key={`${s.partnerAuthUserId}-${s.confirmedAt}-${i}`} className="tt-partner-confirmed__sig-item">
                     <span className="tt-partner-confirmed__sig-main">
-                        <span className="tt-partner-confirmed__sig-name">{name}</span>
+                        <span className="tt-partner-confirmed__sig-name" title={name}>{initials}</span>
                         <span className="tt-partner-confirmed__sig-sep" aria-hidden>·</span>
                         <span className="tt-partner-confirmed__sig-when">{fmtIsoDateShort(s.confirmedAt, locale)}</span>
                     </span>

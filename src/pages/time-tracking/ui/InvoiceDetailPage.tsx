@@ -871,8 +871,8 @@ export function InvoiceDetailPage() {
                               </span>
                             </td>
                             <td>{ln.description ? invoiceClientDescription(ln.description) || '—' : '—'}</td>
-                            <td>{ln.quantity}</td>
-                            <td>{ln.unitAmount}</td>
+                            <td>{Number.isFinite(Number(ln.quantity)) ? Number(ln.quantity).toFixed(2) : ln.quantity}</td>
+                            <td>{fmtMoney(ln.unitAmount, detail.currency, locale)}</td>
                             <td>
                               {fmtMoney(ln.lineTotal, detail.currency, locale)}
                               {ln.sourceCurrency && ln.sourceCurrency !== detail.currency && ln.sourceAmount != null

@@ -1776,10 +1776,10 @@
 .tt-partner-confirmed__sig-item {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 0.35rem 0.45rem;
+  flex-wrap: nowrap;
+  gap: 0.3rem 0.4rem;
   max-width: 100%;
-  padding: 0.28rem 0.35rem 0.28rem 0.55rem;
+  padding: 0.22rem 0.3rem 0.22rem 0.5rem;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--app-border, #e2e8f0) 88%, var(--app-accent, #4f46e5) 12%);
   background: color-mix(in srgb, var(--app-surface-soft, #f8fafc) 88%, var(--app-accent, #4f46e5) 12%);
