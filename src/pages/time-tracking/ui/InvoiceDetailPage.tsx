@@ -852,7 +852,7 @@ export function InvoiceDetailPage() {
                     </span>
                   </div>
                   <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
-                    <table className="tt-inv-mini">
+                    <table className="tt-inv-mini tt-inv-mini--lines">
                       <thead>
                         <tr>
                           <th>{t('timeTrackingPage.invoices.detail.linesKind')}</th>
