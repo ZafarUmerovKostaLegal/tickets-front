@@ -107,6 +107,10 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
             issueDate,
             dueDate: addDaysIso(30),
             currency: preview.currency,
+            // Align with confirmed report total (pre-tax). Tax/discount can be edited on the draft.
+            taxPercent: 0,
+            tax2Percent: 0,
+            discountPercent: 0,
             timeEntryIds,
             expenseIds,
             partnerBillingPeriodFrom: dateFrom,
