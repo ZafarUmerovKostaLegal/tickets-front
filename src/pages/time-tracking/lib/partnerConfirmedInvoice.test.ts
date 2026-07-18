@@ -15,8 +15,11 @@ function baseRow(partial?: Partial<PartnerReportConfirmationRequest>): PartnerRe
         createdAt: '2026-01-01T00:00:00Z',
         updatedAt: null,
         signatures: [],
+        reviewPriority: 'green',
+        requiredPartnerAuthUserIds: [],
+        pendingPartnerAuthUserIds: [],
         ...partial,
-    };
+    } as PartnerReportConfirmationRequest;
 }
 
 function baseInv(partial?: Partial<InvoiceDto>): InvoiceDto {

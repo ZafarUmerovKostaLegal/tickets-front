@@ -1,9 +1,15 @@
 import {
     createInvoice,
     fetchPartnerInvoicePreview,
+    getReportSnapshot,
     type InvoiceDto,
     type PartnerReportConfirmationRequest,
 } from '@entities/time-tracking';
+import { loadSnapshotRowsForPartnerExcel } from '@entities/time-tracking/lib/exportPartnerConfirmedSnapshotExcel';
+import {
+    collectConfirmedSnapshotTimeEntryIds,
+    intersectPreviewTimeEntryIdsWithSnapshot,
+} from './confirmedSnapshotInvoiceLines';
 
 function todayIso(): string {
     const d = new Date();
@@ -72,6 +78,32 @@ export class PartnerConfirmedInvoiceMismatchError extends Error {
     }
 }
 
+export class PartnerConfirmedInvoiceLineCountError extends Error {
+    readonly expectedCount: number;
+    readonly actualCount: number;
+
+    constructor(expectedCount: number, actualCount: number) {
+        super('INVOICE_LINE_COUNT_MISMATCH');
+        this.name = 'PartnerConfirmedInvoiceLineCountError';
+        this.expectedCount = expectedCount;
+        this.actualCount = actualCount;
+    }
+}
+
+async function loadConfirmedSnapshotTimeEntryIds(row: PartnerReportConfirmationRequest): Promise<string[]> {
+    const snapshotId = String(row.snapshotId ?? '').trim();
+    if (!snapshotId)
+        return [];
+    try {
+        const snapshot = await getReportSnapshot(snapshotId);
+        const rows = await loadSnapshotRowsForPartnerExcel(snapshotId, snapshot);
+        return collectConfirmedSnapshotTimeEntryIds(rows);
+    }
+    catch {
+        return [];
+    }
+}
+
 export async function generateInvoiceFromPartnerConfirmedReport(args: {
     row: PartnerReportConfirmationRequest;
     clientId: string;
@@ -85,18 +117,29 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
         throw new Error('INVALID_PARTNER_CONFIRMED_ROW');
 
     const issueDate = todayIso();
-    const preview = await fetchPartnerInvoicePreview({
-        projectId,
-        dateFrom,
-        dateTo,
-        clientId: clientId.trim(),
-        currency: args.currency?.trim() || undefined,
-        issueDate,
-    });
+    const [preview, snapshotTimeEntryIds] = await Promise.all([
+        fetchPartnerInvoicePreview({
+            projectId,
+            dateFrom,
+            dateTo,
+            clientId: clientId.trim(),
+            currency: args.currency?.trim() || undefined,
+            issueDate,
+        }),
+        loadConfirmedSnapshotTimeEntryIds(row),
+    ]);
 
-    const timeEntryIds = preview.timeEntryIds;
-    const expenseIds = preview.expenseIds;
+    const { timeEntryIds, usedSnapshotFilter, snapshotEntryCount } = intersectPreviewTimeEntryIdsWithSnapshot(
+        preview.timeEntryIds,
+        snapshotTimeEntryIds,
+    );
+    const expenseIds = [...new Set(preview.expenseIds.map((id) => String(id ?? '').trim()).filter(Boolean))];
     const hasPackage = preview.packageFeeSubtotal > 1e-9;
+
+    if (usedSnapshotFilter && snapshotEntryCount > 0 && timeEntryIds.length !== snapshotEntryCount) {
+        throw new PartnerConfirmedInvoiceLineCountError(snapshotEntryCount, timeEntryIds.length);
+    }
+
     if (timeEntryIds.length === 0 && expenseIds.length === 0 && !hasPackage)
         throw new PartnerConfirmedInvoiceNoLinesError();
 

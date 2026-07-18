@@ -16,6 +16,7 @@ import { fetchExpenseById } from '@entities/expenses/model/expensesApi';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { parseTimeEntryDescriptionLines } from './parseTimeEntryDescriptionLines';
 import { packCurrencyCode } from './invoicePreviewPackShared';
+import { invoiceClientDescription } from '@pages/time-tracking/lib/invoiceClientDescription';
 import {
     emptyInvoiceTimeReportPack,
     finalizeDetailSlots,
@@ -223,7 +224,8 @@ export async function resolveInvoiceTimeReportPack(
                     date: dateDisplayFromIso(e.workDate),
                     initials: u ? initialsFromUser(u) : String(e.authUserId).slice(0, 3),
                     task: taskLine,
-                    description: notes.trim().length ? notes : (taskLine || (e.description ?? '').trim() || '—'),
+                    description: invoiceClientDescription(e.description, taskLine)
+                        || (notes.trim().length ? notes : (taskLine || '—')),
                     hours: formatTimeReportHours(h),
                     amount: formatTimeReportAmount(a, currency),
                     authId: e.authUserId,
@@ -336,11 +338,14 @@ export async function resolveInvoiceTimeReportPack(
                 const u = authId != null ? userByAuthId(users, authId) : null;
                 const hours = numHoursFromLine(ln);
                 const { taskLine } = parseTimeEntryDescriptionLines(entry?.description ?? null);
+                const taskFromEntry = (entry as { task_name?: string | null; task?: string | null } | null);
+                const taskHint = taskLine
+                    || String(taskFromEntry?.task_name ?? taskFromEntry?.task ?? '').trim();
                 details.push({
                     date: workIso ? dateDisplayFromIso(workIso) : '—',
                     initials: u ? initialsFromUser(u) : '—',
-                    task: taskLine || '',
-                    description: desc,
+                    task: taskHint || '',
+                    description: invoiceClientDescription(desc, taskHint) || '—',
                     hours: hours > 0 ? formatTimeReportHours(hours) : '',
                     amount: formatTimeReportAmount(amt, currency),
                     authId,

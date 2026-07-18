@@ -11,6 +11,7 @@ import {
   createInvoice,
   fetchUnbilledTimeEntries,
   fetchUnbilledExpenses,
+  getReportSnapshot,
   listPartnerReportConfirmationsConfirmed,
   listAllTimeManagerClientsMerged,
   listAllClientProjectsMerged,
@@ -26,6 +27,7 @@ import {
   type PartnerReportConfirmationRequest,
 } from '@entities/time-tracking';
 import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
+import { loadSnapshotRowsForPartnerExcel } from '@entities/time-tracking/lib/exportPartnerConfirmedSnapshotExcel';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 import {
   addDaysIso,
@@ -35,6 +37,11 @@ import {
   notifyReportsInvalidated,
   todayIso,
 } from '../lib/invoicePageShared';
+import { invoiceClientDescription } from '../lib/invoiceClientDescription';
+import {
+  collectConfirmedSnapshotTimeEntryIds,
+  intersectPreviewTimeEntryIdsWithSnapshot,
+} from '../lib/confirmedSnapshotInvoiceLines';
 import './TimeTrackingPage.css';
 import './TimesheetPanel.css';
 import './InvoicePage.css';
@@ -239,14 +246,41 @@ export function InvoiceCreatePage() {
         fetchUnbilledTimeEntries({ projectId: createProjectId, dateFrom: unbilledFrom, dateTo: unbilledTo }),
         fetchUnbilledExpenses({ projectId: createProjectId, dateFrom: unbilledFrom, dateTo: unbilledTo }),
       ]);
-      setUnbilledTime(timeRows);
+
+      let filteredTime = timeRows;
+      const matchingConfirm = confirmedReportsForCreate.find((r) =>
+        String(r.projectId ?? '').trim() === createProjectId.trim()
+        && String(r.dateFrom ?? '').slice(0, 10) === unbilledFrom.trim().slice(0, 10)
+        && String(r.dateTo ?? '').slice(0, 10) === unbilledTo.trim().slice(0, 10)
+        && String(r.status ?? '').trim().toLowerCase() === 'fully_confirmed');
+      const snapId = String(matchingConfirm?.snapshotId ?? '').trim();
+      if (snapId) {
+        try {
+          const snapshot = await getReportSnapshot(snapId);
+          const snapRows = await loadSnapshotRowsForPartnerExcel(snapId, snapshot);
+          const snapTeIds = collectConfirmedSnapshotTimeEntryIds(snapRows);
+          if (snapTeIds.length > 0) {
+            const { timeEntryIds } = intersectPreviewTimeEntryIdsWithSnapshot(
+              timeRows.map((r) => r.id),
+              snapTeIds,
+            );
+            const keep = new Set(timeEntryIds);
+            filteredTime = timeRows.filter((r) => keep.has(r.id));
+          }
+        }
+        catch {
+          /* keep unfiltered unbilled if snapshot load fails */
+        }
+      }
+
+      setUnbilledTime(filteredTime);
       setUnbilledExp(expRows);
       if (!opts?.preserveSelections) {
         setSelTime(new Set());
         setSelExp(new Set());
       }
       else {
-        const timeIds = new Set(timeRows.map((r) => r.id));
+        const timeIds = new Set(filteredTime.map((r) => r.id));
         const expIds = new Set(expRows.map((r) => r.id));
         setSelTime((prev) => new Set([...prev].filter((id) => timeIds.has(id))));
         setSelExp((prev) => new Set([...prev].filter((id) => expIds.has(id))));
@@ -269,7 +303,7 @@ export function InvoiceCreatePage() {
     finally {
       setUnbilledLoading(false);
     }
-  }, [createProjectId, unbilledFrom, unbilledTo, requireFullyConfirmedPeriod, showAlert, t]);
+  }, [createProjectId, unbilledFrom, unbilledTo, confirmedReportsForCreate, requireFullyConfirmedPeriod, showAlert, t]);
 
   useEffect(() => {
     if (resumeAppliedRef.current)
@@ -592,7 +626,7 @@ export function InvoiceCreatePage() {
                             <td>{formatHM(seconds)}</td>
                             <td>{Number(x.hours).toFixed(2)}</td>
                             <td>{fmtMoney(x.billableAmount, x.currency, locale)}{x.packageCovered ? ` (${t('timeTrackingPage.invoices.createDialog.packageCovered')})` : ''}</td>
-                            <td>{x.description ?? '—'}</td>
+                            <td>{invoiceClientDescription(x.description) || '—'}</td>
                           </tr>
                         );
                       })}

@@ -38,6 +38,7 @@ import {
 } from '@entities/time-tracking';
 import { isActiveTimeManagerClientRow } from '@entities/time-tracking/lib/projectTimeEntry';
 import { InvoiceSendContactModal } from './InvoiceSendContactModal';
+import { invoiceClientDescription } from '../lib/invoiceClientDescription';
 import {
   blobToBase64,
   buildPaidAtForPaymentApi,
@@ -835,7 +836,7 @@ export function InvoiceDetailPage() {
                               {invoiceLineKindLabel(ln, t)}
                             </span>
                           </td>
-                          <td>{ln.description ?? '—'}</td>
+                          <td>{ln.description ? invoiceClientDescription(ln.description) || '—' : '—'}</td>
                           <td>{ln.quantity}</td>
                           <td>{ln.unitAmount}</td>
                           <td>

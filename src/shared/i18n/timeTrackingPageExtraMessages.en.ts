@@ -1119,6 +1119,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             invoiceBusyAria: 'Generating invoice',
             invoiceFailed: 'Failed to generate invoice',
             invoiceNoLines: 'No unbilled time or expense lines for the report period — invoice was not created.',
+            invoiceLineCountMismatch: 'Invoice line count does not match the confirmed report: report has {expected}, billable now {actual}. Check duplicate time entries and try again.',
             invoiceNoClient: 'Could not resolve the project client for invoicing.',
             invoicePartialBlocked: 'Invoice can only be generated after the report is fully confirmed by all partners.',
             deleteTitle: 'Delete confirmed report',

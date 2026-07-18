@@ -36,6 +36,7 @@ import {
     generateInvoiceFromPartnerConfirmedReport,
     PartnerConfirmedInvoiceMismatchError,
     PartnerConfirmedInvoiceNoLinesError,
+    PartnerConfirmedInvoiceLineCountError,
 } from '@pages/time-tracking/lib/partnerConfirmedInvoice';
 import { openConfirmedPartnerReportPreview } from '@pages/time-tracking/lib/partnerReportPreviewNav';
 import { exportPartnerConfirmedReportExcel } from '@pages/time-tracking/lib/exportPartnerConfirmedReportExcel';
@@ -647,6 +648,14 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         catch (e) {
             if (e instanceof PartnerConfirmedInvoiceNoLinesError) {
                 await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.invoiceNoLines') });
+                return;
+            }
+            if (e instanceof PartnerConfirmedInvoiceLineCountError) {
+                await showAlert({
+                    message: t('timeTrackingPage.reports.partnerConfirmed.invoiceLineCountMismatch')
+                        .replace('{expected}', String(e.expectedCount))
+                        .replace('{actual}', String(e.actualCount)),
+                });
                 return;
             }
             if (e instanceof PartnerConfirmedInvoiceMismatchError) {
