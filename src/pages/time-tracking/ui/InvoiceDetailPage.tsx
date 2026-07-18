@@ -554,113 +554,154 @@ export function InvoiceDetailPage() {
           </div>
         </nav>
         <div className="time-page__content time-page__content--enter tt-inv-page" role="region" aria-labelledby="tt-inv-detail-title">
-          <header className="tt-inv-page__header">
-            <h1 id="tt-inv-detail-title" className="tt-inv-page__title">{title}</h1>
-            {clientSubtitle && <p className="tt-inv-page__sub">{clientSubtitle}</p>}
-            {readOnly && (
-              <span className="tt-inv__readonly-badge" role="status">{t('timeTrackingPage.invoices.readonlyBadge')}</span>
-            )}
-          </header>
-
-          <div className="tt-inv-page__body">
-            {!detail || detailLoading ? (
+          {!detail || detailLoading ? (
+            <div className="tt-inv-page__loading">
               <p className="tt-inv__muted">{t('timeTrackingPage.invoices.detail.loadingCard')}</p>
-            ) : (
-              <>
-                <div className="tt-inv-detail-meta tt-inv-detail-meta--page">
-                  <div className="tt-inv-detail-meta__item">
-                    <span className="tt-inv-detail-meta__k">{t('timeTrackingPage.invoices.detail.status')}</span>
-                    <span className="tt-inv-detail-meta__v">
+            </div>
+          ) : (
+            <>
+              <header className="tt-inv-page__header">
+                <div className="tt-inv-page__header-main">
+                  <div className="tt-inv-page__title-row">
+                    <h1 id="tt-inv-detail-title" className="tt-inv-page__title">{title}</h1>
+                    <span className={`tt-inv__badge ${INVOICE_STATUS_BADGE_CLASS[detail.status] ?? 'tt-inv__badge--neutral'}`}>
+                      {ttInvoiceStatusLabel(detail.status, t)}
+                    </span>
+                    {readOnly && (
+                      <span className="tt-inv__readonly-badge" role="status">{t('timeTrackingPage.invoices.readonlyBadge')}</span>
+                    )}
+                  </div>
+                  {clientSubtitle && <p className="tt-inv-page__sub">{clientSubtitle}</p>}
+                  {detail.storedStatus !== detail.status && (
+                    <p className="tt-inv-page__sub">
+                      {t('timeTrackingPage.invoices.detail.inDb')}: <code>{detail.storedStatus}</code>
+                    </p>
+                  )}
+                </div>
+              </header>
+
+              <div className="tt-inv-page__body">
+                <div className="tt-reports__summary tt-inv-page__kpis" aria-label={t('timeTrackingPage.invoices.summary.aria')}>
+                  <div className="tt-reports__summary-card tt-inv-page__kpi-status">
+                    <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.status')}</span>
+                    <span className="tt-reports__summary-value">
                       <span className={`tt-inv__badge ${INVOICE_STATUS_BADGE_CLASS[detail.status] ?? 'tt-inv__badge--neutral'}`}>
                         {ttInvoiceStatusLabel(detail.status, t)}
                       </span>
                     </span>
                   </div>
-                  {detail.storedStatus !== detail.status && (
-                    <div className="tt-inv-detail-meta__item">
-                      <span className="tt-inv-detail-meta__k">{t('timeTrackingPage.invoices.detail.inDb')}</span>
-                      <span className="tt-inv-detail-meta__v tt-inv-detail-meta__v--mono">{detail.storedStatus}</span>
-                    </div>
-                  )}
-                  <div className="tt-inv-detail-meta__item">
-                    <span className="tt-inv-detail-meta__k">{t('timeTrackingPage.invoices.detail.issueDate')}</span>
-                    <span className="tt-inv-detail-meta__v">{fmtDisplayDate(detail.issueDate, locale)}</span>
+                  <div className="tt-reports__summary-card">
+                    <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.issueDate')}</span>
+                    <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtDisplayDate(detail.issueDate, locale)}</span>
                   </div>
-                  <div className="tt-inv-detail-meta__item">
-                    <span className="tt-inv-detail-meta__k">{t('timeTrackingPage.invoices.detail.dueDate')}</span>
-                    <span className="tt-inv-detail-meta__v">{fmtDisplayDate(detail.dueDate, locale)}</span>
+                  <div className="tt-reports__summary-card">
+                    <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.dueDate')}</span>
+                    <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtDisplayDate(detail.dueDate, locale)}</span>
                   </div>
-                  <div className="tt-inv-detail-meta__item">
-                    <span className="tt-inv-detail-meta__k">{t('timeTrackingPage.invoices.detail.amount')}</span>
-                    <span className="tt-inv-detail-meta__v tt-inv-detail-meta__v--num">{fmtMoney(detail.totalAmount, detail.currency, locale)}</span>
+                  <div className="tt-reports__summary-card tt-inv__summary-card--accent">
+                    <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.amount')}</span>
+                    <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtMoney(detail.totalAmount, detail.currency, locale)}</span>
                   </div>
-                  <div className="tt-inv-detail-meta__item">
-                    <span className="tt-inv-detail-meta__k">{t('timeTrackingPage.invoices.detail.paid')}</span>
-                    <span className="tt-inv-detail-meta__v tt-inv-detail-meta__v--num">{fmtMoney(detail.amountPaid, detail.currency, locale)}</span>
+                  <div className="tt-reports__summary-card tt-inv__summary-card--success">
+                    <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.paid')}</span>
+                    <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtMoney(detail.amountPaid, detail.currency, locale)}</span>
                   </div>
-                  <div className="tt-inv-detail-meta__item">
-                    <span className="tt-inv-detail-meta__k">{t('timeTrackingPage.invoices.detail.balance')}</span>
-                    <span className="tt-inv-detail-meta__v tt-inv-detail-meta__v--num tt-inv-detail-meta__v--strong">{fmtMoney(detail.balanceDue, detail.currency, locale)}</span>
+                  <div className={`tt-reports__summary-card${detail.balanceDue > 1e-9 ? ' tt-inv__summary-card--danger' : ' tt-inv__summary-card--muted'}`}>
+                    <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.balance')}</span>
+                    <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtMoney(detail.balanceDue, detail.currency, locale)}</span>
                   </div>
                 </div>
 
-                {(detail.requiresPaymentConfirmationDocument === true || Boolean(detail.paymentConfirmationDocumentUrl?.trim())) && (
-                  <div className="tt-inv-pay-confirm" role="region" aria-label={t('timeTrackingPage.invoices.detail.paymentConfirmRegion')}>
-                    {detail.requiresPaymentConfirmationDocument === true && !readOnly ? (
-                      <>
-                        <h2 className="tt-inv__section-title">{t('timeTrackingPage.invoices.detail.paymentConfirmTitle')}</h2>
-                        <p className="tt-inv-pay-confirm__hint">
-                          {t('timeTrackingPage.invoices.detail.paymentConfirmHint')}
-                        </p>
-                        <label>
-                          {t('timeTrackingPage.invoices.detail.paymentConfirmDocLabel')}
-                          <input className="tt-inv__input" value={paymentConfirmDocUrl} onChange={(e) => setPaymentConfirmDocUrl(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.paymentConfirmDocPlaceholder')} autoComplete="off" />
-                        </label>
-                        <div className="tt-inv-actions tt-inv-pay-confirm__actions">
-                          <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleSubmitPaymentConfirmation()}>
-                            {t('timeTrackingPage.invoices.detail.savePaymentConfirm')}
-                          </button>
-                        </div>
-                      </>
-                    ) : null}
-                    {detail.requiresPaymentConfirmationDocument === true && readOnly ? (
-                      <p className="tt-inv-pay-confirm__hint tt-inv__muted">
-                        {t('timeTrackingPage.invoices.detail.paymentConfirmReadonly')}
-                      </p>
-                    ) : null}
-                    {detail.paymentConfirmationDocumentUrl?.trim() ? (() => {
-                      const u = detail.paymentConfirmationDocumentUrl!.trim();
-                      const recRaw = detail.paymentConfirmationRecordedAt?.trim();
-                      let recLabel = '';
-                      if (recRaw) {
-                        const d = new Date(recRaw);
-                        recLabel = Number.isNaN(d.getTime())
-                          ? recRaw
-                          : d.toLocaleString(localeTag(locale), { dateStyle: 'short', timeStyle: 'short' });
-                      }
-                      return (
-                        <p className="tt-inv-pay-confirm__saved">
-                          {t('timeTrackingPage.invoices.detail.paymentConfirmRecorded')}{recLabel ? ` · ${recLabel}` : ''}
-                          {' · '}
-                          {/^https?:\/\//i.test(u)
-                            ? (<a href={u} target="_blank" rel="noopener noreferrer">{u}</a>)
-                            : <code>{u}</code>}
-                        </p>
-                      );
-                    })() : null}
+                <div className="tt-inv-page__toolbar" role="toolbar" aria-label={t('timeTrackingPage.invoices.detail.exportAria')}>
+                  <div className="tt-inv-detail-export">
+                    <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={Boolean(actionBusy || detailExportBusy)} onClick={() => openExistingInvoicePreview(detail)} title={t('timeTrackingPage.invoices.detail.previewTitle')}>
+                      {t('timeTrackingPage.invoices.detail.preview')}
+                    </button>
+                    <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={Boolean(actionBusy || detailExportBusy)} onClick={() => void handleDetailDownloadPdf(detail)}>
+                      {detailExportBusy === 'pdf' ? t('timeTrackingPage.invoices.detail.preparingPdf') : t('timeTrackingPage.invoices.detail.downloadPdf')}
+                    </button>
+                    <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={Boolean(actionBusy || detailExportBusy)} onClick={() => void handleDetailDownloadWord(detail)}>
+                      {detailExportBusy === 'word' ? t('timeTrackingPage.invoices.detail.preparingWord') : t('timeTrackingPage.invoices.detail.downloadWord')}
+                    </button>
                   </div>
-                )}
-
-                <div className="tt-inv-detail-export" role="group" aria-label={t('timeTrackingPage.invoices.detail.exportAria')}>
-                  <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={Boolean(actionBusy || detailExportBusy)} onClick={() => openExistingInvoicePreview(detail)} title={t('timeTrackingPage.invoices.detail.previewTitle')}>
-                    {t('timeTrackingPage.invoices.detail.preview')}
-                  </button>
-                  <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={Boolean(actionBusy || detailExportBusy)} onClick={() => void handleDetailDownloadPdf(detail)}>
-                    {detailExportBusy === 'pdf' ? t('timeTrackingPage.invoices.detail.preparingPdf') : t('timeTrackingPage.invoices.detail.downloadPdf')}
-                  </button>
-                  <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={Boolean(actionBusy || detailExportBusy)} onClick={() => void handleDetailDownloadWord(detail)}>
-                    {detailExportBusy === 'word' ? t('timeTrackingPage.invoices.detail.preparingWord') : t('timeTrackingPage.invoices.detail.downloadWord')}
-                  </button>
+                  {!readOnly && (
+                    <>
+                      <span className="tt-inv-page__toolbar-sep" aria-hidden />
+                      <div className="tt-inv-actions">
+                        {invoiceCanSend(detail.status as InvoiceUiStatus) && (
+                          <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy || Boolean(outlookSendWait && outlookSendWait.invoiceId === detail.id)} onClick={() => setSendContactOpen(true)}>
+                            {outlookSendWait && outlookSendWait.invoiceId === detail.id
+                              ? t('timeTrackingPage.invoices.sendDialog.outlookWaitingShort')
+                              : ttInvoiceSendActionLabel(detail.status as InvoiceUiStatus, t)}
+                          </button>
+                        )}
+                        {invoiceCanMarkViewed(detail.status as InvoiceUiStatus) && (
+                          <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {
+                            setActionBusy(true);
+                            try {
+                              await markInvoiceViewed(detail.id);
+                              await refreshDetail(detail.id);
+                            }
+                            catch (e) {
+                              await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
+                            }
+                            finally {
+                              setActionBusy(false);
+                            }
+                          }}>
+                            {t('timeTrackingPage.invoices.detail.markViewed')}
+                          </button>
+                        )}
+                        {invoiceCanRegisterPayment(detail.status as InvoiceUiStatus, detail.balanceDue) && (
+                          <>
+                            <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleFullPaymentNow()}>
+                              {t('timeTrackingPage.invoices.detail.fullPayment')}
+                            </button>
+                            <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={() => {
+                              setPayAmount(detail.balanceDue > 1e-9 ? String(detail.balanceDue).replace('.', ',') : '');
+                              setPayAt('');
+                              setPayOpen(true);
+                            }}>
+                              {t('timeTrackingPage.invoices.detail.partialPayment')}
+                            </button>
+                          </>
+                        )}
+                        {invoiceCanCancel(detail.status as InvoiceUiStatus) && (
+                          <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {
+                            if (!await showConfirm({
+                              title: t('timeTrackingPage.invoices.confirm.cancelTitle'),
+                              message: t('timeTrackingPage.invoices.confirm.cancelMessage'),
+                              variant: 'danger',
+                              confirmLabel: t('timeTrackingPage.invoices.confirm.cancelConfirm'),
+                            }))
+                              return;
+                            setActionBusy(true);
+                            try {
+                              await cancelInvoice(detail.id);
+                              await refreshDetail(detail.id);
+                            }
+                            catch (e) {
+                              await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
+                            }
+                            finally {
+                              setActionBusy(false);
+                            }
+                          }}>
+                            {t('timeTrackingPage.invoices.detail.cancelInvoice')}
+                          </button>
+                        )}
+                        {invoiceCanDeleteDraft(detail.status as InvoiceUiStatus) && (
+                          <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={() => {
+                            void deleteInvoiceById(detail);
+                          }}>
+                            {detail.status === 'canceled'
+                              ? t('timeTrackingPage.invoices.detail.deleteCanceled')
+                              : t('timeTrackingPage.invoices.detail.deleteDraft')}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {outlookSendWait && outlookSendWait.invoiceId === detail.id && (
@@ -669,201 +710,195 @@ export function InvoiceDetailPage() {
                   </p>
                 )}
 
-                {!readOnly && (
-                  <div className="tt-inv-actions">
-                    {invoiceCanSend(detail.status as InvoiceUiStatus) && (
-                      <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy || Boolean(outlookSendWait && outlookSendWait.invoiceId === detail.id)} onClick={() => setSendContactOpen(true)}>
-                        {outlookSendWait && outlookSendWait.invoiceId === detail.id
-                          ? t('timeTrackingPage.invoices.sendDialog.outlookWaitingShort')
-                          : ttInvoiceSendActionLabel(detail.status as InvoiceUiStatus, t)}
-                      </button>
-                    )}
-                    {invoiceCanMarkViewed(detail.status as InvoiceUiStatus) && (
-                      <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {
-                        setActionBusy(true);
-                        try {
-                          await markInvoiceViewed(detail.id);
-                          await refreshDetail(detail.id);
+                {(detail.requiresPaymentConfirmationDocument === true || Boolean(detail.paymentConfirmationDocumentUrl?.trim())) && (
+                  <section className="tt-inv-page__section tt-inv-page__section--soft" aria-label={t('timeTrackingPage.invoices.detail.paymentConfirmRegion')}>
+                    <div className="tt-inv-page__section-head">
+                      <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.detail.paymentConfirmTitle')}</h2>
+                    </div>
+                    <div className="tt-inv-pay-confirm">
+                      {detail.requiresPaymentConfirmationDocument === true && !readOnly ? (
+                        <>
+                          <p className="tt-inv-pay-confirm__hint">
+                            {t('timeTrackingPage.invoices.detail.paymentConfirmHint')}
+                          </p>
+                          <label>
+                            {t('timeTrackingPage.invoices.detail.paymentConfirmDocLabel')}
+                            <input className="tt-inv__input" value={paymentConfirmDocUrl} onChange={(e) => setPaymentConfirmDocUrl(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.paymentConfirmDocPlaceholder')} autoComplete="off" />
+                          </label>
+                          <div className="tt-inv-page__draft-actions">
+                            <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleSubmitPaymentConfirmation()}>
+                              {t('timeTrackingPage.invoices.detail.savePaymentConfirm')}
+                            </button>
+                          </div>
+                        </>
+                      ) : null}
+                      {detail.requiresPaymentConfirmationDocument === true && readOnly ? (
+                        <p className="tt-inv-pay-confirm__hint tt-inv__muted">
+                          {t('timeTrackingPage.invoices.detail.paymentConfirmReadonly')}
+                        </p>
+                      ) : null}
+                      {detail.paymentConfirmationDocumentUrl?.trim() ? (() => {
+                        const u = detail.paymentConfirmationDocumentUrl!.trim();
+                        const recRaw = detail.paymentConfirmationRecordedAt?.trim();
+                        let recLabel = '';
+                        if (recRaw) {
+                          const d = new Date(recRaw);
+                          recLabel = Number.isNaN(d.getTime())
+                            ? recRaw
+                            : d.toLocaleString(localeTag(locale), { dateStyle: 'short', timeStyle: 'short' });
                         }
-                        catch (e) {
-                          await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
-                        }
-                        finally {
-                          setActionBusy(false);
-                        }
-                      }}>
-                        {t('timeTrackingPage.invoices.detail.markViewed')}
-                      </button>
-                    )}
-                    {invoiceCanRegisterPayment(detail.status as InvoiceUiStatus, detail.balanceDue) && (
-                      <>
-                        <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleFullPaymentNow()}>
-                          {t('timeTrackingPage.invoices.detail.fullPayment')}
-                        </button>
-                        <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={() => {
-                          setPayAmount(detail.balanceDue > 1e-9 ? String(detail.balanceDue).replace('.', ',') : '');
-                          setPayAt('');
-                          setPayOpen(true);
-                        }}>
-                          {t('timeTrackingPage.invoices.detail.partialPayment')}
-                        </button>
-                      </>
-                    )}
-                    {invoiceCanCancel(detail.status as InvoiceUiStatus) && (
-                      <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {
-                        if (!await showConfirm({
-                          title: t('timeTrackingPage.invoices.confirm.cancelTitle'),
-                          message: t('timeTrackingPage.invoices.confirm.cancelMessage'),
-                          variant: 'danger',
-                          confirmLabel: t('timeTrackingPage.invoices.confirm.cancelConfirm'),
-                        }))
-                          return;
-                        setActionBusy(true);
-                        try {
-                          await cancelInvoice(detail.id);
-                          await refreshDetail(detail.id);
-                        }
-                        catch (e) {
-                          await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
-                        }
-                        finally {
-                          setActionBusy(false);
-                        }
-                      }}>
-                        {t('timeTrackingPage.invoices.detail.cancelInvoice')}
-                      </button>
-                    )}
-                    {invoiceCanDeleteDraft(detail.status as InvoiceUiStatus) && (
-                      <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={() => {
-                        void deleteInvoiceById(detail);
-                      }}>
-                        {detail.status === 'canceled'
-                          ? t('timeTrackingPage.invoices.detail.deleteCanceled')
-                          : t('timeTrackingPage.invoices.detail.deleteDraft')}
-                      </button>
-                    )}
-                  </div>
+                        return (
+                          <p className="tt-inv-pay-confirm__saved">
+                            {t('timeTrackingPage.invoices.detail.paymentConfirmRecorded')}{recLabel ? ` · ${recLabel}` : ''}
+                            {' · '}
+                            {/^https?:\/\//i.test(u)
+                              ? (<a href={u} target="_blank" rel="noopener noreferrer">{u}</a>)
+                              : <code>{u}</code>}
+                          </p>
+                        );
+                      })() : null}
+                    </div>
+                  </section>
                 )}
 
                 {!readOnly && invoiceCanPatchDraft(detail.status as InvoiceUiStatus) && (
-                  <div className="tt-inv-draft">
-                    <p className="tt-inv-draft__hint">{t('timeTrackingPage.invoices.detail.draftEditHint')}</p>
-                    <div className="tt-inv-dialog__grid tt-inv-dialog__grid--draft-invoice">
-                      <div className="tt-inv-dialog__field">
-                        <span id="inv-draft-issue-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.detail.issueDate')}</span>
-                        <DatePicker id="inv-draft-issue" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={draftIssueDate} max={draftDueDate || undefined} onChange={(iso) => setDraftIssueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.detail.issueDate')} showChevron aria-labelledby="inv-draft-issue-lbl" />
-                      </div>
-                      <div className="tt-inv-dialog__field">
-                        <span id="inv-draft-due-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.detail.dueDate')}</span>
-                        <DatePicker id="inv-draft-due" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={draftDueDate} min={draftIssueDate || undefined} onChange={(iso) => setDraftDueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.detail.dueDate')} showChevron aria-labelledby="inv-draft-due-lbl" />
-                      </div>
-                      <div className="tt-inv-dialog__field">
-                        <label className="tt-inv-dialog__label" htmlFor="inv-tax1">{t('timeTrackingPage.invoices.detail.tax1')}</label>
-                        <input id="inv-tax1" type="text" inputMode="decimal" className="tt-inv-dialog__control" value={draftTaxPct} onChange={(e) => setDraftTaxPct(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.taxPlaceholder')} />
-                      </div>
-                      <div className="tt-inv-dialog__field">
-                        <label className="tt-inv-dialog__label" htmlFor="inv-tax2">{t('timeTrackingPage.invoices.detail.tax2')}</label>
-                        <input id="inv-tax2" type="text" inputMode="decimal" className="tt-inv-dialog__control" value={draftTax2Pct} onChange={(e) => setDraftTax2Pct(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.optionalPlaceholder')} />
-                      </div>
-                      <div className="tt-inv-dialog__field">
-                        <label className="tt-inv-dialog__label" htmlFor="inv-disc">{t('timeTrackingPage.invoices.detail.discount')}</label>
-                        <input id="inv-disc" type="text" inputMode="decimal" className="tt-inv-dialog__control" value={draftDiscPct} onChange={(e) => setDraftDiscPct(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.optionalPlaceholder')} />
+                  <section className="tt-inv-page__section" aria-labelledby="tt-inv-draft-section-title">
+                    <div className="tt-inv-page__section-head">
+                      <div>
+                        <h2 id="tt-inv-draft-section-title" className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.detail.draftDates')}</h2>
+                        <p className="tt-inv-page__section-desc">{t('timeTrackingPage.invoices.detail.draftEditHint')}</p>
                       </div>
                     </div>
-                    <div className="tt-inv-draft__notes">
-                      <label htmlFor="inv-client-note">
-                        {t('timeTrackingPage.invoices.detail.clientNote')}
-                        <textarea className="tt-inv__textarea" rows={3} defaultValue={detail.clientNote ?? ''} id="inv-client-note" />
-                      </label>
-                      <label htmlFor="inv-int-note">
-                        {t('timeTrackingPage.invoices.detail.internalNote')}
-                        <textarea className="tt-inv__textarea" rows={3} defaultValue={detail.internalNote ?? ''} id="inv-int-note" />
-                      </label>
+                    <div className="tt-inv-draft">
+                      <div className="tt-inv-dialog__grid tt-inv-dialog__grid--draft-invoice">
+                        <div className="tt-inv-dialog__field">
+                          <span id="inv-draft-issue-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.detail.issueDate')}</span>
+                          <DatePicker id="inv-draft-issue" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={draftIssueDate} max={draftDueDate || undefined} onChange={(iso) => setDraftIssueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.detail.issueDate')} showChevron aria-labelledby="inv-draft-issue-lbl" />
+                        </div>
+                        <div className="tt-inv-dialog__field">
+                          <span id="inv-draft-due-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.detail.dueDate')}</span>
+                          <DatePicker id="inv-draft-due" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={draftDueDate} min={draftIssueDate || undefined} onChange={(iso) => setDraftDueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.detail.dueDate')} showChevron aria-labelledby="inv-draft-due-lbl" />
+                        </div>
+                        <div className="tt-inv-dialog__field">
+                          <label className="tt-inv-dialog__label" htmlFor="inv-tax1">{t('timeTrackingPage.invoices.detail.tax1')}</label>
+                          <input id="inv-tax1" type="text" inputMode="decimal" className="tt-inv-dialog__control" value={draftTaxPct} onChange={(e) => setDraftTaxPct(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.taxPlaceholder')} />
+                        </div>
+                        <div className="tt-inv-dialog__field">
+                          <label className="tt-inv-dialog__label" htmlFor="inv-tax2">{t('timeTrackingPage.invoices.detail.tax2')}</label>
+                          <input id="inv-tax2" type="text" inputMode="decimal" className="tt-inv-dialog__control" value={draftTax2Pct} onChange={(e) => setDraftTax2Pct(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.optionalPlaceholder')} />
+                        </div>
+                        <div className="tt-inv-dialog__field">
+                          <label className="tt-inv-dialog__label" htmlFor="inv-disc">{t('timeTrackingPage.invoices.detail.discount')}</label>
+                          <input id="inv-disc" type="text" inputMode="decimal" className="tt-inv-dialog__control" value={draftDiscPct} onChange={(e) => setDraftDiscPct(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.optionalPlaceholder')} />
+                        </div>
+                      </div>
+                      <div className="tt-inv-draft__notes">
+                        <label htmlFor="inv-client-note">
+                          {t('timeTrackingPage.invoices.detail.clientNote')}
+                          <textarea className="tt-inv__textarea" rows={3} defaultValue={detail.clientNote ?? ''} id="inv-client-note" />
+                        </label>
+                        <label htmlFor="inv-int-note">
+                          {t('timeTrackingPage.invoices.detail.internalNote')}
+                          <textarea className="tt-inv__textarea" rows={3} defaultValue={detail.internalNote ?? ''} id="inv-int-note" />
+                        </label>
+                      </div>
+                      <div className="tt-inv-page__draft-actions">
+                        <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleSaveDraft()}>
+                          {t('timeTrackingPage.invoices.detail.saveDraft')}
+                        </button>
+                      </div>
                     </div>
-                    <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleSaveDraft()}>
-                      {t('timeTrackingPage.invoices.detail.saveDraft')}
-                    </button>
-                  </div>
+                  </section>
                 )}
 
                 {!readOnly && payOpen && (
-                  <div className="tt-inv-pay">
-                    <h2 className="tt-inv__section-title">{t('timeTrackingPage.invoices.payment.title')}</h2>
-                    <p className="tt-inv-pay__hint">
-                      {t('timeTrackingPage.invoices.payment.hint')}
-                    </p>
-                    <label>
-                      {t('timeTrackingPage.invoices.payment.amountLabel')}
-                      <input className="tt-inv__input" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder={t('timeTrackingPage.invoices.payment.amountPlaceholder')} />
-                    </label>
-                    <label>
-                      {t('timeTrackingPage.invoices.payment.paidAtLabel')}
-                      <input type="text" className="tt-inv__input" value={payAt} onChange={(e) => setPayAt(e.target.value)} placeholder={t('timeTrackingPage.invoices.payment.paidAtPlaceholder')} />
-                    </label>
-                    <label>
-                      {t('timeTrackingPage.invoices.payment.methodLabel')}
-                      <input className="tt-inv__input" value={payMethod} onChange={(e) => setPayMethod(e.target.value)} />
-                    </label>
-                    <label>
-                      {t('timeTrackingPage.invoices.payment.noteLabel')}
-                      <input className="tt-inv__input" value={payNote} onChange={(e) => setPayNote(e.target.value)} />
-                    </label>
-                    <div className="tt-inv-actions">
-                      <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setPayOpen(false)} disabled={actionBusy}>{t('timeTrackingPage.common.cancel')}</button>
-                      <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={() => void handlePayment()} disabled={actionBusy}>{t('timeTrackingPage.invoices.payment.recordPayment')}</button>
+                  <section className="tt-inv-page__section tt-inv-page__section--soft" aria-labelledby="tt-inv-pay-section-title">
+                    <div className="tt-inv-page__section-head">
+                      <h2 id="tt-inv-pay-section-title" className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.payment.title')}</h2>
                     </div>
+                    <div className="tt-inv-pay">
+                      <p className="tt-inv-pay__hint">
+                        {t('timeTrackingPage.invoices.payment.hint')}
+                      </p>
+                      <label>
+                        {t('timeTrackingPage.invoices.payment.amountLabel')}
+                        <input className="tt-inv__input" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder={t('timeTrackingPage.invoices.payment.amountPlaceholder')} />
+                      </label>
+                      <label>
+                        {t('timeTrackingPage.invoices.payment.paidAtLabel')}
+                        <input type="text" className="tt-inv__input" value={payAt} onChange={(e) => setPayAt(e.target.value)} placeholder={t('timeTrackingPage.invoices.payment.paidAtPlaceholder')} />
+                      </label>
+                      <label>
+                        {t('timeTrackingPage.invoices.payment.methodLabel')}
+                        <input className="tt-inv__input" value={payMethod} onChange={(e) => setPayMethod(e.target.value)} />
+                      </label>
+                      <label>
+                        {t('timeTrackingPage.invoices.payment.noteLabel')}
+                        <input className="tt-inv__input" value={payNote} onChange={(e) => setPayNote(e.target.value)} />
+                      </label>
+                      <div className="tt-inv-page__draft-actions">
+                        <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setPayOpen(false)} disabled={actionBusy}>{t('timeTrackingPage.common.cancel')}</button>
+                        <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={() => void handlePayment()} disabled={actionBusy}>{t('timeTrackingPage.invoices.payment.recordPayment')}</button>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                <section className="tt-inv-page__section" aria-labelledby="tt-inv-lines-section-title">
+                  <div className="tt-inv-page__section-head">
+                    <h2 id="tt-inv-lines-section-title" className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.detail.linesTitle')}</h2>
+                    <span className="tt-inv-page__section-desc">
+                      {(detail.lines ?? []).length}
+                    </span>
                   </div>
-                )}
-
-                <div className="tt-inv-detail__section-divider" role="presentation" aria-hidden />
-                <h2 className="tt-inv__section-title">{t('timeTrackingPage.invoices.detail.linesTitle')}</h2>
-                <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
-                  <table className="tt-inv-mini">
-                    <thead>
-                      <tr>
-                        <th>{t('timeTrackingPage.invoices.detail.linesKind')}</th>
-                        <th>{t('timeTrackingPage.invoices.detail.linesDescription')}</th>
-                        <th>{t('timeTrackingPage.invoices.detail.linesQty')}</th>
-                        <th>{t('timeTrackingPage.invoices.detail.linesPrice')}</th>
-                        <th>{t('timeTrackingPage.invoices.detail.linesAmount')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(detail.lines ?? []).map((ln) => (
-                        <tr key={ln.id}>
-                          <td>
-                            <span className={`tt-inv-line-kind tt-inv-line-kind--${invoiceLineKindSlug(ln)}`}>
-                              {invoiceLineKindLabel(ln, t)}
-                            </span>
-                          </td>
-                          <td>{ln.description ? invoiceClientDescription(ln.description) || '—' : '—'}</td>
-                          <td>{ln.quantity}</td>
-                          <td>{ln.unitAmount}</td>
-                          <td>
-                            {fmtMoney(ln.lineTotal, detail.currency, locale)}
-                            {ln.sourceCurrency && ln.sourceCurrency !== detail.currency && ln.sourceAmount != null
-                              ? ` (${fmtMoney(ln.sourceAmount, ln.sourceCurrency, locale)})`
-                              : ''}
-                          </td>
+                  <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
+                    <table className="tt-inv-mini">
+                      <thead>
+                        <tr>
+                          <th>{t('timeTrackingPage.invoices.detail.linesKind')}</th>
+                          <th>{t('timeTrackingPage.invoices.detail.linesDescription')}</th>
+                          <th>{t('timeTrackingPage.invoices.detail.linesQty')}</th>
+                          <th>{t('timeTrackingPage.invoices.detail.linesPrice')}</th>
+                          <th>{t('timeTrackingPage.invoices.detail.linesAmount')}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {(detail.lines ?? []).map((ln) => (
+                          <tr key={ln.id}>
+                            <td>
+                              <span className={`tt-inv-line-kind tt-inv-line-kind--${invoiceLineKindSlug(ln)}`}>
+                                {invoiceLineKindLabel(ln, t)}
+                              </span>
+                            </td>
+                            <td>{ln.description ? invoiceClientDescription(ln.description) || '—' : '—'}</td>
+                            <td>{ln.quantity}</td>
+                            <td>{ln.unitAmount}</td>
+                            <td>
+                              {fmtMoney(ln.lineTotal, detail.currency, locale)}
+                              {ln.sourceCurrency && ln.sourceCurrency !== detail.currency && ln.sourceAmount != null
+                                ? ` (${fmtMoney(ln.sourceAmount, ln.sourceCurrency, locale)})`
+                                : ''}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                {(detail.payments ?? []).length > 0 && (
-                  <>
-                    <h2 className="tt-inv__section-title">{t('timeTrackingPage.invoices.detail.paymentsTitle')}</h2>
-                    <ul className="tt-inv-payments">
-                      {detail.payments!.map((p) => (
-                        <li key={p.id}>{fmtMoney(p.amount, detail.currency, locale)} — {p.paidAt}</li>
-                      ))}
-                    </ul>
-                  </>
-                )}
-              </>
-            )}
-          </div>
+                  {(detail.payments ?? []).length > 0 && (
+                    <>
+                      <h3 className="tt-inv-page__section-title" style={{ marginTop: '1rem' }}>{t('timeTrackingPage.invoices.detail.paymentsTitle')}</h3>
+                      <ul className="tt-inv-page__payments">
+                        {detail.payments!.map((p) => (
+                          <li key={p.id}>{fmtMoney(p.amount, detail.currency, locale)} — {p.paidAt}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </section>
+              </div>
+            </>
+          )}
         </div>
       </main>
 

@@ -482,12 +482,17 @@ export function InvoiceCreatePage() {
         </nav>
         <div className="time-page__content time-page__content--enter tt-inv-page" role="region" aria-labelledby="tt-inv-create-title">
           <header className="tt-inv-page__header">
-            <h1 id="tt-inv-create-title" className="tt-inv-page__title">{t('timeTrackingPage.invoices.createDialog.title')}</h1>
-            <p className="tt-inv-page__sub">{t('timeTrackingPage.invoices.createDialog.subtitle')}</p>
+            <div className="tt-inv-page__header-main">
+              <h1 id="tt-inv-create-title" className="tt-inv-page__title">{t('timeTrackingPage.invoices.createDialog.title')}</h1>
+              <p className="tt-inv-page__sub">{t('timeTrackingPage.invoices.createDialog.subtitle')}</p>
+            </div>
           </header>
 
           <div className="tt-inv-page__body">
-            <div className="tt-inv-dialog__section">
+            <section className="tt-inv-page__section">
+              <div className="tt-inv-page__section-head">
+                <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.clientRequired')}</h2>
+              </div>
               <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
                 <div className="tt-inv-dialog__field">
                   <label id="tt-inv-create-client-lbl" className="tt-inv-dialog__label" htmlFor="tt-inv-create-client-btn">{t('timeTrackingPage.invoices.createDialog.clientRequired')}</label>
@@ -501,9 +506,12 @@ export function InvoiceCreatePage() {
                   <SearchableSelect<TimeManagerClientProjectRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-project-btn" portalDropdown portalZIndex={12050} portalMinWidth={560} placeholder={!createClientId ? t('timeTrackingPage.common.selectClientFirst') : projects.length === 0 ? t('timeTrackingPage.common.noProjects') : t('timeTrackingPage.invoices.createDialog.selectProject')} emptyListText={t('timeTrackingPage.common.noProjects')} noMatchText={t('timeTrackingPage.common.projectNotFound')} value={createProjectId} items={projects} getOptionValue={(p) => p.id} getOptionLabel={(p) => p.code ? `${p.name} (${p.code})` : p.name} getSearchText={(p) => `${p.name} ${p.code ?? ''} ${p.id}`.trim()} onSelect={(p) => setCreateProjectId(p.id)} disabled={!createClientId} aria-labelledby="tt-inv-create-project-lbl" />
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div className="tt-inv-dialog__section">
+            <section className="tt-inv-page__section">
+              <div className="tt-inv-page__section-head">
+                <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.issueDate')}</h2>
+              </div>
               <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
                 <div className="tt-inv-dialog__field">
                   <span id="tt-inv-issue-date-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.issueDate')}</span>
@@ -528,18 +536,22 @@ export function InvoiceCreatePage() {
                     autoComplete="off"
                     disabled={createBusy}
                   />
-                  <p className="tt-inv-dialog__section-desc" style={{ marginTop: '0.35rem', marginBottom: 0 }}>
+                  <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
                     {t('timeTrackingPage.invoices.createDialog.invoiceNumberHint')}
                   </p>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div className="tt-inv-dialog__section tt-inv-dialog__section--callout">
-              <p className="tt-inv-dialog__section-title">{t('timeTrackingPage.invoices.createDialog.unbilledSectionTitle')}</p>
-              <p className="tt-inv-dialog__section-desc" style={{ marginTop: '0.35rem' }}>
-                {t('timeTrackingPage.invoices.createDialog.unbilledReimbursableNote')}
-              </p>
+            <section className="tt-inv-page__section tt-inv-page__section--soft">
+              <div className="tt-inv-page__section-head">
+                <div>
+                  <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.unbilledSectionTitle')}</h2>
+                  <p className="tt-inv-page__section-desc">
+                    {t('timeTrackingPage.invoices.createDialog.unbilledReimbursableNote')}
+                  </p>
+                </div>
+              </div>
               <div className="tt-inv-dialog__period-bar">
                 <div className="tt-inv-dialog__field">
                   <span id="tt-inv-unbill-from-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.fromLabel')}</span>
@@ -556,12 +568,12 @@ export function InvoiceCreatePage() {
                   </button>
                 </div>
               </div>
-            </div>
+            </section>
 
             {unbilledPartnerBlockReason ? (
-              <div className="tt-inv-dialog__section tt-inv-dialog__partner-gate" role="alert">
-                <p className="tt-inv-dialog__section-desc" style={{ marginBottom: '0.75rem' }}>{unbilledPartnerBlockReason}</p>
-                <p style={{ margin: 0 }} className="tt-inv-dialog__section-desc">
+              <section className="tt-inv-page__section tt-inv-dialog__partner-gate" role="alert">
+                <p className="tt-inv-page__section-desc" style={{ marginBottom: '0.75rem' }}>{unbilledPartnerBlockReason}</p>
+                <p style={{ margin: 0 }} className="tt-inv-page__section-desc">
                   <Link className="tt-inv-dialog__partner-gate-link" to={`${routes.timeTracking}?tab=reports`}>{t('timeTrackingPage.invoices.createDialog.openReportsLink')}</Link>
                   {createProjectId.trim() !== '' ? (
                     <>
@@ -572,14 +584,16 @@ export function InvoiceCreatePage() {
                     </>
                   ) : null}
                 </p>
-              </div>
+              </section>
             ) : null}
 
             {unbilledTime.length > 0 && (
-              <div className="tt-inv-dialog__subsection">
-                <h2 className="tt-inv__section-title">
-                  {t('timeTrackingPage.invoices.createDialog.timeSection').replace('{count}', String(unbilledTime.length))}
-                </h2>
+              <section className="tt-inv-page__section">
+                <div className="tt-inv-page__section-head">
+                  <h2 className="tt-inv-page__section-title">
+                    {t('timeTrackingPage.invoices.createDialog.timeSection').replace('{count}', String(unbilledTime.length))}
+                  </h2>
+                </div>
                 <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
                   <table className="tt-inv-mini">
                     <thead>
@@ -633,12 +647,14 @@ export function InvoiceCreatePage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </section>
             )}
 
             {unbilledExp.length > 0 && (
-              <div className="tt-inv-dialog__subsection">
-                <h2 className="tt-inv__section-title">{t('timeTrackingPage.invoices.createDialog.expensesSection').replace('{count}', String(unbilledExp.length))}</h2>
+              <section className="tt-inv-page__section">
+                <div className="tt-inv-page__section-head">
+                  <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.expensesSection').replace('{count}', String(unbilledExp.length))}</h2>
+                </div>
                 <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
                   <table className="tt-inv-mini">
                     <thead>
@@ -685,7 +701,7 @@ export function InvoiceCreatePage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </section>
             )}
           </div>
 
