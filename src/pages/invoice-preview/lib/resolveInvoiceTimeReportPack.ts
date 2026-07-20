@@ -5,6 +5,7 @@ import {
     fetchUnbilledTimeEntries,
     getInvoice,
     isForbiddenError,
+    listProjectTasksCached,
     listTimeTrackingUsers,
     type InvoiceLineDto,
     type TimeEntryRow,
@@ -15,6 +16,10 @@ import {
 import { fetchExpenseById } from '@entities/expenses/model/expensesApi';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { parseTimeEntryDescriptionLines } from './parseTimeEntryDescriptionLines';
+import {
+    buildProjectTaskNameByIdMap,
+    resolveInvoiceTimeReportTaskLabel,
+} from './resolveInvoiceTimeReportTaskLabel';
 import { packCurrencyCode } from './invoicePreviewPackShared';
 import { invoiceClientDescription } from '@pages/time-tracking/lib/invoiceClientDescription';
 import {
@@ -87,6 +92,20 @@ function lineAmount(ln: InvoiceLineDto): number {
 }
 
 type BuildingDetail = InvoiceTimeReportDetailRow & { authId: number | null; hoursNum: number; amtNum: number };
+
+async function loadProjectTaskNameById(clientId: string, projectId: string): Promise<Map<string, string>> {
+    const cid = clientId.trim();
+    const pid = projectId.trim();
+    if (!cid || !pid)
+        return new Map();
+    try {
+        const tasks = await listProjectTasksCached(cid, pid);
+        return buildProjectTaskNameByIdMap(tasks);
+    }
+    catch {
+        return new Map();
+    }
+}
 
 function toPublicRow(d: BuildingDetail): InvoiceTimeReportDetailRow {
     return {
@@ -212,20 +231,35 @@ export async function resolveInvoiceTimeReportPack(
             const selT = new Set(f.selTime);
             const selE = new Set(f.selExp);
             const details: BuildingDetail[] = [];
+            const clientId = f.createClientId.trim();
+            const taskNameById = await loadProjectTaskNameById(clientId, pid);
 
-            for (const e of timeRows.filter((x) => selT.has(x.id))) {
+            const selectedTimeRows = timeRows.filter((x) => selT.has(x.id));
+            const entryById = new Map<string, TimeEntryRow | null>();
+            await Promise.all(selectedTimeRows.map(async (e) => {
+                const row = await fetchTimeEntry(e.authUserId, e.id).catch(() => null);
+                entryById.set(e.id, row);
+            }));
+
+            for (const e of selectedTimeRows) {
                 const u = userByAuthId(users, e.authUserId);
                 const hrs = Number(e.hours);
                 const h = Number.isFinite(hrs) ? hrs : 0;
                 const amt = Number(e.billableAmount);
                 const a = Number.isFinite(amt) ? amt : 0;
-                const { taskLine, notes } = parseTimeEntryDescriptionLines(e.description ?? null);
+                const entry = entryById.get(e.id) ?? null;
+                const taskLabel = resolveInvoiceTimeReportTaskLabel({
+                    entry,
+                    invoiceLineDescription: e.description,
+                    taskNameById,
+                });
+                const { notes } = parseTimeEntryDescriptionLines(entry?.description ?? e.description ?? null);
                 details.push({
                     date: dateDisplayFromIso(e.workDate),
                     initials: u ? initialsFromUser(u) : String(e.authUserId).slice(0, 3),
-                    task: taskLine,
-                    description: invoiceClientDescription(e.description, taskLine)
-                        || (notes.trim().length ? notes : (taskLine || '—')),
+                    task: taskLabel,
+                    description: invoiceClientDescription(entry?.description ?? e.description, taskLabel)
+                        || (notes.trim().length ? notes : (taskLabel || '—')),
                     hours: formatTimeReportHours(h),
                     amount: formatTimeReportAmount(a, currency),
                     authId: e.authUserId,
@@ -261,6 +295,7 @@ export async function resolveInvoiceTimeReportPack(
         const inv = await getInvoice(session.invoiceId, true);
         const lines = [...(inv.lines ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
         const details: BuildingDetail[] = [];
+        const taskNameById = await loadProjectTaskNameById(inv.clientId, inv.projectId ?? '');
 
         const entryCache = new Map<string, TimeEntryRow | null>();
         async function getEntry(id: string | null | undefined, preferredAuthUserId: number | null): Promise<TimeEntryRow | null> {
@@ -327,7 +362,7 @@ export async function resolveInvoiceTimeReportPack(
                         : null;
 
                 let entry: TimeEntryRow | null = null;
-                if ((authId == null || !workIso) && ln.timeEntryId?.trim())
+                if (ln.timeEntryId?.trim())
                     entry = await getEntry(ln.timeEntryId, authId);
                 if (authId == null && entry?.auth_user_id != null)
                     authId = entry.auth_user_id;
@@ -337,15 +372,16 @@ export async function resolveInvoiceTimeReportPack(
 
                 const u = authId != null ? userByAuthId(users, authId) : null;
                 const hours = numHoursFromLine(ln);
-                const { taskLine } = parseTimeEntryDescriptionLines(entry?.description ?? null);
-                const taskFromEntry = (entry as { task_name?: string | null; task?: string | null } | null);
-                const taskHint = taskLine
-                    || String(taskFromEntry?.task_name ?? taskFromEntry?.task ?? '').trim();
+                const taskLabel = resolveInvoiceTimeReportTaskLabel({
+                    entry,
+                    invoiceLineDescription: desc,
+                    taskNameById,
+                });
                 details.push({
                     date: workIso ? dateDisplayFromIso(workIso) : '—',
                     initials: u ? initialsFromUser(u) : '—',
-                    task: taskHint || '',
-                    description: invoiceClientDescription(desc, taskHint) || '—',
+                    task: taskLabel,
+                    description: invoiceClientDescription(entry?.description ?? desc, taskLabel) || desc || '—',
                     hours: hours > 0 ? formatTimeReportHours(hours) : '',
                     amount: formatTimeReportAmount(amt, currency),
                     authId,

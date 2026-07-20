@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { invoiceClientDescription } from './invoiceClientDescription';
+import { invoiceClientDescription, detectInvoiceDescriptionTaskPrefix } from './invoiceClientDescription';
 import {
     collectConfirmedSnapshotTimeEntryIds,
     intersectPreviewTimeEntryIdsWithSnapshot,
@@ -29,6 +29,16 @@ describe('invoiceClientDescription', () => {
 
     it('uses explicit taskName hint', () => {
         expect(invoiceClientDescription('Custom Task\nNotes here', 'Custom Task')).toBe('Notes here');
+    });
+});
+
+describe('detectInvoiceDescriptionTaskPrefix', () => {
+    it('detects Task\\nNotes first line', () => {
+        expect(detectInvoiceDescriptionTaskPrefix('Document Review\nЗаконодательство')).toBe('Document Review');
+    });
+
+    it('detects leading known prefix', () => {
+        expect(detectInvoiceDescriptionTaskPrefix('Drafting Проект договора')).toBe('Drafting');
     });
 });
 

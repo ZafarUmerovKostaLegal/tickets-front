@@ -91,6 +91,30 @@ export function invoiceClientDescription(
     return text;
 }
 
+/** Detects a leading task label in raw time-entry or invoice-line description. */
+export function detectInvoiceDescriptionTaskPrefix(raw: string | null | undefined): string {
+    const base = (raw ?? '').trim();
+    if (!base)
+        return '';
+
+    const { taskLine, notes } = parseTimeEntryDescription(base);
+    if (notes.trim() && taskLine.trim())
+        return taskLine.trim();
+
+    for (const prefix of PREFIXES_BY_LENGTH) {
+        if (base.length <= prefix.length)
+            continue;
+        if (!base.toLowerCase().startsWith(prefix.toLowerCase()))
+            continue;
+        const after = base.slice(prefix.length);
+        if (!isSafePrefixBoundary(after))
+            continue;
+        return prefix;
+    }
+
+    return '';
+}
+
 export function normalizeNoteForDuplicateKey(
     raw: string | null | undefined,
     taskName?: string | null,
