@@ -1355,8 +1355,8 @@
 .tt-partner-confirmed__table--confirmed th,
 .tt-partner-confirmed__table--confirmed td {
   vertical-align: middle;
-  padding-top: 0.45rem;
-  padding-bottom: 0.45rem;
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
 }
 
 .tt-partner-confirmed__table--confirmed tbody tr {
@@ -1369,27 +1369,27 @@
 
 .tt-partner-confirmed__table--confirmed th:nth-child(1),
 .tt-partner-confirmed__table--confirmed td:nth-child(1) {
-  width: 14%;
+  width: 15%;
 }
 
 .tt-partner-confirmed__table--confirmed th:nth-child(2),
 .tt-partner-confirmed__table--confirmed td:nth-child(2) {
-  width: 22%;
+  width: 20%;
 }
 
 .tt-partner-confirmed__table--confirmed th:nth-child(3),
 .tt-partner-confirmed__table--confirmed td:nth-child(3) {
-  width: 12%;
+  width: 13%;
 }
 
 .tt-partner-confirmed__table--confirmed th:nth-child(4),
 .tt-partner-confirmed__table--confirmed td:nth-child(4) {
-  width: 28%;
+  width: 30%;
 }
 
 .tt-partner-confirmed__table--confirmed th:nth-child(5),
 .tt-partner-confirmed__table--confirmed td:nth-child(5) {
-  width: 7.5rem;
+  width: 8.5rem;
 }
 
 .tt-partner-confirmed__table--confirmed th:nth-child(6),
@@ -1427,10 +1427,10 @@
 
 .tt-partner-confirmed__td-period {
   font-size: 0.8125rem;
-  line-height: 1.3;
+  line-height: 1.4;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  color: var(--app-muted, #64748b);
+  color: var(--app-text-dim, #475569);
 }
 
 .tt-partner-confirmed__td-comments {
@@ -1468,53 +1468,73 @@
 }
 
 .tt-partner-confirmed__sig-compact {
-  gap: 0.3rem;
+  gap: 0.45rem;
 }
 
 .tt-partner-confirmed__sig-chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.15rem;
   max-width: 100%;
+  position: relative;
+}
+
+.tt-partner-confirmed__sig-chip .rp-partner-initials__chip {
+  min-width: 2.25rem;
+  padding: 0.28rem 0.6rem;
+  font-size: 0.8125rem;
 }
 
 .tt-partner-confirmed__sig-revoke-icon {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.4rem;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.2rem;
+  height: 1.2rem;
   margin: 0;
   padding: 0;
-  border: 1px solid transparent;
+  border: 1px solid color-mix(in srgb, #dc2626 30%, #fff);
   border-radius: 999px;
-  background: transparent;
+  background: #fff;
   color: #b91c1c;
   cursor: pointer;
-  opacity: 0.55;
-  transition: opacity 0.12s, background 0.12s, border-color 0.12s;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+  transition: opacity 0.12s, background 0.12s, transform 0.12s;
 }
 
 .tt-partner-confirmed__sig-chip--revokable:hover .tt-partner-confirmed__sig-revoke-icon,
+.tt-partner-confirmed__sig-chip--revokable:focus-within .tt-partner-confirmed__sig-revoke-icon,
 .tt-partner-confirmed__sig-revoke-icon:focus-visible {
   opacity: 1;
-  background: color-mix(in srgb, #fee2e2 70%, #fff);
-  border-color: color-mix(in srgb, #dc2626 28%, transparent);
+  pointer-events: auto;
 }
 
 .tt-partner-confirmed__sig-revoke-icon:hover:not(:disabled) {
   background: #fecaca;
-  border-color: color-mix(in srgb, #dc2626 40%, transparent);
+  transform: scale(1.06);
 }
 
 .tt-partner-confirmed__sig-revoke-icon:disabled {
-  opacity: 0.35;
+  opacity: 0.45;
   cursor: not-allowed;
+  pointer-events: auto;
 }
 
 .tt-partner-confirmed__sig-revoke-icon .tt-partner-confirmed__btn-spinner {
-  width: 11px;
-  height: 11px;
+  width: 10px;
+  height: 10px;
+}
+
+@media (hover: none) {
+  .tt-partner-confirmed__sig-chip--revokable .tt-partner-confirmed__sig-revoke-icon {
+    opacity: 0.9;
+    pointer-events: auto;
+  }
 }
 
 .tt-partner-confirmed__comments-btn {
@@ -1540,21 +1560,21 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.3rem;
+  gap: 0.35rem;
   width: auto;
-  min-width: 3.25rem;
-  padding: 0.22rem 0.45rem;
+  min-width: 3.75rem;
+  padding: 0.35rem 0.6rem;
   border-radius: 8px;
 }
 
 .tt-partner-confirmed__comments-btn--compact .tt-partner-confirmed__comments-btn-icon {
-  width: 1.2rem;
-  height: 1.2rem;
+  width: 1.35rem;
+  height: 1.35rem;
   border-radius: 6px;
 }
 
 .tt-partner-confirmed__comments-btn--compact .tt-partner-confirmed__comments-btn-count {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   color: var(--app-muted, #64748b);
