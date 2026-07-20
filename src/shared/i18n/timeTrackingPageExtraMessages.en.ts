@@ -546,6 +546,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             hint: 'Click “+” or open the field above to add a member.',
             rateSourceGlobal: 'Showing the global rate (no project override). Editing the amount on save will create a project rate.',
             rateSourceProject: 'Project rate (overrides the global rate).',
+            rateSourceOtherProject: 'Showing a rate from another project (fallback). Editing the amount on save will create a rate for this project.',
             changeFrom: {
                 cta: 'Change from date',
                 title: 'Change project rate from a date',

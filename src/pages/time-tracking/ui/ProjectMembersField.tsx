@@ -101,7 +101,7 @@ export type ProjectMemberRateDraft = {
     currency: string;
     rateId?: string;
     /** Where the displayed amount came from when the modal loaded. */
-    source?: 'project' | 'global' | 'none';
+    source?: 'project' | 'global' | 'other_project' | 'none';
     baselineAmount?: string;
     baselineCurrency?: string;
 };
@@ -348,7 +348,9 @@ export function ProjectMembersField({
                     ? t('timeTrackingPage.projects.membersField.rateSourceGlobal')
                     : dr.source === 'project'
                         ? t('timeTrackingPage.projects.membersField.rateSourceProject')
-                        : null;
+                        : dr.source === 'other_project'
+                            ? t('timeTrackingPage.projects.membersField.rateSourceOtherProject')
+                            : null;
                 return (<li key={u.id} className="tt-tm-members__chip">
                     <div className="tt-tm-members__chip-identity">
                       <span className="tt-tm-members__chip-text">{label}</span>
