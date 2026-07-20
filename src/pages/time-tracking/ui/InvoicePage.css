@@ -272,20 +272,30 @@
   border: 1px solid var(--app-border, #e2e8f0);
 }
 
-/* Create page footer */
-.tt-inv-page__foot {
-  display: flex;
+/* Create page actions live in the top navbar (no sticky floating bar) */
+.time-page--invoice-sub .time-page__navbar:has(.tt-inv-page__nav-actions) {
+  height: auto;
+  min-height: 50px;
   flex-wrap: wrap;
-  gap: 0.65rem;
-  justify-content: flex-end;
-  padding: 0.85rem 1rem;
-  border: 1px solid var(--app-border, #e2e8f0);
-  border-radius: 14px;
-  background: var(--app-surface, #fff);
-  position: sticky;
-  bottom: 0.75rem;
-  z-index: 2;
-  box-shadow: 0 -6px 20px color-mix(in srgb, var(--app-text, #0f172a) 6%, transparent);
+  row-gap: 0.45rem;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+
+.tt-inv-page__nav-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  max-width: min(100%, 28rem);
+}
+
+.tt-inv-page__nav-btn {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
 }
 
 .tt-inv-page__loading {
@@ -313,12 +323,15 @@
     display: none;
   }
 
-  .tt-inv-page__foot {
+  .tt-inv-page__nav-actions {
+    order: 5;
+    flex: 1 1 100%;
+    max-width: none;
     justify-content: stretch;
-    bottom: 0.5rem;
+    margin-top: 0.15rem;
   }
 
-  .tt-inv-page__foot .tt-reports__btn {
+  .tt-inv-page__nav-btn {
     flex: 1 1 auto;
   }
 }

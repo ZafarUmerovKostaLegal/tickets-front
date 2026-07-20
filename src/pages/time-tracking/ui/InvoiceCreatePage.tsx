@@ -476,6 +476,27 @@ export function InvoiceCreatePage() {
           <div className="time-page__navbar-sep" aria-hidden="true" />
           <span className="time-page__navbar-title">{t('timeTrackingPage.invoices.createDialog.title')}</span>
           <div className="time-page__navbar-spacer" />
+          <div className="tt-inv-page__nav-actions" role="group" aria-label={t('timeTrackingPage.invoices.createDialog.title')}>
+            <button
+              type="button"
+              className="tt-reports__btn tt-reports__btn--outline tt-inv-page__nav-btn"
+              onClick={() => void openInvoicePreview()}
+              disabled={createBusy}
+              title={t('timeTrackingPage.invoices.createDialog.previewTitle')}
+            >
+              {t('timeTrackingPage.invoices.createDialog.preview')}
+            </button>
+            <button
+              type="button"
+              className="tt-reports__btn tt-reports__btn--accent tt-inv-page__nav-btn"
+              onClick={() => void handleCreate()}
+              disabled={createBusy}
+            >
+              {createBusy
+                ? t('timeTrackingPage.invoices.createDialog.creating')
+                : t('timeTrackingPage.invoices.createDialog.createDraft')}
+            </button>
+          </div>
           <div className="time-page__navbar-settings">
             <AppPageSettings />
           </div>
@@ -704,16 +725,6 @@ export function InvoiceCreatePage() {
               </section>
             )}
           </div>
-
-          <footer className="tt-inv-page__foot">
-            <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => void openInvoicePreview()} disabled={createBusy} title={t('timeTrackingPage.invoices.createDialog.previewTitle')}>
-              {t('timeTrackingPage.invoices.createDialog.preview')}
-            </button>
-            <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={toInvoices} disabled={createBusy}>{t('timeTrackingPage.common.cancel')}</button>
-            <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={() => void handleCreate()} disabled={createBusy}>
-              {createBusy ? t('timeTrackingPage.invoices.createDialog.creating') : t('timeTrackingPage.invoices.createDialog.createDraft')}
-            </button>
-          </footer>
         </div>
       </main>
     </div>
