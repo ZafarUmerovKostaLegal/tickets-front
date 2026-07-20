@@ -52,15 +52,37 @@ const IcoComment = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
 </svg>);
 
-export function PartnerConfirmedCommentsCell({ count, preview, countLabel, openLabel, emptyLabel, onOpen, }: {
+export function PartnerConfirmedCommentsCell({ count, preview, countLabel, openLabel, emptyLabel, onOpen, compact, }: {
     count: number;
     preview: string | null;
     countLabel: string;
     openLabel: string;
     emptyLabel: string;
     onOpen: () => void;
+    compact?: boolean;
 }) {
     const hasComments = count > 0;
+    const tip = hasComments && preview
+        ? `${countLabel}: ${preview}`
+        : openLabel;
+    if (compact) {
+        return (
+            <button
+                type="button"
+                className={`tt-partner-confirmed__comments-btn tt-partner-confirmed__comments-btn--compact${hasComments ? ' tt-partner-confirmed__comments-btn--has' : ''}`}
+                onClick={onOpen}
+                aria-label={openLabel}
+                title={tip}
+            >
+                <span className="tt-partner-confirmed__comments-btn-icon" aria-hidden>
+                    <IcoComment />
+                </span>
+                <span className="tt-partner-confirmed__comments-btn-count">
+                    {hasComments ? String(count) : '0'}
+                </span>
+            </button>
+        );
+    }
     return (<button type="button" className="tt-partner-confirmed__comments-btn" onClick={onOpen} aria-label={openLabel} title={openLabel}>
       <span className="tt-partner-confirmed__comments-btn-icon" aria-hidden>
         <IcoComment />

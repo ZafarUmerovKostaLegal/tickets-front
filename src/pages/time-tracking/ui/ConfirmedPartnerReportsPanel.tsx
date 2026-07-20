@@ -150,6 +150,24 @@ function fmtIsoDateShort(iso: string | null | undefined, locale: 'ru' | 'en'): s
     }
 }
 
+function formatPeriodCompact(from: string, to: string, locale: 'ru' | 'en'): string {
+    const tag = localeTag(locale);
+    const fmt = (iso: string) => {
+        const d = new Date(`${iso.slice(0, 10)}T12:00:00`);
+        if (Number.isNaN(d.getTime()))
+            return iso.slice(0, 10);
+        return d.toLocaleDateString(tag, { day: '2-digit', month: '2-digit', year: 'numeric' });
+    };
+    return `${fmt(from)} – ${fmt(to)}`;
+}
+
+const IcoRevoke = () => (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M3 7v6h6" />
+        <path d="M3 13a9 9 0 1 0 3-7.7L3 7" />
+    </svg>
+);
+
 function PartnerSignaturesList({
     signatures,
     usersById,
@@ -160,7 +178,6 @@ function PartnerSignaturesList({
     revokeTitle,
     revokeAria,
     revokeBusyLabel,
-    revokeActionLabel,
     onRevoke,
 }: {
     signatures: PartnerReportConfirmationRequest['signatures'];
@@ -172,52 +189,61 @@ function PartnerSignaturesList({
     revokeTitle: (partnerName: string) => string;
     revokeAria: string;
     revokeBusyLabel: string;
-    revokeActionLabel: string;
     onRevoke: (partnerAuthUserId: number, partnerName: string) => void;
 }) {
     if (signatures.length === 0)
         return <span className="tt-partner-confirmed__empty-cell">—</span>;
-    return (<ul className="tt-partner-confirmed__sig-list">
-        {signatures.map((s, i) => {
-            const meta = usersById.get(s.partnerAuthUserId);
-            const name = meta?.label ?? `ID ${s.partnerAuthUserId}`;
-            const initials = partnerInitialsForId(s.partnerAuthUserId, usersById);
-            const initialsTitle = initials === '—' ? name : `${initials} · ${name}`;
-            const showRevoke = canRevoke(s.partnerAuthUserId);
-            const busy = revokeBusyPartnerId === s.partnerAuthUserId;
-            const blocked = Boolean(revokeDisabledReason);
-            const title = busy
-                ? revokeBusyLabel
-                : blocked
-                    ? (revokeDisabledReason ?? '')
-                    : revokeTitle(name);
-            return (
-                <li key={`${s.partnerAuthUserId}-${s.confirmedAt}-${i}`} className="tt-partner-confirmed__sig-item">
-                    <span className="tt-partner-confirmed__sig-main">
-                        <span className="tt-partner-confirmed__sig-name" title={initialsTitle}>{initials}</span>
-                        <span className="tt-partner-confirmed__sig-sep" aria-hidden>·</span>
-                        <span className="tt-partner-confirmed__sig-when">{fmtIsoDateShort(s.confirmedAt, locale)}</span>
-                    </span>
-                    {showRevoke ? (
-                        <button
-                            type="button"
-                            className="tt-partner-confirmed__sig-revoke"
-                            disabled={busy || blocked || (revokeBusyPartnerId != null && !busy)}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                onRevoke(s.partnerAuthUserId, name);
-                            }}
-                            title={title}
-                            aria-label={busy ? revokeBusyLabel : `${revokeAria}: ${name}`}
+    return (
+        <div className="rp-partner-initials tt-partner-confirmed__sig-compact" role="list">
+            {signatures.map((s, i) => {
+                const meta = usersById.get(s.partnerAuthUserId);
+                const name = meta?.label ?? `ID ${s.partnerAuthUserId}`;
+                const initials = partnerInitialsForId(s.partnerAuthUserId, usersById);
+                const when = fmtIsoDateShort(s.confirmedAt, locale);
+                const chipTitle = initials === '—'
+                    ? `${name} · ${when}`
+                    : `${initials} · ${name} · ${when}`;
+                const showRevoke = canRevoke(s.partnerAuthUserId);
+                const busy = revokeBusyPartnerId === s.partnerAuthUserId;
+                const blocked = Boolean(revokeDisabledReason);
+                const revokeTip = busy
+                    ? revokeBusyLabel
+                    : blocked
+                        ? (revokeDisabledReason ?? '')
+                        : revokeTitle(name);
+                return (
+                    <span
+                        key={`${s.partnerAuthUserId}-${s.confirmedAt}-${i}`}
+                        role="listitem"
+                        className={`tt-partner-confirmed__sig-chip${showRevoke ? ' tt-partner-confirmed__sig-chip--revokable' : ''}`}
+                    >
+                        <span
+                            className="rp-partner-initials__chip rp-partner-initials__chip--signed"
+                            title={chipTitle}
                         >
-                            {busy ? revokeBusyLabel : revokeActionLabel}
-                        </button>
-                    ) : null}
-                </li>
-            );
-        })}
-    </ul>);
+                            {initials}
+                        </span>
+                        {showRevoke ? (
+                            <button
+                                type="button"
+                                className="tt-partner-confirmed__sig-revoke-icon"
+                                disabled={busy || blocked || (revokeBusyPartnerId != null && !busy)}
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    onRevoke(s.partnerAuthUserId, name);
+                                }}
+                                title={revokeTip}
+                                aria-label={busy ? revokeBusyLabel : `${revokeAria}: ${name}`}
+                            >
+                                {busy ? <IcoSpinner /> : <IcoRevoke />}
+                            </button>
+                        ) : null}
+                    </span>
+                );
+            })}
+        </div>
+    );
 }
 
 function userLabel(map: Map<number, PartnerUserMeta>, id: number): string {
@@ -933,7 +959,9 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                             ) : null}
                         </span>
                     </td>
-                    <td className="tt-partner-confirmed__td-period" data-label={columnLabels.period}>{formatIsoRangeTitle(r.dateFrom, r.dateTo, { prefix: false, locale: localeTag(locale) })}</td>
+                    <td className="tt-partner-confirmed__td-period" data-label={columnLabels.period} title={formatIsoRangeTitle(r.dateFrom, r.dateTo, { prefix: false, locale: localeTag(locale) })}>
+                        {formatPeriodCompact(r.dateFrom, r.dateTo, locale)}
+                    </td>
                     <td className="tt-partner-confirmed__cell-multiline tt-partner-confirmed__td-partners" data-label={columnLabels.partners}>
                         <PartnerSignaturesList
                             signatures={r.signatures}
@@ -947,14 +975,21 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                             revokeTitle={(name) => t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureTitle').replace('{name}', name)}
                             revokeAria={t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureAria')}
                             revokeBusyLabel={t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureBusy')}
-                            revokeActionLabel={t('timeTrackingPage.reports.partnerConfirmed.revokeSignatureAction')}
                             onRevoke={(partnerAuthUserId, partnerName) => {
                                 void revokeSignature(r, partnerAuthUserId, partnerName);
                             }}
                         />
                     </td>
                     <td className="tt-partner-confirmed__td-comments" data-label={columnLabels.comments}>
-                        <PartnerConfirmedCommentsCell count={commentsCount} preview={commentsPreview} countLabel={commentsCountLabel} openLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsOpen').replace('{project}', resolveProjectLabel(r))} emptyLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsCountZero')} onOpen={() => openCommentsDrawer(r)} />
+                        <PartnerConfirmedCommentsCell
+                            count={commentsCount}
+                            preview={commentsPreview}
+                            countLabel={commentsCountLabel}
+                            openLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsOpen').replace('{project}', resolveProjectLabel(r))}
+                            emptyLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsCountZero')}
+                            onOpen={() => openCommentsDrawer(r)}
+                            compact
+                        />
                     </td>
                     <td className="tt-partner-confirmed__actions-cell tt-partner-confirmed__td-actions" data-label={columnLabels.actions}>
                         <div className="tt-partner-confirmed__actions" role="group" aria-label={columnLabels.actions}>
