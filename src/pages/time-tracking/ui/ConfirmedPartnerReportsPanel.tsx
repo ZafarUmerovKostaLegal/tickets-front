@@ -48,6 +48,7 @@ import { useI18n } from '@shared/i18n';
 import { localeTag } from '@shared/i18n/ticketUi';
 import { getInvoiceDetailUrl } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
+import { getUsers, type User } from '@entities/user';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { useAppDialog } from '@shared/ui';
@@ -62,6 +63,19 @@ import { PartnerReportsListLoading } from './PartnerReportsListLoading';
 import { MonthlyPartnerArchivePanel } from './MonthlyPartnerArchivePanel';
 import type { PartnerConfirmedSubview } from '@entities/time-tracking/model/reportsPanelConfig';
 
+type PartnerUserMeta = {
+    label: string;
+    initials: string | null;
+};
+
+function normalizeSystemInitials(raw: string | null | undefined): string | null {
+    const stored = (raw ?? '').trim().toUpperCase().replace(/Ё/g, 'Е');
+    return stored || null;
+}
+
+function partnerInitialsForId(id: number, usersById: Map<number, PartnerUserMeta>): string {
+    return usersById.get(id)?.initials ?? '—';
+}
 const IcoRefresh = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
     <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
     <path d="M3 3v5h5" />
@@ -150,7 +164,7 @@ function PartnerSignaturesList({
     onRevoke,
 }: {
     signatures: PartnerReportConfirmationRequest['signatures'];
-    usersById: Map<number, string>;
+    usersById: Map<number, PartnerUserMeta>;
     locale: 'ru' | 'en';
     canRevoke: (partnerAuthUserId: number) => boolean;
     revokeDisabledReason: string | null;
@@ -165,7 +179,10 @@ function PartnerSignaturesList({
         return <span className="tt-partner-confirmed__empty-cell">—</span>;
     return (<ul className="tt-partner-confirmed__sig-list">
         {signatures.map((s, i) => {
-            const name = userLabel(usersById, s.partnerAuthUserId);
+            const meta = usersById.get(s.partnerAuthUserId);
+            const name = meta?.label ?? `ID ${s.partnerAuthUserId}`;
+            const initials = partnerInitialsForId(s.partnerAuthUserId, usersById);
+            const initialsTitle = initials === '—' ? name : `${initials} · ${name}`;
             const showRevoke = canRevoke(s.partnerAuthUserId);
             const busy = revokeBusyPartnerId === s.partnerAuthUserId;
             const blocked = Boolean(revokeDisabledReason);
@@ -177,7 +194,7 @@ function PartnerSignaturesList({
             return (
                 <li key={`${s.partnerAuthUserId}-${s.confirmedAt}-${i}`} className="tt-partner-confirmed__sig-item">
                     <span className="tt-partner-confirmed__sig-main">
-                        <span className="tt-partner-confirmed__sig-name">{name}</span>
+                        <span className="tt-partner-confirmed__sig-name" title={initialsTitle}>{initials}</span>
                         <span className="tt-partner-confirmed__sig-sep" aria-hidden>·</span>
                         <span className="tt-partner-confirmed__sig-when">{fmtIsoDateShort(s.confirmedAt, locale)}</span>
                     </span>
@@ -203,8 +220,8 @@ function PartnerSignaturesList({
     </ul>);
 }
 
-function userLabel(map: Map<number, string>, id: number): string {
-    return map.get(id) ?? `ID ${id}`;
+function userLabel(map: Map<number, PartnerUserMeta>, id: number): string {
+    return map.get(id)?.label ?? `ID ${id}`;
 }
 
 type PartnerFilterItem = {
@@ -261,7 +278,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
     const [error, setError] = useState<string | null>(null);
     const [archiveError, setArchiveError] = useState<string | null>(null);
     const [query, setQuery] = useState('');
-    const [usersById, setUsersById] = useState<Map<number, string>>(new Map());
+    const [usersById, setUsersById] = useState<Map<number, PartnerUserMeta>>(new Map());
     const [projectRows, setProjectRows] = useState<TimeManagerClientProjectRow[]>([]);
     const [clientNamesById, setClientNamesById] = useState<Map<string, string>>(new Map());
     const [clientMetaByProjectId, setClientMetaByProjectId] = useState<Map<string, PartnerReportClientMeta>>(new Map());
@@ -383,11 +400,25 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
     }, [commentComposeDraft, commentsDrawerRow, commentsSubmitting, drawerComments, patchRowCommentsSummary, t]);
 
     const loadUsers = useCallback(() => {
-        void listTimeTrackingUsers().then((list: TimeTrackingUserRow[]) => {
-            const m = new Map<number, string>();
-            for (const r of list) {
+        void Promise.all([
+            listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]),
+            getUsers(true).catch(() => [] as User[]),
+        ]).then(([ttUsers, authUsers]) => {
+            const m = new Map<number, PartnerUserMeta>();
+            for (const r of ttUsers) {
                 const label = r.display_name?.trim() || r.email?.trim() || `ID ${r.id}`;
-                m.set(r.id, label);
+                m.set(r.id, { label, initials: normalizeSystemInitials(r.initials) });
+            }
+            for (const u of authUsers) {
+                if (!u.id)
+                    continue;
+                const label = u.display_name?.trim() || u.email?.trim() || `ID ${u.id}`;
+                const initials = normalizeSystemInitials(u.initials);
+                const prev = m.get(u.id);
+                m.set(u.id, {
+                    label: prev?.label || label,
+                    initials: initials ?? prev?.initials ?? null,
+                });
             }
             setUsersById(m);
         }).catch(() => {
@@ -395,6 +426,12 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         });
     }, []);
 
+    const usersLabelById = useMemo(() => {
+        const m = new Map<number, string>();
+        for (const [id, meta] of usersById)
+            m.set(id, meta.label);
+        return m;
+    }, [usersById]);
     const loadMeta = useCallback(() => {
         void loadPartnerReportDisplayLookups().then(({ projectRows: projects, clientNamesById: clientMap, clientMetaByProjectId: projectClientMeta }) => {
             setProjectRows(projects);
@@ -573,6 +610,11 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             if (!q)
                 return true;
             const pendingNames = r.pendingPartnerAuthUserIds.map((id) => userLabel(usersById, id));
+            const partnerInitials = [
+                ...r.requiredPartnerAuthUserIds,
+                ...r.signatures.map((s) => s.partnerAuthUserId),
+                ...r.pendingPartnerAuthUserIds,
+            ].map((id) => partnerInitialsForId(id, usersById));
             const hay = [
                 r.title,
                 resolveProjectLabel(r),
@@ -588,6 +630,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                 ...r.requiredPartnerAuthUserIds.map(String),
                 ...r.signatures.map((s) => String(s.partnerAuthUserId)),
                 ...pendingNames,
+                ...partnerInitials,
             ].join(' ').toLowerCase();
             return hay.includes(q);
         });
@@ -610,7 +653,8 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             allOpt,
             ...ids.map((id) => {
                 const name = userLabel(usersById, id);
-                return { id: String(id), name, search: `${name} ${id}` };
+                const initials = partnerInitialsForId(id, usersById);
+                return { id: String(id), name, search: `${name} ${initials} ${id}` };
             }),
         ];
     }, [archiveRows, locale, rows, t, usersById]);
@@ -1044,7 +1088,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             </div>) : null}
         </div>
 
-        <PartnerConfirmedCommentsDrawer open={commentsDrawerRow != null} row={commentsDrawerRow} projectLabel={commentsDrawerRow ? resolveProjectLabel(commentsDrawerRow) : ''} clientLabel={commentsDrawerRow ? resolveClientLabel(commentsDrawerRow) : ''} periodLabel={commentsDrawerRow ? formatIsoRangeTitle(commentsDrawerRow.dateFrom, commentsDrawerRow.dateTo, { prefix: false, locale: localeTag(locale) }) : ''} comments={drawerComments} usersById={usersById} locale={locale} draft={commentComposeDraft} onDraftChange={setCommentComposeDraft} onAdd={addCommentForOpenRow} onClose={closeCommentsDrawer} currentUserId={currentUser?.id ?? null} loading={commentsLoading} submitting={commentsSubmitting} error={commentsError} labels={{
+        <PartnerConfirmedCommentsDrawer open={commentsDrawerRow != null} row={commentsDrawerRow} projectLabel={commentsDrawerRow ? resolveProjectLabel(commentsDrawerRow) : ''} clientLabel={commentsDrawerRow ? resolveClientLabel(commentsDrawerRow) : ''} periodLabel={commentsDrawerRow ? formatIsoRangeTitle(commentsDrawerRow.dateFrom, commentsDrawerRow.dateTo, { prefix: false, locale: localeTag(locale) }) : ''} comments={drawerComments} usersById={usersLabelById} locale={locale} draft={commentComposeDraft} onDraftChange={setCommentComposeDraft} onAdd={addCommentForOpenRow} onClose={closeCommentsDrawer} currentUserId={currentUser?.id ?? null} loading={commentsLoading} submitting={commentsSubmitting} error={commentsError} labels={{
             title: t('timeTrackingPage.reports.partnerConfirmed.commentsDrawerTitle'),
             empty: t('timeTrackingPage.reports.partnerConfirmed.commentsEmpty'),
             loading: t('timeTrackingPage.reports.partnerConfirmed.loading'),
