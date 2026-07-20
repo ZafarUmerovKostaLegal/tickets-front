@@ -78,7 +78,7 @@ export function PartnerConfirmedCommentsCell({ count, preview, countLabel, openL
                     <IcoComment />
                 </span>
                 <span className="tt-partner-confirmed__comments-btn-count">
-                    {hasComments ? String(count) : '0'}
+                    {hasComments ? countLabel : emptyLabel}
                 </span>
             </button>
         );
