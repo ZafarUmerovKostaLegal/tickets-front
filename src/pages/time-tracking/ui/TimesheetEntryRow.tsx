@@ -87,8 +87,8 @@ export const TimesheetEntryRow = memo(function TimesheetEntryRow({
             <span className="tsp__row-bar" style={{ background: e.color }} />
             <div className="tsp__row-txt">
                 <p className="tsp__row-proj">
-                    <strong>{e.project}</strong>
-                    <span className="tsp__row-client">({e.client})</span>
+                    <strong>{e.project.trim() || e.task.trim() || t('timeTrackingPage.timesheet.noProject')}</strong>
+                    {e.client.trim() ? <span className="tsp__row-client">({e.client})</span> : null}
                     {!e.billable && <span className="tsp__row-nb">Non-billable</span>}
                     {e.isVoided
                         ? (<span className="tsp__row-void-badge" title={t('timeTrackingPage.timesheet.voidLocked')}>
@@ -96,7 +96,7 @@ export const TimesheetEntryRow = memo(function TimesheetEntryRow({
                           </span>)
                         : null}
                 </p>
-                <p className="tsp__row-task">{e.task}</p>
+                {e.project.trim() && e.task.trim() ? <p className="tsp__row-task">{e.task}</p> : null}
                 {e.notes && <p className="tsp__row-notes">{e.notes}</p>}
             </div>
             <div className="tsp__row-acts">

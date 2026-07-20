@@ -17,6 +17,12 @@ describe('invoiceClientDescription', () => {
         expect(invoiceClientDescription('Telephone calls Звонок клиенту')).toBe('Звонок клиенту');
     });
 
+    it('strips glued task label without separator', () => {
+        expect(invoiceClientDescription('Document ReviewЗаконодательство, документы и проект')).toBe(
+            'Законодательство, документы и проект',
+        );
+    });
+
     it('keeps plain notes unchanged', () => {
         expect(invoiceClientDescription('Законодательство и договор')).toBe('Законодательство и договор');
     });

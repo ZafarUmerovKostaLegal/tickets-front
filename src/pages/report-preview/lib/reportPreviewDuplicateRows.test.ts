@@ -98,4 +98,27 @@ describe('deduplicateTimeExcelPreviewRows', () => {
         expect(out).toHaveLength(1);
         expect(out[0]?.timeEntryId).toBe('a');
     });
+
+    it('collapses glued Document Review note with clean near-duplicate', () => {
+        const rows = [
+            row({
+                rowKey: 'a',
+                workDate: '2026-07-15',
+                taskName: 'Document Review',
+                note: 'Document ReviewЗаконодательство, документы и проект,',
+                hours: 2.633333,
+                amountToPay: 395,
+            }),
+            row({
+                rowKey: 'b',
+                workDate: '2026-07-15',
+                taskName: 'Document Review',
+                note: 'Законодательство, документы и проект договора на услуги',
+                hours: 2.633333,
+                amountToPay: 395,
+            }),
+        ];
+        const kept = deduplicateTimeExcelPreviewRows(rows);
+        expect(kept.filter((r) => r.rowKind === 'entry')).toHaveLength(1);
+    });
 });

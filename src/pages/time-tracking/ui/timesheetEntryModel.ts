@@ -183,11 +183,13 @@ export function mapTimeEntryRowToUi(row: TimeEntryRow, projectById: Map<string, 
     const voidKind: 'rejected' | 'reallocated' | null = isVoided
         ? (row.void_kind === 'reallocated' ? 'reallocated' : 'rejected')
         : null;
+    const projectName = (p?.name ?? apiProjectName ?? '').trim();
+    const clientName = (p?.client ?? apiClientName ?? '').trim();
     return {
         id: row.id,
         date: row.work_date,
-        project: p?.name ?? apiProjectName ?? '',
-        client: p?.client ?? apiClientName ?? '',
+        project: projectName,
+        client: clientName,
         projectId: pid,
         projectCurrency: p?.currency,
         taskId: row.task_id ?? undefined,

@@ -28,9 +28,26 @@ export const INVOICE_DESCRIPTION_TASK_PREFIXES = [
 
 const PREFIXES_BY_LENGTH = [...INVOICE_DESCRIPTION_TASK_PREFIXES].sort((a, b) => b.length - a.length);
 
+const SEP_START = /^[\s:.\u2014\u2013\-]+/u;
+
+function isSafePrefixBoundary(after: string): boolean {
+    if (!after)
+        return false;
+    const ch = after[0]!;
+    if (/[\s:\n.\u2014\u2013\-]/.test(ch))
+        return true;
+    // Glued Harvest-style: "Document ReviewЗаконодательство"
+    if (ch.charCodeAt(0) > 127)
+        return true;
+    if (ch === ch.toUpperCase() && ch !== ch.toLowerCase())
+        return true;
+    return false;
+}
+
 /**
  * Client-facing invoice / unbilled description: notes only, without task name
  * (`Task\\nNotes` storage) or a leading known task label (`Document Review …`).
+ * Also strips glued labels without a separator (`Document ReviewЗаконодательство`).
  */
 export function invoiceClientDescription(
     raw: string | null | undefined,
@@ -48,9 +65,14 @@ export function invoiceClientDescription(
     const task = (taskName ?? '').trim();
     let text = base;
     if (task && text.toLowerCase().startsWith(task.toLowerCase())) {
-        const rest = text.slice(task.length).replace(/^[\s:.—–\-–]+/u, '').trim();
-        if (rest)
-            text = rest;
+        const after = text.slice(task.length);
+        if (isSafePrefixBoundary(after) || !after.trim()) {
+            const rest = after.replace(SEP_START, '').trim();
+            if (rest)
+                text = rest;
+            else if (!after.trim())
+                return '';
+        }
     }
 
     for (const prefix of PREFIXES_BY_LENGTH) {
@@ -59,12 +81,31 @@ export function invoiceClientDescription(
         if (!text.toLowerCase().startsWith(prefix.toLowerCase()))
             continue;
         const after = text.slice(prefix.length);
-        if (!/^[\s:.—–\-–]/u.test(after) && after[0] !== '\n')
+        if (!isSafePrefixBoundary(after))
             continue;
-        const rest = after.replace(/^[\s:.—–\-–]+/u, '').trim();
+        const rest = after.replace(SEP_START, '').trim();
         if (rest)
             return rest;
     }
 
     return text;
+}
+
+export function normalizeNoteForDuplicateKey(
+    raw: string | null | undefined,
+    taskName?: string | null,
+): string {
+    return invoiceClientDescription(raw, taskName).trim().toLowerCase().split(/\s+/).filter(Boolean).join(' ');
+}
+
+export function notesAreNearDuplicate(a: string, b: string, minPrefixLen = 24): boolean {
+    if (a === b)
+        return true;
+    if (!a || !b)
+        return false;
+    const [shorter, longer] = a.length <= b.length ? [a, b] : [b, a];
+    const core = shorter.replace(/[ ,.;:]+$/u, '');
+    if (core.length < minPrefixLen)
+        return false;
+    return longer.startsWith(core);
 }

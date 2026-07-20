@@ -326,6 +326,7 @@ export const timeTrackingPageMessages = {
         voidReject: 'Снято: не принято',
         voidBadgeRealloc: 'Снято: перенос',
         voidBadgeReject: 'Снято: не принято',
+        noProject: 'Без проекта',
         voidLocked: 'Запись снята с учёта',
         voidEditBlocked: 'Запись снята с учёта — правки недоступны',
         editEntry: 'Изменить запись',

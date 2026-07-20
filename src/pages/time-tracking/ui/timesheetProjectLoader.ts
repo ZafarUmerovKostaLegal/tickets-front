@@ -14,6 +14,8 @@ export type ProjectOption = {
     clientId: string;
     currency: string;
     recordsLanguage: TimeManagerProjectRecordsLanguage;
+    /** Archived / paused / ended — keep for historical display, not for new entries. */
+    isClosed?: boolean;
 };
 function hashToColor(seed: string): string {
     let h = 0;
@@ -25,7 +27,7 @@ function hashToColor(seed: string): string {
 function isActiveProjectForTimesheet(p: TimeTrackingProjectForExpense, today: string): boolean {
     return !isProjectClosedForTimeEntry(p, today);
 }
-function mapProjectRowToOption(p: TimeTrackingProjectForExpense): ProjectOption {
+function mapProjectRowToOption(p: TimeTrackingProjectForExpense, today: string = todayYmdUtc()): ProjectOption {
     return {
         id: p.id,
         name: p.name,
@@ -34,12 +36,15 @@ function mapProjectRowToOption(p: TimeTrackingProjectForExpense): ProjectOption 
         color: hashToColor(p.id),
         currency: (p.currency && String(p.currency).trim()) || 'USD',
         recordsLanguage: p.recordsLanguage ?? 'ENG',
+        isClosed: isProjectClosedForTimeEntry(p, today),
     };
 }
 function tForLocale(locale: AppLocale) {
     return createTranslator(getMessages(locale));
 }
-export async function loadTimesheetProjectOptions(user: User, locale: AppLocale = 'ru'): Promise<{
+export async function loadTimesheetProjectOptions(user: User, locale: AppLocale = 'ru', opts?: {
+    includeClosed?: boolean;
+}): Promise<{
     items: ProjectOption[];
     error: string | null;
 }> {
@@ -51,11 +56,16 @@ export async function loadTimesheetProjectOptions(user: User, locale: AppLocale 
         return { items: [], error: null };
     }
     const today = todayYmdUtc();
-    const rows = await listProjectsForExpenses();
+    const includeClosed = Boolean(opts?.includeClosed);
+    // Archived/closed projects must stay in the catalog for historical rows;
+    // new-entry pickers call without includeClosed and stay active-only.
+    const rows = await listProjectsForExpenses(
+        includeClosed ? { includeArchived: true } : undefined,
+    );
     const items = rows
         .filter((p) => allowed.has(p.id))
-        .filter((p) => isActiveProjectForTimesheet(p, today))
-        .map(mapProjectRowToOption);
+        .filter((p) => includeClosed || isActiveProjectForTimesheet(p, today))
+        .map((p) => mapProjectRowToOption(p, today));
     if (allowed.size > 0 && items.length === 0) {
         return {
             items: [],
@@ -76,17 +86,18 @@ export async function loadTimesheetProjectCatalogForEntriesView(viewer: User, op
     items: ProjectOption[];
     error: string | null;
 }> {
+    // Include closed projects so historical timesheet rows keep project/client titles.
     const subject = opts?.subjectUser;
     if (subject && subject.id !== viewer.id) {
         const byId = new Map<string, ProjectOption>();
         const viewerResult = await loadTimesheetProjectOptionsForMove(viewer, locale);
         mergeProjectOptions(byId, viewerResult.items);
-        const subjectResult = await loadTimesheetProjectOptions(subject, locale);
+        const subjectResult = await loadTimesheetProjectOptions(subject, locale, { includeClosed: true });
         mergeProjectOptions(byId, subjectResult.items);
         const error = viewerResult.error ?? subjectResult.error;
         return { items: [...byId.values()], error };
     }
-    return loadTimesheetProjectOptions(viewer, locale);
+    return loadTimesheetProjectOptions(viewer, locale, { includeClosed: true });
 }
 export async function loadTimesheetProjectOptionsForMove(user: User, locale: AppLocale = 'ru'): Promise<{
     items: ProjectOption[];
@@ -120,7 +131,7 @@ export async function loadExpenseJournalProjectOptions(user: User, locale: AppLo
         const items = rows
             .filter((p) => !p.isArchived)
             .filter((p) => isActiveProjectForTimesheet(p, today))
-            .map(mapProjectRowToOption);
+            .map((p) => mapProjectRowToOption(p, today));
         return { items, error: null };
     }
     catch (e) {

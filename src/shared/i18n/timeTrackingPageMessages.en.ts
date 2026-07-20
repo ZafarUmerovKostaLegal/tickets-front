@@ -327,6 +327,7 @@ export const timeTrackingPageMessagesEn: TimeTrackingPageMessages = {
         voidReject: 'Removed: not accepted',
         voidBadgeRealloc: 'Removed: reallocation',
         voidBadgeReject: 'Removed: not accepted',
+        noProject: 'No project',
         voidLocked: 'Entry removed from tracking',
         voidEditBlocked: 'Entry removed from tracking — edits unavailable',
         editEntry: 'Edit entry',

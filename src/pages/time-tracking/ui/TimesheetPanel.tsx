@@ -279,15 +279,21 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     }, [entries]);
     const entryModalProjects = useMemo((): ProjectOption[] => {
         const items = projectsState.items;
+        // New/clone: only open projects. Edit: open + the entry's project (even if archived).
+        const active = items.filter((p) => !p.isClosed);
         if (!modal.open)
-            return items;
+            return active;
         const seed = modal.edit ?? modal.clone;
         const pid = seed?.projectId?.trim();
-        if (!pid || items.some((p) => p.id === pid))
-            return items;
-        if (!modal.edit)
-            return items;
-        return [...items, {
+        if (!modal.edit) {
+            return active;
+        }
+        if (!pid || active.some((p) => p.id === pid))
+            return active;
+        const fromCatalog = items.find((p) => p.id === pid);
+        if (fromCatalog)
+            return [...active, fromCatalog];
+        return [...active, {
             id: pid,
             name: seed!.project || pid,
             client: seed!.client || '',
@@ -295,6 +301,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
             color: seed!.color,
             currency: seed!.projectCurrency || 'USD',
             recordsLanguage: 'ENG',
+            isClosed: true,
         }];
     }, [projectsState.items, modal.open, modal.edit, modal.clone]);
     const modalSeedProjectId = useMemo(() => {
