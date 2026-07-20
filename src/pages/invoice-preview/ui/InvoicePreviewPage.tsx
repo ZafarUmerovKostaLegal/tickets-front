@@ -5,6 +5,7 @@ import { AppBackButton, AppHomeLogo, AppPageSettings, useAppToast } from '@share
 import { readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
+import { applyCoverLetterLanguage, type InvoiceCoverLanguage } from '../lib/invoiceCoverLetterI18n';
 import { emptyInvoiceTimeReportPack, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
@@ -82,12 +83,26 @@ export function InvoicePreviewPage() {
         setActivePage(page);
     }, []);
 
+    const issueDateIso = useMemo(() => {
+        if (session?.mode === 'existing')
+            return session.meta.issueDateIso ?? coverModel?.issueDateIso ?? new Date().toISOString().slice(0, 10);
+        if (session?.mode === 'create')
+            return session.form.issueDate.slice(0, 10);
+        return coverModel?.issueDateIso ?? new Date().toISOString().slice(0, 10);
+    }, [session, coverModel?.issueDateIso]);
+
+    const setCoverLanguage = useCallback((lang: InvoiceCoverLanguage) => {
+        setCoverModel((prev) => applyCoverLetterLanguage(prev ?? fallbackCoverModel(), lang, issueDateIso));
+    }, [issueDateIso]);
+
     const patchCoverModel = useCallback((patch: Partial<InvoiceCoverLetterModel>) => {
         setCoverModel((prev) => ({
             ...(prev ?? fallbackCoverModel()),
             ...patch,
         }));
     }, []);
+
+    const coverLanguage = displayModel.coverLanguage ?? 'ENG';
 
     const patchLegalOverrides = useCallback((patch: Partial<InvoiceLegalPageOverrides>) => {
         setLegalOverrides((prev) => ({ ...prev, ...patch }));
@@ -446,6 +461,28 @@ export function InvoicePreviewPage() {
                 <span className="tt-inv-preview__pdf-toolbar-export" title="Страницы для PDF и Word">
                   Экспорт: {exportSelectionLabel}
                 </span>
+                <div className="tt-inv-preview__lang-toggle" role="group" aria-label="Язык сопроводительного письма">
+                  <button
+                    type="button"
+                    className={`tt-inv-preview__lang-btn${coverLanguage === 'ENG' ? ' tt-inv-preview__lang-btn--active' : ''}`}
+                    aria-pressed={coverLanguage === 'ENG'}
+                    disabled={!coverModel}
+                    onClick={() => setCoverLanguage('ENG')}
+                    title="English cover letter"
+                  >
+                    ENG
+                  </button>
+                  <button
+                    type="button"
+                    className={`tt-inv-preview__lang-btn${coverLanguage === 'RU' ? ' tt-inv-preview__lang-btn--active' : ''}`}
+                    aria-pressed={coverLanguage === 'RU'}
+                    disabled={!coverModel}
+                    onClick={() => setCoverLanguage('RU')}
+                    title="Сопроводительное письмо на русском"
+                  >
+                    RU
+                  </button>
+                </div>
                 <button
                   type="button"
                   className={`tt-inv-preview__pdf-toolbar-edit-btn${isEditingActivePage ? ' tt-inv-preview__pdf-toolbar-edit-btn--active' : ''}`}

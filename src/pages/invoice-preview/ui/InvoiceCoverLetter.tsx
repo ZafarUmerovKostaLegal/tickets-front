@@ -3,6 +3,7 @@ import letterheadFullLogoUrl from '../../../assets/brand/KostaLegal-logo-letterh
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import {
     KOSTA_LEGAL_FIRM,
+    getCoverLetterLabels,
     resolveCoverIntroParagraph,
     resolveCoverInvoiceParagraph,
 } from '../lib/invoiceCoverLetterModel';
@@ -54,9 +55,9 @@ export function InvoiceCoverLetter({
 }: InvoiceCoverLetterProps) {
     const addr2 = model.recipientAddressLines[1];
     const patch = onChange;
+    const labels = getCoverLetterLabels(model.coverLanguage);
     const introText = resolveCoverIntroParagraph(model);
     const invoiceText = resolveCoverInvoiceParagraph(model);
-    const useTemplateInvoice = secondParagraphMode === 'invoice' && !model.invoiceParagraphOverride?.trim();
     const showSecondParagraph = secondParagraphMode === 'invoice'
         || editable
         || Boolean(model.invoiceParagraphOverride?.trim());
@@ -119,7 +120,7 @@ export function InvoiceCoverLetter({
         </div>
 
         <p className="tt-inv-cover__attention">
-          Attention:{' '}
+          {labels.attention}:{' '}
           <CoverField
             editable={editable}
             value={model.attentionName}
@@ -137,7 +138,7 @@ export function InvoiceCoverLetter({
         </p>
 
         <p className="tt-inv-cover__salutation">
-          Dear{' '}
+          {labels.dear}{' '}
           <CoverField
             editable={editable}
             value={model.attentionName}
@@ -168,19 +169,12 @@ export function InvoiceCoverLetter({
               value={invoiceText}
               onChange={(e) => patch?.({ invoiceParagraphOverride: e.target.value })}
             />
-          ) : useTemplateInvoice ? (
-            <p className="tt-inv-cover__para">
-              Herewith, we are sending the report <strong>or/and </strong>
-              with the invoice on legal services rendered in{' '}
-              <strong>{model.servicesMonthYear}</strong>
-              {' '}for the total amount of <strong>{model.totalFormatted}</strong>.
-            </p>
           ) : (
             <p className="tt-inv-cover__para">{invoiceText}</p>
           )
         ) : null}
 
-        <p className="tt-inv-cover__closing">Kind regards,</p>
+        <p className="tt-inv-cover__closing">{labels.closing}</p>
 
         <div className="tt-inv-cover__signature">
           <span className="tt-inv-cover__sig-line" aria-hidden/>

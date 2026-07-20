@@ -19,6 +19,7 @@ import {
 } from 'docx';
 import {
     KOSTA_LEGAL_FIRM,
+    getCoverLetterLabels,
     resolveCoverIntroParagraph,
     resolveCoverInvoiceParagraph,
     type InvoiceCoverLetterModel,
@@ -124,10 +125,12 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
         }));
     }
 
+    const labels = getCoverLetterLabels(model.coverLanguage);
+
     body.push(
-        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `Attention: ${model.attentionName}`, size: h(10), font: 'Calibri' })] }),
+        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `${labels.attention}: ${model.attentionName}`, size: h(10), font: 'Calibri' })] }),
         new Paragraph({ children: [new TextRun({ text: model.attentionTitle, size: h(10), font: 'Calibri' })] }),
-        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `Dear ${model.attentionName},`, size: h(10), font: 'Calibri' })] }),
+        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `${labels.dear} ${model.attentionName},`, size: h(10), font: 'Calibri' })] }),
         new Paragraph({
             spacing: { before: 160 },
             children: [new TextRun({
@@ -144,7 +147,7 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
                 font: 'Calibri',
             })],
         }),
-        new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: 'Kind regards,', size: h(10), font: 'Calibri' })] }),
+        new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: labels.closing, size: h(10), font: 'Calibri' })] }),
         new Paragraph({ spacing: { before: 280 }, children: [new TextRun({ text: '_________________________', size: h(10), font: 'Calibri', color: '666666' })] }),
         new Paragraph({ spacing: { before: 80 }, children: [new TextRun({ text: model.signatoryName, size: h(10), font: 'Calibri' })] }),
         new Paragraph({ children: [new TextRun({ text: model.signatoryTitle, size: h(10), font: 'Calibri' })] }),

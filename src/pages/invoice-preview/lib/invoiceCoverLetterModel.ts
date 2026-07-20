@@ -9,6 +9,8 @@ export const KOSTA_LEGAL_FIRM = {
     defaultSignatoryTitle: 'Partner',
 } as const;
 
+export type InvoiceCoverLanguage = 'ENG' | 'RU';
+
 export type InvoiceCoverLetterInput = {
     issueDateIso: string;
     clientName: string;
@@ -16,9 +18,12 @@ export type InvoiceCoverLetterInput = {
     contactName: string | null;
     totalAmount: number | null;
     currency: string;
+    coverLanguage?: InvoiceCoverLanguage;
 };
 
 export type InvoiceCoverLetterModel = {
+    coverLanguage: InvoiceCoverLanguage;
+    issueDateIso: string;
     letterDateDisplay: string;
     recipientCompany: string;
     recipientAddressLines: [string, string];
@@ -35,37 +40,21 @@ export type InvoiceCoverLetterModel = {
     invoiceParagraphOverride?: string | null;
 };
 
-export function resolveCoverIntroParagraph(model: InvoiceCoverLetterModel): string {
-    const custom = model.introParagraphOverride?.trim();
-    if (custom)
-        return custom;
-    return `It is our pleasure to provide legal assistance to «${model.quotedCompanyName}» in connection with its activities in Uzbekistan.`;
-}
+export {
+    formatCoverLetterDate,
+    formatCoverServicesPeriod,
+    getCoverLetterLabels,
+    normalizeCoverLanguage,
+    resolveLocalizedCoverIntroParagraph as resolveCoverIntroParagraph,
+    resolveLocalizedCoverInvoiceParagraph as resolveCoverInvoiceParagraph,
+} from './invoiceCoverLetterI18n';
 
-export function resolveCoverInvoiceParagraph(model: InvoiceCoverLetterModel): string {
-    const custom = model.invoiceParagraphOverride?.trim();
-    if (custom)
-        return custom;
-    return `Herewith, we are sending the report or/and with the invoice on legal services rendered in ${model.servicesMonthYear} for the total amount of ${model.totalFormatted}.`;
-}
-
-function letterDateEn(isoYmd: string): string {
-    if (!isoYmd || !/^\d{4}-\d{2}-\d{2}/.test(isoYmd))
-        return '—';
-    const d = new Date(`${isoYmd.slice(0, 10)}T12:00:00`);
-    if (Number.isNaN(d.getTime()))
-        return isoYmd;
-    return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-}
-
-function servicesMonthYearEn(isoYmd: string): string {
-    if (!isoYmd || !/^\d{4}-\d{2}-\d{2}/.test(isoYmd))
-        return 'Month 2026';
-    const d = new Date(`${isoYmd.slice(0, 10)}T12:00:00`);
-    if (Number.isNaN(d.getTime()))
-        return 'Month 2026';
-    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-}
+import {
+    formatCoverLetterDate,
+    formatCoverServicesPeriod,
+    getCoverLetterLabels,
+    normalizeCoverLanguage,
+} from './invoiceCoverLetterI18n';
 
 export function formatCoverLetterTotal(amount: number | null, currency: string): string {
     const cur = (currency || 'EUR').trim().toUpperCase() || 'EUR';
@@ -79,9 +68,10 @@ export function formatCoverLetterTotal(amount: number | null, currency: string):
     return neg ? `−${cur} ${num}` : `${cur} ${num}`;
 }
 
-function splitAddress(raw: string | null): [string, string] {
+function splitAddress(raw: string | null, lang: InvoiceCoverLanguage): [string, string] {
+    const fallback = getCoverLetterLabels(lang).defaultAddress;
     if (!raw || !raw.trim())
-        return ['Full address', ''];
+        return [fallback, ''];
     const lines = raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
     if (lines.length >= 2)
         return [lines[0]!, lines.slice(1).join(', ')];
@@ -92,23 +82,27 @@ function splitAddress(raw: string | null): [string, string] {
 }
 
 export function buildInvoiceCoverLetterModel(input: InvoiceCoverLetterInput): InvoiceCoverLetterModel {
+    const lang = normalizeCoverLanguage(input.coverLanguage);
+    const labels = getCoverLetterLabels(lang);
     const iso = input.issueDateIso.slice(0, 10);
-    const [a1, a2] = splitAddress(input.clientAddress);
+    const [a1, a2] = splitAddress(input.clientAddress, lang);
     const company = input.clientName.trim() || 'Company Name';
     const contact = (input.contactName ?? '').trim();
     return {
-        letterDateDisplay: letterDateEn(iso),
+        coverLanguage: lang,
+        issueDateIso: iso,
+        letterDateDisplay: formatCoverLetterDate(iso, lang),
         recipientCompany: company,
         recipientAddressLines: [
-            a1 || 'Full address',
+            a1 || labels.defaultAddress,
             a2,
         ],
-        attentionName: contact || 'Mr./Ms. Name Surname',
-        attentionTitle: 'Position',
+        attentionName: contact || labels.defaultAttentionName,
+        attentionTitle: labels.defaultAttentionTitle,
         quotedCompanyName: company,
-        servicesMonthYear: servicesMonthYearEn(iso),
+        servicesMonthYear: formatCoverServicesPeriod(iso, lang),
         totalFormatted: formatCoverLetterTotal(input.totalAmount, input.currency),
         signatoryName: KOSTA_LEGAL_FIRM.defaultSignatoryName,
-        signatoryTitle: KOSTA_LEGAL_FIRM.defaultSignatoryTitle,
+        signatoryTitle: labels.defaultSignatoryTitle,
     };
 }

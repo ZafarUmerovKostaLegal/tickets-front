@@ -453,6 +453,47 @@
   color: var(--app-accent, #4f46e5);
 }
 
+.tt-inv-preview__lang-toggle {
+  display: inline-flex;
+  flex-shrink: 0;
+  border: 1px solid var(--tt-inv-shell-divider);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--tt-inv-paper);
+}
+
+.tt-inv-preview__lang-btn {
+  min-width: 2.5rem;
+  height: 1.875rem;
+  padding: 0 0.55rem;
+  border: none;
+  background: transparent;
+  color: var(--tt-inv-shell-muted-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.tt-inv-preview__lang-btn + .tt-inv-preview__lang-btn {
+  border-left: 1px solid var(--tt-inv-shell-divider);
+}
+
+.tt-inv-preview__lang-btn:hover:not(:disabled) {
+  color: var(--app-accent, #4f46e5);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 6%, var(--tt-inv-paper));
+}
+
+.tt-inv-preview__lang-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tt-inv-preview__lang-btn--active {
+  color: var(--app-accent, #4f46e5);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 12%, var(--tt-inv-paper));
+}
+
 .tt-inv-a4-page--editing {
   box-shadow:
     0 0 0 2px rgba(var(--app-accent-rgb, 79, 70, 229), 0.45),

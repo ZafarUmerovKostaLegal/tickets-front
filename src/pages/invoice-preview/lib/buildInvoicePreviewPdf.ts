@@ -27,6 +27,7 @@ import {
 import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
 import {
     KOSTA_LEGAL_FIRM,
+    getCoverLetterLabels,
     resolveCoverIntroParagraph,
     resolveCoverInvoiceParagraph,
     type InvoiceCoverLetterModel,
@@ -133,12 +134,13 @@ function drawCoverPage(
     }
 
     y -= 26;
-    page.drawText(`Attention: ${model.attentionName}`, { x: ML, y, size: 10, font, color: BODY });
+    const labels = getCoverLetterLabels(model.coverLanguage);
+    page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: 10, font, color: BODY });
     y -= 14;
     page.drawText(model.attentionTitle, { x: ML, y, size: 10, font, color: BODY });
 
     y -= 26;
-    page.drawText(`Dear ${model.attentionName},`, { x: ML, y, size: 10, font, color: BODY });
+    page.drawText(`${labels.dear} ${model.attentionName},`, { x: ML, y, size: 10, font, color: BODY });
 
     y -= 22;
     const p1 = resolveCoverIntroParagraph(model);
@@ -152,7 +154,7 @@ function drawCoverPage(
     y = wrapPlainParagraph(page, p2, ML, y, maxW, bodySize, font, bodyGap);
     y -= bodyGap;
 
-    page.drawText('Kind regards,', { x: ML, y, size: bodySize, font, color: BODY });
+    page.drawText(labels.closing, { x: ML, y, size: bodySize, font, color: BODY });
     y -= bodyGap * 2;
 
     const sigW = 160;
