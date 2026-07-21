@@ -425,10 +425,12 @@ function pickWorkDateStr(d: Record<string, unknown>): string {
     return wd.trim().slice(0, 10);
 }
 
-function pickBillableHoursNum(d: Record<string, unknown>): number | null {
+function pickBillableHoursOnly(d: Record<string, unknown>): number | null {
+    return pickNum(d, 'billableHours', 'billable_hours');
+}
+
+function pickWorkedHoursNum(d: Record<string, unknown>): number | null {
     return pickNum(d,
-        'billableHours',
-        'billable_hours',
         'hours',
         'durationHours',
         'duration_hours',
@@ -436,6 +438,15 @@ function pickBillableHoursNum(d: Record<string, unknown>): number | null {
         'total_hours',
         'quantity',
     );
+}
+
+/** Prefer billable hours for money lines; fall back to worked hours so non-billable entries still export. */
+function resolveExcelExportHours(billableHours: number, workedHours: number): { hoursRaw: number; useBillableRate: boolean } {
+    if (billableHours > 1e-9)
+        return { hoursRaw: billableHours, useBillableRate: true };
+    if (workedHours > 1e-9)
+        return { hoursRaw: workedHours, useBillableRate: false };
+    return { hoursRaw: 0, useBillableRate: false };
 }
 
 function isIncludedEntryRow(sr: ReportSnapshotRow, d: Record<string, unknown>): boolean {
@@ -450,11 +461,13 @@ function isIncludedEntryRow(sr: ReportSnapshotRow, d: Record<string, unknown>): 
     if (rk === 'entry')
         return true;
     const wd = pickWorkDateStr(d);
-    const hours = pickBillableHoursNum(d);
+    const billable = pickBillableHoursOnly(d) ?? 0;
+    const worked = pickWorkedHoursNum(d) ?? 0;
+    const hours = Math.max(billable, worked);
     const te = pickStr(d, 'timeEntryId', 'time_entry_id');
-    if (te && hours != null && hours > 1e-9)
+    if (te && hours > 1e-9)
         return true;
-    if (wd && hours != null && hours > 1e-9)
+    if (wd && hours > 1e-9)
         return true;
     return false;
 }
@@ -482,6 +495,8 @@ export type PartnerConfirmedExcelFallbackRow = {
     authUserId: number;
     taskName: string;
     note: string;
+    /** Worked hours (include non-billable rows in Excel). */
+    hours: number;
     billableHours: number;
     billableRate: number;
     amountToPay: number;
@@ -497,10 +512,12 @@ function buildDetailLinesFromSnapshotRows(rawRows: ReportSnapshotRow[]): DetailL
             continue;
         const fullName = pickStr(d, 'employeeName', 'employee_name');
         const initialsRaw = pickStr(d, 'employeeInitials', 'employee_initials');
-        const hoursRaw = pickBillableHoursNum(d) ?? 0;
+        const billableRaw = pickBillableHoursOnly(d) ?? 0;
+        const workedRaw = pickWorkedHoursNum(d) ?? 0;
+        const { hoursRaw, useBillableRate } = resolveExcelExportHours(billableRaw, workedRaw);
         if (hoursRaw <= 1e-9)
             continue;
-        const rateRaw = pickNum(d, 'billableRate', 'billable_rate') ?? 0;
+        const rateRaw = useBillableRate ? (pickNum(d, 'billableRate', 'billable_rate') ?? 0) : 0;
         const { hours, rate, amount } = consistentExcelMoneyLine(hoursRaw, rateRaw);
 
         const wd = pickWorkDateStr(d);
@@ -532,10 +549,13 @@ function detailLinesFromFallback(fr: PartnerConfirmedExcelFallbackRow[]): Detail
     for (const row of fr) {
         if (row.rowKind !== 'entry' || row.isVoided)
             continue;
-        const hoursRaw = row.billableHours;
+        const billableRaw = Number.isFinite(row.billableHours) ? row.billableHours : 0;
+        const workedRaw = Number.isFinite(row.hours) ? row.hours : 0;
+        const { hoursRaw, useBillableRate } = resolveExcelExportHours(billableRaw, workedRaw);
         if (hoursRaw <= 1e-9)
             continue;
-        const { hours, rate, amount } = consistentExcelMoneyLine(hoursRaw, row.billableRate);
+        const rateRaw = useBillableRate ? row.billableRate : 0;
+        const { hours, rate, amount } = consistentExcelMoneyLine(hoursRaw, rateRaw);
         const fullName = row.employeeName.trim();
         const wd = row.workDate.trim().slice(0, 10);
         const personKey = row.authUserId > 0 ? `id:${row.authUserId}` : `n:${fullName.toLowerCase()}`;
@@ -549,7 +569,7 @@ function detailLinesFromFallback(fr: PartnerConfirmedExcelFallbackRow[]): Detail
             notes: row.note.trim(),
             hours,
             rate,
-            amount,
+            amount: useBillableRate && Number.isFinite(row.amountToPay) ? excelNum2(row.amountToPay) : amount,
             sortKey: `${wd}\u0000${fullName}\u0000${row.timeEntryId}`,
             personKey,
             fullName,

@@ -56,6 +56,7 @@ export function timeExcelPreviewRowsToPartnerFallback(rows: TimeExcelPreviewRow[
         authUserId: row.authUserId,
         taskName: row.taskName,
         note: row.note || row.description || '',
+        hours: Number.isFinite(row.hours) ? row.hours : 0,
         billableHours: Number.isFinite(row.billableHours) ? row.billableHours : 0,
         billableRate: Number.isFinite(row.billableRate) ? row.billableRate : 0,
         amountToPay: computeTimePreviewRowAmountToPay(row),
