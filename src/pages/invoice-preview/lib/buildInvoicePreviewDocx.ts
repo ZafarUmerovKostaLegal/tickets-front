@@ -757,12 +757,25 @@ function legalInvoiceDocxBlocks(
         }),
         totalsTbl,
         new Paragraph({
-            spacing: { before: 160 },
-            children: [new TextRun({ text: labels.thanks, size: DOC_SIZE, font: DOC_FONT, color: '1E293B' })],
+            spacing: { before: 280, after: 160 },
+            alignment: AlignmentType.CENTER,
+            children: [new TextRun({
+                text: labels.thanks,
+                italics: true,
+                size: DOC_SIZE,
+                font: 'Georgia',
+                color: '6B7280',
+            })],
         }),
         new Paragraph({
-            spacing: { before: 200 },
-            children: [new TextRun({ text: paymentDisclaimer, size: DOC_SIZE, font: DOC_FONT, color: '404040' })],
+            spacing: { before: 80 },
+            alignment: AlignmentType.LEFT,
+            children: [new TextRun({
+                text: paymentDisclaimer,
+                size: DOC_SIZE,
+                font: DOC_FONT,
+                color: '4B5563',
+            })],
         }),
     ];
 }

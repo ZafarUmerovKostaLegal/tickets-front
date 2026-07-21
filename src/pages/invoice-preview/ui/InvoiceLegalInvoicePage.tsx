@@ -353,9 +353,8 @@ export function InvoiceLegalInvoicePage({
         </div>
       </div>
 
-      <p className="tt-inv-li__thanks">{labels.thanks}</p>
-
-      <footer className="tt-inv-li__bottom" aria-label="Условия">
+      <div className="tt-inv-li__closing">
+        <p className="tt-inv-li__thanks">{labels.thanks}</p>
         <p className="tt-inv-li__disclaimer">
           <LiField
             editable={editable}
@@ -365,6 +364,6 @@ export function InvoiceLegalInvoicePage({
             onChange={(paymentDisclaimer) => onChangeLegalOverrides?.({ paymentDisclaimer })}
           />
         </p>
-      </footer>
+      </div>
     </div>);
 }

@@ -4,7 +4,7 @@
   box-sizing: border-box;
   position: relative;
   width: 100%;
-  padding: 20mm 12mm calc(20mm + 5.5rem) 30mm;
+  padding: 20mm 12mm 18mm 30mm;
   font-family: var(--tt-inv-doc-font, 'Calibri Light', Calibri, Carlito, 'Segoe UI', sans-serif);
   font-size: var(--tt-inv-doc-size, 11px);
   font-weight: var(--tt-inv-doc-weight, 300);
@@ -252,27 +252,33 @@
   color: inherit;
 }
 
-.tt-inv-li__thanks {
-  margin: 0 0 0.85rem;
-  text-align: left;
-  font-size: inherit;
-  font-weight: 400;
-  color: var(--tt-inv-paper-ink, #0f172a);
+.tt-inv-li__closing {
+  margin-top: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
 }
 
-.tt-inv-li__bottom {
-  position: absolute;
-  left: 12mm;
-  right: 12mm;
-  bottom: 10mm;
+.tt-inv-li__thanks {
+  margin: 0;
+  text-align: center;
+  font-family: Georgia, 'Times New Roman', 'Liberation Serif', serif;
+  font-size: inherit;
+  font-weight: 400;
+  font-style: italic;
+  line-height: 1.45;
+  color: #6b7280;
 }
 
 .tt-inv-li__disclaimer {
   margin: 0;
-  font-family: var(--app-font-family);
+  text-align: left;
+  font-family: Calibri, Carlito, 'Segoe UI', sans-serif;
   font-size: inherit;
-  line-height: 1.5;
-  color: #64748b;
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.55;
+  color: #4b5563;
 }
 
 .tt-inv-li--editable .tt-inv-li__field {

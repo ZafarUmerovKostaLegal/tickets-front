@@ -786,16 +786,20 @@ function drawLegalInvoicePdfPage(
     });
     yTot -= 6;
 
-    page.drawText(labels.thanks, {
-        x: ML,
+    yTot -= 18;
+    const thanks = labels.thanks;
+    const thanksSize = 10;
+    const thanksW = font.widthOfTextAtSize(thanks, thanksSize);
+    page.drawText(thanks, {
+        x: ML + (W - ML - MR - thanksW) / 2,
         y: yTot,
-        size: 10,
+        size: thanksSize,
         font,
-        color: BODY,
+        color: rgb(0.42, 0.45, 0.5),
     });
-    yTot -= 24;
+    yTot -= 22;
 
-    yTot = wrapPlainParagraph(page, paymentDisclaimer, ML, yTot, W - ML - MR, 7, font, 9);
+    yTot = wrapPlainParagraph(page, paymentDisclaimer, ML, yTot, W - ML - MR, 9, font, 12);
 }
 
 export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput): Promise<Blob> {
