@@ -73,8 +73,15 @@
   margin: 0 0 0.15rem;
 }
 
+.tt-inv-cover__recipient-line--company {
+  font-weight: 700;
+  color: var(--tt-inv-paper-strong, #0f172a);
+}
+
 .tt-inv-cover__attention {
   margin: 0 0 0.15rem;
+  font-weight: 700;
+  color: var(--tt-inv-paper-strong, #0f172a);
 }
 
 .tt-inv-cover__attention-sub {

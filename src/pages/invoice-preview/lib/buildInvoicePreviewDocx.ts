@@ -117,7 +117,7 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
         new Paragraph({
             children: [new TextRun({ text: model.letterDateDisplay, size: h(10), font: 'Calibri' })],
         }),
-        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: model.recipientCompany, size: h(10), font: 'Calibri' })] }),
+        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: model.recipientCompany, bold: true, size: h(10), font: 'Calibri' })] }),
         new Paragraph({ children: [new TextRun({ text: model.recipientAddressLines[0], size: h(10), font: 'Calibri' })] }),
     ];
 
@@ -130,7 +130,7 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
     const labels = getCoverLetterLabels(model.coverLanguage);
 
     body.push(
-        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `${labels.attention}: ${model.attentionName}`, size: h(10), font: 'Calibri' })] }),
+        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `${labels.attention}: ${model.attentionName}`, bold: true, size: h(10), font: 'Calibri' })] }),
         new Paragraph({ children: [new TextRun({ text: model.attentionTitle, size: h(10), font: 'Calibri' })] }),
         new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `${labels.dear} ${model.attentionName},`, size: h(10), font: 'Calibri' })] }),
         new Paragraph({

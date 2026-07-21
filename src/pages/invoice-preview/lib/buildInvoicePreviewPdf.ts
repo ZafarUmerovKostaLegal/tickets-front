@@ -88,6 +88,7 @@ function drawCoverPage(
     page: PDFPage,
     model: InvoiceCoverLetterModel,
     font: PDFFont,
+    fontBold: PDFFont,
     logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null,
 ): void {
     const logoTop = H - MT;
@@ -127,7 +128,7 @@ function drawCoverPage(
     page.drawText(model.letterDateDisplay, { x: ML, y, size: 10, font, color: BODY });
 
     y -= 26;
-    page.drawText(model.recipientCompany, { x: ML, y, size: 10, font, color: BODY });
+    page.drawText(model.recipientCompany, { x: ML, y, size: 10, font: fontBold, color: BODY });
     y -= 14;
     page.drawText(model.recipientAddressLines[0], { x: ML, y, size: 10, font, color: BODY });
     if (model.recipientAddressLines[1]) {
@@ -137,7 +138,7 @@ function drawCoverPage(
 
     y -= 26;
     const labels = getCoverLetterLabels(model.coverLanguage);
-    page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: 10, font, color: BODY });
+    page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: 10, font: fontBold, color: BODY });
     y -= 14;
     page.drawText(model.attentionTitle, { x: ML, y, size: 10, font, color: BODY });
 
@@ -798,7 +799,7 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
 
     if (includePage(1)) {
         const p1 = doc.addPage([W, H]);
-        drawCoverPage(p1, model, font, logoImage);
+        drawCoverPage(p1, model, font, fontBold, logoImage);
     }
 
     let trPageTag = 2;

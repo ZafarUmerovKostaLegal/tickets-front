@@ -86,7 +86,7 @@ export function InvoiceCoverLetter({
         </p>
 
         <div className="tt-inv-cover__recipient">
-          <p className="tt-inv-cover__recipient-line">
+          <p className="tt-inv-cover__recipient-line tt-inv-cover__recipient-line--company">
             <CoverField
               editable={editable}
               value={model.recipientCompany}
