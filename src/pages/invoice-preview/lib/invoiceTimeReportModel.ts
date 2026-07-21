@@ -80,6 +80,18 @@ export function padDetailRows(rows: InvoiceTimeReportDetailRow[]): InvoiceTimeRe
     return out;
 }
 
+function summaryRowIsEmpty(row: InvoiceTimeReportSummaryRow): boolean {
+    return ![row.initials, row.name, row.title, row.hours, row.hourlyRate, row.totalPrice]
+        .some((c) => String(c).trim().length > 0);
+}
+
+export function trimTrailingEmptySummarySlots(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow[] {
+    const out = [...rows];
+    while (out.length > 0 && summaryRowIsEmpty(out[out.length - 1]!))
+        out.pop();
+    return out;
+}
+
 export function padSummaryRows(rows: InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow[] {
     const out = [...rows];
     while (out.length < TIME_REPORT_SUMMARY_ROWS)
