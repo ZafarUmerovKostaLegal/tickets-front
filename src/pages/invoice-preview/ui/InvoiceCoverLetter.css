@@ -7,7 +7,7 @@
   min-height: 100%;
   padding: 20mm 12mm 20mm 30mm;
   font-family: var(--tt-inv-doc-font, 'Calibri Light', Calibri, Carlito, 'Segoe UI', sans-serif);
-  font-size: var(--tt-inv-doc-size, 11pt);
+  font-size: var(--tt-inv-doc-size, 11px);
   font-weight: var(--tt-inv-doc-weight, 300);
   line-height: var(--tt-inv-doc-line, 1.45);
   color: var(--tt-inv-paper-ink, #0f172a);
