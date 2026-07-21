@@ -85,13 +85,13 @@ export function InvoiceTimeReportPage({
         <table className="tt-inv-tr__table" role="grid" aria-label="Детальный отчёт по времени">
           <thead className="tt-inv-tr__thead">
             <tr>
-              <th scope="col" style={{ width: '10%' }}>{labels.date}</th>
-              <th scope="col" style={{ width: '8%' }}>{labels.initials}</th>
-              <th scope="col" style={{ width: '12%' }}>{labels.task}</th>
-              <th scope="col" style={{ width: '30%' }}>{labels.description}</th>
-              <th scope="col" style={{ width: '8%' }}>{labels.hours}</th>
+              <th scope="col" style={{ width: '12%' }}>{labels.date}</th>
+              <th scope="col" style={{ width: '10%' }}>{labels.initials}</th>
+              <th scope="col" style={{ width: '11%' }}>{labels.task}</th>
+              <th scope="col" style={{ width: '22%' }}>{labels.description}</th>
+              <th scope="col" style={{ width: '9%' }}>{labels.hours}</th>
               <th scope="col" style={{ width: '14%' }}>{labels.rate}</th>
-              <th scope="col" style={{ width: '18%' }}>{amountHeader}</th>
+              <th scope="col" style={{ width: '22%' }}>{amountHeader}</th>
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">
@@ -158,11 +158,11 @@ export function InvoiceTimeReportPage({
                 <thead className="tt-inv-tr__thead">
                   <tr>
                     <th scope="col" style={{ width: '9%' }}>{labels.initials}</th>
-                    <th scope="col" style={{ width: '26%' }}>{labels.name}</th>
-                    <th scope="col" style={{ width: '26%' }}>{labels.titleCol}</th>
+                    <th scope="col" style={{ width: '22%' }}>{labels.name}</th>
+                    <th scope="col" style={{ width: '20%' }}>{labels.titleCol}</th>
                     <th scope="col" style={{ width: '13%' }}>{labels.hours}</th>
-                    <th scope="col" style={{ width: '13%' }}>{labels.hourlyRate}</th>
-                    <th scope="col" style={{ width: '13%' }}>{labels.totalPrice(cur)}</th>
+                    <th scope="col" style={{ width: '15%' }}>{labels.hourlyRate}</th>
+                    <th scope="col" style={{ width: '21%' }}>{labels.totalPrice(cur)}</th>
                   </tr>
                 </thead>
                 <tbody className="tt-inv-tr__tbody">

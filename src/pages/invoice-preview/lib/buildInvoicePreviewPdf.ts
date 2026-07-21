@@ -407,8 +407,8 @@ function paintTimeReportBody(
     widths: readonly number[],
     font: PDFFont,
     rightAlignedCols: ReadonlySet<number>,
+    wrapCols: ReadonlySet<number>,
 ): void {
-    const ascent = textAscent(font, DOC_FS);
     let yRowTop = yHeaderBot;
     for (let r = 0; r < cellLines.length; r++) {
         const rowH = rowHeights[r] ?? bodyRowHeight(1);
@@ -419,13 +419,25 @@ function paintTimeReportBody(
             const lines = cols[c]!;
             if (!lines.length)
                 continue;
-            let yLine = cellTop - CELL_PAD_Y - ascent;
+            const maxW = Math.max(8, widths[c]! - CELL_PAD_X * 2);
+            let yLine = cellTop - CELL_PAD_Y - textAscent(font, DOC_FS);
             for (const ln of lines) {
-                const tw = font.widthOfTextAtSize(ln, DOC_FS);
+                const fitted = wrapCols.has(c)
+                    ? { text: ln, size: DOC_FS }
+                    : fitPdfCellText(ln, maxW, font, DOC_FS, DOC_FS * 0.72);
+                if (!fitted.text)
+                    continue;
+                const tw = font.widthOfTextAtSize(fitted.text, fitted.size);
                 let xDraw = xs[c]! + CELL_PAD_X;
                 if (rightAlignedCols.has(c))
                     xDraw = xs[c]! + widths[c]! - CELL_PAD_X - tw;
-                page.drawText(ln, { x: xDraw, y: yLine, size: DOC_FS, font, color: CELL_MUTED });
+                page.drawText(fitted.text, {
+                    x: xDraw,
+                    y: yLine,
+                    size: fitted.size,
+                    font,
+                    color: CELL_MUTED,
+                });
                 yLine -= CELL_LINE_STEP;
             }
         }
@@ -797,6 +809,7 @@ function drawTimeReportGridTable(
             widths,
             font,
             rightAlignedBodyCols ?? new Set(),
+            wrapBodyCols ?? new Set(),
         );
     }
 
@@ -849,8 +862,8 @@ function drawTimeReportGridTable(
     return tableBottom;
 }
 
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [14, 7, 12, 24, 10, 14, 19] as const;
-const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 24, 22, 11, 11, 23] as const;
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [12, 10, 11, 22, 9, 14, 22] as const;
+const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 22, 20, 13, 15, 21] as const;
 /** Description + Task can wrap to keep full values visible. */
 const TR_DETAIL_WRAP_COLS = new Set([2, 3]);
 const TR_SUMMARY_WRAP_COLS = new Set([1, 2]);

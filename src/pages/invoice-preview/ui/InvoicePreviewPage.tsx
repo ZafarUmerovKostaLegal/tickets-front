@@ -22,6 +22,74 @@ import '@pages/time-tracking/ui/TimePageShell.css';
 import './InvoicePreviewPage.css';
 
 const INV_PREVIEW_PAGE_BASE_PX = 794;
+
+type InvoicePageSkeletonType = 'cover' | 'report' | 'invoice';
+function InvoicePageSkeleton({ type }: { type: InvoicePageSkeletonType }) {
+    return (
+      <div className="tt-inv-skel-page" aria-hidden="true">
+        {/* Header: logo + address */}
+        <div className="tt-inv-skel-cover__header">
+          <span className="tt-inv-skel-b tt-inv-skel-cover__logo"/>
+          <div className="tt-inv-skel-cover__addr">
+            {[90, 70, 80, 65].map((w, i) => (
+              <span key={i} className="tt-inv-skel-b tt-inv-skel-cover__line" style={{ width: w, animationDelay: `${i * 0.05}s` }}/>
+            ))}
+          </div>
+        </div>
+
+        {type === 'cover' && (
+          <>
+            <span className="tt-inv-skel-b tt-inv-skel-cover__date" style={{ animationDelay: '0.05s' }}/>
+            <div className="tt-inv-skel-cover__block">
+              {[120, 90].map((w, i) => (
+                <span key={i} className="tt-inv-skel-b tt-inv-skel-cover__line" style={{ width: w, animationDelay: `${0.08 + i * 0.04}s` }}/>
+              ))}
+            </div>
+            <div className="tt-inv-skel-cover__block">
+              {[100, 80].map((w, i) => (
+                <span key={i} className="tt-inv-skel-b tt-inv-skel-cover__line" style={{ width: w, animationDelay: `${0.14 + i * 0.04}s` }}/>
+              ))}
+            </div>
+            <div className="tt-inv-skel-cover__block" style={{ marginTop: 8 }}>
+              {[160, 440, 380].map((w, i) => (
+                <span key={i} className="tt-inv-skel-b tt-inv-skel-cover__line" style={{ width: w, animationDelay: `${0.2 + i * 0.04}s` }}/>
+              ))}
+            </div>
+            <div className="tt-inv-skel-cover__block" style={{ marginTop: 16 }}>
+              {[90].map((w, i) => (
+                <span key={i} className="tt-inv-skel-b tt-inv-skel-cover__line" style={{ width: w, animationDelay: `${0.3 + i * 0.04}s` }}/>
+              ))}
+            </div>
+            <div className="tt-inv-skel-cover__block" style={{ marginTop: 32 }}>
+              {[130, 60].map((w, i) => (
+                <span key={i} className="tt-inv-skel-b tt-inv-skel-cover__line" style={{ width: w, animationDelay: `${0.36 + i * 0.04}s` }}/>
+              ))}
+            </div>
+          </>
+        )}
+
+        {(type === 'report' || type === 'invoice') && (
+          <>
+            {/* Table */}
+            <div style={{ marginTop: 28 }}>
+              <div className="tt-inv-skel-table__head tt-inv-skel-b" style={{ animationDelay: '0.04s' }}>
+                {[60, 40, 120, 180, 55, 60, 70].map((w, i) => (
+                  <span key={i} className="tt-inv-skel-table__head-cell" style={{ width: w }}/>
+                ))}
+              </div>
+              {Array.from({ length: type === 'report' ? 12 : 5 }, (_, i) => (
+                <div key={i} className="tt-inv-skel-table__row" style={{ animationDelay: `${0.04 + i * 0.03}s` }}>
+                  {[60, 40, 120, 180, 55, 60, 70].map((w, j) => (
+                    <span key={j} className="tt-inv-skel-b tt-inv-skel-table__cell" style={{ width: w, animationDelay: `${0.04 + i * 0.03 + j * 0.01}s` }}/>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+}
 const SHEET_ZOOM_MIN = 50;
 const SHEET_ZOOM_MAX = 250;
 const SHEET_ZOOM_STEP = 10;
@@ -396,11 +464,30 @@ export function InvoicePreviewPage() {
           <aside className="tt-inv-preview__thumbs" aria-label="Миниатюры страниц">
             <div className="tt-inv-preview__thumbs-head">
               <span className="tt-inv-preview__thumbs-title">Страницы</span>
-              <button type="button" className="tt-inv-preview__thumbs-all" onClick={() => selectAllPagesForExport(pageCount)}>
-                Все
-              </button>
+              {coverModel
+                ? (
+                    <button type="button" className="tt-inv-preview__thumbs-all" onClick={() => selectAllPagesForExport(pageCount)}>
+                      Все
+                    </button>
+                  )
+                : null}
             </div>
-            {Array.from({ length: pageCount }, (_, i) => i + 1).map((num) => {
+            {!coverModel
+              ? (
+                  [1, 2, 3].map((n) => (
+                    <div key={n} className={`tt-inv-preview__thumb-wrap${n === 1 ? ' tt-inv-preview__thumb-wrap--active' : ''}`}>
+                      <span className="tt-inv-preview__thumb-sheet" aria-hidden>
+                        <span className="tt-inv-skel-thumb"/>
+                      </span>
+                      <div className="tt-inv-preview__thumb-meta">
+                        <span className="tt-inv-preview__thumb-num">{n}</span>
+                      </div>
+                    </div>
+                  ))
+                )
+              : null}
+            {coverModel
+              ? Array.from({ length: pageCount }, (_, i) => i + 1).map((num) => {
                 const thumbTrIdx = num >= 2 && num < pageCount ? num - 2 : null;
                 const exportOn = selectedPages.has(num);
                 return (
@@ -461,7 +548,8 @@ export function InvoicePreviewPage() {
                     </div>
                   </div>
                 );
-            })}
+            })
+              : null}
           </aside>
 
           <div className="tt-inv-preview__stage">
@@ -550,62 +638,81 @@ export function InvoicePreviewPage() {
             </div>
             <div ref={sheetStackRef} className="tt-inv-preview__sheet-stack" aria-label="Документ, прокрутка колёсиком мыши или жестами">
               <div className="tt-inv-preview__pages" style={pagesZoomStyle}>
-                <div
-                  ref={(el) => {
-                    pageRefs.current[0] = el;
-                  }}
-                  className={`tt-inv-a4-page tt-inv-a4-page--cover${editingPage === 1 ? ' tt-inv-a4-page--editing' : ''}${!selectedPages.has(1) ? ' tt-inv-a4-page--export-off' : ''}`}
-                  aria-label={`Страница 1 из ${pageCount} — сопроводительное письмо${editingPage === 1 ? ', режим редактирования' : ''}`}
-                >
-                  <InvoiceCoverLetter
-                    model={displayModel}
-                    editable={editingPage === 1}
-                    onChange={patchCoverModel}
-                  />
-                </div>
-                {timeReportChunks.map((chunk, i) => {
-                    const pageNum = 2 + i;
-                    return (
+                {!coverModel
+                  ? (
+                      <>
+                        <InvoicePageSkeleton type="cover"/>
+                        <InvoicePageSkeleton type="report"/>
+                        <InvoicePageSkeleton type="invoice"/>
+                      </>
+                    )
+                  : null}
+                {coverModel
+                  ? (
                       <div
-                        key={`tr-${i}`}
                         ref={(el) => {
-                            pageRefs.current[1 + i] = el;
+                          pageRefs.current[0] = el;
                         }}
-                        className={`tt-inv-a4-page tt-inv-a4-page--timerpt${editingPage === pageNum ? ' tt-inv-a4-page--editing' : ''}${!selectedPages.has(pageNum) ? ' tt-inv-a4-page--export-off' : ''}`}
-                        aria-label={`Страница ${pageNum} из ${pageCount} — time report${i > 0 ? ', продолжение' : ''}`}
+                        className={`tt-inv-a4-page tt-inv-a4-page--cover${editingPage === 1 ? ' tt-inv-a4-page--editing' : ''}${!selectedPages.has(1) ? ' tt-inv-a4-page--export-off' : ''}`}
+                        aria-label={`Страница 1 из ${pageCount} — сопроводительное письмо${editingPage === 1 ? ', режим редактирования' : ''}`}
                       >
-                        <InvoiceTimeReportPage
+                        <InvoiceCoverLetter
                           model={displayModel}
-                          pack={resolvedTimeReportPack}
-                          pageNumber={pageNum}
-                          detailRows={chunk}
-                          continuation={i > 0}
-                          showDetailTotalRow={i === timeReportChunks.length - 1}
-                          showSummarySection={i === timeReportChunks.length - 1}
-                          editable={editingPage === pageNum}
-                          onPatchDetailRow={(rowIndex, field, value) => patchDetailRowInChunk(i, rowIndex, field, value)}
-                          onPatchSummaryRow={patchSummaryRow}
-                          onPatchPack={patchTimeReportPack}
+                          editable={editingPage === 1}
+                          onChange={patchCoverModel}
                         />
                       </div>
-                    );
-                })}
-                <div
-                  ref={(el) => {
-                    pageRefs.current[1 + timeReportChunks.length] = el;
-                  }}
-                  className={`tt-inv-a4-page tt-inv-a4-page--invoice${editingPage === pageCount ? ' tt-inv-a4-page--editing' : ''}${!selectedPages.has(pageCount) ? ' tt-inv-a4-page--export-off' : ''}`}
-                  aria-label={`Страница ${pageCount} из ${pageCount} — счёт`}
-                >
-                  <InvoiceLegalInvoicePage
-                    model={displayModel}
-                    session={session}
-                    editable={editingPage === pageCount}
-                    legalOverrides={legalOverrides}
-                    onChangeLegalOverrides={patchLegalOverrides}
-                    onChangeModel={patchCoverModel}
-                  />
-                </div>
+                    )
+                  : null}
+                {coverModel
+                  ? timeReportChunks.map((chunk, i) => {
+                      const pageNum = 2 + i;
+                      return (
+                        <div
+                          key={`tr-${i}`}
+                          ref={(el) => {
+                              pageRefs.current[1 + i] = el;
+                          }}
+                          className={`tt-inv-a4-page tt-inv-a4-page--timerpt${editingPage === pageNum ? ' tt-inv-a4-page--editing' : ''}${!selectedPages.has(pageNum) ? ' tt-inv-a4-page--export-off' : ''}`}
+                          aria-label={`Страница ${pageNum} из ${pageCount} — time report${i > 0 ? ', продолжение' : ''}`}
+                        >
+                          <InvoiceTimeReportPage
+                            model={displayModel}
+                            pack={resolvedTimeReportPack}
+                            pageNumber={pageNum}
+                            detailRows={chunk}
+                            continuation={i > 0}
+                            showDetailTotalRow={i === timeReportChunks.length - 1}
+                            showSummarySection={i === timeReportChunks.length - 1}
+                            editable={editingPage === pageNum}
+                            onPatchDetailRow={(rowIndex, field, value) => patchDetailRowInChunk(i, rowIndex, field, value)}
+                            onPatchSummaryRow={patchSummaryRow}
+                            onPatchPack={patchTimeReportPack}
+                          />
+                        </div>
+                      );
+                  })
+                  : null}
+                {coverModel
+                  ? (
+                      <div
+                        ref={(el) => {
+                          pageRefs.current[1 + timeReportChunks.length] = el;
+                        }}
+                        className={`tt-inv-a4-page tt-inv-a4-page--invoice${editingPage === pageCount ? ' tt-inv-a4-page--editing' : ''}${!selectedPages.has(pageCount) ? ' tt-inv-a4-page--export-off' : ''}`}
+                        aria-label={`Страница ${pageCount} из ${pageCount} — счёт`}
+                      >
+                        <InvoiceLegalInvoicePage
+                          model={displayModel}
+                          session={session}
+                          editable={editingPage === pageCount}
+                          legalOverrides={legalOverrides}
+                          onChangeLegalOverrides={patchLegalOverrides}
+                          onChangeModel={patchCoverModel}
+                        />
+                      </div>
+                    )
+                  : null}
               </div>
             </div>
           </div>

@@ -85,6 +85,7 @@
 .tt-inv-tr__thead th:last-child,
 .tt-inv-tr__thead th:nth-child(5):nth-last-child(3),
 .tt-inv-tr__thead th:nth-child(6):nth-last-child(2),
+.tt-inv-tr__table[aria-label='Сводка по сервисам'] .tt-inv-tr__thead th:nth-child(n + 4),
 .tt-inv-tr__tbody td:last-child,
 .tt-inv-tr__tbody td:nth-child(5):nth-last-child(3),
 .tt-inv-tr__tbody td:nth-child(6):nth-last-child(2),

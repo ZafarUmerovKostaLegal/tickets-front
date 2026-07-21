@@ -260,18 +260,18 @@ function timeReportDocxSectionChildren(
     const cur = packCurrencyCode(model);
     const labels = getTimeReportLabels(model.coverLanguage);
     const amountHdr = labels.amount(cur);
-    const DW = pctWidths([14, 7, 12, 24, 10, 14, 19]);
-    const SW = pctWidths([9, 24, 22, 11, 11, 23]);
+    const DW = pctWidths([12, 10, 11, 22, 9, 14, 22]);
+    const SW = pctWidths([9, 22, 20, 13, 15, 21]);
 
     const detailHeader = new TableRow({
         children: [
-            trHeadCell(labels.date, DW[0] ?? 10),
-            trHeadCell(labels.initials, DW[1] ?? 7),
-            trHeadCell(labels.task, DW[2] ?? 10),
-            trHeadCell(labels.description, DW[3] ?? 25),
-            trHeadCell(labels.hours, DW[4] ?? 10),
-            trHeadCell(labels.rate, DW[5] ?? 12),
-            trHeadCell(amountHdr, DW[6] ?? 16),
+            trHeadCell(labels.date, DW[0] ?? 12),
+            trHeadCell(labels.initials, DW[1] ?? 10),
+            trHeadCell(labels.task, DW[2] ?? 11),
+            trHeadCell(labels.description, DW[3] ?? 22),
+            trHeadCell(labels.hours, DW[4] ?? 9),
+            trHeadCell(labels.rate, DW[5] ?? 14),
+            trHeadCell(amountHdr, DW[6] ?? 22),
         ],
     });
     const detailBodyRows: TableRow[] = detailChunk.map((r) => new TableRow({
