@@ -288,7 +288,7 @@ function drawRightFitPdfBold(
     if (!t.length)
         return;
     const maxW = Math.max(4, cellW - CELL_PAD_X * 2);
-    const fitted = fitPdfCellText(t, maxW, fontBold, DOC_FS, DOC_FS * 0.85);
+    const fitted = fitPdfCellText(t, maxW, fontBold, DOC_FS, DOC_FS * 0.68);
     if (!fitted.text)
         return;
     const tw = fontBold.widthOfTextAtSize(fitted.text, fitted.size);
@@ -382,14 +382,11 @@ function computeBodyRowLayouts(
             if (!raw) {
                 lines = [];
             }
-            else if (TR_DETAIL_NO_CLIP_COLS.has(c)) {
-                lines = raw ? [raw] : [];
-            }
             else if (wrapCols.has(c)) {
                 lines = wrapCellLines(raw, maxW, font, DOC_FS);
             }
             else {
-                const fitted = fitPdfCellText(raw, maxW, font, DOC_FS, DOC_FS * 0.85);
+                const fitted = fitPdfCellText(raw, maxW, font, DOC_FS, DOC_FS * 0.72);
                 lines = fitted.text ? [fitted.text] : [];
             }
             rowCellLines.push(lines);
@@ -852,12 +849,11 @@ function drawTimeReportGridTable(
     return tableBottom;
 }
 
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [14, 7, 12, 25, 8, 14, 20] as const;
-const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 26, 26, 13, 13, 13] as const;
-/** Only Description wraps; Date/Task stay on one line. */
-const TR_DETAIL_WRAP_COLS = new Set([3]);
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [14, 7, 12, 24, 10, 14, 19] as const;
+const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 24, 22, 11, 11, 23] as const;
+/** Description + Task can wrap to keep full values visible. */
+const TR_DETAIL_WRAP_COLS = new Set([2, 3]);
 const TR_SUMMARY_WRAP_COLS = new Set([1, 2]);
-const TR_DETAIL_NO_CLIP_COLS = new Set([0, 1]);
 
 function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, fontBold: PDFFont, continuation: boolean): number {
     let yTop = H - MT - 4;
