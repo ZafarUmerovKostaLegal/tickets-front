@@ -3,12 +3,6 @@ import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { resolveLegalFirmBankingLines, type InvoiceLegalPageOverrides } from './invoiceLegalPageModel';
 import type { InvoiceTimeReportPack } from './invoiceTimeReportModel';
 
-export const INVOICE_PAYMENT_DISCLAIMER = (
-    'The payment under this invoice shall constitute the due acceptance of the Services by '
-    + 'the Client. Perfection of a separate document on acceptance of the Services is not '
-    + 'required.'
-);
-
 export const TIME_REPORT_DETAIL_ROWS = 14;
 export const TIME_REPORT_SUMMARY_ROWS = 5;
 
@@ -33,18 +27,7 @@ export function packResolveDueIso(session: InvoicePreviewSessionV1 | null, issue
     return issueIso;
 }
 
-export function packUppercaseRibbonDate(isoYmd: string): string {
-    if (!isoYmd || !/^\d{4}-\d{2}-\d{2}$/.test(isoYmd))
-        return '—';
-    const d = new Date(`${isoYmd}T12:00:00`);
-    if (Number.isNaN(d.getTime()))
-        return '—';
-    return d.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-    }).toUpperCase();
-}
+export { formatLegalRibbonDate as packUppercaseRibbonDate } from './invoiceLegalPageI18n';
 
 export function packInvoiceNumberDisplay(session: InvoicePreviewSessionV1 | null): string {
     const n = session?.meta.invoiceNumber?.trim();
@@ -60,8 +43,11 @@ export function packZeroCommaAmount(model: InvoiceCoverLetterModel): string {
     return `${packCurrencyCode(model)} 0,00`;
 }
 
-export function packCaseDetailLine(session: InvoicePreviewSessionV1 | null): string {
-    return session?.meta.projectLabel?.trim() || 'Legal services';
+export function packCaseDetailLine(
+    session: InvoicePreviewSessionV1 | null,
+    fallback = 'Legal services',
+): string {
+    return session?.meta.projectLabel?.trim() || fallback;
 }
 
 export function packFirmBankingLines(currencyCode: string): string[] {

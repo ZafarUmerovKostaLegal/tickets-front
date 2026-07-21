@@ -37,6 +37,8 @@ import type { InvoiceTimeReportDetailRow, InvoiceTimeReportPack } from './invoic
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
 import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
+import { getTimeReportLabels } from './invoiceTimeReportI18n';
+import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
 import {
     invoicePreviewPageCount,
     resolveLegalBillToBankName,
@@ -241,17 +243,18 @@ function timeReportDocxSectionChildren(
     opts: TimeReportDocxChunkOpts,
 ): (Paragraph | Table)[] {
     const cur = packCurrencyCode(model);
-    const amountHdr = cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`;
+    const labels = getTimeReportLabels(model.coverLanguage);
+    const amountHdr = labels.amount(cur);
     const DW = pctWidths([11, 8, 11, 28, 11, 16]);
     const SW = pctWidths([9, 26, 26, 13, 13, 13]);
 
     const detailHeader = new TableRow({
         children: [
-            trHeadCell('Date', DW[0] ?? 11),
-            trHeadCell('Initials', DW[1] ?? 8),
-            trHeadCell('Task', DW[2] ?? 11),
-            trHeadCell('Description', DW[3] ?? 28),
-            trHeadCell('Hours', DW[4] ?? 11),
+            trHeadCell(labels.date, DW[0] ?? 11),
+            trHeadCell(labels.initials, DW[1] ?? 8),
+            trHeadCell(labels.task, DW[2] ?? 11),
+            trHeadCell(labels.description, DW[3] ?? 28),
+            trHeadCell(labels.hours, DW[4] ?? 11),
             trHeadCell(amountHdr, DW[5] ?? 16),
         ],
     });
@@ -273,7 +276,7 @@ function timeReportDocxSectionChildren(
                     borders: cellBorderGrid,
                     columnSpan: 4,
                     children: [new Paragraph({
-                        children: [new TextRun({ text: 'Total', bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
+                        children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
                     })],
                 }),
                 trFootValueCell(pack.detailTotalHoursDisplay, DW[4]!, AlignmentType.RIGHT),
@@ -313,7 +316,7 @@ function timeReportDocxSectionChildren(
                         children: [new Paragraph({
                             alignment: AlignmentType.CENTER,
                             children: [new TextRun({
-                                text: 'Private and confidential',
+                                text: labels.confidential,
                                 bold: true,
                                 color: 'FFFFFF',
                                 size: h(8),
@@ -326,8 +329,9 @@ function timeReportDocxSectionChildren(
         ],
     });
 
-    const titleBase = `TIME REPORT FOR SERVICES PROVIDED IN ${model.servicesMonthYear.toUpperCase()}`;
-    const titleText = opts.continuation ? `${titleBase} — CONTINUED` : titleBase;
+    const titleText = opts.continuation
+        ? labels.titleContinued(model.servicesMonthYear)
+        : labels.title(model.servicesMonthYear);
 
     const out: (Paragraph | Table)[] = [
         confidentialRow,
@@ -352,12 +356,12 @@ function timeReportDocxSectionChildren(
     if (opts.isLastChunk) {
         const summaryHeader = new TableRow({
             children: [
-                trHeadCell('Initials', SW[0] ?? 9),
-                trHeadCell('Name', SW[1] ?? 26),
-                trHeadCell('Title', SW[2] ?? 26),
-                trHeadCell('Hours', SW[3] ?? 13),
-                trHeadCell('Hourly rate', SW[4] ?? 13),
-                trHeadCell(`Total price (${cur})`, SW[5] ?? 13),
+                trHeadCell(labels.initials, SW[0] ?? 9),
+                trHeadCell(labels.name, SW[1] ?? 26),
+                trHeadCell(labels.titleCol, SW[2] ?? 26),
+                trHeadCell(labels.hours, SW[3] ?? 13),
+                trHeadCell(labels.hourlyRate, SW[4] ?? 13),
+                trHeadCell(labels.totalPrice(cur), SW[5] ?? 13),
             ],
         });
         const summaryDataRows: TableRow[] = pack.summarySlots.map((r) => new TableRow({
@@ -379,7 +383,7 @@ function timeReportDocxSectionChildren(
                     borders: cellBorderGrid,
                     columnSpan: 3,
                     children: [new Paragraph({
-                        children: [new TextRun({ text: 'Total', bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
+                        children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: h(8), font: 'Calibri' })],
                     })],
                 }),
                 trFootValueCell(pack.summaryGrandHoursDisplay, SW[3]!, AlignmentType.RIGHT),
@@ -396,7 +400,7 @@ function timeReportDocxSectionChildren(
         out.push(
             new Paragraph({
                 spacing: { before: 260, after: 120 },
-                children: [new TextRun({ text: 'Summary of services', bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
+                children: [new TextRun({ text: labels.summaryTitle, bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
             }),
             sumTbl,
         );
@@ -451,23 +455,24 @@ function legalInvoiceDocxBlocks(
     logoRuns: ParagraphChild[],
     legalOverrides?: InvoiceLegalPageOverrides,
 ): (Paragraph | Table)[] {
+    const labels = getLegalInvoiceLabels(model.coverLanguage);
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
-    const ribbonIssue = packUppercaseRibbonDate(issueIso);
-    const dueBanner = packUppercaseRibbonDate(dueIso);
+    const ribbonIssue = packUppercaseRibbonDate(issueIso, model.coverLanguage);
+    const dueBanner = packUppercaseRibbonDate(dueIso, model.coverLanguage);
     const invNo = packInvoiceNumberDisplay(session);
-    const caseLine = resolveLegalCaseDetailLine(session, legalOverrides);
+    const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);
     const zeroLine = packZeroCommaAmount(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
-    const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides);
+    const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
 
     const firmParas = [
         new Paragraph({
             spacing: { after: 40 },
             children: [new TextRun({ text: `${KOSTA_LEGAL_FIRM.brandName} LF`, bold: true, color: INV_RED, size: h(12), font: 'Calibri' })],
         }),
-        ...[KOSTA_LEGAL_FIRM.addressLine, ...resolveLegalFirmBankingLines(cur, legalOverrides)].map((txt) =>
+        ...[KOSTA_LEGAL_FIRM.addressLine, ...resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage)].map((txt) =>
             new Paragraph({
                 spacing: { after: 35 },
                 children: [new TextRun({ text: txt, color: '100814', size: h(9), font: 'Calibri' })],
@@ -499,12 +504,12 @@ function legalInvoiceDocxBlocks(
         ],
     });
 
-    const ribbon = invoiceRibbonTable(`INVOICE No. ${invNo}`, ribbonIssue);
+    const ribbon = invoiceRibbonTable(labels.invoiceNo(invNo), ribbonIssue);
 
     const billChildren: Paragraph[] = [
         new Paragraph({
             spacing: { after: 80 },
-            children: [new TextRun({ text: 'Bill to', bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
+            children: [new TextRun({ text: labels.billTo, bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
         }),
         new Paragraph({
             spacing: { after: 40 },
@@ -512,7 +517,7 @@ function legalInvoiceDocxBlocks(
         }),
         new Paragraph({
             spacing: { after: 30 },
-            children: [new TextRun({ text: 'Address:', color: '707784', size: h(9), font: 'Calibri' })],
+            children: [new TextRun({ text: `${labels.address}:`, color: '707784', size: h(9), font: 'Calibri' })],
         }),
         new Paragraph({
             spacing: { after: 30 },
@@ -528,7 +533,7 @@ function legalInvoiceDocxBlocks(
     billChildren.push(
         new Paragraph({
             spacing: { after: 30 },
-            children: [new TextRun({ text: 'Bank name:', color: '707784', size: h(9), font: 'Calibri' })],
+            children: [new TextRun({ text: `${labels.bankName}:`, color: '707784', size: h(9), font: 'Calibri' })],
         }),
         new Paragraph({
             spacing: { after: 30 },
@@ -536,7 +541,7 @@ function legalInvoiceDocxBlocks(
         }),
         new Paragraph({
             spacing: { after: 30 },
-            children: [new TextRun({ text: 'SWIFT:', color: '707784', size: h(9), font: 'Calibri' })],
+            children: [new TextRun({ text: `${labels.swift}:`, color: '707784', size: h(9), font: 'Calibri' })],
         }),
         new Paragraph({
             children: [new TextRun({ text: resolveLegalBillToSwift(legalOverrides), color: '707784', size: h(9), font: 'Calibri' })],
@@ -546,7 +551,7 @@ function legalInvoiceDocxBlocks(
     const caseChildren: Paragraph[] = [
         new Paragraph({
             spacing: { after: 80 },
-            children: [new TextRun({ text: 'Case details', bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
+            children: [new TextRun({ text: labels.caseDetails, bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
         }),
         new Paragraph({
             children: [new TextRun({ text: caseLine, size: h(10), font: 'Calibri' })],
@@ -576,8 +581,8 @@ function legalInvoiceDocxBlocks(
 
     const svcHead = new TableRow({
         children: [
-            trHeadCell('Description', 72),
-            trHeadCell(`Total (${cur})`, 28),
+            trHeadCell(labels.description, 72),
+            trHeadCell(labels.total(cur), 28),
         ],
     });
     const svcBody = new TableRow({
@@ -611,21 +616,21 @@ function legalInvoiceDocxBlocks(
             spacing: { before: 200 },
             alignment: AlignmentType.RIGHT,
             children: [
-                new TextRun({ text: 'SUBTOTAL: ', bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
+                new TextRun({ text: `${labels.subtotal} `, bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
                 new TextRun({ text: model.totalFormatted, bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
             ],
         }),
         new Paragraph({
             alignment: AlignmentType.RIGHT,
             children: [
-                new TextRun({ text: 'VAT: ', bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
+                new TextRun({ text: `${labels.vat} `, bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
                 new TextRun({ text: zeroLine, color: INV_RED, size: h(10), font: 'Calibri' }),
             ],
         }),
         new Paragraph({
             alignment: AlignmentType.RIGHT,
             children: [
-                new TextRun({ text: 'Extra expenses: ', bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
+                new TextRun({ text: `${labels.extraExpenses} `, bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
                 new TextRun({ text: zeroLine, color: INV_RED, size: h(10), font: 'Calibri' }),
             ],
         }),
@@ -633,7 +638,7 @@ function legalInvoiceDocxBlocks(
             alignment: AlignmentType.RIGHT,
             spacing: { after: 120 },
             children: [
-                new TextRun({ text: `TOTAL DUE BY ${dueBanner}: `, bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
+                new TextRun({ text: `${labels.totalDueBy(dueBanner)} `, bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
                 new TextRun({ text: model.totalFormatted, bold: true, color: INV_RED, size: h(12), font: 'Calibri' }),
             ],
         }),
@@ -659,7 +664,7 @@ function legalInvoiceDocxBlocks(
         ...totals,
         new Paragraph({
             spacing: { before: 160 },
-            children: [new TextRun({ text: 'Thank you for your business!', bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
+            children: [new TextRun({ text: labels.thanks, bold: true, color: INV_RED, size: h(11), font: 'Calibri' })],
         }),
         new Paragraph({
             spacing: { before: 200 },

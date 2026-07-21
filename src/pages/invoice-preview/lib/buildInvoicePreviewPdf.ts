@@ -25,6 +25,8 @@ import {
     type InvoiceLegalPageOverrides,
 } from './invoiceLegalPageModel';
 import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
+import { getTimeReportLabels } from './invoiceTimeReportI18n';
+import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
 import {
     KOSTA_LEGAL_FIRM,
     getCoverLetterLabels,
@@ -284,6 +286,7 @@ function drawTimeReportGridTable(
         } | null;
 
         showInnerTotal?: boolean;
+        totalLabel?: string;
     },
 ): number {
     const {
@@ -301,6 +304,7 @@ function drawTimeReportGridTable(
         rightAlignedBodyCols,
         footerTotals,
         showInnerTotal,
+        totalLabel = 'Total',
     } = opts;
     const headerH = 20;
     const rowH = 14;
@@ -365,7 +369,7 @@ function drawTimeReportGridTable(
     const yFoot = tableBottom + 5;
     if (innerFootLines > 0) {
         const fsTot = 8;
-        page.drawText('Total', { x: xs[0]! + 3, y: yFoot, size: fsTot, font: fontBold, color: TR_RED });
+        page.drawText(totalLabel, { x: xs[0]! + 3, y: yFoot, size: fsTot, font: fontBold, color: TR_RED });
 
         if (footerKind === 'detail' && footerTotals?.detail) {
             const { hours, amount } = footerTotals.detail;
@@ -411,7 +415,8 @@ const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 26, 26, 13, 13, 13] as const;
 
 function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, font: PDFFont, fontBold: PDFFont, continuation: boolean): number {
     let yTop = H - MT - 4;
-    const confLabel = 'Private and confidential';
+    const labels = getTimeReportLabels(model.coverLanguage);
+    const confLabel = labels.confidential;
     const fsConf = 9;
     const cw = font.widthOfTextAtSize(confLabel, fsConf);
     const padConfX = 6;
@@ -442,8 +447,9 @@ function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel,
         color: TR_RED,
     });
     yTop -= 12;
-    const titleBase = `TIME REPORT FOR SERVICES PROVIDED IN ${model.servicesMonthYear.toUpperCase()}`;
-    const title = continuation ? `${titleBase} — CONTINUED` : titleBase;
+    const title = continuation
+        ? labels.titleContinued(model.servicesMonthYear)
+        : labels.title(model.servicesMonthYear);
     page.drawText(title, {
         x: ML,
         y: yTop,
@@ -502,7 +508,8 @@ function drawSingleTimeReportPdfPage(
     const detailBody = slice.map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.amount] as const);
     const tableW = W - ML - MR;
     const cur = packCurrencyCode(model);
-    const amountHdr = cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`;
+    const labels = getTimeReportLabels(model.coverLanguage);
+    const amountHdr = labels.amount(cur);
     const nRows = Math.max(slice.length, 1);
 
     const yAfterDetail = drawTimeReportGridTable(page, {
@@ -510,7 +517,7 @@ function drawSingleTimeReportPdfPage(
         tableW,
         yTopPdf: yGridTop,
         colWeights: TIME_REPORT_PDF_DETAIL_WEIGHTS,
-        headers: ['Date', 'Initials', 'Task', 'Description', 'Hours', amountHdr],
+        headers: [labels.date, labels.initials, labels.task, labels.description, labels.hours, amountHdr],
         bodyRows: nRows,
         footerKind: 'detail',
         summaryCurrency: null,
@@ -519,6 +526,7 @@ function drawSingleTimeReportPdfPage(
         bodyTexts: detailBody.length ? detailBody : [['', '', '', '', '', '']],
         rightAlignedBodyCols: new Set([4, 5]),
         showInnerTotal: opts.showDetailTotals,
+        totalLabel: labels.total,
         footerTotals: opts.showDetailTotals
             ? {
                 detail: {
@@ -538,7 +546,7 @@ function drawSingleTimeReportPdfPage(
     const summaryRows = Math.max(summaryBody.length, 1);
 
     let yMid = yAfterDetail - 16;
-    page.drawText('Summary of services', {
+    page.drawText(labels.summaryTitle, {
         x: ML,
         y: yMid,
         size: 11,
@@ -552,7 +560,7 @@ function drawSingleTimeReportPdfPage(
         tableW,
         yTopPdf: yMid,
         colWeights: TIME_REPORT_PDF_SUMMARY_WEIGHTS,
-        headers: ['Initials', 'Name', 'Title', 'Hours', 'Hourly rate', `Total price (${cur})`],
+        headers: [labels.initials, labels.name, labels.titleCol, labels.hours, labels.hourlyRate, labels.totalPrice(cur)],
         bodyRows: summaryRows,
         footerKind: 'summary',
         summaryCurrency: cur,
@@ -560,6 +568,7 @@ function drawSingleTimeReportPdfPage(
         fontBold,
         bodyTexts: summaryBody.length ? summaryBody : [['', '', '', '', '', '']],
         rightAlignedBodyCols: new Set([3, 4, 5]),
+        totalLabel: labels.total,
         footerTotals: {
             summary: {
                 hours: pack.summaryGrandHoursDisplay,
@@ -583,14 +592,15 @@ function drawLegalInvoicePdfPage(
 ): void {
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
-    const ribbonIssue = packUppercaseRibbonDate(issueIso);
-    const dueBanner = packUppercaseRibbonDate(dueIso);
+    const labels = getLegalInvoiceLabels(model.coverLanguage);
+    const ribbonIssue = packUppercaseRibbonDate(issueIso, model.coverLanguage);
+    const dueBanner = packUppercaseRibbonDate(dueIso, model.coverLanguage);
     const invNo = packInvoiceNumberDisplay(session);
-    const caseLine = resolveLegalCaseDetailLine(session, legalOverrides);
+    const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);
     const zeroLine = packZeroCommaAmount(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
-    const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides);
+    const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
 
     let yTop = H - MT - 4;
     const firmName = `${KOSTA_LEGAL_FIRM.brandName} LF`;
@@ -602,7 +612,7 @@ function drawLegalInvoicePdfPage(
         color: TR_RED,
     });
     yTop -= 14;
-    const leftBlurb: string[] = [KOSTA_LEGAL_FIRM.addressLine, ...resolveLegalFirmBankingLines(cur, legalOverrides)];
+    const leftBlurb: string[] = [KOSTA_LEGAL_FIRM.addressLine, ...resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage)];
     for (const ln of leftBlurb) {
         page.drawText(ln, { x: ML, y: yTop, size: 8, font, color: CORP_TEXT });
         yTop -= 10;
@@ -631,7 +641,7 @@ function drawLegalInvoicePdfPage(
         color: TR_RED,
     });
 
-    page.drawText(`INVOICE No. ${invNo}`, {
+    page.drawText(labels.invoiceNo(invNo), {
         x: ML + 8,
         y: yRibbonBot + 6,
         size: 10,
@@ -651,11 +661,11 @@ function drawLegalInvoicePdfPage(
     let yPanels = yRibbonBot - 18;
     const splitX = ML + (W - ML - MR) * 0.52;
 
-    page.drawText('Bill to', { x: ML, y: yPanels, size: 9, font: fontBold, color: TR_RED });
+    page.drawText(labels.billTo, { x: ML, y: yPanels, size: 9, font: fontBold, color: TR_RED });
     let yBill = yPanels - 13;
     page.drawText(model.recipientCompany, { x: ML, y: yBill, size: 9, font: fontBold, color: BODY });
     yBill -= 12;
-    page.drawText('Address:', { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
+    page.drawText(`${labels.address}:`, { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
     yBill -= 10;
     page.drawText(model.recipientAddressLines[0], { x: ML, y: yBill, size: 8, font, color: BODY });
     yBill -= 10;
@@ -663,15 +673,15 @@ function drawLegalInvoicePdfPage(
         page.drawText(model.recipientAddressLines[1], { x: ML, y: yBill, size: 8, font, color: BODY });
         yBill -= 10;
     }
-    page.drawText('Bank name:', { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
+    page.drawText(`${labels.bankName}:`, { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
     yBill -= 10;
     page.drawText(resolveLegalBillToBankName(legalOverrides), { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
     yBill -= 10;
-    page.drawText('SWIFT:', { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
+    page.drawText(`${labels.swift}:`, { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
     yBill -= 10;
     page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
 
-    page.drawText('Case details', { x: splitX, y: yPanels, size: 9, font: fontBold, color: TR_RED });
+    page.drawText(labels.caseDetails, { x: splitX, y: yPanels, size: 9, font: fontBold, color: TR_RED });
     const yCaseFloor = wrapPlainParagraph(page, caseLine, splitX, yPanels - 13, W - MR - splitX - 6, 8, font, 11);
 
     let yTable = Math.min(yBill - 16, yCaseFloor - 10);
@@ -686,14 +696,14 @@ function drawLegalInvoicePdfPage(
         height: headH,
         color: TR_RED,
     });
-    page.drawText('Description', {
+    page.drawText(labels.description, {
         x: ML + 6,
         y: yHBot + 5,
         size: 9,
         font: fontBold,
         color: rgb(1, 1, 1),
     });
-    const th2 = `Total (${cur})`;
+    const th2 = labels.total(cur);
     page.drawText(th2, {
         x: ML + descW + 4,
         y: yHBot + 5,
@@ -734,17 +744,17 @@ function drawLegalInvoicePdfPage(
         page.drawText(value, { x: startX + lw, y: yTot, size: 9, font: boldVal ? fontBold : font, color: TR_RED });
         yTot -= 12;
     };
-    drawTotalLine('SUBTOTAL:', model.totalFormatted, true);
-    drawTotalLine('VAT:', zeroLine, false);
-    drawTotalLine('Extra expenses:', zeroLine, false);
-    const dueLab = `TOTAL DUE BY ${dueBanner}: `;
+    drawTotalLine(labels.subtotal, model.totalFormatted, true);
+    drawTotalLine(labels.vat, zeroLine, false);
+    drawTotalLine(labels.extraExpenses, zeroLine, false);
+    const dueLab = `${labels.totalDueBy(dueBanner)} `;
     const dueW = fontBold.widthOfTextAtSize(model.totalFormatted, 11);
     const dl = fontBold.widthOfTextAtSize(dueLab, 9);
     page.drawText(dueLab, { x: rightX - dl - dueW, y: yTot, size: 9, font: fontBold, color: TR_RED });
     page.drawText(model.totalFormatted, { x: rightX - dueW, y: yTot, size: 11, font: fontBold, color: TR_RED });
     yTot -= 22;
 
-    page.drawText('Thank you for your business!', {
+    page.drawText(labels.thanks, {
         x: ML,
         y: yTot,
         size: 10,

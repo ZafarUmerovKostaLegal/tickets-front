@@ -23,6 +23,11 @@ import {
 import { packCurrencyCode } from './invoicePreviewPackShared';
 import { invoiceClientDescription } from '@pages/time-tracking/lib/invoiceClientDescription';
 import {
+    formatTimeReportDateDisplay,
+    localizeTimeReportTaskLabel,
+} from './invoiceTimeReportI18n';
+import { normalizeCoverLanguage } from './invoiceCoverLetterI18n';
+import {
     emptyInvoiceTimeReportPack,
     finalizeDetailSlots,
     formatTimeReportAmount,
@@ -71,14 +76,11 @@ function userByAuthId(users: TimeTrackingUserRow[], authId: number): TimeTrackin
     return users.find((u) => u.id === authId) ?? null;
 }
 
-function dateDisplayFromIso(iso: string | undefined | null): string {
-    const s = (iso ?? '').trim().slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(s))
-        return '—';
-    const d = new Date(`${s}T12:00:00`);
-    if (Number.isNaN(d.getTime()))
-        return '—';
-    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+function dateDisplayFromIso(
+    iso: string | undefined | null,
+    lang: ReturnType<typeof normalizeCoverLanguage>,
+): string {
+    return formatTimeReportDateDisplay(iso, lang);
 }
 
 function numHoursFromLine(ln: InvoiceLineDto): number {
@@ -188,10 +190,16 @@ export async function resolveInvoiceTimeReportPack(
     options?: ResolveInvoiceTimeReportPackOptions,
 ): Promise<InvoiceTimeReportPack> {
     const currency = packCurrencyCode(model);
+    const lang = normalizeCoverLanguage(model.coverLanguage);
     const empty = emptyInvoiceTimeReportPack(currency);
 
     if (!session)
         return empty;
+
+    const localizeTask = (raw: string) => localizeTimeReportTaskLabel(raw, lang);
+    const expenseTask = localizeTask('Expense');
+    const manualTask = localizeTask('Manual');
+    const otherTask = localizeTask('Other');
 
     try {
         const users = await listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]);
@@ -248,14 +256,14 @@ export async function resolveInvoiceTimeReportPack(
                 const amt = Number(e.billableAmount);
                 const a = Number.isFinite(amt) ? amt : 0;
                 const entry = entryById.get(e.id) ?? null;
-                const taskLabel = resolveInvoiceTimeReportTaskLabel({
+                const taskLabel = localizeTask(resolveInvoiceTimeReportTaskLabel({
                     entry,
                     invoiceLineDescription: e.description,
                     taskNameById,
-                });
+                }));
                 const { notes } = parseTimeEntryDescriptionLines(entry?.description ?? e.description ?? null);
                 details.push({
-                    date: dateDisplayFromIso(e.workDate),
+                    date: dateDisplayFromIso(e.workDate, lang),
                     initials: u ? initialsFromUser(u) : String(e.authUserId).slice(0, 3),
                     task: taskLabel,
                     description: invoiceClientDescription(entry?.description ?? e.description, taskLabel)
@@ -272,9 +280,9 @@ export async function resolveInvoiceTimeReportPack(
                 const amt = Number(e.equivalentAmount);
                 const a = Number.isFinite(amt) ? amt : 0;
                 details.push({
-                    date: dateDisplayFromIso(e.expenseDate),
+                    date: dateDisplayFromIso(e.expenseDate, lang),
                     initials: '—',
-                    task: 'Expense',
+                    task: expenseTask,
                     description: (e.description ?? '').trim() || '—',
                     hours: '',
                     amount: formatTimeReportAmount(a, currency),
@@ -372,13 +380,13 @@ export async function resolveInvoiceTimeReportPack(
 
                 const u = authId != null ? userByAuthId(users, authId) : null;
                 const hours = numHoursFromLine(ln);
-                const taskLabel = resolveInvoiceTimeReportTaskLabel({
+                const taskLabel = localizeTask(resolveInvoiceTimeReportTaskLabel({
                     entry,
                     invoiceLineDescription: desc,
                     taskNameById,
-                });
+                }));
                 details.push({
-                    date: workIso ? dateDisplayFromIso(workIso) : '—',
+                    date: workIso ? dateDisplayFromIso(workIso, lang) : '—',
                     initials: u ? initialsFromUser(u) : '—',
                     task: taskLabel,
                     description: invoiceClientDescription(entry?.description ?? desc, taskLabel) || desc || '—',
@@ -392,9 +400,9 @@ export async function resolveInvoiceTimeReportPack(
             else if (kind === 'expense') {
                 const workIso = await resolveExpenseLineDateIso(ln);
                 details.push({
-                    date: workIso ? dateDisplayFromIso(workIso) : '—',
+                    date: workIso ? dateDisplayFromIso(workIso, lang) : '—',
                     initials: '—',
-                    task: 'Expense',
+                    task: expenseTask,
                     description: desc,
                     hours: '',
                     amount: formatTimeReportAmount(amt, currency),
@@ -404,7 +412,7 @@ export async function resolveInvoiceTimeReportPack(
                 });
             }
             else {
-                const taskLabel = kind === 'manual' ? 'Manual' : 'Other';
+                const taskLabel = kind === 'manual' ? manualTask : otherTask;
                 details.push({
                     date: '—',
                     initials: '—',

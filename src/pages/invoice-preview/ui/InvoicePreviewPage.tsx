@@ -93,6 +93,11 @@ export function InvoicePreviewPage() {
 
     const setCoverLanguage = useCallback((lang: InvoiceCoverLanguage) => {
         setCoverModel((prev) => applyCoverLetterLanguage(prev ?? fallbackCoverModel(), lang, issueDateIso));
+        setLegalOverrides((prev) => ({
+            ...prev,
+            serviceDescriptionLine: null,
+            paymentDisclaimer: null,
+        }));
     }, [issueDateIso]);
 
     const patchCoverModel = useCallback((patch: Partial<InvoiceCoverLetterModel>) => {
@@ -156,7 +161,7 @@ export function InvoicePreviewPage() {
         return () => {
             cancel = true;
         };
-    }, [session, coverModel != null, pushToast]);
+    }, [session, coverLanguage, coverModel == null, pushToast]);
 
     const timeReportFallback = useMemo(
         () => emptyInvoiceTimeReportPack(packCurrencyCode(displayModel)),
@@ -461,7 +466,7 @@ export function InvoicePreviewPage() {
                 <span className="tt-inv-preview__pdf-toolbar-export" title="Страницы для PDF и Word">
                   Экспорт: {exportSelectionLabel}
                 </span>
-                <div className="tt-inv-preview__lang-toggle" role="group" aria-label="Язык сопроводительного письма">
+                <div className="tt-inv-preview__lang-toggle" role="group" aria-label="Язык документа">
                   <button
                     type="button"
                     className={`tt-inv-preview__lang-btn${coverLanguage === 'ENG' ? ' tt-inv-preview__lang-btn--active' : ''}`}
