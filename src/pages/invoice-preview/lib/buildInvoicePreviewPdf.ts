@@ -72,6 +72,24 @@ const PAGE_FOOTER_ZONE_TOP = MB + 52;
 const TR_SECTION_GAP = DOC_LH * 2.2;
 const TR_SUMMARY_TITLE_GAP = DOC_LH * 1.15;
 
+/** Cover letter rhythm — InvoiceCoverLetter.css (rem @ 16px → pt). */
+const CSS_REM_PT = 12;
+const COVER_LOGO_H_PT = 27;
+const COVER_LOGO_W_PT = COVER_LOGO_H_PT * (439 / 219);
+const COVER_HEADER_PAD_BOTTOM = CSS_REM_PT;
+const COVER_HEADER_MARGIN_BOTTOM = CSS_REM_PT * 2.1;
+const COVER_BLOCK_GAP = CSS_REM_PT * 1.25;
+const COVER_SALUTE_GAP = CSS_REM_PT;
+const COVER_PARA_GAP = CSS_REM_PT;
+const COVER_CLOSING_BEFORE = CSS_REM_PT * 1.65;
+const COVER_SIG_BEFORE = CSS_REM_PT * 2;
+const COVER_HEADER_RULE = rgb(0.39, 0.45, 0.52);
+const LEGAL_LOGO_H_PT = 30;
+const LEGAL_LOGO_W_PT = LEGAL_LOGO_H_PT * (439 / 219);
+const LEGAL_MASTHEAD_MB = CSS_REM_PT * 0.85;
+const LEGAL_RIBBON_MB = CSS_REM_PT * 0.75;
+const LEGAL_PANELS_PT = CSS_REM_PT * 0.65;
+
 type PdfRgb = ReturnType<typeof rgb>;
 
 function wrapPlainParagraph(page: PDFPage, text: string, x: number, y: number, maxWidth: number, size: number, font: PDFFont, lineGap: number): number {
@@ -147,19 +165,17 @@ function drawCoverPage(
     logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null,
 ): void {
     const logoTop = H - MT;
-    let lowestHeaderY = logoTop;
+    let headerContentBottom = logoTop - COVER_LOGO_H_PT;
 
-    const logoWidthPt = 140;
     if (logoImage) {
-        const logoHeightPt = (logoImage.height / logoImage.width) * logoWidthPt;
-        const logoBottom = logoTop - logoHeightPt;
+        const logoBottom = logoTop - COVER_LOGO_H_PT;
         page.drawImage(logoImage, {
             x: ML,
             y: logoBottom,
-            width: logoWidthPt,
-            height: logoHeightPt,
+            width: COVER_LOGO_W_PT,
+            height: COVER_LOGO_H_PT,
         });
-        lowestHeaderY = Math.min(lowestHeaderY, logoBottom);
+        headerContentBottom = logoBottom;
     }
 
     const contact = [
@@ -175,13 +191,22 @@ function drawCoverPage(
         page.drawText(line, { x: W - MR - tw, y: cy, size: DOC_FS, font, color: muted });
         cy -= DOC_LH;
     }
-    lowestHeaderY = Math.min(lowestHeaderY, cy);
+    headerContentBottom = Math.min(headerContentBottom, cy);
 
-    let y = lowestHeaderY - DOC_LH * 2;
+    const borderY = headerContentBottom - COVER_HEADER_PAD_BOTTOM;
+    page.drawLine({
+        start: { x: ML, y: borderY },
+        end: { x: W - MR, y: borderY },
+        thickness: 0.5,
+        color: COVER_HEADER_RULE,
+        opacity: 0.35,
+    });
+
+    let y = borderY - COVER_HEADER_MARGIN_BOTTOM;
 
     page.drawText(model.letterDateDisplay, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= DOC_LH * 1.8;
+    y -= COVER_BLOCK_GAP;
     page.drawText(model.recipientCompany, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
     y -= DOC_LH;
     page.drawText(model.recipientAddressLines[0], { x: ML, y, size: DOC_FS, font, color: BODY });
@@ -190,35 +215,34 @@ function drawCoverPage(
         page.drawText(model.recipientAddressLines[1], { x: ML, y, size: DOC_FS, font, color: BODY });
     }
 
-    y -= DOC_LH * 1.8;
+    y -= COVER_BLOCK_GAP;
     const labels = getCoverLetterLabels(model.coverLanguage);
     page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
     y -= DOC_LH;
     page.drawText(model.attentionTitle, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= DOC_LH * 1.8;
+    y -= COVER_BLOCK_GAP;
     page.drawText(`${labels.dear} ${model.attentionName},`, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= DOC_LH * 1.5;
+    y -= COVER_SALUTE_GAP;
     const p1 = resolveCoverIntroParagraph(model);
-    const bodyGap = DOC_LH;
     const maxW = W - ML - MR;
-    y = wrapPlainParagraph(page, p1, ML, y, maxW, DOC_FS, font, bodyGap);
+    y = wrapPlainParagraph(page, p1, ML, y, maxW, DOC_FS, font, COVER_PARA_GAP);
 
-    y -= DOC_LH * 0.5;
+    y -= COVER_PARA_GAP * 0.35;
     const p2 = resolveCoverInvoiceParagraph(model);
-    y = wrapPlainParagraph(page, p2, ML, y, maxW, DOC_FS, font, bodyGap);
-    y -= bodyGap;
+    y = wrapPlainParagraph(page, p2, ML, y, maxW, DOC_FS, font, COVER_PARA_GAP);
 
+    y -= COVER_CLOSING_BEFORE;
     page.drawText(labels.closing, { x: ML, y, size: DOC_FS, font, color: BODY });
-    y -= bodyGap * 2;
 
+    y -= COVER_SIG_BEFORE;
     const sigW = 160;
     page.drawLine({ start: { x: ML, y }, end: { x: ML + sigW, y }, thickness: 0.5, color: rgb(0.35, 0.38, 0.45) });
-    y -= DOC_LH * 0.5;
+    y -= DOC_LH * 0.55;
 
     page.drawText(model.signatoryName, { x: ML, y, size: DOC_FS, font, color: BODY });
-    y -= bodyGap;
+    y -= DOC_LH;
     page.drawText(model.signatoryTitle, { x: ML, y, size: DOC_FS, font, color: BODY });
 }
 
@@ -882,16 +906,15 @@ function drawLegalInvoicePdfPage(
     const contentW = W - ML - MR;
     let y = H - MT;
 
-    const logoW = (150 * W) / 794;
     let logoBottom = y;
     if (logoImage) {
-        const logoH = (logoImage.height / logoImage.width) * logoW;
-        logoBottom = y - logoH;
+        const logoBottomY = y - LEGAL_LOGO_H_PT;
+        logoBottom = logoBottomY;
         page.drawImage(logoImage, {
-            x: W - MR - logoW,
-            y: logoBottom,
-            width: logoW,
-            height: logoH,
+            x: W - MR - LEGAL_LOGO_W_PT,
+            y: logoBottomY,
+            width: LEGAL_LOGO_W_PT,
+            height: LEGAL_LOGO_H_PT,
         });
     }
 
@@ -904,7 +927,7 @@ function drawLegalInvoicePdfPage(
         font: fontBold,
         color: FIRM_NAME,
     });
-    let yBlurb = y - DOC_LH;
+    let yBlurb = y - DOC_LH * 1.15;
 
     yBlurb = wrapTextBlock(page, firmAddress, ML, yBlurb, blurbW, DOC_FS, font, MUTED_TEXT, DOC_LH * 0.92);
     const leftBlurb = resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage);
@@ -913,7 +936,7 @@ function drawLegalInvoicePdfPage(
         yBlurb -= DOC_LH * 0.92;
     }
 
-    y = Math.min(yBlurb, logoBottom) - DOC_LH * 0.75;
+    y = Math.min(yBlurb, logoBottom) - LEGAL_MASTHEAD_MB;
 
     const ribbonPad = DOC_FS * 0.38;
     const ribbonH = DOC_FS + ribbonPad * 2;
@@ -940,7 +963,7 @@ function drawLegalInvoicePdfPage(
         font: fontBold,
         color: CORAL_DARK,
     });
-    y -= ribbonH + DOC_LH * 0.75;
+    y -= ribbonH + LEGAL_RIBBON_MB;
 
     page.drawLine({
         start: { x: ML, y: y + 3 },
@@ -948,7 +971,7 @@ function drawLegalInvoicePdfPage(
         thickness: 0.5,
         color: GRID_LINE,
     });
-    y -= DOC_LH * 0.55;
+    y -= LEGAL_PANELS_PT;
 
     const splitX = ML + contentW * 0.52;
     const rightColW = W - MR - splitX - 8;
