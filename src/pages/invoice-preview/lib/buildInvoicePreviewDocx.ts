@@ -123,11 +123,12 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
 
     const body: (Paragraph | Table)[] = [
         headerTable,
-        new Paragraph({ spacing: { before: 100, after: 120 }, children: [new TextRun({ text: '', size: 2 })] }),
+        new Paragraph({ spacing: { before: 260, after: 80 }, children: [new TextRun({ text: '', size: 2 })] }),
         new Paragraph({
+            spacing: { after: 240 },
             children: [new TextRun({ text: model.letterDateDisplay, size: DOC_SIZE, font: DOC_FONT })],
         }),
-        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: model.recipientCompany, bold: true, size: DOC_SIZE, font: DOC_FONT })] }),
+        new Paragraph({ spacing: { before: 40 }, children: [new TextRun({ text: model.recipientCompany, bold: true, size: DOC_SIZE, font: DOC_FONT })] }),
         new Paragraph({ children: [new TextRun({ text: model.recipientAddressLines[0], size: DOC_SIZE, font: DOC_FONT })] }),
     ];
 

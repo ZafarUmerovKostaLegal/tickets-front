@@ -83,10 +83,11 @@ const TR_SUMMARY_TITLE_GAP = DOC_LH * 1.15;
 /** Cover letter rhythm — InvoiceCoverLetter.css (rem @ 16px → pt). */
 const COVER_LOGO_H_PT = 42;
 const COVER_LOGO_W_PT = COVER_LOGO_H_PT * (439 / 219);
-const COVER_HEADER_MARGIN_BOTTOM = CSS_REM_PT * 0.85;
+const COVER_HEADER_MARGIN_BOTTOM = CSS_REM_PT * 1.85;
 /** Contact block: 8px on 794px preview ≈ 6pt on A4. */
 const COVER_CONTACT_FS = 6;
 const COVER_CONTACT_LH = COVER_CONTACT_FS * 1.35;
+const COVER_DATE_AFTER = CSS_REM_PT * 1.65;
 const COVER_BLOCK_GAP = CSS_REM_PT * 1.25;
 const COVER_SALUTE_GAP = CSS_REM_PT;
 const COVER_PARA_GAP = CSS_REM_PT;
@@ -213,7 +214,7 @@ function drawCoverPage(
 
     page.drawText(model.letterDateDisplay, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= COVER_BLOCK_GAP;
+    y -= COVER_DATE_AFTER;
     page.drawText(model.recipientCompany, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
     y -= DOC_LH;
     page.drawText(model.recipientAddressLines[0], { x: ML, y, size: DOC_FS, font, color: BODY });

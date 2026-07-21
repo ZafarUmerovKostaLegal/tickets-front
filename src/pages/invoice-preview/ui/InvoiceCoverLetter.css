@@ -20,7 +20,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 1.85rem;
   padding-bottom: 0;
 }
 
@@ -73,7 +73,7 @@
 }
 
 .tt-inv-cover__date {
-  margin: 0 0 1.25rem;
+  margin: 0 0 1.65rem;
 }
 
 .tt-inv-cover__recipient {
