@@ -200,7 +200,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  font-family: Calibri, Carlito, 'Segoe UI', sans-serif;
   font-size: inherit;
+  font-weight: 700;
   line-height: 1.45;
   color: var(--tt-inv-paper-ink, #0f172a);
 }
@@ -215,7 +217,7 @@
 .tt-inv-li__total-label {
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  font-weight: 600;
+  font-weight: 700;
   font-size: inherit;
 }
 
@@ -223,6 +225,7 @@
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .tt-inv-li__total-line--due {
@@ -232,6 +235,7 @@
 
 .tt-inv-li__total-due-label {
   font-size: inherit;
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   min-width: 0;
@@ -242,7 +246,7 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: var(--tt-inv-paper-ink, #0f172a);
+  color: inherit;
 }
 
 .tt-inv-li__thanks {
