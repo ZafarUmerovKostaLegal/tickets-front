@@ -22,8 +22,10 @@ import {
     resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
     resolveLegalServiceDescriptionLine,
+    invoicePreviewPageCount,
     type InvoiceLegalPageOverrides,
 } from './invoiceLegalPageModel';
+import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
@@ -1305,6 +1307,45 @@ function drawLegalInvoicePdfPage(
     wrapTextBlock(page, paymentDisclaimer, ML, y, contentW, DOC_FS, font, DISCLAIMER_TEXT, DOC_LH);
 }
 
+/**
+ * Preview checkboxes use fixed chunk page numbers; PDF may split time-report
+ * rows differently. Map cover / TR indices / invoice by role so selection matches UI.
+ */
+function remapPreviewPageSelectionToPdf(
+    selectedPreview: Set<number> | null,
+    previewPageCount: number,
+    pdfPageCount: number,
+): Set<number> | null {
+    if (!selectedPreview)
+        return null;
+    const out = new Set<number>();
+    if (selectedPreview.has(1))
+        out.add(1);
+
+    const previewTr = Math.max(0, previewPageCount - 2);
+    const pdfTr = Math.max(0, pdfPageCount - 2);
+    for (let i = 0; i < previewTr; i++) {
+        if (!selectedPreview.has(2 + i))
+            continue;
+        if (pdfTr <= 0)
+            continue;
+        if (pdfTr === previewTr) {
+            out.add(2 + i);
+            continue;
+        }
+        const start = Math.floor((i * pdfTr) / previewTr);
+        let end = Math.floor(((i + 1) * pdfTr) / previewTr);
+        if (end <= start)
+            end = Math.min(pdfTr, start + 1);
+        for (let j = start; j < end && j < pdfTr; j++)
+            out.add(2 + j);
+    }
+
+    if (selectedPreview.has(previewPageCount))
+        out.add(pdfPageCount);
+    return out;
+}
+
 export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput): Promise<Blob> {
     const { model, session, timeReportPack: timeReportOverride, legalOverrides, selectedPageNumbers } = input;
     const doc = await PDFDocument.create();
@@ -1336,9 +1377,13 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
         ? timeReportOverride
         : await resolveInvoiceTimeReportPack(session, model);
     const detailPlans = paginateDetailRowsForPdf(timeReport.detailSlots, model, timeReport, font, fontBold);
-    const pageCount = 2 + detailPlans.length;
-    const selected = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;
-    const includePage = (n: number) => !selected || selected.has(n);
+    const pdfPageCount = 2 + detailPlans.length;
+    /** Preview/DOCX page numbers (fixed chunking) — selection UI uses these. */
+    const previewTrChunks = splitDetailRowsForPagedTimeReport(timeReport.detailSlots);
+    const previewPageCount = invoicePreviewPageCount(previewTrChunks.length);
+    const selectedPreview = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;
+    const selectedPdf = remapPreviewPageSelectionToPdf(selectedPreview, previewPageCount, pdfPageCount);
+    const includePage = (n: number) => !selectedPdf || selectedPdf.has(n);
 
     if (includePage(1)) {
         const p1 = doc.addPage([W, H]);
@@ -1360,7 +1405,7 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
         trPageTag++;
     }
 
-    if (includePage(pageCount)) {
+    if (includePage(pdfPageCount)) {
         const pInv = doc.addPage([W, H]);
         drawLegalInvoicePdfPage(pInv, model, session, font, fontBold, logoImage, legalOverrides);
     }

@@ -132,6 +132,7 @@ export function InvoicePreviewPage() {
     const [selectedPages, setSelectedPages] = useState<Set<number>>(() => new Set([1, 2, 3]));
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const prevPageCountRef = useRef(0);
     const [activePage, setActivePage] = useState(1);
     const [sheetZoomPct, setSheetZoomPct] = useState(100);
 
@@ -252,10 +253,12 @@ export function InvoicePreviewPage() {
     useEffect(() => {
         setSelectedPages((prev) => {
             const next = new Set<number>();
+            const oldCount = prevPageCountRef.current;
             for (let i = 1; i <= pageCount; i += 1) {
-                if (prev.has(i))
+                if (prev.has(i) || i > oldCount)
                     next.add(i);
             }
+            prevPageCountRef.current = pageCount;
             if (next.size === 0)
                 return allPagesSet(pageCount);
             return next;
