@@ -1291,7 +1291,7 @@ function drawLegalInvoicePdfPage(
         thickness: 0.6,
         color: CORAL,
     });
-    y -= DOC_LH * 1.75;
+    y -= DOC_LH * 3.1;
 
     const thanks = labels.thanks;
     const thanksW = font.widthOfTextAtSize(thanks, DOC_FS);

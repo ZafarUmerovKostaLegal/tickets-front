@@ -757,7 +757,7 @@ function legalInvoiceDocxBlocks(
         }),
         totalsTbl,
         new Paragraph({
-            spacing: { before: 280, after: 160 },
+            spacing: { before: 480, after: 160 },
             alignment: AlignmentType.CENTER,
             children: [new TextRun({
                 text: labels.thanks,
