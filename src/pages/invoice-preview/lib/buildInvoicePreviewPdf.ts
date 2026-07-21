@@ -49,19 +49,37 @@ const MT = mmToPt(20);
 const MB = mmToPt(20);
 
 const TR_RED = rgb(155 / 255, 27 / 255, 48 / 255);
-const CORP_TEXT = rgb(0.06, 0.02, 0.026);
 const MUTED_TEXT = rgb(0.41, 0.44, 0.52);
 const GRID_LINE = rgb(0.74, 0.77, 0.8);
 const BODY = rgb(0.12, 0.14, 0.18);
+const CORAL = rgb(232 / 255, 146 / 255, 140 / 255);
+const CORAL_DARK = rgb(26 / 255, 5 / 255, 6 / 255);
+const PANEL_HEAD = rgb(0.28, 0.33, 0.39);
+const FIRM_NAME = rgb(0.12, 0.16, 0.23);
+const THANKS_TEXT = rgb(0.42, 0.45, 0.5);
+const DISCLAIMER_TEXT = rgb(0.29, 0.33, 0.39);
 
-async function fetchFontBytes(ttfModuleUrl: string): Promise<Uint8Array> {
-    const res = await fetch(ttfModuleUrl);
-    if (!res.ok)
-        throw new Error(`Не удалось загрузить шрифт для PDF (${res.status})`);
-    return new Uint8Array(await res.arrayBuffer());
-}
+/** 11px preview font on 794px-wide page → PDF points on A4. */
+const LI_FS = (11 * W) / 794;
+const LI_LH = LI_FS * 1.45;
+
+type PdfRgb = ReturnType<typeof rgb>;
 
 function wrapPlainParagraph(page: PDFPage, text: string, x: number, y: number, maxWidth: number, size: number, font: PDFFont, lineGap: number): number {
+    return wrapTextBlock(page, text, x, y, maxWidth, size, font, BODY, lineGap);
+}
+
+function wrapTextBlock(
+    page: PDFPage,
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    size: number,
+    font: PDFFont,
+    color: PdfRgb,
+    lineGap: number,
+): number {
     const words = text.split(/\s+/).filter(Boolean);
     let line = '';
     let cy = y;
@@ -72,17 +90,44 @@ function wrapPlainParagraph(page: PDFPage, text: string, x: number, y: number, m
         }
         else {
             if (line) {
-                page.drawText(line, { x, y: cy, size, font, color: BODY });
+                page.drawText(line, { x, y: cy, size, font, color });
                 cy -= lineGap;
             }
             line = w;
         }
     }
     if (line) {
-        page.drawText(line, { x, y: cy, size, font, color: BODY });
+        page.drawText(line, { x, y: cy, size, font, color });
         cy -= lineGap;
     }
     return cy;
+}
+
+function splitTextLines(text: string, maxWidth: number, size: number, font: PDFFont): string[] {
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let line = '';
+    for (const w of words) {
+        const trial = line ? `${line} ${w}` : w;
+        if (font.widthOfTextAtSize(trial, size) <= maxWidth) {
+            line = trial;
+        }
+        else {
+            if (line)
+                lines.push(line);
+            line = w;
+        }
+    }
+    if (line)
+        lines.push(line);
+    return lines.length ? lines : [''];
+}
+
+async function fetchFontBytes(ttfModuleUrl: string): Promise<Uint8Array> {
+    const res = await fetch(ttfModuleUrl);
+    if (!res.ok)
+        throw new Error(`Не удалось загрузить шрифт для PDF (${res.status})`);
+    return new Uint8Array(await res.arrayBuffer());
 }
 
 function drawCoverPage(
@@ -613,193 +658,227 @@ function drawLegalInvoicePdfPage(
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
 
-    let yTop = H - MT - 4;
-    const firmName = `${KOSTA_LEGAL_FIRM.brandName} LF`;
-    page.drawText(firmName, {
-        x: ML,
-        y: yTop,
-        size: 11,
-        font: fontBold,
-        color: TR_RED,
-    });
-    yTop -= 14;
-    const leftBlurb: string[] = [firmAddress, ...resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage)];
-    for (const ln of leftBlurb) {
-        page.drawText(ln, { x: ML, y: yTop, size: 11, font, color: CORP_TEXT });
-        yTop -= 13;
-    }
+    const contentW = W - ML - MR;
+    let y = H - MT;
 
+    const logoW = (150 * W) / 794;
+    let logoBottom = y;
     if (logoImage) {
-        const lw = 120;
-        const lh = (logoImage.height / logoImage.width) * lw;
-        const logoTop = H - MT - 4;
+        const logoH = (logoImage.height / logoImage.width) * logoW;
+        logoBottom = y - logoH;
         page.drawImage(logoImage, {
-            x: W - MR - lw,
-            y: logoTop - lh,
-            width: lw,
-            height: lh,
+            x: W - MR - logoW,
+            y: logoBottom,
+            width: logoW,
+            height: logoH,
         });
     }
 
-    const ribbonH = 22;
-    const yRibbonTop = H - MT - 130;
-    const yRibbonBot = yRibbonTop - ribbonH;
-    page.drawRectangle({
+    const blurbW = contentW * 0.62;
+    const firmName = `${KOSTA_LEGAL_FIRM.brandName} LF`;
+    page.drawText(firmName, {
         x: ML,
-        y: yRibbonBot,
-        width: W - ML - MR,
-        height: ribbonH,
-        color: TR_RED,
-    });
-
-    page.drawText(labels.invoiceNo(invNo), {
-        x: ML + 8,
-        y: yRibbonBot + 6,
-        size: 11,
+        y,
+        size: LI_FS,
         font: fontBold,
-        color: rgb(1, 1, 1),
+        color: FIRM_NAME,
     });
-    const rtxt = ribbonIssue;
-    const rw = fontBold.widthOfTextAtSize(rtxt, 11);
-    page.drawText(rtxt, {
-        x: W - MR - 8 - rw,
-        y: yRibbonBot + 6,
-        size: 11,
-        font: fontBold,
-        color: rgb(1, 1, 1),
-    });
+    let yBlurb = y - LI_LH;
 
-    let yPanels = yRibbonBot - 18;
-    const splitX = ML + (W - ML - MR) * 0.52;
-
-    page.drawText(labels.billTo, { x: ML, y: yPanels, size: 11, font: fontBold, color: TR_RED });
-    let yBill = yPanels - 15;
-    page.drawText(model.recipientCompany, { x: ML, y: yBill, size: 11, font: fontBold, color: BODY });
-    yBill -= 14;
-    page.drawText(`${labels.address}:`, { x: ML, y: yBill, size: 11, font, color: MUTED_TEXT });
-    yBill -= 13;
-    page.drawText(model.recipientAddressLines[0], { x: ML, y: yBill, size: 11, font, color: BODY });
-    yBill -= 13;
-    if (model.recipientAddressLines[1]) {
-        page.drawText(model.recipientAddressLines[1], { x: ML, y: yBill, size: 11, font, color: BODY });
-        yBill -= 13;
+    yBlurb = wrapTextBlock(page, firmAddress, ML, yBlurb, blurbW, LI_FS, font, MUTED_TEXT, LI_LH * 0.92);
+    const leftBlurb = resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage);
+    for (const ln of leftBlurb) {
+        page.drawText(ln, { x: ML, y: yBlurb, size: LI_FS, font, color: MUTED_TEXT });
+        yBlurb -= LI_LH * 0.92;
     }
-    page.drawText(`${labels.bankName}:`, { x: ML, y: yBill, size: 11, font, color: MUTED_TEXT });
-    yBill -= 13;
-    page.drawText(resolveLegalBillToBankName(legalOverrides), { x: ML, y: yBill, size: 11, font, color: MUTED_TEXT });
-    yBill -= 13;
-    page.drawText(`${labels.swift}:`, { x: ML, y: yBill, size: 11, font, color: MUTED_TEXT });
-    yBill -= 13;
-    page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yBill, size: 11, font, color: MUTED_TEXT });
 
-    page.drawText(labels.caseDetails, { x: splitX, y: yPanels, size: 11, font: fontBold, color: TR_RED });
-    const yCaseFloor = wrapPlainParagraph(page, caseLine, splitX, yPanels - 15, W - MR - splitX - 6, 11, font, 14);
+    y = Math.min(yBlurb, logoBottom) - LI_LH * 0.75;
 
-    let yTable = Math.min(yBill - 16, yCaseFloor - 10);
-    const tw = W - ML - MR;
-    const headH = 18;
-    const yHBot = yTable - headH;
+    const ribbonPad = LI_FS * 0.38;
+    const ribbonH = LI_FS + ribbonPad * 2;
     page.drawRectangle({
         x: ML,
-        y: yHBot,
-        width: tw,
+        y: y - ribbonH,
+        width: contentW,
+        height: ribbonH,
+        color: CORAL,
+    });
+    const ribbonTextY = y - ribbonH + ribbonPad + 1;
+    page.drawText(labels.invoiceNo(invNo), {
+        x: ML + 6,
+        y: ribbonTextY,
+        size: LI_FS,
+        font: fontBold,
+        color: CORAL_DARK,
+    });
+    const ribbonDateW = fontBold.widthOfTextAtSize(ribbonIssue, LI_FS);
+    page.drawText(ribbonIssue, {
+        x: ML + contentW - 6 - ribbonDateW,
+        y: ribbonTextY,
+        size: LI_FS,
+        font: fontBold,
+        color: CORAL_DARK,
+    });
+    y -= ribbonH + LI_LH * 0.75;
+
+    page.drawLine({
+        start: { x: ML, y: y + 3 },
+        end: { x: ML + contentW, y: y + 3 },
+        thickness: 0.5,
+        color: GRID_LINE,
+    });
+    y -= LI_LH * 0.55;
+
+    const splitX = ML + contentW * 0.52;
+    const rightColW = W - MR - splitX - 8;
+    const panelsTop = y;
+
+    page.drawText(labels.billTo, { x: ML, y: panelsTop, size: LI_FS, font: fontBold, color: PANEL_HEAD });
+    let yLeft = panelsTop - LI_LH;
+    page.drawText(model.recipientCompany, { x: ML, y: yLeft, size: LI_FS, font: fontBold, color: BODY });
+    yLeft -= LI_LH;
+    page.drawText(`${labels.address}:`, { x: ML, y: yLeft, size: LI_FS, font: fontBold, color: MUTED_TEXT });
+    yLeft -= LI_LH * 0.92;
+    page.drawText(model.recipientAddressLines[0], { x: ML, y: yLeft, size: LI_FS, font, color: MUTED_TEXT });
+    yLeft -= LI_LH * 0.92;
+    if (model.recipientAddressLines[1]) {
+        page.drawText(model.recipientAddressLines[1], { x: ML, y: yLeft, size: LI_FS, font, color: MUTED_TEXT });
+        yLeft -= LI_LH * 0.92;
+    }
+    page.drawText(`${labels.bankName}:`, { x: ML, y: yLeft, size: LI_FS, font: fontBold, color: MUTED_TEXT });
+    yLeft -= LI_LH * 0.92;
+    page.drawText(resolveLegalBillToBankName(legalOverrides), { x: ML, y: yLeft, size: LI_FS, font, color: MUTED_TEXT });
+    yLeft -= LI_LH * 0.92;
+    page.drawText(`${labels.swift}:`, { x: ML, y: yLeft, size: LI_FS, font: fontBold, color: MUTED_TEXT });
+    yLeft -= LI_LH * 0.92;
+    page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yLeft, size: LI_FS, font, color: MUTED_TEXT });
+    yLeft -= LI_LH * 0.92;
+
+    page.drawText(labels.caseDetails, { x: splitX, y: panelsTop, size: LI_FS, font: fontBold, color: PANEL_HEAD });
+    const yRight = wrapTextBlock(page, caseLine, splitX, panelsTop - LI_LH, rightColW, LI_FS, font, BODY, LI_LH);
+
+    y = Math.min(yLeft, yRight) - LI_LH;
+
+    const descColW = contentW * 0.72;
+    const headH = LI_FS + 10;
+    const yHeadTop = y;
+    const yHeadBot = yHeadTop - headH;
+    page.drawRectangle({
+        x: ML,
+        y: yHeadBot,
+        width: contentW,
         height: headH,
         color: rgb(0.1, 0.1, 0.1),
     });
     page.drawText(labels.description, {
         x: ML + 6,
-        y: yHBot + 5,
-        size: 9,
+        y: yHeadBot + 5,
+        size: LI_FS,
         font: fontBold,
         color: rgb(1, 1, 1),
     });
     const th2 = labels.total(cur);
-    const th2W = fontBold.widthOfTextAtSize(th2, 9);
+    const th2W = fontBold.widthOfTextAtSize(th2, LI_FS);
     page.drawText(th2, {
-        x: ML + tw - 6 - th2W,
-        y: yHBot + 5,
-        size: 9,
+        x: ML + contentW - 6 - th2W,
+        y: yHeadBot + 5,
+        size: LI_FS,
         font: fontBold,
         color: rgb(1, 1, 1),
     });
 
-    const rowH = 22;
-    const yRowBot = yHBot - rowH;
+    const svcLines = splitTextLines(svcLine, descColW - 10, LI_FS, fontBold);
+    const rowPad = 8;
+    const rowH = Math.max(LI_LH, svcLines.length * LI_LH) + rowPad;
+    const yRowTop = yHeadBot;
+    const yRowBot = yRowTop - rowH;
     page.drawLine({
         start: { x: ML, y: yRowBot },
-        end: { x: ML + tw, y: yRowBot },
+        end: { x: ML + contentW, y: yRowBot },
         thickness: 0.6,
-        color: rgb(232 / 255, 146 / 255, 140 / 255),
+        color: CORAL,
     });
-    page.drawText(svcLine, { x: ML + 5, y: yRowBot + 6, size: 9, font: fontBold, color: BODY });
-    const totW = fontBold.widthOfTextAtSize(model.totalFormatted, 9);
+    let svcY = yRowTop - rowPad - LI_FS;
+    for (const ln of svcLines) {
+        page.drawText(ln, { x: ML + 5, y: svcY, size: LI_FS, font: fontBold, color: BODY });
+        svcY -= LI_LH;
+    }
+    const totW = fontBold.widthOfTextAtSize(model.totalFormatted, LI_FS);
     page.drawText(model.totalFormatted, {
-        x: ML + tw - 6 - totW,
-        y: yRowBot + 6,
-        size: 9,
+        x: ML + contentW - 6 - totW,
+        y: yRowTop - rowPad - LI_FS,
+        size: LI_FS,
         font: fontBold,
         color: BODY,
     });
 
-    let yTot = yRowBot - 14;
-    const rightX = W - MR - 8;
-    const totalsW = 220;
+    y = yRowBot - LI_LH;
+
+    const rightX = ML + contentW;
+    const totalsW = contentW * 0.46;
     const totalsLeft = rightX - totalsW;
-    const coral = rgb(232 / 255, 146 / 255, 140 / 255);
-    page.drawLine({
-        start: { x: totalsLeft, y: yTot + 10 },
-        end: { x: rightX, y: yTot + 10 },
-        thickness: 0.6,
-        color: coral,
-    });
-    yTot -= 2;
+    const valueReserve = 78;
+
     const drawTotalRow = (label: string, value: string, due = false) => {
-        const labelColor = due ? coral : BODY;
-        const valueColor = due ? coral : BODY;
-        page.drawText(label, {
-            x: totalsLeft,
-            y: yTot,
-            size: 9,
-            font: fontBold,
-            color: labelColor,
-            maxWidth: totalsW - 88,
-        });
-        const vw = fontBold.widthOfTextAtSize(value, 9);
+        const labelColor = due ? CORAL : BODY;
+        const valueColor = due ? CORAL : BODY;
+        const labelMaxW = totalsW - valueReserve;
+        const valW = fontBold.widthOfTextAtSize(value, LI_FS);
+        const labelLines = splitTextLines(label, labelMaxW, LI_FS, fontBold);
+        const blockH = Math.max(labelLines.length, 1) * (LI_LH * 0.95);
+        const labelStartY = y - LI_FS + 1;
+        let labelY = labelStartY;
+        for (const ln of labelLines) {
+            page.drawText(ln, {
+                x: totalsLeft,
+                y: labelY,
+                size: LI_FS,
+                font: fontBold,
+                color: labelColor,
+            });
+            labelY -= LI_LH * 0.95;
+        }
         page.drawText(value, {
-            x: rightX - vw,
-            y: yTot,
-            size: 9,
+            x: rightX - valW,
+            y: labelStartY,
+            size: LI_FS,
             font: fontBold,
             color: valueColor,
         });
-        yTot -= due ? 18 : 13;
+        y -= blockH + (due ? 3 : 1);
     };
+
+    page.drawLine({
+        start: { x: totalsLeft, y: y + 4 },
+        end: { x: rightX, y: y + 4 },
+        thickness: 0.6,
+        color: CORAL,
+    });
+    y -= 6;
     drawTotalRow(labels.subtotal, model.totalFormatted);
     drawTotalRow(labels.vat, vatAmount);
     drawTotalRow(labels.extraExpenses, extraExpensesAmount);
     drawTotalRow(labels.totalDueBy(dueBanner), model.totalFormatted, true);
     page.drawLine({
-        start: { x: totalsLeft, y: yTot + 8 },
-        end: { x: rightX, y: yTot + 8 },
+        start: { x: totalsLeft, y: y + 4 },
+        end: { x: rightX, y: y + 4 },
         thickness: 0.6,
-        color: coral,
+        color: CORAL,
     });
-    yTot -= 6;
+    y -= LI_LH * 1.75;
 
-    yTot -= 18;
     const thanks = labels.thanks;
-    const thanksSize = 10;
-    const thanksW = font.widthOfTextAtSize(thanks, thanksSize);
+    const thanksW = font.widthOfTextAtSize(thanks, LI_FS);
     page.drawText(thanks, {
-        x: ML + (W - ML - MR - thanksW) / 2,
-        y: yTot,
-        size: thanksSize,
+        x: ML + (contentW - thanksW) / 2,
+        y,
+        size: LI_FS,
         font,
-        color: rgb(0.42, 0.45, 0.5),
+        color: THANKS_TEXT,
     });
-    yTot -= 22;
+    y -= LI_LH * 1.15;
 
-    yTot = wrapPlainParagraph(page, paymentDisclaimer, ML, yTot, W - ML - MR, 9, font, 12);
+    wrapTextBlock(page, paymentDisclaimer, ML, y, contentW, LI_FS, font, DISCLAIMER_TEXT, LI_LH);
 }
 
 export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput): Promise<Blob> {
