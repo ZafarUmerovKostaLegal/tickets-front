@@ -79,7 +79,7 @@ const TR_SECTION_GAP = DOC_LH * 2.2;
 const TR_SUMMARY_TITLE_GAP = DOC_LH * 1.15;
 
 /** Cover letter rhythm — InvoiceCoverLetter.css (rem @ 16px → pt). */
-const COVER_LOGO_H_PT = 27;
+const COVER_LOGO_H_PT = 42;
 const COVER_LOGO_W_PT = COVER_LOGO_H_PT * (439 / 219);
 const COVER_HEADER_PAD_BOTTOM = CSS_REM_PT;
 const COVER_HEADER_MARGIN_BOTTOM = CSS_REM_PT * 2.1;
@@ -244,9 +244,9 @@ function drawCoverPage(
     y -= COVER_SIG_BEFORE;
     const sigW = 160;
     page.drawLine({ start: { x: ML, y }, end: { x: ML + sigW, y }, thickness: 0.5, color: rgb(0.35, 0.38, 0.45) });
-    y -= DOC_LH * 0.55;
+    y -= DOC_LH * 1.6;
 
-    page.drawText(model.signatoryName, { x: ML, y, size: DOC_FS, font, color: BODY });
+    page.drawText(model.signatoryName, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
     y -= DOC_LH;
     page.drawText(model.signatoryTitle, { x: ML, y, size: DOC_FS, font, color: BODY });
 }
