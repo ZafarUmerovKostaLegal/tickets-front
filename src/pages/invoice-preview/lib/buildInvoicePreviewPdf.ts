@@ -1,8 +1,8 @@
 import fontkit from '@pdf-lib/fontkit';
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
-import carlitoBoldUrl from '../../../assets/fonts/Carlito-Bold.ttf?url';
-import carlitoRegularUrl from '../../../assets/fonts/Carlito-Regular.ttf?url';
+import dejavuSansBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
+import dejavuSansRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
 import {
     type InvoicePreviewPackInput,
     packCurrencyCode,
@@ -60,7 +60,7 @@ const FIRM_NAME = rgb(0.12, 0.16, 0.23);
 const THANKS_TEXT = rgb(0.42, 0.45, 0.5);
 const DISCLAIMER_TEXT = rgb(0.29, 0.33, 0.39);
 
-/** Match Word export: Calibri Light 11pt. */
+/** Document body size (11pt). PDF uses DejaVu as a Calibri/Carlito substitute. */
 const DOC_FS = 11;
 const DOC_LH = DOC_FS * 1.45;
 const CELL_MUTED = rgb(0.28, 0.33, 0.41);
@@ -1026,8 +1026,8 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     const doc = await PDFDocument.create();
     doc.registerFontkit(fontkit);
     const [regularBytes, boldBytes] = await Promise.all([
-        fetchFontBytes(carlitoRegularUrl),
-        fetchFontBytes(carlitoBoldUrl),
+        fetchFontBytes(dejavuSansRegularUrl),
+        fetchFontBytes(dejavuSansBoldUrl),
     ]);
     const font = await doc.embedFont(regularBytes, { subset: true });
     const fontBold = await doc.embedFont(boldBytes, { subset: true });
