@@ -13,7 +13,6 @@ import {
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
 import { trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
-import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import {
     resolveLegalBillToBankName,
@@ -383,6 +382,9 @@ function computeBodyRowLayouts(
             if (!raw) {
                 lines = [];
             }
+            else if (TR_DETAIL_NO_CLIP_COLS.has(c)) {
+                lines = raw ? [raw] : [];
+            }
             else if (wrapCols.has(c)) {
                 lines = wrapCellLines(raw, maxW, font, DOC_FS);
             }
@@ -448,6 +450,157 @@ function estimateGridTableHeight(
     const { rowHeights } = computeBodyRowLayouts(bodyTexts, bodyTexts.length, widths, font, wrapCols);
     const bodyH = rowHeights.reduce((s, h) => s + h, 0);
     return headerH + bodyH + (withFooter ? TABLE_FOOTER_H : 0);
+}
+
+function estimateTimeReportTableTop(continuation: boolean, model: InvoiceCoverLetterModel, fontBold: PDFFont): number {
+    let yTop = H - MT - 4;
+    yTop -= 18;
+    yTop -= 14;
+    const labels = getTimeReportLabels(model.coverLanguage);
+    const title = continuation
+        ? labels.titleContinued(model.servicesMonthYear)
+        : labels.title(model.servicesMonthYear);
+    const titleLines = splitTextLines(title, W - ML - MR, DOC_FS, fontBold);
+    yTop -= Math.max(titleLines.length, 1) * DOC_LH;
+    return yTop - TR_TITLE_TABLE_GAP;
+}
+
+type PdfTimeReportPagePlan = {
+    slice: InvoiceTimeReportDetailRow[];
+    continuation: boolean;
+    showDetailTotals: boolean;
+    showSummarySection: boolean;
+};
+
+function paginateDetailRowsForPdf(
+    rows: readonly InvoiceTimeReportDetailRow[],
+    model: InvoiceCoverLetterModel,
+    pack: InvoiceTimeReportPack,
+    font: PDFFont,
+    fontBold: PDFFont,
+): PdfTimeReportPagePlan[] {
+    const trimmed = trimTrailingEmptyDetailSlots(rows);
+    if (trimmed.length === 0) {
+        return [{
+            slice: [{ date: '', initials: '', task: '', description: '', hours: '', hourlyRate: '', amount: '' }],
+            continuation: false,
+            showDetailTotals: true,
+            showSummarySection: true,
+        }];
+    }
+
+    const tableW = W - ML - MR;
+    const labels = getTimeReportLabels(model.coverLanguage);
+    const cur = packCurrencyCode(model);
+    const detailHeaders = [labels.date, labels.initials, labels.task, labels.description, labels.hours, labels.rate, labels.amount(cur)] as const;
+    const summaryHeaders = [labels.initials, labels.name, labels.titleCol, labels.hours, labels.hourlyRate, labels.totalPrice(cur)] as const;
+    const summaryBody = trimTrailingEmptySummarySlots(pack.summarySlots)
+        .map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
+    const summaryReserve = TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
+        + estimateGridTableHeight(
+            tableW,
+            TIME_REPORT_PDF_SUMMARY_WEIGHTS,
+            summaryHeaders,
+            summaryBody.length ? summaryBody : [['', '', '', '', '', '']],
+            TR_SUMMARY_WRAP_COLS,
+            font,
+            fontBold,
+            true,
+        );
+
+    const pages: PdfTimeReportPagePlan[] = [];
+    let i = 0;
+    let pageIndex = 0;
+
+    while (i < trimmed.length) {
+        const continuation = pageIndex > 0;
+        const yGridTop = estimateTimeReportTableTop(continuation, model, fontBold);
+        const maxH = yGridTop - PAGE_FOOTER_ZONE_TOP;
+        const remaining = trimmed.length - i;
+
+        const heightFor = (count: number, withFooter: boolean) => {
+            const body = trimmed.slice(i, i + count).map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount] as const);
+            return estimateGridTableHeight(
+                tableW,
+                TIME_REPORT_PDF_DETAIL_WEIGHTS,
+                detailHeaders,
+                body,
+                TR_DETAIL_WRAP_COLS,
+                font,
+                fontBold,
+                withFooter,
+            );
+        };
+
+        let takeWithSummary = 0;
+        for (let n = 1; n <= remaining; n++) {
+            if (heightFor(n, true) <= maxH - summaryReserve)
+                takeWithSummary = n;
+            else
+                break;
+        }
+
+        if (takeWithSummary === remaining) {
+            pages.push({
+                slice: trimmed.slice(i),
+                continuation,
+                showDetailTotals: true,
+                showSummarySection: true,
+            });
+            break;
+        }
+
+        let take = 0;
+        for (let n = 1; n <= remaining; n++) {
+            if (heightFor(n, false) <= maxH)
+                take = n;
+            else
+                break;
+        }
+        if (take < 1)
+            take = 1;
+
+        pages.push({
+            slice: trimmed.slice(i, i + take),
+            continuation,
+            showDetailTotals: false,
+            showSummarySection: false,
+        });
+        i += take;
+        pageIndex++;
+    }
+
+    return pages;
+}
+
+function trimDetailSliceToFitPage(
+    slice: InvoiceTimeReportDetailRow[],
+    yGridTop: number,
+    tableW: number,
+    detailHeaders: readonly string[],
+    showDetailTotals: boolean,
+    font: PDFFont,
+    fontBold: PDFFont,
+): InvoiceTimeReportDetailRow[] {
+    const maxDetailHeight = yGridTop - PAGE_FOOTER_ZONE_TOP;
+    let trimmed = [...slice];
+    while (trimmed.length > 1) {
+        const body = trimmed.map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount] as const);
+        const h = estimateGridTableHeight(
+            tableW,
+            TIME_REPORT_PDF_DETAIL_WEIGHTS,
+            detailHeaders,
+            body,
+            TR_DETAIL_WRAP_COLS,
+            font,
+            fontBold,
+            showDetailTotals,
+        );
+        if (h <= maxDetailHeight)
+            break;
+        trimmed = trimmed.slice(0, -1);
+    }
+    return trimmed;
 }
 
 function trimDetailSliceToFitSummary(
@@ -699,10 +852,12 @@ function drawTimeReportGridTable(
     return tableBottom;
 }
 
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [10, 7, 10, 25, 10, 12, 16] as const;
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [14, 7, 12, 25, 8, 14, 20] as const;
 const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 26, 26, 13, 13, 13] as const;
-const TR_DETAIL_WRAP_COLS = new Set([2, 3]);
+/** Only Description wraps; Date/Task stay on one line. */
+const TR_DETAIL_WRAP_COLS = new Set([3]);
 const TR_SUMMARY_WRAP_COLS = new Set([1, 2]);
+const TR_DETAIL_NO_CLIP_COLS = new Set([0, 1]);
 
 function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, fontBold: PDFFont, continuation: boolean): number {
     let yTop = H - MT - 4;
@@ -813,6 +968,9 @@ function drawSingleTimeReportPdfPage(
             font,
             fontBold,
         );
+    }
+    else {
+        detailSlice = trimDetailSliceToFitPage(slice, yGridTop, tableW, detailHeaders, false, font, fontBold);
     }
 
     const detailBody = detailSlice.map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount] as const);
@@ -1168,8 +1326,8 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     )
         ? timeReportOverride
         : await resolveInvoiceTimeReportPack(session, model);
-    const detailChunks = splitDetailRowsForPagedTimeReport(timeReport.detailSlots);
-    const pageCount = 2 + detailChunks.length;
+    const detailPlans = paginateDetailRowsForPdf(timeReport.detailSlots, model, timeReport, font, fontBold);
+    const pageCount = 2 + detailPlans.length;
     const selected = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;
     const includePage = (n: number) => !selected || selected.has(n);
 
@@ -1179,16 +1337,16 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     }
 
     let trPageTag = 2;
-    for (let i = 0; i < detailChunks.length; i++) {
+    for (let i = 0; i < detailPlans.length; i++) {
         const pageNum = 2 + i;
         if (!includePage(pageNum))
             continue;
-        const lastChunk = i === detailChunks.length - 1;
+        const plan = detailPlans[i]!;
         const pTr = doc.addPage([W, H]);
-        drawSingleTimeReportPdfPage(pTr, model, timeReport, font, fontBold, trPageTag, detailChunks[i]!, {
-            continuation: i > 0,
-            showDetailTotals: lastChunk,
-            showSummarySection: lastChunk,
+        drawSingleTimeReportPdfPage(pTr, model, timeReport, font, fontBold, trPageTag, plan.slice, {
+            continuation: plan.continuation,
+            showDetailTotals: plan.showDetailTotals,
+            showSummarySection: plan.showSummarySection,
         });
         trPageTag++;
     }
