@@ -16,6 +16,8 @@ import { resolveInvoiceTimeReportPack } from '../lib/resolveInvoiceTimeReportPac
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import { InvoiceTimeReportPage } from './InvoiceTimeReportPage';
 import { InvoiceLegalInvoicePage } from './InvoiceLegalInvoicePage';
+import '@fontsource/carlito/400.css';
+import '@fontsource/carlito/700.css';
 import '@pages/time-tracking/ui/TimePageShell.css';
 import './InvoicePreviewPage.css';
 

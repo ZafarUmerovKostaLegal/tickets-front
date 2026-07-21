@@ -5,9 +5,10 @@
   position: relative;
   width: 100%;
   padding: 20mm 12mm calc(20mm + 5.5rem) 30mm;
-  font-family: var(--app-font-family);
-  font-size: 10px;
-  line-height: 1.42;
+  font-family: var(--tt-inv-doc-font, 'Calibri Light', Calibri, Carlito, 'Segoe UI', sans-serif);
+  font-size: var(--tt-inv-doc-size, 11pt);
+  font-weight: var(--tt-inv-doc-weight, 300);
+  line-height: var(--tt-inv-doc-line, 1.45);
   color: var(--tt-inv-paper-ink, #0f172a);
   background: var(--tt-inv-paper, #ffffff);
   display: flex;
@@ -31,7 +32,7 @@
 
 .tt-inv-li__firm-name {
   margin: 0 0 0.2rem;
-  font-size: 10.5px;
+  font-size: inherit;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -40,7 +41,7 @@
 
 .tt-inv-li__firm-line {
   margin: 0.05rem 0 0;
-  font-size: 8px;
+  font-size: inherit;
   line-height: 1.45;
   color: #64748b;
 }
@@ -76,7 +77,7 @@
 
 .tt-inv-li__ribbon-no,
 .tt-inv-li__ribbon-date {
-  font-size: 9px;
+  font-size: inherit;
   font-weight: 800;
   letter-spacing: 0.045em;
   text-transform: uppercase;
@@ -99,7 +100,7 @@
 
 .tt-inv-li__panel-h {
   margin: 0 0 0.45rem;
-  font-size: 9px;
+  font-size: inherit;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -109,13 +110,13 @@
 .tt-inv-li__panel-strong {
   margin: 0 0 0.35rem;
   font-weight: 700;
-  font-size: 10px;
+  font-size: inherit;
   color: #0f172a;
 }
 
 .tt-inv-li__panel-label {
   margin: 0.45rem 0 0.1rem;
-  font-size: 8px;
+  font-size: inherit;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -124,7 +125,7 @@
 
 .tt-inv-li__panel-muted {
   margin: 0;
-  font-size: 9px;
+  font-size: inherit;
   color: #64748b;
 }
 
@@ -134,7 +135,7 @@
 
 .tt-inv-li__panel-text {
   margin: 0;
-  font-size: 9.5px;
+  font-size: inherit;
   color: #0f172a;
 }
 
@@ -163,7 +164,7 @@
 
 .tt-inv-li__svc-table th {
   padding: 0.35rem 0.45rem;
-  font-size: 8px;
+  font-size: inherit;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -178,7 +179,7 @@
 
 .tt-inv-li__svc-table td {
   padding: 0.45rem;
-  font-size: 9.5px;
+  font-size: inherit;
   vertical-align: top;
   border-bottom: 2px solid var(--tt-inv-li-coral);
 }
@@ -194,7 +195,7 @@
   text-align: right;
   margin-bottom: 1.35rem;
   max-width: 15rem;
-  font-size: 9.5px;
+  font-size: inherit;
   line-height: 1.55;
 }
 
@@ -206,7 +207,7 @@
 .tt-inv-li__total-label {
   letter-spacing: 0.06em;
   font-weight: 800;
-  font-size: 8.5px;
+  font-size: inherit;
 }
 
 .tt-inv-li__total-due {
@@ -218,7 +219,7 @@
 }
 
 .tt-inv-li__total-due-label {
-  font-size: 8.5px;
+  font-size: inherit;
   letter-spacing: 0.04em;
 }
 
@@ -231,7 +232,7 @@
 .tt-inv-li__thanks {
   margin: 0 0 0.85rem;
   text-align: center;
-  font-size: 11px;
+  font-size: inherit;
   font-weight: 600;
   color: #334155;
 }
@@ -246,7 +247,7 @@
 .tt-inv-li__disclaimer {
   margin: 0;
   font-family: var(--app-font-family);
-  font-size: 8px;
+  font-size: inherit;
   line-height: 1.5;
   color: #64748b;
 }
@@ -300,7 +301,7 @@
 
 .tt-inv-li--editable .tt-inv-li__field--due {
   font-weight: 800;
-  font-size: 12px;
+  font-size: inherit;
 }
 
 .tt-inv-li--editable .tt-inv-li__field--due-date {

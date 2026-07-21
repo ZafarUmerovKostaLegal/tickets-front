@@ -6,9 +6,10 @@
   height: auto;
   min-height: 100%;
   padding: 20mm 12mm 20mm 30mm;
-  font-family: var(--app-font-family);
-  font-size: 10.5px;
-  line-height: 1.52;
+  font-family: var(--tt-inv-doc-font, 'Calibri Light', Calibri, Carlito, 'Segoe UI', sans-serif);
+  font-size: var(--tt-inv-doc-size, 11pt);
+  font-weight: var(--tt-inv-doc-weight, 300);
+  line-height: var(--tt-inv-doc-line, 1.45);
   color: var(--tt-inv-paper-ink, #0f172a);
   background: var(--tt-inv-paper, #ffffff);
   text-align: left;
@@ -45,8 +46,8 @@
 .tt-inv-cover__firm-contact {
   margin: 0;
   font-style: normal;
-  font-size: 9.5px;
-  line-height: 1.4;
+  font-size: inherit;
+  line-height: inherit;
   color: var(--tt-inv-paper-muted, #64748b);
   text-align: right;
   max-width: 17rem;
@@ -57,7 +58,7 @@
 }
 
 .tt-inv-cover__letter-body {
-  font-size: 10.5px;
+  font-size: inherit;
   color: var(--tt-inv-paper-ink);
 }
 

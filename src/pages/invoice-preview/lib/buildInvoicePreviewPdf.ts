@@ -115,7 +115,7 @@ function drawCoverPage(
         KOSTA_LEGAL_FIRM.web,
     ];
     let cy = logoTop;
-    const fsSmall = 9;
+    const fsSmall = 11;
     const muted = rgb(0.22, 0.26, 0.34);
     for (const line of contact) {
         const tw = font.widthOfTextAtSize(line, fsSmall);
@@ -126,30 +126,30 @@ function drawCoverPage(
 
     let y = lowestHeaderY - 28;
 
-    page.drawText(model.letterDateDisplay, { x: ML, y, size: 10, font, color: BODY });
+    page.drawText(model.letterDateDisplay, { x: ML, y, size: 11, font, color: BODY });
 
     y -= 26;
-    page.drawText(model.recipientCompany, { x: ML, y, size: 10, font: fontBold, color: BODY });
+    page.drawText(model.recipientCompany, { x: ML, y, size: 11, font: fontBold, color: BODY });
     y -= 14;
-    page.drawText(model.recipientAddressLines[0], { x: ML, y, size: 10, font, color: BODY });
+    page.drawText(model.recipientAddressLines[0], { x: ML, y, size: 11, font, color: BODY });
     if (model.recipientAddressLines[1]) {
         y -= 14;
-        page.drawText(model.recipientAddressLines[1], { x: ML, y, size: 10, font, color: BODY });
+        page.drawText(model.recipientAddressLines[1], { x: ML, y, size: 11, font, color: BODY });
     }
 
     y -= 26;
     const labels = getCoverLetterLabels(model.coverLanguage);
-    page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: 10, font: fontBold, color: BODY });
+    page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: 11, font: fontBold, color: BODY });
     y -= 14;
-    page.drawText(model.attentionTitle, { x: ML, y, size: 10, font, color: BODY });
+    page.drawText(model.attentionTitle, { x: ML, y, size: 11, font, color: BODY });
 
     y -= 26;
-    page.drawText(`${labels.dear} ${model.attentionName},`, { x: ML, y, size: 10, font, color: BODY });
+    page.drawText(`${labels.dear} ${model.attentionName},`, { x: ML, y, size: 11, font, color: BODY });
 
     y -= 22;
     const p1 = resolveCoverIntroParagraph(model);
-    const bodySize = 10;
-    const bodyGap = 14;
+    const bodySize = 11;
+    const bodyGap = 15;
     const maxW = W - ML - MR;
     y = wrapPlainParagraph(page, p1, ML, y, maxW, bodySize, font, bodyGap);
 
@@ -246,7 +246,7 @@ function paintTimeReportBody(
     font: PDFFont,
     rightAlignedCols: ReadonlySet<number>,
 ): void {
-    const fsBody = 6.7;
+    const fsBody = 11;
     for (let r = 0; r < bodyRowCount && r < rows.length; r++) {
         const cols = rows[r];
         if (!cols)
@@ -308,8 +308,8 @@ function drawTimeReportGridTable(
         showInnerTotal,
         totalLabel = 'Total',
     } = opts;
-    const headerH = 20;
-    const rowH = 14;
+    const headerH = 24;
+    const rowH = 18;
     const { xs, widths } = colLayout(tableLeft, tableW, colWeights);
     const yHeaderBot = yTopPdf - headerH;
     const innerFootLines = footerKind === 'detail'
@@ -325,7 +325,7 @@ function drawTimeReportGridTable(
         color: TR_RED,
     });
 
-    const fsHdr = Math.min(8, headerH / 3);
+    const fsHdr = Math.min(11, headerH / 2);
     for (let i = 0; i < headers.length; i++) {
         page.drawText(headers[i]!, {
             x: xs[i]! + 2,
@@ -625,8 +625,8 @@ function drawLegalInvoicePdfPage(
     yTop -= 14;
     const leftBlurb: string[] = [firmAddress, ...resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage)];
     for (const ln of leftBlurb) {
-        page.drawText(ln, { x: ML, y: yTop, size: 8, font, color: CORP_TEXT });
-        yTop -= 10;
+        page.drawText(ln, { x: ML, y: yTop, size: 11, font, color: CORP_TEXT });
+        yTop -= 13;
     }
 
     if (logoImage) {
@@ -655,16 +655,16 @@ function drawLegalInvoicePdfPage(
     page.drawText(labels.invoiceNo(invNo), {
         x: ML + 8,
         y: yRibbonBot + 6,
-        size: 10,
+        size: 11,
         font: fontBold,
         color: rgb(1, 1, 1),
     });
     const rtxt = ribbonIssue;
-    const rw = fontBold.widthOfTextAtSize(rtxt, 10);
+    const rw = fontBold.widthOfTextAtSize(rtxt, 11);
     page.drawText(rtxt, {
         x: W - MR - 8 - rw,
         y: yRibbonBot + 6,
-        size: 10,
+        size: 11,
         font: fontBold,
         color: rgb(1, 1, 1),
     });
@@ -672,28 +672,28 @@ function drawLegalInvoicePdfPage(
     let yPanels = yRibbonBot - 18;
     const splitX = ML + (W - ML - MR) * 0.52;
 
-    page.drawText(labels.billTo, { x: ML, y: yPanels, size: 9, font: fontBold, color: TR_RED });
-    let yBill = yPanels - 13;
-    page.drawText(model.recipientCompany, { x: ML, y: yBill, size: 9, font: fontBold, color: BODY });
-    yBill -= 12;
-    page.drawText(`${labels.address}:`, { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
-    yBill -= 10;
-    page.drawText(model.recipientAddressLines[0], { x: ML, y: yBill, size: 8, font, color: BODY });
-    yBill -= 10;
+    page.drawText(labels.billTo, { x: ML, y: yPanels, size: 11, font: fontBold, color: TR_RED });
+    let yBill = yPanels - 15;
+    page.drawText(model.recipientCompany, { x: ML, y: yBill, size: 11, font: fontBold, color: BODY });
+    yBill -= 14;
+    page.drawText(`${labels.address}:`, { x: ML, y: yBill, size: 11, font, color: MUTED_TEXT });
+    yBill -= 13;
+    page.drawText(model.recipientAddressLines[0], { x: ML, y: yBill, size: 11, font, color: BODY });
+    yBill -= 13;
     if (model.recipientAddressLines[1]) {
-        page.drawText(model.recipientAddressLines[1], { x: ML, y: yBill, size: 8, font, color: BODY });
-        yBill -= 10;
+        page.drawText(model.recipientAddressLines[1], { x: ML, y: yBill, size: 11, font, color: BODY });
+        yBill -= 13;
     }
-    page.drawText(`${labels.bankName}:`, { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
-    yBill -= 10;
-    page.drawText(resolveLegalBillToBankName(legalOverrides), { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
-    yBill -= 10;
-    page.drawText(`${labels.swift}:`, { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
-    yBill -= 10;
-    page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yBill, size: 8, font, color: MUTED_TEXT });
+    page.drawText(`${labels.bankName}:`, { x: ML, y: yBill, size: 11, font, color: MUTED_TEXT });
+    yBill -= 13;
+    page.drawText(resolveLegalBillToBankName(legalOverrides), { x: ML, y: yBill, size: 11, font, color: MUTED_TEXT });
+    yBill -= 13;
+    page.drawText(`${labels.swift}:`, { x: ML, y: yBill, size: 11, font, color: MUTED_TEXT });
+    yBill -= 13;
+    page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yBill, size: 11, font, color: MUTED_TEXT });
 
-    page.drawText(labels.caseDetails, { x: splitX, y: yPanels, size: 9, font: fontBold, color: TR_RED });
-    const yCaseFloor = wrapPlainParagraph(page, caseLine, splitX, yPanels - 13, W - MR - splitX - 6, 8, font, 11);
+    page.drawText(labels.caseDetails, { x: splitX, y: yPanels, size: 11, font: fontBold, color: TR_RED });
+    const yCaseFloor = wrapPlainParagraph(page, caseLine, splitX, yPanels - 15, W - MR - splitX - 6, 11, font, 14);
 
     let yTable = Math.min(yBill - 16, yCaseFloor - 10);
     const tw = W - ML - MR;

@@ -28,6 +28,10 @@
   --tt-inv-paper-ink: #0f172a;
   --tt-inv-paper-muted: #64748b;
   --tt-inv-paper-strong: #0f172a;
+  --tt-inv-doc-font: 'Calibri Light', Calibri, Carlito, 'Segoe UI', sans-serif;
+  --tt-inv-doc-size: 11pt;
+  --tt-inv-doc-weight: 300;
+  --tt-inv-doc-line: 1.45;
 
   --tt-inv-shell-sidebar: #f9fafb;
   --tt-inv-shell-toolbar: #ffffff;
@@ -674,6 +678,19 @@
     0 14px 40px rgba(15, 23, 42, 0.07);
   scroll-margin-block-start: 1rem;
   overflow: visible;
+  font-family: var(--tt-inv-doc-font);
+  font-size: var(--tt-inv-doc-size);
+  font-weight: var(--tt-inv-doc-weight);
+  line-height: var(--tt-inv-doc-line);
+}
+
+.tt-inv-preview .tt-inv-a4-page .tt-inv-cover,
+.tt-inv-preview .tt-inv-a4-page .tt-inv-tr,
+.tt-inv-preview .tt-inv-a4-page .tt-inv-li {
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
 }
 
 .tt-inv-preview .tt-inv-a4-page--timerpt,

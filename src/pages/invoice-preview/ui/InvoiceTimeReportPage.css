@@ -5,9 +5,10 @@
   position: relative;
   width: 100%;
   padding: 20mm 12mm calc(20mm + 40px) 30mm;
-  font-family: var(--app-font-family);
-  font-size: 9.5px;
-  line-height: 1.35;
+  font-family: var(--tt-inv-doc-font, 'Calibri Light', Calibri, Carlito, 'Segoe UI', sans-serif);
+  font-size: var(--tt-inv-doc-size, 11pt);
+  font-weight: var(--tt-inv-doc-weight, 300);
+  line-height: var(--tt-inv-doc-line, 1.45);
   color: var(--tt-inv-paper-ink, #0f172a);
   background: var(--tt-inv-paper, #ffffff);
   text-align: left;
@@ -26,7 +27,7 @@
 .tt-inv-tr__confidential {
   display: inline-block;
   padding: 0.35rem 0.55rem;
-  font-size: 8px;
+  font-size: inherit;
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -44,7 +45,7 @@
 
 .tt-inv-tr__title {
   margin: 0 0 0.65rem;
-  font-size: 11px;
+  font-size: inherit;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -70,7 +71,7 @@
 
 .tt-inv-tr__thead th {
   padding: 0.4rem 0.35rem;
-  font-size: 8px;
+  font-size: inherit;
   font-weight: 700;
   text-transform: none;
   text-align: left;
@@ -90,7 +91,7 @@
 
 .tt-inv-tr__tbody td {
   padding: 0.38rem 0.35rem;
-  font-size: 8.5px;
+  font-size: inherit;
   border-bottom: 1px solid #e2e8f0;
   vertical-align: top;
   min-height: 1.2rem;
@@ -108,7 +109,7 @@
 
 .tt-inv-tr__tfoot td {
   padding: 0.45rem 0.35rem 0;
-  font-size: 9px;
+  font-size: inherit;
   font-weight: 700;
   color: var(--tt-inv-tr-red);
   border-bottom: none;
@@ -120,7 +121,7 @@
 
 .tt-inv-tr__subtitle {
   margin: 0 0 0.5rem;
-  font-size: 10.5px;
+  font-size: inherit;
   font-weight: 700;
   color: var(--tt-inv-tr-red);
 }
@@ -151,7 +152,7 @@
   min-width: 1.25rem;
   height: 1.25rem;
   padding: 0 0.2rem;
-  font-size: 9px;
+  font-size: inherit;
   font-weight: 800;
   color: var(--tt-inv-tr-red-dark);
   border: 1px solid var(--tt-inv-tr-red);
@@ -183,7 +184,7 @@
   border-radius: 2px;
   padding: 0.15rem 0.25rem;
   font: inherit;
-  font-size: 8.5px;
+  font-size: inherit;
   color: var(--tt-inv-paper-ink, #0f172a);
   background: #ffffff;
 }
