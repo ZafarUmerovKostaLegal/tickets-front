@@ -1,10 +1,10 @@
 import { emptyDetailRow, type InvoiceTimeReportDetailRow, trimTrailingEmptyDetailSlots } from './invoiceTimeReportModel';
 
 /** Detail rows on a continuation page (no summary block). */
-export const TIME_REPORT_PDF_ROWS_MID_CHUNK = 22;
+export const TIME_REPORT_PDF_ROWS_MID_CHUNK = 16;
 
 /** Detail rows on the last time-report page (summary table below). */
-export const TIME_REPORT_PDF_ROWS_LAST_CHUNK = 12;
+export const TIME_REPORT_PDF_ROWS_LAST_CHUNK = 8;
 
 export function splitDetailRowsForPagedTimeReport(rows: readonly InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[][] {
     const trimmed = trimTrailingEmptyDetailSlots(rows);

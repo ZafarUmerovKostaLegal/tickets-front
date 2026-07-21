@@ -1,8 +1,8 @@
 import fontkit from '@pdf-lib/fontkit';
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
-import dejavuSansBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
-import dejavuSansRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
+import carlitoBoldUrl from '../../../assets/fonts/Carlito-Bold.ttf?url';
+import carlitoRegularUrl from '../../../assets/fonts/Carlito-Regular.ttf?url';
 import {
     type InvoicePreviewPackInput,
     packCurrencyCode,
@@ -60,9 +60,13 @@ const FIRM_NAME = rgb(0.12, 0.16, 0.23);
 const THANKS_TEXT = rgb(0.42, 0.45, 0.5);
 const DISCLAIMER_TEXT = rgb(0.29, 0.33, 0.39);
 
-/** 11px preview font on 794px-wide page → PDF points on A4. */
-const LI_FS = (11 * W) / 794;
-const LI_LH = LI_FS * 1.45;
+/** Match Word export: Calibri Light 11pt. */
+const DOC_FS = 11;
+const DOC_LH = DOC_FS * 1.45;
+const CELL_MUTED = rgb(0.28, 0.33, 0.41);
+const CELL_PAD_X = 3;
+const CELL_PAD_Y = 4;
+const CELL_LINE_STEP = DOC_FS * 1.2;
 
 type PdfRgb = ReturnType<typeof rgb>;
 
@@ -252,9 +256,9 @@ function drawRightFitPdfBold(
     const t = text.trim();
     if (!t.length)
         return;
-    const padOuter = 3;
+    const padOuter = CELL_PAD_X;
     const maxW = Math.max(4, cellW - padOuter * 2);
-    const fitted = fitPdfCellText(t, maxW, fontBold, LI_FS, 5.5);
+    const fitted = fitPdfCellText(t, maxW, fontBold, DOC_FS, DOC_FS * 0.85);
     if (!fitted.text)
         return;
     const tw = fontBold.widthOfTextAtSize(fitted.text, fitted.size);
@@ -267,7 +271,7 @@ function drawRightFitPdfBold(
     });
 }
 
-function fitPdfCellText(txt: string, maxW: number, font: PDFFont, preferSize: number, minSize = 5): { text: string; size: number } {
+function fitPdfCellText(txt: string, maxW: number, font: PDFFont, preferSize: number, minSize = 8): { text: string; size: number } {
     const t = txt.trim();
     if (!t || maxW <= 2)
         return { text: '', size: preferSize };
@@ -280,37 +284,130 @@ function fitPdfCellText(txt: string, maxW: number, font: PDFFont, preferSize: nu
     return { text: clipPdfCellText(t, maxW, font, minSize), size: minSize };
 }
 
+function wrapCellLines(text: string, maxW: number, font: PDFFont, size: number): string[] {
+    const words = text.trim().split(/\s+/).filter(Boolean);
+    if (!words.length)
+        return [];
+    const lines: string[] = [];
+    let line = '';
+    const pushLongToken = (token: string) => {
+        let chunk = '';
+        for (const ch of token) {
+            const trial = chunk + ch;
+            if (font.widthOfTextAtSize(trial, size) <= maxW)
+                chunk = trial;
+            else {
+                if (chunk)
+                    lines.push(chunk);
+                chunk = ch;
+            }
+        }
+        line = chunk;
+    };
+    for (const w of words) {
+        const trial = line ? `${line} ${w}` : w;
+        if (font.widthOfTextAtSize(trial, size) <= maxW) {
+            line = trial;
+        }
+        else {
+            if (line)
+                lines.push(line);
+            if (font.widthOfTextAtSize(w, size) > maxW)
+                pushLongToken(w);
+            else
+                line = w;
+        }
+    }
+    if (line)
+        lines.push(line);
+    return lines;
+}
+
+function computeBodyRowLayouts(
+    bodyTexts: readonly (readonly string[])[],
+    bodyRows: number,
+    widths: readonly number[],
+    font: PDFFont,
+    wrapCols: ReadonlySet<number>,
+): { rowHeights: number[]; cellLines: string[][][] } {
+    const rowHeights: number[] = [];
+    const cellLines: string[][][] = [];
+    for (let r = 0; r < bodyRows; r++) {
+        const cols = bodyTexts[r] ?? [];
+        const rowCellLines: string[][] = [];
+        let maxLines = 1;
+        for (let c = 0; c < widths.length; c++) {
+            const raw = String(cols[c] ?? '').trim();
+            const maxW = Math.max(8, widths[c]! - CELL_PAD_X * 2);
+            let lines: string[];
+            if (!raw) {
+                lines = [];
+            }
+            else if (wrapCols.has(c)) {
+                lines = wrapCellLines(raw, maxW, font, DOC_FS);
+            }
+            else {
+                const fitted = fitPdfCellText(raw, maxW, font, DOC_FS, DOC_FS * 0.85);
+                lines = fitted.text ? [fitted.text] : [];
+            }
+            rowCellLines.push(lines);
+            maxLines = Math.max(maxLines, Math.max(lines.length, 1));
+        }
+        cellLines.push(rowCellLines);
+        rowHeights.push(CELL_PAD_Y * 2 + maxLines * CELL_LINE_STEP);
+    }
+    return { rowHeights, cellLines };
+}
+
 function paintTimeReportBody(
     page: PDFPage,
-    rows: readonly (readonly string[])[],
+    cellLines: string[][][],
+    rowHeights: readonly number[],
     yHeaderBot: number,
-    rowH: number,
-    bodyRowCount: number,
     xs: readonly number[],
     widths: readonly number[],
     font: PDFFont,
     rightAlignedCols: ReadonlySet<number>,
 ): void {
-    const fsBody = LI_FS;
-    for (let r = 0; r < bodyRowCount && r < rows.length; r++) {
-        const cols = rows[r];
-        if (!cols)
-            continue;
-        const yRow = yHeaderBot - (r + 0.72) * rowH;
+    let yRowTop = yHeaderBot;
+    for (let r = 0; r < cellLines.length; r++) {
+        const rowH = rowHeights[r] ?? CELL_PAD_Y * 2 + CELL_LINE_STEP;
+        const cols = cellLines[r]!;
+        yRowTop -= rowH;
         for (let c = 0; c < cols.length && c < xs.length; c++) {
-            const raw = String(cols[c] ?? '').trim();
-            if (!raw)
+            const lines = cols[c]!;
+            if (!lines.length)
                 continue;
-            const cw = Math.max(6, widths[c]! - 5);
-            const fitted = fitPdfCellText(raw, cw, font, fsBody, 5.5);
-            if (!fitted.text)
-                continue;
-            let xDraw = xs[c]! + 2.5;
-            if (rightAlignedCols.has(c))
-                xDraw = xs[c]! + widths[c]! - 2.5 - font.widthOfTextAtSize(fitted.text, fitted.size);
-            page.drawText(fitted.text, { x: xDraw, y: yRow, size: fitted.size, font, color: BODY });
+            let yLine = yRowTop + rowH - CELL_PAD_Y - DOC_FS;
+            for (const ln of lines) {
+                const tw = font.widthOfTextAtSize(ln, DOC_FS);
+                let xDraw = xs[c]! + CELL_PAD_X;
+                if (rightAlignedCols.has(c))
+                    xDraw = xs[c]! + widths[c]! - CELL_PAD_X - tw;
+                page.drawText(ln, { x: xDraw, y: yLine, size: DOC_FS, font, color: CELL_MUTED });
+                yLine -= CELL_LINE_STEP;
+            }
         }
     }
+}
+
+function computeHeaderLayouts(
+    headers: readonly string[],
+    widths: readonly number[],
+    fontBold: PDFFont,
+): { headerLines: string[][]; headerH: number } {
+    const headerLines: string[][] = [];
+    let maxLines = 1;
+    for (let i = 0; i < headers.length; i++) {
+        const cw = Math.max(8, widths[i]! - CELL_PAD_X * 2);
+        const lines = wrapCellLines(headers[i] ?? '', cw, fontBold, DOC_FS);
+        headerLines.push(lines.length ? lines : ['']);
+        maxLines = Math.max(maxLines, Math.max(lines.length, 1));
+    }
+    return {
+        headerLines,
+        headerH: CELL_PAD_Y * 2 + maxLines * CELL_LINE_STEP,
+    };
 }
 
 function drawTimeReportGridTable(
@@ -329,6 +426,7 @@ function drawTimeReportGridTable(
 
         bodyTexts?: readonly (readonly string[])[] | null;
         rightAlignedBodyCols?: ReadonlySet<number>;
+        wrapBodyCols?: ReadonlySet<number>;
         footerTotals?: {
             detail?: { hours: string; amount: string };
             summary?: { hours: string; hourly: string; amount: string };
@@ -351,18 +449,25 @@ function drawTimeReportGridTable(
         font,
         bodyTexts,
         rightAlignedBodyCols,
+        wrapBodyCols,
         footerTotals,
         showInnerTotal,
         totalLabel = 'Total',
     } = opts;
-    const headerH = LI_FS + 10;
-    const rowH = LI_FS + 9;
     const { xs, widths } = colLayout(tableLeft, tableW, colWeights);
+    const { headerLines, headerH } = computeHeaderLayouts(headers, widths, fontBold);
+    const footerH = DOC_FS + 10;
     const yHeaderBot = yTopPdf - headerH;
     const innerFootLines = footerKind === 'detail'
         ? (showInnerTotal !== false ? 1 : 0)
         : 1;
-    const tableBottom = yHeaderBot - rowH * (bodyRows + innerFootLines);
+
+    const bodyData = bodyTexts?.length ? bodyTexts : null;
+    const { rowHeights, cellLines } = bodyData
+        ? computeBodyRowLayouts(bodyData, bodyRows, widths, font, wrapBodyCols ?? new Set())
+        : { rowHeights: Array.from({ length: bodyRows }, () => CELL_PAD_Y * 2 + CELL_LINE_STEP), cellLines: [] as string[][][] };
+    const bodyHeight = rowHeights.reduce((s, h) => s + h, 0);
+    const tableBottom = yHeaderBot - bodyHeight - (innerFootLines > 0 ? footerH : 0);
 
     page.drawRectangle({
         x: tableLeft,
@@ -372,24 +477,28 @@ function drawTimeReportGridTable(
         color: TR_RED,
     });
 
-    for (let i = 0; i < headers.length; i++) {
-        const cw = Math.max(6, widths[i]! - 5);
-        const fitted = fitPdfCellText(headers[i]!, cw, fontBold, LI_FS, 5.5);
-        if (!fitted.text)
+    for (let i = 0; i < headerLines.length; i++) {
+        const lines = headerLines[i]!;
+        if (!lines.length)
             continue;
         const rightAlign = footerKind === 'detail'
             ? i >= 4
             : i >= 3;
-        let xDraw = xs[i]! + 2.5;
-        if (rightAlign)
-            xDraw = xs[i]! + widths[i]! - 2.5 - fontBold.widthOfTextAtSize(fitted.text, fitted.size);
-        page.drawText(fitted.text, {
-            x: xDraw,
-            y: yHeaderBot + (headerH - fitted.size) / 2 - 1,
-            size: fitted.size,
-            font: fontBold,
-            color: rgb(1, 1, 1),
-        });
+        let yLine = yHeaderBot + headerH - CELL_PAD_Y - DOC_FS;
+        for (const ln of lines) {
+            const tw = fontBold.widthOfTextAtSize(ln, DOC_FS);
+            let xDraw = xs[i]! + CELL_PAD_X;
+            if (rightAlign)
+                xDraw = xs[i]! + widths[i]! - CELL_PAD_X - tw;
+            page.drawText(ln, {
+                x: xDraw,
+                y: yLine,
+                size: DOC_FS,
+                font: fontBold,
+                color: rgb(1, 1, 1),
+            });
+            yLine -= CELL_LINE_STEP;
+        }
     }
 
     page.drawRectangle({
@@ -401,11 +510,20 @@ function drawTimeReportGridTable(
         borderColor: GRID_LINE,
     });
 
-    for (let i = 1; i <= bodyRows + innerFootLines; i++) {
-        const yy = yHeaderBot - i * rowH;
+    let yLine = yHeaderBot;
+    for (const rh of rowHeights) {
+        yLine -= rh;
         page.drawLine({
-            start: { x: tableLeft, y: yy },
-            end: { x: tableLeft + tableW, y: yy },
+            start: { x: tableLeft, y: yLine },
+            end: { x: tableLeft + tableW, y: yLine },
+            thickness: 0.35,
+            color: GRID_LINE,
+        });
+    }
+    if (innerFootLines > 0) {
+        page.drawLine({
+            start: { x: tableLeft, y: tableBottom },
+            end: { x: tableLeft + tableW, y: tableBottom },
             thickness: 0.35,
             color: GRID_LINE,
         });
@@ -420,13 +538,12 @@ function drawTimeReportGridTable(
         });
     }
 
-    if (bodyTexts?.length) {
+    if (cellLines.length) {
         paintTimeReportBody(
             page,
-            bodyTexts,
+            cellLines,
+            rowHeights,
             yHeaderBot,
-            rowH,
-            bodyRows,
             xs,
             widths,
             font,
@@ -434,12 +551,12 @@ function drawTimeReportGridTable(
         );
     }
 
-    const yFoot = tableBottom + Math.max(3, (rowH - LI_FS) / 2);
+    const yFoot = tableBottom + Math.max(4, (footerH - DOC_FS) / 2);
     if (innerFootLines > 0) {
         page.drawText(totalLabel, {
-            x: xs[0]! + 3,
+            x: xs[0]! + CELL_PAD_X,
             y: yFoot,
-            size: LI_FS,
+            size: DOC_FS,
             font: fontBold,
             color: TR_RED,
         });
@@ -483,15 +600,17 @@ function drawTimeReportGridTable(
     return tableBottom;
 }
 
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [11, 9, 12, 28, 8, 14, 18] as const;
-const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 24, 24, 12, 15, 16] as const;
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [10, 7, 10, 25, 10, 12, 16] as const;
+const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 26, 26, 13, 13, 13] as const;
+const TR_DETAIL_WRAP_COLS = new Set([2, 3]);
+const TR_SUMMARY_WRAP_COLS = new Set([1, 2]);
 
-function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, font: PDFFont, fontBold: PDFFont, continuation: boolean): number {
+function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, fontBold: PDFFont, continuation: boolean): number {
     let yTop = H - MT - 4;
     const labels = getTimeReportLabels(model.coverLanguage);
     const confLabel = labels.confidential;
-    const fsConf = 9;
-    const cw = font.widthOfTextAtSize(confLabel, fsConf);
+    const fsConf = DOC_FS;
+    const cw = fontBold.widthOfTextAtSize(confLabel, fsConf);
     const padConfX = 6;
     const padConfY = 4;
     const boxW = cw + padConfX * 2;
@@ -507,30 +626,23 @@ function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel,
     });
     page.drawText(confLabel, {
         x: boxX + padConfX,
-        y: boxBottom + fsConf - 2,
+        y: boxBottom + padConfY - 1,
         size: fsConf,
-        font,
+        font: fontBold,
         color: rgb(1, 1, 1),
     });
-    yTop -= 16;
+    yTop -= 18;
     page.drawLine({
         start: { x: ML, y: yTop + 6 },
         end: { x: W - MR, y: yTop + 6 },
         thickness: 0.6,
         color: TR_RED,
     });
-    yTop -= 12;
+    yTop -= 14;
     const title = continuation
         ? labels.titleContinued(model.servicesMonthYear)
         : labels.title(model.servicesMonthYear);
-    page.drawText(title, {
-        x: ML,
-        y: yTop,
-        size: 12,
-        font: fontBold,
-        color: TR_RED,
-    });
-    yTop -= 22;
+    yTop = wrapTextBlock(page, title, ML, yTop, W - ML - MR, DOC_FS, fontBold, TR_RED, DOC_LH) + DOC_LH * 0.2;
     return yTop;
 }
 
@@ -555,9 +667,9 @@ function drawTimeReportBandFooter(page: PDFPage, fontBold: PDFFont, pageTag: num
     });
     const tag = String(pageTag);
     page.drawText(tag, {
-        x: bx + (box / 2 - fontBold.widthOfTextAtSize(tag, 9) / 2),
+        x: bx + (box / 2 - fontBold.widthOfTextAtSize(tag, DOC_FS) / 2),
         y: footerLine - box + 1,
-        size: 9,
+        size: DOC_FS,
         font: fontBold,
         color: TR_RED,
     });
@@ -577,7 +689,7 @@ function drawSingleTimeReportPdfPage(
         showSummarySection: boolean;
     },
 ): void {
-    const yGridTop = drawTimeReportBandHeader(page, model, font, fontBold, opts.continuation);
+    const yGridTop = drawTimeReportBandHeader(page, model, fontBold, opts.continuation);
     const detailBody = slice.map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount] as const);
     const tableW = W - ML - MR;
     const cur = packCurrencyCode(model);
@@ -598,6 +710,7 @@ function drawSingleTimeReportPdfPage(
         fontBold,
         bodyTexts: detailBody.length ? detailBody : [['', '', '', '', '', '', '']],
         rightAlignedBodyCols: new Set([4, 5, 6]),
+        wrapBodyCols: TR_DETAIL_WRAP_COLS,
         showInnerTotal: opts.showDetailTotals,
         totalLabel: labels.total,
         footerTotals: opts.showDetailTotals
@@ -618,15 +731,15 @@ function drawSingleTimeReportPdfPage(
     const summaryBody = pack.summarySlots.map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
     const summaryRows = Math.max(summaryBody.length, 1);
 
-    let yMid = yAfterDetail - 16;
+    let yMid = yAfterDetail - 14;
     page.drawText(labels.summaryTitle, {
         x: ML,
         y: yMid,
-        size: 11,
+        size: DOC_FS,
         font: fontBold,
         color: TR_RED,
     });
-    yMid -= 18;
+    yMid -= DOC_LH;
 
     drawTimeReportGridTable(page, {
         tableLeft: ML,
@@ -641,6 +754,7 @@ function drawSingleTimeReportPdfPage(
         fontBold,
         bodyTexts: summaryBody.length ? summaryBody : [['', '', '', '', '', '']],
         rightAlignedBodyCols: new Set([3, 4, 5]),
+        wrapBodyCols: TR_SUMMARY_WRAP_COLS,
         totalLabel: labels.total,
         footerTotals: {
             summary: {
@@ -705,23 +819,23 @@ function drawLegalInvoicePdfPage(
     page.drawText(firmName, {
         x: ML,
         y,
-        size: LI_FS,
+        size: DOC_FS,
         font: fontBold,
         color: FIRM_NAME,
     });
-    let yBlurb = y - LI_LH;
+    let yBlurb = y - DOC_LH;
 
-    yBlurb = wrapTextBlock(page, firmAddress, ML, yBlurb, blurbW, LI_FS, font, MUTED_TEXT, LI_LH * 0.92);
+    yBlurb = wrapTextBlock(page, firmAddress, ML, yBlurb, blurbW, DOC_FS, font, MUTED_TEXT, DOC_LH * 0.92);
     const leftBlurb = resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage);
     for (const ln of leftBlurb) {
-        page.drawText(ln, { x: ML, y: yBlurb, size: LI_FS, font, color: MUTED_TEXT });
-        yBlurb -= LI_LH * 0.92;
+        page.drawText(ln, { x: ML, y: yBlurb, size: DOC_FS, font, color: MUTED_TEXT });
+        yBlurb -= DOC_LH * 0.92;
     }
 
-    y = Math.min(yBlurb, logoBottom) - LI_LH * 0.75;
+    y = Math.min(yBlurb, logoBottom) - DOC_LH * 0.75;
 
-    const ribbonPad = LI_FS * 0.38;
-    const ribbonH = LI_FS + ribbonPad * 2;
+    const ribbonPad = DOC_FS * 0.38;
+    const ribbonH = DOC_FS + ribbonPad * 2;
     page.drawRectangle({
         x: ML,
         y: y - ribbonH,
@@ -733,19 +847,19 @@ function drawLegalInvoicePdfPage(
     page.drawText(labels.invoiceNo(invNo), {
         x: ML + 6,
         y: ribbonTextY,
-        size: LI_FS,
+        size: DOC_FS,
         font: fontBold,
         color: CORAL_DARK,
     });
-    const ribbonDateW = fontBold.widthOfTextAtSize(ribbonIssue, LI_FS);
+    const ribbonDateW = fontBold.widthOfTextAtSize(ribbonIssue, DOC_FS);
     page.drawText(ribbonIssue, {
         x: ML + contentW - 6 - ribbonDateW,
         y: ribbonTextY,
-        size: LI_FS,
+        size: DOC_FS,
         font: fontBold,
         color: CORAL_DARK,
     });
-    y -= ribbonH + LI_LH * 0.75;
+    y -= ribbonH + DOC_LH * 0.75;
 
     page.drawLine({
         start: { x: ML, y: y + 3 },
@@ -753,40 +867,40 @@ function drawLegalInvoicePdfPage(
         thickness: 0.5,
         color: GRID_LINE,
     });
-    y -= LI_LH * 0.55;
+    y -= DOC_LH * 0.55;
 
     const splitX = ML + contentW * 0.52;
     const rightColW = W - MR - splitX - 8;
     const panelsTop = y;
 
-    page.drawText(labels.billTo, { x: ML, y: panelsTop, size: LI_FS, font: fontBold, color: PANEL_HEAD });
-    let yLeft = panelsTop - LI_LH;
-    page.drawText(model.recipientCompany, { x: ML, y: yLeft, size: LI_FS, font: fontBold, color: BODY });
-    yLeft -= LI_LH;
-    page.drawText(`${labels.address}:`, { x: ML, y: yLeft, size: LI_FS, font: fontBold, color: MUTED_TEXT });
-    yLeft -= LI_LH * 0.92;
-    page.drawText(model.recipientAddressLines[0], { x: ML, y: yLeft, size: LI_FS, font, color: MUTED_TEXT });
-    yLeft -= LI_LH * 0.92;
+    page.drawText(labels.billTo, { x: ML, y: panelsTop, size: DOC_FS, font: fontBold, color: PANEL_HEAD });
+    let yLeft = panelsTop - DOC_LH;
+    page.drawText(model.recipientCompany, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: BODY });
+    yLeft -= DOC_LH;
+    page.drawText(`${labels.address}:`, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: MUTED_TEXT });
+    yLeft -= DOC_LH * 0.92;
+    page.drawText(model.recipientAddressLines[0], { x: ML, y: yLeft, size: DOC_FS, font, color: MUTED_TEXT });
+    yLeft -= DOC_LH * 0.92;
     if (model.recipientAddressLines[1]) {
-        page.drawText(model.recipientAddressLines[1], { x: ML, y: yLeft, size: LI_FS, font, color: MUTED_TEXT });
-        yLeft -= LI_LH * 0.92;
+        page.drawText(model.recipientAddressLines[1], { x: ML, y: yLeft, size: DOC_FS, font, color: MUTED_TEXT });
+        yLeft -= DOC_LH * 0.92;
     }
-    page.drawText(`${labels.bankName}:`, { x: ML, y: yLeft, size: LI_FS, font: fontBold, color: MUTED_TEXT });
-    yLeft -= LI_LH * 0.92;
-    page.drawText(resolveLegalBillToBankName(legalOverrides), { x: ML, y: yLeft, size: LI_FS, font, color: MUTED_TEXT });
-    yLeft -= LI_LH * 0.92;
-    page.drawText(`${labels.swift}:`, { x: ML, y: yLeft, size: LI_FS, font: fontBold, color: MUTED_TEXT });
-    yLeft -= LI_LH * 0.92;
-    page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yLeft, size: LI_FS, font, color: MUTED_TEXT });
-    yLeft -= LI_LH * 0.92;
+    page.drawText(`${labels.bankName}:`, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: MUTED_TEXT });
+    yLeft -= DOC_LH * 0.92;
+    page.drawText(resolveLegalBillToBankName(legalOverrides), { x: ML, y: yLeft, size: DOC_FS, font, color: MUTED_TEXT });
+    yLeft -= DOC_LH * 0.92;
+    page.drawText(`${labels.swift}:`, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: MUTED_TEXT });
+    yLeft -= DOC_LH * 0.92;
+    page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yLeft, size: DOC_FS, font, color: MUTED_TEXT });
+    yLeft -= DOC_LH * 0.92;
 
-    page.drawText(labels.caseDetails, { x: splitX, y: panelsTop, size: LI_FS, font: fontBold, color: PANEL_HEAD });
-    const yRight = wrapTextBlock(page, caseLine, splitX, panelsTop - LI_LH, rightColW, LI_FS, font, BODY, LI_LH);
+    page.drawText(labels.caseDetails, { x: splitX, y: panelsTop, size: DOC_FS, font: fontBold, color: PANEL_HEAD });
+    const yRight = wrapTextBlock(page, caseLine, splitX, panelsTop - DOC_LH, rightColW, DOC_FS, font, BODY, DOC_LH);
 
-    y = Math.min(yLeft, yRight) - LI_LH;
+    y = Math.min(yLeft, yRight) - DOC_LH;
 
     const descColW = contentW * 0.72;
-    const headH = LI_FS + 10;
+    const headH = DOC_FS + 10;
     const yHeadTop = y;
     const yHeadBot = yHeadTop - headH;
     page.drawRectangle({
@@ -799,23 +913,23 @@ function drawLegalInvoicePdfPage(
     page.drawText(labels.description, {
         x: ML + 6,
         y: yHeadBot + 5,
-        size: LI_FS,
+        size: DOC_FS,
         font: fontBold,
         color: rgb(1, 1, 1),
     });
     const th2 = labels.total(cur);
-    const th2W = fontBold.widthOfTextAtSize(th2, LI_FS);
+    const th2W = fontBold.widthOfTextAtSize(th2, DOC_FS);
     page.drawText(th2, {
         x: ML + contentW - 6 - th2W,
         y: yHeadBot + 5,
-        size: LI_FS,
+        size: DOC_FS,
         font: fontBold,
         color: rgb(1, 1, 1),
     });
 
-    const svcLines = splitTextLines(svcLine, descColW - 10, LI_FS, fontBold);
+    const svcLines = splitTextLines(svcLine, descColW - 10, DOC_FS, fontBold);
     const rowPad = 8;
-    const rowH = Math.max(LI_LH, svcLines.length * LI_LH) + rowPad;
+    const rowH = Math.max(DOC_LH, svcLines.length * DOC_LH) + rowPad;
     const yRowTop = yHeadBot;
     const yRowBot = yRowTop - rowH;
     page.drawLine({
@@ -824,21 +938,21 @@ function drawLegalInvoicePdfPage(
         thickness: 0.6,
         color: CORAL,
     });
-    let svcY = yRowTop - rowPad - LI_FS;
+    let svcY = yRowTop - rowPad - DOC_FS;
     for (const ln of svcLines) {
-        page.drawText(ln, { x: ML + 5, y: svcY, size: LI_FS, font: fontBold, color: BODY });
-        svcY -= LI_LH;
+        page.drawText(ln, { x: ML + 5, y: svcY, size: DOC_FS, font: fontBold, color: BODY });
+        svcY -= DOC_LH;
     }
-    const totW = fontBold.widthOfTextAtSize(model.totalFormatted, LI_FS);
+    const totW = fontBold.widthOfTextAtSize(model.totalFormatted, DOC_FS);
     page.drawText(model.totalFormatted, {
         x: ML + contentW - 6 - totW,
-        y: yRowTop - rowPad - LI_FS,
-        size: LI_FS,
+        y: yRowTop - rowPad - DOC_FS,
+        size: DOC_FS,
         font: fontBold,
         color: BODY,
     });
 
-    y = yRowBot - LI_LH;
+    y = yRowBot - DOC_LH;
 
     const rightX = ML + contentW;
     const totalsW = contentW * 0.46;
@@ -849,25 +963,25 @@ function drawLegalInvoicePdfPage(
         const labelColor = due ? CORAL : BODY;
         const valueColor = due ? CORAL : BODY;
         const labelMaxW = totalsW - valueReserve;
-        const valW = fontBold.widthOfTextAtSize(value, LI_FS);
-        const labelLines = splitTextLines(label, labelMaxW, LI_FS, fontBold);
-        const blockH = Math.max(labelLines.length, 1) * (LI_LH * 0.95);
-        const labelStartY = y - LI_FS + 1;
+        const valW = fontBold.widthOfTextAtSize(value, DOC_FS);
+        const labelLines = splitTextLines(label, labelMaxW, DOC_FS, fontBold);
+        const blockH = Math.max(labelLines.length, 1) * (DOC_LH * 0.95);
+        const labelStartY = y - DOC_FS + 1;
         let labelY = labelStartY;
         for (const ln of labelLines) {
             page.drawText(ln, {
                 x: totalsLeft,
                 y: labelY,
-                size: LI_FS,
+                size: DOC_FS,
                 font: fontBold,
                 color: labelColor,
             });
-            labelY -= LI_LH * 0.95;
+            labelY -= DOC_LH * 0.95;
         }
         page.drawText(value, {
             x: rightX - valW,
             y: labelStartY,
-            size: LI_FS,
+            size: DOC_FS,
             font: fontBold,
             color: valueColor,
         });
@@ -891,20 +1005,20 @@ function drawLegalInvoicePdfPage(
         thickness: 0.6,
         color: CORAL,
     });
-    y -= LI_LH * 1.75;
+    y -= DOC_LH * 1.75;
 
     const thanks = labels.thanks;
-    const thanksW = font.widthOfTextAtSize(thanks, LI_FS);
+    const thanksW = font.widthOfTextAtSize(thanks, DOC_FS);
     page.drawText(thanks, {
         x: ML + (contentW - thanksW) / 2,
         y,
-        size: LI_FS,
+        size: DOC_FS,
         font,
         color: THANKS_TEXT,
     });
-    y -= LI_LH * 1.15;
+    y -= DOC_LH * 1.15;
 
-    wrapTextBlock(page, paymentDisclaimer, ML, y, contentW, LI_FS, font, DISCLAIMER_TEXT, LI_LH);
+    wrapTextBlock(page, paymentDisclaimer, ML, y, contentW, DOC_FS, font, DISCLAIMER_TEXT, DOC_LH);
 }
 
 export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput): Promise<Blob> {
@@ -912,8 +1026,8 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     const doc = await PDFDocument.create();
     doc.registerFontkit(fontkit);
     const [regularBytes, boldBytes] = await Promise.all([
-        fetchFontBytes(dejavuSansRegularUrl),
-        fetchFontBytes(dejavuSansBoldUrl),
+        fetchFontBytes(carlitoRegularUrl),
+        fetchFontBytes(carlitoBoldUrl),
     ]);
     const font = await doc.embedFont(regularBytes, { subset: true });
     const fontBold = await doc.embedFont(boldBytes, { subset: true });
