@@ -66,16 +66,6 @@ function h(pt: number): number {
 const DOC_FONT = 'Calibri Light';
 const DOC_SIZE = h(11);
 
-function docRun(text: string, opts?: { bold?: boolean; color?: string; size?: number }): TextRun {
-    return new TextRun({
-        text,
-        font: DOC_FONT,
-        size: opts?.size ?? DOC_SIZE,
-        bold: opts?.bold,
-        color: opts?.color,
-    });
-}
-
 function contactParagraph(text: string, spacingAfter = 20): Paragraph {
     return new Paragraph({
         alignment: AlignmentType.RIGHT,
