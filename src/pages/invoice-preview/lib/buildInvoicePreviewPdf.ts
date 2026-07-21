@@ -62,18 +62,23 @@ const DISCLAIMER_TEXT = rgb(0.29, 0.33, 0.39);
 /** Match preview (11px on 794px canvas) ≈ 8.25pt on A4. DejaVu reads larger than Calibri at same pt. */
 const DOC_FS = 8.25;
 const DOC_LH = DOC_FS * 1.45;
+/** CSS rem @ 16px root → pt (shared layout rhythm). */
+const CSS_REM_PT = 12;
 const CELL_MUTED = rgb(0.28, 0.33, 0.41);
-const CELL_PAD_X = 3;
-const CELL_PAD_Y = 3;
-const CELL_LINE_STEP = DOC_FS * 1.2;
-const TABLE_FOOTER_H = DOC_FS + CELL_PAD_Y * 2 + 6;
+/** Match InvoiceTimeReportPage.css: ~0.35rem × 0.38–0.4rem cell padding. */
+const CELL_PAD_X = 5;
+const CELL_PAD_Y = 5;
+const CELL_HEAD_PAD_Y = 5;
+const CELL_FOOT_PAD_TOP = 6;
+const CELL_LINE_STEP = DOC_FS * 1.25;
+const TABLE_FOOTER_H = CELL_FOOT_PAD_TOP + DOC_FS + CELL_PAD_Y;
+const TR_TITLE_TABLE_GAP = CSS_REM_PT * 0.65;
 /** Reserve space for page number band at bottom. */
 const PAGE_FOOTER_ZONE_TOP = MB + 52;
 const TR_SECTION_GAP = DOC_LH * 2.2;
 const TR_SUMMARY_TITLE_GAP = DOC_LH * 1.15;
 
 /** Cover letter rhythm — InvoiceCoverLetter.css (rem @ 16px → pt). */
-const CSS_REM_PT = 12;
 const COVER_LOGO_H_PT = 27;
 const COVER_LOGO_W_PT = COVER_LOGO_H_PT * (439 / 219);
 const COVER_HEADER_PAD_BOTTOM = CSS_REM_PT;
@@ -380,7 +385,7 @@ function computeBodyRowLayouts(
             maxLines = Math.max(maxLines, Math.max(lines.length, 1));
         }
         cellLines.push(rowCellLines);
-        rowHeights.push(CELL_PAD_Y * 2 + maxLines * CELL_LINE_STEP);
+        rowHeights.push(Math.max(CELL_PAD_Y * 2 + CELL_LINE_STEP, CELL_PAD_Y * 2 + maxLines * CELL_LINE_STEP));
     }
     return { rowHeights, cellLines };
 }
@@ -481,18 +486,18 @@ function computeHeaderLayouts(
     headers: readonly string[],
     widths: readonly number[],
     fontBold: PDFFont,
-): { headerLines: string[][]; headerH: number } {
-    const headerLines: string[][] = [];
-    let maxLines = 1;
+): { headerCells: { text: string; size: number }[]; headerH: number } {
+    const headerCells: { text: string; size: number }[] = [];
+    let maxSize = DOC_FS;
     for (let i = 0; i < headers.length; i++) {
         const cw = Math.max(8, widths[i]! - CELL_PAD_X * 2);
-        const lines = wrapCellLines(headers[i] ?? '', cw, fontBold, DOC_FS);
-        headerLines.push(lines.length ? lines : ['']);
-        maxLines = Math.max(maxLines, Math.max(lines.length, 1));
+        const fitted = fitPdfCellText(headers[i] ?? '', cw, fontBold, DOC_FS, DOC_FS * 0.72);
+        headerCells.push({ text: fitted.text, size: fitted.size });
+        maxSize = Math.max(maxSize, fitted.size);
     }
     return {
-        headerLines,
-        headerH: CELL_PAD_Y * 2 + maxLines * CELL_LINE_STEP,
+        headerCells,
+        headerH: CELL_HEAD_PAD_Y * 2 + maxSize + 2,
     };
 }
 
@@ -541,7 +546,7 @@ function drawTimeReportGridTable(
         totalLabel = 'Total',
     } = opts;
     const { xs, widths } = colLayout(tableLeft, tableW, colWeights);
-    const { headerLines, headerH } = computeHeaderLayouts(headers, widths, fontBold);
+    const { headerCells, headerH } = computeHeaderLayouts(headers, widths, fontBold);
     const footerH = TABLE_FOOTER_H;
     const yHeaderBot = yTopPdf - headerH;
     const innerFootLines = footerKind === 'detail'
@@ -563,28 +568,25 @@ function drawTimeReportGridTable(
         color: TR_RED,
     });
 
-    for (let i = 0; i < headerLines.length; i++) {
-        const lines = headerLines[i]!;
-        if (!lines.length)
+    for (let i = 0; i < headerCells.length; i++) {
+        const { text, size } = headerCells[i]!;
+        if (!text)
             continue;
         const rightAlign = footerKind === 'detail'
             ? i >= 4
             : i >= 3;
-        let yLine = yHeaderBot + headerH - CELL_PAD_Y - DOC_FS;
-        for (const ln of lines) {
-            const tw = fontBold.widthOfTextAtSize(ln, DOC_FS);
-            let xDraw = xs[i]! + CELL_PAD_X;
-            if (rightAlign)
-                xDraw = xs[i]! + widths[i]! - CELL_PAD_X - tw;
-            page.drawText(ln, {
-                x: xDraw,
-                y: yLine,
-                size: DOC_FS,
-                font: fontBold,
-                color: rgb(1, 1, 1),
-            });
-            yLine -= CELL_LINE_STEP;
-        }
+        const tw = fontBold.widthOfTextAtSize(text, size);
+        let xDraw = xs[i]! + CELL_PAD_X;
+        if (rightAlign)
+            xDraw = xs[i]! + widths[i]! - CELL_PAD_X - tw;
+        const yLine = yHeaderBot + (headerH - size) / 2;
+        page.drawText(text, {
+            x: xDraw,
+            y: yLine,
+            size,
+            font: fontBold,
+            color: rgb(1, 1, 1),
+        });
     }
 
     page.drawRectangle({
@@ -637,7 +639,7 @@ function drawTimeReportGridTable(
         );
     }
 
-    const yFoot = tableBottom + Math.max(4, (footerH - DOC_FS) / 2);
+    const yFoot = tableBottom + CELL_FOOT_PAD_TOP + Math.max(0, (footerH - CELL_FOOT_PAD_TOP - DOC_FS - CELL_PAD_Y) / 2);
     if (innerFootLines > 0) {
         page.drawText(totalLabel, {
             x: xs[0]! + CELL_PAD_X,
@@ -728,8 +730,8 @@ function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel,
     const title = continuation
         ? labels.titleContinued(model.servicesMonthYear)
         : labels.title(model.servicesMonthYear);
-    yTop = wrapTextBlock(page, title, ML, yTop, W - ML - MR, DOC_FS, fontBold, TR_RED, DOC_LH) + DOC_LH * 0.2;
-    return yTop;
+    const yAfterTitle = wrapTextBlock(page, title, ML, yTop, W - ML - MR, DOC_FS, fontBold, TR_RED, DOC_LH);
+    return yAfterTitle - TR_TITLE_TABLE_GAP;
 }
 
 function drawTimeReportBandFooter(page: PDFPage, fontBold: PDFFont, pageTag: number): void {
