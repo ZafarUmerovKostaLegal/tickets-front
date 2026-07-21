@@ -202,7 +202,7 @@ export function InvoicePreviewPage() {
             const globalIdx = globalDetailRowOffset(chunks, chunkIndex) + rowIndex;
             const nextSlots = [...base.detailSlots];
             while (nextSlots.length <= globalIdx)
-                nextSlots.push({ date: '', initials: '', task: '', description: '', hours: '', amount: '' });
+                nextSlots.push({ date: '', initials: '', task: '', description: '', hours: '', hourlyRate: '', amount: '' });
             nextSlots[globalIdx] = { ...nextSlots[globalIdx]!, [field]: value };
             return { ...base, detailSlots: nextSlots };
         });

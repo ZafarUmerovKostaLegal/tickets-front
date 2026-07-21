@@ -85,17 +85,18 @@ export function InvoiceTimeReportPage({
         <table className="tt-inv-tr__table" role="grid" aria-label="Детальный отчёт по времени">
           <thead className="tt-inv-tr__thead">
             <tr>
-              <th scope="col" style={{ width: '11%' }}>{labels.date}</th>
-              <th scope="col" style={{ width: '8%' }}>{labels.initials}</th>
-              <th scope="col" style={{ width: '11%' }}>{labels.task}</th>
+              <th scope="col" style={{ width: '10%' }}>{labels.date}</th>
+              <th scope="col" style={{ width: '7%' }}>{labels.initials}</th>
+              <th scope="col" style={{ width: '10%' }}>{labels.task}</th>
               <th scope="col" style={{ width: '28%' }}>{labels.description}</th>
-              <th scope="col" style={{ width: '11%' }}>{labels.hours}</th>
-              <th scope="col" style={{ width: '16%' }}>{amountHeader}</th>
+              <th scope="col" style={{ width: '9%' }}>{labels.hours}</th>
+              <th scope="col" style={{ width: '12%' }}>{labels.rate}</th>
+              <th scope="col" style={{ width: '14%' }}>{amountHeader}</th>
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">
             {detail.map((r, i) => {
-                const empty = !([r.date, r.initials, r.task, r.description, r.hours, r.amount].some((c) => String(c).trim().length > 0));
+                const empty = !([r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0));
                 const cellClass = empty ? 'tt-inv-tr__cell--empty' : undefined;
                 const numClass = `tt-inv-tr__cell--num${empty ? ' tt-inv-tr__cell--empty' : ''}`;
                 const amtClass = `${numClass} tt-inv-tr__cell--amount`;
@@ -106,6 +107,7 @@ export function InvoiceTimeReportPage({
                       <TrCell editable={editable} className={cellClass} value={r.task} ariaLabel={`${labels.task}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'task', v)} />
                       <TrCell editable={editable} className={cellClass} value={r.description} ariaLabel={`${labels.description}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'description', v)} />
                       <TrCell editable={editable} className={numClass} value={r.hours} ariaLabel={`${labels.hours}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'hours', v)} />
+                      <TrCell editable={editable} className={numClass} value={r.hourlyRate} ariaLabel={`${labels.rate}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'hourlyRate', v)} />
                       <TrCell editable={editable} className={amtClass} value={r.amount} ariaLabel={`${labels.amount(cur)}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'amount', v)} />
                     </tr>
                 );
@@ -128,6 +130,7 @@ export function InvoiceTimeReportPage({
                         )
                       : (pack.detailTotalHoursDisplay || '\u00a0')}
                   </td>
+                  <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">—</td>
                   <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num tt-inv-tr__cell--amount">
                     {editable
                       ? (

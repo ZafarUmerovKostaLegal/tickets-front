@@ -15,6 +15,7 @@ export type TimeReportLabels = {
     task: string;
     description: string;
     hours: string;
+    rate: string;
     amount: (currency: string) => string;
     total: string;
     summaryTitle: string;
@@ -34,6 +35,7 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
         task: 'Task',
         description: 'Description',
         hours: 'Hours',
+        rate: 'Rate',
         amount: (cur) => (cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`),
         total: 'Total',
         summaryTitle: 'Summary of services',
@@ -51,6 +53,7 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
         task: 'Задача',
         description: 'Описание',
         hours: 'Часы',
+        rate: 'Ставка',
         amount: (cur) => `Сумма (${cur})`,
         total: 'Итого',
         summaryTitle: 'Сводка по услугам',

@@ -376,7 +376,7 @@ function drawTimeReportGridTable(
         if (footerKind === 'detail' && footerTotals?.detail) {
             const { hours, amount } = footerTotals.detail;
             const hi = 4;
-            const ai = 5;
+            const ai = 6;
             if (hours?.trim())
                 drawRightFitPdfBold(page, hours, xs[hi]!, widths[hi]!, yFoot, fontBold);
             if (amount?.trim())
@@ -412,7 +412,7 @@ function drawTimeReportGridTable(
     return tableBottom;
 }
 
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [11, 8, 11, 28, 11, 16] as const;
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [10, 7, 10, 25, 10, 12, 16] as const;
 const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 26, 26, 13, 13, 13] as const;
 
 function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, font: PDFFont, fontBold: PDFFont, continuation: boolean): number {
@@ -507,7 +507,7 @@ function drawSingleTimeReportPdfPage(
     },
 ): void {
     const yGridTop = drawTimeReportBandHeader(page, model, font, fontBold, opts.continuation);
-    const detailBody = slice.map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.amount] as const);
+    const detailBody = slice.map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount] as const);
     const tableW = W - ML - MR;
     const cur = packCurrencyCode(model);
     const labels = getTimeReportLabels(model.coverLanguage);
@@ -519,14 +519,14 @@ function drawSingleTimeReportPdfPage(
         tableW,
         yTopPdf: yGridTop,
         colWeights: TIME_REPORT_PDF_DETAIL_WEIGHTS,
-        headers: [labels.date, labels.initials, labels.task, labels.description, labels.hours, amountHdr],
+        headers: [labels.date, labels.initials, labels.task, labels.description, labels.hours, labels.rate, amountHdr],
         bodyRows: nRows,
         footerKind: 'detail',
         summaryCurrency: null,
         font,
         fontBold,
-        bodyTexts: detailBody.length ? detailBody : [['', '', '', '', '', '']],
-        rightAlignedBodyCols: new Set([4, 5]),
+        bodyTexts: detailBody.length ? detailBody : [['', '', '', '', '', '', '']],
+        rightAlignedBodyCols: new Set([4, 5, 6]),
         showInnerTotal: opts.showDetailTotals,
         totalLabel: labels.total,
         footerTotals: opts.showDetailTotals

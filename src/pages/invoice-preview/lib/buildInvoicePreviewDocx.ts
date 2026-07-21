@@ -260,17 +260,18 @@ function timeReportDocxSectionChildren(
     const cur = packCurrencyCode(model);
     const labels = getTimeReportLabels(model.coverLanguage);
     const amountHdr = labels.amount(cur);
-    const DW = pctWidths([11, 8, 11, 28, 11, 16]);
+    const DW = pctWidths([10, 7, 10, 25, 10, 12, 16]);
     const SW = pctWidths([9, 26, 26, 13, 13, 13]);
 
     const detailHeader = new TableRow({
         children: [
-            trHeadCell(labels.date, DW[0] ?? 11),
-            trHeadCell(labels.initials, DW[1] ?? 8),
-            trHeadCell(labels.task, DW[2] ?? 11),
-            trHeadCell(labels.description, DW[3] ?? 28),
-            trHeadCell(labels.hours, DW[4] ?? 11),
-            trHeadCell(amountHdr, DW[5] ?? 16),
+            trHeadCell(labels.date, DW[0] ?? 10),
+            trHeadCell(labels.initials, DW[1] ?? 7),
+            trHeadCell(labels.task, DW[2] ?? 10),
+            trHeadCell(labels.description, DW[3] ?? 25),
+            trHeadCell(labels.hours, DW[4] ?? 10),
+            trHeadCell(labels.rate, DW[5] ?? 12),
+            trHeadCell(amountHdr, DW[6] ?? 16),
         ],
     });
     const detailBodyRows: TableRow[] = detailChunk.map((r) => new TableRow({
@@ -280,7 +281,8 @@ function timeReportDocxSectionChildren(
             trBodyTextCell(r.task, DW[2]!, AlignmentType.LEFT),
             trBodyTextCell(r.description, DW[3]!, AlignmentType.LEFT),
             trBodyTextCell(r.hours, DW[4]!, AlignmentType.RIGHT),
-            trBodyTextCell(r.amount, DW[5]!, AlignmentType.RIGHT),
+            trBodyTextCell(r.hourlyRate, DW[5]!, AlignmentType.RIGHT),
+            trBodyTextCell(r.amount, DW[6]!, AlignmentType.RIGHT),
         ],
     }));
 
@@ -295,7 +297,8 @@ function timeReportDocxSectionChildren(
                     })],
                 }),
                 trFootValueCell(pack.detailTotalHoursDisplay, DW[4]!, AlignmentType.RIGHT),
-                trFootValueCell(pack.detailTotalAmountDisplay, DW[5]!, AlignmentType.RIGHT),
+                trFootValueCell('—', DW[5]!, AlignmentType.RIGHT),
+                trFootValueCell(pack.detailTotalAmountDisplay, DW[6]!, AlignmentType.RIGHT),
             ],
         }));
     }

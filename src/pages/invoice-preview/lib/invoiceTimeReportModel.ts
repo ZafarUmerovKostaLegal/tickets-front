@@ -7,6 +7,7 @@ export type InvoiceTimeReportDetailRow = {
     task: string;
     description: string;
     hours: string;
+    hourlyRate: string;
     amount: string;
 };
 
@@ -30,7 +31,7 @@ export type InvoiceTimeReportPack = {
 };
 
 export function emptyDetailRow(): InvoiceTimeReportDetailRow {
-    return { date: '', initials: '', task: '', description: '', hours: '', amount: '' };
+    return { date: '', initials: '', task: '', description: '', hours: '', hourlyRate: '', amount: '' };
 }
 
 function emptySummaryRow(): InvoiceTimeReportSummaryRow {
@@ -57,7 +58,8 @@ export function formatTimeReportHours(n: number): string {
 }
 
 function detailRowIsTrailingEmpty(row: InvoiceTimeReportDetailRow): boolean {
-    return ![row.date, row.initials, row.task, row.description, row.hours, row.amount].some((c) => String(c).trim().length > 0);
+    return ![row.date, row.initials, row.task, row.description, row.hours, row.hourlyRate, row.amount]
+        .some((c) => String(c).trim().length > 0);
 }
 
 export function trimTrailingEmptyDetailSlots(rows: readonly InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {

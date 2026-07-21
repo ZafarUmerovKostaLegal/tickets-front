@@ -7,6 +7,7 @@ import {
     isForbiddenError,
     listProjectTasksCached,
     listTimeTrackingUsers,
+    resolveReportEmployeeInitials,
     type InvoiceLineDto,
     type TimeEntryRow,
     type TimeTrackingUserRow,
@@ -50,18 +51,42 @@ function lineKind(ln: InvoiceLineDto): string {
 }
 
 function initialsFromUser(u: TimeTrackingUserRow): string {
-    const custom = (u.initials ?? '').trim().toUpperCase();
-    if (custom.length >= 3 && custom.length <= 8)
-        return custom;
-    const n = (u.display_name ?? '').trim();
-    if (n.length) {
-        const p = n.split(/\s+/).filter(Boolean);
-        if (p.length >= 2)
-            return (p[0]!.slice(0, 1) + p[p.length - 1]!.slice(0, 1)).toUpperCase();
-        return n.slice(0, 3).toUpperCase();
-    }
-    const em = u.email?.split('@')[0] ?? '?';
-    return em.slice(0, 3).toUpperCase();
+    return resolveReportEmployeeInitials({
+        stored: u.initials,
+        displayName: u.display_name,
+        email: u.email,
+    }) || '—';
+}
+
+function readEntryRateSource(entry: TimeEntryRow | null | undefined): number | null {
+    if (!entry)
+        return null;
+    const raw = entry.rate_source_amount ?? entry.rateSourceAmount;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function resolveDetailHourlyRate(opts: {
+    unitAmount?: number | null;
+    rateSource?: number | null;
+    hours: number;
+    amount: number;
+}): number {
+    const unit = Number(opts.unitAmount);
+    if (Number.isFinite(unit) && unit > 0)
+        return unit;
+    const src = Number(opts.rateSource);
+    if (Number.isFinite(src) && src > 0)
+        return src;
+    if (opts.hours > 0 && Number.isFinite(opts.amount) && opts.amount !== 0)
+        return opts.amount / opts.hours;
+    return 0;
+}
+
+function formatDetailHourlyRate(rate: number, currency: string): string {
+    if (!Number.isFinite(rate) || rate <= 0)
+        return '';
+    return formatTimeReportAmount(rate, currency);
 }
 
 function displayUserName(u: TimeTrackingUserRow): string {
@@ -116,6 +141,7 @@ function toPublicRow(d: BuildingDetail): InvoiceTimeReportDetailRow {
         task: d.task,
         description: d.description,
         hours: d.hours,
+        hourlyRate: d.hourlyRate,
         amount: d.amount,
     };
 }
@@ -262,6 +288,11 @@ export async function resolveInvoiceTimeReportPack(
                     taskNameById,
                 }));
                 const { notes } = parseTimeEntryDescriptionLines(entry?.description ?? e.description ?? null);
+                const rate = resolveDetailHourlyRate({
+                    rateSource: readEntryRateSource(entry),
+                    hours: h,
+                    amount: a,
+                });
                 details.push({
                     date: dateDisplayFromIso(e.workDate, lang),
                     initials: u ? initialsFromUser(u) : String(e.authUserId).slice(0, 3),
@@ -269,6 +300,7 @@ export async function resolveInvoiceTimeReportPack(
                     description: invoiceClientDescription(entry?.description ?? e.description, taskLabel)
                         || (notes.trim().length ? notes : (taskLabel || '—')),
                     hours: formatTimeReportHours(h),
+                    hourlyRate: formatDetailHourlyRate(rate, currency),
                     amount: formatTimeReportAmount(a, currency),
                     authId: e.authUserId,
                     hoursNum: h,
@@ -285,6 +317,7 @@ export async function resolveInvoiceTimeReportPack(
                     task: expenseTask,
                     description: (e.description ?? '').trim() || '—',
                     hours: '',
+                    hourlyRate: '',
                     amount: formatTimeReportAmount(a, currency),
                     authId: null,
                     hoursNum: 0,
@@ -385,12 +418,19 @@ export async function resolveInvoiceTimeReportPack(
                     invoiceLineDescription: desc,
                     taskNameById,
                 }));
+                const rate = resolveDetailHourlyRate({
+                    unitAmount: ln.unitAmount,
+                    rateSource: readEntryRateSource(entry),
+                    hours,
+                    amount: amt,
+                });
                 details.push({
                     date: workIso ? dateDisplayFromIso(workIso, lang) : '—',
                     initials: u ? initialsFromUser(u) : '—',
                     task: taskLabel,
                     description: invoiceClientDescription(entry?.description ?? desc, taskLabel) || desc || '—',
                     hours: hours > 0 ? formatTimeReportHours(hours) : '',
+                    hourlyRate: formatDetailHourlyRate(rate, currency),
                     amount: formatTimeReportAmount(amt, currency),
                     authId,
                     hoursNum: hours,
@@ -405,6 +445,7 @@ export async function resolveInvoiceTimeReportPack(
                     task: expenseTask,
                     description: desc,
                     hours: '',
+                    hourlyRate: '',
                     amount: formatTimeReportAmount(amt, currency),
                     authId: null,
                     hoursNum: 0,
@@ -419,6 +460,7 @@ export async function resolveInvoiceTimeReportPack(
                     task: taskLabel,
                     description: desc,
                     hours: '',
+                    hourlyRate: '',
                     amount: formatTimeReportAmount(amt, currency),
                     authId: null,
                     hoursNum: 0,

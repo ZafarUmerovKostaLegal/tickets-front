@@ -13,6 +13,7 @@ function row(id: string): InvoiceTimeReportDetailRow {
         task: '',
         description: `Row ${id}`,
         hours: '1:00',
+        hourlyRate: '100,00',
         amount: '100,00',
     };
 }
