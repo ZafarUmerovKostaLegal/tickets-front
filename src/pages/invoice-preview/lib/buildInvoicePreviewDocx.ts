@@ -605,26 +605,60 @@ function legalInvoiceDocxBlocks(
 
     const svcHead = new TableRow({
         children: [
-            trHeadCell(labels.description, 72),
-            trHeadCell(labels.total(cur), 28),
-        ],
-    });
-    const svcBody = new TableRow({
-        children: [
             new TableCell({
-                borders: cellBorderGrid,
+                borders: {
+                    top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                },
                 width: { size: 72, type: WidthType.PERCENTAGE },
+                shading: { type: ShadingType.SOLID, fill: '1A1A1A', color: '1A1A1A' },
+                verticalAlign: VerticalAlignTable.CENTER,
                 children: [new Paragraph({
-                    children: [new TextRun({ text: svcLine, size: DOC_SIZE, font: DOC_FONT })],
+                    children: [new TextRun({ text: labels.description, bold: true, color: 'FFFFFF', size: DOC_SIZE, font: DOC_FONT })],
                 })],
             }),
             new TableCell({
-                borders: cellBorderGrid,
+                borders: {
+                    top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                },
                 width: { size: 28, type: WidthType.PERCENTAGE },
+                shading: { type: ShadingType.SOLID, fill: '1A1A1A', color: '1A1A1A' },
                 verticalAlign: VerticalAlignTable.CENTER,
                 children: [new Paragraph({
                     alignment: AlignmentType.RIGHT,
-                    children: [new TextRun({ text: model.totalFormatted, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                    children: [new TextRun({ text: labels.total(cur), bold: true, color: 'FFFFFF', size: DOC_SIZE, font: DOC_FONT })],
+                })],
+            }),
+        ],
+    });
+    const svcBodyBorders = {
+        top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        bottom: { style: BorderStyle.SINGLE, size: 8, color: 'E8928C', space: 1 },
+        left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+    };
+    const svcBody = new TableRow({
+        children: [
+            new TableCell({
+                borders: svcBodyBorders,
+                width: { size: 72, type: WidthType.PERCENTAGE },
+                verticalAlign: VerticalAlignTable.BOTTOM,
+                children: [new Paragraph({
+                    children: [new TextRun({ text: svcLine, bold: true, size: DOC_SIZE, font: DOC_FONT, color: '1E293B' })],
+                })],
+            }),
+            new TableCell({
+                borders: svcBodyBorders,
+                width: { size: 28, type: WidthType.PERCENTAGE },
+                verticalAlign: VerticalAlignTable.BOTTOM,
+                children: [new Paragraph({
+                    alignment: AlignmentType.RIGHT,
+                    children: [new TextRun({ text: model.totalFormatted, bold: true, color: '1E293B', size: DOC_SIZE, font: DOC_FONT })],
                 })],
             }),
         ],
@@ -656,7 +690,7 @@ function legalInvoiceDocxBlocks(
                 children: [new Paragraph({
                     children: [new TextRun({
                         text: label,
-                        bold: due,
+                        bold: true,
                         color: due ? 'E8928C' : '1E293B',
                         size: DOC_SIZE,
                         font: DOC_FONT,
@@ -670,8 +704,8 @@ function legalInvoiceDocxBlocks(
                     alignment: AlignmentType.RIGHT,
                     children: [new TextRun({
                         text: value,
-                        bold: due,
-                        color: '1E293B',
+                        bold: true,
+                        color: due ? 'E8928C' : '1E293B',
                         size: DOC_SIZE,
                         font: DOC_FONT,
                     })],

@@ -155,22 +155,22 @@
   border-collapse: collapse;
   table-layout: fixed;
   margin-bottom: 1rem;
-  font-family: inherit;
+  font-family: Calibri, Carlito, 'Segoe UI', sans-serif;
 }
 
 .tt-inv-li__svc-table thead tr {
-  background: #eef2f6;
+  background: #1a1a1a;
 }
 
 .tt-inv-li__svc-table th {
-  padding: 0.35rem 0.45rem;
+  padding: 0.4rem 0.55rem;
   font-size: inherit;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #334155;
+  letter-spacing: 0.06em;
+  color: #ffffff;
   text-align: left;
-  border-bottom: 1px solid #e2e8f0;
+  border: none;
 }
 
 .tt-inv-li__svc-table .tt-inv-li__th-total {
@@ -178,16 +178,19 @@
 }
 
 .tt-inv-li__svc-table td {
-  padding: 0.45rem;
+  padding: 0.55rem 0.55rem 0.45rem;
   font-size: inherit;
-  vertical-align: top;
-  border-bottom: 2px solid var(--tt-inv-li-coral);
+  font-weight: 700;
+  vertical-align: bottom;
+  border-bottom: 1px solid var(--tt-inv-li-coral);
+  color: var(--tt-inv-paper-ink, #0f172a);
 }
 
 .tt-inv-li__svc-amt {
   text-align: right;
   white-space: nowrap;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 .tt-inv-li__totals {
