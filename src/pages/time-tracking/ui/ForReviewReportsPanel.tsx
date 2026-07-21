@@ -833,7 +833,9 @@ export function ForReviewReportsPanel() {
                             }
                         }}
                     >
-                        <td className="tt-partner-confirmed__td-client" data-label={columnLabels.client}>{resolveClientLabel(r)}</td>
+                        <td className="tt-partner-confirmed__td-client" data-label={columnLabels.client}>
+                          <span className="tt-partner-confirmed__td-client-text">{resolveClientLabel(r)}</span>
+                        </td>
                         <td className="tt-partner-confirmed__cell-title tt-partner-confirmed__td-primary" data-label={columnLabels.project}>
                             <span className="tt-partner-confirmed__project-cell">
                                 <span className="tt-partner-confirmed__card-client">{resolveClientLabel(r)}</span>
@@ -886,7 +888,15 @@ export function ForReviewReportsPanel() {
                             onClick={(e) => e.stopPropagation()}
                             onKeyDown={(e) => e.stopPropagation()}
                         >
-                            <PartnerConfirmedCommentsCell count={commentsCount} preview={commentsPreview} countLabel={commentsCountLabel} openLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsOpen').replace('{project}', resolveProjectLabel(r))} emptyLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsCountZero')} onOpen={() => openCommentsDrawer(r)} />
+                            <PartnerConfirmedCommentsCell
+                              count={commentsCount}
+                              preview={commentsPreview}
+                              countLabel={commentsCountLabel}
+                              openLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsOpen').replace('{project}', resolveProjectLabel(r))}
+                              emptyLabel={t('timeTrackingPage.reports.partnerConfirmed.commentsCountZero')}
+                              onOpen={() => openCommentsDrawer(r)}
+                              compact
+                            />
                         </td>
                         <td
                             className="tt-partner-confirmed__actions-cell tt-partner-confirmed__td-actions"

@@ -381,6 +381,47 @@ body[data-theme='dark'] .expenses-page {
   font-weight: 600;
 }
 
+.exp-filter__sep {
+  height: 1px;
+  margin: 0.25rem 0.5rem;
+  background: var(--app-border);
+}
+
+.exp-filters-custom-range {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  margin-top: 0.625rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+}
+
+.exp-filters-custom-range__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--app-muted, #64748b);
+  flex-shrink: 0;
+}
+
+.exp-filters-custom-range__field {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.exp-filters-custom-range__field-label {
+  font-size: 0.8125rem;
+  color: var(--app-muted, #64748b);
+  flex-shrink: 0;
+}
+
+.exp-filters-custom-range__picker {
+  min-width: 9.5rem;
+}
+
 .exp-filter__dot {
   width: 8px;
   height: 8px;
@@ -5013,6 +5054,7 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 
 .exp-tt-filters-outer .exp-filters {
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .exp-tt-expense-list {

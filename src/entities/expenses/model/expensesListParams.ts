@@ -1,26 +1,16 @@
 import type { ExpenseStatus, ExpenseType, ListParams } from './types';
+import {
+    defaultExpensesCustomRange,
+    expensesPeriodPresetRange,
+    type ExpensesUiFilterPeriod,
+} from './expensesPeriodPresets';
 
 export const EXPENSES_LIST_PAGE_SIZE = 50;
-export type ExpensesUiFilterPeriod = 'all' | 'today' | 'week' | 'month';
-function todayIsoLocal(): string {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-}
-function weekStartIsoLocal(): string {
-    const d = new Date();
-    d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-}
-function monthStartIsoLocal(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
-}
+
+export type ExpensesUiSortBy = 'createdAt' | 'expenseDate';
+
+export type { ExpensesUiFilterPeriod };
+
 export function buildExpensesListParams(args: {
     isModerationQueue: boolean;
     search: string;
@@ -28,6 +18,9 @@ export function buildExpensesListParams(args: {
     filterType: ExpenseType | '';
     filterReimb: 'reimbursable' | 'non_reimbursable' | '';
     filterPeriod: ExpensesUiFilterPeriod;
+    filterDateFrom?: string;
+    filterDateTo?: string;
+    sortBy?: ExpensesUiSortBy;
     page: number;
     pageSize?: number;
 }): ListParams {
@@ -36,7 +29,7 @@ export function buildExpensesListParams(args: {
     const p: ListParams = {
         skip: (page - 1) * pageSize,
         limit: pageSize,
-        sortBy: 'createdAt',
+        sortBy: args.sortBy ?? 'createdAt',
         sortOrder: 'desc',
     };
     const q = args.search.trim();
@@ -54,18 +47,33 @@ export function buildExpensesListParams(args: {
         p.isReimbursable = true;
     if (args.filterReimb === 'non_reimbursable')
         p.isReimbursable = false;
-    const today = todayIsoLocal();
-    if (args.filterPeriod === 'today') {
-        p.dateFrom = today;
-        p.dateTo = today;
+
+    if (args.filterPeriod === 'custom') {
+        const from = (args.filterDateFrom ?? '').trim().slice(0, 10);
+        const to = (args.filterDateTo ?? '').trim().slice(0, 10);
+        if (from && to) {
+            p.dateFrom = from <= to ? from : to;
+            p.dateTo = from <= to ? to : from;
+        }
+        else if (from) {
+            p.dateFrom = from;
+            p.dateTo = from;
+        }
+        else if (to) {
+            p.dateFrom = to;
+            p.dateTo = to;
+        }
+        else {
+            const fallback = defaultExpensesCustomRange();
+            p.dateFrom = fallback.dateFrom;
+            p.dateTo = fallback.dateTo;
+        }
     }
-    else if (args.filterPeriod === 'week') {
-        p.dateFrom = weekStartIsoLocal();
-        p.dateTo = today;
+    else if (args.filterPeriod !== 'all') {
+        const range = expensesPeriodPresetRange(args.filterPeriod);
+        p.dateFrom = range.dateFrom;
+        p.dateTo = range.dateTo;
     }
-    else if (args.filterPeriod === 'month') {
-        p.dateFrom = monthStartIsoLocal();
-        p.dateTo = today;
-    }
+
     return p;
 }

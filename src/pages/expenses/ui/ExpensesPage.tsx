@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { routes, getExpensesOpenUrl } from '@shared/config';
 import { useCurrentUser, useMediaQuery } from '@shared/hooks';
-import { AppBackButton, AppHomeLogo, AppPageSettings, Pagination } from '@shared/ui';
+import { AppBackButton, AppHomeLogo, AppPageSettings, DatePicker, Pagination } from '@shared/ui';
 import { ExpensesFormPanel, type PanelMode } from './ExpensesFormPanel';
 import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
 import { ExpensesReportModal } from '@features/expense-report';
@@ -11,7 +11,18 @@ import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseStat
 import { EXPENSE_REGISTRY_STATUSES, EXPENSE_REGISTRY_STATUS_SET, STATUS_META, TYPE_META, REIMBURSABLE_META, } from '@entities/expenses/model/constants';
 import { approveExpense, payExpense, closeExpense, deleteExpense, fetchExpenses, fetchExpenseById, createExpense, updateExpense, submitExpense, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
 import { computeAmountUzsForApi } from '@entities/expenses/model/expenseCurrency';
-import { buildExpensesListParams, EXPENSES_LIST_PAGE_SIZE, } from '@entities/expenses/model/expensesListParams';
+import {
+    buildExpensesListParams,
+    EXPENSES_LIST_PAGE_SIZE,
+    type ExpensesUiFilterPeriod,
+    type ExpensesUiSortBy,
+} from '@entities/expenses/model/expensesListParams';
+import {
+    defaultExpensesCustomRange,
+    EXPENSES_PERIOD_LABELS,
+    EXPENSES_PERIOD_PRESET_IDS,
+    expensesPeriodFilterLabel,
+} from '@entities/expenses/model/expensesPeriodPresets';
 import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/model/coerceExpense';
 import { getUser } from '@entities/user';
 import { formatExpenseApprovedByLabel, formatExpenseAuthorLabel, mergeExpenseAuthorFromCache, needsAuthorEnrichment, formatPartnerUserLabel, } from '@entities/expenses/model/expenseAuthor';
@@ -39,8 +50,12 @@ type TableConfirmState = null | {
     kind: 'delete';
     req: ExpenseRequest;
 };
-type FilterPeriod = 'all' | 'today' | 'week' | 'month';
-type ActiveFilter = 'status' | 'type' | 'reimbursable' | 'period' | null;
+type ActiveFilter = 'status' | 'type' | 'reimbursable' | 'period' | 'sort' | null;
+
+const SORT_LABELS: Record<ExpensesUiSortBy, string> = {
+    createdAt: 'По дате создания',
+    expenseDate: 'По дате расхода',
+};
 function fmtDate(iso: string) {
     if (!iso)
         return '—';
@@ -508,9 +523,6 @@ function SkeletonTableBody({ rowCount = 10 }: {
       </div>
     </div>);
 }
-const PERIOD_LABELS: Record<FilterPeriod, string> = {
-    all: 'Весь период', today: 'Сегодня', week: 'Эта неделя', month: 'Этот месяц',
-};
 function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const isMobile = useMediaQuery('(max-width: 768px)');
     const navigate = useNavigate();
@@ -536,7 +548,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [filterStatus, setFilterStatus] = useState<ExpenseStatus | ''>('');
     const [filterType, setFilterType] = useState<ExpenseType | ''>('');
     const [filterReimb, setFilterReimb] = useState<'reimbursable' | 'non_reimbursable' | ''>('');
-    const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('all');
+    const [filterPeriod, setFilterPeriod] = useState<ExpensesUiFilterPeriod>('all');
+    const [filterDateFrom, setFilterDateFrom] = useState('');
+    const [filterDateTo, setFilterDateTo] = useState('');
+    const [filterSort, setFilterSort] = useState<ExpensesUiSortBy>('createdAt');
     const [openFilter, setOpenFilter] = useState<ActiveFilter>(null);
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     useEffect(() => {
@@ -549,7 +564,17 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     }, [search]);
     const [listTotal, setListTotal] = useState<number | null>(null);
     const [listPage, setListPage] = useState(1);
-    const filterDepsKey = useMemo(() => [debouncedSearch, filterStatus, filterType, filterReimb, filterPeriod, isModerationQueue].join('\0'), [debouncedSearch, filterStatus, filterType, filterReimb, filterPeriod, isModerationQueue]);
+    const filterDepsKey = useMemo(() => [
+        debouncedSearch,
+        filterStatus,
+        filterType,
+        filterReimb,
+        filterPeriod,
+        filterDateFrom,
+        filterDateTo,
+        filterSort,
+        isModerationQueue,
+    ].join('\0'), [debouncedSearch, filterStatus, filterType, filterReimb, filterPeriod, filterDateFrom, filterDateTo, filterSort, isModerationQueue]);
     useEffect(() => {
         setExpenseTableMenuForId(null);
     }, [listPage, filterDepsKey, loadKey]);
@@ -591,6 +616,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             filterType,
             filterReimb,
             filterPeriod,
+            filterDateFrom,
+            filterDateTo,
+            sortBy: filterSort,
             page: listPage,
             pageSize: EXPENSES_LIST_PAGE_SIZE,
         });
@@ -625,6 +653,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         filterType,
         filterReimb,
         filterPeriod,
+        filterDateFrom,
+        filterDateTo,
+        filterSort,
     ]);
     useEffect(() => {
         if (isModerationQueue)
@@ -1038,7 +1069,24 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         setFilterType('');
         setFilterReimb('');
         setFilterPeriod('all');
+        setFilterDateFrom('');
+        setFilterDateTo('');
+        setFilterSort('createdAt');
         setSearch('');
+    }, []);
+    const selectCustomPeriod = useCallback(() => {
+        setFilterPeriod('custom');
+        setFilterDateFrom((prev) => {
+            if (prev.trim())
+                return prev;
+            return defaultExpensesCustomRange().dateFrom;
+        });
+        setFilterDateTo((prev) => {
+            if (prev.trim())
+                return prev;
+            return defaultExpensesCustomRange().dateTo;
+        });
+        setOpenFilter(null);
     }, []);
     const requestsForUi = useMemo(() => {
         if (!Array.isArray(requests))
@@ -1122,8 +1170,8 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         usd: acc.usd + asExpenseNumber(r.equivalentAmount),
     }), { uzs: 0, usd: 0 }), [filtered]);
     const hasFilters = isModerationQueue
-        ? !!(filterType || filterReimb || filterPeriod !== 'all' || search)
-        : !!(filterStatus || filterType || filterReimb || filterPeriod !== 'all' || search);
+        ? !!(filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
+        : !!(filterStatus || filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search);
     const activeFilterChipCount = useMemo(() => {
         let n = 0;
         if (!isModerationQueue && filterStatus)
@@ -1134,8 +1182,14 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             n++;
         if (filterPeriod !== 'all')
             n++;
+        if (filterSort !== 'createdAt')
+            n++;
         return n;
-    }, [isModerationQueue, filterStatus, filterType, filterReimb, filterPeriod]);
+    }, [isModerationQueue, filterStatus, filterType, filterReimb, filterPeriod, filterSort]);
+    const periodFilterLabel = useMemo(
+        () => expensesPeriodFilterLabel(filterPeriod, filterDateFrom, filterDateTo),
+        [filterPeriod, filterDateFrom, filterDateTo],
+    );
     const statuses: ExpenseStatus[] = EXPENSE_REGISTRY_STATUSES;
     const types: ExpenseType[] = [
         'transport',
@@ -1261,9 +1315,22 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
               </FilterDrop>
 
               
-              <FilterDrop label={PERIOD_LABELS[filterPeriod]} active={filterPeriod !== 'all'} isOpen={openFilter === 'period'} onToggle={() => toggleFilter('period')}>
-                {(Object.keys(PERIOD_LABELS) as FilterPeriod[]).map(p => (<button key={p} className={`exp-filter__opt${filterPeriod === p ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod(p); setOpenFilter(null); }}>
-                    {PERIOD_LABELS[p]}
+              <FilterDrop label={periodFilterLabel} active={filterPeriod !== 'all'} isOpen={openFilter === 'period'} onToggle={() => toggleFilter('period')}>
+                <button className={`exp-filter__opt${filterPeriod === 'all' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod('all'); setOpenFilter(null); }}>
+                  {EXPENSES_PERIOD_LABELS.all}
+                </button>
+                {EXPENSES_PERIOD_PRESET_IDS.map(p => (<button key={p} className={`exp-filter__opt${filterPeriod === p ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod(p); setOpenFilter(null); }}>
+                    {EXPENSES_PERIOD_LABELS[p]}
+                  </button>))}
+                <div className="exp-filter__sep" role="separator"/>
+                <button className={`exp-filter__opt${filterPeriod === 'custom' ? ' exp-filter__opt--on' : ''}`} onClick={selectCustomPeriod}>
+                  {EXPENSES_PERIOD_LABELS.custom}
+                </button>
+              </FilterDrop>
+
+              <FilterDrop label={SORT_LABELS[filterSort]} active={filterSort !== 'createdAt'} isOpen={openFilter === 'sort'} onToggle={() => toggleFilter('sort')}>
+                {(Object.keys(SORT_LABELS) as ExpensesUiSortBy[]).map(sort => (<button key={sort} className={`exp-filter__opt${filterSort === sort ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSort(sort); setOpenFilter(null); }}>
+                    {SORT_LABELS[sort]}
                   </button>))}
               </FilterDrop>
 
@@ -1271,6 +1338,40 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                   Сбросить
                 </button>)}
             </div>
+
+            {filterPeriod === 'custom' && (<div className="exp-filters-custom-range" aria-label="Свой период">
+                <span className="exp-filters-custom-range__label">Период:</span>
+                <div className="exp-filters-custom-range__field">
+                  <span className="exp-filters-custom-range__field-label">С</span>
+                  <DatePicker
+                    value={filterDateFrom}
+                    max={filterDateTo || undefined}
+                    onChange={(iso) => {
+                        setFilterDateFrom(iso);
+                        if (filterDateTo && iso > filterDateTo)
+                            setFilterDateTo(iso);
+                        setFilterPeriod('custom');
+                    }}
+                    portal
+                    buttonClassName="exp-filters-custom-range__picker"
+                  />
+                </div>
+                <div className="exp-filters-custom-range__field">
+                  <span className="exp-filters-custom-range__field-label">По</span>
+                  <DatePicker
+                    value={filterDateTo}
+                    min={filterDateFrom || undefined}
+                    onChange={(iso) => {
+                        setFilterDateTo(iso);
+                        if (filterDateFrom && iso < filterDateFrom)
+                            setFilterDateFrom(iso);
+                        setFilterPeriod('custom');
+                    }}
+                    portal
+                    buttonClassName="exp-filters-custom-range__picker"
+                  />
+                </div>
+              </div>)}
           </div>
 
           
