@@ -68,10 +68,14 @@ export function InvoiceCoverLetter({
           <img className="tt-inv-cover__logo" src={letterheadFullLogoUrl} alt="" decoding="async"/>
         </div>
         <address className="tt-inv-cover__firm-contact">
-          <span>{KOSTA_LEGAL_FIRM.addressLine}</span>
-          <span>{KOSTA_LEGAL_FIRM.phone}</span>
-          <span>{KOSTA_LEGAL_FIRM.email}</span>
-          <span>{KOSTA_LEGAL_FIRM.web}</span>
+          <span className="tt-inv-cover__firm-contact-group">
+            <span>{KOSTA_LEGAL_FIRM.addressLine}</span>
+            <span>{KOSTA_LEGAL_FIRM.phone}</span>
+          </span>
+          <span className="tt-inv-cover__firm-contact-group">
+            <span>{KOSTA_LEGAL_FIRM.email}</span>
+            <span>{KOSTA_LEGAL_FIRM.web}</span>
+          </span>
         </address>
       </header>
 

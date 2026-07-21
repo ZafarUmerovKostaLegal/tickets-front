@@ -83,14 +83,15 @@ const TR_SUMMARY_TITLE_GAP = DOC_LH * 1.15;
 /** Cover letter rhythm — InvoiceCoverLetter.css (rem @ 16px → pt). */
 const COVER_LOGO_H_PT = 42;
 const COVER_LOGO_W_PT = COVER_LOGO_H_PT * (439 / 219);
-const COVER_HEADER_PAD_BOTTOM = CSS_REM_PT;
-const COVER_HEADER_MARGIN_BOTTOM = CSS_REM_PT * 2.1;
+const COVER_HEADER_MARGIN_BOTTOM = CSS_REM_PT * 0.85;
+/** Contact block: 8px on 794px preview ≈ 6pt on A4. */
+const COVER_CONTACT_FS = 6;
+const COVER_CONTACT_LH = COVER_CONTACT_FS * 1.35;
 const COVER_BLOCK_GAP = CSS_REM_PT * 1.25;
 const COVER_SALUTE_GAP = CSS_REM_PT;
 const COVER_PARA_GAP = CSS_REM_PT;
 const COVER_CLOSING_BEFORE = CSS_REM_PT * 1.65;
 const COVER_SIG_BEFORE = CSS_REM_PT * 2;
-const COVER_HEADER_RULE = rgb(0.39, 0.45, 0.52);
 const LEGAL_LOGO_H_PT = 30;
 const LEGAL_LOGO_W_PT = LEGAL_LOGO_H_PT * (439 / 219);
 const LEGAL_MASTHEAD_MB = CSS_REM_PT * 0.85;
@@ -185,31 +186,30 @@ function drawCoverPage(
         headerContentBottom = logoBottom;
     }
 
-    const contact = [
+    const contactTop = [
         KOSTA_LEGAL_FIRM.addressLine,
         KOSTA_LEGAL_FIRM.phone,
+    ];
+    const contactBottom = [
         KOSTA_LEGAL_FIRM.email,
         KOSTA_LEGAL_FIRM.web,
     ];
     let cy = logoTop;
     const muted = rgb(0.22, 0.26, 0.34);
-    for (const line of contact) {
-        const tw = font.widthOfTextAtSize(line, DOC_FS);
-        page.drawText(line, { x: W - MR - tw, y: cy, size: DOC_FS, font, color: muted });
-        cy -= DOC_LH;
+    for (const line of contactTop) {
+        const tw = font.widthOfTextAtSize(line, COVER_CONTACT_FS);
+        page.drawText(line, { x: W - MR - tw, y: cy, size: COVER_CONTACT_FS, font, color: muted });
+        cy -= COVER_CONTACT_LH;
+    }
+    cy -= COVER_CONTACT_LH * 0.55;
+    for (const line of contactBottom) {
+        const tw = font.widthOfTextAtSize(line, COVER_CONTACT_FS);
+        page.drawText(line, { x: W - MR - tw, y: cy, size: COVER_CONTACT_FS, font, color: muted });
+        cy -= COVER_CONTACT_LH;
     }
     headerContentBottom = Math.min(headerContentBottom, cy);
 
-    const borderY = headerContentBottom - COVER_HEADER_PAD_BOTTOM;
-    page.drawLine({
-        start: { x: ML, y: borderY },
-        end: { x: W - MR, y: borderY },
-        thickness: 0.5,
-        color: COVER_HEADER_RULE,
-        opacity: 0.35,
-    });
-
-    let y = borderY - COVER_HEADER_MARGIN_BOTTOM;
+    let y = headerContentBottom - COVER_HEADER_MARGIN_BOTTOM;
 
     page.drawText(model.letterDateDisplay, { x: ML, y, size: DOC_FS, font, color: BODY });
 

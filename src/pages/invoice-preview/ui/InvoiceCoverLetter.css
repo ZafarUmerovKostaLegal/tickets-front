@@ -20,9 +20,8 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 2.1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(100, 116, 139, 0.18);
+  margin-bottom: 0.85rem;
+  padding-bottom: 0;
 }
 
 .tt-inv-cover__brand {
@@ -46,14 +45,25 @@
 .tt-inv-cover__firm-contact {
   margin: 0;
   font-style: normal;
-  font-size: inherit;
-  line-height: inherit;
+  font-family: 'Gotham Pro', 'Montserrat', 'Avenir Next', 'Segoe UI', sans-serif;
+  font-size: 8px;
+  font-weight: 400;
+  line-height: 1.35;
   color: var(--tt-inv-paper-muted, #64748b);
   text-align: right;
   max-width: 17rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
 }
 
-.tt-inv-cover__firm-contact span {
+.tt-inv-cover__firm-contact-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.tt-inv-cover__firm-contact-group > span {
   display: block;
 }
 

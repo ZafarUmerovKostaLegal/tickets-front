@@ -76,11 +76,16 @@ function docRun(text: string, opts?: { bold?: boolean; color?: string; size?: nu
     });
 }
 
-function contactParagraph(text: string): Paragraph {
+function contactParagraph(text: string, spacingAfter = 20): Paragraph {
     return new Paragraph({
         alignment: AlignmentType.RIGHT,
-        spacing: { after: 40 },
-        children: [docRun(text)],
+        spacing: { after: spacingAfter },
+        children: [new TextRun({
+            text,
+            font: 'Gotham Pro',
+            size: 16,
+            color: '64748B',
+        })],
     });
 }
 
@@ -116,9 +121,9 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
                         width: { size: 52, type: WidthType.PERCENTAGE },
                         children: [
                             contactParagraph(KOSTA_LEGAL_FIRM.addressLine),
-                            contactParagraph(KOSTA_LEGAL_FIRM.phone),
+                            contactParagraph(KOSTA_LEGAL_FIRM.phone, 100),
                             contactParagraph(KOSTA_LEGAL_FIRM.email),
-                            contactParagraph(KOSTA_LEGAL_FIRM.web),
+                            contactParagraph(KOSTA_LEGAL_FIRM.web, 0),
                         ],
                     }),
                 ],
@@ -128,7 +133,7 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
 
     const body: (Paragraph | Table)[] = [
         headerTable,
-        new Paragraph({ spacing: { before: 280, after: 200 }, children: [new TextRun({ text: '', size: 2 })] }),
+        new Paragraph({ spacing: { before: 100, after: 120 }, children: [new TextRun({ text: '', size: 2 })] }),
         new Paragraph({
             children: [new TextRun({ text: model.letterDateDisplay, size: DOC_SIZE, font: DOC_FONT })],
         }),
