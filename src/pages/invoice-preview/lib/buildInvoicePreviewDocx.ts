@@ -45,6 +45,7 @@ import {
     resolveLegalBillToSwift,
     resolveLegalCaseDetailLine,
     resolveLegalFirmBankingLines,
+    resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
     resolveLegalServiceDescriptionLine,
     type InvoiceLegalPageOverrides,
@@ -458,12 +459,21 @@ function legalInvoiceDocxBlocks(
     const labels = getLegalInvoiceLabels(model.coverLanguage);
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
-    const ribbonIssue = packUppercaseRibbonDate(issueIso, model.coverLanguage);
-    const dueBanner = packUppercaseRibbonDate(dueIso, model.coverLanguage);
-    const invNo = packInvoiceNumberDisplay(session);
+    const zeroFallback = packZeroCommaAmount(model);
+    const ribbonIssue = resolveLegalOverrideText(
+        legalOverrides?.issueDateDisplay,
+        packUppercaseRibbonDate(issueIso, model.coverLanguage),
+    );
+    const dueBanner = resolveLegalOverrideText(
+        legalOverrides?.dueDateDisplay,
+        packUppercaseRibbonDate(dueIso, model.coverLanguage),
+    );
+    const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, packInvoiceNumberDisplay(session));
+    const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, zeroFallback);
+    const extraExpensesAmount = resolveLegalOverrideText(legalOverrides?.extraExpensesAmount, zeroFallback);
+    const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
     const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);
-    const zeroLine = packZeroCommaAmount(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
 
@@ -472,7 +482,7 @@ function legalInvoiceDocxBlocks(
             spacing: { after: 40 },
             children: [new TextRun({ text: `${KOSTA_LEGAL_FIRM.brandName} LF`, bold: true, color: INV_RED, size: h(12), font: 'Calibri' })],
         }),
-        ...[KOSTA_LEGAL_FIRM.addressLine, ...resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage)].map((txt) =>
+        ...[firmAddress, ...resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage)].map((txt) =>
             new Paragraph({
                 spacing: { after: 35 },
                 children: [new TextRun({ text: txt, color: '100814', size: h(9), font: 'Calibri' })],
@@ -624,14 +634,14 @@ function legalInvoiceDocxBlocks(
             alignment: AlignmentType.RIGHT,
             children: [
                 new TextRun({ text: `${labels.vat} `, bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
-                new TextRun({ text: zeroLine, color: INV_RED, size: h(10), font: 'Calibri' }),
+                new TextRun({ text: vatAmount, color: INV_RED, size: h(10), font: 'Calibri' }),
             ],
         }),
         new Paragraph({
             alignment: AlignmentType.RIGHT,
             children: [
                 new TextRun({ text: `${labels.extraExpenses} `, bold: true, color: INV_RED, size: h(10), font: 'Calibri' }),
-                new TextRun({ text: zeroLine, color: INV_RED, size: h(10), font: 'Calibri' }),
+                new TextRun({ text: extraExpensesAmount, color: INV_RED, size: h(10), font: 'Calibri' }),
             ],
         }),
         new Paragraph({

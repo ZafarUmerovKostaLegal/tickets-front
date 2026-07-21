@@ -6,6 +6,7 @@ import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 
 export type LegalInvoiceLabels = {
     invoiceNo: (number: string) => string;
+    invoiceNoPrefix: string;
     billTo: string;
     address: string;
     bankName: string;
@@ -17,6 +18,7 @@ export type LegalInvoiceLabels = {
     vat: string;
     extraExpenses: string;
     totalDueBy: (dueBanner: string) => string;
+    totalDueByPrefix: string;
     thanks: string;
     tin: string;
     bankAddress: string;
@@ -32,6 +34,7 @@ export type LegalInvoiceLabels = {
 const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
     ENG: {
         invoiceNo: (n) => `INVOICE No. ${n}`,
+        invoiceNoPrefix: 'INVOICE No.',
         billTo: 'Bill to',
         address: 'Address',
         bankName: 'Bank name',
@@ -43,6 +46,7 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         vat: 'VAT:',
         extraExpenses: 'Extra expenses:',
         totalDueBy: (due) => `TOTAL DUE BY ${due}:`,
+        totalDueByPrefix: 'TOTAL DUE BY',
         thanks: 'Thank you for your business!',
         tin: 'TIN',
         bankAddress: 'Bank address',
@@ -60,6 +64,7 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
     },
     RU: {
         invoiceNo: (n) => `СЧЁТ № ${n}`,
+        invoiceNoPrefix: 'СЧЁТ №',
         billTo: 'Плательщик',
         address: 'Адрес',
         bankName: 'Банк',
@@ -71,6 +76,7 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         vat: 'НДС:',
         extraExpenses: 'Доп. расходы:',
         totalDueBy: (due) => `ИТОГО К ОПЛАТЕ ДО ${due}:`,
+        totalDueByPrefix: 'ИТОГО К ОПЛАТЕ ДО',
         thanks: 'Благодарим за сотрудничество!',
         tin: 'ИНН',
         bankAddress: 'Адрес банка',

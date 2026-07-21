@@ -18,6 +18,7 @@ import {
     resolveLegalBillToBankName,
     resolveLegalBillToSwift,
     resolveLegalCaseDetailLine,
+    resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
     resolveLegalServiceDescriptionLine,
     type InvoiceLegalBankingFieldKey,
@@ -40,6 +41,7 @@ function LiField({
     editable,
     multiline,
     ariaLabel,
+    placeholder,
     onChange,
 }: {
     className?: string;
@@ -47,6 +49,7 @@ function LiField({
     editable?: boolean;
     multiline?: boolean;
     ariaLabel?: string;
+    placeholder?: string;
     onChange?: (next: string) => void;
 }) {
     if (!editable) {
@@ -55,6 +58,7 @@ function LiField({
     const shared = {
         className: `tt-inv-li__field${className ? ` ${className}` : ''}`,
         value,
+        placeholder,
         'aria-label': ariaLabel,
         onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange?.(e.target.value),
     };
@@ -86,6 +90,7 @@ function BankingLine({
                 editable={editable}
                 className="tt-inv-li__field--bank"
                 value={editable ? inputValue : displayValue}
+                placeholder="—"
                 ariaLabel={ariaLabel}
                 onChange={onChange}
             />
@@ -104,12 +109,20 @@ export function InvoiceLegalInvoicePage({
     const labels = getLegalInvoiceLabels(model.coverLanguage);
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
-    const ribbonIssue = packUppercaseRibbonDate(issueIso, model.coverLanguage);
-    const dueBanner = packUppercaseRibbonDate(dueIso, model.coverLanguage);
-    const invNo = packInvoiceNumberDisplay(session);
+    const defaultRibbonIssue = packUppercaseRibbonDate(issueIso, model.coverLanguage);
+    const defaultDueBanner = packUppercaseRibbonDate(dueIso, model.coverLanguage);
+    const defaultInvNo = packInvoiceNumberDisplay(session);
+    const defaultZero = packZeroCommaAmount(model);
+
+    const ribbonIssue = resolveLegalOverrideText(legalOverrides?.issueDateDisplay, defaultRibbonIssue);
+    const dueBanner = resolveLegalOverrideText(legalOverrides?.dueDateDisplay, defaultDueBanner);
+    const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, defaultInvNo);
+    const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, defaultZero);
+    const extraExpensesAmount = resolveLegalOverrideText(legalOverrides?.extraExpensesAmount, defaultZero);
+    const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
+
     const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);
-    const zeroLine = packZeroCommaAmount(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
     const addr2 = model.recipientAddressLines[1];
@@ -125,7 +138,15 @@ export function InvoiceLegalInvoicePage({
       <header className="tt-inv-li__masthead">
         <div className="tt-inv-li__firm-blurb">
           <p className="tt-inv-li__firm-name">{KOSTA_LEGAL_FIRM.brandName} LF</p>
-          <p className="tt-inv-li__firm-line">{KOSTA_LEGAL_FIRM.addressLine}</p>
+          <p className="tt-inv-li__firm-line">
+            <LiField
+              editable={editable}
+              className="tt-inv-li__field--firm-addr"
+              value={editable ? (legalOverrides?.firmAddress ?? firmAddress) : firmAddress}
+              ariaLabel={labels.address}
+              onChange={(next) => onChangeLegalOverrides?.({ firmAddress: next })}
+            />
+          </p>
           {firmBankingRows.map((row) => (
             <BankingLine
               key={row.field}
@@ -144,8 +165,30 @@ export function InvoiceLegalInvoicePage({
       </header>
 
       <div className="tt-inv-li__ribbon">
-        <span className="tt-inv-li__ribbon-no">{labels.invoiceNo(invNo)}</span>
-        <span className="tt-inv-li__ribbon-date">{ribbonIssue}</span>
+        <span className="tt-inv-li__ribbon-no">
+          {editable ? (
+            <>
+              <span className="tt-inv-li__ribbon-prefix">{labels.invoiceNoPrefix}</span>
+              {' '}
+              <LiField
+                editable
+                className="tt-inv-li__field--ribbon"
+                value={legalOverrides?.invoiceNumber ?? invNo}
+                ariaLabel={labels.invoiceNoPrefix}
+                onChange={(invoiceNumber) => onChangeLegalOverrides?.({ invoiceNumber })}
+              />
+            </>
+          ) : labels.invoiceNo(invNo)}
+        </span>
+        <span className="tt-inv-li__ribbon-date">
+          <LiField
+            editable={editable}
+            className="tt-inv-li__field--ribbon tt-inv-li__field--ribbon-date"
+            value={editable ? (legalOverrides?.issueDateDisplay ?? ribbonIssue) : ribbonIssue}
+            ariaLabel="Дата счёта"
+            onChange={(issueDateDisplay) => onChangeLegalOverrides?.({ issueDateDisplay })}
+          />
+        </span>
       </div>
 
       <div className="tt-inv-li__panels">
@@ -188,6 +231,7 @@ export function InvoiceLegalInvoicePage({
             <LiField
               editable={editable}
               value={editable ? legalBankingInputValue(legalOverrides?.billToBankName) : billToBankName}
+              placeholder="—"
               ariaLabel={`${labels.billTo} ${labels.bankName}`}
               onChange={(billToBankName) => patchBanking('billToBankName', billToBankName)}
             />
@@ -197,6 +241,7 @@ export function InvoiceLegalInvoicePage({
             <LiField
               editable={editable}
               value={editable ? legalBankingInputValue(legalOverrides?.billToSwift) : billToSwift}
+              placeholder="—"
               ariaLabel={`${labels.billTo} ${labels.swift}`}
               onChange={(billToSwift) => patchBanking('billToSwift', billToSwift)}
             />
@@ -258,10 +303,39 @@ export function InvoiceLegalInvoicePage({
             onChange={(totalFormatted) => onChangeModel?.({ totalFormatted })}
           />
         </div>
-        <div className="tt-inv-li__total-line">{`${labels.vat} ${zeroLine}`}</div>
-        <div className="tt-inv-li__total-line">{`${labels.extraExpenses} ${zeroLine}`}</div>
+        <div className="tt-inv-li__total-line">
+          <span className="tt-inv-li__total-label">{labels.vat}</span>{' '}
+          <LiField
+            editable={editable}
+            className="tt-inv-li__field--inline"
+            value={editable ? (legalOverrides?.vatAmount ?? vatAmount) : vatAmount}
+            ariaLabel={labels.vat}
+            onChange={(vatAmount) => onChangeLegalOverrides?.({ vatAmount })}
+          />
+        </div>
+        <div className="tt-inv-li__total-line">
+          <span className="tt-inv-li__total-label">{labels.extraExpenses}</span>{' '}
+          <LiField
+            editable={editable}
+            className="tt-inv-li__field--inline"
+            value={editable ? (legalOverrides?.extraExpensesAmount ?? extraExpensesAmount) : extraExpensesAmount}
+            ariaLabel={labels.extraExpenses}
+            onChange={(extraExpensesAmount) => onChangeLegalOverrides?.({ extraExpensesAmount })}
+          />
+        </div>
         <div className="tt-inv-li__total-due">
-          <span className="tt-inv-li__total-due-label">{labels.totalDueBy(dueBanner)}</span>
+          <span className="tt-inv-li__total-due-label">
+            {labels.totalDueByPrefix}
+            {' '}
+            <LiField
+              editable={editable}
+              className="tt-inv-li__field--inline tt-inv-li__field--due-date"
+              value={editable ? (legalOverrides?.dueDateDisplay ?? dueBanner) : dueBanner}
+              ariaLabel={labels.totalDueByPrefix}
+              onChange={(dueDateDisplay) => onChangeLegalOverrides?.({ dueDateDisplay })}
+            />
+            :
+          </span>
           {' '}
           <span className="tt-inv-li__total-due-amt">
             <LiField

@@ -302,3 +302,44 @@
   font-weight: 800;
   font-size: 12px;
 }
+
+.tt-inv-li--editable .tt-inv-li__field--due-date {
+  min-width: 7.5rem;
+  text-align: left;
+  text-transform: uppercase;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.tt-inv-li--editable .tt-inv-li__field--firm-addr {
+  width: min(100%, 18rem);
+}
+
+.tt-inv-li__ribbon-prefix {
+  flex-shrink: 0;
+}
+
+.tt-inv-li--editable .tt-inv-li__ribbon-no {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+  white-space: normal;
+}
+
+.tt-inv-li--editable .tt-inv-li__field--ribbon {
+  width: auto;
+  min-width: 8rem;
+  max-width: 14rem;
+  border-color: rgba(26, 5, 6, 0.28);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--tt-inv-li-coral-dark);
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.tt-inv-li--editable .tt-inv-li__field--ribbon-date {
+  min-width: 9rem;
+  text-align: right;
+}

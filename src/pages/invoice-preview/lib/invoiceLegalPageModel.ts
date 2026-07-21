@@ -23,6 +23,12 @@ export type InvoiceLegalPageOverrides = {
     caseDetailLine?: string | null;
     serviceDescriptionLine?: string | null;
     paymentDisclaimer?: string | null;
+    invoiceNumber?: string | null;
+    issueDateDisplay?: string | null;
+    dueDateDisplay?: string | null;
+    vatAmount?: string | null;
+    extraExpensesAmount?: string | null;
+    firmAddress?: string | null;
     tin?: string | null;
     bankName?: string | null;
     bankAddress?: string | null;
@@ -85,6 +91,14 @@ export function resolveLegalBillToBankName(overrides?: InvoiceLegalPageOverrides
 
 export function resolveLegalBillToSwift(overrides?: InvoiceLegalPageOverrides | null): string {
     return resolveBankingValue(overrides?.billToSwift);
+}
+
+export function resolveLegalOverrideText(
+    override: string | null | undefined,
+    fallback: string,
+): string {
+    const t = override?.trim();
+    return t || fallback;
 }
 
 export function resolveLegalCaseDetailLine(

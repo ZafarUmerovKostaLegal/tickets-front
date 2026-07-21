@@ -20,6 +20,7 @@ import {
     resolveLegalBillToSwift,
     resolveLegalCaseDetailLine,
     resolveLegalFirmBankingLines,
+    resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
     resolveLegalServiceDescriptionLine,
     type InvoiceLegalPageOverrides,
@@ -594,12 +595,21 @@ function drawLegalInvoicePdfPage(
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
     const labels = getLegalInvoiceLabels(model.coverLanguage);
-    const ribbonIssue = packUppercaseRibbonDate(issueIso, model.coverLanguage);
-    const dueBanner = packUppercaseRibbonDate(dueIso, model.coverLanguage);
-    const invNo = packInvoiceNumberDisplay(session);
+    const zeroFallback = packZeroCommaAmount(model);
+    const ribbonIssue = resolveLegalOverrideText(
+        legalOverrides?.issueDateDisplay,
+        packUppercaseRibbonDate(issueIso, model.coverLanguage),
+    );
+    const dueBanner = resolveLegalOverrideText(
+        legalOverrides?.dueDateDisplay,
+        packUppercaseRibbonDate(dueIso, model.coverLanguage),
+    );
+    const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, packInvoiceNumberDisplay(session));
+    const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, zeroFallback);
+    const extraExpensesAmount = resolveLegalOverrideText(legalOverrides?.extraExpensesAmount, zeroFallback);
+    const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
     const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);
-    const zeroLine = packZeroCommaAmount(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
 
@@ -613,7 +623,7 @@ function drawLegalInvoicePdfPage(
         color: TR_RED,
     });
     yTop -= 14;
-    const leftBlurb: string[] = [KOSTA_LEGAL_FIRM.addressLine, ...resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage)];
+    const leftBlurb: string[] = [firmAddress, ...resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage)];
     for (const ln of leftBlurb) {
         page.drawText(ln, { x: ML, y: yTop, size: 8, font, color: CORP_TEXT });
         yTop -= 10;
@@ -746,8 +756,8 @@ function drawLegalInvoicePdfPage(
         yTot -= 12;
     };
     drawTotalLine(labels.subtotal, model.totalFormatted, true);
-    drawTotalLine(labels.vat, zeroLine, false);
-    drawTotalLine(labels.extraExpenses, zeroLine, false);
+    drawTotalLine(labels.vat, vatAmount, false);
+    drawTotalLine(labels.extraExpenses, extraExpensesAmount, false);
     const dueLab = `${labels.totalDueBy(dueBanner)} `;
     const dueW = fontBold.widthOfTextAtSize(model.totalFormatted, 11);
     const dl = fontBold.widthOfTextAtSize(dueLab, 9);
