@@ -159,11 +159,15 @@ export function InvoicePreviewPage() {
         }).then((p) => {
             if (!cancel)
                 setTimeReportPack(p);
+        }).catch((err) => {
+            console.error(err);
+            if (!cancel)
+                pushToast({ message: 'Не удалось загрузить time report для счёта', variant: 'error' });
         });
         return () => {
             cancel = true;
         };
-    }, [session, coverLanguage, coverModel == null, pushToast]);
+    }, [session, coverLanguage, coverModel, pushToast]);
 
     const timeReportFallback = useMemo(
         () => emptyInvoiceTimeReportPack(packCurrencyCode(displayModel)),

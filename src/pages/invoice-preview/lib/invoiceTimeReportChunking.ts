@@ -1,4 +1,3 @@
-import { TIME_REPORT_DETAIL_ROWS } from './invoicePreviewPackShared';
 import { emptyDetailRow, type InvoiceTimeReportDetailRow, trimTrailingEmptyDetailSlots } from './invoiceTimeReportModel';
 
 /** Detail rows on a continuation page (no summary block). */
@@ -9,11 +8,8 @@ export const TIME_REPORT_PDF_ROWS_LAST_CHUNK = 12;
 
 export function splitDetailRowsForPagedTimeReport(rows: readonly InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[][] {
     const trimmed = trimTrailingEmptyDetailSlots(rows);
-    if (trimmed.length === 0) {
-        return [
-            Array.from({ length: TIME_REPORT_DETAIL_ROWS }, () => emptyDetailRow()),
-        ];
-    }
+    if (trimmed.length === 0)
+        return [[emptyDetailRow()]];
 
     const MID = TIME_REPORT_PDF_ROWS_MID_CHUNK;
     const LAST = TIME_REPORT_PDF_ROWS_LAST_CHUNK;

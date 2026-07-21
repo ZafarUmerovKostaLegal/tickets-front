@@ -13,6 +13,7 @@ import {
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
 import type { InvoiceTimeReportDetailRow, InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { trimTrailingEmptyDetailSlots } from './invoiceTimeReportModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import {
@@ -251,33 +252,32 @@ function drawRightFitPdfBold(
     const t = text.trim();
     if (!t.length)
         return;
-    const padOuter = 4;
+    const padOuter = 3;
     const maxW = Math.max(4, cellW - padOuter * 2);
-    let fs = 8;
-    const minFs = 5;
-    while (fs >= minFs) {
-        if (fontBold.widthOfTextAtSize(t, fs) <= maxW) {
-            const tw = fontBold.widthOfTextAtSize(t, fs);
-            page.drawText(t, {
-                x: xCellLeft + cellW - padOuter - tw,
-                y: yBaseline,
-                size: fs,
-                font: fontBold,
-                color: TR_RED,
-            });
-            return;
-        }
-        fs -= 0.5;
-    }
-    const clip = clipPdfCellText(t, maxW, fontBold, minFs);
-    const tw = fontBold.widthOfTextAtSize(clip, minFs);
-    page.drawText(clip, {
+    const fitted = fitPdfCellText(t, maxW, fontBold, LI_FS, 5.5);
+    if (!fitted.text)
+        return;
+    const tw = fontBold.widthOfTextAtSize(fitted.text, fitted.size);
+    page.drawText(fitted.text, {
         x: xCellLeft + cellW - padOuter - tw,
         y: yBaseline,
-        size: minFs,
+        size: fitted.size,
         font: fontBold,
         color: TR_RED,
     });
+}
+
+function fitPdfCellText(txt: string, maxW: number, font: PDFFont, preferSize: number, minSize = 5): { text: string; size: number } {
+    const t = txt.trim();
+    if (!t || maxW <= 2)
+        return { text: '', size: preferSize };
+    let fs = preferSize;
+    while (fs >= minSize) {
+        if (font.widthOfTextAtSize(t, fs) <= maxW)
+            return { text: t, size: fs };
+        fs -= 0.5;
+    }
+    return { text: clipPdfCellText(t, maxW, font, minSize), size: minSize };
 }
 
 function paintTimeReportBody(
@@ -291,22 +291,24 @@ function paintTimeReportBody(
     font: PDFFont,
     rightAlignedCols: ReadonlySet<number>,
 ): void {
-    const fsBody = 11;
+    const fsBody = LI_FS;
     for (let r = 0; r < bodyRowCount && r < rows.length; r++) {
         const cols = rows[r];
         if (!cols)
             continue;
-        const yRow = yHeaderBot - (r + 0.78) * rowH;
+        const yRow = yHeaderBot - (r + 0.72) * rowH;
         for (let c = 0; c < cols.length && c < xs.length; c++) {
-            let raw = (cols[c] ?? '').trim();
+            const raw = String(cols[c] ?? '').trim();
             if (!raw)
                 continue;
-            const cw = Math.max(8, widths[c]! - 4);
-            const clip = clipPdfCellText(raw, cw, font, fsBody);
-            let xDraw = xs[c]! + 2;
+            const cw = Math.max(6, widths[c]! - 5);
+            const fitted = fitPdfCellText(raw, cw, font, fsBody, 5.5);
+            if (!fitted.text)
+                continue;
+            let xDraw = xs[c]! + 2.5;
             if (rightAlignedCols.has(c))
-                xDraw = xs[c]! + widths[c]! - 2 - font.widthOfTextAtSize(clip, fsBody);
-            page.drawText(clip, { x: xDraw, y: yRow, size: fsBody, font, color: BODY });
+                xDraw = xs[c]! + widths[c]! - 2.5 - font.widthOfTextAtSize(fitted.text, fitted.size);
+            page.drawText(fitted.text, { x: xDraw, y: yRow, size: fitted.size, font, color: BODY });
         }
     }
 }
@@ -353,8 +355,8 @@ function drawTimeReportGridTable(
         showInnerTotal,
         totalLabel = 'Total',
     } = opts;
-    const headerH = 24;
-    const rowH = 18;
+    const headerH = LI_FS + 10;
+    const rowH = LI_FS + 9;
     const { xs, widths } = colLayout(tableLeft, tableW, colWeights);
     const yHeaderBot = yTopPdf - headerH;
     const innerFootLines = footerKind === 'detail'
@@ -370,12 +372,21 @@ function drawTimeReportGridTable(
         color: TR_RED,
     });
 
-    const fsHdr = Math.min(11, headerH / 2);
     for (let i = 0; i < headers.length; i++) {
-        page.drawText(headers[i]!, {
-            x: xs[i]! + 2,
-            y: yHeaderBot + 6,
-            size: fsHdr,
+        const cw = Math.max(6, widths[i]! - 5);
+        const fitted = fitPdfCellText(headers[i]!, cw, fontBold, LI_FS, 5.5);
+        if (!fitted.text)
+            continue;
+        const rightAlign = footerKind === 'detail'
+            ? i >= 4
+            : i >= 3;
+        let xDraw = xs[i]! + 2.5;
+        if (rightAlign)
+            xDraw = xs[i]! + widths[i]! - 2.5 - fontBold.widthOfTextAtSize(fitted.text, fitted.size);
+        page.drawText(fitted.text, {
+            x: xDraw,
+            y: yHeaderBot + (headerH - fitted.size) / 2 - 1,
+            size: fitted.size,
             font: fontBold,
             color: rgb(1, 1, 1),
         });
@@ -409,14 +420,29 @@ function drawTimeReportGridTable(
         });
     }
 
-    if (bodyTexts?.length && rightAlignedBodyCols) {
-        paintTimeReportBody(page, bodyTexts, yHeaderBot, rowH, bodyRows, xs, widths, font, rightAlignedBodyCols);
+    if (bodyTexts?.length) {
+        paintTimeReportBody(
+            page,
+            bodyTexts,
+            yHeaderBot,
+            rowH,
+            bodyRows,
+            xs,
+            widths,
+            font,
+            rightAlignedBodyCols ?? new Set(),
+        );
     }
 
-    const yFoot = tableBottom + 5;
+    const yFoot = tableBottom + Math.max(3, (rowH - LI_FS) / 2);
     if (innerFootLines > 0) {
-        const fsTot = 8;
-        page.drawText(totalLabel, { x: xs[0]! + 3, y: yFoot, size: fsTot, font: fontBold, color: TR_RED });
+        page.drawText(totalLabel, {
+            x: xs[0]! + 3,
+            y: yFoot,
+            size: LI_FS,
+            font: fontBold,
+            color: TR_RED,
+        });
 
         if (footerKind === 'detail' && footerTotals?.detail) {
             const { hours, amount } = footerTotals.detail;
@@ -457,8 +483,8 @@ function drawTimeReportGridTable(
     return tableBottom;
 }
 
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [10, 7, 10, 25, 10, 12, 16] as const;
-const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 26, 26, 13, 13, 13] as const;
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [11, 9, 12, 28, 8, 14, 18] as const;
+const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 24, 24, 12, 15, 16] as const;
 
 function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, font: PDFFont, fontBold: PDFFont, continuation: boolean): number {
     let yTop = H - MT - 4;
@@ -905,7 +931,12 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
         }
     }
 
-    const timeReport = timeReportOverride ?? await resolveInvoiceTimeReportPack(session, model);
+    const timeReport = (
+        timeReportOverride
+        && trimTrailingEmptyDetailSlots(timeReportOverride.detailSlots).length > 0
+    )
+        ? timeReportOverride
+        : await resolveInvoiceTimeReportPack(session, model);
     const detailChunks = splitDetailRowsForPagedTimeReport(timeReport.detailSlots);
     const pageCount = 2 + detailChunks.length;
     const selected = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;

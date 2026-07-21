@@ -86,12 +86,12 @@ export function InvoiceTimeReportPage({
           <thead className="tt-inv-tr__thead">
             <tr>
               <th scope="col" style={{ width: '10%' }}>{labels.date}</th>
-              <th scope="col" style={{ width: '7%' }}>{labels.initials}</th>
-              <th scope="col" style={{ width: '10%' }}>{labels.task}</th>
-              <th scope="col" style={{ width: '28%' }}>{labels.description}</th>
-              <th scope="col" style={{ width: '9%' }}>{labels.hours}</th>
-              <th scope="col" style={{ width: '12%' }}>{labels.rate}</th>
-              <th scope="col" style={{ width: '14%' }}>{amountHeader}</th>
+              <th scope="col" style={{ width: '8%' }}>{labels.initials}</th>
+              <th scope="col" style={{ width: '12%' }}>{labels.task}</th>
+              <th scope="col" style={{ width: '30%' }}>{labels.description}</th>
+              <th scope="col" style={{ width: '8%' }}>{labels.hours}</th>
+              <th scope="col" style={{ width: '14%' }}>{labels.rate}</th>
+              <th scope="col" style={{ width: '18%' }}>{amountHeader}</th>
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">

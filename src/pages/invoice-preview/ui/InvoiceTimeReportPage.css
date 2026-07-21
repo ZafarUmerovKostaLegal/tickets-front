@@ -77,6 +77,9 @@
   text-align: left;
   vertical-align: middle;
   border: 1px solid rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tt-inv-tr__thead th:last-child,
@@ -98,6 +101,8 @@
   vertical-align: top;
   min-height: 1.2rem;
   color: #475569;
+  overflow: hidden;
+  word-break: break-word;
 }
 
 .tt-inv-tr__tbody td.tt-inv-tr__cell--empty {

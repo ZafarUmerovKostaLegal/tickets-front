@@ -33,7 +33,7 @@ import {
     packUppercaseRibbonDate,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
-import type { InvoiceTimeReportDetailRow, InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
 import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
@@ -796,7 +796,12 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
         }
     }
 
-    const timeReportPack = timeReportOverride ?? await resolveInvoiceTimeReportPack(session, model);
+    const timeReportPack = (
+        timeReportOverride
+        && trimTrailingEmptyDetailSlots(timeReportOverride.detailSlots).length > 0
+    )
+        ? timeReportOverride
+        : await resolveInvoiceTimeReportPack(session, model);
     const trChunks = splitDetailRowsForPagedTimeReport(timeReportPack.detailSlots);
     const pageCount = invoicePreviewPageCount(trChunks.length);
     const selected = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;

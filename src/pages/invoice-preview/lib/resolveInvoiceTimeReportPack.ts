@@ -7,13 +7,13 @@ import {
     isForbiddenError,
     listProjectTasksCached,
     listTimeTrackingUsers,
-    resolveReportEmployeeInitials,
     type InvoiceLineDto,
     type TimeEntryRow,
     type TimeTrackingUserRow,
     type UnbilledExpenseEntryDto,
     type UnbilledTimeEntryDto,
 } from '@entities/time-tracking';
+import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { fetchExpenseById } from '@entities/expenses/model/expensesApi';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { parseTimeEntryDescriptionLines } from './parseTimeEntryDescriptionLines';
@@ -476,7 +476,8 @@ export async function resolveInvoiceTimeReportPack(
             ...tail,
         };
     }
-    catch {
+    catch (err) {
+        console.error('resolveInvoiceTimeReportPack failed', err);
         return empty;
     }
 }
