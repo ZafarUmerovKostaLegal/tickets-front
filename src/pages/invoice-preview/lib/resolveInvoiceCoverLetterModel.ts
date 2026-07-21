@@ -1,6 +1,6 @@
-import { getInvoice, getTimeManagerClient, listAllClientProjectsMerged } from '@entities/time-tracking';
+import { getInvoice, getTimeManagerClient, listAllClientProjectsMerged, listTimeTrackingUsers } from '@entities/time-tracking';
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
-import { buildInvoiceCoverLetterModel, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
+import { buildInvoiceCoverLetterModel, KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { coverLanguageFromRecordsLanguage, type InvoiceCoverLanguage } from './invoiceCoverLetterI18n';
 
 function fallbackInput(coverLanguage: InvoiceCoverLanguage = 'ENG') {
@@ -16,16 +16,17 @@ function fallbackInput(coverLanguage: InvoiceCoverLanguage = 'ENG') {
     };
 }
 
+async function resolveProjectIdFromSession(session: InvoicePreviewSessionV1): Promise<string | null> {
+    if (session.mode === 'existing') {
+        const inv = await getInvoice(session.invoiceId, true);
+        return inv.projectId?.trim() || null;
+    }
+    return session.form.createProjectId.trim() || null;
+}
+
 async function resolveCoverLanguageFromSession(session: InvoicePreviewSessionV1): Promise<InvoiceCoverLanguage> {
     try {
-        let projectId: string | null = null;
-        if (session.mode === 'existing') {
-            const inv = await getInvoice(session.invoiceId, true);
-            projectId = inv.projectId?.trim() || null;
-        }
-        else {
-            projectId = session.form.createProjectId.trim() || null;
-        }
+        const projectId = await resolveProjectIdFromSession(session);
         if (!projectId)
             return 'ENG';
         const projects = await listAllClientProjectsMerged(true);
@@ -37,15 +38,42 @@ async function resolveCoverLanguageFromSession(session: InvoicePreviewSessionV1)
     }
 }
 
+async function resolveProjectPartnerName(session: InvoicePreviewSessionV1): Promise<string | null> {
+    try {
+        const projectId = await resolveProjectIdFromSession(session);
+        if (!projectId)
+            return null;
+        const [projects, users] = await Promise.all([
+            listAllClientProjectsMerged(true),
+            listTimeTrackingUsers().catch(() => []),
+        ]);
+        const project = projects.find((p) => p.id === projectId);
+        const partnerIds: number[] = project?.partnerAuthUserIds ?? [];
+        if (partnerIds.length === 0)
+            return null;
+        const partnerUser = users.find((u) => partnerIds.includes(u.id));
+        if (!partnerUser)
+            return null;
+        return (partnerUser.display_name ?? '').trim() || null;
+    }
+    catch {
+        return null;
+    }
+}
+
 export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSessionV1 | null): Promise<InvoiceCoverLetterModel> {
     if (!session)
         return buildInvoiceCoverLetterModel(fallbackInput());
-    const coverLanguage = await resolveCoverLanguageFromSession(session);
+    const [coverLanguage, partnerName] = await Promise.all([
+        resolveCoverLanguageFromSession(session),
+        resolveProjectPartnerName(session),
+    ]);
+    const signatoryName = partnerName || KOSTA_LEGAL_FIRM.defaultSignatoryName;
     try {
         if (session.mode === 'existing') {
             const inv = await getInvoice(session.invoiceId, true);
             const client = await getTimeManagerClient(inv.clientId);
-            return buildInvoiceCoverLetterModel({
+            const model = buildInvoiceCoverLetterModel({
                 issueDateIso: inv.issueDate.slice(0, 10),
                 clientName: client.name,
                 clientAddress: client.address,
@@ -54,11 +82,12 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
                 currency: inv.currency,
                 coverLanguage,
             });
+            return { ...model, signatoryName };
         }
         const f = session.form;
         const iso = f.issueDate.slice(0, 10);
         if (!f.createClientId.trim()) {
-            return buildInvoiceCoverLetterModel({
+            const model = buildInvoiceCoverLetterModel({
                 issueDateIso: iso,
                 clientName: session.meta.clientLabel ?? 'Company Name',
                 clientAddress: null,
@@ -67,9 +96,10 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
                 currency: 'EUR',
                 coverLanguage,
             });
+            return { ...model, signatoryName };
         }
         const client = await getTimeManagerClient(f.createClientId);
-        return buildInvoiceCoverLetterModel({
+        const model = buildInvoiceCoverLetterModel({
             issueDateIso: iso,
             clientName: client.name,
             clientAddress: client.address,
@@ -78,8 +108,10 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
             currency: client.currency || 'EUR',
             coverLanguage,
         });
+        return { ...model, signatoryName };
     }
     catch {
-        return buildInvoiceCoverLetterModel(fallbackInput(coverLanguage));
+        const model = buildInvoiceCoverLetterModel(fallbackInput(coverLanguage));
+        return { ...model, signatoryName };
     }
 }
