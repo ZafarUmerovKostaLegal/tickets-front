@@ -65,13 +65,14 @@ const DOC_LH = DOC_FS * 1.45;
 /** CSS rem @ 16px root → pt (shared layout rhythm). */
 const CSS_REM_PT = 12;
 const CELL_MUTED = rgb(0.28, 0.33, 0.41);
-/** Match InvoiceTimeReportPage.css: ~0.35rem × 0.38–0.4rem cell padding. */
-const CELL_PAD_X = 5;
-const CELL_PAD_Y = 5;
-const CELL_HEAD_PAD_Y = 5;
-const CELL_FOOT_PAD_TOP = 6;
-const CELL_LINE_STEP = DOC_FS * 1.25;
-const TABLE_FOOTER_H = CELL_FOOT_PAD_TOP + DOC_FS + CELL_PAD_Y;
+/** Match InvoiceTimeReportPage.css cell padding, scaled for PDF readability. */
+const CELL_PAD_X = 7;
+const CELL_PAD_Y = 7;
+const CELL_HEAD_PAD_Y = 7;
+const CELL_FOOT_PAD_TOP = 8;
+const TEXT_ASCENT_RATIO = 0.78;
+const CELL_LINE_STEP = DOC_LH;
+const TABLE_FOOTER_H = CELL_FOOT_PAD_TOP + DOC_FS + CELL_PAD_Y + 2;
 const TR_TITLE_TABLE_GAP = CSS_REM_PT * 0.65;
 /** Reserve space for page number band at bottom. */
 const PAGE_FOOTER_ZONE_TOP = MB + 52;
@@ -287,14 +288,13 @@ function drawRightFitPdfBold(
     const t = text.trim();
     if (!t.length)
         return;
-    const padOuter = CELL_PAD_X;
-    const maxW = Math.max(4, cellW - padOuter * 2);
+    const maxW = Math.max(4, cellW - CELL_PAD_X * 2);
     const fitted = fitPdfCellText(t, maxW, fontBold, DOC_FS, DOC_FS * 0.85);
     if (!fitted.text)
         return;
     const tw = fontBold.widthOfTextAtSize(fitted.text, fitted.size);
     page.drawText(fitted.text, {
-        x: xCellLeft + cellW - padOuter - tw,
+        x: xCellLeft + cellW - CELL_PAD_X - tw,
         y: yBaseline,
         size: fitted.size,
         font: fontBold,
@@ -354,6 +354,15 @@ function wrapCellLines(text: string, maxW: number, font: PDFFont, size: number):
     return lines;
 }
 
+function textAscent(font: PDFFont, size: number): number {
+    return font.heightAtSize(size) * TEXT_ASCENT_RATIO;
+}
+
+function bodyRowHeight(maxLines: number): number {
+    const lines = Math.max(maxLines, 1);
+    return CELL_PAD_Y * 2 + (lines - 1) * CELL_LINE_STEP + DOC_FS * 1.1;
+}
+
 function computeBodyRowLayouts(
     bodyTexts: readonly (readonly string[])[],
     bodyRows: number,
@@ -385,7 +394,7 @@ function computeBodyRowLayouts(
             maxLines = Math.max(maxLines, Math.max(lines.length, 1));
         }
         cellLines.push(rowCellLines);
-        rowHeights.push(Math.max(CELL_PAD_Y * 2 + CELL_LINE_STEP, CELL_PAD_Y * 2 + maxLines * CELL_LINE_STEP));
+        rowHeights.push(bodyRowHeight(maxLines));
     }
     return { rowHeights, cellLines };
 }
@@ -400,16 +409,18 @@ function paintTimeReportBody(
     font: PDFFont,
     rightAlignedCols: ReadonlySet<number>,
 ): void {
+    const ascent = textAscent(font, DOC_FS);
     let yRowTop = yHeaderBot;
     for (let r = 0; r < cellLines.length; r++) {
-        const rowH = rowHeights[r] ?? CELL_PAD_Y * 2 + CELL_LINE_STEP;
+        const rowH = rowHeights[r] ?? bodyRowHeight(1);
         const cols = cellLines[r]!;
         yRowTop -= rowH;
+        const cellTop = yRowTop + rowH;
         for (let c = 0; c < cols.length && c < xs.length; c++) {
             const lines = cols[c]!;
             if (!lines.length)
                 continue;
-            let yLine = yRowTop + rowH - CELL_PAD_Y - DOC_FS;
+            let yLine = cellTop - CELL_PAD_Y - ascent;
             for (const ln of lines) {
                 const tw = font.widthOfTextAtSize(ln, DOC_FS);
                 let xDraw = xs[c]! + CELL_PAD_X;
@@ -497,7 +508,7 @@ function computeHeaderLayouts(
     }
     return {
         headerCells,
-        headerH: CELL_HEAD_PAD_Y * 2 + maxSize + 2,
+        headerH: CELL_HEAD_PAD_Y * 2 + maxSize + 4,
     };
 }
 
@@ -556,7 +567,7 @@ function drawTimeReportGridTable(
     const bodyData = bodyTexts?.length ? bodyTexts : null;
     const { rowHeights, cellLines } = bodyData
         ? computeBodyRowLayouts(bodyData, bodyRows, widths, font, wrapBodyCols ?? new Set())
-        : { rowHeights: Array.from({ length: bodyRows }, () => CELL_PAD_Y * 2 + CELL_LINE_STEP), cellLines: [] as string[][][] };
+        : { rowHeights: Array.from({ length: bodyRows }, () => bodyRowHeight(1)), cellLines: [] as string[][][] };
     const bodyHeight = rowHeights.reduce((s, h) => s + h, 0);
     const tableBottom = yHeaderBot - bodyHeight - (innerFootLines > 0 ? footerH : 0);
 
@@ -579,7 +590,7 @@ function drawTimeReportGridTable(
         let xDraw = xs[i]! + CELL_PAD_X;
         if (rightAlign)
             xDraw = xs[i]! + widths[i]! - CELL_PAD_X - tw;
-        const yLine = yHeaderBot + (headerH - size) / 2;
+        const yLine = yHeaderBot + headerH - CELL_HEAD_PAD_Y - textAscent(fontBold, size);
         page.drawText(text, {
             x: xDraw,
             y: yLine,
