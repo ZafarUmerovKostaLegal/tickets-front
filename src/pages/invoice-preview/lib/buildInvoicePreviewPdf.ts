@@ -60,12 +60,12 @@ const FIRM_NAME = rgb(0.12, 0.16, 0.23);
 const THANKS_TEXT = rgb(0.42, 0.45, 0.5);
 const DISCLAIMER_TEXT = rgb(0.29, 0.33, 0.39);
 
-/** Document body size (11pt). PDF uses DejaVu as a Calibri/Carlito substitute. */
-const DOC_FS = 11;
+/** Match preview (11px on 794px canvas) ≈ 8.25pt on A4. DejaVu reads larger than Calibri at same pt. */
+const DOC_FS = 8.25;
 const DOC_LH = DOC_FS * 1.45;
 const CELL_MUTED = rgb(0.28, 0.33, 0.41);
 const CELL_PAD_X = 3;
-const CELL_PAD_Y = 4;
+const CELL_PAD_Y = 3;
 const CELL_LINE_STEP = DOC_FS * 1.2;
 
 type PdfRgb = ReturnType<typeof rgb>;
@@ -165,59 +165,57 @@ function drawCoverPage(
         KOSTA_LEGAL_FIRM.web,
     ];
     let cy = logoTop;
-    const fsSmall = 11;
     const muted = rgb(0.22, 0.26, 0.34);
     for (const line of contact) {
-        const tw = font.widthOfTextAtSize(line, fsSmall);
-        page.drawText(line, { x: W - MR - tw, y: cy, size: fsSmall, font, color: muted });
-        cy -= fsSmall + 3;
+        const tw = font.widthOfTextAtSize(line, DOC_FS);
+        page.drawText(line, { x: W - MR - tw, y: cy, size: DOC_FS, font, color: muted });
+        cy -= DOC_LH;
     }
     lowestHeaderY = Math.min(lowestHeaderY, cy);
 
-    let y = lowestHeaderY - 28;
+    let y = lowestHeaderY - DOC_LH * 2;
 
-    page.drawText(model.letterDateDisplay, { x: ML, y, size: 11, font, color: BODY });
+    page.drawText(model.letterDateDisplay, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= 26;
-    page.drawText(model.recipientCompany, { x: ML, y, size: 11, font: fontBold, color: BODY });
-    y -= 14;
-    page.drawText(model.recipientAddressLines[0], { x: ML, y, size: 11, font, color: BODY });
+    y -= DOC_LH * 1.8;
+    page.drawText(model.recipientCompany, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
+    y -= DOC_LH;
+    page.drawText(model.recipientAddressLines[0], { x: ML, y, size: DOC_FS, font, color: BODY });
     if (model.recipientAddressLines[1]) {
-        y -= 14;
-        page.drawText(model.recipientAddressLines[1], { x: ML, y, size: 11, font, color: BODY });
+        y -= DOC_LH;
+        page.drawText(model.recipientAddressLines[1], { x: ML, y, size: DOC_FS, font, color: BODY });
     }
 
-    y -= 26;
+    y -= DOC_LH * 1.8;
     const labels = getCoverLetterLabels(model.coverLanguage);
-    page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: 11, font: fontBold, color: BODY });
-    y -= 14;
-    page.drawText(model.attentionTitle, { x: ML, y, size: 11, font, color: BODY });
+    page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
+    y -= DOC_LH;
+    page.drawText(model.attentionTitle, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= 26;
-    page.drawText(`${labels.dear} ${model.attentionName},`, { x: ML, y, size: 11, font, color: BODY });
+    y -= DOC_LH * 1.8;
+    page.drawText(`${labels.dear} ${model.attentionName},`, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= 22;
+    y -= DOC_LH * 1.5;
     const p1 = resolveCoverIntroParagraph(model);
-    const bodySize = 11;
-    const bodyGap = 15;
+    const bodyGap = DOC_LH;
     const maxW = W - ML - MR;
-    y = wrapPlainParagraph(page, p1, ML, y, maxW, bodySize, font, bodyGap);
+    y = wrapPlainParagraph(page, p1, ML, y, maxW, DOC_FS, font, bodyGap);
 
-    y -= 8;
+    y -= DOC_LH * 0.5;
     const p2 = resolveCoverInvoiceParagraph(model);
-    y = wrapPlainParagraph(page, p2, ML, y, maxW, bodySize, font, bodyGap);
+    y = wrapPlainParagraph(page, p2, ML, y, maxW, DOC_FS, font, bodyGap);
     y -= bodyGap;
 
-    page.drawText(labels.closing, { x: ML, y, size: bodySize, font, color: BODY });
+    page.drawText(labels.closing, { x: ML, y, size: DOC_FS, font, color: BODY });
     y -= bodyGap * 2;
 
     const sigW = 160;
     page.drawLine({ start: { x: ML, y }, end: { x: ML + sigW, y }, thickness: 0.5, color: rgb(0.35, 0.38, 0.45) });
-    y -= 8;
+    y -= DOC_LH * 0.5;
 
-    page.drawText(model.signatoryName, { x: ML, y, size: bodySize, font, color: BODY });
+    page.drawText(model.signatoryName, { x: ML, y, size: DOC_FS, font, color: BODY });
     y -= bodyGap;
-    page.drawText(model.signatoryTitle, { x: ML, y, size: bodySize, font, color: BODY });
+    page.drawText(model.signatoryTitle, { x: ML, y, size: DOC_FS, font, color: BODY });
 }
 
 function colLayout(tableLeft: number, tableW: number, weights: readonly number[]) {
