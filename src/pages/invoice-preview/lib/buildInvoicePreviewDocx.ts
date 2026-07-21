@@ -635,38 +635,67 @@ function legalInvoiceDocxBlocks(
         rows: [svcHead, svcBody],
     });
 
-    const totals: Paragraph[] = [
-        new Paragraph({
-            spacing: { before: 200 },
-            alignment: AlignmentType.RIGHT,
-            children: [
-                new TextRun({ text: `${labels.subtotal} `, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT }),
-                new TextRun({ text: model.totalFormatted, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT }),
-            ],
-        }),
-        new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            children: [
-                new TextRun({ text: `${labels.vat} `, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT }),
-                new TextRun({ text: vatAmount, color: INV_RED, size: DOC_SIZE, font: DOC_FONT }),
-            ],
-        }),
-        new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            children: [
-                new TextRun({ text: `${labels.extraExpenses} `, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT }),
-                new TextRun({ text: extraExpensesAmount, color: INV_RED, size: DOC_SIZE, font: DOC_FONT }),
-            ],
-        }),
-        new Paragraph({
-            alignment: AlignmentType.RIGHT,
-            spacing: { after: 120 },
-            children: [
-                new TextRun({ text: `${labels.totalDueBy(dueBanner)} `, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT }),
-                new TextRun({ text: model.totalFormatted, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT }),
-            ],
-        }),
-    ];
+    const coralLine = { style: BorderStyle.SINGLE, size: 8, color: 'E8928C', space: 1 };
+    type TotalsBorders = {
+        top: { style: (typeof BorderStyle)[keyof typeof BorderStyle]; size: number; color: string; space?: number };
+        bottom: { style: (typeof BorderStyle)[keyof typeof BorderStyle]; size: number; color: string; space?: number };
+        left: { style: (typeof BorderStyle)[keyof typeof BorderStyle]; size: number; color: string; space?: number };
+        right: { style: (typeof BorderStyle)[keyof typeof BorderStyle]; size: number; color: string; space?: number };
+    };
+    const totalsNil: TotalsBorders = {
+        top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+        right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+    };
+    const mkTotalRow = (label: string, value: string, due: boolean, borders: TotalsBorders) => new TableRow({
+        children: [
+            new TableCell({
+                borders,
+                width: { size: 70, type: WidthType.PERCENTAGE },
+                children: [new Paragraph({
+                    children: [new TextRun({
+                        text: label,
+                        bold: due,
+                        color: due ? 'E8928C' : '1E293B',
+                        size: DOC_SIZE,
+                        font: DOC_FONT,
+                    })],
+                })],
+            }),
+            new TableCell({
+                borders,
+                width: { size: 30, type: WidthType.PERCENTAGE },
+                children: [new Paragraph({
+                    alignment: AlignmentType.RIGHT,
+                    children: [new TextRun({
+                        text: value,
+                        bold: due,
+                        color: '1E293B',
+                        size: DOC_SIZE,
+                        font: DOC_FONT,
+                    })],
+                })],
+            }),
+        ],
+    });
+    const totalsTbl = new Table({
+        width: { size: 52, type: WidthType.PERCENTAGE },
+        layout: TableLayoutType.FIXED,
+        alignment: AlignmentType.RIGHT,
+        rows: [
+            mkTotalRow(labels.subtotal, model.totalFormatted, false, {
+                ...totalsNil,
+                top: coralLine,
+            }),
+            mkTotalRow(labels.vat, vatAmount, false, totalsNil),
+            mkTotalRow(labels.extraExpenses, extraExpensesAmount, false, totalsNil),
+            mkTotalRow(labels.totalDueBy(dueBanner), model.totalFormatted, true, {
+                ...totalsNil,
+                bottom: coralLine,
+            }),
+        ],
+    });
 
     return [
         masthead,
@@ -685,10 +714,14 @@ function legalInvoiceDocxBlocks(
             children: [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
         }),
         svcTbl,
-        ...totals,
+        new Paragraph({
+            spacing: { before: 200 },
+            children: [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
+        }),
+        totalsTbl,
         new Paragraph({
             spacing: { before: 160 },
-            children: [new TextRun({ text: labels.thanks, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+            children: [new TextRun({ text: labels.thanks, size: DOC_SIZE, font: DOC_FONT, color: '1E293B' })],
         }),
         new Paragraph({
             spacing: { before: 200 },

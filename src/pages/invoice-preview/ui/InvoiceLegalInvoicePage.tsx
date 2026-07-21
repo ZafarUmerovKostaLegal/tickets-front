@@ -294,36 +294,42 @@ export function InvoiceLegalInvoicePage({
 
       <div className="tt-inv-li__totals">
         <div className="tt-inv-li__total-line">
-          <span className="tt-inv-li__total-label">{labels.subtotal}</span>{' '}
-          <LiField
-            editable={editable}
-            className="tt-inv-li__field--inline"
-            value={model.totalFormatted}
-            ariaLabel={labels.subtotal}
-            onChange={(totalFormatted) => onChangeModel?.({ totalFormatted })}
-          />
+          <span className="tt-inv-li__total-label">{labels.subtotal}</span>
+          <span className="tt-inv-li__total-value">
+            <LiField
+              editable={editable}
+              className="tt-inv-li__field--inline"
+              value={model.totalFormatted}
+              ariaLabel={labels.subtotal}
+              onChange={(totalFormatted) => onChangeModel?.({ totalFormatted })}
+            />
+          </span>
         </div>
         <div className="tt-inv-li__total-line">
-          <span className="tt-inv-li__total-label">{labels.vat}</span>{' '}
-          <LiField
-            editable={editable}
-            className="tt-inv-li__field--inline"
-            value={editable ? (legalOverrides?.vatAmount ?? vatAmount) : vatAmount}
-            ariaLabel={labels.vat}
-            onChange={(vatAmount) => onChangeLegalOverrides?.({ vatAmount })}
-          />
+          <span className="tt-inv-li__total-label">{labels.vat}</span>
+          <span className="tt-inv-li__total-value">
+            <LiField
+              editable={editable}
+              className="tt-inv-li__field--inline"
+              value={editable ? (legalOverrides?.vatAmount ?? vatAmount) : vatAmount}
+              ariaLabel={labels.vat}
+              onChange={(vatAmount) => onChangeLegalOverrides?.({ vatAmount })}
+            />
+          </span>
         </div>
         <div className="tt-inv-li__total-line">
-          <span className="tt-inv-li__total-label">{labels.extraExpenses}</span>{' '}
-          <LiField
-            editable={editable}
-            className="tt-inv-li__field--inline"
-            value={editable ? (legalOverrides?.extraExpensesAmount ?? extraExpensesAmount) : extraExpensesAmount}
-            ariaLabel={labels.extraExpenses}
-            onChange={(extraExpensesAmount) => onChangeLegalOverrides?.({ extraExpensesAmount })}
-          />
+          <span className="tt-inv-li__total-label">{labels.extraExpenses}</span>
+          <span className="tt-inv-li__total-value">
+            <LiField
+              editable={editable}
+              className="tt-inv-li__field--inline"
+              value={editable ? (legalOverrides?.extraExpensesAmount ?? extraExpensesAmount) : extraExpensesAmount}
+              ariaLabel={labels.extraExpenses}
+              onChange={(extraExpensesAmount) => onChangeLegalOverrides?.({ extraExpensesAmount })}
+            />
+          </span>
         </div>
-        <div className="tt-inv-li__total-due">
+        <div className="tt-inv-li__total-line tt-inv-li__total-line--due">
           <span className="tt-inv-li__total-due-label">
             {labels.totalDueByPrefix}
             {' '}
@@ -334,9 +340,7 @@ export function InvoiceLegalInvoicePage({
               ariaLabel={labels.totalDueByPrefix}
               onChange={(dueDateDisplay) => onChangeLegalOverrides?.({ dueDateDisplay })}
             />
-            :
           </span>
-          {' '}
           <span className="tt-inv-li__total-due-amt">
             <LiField
               editable={editable}

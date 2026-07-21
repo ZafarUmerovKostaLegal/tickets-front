@@ -744,33 +744,58 @@ function drawLegalInvoicePdfPage(
         color: TR_RED,
     });
 
-    let yTot = yRowBot - 20;
+    let yTot = yRowBot - 14;
     const rightX = W - MR - 8;
-    const drawTotalLine = (label: string, value: string, boldVal: boolean) => {
-        const lab = `${label} `;
-        const lw = fontBold.widthOfTextAtSize(lab, 9);
-        const vw = (boldVal ? fontBold : font).widthOfTextAtSize(value, 9);
-        const startX = rightX - lw - vw;
-        page.drawText(lab, { x: startX, y: yTot, size: 9, font: fontBold, color: TR_RED });
-        page.drawText(value, { x: startX + lw, y: yTot, size: 9, font: boldVal ? fontBold : font, color: TR_RED });
-        yTot -= 12;
+    const totalsW = 220;
+    const totalsLeft = rightX - totalsW;
+    const coral = rgb(232 / 255, 146 / 255, 140 / 255);
+    page.drawLine({
+        start: { x: totalsLeft, y: yTot + 10 },
+        end: { x: rightX, y: yTot + 10 },
+        thickness: 0.6,
+        color: coral,
+    });
+    yTot -= 2;
+    const drawTotalRow = (label: string, value: string, due = false) => {
+        const labelFont = due ? fontBold : font;
+        const labelColor = due ? coral : BODY;
+        const valueFont = due ? fontBold : font;
+        page.drawText(label, {
+            x: totalsLeft,
+            y: yTot,
+            size: 9,
+            font: labelFont,
+            color: labelColor,
+            maxWidth: totalsW - 88,
+        });
+        const vw = valueFont.widthOfTextAtSize(value, 9);
+        page.drawText(value, {
+            x: rightX - vw,
+            y: yTot,
+            size: 9,
+            font: valueFont,
+            color: BODY,
+        });
+        yTot -= due ? 18 : 13;
     };
-    drawTotalLine(labels.subtotal, model.totalFormatted, true);
-    drawTotalLine(labels.vat, vatAmount, false);
-    drawTotalLine(labels.extraExpenses, extraExpensesAmount, false);
-    const dueLab = `${labels.totalDueBy(dueBanner)} `;
-    const dueW = fontBold.widthOfTextAtSize(model.totalFormatted, 11);
-    const dl = fontBold.widthOfTextAtSize(dueLab, 9);
-    page.drawText(dueLab, { x: rightX - dl - dueW, y: yTot, size: 9, font: fontBold, color: TR_RED });
-    page.drawText(model.totalFormatted, { x: rightX - dueW, y: yTot, size: 11, font: fontBold, color: TR_RED });
-    yTot -= 22;
+    drawTotalRow(labels.subtotal, model.totalFormatted);
+    drawTotalRow(labels.vat, vatAmount);
+    drawTotalRow(labels.extraExpenses, extraExpensesAmount);
+    drawTotalRow(labels.totalDueBy(dueBanner), model.totalFormatted, true);
+    page.drawLine({
+        start: { x: totalsLeft, y: yTot + 8 },
+        end: { x: rightX, y: yTot + 8 },
+        thickness: 0.6,
+        color: coral,
+    });
+    yTot -= 6;
 
     page.drawText(labels.thanks, {
         x: ML,
         y: yTot,
         size: 10,
-        font: fontBold,
-        color: TR_RED,
+        font,
+        color: BODY,
     });
     yTot -= 24;
 

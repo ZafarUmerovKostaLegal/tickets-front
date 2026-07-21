@@ -192,49 +192,65 @@
 
 .tt-inv-li__totals {
   align-self: flex-end;
-  text-align: right;
-  margin-bottom: 1.35rem;
-  max-width: 15rem;
+  width: min(100%, 22rem);
+  margin: 0.35rem 0 1.1rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid var(--tt-inv-li-coral);
+  border-bottom: 1px solid var(--tt-inv-li-coral);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
   font-size: inherit;
-  line-height: 1.55;
+  line-height: 1.45;
+  color: var(--tt-inv-paper-ink, #0f172a);
 }
 
 .tt-inv-li__total-line {
-  margin: 0.12rem 0;
-  font-weight: 600;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 1.25rem;
+  align-items: start;
 }
 
 .tt-inv-li__total-label {
-  letter-spacing: 0.06em;
-  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-weight: 600;
   font-size: inherit;
 }
 
-.tt-inv-li__total-due {
-  margin-top: 0.55rem;
-  padding: 0.5rem 0.65rem;
-  background: rgba(232, 146, 140, 0.28);
-  border-radius: 2px;
-  font-weight: 800;
+.tt-inv-li__total-value {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tt-inv-li__total-line--due {
+  color: var(--tt-inv-li-coral);
+  font-weight: 700;
 }
 
 .tt-inv-li__total-due-label {
   font-size: inherit;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
+  min-width: 0;
 }
 
 .tt-inv-li__total-due-amt {
-  border-bottom: 2px solid var(--tt-inv-li-coral);
-  padding-bottom: 1px;
+  text-align: right;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--tt-inv-paper-ink, #0f172a);
 }
 
 .tt-inv-li__thanks {
   margin: 0 0 0.85rem;
-  text-align: center;
+  text-align: left;
   font-size: inherit;
-  font-weight: 600;
-  color: #334155;
+  font-weight: 400;
+  color: var(--tt-inv-paper-ink, #0f172a);
 }
 
 .tt-inv-li__bottom {
@@ -300,7 +316,7 @@
 }
 
 .tt-inv-li--editable .tt-inv-li__field--due {
-  font-weight: 800;
+  font-weight: 700;
   font-size: inherit;
 }
 
@@ -308,8 +324,9 @@
   min-width: 7.5rem;
   text-align: left;
   text-transform: uppercase;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.04em;
+  color: inherit;
 }
 
 .tt-inv-li--editable .tt-inv-li__field--firm-addr {
