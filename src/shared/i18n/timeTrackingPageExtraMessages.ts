@@ -347,10 +347,10 @@ export const timeTrackingPageExtraMessages = {
             archived: 'Архив',
         },
         budgetTypes: {
-            timeAndMaterials: 'Время и материалы',
-            fixedRate: 'Фиксированная ставка',
-            noBudget: 'Без бюджета',
-            hourPackage: 'Пакет часов',
+            timeAndMaterials: 'Время и материалы (T&M)',
+            fixedRate: 'Фиксированный гонорар',
+            noBudget: 'Не оплачиваемый',
+            hourPackage: 'Пакет часов (N ч/мес за $X)',
         },
         plural: {
             one: 'проект',
@@ -594,10 +594,10 @@ export const timeTrackingPageExtraMessages = {
             noFilterMatch: 'Ничего не найдено по фильтру.',
         },
         budgetTypes: {
-            timeAndMaterials: 'Время и материалы',
-            fixedRate: 'Фиксированная ставка',
-            noBudget: 'Без бюджета',
-            hourPackage: 'Пакет часов',
+            timeAndMaterials: 'Время и материалы (T&M)',
+            fixedRate: 'Фиксированный гонорар',
+            noBudget: 'Не оплачиваемый',
+            hourPackage: 'Пакет часов (N ч/мес за $X)',
         },
         deleteConfirm: {
             title: 'Удалить клиента?',

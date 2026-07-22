@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect, useRef, useId, lazy, Suspens
 import { useParams, useNavigate, Navigate, useSearchParams, type NavigateFunction, } from 'react-router-dom';
 import { listColleaguesAsUsers } from '@entities/contacts';
 import { routes, getProjectDetailUrl } from '@shared/config';
-import { useI18n } from '@shared/i18n';
+import { useI18n, ttProjectTypeLabel } from '@shared/i18n';
 import { formatDecimalHoursAsHm } from '@shared/lib/formatTrackingHours';
 import { waitForAppFonts } from '@shared/lib/waitForAppFonts';
 import { useCurrentUser } from '@shared/hooks';
@@ -1639,7 +1639,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
             <div className="pdp__title-row">
               <h1 className="pdp__title">{project.name} — ({project.client})</h1>
               <span className="pdp__type-badge" style={{ color: typeMeta.color, background: typeMeta.bg }}>
-                {project.type}
+                {ttProjectTypeLabel(project.type, t)}
               </span>
               {project.status === 'paused' ? (<span className="pdp__type-badge" style={{ color: '#b45309', background: '#fffbeb' }}>
                   На паузе

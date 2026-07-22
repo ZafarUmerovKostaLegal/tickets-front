@@ -15,6 +15,7 @@ import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
 import { ExpenseSearchableSelect } from './ExpenseSearchableSelect';
 import { listPartners, type UserPublic } from '@entities/user';
 import { listProjectsForExpenses, listProjectExpenseCategories, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeTrackingProjectForExpense, type ProjectExpenseCategoryRow, } from '@entities/time-tracking';
+import { useI18n, ttProjectTypeLabel } from '@shared/i18n';
 import { showToast } from '@shared/ui/app-toast';
 
 async function copyTextToClipboard(text: string): Promise<boolean> {
@@ -114,12 +115,6 @@ function groupProjectsForExpenseForm(rows: TimeTrackingProjectForExpense[]): Exp
     }
     return [...m.values()].sort((a, b) => a.client.name.localeCompare(b.client.name, 'ru', { sensitivity: 'base' }));
 }
-const EXPENSE_PROJECT_TYPE_LABEL: Record<string, string> = {
-    time_and_materials: 'T&M',
-    fixed_fee: 'Фикс',
-    hour_package: 'Пакет часов',
-    non_billable: 'Не оплачиваемый',
-};
 function formatExpenseProjectDateShort(iso: string | null | undefined): string {
     if (!iso)
         return '—';
@@ -132,13 +127,14 @@ function formatExpenseProjectDateShort(iso: string | null | undefined): string {
 function ExpenseProjectCardBody({ project }: {
     project: TimeManagerClientProjectRow;
 }) {
+    const { t } = useI18n();
     return (<div className="exp-project-picker__card-body">
       <div className="exp-project-picker__card-title">
         <span className="exp-project-picker__card-name">{project.name}</span>
         {project.code ? <span className="exp-project-picker__code">{project.code}</span> : null}
       </div>
       <p className="exp-project-picker__meta">
-        {EXPENSE_PROJECT_TYPE_LABEL[project.project_type] ?? project.project_type}
+        {ttProjectTypeLabel(project.project_type, t)}
         {' · '}
         {formatExpenseProjectDateShort(project.start_date)} — {formatExpenseProjectDateShort(project.end_date)}
         {project.usage_count > 0 ? ` · записей времени: ${project.usage_count}` : ''}

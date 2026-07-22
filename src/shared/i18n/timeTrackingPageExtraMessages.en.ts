@@ -349,10 +349,10 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             archived: 'Archived',
         },
         budgetTypes: {
-            timeAndMaterials: 'Time and materials',
-            fixedRate: 'Fixed rate',
-            noBudget: 'No budget',
-            hourPackage: 'Hour package',
+            timeAndMaterials: 'Time and materials (T&M)',
+            fixedRate: 'Fixed fee',
+            noBudget: 'Non-billable',
+            hourPackage: 'Hour package (N hrs/mo for $X)',
         },
         plural: {
             one: 'project',
@@ -596,10 +596,10 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             noFilterMatch: 'Nothing matches the filter.',
         },
         budgetTypes: {
-            timeAndMaterials: 'Time and materials',
-            fixedRate: 'Fixed rate',
-            noBudget: 'No budget',
-            hourPackage: 'Hour package',
+            timeAndMaterials: 'Time and materials (T&M)',
+            fixedRate: 'Fixed fee',
+            noBudget: 'Non-billable',
+            hourPackage: 'Hour package (N hrs/mo for $X)',
         },
         deleteConfirm: {
             title: 'Delete client?',
