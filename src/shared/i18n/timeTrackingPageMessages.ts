@@ -72,9 +72,9 @@ export const timeTrackingPageMessages = {
         },
         subTabs: {
             aria: 'Разделы статистики',
-            project: 'По проекту',
-            team: 'По команде',
-            user: 'По пользователю',
+            project: 'Проектная статистика',
+            team: 'Командная',
+            user: 'Пользователь',
             finance: 'Финансы',
         },
         teamFinance: {

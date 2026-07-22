@@ -12,3 +12,11 @@
   letter-spacing: -0.02em;
   color: var(--app-text, #0f172a);
 }
+
+.tt-statistics__tabs-block {
+  margin: 0;
+}
+
+.tt-statistics__tab-panel {
+  min-height: 8rem;
+}

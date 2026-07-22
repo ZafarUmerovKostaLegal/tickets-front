@@ -73,9 +73,9 @@ export const timeTrackingPageMessagesEn: TimeTrackingPageMessages = {
         },
         subTabs: {
             aria: 'Statistics sections',
-            project: 'By project',
-            team: 'By team',
-            user: 'By user',
+            project: 'Project statistics',
+            team: 'Team',
+            user: 'User',
             finance: 'Finance',
         },
         teamFinance: {
