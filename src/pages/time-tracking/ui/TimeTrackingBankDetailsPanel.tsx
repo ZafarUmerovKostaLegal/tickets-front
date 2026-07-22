@@ -133,7 +133,7 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
     };
 
     return portalTimeTrackingModal(
-        <div className="tt-tm-modal-backdrop" role="presentation" onClick={onClose}>
+        <div className="tt-tm-modal-overlay" role="presentation" onClick={onClose}>
             <div
                 className="tt-tm-modal tt-tm-modal--task tt-bank-modal"
                 role="dialog"
