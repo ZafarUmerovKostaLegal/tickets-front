@@ -1797,6 +1797,72 @@
   background: var(--app-surface-soft, #fafafa);
   position: relative;
 }
+
+.uep__proj-status-block {
+  padding: 0.75rem 2rem 1rem;
+  border-bottom: 1px solid var(--app-border, #e5e7eb);
+  background: var(--app-bg, #f8fafc);
+}
+
+.uep__proj-status-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--app-muted, #94a3b8);
+}
+
+.uep__proj-status-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  padding: 0.15rem 0;
+}
+
+.uep__proj-status-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--app-muted, #64748b);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, background 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.uep__proj-status-tab:hover {
+  color: var(--app-text, #1e293b);
+  background: color-mix(in srgb, var(--app-surface, #fff) 55%, transparent);
+}
+
+.uep__proj-status-tab--active {
+  color: var(--app-accent, #4f46e5);
+  background: var(--app-surface, #fff);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+  border-color: var(--app-border, #e2e8f0);
+}
+
+.uep__proj-status-count {
+  min-width: 1.25rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.uep__proj-empty--filter {
+  padding: 2rem 1.5rem;
+}
 .uep__proj-search-field {
   display: flex;
   align-items: center;
@@ -1912,6 +1978,12 @@
   color: var(--app-muted, #6b7280);
   text-transform: uppercase; letter-spacing: 0.05em;
 }
+.uep__proj-list-head-meta {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  color: var(--app-muted, #94a3b8);
+  font-weight: 600;
+}
 .uep__proj-manages-head {
   margin-left: auto;
   display: flex; align-items: center; gap: 0.5rem;
@@ -1970,6 +2042,32 @@
 .uep__proj-item-client {
   font-size: 0.75rem; color: var(--app-muted, #6b7280);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.uep__proj-item--archived .uep__proj-item-name,
+.uep__proj-item--archived .uep__proj-item-client {
+  color: var(--app-muted, #64748b);
+}
+
+.uep__proj-arch-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.4rem;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+}
+
+.uep__proj-item-info,
+.uep__proj-item-info * {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .uep__proj-manages-toggle {

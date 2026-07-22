@@ -566,6 +566,7 @@ export function UserEditPage() {
     const [transferFlagSaving, setTransferFlagSaving] = useState(false);
     const [projectSearch, setProjectSearch] = useState('');
     const [searchOpen, setSearchOpen] = useState(false);
+    const [assignedProjectsStatus, setAssignedProjectsStatus] = useState<'active' | 'archived' | 'all'>('active');
     const searchBoxRef = useRef<HTMLDivElement>(null);
     const projPickListId = useId();
     const [capacity, setCapacity] = useState<number>(CAPACITY_DEFAULT);
@@ -1363,6 +1364,8 @@ export function UserEditPage() {
                 const p = catalogById.get(pid);
                 return p ?? { id: pid, name: 'Неизвестный проект', client: 'Не найден в каталоге', color: hashToColor(pid), archived: false };
             });
+            const assignedActiveCount = assignedRows.filter((p) => !p.archived).length;
+            const assignedArchivedCount = assignedRows.filter((p) => p.archived).length;
             const unassigned = projectCatalog.filter((p) => !assignedProjectIds.includes(p.id) && !p.archived);
             const q = projectSearch.trim().toLowerCase();
             const searchResults = q
@@ -1371,6 +1374,15 @@ export function UserEditPage() {
             const displayResults = q ? searchResults : unassigned.slice(0, UEP_PROJECT_PICKER_CAP);
             const listTruncated = !q && unassigned.length > UEP_PROJECT_PICKER_CAP;
             const pickDisabled = !canEditTTProjectAccess || projectsTabSaving || projectsTabLoading;
+            const assignedVisible = assignedRows.filter((p) => {
+                if (assignedProjectsStatus === 'active' && p.archived)
+                    return false;
+                if (assignedProjectsStatus === 'archived' && !p.archived)
+                    return false;
+                if (!q)
+                    return true;
+                return p.name.toLowerCase().includes(q) || p.client.toLowerCase().includes(q);
+            });
             return (<div id="uep-panel-projects" role="tabpanel" aria-labelledby="uep-tab-projects" className="uep__tab-panel uep__tab-panel--flush">
                 <div className="uep__proj-page">
                 <div className="uep__proj-header">
@@ -1420,10 +1432,14 @@ export function UserEditPage() {
                       <circle cx="11" cy="11" r="8"/>
                       <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                     </svg>
-                    <input type="text" placeholder="Список ниже — введите текст, чтобы сузить по проекту или клиенту" value={projectSearch} disabled={projectsTabLoading || !canEditTTProjectAccess} aria-expanded={searchOpen} aria-controls={searchOpen ? `${projPickListId}-listbox` : undefined} aria-autocomplete="list" onChange={(e) => {
+                    <input type="text" placeholder="Список ниже — введите текст, чтобы сузить по проекту или клиенту" value={projectSearch} disabled={projectsTabLoading} aria-expanded={searchOpen} aria-controls={searchOpen ? `${projPickListId}-listbox` : undefined} aria-autocomplete="list" onChange={(e) => {
                     setProjectSearch(e.target.value);
-                    setSearchOpen(true);
-                }} onFocus={() => setSearchOpen(true)} onKeyDown={(e) => {
+                    if (canEditTTProjectAccess)
+                        setSearchOpen(true);
+                }} onFocus={() => {
+                    if (canEditTTProjectAccess)
+                        setSearchOpen(true);
+                }} onKeyDown={(e) => {
                     if (e.key === 'Escape') {
                         e.preventDefault();
                         setSearchOpen(false);
@@ -1474,6 +1490,43 @@ export function UserEditPage() {
                           </div>);
                     })(), document.body)}
                 </div>
+
+                <div className="uep__proj-status-block">
+                  <p className="uep__proj-status-title" id="uep-proj-status-heading">Статус проектов</p>
+                  <nav className="uep__proj-status-nav" role="tablist" aria-labelledby="uep-proj-status-heading">
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={assignedProjectsStatus === 'active'}
+                      className={`uep__proj-status-tab${assignedProjectsStatus === 'active' ? ' uep__proj-status-tab--active' : ''}`}
+                      onClick={() => setAssignedProjectsStatus('active')}
+                    >
+                      Активные
+                      <span className="uep__proj-status-count">{assignedActiveCount}</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={assignedProjectsStatus === 'archived'}
+                      className={`uep__proj-status-tab${assignedProjectsStatus === 'archived' ? ' uep__proj-status-tab--active' : ''}`}
+                      onClick={() => setAssignedProjectsStatus('archived')}
+                    >
+                      Архивные
+                      <span className="uep__proj-status-count">{assignedArchivedCount}</span>
+                    </button>
+                    <button
+                      type="button"
+                      role="tab"
+                      aria-selected={assignedProjectsStatus === 'all'}
+                      className={`uep__proj-status-tab${assignedProjectsStatus === 'all' ? ' uep__proj-status-tab--active' : ''}`}
+                      onClick={() => setAssignedProjectsStatus('all')}
+                    >
+                      Все
+                      <span className="uep__proj-status-count">{assignedRows.length}</span>
+                    </button>
+                  </nav>
+                </div>
+
                 {assignedRows.length === 0 ? (<div className="uep__proj-empty">
                     <div className="uep__proj-empty-icon">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1485,11 +1538,25 @@ export function UserEditPage() {
                     <p className="uep__proj-empty-hint">
                       Откройте список выше (фокус в поле) и добавьте проект или сузьте список поиском
                     </p>
+                  </div>) : assignedVisible.length === 0 ? (<div className="uep__proj-empty uep__proj-empty--filter">
+                    <p className="uep__proj-empty-title">
+                      {assignedProjectsStatus === 'active'
+                        ? 'Нет активных назначенных проектов'
+                        : assignedProjectsStatus === 'archived'
+                          ? 'Нет архивных назначенных проектов'
+                          : 'Ничего не найдено'}
+                    </p>
+                    <p className="uep__proj-empty-hint">
+                      {q
+                        ? 'Измените поисковый запрос или переключите фильтр статуса'
+                        : 'Переключите фильтр статуса или назначьте проекты через поле выше'}
+                    </p>
                   </div>) : (<div className="uep__proj-list">
                     <div className="uep__proj-list-head">
                       <span>Проект</span>
+                      <span className="uep__proj-list-head-meta">{assignedVisible.length}</span>
                     </div>
-                    {assignedRows.map((p) => (<div key={p.id} className="uep__proj-item">
+                    {assignedVisible.map((p) => (<div key={p.id} className={`uep__proj-item${p.archived ? ' uep__proj-item--archived' : ''}`}>
                         <button type="button" className="uep__proj-item-remove" disabled={pickDisabled} onClick={() => removeProject(p.id)} title={`Убрать из ${p.name}`}>
                           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path d="M18 6L6 18M6 6l12 12"/>
@@ -1497,7 +1564,10 @@ export function UserEditPage() {
                         </button>
                         <span className="uep__proj-color-dot" style={{ background: p.color }}/>
                         <span className="uep__proj-item-info">
-                          <span className="uep__proj-item-name">{p.name}</span>
+                          <span className="uep__proj-item-name">
+                            {p.name}
+                            {p.archived ? <span className="uep__proj-arch-badge">Архив</span> : null}
+                          </span>
                           <span className="uep__proj-item-client">{p.client}</span>
                         </span>
                       </div>))}
