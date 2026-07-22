@@ -84,12 +84,12 @@ const PDP_PERIOD_PRESETS: {
     id: PdpPeriodPresetId;
     label: string;
 }[] = [
-    { id: 'week', label: 'Эта неделя' },
-    { id: 'month', label: 'Этот месяц' },
-    { id: 'quarter', label: 'Этот квартал' },
-    { id: 'year', label: 'Этот год' },
-    { id: 'all', label: 'За всё время' },
-];
+        { id: 'week', label: 'Эта неделя' },
+        { id: 'month', label: 'Этот месяц' },
+        { id: 'quarter', label: 'Этот квартал' },
+        { id: 'year', label: 'Этот год' },
+        { id: 'all', label: 'За всё время' },
+    ];
 function periodPresetToRange(id: PdpPeriodPresetId): {
     from: string;
     to: string;
@@ -313,17 +313,17 @@ function buildChartDataFromDashboard(dashboard: TimeManagerProjectDashboard): {
     return { progressData, hoursData, progressMode };
 }
 const IcoEdit = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-  </svg>);
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+</svg>);
 const IcoChevron = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <path d="M6 9l6 6 6-6"/>
-  </svg>);
+    <path d="M6 9l6 6 6-6" />
+</svg>);
 const IcoInfo = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <circle cx="12" cy="12" r="10"/>
-    <line x1="12" y1="8" x2="12" y2="12"/>
-    <line x1="12" y1="16" x2="12.01" y2="16"/>
-  </svg>);
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="8" x2="12" y2="12" />
+    <line x1="12" y1="16" x2="12.01" y2="16" />
+</svg>);
 type TaskMemberRow = {
     userId: string;
     name: string;
@@ -433,53 +433,53 @@ function renderTaskTableRows(rows: TaskRow[], expanded: Set<string>, toggle: (id
     return rows.flatMap((r) => {
         const isOpen = expanded.has(r.id);
         const mainRow = (<tr key={r.id} className={`pdp__tasks-row${isOpen ? ' pdp__tasks-row--expanded' : ''}`}>
-              <td className="pdp__tasks-td pdp__tasks-td--name">
+            <td className="pdp__tasks-td pdp__tasks-td--name">
                 {r.expandable ? (<button type="button" className={`pdp__tasks-expand${isOpen ? ' pdp__tasks-expand--open' : ''}`} onClick={() => toggle(r.id)} aria-expanded={isOpen} aria-label={isOpen ? 'Свернуть детализацию' : 'Развернуть детализацию'}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                      <path d="M9 18l6-6-6-6"/>
+                        <path d="M9 18l6-6-6-6" />
                     </svg>
-                  </button>) : (<span className="pdp__tasks-expand-placeholder"/>)}
+                </button>) : (<span className="pdp__tasks-expand-placeholder" />)}
                 {r.expandable ? (<button type="button" className="pdp__tasks-name-btn" onClick={() => toggle(r.id)} aria-expanded={isOpen}>
                     {r.name}
-                  </button>) : r.name}
-              </td>
-              <td className="pdp__tasks-td pdp__tasks-td--hours">
+                </button>) : r.name}
+            </td>
+            <td className="pdp__tasks-td pdp__tasks-td--hours">
                 {r.hours > 0 ? (<button type="button" className="pdp__tasks-hours-link" onClick={() => r.expandable && toggle(r.id)}>
                     {formatDecimalHoursAsHm(r.hours)}
-                  </button>) : (<span className="pdp__tasks-zero">{formatDecimalHoursAsHm(0)}</span>)}
-              </td>
-              <td className="pdp__tasks-td pdp__tasks-td--amt">
+                </button>) : (<span className="pdp__tasks-zero">{formatDecimalHoursAsHm(0)}</span>)}
+            </td>
+            <td className="pdp__tasks-td pdp__tasks-td--amt">
                 {r.billableAmt > 0 ? (<span className="pdp__tasks-num">{fmtMoney(r.billableAmt, r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
-              </td>
-              <td className="pdp__tasks-td pdp__tasks-td--costs">
+            </td>
+            <td className="pdp__tasks-td pdp__tasks-td--costs">
                 <span className="pdp__tasks-cost-with-icon">
-                  {r.costs > 0 ? (<span className="pdp__tasks-num">{fmtMoney(r.costs, r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
-                  <span className="pdp__tasks-warn-slot pdp__tasks-warn-slot--empty" aria-hidden/>
+                    {r.costs > 0 ? (<span className="pdp__tasks-num">{fmtMoney(r.costs, r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
+                    <span className="pdp__tasks-warn-slot pdp__tasks-warn-slot--empty" aria-hidden />
                 </span>
-              </td>
-            </tr>);
+            </td>
+        </tr>);
         if (!isOpen || !r.expandable)
             return [mainRow];
         const detailRows = r.members.map((m) => (<tr key={`${r.id}-${m.userId}`} className="pdp__tasks-detail-row">
-              <td className="pdp__tasks-td pdp__tasks-td--name pdp__tasks-td--detail">
-                <span className="pdp__tasks-detail-indent" aria-hidden/>
+            <td className="pdp__tasks-td pdp__tasks-td--name pdp__tasks-td--detail">
+                <span className="pdp__tasks-detail-indent" aria-hidden />
                 <span className="pdp__tasks-detail-name">{m.name}</span>
-              </td>
-              <td className="pdp__tasks-td pdp__tasks-td--hours pdp__tasks-td--detail">
+            </td>
+            <td className="pdp__tasks-td pdp__tasks-td--hours pdp__tasks-td--detail">
                 {m.hours > 0 && onOpenMemberReport && isLinkableMemberUserId(m.userId) ? (<button type="button" className="pdp__tasks-hours-link" title="Открыть детальный отчёт по сотруднику и задаче" onClick={() => onOpenMemberReport(r.id, m.userId)}>
                     {formatDecimalHoursAsHm(m.hours)}
-                  </button>) : (<span className="pdp__tasks-num">{formatDecimalHoursAsHm(m.hours)}</span>)}
-              </td>
-              <td className="pdp__tasks-td pdp__tasks-td--amt pdp__tasks-td--detail">
+                </button>) : (<span className="pdp__tasks-num">{formatDecimalHoursAsHm(m.hours)}</span>)}
+            </td>
+            <td className="pdp__tasks-td pdp__tasks-td--amt pdp__tasks-td--detail">
                 {m.billableAmt > 0 ? (<span className="pdp__tasks-num">{fmtMoney(m.billableAmt, r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
-              </td>
-              <td className="pdp__tasks-td pdp__tasks-td--costs pdp__tasks-td--detail">
+            </td>
+            <td className="pdp__tasks-td pdp__tasks-td--costs pdp__tasks-td--detail">
                 <span className="pdp__tasks-cost-with-icon">
-                  {m.costs > 0 ? (<span className="pdp__tasks-num">{fmtMoney(m.costs, r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
-                  <span className="pdp__tasks-warn-slot pdp__tasks-warn-slot--empty" aria-hidden/>
+                    {m.costs > 0 ? (<span className="pdp__tasks-num">{fmtMoney(m.costs, r.currency)}</span>) : (<span className="pdp__tasks-zero">{fmtMoney(0, r.currency)}</span>)}
+                    <span className="pdp__tasks-warn-slot pdp__tasks-warn-slot--empty" aria-hidden />
                 </span>
-              </td>
-            </tr>));
+            </td>
+        </tr>));
         return [mainRow, ...detailRows];
     });
 }
@@ -530,199 +530,199 @@ function TasksPanel({ rows, nonBillableRows, totalHours, totalAmt, currency, per
     const nonBillTotalCosts = nonBillableRows.reduce((s, r) => s + r.costs, 0);
     const costsWarnTitle = 'Оценка внутренних затрат: при неполных данных по ставкам сотрудников сумма может быть уточнена позже.';
     return (<div className="pdp__tasks pdp__tasks-panel">
-      <div className="pdp__tasks-toolbar">
-        <div className="pdp__tasks-toolbar-left">
-          <span className="pdp__tasks-heading">Задачи по проекту</span>
-          <span className="pdp__tasks-subheading">{periodSubtitle ?? 'За всё время'}</span>
-        </div>
-        <div className="pdp__tasks-toolbar-right">
-          {onPreviewEntries ? (<button type="button" className="pdp__tasks-preview-btn" onClick={onPreviewEntries} title="Открыть предпросмотр всех записей проекта за выбранный период">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-              Предпросмотр записей
-            </button>) : null}
-          <div className="pdp__period-preset-wrap" ref={periodMenuRef}>
-            <button type="button" className={`pdp__tasks-filter-btn${periodMenuOpen ? ' pdp__tasks-filter-btn--open' : ''}`} onClick={() => setPeriodMenuOpen((v) => !v)} aria-expanded={periodMenuOpen} aria-haspopup="menu">
-              {activePeriodPresetLabel}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
-            </button>
-            {periodMenuOpen ? (<div className="pdp__period-preset-menu" role="menu">
-                {PDP_PERIOD_PRESETS.map((p) => (<button key={p.id} type="button" role="menuitemradio" aria-checked={activePeriodPresetId === p.id} className={`pdp__period-preset-item${activePeriodPresetId === p.id ? ' pdp__period-preset-item--active' : ''}`} onClick={() => {
-                        onSelectPeriodPreset(p.id);
-                        setPeriodMenuOpen(false);
-                    }}>
-                    {p.label}
-                  </button>))}
-              </div>) : null}
-          </div>
-          <div className="pdp__period-preset-wrap" ref={exportMenuRef}>
-            <button type="button" className={`pdp__tasks-export-btn${exportMenuOpen ? ' pdp__tasks-export-btn--open' : ''}`} disabled={exportBusy} onClick={() => setExportMenuOpen((v) => !v)} aria-expanded={exportMenuOpen} aria-haspopup="menu">
-              {exportBusy ? 'Экспорт…' : 'Экспорт'}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
-            </button>
-            {exportMenuOpen && !exportBusy ? (<div className="pdp__period-preset-menu" role="menu">
-                <button type="button" role="menuitem" className="pdp__period-preset-item" onClick={() => {
-                        setExportMenuOpen(false);
-                        onExport('xlsx');
-                    }}>
-                  Excel (.xlsx)
-                </button>
-                <button type="button" role="menuitem" className="pdp__period-preset-item" onClick={() => {
-                        setExportMenuOpen(false);
-                        onExport('csv');
-                    }}>
-                  CSV
-                </button>
-              </div>) : null}
-          </div>
-        </div>
-      </div>
-
-      {breakdownHint ? (<p className="pdp__tasks-breakdown-hint">{breakdownHint}</p>) : null}
-
-      <div className="pdp__tasks-sections">
-        <section className="pdp__tasks-section" aria-labelledby="pdp-tasks-billable-heading">
-          <div className="pdp__tasks-section__head">
-            <h3 id="pdp-tasks-billable-heading" className="pdp__tasks-section__title">
-              Оплачиваемые задачи
-            </h3>
-          </div>
-          <div className="pdp__tasks-section__table-wrap">
-            <table className="pdp__tasks-table">
-              <colgroup>
-                <col className="pdp__tasks-col pdp__tasks-col--name"/>
-                <col className="pdp__tasks-col pdp__tasks-col--hours"/>
-                <col className="pdp__tasks-col pdp__tasks-col--amt"/>
-                <col className="pdp__tasks-col pdp__tasks-col--costs"/>
-              </colgroup>
-              <thead>
-                <tr className="pdp__tasks-thead">
-                  <th className="pdp__tasks-th pdp__tasks-th--name">Задача</th>
-                  <th className="pdp__tasks-th pdp__tasks-th--hours">
-                    <span className="pdp__tasks-th-hours-label">
-                      Часы
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="pdp__tasks-sort">
-                        <path d="M18 15l-6-6-6 6"/>
-                      </svg>
-                    </span>
-                  </th>
-                  <th className="pdp__tasks-th pdp__tasks-th--amt">Оплачиваемая сумма</th>
-                  <th className="pdp__tasks-th pdp__tasks-th--costs">Затраты</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 && (<tr className="pdp__tasks-placeholder-row">
-                    <td className="pdp__tasks-placeholder-cell" colSpan={4}>
-                      <p className="pdp__tasks-placeholder-text">Пока нет оплачиваемых задач с часами за выбранный период.</p>
-                    </td>
-                  </tr>)}
-                {renderTaskTableRows(rows, expanded, toggle, onOpenMemberReport)}
-                <tr className="pdp__tasks-total-row">
-                  <td className="pdp__tasks-td pdp__tasks-td--name">
-                    <strong>Итого</strong>
-                  </td>
-                  <td className="pdp__tasks-td pdp__tasks-td--hours">
-                    {totalHours > 0 ? (<button type="button" className="pdp__tasks-hours-link pdp__tasks-hours-link--bold">
-                        {formatDecimalHoursAsHm(totalHours)}
-                      </button>) : (<span className="pdp__tasks-zero">{formatDecimalHoursAsHm(totalHours)}</span>)}
-                  </td>
-                  <td className="pdp__tasks-td pdp__tasks-td--amt">
-                    <strong className="pdp__tasks-num">{fmtMoney(totalAmt, currency)}</strong>
-                  </td>
-                  <td className="pdp__tasks-td pdp__tasks-td--costs">
-                    <span className="pdp__tasks-cost-with-icon">
-                      <strong className="pdp__tasks-num">
-                        {billableTotalCosts > 0
-            ? fmtMoney(billableTotalCosts, currency)
-            : fmtMoney(0, currency)}
-                      </strong>
-                      <span className="pdp__tasks-warn-slot">
-                        <button type="button" className="pdp__tasks-warn-btn" title={costsWarnTitle} aria-label={costsWarnTitle}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="pdp__tasks-warn">
-                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                            <line x1="12" y1="9" x2="12" y2="13"/>
-                            <line x1="12" y1="17" x2="12.01" y2="17"/>
-                          </svg>
+        <div className="pdp__tasks-toolbar">
+            <div className="pdp__tasks-toolbar-left">
+                <span className="pdp__tasks-heading">Задачи по проекту</span>
+                <span className="pdp__tasks-subheading">{periodSubtitle ?? 'За всё время'}</span>
+            </div>
+            <div className="pdp__tasks-toolbar-right">
+                {onPreviewEntries ? (<button type="button" className="pdp__tasks-preview-btn" onClick={onPreviewEntries} title="Открыть предпросмотр всех записей проекта за выбранный период">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    Предпросмотр записей
+                </button>) : null}
+                <div className="pdp__period-preset-wrap" ref={periodMenuRef}>
+                    <button type="button" className={`pdp__tasks-filter-btn${periodMenuOpen ? ' pdp__tasks-filter-btn--open' : ''}`} onClick={() => setPeriodMenuOpen((v) => !v)} aria-expanded={periodMenuOpen} aria-haspopup="menu">
+                        {activePeriodPresetLabel}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </button>
+                    {periodMenuOpen ? (<div className="pdp__period-preset-menu" role="menu">
+                        {PDP_PERIOD_PRESETS.map((p) => (<button key={p.id} type="button" role="menuitemradio" aria-checked={activePeriodPresetId === p.id} className={`pdp__period-preset-item${activePeriodPresetId === p.id ? ' pdp__period-preset-item--active' : ''}`} onClick={() => {
+                            onSelectPeriodPreset(p.id);
+                            setPeriodMenuOpen(false);
+                        }}>
+                            {p.label}
+                        </button>))}
+                    </div>) : null}
+                </div>
+                <div className="pdp__period-preset-wrap" ref={exportMenuRef}>
+                    <button type="button" className={`pdp__tasks-export-btn${exportMenuOpen ? ' pdp__tasks-export-btn--open' : ''}`} disabled={exportBusy} onClick={() => setExportMenuOpen((v) => !v)} aria-expanded={exportMenuOpen} aria-haspopup="menu">
+                        {exportBusy ? 'Экспорт…' : 'Экспорт'}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </button>
+                    {exportMenuOpen && !exportBusy ? (<div className="pdp__period-preset-menu" role="menu">
+                        <button type="button" role="menuitem" className="pdp__period-preset-item" onClick={() => {
+                            setExportMenuOpen(false);
+                            onExport('xlsx');
+                        }}>
+                            Excel (.xlsx)
                         </button>
-                      </span>
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
+                        <button type="button" role="menuitem" className="pdp__period-preset-item" onClick={() => {
+                            setExportMenuOpen(false);
+                            onExport('csv');
+                        }}>
+                            CSV
+                        </button>
+                    </div>) : null}
+                </div>
+            </div>
+        </div>
 
-        <section className="pdp__tasks-section" aria-labelledby="pdp-tasks-nonbill-heading">
-          <div className="pdp__tasks-section__head">
-            <h3 id="pdp-tasks-nonbill-heading" className="pdp__tasks-section__title">
-              Неоплачиваемые задачи
-            </h3>
-          </div>
-          <div className="pdp__tasks-section__table-wrap">
-            <table className="pdp__tasks-table">
-              <colgroup>
-                <col className="pdp__tasks-col pdp__tasks-col--name"/>
-                <col className="pdp__tasks-col pdp__tasks-col--hours"/>
-                <col className="pdp__tasks-col pdp__tasks-col--amt"/>
-                <col className="pdp__tasks-col pdp__tasks-col--costs"/>
-              </colgroup>
-              <thead>
-                <tr className="pdp__tasks-thead">
-                  <th className="pdp__tasks-th pdp__tasks-th--name">Задача</th>
-                  <th className="pdp__tasks-th pdp__tasks-th--hours">
-                    <span className="pdp__tasks-th-hours-label">
-                      Часы
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="pdp__tasks-sort">
-                        <path d="M18 15l-6-6-6 6"/>
-                      </svg>
-                    </span>
-                  </th>
-                  <th className="pdp__tasks-th pdp__tasks-th--amt">Оплачиваемая сумма</th>
-                  <th className="pdp__tasks-th pdp__tasks-th--costs">Затраты</th>
-                </tr>
-              </thead>
-              <tbody>
-                {nonBillableRows.length === 0 && (<tr className="pdp__tasks-placeholder-row">
-                    <td className="pdp__tasks-placeholder-cell" colSpan={4}>
-                      <p className="pdp__tasks-placeholder-text">Пока нет неоплачиваемых задач с часами за выбранный период.</p>
-                    </td>
-                  </tr>)}
-                {renderTaskTableRows(nonBillableRows, expanded, toggle, onOpenMemberReport)}
-                <tr className="pdp__tasks-total-row">
-                  <td className="pdp__tasks-td pdp__tasks-td--name">
-                    <strong>Итого</strong>
-                  </td>
-                  <td className="pdp__tasks-td pdp__tasks-td--hours">
-                    <span className={nonBillTotal > 0 ? 'pdp__tasks-hours-link' : 'pdp__tasks-zero'}>
-                      {formatDecimalHoursAsHm(nonBillTotal)}
-                    </span>
-                  </td>
-                  <td className="pdp__tasks-td pdp__tasks-td--amt">
-                    <strong className="pdp__tasks-num">
-                      {nonBillTotalAmt > 0 ? fmtMoney(nonBillTotalAmt, currency) : fmtMoney(0, currency)}
-                    </strong>
-                  </td>
-                  <td className="pdp__tasks-td pdp__tasks-td--costs">
-                    <span className="pdp__tasks-cost-with-icon">
-                      <strong className="pdp__tasks-num">
-                        {nonBillTotalCosts > 0 ? fmtMoney(nonBillTotalCosts, currency) : fmtMoney(0, currency)}
-                      </strong>
-                      <span className="pdp__tasks-warn-slot pdp__tasks-warn-slot--empty" aria-hidden/>
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+        {breakdownHint ? (<p className="pdp__tasks-breakdown-hint">{breakdownHint}</p>) : null}
+
+        <div className="pdp__tasks-sections">
+            <section className="pdp__tasks-section" aria-labelledby="pdp-tasks-billable-heading">
+                <div className="pdp__tasks-section__head">
+                    <h3 id="pdp-tasks-billable-heading" className="pdp__tasks-section__title">
+                        Оплачиваемые задачи
+                    </h3>
+                </div>
+                <div className="pdp__tasks-section__table-wrap">
+                    <table className="pdp__tasks-table">
+                        <colgroup>
+                            <col className="pdp__tasks-col pdp__tasks-col--name" />
+                            <col className="pdp__tasks-col pdp__tasks-col--hours" />
+                            <col className="pdp__tasks-col pdp__tasks-col--amt" />
+                            <col className="pdp__tasks-col pdp__tasks-col--costs" />
+                        </colgroup>
+                        <thead>
+                            <tr className="pdp__tasks-thead">
+                                <th className="pdp__tasks-th pdp__tasks-th--name">Задача</th>
+                                <th className="pdp__tasks-th pdp__tasks-th--hours">
+                                    <span className="pdp__tasks-th-hours-label">
+                                        Часы
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="pdp__tasks-sort">
+                                            <path d="M18 15l-6-6-6 6" />
+                                        </svg>
+                                    </span>
+                                </th>
+                                <th className="pdp__tasks-th pdp__tasks-th--amt">Оплачиваемая сумма</th>
+                                <th className="pdp__tasks-th pdp__tasks-th--costs">Затраты</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows.length === 0 && (<tr className="pdp__tasks-placeholder-row">
+                                <td className="pdp__tasks-placeholder-cell" colSpan={4}>
+                                    <p className="pdp__tasks-placeholder-text">Пока нет оплачиваемых задач с часами за выбранный период.</p>
+                                </td>
+                            </tr>)}
+                            {renderTaskTableRows(rows, expanded, toggle, onOpenMemberReport)}
+                            <tr className="pdp__tasks-total-row">
+                                <td className="pdp__tasks-td pdp__tasks-td--name">
+                                    <strong>Итого</strong>
+                                </td>
+                                <td className="pdp__tasks-td pdp__tasks-td--hours">
+                                    {totalHours > 0 ? (<button type="button" className="pdp__tasks-hours-link pdp__tasks-hours-link--bold">
+                                        {formatDecimalHoursAsHm(totalHours)}
+                                    </button>) : (<span className="pdp__tasks-zero">{formatDecimalHoursAsHm(totalHours)}</span>)}
+                                </td>
+                                <td className="pdp__tasks-td pdp__tasks-td--amt">
+                                    <strong className="pdp__tasks-num">{fmtMoney(totalAmt, currency)}</strong>
+                                </td>
+                                <td className="pdp__tasks-td pdp__tasks-td--costs">
+                                    <span className="pdp__tasks-cost-with-icon">
+                                        <strong className="pdp__tasks-num">
+                                            {billableTotalCosts > 0
+                                                ? fmtMoney(billableTotalCosts, currency)
+                                                : fmtMoney(0, currency)}
+                                        </strong>
+                                        <span className="pdp__tasks-warn-slot">
+                                            <button type="button" className="pdp__tasks-warn-btn" title={costsWarnTitle} aria-label={costsWarnTitle}>
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="pdp__tasks-warn">
+                                                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                                    <line x1="12" y1="9" x2="12" y2="13" />
+                                                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                                                </svg>
+                                            </button>
+                                        </span>
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section className="pdp__tasks-section" aria-labelledby="pdp-tasks-nonbill-heading">
+                <div className="pdp__tasks-section__head">
+                    <h3 id="pdp-tasks-nonbill-heading" className="pdp__tasks-section__title">
+                        Неоплачиваемые задачи
+                    </h3>
+                </div>
+                <div className="pdp__tasks-section__table-wrap">
+                    <table className="pdp__tasks-table">
+                        <colgroup>
+                            <col className="pdp__tasks-col pdp__tasks-col--name" />
+                            <col className="pdp__tasks-col pdp__tasks-col--hours" />
+                            <col className="pdp__tasks-col pdp__tasks-col--amt" />
+                            <col className="pdp__tasks-col pdp__tasks-col--costs" />
+                        </colgroup>
+                        <thead>
+                            <tr className="pdp__tasks-thead">
+                                <th className="pdp__tasks-th pdp__tasks-th--name">Задача</th>
+                                <th className="pdp__tasks-th pdp__tasks-th--hours">
+                                    <span className="pdp__tasks-th-hours-label">
+                                        Часы
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="pdp__tasks-sort">
+                                            <path d="M18 15l-6-6-6 6" />
+                                        </svg>
+                                    </span>
+                                </th>
+                                <th className="pdp__tasks-th pdp__tasks-th--amt">Оплачиваемая сумма</th>
+                                <th className="pdp__tasks-th pdp__tasks-th--costs">Затраты</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {nonBillableRows.length === 0 && (<tr className="pdp__tasks-placeholder-row">
+                                <td className="pdp__tasks-placeholder-cell" colSpan={4}>
+                                    <p className="pdp__tasks-placeholder-text">Пока нет неоплачиваемых задач с часами за выбранный период.</p>
+                                </td>
+                            </tr>)}
+                            {renderTaskTableRows(nonBillableRows, expanded, toggle, onOpenMemberReport)}
+                            <tr className="pdp__tasks-total-row">
+                                <td className="pdp__tasks-td pdp__tasks-td--name">
+                                    <strong>Итого</strong>
+                                </td>
+                                <td className="pdp__tasks-td pdp__tasks-td--hours">
+                                    <span className={nonBillTotal > 0 ? 'pdp__tasks-hours-link' : 'pdp__tasks-zero'}>
+                                        {formatDecimalHoursAsHm(nonBillTotal)}
+                                    </span>
+                                </td>
+                                <td className="pdp__tasks-td pdp__tasks-td--amt">
+                                    <strong className="pdp__tasks-num">
+                                        {nonBillTotalAmt > 0 ? fmtMoney(nonBillTotalAmt, currency) : fmtMoney(0, currency)}
+                                    </strong>
+                                </td>
+                                <td className="pdp__tasks-td pdp__tasks-td--costs">
+                                    <span className="pdp__tasks-cost-with-icon">
+                                        <strong className="pdp__tasks-num">
+                                            {nonBillTotalCosts > 0 ? fmtMoney(nonBillTotalCosts, currency) : fmtMoney(0, currency)}
+                                        </strong>
+                                        <span className="pdp__tasks-warn-slot pdp__tasks-warn-slot--empty" aria-hidden />
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
     </div>);
 }
 const TYPE_COLOR: Record<string, {
@@ -992,62 +992,62 @@ function ProjectPartnerReportPanel({ projectId, detailPeriod, currentUserId, }: 
         {listsLoad === 'loading' ? (<span className="pdp__partner-report-status">Загрузка запросов на подтверждение…</span>) : null}
         {listsLoad === 'error' ? (<span className="pdp__partner-report-muted pdp__partner-report-muted--error" role="alert">
             Не удалось загрузить статус подтверждений отчётов.
-          </span>) : null}
+        </span>) : null}
         {showPartnerConfirmBtn ? (<button type="button" className="pdp__partner-report-btn" onClick={() => void handleConfirmReport()} disabled={confirmBusy}>
             {confirmBusy ? 'Отправка…' : 'Подтвердить принятие отчёта'}
-          </button>) : null}
+        </button>) : null}
         {listsLoad === 'ok' && fullyConfirmed && mySig ? (<span className="pdp__partner-report-status pdp__partner-report-status--ok">
             Все необходимые партнёры подтвердили отчёт за этот период. Ваша подпись: {fmtConfirmed(mySig.confirmedAt)}.
-          </span>) : null}
+        </span>) : null}
         {listsLoad === 'ok' && fullyConfirmed && !mySig ? (<span className="pdp__partner-report-status pdp__partner-report-status--ok">
             Отчёт за этот период полностью подтверждён партнёрами.
-          </span>) : null}
+        </span>) : null}
         {listsLoad === 'ok' && !fullyConfirmed && !pendingForProject && mySig ? (<span className="pdp__partner-report-status pdp__partner-report-status--ok">
             Вы подтвердили принятие отчёта ({fmtConfirmed(mySig.confirmedAt)}). Ожидаются подписи других партнёров.
-          </span>) : null}
-      </div>);
+        </span>) : null}
+    </div>);
     return (<section className="pdp__partner-report" aria-labelledby="pdp-partner-report-heading">
         <div className="pdp__partner-report-head">
-          <h2 id="pdp-partner-report-heading" className="pdp__partner-report-title">
-            Партнёры проекта
-          </h2>
-          {partnerActions}
+            <h2 id="pdp-partner-report-heading" className="pdp__partner-report-title">
+                Партнёры проекта
+            </h2>
+            {partnerActions}
         </div>
         <p className="pdp__partner-report-hint">
-          Подтвердите отчёт за период карточки как партнёр. После подписей всех партнёров запись попадает в список подтверждённых на сервере; то же действие доступно из предпросмотра отчёта.
+            Подтвердите отчёт за период карточки как партнёр. После подписей всех партнёров запись попадает в список подтверждённых на сервере; то же действие доступно из предпросмотра отчёта.
         </p>
         {partners.length === 0 ? (<p className="pdp__partner-report-muted">Нет партнёров с доступом к проекту.</p>) : (<ul className="pdp__partner-report-list">
             {partners.map((p) => (<li key={p.authUserId} className="pdp__partner-report-item">
                 <span className="pdp__partner-report-name">{p.displayName}</span>
                 {p.position ? (<span className="pdp__partner-report-pos">{p.position}</span>) : null}
                 {currentUserId === p.authUserId ? (<span className="pdp__partner-report-you">Вы</span>) : null}
-              </li>))}
-          </ul>)}
-      </section>);
+            </li>))}
+        </ul>)}
+    </section>);
 }
 function ProjectDetailPageSkeleton() {
     return (<div className="pdp pdp--loading" aria-busy="true" aria-label="Загрузка проекта">
-      <header className="pdp__header pdp__header--skeleton">
-        <div className="pdp__header-left">
-          <span className="pdp__skel pdp__skel--back" aria-hidden/>
-          <span className="pdp__skel pdp__skel--title" aria-hidden/>
-          <span className="pdp__skel pdp__skel--badge" aria-hidden/>
+        <header className="pdp__header pdp__header--skeleton">
+            <div className="pdp__header-left">
+                <span className="pdp__skel pdp__skel--back" aria-hidden />
+                <span className="pdp__skel pdp__skel--title" aria-hidden />
+                <span className="pdp__skel pdp__skel--badge" aria-hidden />
+            </div>
+            <div className="pdp__header-right">
+                <span className="pdp__skel pdp__skel--btn" aria-hidden />
+                <span className="pdp__skel pdp__skel--btn" aria-hidden />
+                <span className="pdp__skel pdp__skel--btn" aria-hidden />
+            </div>
+        </header>
+        <div className="pdp__body pdp__body--skeleton">
+            <span className="pdp__skel pdp__skel--chart" aria-hidden />
+            <div className="pdp__skel-stats">
+                <span className="pdp__skel pdp__skel--stat" aria-hidden />
+                <span className="pdp__skel pdp__skel--stat" aria-hidden />
+                <span className="pdp__skel pdp__skel--stat" aria-hidden />
+                <span className="pdp__skel pdp__skel--stat" aria-hidden />
+            </div>
         </div>
-        <div className="pdp__header-right">
-          <span className="pdp__skel pdp__skel--btn" aria-hidden/>
-          <span className="pdp__skel pdp__skel--btn" aria-hidden/>
-          <span className="pdp__skel pdp__skel--btn" aria-hidden/>
-        </div>
-      </header>
-      <div className="pdp__body pdp__body--skeleton">
-        <span className="pdp__skel pdp__skel--chart" aria-hidden/>
-        <div className="pdp__skel-stats">
-          <span className="pdp__skel pdp__skel--stat" aria-hidden/>
-          <span className="pdp__skel pdp__skel--stat" aria-hidden/>
-          <span className="pdp__skel pdp__skel--stat" aria-hidden/>
-          <span className="pdp__skel pdp__skel--stat" aria-hidden/>
-        </div>
-      </div>
     </div>);
 }
 
@@ -1316,9 +1316,9 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
             DetailTabId,
             string
         ][] = [
-            ['tasks', 'Задачи'],
-            ['team', 'Команда'],
-        ];
+                ['tasks', 'Задачи'],
+                ['team', 'Команда'],
+            ];
         if (canManageInvoices)
             base.push(['invoices', 'Счета']);
         if (canManageProjects)
@@ -1350,55 +1350,55 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
             listColleaguesAsUsers().catch(() => []),
         ])
             .then(([d, ttUsers, orgUsers]) => {
-            if (cancelled)
-                return;
-            const weekly = new Map<number, number>();
-            for (const r of ttUsers) {
-                if (r.weekly_capacity_hours == null)
-                    continue;
-                const w = typeof r.weekly_capacity_hours === 'number'
-                    ? r.weekly_capacity_hours
-                    : parseFloat(String(r.weekly_capacity_hours).replace(',', '.'));
-                if (Number.isFinite(w) && w > 0)
-                    weekly.set(r.id, w);
-            }
-            const posAuth = new Map<number, string>();
-            for (const u of orgUsers) {
-                const p = u.position?.trim();
-                if (p)
-                    posAuth.set(u.id, p);
-            }
-            const posMerged = new Map<number, string>();
-            for (const t of ttUsers) {
-                const fromTt = t.position?.trim();
-                if (fromTt)
-                    posMerged.set(t.id, fromTt);
-                else {
-                    const fb = posAuth.get(t.id);
-                    if (fb)
-                        posMerged.set(t.id, fb);
+                if (cancelled)
+                    return;
+                const weekly = new Map<number, number>();
+                for (const r of ttUsers) {
+                    if (r.weekly_capacity_hours == null)
+                        continue;
+                    const w = typeof r.weekly_capacity_hours === 'number'
+                        ? r.weekly_capacity_hours
+                        : parseFloat(String(r.weekly_capacity_hours).replace(',', '.'));
+                    if (Number.isFinite(w) && w > 0)
+                        weekly.set(r.id, w);
                 }
-            }
-            for (const mem of d.members) {
-                if (!posMerged.has(mem.auth_user_id)) {
-                    const fb = posAuth.get(mem.auth_user_id);
-                    if (fb)
-                        posMerged.set(mem.auth_user_id, fb);
+                const posAuth = new Map<number, string>();
+                for (const u of orgUsers) {
+                    const p = u.position?.trim();
+                    if (p)
+                        posAuth.set(u.id, p);
                 }
-            }
-            setProjectTeamPositionById(posMerged);
-            setTeamProfileWeeklyById(weekly);
-            setProjectTeamWl(d);
-            setProjectTeamLoad('ok');
-        })
+                const posMerged = new Map<number, string>();
+                for (const t of ttUsers) {
+                    const fromTt = t.position?.trim();
+                    if (fromTt)
+                        posMerged.set(t.id, fromTt);
+                    else {
+                        const fb = posAuth.get(t.id);
+                        if (fb)
+                            posMerged.set(t.id, fb);
+                    }
+                }
+                for (const mem of d.members) {
+                    if (!posMerged.has(mem.auth_user_id)) {
+                        const fb = posAuth.get(mem.auth_user_id);
+                        if (fb)
+                            posMerged.set(mem.auth_user_id, fb);
+                    }
+                }
+                setProjectTeamPositionById(posMerged);
+                setTeamProfileWeeklyById(weekly);
+                setProjectTeamWl(d);
+                setProjectTeamLoad('ok');
+            })
             .catch(() => {
-            if (!cancelled) {
-                setProjectTeamWl(null);
-                setTeamProfileWeeklyById(new Map());
-                setProjectTeamPositionById(new Map());
-                setProjectTeamLoad('error');
-            }
-        });
+                if (!cancelled) {
+                    setProjectTeamWl(null);
+                    setTeamProfileWeeklyById(new Map());
+                    setProjectTeamPositionById(new Map());
+                    setProjectTeamLoad('error');
+                }
+            });
         return () => {
             cancelled = true;
         };
@@ -1631,386 +1631,386 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
         return r.from === detailPeriod.from && r.to === detailPeriod.to;
     });
     return (<div className="pdp pdp--ready">
-    <header className="pdp__header">
-        <div className="pdp__header-left">
-          <AppBackButton onClick={onBackToProjects} label={backToProjectsLabel} ariaLabel={backToProjectsLabel}/>
-          <AppHomeLogo withSeparator />
-          <div className="pdp__title-block">
-            <div className="pdp__title-row">
-              <h1 className="pdp__title">{project.name} — ({project.client})</h1>
-              <span className="pdp__type-badge" style={{ color: typeMeta.color, background: typeMeta.bg }}>
-                {ttProjectTypeLabel(project.type, t)}
-              </span>
-              {project.status === 'paused' ? (<span className="pdp__type-badge" style={{ color: '#b45309', background: '#fffbeb' }}>
-                  На паузе
-                </span>) : null}
-              {project.status === 'archived' ? (<span className="pdp__type-badge" style={{ color: '#64748b', background: '#f1f5f9' }}>
-                  Архив
-                </span>) : null}
+        <header className="pdp__header">
+            <div className="pdp__header-left">
+                <AppBackButton onClick={onBackToProjects} label={backToProjectsLabel} ariaLabel={backToProjectsLabel} />
+                <AppHomeLogo withSeparator />
+                <div className="pdp__title-block">
+                    <div className="pdp__title-row">
+                        <h1 className="pdp__title">{project.name} — ({project.client})</h1>
+                        <span className="pdp__type-badge" style={{ color: typeMeta.color, background: typeMeta.bg }}>
+                            {ttProjectTypeLabel(project.type, t)}
+                        </span>
+                        {project.status === 'paused' ? (<span className="pdp__type-badge" style={{ color: '#b45309', background: '#fffbeb' }}>
+                            На паузе
+                        </span>) : null}
+                        {project.status === 'archived' ? (<span className="pdp__type-badge" style={{ color: '#64748b', background: '#f1f5f9' }}>
+                            Архив
+                        </span>) : null}
+                    </div>
+                </div>
             </div>
-          </div>
-        </div>
-        <div className="pdp__header-right app-page-header-end">
-          <AppPageSettings />
-          <button type="button" className="pdp__edit-btn" onClick={() => void openProjectEdit()} disabled={!canManageProjects || actionBusy} title={!canManageProjects ? 'Доступно администраторам и партнёру' : 'Редактировать проект'}>
-            <IcoEdit /> Редактировать
-          </button>
-          <div className="pdp__actions-wrap" ref={actionsMenuRef}>
-            <button type="button" className={`pdp__actions-btn${actionsOpen ? ' pdp__actions-btn--open' : ''}`} onClick={() => setActionsOpen(v => !v)} disabled={actionBusy} aria-expanded={actionsOpen}>
-              Действия <IcoChevron />
-            </button>
-            {actionsOpen && (<div className="pdp__actions-menu" role="menu">
-                {canManageProjects && (<>
-                    {project.status !== 'archived' && (<button type="button" className="pdp__actions-item" role="menuitem" disabled={actionBusy} onClick={() => void handlePauseProject()}>
-                        {project.status === 'paused' ? 'Снять с паузы' : 'На паузу'}
-                      </button>)}
-                    <button type="button" className="pdp__actions-item" role="menuitem" disabled={actionBusy} onClick={() => void handleArchiveProject()}>
-                      {project.status === 'archived' ? 'Восстановить' : 'Архивировать'}
-                    </button>
-                    <button type="button" className="pdp__actions-item" role="menuitem" disabled={actionBusy} onClick={() => void handleDuplicateProject()}>
-                      Дублировать
-                    </button>
-                  </>)}
-                <button type="button" className="pdp__actions-item" role="menuitem" onClick={handleExportProject}>
-                  Экспорт
+            <div className="pdp__header-right app-page-header-end">
+                <AppPageSettings />
+                <button type="button" className="pdp__edit-btn" onClick={() => void openProjectEdit()} disabled={!canManageProjects || actionBusy} title={!canManageProjects ? 'Доступно администраторам и партнёру' : 'Редактировать проект'}>
+                    <IcoEdit /> Редактировать
                 </button>
-                {canManageProjects && (<button type="button" className="pdp__actions-item pdp__actions-item--danger" role="menuitem" disabled={actionBusy} onClick={() => void handleDeleteProject()}>
-                    Удалить
-                  </button>)}
-              </div>)}
-          </div>
-        </div>
-      </header>
-
-      <div className={`pdp__body${dashboardRefreshing ? ' pdp__body--refreshing' : ''}`}>
-        {dashboardError ? (<div className="pdp__dashboard-alert" role="alert">
-            <p>Не удалось загрузить дашборд проекта: {dashboardError}</p>
-          </div>) : null}
-
-      <div className="pdp__period-bar" role="group" aria-label="Период дашборда и команды">
-        <span className="pdp__period-bar-label">Период</span>
-        <DatePicker
-          value={detailPeriod.from}
-          max={detailPeriod.to}
-          onChange={(iso) => {
-            const to = iso > detailPeriod.to ? iso : detailPeriod.to;
-            onDetailPeriodChange({ from: iso, to });
-          }}
-          portal
-          iconAfterLabel
-          aria-labelledby={`${detailPeriodRangeId}-from`}
-          buttonClassName="pdp__period-date-picker-btn"
-          title="Дата с"
-        />
-        <span id={`${detailPeriodRangeId}-from`} className="pdp__period-sr-only">Дата с</span>
-        <span className="pdp__period-sep" aria-hidden>—</span>
-        <DatePicker
-          value={detailPeriod.to}
-          min={detailPeriod.from}
-          onChange={(iso) => {
-            const from = iso < detailPeriod.from ? iso : detailPeriod.from;
-            onDetailPeriodChange({ from, to: iso });
-          }}
-          portal
-          iconAfterLabel
-          aria-labelledby={`${detailPeriodRangeId}-to`}
-          buttonClassName="pdp__period-date-picker-btn"
-          title="Дата по"
-        />
-        <span id={`${detailPeriodRangeId}-to`} className="pdp__period-sr-only">Дата по</span>
-        <div className="pdp__period-actions">
-          {memberFilterOptions.length > 0 ? (<SearchableSelect<{ id: string; name: string }> portalDropdown className="pdp__period-member-select" buttonClassName="pdp__period-member-btn" aria-label="Фильтр по сотруднику" placeholder="Все сотрудники" value={selectedMemberId} items={[{ id: '', name: 'Все сотрудники' }, ...memberFilterOptions]} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.name} onSelect={(o) => setSelectedMemberId(o.id)}/>) : null}
-          <div className="pdp__period-preset-wrap" ref={periodMenuRef}>
-            <button type="button" className={`pdp__period-preset-btn${periodMenuOpen ? ' pdp__period-preset-btn--open' : ''}`} onClick={() => setPeriodMenuOpen((v) => !v)} aria-expanded={periodMenuOpen} aria-haspopup="menu">
-              {activePeriodPreset?.label ?? 'Период'}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
-            </button>
-            {periodMenuOpen ? (<div className="pdp__period-preset-menu" role="menu">
-                {PDP_PERIOD_PRESETS.map((p) => (<button key={p.id} type="button" role="menuitemradio" aria-checked={activePeriodPreset?.id === p.id} className={`pdp__period-preset-item${activePeriodPreset?.id === p.id ? ' pdp__period-preset-item--active' : ''}`} onClick={() => {
-                        onDetailPeriodChange(periodPresetToRange(p.id));
-                        setPeriodMenuOpen(false);
-                    }}>
-                    {p.label}
-                  </button>))}
-              </div>) : null}
-          </div>
-        </div>
-      </div>
-
-      <ProjectPartnerReportPanel projectId={project.id} detailPeriod={detailPeriod} currentUserId={currentUserId}/>
-
-    <Suspense fallback={<div className="pdp__chart-card pdp__chart-card--loading" aria-hidden />}>
-        <ProjectDetailCharts
-          chartTab={chartTab}
-          onChartTabChange={setChartTab}
-          dashboardOk={dashboardOk}
-          progressMode={progressMode}
-          progressData={progressData}
-          hoursData={hoursData}
-          hoverIdx={hoverIdx}
-          onHoverIdxChange={setHoverIdx}
-          thisWeekIdx={thisWeekIdx}
-          monthBoundaries={monthBoundaries}
-          hasBudget={hasBudget}
-          budgetLimitForChart={budgetLimitForChart}
-          displayCurrency={displayCurrency}
-          hoursChartStacked={hoursChartStacked}
-          yTicks={yTicks}
-          maxVal={maxVal}
-        />
-      </Suspense>
-    <div className="pdp__stats">
-    <div className="pdp__stat-card">
-            <p className="pdp__stat-label">Всего часов</p>
-            <p className="pdp__stat-value">
-              {displayTotalHours != null ? formatDecimalHoursAsHm(displayTotalHours) : '—'}
-            </p>
-            <div className="pdp__stat-rows">
-              <div className="pdp__stat-row">
-                <span>Оплачиваемые</span>
-                <span className="pdp__stat-row-val">
-                  {displayBillableHours != null ? formatDecimalHoursAsHm(displayBillableHours) : '—'}
-                </span>
-              </div>
-              <div className="pdp__stat-row">
-                <span>Неоплачиваемые</span>
-                <span className="pdp__stat-row-val">
-                  {displayNonBillHours != null ? formatDecimalHoursAsHm(displayNonBillHours) : '—'}
-                </span>
-              </div>
+                <div className="pdp__actions-wrap" ref={actionsMenuRef}>
+                    <button type="button" className={`pdp__actions-btn${actionsOpen ? ' pdp__actions-btn--open' : ''}`} onClick={() => setActionsOpen(v => !v)} disabled={actionBusy} aria-expanded={actionsOpen}>
+                        Действия <IcoChevron />
+                    </button>
+                    {actionsOpen && (<div className="pdp__actions-menu" role="menu">
+                        {canManageProjects && (<>
+                            {project.status !== 'archived' && (<button type="button" className="pdp__actions-item" role="menuitem" disabled={actionBusy} onClick={() => void handlePauseProject()}>
+                                {project.status === 'paused' ? 'Снять с паузы' : 'На паузу'}
+                            </button>)}
+                            <button type="button" className="pdp__actions-item" role="menuitem" disabled={actionBusy} onClick={() => void handleArchiveProject()}>
+                                {project.status === 'archived' ? 'Восстановить' : 'Архивировать'}
+                            </button>
+                            <button type="button" className="pdp__actions-item" role="menuitem" disabled={actionBusy} onClick={() => void handleDuplicateProject()}>
+                                Дублировать
+                            </button>
+                        </>)}
+                        <button type="button" className="pdp__actions-item" role="menuitem" onClick={handleExportProject}>
+                            Экспорт
+                        </button>
+                        {canManageProjects && (<button type="button" className="pdp__actions-item pdp__actions-item--danger" role="menuitem" disabled={actionBusy} onClick={() => void handleDeleteProject()}>
+                            Удалить
+                        </button>)}
+                    </div>)}
+                </div>
             </div>
-          </div>
-          {dashboardOk && (<div className="pdp__stat-card">
-              <p className="pdp__stat-label">Расходы ({displayCurrency})</p>
-              <p className="pdp__stat-value">{fmtAmt(expenseEquivalentTotal, displayCurrency)}</p>
-              <p className="pdp__stat-hint">
-                Эквивалент заявок (как в модуле расходов) · {expenseCount} заявок (одобрено / оплачено / закрыто) · период как у фильтра дат выше
-              </p>
-              {expenseAmountUzs > 0 ? (<p className="pdp__stat-hint pdp__stat-hint--muted">
-                  В сумах (UZS, без пересчёта по курсу):{' '}
-                  {fmtAmt(expenseAmountUzs, 'UZS')}
-                </p>) : null}
-              {expenseCount === 0 && expenseEquivalentTotal === 0 && expenseAmountUzs === 0 ? (<p className="pdp__stat-hint pdp__stat-hint--muted">
-                  Если заявки есть, убедитесь, что в них указан этот проект и что сервис расходов доступен бэкенду
-                  учёта времени.
-                </p>) : null}
-            </div>)}
-    <div className="pdp__stat-card">
-            <p className="pdp__stat-label">
-              Остаток бюджета
-              {pctDenom != null && pctDenom > 0 && remaining != null && (overspendPct != null ? (<span className="pdp__stat-label-pct--over">
-                    &nbsp;(перерасход {overspendPct}%)
-                  </span>) : remainingPct != null ? (<span className="pdp__stat-label-pct">
-                    &nbsp;(остаток +{remainingPct}%)
-                  </span>) : null)}
-              {isOver && <span className="pdp__stat-info"><IcoInfo /></span>}
-            </p>
-            {remaining != null ? (<p className={`pdp__stat-value${isOver ? ' pdp__stat-value--red' : ''}`}>
-                {isOver ? '−' : ''}
-                {apiBudget != null
-                    ? fmtDashboardBudgetSpentRemaining(apiBudget, Math.abs(remaining))
-                    : fmtAmt(Math.abs(remaining), displayCurrency)}
-              </p>) : (<p className="pdp__stat-value pdp__stat-value--na">Без бюджета</p>)}
-            {hasBudget && (<div className="pdp__stat-budget-block">
-                {budgetDual ? (<>
-                  <div className="pdp__stat-budget-row">
-                    <span className="pdp__stat-budget-label">Лимит (деньги) за период</span>
-                    <span className="pdp__stat-budget-val">
-                      {fmtDashboardBudgetValue(apiBudget!)}
-                    </span>
-                  </div>
-                  {apiBudget != null && (dualMoneyUsedRawPct != null || apiBudget.percentUsedMoney != null && Number.isFinite(apiBudget.percentUsedMoney) || apiBudget.money?.percentUsed != null) && (<p className="pdp__stat-hint">
-                      Использовано (деньги):{' '}
-                      {Math.round(dualMoneyUsedRawPct ?? (apiBudget.percentUsedMoney ?? apiBudget.money?.percentUsed) ?? 0)}%
-                    </p>)}
-                  <div className="pdp__budget-bar">
-                    <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${dualMoneyUsedRawPct != null ? Math.min(100, dualMoneyUsedRawPct) : Math.min(100, budgetDual.money.budget > 0 ? (budgetDual.money.spent / budgetDual.money.budget) * 100 : 0)}%` }}/>
-                    {dualMoneyUsedRawPct != null && dualMoneyUsedRawPct > 100 ? (<div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${Math.min(100, dualMoneyUsedRawPct - 100)}%` }}/>) : null}
-                  </div>
-                  <p className="pdp__stat-hint pdp__stat-hint--muted">
-                    Потрачено (деньги):{' '}
-                    {fmtDashboardBudgetSpentRemaining(apiBudget!, budgetDual.money.spent)} · {apiBudget!.currency}
-                  </p>
-                  <div className="pdp__stat-budget-row" style={{ marginTop: '0.65rem' }}>
-                    <span className="pdp__stat-budget-label">Лимит (часы) за период</span>
-                    <span className="pdp__stat-budget-val">
-                      {formatDecimalHoursAsHm(budgetDual.hours.budget)}
-                    </span>
-                  </div>
-                  {apiBudget != null && (dualHoursUsedRawPct != null || apiBudget.percentUsedHours != null && Number.isFinite(apiBudget.percentUsedHours) || apiBudget.hours?.percentUsed != null) && (<p className="pdp__stat-hint">
-                      Использовано (часы):{' '}
-                      {Math.round(dualHoursUsedRawPct ?? (apiBudget.percentUsedHours ?? apiBudget.hours?.percentUsed) ?? 0)}%
-                    </p>)}
-                  <div className="pdp__budget-bar">
-                    <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${dualHoursUsedRawPct != null ? Math.min(100, dualHoursUsedRawPct) : Math.min(100, budgetDual.hours.budget > 0 ? (budgetDual.hours.spent / budgetDual.hours.budget) * 100 : 0)}%` }}/>
-                    {dualHoursUsedRawPct != null && dualHoursUsedRawPct > 100 ? (<div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${Math.min(100, dualHoursUsedRawPct - 100)}%` }}/>) : null}
-                  </div>
-                  <p className="pdp__stat-hint pdp__stat-hint--muted">
-                    Списано (часы): {formatDecimalHoursAsHm(budgetDual.hours.spent)}
-                  </p>
-                  {apiBudget != null && (dualMoneyUsedRawPct != null || dualHoursUsedRawPct != null || apiBudget.percentUsed != null) && (<p className="pdp__stat-hint">
-                      Ориентир по лимиту (макс. из двух):{' '}
-                      {Math.round(Math.max(dualMoneyUsedRawPct ?? 0, dualHoursUsedRawPct ?? 0, apiBudget.percentUsed ?? 0))}%
-                    </p>)}
-                </>) : (<>
-                  <div className="pdp__stat-budget-row">
-                    <span className="pdp__stat-budget-label">
-                      {apiBudget != null ? `Лимит (${apiBudget.budgetBy === 'hours' ? 'часы' : 'деньги'}) за период` : 'Общий бюджет'}
-                    </span>
-                    <span className="pdp__stat-budget-val">
-                      {apiBudget != null
-                        ? fmtDashboardBudgetValue(apiBudget)
-                        : fmtAmt(project.budget!, displayCurrency)}
-                    </span>
-                  </div>
-                  {apiBudget != null && (singleBudgetUsedRawPct != null || apiBudget.percentUsed != null && Number.isFinite(apiBudget.percentUsed)) && (<p className="pdp__stat-hint">
-                      Использовано лимита:{' '}
-                      {Math.round(singleBudgetUsedRawPct ?? apiBudget.percentUsed ?? 0)}%
-                    </p>)}
-                  <div className="pdp__budget-bar">
-                    <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${spentPct}%` }}/>
-                    {isOver && <div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${overPct}%` }}/>}
-                  </div>
-                  {apiBudget != null ? (<p className="pdp__stat-hint pdp__stat-hint--muted">
-                      Потрачено за выбранный период:{' '}
-                      {fmtDashboardBudgetSpentRemaining(apiBudget, apiBudget.spent)}
-                      {apiBudget.budgetBy === 'money' ? ` · валюта лимита: ${apiBudget.currency}` : null}
-                    </p>) : null}
-                </>)}
-                {budgetBurnIncludesExpenses && (<p className="pdp__stat-hint">
-                    В расход бюджета включена сумма расходов ({displayCurrency}).
-                  </p>)}
-              </div>)}
-          </div>
-    <div className="pdp__stat-card">
-            <p className="pdp__stat-label">Внутренние затраты</p>
-            {dashboardOk && !internalCostsComplete ? (<>
-                <p className="pdp__stat-value">{fmtAmt(internalCostAmount, displayCurrency)}</p>
-                <p className="pdp__stat-hint">
-                  {internalCostAmount > 0
-                ? 'Себестоимость посчитана не для всех часов: задайте ставки «себестоимость» всем участникам с часами по проекту.'
-                : 'Себестоимость не задана для части команды — по этим часам затраты считаются как 0.'}
-                </p>
-              </>) : internalCostAmount > 0 ? (<p className="pdp__stat-value">
-                {fmtAmt(internalCostAmount, displayCurrency)}
-              </p>) : dashboardOk && internalCostsComplete ? (<p className="pdp__stat-value">{fmtAmt(0, displayCurrency)}</p>) : (<>
-                <p className="pdp__stat-value pdp__stat-value--na">N/A</p>
-                {!dashboardOk && !dashboardError && (<p className="pdp__stat-hint">
-                    Внутренние ставки не заданы для некоторых сотрудников.
-                  </p>)}
-                {dashboardError ? (<p className="pdp__stat-hint">Данные дашборда недоступны.</p>) : null}
-              </>)}
-          </div>
-        {canManageInvoices && (<div className="pdp__stat-card">
-              <p className="pdp__stat-label">Не выставлено счётов</p>
-              <p className="pdp__stat-value">{fmtAmt(unbilled, displayCurrency)}</p>
-              <button type="button" className="pdp__invoice-btn">Создать счёт</button>
-            </div>)}
+        </header>
 
-        </div>
-    <div className="pdp__detail-block">
-          <nav className="pdp__detail-tabs" role="tablist">
-            {detailTabDefs.map(([id, label]) => (<button key={id} role="tab" aria-selected={detailTab === id} className={`pdp__detail-tab${detailTab === id ? ' pdp__detail-tab--active' : ''}`} onClick={() => setDetailTab(id)}>
-                {label}
-              </button>))}
-          </nav>
+        <div className={`pdp__body${dashboardRefreshing ? ' pdp__body--refreshing' : ''}`}>
+            {dashboardError ? (<div className="pdp__dashboard-alert" role="alert">
+                <p>Не удалось загрузить дашборд проекта: {dashboardError}</p>
+            </div>) : null}
 
-          {detailTab === 'tasks' && (<TasksPanel rows={displayTaskData.billable} nonBillableRows={displayTaskData.nonBillable} totalHours={displayBillableHours ?? 0} totalAmt={displayBillableAmount} currency={displayCurrency} periodSubtitle={tasksPanelSubtitle} breakdownHint={tasksBreakdownHint} onOpenMemberReport={openMemberDetailReport} onPreviewEntries={openProjectPeriodReport} activePeriodPresetId={activePeriodPreset?.id} activePeriodPresetLabel={activePeriodPreset?.label ?? (formatDetailPeriodLabel(detailPeriod) || 'Период')} onSelectPeriodPreset={handleTasksPeriodPreset} onExport={(format) => void handleTasksExport(format)} exportBusy={tasksExportBusy}/>)}
+            <div className="pdp__period-bar" role="group" aria-label="Период дашборда и команды">
+                <span className="pdp__period-bar-label">Период</span>
+                <DatePicker
+                    value={detailPeriod.from}
+                    max={detailPeriod.to}
+                    onChange={(iso) => {
+                        const to = iso > detailPeriod.to ? iso : detailPeriod.to;
+                        onDetailPeriodChange({ from: iso, to });
+                    }}
+                    portal
+                    iconAfterLabel
+                    aria-labelledby={`${detailPeriodRangeId}-from`}
+                    buttonClassName="pdp__period-date-picker-btn"
+                    title="Дата с"
+                />
+                <span id={`${detailPeriodRangeId}-from`} className="pdp__period-sr-only">Дата с</span>
+                <span className="pdp__period-sep" aria-hidden>—</span>
+                <DatePicker
+                    value={detailPeriod.to}
+                    min={detailPeriod.from}
+                    onChange={(iso) => {
+                        const from = iso < detailPeriod.from ? iso : detailPeriod.from;
+                        onDetailPeriodChange({ from, to: iso });
+                    }}
+                    portal
+                    iconAfterLabel
+                    aria-labelledby={`${detailPeriodRangeId}-to`}
+                    buttonClassName="pdp__period-date-picker-btn"
+                    title="Дата по"
+                />
+                <span id={`${detailPeriodRangeId}-to`} className="pdp__period-sr-only">Дата по</span>
+                <div className="pdp__period-actions">
+                    {memberFilterOptions.length > 0 ? (<SearchableSelect<{ id: string; name: string }> portalDropdown className="pdp__period-member-select" buttonClassName="pdp__period-member-btn" aria-label="Фильтр по сотруднику" placeholder="Все сотрудники" value={selectedMemberId} items={[{ id: '', name: 'Все сотрудники' }, ...memberFilterOptions]} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.name} onSelect={(o) => setSelectedMemberId(o.id)} />) : null}
+                    <div className="pdp__period-preset-wrap" ref={periodMenuRef}>
+                        <button type="button" className={`pdp__period-preset-btn${periodMenuOpen ? ' pdp__period-preset-btn--open' : ''}`} onClick={() => setPeriodMenuOpen((v) => !v)} aria-expanded={periodMenuOpen} aria-haspopup="menu">
+                            {activePeriodPreset?.label ?? 'Период'}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+                        {periodMenuOpen ? (<div className="pdp__period-preset-menu" role="menu">
+                            {PDP_PERIOD_PRESETS.map((p) => (<button key={p.id} type="button" role="menuitemradio" aria-checked={activePeriodPreset?.id === p.id} className={`pdp__period-preset-item${activePeriodPreset?.id === p.id ? ' pdp__period-preset-item--active' : ''}`} onClick={() => {
+                                onDetailPeriodChange(periodPresetToRange(p.id));
+                                setPeriodMenuOpen(false);
+                            }}>
+                                {p.label}
+                            </button>))}
+                        </div>) : null}
+                    </div>
+                </div>
+            </div>
 
-          {detailTab === 'team' &&
-            (projectTeamLoad === 'loading' ? (<div className="pdp__detail-loading" role="status">
-                <p>Загрузка команды…</p>
-              </div>) : projectTeamLoad === 'error' ? (<div className="pdp__detail-empty">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="10"/>
-                  <line x1="12" y1="8" x2="12" y2="12"/>
-                  <line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                <p>Не удалось загрузить данные команды за выбранный период.</p>
-              </div>) : projectTeamTotals && projectTeamWl ? (<div className="time-page__panel time-users pdp__team-workload">
-                <p className="pdp__team-workload__period">
-                  Период:{' '}
-                  <strong>
-                    {projectTeamWl.date_from} — {projectTeamWl.date_to}
-                  </strong>
-                  {projectTeamWl.project_name ? (<>
-                      {' '}
-                      · проект «{projectTeamWl.project_name}»
-                    </>) : null}
-                </p>
-                <TimeUsersSummary totals={projectTeamTotals}/>
-                {projectTeamUsers.length === 0 ? (<div className="pdp__detail-empty pdp__detail-empty--inset">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                      <circle cx="9" cy="7" r="4"/>
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
-                    <p>За период нет сотрудников с доступом к проекту и записями времени.</p>
-                    <p className="pdp__detail-empty-hint">
-                      Назначьте проект во вкладке «Пользователи» учёта времени («Доступ к проектам» в строке
-                      сотрудника) или добавьте часы по этому проекту в табеле.
+            <ProjectPartnerReportPanel projectId={project.id} detailPeriod={detailPeriod} currentUserId={currentUserId} />
+
+            <Suspense fallback={<div className="pdp__chart-card pdp__chart-card--loading" aria-hidden />}>
+                <ProjectDetailCharts
+                    chartTab={chartTab}
+                    onChartTabChange={setChartTab}
+                    dashboardOk={dashboardOk}
+                    progressMode={progressMode}
+                    progressData={progressData}
+                    hoursData={hoursData}
+                    hoverIdx={hoverIdx}
+                    onHoverIdxChange={setHoverIdx}
+                    thisWeekIdx={thisWeekIdx}
+                    monthBoundaries={monthBoundaries}
+                    hasBudget={hasBudget}
+                    budgetLimitForChart={budgetLimitForChart}
+                    displayCurrency={displayCurrency}
+                    hoursChartStacked={hoursChartStacked}
+                    yTicks={yTicks}
+                    maxVal={maxVal}
+                />
+            </Suspense>
+            <div className="pdp__stats">
+                <div className="pdp__stat-card">
+                    <p className="pdp__stat-label">Всего часов</p>
+                    <p className="pdp__stat-value">
+                        {displayTotalHours != null ? formatDecimalHoursAsHm(displayTotalHours) : '—'}
                     </p>
-                  </div>) : (<TimeUsersTable users={projectTeamUsers} openActionsId={teamActionsOpen} onActionsOpen={setTeamActionsOpen} onActionsClose={() => setTeamActionsOpen(null)}/>)}
-              </div>) : null)}
+                    <div className="pdp__stat-rows">
+                        <div className="pdp__stat-row">
+                            <span>Оплачиваемые</span>
+                            <span className="pdp__stat-row-val">
+                                {displayBillableHours != null ? formatDecimalHoursAsHm(displayBillableHours) : '—'}
+                            </span>
+                        </div>
+                        <div className="pdp__stat-row">
+                            <span>Неоплачиваемые</span>
+                            <span className="pdp__stat-row-val">
+                                {displayNonBillHours != null ? formatDecimalHoursAsHm(displayNonBillHours) : '—'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {dashboardOk && (<div className="pdp__stat-card">
+                    <p className="pdp__stat-label">Расходы ({displayCurrency})</p>
+                    <p className="pdp__stat-value">{fmtAmt(expenseEquivalentTotal, displayCurrency)}</p>
+                    <p className="pdp__stat-hint">
+                        Эквивалент заявок (как в модуле расходов) · {expenseCount} заявок (одобрено / оплачено / закрыто) · период как у фильтра дат выше
+                    </p>
+                    {expenseAmountUzs > 0 ? (<p className="pdp__stat-hint pdp__stat-hint--muted">
+                        В сумах (UZS, без пересчёта по курсу):{' '}
+                        {fmtAmt(expenseAmountUzs, 'UZS')}
+                    </p>) : null}
+                    {expenseCount === 0 && expenseEquivalentTotal === 0 && expenseAmountUzs === 0 ? (<p className="pdp__stat-hint pdp__stat-hint--muted">
+                        Если заявки есть, убедитесь, что в них указан этот проект и что сервис расходов доступен бэкенду
+                        учёта времени.
+                    </p>) : null}
+                </div>)}
+                <div className="pdp__stat-card">
+                    <p className="pdp__stat-label">
+                        Остаток бюджета
+                        {pctDenom != null && pctDenom > 0 && remaining != null && (overspendPct != null ? (<span className="pdp__stat-label-pct--over">
+                            &nbsp;(перерасход {overspendPct}%)
+                        </span>) : remainingPct != null ? (<span className="pdp__stat-label-pct">
+                            &nbsp;(остаток +{remainingPct}%)
+                        </span>) : null)}
+                        {isOver && <span className="pdp__stat-info"><IcoInfo /></span>}
+                    </p>
+                    {remaining != null ? (<p className={`pdp__stat-value${isOver ? ' pdp__stat-value--red' : ''}`}>
+                        {isOver ? '−' : ''}
+                        {apiBudget != null
+                            ? fmtDashboardBudgetSpentRemaining(apiBudget, Math.abs(remaining))
+                            : fmtAmt(Math.abs(remaining), displayCurrency)}
+                    </p>) : (<p className="pdp__stat-value pdp__stat-value--na">Без бюджета</p>)}
+                    {hasBudget && (<div className="pdp__stat-budget-block">
+                        {budgetDual ? (<>
+                            <div className="pdp__stat-budget-row">
+                                <span className="pdp__stat-budget-label">Лимит (деньги) за период</span>
+                                <span className="pdp__stat-budget-val">
+                                    {fmtDashboardBudgetValue(apiBudget!)}
+                                </span>
+                            </div>
+                            {apiBudget != null && (dualMoneyUsedRawPct != null || apiBudget.percentUsedMoney != null && Number.isFinite(apiBudget.percentUsedMoney) || apiBudget.money?.percentUsed != null) && (<p className="pdp__stat-hint">
+                                Использовано (деньги):{' '}
+                                {Math.round(dualMoneyUsedRawPct ?? (apiBudget.percentUsedMoney ?? apiBudget.money?.percentUsed) ?? 0)}%
+                            </p>)}
+                            <div className="pdp__budget-bar">
+                                <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${dualMoneyUsedRawPct != null ? Math.min(100, dualMoneyUsedRawPct) : Math.min(100, budgetDual.money.budget > 0 ? (budgetDual.money.spent / budgetDual.money.budget) * 100 : 0)}%` }} />
+                                {dualMoneyUsedRawPct != null && dualMoneyUsedRawPct > 100 ? (<div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${Math.min(100, dualMoneyUsedRawPct - 100)}%` }} />) : null}
+                            </div>
+                            <p className="pdp__stat-hint pdp__stat-hint--muted">
+                                Потрачено (деньги):{' '}
+                                {fmtDashboardBudgetSpentRemaining(apiBudget!, budgetDual.money.spent)} · {apiBudget!.currency}
+                            </p>
+                            <div className="pdp__stat-budget-row" style={{ marginTop: '0.65rem' }}>
+                                <span className="pdp__stat-budget-label">Лимит (часы) за период</span>
+                                <span className="pdp__stat-budget-val">
+                                    {formatDecimalHoursAsHm(budgetDual.hours.budget)}
+                                </span>
+                            </div>
+                            {apiBudget != null && (dualHoursUsedRawPct != null || apiBudget.percentUsedHours != null && Number.isFinite(apiBudget.percentUsedHours) || apiBudget.hours?.percentUsed != null) && (<p className="pdp__stat-hint">
+                                Использовано (часы):{' '}
+                                {Math.round(dualHoursUsedRawPct ?? (apiBudget.percentUsedHours ?? apiBudget.hours?.percentUsed) ?? 0)}%
+                            </p>)}
+                            <div className="pdp__budget-bar">
+                                <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${dualHoursUsedRawPct != null ? Math.min(100, dualHoursUsedRawPct) : Math.min(100, budgetDual.hours.budget > 0 ? (budgetDual.hours.spent / budgetDual.hours.budget) * 100 : 0)}%` }} />
+                                {dualHoursUsedRawPct != null && dualHoursUsedRawPct > 100 ? (<div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${Math.min(100, dualHoursUsedRawPct - 100)}%` }} />) : null}
+                            </div>
+                            <p className="pdp__stat-hint pdp__stat-hint--muted">
+                                Списано (часы): {formatDecimalHoursAsHm(budgetDual.hours.spent)}
+                            </p>
+                            {apiBudget != null && (dualMoneyUsedRawPct != null || dualHoursUsedRawPct != null || apiBudget.percentUsed != null) && (<p className="pdp__stat-hint">
+                                Ориентир по лимиту (макс. из двух):{' '}
+                                {Math.round(Math.max(dualMoneyUsedRawPct ?? 0, dualHoursUsedRawPct ?? 0, apiBudget.percentUsed ?? 0))}%
+                            </p>)}
+                        </>) : (<>
+                            <div className="pdp__stat-budget-row">
+                                <span className="pdp__stat-budget-label">
+                                    {apiBudget != null ? `Лимит (${apiBudget.budgetBy === 'hours' ? 'часы' : 'деньги'}) за период` : 'Общий бюджет'}
+                                </span>
+                                <span className="pdp__stat-budget-val">
+                                    {apiBudget != null
+                                        ? fmtDashboardBudgetValue(apiBudget)
+                                        : fmtAmt(project.budget!, displayCurrency)}
+                                </span>
+                            </div>
+                            {apiBudget != null && (singleBudgetUsedRawPct != null || apiBudget.percentUsed != null && Number.isFinite(apiBudget.percentUsed)) && (<p className="pdp__stat-hint">
+                                Использовано лимита:{' '}
+                                {Math.round(singleBudgetUsedRawPct ?? apiBudget.percentUsed ?? 0)}%
+                            </p>)}
+                            <div className="pdp__budget-bar">
+                                <div className="pdp__budget-bar-fill pdp__budget-bar-fill--blue" style={{ width: `${spentPct}%` }} />
+                                {isOver && <div className="pdp__budget-bar-fill pdp__budget-bar-fill--red" style={{ width: `${overPct}%` }} />}
+                            </div>
+                            {apiBudget != null ? (<p className="pdp__stat-hint pdp__stat-hint--muted">
+                                Потрачено за выбранный период:{' '}
+                                {fmtDashboardBudgetSpentRemaining(apiBudget, apiBudget.spent)}
+                                {apiBudget.budgetBy === 'money' ? ` · валюта лимита: ${apiBudget.currency}` : null}
+                            </p>) : null}
+                        </>)}
+                        {budgetBurnIncludesExpenses && (<p className="pdp__stat-hint">
+                            В расход бюджета включена сумма расходов ({displayCurrency}).
+                        </p>)}
+                    </div>)}
+                </div>
+                <div className="pdp__stat-card">
+                    <p className="pdp__stat-label">Внутренние затраты</p>
+                    {dashboardOk && !internalCostsComplete ? (<>
+                        <p className="pdp__stat-value">{fmtAmt(internalCostAmount, displayCurrency)}</p>
+                        <p className="pdp__stat-hint">
+                            {internalCostAmount > 0
+                                ? 'Себестоимость посчитана не для всех часов: задайте ставки «себестоимость» всем участникам с часами по проекту.'
+                                : 'Себестоимость не задана для части команды — по этим часам затраты считаются как 0.'}
+                        </p>
+                    </>) : internalCostAmount > 0 ? (<p className="pdp__stat-value">
+                        {fmtAmt(internalCostAmount, displayCurrency)}
+                    </p>) : dashboardOk && internalCostsComplete ? (<p className="pdp__stat-value">{fmtAmt(0, displayCurrency)}</p>) : (<>
+                        <p className="pdp__stat-value pdp__stat-value--na">N/A</p>
+                        {!dashboardOk && !dashboardError && (<p className="pdp__stat-hint">
+                            Внутренние ставки не заданы для некоторых сотрудников.
+                        </p>)}
+                        {dashboardError ? (<p className="pdp__stat-hint">Данные дашборда недоступны.</p>) : null}
+                    </>)}
+                </div>
+                {canManageInvoices && (<div className="pdp__stat-card">
+                    <p className="pdp__stat-label">Не выставлено счётов</p>
+                    <p className="pdp__stat-value">{fmtAmt(unbilled, displayCurrency)}</p>
+                    <button type="button" className="pdp__invoice-btn">Создать счёт</button>
+                </div>)}
 
-          {detailTab === 'invoices' && (dashboard != null && dashboard.invoices.length > 0 ? (<div className="pdp__tasks">
-                <table className="pdp__tasks-table">
-                  <thead>
-                    <tr className="pdp__tasks-thead">
-                      <th className="pdp__tasks-th pdp__tasks-th--name">Дата</th>
-                      <th className="pdp__tasks-th pdp__tasks-th--amt">Сумма</th>
-                      <th className="pdp__tasks-th pdp__tasks-th--name">Статус</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dashboard.invoices.map((inv) => (<tr key={inv.id} className="pdp__tasks-row">
-                        <td className="pdp__tasks-td pdp__tasks-td--name">
-                          {inv.issuedAt
-                    ? new Date(inv.issuedAt).toLocaleDateString('ru-RU')
-                    : '—'}
-                        </td>
-                        <td className="pdp__tasks-td pdp__tasks-td--amt">
-                          {fmtAmt(inv.amount, inv.currency || displayCurrency)}
-                        </td>
-                        <td className="pdp__tasks-td pdp__tasks-td--name">
-                          {inv.status
-                    ? (INVOICE_STATUS_LABELS[inv.status] ?? inv.status)
-                    : '—'}
-                        </td>
-                      </tr>))}
-                  </tbody>
-                </table>
-              </div>) : (<div className="pdp__detail-empty">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2"/>
-                  <line x1="8" y1="21" x2="16" y2="21"/>
-                  <line x1="12" y1="17" x2="12" y2="21"/>
-                </svg>
-                <p>Счета для этого проекта не созданы</p>
-              </div>))}
+            </div>
+            <div className="pdp__detail-block">
+                <nav className="pdp__detail-tabs" role="tablist">
+                    {detailTabDefs.map(([id, label]) => (<button key={id} role="tab" aria-selected={detailTab === id} className={`pdp__detail-tab${detailTab === id ? ' pdp__detail-tab--active' : ''}`} onClick={() => setDetailTab(id)}>
+                        {label}
+                    </button>))}
+                </nav>
 
-          {detailTab === 'duplicates' && canManageProjects ? (
-            <ProjectDuplicatesPanel
-              clientId={project.clientId}
-              projectId={project.id}
-              dateFrom={detailPeriod.from.slice(0, 10)}
-              dateTo={detailPeriod.to.slice(0, 10)}
-              onChanged={onProjectRefresh}
-            />
-          ) : null}
+                {detailTab === 'tasks' && (<TasksPanel rows={displayTaskData.billable} nonBillableRows={displayTaskData.nonBillable} totalHours={displayBillableHours ?? 0} totalAmt={displayBillableAmount} currency={displayCurrency} periodSubtitle={tasksPanelSubtitle} breakdownHint={tasksBreakdownHint} onOpenMemberReport={openMemberDetailReport} onPreviewEntries={openProjectPeriodReport} activePeriodPresetId={activePeriodPreset?.id} activePeriodPresetLabel={activePeriodPreset?.label ?? (formatDetailPeriodLabel(detailPeriod) || 'Период')} onSelectPeriodPreset={handleTasksPeriodPreset} onExport={(format) => void handleTasksExport(format)} exportBusy={tasksExportBusy} />)}
+
+                {detailTab === 'team' &&
+                    (projectTeamLoad === 'loading' ? (<div className="pdp__detail-loading" role="status">
+                        <p>Загрузка команды…</p>
+                    </div>) : projectTeamLoad === 'error' ? (<div className="pdp__detail-empty">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                        </svg>
+                        <p>Не удалось загрузить данные команды за выбранный период.</p>
+                    </div>) : projectTeamTotals && projectTeamWl ? (<div className="time-page__panel time-users pdp__team-workload">
+                        <p className="pdp__team-workload__period">
+                            Период:{' '}
+                            <strong>
+                                {projectTeamWl.date_from} — {projectTeamWl.date_to}
+                            </strong>
+                            {projectTeamWl.project_name ? (<>
+                                {' '}
+                                · проект «{projectTeamWl.project_name}»
+                            </>) : null}
+                        </p>
+                        <TimeUsersSummary totals={projectTeamTotals} />
+                        {projectTeamUsers.length === 0 ? (<div className="pdp__detail-empty pdp__detail-empty--inset">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                            <p>За период нет сотрудников с доступом к проекту и записями времени.</p>
+                            <p className="pdp__detail-empty-hint">
+                                Назначьте проект во вкладке «Пользователи» учёта времени («Доступ к проектам» в строке
+                                сотрудника) или добавьте часы по этому проекту в табеле.
+                            </p>
+                        </div>) : (<TimeUsersTable users={projectTeamUsers} openActionsId={teamActionsOpen} onActionsOpen={setTeamActionsOpen} onActionsClose={() => setTeamActionsOpen(null)} />)}
+                    </div>) : null)}
+
+                {detailTab === 'invoices' && (dashboard != null && dashboard.invoices.length > 0 ? (<div className="pdp__tasks">
+                    <table className="pdp__tasks-table">
+                        <thead>
+                            <tr className="pdp__tasks-thead">
+                                <th className="pdp__tasks-th pdp__tasks-th--name">Дата</th>
+                                <th className="pdp__tasks-th pdp__tasks-th--amt">Сумма</th>
+                                <th className="pdp__tasks-th pdp__tasks-th--name">Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {dashboard.invoices.map((inv) => (<tr key={inv.id} className="pdp__tasks-row">
+                                <td className="pdp__tasks-td pdp__tasks-td--name">
+                                    {inv.issuedAt
+                                        ? new Date(inv.issuedAt).toLocaleDateString('ru-RU')
+                                        : '—'}
+                                </td>
+                                <td className="pdp__tasks-td pdp__tasks-td--amt">
+                                    {fmtAmt(inv.amount, inv.currency || displayCurrency)}
+                                </td>
+                                <td className="pdp__tasks-td pdp__tasks-td--name">
+                                    {inv.status
+                                        ? (INVOICE_STATUS_LABELS[inv.status] ?? inv.status)
+                                        : '—'}
+                                </td>
+                            </tr>))}
+                        </tbody>
+                    </table>
+                </div>) : (<div className="pdp__detail-empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" />
+                        <line x1="8" y1="21" x2="16" y2="21" />
+                        <line x1="12" y1="17" x2="12" y2="21" />
+                    </svg>
+                    <p>Счета для этого проекта не созданы</p>
+                </div>))}
+
+                {detailTab === 'duplicates' && canManageProjects ? (
+                    <ProjectDuplicatesPanel
+                        clientId={project.clientId}
+                        projectId={project.id}
+                        dateFrom={detailPeriod.from.slice(0, 10)}
+                        dateTo={detailPeriod.to.slice(0, 10)}
+                        onChanged={onProjectRefresh}
+                    />
+                ) : null}
+            </div>
+
         </div>
-
-      </div>
-    {editProjectRow && editClientRow && (<ClientProjectModal mode="edit" fixedClientId={project.clientId} initial={editProjectRow} clientsForPicker={[editClientRow]} onClose={() => {
-                setEditProjectRow(null);
-                setEditClientRow(null);
-            }} onSaved={() => {
-                setEditProjectRow(null);
-                setEditClientRow(null);
-                onProjectRefresh();
-            }} canManage={canManageProjects}/>)}
+        {editProjectRow && editClientRow && (<ClientProjectModal mode="edit" fixedClientId={project.clientId} initial={editProjectRow} clientsForPicker={[editClientRow]} onClose={() => {
+            setEditProjectRow(null);
+            setEditClientRow(null);
+        }} onSaved={() => {
+            setEditProjectRow(null);
+            setEditClientRow(null);
+            onProjectRefresh();
+        }} canManage={canManageProjects} />)}
     </div>);
 }
 export function ProjectDetailPage() {
@@ -2042,6 +2042,7 @@ export function ProjectDetailPage() {
             cancelled = true;
         };
     }, [id]);
+
     useEffect(() => {
         if (!id || userLoading)
             return;
@@ -2092,11 +2093,14 @@ export function ProjectDetailPage() {
             cancelled = true;
         };
     }, [id, clientHint, user, userLoading, projectRefreshTick]);
+
     const canManageProjects = canManageTimeTrackingClients(user);
+
     const skipPeriodDashboardFetch = useRef(true);
     useEffect(() => {
         skipPeriodDashboardFetch.current = true;
     }, [id, projectRefreshTick]);
+
     useEffect(() => {
         if (!project?.clientId || !project?.id)
             return;
@@ -2111,21 +2115,21 @@ export function ProjectDetailPage() {
             dateTo: detailPeriod.to,
         })
             .then((d) => {
-            if (!cancelled) {
-                setDashboard(d);
-                setDashboardError(null);
-            }
-        })
+                if (!cancelled) {
+                    setDashboard(d);
+                    setDashboardError(null);
+                }
+            })
             .catch((e) => {
-            if (!cancelled) {
-                setDashboard(null);
-                setDashboardError(e instanceof Error ? e.message : 'ошибка сети или сервера');
-            }
-        })
+                if (!cancelled) {
+                    setDashboard(null);
+                    setDashboardError(e instanceof Error ? e.message : 'ошибка сети или сервера');
+                }
+            })
             .finally(() => {
-            if (!cancelled)
-                setDashboardRefreshing(false);
-        });
+                if (!cancelled)
+                    setDashboardRefreshing(false);
+            });
         return () => {
             cancelled = true;
         };
@@ -2133,13 +2137,13 @@ export function ProjectDetailPage() {
     if (userLoading)
         return null;
     if (!canAccessTimeTracking(user)) {
-        return <Navigate to={routes.home} replace/>;
+        return <Navigate to={routes.home} replace />;
     }
     if (loadError) {
         return (<div className="pdp pdp--error">
-        <p>{loadError}</p>
-        <AppBackButton onClick={() => navigateBackToProjects(navigate)} label={backToProjectsLabel} ariaLabel={backToProjectsLabel}/>
-      </div>);
+            <p>{loadError}</p>
+            <AppBackButton onClick={() => navigateBackToProjects(navigate)} label={backToProjectsLabel} ariaLabel={backToProjectsLabel} />
+        </div>);
     }
     const shellLoading = !fontsReady
         || project === undefined
@@ -2149,9 +2153,9 @@ export function ProjectDetailPage() {
     }
     if (project === null) {
         return (<div className="pdp pdp--error">
-        <p>Проект не найден</p>
-        <AppBackButton onClick={() => navigateBackToProjects(navigate)} label={backToProjectsLabel} ariaLabel={backToProjectsLabel}/>
-      </div>);
+            <p>Проект не найден</p>
+            <AppBackButton onClick={() => navigateBackToProjects(navigate)} label={backToProjectsLabel} ariaLabel={backToProjectsLabel} />
+        </div>);
     }
-    return (<ProjectDetailBody project={project} dashboard={dashboard} dashboardError={dashboardError} detailPeriod={detailPeriod} onDetailPeriodChange={setDetailPeriod} canManageInvoices={hasFullTimeTrackingTabs(user)} canManageProjects={canManageProjects} onProjectRefresh={onProjectRefresh} currentUserId={user?.id ?? null} dashboardRefreshing={dashboardRefreshing}/>);
+    return (<ProjectDetailBody project={project} dashboard={dashboard} dashboardError={dashboardError} detailPeriod={detailPeriod} onDetailPeriodChange={setDetailPeriod} canManageInvoices={hasFullTimeTrackingTabs(user)} canManageProjects={canManageProjects} onProjectRefresh={onProjectRefresh} currentUserId={user?.id ?? null} dashboardRefreshing={dashboardRefreshing} />);
 }

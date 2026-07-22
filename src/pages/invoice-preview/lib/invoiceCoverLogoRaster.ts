@@ -1,4 +1,4 @@
-import invoiceLetterheadFullSvgRaw from '../../../assets/brand/KostaLegal-logo-letterhead-full.svg?raw';
+const LOGO_PUBLIC_PATH = 'vert-logo.svg';
 
 export type InvoiceCoverRasterizedLogo = {
     png: Uint8Array;
@@ -6,36 +6,35 @@ export type InvoiceCoverRasterizedLogo = {
     heightPx: number;
 };
 
-async function svgMarkupSource(): Promise<string | null> {
-    const trimmed = invoiceLetterheadFullSvgRaw.trim();
-    if (trimmed.includes('<svg'))
-        return trimmed;
+/** Intrinsic aspect of public/vert-logo.svg (width / height). */
+export const INVOICE_LOGO_ASPECT = 224 / 377;
 
-    return null;
+function invoiceLogoUrl(): string {
+    const base = import.meta.env.BASE_URL || '/';
+    const prefix = base.endsWith('/') ? base : `${base}/`;
+    return `${prefix}${LOGO_PUBLIC_PATH}`;
 }
 
-function ensureTightFullLogoViewBoxIfIllustratorPage(svgText: string): string {
-    const fullPage =
-        /<svg([^>]*)\bviewBox\s*=\s*["']\s*0\s+0\s+595\.?\d*\s+841\.?\d*\s*["']/i;
-    if (!fullPage.test(svgText))
-        return svgText;
-    let s = svgText.replace(/\bviewBox\s*=\s*["'][^"']*["']/i, `viewBox="79 311 439 219"`);
-    s = s.replace(/\s+style\s*=\s*"[^"]*enable-background[^"]*"/gi, '');
-    if (!/\bpreserveAspectRatio\s*=/.test(s))
-        s = s.replace('<svg', '<svg preserveAspectRatio="xMidYMid meet"');
-    if (!/\swidth\s*=\s*"[\d.]/.test(s))
-        s = s.replace('<svg', '<svg width="439" height="219" ');
-    return s;
+async function svgMarkupSource(): Promise<string | null> {
+    try {
+        const res = await fetch(invoiceLogoUrl());
+        if (!res.ok)
+            return null;
+        const trimmed = (await res.text()).trim();
+        return trimmed.includes('<svg') ? trimmed : null;
+    }
+    catch {
+        return null;
+    }
 }
 
 export async function rasterizeInvoiceCoverLogoSvg(renderWidthPx: number): Promise<InvoiceCoverRasterizedLogo | null> {
     if (typeof document === 'undefined')
         return null;
     try {
-        let markupRaw = await svgMarkupSource();
-        if (!markupRaw)
+        const svgText = await svgMarkupSource();
+        if (!svgText)
             return null;
-        const svgText = ensureTightFullLogoViewBoxIfIllustratorPage(markupRaw);
 
         const blob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
         const objUrl = URL.createObjectURL(blob);
@@ -75,4 +74,8 @@ export async function rasterizeInvoiceCoverLogoSvg(renderWidthPx: number): Promi
     catch {
         return null;
     }
+}
+
+export function invoiceLogoPublicUrl(): string {
+    return invoiceLogoUrl();
 }

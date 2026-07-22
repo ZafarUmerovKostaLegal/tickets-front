@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import letterheadFullLogoUrl from '../../../assets/brand/KostaLegal-logo-letterhead-full.svg?url';
+import { invoiceLogoPublicUrl } from '../lib/invoiceCoverLogoRaster';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import {
     KOSTA_LEGAL_FIRM,
@@ -65,7 +65,7 @@ export function InvoiceCoverLetter({
     return (<div className={`tt-inv-cover${editable ? ' tt-inv-cover--editable' : ''}`}>
       <header className="tt-inv-cover__header">
         <div className="tt-inv-cover__brand">
-          <img className="tt-inv-cover__logo" src={letterheadFullLogoUrl} alt="" decoding="async"/>
+          <img className="tt-inv-cover__logo" src={invoiceLogoPublicUrl()} alt="" decoding="async"/>
         </div>
         <address className="tt-inv-cover__firm-contact">
           <span className="tt-inv-cover__firm-contact-group">

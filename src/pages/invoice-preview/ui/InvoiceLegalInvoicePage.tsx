@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import letterheadFullLogoUrl from '../../../assets/brand/KostaLegal-logo-letterhead-full.svg?url';
+import { invoiceLogoPublicUrl } from '../lib/invoiceCoverLogoRaster';
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { KOSTA_LEGAL_FIRM } from '../lib/invoiceCoverLetterModel';
@@ -160,7 +160,7 @@ export function InvoiceLegalInvoicePage({
           ))}
         </div>
         <div className="tt-inv-li__brand">
-          <img className="tt-inv-li__logo" src={letterheadFullLogoUrl} alt="" decoding="async"/>
+          <img className="tt-inv-li__logo" src={invoiceLogoPublicUrl()} alt="" decoding="async"/>
         </div>
       </header>
 

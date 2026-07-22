@@ -55,10 +55,10 @@
 
 .tt-inv-li__logo {
   display: block;
-  width: 100%;
-  max-width: 150px;
+  width: auto;
+  max-width: 56px;
   height: auto;
-  max-height: 40px;
+  max-height: 94px;
   object-fit: contain;
   object-position: right top;
 }

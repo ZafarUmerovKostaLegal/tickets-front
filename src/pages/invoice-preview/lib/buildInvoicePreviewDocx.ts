@@ -780,10 +780,10 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
     const { model, session, timeReportPack: timeReportOverride, legalOverrides, selectedPageNumbers } = input;
     const logoRuns: ParagraphChild[] = [];
     if (typeof window !== 'undefined') {
-        const raster = await rasterizeInvoiceCoverLogoSvg(420);
+        const raster = await rasterizeInvoiceCoverLogoSvg(160);
         if (raster?.png.length && raster.widthPx > 0) {
-            const tw = 200;
-            const th = Math.max(1, Math.round((raster.heightPx / raster.widthPx) * tw));
+            const th = 72;
+            const tw = Math.max(1, Math.round((raster.widthPx / raster.heightPx) * th));
             logoRuns.push(new ImageRun({
                 type: 'png',
                 data: raster.png,
