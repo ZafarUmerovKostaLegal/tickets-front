@@ -719,6 +719,12 @@ body[data-theme='dark'] .ap__kpi-card--violet .ap__kpi-icon {
   gap: 1rem;
 }
 
+.ap__users-pagination {
+  justify-content: flex-start;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+}
+
 .ap__users-empty {
   grid-column: 1 / -1;
   text-align: center;

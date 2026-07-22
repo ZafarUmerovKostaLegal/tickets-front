@@ -496,8 +496,8 @@ body[data-theme='dark'] .expenses-page {
 .expenses-page .exp-cards-pager .tt-list-pagination__count {
   color: var(--app-text, #374151);
 }
-.expenses-page .exp-tt-pager .tt-settings__btn,
-.expenses-page .exp-cards-pager .tt-settings__btn {
+.expenses-page .exp-tt-pager .tt-list-pagination__btn,
+.expenses-page .exp-cards-pager .tt-list-pagination__btn {
   min-height: 36px;
   padding: 0 0.875rem;
   border-radius: 10px;
@@ -508,13 +508,13 @@ body[data-theme='dark'] .expenses-page {
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, opacity 0.15s;
 }
-.expenses-page .exp-tt-pager .tt-settings__btn:hover:not(:disabled),
-.expenses-page .exp-cards-pager .tt-settings__btn:hover:not(:disabled) {
+.expenses-page .exp-tt-pager .tt-list-pagination__btn:hover:not(:disabled),
+.expenses-page .exp-cards-pager .tt-list-pagination__btn:hover:not(:disabled) {
   border-color: var(--app-accent, #4f46e5);
   color: var(--app-accent, #4f46e5);
 }
-.expenses-page .exp-tt-pager .tt-settings__btn:disabled,
-.expenses-page .exp-cards-pager .tt-settings__btn:disabled {
+.expenses-page .exp-tt-pager .tt-list-pagination__btn:disabled,
+.expenses-page .exp-cards-pager .tt-list-pagination__btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }

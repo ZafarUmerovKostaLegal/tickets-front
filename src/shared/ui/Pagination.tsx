@@ -1,3 +1,4 @@
+import './Pagination.css';
 
 const DEFAULT_LIST_PAGE_SIZE = 24;
 
@@ -14,14 +15,14 @@ export function Pagination({ page, totalCount, pageSize = DEFAULT_LIST_PAGE_SIZE
     if (totalCount <= pageSize)
         return null;
     return (<nav className={`tt-list-pagination${className ? ` ${className}` : ''}`} aria-label="Постраничная навигация">
-      <button type="button" className="tt-settings__btn tt-settings__btn--outline" disabled={loading || page <= 1} onClick={() => onPageChange(page - 1)}>
+      <button type="button" className="tt-list-pagination__btn" disabled={loading || page <= 1} onClick={() => onPageChange(page - 1)}>
         Назад
       </button>
       <span className="tt-list-pagination__meta">
         Стр. {page} из {totalPages}
         <span className="tt-list-pagination__count"> · {totalCount} записей</span>
       </span>
-      <button type="button" className="tt-settings__btn tt-settings__btn--outline" disabled={loading || page >= totalPages} onClick={() => onPageChange(page + 1)}>
+      <button type="button" className="tt-list-pagination__btn" disabled={loading || page >= totalPages} onClick={() => onPageChange(page + 1)}>
         Вперёд
       </button>
     </nav>);
