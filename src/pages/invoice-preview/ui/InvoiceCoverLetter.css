@@ -33,13 +33,13 @@
 
 .tt-inv-cover__logo {
   display: block;
-  width: auto;
-  max-width: 52px;
+  width: 100%;
+  max-width: 146px;
   height: auto;
-  max-height: 88px;
+  max-height: 36px;
   flex-shrink: 0;
   object-fit: contain;
-  object-position: left top;
+  object-position: left center;
 }
 
 .tt-inv-cover__firm-contact {

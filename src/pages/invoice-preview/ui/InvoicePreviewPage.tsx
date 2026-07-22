@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { getInvoiceCreateUrl, getInvoiceDetailUrl } from '@shared/config';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppToast } from '@shared/ui';
 import { readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
+import { firmBankingToLegalOverrides } from '@entities/time-tracking/lib/firmBankingDetailsStorage';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { applyCoverLetterLanguage, type InvoiceCoverLanguage } from '../lib/invoiceCoverLetterI18n';
@@ -127,7 +128,7 @@ export function InvoicePreviewPage() {
     const session = useMemo(() => readInvoicePreviewSession(), [location.key, location.pathname]);
     const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel | null>(null);
     const [editMode, setEditMode] = useState(false);
-    const [legalOverrides, setLegalOverrides] = useState<InvoiceLegalPageOverrides>({});
+    const [legalOverrides, setLegalOverrides] = useState<InvoiceLegalPageOverrides>(() => firmBankingToLegalOverrides());
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
     const [selectedPages, setSelectedPages] = useState<Set<number>>(() => new Set([1, 2, 3]));
     const sheetStackRef = useRef<HTMLDivElement>(null);

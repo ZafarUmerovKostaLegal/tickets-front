@@ -35,7 +35,7 @@ import {
 } from './invoicePreviewPackShared';
 import { trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
-import { rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
+import { rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
@@ -778,15 +778,28 @@ function legalInvoiceDocxBlocks(
 
 export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput): Promise<Blob> {
     const { model, session, timeReportPack: timeReportOverride, legalOverrides, selectedPageNumbers } = input;
-    const logoRuns: ParagraphChild[] = [];
+    const coverLogoRuns: ParagraphChild[] = [];
+    const legalLogoRuns: ParagraphChild[] = [];
     if (typeof window !== 'undefined') {
-        const raster = await rasterizeInvoiceCoverLogoSvg(160);
-        if (raster?.png.length && raster.widthPx > 0) {
-            const th = 72;
-            const tw = Math.max(1, Math.round((raster.widthPx / raster.heightPx) * th));
-            logoRuns.push(new ImageRun({
+        const [coverRaster, legalRaster] = await Promise.all([
+            rasterizeInvoiceLogoSvg(420, 'cover'),
+            rasterizeInvoiceLogoSvg(160, 'legal'),
+        ]);
+        if (coverRaster?.png.length && coverRaster.widthPx > 0) {
+            const tw = 200;
+            const th = Math.max(1, Math.round((coverRaster.heightPx / coverRaster.widthPx) * tw));
+            coverLogoRuns.push(new ImageRun({
                 type: 'png',
-                data: raster.png,
+                data: coverRaster.png,
+                transformation: { width: tw, height: th },
+            }));
+        }
+        if (legalRaster?.png.length && legalRaster.widthPx > 0) {
+            const th = 72;
+            const tw = Math.max(1, Math.round((legalRaster.widthPx / legalRaster.heightPx) * th));
+            legalLogoRuns.push(new ImageRun({
+                type: 'png',
+                data: legalRaster.png,
                 transformation: { width: tw, height: th },
             }));
         }
@@ -816,7 +829,7 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
     if (includePage(1)) {
         sections.push({
             ...sectionPage,
-            children: coverChildren(model, logoRuns),
+            children: coverChildren(model, coverLogoRuns),
         });
     }
 
@@ -837,7 +850,7 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
     if (includePage(pageCount)) {
         sections.push({
             ...sectionPage,
-            children: legalInvoiceDocxBlocks(model, session, logoRuns, legalOverrides),
+            children: legalInvoiceDocxBlocks(model, session, legalLogoRuns, legalOverrides),
         });
     }
 

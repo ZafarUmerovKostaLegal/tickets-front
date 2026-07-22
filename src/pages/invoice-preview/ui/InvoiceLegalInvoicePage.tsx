@@ -1,5 +1,5 @@
 import type { ChangeEvent } from 'react';
-import { invoiceLogoPublicUrl } from '../lib/invoiceCoverLogoRaster';
+import { legalVertLogoPublicUrl } from '../lib/invoiceCoverLogoRaster';
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { KOSTA_LEGAL_FIRM } from '../lib/invoiceCoverLetterModel';
@@ -160,7 +160,7 @@ export function InvoiceLegalInvoicePage({
           ))}
         </div>
         <div className="tt-inv-li__brand">
-          <img className="tt-inv-li__logo" src={invoiceLogoPublicUrl()} alt="" decoding="async"/>
+          <img className="tt-inv-li__logo" src={legalVertLogoPublicUrl()} alt="" decoding="async"/>
         </div>
       </header>
 

@@ -20,6 +20,7 @@ export * from './userFacingProjectAccessError';
 export * from './expenseReportDisplay';
 export * from './projectTasksCache';
 export * from './timesheetTimerPersist';
+export * from './firmBankingDetailsStorage';
 export * from './partnerForReviewReports';
 export * from './forReviewPriority';
 export * from './usePartnerForReviewBadge';

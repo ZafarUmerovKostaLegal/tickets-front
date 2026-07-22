@@ -26,7 +26,7 @@ import {
     type InvoiceLegalPageOverrides,
 } from './invoiceLegalPageModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
-import { INVOICE_LOGO_ASPECT, rasterizeInvoiceCoverLogoSvg } from './invoiceCoverLogoRaster';
+import { COVER_LETTERHEAD_LOGO_ASPECT, LEGAL_VERT_LOGO_ASPECT, rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
 import {
@@ -81,8 +81,8 @@ const TR_SECTION_GAP = DOC_LH * 2.2;
 const TR_SUMMARY_TITLE_GAP = DOC_LH * 1.15;
 
 /** Cover letter rhythm — InvoiceCoverLetter.css (rem @ 16px → pt). */
-const COVER_LOGO_H_PT = 56;
-const COVER_LOGO_W_PT = COVER_LOGO_H_PT * INVOICE_LOGO_ASPECT;
+const COVER_LOGO_H_PT = 42;
+const COVER_LOGO_W_PT = COVER_LOGO_H_PT * COVER_LETTERHEAD_LOGO_ASPECT;
 const COVER_HEADER_MARGIN_BOTTOM = CSS_REM_PT * 1.85;
 /** Contact block: 8px on 794px preview ≈ 6pt on A4. */
 const COVER_CONTACT_FS = 6;
@@ -94,7 +94,7 @@ const COVER_PARA_GAP = CSS_REM_PT;
 const COVER_CLOSING_BEFORE = CSS_REM_PT * 1.65;
 const COVER_SIG_BEFORE = CSS_REM_PT * 2;
 const LEGAL_LOGO_H_PT = 52;
-const LEGAL_LOGO_W_PT = LEGAL_LOGO_H_PT * INVOICE_LOGO_ASPECT;
+const LEGAL_LOGO_W_PT = LEGAL_LOGO_H_PT * LEGAL_VERT_LOGO_ASPECT;
 const LEGAL_MASTHEAD_MB = CSS_REM_PT * 0.85;
 const LEGAL_RIBBON_MB = CSS_REM_PT * 0.75;
 const LEGAL_PANELS_PT = CSS_REM_PT * 0.65;
@@ -1358,15 +1358,27 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     const font = await doc.embedFont(regularBytes, { subset: true });
     const fontBold = await doc.embedFont(boldBytes, { subset: true });
 
-    let logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
+    let coverLogoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
+    let legalLogoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
     if (typeof window !== 'undefined') {
-        const raster = await rasterizeInvoiceCoverLogoSvg(180);
-        if (raster?.png.length) {
+        const [coverRaster, legalRaster] = await Promise.all([
+            rasterizeInvoiceLogoSvg(500, 'cover'),
+            rasterizeInvoiceLogoSvg(180, 'legal'),
+        ]);
+        if (coverRaster?.png.length) {
             try {
-                logoImage = await doc.embedPng(raster.png);
+                coverLogoImage = await doc.embedPng(coverRaster.png);
             }
             catch {
-                logoImage = null;
+                coverLogoImage = null;
+            }
+        }
+        if (legalRaster?.png.length) {
+            try {
+                legalLogoImage = await doc.embedPng(legalRaster.png);
+            }
+            catch {
+                legalLogoImage = null;
             }
         }
     }
@@ -1388,7 +1400,7 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
 
     if (includePage(1)) {
         const p1 = doc.addPage([W, H]);
-        drawCoverPage(p1, model, font, fontBold, logoImage);
+        drawCoverPage(p1, model, font, fontBold, coverLogoImage);
     }
 
     let trPageTag = 2;
@@ -1408,7 +1420,7 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
 
     if (includePage(pdfPageCount)) {
         const pInv = doc.addPage([W, H]);
-        drawLegalInvoicePdfPage(pInv, model, session, font, fontBold, logoImage, legalOverrides);
+        drawLegalInvoicePdfPage(pInv, model, session, font, fontBold, legalLogoImage, legalOverrides);
     }
 
     const bytes = await doc.save();
