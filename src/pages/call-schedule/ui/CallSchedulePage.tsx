@@ -395,7 +395,7 @@ export function CallSchedulePage() {
         };
     }, [retryKey]);
     useEffect(() => {
-        if (calendarsLoading)
+        if (calendarsLoading || calendarsError)
             return;
         let live = true;
         (async () => {
@@ -428,7 +428,7 @@ export function CallSchedulePage() {
         return () => {
             live = false;
         };
-    }, [viewY, viewM, calendarId, retryKey, calendarsLoading]);
+    }, [viewY, viewM, calendarId, retryKey, calendarsLoading, calendarsError, t]);
     const eventsByDate = useMemo(() => {
         const m = new Map<string, CallEvent[]>();
         for (const e of events) {
