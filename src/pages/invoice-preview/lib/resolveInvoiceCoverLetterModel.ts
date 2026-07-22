@@ -1,4 +1,4 @@
-import { getInvoice, getTimeManagerClient, listAllClientProjectsMerged, listTimeTrackingUsers } from '@entities/time-tracking';
+import { getInvoice, getTimeManagerClient, listAllClientProjectsMerged, listTimeTrackingUsers, readProjectRecordsLanguage } from '@entities/time-tracking';
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
 import { buildInvoiceCoverLetterModel, KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { coverLanguageFromRecordsLanguage, type InvoiceCoverLanguage } from './invoiceCoverLetterI18n';
@@ -31,7 +31,7 @@ async function resolveCoverLanguageFromSession(session: InvoicePreviewSessionV1)
             return 'ENG';
         const projects = await listAllClientProjectsMerged(true);
         const project = projects.find((p) => p.id === projectId);
-        return coverLanguageFromRecordsLanguage(project?.records_language);
+        return coverLanguageFromRecordsLanguage(project ? readProjectRecordsLanguage(project) : null);
     }
     catch {
         return 'ENG';

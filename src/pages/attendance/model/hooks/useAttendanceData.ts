@@ -152,6 +152,15 @@ export function useAttendanceData(dateFrom: string, dateTo: string, search: stri
     const sortedForDisplay = useMemo(() => {
         return [...filteredGroupedRecords].sort((a, b) => compareAttendanceRows(a, b, settings, locale === 'en' ? 'en' : 'ru'));
     }, [filteredGroupedRecords, settings, locale]);
+    const [page, setPage] = useState(1);
+    const pageSize = 50;
+    useEffect(() => {
+        setPage(1);
+    }, [dateFrom, dateTo, search, typeFilter]);
+    const pagedGroupedRecords = useMemo(() => {
+        const start = (page - 1) * pageSize;
+        return sortedForDisplay.slice(start, start + pageSize);
+    }, [sortedForDisplay, page]);
     const summary = useMemo((): AttendanceSummary => {
         if (singleDay && dailyReport) {
             const s = dailyReport.summary;
@@ -204,7 +213,12 @@ export function useAttendanceData(dateFrom: string, dateTo: string, search: stri
         error,
         load,
         groupedRecords,
-        filteredGroupedRecords: sortedForDisplay,
+        filteredGroupedRecords: pagedGroupedRecords,
+        allFilteredGroupedRecords: sortedForDisplay,
+        page,
+        setPage,
+        pageSize,
+        totalCount: sortedForDisplay.length,
         summary,
         showTable,
         isDailyMode: Boolean(singleDay),
@@ -215,7 +229,10 @@ export function useAttendanceData(dateFrom: string, dateTo: string, search: stri
         error,
         load,
         groupedRecords,
+        pagedGroupedRecords,
         sortedForDisplay,
+        page,
+        pageSize,
         summary,
         showTable,
         singleDay,

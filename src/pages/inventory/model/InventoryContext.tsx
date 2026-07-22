@@ -42,6 +42,7 @@ type InventoryContextValue = {
     setIncludeArchived: (v: boolean) => void;
     skip: number;
     setSkip: (v: number | ((prev: number) => number)) => void;
+    itemsTotal: number;
     categoryModal: CategoryModal;
     setCategoryModal: (v: CategoryModal) => void;
     itemModal: ItemModal;
@@ -144,6 +145,10 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
     const [filterAssignedTo, setFilterAssignedTo] = useState<number | ''>('');
     const [includeArchived, setIncludeArchived] = useState(false);
     const [skip, setSkip] = useState(0);
+    const [itemsTotal, setItemsTotal] = useState(0);
+    const [inUseCount, setInUseCount] = useState(0);
+    const [inStockCount, setInStockCount] = useState(0);
+    const [archivedCount, setArchivedCount] = useState(0);
     const [categoryModal, setCategoryModal] = useState<CategoryModal>(null);
     const [itemModal, setItemModal] = useState<ItemModal>(null);
     const [assignModal, setAssignModal] = useState<InventoryItem | null>(null);
@@ -191,7 +196,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         setLoadingItems(true);
         setError(null);
         try {
-            setItems(await getItems({
+            const page = await getItems({
                 skip,
                 limit: LIMIT,
                 category_id: filterCategoryId || undefined,
@@ -201,11 +206,20 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
                     : undefined),
                 assigned_to_user_id: filterAssignedTo || undefined,
                 include_archived: includeArchived,
-            }));
+            });
+            setItems(page.items);
+            setItemsTotal(page.total);
+            setInUseCount(page.in_use_count);
+            setInStockCount(page.in_stock_count);
+            setArchivedCount(page.archived_count);
         }
         catch (e) {
             setError(e instanceof Error ? e.message : 'Ошибка загрузки позиций');
             setItems([]);
+            setItemsTotal(0);
+            setInUseCount(0);
+            setInStockCount(0);
+            setArchivedCount(0);
         }
         finally {
             setLoadingItems(false);
@@ -405,10 +419,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
     }, []);
     const categoryById = useCallback((id: number) => categories.find((c) => c.id === id), [categories]);
     const statusLabel = useCallback((value: string) => statuses.find((s) => s.value === value)?.label ?? value, [statuses]);
-    const totalItems = items.length;
-    const inUseCount = items.filter((i) => i.status === 'in_use' && !i.is_archived).length;
-    const inStockCount = items.filter((i) => i.status === 'in_stock' && !i.is_archived).length;
-    const archivedCount = items.filter((i) => i.is_archived).length;
+    const totalItems = itemsTotal;
     const countByCategory = useMemo(() => {
         const acc: Record<number, number> = {};
         items.forEach((i) => {
@@ -445,6 +456,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         setIncludeArchived,
         skip,
         setSkip,
+        itemsTotal,
         categoryModal,
         setCategoryModal,
         itemModal,
@@ -503,6 +515,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         filterAssignedTo,
         includeArchived,
         skip,
+        itemsTotal,
         categoryModal,
         itemModal,
         assignModal,
@@ -532,6 +545,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         archivedCount,
         countByCategory,
         sortedCategories,
+        itemsTotal,
     ]);
     return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
 }

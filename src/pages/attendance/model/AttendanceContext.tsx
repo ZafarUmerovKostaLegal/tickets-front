@@ -76,8 +76,8 @@ export function AttendanceProvider({ children }: AttendanceProviderProps) {
         setTypeFilter('');
     }, []);
     const handleExportExcel = useCallback(() => {
-        exportAttendanceToCsv(data.filteredGroupedRecords, dateFrom, dateTo);
-    }, [data.filteredGroupedRecords, dateFrom, dateTo]);
+        exportAttendanceToCsv(data.allFilteredGroupedRecords, dateFrom, dateTo);
+    }, [data.allFilteredGroupedRecords, dateFrom, dateTo]);
     const value = useMemo<AttendanceContextValue>(() => ({
         dateFrom,
         setDateFrom,
@@ -99,6 +99,10 @@ export function AttendanceProvider({ children }: AttendanceProviderProps) {
         load: data.load,
         groupedRecords: data.groupedRecords,
         filteredGroupedRecords: data.filteredGroupedRecords,
+        page: data.page,
+        setPage: data.setPage,
+        pageSize: data.pageSize,
+        totalCount: data.totalCount,
         summary: data.summary,
         showTable: data.showTable,
         handleReset,

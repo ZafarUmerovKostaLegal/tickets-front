@@ -9,7 +9,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, DatePicker, SearchableSelect } from '@shared/ui';
 import { periodToDates, reportsAllTimeDateFrom, reportsAllTimeDateTo } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { canAccessTimeTracking, canManageTimeTrackingClients, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
-import { INVOICE_STATUS_LABELS, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPendingItems, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, readTimeManagerProjectBillableRateAmount, notifyPartnerConfirmedReportsListInvalidate, exportReportV2, TIME_TRACKING_PROJECT_RECORDS_LANGUAGES, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, type ReportFiltersV2, type TimeManagerProjectRecordsLanguage, } from '@entities/time-tracking';
+import { INVOICE_STATUS_LABELS, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPendingItems, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, readTimeManagerProjectBillableRateAmount, readProjectRecordsLanguage, notifyPartnerConfirmedReportsListInvalidate, exportReportV2, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, type ReportFiltersV2, } from '@entities/time-tracking';
 import { writeReportPreviewTransfer, type ReportPreviewTransferV2 } from '@entities/time-tracking/model/reportPreviewTransfer';
 import { ClientProjectModal } from '@pages/time-tracking/ui/TimeTrackingClientProjectModal';
 import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
@@ -776,11 +776,7 @@ function duplicateProjectCreatePayload(src: TimeManagerClientProjectRow): TimeMa
         endDate: null,
         notes: src.notes,
         reportVisibility: src.report_visibility,
-        recordsLanguage: TIME_TRACKING_PROJECT_RECORDS_LANGUAGES.includes(
-            String(src.records_language ?? 'ENG').trim().toUpperCase() as TimeManagerProjectRecordsLanguage,
-        )
-            ? (String(src.records_language ?? 'ENG').trim().toUpperCase() as TimeManagerProjectRecordsLanguage)
-            : 'ENG',
+        recordsLanguage: readProjectRecordsLanguage(src),
         projectType: src.project_type,
         billableRateType: src.billable_rate_type,
         projectBillableRateAmount: readTimeManagerProjectBillableRateAmount(src).trim() || null,

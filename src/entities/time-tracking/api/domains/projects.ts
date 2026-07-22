@@ -331,6 +331,35 @@ export type TimeManagerClientProjectRow = {
     isPaused?: boolean;
 };
 
+/** API may return `recordsLanguage` (alias) or `records_language`. */
+export function readProjectRecordsLanguage(
+    row: TimeManagerClientProjectRow | Record<string, unknown> | null | undefined,
+): TimeManagerProjectRecordsLanguage {
+    if (!row || typeof row !== 'object')
+        return 'ENG';
+    const raw = row as Record<string, unknown>;
+    const v = String(raw.records_language ?? raw.recordsLanguage ?? 'ENG').trim().toUpperCase();
+    return v === 'RU' ? 'RU' : 'ENG';
+}
+
+/** Normalize mixed camelCase/snake_case project payloads from the API. */
+export function normalizeTimeManagerClientProjectRow(raw: unknown): TimeManagerClientProjectRow | null {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const o = raw as Record<string, unknown>;
+    const id = String(o.id ?? '').trim();
+    const clientId = String(o.client_id ?? o.clientId ?? '').trim();
+    if (!id || !clientId)
+        return null;
+    const row = { ...o } as TimeManagerClientProjectRow;
+    row.id = id;
+    row.client_id = clientId;
+    row.records_language = readProjectRecordsLanguage(o);
+    if (o.clientId != null && row.client_id)
+        (row as Record<string, unknown>).clientId = row.client_id;
+    return row;
+}
+
 export function readTimeManagerProjectBillableRateAmount(row: TimeManagerClientProjectRow & { projectBillableRateAmount?: string | number | null }): string {
     const raw = row.project_billable_rate_amount ?? row.projectBillableRateAmount;
     if (raw == null || String(raw).trim() === '')
@@ -930,7 +959,7 @@ export async function listClientProjects(clientId: string, pagination?: TimeTrac
     const raw = await res.json();
     if (pagination) {
         const off = pagination.offset ?? 0;
-        return parseTimeTrackingPagedResponse(raw, (item) => item as TimeManagerClientProjectRow, {
+        return parseTimeTrackingPagedResponse(raw, (item) => normalizeTimeManagerClientProjectRow(item) ?? (item as TimeManagerClientProjectRow), {
             limit: pagination.limit,
             offset: off,
         });
@@ -938,7 +967,7 @@ export async function listClientProjects(clientId: string, pagination?: TimeTrac
     const arr = unwrapTimeTrackingListArray(raw);
     if (!arr)
         return [];
-    return arr as TimeManagerClientProjectRow[];
+    return arr.map((item) => normalizeTimeManagerClientProjectRow(item) ?? (item as TimeManagerClientProjectRow));
 }
 
 export type ProjectBudgetMetricsEntry = {
@@ -1023,7 +1052,7 @@ export async function listAllClientProjectsMerged(includeArchived = false): Prom
         await throwIfNotOk(res);
         const raw = await res.json();
         const arr = unwrapTimeTrackingListArray(raw);
-        const acc = (arr ?? []) as TimeManagerClientProjectRow[];
+        const acc = (arr ?? []).map((item) => normalizeTimeManagerClientProjectRow(item) ?? (item as TimeManagerClientProjectRow));
         const rows = includeArchived ? acc : acc.filter((p) => isActiveTimeManagerProjectRow(p));
         rows.sort((a, b) => {
             const byClient = (a.client_id ?? '').localeCompare(b.client_id ?? '', 'ru', { sensitivity: 'base' });
@@ -1049,10 +1078,17 @@ export async function listAllClientProjectsForClientMerged(clientId: string): Pr
     rows.sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
     return rows;
 }
+function coerceClientProjectRow(raw: unknown): TimeManagerClientProjectRow {
+    const normalized = normalizeTimeManagerClientProjectRow(raw);
+    if (normalized)
+        return normalized;
+    const o = (raw && typeof raw === 'object' ? raw : {}) as TimeManagerClientProjectRow;
+    return { ...o, records_language: readProjectRecordsLanguage(o) };
+}
 export async function getClientProject(clientId: string, projectId: string): Promise<TimeManagerClientProjectRow> {
     const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/projects/${encodeURIComponent(projectId)}`);
     await throwIfNotOk(res);
-    return (await res.json()) as TimeManagerClientProjectRow;
+    return coerceClientProjectRow(await res.json());
 }
 export async function createClientProject(clientId: string, body: TimeManagerClientProjectCreatePayload): Promise<TimeManagerClientProjectRow> {
     const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/projects`, {
@@ -1062,7 +1098,7 @@ export async function createClientProject(clientId: string, body: TimeManagerCli
     });
     await throwIfNotOk(res);
     invalidateTimeTrackingListCache();
-    return (await res.json()) as TimeManagerClientProjectRow;
+    return coerceClientProjectRow(await res.json());
 }
 export async function patchClientProject(clientId: string, projectId: string, patch: TimeManagerClientProjectPatchPayload): Promise<TimeManagerClientProjectRow> {
     const payload = projectPatchBody(patch);
@@ -1073,7 +1109,7 @@ export async function patchClientProject(clientId: string, projectId: string, pa
     });
     await throwIfNotOk(res);
     invalidateTimeTrackingListCache();
-    return (await res.json()) as TimeManagerClientProjectRow;
+    return coerceClientProjectRow(await res.json());
 }
 export async function deleteClientProject(clientId: string, projectId: string): Promise<void> {
     const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' });

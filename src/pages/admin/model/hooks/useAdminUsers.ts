@@ -1,21 +1,43 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { getUsers, getPositions, setUserRole, setUserBlocked, setUserArchived, setTimeTrackingRole, setUserPosition, type User, } from '@entities/user';
-import { isHiddenSystemUser } from '@shared/lib';
+import { getUsersPage, getPositions, setUserRole, setUserBlocked, setUserArchived, setTimeTrackingRole, setUserPosition, invalidateUsersListCache, type User, } from '@entities/user';
 import type { AdminMetrics } from '../types';
 import type { AdminUserFieldPendingConfirm } from '../AdminContext.types';
 import { TT_POSITIONS_FALLBACK, type TTRole } from '../constants';
+
+const ADMIN_USERS_PAGE_SIZE = 24;
 type ClosePosDropdown = () => void;
+
 export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
     const [users, setUsers] = useState<User[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [roleFilter, setRoleFilter] = useState<string>('all');
     const [includeArchived, setIncludeArchived] = useState(false);
     const [userActionError, setUserActionError] = useState<string | null>(null);
     const [savingUserId, setSavingUserId] = useState<number | null>(null);
     const [pendingUserFieldChange, setPendingUserFieldChange] = useState<AdminUserFieldPendingConfirm>(null);
     const [apiPositions, setApiPositions] = useState<string[]>([...TT_POSITIONS_FALLBACK]);
+    const [metrics, setMetrics] = useState<AdminMetrics>({
+        totalUsers: 0,
+        activeUsers: 0,
+        blockedUsers: 0,
+        archivedUsers: 0,
+        roles: [],
+    });
+
+    useEffect(() => {
+        const t = window.setTimeout(() => setDebouncedSearch(search), 300);
+        return () => window.clearTimeout(t);
+    }, [search]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [debouncedSearch, roleFilter, includeArchived]);
+
     useEffect(() => {
         let cancelled = false;
         getPositions()
@@ -28,6 +50,7 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
             cancelled = true;
         };
     }, []);
+
     const positions = useMemo(() => {
         const seen = new Set<string>();
         const canonical: string[] = [];
@@ -51,13 +74,27 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
         extra.sort((a, b) => a.localeCompare(b, 'ru', { sensitivity: 'base' }));
         return [...canonical, ...extra];
     }, [apiPositions, users]);
+
     const loadUsers = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const list = await getUsers(includeArchived);
-            const filtered = list.filter((u) => !isHiddenSystemUser(u));
-            setUsers(filtered);
+            const result = await getUsersPage({
+                includeArchived,
+                skip: (page - 1) * ADMIN_USERS_PAGE_SIZE,
+                limit: ADMIN_USERS_PAGE_SIZE,
+                q: debouncedSearch,
+                role: roleFilter,
+            });
+            setUsers(result.items);
+            setTotalCount(result.total);
+            setMetrics({
+                totalUsers: result.summary.total,
+                activeUsers: result.summary.active,
+                blockedUsers: result.summary.blocked,
+                archivedUsers: result.summary.archived,
+                roles: result.summary.roles,
+            });
         }
         catch (e) {
             setError(e instanceof Error ? e.message : 'Не удалось загрузить пользователей');
@@ -65,44 +102,20 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
         finally {
             setLoading(false);
         }
-    }, [includeArchived]);
+    }, [includeArchived, page, debouncedSearch, roleFilter]);
+
     useEffect(() => {
         loadUsers();
     }, [loadUsers]);
-    const metrics = useMemo((): AdminMetrics => {
-        const totalUsers = users.length;
-        const activeUsers = users.filter((u) => !u.is_blocked && !u.is_archived).length;
-        const blockedUsers = users.filter((u) => u.is_blocked).length;
-        const archivedUsers = users.filter((u) => u.is_archived).length;
-        const rolesMap = new Map<string, number>();
-        users.forEach((u) => {
-            const key = (u.role || 'Не указано').trim();
-            rolesMap.set(key, (rolesMap.get(key) ?? 0) + 1);
-        });
-        const roles = Array.from(rolesMap.entries())
-            .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => b.count - a.count);
-        return { totalUsers, activeUsers, blockedUsers, archivedUsers, roles };
-    }, [users]);
-    const filteredUsers = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        const roleValue = roleFilter === 'all' ? null : roleFilter;
-        return users.filter((u) => {
-            if (roleValue && (u.role || '').trim() !== roleValue)
-                return false;
-            if (!q)
-                return true;
-            return ((u.display_name || '').toLowerCase().includes(q) ||
-                u.email.toLowerCase().includes(q) ||
-                (u.role || '').toLowerCase().includes(q));
-        });
-    }, [users, search, roleFilter]);
+
     const applyUserUpdate = useCallback(async (user: User, action: () => Promise<User>) => {
         setSavingUserId(user.id);
         setUserActionError(null);
         try {
             const updated = await action();
+            invalidateUsersListCache();
             setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+            await loadUsers();
         }
         catch (e) {
             setUserActionError(e instanceof Error ? e.message : 'Не удалось обновить пользователя');
@@ -110,7 +123,8 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
         finally {
             setSavingUserId(null);
         }
-    }, []);
+    }, [loadUsers]);
+
     const handleToggleBlocked = useCallback((u: User) => {
         applyUserUpdate(u, () => setUserBlocked(u.id, !u.is_blocked));
     }, [applyUserUpdate]);
@@ -146,6 +160,7 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
         applyUserUpdate(u, () => setUserPosition(u.id, pos));
         closePosDropdown();
     }, [applyUserUpdate, closePosDropdown]);
+
     return {
         users,
         positions,
@@ -157,7 +172,11 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
         setRoleFilter,
         includeArchived,
         setIncludeArchived,
-        filteredUsers,
+        filteredUsers: users,
+        page,
+        setPage,
+        totalCount,
+        pageSize: ADMIN_USERS_PAGE_SIZE,
         metrics,
         loadUsers,
         userActionError,

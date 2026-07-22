@@ -4,19 +4,13 @@ import { InvSelect } from './InvSelect';
 import { ItemDetailDrawer } from './ItemDetailDrawer';
 import { EquipmentClassBadge } from './EquipmentClassBadge';
 import { LIMIT } from '../model/constants';
-import { AuthImg } from '@shared/ui';
+import { AuthImg, Pagination } from '@shared/ui';
 import { EQUIPMENT_CLASSES } from '@entities/inventory';
 import type { InventoryItem } from '@entities/inventory';
 export function InventoryItemsSection() {
-    const { canEdit, canCreateItems, categories, statuses, users, items, loadingItems, filterCategoryId, setFilterCategoryId, filterStatus, setFilterStatus, filterEquipmentClass, setFilterEquipmentClass, filterAssignedTo, setFilterAssignedTo, includeArchived, setIncludeArchived, skip, setSkip, setItemModal, resetItemForm, setFormError, categoryById, statusLabel, } = useInventory();
+    const { canEdit, canCreateItems, categories, statuses, users, items, loadingItems, filterCategoryId, setFilterCategoryId, filterStatus, setFilterStatus, filterEquipmentClass, setFilterEquipmentClass, filterAssignedTo, setFilterAssignedTo, includeArchived, setIncludeArchived, skip, setSkip, itemsTotal, setItemModal, resetItemForm, setFormError, categoryById, statusLabel, } = useInventory();
     const [viewItem, setViewItem] = useState<InventoryItem | null>(null);
-    const showPager = skip > 0 || items.length >= LIMIT;
-    const canGoNext = items.length >= LIMIT;
-    const rangeLabel = items.length === 0
-        ? skip > 0
-            ? 'На странице нет записей'
-            : ''
-        : `${skip + 1}–${skip + items.length}`;
+    const page = Math.floor(skip / LIMIT) + 1;
     return (<section className="inv__card">
       <div className="inv__card-head">
         <h2 className="inv__card-title">
@@ -27,7 +21,7 @@ export function InventoryItemsSection() {
           Позиции
         </h2>
         <div className="inv__card-head-right">
-          <span className="inv__card-count">{items.length}</span>
+          <span className="inv__card-count">{itemsTotal}</span>
           {canCreateItems && (<button type="button" className="inv__btn inv__btn--primary" onClick={() => {
                 setItemModal('add');
                 resetItemForm();
@@ -202,15 +196,14 @@ export function InventoryItemsSection() {
           </table>
         </div>)}
 
-      {showPager && (<div className="inv__pager">
-          <button type="button" className="inv__btn inv__btn--ghost" disabled={skip === 0} onClick={() => setSkip((s) => Math.max(0, s - LIMIT))}>
-            Назад
-          </button>
-          <span className="inv__pager-info">{rangeLabel || `Показано ${items.length}`}</span>
-          <button type="button" className="inv__btn inv__btn--ghost" disabled={!canGoNext} onClick={() => setSkip((s) => s + LIMIT)}>
-            Далее
-          </button>
-        </div>)}
+      <Pagination
+        page={page}
+        totalCount={itemsTotal}
+        pageSize={LIMIT}
+        loading={loadingItems}
+        onPageChange={(next) => setSkip((next - 1) * LIMIT)}
+        className="inv__pager"
+      />
 
       {viewItem && (<ItemDetailDrawer item={viewItem} onClose={() => setViewItem(null)}/>)}
     </section>);

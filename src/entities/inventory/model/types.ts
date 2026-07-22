@@ -60,3 +60,13 @@ export type ItemsParams = {
     assigned_to_user_id?: number;
     include_archived?: boolean;
 };
+
+export type InventoryItemsPage = {
+    items: InventoryItem[];
+    total: number;
+    skip: number;
+    limit: number;
+    in_use_count: number;
+    in_stock_count: number;
+    archived_count: number;
+};

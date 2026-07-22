@@ -84,6 +84,72 @@ async function _fetchUsersFromApi(includeArchived: boolean): Promise<User[]> {
 export async function getUsers(includeArchived = false): Promise<User[]> {
     return _usersCache.fetch(`users:${includeArchived}`, () => _fetchUsersFromApi(includeArchived));
 }
+
+export type UsersPageParams = {
+    includeArchived?: boolean;
+    skip?: number;
+    limit?: number;
+    q?: string;
+    role?: string;
+};
+
+export type UsersPageSummary = {
+    total: number;
+    active: number;
+    blocked: number;
+    archived: number;
+    roles: { name: string; count: number }[];
+};
+
+export type UsersPageResult = {
+    items: User[];
+    total: number;
+    skip: number;
+    limit: number;
+    summary: UsersPageSummary;
+};
+
+export async function getUsersPage(params: UsersPageParams = {}): Promise<UsersPageResult> {
+    const q = new URLSearchParams();
+    q.set('include_archived', String(Boolean(params.includeArchived)));
+    q.set('skip', String(params.skip ?? 0));
+    q.set('limit', String(params.limit ?? 24));
+    if (params.q?.trim())
+        q.set('q', params.q.trim());
+    if (params.role?.trim() && params.role.trim() !== 'all')
+        q.set('role', params.role.trim());
+    const res = await apiFetch(`/api/v1/users?${q.toString()}`);
+    if (res.status === 401)
+        throw new Error('Не авторизован');
+    if (res.status === 403)
+        throw new Error('Доступ запрещён (нужны права на каталог пользователей)');
+    if (!res.ok)
+        throw new Error('Не удалось загрузить пользователей');
+    const data = await res.json() as {
+        items?: unknown[];
+        total?: number;
+        skip?: number;
+        limit?: number;
+        summary?: Partial<UsersPageSummary>;
+    };
+    const items = Array.isArray(data.items) ? data.items.map((u) => normalizeUser(u)) : [];
+    const summary = data.summary ?? {};
+    return {
+        items,
+        total: Number(data.total ?? items.length),
+        skip: Number(data.skip ?? params.skip ?? 0),
+        limit: Number(data.limit ?? params.limit ?? 24),
+        summary: {
+            total: Number(summary.total ?? data.total ?? items.length),
+            active: Number(summary.active ?? 0),
+            blocked: Number(summary.blocked ?? 0),
+            archived: Number(summary.archived ?? 0),
+            roles: Array.isArray(summary.roles)
+                ? summary.roles.map((r) => ({ name: String(r.name || 'Не указано'), count: Number(r.count || 0) }))
+                : [],
+        },
+    };
+}
 export async function setUserRole(userId: number, role: string): Promise<User> {
     const res = await apiFetch(`/api/v1/users/${userId}/role`, {
         method: 'PATCH',

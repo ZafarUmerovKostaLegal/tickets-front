@@ -3,15 +3,16 @@ import { AdminSelect } from './AdminSelect';
 import { UserCard } from './UserCard';
 import { UserFieldChangeConfirmModal } from './UserFieldChangeConfirmModal';
 import { KNOWN_ROLES } from '../model/constants';
+import { Pagination } from '@shared/ui/Pagination';
 export function AdminUsersSection() {
-    const { users, loading, search, setSearch, roleFilter, setRoleFilter, includeArchived, setIncludeArchived, filteredUsers, userActionError, savingUserId, handleToggleBlocked, handleToggleArchived, handleRoleChange, handleTTRoleChange, handlePositionChange, pendingUserFieldChange, confirmPendingUserFieldChange, dismissPendingUserFieldChange, openRoleDropdown, setOpenRoleDropdown, roleMenuPos, setRoleMenuPos, roleTriggerRef, roleMenuRef, openTTDropdown, setOpenTTDropdown, ttMenuPos, setTTMenuPos, ttTriggerRef, ttMenuRef, openPosDropdown, setOpenPosDropdown, posMenuPos, setPosMenuPos, posTriggerRef, posMenuRef, ROLE_META, TT_ROLE_OPTIONS, TT_POSITIONS, } = useAdmin();
+    const { users, loading, search, setSearch, roleFilter, setRoleFilter, includeArchived, setIncludeArchived, filteredUsers, page, setPage, totalCount, pageSize, userActionError, savingUserId, handleToggleBlocked, handleToggleArchived, handleRoleChange, handleTTRoleChange, handlePositionChange, pendingUserFieldChange, confirmPendingUserFieldChange, dismissPendingUserFieldChange, openRoleDropdown, setOpenRoleDropdown, roleMenuPos, setRoleMenuPos, roleTriggerRef, roleMenuRef, openTTDropdown, setOpenTTDropdown, ttMenuPos, setTTMenuPos, ttTriggerRef, ttMenuRef, openPosDropdown, setOpenPosDropdown, posMenuPos, setPosMenuPos, posTriggerRef, posMenuRef, ROLE_META, TT_ROLE_OPTIONS, TT_POSITIONS, } = useAdmin();
     return (<section className="ap__card ap__card--users" style={{ borderRadius: 'var(--ap-card-border-radius)', padding: 'var(--ap-card-padding)', background: 'var(--ap-card-bg)', border: 'var(--ap-card-border)' }}>
       <div className="ap__card-head" style={{ paddingBottom: 'var(--ap-card-head-pb)', marginBottom: 'var(--ap-card-head-mb)', borderBottom: 'var(--ap-card-head-border-bottom)' }}>
         <h2 className="ap__card-title" style={{ fontSize: 'var(--ap-card-title-font-size)', fontWeight: 'var(--ap-card-title-font-weight)', gap: 'var(--ap-card-title-gap)' }}>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           Пользователи
         </h2>
-        <span className="ap__card-count" style={{ fontSize: 'var(--ap-card-count-font-size)', color: 'var(--ap-card-count-color)', fontWeight: 'var(--ap-card-count-font-weight)' }}>{filteredUsers.length}</span>
+        <span className="ap__card-count" style={{ fontSize: 'var(--ap-card-count-font-size)', color: 'var(--ap-card-count-color)', fontWeight: 'var(--ap-card-count-font-weight)' }}>{totalCount}</span>
       </div>
       {userActionError && <p className="ap__inline-error" style={{ color: 'var(--ap-inline-error-color)', fontSize: 'var(--ap-inline-error-font-size)', marginBottom: 'var(--ap-inline-error-mb)' }}>{userActionError}</p>}
       <div className="ap__toolbar" style={{ marginBottom: 'var(--ap-toolbar-mb)', gap: 'var(--ap-toolbar-gap)' }}>
@@ -47,6 +48,7 @@ export function AdminUsersSection() {
         {!loading && filteredUsers.length === 0 && (<p className="ap__users-empty" style={{ fontSize: 'var(--ap-users-empty-font-size)', color: 'var(--ap-users-empty-color)' }}>Пользователи не найдены</p>)}
         {filteredUsers.map((u) => (<UserCard key={u.id} user={u} KNOWN_ROLES={KNOWN_ROLES} savingUserId={savingUserId} openRoleDropdown={openRoleDropdown} setOpenRoleDropdown={setOpenRoleDropdown} roleMenuPos={roleMenuPos} setRoleMenuPos={setRoleMenuPos} roleTriggerRef={roleTriggerRef} roleMenuRef={roleMenuRef} openTTDropdown={openTTDropdown} setOpenTTDropdown={setOpenTTDropdown} ttMenuPos={ttMenuPos} setTTMenuPos={setTTMenuPos} ttTriggerRef={ttTriggerRef} ttMenuRef={ttMenuRef} openPosDropdown={openPosDropdown} setOpenPosDropdown={setOpenPosDropdown} posMenuPos={posMenuPos} setPosMenuPos={setPosMenuPos} posTriggerRef={posTriggerRef} posMenuRef={posMenuRef} onRoleChange={handleRoleChange} onTTRoleChange={handleTTRoleChange} onPositionChange={handlePositionChange} onToggleBlocked={handleToggleBlocked} onToggleArchived={handleToggleArchived} ROLE_META={ROLE_META} TT_ROLE_OPTIONS={TT_ROLE_OPTIONS} TT_POSITIONS={TT_POSITIONS}/>))}
       </div>
+      <Pagination page={page} totalCount={totalCount} pageSize={pageSize} loading={loading} onPageChange={setPage} className="ap__users-pagination"/>
 
       <UserFieldChangeConfirmModal pending={pendingUserFieldChange} ttRoleOptions={TT_ROLE_OPTIONS} savingUserId={savingUserId} onConfirm={confirmPendingUserFieldChange} onDismiss={dismissPendingUserFieldChange}/>
     </section>);

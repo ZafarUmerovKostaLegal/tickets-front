@@ -1,7 +1,7 @@
 import { useState, useEffect, useId, useMemo, useRef, useCallback } from 'react';
 import { DatePicker, SearchableSelect, useAppDialog } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
-import { getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, changeHourlyRateFrom, listUsersWithProjectAccessToProject, listProjectTasks, createProjectTask, deleteProjectTask, readTimeManagerProjectBillableRateAmount, pickEffectiveBillableRateForProject, parseHourlyRateAmount, hourlyRateEffectiveOnDate, TIME_TRACKING_PROJECT_CURRENCIES, TIME_TRACKING_PROJECT_RECORDS_LANGUAGES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerInitialProjectAccessMember, type TimeManagerProjectCurrency, type TimeManagerProjectRecordsLanguage, } from '@entities/time-tracking';
+import { getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, changeHourlyRateFrom, listUsersWithProjectAccessToProject, listProjectTasks, createProjectTask, deleteProjectTask, readTimeManagerProjectBillableRateAmount, readProjectRecordsLanguage, pickEffectiveBillableRateForProject, parseHourlyRateAmount, hourlyRateEffectiveOnDate, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerInitialProjectAccessMember, type TimeManagerProjectCurrency, type TimeManagerProjectRecordsLanguage, } from '@entities/time-tracking';
 import { suggestedNextKlProjectCode } from '@entities/time-tracking/lib/klProjectCode';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 import { QuickCreateClientModal } from './QuickCreateClientModal';
@@ -270,11 +270,7 @@ function rowToForm(row: TimeManagerClientProjectRow): ProjectFormState {
     startDate: (row.start_date ?? '').slice(0, 10),
     endDate: (row.end_date ?? '').slice(0, 10),
     notes: row.notes ?? '',
-    recordsLanguage: TIME_TRACKING_PROJECT_RECORDS_LANGUAGES.includes(
-      String(row.records_language ?? 'ENG').trim().toUpperCase() as TimeManagerProjectRecordsLanguage,
-    )
-      ? (String(row.records_language ?? 'ENG').trim().toUpperCase() as TimeManagerProjectRecordsLanguage)
-      : 'ENG',
+    recordsLanguage: readProjectRecordsLanguage(row),
     projectType: pt,
     billableRateType: row.billable_rate_type ?? 'person_billable_rate',
     projectBillableRateAmount: readTimeManagerProjectBillableRateAmount(row),

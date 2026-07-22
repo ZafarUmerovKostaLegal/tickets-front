@@ -1,5 +1,5 @@
 import { apiFetch, getApiUrl } from '@shared/api';
-import type { CreateCategoryBody, InventoryCategory, InventoryItem, InventoryStatusItem, ItemsParams, UpdateCategoryBody, UpdateItemBody, } from './model/types';
+import type { CreateCategoryBody, InventoryCategory, InventoryItem, InventoryItemsPage, InventoryStatusItem, ItemsParams, UpdateCategoryBody, UpdateItemBody, } from './model/types';
 const BASE = '/api/v1/inventory';
 const CATEGORIES = `${BASE}/categories`;
 const ITEMS = `${BASE}/items`;
@@ -79,12 +79,41 @@ export async function deleteCategory(id: number): Promise<void> {
     if (!res.ok)
         throw new Error(await parseError(res, 'Failed to delete category'));
 }
-export async function getItems(params: ItemsParams = {}): Promise<InventoryItem[]> {
+export async function getItems(params: ItemsParams = {}): Promise<InventoryItemsPage> {
     const query = buildItemsQuery(params);
     const res = await apiFetch(`${ITEMS}${query ? `?${query}` : ''}`);
     if (!res.ok)
         throw new Error(await parseError(res, 'Failed to fetch items'));
-    return res.json();
+    const data = await res.json() as {
+        items?: InventoryItem[];
+        total?: number;
+        skip?: number;
+        limit?: number;
+        in_use_count?: number;
+        in_stock_count?: number;
+        archived_count?: number;
+    } | InventoryItem[];
+    if (Array.isArray(data)) {
+        return {
+            items: data,
+            total: data.length,
+            skip: params.skip ?? 0,
+            limit: params.limit ?? data.length,
+            in_use_count: data.filter((i) => i.status === 'in_use' && !i.is_archived).length,
+            in_stock_count: data.filter((i) => i.status === 'in_stock' && !i.is_archived).length,
+            archived_count: data.filter((i) => i.is_archived).length,
+        };
+    }
+    const items = Array.isArray(data.items) ? data.items : [];
+    return {
+        items,
+        total: Number(data.total ?? items.length),
+        skip: Number(data.skip ?? params.skip ?? 0),
+        limit: Number(data.limit ?? params.limit ?? items.length),
+        in_use_count: Number(data.in_use_count ?? 0),
+        in_stock_count: Number(data.in_stock_count ?? 0),
+        archived_count: Number(data.archived_count ?? 0),
+    };
 }
 export async function getItem(uuid: string): Promise<InventoryItem> {
     const res = await apiFetch(`${ITEMS}/${uuid}`);

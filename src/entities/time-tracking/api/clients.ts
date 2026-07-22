@@ -36,6 +36,8 @@ export {
     patchClientProject,
     deleteClientProject,
     readTimeManagerProjectBillableRateAmount,
+    readProjectRecordsLanguage,
+    normalizeTimeManagerClientProjectRow,
     listAllClientProjectsForPicker,
     type TimeManagerClientRow,
     type TimeManagerClientContactRow,

@@ -24,6 +24,10 @@ export type AdminContextValue = {
     includeArchived: boolean;
     setIncludeArchived: (v: boolean) => void;
     filteredUsers: User[];
+    page: number;
+    setPage: (v: number) => void;
+    totalCount: number;
+    pageSize: number;
     metrics: AdminMetrics;
     loadUsers: () => Promise<void>;
     userActionError: string | null;

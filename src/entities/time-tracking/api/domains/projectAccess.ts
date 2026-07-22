@@ -27,6 +27,8 @@ export function parseUserProjectAccess(raw: unknown): UserProjectAccessOut {
 
 export const userProjectAccessInflight = new Map<number, Promise<UserProjectAccessOut>>();
 export const projectAccessPickInflight = new Map<string, Promise<ProjectPartnerAccessRow[]>>();
+/** One reverse lookup per project instead of N× GET /users/{id}/project-access. */
+const projectAssigneesInflight = new Map<string, Promise<ProjectPartnerAccessRow[]>>();
 
 export function invalidateUserProjectAccessCache(authUserId?: number): void {
     if (authUserId != null) {
@@ -38,10 +40,13 @@ export function invalidateUserProjectAccessCache(authUserId?: number): void {
 
 export function invalidateProjectAccessPickCache(projectId?: string): void {
     if (projectId != null) {
-        projectAccessPickInflight.delete(String(projectId).trim());
+        const key = String(projectId).trim();
+        projectAccessPickInflight.delete(key);
+        projectAssigneesInflight.delete(key);
         return;
     }
     projectAccessPickInflight.clear();
+    projectAssigneesInflight.clear();
 }
 
 export async function fetchUserProjectAccess(authUserId: number): Promise<UserProjectAccessOut> {
@@ -91,43 +96,6 @@ export async function putUserProjectAccess(
     invalidateProjectAccessPickCache();
     return parseUserProjectAccess(await res.json());
 }
-export const PROJECT_ACCESS_FETCH_BATCH = 12;
-export async function listUsersWithProjectAccessToProject(projectId: string): Promise<TimeManagerProjectDashboardTeamMember[]> {
-    const pid = String(projectId ?? '').trim();
-    if (!pid)
-        return [];
-    const users = await listTimeTrackingUsers();
-    const active = users.filter((u) => !u.is_archived && !u.is_blocked);
-    const out: TimeManagerProjectDashboardTeamMember[] = [];
-    for (let i = 0; i < active.length; i += PROJECT_ACCESS_FETCH_BATCH) {
-        const chunk = active.slice(i, i + PROJECT_ACCESS_FETCH_BATCH);
-        const chunkResults = await Promise.all(chunk.map(async (u) => {
-            try {
-                const { projectIds } = await getUserProjectAccess(u.id);
-                const hasProject = projectIds.some((x) => String(x).trim() === pid);
-                if (!hasProject)
-                    return null;
-                const name = (u.display_name?.trim() || u.email || `Пользователь ${u.id}`).trim();
-                return {
-                    userId: String(u.id),
-                    name,
-                    hours: 0,
-                    billableHours: 0,
-                    nonBillableHours: 0,
-                } satisfies TimeManagerProjectDashboardTeamMember;
-            }
-            catch {
-                return null;
-            }
-        }));
-        for (const r of chunkResults) {
-            if (r)
-                out.push(r);
-        }
-    }
-    out.sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
-    return out;
-}
 
 export type ProjectPartnerAccessRow = {
     authUserId: number;
@@ -135,43 +103,84 @@ export type ProjectPartnerAccessRow = {
     position: string;
 };
 
-export async function listProjectAccessPickRows(
-    projectId: string,
-    includeUser: (u: TimeTrackingUserRow) => boolean,
-): Promise<ProjectPartnerAccessRow[]> {
-    const pid = String(projectId ?? '').trim();
-    if (!pid)
+function parseProjectAssigneesPayload(raw: unknown): ProjectPartnerAccessRow[] {
+    const root = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+    const list = Array.isArray(raw)
+        ? raw
+        : (root.assignees ?? root.items ?? root.users);
+    if (!Array.isArray(list))
         return [];
-    const users = await listTimeTrackingUsers();
-    const candidates = users.filter((u) => !u.is_archived && !u.is_blocked && includeUser(u));
     const out: ProjectPartnerAccessRow[] = [];
-    for (let i = 0; i < candidates.length; i += PROJECT_ACCESS_FETCH_BATCH) {
-        const chunk = candidates.slice(i, i + PROJECT_ACCESS_FETCH_BATCH);
-        const chunkResults = await Promise.all(chunk.map(async (u) => {
-            try {
-                const { projectIds } = await getUserProjectAccess(u.id);
-                const hasProject = projectIds.some((x) => String(x).trim() === pid);
-                if (!hasProject)
-                    return null;
-                const displayName = (u.display_name?.trim() || u.email || `Пользователь ${u.id}`).trim();
-                const position = (u.position?.trim() ?? '').trim();
-                return {
-                    authUserId: u.id,
-                    displayName,
-                    position,
-                } satisfies ProjectPartnerAccessRow;
-            }
-            catch {
-                return null;
-            }
-        }));
-        for (const r of chunkResults) {
-            if (r)
-                out.push(r);
-        }
+    const seen = new Set<number>();
+    for (const item of list) {
+        if (!item || typeof item !== 'object')
+            continue;
+        const o = item as Record<string, unknown>;
+        const authUserId = Number(o.authUserId ?? o.auth_user_id);
+        if (!Number.isFinite(authUserId) || authUserId <= 0 || seen.has(authUserId))
+            continue;
+        if (o.isArchived === true || o.is_archived === true)
+            continue;
+        if (o.isBlocked === true || o.is_blocked === true)
+            continue;
+        seen.add(authUserId);
+        const displayName = String(o.displayName ?? o.display_name ?? o.email ?? `Пользователь ${authUserId}`).trim()
+            || `Пользователь ${authUserId}`;
+        const position = String(o.position ?? '').trim();
+        out.push({ authUserId, displayName, position });
     }
     out.sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru', { sensitivity: 'base' }));
     return out;
+}
+
+/** Single reverse lookup: users who have access to the project. */
+export async function fetchProjectAccessUsers(projectId: string): Promise<ProjectPartnerAccessRow[]> {
+    const pid = String(projectId ?? '').trim();
+    if (!pid)
+        return [];
+    let pending = projectAssigneesInflight.get(pid);
+    if (!pending) {
+        pending = (async () => {
+            const res = await apiFetch(
+                `/api/v1/time-tracking/projects/${encodeURIComponent(pid)}/time-tracking-assignees`,
+            );
+            await throwIfNotOk(res);
+            return parseProjectAssigneesPayload(await res.json());
+        })().catch((err) => {
+            projectAssigneesInflight.delete(pid);
+            throw err;
+        });
+        projectAssigneesInflight.set(pid, pending);
+    }
+    return pending;
+}
+
+export async function listUsersWithProjectAccessToProject(projectId: string): Promise<TimeManagerProjectDashboardTeamMember[]> {
+    const rows = await fetchProjectAccessUsers(projectId);
+    return rows.map((r) => ({
+        userId: String(r.authUserId),
+        name: r.displayName,
+        hours: 0,
+        billableHours: 0,
+        nonBillableHours: 0,
+    }));
+}
+
+export async function listProjectAccessPickRows(
+    projectId: string,
+    includeUser?: (u: TimeTrackingUserRow) => boolean,
+): Promise<ProjectPartnerAccessRow[]> {
+    const rows = await fetchProjectAccessUsers(projectId);
+    if (!includeUser)
+        return rows;
+    const users = await listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]);
+    if (users.length === 0)
+        return rows;
+    const byId = new Map(users.map((u) => [u.id, u]));
+    return rows.filter((r) => {
+        const u = byId.get(r.authUserId);
+        return u ? includeUser(u) : true;
+    });
 }
 
 export async function findTimeManagerClientProjectById(projectId: string): Promise<TimeManagerClientProjectRow | null> {
@@ -266,7 +275,7 @@ export async function listUsersWithProjectAccessToProjectForPick(projectId: stri
     let pending = projectAccessPickInflight.get(pid);
     if (!pending) {
         pending = (async () => {
-            const accessFallback = await listProjectAccessPickRows(pid, () => true);
+            const accessFallback = await listProjectAccessPickRows(pid);
             return listProjectTeamMembersFromProjectDefinition(pid, accessFallback);
         })().catch((err) => {
             projectAccessPickInflight.delete(pid);
@@ -282,7 +291,7 @@ export async function listPartnerUsersWithProjectAccessToProject(projectId: stri
     if (!pid)
         return [];
     const [members, users] = await Promise.all([
-        listProjectAccessPickRows(pid, () => true).catch(() => [] as ProjectPartnerAccessRow[]),
+        fetchProjectAccessUsers(pid).catch(() => [] as ProjectPartnerAccessRow[]),
         listTimeTrackingUsers(),
     ]);
     const partnerIds = new Set(users

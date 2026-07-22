@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getUsersPublic } from '@entities/user';
 import {
-    fetchAllChatMessages,
     fetchChatMessages,
     CHAT_MESSAGES_MAX_LIMIT,
     fetchChatRooms,
@@ -233,8 +232,10 @@ export function useKostaDailyChat(
         setMessagesLoading(true);
         setMessagesError(null);
         try {
-            const items = await fetchAllChatMessages(roomId);
-            setHasMoreOlderByRoom((prev) => ({ ...prev, [roomId]: false }));
+            const { items, has_more } = await fetchChatMessages(roomId, {
+                limit: MESSAGES_OLDER_BATCH,
+            });
+            setHasMoreOlderByRoom((prev) => ({ ...prev, [roomId]: has_more }));
             let mergedForRoom: ChatMessage[] = [];
             setMessagesByRoom((prev) => {
                 const cached = prev[roomId] ?? [];
@@ -264,7 +265,8 @@ export function useKostaDailyChat(
         if (prefetchedRoomsRef.current.has(roomId))
             return;
         prefetchedRoomsRef.current.add(roomId);
-        void fetchAllChatMessages(roomId).then((items) => {
+        void fetchChatMessages(roomId, { limit: MESSAGES_OLDER_BATCH }).then(({ items, has_more }) => {
+            setHasMoreOlderByRoom((prev) => ({ ...prev, [roomId]: has_more }));
             setMessagesByRoom((prev) => {
                 if (prev[roomId]?.length)
                     return prev;

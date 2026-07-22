@@ -6,6 +6,7 @@ import { uploadAttendanceExplanation } from '@entities/attendance';
 import { createAuthenticatedMediaBlobUrl } from '@shared/api';
 import type { GroupedRow } from '../model/types';
 import type { WorkdaySettings } from '@shared/lib/attendanceSettings';
+import { Pagination } from '@shared/ui/Pagination';
 import { AttendanceDatePicker } from './AttendanceDatePicker';
 import { AttendanceSelect } from './AttendanceSelect';
 const ALLOWED_EXPLANATION_EXT = /\.(jpe?g|png|webp|gif)$/i;
@@ -38,6 +39,10 @@ type AttendanceReportSectionProps = {
     setTypeFilter: (v: string) => void;
     groupedRecords: GroupedRow[];
     filteredGroupedRecords: GroupedRow[];
+    page: number;
+    setPage: (v: number) => void;
+    pageSize: number;
+    totalCount: number;
     loading: boolean;
     error: boolean;
     recordsCount: number;
@@ -52,7 +57,7 @@ type AttendanceReportSectionProps = {
     }[];
     isDailyMode: boolean;
 };
-export function AttendanceReportSection({ dateFrom, setDateFrom, dateTo, setDateTo, search, setSearch, typeFilter, setTypeFilter, groupedRecords, filteredGroupedRecords, loading, error, recordsCount, showTable, load, onReset, onExportExcel, settings, typeFilterOptions, isDailyMode, }: AttendanceReportSectionProps) {
+export function AttendanceReportSection({ dateFrom, setDateFrom, dateTo, setDateTo, search, setSearch, typeFilter, setTypeFilter, groupedRecords, filteredGroupedRecords, page, setPage, pageSize, totalCount, loading, error, recordsCount, showTable, load, onReset, onExportExcel, settings, typeFilterOptions, isDailyMode, }: AttendanceReportSectionProps) {
     const { t } = useI18n();
     const explainFileRef = useRef<HTMLInputElement>(null);
     const pendingExplainRow = useRef<GroupedRow | null>(null);
@@ -322,6 +327,8 @@ export function AttendanceReportSection({ dateFrom, setDateFrom, dateTo, setDate
           <p className="att__empty-title">{t('attendancePage.empty.title')}</p>
           <p className="att__empty-desc">{t('attendancePage.empty.desc')}</p>
         </div>)}
+
+      <Pagination page={page} totalCount={totalCount} pageSize={pageSize} loading={loading} onPageChange={setPage} className="att__pagination"/>
 
       {photoPreviewBlobUrl &&
             typeof document !== 'undefined' &&

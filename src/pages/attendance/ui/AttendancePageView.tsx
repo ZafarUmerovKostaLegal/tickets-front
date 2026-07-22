@@ -9,7 +9,7 @@ import { WorkdaySettingsModal } from './WorkdaySettingsModal';
 import { HikvisionUserLinkModal } from './HikvisionUserLinkModal';
 import './AttendancePage.css';
 export function AttendancePageView() {
-    const { dateFrom, setDateFrom, dateTo, setDateTo, search, setSearch, typeFilter, setTypeFilter, settings, settingsLoading, settingsError, saveWorkdaySettings, isSettingsOpen, setIsSettingsOpen, groupedRecords, loading, error, load, filteredGroupedRecords, summary, showTable, handleReset, handleExportExcel, typeFilterOptions, isDailyMode, } = useAttendance();
+    const { dateFrom, setDateFrom, dateTo, setDateTo, search, setSearch, typeFilter, setTypeFilter, settings, settingsLoading, settingsError, saveWorkdaySettings, isSettingsOpen, setIsSettingsOpen, groupedRecords, loading, error, load, filteredGroupedRecords, page, setPage, pageSize, totalCount, summary, showTable, handleReset, handleExportExcel, typeFilterOptions, isDailyMode, } = useAttendance();
     const { t } = useI18n();
     const { user, loading: userLoading } = useCurrentUser();
     const [isHikvisionModalOpen, setIsHikvisionModalOpen] = useState(false);
@@ -81,7 +81,7 @@ export function AttendancePageView() {
 
           <AttendanceKPISection summary={summary} settings={settings} loading={loading}/>
 
-          <AttendanceReportSection dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} search={search} setSearch={setSearch} typeFilter={typeFilter} setTypeFilter={setTypeFilter} groupedRecords={groupedRecords} filteredGroupedRecords={filteredGroupedRecords} loading={loading} error={!!error} recordsCount={groupedRecords.length} showTable={showTable} load={load} onReset={handleReset} onExportExcel={handleExportExcel} settings={settings} typeFilterOptions={typeFilterOptions} isDailyMode={isDailyMode}/>
+          <AttendanceReportSection dateFrom={dateFrom} setDateFrom={setDateFrom} dateTo={dateTo} setDateTo={setDateTo} search={search} setSearch={setSearch} typeFilter={typeFilter} setTypeFilter={setTypeFilter} groupedRecords={groupedRecords} filteredGroupedRecords={filteredGroupedRecords} page={page} setPage={setPage} pageSize={pageSize} totalCount={totalCount} loading={loading} error={!!error} recordsCount={groupedRecords.length} showTable={showTable} load={load} onReset={handleReset} onExportExcel={handleExportExcel} settings={settings} typeFilterOptions={typeFilterOptions} isDailyMode={isDailyMode}/>
         </div>
       </main>
 

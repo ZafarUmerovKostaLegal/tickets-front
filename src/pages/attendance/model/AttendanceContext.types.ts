@@ -21,6 +21,10 @@ export type AttendanceContextValue = {
     load: () => Promise<void>;
     groupedRecords: GroupedRow[];
     filteredGroupedRecords: GroupedRow[];
+    page: number;
+    setPage: (v: number) => void;
+    pageSize: number;
+    totalCount: number;
     summary: AttendanceSummary;
     showTable: boolean;
     handleReset: () => void;

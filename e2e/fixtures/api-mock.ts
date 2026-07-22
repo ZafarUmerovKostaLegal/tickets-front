@@ -84,6 +84,24 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
 
     
     if (path === '/api/v1/users' && method === 'GET') {
+        const url = new URL(route.request().url());
+        const limit = url.searchParams.get('limit');
+        if (limit != null) {
+            await json(route, {
+                items: [options.user],
+                total: 1,
+                skip: Number(url.searchParams.get('skip') || 0),
+                limit: Number(limit),
+                summary: {
+                    total: 1,
+                    active: 1,
+                    blocked: 0,
+                    archived: 0,
+                    roles: [{ name: options.user.role || 'Сотрудник', count: 1 }],
+                },
+            });
+            return;
+        }
         await json(route, [options.user]);
         return;
     }
@@ -285,6 +303,18 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
 
     
     if (path.startsWith('/api/v1/inventory')) {
+        if (method === 'GET' && path === '/api/v1/inventory/items') {
+            await json(route, {
+                items: [],
+                total: 0,
+                skip: 0,
+                limit: 24,
+                in_use_count: 0,
+                in_stock_count: 0,
+                archived_count: 0,
+            });
+            return;
+        }
         if (method === 'GET')
             await emptyList(route);
         else
