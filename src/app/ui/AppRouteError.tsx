@@ -1,6 +1,9 @@
 import { useRouteError, isRouteErrorResponse } from 'react-router-dom';
 import { routes } from '@shared/config';
-import { isLikelyStaleBundleErrorMessage } from '@app/lib/staleBundleError';
+import {
+    isLikelyStaleBundleErrorMessage,
+    STALE_BUNDLE_USER_MESSAGE,
+} from '@app/lib/staleBundleError';
 
 function routeErrorToText(err: unknown): string {
     if (isRouteErrorResponse(err))
@@ -36,10 +39,10 @@ export function AppRouteError() {
         </h1>
         <p style={{ margin: '0 0 1rem', opacity: 0.92 }}>
           {likelyStale
-            ? 'Часто это происходит после выката новой версии: в кэше осталась старая страница, а скрипты и стили на сервере уже с другими именами. Нажмите «Обновить» или сделайте жёсткое обновление: Ctrl+Shift+R (Cmd+Shift+R на macOS).'
+            ? STALE_BUNDLE_USER_MESSAGE
             : 'Попробуйте обновить страницу. Если ошибка повторяется — проверьте сеть и зайдите снова.'}
         </p>
-        {message
+        {message && !likelyStale
           ? (<details style={{ margin: '0 0 1rem', textAlign: 'left', opacity: 0.8, fontSize: '0.875rem' }}>
             <summary style={{ cursor: 'pointer' }}>Текст ошибки</summary>
             <pre
@@ -77,10 +80,6 @@ export function AppRouteError() {
             На главную
           </a>
         </div>
-        <p style={{ margin: '1.25rem 0 0', fontSize: '0.8rem', opacity: 0.7 }}>
-          Для сервера: убедитесь, что HTML не отдаётся с длинным Cache-Control, иначе клиенты долго не получают
-          ссылки на новые файлы в /assets/.
-        </p>
       </div>
     </div>);
 }

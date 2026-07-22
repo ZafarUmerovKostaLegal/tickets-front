@@ -10,9 +10,10 @@ import { reconcileDesktopAuthCallbackLocation } from '@shared/lib/desktopAuth';
 import { initSafeAreaInsets } from '@shared/lib/safeAreaInsets';
 import { applyDocumentLocale, getInitialLocale } from '@shared/i18n';
 import { applyTheme, getInitialTheme } from '@shared/lib/theme';
-import { stripLegacyReloadQueryParams } from '@app/lib/staleBundleError';
+import { installStaleBundleReload, stripLegacyReloadQueryParams } from '@app/lib/staleBundleError';
 injectPublicEnv();
 stripLegacyReloadQueryParams();
+installStaleBundleReload();
 if (reconcileDesktopAuthCallbackLocation()) {
     
 }

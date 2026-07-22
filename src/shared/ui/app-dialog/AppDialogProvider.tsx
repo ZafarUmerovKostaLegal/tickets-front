@@ -1,11 +1,18 @@
 import { createContext, useCallback, useContext, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import {
+    isLikelyStaleBundleErrorMessage,
+    reloadForStaleBundle,
+    STALE_BUNDLE_USER_MESSAGE,
+    STALE_BUNDLE_USER_TITLE,
+} from '@app/lib/staleBundleError';
 import { registerAppDialogHandlers, type ShowAlertOptions, type ShowConfirmOptions } from './appDialogGate';
 import './AppDialog.css';
 
 type AlertQueueEntry = ShowAlertOptions & {
     kind: 'alert';
     resolve: () => void;
+    reloadOnClose?: boolean;
 };
 
 type ConfirmQueueEntry = ShowConfirmOptions & {
@@ -37,8 +44,11 @@ function AppDialogModal({ entry, onFinish }: {
     const descId = useId();
 
     const finishAlert = useCallback(() => {
-        if (entry.kind === 'alert')
+        if (entry.kind === 'alert') {
             entry.resolve();
+            if (entry.reloadOnClose)
+                reloadForStaleBundle();
+        }
         onFinish();
     }, [entry, onFinish]);
 
@@ -70,6 +80,7 @@ function AppDialogModal({ entry, onFinish }: {
     }, [entry.kind, finishAlert, finishConfirm]);
 
     const titleText = entry.title ?? (entry.kind === 'confirm' ? 'Подтвердите действие' : 'Сообщение');
+    const actionLabel = entry.kind === 'alert' && entry.reloadOnClose ? 'Обновить' : 'Понятно';
 
     const backdropClick = () => {
         if (entry.kind === 'alert')
@@ -100,7 +111,7 @@ function AppDialogModal({ entry, onFinish }: {
                         </button>
                       </>)
                     : (<button type="button" className="app-dlg__btn app-dlg__btn--primary" onClick={finishAlert} autoFocus>
-                        Понятно
+                        {actionLabel}
                       </button>)}
             </div>
         </div>
@@ -112,10 +123,12 @@ export function AppDialogProvider({ children }: { children: ReactNode }) {
 
     const showAlert = useCallback((opts: ShowAlertOptions) => {
         return new Promise<void>((resolve) => {
+            const stale = isLikelyStaleBundleErrorMessage(opts.message);
             setQueue((q) => [...q, {
                     kind: 'alert',
-                    title: opts.title,
-                    message: opts.message,
+                    title: stale ? STALE_BUNDLE_USER_TITLE : opts.title,
+                    message: stale ? STALE_BUNDLE_USER_MESSAGE : opts.message,
+                    reloadOnClose: stale,
                     resolve,
                 }]);
         });

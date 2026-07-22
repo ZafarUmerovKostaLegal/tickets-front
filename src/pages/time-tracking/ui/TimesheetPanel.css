@@ -1673,6 +1673,12 @@
   flex: 1; min-width: 0;
   padding: 0.75rem 1rem 0.75rem 0.875rem;
   display: flex; flex-direction: column; gap: 0.15rem;
+  cursor: text;
+}
+.tsp__row-txt,
+.tsp__row-txt * {
+  user-select: text;
+  -webkit-user-select: text;
 }
 .tsp__row-proj {
   margin: 0; display: flex; align-items: baseline; gap: 0.375rem; flex-wrap: wrap;
