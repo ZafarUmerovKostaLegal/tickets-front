@@ -17,10 +17,12 @@ async function apiFetch(apiBase: string, token: string, path: string, init: Requ
     const base = apiBase.replace(/\/$/, '');
     const url = path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
     const headers = new Headers(init.headers);
-    headers.set('Authorization', `Bearer ${token}`);
+    const bearer = token.trim();
+    if (bearer)
+        headers.set('Authorization', `Bearer ${bearer}`);
     if (init.body && !(init.body instanceof FormData) && !headers.has('Content-Type'))
         headers.set('Content-Type', 'application/json');
-    return fetch(url, { ...init, headers, credentials: 'omit' });
+    return fetch(url, { ...init, headers, credentials: 'include' });
 }
 
 export async function fetchMe(apiBase: string, token: string): Promise<ExtUser> {

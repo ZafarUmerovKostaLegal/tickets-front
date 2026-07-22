@@ -30,6 +30,7 @@ export type TimerPayload = {
 };
 
 export type AuthState = {
+    /** Bearer token when present; empty string for cookie-only session. */
     token: string;
     apiBase: string;
     user: ExtUser;

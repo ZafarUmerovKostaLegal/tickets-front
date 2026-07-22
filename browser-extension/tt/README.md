@@ -26,6 +26,10 @@ npm run ext:tt:build
 4. Откройте приложение (localhost:5173 или production), войдите в аккаунт
 5. Откройте popup расширения — сессия подхватится за несколько секунд
 
+> **Важно:** после каждой пересборки нажимайте «Обновить» на карточке расширения.
+> Content script собирается одним файлом (`content.js` без `import`) — иначе Chrome показывает ошибку
+> `Cannot use import statement outside a module`.
+
 ## Разработка
 
 ```bash

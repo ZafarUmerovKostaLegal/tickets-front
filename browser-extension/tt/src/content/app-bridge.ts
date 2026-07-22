@@ -1,193 +1,143 @@
 import { MSG, TOKEN_KEY, TT_TIMER_LS_PREFIX } from '../shared/constants';
 import { payloadFromPageStorage, toPageStoragePayload } from '../shared/timer-engine';
-import type { TimerPayload } from '../shared/types';
+import type { ExtUser, TimerPayload } from '../shared/types';
 
 type BridgeResult = {
     token: string | null;
     apiBase: string;
     timerRaw: string | null;
-    userJson: string | null;
+    user: ExtUser | null;
 };
 
-function readFromPage(): Promise<BridgeResult> {
-    return new Promise((resolve) => {
-        const id = `kl-tt-bridge-${Date.now()}`;
-        const onMessage = (ev: MessageEvent) => {
-            if (ev.source !== window || !ev.data || ev.data.type !== `${id}:result`)
-                return;
-            window.removeEventListener('message', onMessage);
-            resolve(ev.data.payload as BridgeResult);
-        };
-        window.addEventListener('message', onMessage);
-        const script = document.createElement('script');
-        script.textContent = `
-(function(){
-  var id = ${JSON.stringify(id)};
-  try {
-    var token = localStorage.getItem(${JSON.stringify(TOKEN_KEY)});
-    var apiBase = window.location.origin;
-    var userJson = null;
-    var timerRaw = null;
-    var uid = null;
-    if (token) {
-      fetch(apiBase + '/api/v1/users/me', {
-        headers: { 'Authorization': 'Bearer ' + token },
-        credentials: 'include'
-      }).then(function(r) { return r.ok ? r.json() : null; })
-        .then(function(u) {
-          if (u && u.id) {
-            uid = u.id;
-            userJson = JSON.stringify({
-              id: u.id,
-              email: u.email || '',
-              display_name: u.display_name || u.displayName || '',
-              role: u.role || '',
-              time_tracking_role: u.time_tracking_role || u.timeTrackingRole || null
-            });
-            timerRaw = localStorage.getItem(${JSON.stringify(TT_TIMER_LS_PREFIX)} + u.id);
-          }
-          window.postMessage({ type: id + ':result', payload: {
-            token: token,
-            apiBase: apiBase,
-            userJson: userJson,
-            timerRaw: timerRaw
-          }}, '*');
-        }).catch(function(){
-          window.postMessage({ type: id + ':result', payload: {
-            token: token, apiBase: apiBase, userJson: null, timerRaw: null
-          }}, '*');
+function timerKey(userId: number): string {
+    return `${TT_TIMER_LS_PREFIX}${userId}`;
+}
+
+function parseUser(data: Record<string, unknown>): ExtUser | null {
+    const id = Number(data.id);
+    if (!Number.isFinite(id) || id <= 0)
+        return null;
+    return {
+        id,
+        email: String(data.email ?? ''),
+        display_name: String(data.display_name ?? data.displayName ?? ''),
+        role: String(data.role ?? ''),
+        time_tracking_role: (data.time_tracking_role ?? data.timeTrackingRole ?? null) as ExtUser['time_tracking_role'],
+    };
+}
+
+/** Content scripts share origin localStorage with the page; no MAIN-world injection needed. */
+async function readFromPage(): Promise<BridgeResult> {
+    const apiBase = window.location.origin;
+    const token = localStorage.getItem(TOKEN_KEY)?.trim() || null;
+    const headers: HeadersInit = {};
+    if (token)
+        headers.Authorization = `Bearer ${token}`;
+    try {
+        const res = await fetch(`${apiBase}/api/v1/users/me`, {
+            headers,
+            credentials: 'include',
         });
-    } else {
-      window.postMessage({ type: id + ':result', payload: {
-        token: null, apiBase: apiBase, userJson: null, timerRaw: null
-      }}, '*');
+        if (!res.ok) {
+            return { token: null, apiBase, user: null, timerRaw: null };
+        }
+        const user = parseUser(await res.json() as Record<string, unknown>);
+        if (!user)
+            return { token: null, apiBase, user: null, timerRaw: null };
+        const timerRaw = localStorage.getItem(timerKey(user.id));
+        return { token, apiBase, user, timerRaw };
     }
-  } catch (e) {
-    window.postMessage({ type: id + ':result', payload: {
-      token: null, apiBase: location.origin, userJson: null, timerRaw: null
-    }}, '*');
-  }
-})();
-        `;
-        (document.documentElement || document.head).appendChild(script);
-        script.remove();
-        setTimeout(() => {
-            window.removeEventListener('message', onMessage);
-            resolve({ token: null, apiBase: location.origin, userJson: null, timerRaw: null });
-        }, 8000);
-    });
+    catch {
+        return { token: null, apiBase, user: null, timerRaw: null };
+    }
 }
 
 function writeTimerToPage(userId: number, payload: TimerPayload | null): void {
-    const script = document.createElement('script');
-    const key = `${TT_TIMER_LS_PREFIX}${userId}`;
-    if (payload) {
-        const raw = toPageStoragePayload(payload);
-        script.textContent = `
-try {
-  localStorage.setItem(${JSON.stringify(key)}, ${JSON.stringify(raw)});
-  window.dispatchEvent(new CustomEvent('tt:timer-storage-changed', { detail: { authUserId: ${userId} } }));
-} catch (e) {}
-        `;
+    const key = timerKey(userId);
+    try {
+        if (payload)
+            localStorage.setItem(key, toPageStoragePayload(payload));
+        else
+            localStorage.removeItem(key);
+        window.dispatchEvent(new CustomEvent('tt:timer-storage-changed', { detail: { authUserId: userId } }));
     }
-    else {
-        script.textContent = `
-try {
-  localStorage.removeItem(${JSON.stringify(key)});
-  window.dispatchEvent(new CustomEvent('tt:timer-storage-changed', { detail: { authUserId: ${userId} } }));
-} catch (e) {}
-        `;
+    catch {
+        // ignore quota / private mode
     }
-    (document.documentElement || document.head).appendChild(script);
-    script.remove();
 }
 
 let lastTimerRaw: string | null | undefined;
 
 async function syncAuthFromPage(includeTimer = false): Promise<void> {
     const data = await readFromPage();
-    if (!data.token || !data.userJson) {
+    if (!data.user) {
         lastTimerRaw = undefined;
-        await chrome.runtime.sendMessage({ type: MSG.AUTH_CLEAR });
+        await chrome.runtime.sendMessage({ type: MSG.AUTH_CLEAR }).catch(() => {});
         return;
     }
-    const user = JSON.parse(data.userJson);
     await chrome.runtime.sendMessage({
         type: MSG.AUTH_SYNC,
         token: data.token,
         apiBase: data.apiBase,
-        user,
-    });
+        user: data.user,
+    }).catch(() => {});
     if (!includeTimer)
         return;
     const timerRaw = data.timerRaw;
     if (lastTimerRaw === undefined || timerRaw !== lastTimerRaw) {
         lastTimerRaw = timerRaw;
-        const timer = timerRaw ? payloadFromPageStorage(timerRaw, user.id) : null;
+        const timer = timerRaw ? payloadFromPageStorage(timerRaw, data.user.id) : null;
         await chrome.runtime.sendMessage({
             type: MSG.TIMER_SYNC_FROM_PAGE,
-            userId: user.id,
+            userId: data.user.id,
             payload: timer,
-        });
+        }).catch(() => {});
     }
 }
 
 async function syncTimerFromPage(): Promise<void> {
     const data = await readFromPage();
-    if (!data.token || !data.userJson)
+    if (!data.user)
         return;
-    const user = JSON.parse(data.userJson);
     const timerRaw = data.timerRaw;
     if (timerRaw === lastTimerRaw)
         return;
     lastTimerRaw = timerRaw;
-    const timer = timerRaw ? payloadFromPageStorage(timerRaw, user.id) : null;
+    const timer = timerRaw ? payloadFromPageStorage(timerRaw, data.user.id) : null;
     await chrome.runtime.sendMessage({
         type: MSG.TIMER_SYNC_FROM_PAGE,
-        userId: user.id,
+        userId: data.user.id,
         payload: timer,
-    });
+    }).catch(() => {});
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.type === MSG.TIMER_PUSH) {
-        const payload = message.payload ?? null;
+        const payload = (message.payload ?? null) as TimerPayload | null;
         writeTimerToPage(message.userId as number, payload);
         lastTimerRaw = payload ? toPageStoragePayload(payload) : null;
         sendResponse({ ok: true });
         return;
     }
+    if (message.type === MSG.AUTH_PING) {
+        void syncAuthFromPage(true).then(() => sendResponse({ ok: true }));
+        return true;
+    }
     return false;
 });
 
-function injectPageListeners(): void {
-    const script = document.createElement('script');
-    script.textContent = `
-(function(){
-  var prefix = ${JSON.stringify(TT_TIMER_LS_PREFIX)};
-  var notify = function() {
-    window.postMessage({ type: 'kl-tt-page-timer-changed' }, '*');
-  };
-  window.addEventListener('storage', function(e) {
-    if (e.key && e.key.indexOf(prefix) === 0) notify();
-  });
-  window.addEventListener('tt:timer-storage-changed', notify);
-})();
-    `;
-    (document.documentElement || document.head).appendChild(script);
-    script.remove();
-}
+window.addEventListener('storage', (ev) => {
+    if (ev.key && ev.key.startsWith(TT_TIMER_LS_PREFIX))
+        void syncTimerFromPage();
+});
 
-window.addEventListener('message', (ev) => {
-    if (ev.source !== window || ev.data?.type !== 'kl-tt-page-timer-changed')
-        return;
+window.addEventListener('tt:timer-storage-changed', () => {
     void syncTimerFromPage();
 });
 
-injectPageListeners();
 void syncAuthFromPage(true);
 
-const AUTH_FALLBACK_MS = 30_000;
+const AUTH_FALLBACK_MS = 15_000;
 setInterval(() => {
     if (document.visibilityState !== 'visible')
         return;
@@ -196,7 +146,7 @@ setInterval(() => {
 
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible')
-        void syncAuthFromPage(false);
+        void syncAuthFromPage(true);
 });
 
 export {};

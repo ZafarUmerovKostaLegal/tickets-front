@@ -71,6 +71,26 @@ async function refreshTodayHours(): Promise<number | null> {
     }
 }
 
+async function requestAuthFromAppTabs(): Promise<void> {
+    const tabs = await chrome.tabs.query({
+        url: [
+            'http://localhost:5173/*',
+            'http://127.0.0.1:5173/*',
+            'https://*.kostalegal.com/*',
+        ],
+    });
+    await Promise.all(tabs.map(async (tab) => {
+        if (!tab.id)
+            return;
+        try {
+            await chrome.tabs.sendMessage(tab.id, { type: MSG.AUTH_PING });
+        }
+        catch {
+            // tab without content script
+        }
+    }));
+}
+
 chrome.alarms.create('tt-badge', { periodInMinutes: 1 });
 
 chrome.alarms.onAlarm.addListener(() => {
@@ -83,7 +103,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         try {
             if (message.type === MSG.AUTH_SYNC) {
                 auth = {
-                    token: message.token as string,
+                    token: String(message.token ?? '').trim(),
                     apiBase: message.apiBase as string,
                     user: message.user,
                 };
@@ -109,6 +129,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
                 return;
             }
             if (message.type === MSG.GET_STATE) {
+                if (!auth)
+                    await requestAuthFromAppTabs();
                 const todayHours = await refreshTodayHours();
                 sendResponse(buildState(todayHours));
                 return;

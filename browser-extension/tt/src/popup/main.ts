@@ -5,13 +5,26 @@ import './popup.css';
 
 const app = document.getElementById('app')!;
 
-function render(state: ExtensionState): void {
+function render(state: ExtensionState | null | undefined): void {
+    if (!state) {
+        app.innerHTML = `
+          <div class="tt-ext">
+            <h1 class="tt-ext__title">Kosta Legal TT</h1>
+            <p class="tt-ext__muted">Не удалось связаться с фоновым скриптом. Обновите расширение на chrome://extensions.</p>
+          </div>`;
+        return;
+    }
     const { auth, timer, todayHours, error, busy } = state;
     if (!auth) {
         app.innerHTML = `
           <div class="tt-ext">
             <h1 class="tt-ext__title">Kosta Legal TT</h1>
-            <p class="tt-ext__muted">Войдите в приложение Kosta Legal в этой же сети — расширение подхватит сессию автоматически.</p>
+            <p class="tt-ext__muted">Откройте вкладку Kosta Legal и войдите в аккаунт — сессия подхватится автоматически (cookie или токен).</p>
+            <ol class="tt-ext__steps">
+              <li>Откройте приложение и убедитесь, что вы вошли</li>
+              <li>Оставьте вкладку открытой</li>
+              <li>Снова откройте это окно</li>
+            </ol>
             <a class="tt-ext__link" href="https://tickets.kostalegal.com" target="_blank" rel="noopener">Открыть приложение</a>
           </div>`;
         return;
@@ -87,8 +100,13 @@ async function send(type: string): Promise<void> {
 }
 
 async function refresh(): Promise<void> {
-    const state = await chrome.runtime.sendMessage({ type: MSG.GET_STATE }) as ExtensionState;
-    render(state);
+    try {
+        const state = await chrome.runtime.sendMessage({ type: MSG.GET_STATE }) as ExtensionState;
+        render(state);
+    }
+    catch {
+        render(null);
+    }
 }
 
 chrome.runtime.onMessage.addListener((message) => {
