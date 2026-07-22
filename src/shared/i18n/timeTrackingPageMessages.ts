@@ -46,6 +46,7 @@ export const timeTrackingPageMessages = {
     },
     statistics: {
         pageAria: 'Статистика',
+        sectionTitle: 'Раздел',
         summaryAria: 'Сводка по часам',
         tableAria: 'Таблица статистики по часам',
         chartsTitle: 'Графики и визуализация',
