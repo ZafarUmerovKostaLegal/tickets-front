@@ -4,7 +4,9 @@ import {
     INVOICE_REGISTRY_SHEETS,
     INVOICE_REGISTRY_STATUSES,
     clearInvoiceRegistryOverrides,
+    formatRegistryAmountCell,
     getInvoiceRegistrySheet,
+    isInvoiceRegistryMoneyColumnKey,
     isInvoiceRegistryStatus,
     loadInvoiceRegistryRows,
     writeInvoiceRegistryOverrides,
@@ -206,6 +208,7 @@ function RegistryEditableCell({
     ariaLabel,
     wide,
     editor = 'text',
+    money = false,
     readOnly,
     active,
     onActivate,
@@ -216,6 +219,7 @@ function RegistryEditableCell({
     ariaLabel: string;
     wide?: boolean;
     editor?: 'text' | 'status';
+    money?: boolean;
     readOnly?: boolean;
     active: boolean;
     onActivate: () => void;
@@ -223,6 +227,7 @@ function RegistryEditableCell({
     onBlurCommit: () => void;
 }) {
     const ref = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
+    const isMoney = money && editor === 'text';
     useEffect(() => {
         if (active && editor === 'text' && ref.current) {
             ref.current.focus();
@@ -245,22 +250,23 @@ function RegistryEditableCell({
     }
 
     if (!active) {
+        const display = isMoney ? formatRegistryAmountCell(value) : value;
         return (
             <td
-                className={`tt-inv-reg__td${wide ? ' tt-inv-reg__td--wide' : ''}`}
+                className={`tt-inv-reg__td${wide ? ' tt-inv-reg__td--wide' : ''}${isMoney ? ' tt-inv-reg__td--money' : ''}`}
                 onClick={onActivate}
                 onFocus={onActivate}
                 tabIndex={0}
                 role="gridcell"
                 aria-label={ariaLabel}
-                title={value || undefined}
+                title={display || undefined}
             >
-                <span className="tt-inv-reg__cell-text">{value || '\u00a0'}</span>
+                <span className="tt-inv-reg__cell-text">{display || '\u00a0'}</span>
             </td>
         );
     }
 
-    const multiline = wide || value.includes('\n') || value.length > 48;
+    const multiline = !isMoney && (wide || value.includes('\n') || value.length > 48);
     if (multiline) {
         return (
             <td className={`tt-inv-reg__td tt-inv-reg__td--editing${wide ? ' tt-inv-reg__td--wide' : ''}`}>
@@ -271,7 +277,14 @@ function RegistryEditableCell({
                     aria-label={ariaLabel}
                     rows={Math.min(6, Math.max(2, value.split('\n').length + 1))}
                     onChange={(e) => onChange(e.target.value)}
-                    onBlur={onBlurCommit}
+                    onBlur={() => {
+                        if (isMoney) {
+                            const next = formatRegistryAmountCell(value);
+                            if (next !== value)
+                                onChange(next);
+                        }
+                        onBlurCommit();
+                    }}
                     onKeyDown={(e) => {
                         if (e.key === 'Escape') {
                             e.preventDefault();
@@ -284,15 +297,23 @@ function RegistryEditableCell({
     }
 
     return (
-        <td className="tt-inv-reg__td tt-inv-reg__td--editing">
+        <td className={`tt-inv-reg__td tt-inv-reg__td--editing${isMoney ? ' tt-inv-reg__td--money' : ''}`}>
             <input
                 ref={(el) => { ref.current = el; }}
                 type="text"
+                inputMode={isMoney ? 'decimal' : undefined}
                 className="tt-inv-reg__input"
                 value={value}
                 aria-label={ariaLabel}
                 onChange={(e) => onChange(e.target.value)}
-                onBlur={onBlurCommit}
+                onBlur={(e) => {
+                    if (isMoney) {
+                        const next = formatRegistryAmountCell(e.currentTarget.value);
+                        if (next !== value)
+                            onChange(next);
+                    }
+                    onBlurCommit();
+                }}
                 onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === 'Escape') {
                         e.preventDefault();
@@ -513,12 +534,14 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                                     {columns.map((col) => {
                                         const val = row[col.key] ?? '';
                                         const active = focus?.rowId === row.id && focus.key === col.key;
+                                        const money = isInvoiceRegistryMoneyColumnKey(col.key);
                                         return (
                                             <RegistryEditableCell
                                                 key={col.key}
                                                 value={val}
                                                 wide={col.wide}
                                                 editor={col.editor}
+                                                money={money}
                                                 readOnly={readOnly}
                                                 active={!readOnly && active && col.editor !== 'status'}
                                                 ariaLabel={`${col.label}, ${t('timeTrackingPage.invoices.registry.rowN').replace('{n}', String(idx + 1))}`}

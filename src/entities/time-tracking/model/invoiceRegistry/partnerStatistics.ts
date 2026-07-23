@@ -31,19 +31,79 @@ export type PartnerStatsRow = {
 
 const PARTNER_SPLIT_RE = /^([A-Za-zА-Яа-яЁё]{2,5})\s*:\s*([\d\s.,]+)\s*$/;
 
+/** Parse registry money cells that may use US (`5,881.50`) or EU (`5.881,50`) separators. */
 export function parseRegistryAmount(raw: string): number | null {
-    const s = raw.trim();
+    let s = raw.trim();
     if (!s)
         return null;
-    let cleaned = s.replace(/\s/g, '');
-    if (/,\d{1,2}$/.test(cleaned) && !cleaned.includes('.')) {
-        cleaned = cleaned.replace(',', '.');
+    s = s.replace(/\s/g, '').replace(/\u00a0/g, '');
+    if (!s || /^[-—–]+$/.test(s))
+        return null;
+
+    const lastComma = s.lastIndexOf(',');
+    const lastDot = s.lastIndexOf('.');
+
+    if (lastComma >= 0 && lastDot >= 0) {
+        // Both separators: the rightmost is the decimal separator.
+        if (lastComma > lastDot) {
+            // 5.881,50 → 5881.50
+            s = s.replace(/\./g, '').replace(',', '.');
+        }
+        else {
+            // 5,881.50 → 5881.50
+            s = s.replace(/,/g, '');
+        }
     }
-    else {
-        cleaned = cleaned.replace(/,/g, '');
+    else if (lastComma >= 0) {
+        const frac = s.length - lastComma - 1;
+        if (frac === 1 || frac === 2) {
+            // 5881,50 → decimal comma
+            s = s.replace(',', '.');
+        }
+        else {
+            // 5,881,500 → thousand commas
+            s = s.replace(/,/g, '');
+        }
     }
-    const n = Number.parseFloat(cleaned);
+    else if (lastDot >= 0) {
+        const frac = s.length - lastDot - 1;
+        if (frac === 0 || frac > 2) {
+            // 5.881.500 or trailing dot → thousand dots
+            s = s.replace(/\./g, '');
+        }
+        // else 5122.4 / 5881.50 — already decimal-dot
+    }
+
+    const n = Number.parseFloat(s);
     return Number.isFinite(n) ? n : null;
+}
+
+/** Display/store format: `5,881.50` (en-US, always 2 fraction digits). */
+export function formatRegistryAmount(n: number): string {
+    if (!Number.isFinite(n))
+        return '';
+    return n.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
+/**
+ * Format a registry amount cell for display.
+ * Empty / non-numeric values are returned unchanged.
+ */
+export function formatRegistryAmountCell(raw: string): string {
+    const trimmed = raw.trim();
+    if (!trimmed)
+        return '';
+    const n = parseRegistryAmount(trimmed);
+    if (n == null)
+        return raw;
+    return formatRegistryAmount(n);
+}
+
+export function isInvoiceRegistryMoneyColumnKey(key: string): boolean {
+    return key === 'amount' || key === 'balance';
 }
 
 export function parseAdvanceFeeSplits(text: string): { partner: string; amount: number }[] {

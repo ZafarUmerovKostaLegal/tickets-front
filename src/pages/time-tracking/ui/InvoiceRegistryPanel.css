@@ -153,6 +153,21 @@
   max-width: 22rem;
 }
 
+.tt-inv-reg__td--money {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tt-inv-reg__td--money .tt-inv-reg__cell-text {
+  white-space: nowrap;
+}
+
+.tt-inv-reg__td--money .tt-inv-reg__input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .tt-inv-reg__td--editing {
   padding: 0.15rem;
   background: color-mix(in srgb, var(--app-accent, #4f46e5) 6%, #fff);

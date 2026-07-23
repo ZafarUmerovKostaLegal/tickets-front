@@ -5,7 +5,10 @@ export { loadInvoiceRegistryRows } from './loadSeed';
 export {
     aggregatePartnerRegistryStats,
     flattenPartnerStats,
+    formatRegistryAmount,
+    formatRegistryAmountCell,
     INVOICE_REGISTRY_STATS_YEARS,
+    isInvoiceRegistryMoneyColumnKey,
     listCurrenciesFromStats,
     loadInvoiceRegistryStatsRows,
     parseAdvanceFeeSplits,

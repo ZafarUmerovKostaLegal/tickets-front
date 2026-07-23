@@ -1,19 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import {
-    fetchReportsUsersForFilter,
-    isTimeTrackingHttpError,
-    type ReportsFilterUser,
-} from '@entities/time-tracking';
 import { formatPeriodLabel } from '@entities/time-tracking/lib/reportsPeriodRange';
 import {
     PERIOD_OPTIONS,
     type PeriodGranularity,
 } from '@entities/time-tracking/model/reportsPanelConfig';
-import { useCurrentUser } from '@shared/hooks';
 import { useI18n, ttReportPeriodLabel } from '@shared/i18n';
-import { isHiddenSystemUser } from '@shared/lib';
-import { ReportsUserFilterDropdown } from './ReportsUserFilterDropdown';
 import './StatisticsPanel.css';
 
 type StatisticsTabId = 'project' | 'team' | 'user';
@@ -68,7 +60,6 @@ function shiftPeriodDate(date: Date, granularity: PeriodGranularity, direction: 
 /** Empty shell — previous statistics UI removed; rebuild here. */
 export function StatisticsPanel() {
     const { t } = useI18n();
-    const { user } = useCurrentUser();
     const [searchParams, setSearchParams] = useSearchParams();
     const activeTab = parseStatsTab(searchParams.get('statsTab'));
 
@@ -76,10 +67,6 @@ export function StatisticsPanel() {
     const [periodGranularity, setPeriodGranularity] = useState<PeriodGranularity>('month');
     const [periodDropdown, setPeriodDropdown] = useState(false);
     const periodDropdownRef = useRef<HTMLDivElement>(null);
-
-    const [usersForFilter, setUsersForFilter] = useState<ReportsFilterUser[]>([]);
-    const [usersForFilterError, setUsersForFilterError] = useState<string | null>(null);
-    const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
 
     const setActiveTab = useCallback((tab: StatisticsTabId) => {
         setSearchParams((prev) => {
@@ -105,24 +92,6 @@ export function StatisticsPanel() {
         document.addEventListener('mousedown', onDoc);
         return () => document.removeEventListener('mousedown', onDoc);
     }, [periodDropdown]);
-
-    useEffect(() => {
-        setUsersForFilterError(null);
-        fetchReportsUsersForFilter()
-            .then((list) => {
-                const filtered = list.filter((u) => !isHiddenSystemUser({ email: u.email, display_name: u.displayName }));
-                setUsersForFilter(filtered);
-                setUsersForFilterError(null);
-                if (filtered.length === 1 && user && filtered[0].id === user.id) {
-                    setSelectedUserIds((prev) => (prev.length === 0 ? [user.id] : prev));
-                }
-            })
-            .catch((e: unknown) => {
-                setUsersForFilter([]);
-                if (isTimeTrackingHttpError(e, 401) || isTimeTrackingHttpError(e, 403))
-                    setUsersForFilterError(t('timeTrackingPage.reports.header.usersFilterError'));
-            });
-    }, [user, t]);
 
     return (
         <div className="tt-reports tt-statistics" aria-label={t('timeTrackingPage.statistics.pageAria')}>
@@ -175,14 +144,6 @@ export function StatisticsPanel() {
                     </button>
                 </div>
                 <div className="tt-reports__header-right">
-                    {usersForFilterError ? (
-                        <p className="tt-reports__users-filter-err" role="status">{usersForFilterError}</p>
-                    ) : null}
-                    <ReportsUserFilterDropdown
-                        users={usersForFilter}
-                        selected={selectedUserIds}
-                        onChange={setSelectedUserIds}
-                    />
                     <div className="tt-reports__period-dropdown-wrap" ref={periodDropdownRef}>
                         <button
                             type="button"
