@@ -118,20 +118,20 @@ export function InvoiceRegistryStatisticsPanel() {
                                 <table className="tt-inv-stats__table">
                                     <thead>
                                         <tr>
-                                            <th>{t('timeTrackingPage.invoices.statistics.colPartner')}</th>
+                                            <th className="tt-inv-stats__th-partner">{t('timeTrackingPage.invoices.statistics.colPartner')}</th>
                                             {partnerMatrix.currencies.map((currency) => (
-                                                <th key={currency}>{currency}</th>
+                                                <th key={currency} className="tt-inv-stats__th-currency">{currency}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {partnerMatrix.partners.map((row) => (
                                             <tr key={row.partner}>
-                                                <td>
+                                                <td className="tt-inv-stats__td-partner">
                                                     <span className="tt-inv-stats__partner-badge">{row.partner}</span>
                                                 </td>
                                                 {partnerMatrix.currencies.map((currency) => (
-                                                    <td key={currency} className="tt-inv-stats__num">
+                                                    <td key={currency} className="tt-inv-stats__td-amount">
                                                         {formatInvoicedAmount(row.amounts[currency] ?? 0)}
                                                     </td>
                                                 ))}

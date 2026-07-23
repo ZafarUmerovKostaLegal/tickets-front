@@ -83,15 +83,16 @@
 
 .tt-inv-stats__table {
   width: 100%;
+  min-width: 36rem;
   border-collapse: collapse;
+  table-layout: fixed;
   font-size: 0.8125rem;
 }
 
 .tt-inv-stats__table th,
 .tt-inv-stats__table td {
-  padding: 0.55rem 0.75rem;
+  padding: 0.65rem 0.85rem;
   border-bottom: 1px solid var(--app-border, #e2e8f0);
-  text-align: left;
   vertical-align: middle;
 }
 
@@ -105,8 +106,26 @@
   white-space: nowrap;
 }
 
+.tt-inv-stats__table tbody tr:last-child th,
+.tt-inv-stats__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
 .tt-inv-stats__table tbody tr:hover {
   background: color-mix(in srgb, var(--app-accent, #6366f1) 4%, transparent);
+}
+
+.tt-inv-stats__th-partner,
+.tt-inv-stats__td-partner {
+  width: 7rem;
+  text-align: left;
+}
+
+.tt-inv-stats__th-currency,
+.tt-inv-stats__td-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .tt-inv-stats__partner-badge {
@@ -123,14 +142,3 @@
   background: color-mix(in srgb, var(--app-accent, #6366f1) 10%, var(--app-surface, #fff));
   border: 1px solid color-mix(in srgb, var(--app-accent, #6366f1) 22%, var(--app-border, #e2e8f0));
 }
-
-.tt-inv-stats__num {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-  text-align: right;
-}
-
-.tt-inv-stats__table th:not(:first-child) {
-  text-align: right;
-}
-
