@@ -34,9 +34,14 @@ export function mapInvoiceRegistryAdvanceFee(text: string): string {
     }).join('\n');
 }
 
-export function applyInvoiceRegistryPartnerCodeFixes<T extends Record<string, string>>(row: T): T {
+type PartnerFixableRow = {
+    partner?: string;
+    advanceFee?: string;
+} & Record<string, string>;
+
+export function applyInvoiceRegistryPartnerCodeFixes<T extends PartnerFixableRow>(row: T): T {
     let changed = false;
-    const next = { ...row };
+    const next: PartnerFixableRow = { ...row };
     if (typeof next.partner === 'string') {
         const p = mapInvoiceRegistryPartnerCode(next.partner);
         if (p !== next.partner) {
@@ -51,5 +56,5 @@ export function applyInvoiceRegistryPartnerCodeFixes<T extends Record<string, st
             changed = true;
         }
     }
-    return changed ? next : row;
+    return changed ? (next as T) : row;
 }
