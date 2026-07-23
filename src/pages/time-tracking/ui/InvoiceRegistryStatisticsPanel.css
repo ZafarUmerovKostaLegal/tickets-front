@@ -4,3 +4,53 @@
   gap: 1rem;
   min-width: 0;
 }
+
+.tt-inv-stats__state {
+  padding: 1rem;
+  border: 1px dashed var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  color: var(--app-muted, #64748b);
+  background: var(--app-surface, #fff);
+}
+
+.tt-inv-stats__state--error {
+  color: #b91c1c;
+  border-color: color-mix(in srgb, #b91c1c 25%, var(--app-border, #e2e8f0));
+}
+
+.tt-inv-stats__tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+
+.tt-inv-stats__tile {
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 14px;
+  padding: 0.9rem 1rem;
+  background: var(--app-surface, #fff);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.tt-inv-stats__tile-currency {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--app-accent, #6366f1);
+  letter-spacing: 0.03em;
+}
+
+.tt-inv-stats__tile-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--app-muted, #64748b);
+}
+
+.tt-inv-stats__tile-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--app-text, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
