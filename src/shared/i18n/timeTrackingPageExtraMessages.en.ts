@@ -1358,6 +1358,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             chartRemuneration: 'Partner remuneration',
             chartInvoiced: 'Invoiced by partner',
             chartShare: 'Share in currency',
+            chartsTitle: 'Partner share by currency',
             chartRanking: 'Ranking',
             currencyNote: 'Amounts in original currency, no conversion',
             currencyTotalsTitle: 'Totals by currency',

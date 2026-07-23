@@ -1356,6 +1356,7 @@ export const timeTrackingPageExtraMessages = {
             chartRemuneration: 'Вознаграждение партнёров',
             chartInvoiced: 'Выставлено по партнёрам',
             chartShare: 'Доля в валюте',
+            chartsTitle: 'Доля партнёров по валютам',
             chartRanking: 'Рейтинг',
             currencyNote: 'Суммы в исходной валюте, без конвертации',
             currencyTotalsTitle: 'Итого по валютам',

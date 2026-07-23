@@ -142,3 +142,100 @@
   background: color-mix(in srgb, var(--app-accent, #6366f1) 10%, var(--app-surface, #fff));
   border: 1px solid color-mix(in srgb, var(--app-accent, #6366f1) 22%, var(--app-border, #e2e8f0));
 }
+
+.tt-inv-stats__charts-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.tt-inv-stats__charts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 0.85rem;
+}
+
+.tt-inv-stats__chart-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1rem 1rem 0.85rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 14px;
+  background: var(--app-surface, #fff);
+}
+
+.tt-inv-stats__chart-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--app-text, #0f172a);
+}
+
+.tt-inv-stats__chart-sub {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--app-muted, #64748b);
+}
+
+.tt-inv-stats__chart-plot {
+  width: 100%;
+  min-height: 260px;
+}
+
+.tt-inv-stats__legend {
+  margin: 0.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.tt-inv-stats__legend-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+}
+
+.tt-inv-stats__legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tt-inv-stats__legend-name {
+  color: var(--app-muted, #64748b);
+  font-weight: 600;
+}
+
+.tt-inv-stats__legend-val {
+  color: var(--app-text, #0f172a);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tt-inv-stats__tooltip {
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--app-border, #e2e8f0);
+  background: var(--app-surface, #fff);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 12%);
+  font-size: 0.8125rem;
+}
+
+.tt-inv-stats__tooltip-title {
+  margin-bottom: 0.2rem;
+  font-weight: 600;
+  color: var(--app-text, #334155);
+}
+
+.tt-inv-stats__tooltip-val {
+  font-weight: 700;
+  color: var(--app-text, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+

@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+    Cell,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+} from 'recharts';
+import {
     INVOICE_REGISTRY_STATS_YEARS,
     loadInvoiceRegistryStatsRows,
     sumInvoicedByCurrency,
@@ -9,11 +16,38 @@ import {
 import { useI18n } from '@shared/i18n';
 import './InvoiceRegistryStatisticsPanel.css';
 
+const CHART_COLORS = ['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b', '#ec4899', '#64748b', '#0ea5e9'];
+
 function formatInvoicedAmount(n: number, currency?: string): string {
     if (!Number.isFinite(n) || n <= 0)
         return '—';
     const value = n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return currency ? `${value} ${currency}` : value;
+}
+
+type ChartSlice = {
+    name: string;
+    value: number;
+    fill: string;
+};
+
+type CurrencyPieTooltipProps = {
+    active?: boolean;
+    payload?: { name?: string; value?: number; payload?: ChartSlice }[];
+    currency: string;
+};
+
+function CurrencyPieTooltip({ active, payload, currency }: CurrencyPieTooltipProps) {
+    if (!active || !payload?.length)
+        return null;
+    const item = payload[0];
+    const value = typeof item?.value === 'number' ? item.value : 0;
+    return (
+        <div className="tt-inv-stats__tooltip">
+            <div className="tt-inv-stats__tooltip-title">{item?.name}</div>
+            <div className="tt-inv-stats__tooltip-val">{formatInvoicedAmount(value, currency)}</div>
+        </div>
+    );
 }
 
 export function InvoiceRegistryStatisticsPanel() {
@@ -55,6 +89,26 @@ export function InvoiceRegistryStatisticsPanel() {
         () => invoicedByCurrency.filter((row) => row.invoiced > 0),
         [invoicedByCurrency],
     );
+
+    const currencyCharts = useMemo(() => {
+        return partnerMatrix.currencies
+            .map((currency) => {
+                const data: ChartSlice[] = partnerMatrix.partners
+                    .map((row, i) => ({
+                        name: row.partner,
+                        value: row.amounts[currency] ?? 0,
+                        fill: CHART_COLORS[i % CHART_COLORS.length]!,
+                    }))
+                    .filter((slice) => slice.value > 0)
+                    .sort((a, b) => b.value - a.value)
+                    .map((slice, i) => ({
+                        ...slice,
+                        fill: CHART_COLORS[i % CHART_COLORS.length]!,
+                    }));
+                return { currency, data };
+            })
+            .filter((chart) => chart.data.length > 0);
+    }, [partnerMatrix]);
 
     return (
         <div className="tt-inv-stats">
@@ -139,6 +193,56 @@ export function InvoiceRegistryStatisticsPanel() {
                                         ))}
                                     </tbody>
                                 </table>
+                            </div>
+                        </section>
+                    )}
+
+                    {currencyCharts.length > 0 && (
+                        <section className="tt-inv-stats__charts-section">
+                            <h2 className="tt-inv-stats__table-title">{t('timeTrackingPage.invoices.statistics.chartsTitle')}</h2>
+                            <p className="tt-inv-stats__table-note">{t('timeTrackingPage.invoices.statistics.currencyNote')}</p>
+                            <div className="tt-inv-stats__charts">
+                                {currencyCharts.map(({ currency, data }) => (
+                                    <article key={currency} className="tt-inv-stats__chart-card">
+                                        <h3 className="tt-inv-stats__chart-title">{currency}</h3>
+                                        <p className="tt-inv-stats__chart-sub">{t('timeTrackingPage.invoices.statistics.chartShare')}</p>
+                                        <div className="tt-inv-stats__chart-plot">
+                                            <ResponsiveContainer width="100%" height={260}>
+                                                <PieChart>
+                                                    <Pie
+                                                        data={data}
+                                                        dataKey="value"
+                                                        nameKey="name"
+                                                        cx="50%"
+                                                        cy="48%"
+                                                        innerRadius={52}
+                                                        outerRadius={88}
+                                                        paddingAngle={2}
+                                                        label={({ name, percent }) =>
+                                                            percent != null && percent >= 0.06
+                                                                ? `${name} · ${Math.round(percent * 100)}%`
+                                                                : ''}
+                                                        labelLine={{ stroke: 'var(--app-border, #cbd5e1)' }}
+                                                    >
+                                                        {data.map((entry) => (
+                                                            <Cell key={`${currency}-${entry.name}`} fill={entry.fill} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip content={<CurrencyPieTooltip currency={currency} />} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <ul className="tt-inv-stats__legend">
+                                            {data.map((entry) => (
+                                                <li key={`${currency}-legend-${entry.name}`} className="tt-inv-stats__legend-item">
+                                                    <span className="tt-inv-stats__legend-dot" style={{ background: entry.fill }} />
+                                                    <span className="tt-inv-stats__legend-name">{entry.name}</span>
+                                                    <span className="tt-inv-stats__legend-val">{formatInvoicedAmount(entry.value)}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </article>
+                                ))}
                             </div>
                         </section>
                     )}
