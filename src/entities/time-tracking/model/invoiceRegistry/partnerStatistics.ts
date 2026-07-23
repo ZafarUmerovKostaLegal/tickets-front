@@ -261,6 +261,33 @@ export function partnerTotalsForCurrency(
     return out.sort((a, b) => b.value - a.value);
 }
 
+export type CurrencyTotals = {
+    currency: string;
+    invoiced: number;
+    remuneration: number;
+    balance: number;
+};
+
+function sumMetricForCurrency(map: PartnerCurrencyMap, currency: string): number {
+    let total = 0;
+    for (const byCur of Object.values(map))
+        total += byCur[currency] ?? 0;
+    return total;
+}
+
+export function totalsForCurrency(stats: PartnerRegistryStats, currency: string): CurrencyTotals {
+    return {
+        currency,
+        invoiced: sumMetricForCurrency(stats.invoiced, currency),
+        remuneration: sumMetricForCurrency(stats.remuneration, currency),
+        balance: sumMetricForCurrency(stats.balance, currency),
+    };
+}
+
+export function listCurrencyTotals(stats: PartnerRegistryStats): CurrencyTotals[] {
+    return listCurrenciesFromStats(stats).map((currency) => totalsForCurrency(stats, currency));
+}
+
 export async function loadInvoiceRegistryStatsRows(
     filter: RegistryStatsYearFilter,
 ): Promise<{ rows: InvoiceRegistryRow[]; years: InvoiceRegistryYearId[] }> {

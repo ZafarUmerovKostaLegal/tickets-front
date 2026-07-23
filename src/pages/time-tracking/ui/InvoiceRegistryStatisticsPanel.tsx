@@ -15,9 +15,11 @@ import {
     aggregatePartnerRegistryStats,
     flattenPartnerStats,
     INVOICE_REGISTRY_STATS_YEARS,
+    listCurrencyTotals,
     listCurrenciesFromStats,
     loadInvoiceRegistryStatsRows,
     partnerTotalsForCurrency,
+    totalsForCurrency,
     type RegistryStatsYearFilter,
 } from '@entities/time-tracking/model/invoiceRegistry/partnerStatistics';
 import { useI18n } from '@shared/i18n';
@@ -39,6 +41,16 @@ function formatMoney(n: number, currency: string): string {
     else
         formatted = n.toLocaleString('ru-RU', { maximumFractionDigits: 2 });
     return `${formatted} ${currency}`;
+}
+
+/** Full amount for totals tables (no тыс/млн compression). */
+function formatMoneyExact(n: number, currency: string): string {
+    if (!Number.isFinite(n) || n === 0)
+        return '—';
+    return `${n.toLocaleString('ru-RU', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })} ${currency}`;
 }
 
 function formatAxis(n: number): string {
@@ -80,6 +92,41 @@ function StatsChartTooltip({ active, label, payload, currency }: ChartTooltipPro
     );
 }
 
+function CurrencyTotalsStrip({
+    invoiced,
+    remuneration,
+    balance,
+    currency,
+    invoicedLabel,
+    remunerationLabel,
+    balanceLabel,
+}: {
+    invoiced: number;
+    remuneration: number;
+    balance: number;
+    currency: string;
+    invoicedLabel: string;
+    remunerationLabel: string;
+    balanceLabel: string;
+}) {
+    return (
+        <div className="tt-inv-stats__totals-strip">
+            <div className="tt-inv-stats__totals-item">
+                <span className="tt-inv-stats__totals-label">{invoicedLabel}</span>
+                <span className="tt-inv-stats__totals-value">{formatMoneyExact(invoiced, currency)}</span>
+            </div>
+            <div className="tt-inv-stats__totals-item tt-inv-stats__totals-item--accent">
+                <span className="tt-inv-stats__totals-label">{remunerationLabel}</span>
+                <span className="tt-inv-stats__totals-value">{formatMoneyExact(remuneration, currency)}</span>
+            </div>
+            <div className="tt-inv-stats__totals-item">
+                <span className="tt-inv-stats__totals-label">{balanceLabel}</span>
+                <span className="tt-inv-stats__totals-value">{formatMoneyExact(balance, currency)}</span>
+            </div>
+        </div>
+    );
+}
+
 export function InvoiceRegistryStatisticsPanel() {
     const { t } = useI18n();
     const [yearFilter, setYearFilter] = useState<RegistryStatsYearFilter>('all');
@@ -113,6 +160,7 @@ export function InvoiceRegistryStatisticsPanel() {
     }, [yearFilter, t]);
 
     const currencies = useMemo(() => (stats ? listCurrenciesFromStats(stats) : []), [stats]);
+    const currencyTotals = useMemo(() => (stats ? listCurrencyTotals(stats) : []), [stats]);
     const tableRows = useMemo(() => (stats ? flattenPartnerStats(stats) : []), [stats]);
 
     const summary = useMemo(() => {
@@ -124,23 +172,19 @@ export function InvoiceRegistryStatisticsPanel() {
                 if (partner !== '—')
                     partners.add(partner);
         }
-        let totalRem = 0;
-        let totalInv = 0;
-        for (const row of tableRows) {
-            totalRem += row.remuneration;
-            totalInv += row.invoiced;
-        }
         return {
             partners: partners.size,
-            totalRem,
-            totalInv,
             currencies: currencies.length,
         };
-    }, [stats, tableRows, currencies.length]);
+    }, [stats, currencies.length]);
 
     const yearLabel = yearFilter === 'all'
         ? t('timeTrackingPage.invoices.statistics.allYears')
         : yearFilter;
+
+    const invoicedLabel = t('timeTrackingPage.invoices.statistics.totalInvoiced');
+    const remunerationLabel = t('timeTrackingPage.invoices.statistics.totalRemuneration');
+    const balanceLabel = t('timeTrackingPage.invoices.statistics.totalBalance');
 
     return (
         <div className="tt-inv-stats">
@@ -206,10 +250,49 @@ export function InvoiceRegistryStatisticsPanel() {
                         <div className="tt-inv-stats__state">{t('timeTrackingPage.invoices.statistics.empty')}</div>
                     ) : (
                         <>
+                            <section className="tt-inv-stats__currency-totals">
+                                <header className="tt-inv-stats__currency-head">
+                                    <h2 className="tt-inv-stats__currency-title">
+                                        {t('timeTrackingPage.invoices.statistics.currencyTotalsTitle')}
+                                    </h2>
+                                    <p className="tt-inv-stats__currency-note">
+                                        {t('timeTrackingPage.invoices.statistics.currencyNote')}
+                                    </p>
+                                </header>
+                                <div className="tt-inv-stats__table-wrap">
+                                    <table className="tt-inv-stats__table">
+                                        <thead>
+                                            <tr>
+                                                <th>{t('timeTrackingPage.invoices.statistics.colCurrency')}</th>
+                                                <th>{invoicedLabel}</th>
+                                                <th>{remunerationLabel}</th>
+                                                <th>{balanceLabel}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {currencyTotals.map((row) => (
+                                                <tr key={row.currency}>
+                                                    <td>
+                                                        <span className="tt-inv-stats__partner-badge">{row.currency}</span>
+                                                    </td>
+                                                    <td className="tt-inv-stats__num">{formatMoneyExact(row.invoiced, row.currency)}</td>
+                                                    <td className="tt-inv-stats__num tt-inv-stats__num--accent">
+                                                        {formatMoneyExact(row.remuneration, row.currency)}
+                                                    </td>
+                                                    <td className="tt-inv-stats__num">{formatMoneyExact(row.balance, row.currency)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </section>
+
                             {currencies.map((currency) => {
+                                const totals = totalsForCurrency(stats, currency);
                                 const remuneration = partnerTotalsForCurrency(stats, currency, 'remuneration');
                                 const invoiced = partnerTotalsForCurrency(stats, currency, 'invoiced');
-                                const chartData = (remuneration.length > 0 ? remuneration : invoiced).map((d, i) => ({
+                                const chartSource = remuneration.length > 0 ? remuneration : invoiced;
+                                const chartData = chartSource.map((d, i) => ({
                                     name: d.partner,
                                     value: d.value,
                                     fill: CHART_COLORS[i % CHART_COLORS.length],
@@ -227,66 +310,81 @@ export function InvoiceRegistryStatisticsPanel() {
                                                 {t('timeTrackingPage.invoices.statistics.currencyNote')}
                                             </p>
                                         </header>
-                                        <div className="tt-inv-stats__charts">
-                                            <article className="tt-inv-stats__chart-card">
-                                                <h3 className="tt-inv-stats__chart-title">{barTitle}</h3>
-                                                <p className="tt-inv-stats__chart-sub">{t('timeTrackingPage.invoices.statistics.chartShare')}</p>
-                                                <div className="tt-inv-stats__chart-plot tt-inv-stats__chart-plot--pie">
-                                                    <ResponsiveContainer width="100%" height={280}>
-                                                        <PieChart>
-                                                            <Pie
-                                                                data={chartData}
-                                                                dataKey="value"
-                                                                nameKey="name"
-                                                                cx="50%"
-                                                                cy="48%"
-                                                                innerRadius={52}
-                                                                outerRadius={88}
-                                                                paddingAngle={2}
-                                                                label={({ name, percent }) =>
-                                                                    percent != null && percent >= 0.06
-                                                                        ? `${name} · ${Math.round(percent * 100)}%`
-                                                                        : ''}
-                                                                labelLine={{ stroke: 'var(--app-border, #cbd5e1)' }}
-                                                            >
-                                                                {chartData.map((entry) => (
-                                                                    <Cell key={entry.name} fill={entry.fill} />
-                                                                ))}
-                                                            </Pie>
-                                                            <Tooltip content={<StatsChartTooltip currency={currency} />} />
-                                                        </PieChart>
-                                                    </ResponsiveContainer>
-                                                </div>
-                                            </article>
+                                        <CurrencyTotalsStrip
+                                            currency={currency}
+                                            invoiced={totals.invoiced}
+                                            remuneration={totals.remuneration}
+                                            balance={totals.balance}
+                                            invoicedLabel={invoicedLabel}
+                                            remunerationLabel={remunerationLabel}
+                                            balanceLabel={balanceLabel}
+                                        />
+                                        {chartData.length === 0 ? (
+                                            <div className="tt-inv-stats__state tt-inv-stats__state--soft">
+                                                {t('timeTrackingPage.invoices.statistics.chartEmpty')}
+                                            </div>
+                                        ) : (
+                                            <div className="tt-inv-stats__charts">
+                                                <article className="tt-inv-stats__chart-card">
+                                                    <h3 className="tt-inv-stats__chart-title">{barTitle}</h3>
+                                                    <p className="tt-inv-stats__chart-sub">{t('timeTrackingPage.invoices.statistics.chartShare')}</p>
+                                                    <div className="tt-inv-stats__chart-plot tt-inv-stats__chart-plot--pie">
+                                                        <ResponsiveContainer width="100%" height={280}>
+                                                            <PieChart>
+                                                                <Pie
+                                                                    data={chartData}
+                                                                    dataKey="value"
+                                                                    nameKey="name"
+                                                                    cx="50%"
+                                                                    cy="48%"
+                                                                    innerRadius={52}
+                                                                    outerRadius={88}
+                                                                    paddingAngle={2}
+                                                                    label={({ name, percent }) =>
+                                                                        percent != null && percent >= 0.06
+                                                                            ? `${name} · ${Math.round(percent * 100)}%`
+                                                                            : ''}
+                                                                    labelLine={{ stroke: 'var(--app-border, #cbd5e1)' }}
+                                                                >
+                                                                    {chartData.map((entry) => (
+                                                                        <Cell key={entry.name} fill={entry.fill} />
+                                                                    ))}
+                                                                </Pie>
+                                                                <Tooltip content={<StatsChartTooltip currency={currency} />} />
+                                                            </PieChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+                                                </article>
 
-                                            <article className="tt-inv-stats__chart-card">
-                                                <h3 className="tt-inv-stats__chart-title">{barTitle}</h3>
-                                                <p className="tt-inv-stats__chart-sub">{t('timeTrackingPage.invoices.statistics.chartRanking')}</p>
-                                                <div className="tt-inv-stats__chart-plot">
-                                                    <ResponsiveContainer width="100%" height={280}>
-                                                        <BarChart
-                                                            layout="vertical"
-                                                            data={chartData}
-                                                            margin={{ top: 8, right: 16, left: 4, bottom: 8 }}
-                                                        >
-                                                            <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border, #e2e8f0)" horizontal />
-                                                            <XAxis
-                                                                type="number"
-                                                                tick={{ fontSize: 11 }}
-                                                                tickFormatter={(v) => (typeof v === 'number' ? formatAxis(v) : '')}
-                                                            />
-                                                            <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 11 }} />
-                                                            <Tooltip content={<StatsChartTooltip currency={currency} />} />
-                                                            <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                                                                {chartData.map((entry) => (
-                                                                    <Cell key={entry.name} fill={entry.fill} />
-                                                                ))}
-                                                            </Bar>
-                                                        </BarChart>
-                                                    </ResponsiveContainer>
-                                                </div>
-                                            </article>
-                                        </div>
+                                                <article className="tt-inv-stats__chart-card">
+                                                    <h3 className="tt-inv-stats__chart-title">{barTitle}</h3>
+                                                    <p className="tt-inv-stats__chart-sub">{t('timeTrackingPage.invoices.statistics.chartRanking')}</p>
+                                                    <div className="tt-inv-stats__chart-plot">
+                                                        <ResponsiveContainer width="100%" height={280}>
+                                                            <BarChart
+                                                                layout="vertical"
+                                                                data={chartData}
+                                                                margin={{ top: 8, right: 16, left: 4, bottom: 8 }}
+                                                            >
+                                                                <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border, #e2e8f0)" horizontal />
+                                                                <XAxis
+                                                                    type="number"
+                                                                    tick={{ fontSize: 11 }}
+                                                                    tickFormatter={(v) => (typeof v === 'number' ? formatAxis(v) : '')}
+                                                                />
+                                                                <YAxis type="category" dataKey="name" width={72} tick={{ fontSize: 11 }} />
+                                                                <Tooltip content={<StatsChartTooltip currency={currency} />} />
+                                                                <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+                                                                    {chartData.map((entry) => (
+                                                                        <Cell key={entry.name} fill={entry.fill} />
+                                                                    ))}
+                                                                </Bar>
+                                                            </BarChart>
+                                                        </ResponsiveContainer>
+                                                    </div>
+                                                </article>
+                                            </div>
+                                        )}
                                     </section>
                                 );
                             })}
@@ -310,11 +408,11 @@ export function InvoiceRegistryStatisticsPanel() {
                                                 <tr key={`${row.partner}-${row.currency}`}>
                                                     <td><span className="tt-inv-stats__partner-badge">{row.partner}</span></td>
                                                     <td>{row.currency}</td>
-                                                    <td className="tt-inv-stats__num">{row.invoiced > 0 ? formatMoney(row.invoiced, row.currency) : '—'}</td>
+                                                    <td className="tt-inv-stats__num">{row.invoiced > 0 ? formatMoneyExact(row.invoiced, row.currency) : '—'}</td>
                                                     <td className="tt-inv-stats__num tt-inv-stats__num--accent">
-                                                        {row.remuneration > 0 ? formatMoney(row.remuneration, row.currency) : '—'}
+                                                        {row.remuneration > 0 ? formatMoneyExact(row.remuneration, row.currency) : '—'}
                                                     </td>
-                                                    <td className="tt-inv-stats__num">{row.balance > 0 ? formatMoney(row.balance, row.currency) : '—'}</td>
+                                                    <td className="tt-inv-stats__num">{row.balance > 0 ? formatMoneyExact(row.balance, row.currency) : '—'}</td>
                                                     <td className="tt-inv-stats__num">{row.count > 0 ? row.count : '—'}</td>
                                                 </tr>
                                             ))}
