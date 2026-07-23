@@ -162,7 +162,7 @@ export function ReportPreviewPage() {
     const [expenseExcelRows, setExpenseExcelRows] = useState<ExpenseExcelPreviewRow[]>([]);
     const [uninvoicedExcelRows, setUninvoicedExcelRows] = useState<UninvoicedExcelPreviewRow[]>([]);
     const [budgetExcelRows, setBudgetExcelRows] = useState<BudgetExcelPreviewRow[]>([]);
-    const [selectedUserName, setSelectedUserName] = useState<string | null>(null);
+    const [selectedRowKeys, setSelectedRowKeys] = useState<ReadonlySet<string>>(() => new Set());
     const [employeeExcluded, setEmployeeExcluded] = useState<Set<string>>(() => new Set());
     const [employeeSortAsc, setEmployeeSortAsc] = useState(true);
 
@@ -551,7 +551,7 @@ export function ReportPreviewPage() {
         return `${xferSnapshot.reportType}|${rangeFrom}|${rangeTo}|u:${usersKey}|tf:${teamKey}`;
     }, [xferSnapshot, rangeFrom, rangeTo, selectedProjectId, selectedClientId, effectiveSelectedUserIds, teamFilterEnabled, teamFilterPartnerId, teamFilterTeamId]);
     useEffect(() => {
-        setSelectedUserName(null);
+        setSelectedRowKeys(new Set());
         setEmployeeExcluded(new Set());
         setEmployeeSortAsc(true);
     }, [previewDataResetKey]);
@@ -1571,7 +1571,7 @@ export function ReportPreviewPage() {
             const showTimeLiveTitle = xferSnapshot.groupBy !== 'projects';
             return (<>
                 {showTimeLiveTitle ? (<p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>) : null}
-                <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedUserName={selectedUserName} onSelectUserName={partnerConfirmedReadOnly ? undefined : setSelectedUserName} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick} onDownloadExcel={handleDownloadTimeExcel} downloadExcelBusy={timeExcelDownloadBusy} footerExtras={partnerSignFooterExtras} flashRowKey={partnerConfirmedReadOnly ? null : flashRestoredRowKey} hotkeyDuplicateRowKey={partnerConfirmedReadOnly ? null : hotkeyDuplicateRowKey} onHotkeyDuplicateConsumed={partnerConfirmedReadOnly ? undefined : clearHotkeyDuplicateRowKey} onActiveTimeRowKey={partnerConfirmedReadOnly ? undefined : setActiveTimeRowKey} canUndo={!partnerConfirmedReadOnly && canUndoTimeEdit} onUndo={partnerConfirmedReadOnly ? undefined : undoLastTimeEdit} onSaveNow={partnerConfirmedReadOnly ? undefined : flushAllPendingTimeEntrySaves} />
+                <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={partnerConfirmedReadOnly ? undefined : setSelectedRowKeys} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick} onDownloadExcel={handleDownloadTimeExcel} downloadExcelBusy={timeExcelDownloadBusy} footerExtras={partnerSignFooterExtras} flashRowKey={partnerConfirmedReadOnly ? null : flashRestoredRowKey} hotkeyDuplicateRowKey={partnerConfirmedReadOnly ? null : hotkeyDuplicateRowKey} onHotkeyDuplicateConsumed={partnerConfirmedReadOnly ? undefined : clearHotkeyDuplicateRowKey} onActiveTimeRowKey={partnerConfirmedReadOnly ? undefined : setActiveTimeRowKey} canUndo={!partnerConfirmedReadOnly && canUndoTimeEdit} onUndo={partnerConfirmedReadOnly ? undefined : undoLastTimeEdit} onSaveNow={partnerConfirmedReadOnly ? undefined : flushAllPendingTimeEntrySaves} />
             </>);
         }
         if (xferSnapshot.reportType === 'expenses') {
@@ -1579,7 +1579,7 @@ export function ReportPreviewPage() {
                 return reportPreviewEmptyBlock(rangeFrom, rangeTo);
             return (<>
                 <p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>
-                <ExpenseExcelPreviewTable rows={expenseDisplayRows} onPatch={patchExpenseExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={expenseExcelFilterSlot} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} />
+                <ExpenseExcelPreviewTable rows={expenseDisplayRows} onPatch={patchExpenseExcel} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={setSelectedRowKeys} employeeColumnFilterSlot={expenseExcelFilterSlot} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} />
             </>);
         }
         if (xferSnapshot.reportType === 'uninvoiced') {
@@ -1587,7 +1587,7 @@ export function ReportPreviewPage() {
                 return reportPreviewEmptyBlock(rangeFrom, rangeTo);
             return (<>
                 <p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>
-                <UninvoicedExcelPreviewTable rows={uninvoicedDisplayRows} onPatch={patchUninvoicedExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={uninvoicedExcelFilterSlot} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} />
+                <UninvoicedExcelPreviewTable rows={uninvoicedDisplayRows} onPatch={patchUninvoicedExcel} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={setSelectedRowKeys} employeeColumnFilterSlot={uninvoicedExcelFilterSlot} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} />
             </>);
         }
         if (xferSnapshot.reportType === 'project-budget') {
@@ -1595,7 +1595,7 @@ export function ReportPreviewPage() {
                 return reportPreviewEmptyBlock(rangeFrom, rangeTo);
             return (<>
                 <p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>
-                <BudgetExcelPreviewTable rows={budgetDisplayRows} onPatch={patchBudgetExcel} selectedUserName={selectedUserName} onSelectUserName={setSelectedUserName} employeeColumnFilterSlot={budgetExcelFilterSlot} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} />
+                <BudgetExcelPreviewTable rows={budgetDisplayRows} onPatch={patchBudgetExcel} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={setSelectedRowKeys} employeeColumnFilterSlot={budgetExcelFilterSlot} onRequestServerReload={requestServerDataReload} serverReloadBusy={reportLoading} />
             </>);
         }
         return null;

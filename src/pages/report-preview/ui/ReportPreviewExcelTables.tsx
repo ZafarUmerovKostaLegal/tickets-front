@@ -51,7 +51,6 @@ import { ReportPreviewHotkeysHelpModal } from './ReportPreviewHotkeysHelpModal';
 import { formatPrimaryShortcut } from '../lib/reportPreviewHotkeys';
 import type { LabeledOption, BudgetExcelPreviewRow, ExpenseExcelPreviewRow, TimeExcelPreviewRow, UninvoicedExcelPreviewRow, } from '../lib/previewExcelTypes';
 type PatchFn<T> = (rowKey: string, patch: Partial<T>) => void;
-const ALL_ROWS_SELECTION = '__all-visible-report-preview-rows__';
 
 type TimePreviewEmployeePickState = {
     loading: boolean;
@@ -218,49 +217,51 @@ function TimePreviewNoteTextarea({ value, disabled, ariaLabel, variant, onValue,
     return (<textarea ref={ref} className={cls} rows={variant === 'brief' ? 1 : 2} value={value} disabled={disabled} placeholder="note = description" aria-label={ariaLabel} onChange={(e) => onValue(e.target.value)}/>);
 }
 
-function isAllRowsSelection(selectedUserName: string | null | undefined): boolean {
-    return selectedUserName === ALL_ROWS_SELECTION;
-}
-function isReportRowSelected(userName: string, selectedUserName: string | null | undefined): boolean {
-    return isAllRowsSelection(selectedUserName) || selectedUserName === userName;
+function isReportRowSelected(rowKey: string, selectedRowKeys: ReadonlySet<string> | null | undefined): boolean {
+    return Boolean(selectedRowKeys?.has(rowKey));
 }
 function timeEntryFlashTrModifier(rowKey: string, flashRowKey: string | null | undefined): string {
     return flashRowKey && flashRowKey === rowKey ? ' tt-rp-mtable__tr--flash-restored' : '';
 }
-function rowTrClass(_i: number, userName: string, selectedUserName: string | null, timeWeekLocked = false): string {
+function rowTrClass(_i: number, rowKey: string, selectedRowKeys: ReadonlySet<string> | null | undefined, timeWeekLocked = false): string {
     const parts = ['tt-rp-mtable__tr--pickable'];
-    if (isReportRowSelected(userName, selectedUserName))
+    if (isReportRowSelected(rowKey, selectedRowKeys))
         parts.push('tt-rp-mtable__tr--selected');
     if (timeWeekLocked)
         parts.push('tt-rp-mtable__tr--server-week-locked');
     return parts.join(' ');
 }
-function ReportRowSelectHeader({ selectedUserName, onSelectUserName, rowsCount, }: {
-    selectedUserName?: string | null;
-    onSelectUserName?: (name: string | null) => void;
-    rowsCount: number;
+function ReportRowSelectHeader({ selectedRowKeys, visibleRowKeys, onSelectedRowKeysChange, }: {
+    selectedRowKeys?: ReadonlySet<string> | null;
+    visibleRowKeys: string[];
+    onSelectedRowKeysChange?: (keys: ReadonlySet<string>) => void;
 }) {
-    if (!onSelectUserName || rowsCount <= 0)
+    if (!onSelectedRowKeysChange || visibleRowKeys.length <= 0)
         return null;
-    const allSelected = isAllRowsSelection(selectedUserName);
+    const selected = selectedRowKeys ?? new Set<string>();
+    const allSelected = visibleRowKeys.every((k) => selected.has(k));
     return (<th className="tt-rp-mtable__th tt-rp-mtable__th--select" scope="col">
-      <RpBool checked={allSelected} ariaLabel={allSelected ? 'Снять выделение со всех строк' : 'Выделить все видимые строки'} onChange={(checked) => onSelectUserName(checked ? ALL_ROWS_SELECTION : null)}/>
+      <RpBool checked={allSelected} ariaLabel={allSelected ? 'Снять выделение со всех строк' : 'Выделить все видимые строки'} onChange={(checked) => {
+            onSelectedRowKeysChange(checked ? new Set(visibleRowKeys) : new Set());
+        }}/>
     </th>);
 }
-function ReportRowSelectCell({ userName, selectedUserName, onSelectUserName, }: {
-    userName: string;
-    selectedUserName?: string | null;
-    onSelectUserName?: (name: string | null) => void;
+function ReportRowSelectCell({ rowKey, selectedRowKeys, onSelectedRowKeysChange, }: {
+    rowKey: string;
+    selectedRowKeys?: ReadonlySet<string> | null;
+    onSelectedRowKeysChange?: (keys: ReadonlySet<string>) => void;
 }) {
-    if (!onSelectUserName)
+    if (!onSelectedRowKeysChange)
         return null;
-    const selected = isReportRowSelected(userName, selectedUserName);
+    const selected = isReportRowSelected(rowKey, selectedRowKeys);
     return (<td className="tt-rp-mtable__td tt-rp-mtable__td--select" onClick={(e) => e.stopPropagation()}>
-      <RpBool checked={selected} ariaLabel={selected ? `Снять выделение: ${userName}` : `Выделить: ${userName}`} onChange={(checked) => {
+      <RpBool checked={selected} ariaLabel={selected ? 'Снять выделение со строки' : 'Выделить строку'} onChange={(checked) => {
+            const next = new Set(selectedRowKeys ?? []);
             if (checked)
-                onSelectUserName(userName);
-            else if (isAllRowsSelection(selectedUserName) || selectedUserName === userName)
-                onSelectUserName(null);
+                next.add(rowKey);
+            else
+                next.delete(rowKey);
+            onSelectedRowKeysChange(next);
         }}/>
     </td>);
 }
@@ -377,8 +378,8 @@ function briefFilterDurationQ(r: TimeExcelPreviewRow, q: string, pick: (x: TimeE
     return briefMatchesSubstr(formatReportBillableHoursRu(h), q) || briefMatchesSubstr(formatDecimalHoursAsHm(h), q);
 }
 type UserRowSelectionProps = {
-    selectedUserName?: string | null;
-    onSelectUserName?: (name: string | null) => void;
+    selectedRowKeys?: ReadonlySet<string> | null;
+    onSelectedRowKeysChange?: (keys: ReadonlySet<string>) => void;
     employeeColumnFilterSlot?: ReactNode;
 };
 type PreviewServerReloadProps = {
@@ -595,7 +596,7 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
       </div>
     </div>, document.body);
 }
-export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, }: {
+export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, }: {
     projectTitle: string;
 
     viewMode?: 'brief' | 'full';
@@ -889,7 +890,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         max: '2099-12-31',
     };
     const tableScrollRef = useRef<HTMLDivElement>(null);
-    const showRowSelect = Boolean(onSelectUserName);
+    const showRowSelect = Boolean(onSelectedRowKeysChange);
     const entriesCount = rowsForTotals.length;
     const dockHours = formatReportPreviewDurationHours(totals.hDisplay);
     const dockBillable = formatReportPreviewDurationHours(totals.bhDisplay);
@@ -908,8 +909,8 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const r = displayRows[i];
         const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.userName, selectedUserName, wk)}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
-            <ReportRowSelectCell userName={r.userName} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+            <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
             {visibleFullIds.map((colId) => renderFullBodyCell(colId, r, i, wk))}
             {showEntryActions ? (<td key="actions-full" className="tt-rp-mtable__td tt-rp-mtable__td--brief-actions" onClick={(e) => e.stopPropagation()}>
                 {renderEntryRowActions(r, wk, i)}
@@ -920,8 +921,8 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const r = displayRows[i];
         const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.userName, selectedUserName, wk)}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
-            <ReportRowSelectCell userName={r.userName} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+            <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
             {visibleBriefIds.map((colId) => renderBriefBodyCell(colId, r, i, wk))}
         </tr>);
     };
@@ -1446,7 +1447,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
           {isFull ? (<table className="tt-rp-mtable tt-rp-mtable--time-wide">
             <thead>
               <tr>
-                <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={displayRows.length}/>
+                <ReportRowSelectHeader selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange} visibleRowKeys={displayRows.map((r) => r.rowKey)}/>
                 {visibleFullIds.map((colId) => renderFullHeaderCell(colId))}
                 {showEntryActions ? (<th key="actions-full" className="tt-rp-mtable__th tt-rp-mtable__th--brief-actions" scope="col">
                     Действия
@@ -1460,7 +1461,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             {briefColGroup}
             <thead>
               <tr>
-                <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={displayRows.length}/>
+                <ReportRowSelectHeader selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange} visibleRowKeys={displayRows.map((r) => r.rowKey)}/>
                 {visibleBriefIds.map((colId) => renderBriefHeaderCell(colId))}
               </tr>
             </thead>
@@ -1524,7 +1525,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         }}/>
     </>);
 }
-export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, }: {
+export function ExpenseExcelPreviewTable({ rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, }: {
     rows: ExpenseExcelPreviewRow[];
     onPatch: PatchFn<ExpenseExcelPreviewRow>;
 } & UserRowSelectionProps & PreviewServerReloadProps) {
@@ -1535,8 +1536,8 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
     }))), [rows]);
     const renderRow = (i: number, measure: VirtualTableRowMeasureProps): ReactElement => {
         const r = rows[i];
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.userName, selectedUserName)} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
-                  <ReportRowSelectCell userName={r.userName} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.rowKey, selectedRowKeys)} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+                  <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
@@ -1562,7 +1563,7 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
                   </td>
                 </tr>);
     };
-    const expenseColSpan = 7 + (onSelectUserName ? 1 : 0);
+    const expenseColSpan = 7 + (onSelectedRowKeysChange ? 1 : 0);
     return (<div className="tt-rp-mtable-wrap">
       <div className="tt-rp-mtable-card">
         <header className="tt-rp-mtable-head">
@@ -1578,7 +1579,7 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
           <table className="tt-rp-mtable tt-rp-mtable--wide">
             <thead>
               <tr>
-                <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={rows.length}/>
+                <ReportRowSelectHeader selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange} visibleRowKeys={rows.map((r) => r.rowKey)}/>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--rn">#</th>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--employee-head">
                   <div className="tt-rp-mtable__th-employee">
@@ -1601,7 +1602,7 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedUserName = nul
       </div>
     </div>);
 }
-export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, }: {
+export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, }: {
     rows: UninvoicedExcelPreviewRow[];
     onPatch: PatchFn<UninvoicedExcelPreviewRow>;
 } & UserRowSelectionProps & PreviewServerReloadProps) {
@@ -1612,8 +1613,8 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
     }))), [rows]);
     const renderRow = (i: number, measure: VirtualTableRowMeasureProps): ReactElement => {
         const r = rows[i];
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.userName, selectedUserName)} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
-                  <ReportRowSelectCell userName={r.userName} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.rowKey, selectedRowKeys)} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+                  <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
@@ -1633,7 +1634,7 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
                   </td>
                 </tr>);
     };
-    const uninvoicedColSpan = 6 + (onSelectUserName ? 1 : 0);
+    const uninvoicedColSpan = 6 + (onSelectedRowKeysChange ? 1 : 0);
     return (<div className="tt-rp-mtable-wrap">
       <div className="tt-rp-mtable-card">
         <header className="tt-rp-mtable-head">
@@ -1649,7 +1650,7 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
           <table className="tt-rp-mtable tt-rp-mtable--wide">
             <thead>
               <tr>
-                <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={rows.length}/>
+                <ReportRowSelectHeader selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange} visibleRowKeys={rows.map((r) => r.rowKey)}/>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--rn">#</th>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--employee-head">
                   <div className="tt-rp-mtable__th-employee">
@@ -1671,7 +1672,7 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedUserName = 
       </div>
     </div>);
 }
-export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null, onSelectUserName, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, }: {
+export function BudgetExcelPreviewTable({ rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, }: {
     rows: BudgetExcelPreviewRow[];
     onPatch: PatchFn<BudgetExcelPreviewRow>;
 } & UserRowSelectionProps & PreviewServerReloadProps) {
@@ -1682,8 +1683,8 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null
     }))), [rows]);
     const renderRow = (i: number, measure: VirtualTableRowMeasureProps): ReactElement => {
         const r = rows[i];
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.userName, selectedUserName)} aria-selected={isReportRowSelected(r.userName, selectedUserName) ? true : undefined}>
-                  <ReportRowSelectCell userName={r.userName} selectedUserName={selectedUserName} onSelectUserName={onSelectUserName}/>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={rowTrClass(i, r.rowKey, selectedRowKeys)} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+                  <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
@@ -1700,7 +1701,7 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null
                   </td>
                 </tr>);
     };
-    const budgetColSpan = 5 + (onSelectUserName ? 1 : 0);
+    const budgetColSpan = 5 + (onSelectedRowKeysChange ? 1 : 0);
     return (<div className="tt-rp-mtable-wrap">
       <div className="tt-rp-mtable-card">
         <header className="tt-rp-mtable-head">
@@ -1716,7 +1717,7 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedUserName = null
           <table className="tt-rp-mtable tt-rp-mtable--wide">
             <thead>
               <tr>
-                <ReportRowSelectHeader selectedUserName={selectedUserName} onSelectUserName={onSelectUserName} rowsCount={rows.length}/>
+                <ReportRowSelectHeader selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange} visibleRowKeys={rows.map((r) => r.rowKey)}/>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--rn">#</th>
                 <th className="tt-rp-mtable__th tt-rp-mtable__th--employee-head">
                   <div className="tt-rp-mtable__th-employee">

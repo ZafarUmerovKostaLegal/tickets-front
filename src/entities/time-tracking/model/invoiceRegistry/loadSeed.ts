@@ -1,5 +1,6 @@
 import type { InvoiceRegistryRow, InvoiceRegistryYearId } from './types';
-import { readInvoiceRegistryOverrides } from './storage';
+import { applyInvoiceRegistryPartnerCodeFixes } from './partnerCodeMap';
+import { readInvoiceRegistryOverrides, writeInvoiceRegistryOverrides } from './storage';
 
 const seedLoaders: Record<InvoiceRegistryYearId, () => Promise<{ default: InvoiceRegistryRow[] }>> = {
     '2026': () => import('./seed/year-2026.json'),
@@ -24,7 +25,7 @@ function normalizeRows(raw: unknown): InvoiceRegistryRow[] {
                 continue;
             row[k] = v == null ? '' : String(v);
         }
-        return row;
+        return applyInvoiceRegistryPartnerCodeFixes(row);
     });
 }
 
@@ -34,7 +35,11 @@ export async function loadInvoiceRegistryRows(year: InvoiceRegistryYearId): Prom
 }> {
     const overrides = readInvoiceRegistryOverrides(year);
     if (overrides) {
-        return { rows: overrides, fromOverrides: true };
+        const rows = overrides.map((r) => applyInvoiceRegistryPartnerCodeFixes(r));
+        const changed = rows.some((r, i) => r !== overrides[i]);
+        if (changed)
+            writeInvoiceRegistryOverrides(year, rows);
+        return { rows, fromOverrides: true };
     }
     const mod = await seedLoaders[year]();
     return { rows: normalizeRows(mod.default ?? mod), fromOverrides: false };
