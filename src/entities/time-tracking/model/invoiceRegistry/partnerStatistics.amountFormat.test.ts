@@ -4,6 +4,7 @@ import {
     formatRegistryAmountCell,
     parseAdvanceFeeSplits,
     parseRegistryAmount,
+    sumInvoicedByPartnerCurrency,
 } from './partnerStatistics';
 
 describe('parseRegistryAmount / formatRegistryAmount', () => {
@@ -48,5 +49,21 @@ describe('parseAdvanceFeeSplits partner codes', () => {
             { partner: 'AAA', amount: 1351.8 },
         ]);
         expect(parseAdvanceFeeSplits('VG: 1000')).toEqual([{ partner: 'VGB', amount: 1000 }]);
+    });
+});
+
+describe('sumInvoicedByPartnerCurrency', () => {
+    it('builds partner × currency pivot and maps currency typos', () => {
+        const matrix = sumInvoicedByPartnerCurrency([
+            { id: '1', partner: 'NFH', currency: 'USD', amount: '1,000.00' },
+            { id: '2', partner: 'NFH', currency: 'USZ', amount: '2,000.00' },
+            { id: '3', partner: 'MAD', currency: 'USD', amount: '500.50' },
+            { id: '4', partner: '', currency: 'USD', amount: '999.00' },
+        ]);
+        expect(matrix.currencies).toEqual(['UZS', 'USD']);
+        expect(matrix.partners).toEqual([
+            { partner: 'NFH', amounts: { USD: 1000, UZS: 2000 } },
+            { partner: 'MAD', amounts: { USD: 500.5 } },
+        ]);
     });
 });

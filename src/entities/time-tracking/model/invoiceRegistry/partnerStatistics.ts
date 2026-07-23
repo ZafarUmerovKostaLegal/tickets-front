@@ -315,6 +315,54 @@ export function sumInvoicedByCurrency(rows: InvoiceRegistryRow[]): CurrencyInvoi
         .sort((a, b) => b.invoiced - a.invoiced || a.currency.localeCompare(b.currency));
 }
 
+export type PartnerInvoicedMatrixRow = {
+    partner: string;
+    amounts: Record<string, number>;
+};
+
+export type PartnerInvoicedMatrix = {
+    currencies: string[];
+    partners: PartnerInvoicedMatrixRow[];
+};
+
+/** Pivot: partner × currency invoiced totals (only rows with a partner). */
+export function sumInvoicedByPartnerCurrency(rows: InvoiceRegistryRow[]): PartnerInvoicedMatrix {
+    const byPartner: Record<string, Record<string, number>> = {};
+    const currencyTotals: Record<string, number> = {};
+
+    for (const row of rows) {
+        const amount = parseRegistryAmount(row.amount ?? '');
+        if (amount == null || amount <= 0)
+            continue;
+        const partner = normalizePartner(row.partner ?? '');
+        if (partner === '—')
+            continue;
+        const currency = normalizeCurrency(row.currency ?? '');
+        if (currency === '—')
+            continue;
+        if (!byPartner[partner])
+            byPartner[partner] = {};
+        byPartner[partner]![currency] = (byPartner[partner]![currency] ?? 0) + amount;
+        currencyTotals[currency] = (currencyTotals[currency] ?? 0) + amount;
+    }
+
+    const currencies = Object.entries(currencyTotals)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([currency]) => currency);
+
+    const partners = Object.entries(byPartner)
+        .map(([partner, amounts]) => ({ partner, amounts }))
+        .sort((a, b) => {
+            const aMax = Math.max(0, ...Object.values(a.amounts));
+            const bMax = Math.max(0, ...Object.values(b.amounts));
+            if (bMax !== aMax)
+                return bMax - aMax;
+            return a.partner.localeCompare(b.partner, 'ru');
+        });
+
+    return { currencies, partners };
+}
+
 export async function loadInvoiceRegistryStatsRows(
     filter: RegistryStatsYearFilter,
 ): Promise<{ rows: InvoiceRegistryRow[]; years: InvoiceRegistryYearId[] }> {
