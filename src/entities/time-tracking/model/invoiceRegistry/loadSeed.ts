@@ -1,4 +1,5 @@
 import type { InvoiceRegistryRow, InvoiceRegistryYearId } from './types';
+import { applyInvoiceRegistryCurrencyCodeFixes } from './currencyCodeMap';
 import { applyInvoiceRegistryPartnerCodeFixes } from './partnerCodeMap';
 import { readInvoiceRegistryOverrides, writeInvoiceRegistryOverrides } from './storage';
 
@@ -13,6 +14,10 @@ const seedLoaders: Record<InvoiceRegistryYearId, () => Promise<{ default: Invoic
     checklist: () => import('./seed/year-checklist.json'),
 };
 
+function normalizeRegistryRow(row: InvoiceRegistryRow): InvoiceRegistryRow {
+    return applyInvoiceRegistryCurrencyCodeFixes(applyInvoiceRegistryPartnerCodeFixes(row));
+}
+
 function normalizeRows(raw: unknown): InvoiceRegistryRow[] {
     if (!Array.isArray(raw))
         return [];
@@ -25,7 +30,7 @@ function normalizeRows(raw: unknown): InvoiceRegistryRow[] {
                 continue;
             row[k] = v == null ? '' : String(v);
         }
-        return applyInvoiceRegistryPartnerCodeFixes(row);
+        return normalizeRegistryRow(row);
     });
 }
 
@@ -35,7 +40,7 @@ export async function loadInvoiceRegistryRows(year: InvoiceRegistryYearId): Prom
 }> {
     const overrides = readInvoiceRegistryOverrides(year);
     if (overrides) {
-        const rows = overrides.map((r) => applyInvoiceRegistryPartnerCodeFixes(r));
+        const rows = overrides.map((r) => normalizeRegistryRow(r));
         const changed = rows.some((r, i) => r !== overrides[i]);
         if (changed)
             writeInvoiceRegistryOverrides(year, rows);

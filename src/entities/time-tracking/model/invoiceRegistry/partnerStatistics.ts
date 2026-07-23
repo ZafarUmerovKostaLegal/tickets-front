@@ -1,6 +1,7 @@
 import type { InvoiceRegistryRow, InvoiceRegistryYearId } from './types';
 import { INVOICE_REGISTRY_SHEETS } from './columns';
 import { loadInvoiceRegistryRows } from './loadSeed';
+import { mapInvoiceRegistryCurrencyCode } from './currencyCodeMap';
 import { mapInvoiceRegistryPartnerCode } from './partnerCodeMap';
 
 export const INVOICE_REGISTRY_STATS_YEARS: InvoiceRegistryYearId[] = INVOICE_REGISTRY_SHEETS
@@ -133,7 +134,7 @@ function parseSingleAdvanceFeeAmount(text: string): number | null {
 }
 
 function normalizeCurrency(raw: string): string {
-    const c = raw.trim().toUpperCase();
+    const c = mapInvoiceRegistryCurrencyCode(raw);
     return c || '—';
 }
 
