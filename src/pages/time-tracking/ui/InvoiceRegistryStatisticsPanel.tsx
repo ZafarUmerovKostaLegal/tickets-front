@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-    aggregatePartnerRegistryStats,
     INVOICE_REGISTRY_STATS_YEARS,
-    listCurrencyTotals,
     loadInvoiceRegistryStatsRows,
+    sumInvoicedByCurrency,
     type RegistryStatsYearFilter,
 } from '@entities/time-tracking/model/invoiceRegistry/partnerStatistics';
 import { useI18n } from '@shared/i18n';
@@ -20,7 +19,7 @@ export function InvoiceRegistryStatisticsPanel() {
     const [yearFilter, setYearFilter] = useState<RegistryStatsYearFilter>('all');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [stats, setStats] = useState<ReturnType<typeof aggregatePartnerRegistryStats> | null>(null);
+    const [invoicedByCurrency, setInvoicedByCurrency] = useState<ReturnType<typeof sumInvoicedByCurrency>>([]);
 
     useEffect(() => {
         let cancelled = false;
@@ -30,7 +29,7 @@ export function InvoiceRegistryStatisticsPanel() {
             .then(({ rows }) => {
                 if (cancelled)
                     return;
-                setStats(aggregatePartnerRegistryStats(rows));
+                setInvoicedByCurrency(sumInvoicedByCurrency(rows));
             })
             .catch(() => {
                 if (!cancelled)
@@ -45,13 +44,10 @@ export function InvoiceRegistryStatisticsPanel() {
         };
     }, [yearFilter, t]);
 
-    const invoicedByCurrency = useMemo(() => {
-        if (!stats)
-            return [];
-        return listCurrencyTotals(stats)
-            .filter((row) => row.invoiced > 0)
-            .sort((a, b) => b.invoiced - a.invoiced);
-    }, [stats]);
+    const tiles = useMemo(
+        () => invoicedByCurrency.filter((row) => row.invoiced > 0),
+        [invoicedByCurrency],
+    );
 
     return (
         <div className="tt-inv-stats">
@@ -93,10 +89,10 @@ export function InvoiceRegistryStatisticsPanel() {
 
             {!loading && !error && (
                 <section className="tt-inv-stats__tiles" aria-label={t('timeTrackingPage.invoices.statistics.currencyTotalsTitle')}>
-                    {invoicedByCurrency.length === 0 ? (
+                    {tiles.length === 0 ? (
                         <div className="tt-inv-stats__state">{t('timeTrackingPage.invoices.statistics.empty')}</div>
                     ) : (
-                        invoicedByCurrency.map((row) => (
+                        tiles.map((row) => (
                             <article key={row.currency} className="tt-inv-stats__tile">
                                 <div className="tt-inv-stats__tile-currency">{row.currency}</div>
                                 <div className="tt-inv-stats__tile-label">{t('timeTrackingPage.invoices.statistics.totalInvoiced')}</div>

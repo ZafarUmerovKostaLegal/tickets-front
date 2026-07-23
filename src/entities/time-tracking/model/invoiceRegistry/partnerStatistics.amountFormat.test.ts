@@ -16,6 +16,15 @@ describe('parseRegistryAmount / formatRegistryAmount', () => {
         expect(parseRegistryAmount('1706.6')).toBe(1706.6);
     });
 
+    it('keeps a single decimal point even with long fraction', () => {
+        expect(parseRegistryAmount('4576.224357896251')).toBeCloseTo(4576.224357896251, 6);
+        expect(parseRegistryAmount('4000.203')).toBeCloseTo(4000.203, 6);
+    });
+
+    it('treats multiple dots as thousand separators', () => {
+        expect(parseRegistryAmount('5.881.500')).toBe(5881500);
+    });
+
     it('parses EU decimal comma', () => {
         expect(parseRegistryAmount('5881,50')).toBe(5881.5);
         expect(parseRegistryAmount('5.881,50')).toBe(5881.5);

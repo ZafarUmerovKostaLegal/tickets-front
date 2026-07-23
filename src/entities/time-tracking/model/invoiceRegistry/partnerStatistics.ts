@@ -67,12 +67,16 @@ export function parseRegistryAmount(raw: string): number | null {
         }
     }
     else if (lastDot >= 0) {
-        const frac = s.length - lastDot - 1;
-        if (frac === 0 || frac > 2) {
-            // 5.881.500 or trailing dot → thousand dots
+        const dotCount = (s.match(/\./g) ?? []).length;
+        if (dotCount > 1) {
+            // 5.881.500 → thousand dots
             s = s.replace(/\./g, '');
         }
-        // else 5122.4 / 5881.50 — already decimal-dot
+        else if (s.endsWith('.')) {
+            // trailing dot
+            s = s.slice(0, -1);
+        }
+        // else single decimal point — keep as-is (incl. float tails like 4576.224357896251)
     }
 
     const n = Number.parseFloat(s);
@@ -286,6 +290,28 @@ export function totalsForCurrency(stats: PartnerRegistryStats, currency: string)
 
 export function listCurrencyTotals(stats: PartnerRegistryStats): CurrencyTotals[] {
     return listCurrenciesFromStats(stats).map((currency) => totalsForCurrency(stats, currency));
+}
+
+export type CurrencyInvoicedTotal = {
+    currency: string;
+    invoiced: number;
+};
+
+/** Sum all positive registry `amount` values by currency (partner not required). */
+export function sumInvoicedByCurrency(rows: InvoiceRegistryRow[]): CurrencyInvoicedTotal[] {
+    const totals: Record<string, number> = {};
+    for (const row of rows) {
+        const amount = parseRegistryAmount(row.amount ?? '');
+        if (amount == null || amount <= 0)
+            continue;
+        const currency = normalizeCurrency(row.currency ?? '');
+        if (currency === '—')
+            continue;
+        totals[currency] = (totals[currency] ?? 0) + amount;
+    }
+    return Object.entries(totals)
+        .map(([currency, invoiced]) => ({ currency, invoiced }))
+        .sort((a, b) => b.invoiced - a.invoiced || a.currency.localeCompare(b.currency));
 }
 
 export async function loadInvoiceRegistryStatsRows(
