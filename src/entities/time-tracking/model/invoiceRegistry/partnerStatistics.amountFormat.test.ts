@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     formatRegistryAmount,
     formatRegistryAmountCell,
+    parseAdvanceFeeSplits,
     parseRegistryAmount,
 } from './partnerStatistics';
 
@@ -28,5 +29,15 @@ describe('parseRegistryAmount / formatRegistryAmount', () => {
         expect(formatRegistryAmountCell('1706.6')).toBe('1,706.60');
         expect(formatRegistryAmountCell('')).toBe('');
         expect(formatRegistryAmountCell('n/a')).toBe('n/a');
+    });
+});
+
+describe('parseAdvanceFeeSplits partner codes', () => {
+    it('normalizes legacy partner prefixes', () => {
+        expect(parseAdvanceFeeSplits('NH: 3 375,00\nAA: 1 351,80')).toEqual([
+            { partner: 'NFH', amount: 3375 },
+            { partner: 'AAA', amount: 1351.8 },
+        ]);
+        expect(parseAdvanceFeeSplits('VG: 1000')).toEqual([{ partner: 'VGB', amount: 1000 }]);
     });
 });

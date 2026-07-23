@@ -1,6 +1,7 @@
 import type { InvoiceRegistryRow, InvoiceRegistryYearId } from './types';
 import { INVOICE_REGISTRY_SHEETS } from './columns';
 import { loadInvoiceRegistryRows } from './loadSeed';
+import { mapInvoiceRegistryPartnerCode } from './partnerCodeMap';
 
 export const INVOICE_REGISTRY_STATS_YEARS: InvoiceRegistryYearId[] = INVOICE_REGISTRY_SHEETS
     .map((s) => s.year)
@@ -114,7 +115,7 @@ export function parseAdvanceFeeSplits(text: string): { partner: string; amount: 
             continue;
         const amount = parseRegistryAmount(m[2] ?? '');
         if (amount != null && amount > 0)
-            out.push({ partner: m[1]!.trim(), amount });
+            out.push({ partner: mapInvoiceRegistryPartnerCode(m[1]!.trim()), amount });
     }
     return out;
 }
@@ -133,7 +134,7 @@ function normalizeCurrency(raw: string): string {
 }
 
 function normalizePartner(raw: string): string {
-    const p = raw.trim();
+    const p = mapInvoiceRegistryPartnerCode(raw.trim());
     return p || '—';
 }
 

@@ -2,11 +2,15 @@
 const PARTNER_CODE_MAP: Record<string, string> = {
     AA: 'AAA',
     VG: 'VGB',
+    VBG: 'VGB',
     NH: 'NFH',
+    NF: 'NFH',
     MD: 'MAD',
     SHYU: 'SHMYU',
     ShYu: 'SHMYU',
     shyu: 'SHMYU',
+    ShMYu: 'SHMYU',
+    ShY: 'SHMYU',
 };
 
 export function mapInvoiceRegistryPartnerCode(raw: string): string {
