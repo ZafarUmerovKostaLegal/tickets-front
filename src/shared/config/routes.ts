@@ -30,6 +30,7 @@ export const routes = {
     kostaLegalAi: '/kosta-legal-ai',
     kostaDaily: '/kosta-daily',
     contacts: '/contacts',
+    internalCommunication: '/internal-communication',
 } as const;
 export function getTicketDetailUrl(uuid: string): string {
     return `/ticket/${uuid}`;

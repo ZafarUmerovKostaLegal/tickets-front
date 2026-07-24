@@ -25,7 +25,8 @@ export type AppNavId =
     | 'callSchedule'
     | 'rules'
     | 'help'
-    | 'contacts';
+    | 'contacts'
+    | 'internalCommunication';
 
 export type AppNavItemDef = {
     id: AppNavId;
@@ -50,6 +51,7 @@ const EMPLOYEE_NAV_IDS = new Set<AppNavId>([
     'vacationSchedule',
     'rules',
     'help',
+    'internalCommunication',
 ]);
 
 export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
@@ -69,6 +71,7 @@ export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { id: 'callSchedule', to: routes.callSchedule, icon: IconPhone },
     { id: 'rules', to: routes.rules, icon: IconFileText },
     { id: 'contacts', to: routes.contacts, icon: IconContacts, adminOnly: true, adminModulesOnly: true },
+    { id: 'internalCommunication', to: routes.internalCommunication, icon: IconPhone },
     { id: 'help', to: routes.help, icon: IconHelpCircle },
 ];
 

@@ -51,6 +51,7 @@ describe('routes constants', () => {
             'attendance', 'vacationSchedule', 'inventory', 'timeTracking',
             'todo', 'admin', 'expenses', 'rules', 'help', 'kostaDaily',
             'correspondence', 'accounting', 'contacts', 'callSchedule',
+            'internalCommunication',
         ];
         for (const key of expected)
             expect(routes).toHaveProperty(key);

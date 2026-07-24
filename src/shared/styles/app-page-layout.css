@@ -36,7 +36,8 @@
 .corr__header,
 .acct-page__header,
 .contacts-page__header,
-.td-page__header {
+.td-page__header,
+.icom-page__header {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -59,7 +60,8 @@
 .corr__header-inner,
 .acct-page__header-inner,
 .contacts-page__header-inner,
-.td-page__header-inner {
+.td-page__header-inner,
+.icom-page__header-inner {
   flex: 1;
   display: flex;
   align-items: center;
@@ -80,7 +82,8 @@
 .corr__header-start,
 .acct-page__header-start,
 .contacts-page__header-start,
-.td-page__header-start {
+.td-page__header-start,
+.icom-page__header-start {
   display: flex;
   align-items: center;
   gap: var(--app-page-header-gap);
@@ -98,14 +101,16 @@
 .corr__header-start,
 .acct-page__header-start,
 .contacts-page__header-start,
-.td-page__header-start {
+.td-page__header-start,
+.icom-page__header-start {
   flex: 1;
 }
 
 .corr__header-start > div,
 .acct-page__header-start > div,
 .contacts-page__header-start > div,
-.td-page__header-start > div {
+.td-page__header-start > div,
+.icom-page__header-start > div {
   min-width: 0;
 }
 
@@ -121,7 +126,8 @@
 .corr__title,
 .acct-page__title,
 .contacts-page__title,
-.td-page__title {
+.td-page__title,
+.icom-page__title {
   margin: 0;
   font-size: var(--app-page-title-size);
   font-weight: 700;
@@ -137,7 +143,8 @@
 .ndrive__subtitle,
 .corr__subtitle,
 .acct-page__subtitle,
-.contacts-page__subtitle {
+.contacts-page__subtitle,
+.icom-page__subtitle {
   margin: 0.125rem 0 0;
   font-size: var(--app-page-subtitle-size);
   color: var(--app-muted);
@@ -153,7 +160,8 @@
 .corr__content,
 .acct-page__content,
 .contacts-page__content,
-.td-page__content {
+.td-page__content,
+.icom-page__content {
   box-sizing: border-box;
   padding: var(--app-page-padding-y) var(--app-page-padding-x) var(--app-page-content-padding-bottom);
 }
@@ -188,7 +196,8 @@
   .corr__header,
   .acct-page__header,
   .contacts-page__header,
-  .td-page__header {
+  .td-page__header,
+  .icom-page__header {
     padding-top: var(--mob-safe-top);
     min-height: calc(var(--app-page-header-height) + var(--mob-safe-top));
     height: auto;
@@ -268,6 +277,25 @@
   }
 
   .corr__content {
+    padding-bottom: calc(var(--app-page-content-padding-bottom) + var(--mob-safe-bottom));
+  }
+
+  .icom-page__main {
+    max-height: none;
+    min-height: 100dvh;
+  }
+
+  .icom-page__header {
+    height: auto;
+    min-height: calc(var(--app-page-header-height) + var(--mob-safe-top));
+  }
+
+  .icom-page__title {
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+
+  .icom-page__content {
     padding-bottom: calc(var(--app-page-content-padding-bottom) + var(--mob-safe-bottom));
   }
 }

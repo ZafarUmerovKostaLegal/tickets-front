@@ -124,6 +124,7 @@ export const ruMessages: Messages = {
         rules: 'Правила',
         help: 'Помощь',
         contacts: 'Контакты',
+        internalCommunication: 'Внутренняя связь',
         kostaLegalAi: 'Kosta Legal AI',
         sectionsAria: 'Разделы приложения',
     },
@@ -273,6 +274,17 @@ export const ruMessages: Messages = {
                 text: 'В «Графике отпусков» нажмите «+», выберите категорию (ежегодный отпуск, day off, дистанционный режим), период и партнёра для согласования. Проверьте текст заявления, подпишите его и при необходимости скачайте PDF или Word. Число дней в периоде считается автоматически.',
             },
         },
+    },
+    internalCommunicationPage: {
+        title: 'Внутренняя связь',
+        subtitle: 'Внутренние телефонные номера сотрудников',
+        searchPlaceholder: 'Поиск по ФИО или номеру…',
+        colName: 'ФИО сотрудника',
+        colExtension: 'Внутренний номер',
+        empty: 'Сотрудники не найдены',
+        emptyDirectory: 'Список внутренних номеров пока не заполнен',
+        emptyHint: 'Попробуйте изменить поисковый запрос',
+        count: 'Сотрудников: {count}',
     },
     attendancePage: {
         title: 'Посещаемость',
@@ -684,6 +696,7 @@ export type Messages = {
         | 'rules'
         | 'help'
         | 'contacts'
+        | 'internalCommunication'
         | 'kostaLegalAi'
         | 'sectionsAria',
         string
@@ -782,6 +795,17 @@ export type Messages = {
             | 'vacationRequest',
             { title: string; text: string }
         >;
+    };
+    internalCommunicationPage: {
+        title: string;
+        subtitle: string;
+        searchPlaceholder: string;
+        colName: string;
+        colExtension: string;
+        empty: string;
+        emptyDirectory: string;
+        emptyHint: string;
+        count: string;
     };
     attendancePage: {
         title: string;

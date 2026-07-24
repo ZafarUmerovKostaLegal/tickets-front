@@ -39,6 +39,7 @@ export const HUB_SECTIONS: HubSectionDef[] = [
             'vacationSchedule',
             'inventory',
             'contacts',
+            'internalCommunication',
             'rules',
             'help',
             'networkDrive',

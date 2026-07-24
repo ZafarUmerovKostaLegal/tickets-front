@@ -19,6 +19,7 @@ export const ROUTE_ACCESS_MATRIX: RouteAccessExpectation[] = [
     { path: '/kosta-daily', persona: 'employee', expectUrl: /\/kosta-daily$/ },
     { path: '/rules', persona: 'employee', expectUrl: /\/rules$/ },
     { path: '/help', persona: 'employee', expectUrl: /\/help$/ },
+    { path: '/internal-communication', persona: 'employee', expectUrl: /\/internal-communication$/ },
     { path: '/kosta-legal-ai', persona: 'employee', expectUrl: /\/kosta-legal-ai$/ },
     { path: '/expenses/exp-draft-1', persona: 'employee', expectUrl: /\/expenses\/exp-draft-1$/ },
 
@@ -84,6 +85,7 @@ export const ALL_APP_PATHS = [
     '/kosta-legal-ai',
     '/rules',
     '/help',
+    '/internal-communication',
     '/admin',
     '/admin/user/1',
     '/admin/network-drive',

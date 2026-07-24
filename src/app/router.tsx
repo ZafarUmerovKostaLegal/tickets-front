@@ -51,6 +51,7 @@ const RulesPage = lazy(() => import('@pages/rules').then(m => ({ default: m.Rule
 const HelpPage = lazy(() => import('@pages/help').then(m => ({ default: m.HelpPage })));
 const KostaDailyPage = lazy(() => import('@pages/kosta-daily').then(m => ({ default: m.KostaDailyPage })));
 const ContactsPage = lazy(() => import('@pages/contacts').then(m => ({ default: m.ContactsPage })));
+const InternalCommunicationPage = lazy(() => import('@pages/internal-communication').then(m => ({ default: m.InternalCommunicationPage })));
 const ExpensesPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesPage })));
 const ExpensesRequestsPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesRequestsPage })));
 const ExpensesReportPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesReportPage })));
@@ -144,6 +145,7 @@ const router = createBrowserRouter([
             { path: routes.contacts, element: withProtected(<AdminOnlyModuleRoute>
                     <ContactsPage />
                   </AdminOnlyModuleRoute>) },
+            { path: routes.internalCommunication, element: withProtected(<InternalCommunicationPage />) },
             { path: routes.admin, element: withProtected(<AdminPage />, true) },
             { path: routes.networkDriveAccess, element: withProtected(<DesktopOnlyRoute>
               <NetworkDriveAccessPage />
