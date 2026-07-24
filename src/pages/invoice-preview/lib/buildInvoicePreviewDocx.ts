@@ -256,8 +256,8 @@ function timeReportDocxSectionChildren(
     const cur = packCurrencyCode(model);
     const labels = getTimeReportLabels(model.coverLanguage);
     const amountHdr = labels.amount(cur);
-    const DW = pctWidths([12, 10, 11, 22, 9, 14, 22]);
-    const SW = pctWidths([9, 22, 20, 13, 15, 21]);
+    const DW = pctWidths([11, 9, 14, 20, 8, 18, 20]);
+    const SW = pctWidths([9, 20, 18, 12, 18, 23]);
 
     const detailHeader = new TableRow({
         children: [

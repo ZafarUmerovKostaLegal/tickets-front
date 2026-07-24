@@ -317,26 +317,13 @@ function fitPdfCellText(txt: string, maxW: number, font: PDFFont, preferSize: nu
     return { text: clipPdfCellText(t, maxW, font, minSize), size: minSize };
 }
 
+/** Wrap only at spaces — never split a word mid-letter. */
 function wrapCellLines(text: string, maxW: number, font: PDFFont, size: number): string[] {
     const words = text.trim().split(/\s+/).filter(Boolean);
     if (!words.length)
         return [];
     const lines: string[] = [];
     let line = '';
-    const pushLongToken = (token: string) => {
-        let chunk = '';
-        for (const ch of token) {
-            const trial = chunk + ch;
-            if (font.widthOfTextAtSize(trial, size) <= maxW)
-                chunk = trial;
-            else {
-                if (chunk)
-                    lines.push(chunk);
-                chunk = ch;
-            }
-        }
-        line = chunk;
-    };
     for (const w of words) {
         const trial = line ? `${line} ${w}` : w;
         if (font.widthOfTextAtSize(trial, size) <= maxW) {
@@ -345,10 +332,7 @@ function wrapCellLines(text: string, maxW: number, font: PDFFont, size: number):
         else {
             if (line)
                 lines.push(line);
-            if (font.widthOfTextAtSize(w, size) > maxW)
-                pushLongToken(w);
-            else
-                line = w;
+            line = w;
         }
     }
     if (line)
@@ -865,11 +849,12 @@ function drawTimeReportGridTable(
     return tableBottom;
 }
 
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [12, 10, 11, 22, 9, 14, 22] as const;
-const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 22, 20, 13, 15, 21] as const;
-/** Description + Task can wrap to keep full values visible. */
-const TR_DETAIL_WRAP_COLS = new Set([2, 3]);
-const TR_SUMMARY_WRAP_COLS = new Set([1, 2]);
+/** Wider Task/Rate so labels and `UZS 1,500,000.00` fit at DOC_FS (wrap currency + number). */
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [11, 9, 14, 20, 8, 18, 20] as const;
+const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 20, 18, 12, 18, 23] as const;
+/** Task, Description, Rate, Amount — wrap at spaces; keep full font (no mid-word splits). */
+const TR_DETAIL_WRAP_COLS = new Set([2, 3, 5, 6]);
+const TR_SUMMARY_WRAP_COLS = new Set([1, 2, 4, 5]);
 
 function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, fontBold: PDFFont, continuation: boolean): number {
     let yTop = H - MT - 4;

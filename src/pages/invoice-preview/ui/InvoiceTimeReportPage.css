@@ -103,7 +103,9 @@
   min-height: 1.2rem;
   color: #475569;
   overflow: hidden;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: none;
 }
 
 .tt-inv-tr__tbody td.tt-inv-tr__cell--empty {
@@ -170,14 +172,14 @@
 .tt-inv-tr__cell--amount,
 .tt-inv-tr__tfoot .tt-inv-tr__cell--amount {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   word-break: normal;
   hyphens: none;
 }
 
 .tt-inv-tr__currency-foot {
   white-space: normal;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   word-break: normal;
   hyphens: none;
   font-weight: 700;
