@@ -281,7 +281,7 @@
   }
 
   .icom-page__main {
-    max-height: none;
+    max-height: 100dvh;
     min-height: 100dvh;
   }
 
