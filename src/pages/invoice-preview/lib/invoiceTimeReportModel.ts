@@ -53,8 +53,11 @@ export function emptyInvoiceTimeReportPack(currency: string): InvoiceTimeReportP
 export function formatTimeReportHours(n: number): string {
     if (!Number.isFinite(n))
         return '';
-    const s = n.toFixed(3).replace(/\.?0+$/, '');
-    return s || '0';
+    // Match partner Excel export: 2 decimal places, ru-RU comma separator (e.g. 0,63).
+    return n.toLocaleString('ru-RU', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 }
 
 function detailRowIsTrailingEmpty(row: InvoiceTimeReportDetailRow): boolean {
