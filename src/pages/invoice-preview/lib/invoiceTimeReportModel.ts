@@ -1,5 +1,4 @@
 import { TIME_REPORT_DETAIL_ROWS, TIME_REPORT_SUMMARY_ROWS } from './invoicePreviewPackShared';
-import { formatCoverLetterTotal } from './invoiceCoverLetterModel';
 
 export type InvoiceTimeReportDetailRow = {
     date: string;
@@ -103,5 +102,13 @@ export function padSummaryRows(rows: InvoiceTimeReportSummaryRow[]): InvoiceTime
 }
 
 export function formatTimeReportAmount(amount: number, currency: string): string {
-    return formatCoverLetterTotal(amount, currency);
+    const cur = (currency || 'EUR').trim().toUpperCase() || 'EUR';
+    if (!Number.isFinite(amount))
+        return `${cur} 0.00`;
+    const neg = amount < 0;
+    const num = Math.abs(amount).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+    return neg ? `−${cur} ${num}` : `${cur} ${num}`;
 }
