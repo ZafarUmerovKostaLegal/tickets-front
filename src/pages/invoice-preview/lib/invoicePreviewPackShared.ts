@@ -40,7 +40,7 @@ export function packCurrencyCode(model: InvoiceCoverLetterModel): string {
 }
 
 export function packZeroCommaAmount(model: InvoiceCoverLetterModel): string {
-    return `${packCurrencyCode(model)} 0,00`;
+    return `${packCurrencyCode(model)} 0.00`;
 }
 
 export function packCaseDetailLine(

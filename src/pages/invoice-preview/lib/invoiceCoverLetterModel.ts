@@ -55,17 +55,12 @@ import {
     getCoverLetterLabels,
     normalizeCoverLanguage,
 } from './invoiceCoverLetterI18n';
+import { formatTimeReportAmount } from './invoiceTimeReportModel';
 
 export function formatCoverLetterTotal(amount: number | null, currency: string): string {
-    const cur = (currency || 'EUR').trim().toUpperCase() || 'EUR';
     if (amount == null || !Number.isFinite(amount))
-        return `${cur} 0 000,00`;
-    const neg = amount < 0;
-    const v = Math.abs(amount);
-    const [intRaw, frac = '00'] = v.toFixed(2).split('.');
-    const intPart = intRaw!.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-    const num = `${intPart},${frac}`;
-    return neg ? `−${cur} ${num}` : `${cur} ${num}`;
+        return formatTimeReportAmount(0, currency);
+    return formatTimeReportAmount(amount, currency);
 }
 
 function splitAddress(raw: string | null, lang: InvoiceCoverLanguage): [string, string] {

@@ -23,7 +23,7 @@ describe('invoiceCoverLetterI18n', () => {
         expect(model.letterDateDisplay).toContain('2026');
         expect(model.servicesMonthYear).toBe('июле 2026 года');
         expect(resolveLocalizedCoverIntroParagraph(model)).toContain('GOR INVESTMENT');
-        expect(resolveLocalizedCoverInvoiceParagraph(model)).toContain('EUR 3 250,50');
+        expect(resolveLocalizedCoverInvoiceParagraph(model)).toContain('EUR 3,250.50');
     });
 
     it('switches language and refreshes template fields', () => {

@@ -355,6 +355,7 @@ function computeBodyRowLayouts(
     widths: readonly number[],
     font: PDFFont,
     wrapCols: ReadonlySet<number>,
+    fixedFsCols: ReadonlySet<number> = new Set(),
 ): { rowHeights: number[]; cellLines: string[][][] } {
     const rowHeights: number[] = [];
     const cellLines: string[][][] = [];
@@ -371,6 +372,9 @@ function computeBodyRowLayouts(
             }
             else if (wrapCols.has(c)) {
                 lines = wrapCellLines(raw, maxW, font, DOC_FS);
+            }
+            else if (fixedFsCols.has(c)) {
+                lines = [raw];
             }
             else {
                 const fitted = fitPdfCellText(raw, maxW, font, DOC_FS, DOC_FS * 0.72);
@@ -395,6 +399,7 @@ function paintTimeReportBody(
     font: PDFFont,
     rightAlignedCols: ReadonlySet<number>,
     wrapCols: ReadonlySet<number>,
+    fixedFsCols: ReadonlySet<number> = new Set(),
 ): void {
     let yRowTop = yHeaderBot;
     for (let r = 0; r < cellLines.length; r++) {
@@ -409,7 +414,7 @@ function paintTimeReportBody(
             const maxW = Math.max(8, widths[c]! - CELL_PAD_X * 2);
             let yLine = cellTop - CELL_PAD_Y - textAscent(font, DOC_FS);
             for (const ln of lines) {
-                const fitted = wrapCols.has(c)
+                const fitted = wrapCols.has(c) || fixedFsCols.has(c)
                     ? { text: ln, size: DOC_FS }
                     : fitPdfCellText(ln, maxW, font, DOC_FS, DOC_FS * 0.72);
                 if (!fitted.text)
@@ -440,10 +445,11 @@ function estimateGridTableHeight(
     font: PDFFont,
     fontBold: PDFFont,
     withFooter: boolean,
+    fixedFsCols: ReadonlySet<number> = new Set(),
 ): number {
     const { widths } = colLayout(ML, tableW, colWeights);
     const { headerH } = computeHeaderLayouts(headers, widths, fontBold);
-    const { rowHeights } = computeBodyRowLayouts(bodyTexts, bodyTexts.length, widths, font, wrapCols);
+    const { rowHeights } = computeBodyRowLayouts(bodyTexts, bodyTexts.length, widths, font, wrapCols, fixedFsCols);
     const bodyH = rowHeights.reduce((s, h) => s + h, 0);
     return headerH + bodyH + (withFooter ? TABLE_FOOTER_H : 0);
 }
@@ -678,6 +684,7 @@ function drawTimeReportGridTable(
         bodyTexts?: readonly (readonly string[])[] | null;
         rightAlignedBodyCols?: ReadonlySet<number>;
         wrapBodyCols?: ReadonlySet<number>;
+        fixedFsBodyCols?: ReadonlySet<number>;
         footerTotals?: {
             detail?: { hours: string; amount: string };
             summary?: { hours: string; hourly: string; amount: string };
@@ -701,6 +708,7 @@ function drawTimeReportGridTable(
         bodyTexts,
         rightAlignedBodyCols,
         wrapBodyCols,
+        fixedFsBodyCols,
         footerTotals,
         showInnerTotal,
         totalLabel = 'Total',
@@ -715,7 +723,7 @@ function drawTimeReportGridTable(
 
     const bodyData = bodyTexts?.length ? bodyTexts : null;
     const { rowHeights, cellLines } = bodyData
-        ? computeBodyRowLayouts(bodyData, bodyRows, widths, font, wrapBodyCols ?? new Set())
+        ? computeBodyRowLayouts(bodyData, bodyRows, widths, font, wrapBodyCols ?? new Set(), fixedFsBodyCols ?? new Set())
         : { rowHeights: Array.from({ length: bodyRows }, () => bodyRowHeight(1)), cellLines: [] as string[][][] };
     const bodyHeight = rowHeights.reduce((s, h) => s + h, 0);
     const tableBottom = yHeaderBot - bodyHeight - (innerFootLines > 0 ? footerH : 0);
@@ -797,6 +805,7 @@ function drawTimeReportGridTable(
             font,
             rightAlignedBodyCols ?? new Set(),
             wrapBodyCols ?? new Set(),
+            fixedFsBodyCols ?? new Set(),
         );
     }
 
@@ -849,12 +858,15 @@ function drawTimeReportGridTable(
     return tableBottom;
 }
 
-/** Wider Task/Rate so labels and `UZS 1,500,000.00` fit at DOC_FS (wrap currency + number). */
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [11, 9, 14, 20, 8, 18, 20] as const;
+/** Wider Date so `25 Mar 2026` / `25 мар 2026` fit at DOC_FS (no shrink). */
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [15, 9, 13, 18, 8, 18, 19] as const;
 const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 20, 18, 12, 18, 23] as const;
 /** Task, Description, Rate, Amount — wrap at spaces; keep full font (no mid-word splits). */
 const TR_DETAIL_WRAP_COLS = new Set([2, 3, 5, 6]);
 const TR_SUMMARY_WRAP_COLS = new Set([1, 2, 4, 5]);
+/** Date / Initials / Hours — always DOC_FS (never shrink to fit). */
+const TR_DETAIL_FIXED_FS_COLS = new Set([0, 1, 4]);
+const TR_SUMMARY_FIXED_FS_COLS = new Set([0, 3]);
 
 function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, fontBold: PDFFont, continuation: boolean): number {
     let yTop = H - MT - 4;
@@ -987,6 +999,7 @@ function drawSingleTimeReportPdfPage(
         bodyTexts: detailBody.length ? detailBody : [['', '', '', '', '', '', '']],
         rightAlignedBodyCols: new Set([4, 5, 6]),
         wrapBodyCols: TR_DETAIL_WRAP_COLS,
+        fixedFsBodyCols: TR_DETAIL_FIXED_FS_COLS,
         showInnerTotal: opts.showDetailTotals,
         totalLabel: labels.total,
         footerTotals: opts.showDetailTotals
@@ -1028,6 +1041,7 @@ function drawSingleTimeReportPdfPage(
         bodyTexts: summaryBody.length ? summaryBody : [['', '', '', '', '', '']],
         rightAlignedBodyCols: new Set([3, 4, 5]),
         wrapBodyCols: TR_SUMMARY_WRAP_COLS,
+        fixedFsBodyCols: TR_SUMMARY_FIXED_FS_COLS,
         totalLabel: labels.total,
         footerTotals: {
             summary: {

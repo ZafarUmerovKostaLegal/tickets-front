@@ -27,7 +27,7 @@ export type TimeReportLabels = {
 
 const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
     ENG: {
-        confidential: 'Private and confidential',
+        confidential: 'CONFIDENTIAL',
         title: (period) => `TIME REPORT FOR SERVICES PROVIDED IN ${period.toUpperCase()}`,
         titleContinued: (period) => `TIME REPORT FOR SERVICES PROVIDED IN ${period.toUpperCase()} — CONTINUED`,
         date: 'Date',
@@ -45,7 +45,7 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
         totalPrice: (cur) => `Total price (${cur})`,
     },
     RU: {
-        confidential: 'Конфиденциально',
+        confidential: 'КОНФИДЕНЦИАЛЬНО',
         title: (period) => `ОТЧЁТ О ВРЕМЕНИ ЗА УСЛУГИ, ОКАЗАННЫЕ В ${period.toUpperCase()}`,
         titleContinued: (period) => `ОТЧЁТ О ВРЕМЕНИ ЗА УСЛУГИ, ОКАЗАННЫЕ В ${period.toUpperCase()} — ПРОДОЛЖЕНИЕ`,
         date: 'Дата',
