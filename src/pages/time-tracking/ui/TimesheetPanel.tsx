@@ -1718,9 +1718,9 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                                 {t('timeTrackingPage.timesheet.forWeek')}
                             </>)}
                         </span>
-                        <span className={`tsp__wtotal-n${periodTotal > 0 ? ' tsp__wtotal-n--on' : ''}`}>{fmtHours(periodTotal)}</span>
+                        <span className={`tsp__wtotal-n${periodTotal > 0 ? ' tsp__wtotal-n--on' : ''}${periodBarPct >= 100 ? ' tsp__wtotal-n--full' : ''}`}>{fmtHours(periodTotal)}</span>
                         <div className="tsp__wtotal-bar-wrap" title={`${Math.round((periodTotal / periodNorm) * 100)}% ${t('timeTrackingPage.timesheet.percentOf')} ${fmtHours(periodNorm)}`}>
-                            <div className="tsp__wtotal-bar" style={{ width: `${periodBarPct}%` }} />
+                            <div className={`tsp__wtotal-bar${periodBarPct >= 100 ? ' tsp__wtotal-bar--full' : ''}`} style={{ width: `${periodBarPct}%` }} />
                         </div>
                         <span className="tsp__wtotal-cap">{t('timeTrackingPage.timesheet.ofCap')} {fmtHours(periodNorm)}</span>
                     </div>
