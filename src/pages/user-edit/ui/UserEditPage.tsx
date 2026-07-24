@@ -1,11 +1,16 @@
 import { useState, useEffect, useId, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getUser, setUserInitials, type User, } from '@entities/user';
-import { upsertTimeTrackingUser, getTimeTrackingUser, patchTimeTrackingUserWeeklyCapacity, patchTimeTrackingUserTransferWithoutProjectAccess, listHourlyRates, createHourlyRate, patchHourlyRate, deleteHourlyRate, changeHourlyRateFrom, getUserProjectAccess, putUserProjectAccess, listAllClientProjectsMerged, listAllTimeManagerClientsMerged, isForbiddenError, userFacingProjectAccessError, TIME_TRACKING_PROJECT_CURRENCIES, type HourlyRateRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
+import { upsertTimeTrackingUser, getTimeTrackingUser, patchTimeTrackingUserWeeklyCapacity, patchTimeTrackingUserTransferWithoutProjectAccess, listHourlyRates, createHourlyRate, patchHourlyRate, deleteHourlyRate, changeHourlyRateFrom, getUserProjectAccess, putUserProjectAccess, listAllClientProjectsMerged, listAllTimeManagerClientsMerged, isForbiddenError, userFacingProjectAccessError, TIME_TRACKING_PROJECT_CURRENCIES, fetchAllTimeReportProjectRows, type HourlyRateRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
+import { formatPeriodLabel, isoDateLocal, periodToDates } from '@entities/time-tracking/lib/reportsPeriodRange';
+import { fmtH } from '@entities/time-tracking/lib/reportsFormatUtils';
+import { writeReportPreviewTransfer } from '@entities/time-tracking/model/reportPreviewTransfer';
+import { PERIOD_OPTIONS, type PeriodGranularity } from '@entities/time-tracking/model/reportsPanelConfig';
 import { canAccessAdminPanel } from '@shared/lib/orgRoles';
 import { isManualTtAuthUserId, isWithoutAuthRegistration, timeTrackingRowToUser } from '@entities/time-tracking/model/manualUsers';
 import { useCurrentUser } from '@shared/hooks';
+import { getUserEditUrl, routes } from '@shared/config';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { canManageUserProjectAccess } from '@entities/time-tracking/model/timeManagerClientsAccess';
 import { canManageHourlyRates } from '@entities/time-tracking/model/timeTrackingAccess';
@@ -18,6 +23,18 @@ function tabFromSearchParam(raw: string | null): TabId {
     if (raw === 'basic' || raw === 'rates' || raw === 'projects')
         return raw;
     return 'basic';
+}
+function shiftPeriodDate(date: Date, granularity: PeriodGranularity, direction: -1 | 1): Date {
+    const next = new Date(date);
+    if (granularity === 'week')
+        next.setDate(next.getDate() + 7 * direction);
+    else if (granularity === 'month')
+        next.setMonth(next.getMonth() + direction);
+    else if (granularity === 'quarter')
+        next.setMonth(next.getMonth() + 3 * direction);
+    else if (granularity === 'year')
+        next.setFullYear(next.getFullYear() + direction);
+    return next;
 }
 type RateType = 'billable' | 'cost';
 type Rate = {
@@ -522,6 +539,7 @@ export function UserEditPage() {
     const { id } = useParams<{
         id: string;
     }>();
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const { user: currentEditor } = useCurrentUser();
     const canEditTTProjectAccess = canManageUserProjectAccess(currentEditor?.role, currentEditor?.time_tracking_role ?? null);
@@ -567,6 +585,13 @@ export function UserEditPage() {
     const [projectSearch, setProjectSearch] = useState('');
     const [searchOpen, setSearchOpen] = useState(false);
     const [assignedProjectsStatus, setAssignedProjectsStatus] = useState<'active' | 'archived' | 'all'>('active');
+    const [projPeriodDate, setProjPeriodDate] = useState(() => new Date());
+    const [projPeriodGranularity, setProjPeriodGranularity] = useState<PeriodGranularity>('month');
+    const [projPeriodDropdown, setProjPeriodDropdown] = useState(false);
+    const [projectHoursById, setProjectHoursById] = useState<Record<string, number>>({});
+    const [projectActivityLoading, setProjectActivityLoading] = useState(false);
+    const [projectActivityError, setProjectActivityError] = useState<string | null>(null);
+    const projPeriodDropdownRef = useRef<HTMLDivElement>(null);
     const searchBoxRef = useRef<HTMLDivElement>(null);
     const projPickListId = useId();
     const [capacity, setCapacity] = useState<number>(CAPACITY_DEFAULT);
@@ -756,6 +781,97 @@ export function UserEditPage() {
             cancelled = true;
         };
     }, [user?.id, activeTab, isManualUser]);
+
+    const projPeriodRange = useMemo(
+        () => periodToDates(projPeriodDate, projPeriodGranularity),
+        [projPeriodDate, projPeriodGranularity],
+    );
+    const projPeriodTitle = useMemo(() => {
+        if (projPeriodGranularity === 'all')
+            return 'За всё время';
+        return formatPeriodLabel(projPeriodDate, projPeriodGranularity);
+    }, [projPeriodDate, projPeriodGranularity]);
+
+    useEffect(() => {
+        if (!user || activeTab !== 'projects')
+            return;
+        let cancelled = false;
+        setProjectActivityLoading(true);
+        setProjectActivityError(null);
+        fetchAllTimeReportProjectRows({
+            dateFrom: projPeriodRange.dateFrom,
+            dateTo: projPeriodRange.dateTo,
+            user_id: String(user.id),
+        })
+            .then((rows) => {
+                if (cancelled)
+                    return;
+                const next: Record<string, number> = {};
+                for (const row of rows) {
+                    const pid = String(row.project_id ?? '').trim();
+                    if (!pid)
+                        continue;
+                    const hours = Number(row.total_hours);
+                    if (!Number.isFinite(hours) || hours <= 0)
+                        continue;
+                    next[pid] = (next[pid] ?? 0) + hours;
+                }
+                setProjectHoursById(next);
+            })
+            .catch((e: unknown) => {
+                if (cancelled)
+                    return;
+                setProjectHoursById({});
+                setProjectActivityError(e instanceof Error ? e.message : 'Не удалось загрузить активность по проектам');
+            })
+            .finally(() => {
+                if (!cancelled)
+                    setProjectActivityLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [user?.id, activeTab, projPeriodRange.dateFrom, projPeriodRange.dateTo]);
+
+    useEffect(() => {
+        if (!projPeriodDropdown)
+            return;
+        const onDoc = (e: MouseEvent) => {
+            if (projPeriodDropdownRef.current && !projPeriodDropdownRef.current.contains(e.target as Node))
+                setProjPeriodDropdown(false);
+        };
+        document.addEventListener('mousedown', onDoc);
+        return () => document.removeEventListener('mousedown', onDoc);
+    }, [projPeriodDropdown]);
+
+    const openProjectReportPreview = useCallback((projectId: string) => {
+        if (!user)
+            return;
+        const trimmed = projectId.trim();
+        if (!trimmed)
+            return;
+        writeReportPreviewTransfer({
+            v: 2,
+            reportType: 'time',
+            groupBy: 'projects',
+            filters: {
+                dateFrom: projPeriodRange.dateFrom,
+                dateTo: projPeriodRange.dateTo,
+                user_id: String(user.id),
+                project_id: trimmed,
+                page: 1,
+                per_page: 500,
+            },
+            period: {
+                periodGranularity: projPeriodGranularity,
+                periodAnchorIso: isoDateLocal(projPeriodDate),
+                customRangeActive: false,
+            },
+            returnTo: `${getUserEditUrl(user.id)}?tab=projects`,
+        });
+        navigate(routes.timeTrackingReportPreview);
+    }, [user, projPeriodRange.dateFrom, projPeriodRange.dateTo, projPeriodGranularity, projPeriodDate, navigate]);
+
     async function persistTransferWithoutProjectAccess(enabled: boolean) {
         if (!user || !canEditTTProjectAccess)
             return;
@@ -1527,6 +1643,76 @@ export function UserEditPage() {
                   </nav>
                 </div>
 
+                <div className="uep__proj-period">
+                  <div className="uep__proj-period-left">
+                    <button
+                      type="button"
+                      className="uep__proj-period-nav"
+                      onClick={() => setProjPeriodDate((d) => shiftPeriodDate(d, projPeriodGranularity, -1))}
+                      disabled={projPeriodGranularity === 'all'}
+                      aria-label="Предыдущий период"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                        <path d="M15 18l-6-6 6-6"/>
+                      </svg>
+                    </button>
+                    <h3 className="uep__proj-period-title">{projPeriodTitle}</h3>
+                    <button
+                      type="button"
+                      className="uep__proj-period-nav"
+                      onClick={() => setProjPeriodDate((d) => shiftPeriodDate(d, projPeriodGranularity, 1))}
+                      disabled={projPeriodGranularity === 'all'}
+                      aria-label="Следующий период"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                        <path d="M9 18l6-6-6-6"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="uep__proj-period-dropdown-wrap" ref={projPeriodDropdownRef}>
+                    <button
+                      type="button"
+                      className="uep__proj-period-dropdown-btn"
+                      onClick={() => setProjPeriodDropdown((v) => !v)}
+                      aria-expanded={projPeriodDropdown}
+                    >
+                      {PERIOD_OPTIONS.find((o) => o.id === projPeriodGranularity)?.label ?? 'Месяц'}
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                        <path d="M6 9l6 6 6-6"/>
+                      </svg>
+                    </button>
+                    {projPeriodDropdown ? (
+                      <div className="uep__proj-period-dropdown" role="listbox">
+                        {PERIOD_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            role="option"
+                            aria-selected={projPeriodGranularity === opt.id}
+                            className={`uep__proj-period-opt${projPeriodGranularity === opt.id ? ' uep__proj-period-opt--active' : ''}`}
+                            onClick={() => {
+                              setProjPeriodGranularity(opt.id);
+                              setProjPeriodDropdown(false);
+                            }}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+                {projectActivityLoading && (
+                  <p className="uep__proj-subheading" role="status" style={{ marginBottom: '0.75rem' }}>
+                    Загрузка активности за период…
+                  </p>
+                )}
+                {projectActivityError && (
+                  <p className="uep__field-error" role="alert" style={{ marginBottom: '0.75rem' }}>
+                    {projectActivityError}
+                  </p>
+                )}
+
                 {assignedRows.length === 0 ? (<div className="uep__proj-empty">
                     <div className="uep__proj-empty-icon">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1553,24 +1739,44 @@ export function UserEditPage() {
                     </p>
                   </div>) : (<div className="uep__proj-list">
                     <div className="uep__proj-list-head">
-                      <span>Проект</span>
-                      <span className="uep__proj-list-head-meta">{assignedVisible.length}</span>
+                      <span>
+                        Проект
+                        <span className="uep__proj-list-head-meta">{assignedVisible.length}</span>
+                      </span>
+                      <span className="uep__proj-list-head-hours">Время</span>
+                      <span className="uep__proj-list-head-action">Отчёт</span>
                     </div>
-                    {assignedVisible.map((p) => (<div key={p.id} className={`uep__proj-item${p.archived ? ' uep__proj-item--archived' : ''}`}>
-                        <button type="button" className="uep__proj-item-remove" disabled={pickDisabled} onClick={() => removeProject(p.id)} title={`Убрать из ${p.name}`}>
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                            <path d="M18 6L6 18M6 6l12 12"/>
-                          </svg>
-                        </button>
-                        <span className="uep__proj-color-dot" style={{ background: p.color }}/>
-                        <span className="uep__proj-item-info">
-                          <span className="uep__proj-item-name">
-                            {p.name}
-                            {p.archived ? <span className="uep__proj-arch-badge">Архив</span> : null}
+                    {assignedVisible.map((p) => {
+                      const hours = projectHoursById[p.id] ?? 0;
+                      return (
+                        <div key={p.id} className={`uep__proj-item${p.archived ? ' uep__proj-item--archived' : ''}`}>
+                          <button type="button" className="uep__proj-item-remove" disabled={pickDisabled} onClick={() => removeProject(p.id)} title={`Убрать из ${p.name}`}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M18 6L6 18M6 6l12 12"/>
+                            </svg>
+                          </button>
+                          <span className="uep__proj-color-dot" style={{ background: p.color }}/>
+                          <span className="uep__proj-item-info">
+                            <span className="uep__proj-item-name">
+                              {p.name}
+                              {p.archived ? <span className="uep__proj-arch-badge">Архив</span> : null}
+                            </span>
+                            <span className="uep__proj-item-client">{p.client}</span>
                           </span>
-                          <span className="uep__proj-item-client">{p.client}</span>
-                        </span>
-                      </div>))}
+                          <span className="uep__proj-item-hours" title={`Время за период: ${fmtH(hours)}`}>
+                            {projectActivityLoading ? '…' : fmtH(hours)}
+                          </span>
+                          <button
+                            type="button"
+                            className="uep__proj-item-preview"
+                            onClick={() => openProjectReportPreview(p.id)}
+                            title={`Предпросмотр отчёта: ${p.name}`}
+                          >
+                            Предпросмотр
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>)}
               </div>
               </div>);
