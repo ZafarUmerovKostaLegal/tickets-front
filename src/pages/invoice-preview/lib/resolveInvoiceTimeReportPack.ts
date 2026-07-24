@@ -1,5 +1,6 @@
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
 import {
+    fetchReportsUsersForFilter,
     fetchTimeEntry,
     fetchUnbilledExpenses,
     fetchUnbilledTimeEntries,
@@ -13,6 +14,7 @@ import {
     type UnbilledExpenseEntryDto,
     type UnbilledTimeEntryDto,
 } from '@entities/time-tracking';
+import { getUsers, type User } from '@entities/user';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { fetchExpenseById } from '@entities/expenses/model/expensesApi';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
@@ -50,9 +52,52 @@ function lineKind(ln: InvoiceLineDto): string {
     return k || 'other';
 }
 
-function initialsFromUser(u: TimeTrackingUserRow): string {
+function normalizeStoredInitials(raw: string | null | undefined): string {
+    return (raw ?? '').trim().toUpperCase().replace(/Ё/g, 'Е');
+}
+
+/** Prefer auth `/users` initials (source of truth), then reports filter, then TT users. */
+function buildAuthInitialsLookup(
+    authUsers: User[],
+    filterUsers: { id: number; initials?: string | null; displayName?: string; email?: string }[],
+    ttUsers: TimeTrackingUserRow[],
+): Map<number, string> {
+    const out = new Map<number, string>();
+    for (const u of ttUsers) {
+        const ini = normalizeStoredInitials(u.initials);
+        if (ini)
+            out.set(u.id, ini);
+    }
+    for (const u of filterUsers) {
+        const ini = normalizeStoredInitials(u.initials);
+        if (ini && Number.isFinite(u.id) && u.id > 0)
+            out.set(u.id, ini);
+    }
+    for (const u of authUsers) {
+        const ini = normalizeStoredInitials(u.initials);
+        if (ini && Number.isFinite(u.id) && u.id > 0)
+            out.set(u.id, ini);
+    }
+    return out;
+}
+
+function initialsForAuthUser(
+    authId: number,
+    users: TimeTrackingUserRow[],
+    initialsByAuthId: ReadonlyMap<number, string>,
+): string {
+    const u = users.find((row) => row.id === authId) ?? null;
+    const stored = initialsByAuthId.get(authId) ?? u?.initials ?? null;
     return resolveReportEmployeeInitials({
-        stored: u.initials,
+        stored,
+        displayName: u?.display_name,
+        email: u?.email,
+    }) || '—';
+}
+
+function initialsFromUser(u: TimeTrackingUserRow, initialsByAuthId?: ReadonlyMap<number, string>): string {
+    return resolveReportEmployeeInitials({
+        stored: initialsByAuthId?.get(u.id) ?? u.initials,
         displayName: u.display_name,
         email: u.email,
     }) || '—';
@@ -170,6 +215,7 @@ function buildSummaryAndTotals(
     details: BuildingDetail[],
     users: TimeTrackingUserRow[],
     currency: string,
+    initialsByAuthId: ReadonlyMap<number, string>,
 ): Pick<InvoiceTimeReportPack, 'summarySlots' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay'> {
     const agg = new Map<number, {
         hours: number;
@@ -206,7 +252,7 @@ function buildSummaryAndTotals(
             const u = v.u ?? userByAuthId(users, uid);
             const rate = pickSummaryHourlyRate(v.rateByHours, v.hours, v.amount);
             return {
-                initials: u ? initialsFromUser(u) : String(uid).slice(0, 3),
+                initials: initialsForAuthUser(uid, users, initialsByAuthId),
                 name: u ? displayUserName(u) : `User ${uid}`,
                 title: u ? userTitle(u) : '—',
                 hours: formatTimeReportHours(v.hours),
@@ -263,7 +309,13 @@ export async function resolveInvoiceTimeReportPack(
     const otherTask = localizeTask('Other');
 
     try {
-        const users = await listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]);
+        const [ttUsers, filterUsers, authUsers] = await Promise.all([
+            listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]),
+            fetchReportsUsersForFilter().catch(() => [] as Awaited<ReturnType<typeof fetchReportsUsersForFilter>>),
+            getUsers(true).catch(() => [] as User[]),
+        ]);
+        const users = ttUsers;
+        const initialsByAuthId = buildAuthInitialsLookup(authUsers, filterUsers, ttUsers);
 
         if (session.mode === 'create') {
             const f = session.form;
@@ -311,7 +363,6 @@ export async function resolveInvoiceTimeReportPack(
             }));
 
             for (const e of selectedTimeRows) {
-                const u = userByAuthId(users, e.authUserId);
                 const hrs = Number(e.hours);
                 const h = Number.isFinite(hrs) ? hrs : 0;
                 const amt = Number(e.billableAmount);
@@ -330,7 +381,7 @@ export async function resolveInvoiceTimeReportPack(
                 });
                 details.push({
                     date: dateDisplayFromIso(e.workDate, lang),
-                    initials: u ? initialsFromUser(u) : String(e.authUserId).slice(0, 3),
+                    initials: initialsForAuthUser(e.authUserId, users, initialsByAuthId),
                     task: taskLabel,
                     description: invoiceClientDescription(entry?.description ?? e.description, taskLabel)
                         || (notes.trim().length ? notes : (taskLabel || '—')),
@@ -362,7 +413,7 @@ export async function resolveInvoiceTimeReportPack(
                 });
             }
 
-            const tail = buildSummaryAndTotals(details, users, currency);
+            const tail = buildSummaryAndTotals(details, users, currency, initialsByAuthId);
             return {
                 currency,
                 detailSlots: details.length ? finalizeDetailSlots(details.map(toPublicRow)) : empty.detailSlots,
@@ -463,7 +514,9 @@ export async function resolveInvoiceTimeReportPack(
                 });
                 details.push({
                     date: workIso ? dateDisplayFromIso(workIso, lang) : '—',
-                    initials: u ? initialsFromUser(u) : '—',
+                    initials: authId != null
+                        ? initialsForAuthUser(authId, users, initialsByAuthId)
+                        : (u ? initialsFromUser(u, initialsByAuthId) : '—'),
                     task: taskLabel,
                     description: invoiceClientDescription(entry?.description ?? desc, taskLabel) || desc || '—',
                     hours: hours > 0 ? formatTimeReportHours(hours) : '',
@@ -509,7 +562,7 @@ export async function resolveInvoiceTimeReportPack(
             }
         }
 
-        const tail = buildSummaryAndTotals(details, users, currency);
+        const tail = buildSummaryAndTotals(details, users, currency, initialsByAuthId);
         return {
             currency,
             detailSlots: details.length ? finalizeDetailSlots(details.map(toPublicRow)) : empty.detailSlots,

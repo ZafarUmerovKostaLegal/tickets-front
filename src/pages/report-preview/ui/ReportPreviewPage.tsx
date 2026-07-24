@@ -285,8 +285,6 @@ export function ReportPreviewPage() {
         };
     }, []);
     useEffect(() => {
-        if (!user || !hasFullTimeTrackingTabs(user))
-            return;
         let cancelled = false;
         void getUsers(true)
             .then((list) => {
@@ -299,7 +297,7 @@ export function ReportPreviewPage() {
         return () => {
             cancelled = true;
         };
-    }, [user]);
+    }, []);
     const authUserExportProfilesById = useMemo(() => {
         let merged = new Map(catalogUserExportProfilesById);
         if (projectMembersForEmployeePick.length > 0) {
