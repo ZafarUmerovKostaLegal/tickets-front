@@ -436,6 +436,14 @@ function normalizeHexColor(value: string): string {
         return '#FFF2CC';
     return raw.toUpperCase();
 }
+
+/** Valid #RRGGBB or null (empty / invalid). */
+function parseScopeHexColor(value: string | null | undefined): string | null {
+    const raw = String(value ?? '').trim().toUpperCase();
+    if (!/^#([0-9A-F]{6})$/.test(raw))
+        return null;
+    return raw;
+}
 const IcoDownload = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
 </svg>);
@@ -623,6 +631,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     // In confirmed (read-only) preview still show delete when handler is provided.
     const showEntryActions = !isFull && (
         Boolean(onDeleteTimeEntry)
+        || Boolean(!readOnlyUi && onApplyScopeColorToSelection)
         || (!readOnlyUi && (Boolean(onMoveTimeEntryToProject) || Boolean(onDuplicateTimeEntry) || Boolean(onGrantEditUnlock)))
     );
     const showActionsColumn = Boolean(showEntryActions);
@@ -902,7 +911,6 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     };
     const tableScrollRef = useRef<HTMLDivElement>(null);
     const showRowSelect = Boolean(onSelectedRowKeysChange);
-    const selectedCount = selectedRowKeys?.size ?? 0;
     const scopedSelectionBusy = Boolean(scopeColorBusy);
     const entriesCount = rowsForTotals.length;
     const dockHours = formatReportPreviewDurationHours(totals.hDisplay);
@@ -922,9 +930,9 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const r = displayRows[i];
         const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
-        const scopeColor = normalizeHexColor(r.scopeColor ?? '');
-        const hasScopeColor = Boolean(r.scopeColor && /^#([0-9A-F]{6})$/.test(scopeColor));
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor } : undefined} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+        const scopeColor = parseScopeHexColor(r.scopeColor);
+        const hasScopeColor = Boolean(scopeColor);
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor! } : undefined} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
             <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
             {visibleFullIds.map((colId) => renderFullBodyCell(colId, r, i, wk))}
             {showEntryActions ? (<td key="actions-full" className="tt-rp-mtable__td tt-rp-mtable__td--brief-actions" onClick={(e) => e.stopPropagation()}>
@@ -936,12 +944,17 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const r = displayRows[i];
         const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
-        const scopeColor = normalizeHexColor(r.scopeColor ?? '');
-        const hasScopeColor = Boolean(r.scopeColor && /^#([0-9A-F]{6})$/.test(scopeColor));
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor } : undefined} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+        const scopeColor = parseScopeHexColor(r.scopeColor);
+        const hasScopeColor = Boolean(scopeColor);
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor! } : undefined} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
             <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
             {visibleBriefIds.map((colId) => renderBriefBodyCell(colId, r, i, wk))}
         </tr>);
+    };
+    const resolveScopeTargetKeys = (rowKey: string): ReadonlySet<string> => {
+        if (selectedRowKeys && selectedRowKeys.has(rowKey) && selectedRowKeys.size > 1)
+            return selectedRowKeys;
+        return new Set([rowKey]);
     };
     const renderEntryRowActions = (r: TimeExcelPreviewRow, wk: boolean, i: number): ReactNode => {
         if (!showEntryActions || r.rowKind !== 'entry' || !r.timeEntryId?.trim())
@@ -951,7 +964,32 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const periodClosed = Boolean(wdUnlock && isWorkDateInClosedReportingPeriod(wdUnlock));
         const showUnlockBtn = Boolean(onGrantEditUnlock && canGrantEditUnlockForTarget?.(r.authUserId) && periodClosed);
         const unlockBusy = Boolean(editUnlockPendingCompoundKey === `${r.authUserId}:${wdUnlock}`);
+        const rowScope = parseScopeHexColor(r.scopeColor);
+        const scopePickerValue = rowScope ?? normalizeHexColor(scopeColorValue ?? '#FFF2CC');
+        const canScope = Boolean(onApplyScopeColorToSelection) && !readOnlyUi;
         return (<div className="tt-rp-mtable__brief-row-actions" role="group" aria-label={`Действия, строка ${i + 1}`}>
+          {canScope ? (<label className={`tt-rp-mtable__row-act tt-rp-mtable__row-act--scope${rowScope ? ' tt-rp-mtable__row-act--scope-on' : ''}`} title={rowScope ? `Scope: ${rowScope}` : 'Scope — цвет строки (для выделенных применится ко всем)'}>
+              <span className="tt-rp-mtable__row-act-ico tt-rp-mtable__row-scope-swatch" aria-hidden style={rowScope ? { background: rowScope } : undefined} />
+              <input
+                type="color"
+                className="tt-rp-mtable__row-scope-picker"
+                value={scopePickerValue}
+                disabled={scopedSelectionBusy || pending}
+                onChange={(e) => {
+                    const color = normalizeHexColor(e.target.value);
+                    onScopeColorValueChange?.(color);
+                    void onApplyScopeColorToSelection?.(resolveScopeTargetKeys(r.rowKey), color);
+                }}
+                aria-label={`Scope цвет, строка ${i + 1}`}
+              />
+            </label>) : null}
+          {canScope && rowScope && onClearScopeColorFromSelection ? (<button type="button" className="tt-rp-mtable__row-act tt-rp-mtable__row-act--scope-clear" title="Убрать Scope-цвет" disabled={scopedSelectionBusy || pending} onClick={() => void onClearScopeColorFromSelection(resolveScopeTargetKeys(r.rowKey))} aria-label={`Убрать Scope цвет, строка ${i + 1}`}>
+              <span className="tt-rp-mtable__row-act-ico" aria-hidden>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <path d="M18 6L6 18M6 6l12 12"/>
+                </svg>
+              </span>
+            </button>) : null}
           {showUnlockBtn ? (<button type="button" className="tt-rp-mtable__row-act tt-rp-mtable__row-act--unlock" title="Разрешить сотруднику правки за этот день на 24 часа (продлевается при повторном нажатии)" disabled={unlockBusy || pending} onClick={() => void onGrantEditUnlock?.(r.authUserId, wdUnlock)} aria-label="Разблокировать правки за этот день на 24 часа">
               <span className="tt-rp-mtable__row-act-ico" aria-hidden>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1385,20 +1423,6 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               </span>
               <input type="search" className="tt-rp-mtable-search__input" value={toolbarSearch} onChange={(e) => setToolbarSearch(e.target.value)} placeholder="Поиск по записям…" autoComplete="off" spellCheck={false} />
             </label>
-            {showRowSelect && onApplyScopeColorToSelection ? (<div className="tt-rp-mtable-scope">
-                <span className="tt-rp-mtable-scope__label" title="Цвет для выделенных строк">Scope</span>
-                <input type="color" className="tt-rp-mtable-scope__picker" value={normalizeHexColor(scopeColorValue ?? '#FFF2CC')} onChange={(e) => onScopeColorValueChange?.(normalizeHexColor(e.target.value))} aria-label="Цвет выделенных строк" disabled={scopedSelectionBusy} />
-                <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn" disabled={selectedCount <= 0 || scopedSelectionBusy} onClick={() => void onApplyScopeColorToSelection(selectedRowKeys ?? new Set(), normalizeHexColor(scopeColorValue ?? '#FFF2CC'))}>
-                  {scopedSelectionBusy ? 'Сохранение…' : `Применить (${selectedCount})`}
-                </button>
-                <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn" disabled={selectedCount <= 0 || scopedSelectionBusy || !onClearScopeColorFromSelection} onClick={() => {
-                    if (!onClearScopeColorFromSelection)
-                        return;
-                    void onClearScopeColorFromSelection(selectedRowKeys ?? new Set());
-                }}>
-                  Очистить
-                </button>
-              </div>) : null}
             {!readOnlyUi && onAddTimeEntry ? (<button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-mtable-toolbar__btn--add" onClick={() => void onAddTimeEntry()} disabled={Boolean(serverReloadBusy || timeSave?.ui === 'saving' || timeEntryActionPendingRowKey != null)} title="Создать новую запись времени">
                 + Добавить
               </button>) : null}

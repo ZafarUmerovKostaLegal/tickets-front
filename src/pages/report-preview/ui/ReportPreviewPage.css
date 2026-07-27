@@ -2635,8 +2635,8 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 }
 
 .tt-rp-mtable .tt-rp-mtable__th--brief-actions {
-  width: 6.85rem;
-  min-width: 6.85rem;
+  width: 8.75rem;
+  min-width: 8.75rem;
   text-align: center;
   vertical-align: middle;
   padding-left: 0.35rem;
@@ -2650,8 +2650,8 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
   vertical-align: middle;
   text-align: center;
   padding: 0.45rem 0.35rem;
-  width: 6.85rem;
-  min-width: 6.85rem;
+  width: 8.75rem;
+  min-width: 8.75rem;
   box-sizing: border-box;
 }
 
@@ -2665,8 +2665,8 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 }
 
 .tt-rp-mtable .tt-rp-mtable__td--brief-actions--foot {
-  width: 6.85rem;
-  min-width: 6.85rem;
+  width: 8.75rem;
+  min-width: 8.75rem;
   box-sizing: border-box;
 }
 
@@ -2675,8 +2675,50 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
   align-items: center;
   justify-content: center;
   flex-wrap: nowrap;
-  gap: 0.35rem;
+  gap: 0.3rem;
   vertical-align: middle;
+}
+
+.tt-rp-mtable__row-act--scope {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.tt-rp-mtable__row-act--scope-on {
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 35%, var(--app-border, #e2e8f0));
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface, #fff));
+}
+
+.tt-rp-mtable__row-scope-swatch {
+  display: block;
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 3px;
+  border: 1px solid var(--app-border, #cbd5e1);
+  background:
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%) 0 0 / 6px 6px,
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%) 0 3px / 6px 6px,
+    #fff;
+}
+
+.tt-rp-mtable__row-act--scope-on .tt-rp-mtable__row-scope-swatch {
+  border-color: rgba(15, 23, 42, 0.25);
+}
+
+.tt-rp-mtable__row-scope-picker {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tt-rp-mtable__row-act--scope-clear {
+  color: var(--app-muted, #64748b);
 }
 
 .tt-rp-mtable__row-act {
@@ -3970,13 +4012,25 @@ body[data-theme='dark'] .tt-rp-mtable tbody tr.tt-rp-mtable__tr--flash-restored 
   background: color-mix(in srgb, var(--app-accent, #4f46e5) 7%, var(--app-surface));
 }
 
-.tt-rp-mtable__tr--scoped .tt-rp-mtable__td {
-  background: color-mix(in srgb, var(--tt-rp-row-scope-bg, #fff2cc) 34%, var(--app-surface, #fff));
+.tt-rp-mtable__tr--scoped .tt-rp-mtable__td,
+.tt-rp-mtable__tr--scoped.tt-rp-mtable__tr--alt .tt-rp-mtable__td {
+  background: color-mix(in srgb, var(--tt-rp-row-scope-bg, #fff2cc) 72%, var(--app-surface, #fff)) !important;
+}
+
+.tt-rp-mtable tbody tr.tt-rp-mtable__tr--scoped:not(.tt-rp-mtable__tr--selected):hover .tt-rp-mtable__td,
+.tt-rp-mtable tbody tr.tt-rp-mtable__tr--scoped.tt-rp-mtable__tr--alt:not(.tt-rp-mtable__tr--selected):hover .tt-rp-mtable__td {
+  background: color-mix(in srgb, var(--tt-rp-row-scope-bg, #fff2cc) 82%, var(--app-surface, #fff)) !important;
 }
 
 .tt-rp-mtable__tr--scoped.tt-rp-mtable__tr--selected .tt-rp-mtable__td,
-.tt-rp-mtable__tr--scoped.tt-rp-mtable__tr--selected.tt-rp-mtable__tr--alt .tt-rp-mtable__td {
-  background: color-mix(in srgb, var(--tt-rp-row-scope-bg, #fff2cc) 42%, var(--app-accent, #4f46e5) 10%, var(--app-surface, #fff));
+.tt-rp-mtable__tr--scoped.tt-rp-mtable__tr--selected.tt-rp-mtable__tr--alt .tt-rp-mtable__td,
+.tt-rp-mtable tbody tr.tt-rp-mtable__tr--scoped.tt-rp-mtable__tr--selected:hover .tt-rp-mtable__td {
+  background: color-mix(in srgb, var(--tt-rp-row-scope-bg, #fff2cc) 68%, var(--app-accent, #4f46e5) 12%, var(--app-surface, #fff)) !important;
+}
+
+body[data-theme='dark'] .tt-rp-mtable__tr--scoped .tt-rp-mtable__td,
+body[data-theme='dark'] .tt-rp-mtable__tr--scoped.tt-rp-mtable__tr--alt .tt-rp-mtable__td {
+  background: color-mix(in srgb, var(--tt-rp-row-scope-bg, #fff2cc) 38%, var(--app-surface, #1a2332)) !important;
 }
 
 .tt-rp-mtable tbody tr.tt-rp-mtable__tr--selected .tt-rp-mtable__td:first-child {
