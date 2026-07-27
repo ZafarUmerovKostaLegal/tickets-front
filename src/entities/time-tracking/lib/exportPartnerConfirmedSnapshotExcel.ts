@@ -484,6 +484,7 @@ type DetailLine = {
     personKey: string;
     fullName: string;
     title: string;
+    scopeColor: string;
 };
 
 export type PartnerConfirmedExcelFallbackRow = {
@@ -502,7 +503,17 @@ export type PartnerConfirmedExcelFallbackRow = {
     amountToPay: number;
     isVoided: boolean;
     timeEntryId: string;
+    scopeColor?: string;
 };
+
+function normalizeScopeColorHex(value: unknown): string {
+    if (typeof value !== 'string')
+        return '';
+    const raw = value.trim();
+    if (!/^#([0-9a-fA-F]{6})$/.test(raw))
+        return '';
+    return raw.toUpperCase();
+}
 
 function buildDetailLinesFromSnapshotRows(rawRows: ReportSnapshotRow[]): DetailLine[] {
     const details: DetailLine[] = [];
@@ -538,6 +549,7 @@ function buildDetailLinesFromSnapshotRows(rawRows: ReportSnapshotRow[]): DetailL
             title: resolveReportEmployeePosition({
                 entryPosition: pickStr(d, 'employeePosition', 'employee_position'),
             }),
+            scopeColor: normalizeScopeColorHex(pickStr(d, 'scopeColor', 'scope_color')),
         });
     }
     details.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0));
@@ -574,6 +586,7 @@ function detailLinesFromFallback(fr: PartnerConfirmedExcelFallbackRow[]): Detail
             personKey,
             fullName,
             title: resolveReportEmployeePosition({ entryPosition: row.employeePosition }),
+            scopeColor: normalizeScopeColorHex(row.scopeColor),
         });
     }
     details.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0));
@@ -654,6 +667,15 @@ export async function buildPartnerConfirmedSnapshotExcel(snapshot: ReportSnapsho
         applyExcelNum2Cell(row.getCell(6), line.rate);
         applyExcelNum2Cell(row.getCell(7), line.amount);
         applyExcelProductFormula(row.getCell(T1_FORMULA_COL), 'E', 'F', r);
+        if (line.scopeColor) {
+            const fill: Fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: `FF${line.scopeColor.slice(1)}` } as Color,
+            };
+            for (let col = 1; col <= 7; col++)
+                row.getCell(col).fill = fill;
+        }
     }
     const t1DataLastRow = r;
 

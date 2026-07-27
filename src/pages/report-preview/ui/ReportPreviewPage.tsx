@@ -44,6 +44,8 @@ import {
     type TimeTrackingTeamRow,
     listTimeTrackingTeams,
     invalidateReportApiCache,
+    getReportSnapshot,
+    patchReportSnapshotRow,
 } from '@entities/time-tracking';
 import {
     buildArchivedAuthUserIds,
@@ -112,12 +114,20 @@ import {
     reportPreviewConfirmationProjectId,
     persistXferFilters,
 } from '../lib/reportPreviewPageFilters';
+import { getSnapshotRowDisplayData } from '@entities/time-tracking/lib/reportSnapshotOverrides';
 
 function reportPreviewEmptyBlock(rangeFrom: string, rangeTo: string) {
     return (<div className="tt-rp-preview__no-table-wrap">
         <p className="tt-rp-preview__period-line">{formatIsoRangeTitle(rangeFrom, rangeTo)}</p>
         <p className="tt-rp-preview__muted tt-rp-preview__no-table-msg">Нет данных за период и выбранные фильтры.</p>
     </div>);
+}
+
+function normalizeScopeHexColor(value: string): string {
+    const raw = String(value).trim();
+    if (!/^#([0-9a-fA-F]{6})$/.test(raw))
+        return '#FFF2CC';
+    return raw.toUpperCase();
 }
 
 export function ReportPreviewPage() {
@@ -163,6 +173,10 @@ export function ReportPreviewPage() {
     const [uninvoicedExcelRows, setUninvoicedExcelRows] = useState<UninvoicedExcelPreviewRow[]>([]);
     const [budgetExcelRows, setBudgetExcelRows] = useState<BudgetExcelPreviewRow[]>([]);
     const [selectedRowKeys, setSelectedRowKeys] = useState<ReadonlySet<string>>(() => new Set());
+    const [scopeColorValue, setScopeColorValue] = useState('#FFF2CC');
+    const [scopeColorBusy, setScopeColorBusy] = useState(false);
+    const [rowScopeColorsByKey, setRowScopeColorsByKey] = useState<Record<string, string>>({});
+    const [snapshotRowIdByPreviewKey, setSnapshotRowIdByPreviewKey] = useState<Record<string, string>>({});
     const [employeeExcluded, setEmployeeExcluded] = useState<Set<string>>(() => new Set());
     const [employeeSortAsc, setEmployeeSortAsc] = useState(true);
 
@@ -550,6 +564,8 @@ export function ReportPreviewPage() {
     }, [xferSnapshot, rangeFrom, rangeTo, selectedProjectId, selectedClientId, effectiveSelectedUserIds, teamFilterEnabled, teamFilterPartnerId, teamFilterTeamId]);
     useEffect(() => {
         setSelectedRowKeys(new Set());
+        setRowScopeColorsByKey({});
+        setSnapshotRowIdByPreviewKey({});
         setEmployeeExcluded(new Set());
         setEmployeeSortAsc(true);
     }, [previewDataResetKey]);
@@ -750,6 +766,53 @@ export function ReportPreviewPage() {
         invalidateReportApiCache();
         setServerDataRefreshNonce((n) => n + 1);
     }, [bumpEditHistory]);
+    useEffect(() => {
+        const snapshotId = xferSnapshot?.partnerConfirmationSnapshotId?.trim() ?? '';
+        if (!snapshotId || timeExcelRows.length === 0) {
+            setSnapshotRowIdByPreviewKey({});
+            return;
+        }
+        let cancelled = false;
+        void getReportSnapshot(snapshotId)
+            .then((snapshot) => {
+                if (cancelled)
+                    return;
+                const byEntryId = new Map<string, { rowId: string; scopeColor: string }>();
+                for (const sr of snapshot.rows ?? []) {
+                    const display = getSnapshotRowDisplayData(sr);
+                    const entryId = String(display.timeEntryId ?? display.time_entry_id ?? '').trim();
+                    if (!entryId)
+                        continue;
+                    const scopeColor = normalizeScopeHexColor(String(display.scopeColor ?? display.scope_color ?? '').trim());
+                    byEntryId.set(entryId, {
+                        rowId: sr.id,
+                        scopeColor: /^#([0-9A-F]{6})$/.test(scopeColor) ? scopeColor : '',
+                    });
+                }
+                const nextKeyMap: Record<string, string> = {};
+                const nextColors: Record<string, string> = {};
+                for (const row of timeExcelRows) {
+                    const entryId = row.timeEntryId.trim();
+                    if (!entryId)
+                        continue;
+                    const hit = byEntryId.get(entryId);
+                    if (!hit)
+                        continue;
+                    nextKeyMap[row.rowKey] = hit.rowId;
+                    if (hit.scopeColor)
+                        nextColors[row.rowKey] = hit.scopeColor;
+                }
+                setSnapshotRowIdByPreviewKey(nextKeyMap);
+                setRowScopeColorsByKey((prev) => (Object.keys(prev).length > 0 ? { ...nextColors, ...prev } : nextColors));
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setSnapshotRowIdByPreviewKey({});
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [xferSnapshot?.partnerConfirmationSnapshotId, timeExcelRows]);
     const isProjectPartnerForPreview = useMemo(() => {
         if (!user?.id)
             return false;
@@ -1373,6 +1436,68 @@ export function ReportPreviewPage() {
     const patchBudgetExcel = useCallback((rowKey: string, patch: Partial<BudgetExcelPreviewRow>) => {
         setBudgetExcelRows((prev) => prev.map((r) => (r.rowKey === rowKey ? { ...r, ...patch } : r)));
     }, []);
+    const applyScopeColorToSelection = useCallback(async (rowKeys: ReadonlySet<string>, color: string) => {
+        const picked = normalizeScopeHexColor(color);
+        const keys = [...rowKeys];
+        if (keys.length === 0)
+            return;
+        setScopeColorValue(picked);
+        setRowScopeColorsByKey((prev) => {
+            const next = { ...prev };
+            for (const key of keys)
+                next[key] = picked;
+            return next;
+        });
+        const snapshotId = xferSnapshot?.partnerConfirmationSnapshotId?.trim() ?? '';
+        if (!snapshotId)
+            return;
+        setScopeColorBusy(true);
+        try {
+            await Promise.all(keys.map(async (rowKey) => {
+                const rowId = snapshotRowIdByPreviewKey[rowKey];
+                if (!rowId)
+                    return;
+                await patchReportSnapshotRow(snapshotId, rowId, { scopeColor: picked });
+            }));
+            showToast({ message: 'Цвет строк сохранён', variant: 'success' });
+        }
+        catch (e) {
+            showToast({ message: e instanceof Error ? e.message : 'Не удалось сохранить цвет строк', variant: 'error' });
+        }
+        finally {
+            setScopeColorBusy(false);
+        }
+    }, [xferSnapshot?.partnerConfirmationSnapshotId, snapshotRowIdByPreviewKey]);
+    const clearScopeColorFromSelection = useCallback(async (rowKeys: ReadonlySet<string>) => {
+        const keys = [...rowKeys];
+        if (keys.length === 0)
+            return;
+        setRowScopeColorsByKey((prev) => {
+            const next = { ...prev };
+            for (const key of keys)
+                delete next[key];
+            return next;
+        });
+        const snapshotId = xferSnapshot?.partnerConfirmationSnapshotId?.trim() ?? '';
+        if (!snapshotId)
+            return;
+        setScopeColorBusy(true);
+        try {
+            await Promise.all(keys.map(async (rowKey) => {
+                const rowId = snapshotRowIdByPreviewKey[rowKey];
+                if (!rowId)
+                    return;
+                await patchReportSnapshotRow(snapshotId, rowId, { scopeColor: null });
+            }));
+            showToast({ message: 'Цвет строк очищен', variant: 'success' });
+        }
+        catch (e) {
+            showToast({ message: e instanceof Error ? e.message : 'Не удалось очистить цвет строк', variant: 'error' });
+        }
+        finally {
+            setScopeColorBusy(false);
+        }
+    }, [xferSnapshot?.partnerConfirmationSnapshotId, snapshotRowIdByPreviewKey]);
     const archivedAuthUserIds = useMemo(() => buildArchivedAuthUserIds(ttUsersCatalog), [ttUsersCatalog]);
     const archivedEmployeeNames = useMemo(() => buildArchivedEmployeeNames(ttUsersCatalog), [ttUsersCatalog]);
     const timeUniqueNames = useMemo(() => {
@@ -1395,8 +1520,13 @@ export function ReportPreviewPage() {
         [budgetExcelRows, archivedEmployeeNames],
     );
     const timeDisplayRows = useMemo(() => {
-        return timeExcelRows.filter((r) => !employeeExcluded.has(r.userName));
-    }, [timeExcelRows, employeeExcluded]);
+        return timeExcelRows
+            .filter((r) => !employeeExcluded.has(r.userName))
+            .map((r) => ({
+                ...r,
+                scopeColor: rowScopeColorsByKey[r.rowKey] ?? r.scopeColor ?? '',
+            }));
+    }, [timeExcelRows, employeeExcluded, rowScopeColorsByKey]);
     const timeEmployeePartnerPick = useMemo(() => {
         if (!xferSnapshot || xferSnapshot.reportType !== 'time' || xferSnapshot.groupBy !== 'projects')
             return null;
@@ -1569,7 +1699,7 @@ export function ReportPreviewPage() {
             const showTimeLiveTitle = xferSnapshot.groupBy !== 'projects';
             return (<>
                 {showTimeLiveTitle ? (<p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>) : null}
-                <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={partnerConfirmedReadOnly ? undefined : setSelectedRowKeys} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick} onDownloadExcel={handleDownloadTimeExcel} downloadExcelBusy={timeExcelDownloadBusy} footerExtras={partnerSignFooterExtras} flashRowKey={partnerConfirmedReadOnly ? null : flashRestoredRowKey} hotkeyDuplicateRowKey={partnerConfirmedReadOnly ? null : hotkeyDuplicateRowKey} onHotkeyDuplicateConsumed={partnerConfirmedReadOnly ? undefined : clearHotkeyDuplicateRowKey} onActiveTimeRowKey={partnerConfirmedReadOnly ? undefined : setActiveTimeRowKey} canUndo={!partnerConfirmedReadOnly && canUndoTimeEdit} onUndo={partnerConfirmedReadOnly ? undefined : undoLastTimeEdit} onSaveNow={partnerConfirmedReadOnly ? undefined : flushAllPendingTimeEntrySaves} />
+                <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={partnerConfirmedReadOnly ? undefined : setSelectedRowKeys} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick} onDownloadExcel={handleDownloadTimeExcel} downloadExcelBusy={timeExcelDownloadBusy} footerExtras={partnerSignFooterExtras} flashRowKey={partnerConfirmedReadOnly ? null : flashRestoredRowKey} hotkeyDuplicateRowKey={partnerConfirmedReadOnly ? null : hotkeyDuplicateRowKey} onHotkeyDuplicateConsumed={partnerConfirmedReadOnly ? undefined : clearHotkeyDuplicateRowKey} onActiveTimeRowKey={partnerConfirmedReadOnly ? undefined : setActiveTimeRowKey} canUndo={!partnerConfirmedReadOnly && canUndoTimeEdit} onUndo={partnerConfirmedReadOnly ? undefined : undoLastTimeEdit} onSaveNow={partnerConfirmedReadOnly ? undefined : flushAllPendingTimeEntrySaves} scopeColorValue={scopeColorValue} scopeColorBusy={scopeColorBusy} onScopeColorValueChange={setScopeColorValue} onApplyScopeColorToSelection={applyScopeColorToSelection} onClearScopeColorFromSelection={clearScopeColorFromSelection} />
             </>);
         }
         if (xferSnapshot.reportType === 'expenses') {

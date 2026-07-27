@@ -172,6 +172,7 @@ function buildTimeExcelRow(params: {
         externalReferenceUrl: str(it.external_reference_url) || entryString(it, ['external_reference_url', 'externalReferenceUrl', 'url']),
         invoiceId: str(it.invoice_id) || entryString(it, ['invoice_id', 'invoiceId']),
         invoiceNumber: str(it.invoice_number) || entryString(it, ['invoice_number', 'invoiceNumber']),
+        scopeColor: str(itRec.scopeColor) || str(itRec.scope_color),
         isVoided,
         voidKind,
     };
@@ -230,6 +231,7 @@ export function flattenTimeReportToExcelRows(groupBy: TimeGroup, rows: TimeRepor
                 externalReferenceUrl: '',
                 invoiceId: '',
                 invoiceNumber: '',
+                scopeColor: '',
                 isVoided: false,
                 voidKind: null,
             });

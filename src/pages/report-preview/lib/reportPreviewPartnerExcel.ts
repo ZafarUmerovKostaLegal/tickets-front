@@ -62,6 +62,7 @@ export function timeExcelPreviewRowsToPartnerFallback(rows: TimeExcelPreviewRow[
         amountToPay: computeTimePreviewRowAmountToPay(row),
         isVoided: row.isVoided,
         timeEntryId: row.timeEntryId,
+        scopeColor: typeof row.scopeColor === 'string' ? row.scopeColor : '',
     }));
 }
 

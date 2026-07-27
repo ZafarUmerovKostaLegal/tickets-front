@@ -38,6 +38,7 @@ export type TimeExcelPreviewRow = {
     externalReferenceUrl: string;
     invoiceId: string;
     invoiceNumber: string;
+    scopeColor?: string;
 
     isVoided: boolean;
 

@@ -8,11 +8,9 @@ import {
 } from 'recharts';
 import {
     INVOICE_REGISTRY_STATS_YEARS,
-    loadInvoiceRegistryStatsRows,
-    sumInvoicedByCurrency,
-    sumInvoicedByPartnerCurrency,
     type RegistryStatsYearFilter,
 } from '@entities/time-tracking/model/invoiceRegistry/partnerStatistics';
+import { getInvoiceRegistryStatistics, type InvoiceRegistryStatisticsDto } from '@entities/time-tracking/api/domains/invoiceRegistry';
 import { useI18n } from '@shared/i18n';
 import './InvoiceRegistryStatisticsPanel.css';
 
@@ -55,8 +53,8 @@ export function InvoiceRegistryStatisticsPanel() {
     const [yearFilter, setYearFilter] = useState<RegistryStatsYearFilter>('all');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [invoicedByCurrency, setInvoicedByCurrency] = useState<ReturnType<typeof sumInvoicedByCurrency>>([]);
-    const [partnerMatrix, setPartnerMatrix] = useState<ReturnType<typeof sumInvoicedByPartnerCurrency>>({
+    const [invoicedByCurrency, setInvoicedByCurrency] = useState<InvoiceRegistryStatisticsDto['invoicedByCurrency']>([]);
+    const [partnerMatrix, setPartnerMatrix] = useState<InvoiceRegistryStatisticsDto['partnerMatrix']>({
         currencies: [],
         partners: [],
     });
@@ -65,12 +63,12 @@ export function InvoiceRegistryStatisticsPanel() {
         let cancelled = false;
         setLoading(true);
         setError(null);
-        loadInvoiceRegistryStatsRows(yearFilter)
-            .then(({ rows }) => {
+        getInvoiceRegistryStatistics(yearFilter === 'all' ? '2026' : '2026')
+            .then((dto) => {
                 if (cancelled)
                     return;
-                setInvoicedByCurrency(sumInvoicedByCurrency(rows));
-                setPartnerMatrix(sumInvoicedByPartnerCurrency(rows));
+                setInvoicedByCurrency(dto.invoicedByCurrency ?? []);
+                setPartnerMatrix(dto.partnerMatrix ?? { currencies: [], partners: [] });
             })
             .catch(() => {
                 if (!cancelled)

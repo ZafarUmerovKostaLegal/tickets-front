@@ -1674,6 +1674,27 @@ body[data-theme='dark'] .tt-rp-mtable-more__menu {
   font-size: 0.8125rem;
 }
 
+.tt-rp-mtable-scope {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding-inline: 0.25rem;
+}
+
+.tt-rp-mtable-scope__label {
+  font-size: 0.75rem;
+  color: var(--app-muted, #64748b);
+}
+
+.tt-rp-mtable-scope__picker {
+  width: 2rem;
+  height: 1.5rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 6px;
+  background: var(--app-surface, #fff);
+  padding: 0.1rem;
+}
+
 .tt-rp-mtable-toolbar__btn--reload {
   display: inline-flex;
   align-items: center;
@@ -3947,6 +3968,15 @@ body[data-theme='dark'] .tt-rp-mtable tbody tr.tt-rp-mtable__tr--flash-restored 
 .tt-rp-mtable__tr--selected .tt-rp-mtable__td,
 .tt-rp-mtable__tr--selected.tt-rp-mtable__tr--alt .tt-rp-mtable__td {
   background: color-mix(in srgb, var(--app-accent, #4f46e5) 7%, var(--app-surface));
+}
+
+.tt-rp-mtable__tr--scoped .tt-rp-mtable__td {
+  background: color-mix(in srgb, var(--tt-rp-row-scope-bg, #fff2cc) 34%, var(--app-surface, #fff));
+}
+
+.tt-rp-mtable__tr--scoped.tt-rp-mtable__tr--selected .tt-rp-mtable__td,
+.tt-rp-mtable__tr--scoped.tt-rp-mtable__tr--selected.tt-rp-mtable__tr--alt .tt-rp-mtable__td {
+  background: color-mix(in srgb, var(--tt-rp-row-scope-bg, #fff2cc) 42%, var(--app-accent, #4f46e5) 10%, var(--app-surface, #fff));
 }
 
 .tt-rp-mtable tbody tr.tt-rp-mtable__tr--selected .tt-rp-mtable__td:first-child {

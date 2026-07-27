@@ -416,6 +416,11 @@ type TimeReportPersistenceProps = {
     canUndo?: boolean;
     onUndo?: () => void | Promise<void>;
     onSaveNow?: () => void | Promise<void>;
+    scopeColorValue?: string;
+    scopeColorBusy?: boolean;
+    onScopeColorValueChange?: (color: string) => void;
+    onApplyScopeColorToSelection?: (rowKeys: ReadonlySet<string>, color: string) => void | Promise<void>;
+    onClearScopeColorFromSelection?: (rowKeys: ReadonlySet<string>) => void | Promise<void>;
 };
 function PreviewServerReloadBtn({ onRequestServerReload, serverReloadBusy, }: PreviewServerReloadProps) {
     if (!onRequestServerReload)
@@ -424,6 +429,12 @@ function PreviewServerReloadBtn({ onRequestServerReload, serverReloadBusy, }: Pr
       {serverReloadBusy ? <span className="tt-rp-mtable-toolbar__btn-spin" aria-hidden /> : null}
       Обновить с сервера
     </button>);
+}
+function normalizeHexColor(value: string): string {
+    const raw = String(value).trim();
+    if (!/^#([0-9a-fA-F]{6})$/.test(raw))
+        return '#FFF2CC';
+    return raw.toUpperCase();
 }
 const IcoDownload = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
@@ -596,7 +607,7 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
       </div>
     </div>, document.body);
 }
-export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, }: {
+export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, scopeColorValue, scopeColorBusy, onScopeColorValueChange, onApplyScopeColorToSelection, onClearScopeColorFromSelection, }: {
     projectTitle: string;
 
     viewMode?: 'brief' | 'full';
@@ -891,6 +902,8 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     };
     const tableScrollRef = useRef<HTMLDivElement>(null);
     const showRowSelect = Boolean(onSelectedRowKeysChange);
+    const selectedCount = selectedRowKeys?.size ?? 0;
+    const scopedSelectionBusy = Boolean(scopeColorBusy);
     const entriesCount = rowsForTotals.length;
     const dockHours = formatReportPreviewDurationHours(totals.hDisplay);
     const dockBillable = formatReportPreviewDurationHours(totals.bhDisplay);
@@ -909,7 +922,9 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const r = displayRows[i];
         const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+        const scopeColor = normalizeHexColor(r.scopeColor ?? '');
+        const hasScopeColor = Boolean(r.scopeColor && /^#([0-9A-F]{6})$/.test(scopeColor));
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor } : undefined} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
             <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
             {visibleFullIds.map((colId) => renderFullBodyCell(colId, r, i, wk))}
             {showEntryActions ? (<td key="actions-full" className="tt-rp-mtable__td tt-rp-mtable__td--brief-actions" onClick={(e) => e.stopPropagation()}>
@@ -921,7 +936,9 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const r = displayRows[i];
         const wk = isTimeRowEditingLockedForViewer(r, canOverrideClosedWeek);
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+        const scopeColor = normalizeHexColor(r.scopeColor ?? '');
+        const hasScopeColor = Boolean(r.scopeColor && /^#([0-9A-F]{6})$/.test(scopeColor));
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor } : undefined} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
             <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
             {visibleBriefIds.map((colId) => renderBriefBodyCell(colId, r, i, wk))}
         </tr>);
@@ -1368,6 +1385,20 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               </span>
               <input type="search" className="tt-rp-mtable-search__input" value={toolbarSearch} onChange={(e) => setToolbarSearch(e.target.value)} placeholder="Поиск по записям…" autoComplete="off" spellCheck={false} />
             </label>
+            {showRowSelect && onApplyScopeColorToSelection ? (<div className="tt-rp-mtable-scope">
+                <span className="tt-rp-mtable-scope__label" title="Цвет для выделенных строк">Scope</span>
+                <input type="color" className="tt-rp-mtable-scope__picker" value={normalizeHexColor(scopeColorValue ?? '#FFF2CC')} onChange={(e) => onScopeColorValueChange?.(normalizeHexColor(e.target.value))} aria-label="Цвет выделенных строк" disabled={scopedSelectionBusy} />
+                <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn" disabled={selectedCount <= 0 || scopedSelectionBusy} onClick={() => void onApplyScopeColorToSelection(selectedRowKeys ?? new Set(), normalizeHexColor(scopeColorValue ?? '#FFF2CC'))}>
+                  {scopedSelectionBusy ? 'Сохранение…' : `Применить (${selectedCount})`}
+                </button>
+                <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn" disabled={selectedCount <= 0 || scopedSelectionBusy || !onClearScopeColorFromSelection} onClick={() => {
+                    if (!onClearScopeColorFromSelection)
+                        return;
+                    void onClearScopeColorFromSelection(selectedRowKeys ?? new Set());
+                }}>
+                  Очистить
+                </button>
+              </div>) : null}
             {!readOnlyUi && onAddTimeEntry ? (<button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-mtable-toolbar__btn--add" onClick={() => void onAddTimeEntry()} disabled={Boolean(serverReloadBusy || timeSave?.ui === 'saving' || timeEntryActionPendingRowKey != null)} title="Создать новую запись времени">
                 + Добавить
               </button>) : null}

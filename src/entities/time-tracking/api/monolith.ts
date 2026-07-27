@@ -9,6 +9,7 @@ export * from './domains/projectAccess';
 export * from './domains/reports';
 export * from './domains/partnerConfirmations';
 export * from './domains/invoices';
+export * from './domains/invoiceRegistry';
 
 export { invalidateTimeTrackingListCache } from '../lib/timeTrackingListCache';
 export { reportCacheInvalidateAll as invalidateReportApiCache } from '../lib/reportApiCache';

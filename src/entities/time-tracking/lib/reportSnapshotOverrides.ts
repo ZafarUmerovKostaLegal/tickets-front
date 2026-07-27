@@ -3,6 +3,7 @@ const SNAPSHOT_OVERRIDE_KEYS = new Set<string>([
     'workDate', 'recordedAt', 'clientName', 'projectName', 'taskName', 'note', 'description',
     'hours', 'isBillable', 'taskBillableByDefault', 'employeeName', 'employeePosition',
     'billableRate', 'amountToPay', 'costRate', 'costAmount', 'currency', 'externalReferenceUrl',
+    'scopeColor',
 ]);
 
 export function pickAllowedSnapshotOverrides(overrides: Record<string, unknown>): Record<string, unknown> {
