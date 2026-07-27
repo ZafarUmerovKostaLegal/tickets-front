@@ -7,6 +7,8 @@ interface ListResponse {
     total: number;
     skip: number;
     limit: number;
+    totalAmountUzs?: number;
+    totalEquivalentAmount?: number;
 }
 interface ExchangeRateResponse {
     date: string;
@@ -66,8 +68,29 @@ export async function fetchExpenses(params: ListParams = {}, init?: RequestInit)
     const query = qs.toString();
     const res = await apiFetch(`/api/v1/expenses${query ? `?${query}` : ''}`, init ?? {});
     await throwIfNotOk(res);
-    const j = await res.json() as ListResponse;
-    return { ...j, items: j.items.map(normalizeExpenseRequest) };
+    const j = await res.json() as ListResponse & Record<string, unknown>;
+    const hasFilterTotals =
+        j.totalAmountUzs != null ||
+        j.total_amount_uzs != null ||
+        j.totalEquivalentAmount != null ||
+        j.total_equivalent_amount != null;
+    return {
+        ...j,
+        items: (Array.isArray(j.items) ? j.items : []).map(normalizeExpenseRequest),
+        totalAmountUzs: hasFilterTotals ? asListMoney(j.totalAmountUzs ?? j.total_amount_uzs) : undefined,
+        totalEquivalentAmount: hasFilterTotals
+            ? asListMoney(j.totalEquivalentAmount ?? j.total_equivalent_amount)
+            : undefined,
+    };
+}
+function asListMoney(v: unknown): number {
+    if (typeof v === 'number' && Number.isFinite(v))
+        return v;
+    if (typeof v === 'string' && v.trim()) {
+        const n = Number(v.replace(/\s/g, '').replace(',', '.'));
+        return Number.isFinite(n) ? n : 0;
+    }
+    return 0;
 }
 export interface ExpenseCreateBody {
     description: string;
@@ -206,4 +229,16 @@ export async function fetchExchangeRate(date: string): Promise<ExchangeRateRespo
     const res = await apiFetch(`/api/v1/exchange-rates?date=${date}`);
     await throwIfNotOk(res);
     return res.json() as Promise<ExchangeRateResponse>;
+}
+
+export interface ApprovalRoutingMeta {
+    lowLimitUzs: number | null;
+    lowTierEnabled: boolean;
+    hardAmountLimitUzs: number | null;
+}
+
+export async function fetchApprovalRoutingMeta(): Promise<ApprovalRoutingMeta> {
+    const res = await apiFetch('/api/v1/approval-routing-meta');
+    await throwIfNotOk(res);
+    return res.json() as Promise<ApprovalRoutingMeta>;
 }

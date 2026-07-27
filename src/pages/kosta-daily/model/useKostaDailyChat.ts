@@ -334,7 +334,10 @@ export function useKostaDailyChat(
 
     const serviceText = activeRoom?.is_company_channel ? COMPANY_CHANNEL_HINT : '';
 
-    const apiMessages = activeRoomId != null ? (messagesByRoom[activeRoomId] ?? []) : [];
+    const apiMessages = useMemo(
+        () => (activeRoomId != null ? (messagesByRoom[activeRoomId] ?? []) : []),
+        [activeRoomId, messagesByRoom],
+    );
 
     const dailyMessages: DailyMessage[] = useMemo(
         () => apiMessages.map((m) => apiMessageToDaily(m, labelByUserId, userId ?? null)),

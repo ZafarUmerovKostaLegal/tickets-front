@@ -2,10 +2,10 @@ import { useState, useCallback, useRef, useEffect, useMemo, type Dispatch, type 
 import { createPortal } from 'react-dom';
 import { type ExpenseRequest, type ExpenseFormValues, type ExpenseFormErrors, type ExpenseFilesByKind, type AttachmentItem, EXPENSE_ATTACHMENT_MAX_BYTES, } from '@entities/expenses/model/types';
 import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, STATUS_META, } from '@entities/expenses/model/constants';
-import { computeUsdEquivalent, needsForeignUsdRate } from '@entities/expenses/model/expenseCurrency';
+import { computeAmountUzsForApi, computeUsdEquivalent, needsForeignUsdRate } from '@entities/expenses/model/expenseCurrency';
 import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import type { ExpenseAmountCurrency } from '@entities/expenses/model/types';
-import { approveExpense, rejectExpense, reviseExpense, deleteAttachment, deleteExpense, fetchExpenseAttachmentBlob, openExpenseAttachmentInNewTab, payExpense, closeExpense, withdrawExpense, } from '@entities/expenses/model/expensesApi';
+import { approveExpense, rejectExpense, reviseExpense, deleteAttachment, deleteExpense, fetchExpenseAttachmentBlob, openExpenseAttachmentInNewTab, payExpense, closeExpense, withdrawExpense, fetchApprovalRoutingMeta, type ApprovalRoutingMeta, } from '@entities/expenses/model/expensesApi';
 import type { AttachmentPreviewModel } from '@entities/expenses/lib/buildAttachmentPreview';
 import { ExpenseAttachmentPreviewModal } from './ExpenseAttachmentPreviewModal';
 import { getCloseExpenseUi, isModerationBlockedForOwnExpense, showLifecycleModerationRow, showOwnPendingModerationBlockedHint, showPayExpenseAction, showPendingApprovalModeration, showWithdrawExpenseAction, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
@@ -278,6 +278,7 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
                 e.attachmentsPaymentDoc = 'Прикрепите документ для оплаты';
         }
         else if (legacyOnly) {
+            // Legacy attachments are accepted because their kind was not stored.
         }
         else if (s.length + opts.filesPaymentDoc.length < 1) {
             e.attachmentsPaymentDoc = 'Для возмещаемого расхода приложите документ для оплаты';
@@ -362,8 +363,13 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
     const [expenseProjectCategories, setExpenseProjectCategories] = useState<ProjectExpenseCategoryRow[]>([]);
     const [expenseCategoriesLoading, setExpenseCategoriesLoading] = useState(false);
     const [expenseCategoriesError, setExpenseCategoriesError] = useState<string | null>(null);
+    const [approvalRoutingMeta, setApprovalRoutingMeta] = useState<ApprovalRoutingMeta | null>(null);
     const equivUsd = useMemo(() => computeUsdEquivalent(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd), [values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd]);
     const equiv = equivUsd != null ? asExpenseNumber(equivUsd).toFixed(2) : '';
+    const amountUzsForRouting = useMemo(
+        () => computeAmountUzsForApi(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd),
+        [values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd],
+    );
     const viewEquivFromServer = useMemo(() => {
         const n = asExpenseNumber(editingRequest?.equivalentAmount);
         return n > 0 ? n.toFixed(2) : '';
@@ -411,6 +417,25 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setFileSizeHint(null);
         setErrors({});
     }, [isOpen, mode, formScope]);
+    useEffect(() => {
+        if (!isOpen || formScope === 'partner') {
+            setApprovalRoutingMeta(null);
+            return;
+        }
+        let cancelled = false;
+        void fetchApprovalRoutingMeta()
+            .then((meta) => {
+                if (!cancelled)
+                    setApprovalRoutingMeta(meta);
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setApprovalRoutingMeta(null);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [isOpen, formScope]);
     useEffect(() => {
         if (!isOpen || (mode !== 'edit' && mode !== 'view'))
             return;
@@ -819,6 +844,21 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         }
     }, [isOpen, closeAttachPreview]);
     const isView = mode === 'view';
+    const approvalRoutingHint = useMemo(() => {
+        if (isView || values.expenseType === 'partner_expense')
+            return null;
+        if (!approvalRoutingMeta?.lowTierEnabled || approvalRoutingMeta.lowLimitUzs == null)
+            return null;
+        const limit = approvalRoutingMeta.lowLimitUzs;
+        const limitLabel = limit.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+        if (!(amountUzsForRouting > 0)) {
+            return `До ${limitLabel} UZS включительно заявка уходит согласующим малых расходов; свыше — обычным.`;
+        }
+        if (amountUzsForRouting <= limit) {
+            return `Сумма ≤ ${limitLabel} UZS — на согласование уйдёт согласующим малых расходов.`;
+        }
+        return `Сумма > ${limitLabel} UZS — на согласование уйдёт обычным согласующим.`;
+    }, [isView, values.expenseType, approvalRoutingMeta, amountUzsForRouting]);
     const expenseClientsFlat = useMemo(() => expenseClientsProjects.map(g => g.client), [expenseClientsProjects]);
     const expenseProjectRowsFlat = useMemo((): ExpenseProjectPickRow[] => {
         const out: ExpenseProjectPickRow[] = [];
@@ -1524,6 +1564,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 />
               </div>
               {errors.amountUzs && <p className="exp-form-err-msg" data-err>{errors.amountUzs}</p>}
+              {approvalRoutingHint && <p className="exp-form-hint">{approvalRoutingHint}</p>}
             </div>
 
             {showForeignRate && (<div className={`exp-form-field${errors.foreignPerUsd ? ' exp-form-field--err' : ''}`}>

@@ -400,12 +400,12 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
             return;
         setEntriesScopeMode(viewMode);
     }, [viewMode, viewTxPhase]);
-    const clearViewTxTimers = () => {
+    const clearViewTxTimers = useCallback(() => {
         viewTxTimersRef.current.forEach((id) => window.clearTimeout(id));
         viewTxTimersRef.current = [];
-    };
-    useEffect(() => () => clearViewTxTimers(), []);
-    function beginSegViewSwitch(next: TimesheetViewMode) {
+    }, []);
+    useEffect(() => () => clearViewTxTimers(), [clearViewTxTimers]);
+    const beginSegViewSwitch = useCallback((next: TimesheetViewMode) => {
         if (next === viewMode || viewTxPhase !== 'idle')
             return;
         if (next === 'calendar') {
@@ -425,7 +425,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                 }, VIEW_TX_SHOW_MS));
             }, VIEW_TX_SKEL_MS));
         }, VIEW_TX_HIDE_MS));
-    }
+    }, [activeDay, clearViewTxTimers, viewMode, viewTxPhase]);
     useEffect(() => {
         if (!entriesAuthUserId || userLoading)
             return;
@@ -497,7 +497,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         return () => {
             cancelled = true;
         };
-    }, [entriesAuthUserId, currentUser?.id, userLoading, entriesRange.from, entriesRange.to, projectCatalogVersion, t]);
+    }, [entriesAuthUserId, currentUser?.id, userLoading, entriesRange.from, entriesRange.to, projectCatalogVersion, t, setEntriesBanner]);
     useEffect(() => {
         if (!entriesAuthUserId || isColleagueTimesheetView)
             return;
@@ -668,19 +668,19 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     const monthIndex = (d: Date) => d.getFullYear() * 12 + d.getMonth();
     const canGoNextByWeek = weekStart.getTime() < thisWeekStart.getTime();
     const canGoNextByMonth = monthIndex(calendarAnchor) < monthIndex(today) + TIMESHEET_CALENDAR_MAX_MONTHS_AHEAD;
-    function prevWeek() { setWeekStart((d) => addDays(d, -7)); }
-    function nextWeek() { setWeekStart((d) => addDays(d, 7)); }
-    function goToday() {
+    const prevWeek = useCallback(() => { setWeekStart((d) => addDays(d, -7)); }, []);
+    const nextWeek = useCallback(() => { setWeekStart((d) => addDays(d, 7)); }, []);
+    const goToday = useCallback(() => {
         setWeekStart(startOfWeek(today));
         setActiveDay(today);
-    }
-    function prevPeriod() {
+    }, [today]);
+    const prevPeriod = useCallback(() => {
         if (viewMode === 'calendar')
             setCalendarAnchor((d) => addMonths(d, -1));
         else
             prevWeek();
-    }
-    function nextPeriod() {
+    }, [prevWeek, viewMode]);
+    const nextPeriod = useCallback(() => {
         if (viewMode === 'calendar') {
             if (!canGoNextByMonth)
                 return;
@@ -691,8 +691,8 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                 return;
             nextWeek();
         }
-    }
-    function goTodayPeriod() {
+    }, [canGoNextByMonth, canGoNextByWeek, nextWeek, viewMode]);
+    const goTodayPeriod = useCallback(() => {
         if (viewMode === 'calendar') {
             setCalendarAnchor(startOfMonth(today));
             setActiveDay(today);
@@ -700,8 +700,8 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         else {
             goToday();
         }
-    }
-    function openAdd(date: string) {
+    }, [goToday, today, viewMode]);
+    const openAdd = useCallback((date: string) => {
         const ymd = date.trim().slice(0, 10);
         if (isFutureWorkDateYmd(ymd, today)) {
             setEntriesBanner({
@@ -718,7 +718,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
             return;
         }
         setModal({ open: true, date: ymd });
-    }
+    }, [isSubjectDayReportingBlocked, setEntriesBanner, t, today]);
     function openEdit(entry: TimeEntry) { setModal({ open: true, date: entry.date, edit: entry }); }
     function openAddFromClone(source: TimeEntry) {
         const todayYmd = formatDate(today);
@@ -905,7 +905,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [modal.open, outlookEventDetail, outlookDayAgenda, deleteTarget, timerBusyHintOpen, grantUnlockConfirmOpen, viewTxPhase, viewMode, activeDay, query, billableOnly, isSubjectDayReportingBlocked]);
+    }, [modal.open, outlookEventDetail, outlookDayAgenda, deleteTarget, timerBusyHintOpen, grantUnlockConfirmOpen, viewTxPhase, viewMode, activeDay, query, billableOnly, isSubjectDayReportingBlocked, beginSegViewSwitch, goTodayPeriod, nextPeriod, openAdd, prevPeriod]);
     async function persistTimerStopToApi(entryId: string, merged: TimeEntry) {
         const user = upsertUserForEntriesRef.current;
         const uid = entriesAuthUserIdRef.current;
@@ -1219,7 +1219,10 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
             window.removeEventListener(TT_TIMER_PAUSE_CHANGED_EVENT, onPauseChanged as EventListener);
         };
     }, [isColleagueTimesheetView]);
-    const displayDays = viewMode === 'week' ? weekListDays : [activeDay];
+    const displayDays = useMemo(
+        () => (viewMode === 'week' ? weekListDays : [activeDay]),
+        [activeDay, viewMode, weekListDays],
+    );
     const weekFiltersActive = viewMode === 'week' && (weekDayFilter !== 'all' || weekDayOrder !== 'monday');
     const filterActive = query.trim().length > 0 || billableOnly || weekFiltersActive;
     const rawDayGroups = useMemo(() => displayDays.map((d) => {
@@ -1270,7 +1273,6 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     }), [
         runningTimer,
         isColleagueTimesheetView,
-        fmtHours,
         t,
         onEntryStart,
         onEntryEdit,
@@ -1358,7 +1360,6 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         liveExtraSec,
         dateTag,
         weekClosedTitle,
-        fmtHours,
         t,
         openAdd,
         entryRowHandlers,

@@ -647,7 +647,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
     return () => {
       cancelled = true;
     };
-  }, [mode, initial?.id, canManage]);
+  }, [mode, initial, canManage]);
   async function reloadMemberRate(authUserId: number, projectId: string) {
     const cur0 = (form.currency || 'USD').trim() || 'USD';
     const rows = await listHourlyRates(authUserId, 'billable');

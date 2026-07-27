@@ -395,7 +395,7 @@ export function CallSchedulePage() {
       live = false;
       controller.abort();
     };
-  }, [retryKey]);
+  }, [retryKey, t]);
   useEffect(() => {
     if (calendarsLoading || calendarsError)
       return;

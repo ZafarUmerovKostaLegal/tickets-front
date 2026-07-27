@@ -31,7 +31,7 @@ export default defineConfig({
     },
     test: {
         name: 'unit',
-        include: ['src/**/*.test.ts'],
+        include: ['src/**/*.{test,spec}.{ts,tsx}'],
         environment: 'node',
         globals: false,
         pool: 'threads',
@@ -41,7 +41,13 @@ export default defineConfig({
         coverage: {
             provider: 'v8',
             include: ['src/shared/**/*.ts', 'src/entities/**/*.ts', 'src/pages/time-tracking/ui/timesheet*.ts', 'src/pages/kosta-daily/ui/kostaDaily*.ts'],
-            exclude: ['**/*.test.ts', '**/index.ts', '**/*.css'],
+            exclude: ['**/*.{test,spec}.{ts,tsx}', '**/index.ts', '**/*.css'],
+            thresholds: {
+                statements: 9,
+                branches: 8,
+                functions: 10,
+                lines: 9,
+            },
         },
     },
 });

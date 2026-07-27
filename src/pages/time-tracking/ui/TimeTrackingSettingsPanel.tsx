@@ -1,3 +1,4 @@
+import './TimeTrackingForms.css';
 import { useState } from 'react';
 import { useI18n } from '@shared/i18n';
 import { TimeTrackingClientTasksPanel } from './TimeTrackingClientTasksPanel';

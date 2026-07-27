@@ -577,6 +577,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         return () => window.clearTimeout(t);
     }, [search]);
     const [listTotal, setListTotal] = useState<number | null>(null);
+    const [listTotals, setListTotals] = useState<{ uzs: number; usd: number } | null>(null);
     const [listPage, setListPage] = useState(1);
     const filterDepsKey = useMemo(() => [
         debouncedSearch,
@@ -668,6 +669,15 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             isFirstListFetchRef.current = false;
             setRequests(Array.isArray(data.items) ? data.items : []);
             setListTotal(typeof data.total === 'number' ? data.total : null);
+            if (data.totalAmountUzs != null || data.totalEquivalentAmount != null) {
+                setListTotals({
+                    uzs: asExpenseNumber(data.totalAmountUzs),
+                    usd: asExpenseNumber(data.totalEquivalentAmount),
+                });
+            }
+            else {
+                setListTotals(null);
+            }
             setIsLoading(false);
             setListFetchPending(false);
         })
@@ -675,6 +685,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             if (cancelled || (err instanceof Error && err.name === 'AbortError'))
                 return;
             setListTotal(null);
+            setListTotals(null);
             setLoadError(err instanceof Error ? err.message : 'Ошибка загрузки данных');
             isFirstListFetchRef.current = false;
             setIsLoading(false);
@@ -1210,10 +1221,14 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         const st = r.status as ExpenseStatus;
         return EXPENSE_REGISTRY_STATUS_SET.has(st);
     }), [requestsForUi]);
-    const filteredTotals = useMemo(() => filtered.reduce((acc, r) => ({
-        uzs: acc.uzs + asExpenseNumber(r.amountUzs),
-        usd: acc.usd + asExpenseNumber(r.equivalentAmount),
-    }), { uzs: 0, usd: 0 }), [filtered]);
+    const filteredTotals = useMemo(() => {
+        if (listTotals)
+            return listTotals;
+        return filtered.reduce((acc, r) => ({
+            uzs: acc.uzs + asExpenseNumber(r.amountUzs),
+            usd: acc.usd + asExpenseNumber(r.equivalentAmount),
+        }), { uzs: 0, usd: 0 });
+    }, [listTotals, filtered]);
     const hasFilters = isModerationQueue
         ? !!(filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
         : isPartnerScope

@@ -553,6 +553,7 @@ export function HomeProvider({ children }: HomeProviderProps) {
         selectedNotification,
         handleNotificationSelect,
         handleCreateNotification,
+        formatDateShort,
     ]);
     return <HomeContext.Provider value={value}>{children}</HomeContext.Provider>;
 }

@@ -617,7 +617,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         return () => {
             cancelled = true;
         };
-    }, [archiveRows, clientMetaByProjectId, clientNamesById, projectRows, rows]);
+    }, [archiveRows, clientMetaByProjectId, clientNamesById, extraRowMetaByProjectId, projectRows, rows]);
 
     const resolveProjectLabel = useCallback((r: PartnerReportConfirmationRequest) => {
         return resolvePartnerReportProjectLabel(r, projectRows, clientNamesById, extraRowMetaByProjectId, clientMetaByProjectId);

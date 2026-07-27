@@ -123,9 +123,9 @@ function globalDetailRowOffset(chunks: InvoiceTimeReportDetailRow[][], chunkInde
 
 export function InvoicePreviewPage() {
     const { pushToast } = useAppToast();
-    const location = useLocation();
+    useLocation();
     const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | null>(null);
-    const session = useMemo(() => readInvoicePreviewSession(), [location.key, location.pathname]);
+    const session = readInvoicePreviewSession();
     const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel | null>(null);
     const [editMode, setEditMode] = useState(false);
     const [legalOverrides, setLegalOverrides] = useState<InvoiceLegalPageOverrides>(() => firmBankingToLegalOverrides());

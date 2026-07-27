@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { reportClientError } from '@shared/lib/clientErrorReporter';
 
 type RootErrorBoundaryProps = {
     children: ReactNode;
@@ -16,7 +17,7 @@ export class RootErrorBoundary extends Component<RootErrorBoundaryProps, RootErr
     }
 
     componentDidCatch(error: Error, info: ErrorInfo): void {
-        console.error('[app] render error', error, info.componentStack);
+        reportClientError(error, { source: 'root-error-boundary', componentStack: info.componentStack });
     }
 
     render() {

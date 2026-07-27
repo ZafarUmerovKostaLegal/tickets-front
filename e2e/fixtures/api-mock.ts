@@ -1,6 +1,7 @@
 import type { Page, Route } from '@playwright/test';
 import type { MockUser } from './users';
 import {
+    CHAT_MESSAGES,
     CHAT_ROOMS,
     DAILY_ATTENDANCE_REPORT,
     EXPENSE_TYPES,
@@ -195,7 +196,7 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         return;
     }
     if (path.startsWith('/api/v1/chat/rooms/') && path.endsWith('/messages')) {
-        await json(route, { items: [], has_more: false });
+        await json(route, CHAT_MESSAGES);
         return;
     }
     if (path.startsWith('/api/v1/chat/')) {

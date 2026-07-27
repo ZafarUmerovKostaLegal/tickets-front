@@ -35,13 +35,25 @@ jobs:
 
       - run: npm ci
 
+      - name: Lint
+        run: npm run lint:ci
+
       - name: Run Vitest
-        run: npm run test:unit
+        run: npm run test:unit:coverage
         env:
           VITEST_MAX_THREADS: '4'
 
       - name: Check bundle budget
         run: npm run build && npm run build:check-budget
+
+      - name: Upload hidden source maps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-source-maps
+          path: dist/assets/*.map
+          if-no-files-found: ignore
+          retention-days: 14
 
   e2e:
     name: E2E shard ${{ matrix.shardIndex }}/${{ env.PW_SHARD_TOTAL }}

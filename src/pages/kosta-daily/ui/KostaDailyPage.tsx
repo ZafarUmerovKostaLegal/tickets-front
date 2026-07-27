@@ -609,7 +609,7 @@ export function KostaDailyPage() {
                 ),
             };
         });
-    }, [filteredEmployees, employeeLabel, handleEmployeeOpenDm, openingDmUserId, user?.id]);
+    }, [filteredEmployees, handleEmployeeOpenDm, openingDmUserId, user?.id]);
 
     const scrollToMessage = useCallback((messageId: number) => {
         virtualFeedRef.current?.scrollToBlockId(String(messageId), 'smooth');
@@ -783,7 +783,7 @@ export function KostaDailyPage() {
             replyFlashId={replyFlashId}
             ctxMenuMsgId={ctxMenuMsgId}
             userId={user?.id ?? null}
-            canClosePoll={Boolean(user && (block.type === 'message' && (block.own || activeRoom?.my_role === 'admin')))}
+            canClosePoll={Boolean(user?.id != null && (block.type === 'message' && (block.own || activeRoom?.my_role === 'admin')))}
             onStartReply={startReply}
             onToggleReactionPicker={handleToggleReactionPicker}
             onToggleReaction={toggleReaction}

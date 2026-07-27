@@ -515,7 +515,7 @@ function TimeBriefMoveEntryDialog({ open, row, projectOptions, onClose, onConfir
         if (open) {
             setPick('');
         }
-    }, [open, row?.rowKey]);
+    }, [open, row]);
     useEffect(() => {
         if (!open)
             return;
@@ -584,7 +584,7 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
             const t = getLocalYmdAndHmFromIso(row.recordedAt);
             setHm(t?.hm ?? '12:00');
         }
-    }, [open, row?.rowKey]);
+    }, [open, row]);
     useEffect(() => {
         if (!open)
             return;

@@ -20,10 +20,12 @@ vi.mock('@shared/lib/trustedApiFetchUrl', () => ({
 }));
 
 import { apiFetch, invalidateApiGetReuse } from './client';
+import { clearApiRequestMetrics, getApiRequestMetrics, getApiRequestMetricsSummary } from './requestMetrics';
 
 describe('apiFetch GET deduplication', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
+        clearApiRequestMetrics();
     });
 
     afterEach(() => {
@@ -47,6 +49,13 @@ describe('apiFetch GET deduplication', () => {
         const [firstResponse, secondResponse] = await Promise.all([first, second]);
         await expect(firstResponse.json()).resolves.toEqual({ ok: true });
         await expect(secondResponse.json()).resolves.toEqual({ ok: true });
+        expect(getApiRequestMetrics().map((metric) => metric.delivery).sort()).toEqual(['deduplicated', 'network']);
+        expect(getApiRequestMetricsSummary()).toMatchObject({
+            requestCount: 2,
+            networkCount: 1,
+            avoidedNetworkCount: 1,
+            errorCount: 0,
+        });
     });
 
     it('does not join a post-mutation GET to an older in-flight GET', async () => {

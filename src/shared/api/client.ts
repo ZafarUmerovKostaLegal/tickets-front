@@ -2,6 +2,7 @@ import { getApiBaseUrl, getAzureLoginUrl, upgradeUrlToPageSecurity, isSessionCoo
 import { getAccessToken, removeAccessToken, setSessionCookieHint } from '@shared/lib/auth';
 import { clearClientSessionSecrets } from '@shared/lib/authSessionCleanup';
 import { assertSafeRelativeApiPath, assertTrustedApiFetchPathOrUrl, } from '@shared/lib/trustedApiFetchUrl';
+import { apiRequestMetricNow, recordApiRequestMetric, type ApiRequestDelivery } from './requestMetrics';
 type RequestInitAuth = RequestInit & {
     skipAuth?: boolean;
     skipAuthRedirectOn401?: boolean;
@@ -179,19 +180,36 @@ export function invalidateApiGetReuse(): void {
     invalidateSettledGetReuse();
 }
 
-function fetchWithGetDedupe(url: string, init: RequestInit, headers: Headers): Promise<Response> {
+type CoordinatedFetch = {
+    promise: Promise<Response>;
+    delivery: ApiRequestDelivery;
+};
+
+function fetchWithGetDedupe(url: string, init: RequestInit, headers: Headers): CoordinatedFetch {
     const method = normalizedMethod(init);
     if (method !== 'GET' || init.body != null) {
         if (method !== 'GET' && method !== 'HEAD')
             invalidateApiGetReuse();
-        return fetch(url, { ...init, headers, credentials: 'include' });
+        return {
+            promise: fetch(url, { ...init, headers, credentials: 'include' }),
+            delivery: 'network',
+        };
     }
 
     const key = getDedupeKey(url, init, headers);
     let entry = inflightGets.get(key);
-    if (!entry)
+    let delivery: ApiRequestDelivery;
+    if (!entry) {
         entry = startGet(url, init, headers, key, init.cache === 'no-store' ? 0 : GET_REUSE_WINDOW_MS);
-    return subscribeToGet(key, entry, init.signal ?? undefined);
+        delivery = 'network';
+    }
+    else {
+        delivery = entry.settled ? 'reused' : 'deduplicated';
+    }
+    return {
+        promise: subscribeToGet(key, entry, init.signal ?? undefined),
+        delivery,
+    };
 }
 
 export async function apiFetch(path: string, init: RequestInitAuth = {}): Promise<Response> {
@@ -215,7 +233,36 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
         if (token)
             headers.set('Authorization', `Bearer ${token}`);
     }
-    const response = await fetchWithGetDedupe(url, rest, headers);
+    const method = normalizedMethod(rest);
+    const startedAt = apiRequestMetricNow();
+    let delivery: ApiRequestDelivery = 'network';
+    let response: Response;
+    try {
+        const coordinated = fetchWithGetDedupe(url, rest, headers);
+        delivery = coordinated.delivery;
+        response = await coordinated.promise;
+        recordApiRequestMetric({
+            method,
+            url,
+            delivery,
+            outcome: response.ok ? 'success' : 'http-error',
+            status: response.status,
+            durationMs: apiRequestMetricNow() - startedAt,
+        });
+    }
+    catch (error) {
+        recordApiRequestMetric({
+            method,
+            url,
+            delivery,
+            outcome: rest.signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')
+                ? 'aborted'
+                : 'network-error',
+            status: null,
+            durationMs: apiRequestMetricNow() - startedAt,
+        });
+        throw error;
+    }
     if (response.status === 401 && !skipAuth) {
         removeAccessToken();
 

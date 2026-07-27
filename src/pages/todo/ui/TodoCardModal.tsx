@@ -64,8 +64,6 @@ export const TodoCardModal = memo(function TodoCardModal({ boardId, card, column
         setAttachBusy(false);
         setAttachBusyHint(null);
         setAttachDragging(false);
-        setTitleValue(card.title);
-        setDescDraft(card.description ?? '');
         setTitleEditing(false);
         setColumnMenuOpen(false);
         setAttachError(null);
@@ -205,7 +203,7 @@ export const TodoCardModal = memo(function TodoCardModal({ boardId, card, column
         catch {
             setAttachError(t('todoPage.errors.openFile'));
         }
-    }, []);
+    }, [t]);
     const sendComment = useCallback(async () => {
         const t = commentText.trim();
         if (!t || !apiOk)
@@ -829,7 +827,7 @@ function MembersPanel({ boardId, card, cardServerId, applyTodoBoard, apiOk, boar
     const { t, locale } = useI18n();
     const [userIdRaw, setUserIdRaw] = useState('');
     const [pickSearch, setPickSearch] = useState('');
-    const ids = card.participantUserIds ?? [];
+    const ids = useMemo(() => card.participantUserIds ?? [], [card.participantUserIds]);
     const byId = boardUsers.byId;
     const pickList = useMemo(() => {
         if (boardUsers.error !== null)
@@ -842,7 +840,7 @@ function MembersPanel({ boardId, card, cardServerId, applyTodoBoard, apiOk, boar
             (u.display_name?.toLowerCase().includes(q) ?? false) ||
             String(u.id).includes(q))
             .sort((a, b) => todoUserPickLabel(a).localeCompare(todoUserPickLabel(b), locale === 'ru' ? 'ru' : 'en'));
-    }, [boardUsers.list, boardUsers.error, ids, pickSearch]);
+    }, [boardUsers.list, boardUsers.error, ids, locale, pickSearch]);
     const addMemberById = async (n: number) => {
         if (!apiOk)
             return;

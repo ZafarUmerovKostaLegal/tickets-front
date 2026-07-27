@@ -30,6 +30,7 @@
     "android:build:apk": "tauri android build --apk",
     "android:build:apk:debug": "tauri android build --apk --debug",
     "lint": "eslint .",
+    "lint:ci": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",

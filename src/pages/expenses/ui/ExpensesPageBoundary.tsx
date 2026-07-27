@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { reportClientError } from '@shared/lib/clientErrorReporter';
 import './ExpensesPage.css';
 type Props = {
     children: ReactNode;
@@ -12,7 +13,7 @@ export class ExpensesPageBoundary extends Component<Props, State> {
         return { error };
     }
     componentDidCatch(error: Error, info: ErrorInfo) {
-        console.error('[ExpensesPageBoundary]', error.message, info.componentStack);
+        reportClientError(error, { source: 'expenses-error-boundary', componentStack: info.componentStack });
     }
     private handleRetry = () => {
         this.setState({ error: null });

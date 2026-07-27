@@ -43,7 +43,7 @@ function parseGraphEventDateTime(dateTime: string): Date | null {
     if (!t)
         return null;
     const noFrac = t.replace(/(\.\d{3})\d+/, '$1');
-    const d = new Date(/[zZ]|[+\-]\d{2}:\d{2}$/.test(noFrac) ? noFrac : noFrac);
+    const d = new Date(/[zZ]|[+-]\d{2}:\d{2}$/.test(noFrac) ? noFrac : noFrac);
     return Number.isNaN(d.getTime()) ? null : d;
 }
 

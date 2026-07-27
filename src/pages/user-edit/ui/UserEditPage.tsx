@@ -741,7 +741,7 @@ export function UserEditPage() {
         if (!user || activeTab !== 'rates')
             return;
         void refreshRates();
-    }, [user?.id, activeTab, refreshRates]);
+    }, [user, activeTab, refreshRates]);
     useEffect(() => {
         if (!user || (activeTab !== 'projects' && activeTab !== 'rates'))
             return;
@@ -780,7 +780,7 @@ export function UserEditPage() {
         return () => {
             cancelled = true;
         };
-    }, [user?.id, activeTab, isManualUser]);
+    }, [user, activeTab, isManualUser]);
 
     const projPeriodRange = useMemo(
         () => periodToDates(projPeriodDate, projPeriodGranularity),
@@ -831,7 +831,7 @@ export function UserEditPage() {
         return () => {
             cancelled = true;
         };
-    }, [user?.id, activeTab, projPeriodRange.dateFrom, projPeriodRange.dateTo]);
+    }, [user, activeTab, projPeriodRange.dateFrom, projPeriodRange.dateTo]);
 
     useEffect(() => {
         if (!projPeriodDropdown)

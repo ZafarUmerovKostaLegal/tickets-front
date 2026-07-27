@@ -29,10 +29,11 @@ export default defineConfig(({ mode }) => {
         build: {
             target: viteBuildTarget,
             minify: process.env.TAURI_ENV_DEBUG ? false : 'esbuild',
-            sourcemap: false,
+            sourcemap: 'hidden',
             rollupOptions: {
                 output: {
                     manualChunks(id) {
+                        const norm = id.replace(/\\/g, '/');
                         if (id.includes('node_modules/react-dom/'))
                             return 'react-vendor';
                         if (id.includes('node_modules/react/'))
@@ -45,38 +46,28 @@ export default defineConfig(({ mode }) => {
                             return 'pdf-lib';
                         if (id.includes('node_modules/docx'))
                             return 'docx';
+                        if (
+                            norm.includes('/node_modules/buffer/')
+                            || norm.includes('/node_modules/base64-js/')
+                            || norm.includes('/node_modules/ieee754/')
+                            || norm.includes('/node_modules/process/')
+                            || norm.includes('/node_modules/events/')
+                        )
+                            return 'browser-polyfills';
+                        if (
+                            norm.includes('/node_modules/readable-stream/')
+                            || norm.includes('/node_modules/inherits/')
+                            || norm.includes('/node_modules/string_decoder/')
+                            || norm.includes('/node_modules/safe-buffer/')
+                            || norm.includes('/node_modules/core-util-is/')
+                            || norm.includes('/node_modules/isarray/')
+                            || id.includes('browser-external')
+                        )
+                            return 'excel-streams';
                         if (id.includes('node_modules/exceljs'))
                             return 'exceljs';
-                        const norm = id.replace(/\\/g, '/');
-                        if (
-                            norm.includes('/src/shared/i18n/timeTrackingPageMessages')
-                            || norm.includes('/src/shared/i18n/timeTrackingPageExtraMessages')
-                        )
-                            return 'tt-i18n';
-                        if (norm.includes('/src/entities/time-tracking/api/monolith'))
-                            return 'tt-api';
-                        if (norm.includes('/src/entities/') || norm.includes('/src/shared/'))
-                            return 'platform';
-                        if (norm.includes('/src/pages/time-tracking/ui/TimesheetPanel'))
-                            return 'tt-timesheet';
-                        if (norm.includes('/src/pages/time-tracking/ui/ReportsPanel'))
-                            return 'tt-reports';
-                        if (norm.includes('/src/pages/time-tracking/ui/StatisticsPanel'))
-                            return 'tt-statistics';
-                        if (norm.includes('/src/pages/time-tracking/ui/InvoicesPanel'))
-                            return 'tt-invoices';
-                        if (norm.includes('/src/pages/time-tracking/ui/ProjectsPanel'))
-                            return 'tt-projects';
-                        if (norm.includes('/src/pages/time-tracking/ui/ExpensesPanel'))
-                            return 'tt-expenses';
-                        if (norm.includes('/src/pages/time-tracking/ui/TimeUsersPanel'))
-                            return 'tt-users';
-                        if (norm.includes('/src/pages/time-tracking/ui/TimeTrackingSettingsPanel'))
-                            return 'tt-settings';
-                        if (norm.includes('/src/pages/time-tracking/ui/TimeTrackingClientsPanel'))
-                            return 'tt-clients';
-                        if (norm.includes('/src/pages/time-tracking/'))
-                            return 'time-tracking';
+                        if (norm.includes('/src/shared/api/'))
+                            return 'api-client';
                     },
                 },
             },
@@ -114,7 +105,7 @@ export default defineConfig(({ mode }) => {
         preview: {
             headers: {
                 'Content-Security-Policy':
-                    "default-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https: http://127.0.0.1:1234 http://localhost:1234; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: ws:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'",
+                    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https: http://127.0.0.1:1234 http://localhost:1234; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: ws:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'",
             },
         },
         server: {

@@ -212,10 +212,11 @@ export function ReportPreviewPage() {
         timeExcelRowsRef.current = timeExcelRows;
     }, [timeExcelRows]);
     useEffect(() => {
+        const saveTimers = timeEntrySaveTimers.current;
         return () => {
-            for (const t of timeEntrySaveTimers.current.values())
+            for (const t of saveTimers.values())
                 clearTimeout(t);
-            timeEntrySaveTimers.current.clear();
+            saveTimers.clear();
             if (flashRestoredTimerRef.current)
                 clearTimeout(flashRestoredTimerRef.current);
         };
@@ -342,7 +343,7 @@ export function ReportPreviewPage() {
             timeExcelRowsRef.current = next;
             return next;
         });
-    }, [catalogUserExportProfilesById, projectMembersForEmployeePick]);
+    }, [authUserExportProfilesById]);
     useEffect(() => {
         void fetchReportsMeta()
             .then((m) => {
@@ -774,7 +775,7 @@ export function ReportPreviewPage() {
         return () => {
             cancelled = true;
         };
-    }, [xferSnapshot, rangeFrom, rangeTo, selectedProjectId, selectedClientId, effectiveSelectedUserIds, serverDataRefreshNonce, reportPageSizeMax]);
+    }, [xferSnapshot, rangeFrom, rangeTo, selectedProjectId, selectedClientId, effectiveSelectedUserIds, serverDataRefreshNonce, reportPageSizeMax, authUserExportProfilesById]);
     const requestServerDataReload = useCallback(() => {
         clearEditHistory(editHistoryRef.current);
         bumpEditHistory();
@@ -887,7 +888,7 @@ export function ReportPreviewPage() {
             setTimeEntrySaveUI('err');
             setTimeEntrySaveMessage(msg);
         }
-    }, [canOverrideWeeklyLock]);
+    }, []);
     const schedulePersistTimeEntry = useCallback((rowKey: string) => {
         clearPendingSaveTimer(rowKey);
         timeEntrySaveTimers.current.set(rowKey, setTimeout(() => {
@@ -1436,10 +1437,8 @@ export function ReportPreviewPage() {
         xferSnapshot?.partnerConfirmationSnapshotId,
         xferSnapshot?.reportType,
     ]);
-    const canUndoTimeEdit = useMemo(
-        () => editHistoryCanUndo(editHistoryRef.current),
-        [editHistoryVersion],
-    );
+    void editHistoryVersion;
+    const canUndoTimeEdit = editHistoryCanUndo(editHistoryRef.current);
     const setActiveTimeRowKey = useCallback((rowKey: string) => {
         activeTimeRowKeyRef.current = rowKey;
     }, []);

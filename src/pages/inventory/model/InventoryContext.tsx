@@ -550,7 +550,6 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         archivedCount,
         countByCategory,
         sortedCategories,
-        itemsTotal,
     ]);
     return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
 }

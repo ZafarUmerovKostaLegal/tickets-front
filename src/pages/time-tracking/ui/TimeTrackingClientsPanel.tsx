@@ -1,3 +1,4 @@
+import './TimeTrackingForms.css';
 import { useState, useMemo, useEffect, useRef, useCallback, useId, useLayoutEffect, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -328,7 +329,7 @@ function ClientViewModal({ listRow, canManage, onClose, onEdit, onClientUpdated 
         return () => {
             cancelled = true;
         };
-    }, [listRow.id]);
+    }, [listRow.id, t]);
     const c = detail ?? listRow;
     const extras = c.extra_contacts ?? [];
     return portalTimeTrackingModal(<div className="tt-tm-modal-overlay" role="presentation">
@@ -483,7 +484,7 @@ function TimeManagerClientModal({ mode, initial, canManage, onClose, onSaved }: 
         return () => {
             cancelled = true;
         };
-    }, [mode, initial?.id]);
+    }, [mode, initial, t]);
     const clientId = mode === 'edit' && initial?.id ? initial.id : null;
     const archivedLocked = Boolean(form.isArchived && canManage);
     const refreshContactsFromServer = useCallback(async () => {

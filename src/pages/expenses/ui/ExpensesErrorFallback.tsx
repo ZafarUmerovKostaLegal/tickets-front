@@ -1,6 +1,6 @@
 import { useRouteError, Link } from 'react-router-dom';
 import { routes } from '@shared/config';
-import './ExpensesPage.css';
+import './ExpensesErrorFallback.css';
 export function ExpensesErrorFallback() {
     const err = useRouteError();
     const message = err instanceof Error ? err.message : String(err);

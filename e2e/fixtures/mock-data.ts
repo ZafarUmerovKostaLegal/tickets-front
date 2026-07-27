@@ -70,6 +70,26 @@ export const CHAT_ROOMS = {
     ],
 };
 
+export const CHAT_MESSAGES = {
+    items: [
+        {
+            id: 101,
+            room_id: 1,
+            author_user_id: 2,
+            message_kind: 'text',
+            body: 'Тестовое входящее сообщение',
+            created_at: '2024-06-01T10:00:00.000Z',
+            edited_at: null,
+            is_deleted: false,
+            attachments: [],
+            reply_to: null,
+            reactions: [],
+            poll: null,
+        },
+    ],
+    has_more: false,
+};
+
 export const EXPENSE_TYPES = [
     { id: 1, name: 'Транспорт', is_active: true },
     { id: 2, name: 'Питание', is_active: true },

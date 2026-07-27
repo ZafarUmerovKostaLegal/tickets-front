@@ -30,7 +30,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         setCatalogEpoch((n) => n + 1);
     }), []);
 
-    const messages = useMemo(() => getMessages(locale), [locale, catalogEpoch]);
+    const messages = useMemo(() => {
+        void catalogEpoch;
+        return getMessages(locale);
+    }, [locale, catalogEpoch]);
     const t = useMemo(() => createTranslator(messages), [messages]);
 
     useEffect(() => {

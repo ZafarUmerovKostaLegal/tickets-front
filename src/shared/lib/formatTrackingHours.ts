@@ -61,7 +61,7 @@ export function sumDecimalHoursForMinuteDisplay(values: readonly number[]): numb
 }
 
 export function sanitizeColonHoursInput(raw: string): string {
-    let v = raw.replace(/[^\d:]/g, '');
+    const v = raw.replace(/[^\d:]/g, '');
     const colon = v.indexOf(':');
     if (colon !== -1) {
         const h = v.slice(0, colon).replace(/\D/g, '').slice(0, 2);

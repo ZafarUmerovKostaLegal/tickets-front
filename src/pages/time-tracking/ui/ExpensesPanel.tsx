@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useLayoutEffect, useId } from 'react';
+import { useState, useMemo, useRef, useEffect, useLayoutEffect, useId, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useCurrentUser } from '@shared/hooks';
 import { listProjectExpenseCategories, type ProjectExpenseCategoryRow, } from '@entities/time-tracking';
@@ -383,6 +383,12 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         listVersion,
         t,
     ]);
+    const cancelForm = useCallback(() => {
+        if (formBusy)
+            return;
+        setFormErr(null);
+        setShowForm(false);
+    }, [formBusy]);
     useEffect(() => {
         if (!showForm)
             return;
@@ -396,7 +402,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             document.removeEventListener('keydown', h);
             document.body.style.overflow = '';
         };
-    }, [showForm, formBusy]);
+    }, [showForm, formBusy, cancelForm]);
     useEffect(() => {
         if (!detailExp)
             return;
@@ -456,12 +462,6 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             next.has(key) ? next.delete(key) : next.add(key);
             return next;
         });
-    }
-    function cancelForm() {
-        if (formBusy)
-            return;
-        setFormErr(null);
-        setShowForm(false);
     }
     async function saveForm(e: React.FormEvent) {
         e.preventDefault();

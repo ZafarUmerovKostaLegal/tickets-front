@@ -28,10 +28,10 @@ describe('splitDetailRowsForPagedTimeReport', () => {
         expect(chunkSizes(TIME_REPORT_PDF_ROWS_LAST_CHUNK)).toEqual([TIME_REPORT_PDF_ROWS_LAST_CHUNK]);
     });
 
-    it('balances two-page splits instead of leaving a tiny first page', () => {
-        expect(chunkSizes(19)).toEqual([10, 9]);
-        expect(chunkSizes(23)).toEqual([12, 11]);
-        expect(chunkSizes(24)).toEqual([12, 12]);
+    it('keeps the summary page within its reduced capacity', () => {
+        expect(chunkSizes(19)).toEqual([12, 7]);
+        expect(chunkSizes(23)).toEqual([16, 7]);
+        expect(chunkSizes(24)).toEqual([17, 7]);
     });
 
     it('respects last-page and mid-page capacity limits', () => {

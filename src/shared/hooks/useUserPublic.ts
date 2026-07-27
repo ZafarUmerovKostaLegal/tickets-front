@@ -55,7 +55,7 @@ export function useUserPublic(ids: readonly number[]): Map<number, UserPublic> {
         return () => {
             cancelled = true;
         };
-    }, [idsKey]);
+    }, [idsKey, normalizedIds]);
 
     const snapshotRef = useRef<Map<number, UserPublic>>(new Map());
     const lastIdsKeyRef = useRef<string>('');
@@ -69,7 +69,7 @@ export function useUserPublic(ids: readonly number[]): Map<number, UserPublic> {
             lastIdsKeyRef.current = idsKey;
             return fresh;
         };
-    }, [idsKey]);
+    }, [idsKey, normalizedIds]);
 
     return useSyncExternalStore(subscribePublicUserCache, getSnapshot, getSnapshot);
 }

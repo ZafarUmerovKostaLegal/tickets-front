@@ -9,6 +9,7 @@ import { useI18n } from '@shared/i18n';
 import { ClientProjectModal } from './TimeTrackingClientProjectModal';
 import { TimeTrackingNewProjectFormSkeleton } from './TimeTrackingNewProjectFormSkeleton';
 import './TimeTrackingPage.css';
+import './TimeTrackingForms.css';
 
 export function TimeTrackingNewProjectPage() {
     const { t } = useI18n();

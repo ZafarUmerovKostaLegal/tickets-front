@@ -9,10 +9,10 @@ import { useCurrentUser } from '@shared/hooks';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, DatePicker, SearchableSelect } from '@shared/ui';
 import { periodToDates, reportsAllTimeDateFrom, reportsAllTimeDateTo } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { canAccessTimeTracking, canManageTimeTrackingClients, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
-import { INVOICE_STATUS_LABELS, listAllTimeManagerClientsMerged, listAllClientProjectsMerged, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPendingItems, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, readTimeManagerProjectBillableRateAmount, readProjectRecordsLanguage, notifyPartnerConfirmedReportsListInvalidate, exportReportV2, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, type ReportFiltersV2, } from '@entities/time-tracking';
+import { INVOICE_STATUS_LABELS, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPendingItems, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, readTimeManagerProjectBillableRateAmount, readProjectRecordsLanguage, notifyPartnerConfirmedReportsListInvalidate, exportReportV2, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, type ReportFiltersV2, } from '@entities/time-tracking';
 import { writeReportPreviewTransfer, type ReportPreviewTransferV2 } from '@entities/time-tracking/model/reportPreviewTransfer';
 import { ClientProjectModal } from '@pages/time-tracking/ui/TimeTrackingClientProjectModal';
-import { mapClientProjectToProjectRow } from '@entities/time-tracking/model/mapClientProjectToProjectRow';
+import { loadProjectDetailRow } from '../model/loadProjectDetailRow';
 import { buildProjectArchiveTogglePatch, buildProjectPauseTogglePatch } from '@entities/time-tracking/lib/projectArchiveRestore';
 import { memberWeeklyCapacityHours } from '@entities/time-tracking/model/memberWeeklyCapacity';
 import type { ProjectRow, TimeUserRow, TimeUsersTotals } from '@entities/time-tracking/model/types';
@@ -734,31 +734,6 @@ const TYPE_COLOR: Record<string, {
     'Без бюджета': { color: '#64748b', bg: 'rgba(100,116,139,0.08)' },
     'Пакет часов': { color: '#0d9488', bg: 'rgba(13,148,136,0.08)' },
 };
-async function loadProjectDetailRow(projectId: string, clientIdHint: string | null): Promise<ProjectRow | null> {
-    if (clientIdHint) {
-        try {
-            const clients = await listAllTimeManagerClientsMerged();
-            const client = clients.find((c) => c.id === clientIdHint);
-            if (client) {
-                const p = await getClientProject(clientIdHint, projectId);
-                return mapClientProjectToProjectRow(p, client);
-            }
-        }
-        catch {
-        }
-    }
-    const [clients, allProjects] = await Promise.all([
-        listAllTimeManagerClientsMerged(),
-        listAllClientProjectsMerged(true),
-    ]);
-    const hit = allProjects.find((x) => x.id === projectId);
-    if (!hit)
-        return null;
-    const client = clients.find((c) => c.id === hit.client_id);
-    if (!client)
-        return null;
-    return mapClientProjectToProjectRow(hit, client);
-}
 function duplicateProjectCreatePayload(src: TimeManagerClientProjectRow): TimeManagerClientProjectCreatePayload {
     const amt = src.budget_amount != null && String(src.budget_amount).trim() !== ''
         ? src.budget_amount
@@ -2027,6 +2002,8 @@ export function ProjectDetailPage() {
     const [dashboard, setDashboard] = useState<TimeManagerProjectDashboard | null | undefined>(undefined);
     const [dashboardError, setDashboardError] = useState<string | null>(null);
     const [detailPeriod, setDetailPeriod] = useState(() => defaultProjectTeamPeriod());
+    const detailPeriodRef = useRef(detailPeriod);
+    detailPeriodRef.current = detailPeriod;
     const [loadError, setLoadError] = useState<string | null>(null);
     const [fontsReady, setFontsReady] = useState(false);
     const [dashboardRefreshing, setDashboardRefreshing] = useState(false);
@@ -2066,8 +2043,8 @@ export function ProjectDetailPage() {
                 }
                 try {
                     const d = await getClientProjectDashboard(row.clientId, row.id, {
-                        dateFrom: detailPeriod.from,
-                        dateTo: detailPeriod.to,
+                        dateFrom: detailPeriodRef.current.from,
+                        dateTo: detailPeriodRef.current.to,
                     });
                     if (!cancelled) {
                         setDashboard(d);

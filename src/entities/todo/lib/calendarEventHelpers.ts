@@ -39,7 +39,7 @@ export function parseCalendarDateTime(dateTime: string, timeZone?: string): Date
     const raw = stripFractionalSeconds((dateTime || '').trim());
     if (!raw)
         return null;
-    if (/[zZ]|[+\-]\d{2}:\d{2}$/.test(raw)) {
+    if (/[zZ]|[+-]\d{2}:\d{2}$/.test(raw)) {
         const d = new Date(raw);
         return Number.isNaN(d.getTime()) ? null : d;
     }

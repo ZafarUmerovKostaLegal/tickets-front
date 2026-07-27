@@ -11,13 +11,12 @@ import { initSafeAreaInsets } from '@shared/lib/safeAreaInsets';
 import { applyDocumentLocale, getInitialLocale } from '@shared/i18n';
 import { applyTheme, getInitialTheme } from '@shared/lib/theme';
 import { installStaleBundleReload, stripLegacyReloadQueryParams } from '@app/lib/staleBundleError';
+import { installGlobalErrorReporting } from '@shared/lib/clientErrorReporter';
 injectPublicEnv();
+installGlobalErrorReporting();
 stripLegacyReloadQueryParams();
 installStaleBundleReload();
-if (reconcileDesktopAuthCallbackLocation()) {
-    
-}
-else {
+if (!reconcileDesktopAuthCallbackLocation()) {
     applyTheme(getInitialTheme());
     applyDocumentLocale(getInitialLocale());
     initSafeAreaInsets();

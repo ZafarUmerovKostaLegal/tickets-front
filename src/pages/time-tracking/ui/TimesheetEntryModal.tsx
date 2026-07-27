@@ -347,7 +347,7 @@ export function EntryModal({ entry, clone, defaultDate, projects, projectsLoadin
             const first = tasks[0]!;
             return { ...f, taskId: first.id, task: first.name, billable: first.billableByDefault };
         });
-    }, [proj?.id, tasksByProjectId, preferredTaskName]);
+    }, [proj, tasksByProjectId, preferredTaskName]);
     const hoursForTimerHint = useMemo(() => {
         const t = form.hours.trim();
         if (!t)
@@ -384,7 +384,7 @@ export function EntryModal({ entry, clone, defaultDate, projects, projectsLoadin
             document.getElementById(`${uid}-d`),
         ];
         return stops.filter((el): el is HTMLElement => !!el && !el.hasAttribute('disabled'));
-    }, [uid, form.projectId, formDateLocked, projectTasksListReady, projectTasks.length, saving, entry]);
+    }, [uid]);
     const moveEntryModalTabStop = useCallback((from: HTMLElement, forward: boolean) => {
         const stops = getEntryModalTabStops();
         if (stops.length === 0)

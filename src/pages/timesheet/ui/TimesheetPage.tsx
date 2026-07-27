@@ -197,8 +197,11 @@ export function TimesheetPage() {
   function prevWeek() { setWeekStart(d => addDays(d, -7)); }
   function nextWeek() { setWeekStart(d => addDays(d, 7)); }
   function goToday() { setWeekStart(startOfWeek(today)); setActiveDay(today); }
-  const displayDays = viewMode === 'week' ? weekDays : [activeDay];
-  const randomQuote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], [weekStart]);
+  const displayDays = useMemo(() => (viewMode === 'week' ? weekDays : [activeDay]), [activeDay, viewMode, weekDays]);
+  const randomQuote = useMemo(() => {
+    void weekStart;
+    return QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  }, [weekStart]);
   const addEntry = (e: TimeEntry) => setEntries(prev => [...prev, e]);
   function deleteEntry(id: string) {
     setEntries(prev => prev.filter(e => e.id !== id));

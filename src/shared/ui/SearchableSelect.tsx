@@ -7,6 +7,7 @@ import {
     useId,
     useLayoutEffect,
     useImperativeHandle,
+    useCallback,
     Fragment,
     type ReactNode,
     type KeyboardEvent,
@@ -132,19 +133,19 @@ function SearchableSelectInner<T>({
         return [...map.entries()].sort(([ga], [gb]) => ga.localeCompare(gb, 'ru', { sensitivity: 'base' }));
     }, [filtered, getGroupLabel, groupItemSort, getSearchText]);
 
-    function closeDropdown() {
+    const closeDropdown = useCallback(() => {
         setOpen(false);
         setQuery('');
         setActiveIndex(0);
         pendingQueryRef.current = null;
-    }
+    }, []);
 
-    function openDropdown(initialQuery?: string) {
+    const openDropdown = useCallback((initialQuery?: string) => {
         if (disabled)
             return;
         pendingQueryRef.current = initialQuery ?? null;
         setOpen(true);
-    }
+    }, [disabled]);
 
     function selectItem(it: T) {
         onSelect(it);
@@ -170,7 +171,7 @@ function SearchableSelectInner<T>({
                 buttonRef.current?.focus();
             });
         },
-    }), [disabled]);
+    }), [disabled, closeDropdown, openDropdown]);
 
     useEffect(() => {
         if (!open)

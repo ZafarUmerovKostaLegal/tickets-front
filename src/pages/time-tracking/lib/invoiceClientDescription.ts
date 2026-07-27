@@ -28,13 +28,13 @@ export const INVOICE_DESCRIPTION_TASK_PREFIXES = [
 
 const PREFIXES_BY_LENGTH = [...INVOICE_DESCRIPTION_TASK_PREFIXES].sort((a, b) => b.length - a.length);
 
-const SEP_START = /^[\s:.\u2014\u2013\-]+/u;
+const SEP_START = /^[\s:.\u2014\u2013-]+/u;
 
 function isSafePrefixBoundary(after: string): boolean {
     if (!after)
         return false;
     const ch = after[0]!;
-    if (/[\s:\n.\u2014\u2013\-]/.test(ch))
+    if (/[\s:\n.\u2014\u2013-]/.test(ch))
         return true;
     // Glued Harvest-style: "Document ReviewЗаконодательство"
     if (ch.charCodeAt(0) > 127)

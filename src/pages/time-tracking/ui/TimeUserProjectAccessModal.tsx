@@ -68,7 +68,7 @@ export function TimeUserProjectAccessModal({ authUserId, userLabel, canSave, onC
         return () => {
             cancelled = true;
         };
-    }, [authUserId]);
+    }, [authUserId, t]);
     const q = query.trim().toLowerCase();
     const filtered = useMemo(() => {
         if (!q)

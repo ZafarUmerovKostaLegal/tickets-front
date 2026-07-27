@@ -56,12 +56,13 @@ export function AttendanceProvider({ children }: AttendanceProviderProps) {
         () => buildTypeFilterOptions(data.isDailyMode, t),
         [data.isDailyMode, t],
     );
+    const reloadAttendance = data.load;
     const saveWorkdaySettings = useCallback(async (value: WorkdaySettings) => {
         const dto = await patchWorkdaySettings(settingsToWorkdayDto(value));
         setSettings(workdayDtoToSettings(dto));
         setSettingsError(null);
-        await data.load();
-    }, [data.load]);
+        await reloadAttendance();
+    }, [reloadAttendance]);
     const singleDaySelected = Boolean(dateFrom && dateTo && dateFrom === dateTo);
     useEffect(() => {
         if (singleDaySelected && typeFilter === 'overtime')
@@ -123,7 +124,6 @@ export function AttendanceProvider({ children }: AttendanceProviderProps) {
         handleReset,
         handleExportExcel,
         typeFilterOptions,
-        data.isDailyMode,
     ]);
     return (<AttendanceContext.Provider value={value}>
       {children}

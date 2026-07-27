@@ -133,7 +133,7 @@ export function TodoBoardsBar({
     return () => {
       cancelled = true;
     };
-  }, [addBoardOpen]);
+  }, [addBoardOpen, t]);
 
   const handleOpenAddBoard = () => {
     setNewBoardName('');

@@ -262,7 +262,7 @@ export function TodoPage() {
         return () => {
             cancelled = true;
         };
-    }, []);
+    }, [t]);
     const [referencedUserIds, setReferencedUserIds] = useState<number[]>([]);
     const referencedPublicById = useUserPublic(referencedUserIds);
     const todoBoardUsers = useMemo((): TodoBoardUsers => {
@@ -371,7 +371,7 @@ export function TodoPage() {
         }
         expired.sort((a, b) => (b.archivedAt ?? '').localeCompare(a.archivedAt ?? ''));
         return { columns: result, expired };
-    }, [calendarEvents, stripHtml, columnOrder, columnTitles]);
+    }, [calendarEvents, stripHtml, columnOrder, columnTitles, t]);
     const handlePrevMonth = useCallback(() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1)), []);
     const handleNextMonth = useCallback(() => setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1)), []);
     useEffect(() => {
@@ -430,7 +430,7 @@ export function TodoPage() {
             }, 1300);
         };
         img.src = url;
-    }, [setBoardError]);
+    }, [setBoardError, t]);
     const applyBoardFromApi = useCallback((board: TodoBoard, summaries?: TodoBoardSummary[]) => {
         const boardList = summaries ?? boardSummariesRef.current;
         const { columnOrder: ord, columnTitles: titles, columnColors: colors, collapsedColumns: collapsed, cards: nextCards, boardLabels: labels, } = unpackBoard(board);
@@ -478,7 +478,7 @@ export function TodoPage() {
             setBgTransitioning(false);
             setThemeVars(createDefaultTodoThemeVars());
         }
-    }, [applyBackground, setBoardError]);
+    }, [applyBackground, setBoardError, t]);
     const commitBoard = useCallback(async (promise: Promise<TodoBoard>): Promise<TodoBoard | null> => {
         try {
             const b = await promise;
@@ -491,7 +491,7 @@ export function TodoPage() {
             setBoardError(e instanceof Error ? e.message : t('todoPage.errors.saveBoard'));
             return null;
         }
-    }, [applyBoardFromApi]);
+    }, [applyBoardFromApi, t]);
     const reloadBoardSummaries = useCallback(() => {
         return fetchTodoBoardsList()
             .then((data) => {
@@ -502,7 +502,7 @@ export function TodoPage() {
                 setBoardSummaries([]);
                 setBoardListError(err instanceof Error ? err.message : t('todoPage.errors.loadBoardList'));
             });
-    }, []);
+    }, [t]);
     const handleSelectTodoBoard = useCallback(async (boardId: number) => {
         if (boardId === activeBoardId)
             return;
@@ -522,14 +522,14 @@ export function TodoPage() {
         finally {
             setInitialLoading(false);
         }
-    }, [activeBoardId, applyBoardFromApi, reloadBoardSummaries]);
+    }, [activeBoardId, applyBoardFromApi, t]);
     const handleCreateTodoBoard = useCallback(async (body: CreateTodoBoardBody) => {
         const b = await commitBoard(createTodoBoard(body));
         if (!b)
             throw new Error(t('todoPage.errors.createBoardFailed'));
         void putTodoBoardCurrent(b.id).catch(() => { });
         await reloadBoardSummaries();
-    }, [commitBoard, reloadBoardSummaries]);
+    }, [commitBoard, reloadBoardSummaries, t]);
     const handlePickBackground = () => {
         fileInputRef.current?.click();
         setMenuOpen(false);
@@ -686,7 +686,7 @@ export function TodoPage() {
         return () => {
             cancelled = true;
         };
-    }, [applyBoardFromApi]);
+    }, [applyBoardFromApi, t]);
     useEffect(() => {
         if (calendarConnected)
             setCalendarConnectError(null);
@@ -755,7 +755,7 @@ export function TodoPage() {
             const msg = err instanceof Error ? err.message : t('todoPage.errors.connectCalendar');
             setCalendarConnectError(msg);
         });
-    }, []);
+    }, [t]);
     const handleOpenAddEvent = useCallback((date: Date) => {
         const y = date.getFullYear();
         const m = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -799,7 +799,7 @@ export function TodoPage() {
         finally {
             setAddEventSaving(false);
         }
-    }, [addEventSubject, addEventDate, addEventStartTime, addEventEndTime, addEventBody, fetchCalendarEvents]);
+    }, [addEventSubject, addEventDate, addEventStartTime, addEventEndTime, addEventBody, fetchCalendarEvents, t]);
     const archivedCalIdsRef = useRef<Set<string>>(new Set());
     useEffect(() => {
         const { expired } = calendarCardsByColumn;

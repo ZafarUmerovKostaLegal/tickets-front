@@ -385,7 +385,7 @@ function LetterComposeView({ editingLetter, letters, loading, onBack, onPreview 
             setCoverModel(mockLetterToCoverModel(editingLetter));
             setAttachments(editingLetter.attachments);
         }
-    }, [editingLetter?.id]);
+    }, [editingLetter]);
 
     const patchCoverModel = useCallback((patch: Partial<InvoiceCoverLetterModel>) => {
         setCoverModel((prev) => ({ ...prev, ...patch }));
