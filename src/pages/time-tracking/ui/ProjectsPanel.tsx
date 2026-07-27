@@ -326,28 +326,6 @@ export function ProjectsPanel() {
         archived: baseFiltered.filter((p) => p.status === 'archived').length,
     }), [baseFiltered]);
     const filtered = useMemo(() => baseFiltered.filter((p) => !statusFilter || p.status === statusFilter), [baseFiltered, statusFilter]);
-    const filteredProjectIdsKey = useMemo(
-        () => filtered.map((p) => p.id).join(','),
-        [filtered],
-    );
-    useEffect(() => {
-        const ids = filtered.map((p) => p.id);
-        if (loading || ids.length === 0)
-            return;
-        let cancelled = false;
-        void fetchProjectsBudgetMetrics(ids)
-            .then((metrics) => {
-                if (cancelled)
-                    return;
-                setApiProjects((prev) => applyBudgetMetricsToProjects(prev, metrics));
-            })
-            .catch(() => {
-
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [loading, filteredProjectIdsKey]);
     const fixedClientIdForCreate = useMemo(() => {
         if (!clientFilter)
             return null;
@@ -364,6 +342,25 @@ export function ProjectsPanel() {
         const start = (projectsTablePage - 1) * PAGE;
         return ordered.slice(start, start + PAGE);
     }, [filtered, projectsTablePage, PAGE]);
+    const visibleProjectIdsKey = useMemo(
+        () => projectsPageSlice.map((project) => project.id).sort().join(','),
+        [projectsPageSlice],
+    );
+    useEffect(() => {
+        const ids = visibleProjectIdsKey ? visibleProjectIdsKey.split(',') : [];
+        if (loading || ids.length === 0)
+            return;
+        let cancelled = false;
+        void fetchProjectsBudgetMetrics(ids)
+            .then((metrics) => {
+                if (!cancelled)
+                    setApiProjects((prev) => applyBudgetMetricsToProjects(prev, metrics));
+            })
+            .catch(() => { });
+        return () => {
+            cancelled = true;
+        };
+    }, [loading, visibleProjectIdsKey]);
     const groupedPage = useMemo(() => {
         const map = new Map<string, ProjectRow[]>();
         for (const p of projectsPageSlice) {

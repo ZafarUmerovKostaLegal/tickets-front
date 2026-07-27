@@ -3,6 +3,8 @@ import { isSessionCookieOnly } from '@shared/config';
 import { removeAccessToken, setSessionCookieHint } from '@shared/lib/auth';
 import { createQueryCache } from '@shared/lib/queryCache';
 import { clearClientSessionSecrets } from '@shared/lib/authSessionCleanup';
+import { invalidatePublicUserCache } from './lib/publicUserCache';
+import { invalidatePartnersCache } from './publicApi';
 import type { User, MicrosoftUser } from './model/types';
 import { normalizeUser } from './lib/normalizeUser';
 
@@ -12,8 +14,14 @@ const _usersCache = createQueryCache<User[]>({
     storageKey: 'users:false',
 });
 
-export function invalidateUsersListCache(): void {
+function invalidateUserDirectoryCaches(userId?: number): void {
     _usersCache.invalidate();
+    invalidatePartnersCache();
+    invalidatePublicUserCache(userId === undefined ? undefined : [userId]);
+}
+
+export function invalidateUsersListCache(): void {
+    invalidateUserDirectoryCaches();
 }
 
 const POSITIONS_TTL_MS = 30 * 60_000;
@@ -109,7 +117,7 @@ export type UsersPageResult = {
     summary: UsersPageSummary;
 };
 
-export async function getUsersPage(params: UsersPageParams = {}): Promise<UsersPageResult> {
+export async function getUsersPage(params: UsersPageParams = {}, signal?: AbortSignal): Promise<UsersPageResult> {
     const q = new URLSearchParams();
     q.set('include_archived', String(Boolean(params.includeArchived)));
     q.set('skip', String(params.skip ?? 0));
@@ -118,7 +126,7 @@ export async function getUsersPage(params: UsersPageParams = {}): Promise<UsersP
         q.set('q', params.q.trim());
     if (params.role?.trim() && params.role.trim() !== 'all')
         q.set('role', params.role.trim());
-    const res = await apiFetch(`/api/v1/users?${q.toString()}`);
+    const res = await apiFetch(`/api/v1/users?${q.toString()}`, { signal });
     if (res.status === 401)
         throw new Error('Не авторизован');
     if (res.status === 403)
@@ -167,7 +175,7 @@ export async function setUserRole(userId: number, role: string): Promise<User> {
         } | null)?.detail ?? 'Не удалось изменить роль');
     }
     const user = normalizeUser(await res.json());
-    _usersCache.invalidate();
+    invalidateUserDirectoryCaches(userId);
     return user;
 }
 export async function setUserBlocked(userId: number, isBlocked: boolean): Promise<User> {
@@ -187,7 +195,7 @@ export async function setUserBlocked(userId: number, isBlocked: boolean): Promis
         } | null)?.detail ?? 'Не удалось изменить блокировку');
     }
     const user = normalizeUser(await res.json());
-    _usersCache.invalidate();
+    invalidateUserDirectoryCaches(userId);
     return user;
 }
 export async function setUserArchived(userId: number, isArchived: boolean): Promise<User> {
@@ -207,7 +215,7 @@ export async function setUserArchived(userId: number, isArchived: boolean): Prom
         } | null)?.detail ?? 'Не удалось изменить архивный статус');
     }
     const user = normalizeUser(await res.json());
-    _usersCache.invalidate();
+    invalidateUserDirectoryCaches(userId);
     return user;
 }
 export async function setTimeTrackingRole(userId: number, timeTrackingRole: 'user' | 'manager' | null): Promise<User> {
@@ -230,7 +238,9 @@ export async function setTimeTrackingRole(userId: number, timeTrackingRole: 'use
             detail?: string;
         } | null)?.detail ?? 'Не удалось изменить роль учёта времени');
     }
-    return normalizeUser(await res.json());
+    const user = normalizeUser(await res.json());
+    invalidateUserDirectoryCaches(userId);
+    return user;
 }
 export async function patchMyWeeklyCapacityHours(hours: number): Promise<User> {
     const res = await apiFetch('/api/v1/users/me/weekly-capacity-hours', {
@@ -281,7 +291,7 @@ export async function setUserInitials(userId: number, initials: string | null): 
         } | null)?.detail ?? 'Не удалось сохранить инициалы');
     }
     const user = normalizeUser(await res.json());
-    _usersCache.invalidate();
+    invalidateUserDirectoryCaches(userId);
     return user;
 }
 export async function setUserPosition(userId: number, position: string | null): Promise<User> {
@@ -302,7 +312,9 @@ export async function setUserPosition(userId: number, position: string | null): 
             detail?: string;
         } | null)?.detail ?? 'Не удалось изменить должность');
     }
-    return normalizeUser(await res.json());
+    const user = normalizeUser(await res.json());
+    invalidateUserDirectoryCaches(userId);
+    return user;
 }
 export async function uploadDesktopBackground(file: File): Promise<User> {
     const formData = new FormData();

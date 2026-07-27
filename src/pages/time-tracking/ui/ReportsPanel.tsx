@@ -349,9 +349,9 @@ export function ReportsPanel() {
     const t = window.setTimeout(() => setDebouncedTableSearch(tableSearch.trim()), 450);
     return () => window.clearTimeout(t);
   }, [tableSearch]);
+  const fullSearchActive = debouncedTableSearch.trim().length >= 2;
   useEffect(() => {
-    const q = debouncedTableSearch.trim();
-    if (!q || q.length < 2 || !dateFrom || !dateTo || dateFrom > dateTo) {
+    if (!fullSearchActive || !dateFrom || !dateTo || dateFrom > dateTo) {
       setSearchFullRows(null);
       setSearchFullLoading(false);
       return;
@@ -404,7 +404,7 @@ export function ReportsPanel() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedTableSearch, reportType, groupBy, dateFrom, dateTo, selectedUserIds, includeFixed, reportPageSizeMax, withPartnerReportScope]);
+  }, [fullSearchActive, reportType, groupBy, dateFrom, dateTo, selectedUserIds, includeFixed, reportPageSizeMax, withPartnerReportScope]);
   useEffect(() => {
     setUsersForFilterError(null);
     fetchReportsUsersForFilter()
@@ -906,7 +906,7 @@ export function ReportsPanel() {
       spentHours,
       moneyBudgetByCurrency,
     };
-  }, [results, filteredTableRows, scopedResults, tableSearchQ, reportType, serverTotals, partnerProjectsScopeActive]);
+  }, [filteredTableRows, scopedResults, tableSearchQ, reportType, serverTotals, partnerProjectsScopeActive]);
   const singleProjectIdForSubmit = useMemo(() => {
     if (reportType !== 'time' || groupBy !== 'projects')
       return null;

@@ -74,6 +74,8 @@ describe('getVisibleAppNavItems', () => {
         expect(ids.has('home')).toBe(true);
         expect(ids.has('kostaDaily')).toBe(true);
         expect(ids.has('contacts')).toBe(true);
+        expect(ids.has('expenses')).toBe(true);
+        expect(ids.has('expensesPartners')).toBe(true);
         expect(ids.has('internalCommunication')).toBe(true);
     });
 });

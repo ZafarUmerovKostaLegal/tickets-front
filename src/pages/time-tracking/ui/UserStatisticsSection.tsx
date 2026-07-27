@@ -1,71 +1,82 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     fetchLaborStatistics,
+    fetchLaborStatisticsMeta,
     isTimeTrackingHttpError,
+    type LaborStatisticsMeta,
     type LaborStatisticsResponse,
 } from '@entities/time-tracking';
 import { fmtAmtWithIso, fmtH } from '@entities/time-tracking/lib/reportsFormatUtils';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
-import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import { ProjectActivityChart } from './ProjectActivityChart';
-import { loadTimesheetProjectOptions, type ProjectOption } from './timesheetProjectLoader';
 
-function projectOptionLabel(p: ProjectOption): string {
-    const c = (p.client || '').trim();
-    return c ? `${p.name.trim()} (${c})` : p.name.trim();
+type UserOption = LaborStatisticsMeta['lawyers'][number];
+
+function userOptionLabel(u: UserOption): string {
+    const name = (u.name || '').trim();
+    const email = (u.email || '').trim();
+    if (name && email)
+        return `${name} (${email})`;
+    return name || email || u.id;
 }
 
-function projectSearchText(p: ProjectOption): string {
-    return `${p.name} ${p.client} ${p.id}`.replace(/\s+/g, ' ').trim();
+function userSearchText(u: UserOption): string {
+    return `${u.name ?? ''} ${u.email ?? ''} ${u.id}`.replace(/\s+/g, ' ').trim();
 }
 
-type ProjectStatisticsSectionProps = {
+type UserStatisticsSectionProps = {
     dateFrom: string;
     dateTo: string;
 };
 
-export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatisticsSectionProps) {
-    const { t, locale } = useI18n();
-    const { user } = useCurrentUser();
-    const [projects, setProjects] = useState<ProjectOption[]>([]);
-    const [projectsLoading, setProjectsLoading] = useState(true);
-    const [projectsError, setProjectsError] = useState<string | null>(null);
-    const [selectedProjectId, setSelectedProjectId] = useState('');
+export function UserStatisticsSection({ dateFrom, dateTo }: UserStatisticsSectionProps) {
+    const { t } = useI18n();
+    const [users, setUsers] = useState<UserOption[]>([]);
+    const [usersLoading, setUsersLoading] = useState(true);
+    const [usersError, setUsersError] = useState<string | null>(null);
+    const [selectedUserId, setSelectedUserId] = useState('');
     const [stats, setStats] = useState<LaborStatisticsResponse | null>(null);
     const [statsLoading, setStatsLoading] = useState(false);
     const [statsError, setStatsError] = useState<string | null>(null);
     const [detailQ, setDetailQ] = useState('');
 
-    const selectedProject = useMemo(
-        () => projects.find((p) => p.id === selectedProjectId) ?? null,
-        [projects, selectedProjectId],
+    const selectedUser = useMemo(
+        () => users.find((u) => u.id === selectedUserId) ?? null,
+        [users, selectedUserId],
     );
 
     useEffect(() => {
-        if (!user) {
-            setProjects([]);
-            setProjectsLoading(false);
-            return;
-        }
         let cancelled = false;
-        setProjectsLoading(true);
-        setProjectsError(null);
-        void loadTimesheetProjectOptions(user, locale, { includeClosed: true }).then(({ items, error }) => {
-            if (cancelled)
-                return;
-            setProjects(items);
-            setProjectsError(error);
-            setProjectsLoading(false);
-        });
+        setUsersLoading(true);
+        setUsersError(null);
+        void fetchLaborStatisticsMeta()
+            .then((meta) => {
+                if (cancelled)
+                    return;
+                setUsers(meta.lawyers ?? []);
+            })
+            .catch((e) => {
+                if (cancelled)
+                    return;
+                setUsers([]);
+                if (isTimeTrackingHttpError(e, 403))
+                    setUsersError(t('timeTrackingPage.statistics.errors.forbidden'));
+                else
+                    setUsersError(e instanceof Error ? e.message : t('timeTrackingPage.statistics.errors.loadFailed'));
+            })
+            .finally(() => {
+                if (!cancelled)
+                    setUsersLoading(false);
+            });
         return () => {
             cancelled = true;
         };
-    }, [user, locale]);
+    }, [t]);
 
-    const loadStats = useCallback(async (projectId: string, from: string, to: string) => {
-        const pid = projectId.trim();
-        if (!pid || !from || !to) {
+    const loadStats = useCallback(async (lawyerId: string, from: string, to: string) => {
+        const lid = lawyerId.trim();
+        if (!lid || !from || !to) {
             setStats(null);
             setStatsError(null);
             return;
@@ -76,7 +87,7 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
             const data = await fetchLaborStatistics({
                 dateFrom: from,
                 dateTo: to,
-                projectId: pid,
+                lawyerId: lid,
                 page: 1,
                 perPage: 100,
                 sort: 'hours',
@@ -97,13 +108,13 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
     }, [t]);
 
     useEffect(() => {
-        if (!selectedProjectId) {
+        if (!selectedUserId) {
             setStats(null);
             setStatsError(null);
             return;
         }
-        void loadStats(selectedProjectId, dateFrom, dateTo);
-    }, [selectedProjectId, dateFrom, dateTo, loadStats]);
+        void loadStats(selectedUserId, dateFrom, dateTo);
+    }, [selectedUserId, dateFrom, dateTo, loadStats]);
 
     const filteredDetailRows = useMemo(() => {
         const rows = stats?.detail.rows ?? [];
@@ -112,8 +123,9 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
             return rows;
         return rows.filter((r) => {
             const hay = [
-                r.lawyer_name,
+                r.project_name,
                 r.task_name,
+                r.client_name,
                 r.team_name,
                 r.partner_name,
                 r.period_label,
@@ -122,59 +134,60 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
         });
     }, [stats, detailQ]);
 
-    const byUsers = stats?.charts.by_users ?? [];
+    const byProjects = stats?.charts.by_projects ?? [];
+    const byClients = stats?.charts.by_clients ?? [];
     const hoursByDay = stats?.charts.hours_by_day ?? [];
 
     return (
         <div className="tt-statistics-project">
             <div className="tt-statistics-project__toolbar">
                 <label className="tt-statistics-project__project-field">
-                    <span className="tt-statistics-project__label">{t('timeTrackingPage.statistics.projectLabel')}</span>
-                    <SearchableSelect<ProjectOption>
+                    <span className="tt-statistics-project__label">{t('timeTrackingPage.statistics.userLabel')}</span>
+                    <SearchableSelect<UserOption>
                         portalDropdown
                         className="tt-statistics-project__srch"
                         buttonClassName="tt-statistics-project__srch-btn"
-                        aria-label={t('timeTrackingPage.statistics.projectLabel')}
-                        disabled={projectsLoading || !user || projects.length === 0}
+                        aria-label={t('timeTrackingPage.statistics.userLabel')}
+                        disabled={usersLoading || users.length === 0}
                         placeholder={
-                            projectsLoading
+                            usersLoading
                                 ? t('timeTrackingPage.common.loading')
-                                : projects.length === 0
-                                    ? t('timeTrackingPage.statistics.projectSearchEmpty')
-                                    : t('timeTrackingPage.statistics.selectProject')
+                                : users.length === 0
+                                    ? t('timeTrackingPage.statistics.userSearchEmpty')
+                                    : t('timeTrackingPage.statistics.selectUser')
                         }
-                        emptyListText={t('timeTrackingPage.statistics.projectSearchEmpty')}
+                        emptyListText={t('timeTrackingPage.statistics.userSearchEmpty')}
                         noMatchText={t('timeTrackingPage.notFound')}
-                        value={selectedProjectId}
-                        items={projects}
-                        getOptionValue={(p) => p.id}
-                        getOptionLabel={projectOptionLabel}
-                        getSearchText={projectSearchText}
-                        onSelect={(p) => {
-                            setSelectedProjectId(p.id);
+                        value={selectedUserId}
+                        items={users}
+                        getOptionValue={(u) => u.id}
+                        getOptionLabel={userOptionLabel}
+                        getSearchText={userSearchText}
+                        onSelect={(u) => {
+                            setSelectedUserId(u.id);
                             setDetailQ('');
                         }}
                     />
                 </label>
-                {selectedProjectId ? (
+                {selectedUserId ? (
                     <button
                         type="button"
                         className="tt-reports__btn tt-reports__btn--outline"
                         disabled={statsLoading}
-                        onClick={() => void loadStats(selectedProjectId, dateFrom, dateTo)}
+                        onClick={() => void loadStats(selectedUserId, dateFrom, dateTo)}
                     >
                         {t('timeTrackingPage.statistics.widgetToolbar.refresh')}
                     </button>
                 ) : null}
             </div>
 
-            {projectsError ? <p className="tt-statistics-project__error">{projectsError}</p> : null}
+            {usersError ? <p className="tt-statistics-project__error">{usersError}</p> : null}
             {statsError ? <p className="tt-statistics-project__error">{statsError}</p> : null}
 
-            {!selectedProjectId ? (
+            {!selectedUserId ? (
                 <div className="tt-statistics-project__empty">
-                    <p className="tt-statistics-project__empty-title">{t('timeTrackingPage.statistics.selectProject')}</p>
-                    <p className="tt-statistics-project__empty-hint">{t('timeTrackingPage.statistics.projectSearchHint')}</p>
+                    <p className="tt-statistics-project__empty-title">{t('timeTrackingPage.statistics.selectUser')}</p>
+                    <p className="tt-statistics-project__empty-hint">{t('timeTrackingPage.statistics.userSearchHint')}</p>
                 </div>
             ) : statsLoading && !stats ? (
                 <p className="tt-statistics-project__muted">{t('timeTrackingPage.common.loading')}</p>
@@ -182,7 +195,7 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
                 <>
                     <header className="tt-statistics-project__head">
                         <h3 className="tt-statistics-project__title">
-                            {selectedProject ? projectOptionLabel(selectedProject) : selectedProjectId}
+                            {selectedUser ? userOptionLabel(selectedUser) : selectedUserId}
                         </h3>
                         <p className="tt-statistics-project__period">
                             {dateFrom} — {dateTo}
@@ -210,31 +223,25 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
                     {hoursByDay.length > 0 ? (
                         <ProjectActivityChart
                             days={hoursByDay}
-                            title={t('timeTrackingPage.statistics.projectChartTitle')}
-                            hint={t('timeTrackingPage.statistics.projectChartHint')}
+                            title={t('timeTrackingPage.statistics.userChartTitle')}
+                            hint={t('timeTrackingPage.statistics.userChartHint')}
                         />
                     ) : null}
 
-                    {byUsers.length > 0 ? (
-                        <section className="tt-statistics-project__users" aria-label={t('timeTrackingPage.statistics.widgets.byUsers')}>
-                            <h4 className="tt-statistics-project__section-title">{t('timeTrackingPage.statistics.widgets.byUsers')}</h4>
-                            <ul className="tt-statistics-project__user-list">
-                                {byUsers.map((u) => {
-                                    const total = u.billable_hours + u.non_billable_hours;
-                                    return (
-                                        <li key={u.id} className="tt-statistics-project__user-row">
-                                            <span className="tt-statistics-project__user-name">{u.name}</span>
-                                            <span className="tt-statistics-project__user-hours">
-                                                {fmtH(total)}
-                                                <span className="tt-statistics-project__user-split">
-                                                    {' '}({t('timeTrackingPage.statistics.widgets.billableShort')} {fmtH(u.billable_hours)})
-                                                </span>
-                                            </span>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </section>
+                    {byProjects.length > 0 ? (
+                        <StackedHoursList
+                            title={t('timeTrackingPage.statistics.widgets.byProjects')}
+                            rows={byProjects}
+                            billableShort={t('timeTrackingPage.statistics.widgets.billableShort')}
+                        />
+                    ) : null}
+
+                    {byClients.length > 0 ? (
+                        <StackedHoursList
+                            title={t('timeTrackingPage.statistics.widgets.byClients')}
+                            rows={byClients}
+                            billableShort={t('timeTrackingPage.statistics.widgets.billableShort')}
+                        />
                     ) : null}
 
                     <section className="tt-statistics-project__detail" aria-label={t('timeTrackingPage.statistics.detailTable.aria')}>
@@ -258,8 +265,9 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
                                 <table className="tt-reports__table tt-statistics-project__table">
                                     <thead>
                                         <tr>
-                                            <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.lawyer_name')}</th>
+                                            <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.project_name')}</th>
                                             <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.task_name')}</th>
+                                            <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.client_name')}</th>
                                             <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.hours')}</th>
                                             <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.payment')}</th>
                                         </tr>
@@ -267,8 +275,9 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
                                     <tbody>
                                         {filteredDetailRows.map((r) => (
                                             <tr key={r.id}>
-                                                <td>{r.lawyer_name || '—'}</td>
+                                                <td>{r.project_name || '—'}</td>
                                                 <td>{r.task_name || '—'}</td>
+                                                <td>{r.client_name || '—'}</td>
                                                 <td>{fmtH(r.hours)}</td>
                                                 <td>{fmtAmtWithIso(r.payment, r.currency)}</td>
                                             </tr>
@@ -290,5 +299,37 @@ function KpiCard({ label, value }: { label: string; value: string }) {
             <span className="tt-statistics-project__kpi-label">{label}</span>
             <strong className="tt-statistics-project__kpi-value">{value}</strong>
         </div>
+    );
+}
+
+function StackedHoursList({
+    title,
+    rows,
+    billableShort,
+}: {
+    title: string;
+    rows: Array<{ id: string; name: string; billable_hours: number; non_billable_hours: number }>;
+    billableShort: string;
+}) {
+    return (
+        <section className="tt-statistics-project__users" aria-label={title}>
+            <h4 className="tt-statistics-project__section-title">{title}</h4>
+            <ul className="tt-statistics-project__user-list">
+                {rows.map((row) => {
+                    const total = row.billable_hours + row.non_billable_hours;
+                    return (
+                        <li key={row.id || row.name} className="tt-statistics-project__user-row">
+                            <span className="tt-statistics-project__user-name">{row.name}</span>
+                            <span className="tt-statistics-project__user-hours">
+                                {fmtH(total)}
+                                <span className="tt-statistics-project__user-split">
+                                    {' '}({billableShort} {fmtH(row.billable_hours)})
+                                </span>
+                            </span>
+                        </li>
+                    );
+                })}
+            </ul>
+        </section>
     );
 }

@@ -1020,19 +1020,88 @@ export function applyBudgetMetricsToProjects(
 }
 
 export const PROJECT_BUDGET_METRICS_CHUNK = 40;
+const PROJECT_BUDGET_METRICS_TTL_MS = 30_000;
+type ProjectBudgetMetricsCacheEntry = {
+    value: ProjectBudgetMetricsEntry | null;
+    expiresAt: number;
+};
+const projectBudgetMetricsCache = new Map<string, ProjectBudgetMetricsCacheEntry>();
+const projectBudgetMetricsInflight = new Map<string, Promise<void>>();
 
-export async function fetchProjectsBudgetMetrics(projectIds: string[]): Promise<ProjectBudgetMetricsMap> {
-    const ids = [...new Set(projectIds.map((id) => id.trim()).filter(Boolean))];
-    if (ids.length === 0)
-        return {};
-    const merged: ProjectBudgetMetricsMap = {};
-    for (let i = 0; i < ids.length; i += PROJECT_BUDGET_METRICS_CHUNK) {
-        const chunk = ids.slice(i, i + PROJECT_BUDGET_METRICS_CHUNK);
-        const qs = new URLSearchParams({ ids: chunk.join(',') });
+export function invalidateProjectBudgetMetricsCache(projectIds?: readonly string[]): void {
+    if (!projectIds) {
+        projectBudgetMetricsCache.clear();
+        return;
+    }
+    for (const id of projectIds)
+        projectBudgetMetricsCache.delete(id.trim());
+}
+
+function readCachedProjectBudgetMetric(projectId: string): ProjectBudgetMetricsCacheEntry | null {
+    const cached = projectBudgetMetricsCache.get(projectId);
+    if (!cached)
+        return null;
+    if (cached.expiresAt <= Date.now()) {
+        projectBudgetMetricsCache.delete(projectId);
+        return null;
+    }
+    return cached;
+}
+
+function startProjectBudgetMetricsChunk(chunk: string[]): Promise<void> {
+    const qs = new URLSearchParams({ ids: chunk.join(',') });
+    const job = (async () => {
         const res = await apiFetch(`/api/v1/time-tracking/projects/budget-metrics?${qs}`);
         await throwIfNotOk(res);
         const part = await res.json() as ProjectBudgetMetricsMap;
-        Object.assign(merged, part);
+        const expiresAt = Date.now() + PROJECT_BUDGET_METRICS_TTL_MS;
+        for (const id of chunk) {
+            projectBudgetMetricsCache.set(id, {
+                value: part[id] ?? null,
+                expiresAt,
+            });
+        }
+    })();
+    for (const id of chunk)
+        projectBudgetMetricsInflight.set(id, job);
+    const clear = () => {
+        for (const id of chunk) {
+            if (projectBudgetMetricsInflight.get(id) === job)
+                projectBudgetMetricsInflight.delete(id);
+        }
+    };
+    void job.then(clear, clear);
+    return job;
+}
+
+export async function fetchProjectsBudgetMetrics(projectIds: string[]): Promise<ProjectBudgetMetricsMap> {
+    const ids = [...new Set(projectIds.map((id) => id.trim()).filter(Boolean))].sort();
+    if (ids.length === 0)
+        return {};
+
+    const waiting = new Set<Promise<void>>();
+    const missing: string[] = [];
+    for (const id of ids) {
+        if (readCachedProjectBudgetMetric(id))
+            continue;
+        const pending = projectBudgetMetricsInflight.get(id);
+        if (pending)
+            waiting.add(pending);
+        else
+            missing.push(id);
+    }
+    for (let i = 0; i < missing.length; i += PROJECT_BUDGET_METRICS_CHUNK) {
+        waiting.add(startProjectBudgetMetricsChunk(missing.slice(i, i + PROJECT_BUDGET_METRICS_CHUNK)));
+    }
+
+    if (waiting.size > 0)
+        await Promise.all(waiting);
+
+    const merged: ProjectBudgetMetricsMap = {};
+    for (const id of ids) {
+        const cached = readCachedProjectBudgetMetric(id);
+        if (cached?.value)
+            merged[id] = cached.value;
     }
     return merged;
 }
@@ -1097,8 +1166,10 @@ export async function createClientProject(clientId: string, body: TimeManagerCli
         body: JSON.stringify(projectCreateBody(body)),
     });
     await throwIfNotOk(res);
+    const created = coerceClientProjectRow(await res.json());
     invalidateTimeTrackingListCache();
-    return coerceClientProjectRow(await res.json());
+    invalidateProjectBudgetMetricsCache([created.id]);
+    return created;
 }
 export async function patchClientProject(clientId: string, projectId: string, patch: TimeManagerClientProjectPatchPayload): Promise<TimeManagerClientProjectRow> {
     const payload = projectPatchBody(patch);
@@ -1108,13 +1179,16 @@ export async function patchClientProject(clientId: string, projectId: string, pa
         body: JSON.stringify(payload),
     });
     await throwIfNotOk(res);
+    const updated = coerceClientProjectRow(await res.json());
     invalidateTimeTrackingListCache();
-    return coerceClientProjectRow(await res.json());
+    invalidateProjectBudgetMetricsCache([projectId]);
+    return updated;
 }
 export async function deleteClientProject(clientId: string, projectId: string): Promise<void> {
     const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/projects/${encodeURIComponent(projectId)}`, { method: 'DELETE' });
     await throwIfNotOk(res);
     invalidateTimeTrackingListCache();
+    invalidateProjectBudgetMetricsCache([projectId]);
 }
 export function projectForExpenseToPickerStub(p: TimeTrackingProjectForExpense): TimeManagerClientProjectRow {
     const cur = (p.currency ?? '').trim().toUpperCase();

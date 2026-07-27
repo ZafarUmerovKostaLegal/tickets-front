@@ -22,6 +22,8 @@ export const routes = {
     expenses: '/expenses',
     expensesRequests: '/expenses/requests',
     expensesReport: '/expenses/report',
+    expensesPartners: '/expenses/partners',
+    expensesPartnersReport: '/expenses/partners/report',
     rules: '/rules',
     help: '/help',
     callSchedule: '/call-schedule',

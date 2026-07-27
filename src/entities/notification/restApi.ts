@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { createQueryCache } from '@shared/lib/queryCache';
 import { normalizeNotificationItem } from './normalize';
 import type { NotificationItem } from './types';
 
@@ -11,6 +12,11 @@ export type ListNotificationsParams = {
 const DEFAULT_SKIP = 0;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
+const notificationsListCache = createQueryCache<NotificationItem[]>({ ttlMs: 5_000 });
+
+export function invalidateNotificationsListCache(): void {
+    notificationsListCache.invalidate();
+}
 
 function clampNum(val: unknown, min: number, max: number, fallback: number): number {
     if (typeof val !== 'number' || !Number.isFinite(val))
@@ -18,7 +24,7 @@ function clampNum(val: unknown, min: number, max: number, fallback: number): num
     return Math.max(min, Math.min(max, Math.floor(val)));
 }
 
-export async function listNotificationsRest(params: ListNotificationsParams = {}): Promise<NotificationItem[]> {
+async function fetchNotificationsRest(params: ListNotificationsParams): Promise<NotificationItem[]> {
     const skip = clampNum(params.skip, 0, Number.MAX_SAFE_INTEGER, DEFAULT_SKIP);
     const limit = clampNum(params.limit, 1, MAX_LIMIT, DEFAULT_LIMIT);
     const q = new URLSearchParams({
@@ -51,6 +57,16 @@ export async function listNotificationsRest(params: ListNotificationsParams = {}
     return out;
 }
 
+export async function listNotificationsRest(params: ListNotificationsParams = {}): Promise<NotificationItem[]> {
+    const normalized = {
+        skip: clampNum(params.skip, 0, Number.MAX_SAFE_INTEGER, DEFAULT_SKIP),
+        limit: clampNum(params.limit, 1, MAX_LIMIT, DEFAULT_LIMIT),
+        include_archived: Boolean(params.include_archived),
+    };
+    const key = `${normalized.skip}:${normalized.limit}:${normalized.include_archived}`;
+    return notificationsListCache.fetch(key, () => fetchNotificationsRest(normalized));
+}
+
 export async function getNotificationRest(uuid: string): Promise<NotificationItem> {
     const id = uuid.trim();
     if (!id)
@@ -80,5 +96,6 @@ export async function archiveNotificationRest(uuid: string, isArchived = true): 
     const item = normalizeNotificationItem(JSON.parse(text) as Record<string, unknown>);
     if (!item)
         throw new Error('Invalid response');
+    invalidateNotificationsListCache();
     return item;
 }

@@ -108,6 +108,7 @@ export const enMessages = {
         home: 'Home',
         timeTracking: 'Time tracking',
         expenses: 'Expenses',
+        expensesPartners: 'Partner expenses',
         todo: 'To-do list',
         tickets: 'IT tickets',
         correspondence: 'Correspondence',
@@ -139,6 +140,8 @@ export const enMessages = {
         user: 'User',
         expensesRequests: 'Expense requests',
         expensesReport: 'Expense report',
+        expensesPartners: 'Partner expenses',
+        expensesPartnersReport: 'Partner expense report',
     },
     header: {
         themeLight: 'Light theme',

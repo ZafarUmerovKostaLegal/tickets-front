@@ -108,9 +108,14 @@ export interface ProjectRef {
     id: string;
     name: string;
 }
+export type ExpensesScopeMode = 'company' | 'partner';
+
 export interface ListParams {
     status?: string;
     expenseType?: string;
+    expenseSubtype?: string;
+    scopeMode?: ExpensesScopeMode;
+    partnerUserId?: number;
     isReimbursable?: boolean;
     dateFrom?: string;
     dateTo?: string;

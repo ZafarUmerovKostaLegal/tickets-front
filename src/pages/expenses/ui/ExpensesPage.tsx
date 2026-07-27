@@ -7,8 +7,8 @@ import { AppBackButton, AppHomeLogo, AppPageSettings, DatePicker, Pagination } f
 import { ExpensesFormPanel, type PanelMode } from './ExpensesFormPanel';
 import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
 import { ExpensesReportModal } from '@features/expense-report';
-import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseStatus, ExpenseType, ExpenseCreatedBy, } from '@entities/expenses/model/types';
-import { EXPENSE_REGISTRY_STATUSES, EXPENSE_REGISTRY_STATUS_SET, STATUS_META, TYPE_META, REIMBURSABLE_META, } from '@entities/expenses/model/constants';
+import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseStatus, ExpenseType, ExpenseCreatedBy, PartnerExpenseCategory, } from '@entities/expenses/model/types';
+import { EXPENSE_REGISTRY_STATUSES, EXPENSE_REGISTRY_STATUS_SET, STATUS_META, TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
 import { approveExpense, payExpense, closeExpense, deleteExpense, fetchExpenses, fetchExpenseById, createExpense, updateExpense, submitExpense, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
 import { computeAmountUzsForApi } from '@entities/expenses/model/expenseCurrency';
 import {
@@ -24,14 +24,14 @@ import {
     expensesPeriodFilterLabel,
 } from '@entities/expenses/model/expensesPeriodPresets';
 import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/model/coerceExpense';
-import { getUser } from '@entities/user';
+import { listPartners, loadPublicUsersByIds, type UserPublic } from '@entities/user';
 import { formatExpenseApprovedByLabel, formatExpenseAuthorLabel, mergeExpenseAuthorFromCache, needsAuthorEnrichment, formatPartnerUserLabel, } from '@entities/expenses/model/expenseAuthor';
 import { canViewExpensesRequestsAndReport } from '@entities/expenses/model/expenseModeration';
 import { getCloseExpenseUi, isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, showOwnPendingModerationBlockedHint, resolveExpensePanelMode, showPayExpenseAction, showPendingApprovalModeration, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
 import { ExpensesPageBoundary } from './ExpensesPageBoundary';
 import '@pages/time-tracking/ui/TimeTrackingForms.css';
 import './ExpensesPage.css';
-export type ExpensesPageVariant = 'default' | 'moderationQueue';
+export type ExpensesPageVariant = 'default' | 'moderationQueue' | 'partner';
 export type ExpensesPageProps = {
     variant?: ExpensesPageVariant;
 };
@@ -50,7 +50,7 @@ type TableConfirmState = null | {
     kind: 'delete';
     req: ExpenseRequest;
 };
-type ActiveFilter = 'status' | 'type' | 'reimbursable' | 'period' | 'sort' | null;
+type ActiveFilter = 'status' | 'type' | 'subtype' | 'partner' | 'reimbursable' | 'period' | 'sort' | null;
 
 const SORT_LABELS: Record<ExpensesUiSortBy, string> = {
     createdAt: 'По дате создания',
@@ -136,7 +136,7 @@ function IconDotsVertical() {
       <circle cx="12" cy="19" r="1.85"/>
     </svg>);
 }
-function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserRole, moderationBusyId, onApprove, onRejectClick, onReviseClick, onPay, onCloseLifecycle, onDeleteClick, isActionMenuOpen, onToggleActionMenu, onCloseActionMenu, }: {
+function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserRole, moderationBusyId, onApprove, onRejectClick, onReviseClick, onPay, onCloseLifecycle, onDeleteClick, isActionMenuOpen, onToggleActionMenu, onCloseActionMenu, partnerScope = false, }: {
     req: ExpenseRequest;
     onOpen: (r: ExpenseRequest, opts?: { mode?: 'view' | 'edit' }) => void;
     canModerate: boolean;
@@ -152,9 +152,18 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
     isActionMenuOpen: boolean;
     onToggleActionMenu: () => void;
     onCloseActionMenu: () => void;
+    partnerScope?: boolean;
 }) {
     const typeLabel = TYPE_META[req.expenseType as ExpenseType]?.label ?? req.expenseType;
+    const subtypeLabel = req.expenseType === 'partner_expense'
+        ? getPartnerExpenseSubtypeLabel(req.expenseSubtype)
+        : '';
     const partnerLabel = req.expenseType === 'partner_expense' ? formatPartnerUserLabel(req) : '';
+    const typeCellTitle = [typeLabel, subtypeLabel, partnerLabel].filter(Boolean).join(' · ');
+    const typeCellPrimary = partnerScope && subtypeLabel ? subtypeLabel : typeLabel;
+    const typeCellSecondary = partnerScope
+        ? (partnerLabel || null)
+        : (partnerLabel || (subtypeLabel || null));
     const reimbLabel = req.isReimbursable
         ? REIMBURSABLE_META['reimbursable'].label
         : REIMBURSABLE_META['non_reimbursable'].label;
@@ -248,9 +257,9 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
       <div className="exp-table__td exp-table__td--paydue" role="cell">
         {payDueLabel}
       </div>
-      <div className="exp-table__td exp-table__td--type" role="cell" title={partnerLabel ? `${typeLabel} · ${partnerLabel}` : typeLabel}>
-        {typeLabel}
-        {partnerLabel ? (<span className="exp-table__partner-sub">{partnerLabel}</span>) : null}
+      <div className="exp-table__td exp-table__td--type" role="cell" title={typeCellTitle}>
+        {typeCellPrimary}
+        {typeCellSecondary ? (<span className="exp-table__partner-sub">{typeCellSecondary}</span>) : null}
       </div>
       <div className="exp-table__td exp-table__td--reimb" role="cell">
         <span className={`exp-reimb exp-reimb--${reimbKey}`}>{reimbLabel}</span>
@@ -258,7 +267,7 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
       <div className="exp-table__td exp-table__td--status" role="cell">
         <div className="exp-table__status-tags">
           <StatusBadge status={req.status}/>
-          {req.expenseType === 'partner_expense' && (<span className="exp-card__partner-pill exp-card__partner-pill--table" title="Расход партнёра · без согласования модератором">
+          {req.expenseType === 'partner_expense' && !partnerScope && (<span className="exp-card__partner-pill exp-card__partner-pill--table" title="Расход партнёра · без согласования модератором">
               Расход партнёра
             </span>)}
         </div>
@@ -543,10 +552,15 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [loadKey, setLoadKey] = useState(0);
     const [expenseTableMenuForId, setExpenseTableMenuForId] = useState<string | null>(null);
     const isModerationQueue = variant === 'moderationQueue';
+    const isPartnerScope = variant === 'partner';
+    const scopeMode = isPartnerScope ? 'partner' as const : (isModerationQueue ? undefined : 'company' as const);
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState<ExpenseStatus | ''>('');
     const [filterType, setFilterType] = useState<ExpenseType | ''>('');
+    const [filterSubtype, setFilterSubtype] = useState<PartnerExpenseCategory | ''>('');
+    const [filterPartnerUserId, setFilterPartnerUserId] = useState<number | ''>('');
+    const [partnerFilterOptions, setPartnerFilterOptions] = useState<UserPublic[]>([]);
     const [filterReimb, setFilterReimb] = useState<'reimbursable' | 'non_reimbursable' | ''>('');
     const [filterPeriod, setFilterPeriod] = useState<ExpensesUiFilterPeriod>('all');
     const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -568,16 +582,37 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         debouncedSearch,
         filterStatus,
         filterType,
+        filterSubtype,
+        filterPartnerUserId,
         filterReimb,
         filterPeriod,
         filterDateFrom,
         filterDateTo,
         filterSort,
         isModerationQueue,
-    ].join('\0'), [debouncedSearch, filterStatus, filterType, filterReimb, filterPeriod, filterDateFrom, filterDateTo, filterSort, isModerationQueue]);
+        isPartnerScope,
+        scopeMode ?? '',
+    ].join('\0'), [debouncedSearch, filterStatus, filterType, filterSubtype, filterPartnerUserId, filterReimb, filterPeriod, filterDateFrom, filterDateTo, filterSort, isModerationQueue, isPartnerScope, scopeMode]);
     useEffect(() => {
         setExpenseTableMenuForId(null);
     }, [listPage, filterDepsKey, loadKey]);
+    useEffect(() => {
+        if (!isPartnerScope)
+            return;
+        let cancelled = false;
+        void listPartners()
+            .then((rows) => {
+                if (!cancelled)
+                    setPartnerFilterOptions(Array.isArray(rows) ? rows : []);
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setPartnerFilterOptions([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [isPartnerScope]);
     const filterDepsKeyRef = useRef<string | null>(null);
     useLayoutEffect(() => {
         if (filterDepsKeyRef.current === null) {
@@ -605,6 +640,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     }, [listPage]);
     useEffect(() => {
         let cancelled = false;
+        const controller = new AbortController();
         setLoadError(null);
         if (isFirstListFetchRef.current)
             setIsLoading(true);
@@ -614,6 +650,8 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             search: debouncedSearch,
             filterStatus,
             filterType,
+            filterSubtype,
+            filterPartnerUserId,
             filterReimb,
             filterPeriod,
             filterDateFrom,
@@ -621,8 +659,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             sortBy: filterSort,
             page: listPage,
             pageSize: EXPENSES_LIST_PAGE_SIZE,
+            scopeMode,
         });
-        fetchExpenses(params)
+        fetchExpenses(params, { signal: controller.signal })
             .then(data => {
             if (cancelled)
                 return;
@@ -633,7 +672,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             setListFetchPending(false);
         })
             .catch(err => {
-            if (cancelled)
+            if (cancelled || (err instanceof Error && err.name === 'AbortError'))
                 return;
             setListTotal(null);
             setLoadError(err instanceof Error ? err.message : 'Ошибка загрузки данных');
@@ -643,14 +682,19 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         });
         return () => {
             cancelled = true;
+            controller.abort();
         };
     }, [
         loadKey,
         listPage,
         isModerationQueue,
+        isPartnerScope,
+        scopeMode,
         debouncedSearch,
         filterStatus,
         filterType,
+        filterSubtype,
+        filterPartnerUserId,
         filterReimb,
         filterPeriod,
         filterDateFrom,
@@ -733,24 +777,23 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         if (pending.length === 0)
             return;
         let cancelled = false;
-        Promise.all(pending.map(id => getUser(id)
-            .then((u): ExpenseCreatedBy => ({
-            id: u.id,
-            displayName: u.display_name,
-            email: u.email,
-            picture: u.picture,
-            position: u.position,
-        }))
-            .catch(() => {
-            authorFetchStartedRef.current.delete(id);
-            return null;
-        }))).then(entries => {
+        void loadPublicUsersByIds(pending).then((loaded) => {
             if (cancelled)
                 return;
             const next: Record<number, ExpenseCreatedBy> = {};
-            for (const e of entries) {
-                if (e)
-                    next[e.id] = e;
+            for (const id of pending) {
+                const user = loaded.get(id);
+                if (!user) {
+                    authorFetchStartedRef.current.delete(id);
+                    continue;
+                }
+                next[id] = {
+                    id: user.id,
+                    displayName: user.display_name,
+                    email: user.email,
+                    picture: user.picture,
+                    position: user.position,
+                };
             }
             if (Object.keys(next).length > 0) {
                 setAuthorCache(prev => ({ ...prev, ...next }));
@@ -1067,6 +1110,8 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const resetFilters = useCallback(() => {
         setFilterStatus('');
         setFilterType('');
+        setFilterSubtype('');
+        setFilterPartnerUserId('');
         setFilterReimb('');
         setFilterPeriod('all');
         setFilterDateFrom('');
@@ -1171,13 +1216,22 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     }), { uzs: 0, usd: 0 }), [filtered]);
     const hasFilters = isModerationQueue
         ? !!(filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
-        : !!(filterStatus || filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search);
+        : isPartnerScope
+            ? !!(filterStatus || filterSubtype || filterPartnerUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
+            : !!(filterStatus || filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search);
     const activeFilterChipCount = useMemo(() => {
         let n = 0;
         if (!isModerationQueue && filterStatus)
             n++;
-        if (filterType)
+        if (isPartnerScope) {
+            if (filterSubtype)
+                n++;
+            if (filterPartnerUserId)
+                n++;
+        }
+        else if (filterType) {
             n++;
+        }
         if (filterReimb)
             n++;
         if (filterPeriod !== 'all')
@@ -1185,23 +1239,19 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         if (filterSort !== 'createdAt')
             n++;
         return n;
-    }, [isModerationQueue, filterStatus, filterType, filterReimb, filterPeriod, filterSort]);
+    }, [isModerationQueue, isPartnerScope, filterStatus, filterType, filterSubtype, filterPartnerUserId, filterReimb, filterPeriod, filterSort]);
     const periodFilterLabel = useMemo(
         () => expensesPeriodFilterLabel(filterPeriod, filterDateFrom, filterDateTo),
         [filterPeriod, filterDateFrom, filterDateTo],
     );
     const statuses: ExpenseStatus[] = EXPENSE_REGISTRY_STATUSES;
-    const types: ExpenseType[] = [
-        'transport',
-        'food',
-        'accommodation',
-        'purchase',
-        'services',
-        'entertainment',
-        'client_expense',
-        'partner_expense',
-        'other',
-    ];
+    const types: ExpenseType[] = [...COMPANY_EXPENSE_TYPE_CODES];
+    const partnerFilterLabel = useMemo(() => {
+        if (!filterPartnerUserId)
+            return 'Партнёр';
+        const p = partnerFilterOptions.find(x => x.id === filterPartnerUserId);
+        return p?.display_name?.trim() || p?.email || `Партнёр #${filterPartnerUserId}`;
+    }, [filterPartnerUserId, partnerFilterOptions]);
     return (<div className="expenses-page">
       <main className="expenses-page__main">
         <header className="expenses-page__header">
@@ -1211,16 +1261,31 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
               <AppHomeLogo withSeparator />
               <div className="expenses-page__header-titles">
                 <h1 className="expenses-page__title">
-                  {isModerationQueue ? 'Заявки на согласование' : 'Расходы компании'}
+                  {isModerationQueue
+                    ? 'Заявки на согласование'
+                    : isPartnerScope
+                      ? 'Расходы партнёров'
+                      : 'Расходы компании'}
                 </h1>
-                {((canModerate && !isModerationQueue) || isModerationQueue) && (<div className="exp-header-queue-wrap">
-                    {canModerate && !isModerationQueue && (<>
+                {((canModerate && !isModerationQueue) || isModerationQueue || isPartnerScope) && (<div className="exp-header-queue-wrap">
+                    {canModerate && !isModerationQueue && !isPartnerScope && (<>
                         <NavLink to={routes.expensesRequests} className="exp-queue-nav">
                           На согласование
                         </NavLink>
                         <NavLink to={routes.expensesReport} className="exp-queue-nav">
                           Аналитика
                         </NavLink>
+                        <NavLink to={routes.expensesPartners} className="exp-queue-nav">
+                          Расходы партнёров
+                        </NavLink>
+                      </>)}
+                    {isPartnerScope && (<>
+                        <NavLink to={routes.expenses} className="exp-queue-nav">
+                          Расходы компании
+                        </NavLink>
+                        {canModerate && (<NavLink to={routes.expensesPartnersReport} className="exp-queue-nav">
+                          Отчёт
+                        </NavLink>)}
                       </>)}
                     {isModerationQueue && (<NavLink to={routes.expenses} className="exp-queue-nav">
                         Утверждённые расходы
@@ -1244,9 +1309,15 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
           <div className={`tt-settings__actions-row tt-settings__actions-row--clients exp-tt-toolbar${isLoading || listFetchPending ? ' exp-tt-toolbar--loading' : ''}`}>
             <div className="tt-settings__toolbar-left tt-settings__toolbar-left--inline">
               {!isModerationQueue && (<button type="button" className="tt-settings__btn tt-settings__btn--primary" onClick={handleCreate}>
-                  + Создать заявку
+                  {isPartnerScope ? '+ Записать расход' : '+ Создать заявку'}
                 </button>)}
-              {canModerate && (<button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={() => setIsReportOpen(true)} title="Создать отчёт Excel" aria-label="Создать отчёт Excel">
+              {canModerate && (<button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={() => {
+                    if (isPartnerScope) {
+                        navigate(routes.expensesPartnersReport);
+                        return;
+                    }
+                    setIsReportOpen(true);
+                }} title="Создать отчёт Excel" aria-label="Создать отчёт Excel">
                   Отчёт Excel
                 </button>)}
             </div>
@@ -1292,14 +1363,32 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 </FilterDrop>)}
 
               
-              <FilterDrop label={filterType ? TYPE_META[filterType].label : 'Тип расхода'} active={!!filterType} isOpen={openFilter === 'type'} onToggle={() => toggleFilter('type')}>
+              {!isPartnerScope && (<FilterDrop label={filterType ? TYPE_META[filterType].label : 'Тип расхода'} active={!!filterType} isOpen={openFilter === 'type'} onToggle={() => toggleFilter('type')}>
                 <button className={`exp-filter__opt${!filterType ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(''); setOpenFilter(null); }}>
                   Все типы
                 </button>
                 {types.map(t => (<button key={t} className={`exp-filter__opt${filterType === t ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(t); setOpenFilter(null); }}>
                     {TYPE_META[t].label}
                   </button>))}
-              </FilterDrop>
+              </FilterDrop>)}
+
+              {isPartnerScope && (<FilterDrop label={filterSubtype ? getPartnerExpenseSubtypeLabel(filterSubtype) : 'Категория'} active={!!filterSubtype} isOpen={openFilter === 'subtype'} onToggle={() => toggleFilter('subtype')}>
+                <button className={`exp-filter__opt${!filterSubtype ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSubtype(''); setOpenFilter(null); }}>
+                  Все категории
+                </button>
+                {PARTNER_EXPENSE_CATEGORIES.map(c => (<button key={c.value} className={`exp-filter__opt${filterSubtype === c.value ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSubtype(c.value); setOpenFilter(null); }}>
+                    {c.label}
+                  </button>))}
+              </FilterDrop>)}
+
+              {isPartnerScope && (<FilterDrop label={partnerFilterLabel} active={!!filterPartnerUserId} isOpen={openFilter === 'partner'} onToggle={() => toggleFilter('partner')}>
+                <button className={`exp-filter__opt${!filterPartnerUserId ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(''); setOpenFilter(null); }}>
+                  Все партнёры
+                </button>
+                {partnerFilterOptions.map(p => (<button key={p.id} className={`exp-filter__opt${filterPartnerUserId === p.id ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(p.id); setOpenFilter(null); }}>
+                    {p.display_name?.trim() || p.email || `#${p.id}`}
+                  </button>))}
+              </FilterDrop>)}
 
               
               <FilterDrop label={filterReimb ? REIMBURSABLE_META[filterReimb].label : 'Возмещение'} active={!!filterReimb} isOpen={openFilter === 'reimbursable'} onToggle={() => toggleFilter('reimbursable')}>
@@ -1427,7 +1516,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                             Срок оплаты
                           </div>
                           <div className="exp-table__th exp-table__th--type" role="columnheader">
-                            Тип
+                            {isPartnerScope ? 'Категория' : 'Тип'}
                           </div>
                           <div className="exp-table__th exp-table__th--reimb" role="columnheader">
                             Возмещение
@@ -1445,7 +1534,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                             <span className="exp-table__sr-only">Действия</span>
                           </div>
                         </div>
-                        {filtered.map(r => (<ExpenseTableRow key={r.id} req={r} onOpen={handleOpenReq} canModerate={canModerate} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} moderationBusyId={tableModerationBusyId} onApprove={handleTableApprove} onRejectClick={openTableReject} onReviseClick={openTableRevise} onPay={handleTablePay} onCloseLifecycle={handleTableCloseLifecycle} onDeleteClick={handleTableDeleteClick} isActionMenuOpen={expenseTableMenuForId === r.id} onToggleActionMenu={() => setExpenseTableMenuForId(prev => prev === r.id ? null : r.id)} onCloseActionMenu={() => setExpenseTableMenuForId(null)}/>))}
+                        {filtered.map(r => (<ExpenseTableRow key={r.id} req={r} onOpen={handleOpenReq} canModerate={canModerate} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} moderationBusyId={tableModerationBusyId} onApprove={handleTableApprove} onRejectClick={openTableReject} onReviseClick={openTableRevise} onPay={handleTablePay} onCloseLifecycle={handleTableCloseLifecycle} onDeleteClick={handleTableDeleteClick} isActionMenuOpen={expenseTableMenuForId === r.id} onToggleActionMenu={() => setExpenseTableMenuForId(prev => prev === r.id ? null : r.id)} onCloseActionMenu={() => setExpenseTableMenuForId(null)} partnerScope={isPartnerScope}/>))}
                       </div>
                     </div>
                   {listTotal != null && listTotal > 0 ? (<Pagination className="exp-cards-pager" page={listPage} totalCount={listTotal} pageSize={EXPENSES_LIST_PAGE_SIZE} onPageChange={setListPage} loading={listFetchPending}/>) : null}
@@ -1509,9 +1598,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
       <ExpensesFormPanel isOpen={isPanelOpen} mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
             setEditingReq(r);
             setRequests(prev => prev.map(x => (x.id === r.id ? r : x)));
-        }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null}/>
+        }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} formScope={isPartnerScope ? 'partner' : 'company'}/>
 
-      <ExpensesReportModal isOpen={canModerate && isReportOpen} requests={requestsForUi} onClose={() => setIsReportOpen(false)}/>
+      <ExpensesReportModal isOpen={canModerate && isReportOpen && !isPartnerScope} requests={requestsForUi} onClose={() => setIsReportOpen(false)}/>
     </div>);
 }
 export function ExpensesPage(props: ExpensesPageProps) {

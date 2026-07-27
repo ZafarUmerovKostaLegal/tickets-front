@@ -15,8 +15,8 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [roleFilter, setRoleFilter] = useState<string>('all');
-    const [includeArchived, setIncludeArchived] = useState(false);
+    const [roleFilter, setRoleFilterState] = useState<string>('all');
+    const [includeArchived, setIncludeArchivedState] = useState(false);
     const [userActionError, setUserActionError] = useState<string | null>(null);
     const [savingUserId, setSavingUserId] = useState<number | null>(null);
     const [pendingUserFieldChange, setPendingUserFieldChange] = useState<AdminUserFieldPendingConfirm>(null);
@@ -30,13 +30,20 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
     });
 
     useEffect(() => {
-        const t = window.setTimeout(() => setDebouncedSearch(search), 300);
+        const t = window.setTimeout(() => {
+            setDebouncedSearch(search);
+            setPage(1);
+        }, 300);
         return () => window.clearTimeout(t);
     }, [search]);
-
-    useEffect(() => {
+    const setRoleFilter = useCallback((value: string) => {
+        setRoleFilterState(value);
         setPage(1);
-    }, [debouncedSearch, roleFilter, includeArchived]);
+    }, []);
+    const setIncludeArchived = useCallback((value: boolean) => {
+        setIncludeArchivedState(value);
+        setPage(1);
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -75,7 +82,7 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
         return [...canonical, ...extra];
     }, [apiPositions, users]);
 
-    const loadUsers = useCallback(async () => {
+    const loadUsers = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         setError(null);
         try {
@@ -85,7 +92,7 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
                 limit: ADMIN_USERS_PAGE_SIZE,
                 q: debouncedSearch,
                 role: roleFilter,
-            });
+            }, signal);
             setUsers(result.items);
             setTotalCount(result.total);
             setMetrics({
@@ -97,15 +104,20 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
             });
         }
         catch (e) {
+            if (signal?.aborted)
+                return;
             setError(e instanceof Error ? e.message : 'Не удалось загрузить пользователей');
         }
         finally {
-            setLoading(false);
+            if (!signal?.aborted)
+                setLoading(false);
         }
     }, [includeArchived, page, debouncedSearch, roleFilter]);
 
     useEffect(() => {
-        loadUsers();
+        const controller = new AbortController();
+        void loadUsers(controller.signal);
+        return () => controller.abort();
     }, [loadUsers]);
 
     const applyUserUpdate = useCallback(async (user: User, action: () => Promise<User>) => {

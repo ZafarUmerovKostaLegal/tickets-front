@@ -417,7 +417,7 @@ export function readPartnerConfirmationBlocked(o: Record<string, unknown>): bool
 
 const invoiceApiFetchInit: RequestInit = { cache: 'no-store' };
 
-export async function listInvoices(params?: InvoiceListParams): Promise<InvoicesListResponse> {
+export async function listInvoices(params?: InvoiceListParams, signal?: AbortSignal): Promise<InvoicesListResponse> {
     const normalizeItem = (row: unknown): InvoiceDto => {
         try {
             return normalizeInvoiceDto(row);
@@ -426,7 +426,10 @@ export async function listInvoices(params?: InvoiceListParams): Promise<Invoices
             return row as InvoiceDto;
         }
     };
-    const res = await apiFetch(`/api/v1/time-tracking/invoices${buildInvoiceListQs(params ?? {})}`, invoiceApiFetchInit);
+    const res = await apiFetch(`/api/v1/time-tracking/invoices${buildInvoiceListQs(params ?? {})}`, {
+        ...invoiceApiFetchInit,
+        signal,
+    });
     await throwIfNotOk(res);
     const raw = await res.json();
     if (Array.isArray(raw)) {
@@ -458,8 +461,11 @@ export async function listInvoices(params?: InvoiceListParams): Promise<Invoices
         ...(partnerConfirmationBlocked ? { partnerConfirmationBlocked: true } : {}),
     };
 }
-export async function getInvoicesAggregatedStats(params?: Omit<InvoiceListParams, 'limit' | 'offset' | 'includeTotalCount'>): Promise<InvoicesAggregatedStats> {
-    const res = await apiFetch(`/api/v1/time-tracking/invoices/stats${buildInvoiceStatsQs(params ?? {})}`, invoiceApiFetchInit);
+export async function getInvoicesAggregatedStats(params?: Omit<InvoiceListParams, 'limit' | 'offset' | 'includeTotalCount'>, signal?: AbortSignal): Promise<InvoicesAggregatedStats> {
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/stats${buildInvoiceStatsQs(params ?? {})}`, {
+        ...invoiceApiFetchInit,
+        signal,
+    });
     await throwIfNotOk(res);
     const raw = await res.json();
     return parseInvoicesAggregatedStats(raw);
@@ -469,7 +475,7 @@ export const INVOICE_AGGR_BALANCE_EPS = 1e-6;
 export const INVOICE_AGGR_PAGE = 500;
 export const INVOICE_AGGR_MAX_OFFSET = 250_000;
 
-export async function fetchAllInvoices(params?: Omit<InvoiceListParams, 'limit' | 'offset' | 'includeTotalCount'>): Promise<InvoiceDto[]> {
+export async function fetchAllInvoices(params?: Omit<InvoiceListParams, 'limit' | 'offset' | 'includeTotalCount'>, signal?: AbortSignal): Promise<InvoiceDto[]> {
     const p = params ?? {};
     const all: InvoiceDto[] = [];
     let offset = 0;
@@ -479,7 +485,7 @@ export async function fetchAllInvoices(params?: Omit<InvoiceListParams, 'limit' 
             limit: INVOICE_AGGR_PAGE,
             offset,
             includeTotalCount: false,
-        });
+        }, signal);
         all.push(...r.items);
         if (r.items.length < INVOICE_AGGR_PAGE)
             break;
@@ -490,7 +496,7 @@ export async function fetchAllInvoices(params?: Omit<InvoiceListParams, 'limit' 
     return all;
 }
 
-export async function aggregateInvoicesMoneyExcludingCanceled(params?: Omit<InvoiceListParams, 'limit' | 'offset' | 'includeTotalCount'>): Promise<{
+export async function aggregateInvoicesMoneyExcludingCanceled(params?: Omit<InvoiceListParams, 'limit' | 'offset' | 'includeTotalCount'>, signal?: AbortSignal): Promise<{
     byCurrency: Record<string, InvoicesStatsCurrencyRow>;
     unpaidInvoicesCount: number;
     openBalanceDue: number;
@@ -499,7 +505,7 @@ export async function aggregateInvoicesMoneyExcludingCanceled(params?: Omit<Invo
     const byCurrency: Record<string, InvoicesStatsCurrencyRow> = {};
     let unpaidInvoicesCount = 0;
     let openBalanceDue = 0;
-    const invoices = await fetchAllInvoices(p);
+    const invoices = await fetchAllInvoices(p, signal);
     for (const inv of invoices) {
         const st = String(inv.status ?? '').toLowerCase();
         if (st === 'canceled' || st === 'cancelled')

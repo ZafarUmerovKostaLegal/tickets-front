@@ -96,14 +96,15 @@ function collectMissing(userIds: readonly number[]): number[] {
 
 export async function ensurePublicUsersLoaded(userIds: readonly number[]): Promise<void> {
     const toLoad = collectMissing(userIds);
+    const waiting = new Set<Promise<void>>();
+    for (const id of userIds) {
+        const pending = inflight.get(Number(id));
+        if (pending)
+            waiting.add(pending);
+    }
+
     if (toLoad.length === 0) {
-        const waiting: Promise<void>[] = [];
-        for (const id of userIds) {
-            const p = inflight.get(Number(id));
-            if (p)
-                waiting.push(p);
-        }
-        if (waiting.length > 0)
+        if (waiting.size > 0)
             await Promise.allSettled(waiting);
         return;
     }
@@ -121,8 +122,9 @@ export async function ensurePublicUsersLoaded(userIds: readonly number[]): Promi
 
     for (const id of toLoad)
         inflight.set(id, job);
+    waiting.add(job);
     try {
-        await job;
+        await Promise.allSettled(waiting);
     }
     finally {
         for (const id of toLoad)

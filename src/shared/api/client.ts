@@ -9,9 +9,16 @@ type RequestInitAuth = RequestInit & {
 
 type InflightGet = {
     promise: Promise<Response>;
+    controller: AbortController;
+    consumers: number;
+    settled: boolean;
+    abortTimer?: ReturnType<typeof setTimeout>;
+    evictionTimer?: ReturnType<typeof setTimeout>;
 };
 
 const inflightGets = new Map<string, InflightGet>();
+const GET_ABORT_GRACE_MS = 75;
+const GET_REUSE_WINDOW_MS = 250;
 let mutationGeneration = 0;
 
 function normalizedMethod(init: RequestInit): string {
@@ -35,38 +42,156 @@ function getDedupeKey(url: string, init: RequestInit, headers: Headers): string 
     });
 }
 
+function abortError(signal?: AbortSignal): unknown {
+    if (signal?.reason !== undefined)
+        return signal.reason;
+    return new DOMException('The operation was aborted.', 'AbortError');
+}
+
+function cancelUnusedResponse(response: Response): void {
+    queueMicrotask(() => {
+        void response.body?.cancel().catch(() => { });
+    });
+}
+
+function evictGet(key: string, entry: InflightGet, response?: Response): void {
+    if (inflightGets.get(key) === entry)
+        inflightGets.delete(key);
+    if (entry.abortTimer !== undefined)
+        clearTimeout(entry.abortTimer);
+    if (entry.evictionTimer !== undefined)
+        clearTimeout(entry.evictionTimer);
+    if (response)
+        cancelUnusedResponse(response);
+}
+
+function scheduleUnusedGetAbort(key: string, entry: InflightGet): void {
+    if (entry.consumers !== 0 || entry.settled || entry.abortTimer !== undefined)
+        return;
+    entry.abortTimer = setTimeout(() => {
+        entry.abortTimer = undefined;
+        if (entry.consumers !== 0 || entry.settled)
+            return;
+        if (inflightGets.get(key) === entry)
+            inflightGets.delete(key);
+        entry.controller.abort();
+    }, GET_ABORT_GRACE_MS);
+}
+
+function subscribeToGet(key: string, entry: InflightGet, signal?: AbortSignal): Promise<Response> {
+    if (signal?.aborted)
+        return Promise.reject(abortError(signal));
+
+    entry.consumers += 1;
+    if (entry.abortTimer !== undefined) {
+        clearTimeout(entry.abortTimer);
+        entry.abortTimer = undefined;
+    }
+
+    return new Promise<Response>((resolve, reject) => {
+        let finished = false;
+
+        const release = () => {
+            if (finished)
+                return false;
+            finished = true;
+            signal?.removeEventListener('abort', onAbort);
+            entry.consumers = Math.max(0, entry.consumers - 1);
+            scheduleUnusedGetAbort(key, entry);
+            return true;
+        };
+        const onAbort = () => {
+            if (!release())
+                return;
+            reject(abortError(signal));
+        };
+
+        signal?.addEventListener('abort', onAbort, { once: true });
+        entry.promise.then(
+            (response) => {
+                if (!release())
+                    return;
+                try {
+                    resolve(response.clone());
+                }
+                catch (error) {
+                    reject(error);
+                }
+            },
+            (error) => {
+                if (!release())
+                    return;
+                reject(error);
+            },
+        );
+    });
+}
+
+function startGet(url: string, init: RequestInit, headers: Headers, key: string, reuseWindowMs: number): InflightGet {
+    const controller = new AbortController();
+    const { signal: _callerSignal, ...requestInit } = init;
+    const promise = fetch(url, {
+        ...requestInit,
+        headers,
+        credentials: 'include',
+        signal: controller.signal,
+    });
+    const entry: InflightGet = {
+        promise,
+        controller,
+        consumers: 0,
+        settled: false,
+    };
+    inflightGets.set(key, entry);
+    void promise.then(
+        (response) => {
+            entry.settled = true;
+            if (!response.ok || reuseWindowMs <= 0) {
+                evictGet(key, entry, response);
+                return;
+            }
+            entry.evictionTimer = setTimeout(
+                () => evictGet(key, entry, response),
+                reuseWindowMs,
+            );
+        },
+        () => {
+            entry.settled = true;
+            evictGet(key, entry);
+        },
+    );
+    return entry;
+}
+
+function invalidateSettledGetReuse(): void {
+    for (const [key, entry] of inflightGets) {
+        if (!entry.settled)
+            continue;
+        void entry.promise.then(
+            (response) => evictGet(key, entry, response),
+            () => evictGet(key, entry),
+        );
+    }
+}
+
+export function invalidateApiGetReuse(): void {
+    mutationGeneration += 1;
+    invalidateSettledGetReuse();
+}
+
 function fetchWithGetDedupe(url: string, init: RequestInit, headers: Headers): Promise<Response> {
     const method = normalizedMethod(init);
-    if (method !== 'GET' || init.signal != null || init.body != null) {
+    if (method !== 'GET' || init.body != null) {
         if (method !== 'GET' && method !== 'HEAD')
-            mutationGeneration += 1;
+            invalidateApiGetReuse();
         return fetch(url, { ...init, headers, credentials: 'include' });
     }
 
     const key = getDedupeKey(url, init, headers);
     let entry = inflightGets.get(key);
-    if (!entry) {
-        const promise = fetch(url, { ...init, headers, credentials: 'include' });
-        entry = { promise };
-        inflightGets.set(key, entry);
-        const current = entry;
-        void promise.then(
-            (response) => {
-                if (inflightGets.get(key) === current)
-                    inflightGets.delete(key);
-                // Every consumer receives a clone. Cancel the unused source
-                // branch after all promise continuations had a chance to clone.
-                queueMicrotask(() => {
-                    void response.body?.cancel().catch(() => { });
-                });
-            },
-            () => {
-                if (inflightGets.get(key) === current)
-                    inflightGets.delete(key);
-            },
-        );
-    }
-    return entry.promise.then((response) => response.clone());
+    if (!entry)
+        entry = startGet(url, init, headers, key, init.cache === 'no-store' ? 0 : GET_REUSE_WINDOW_MS);
+    return subscribeToGet(key, entry, init.signal ?? undefined);
 }
 
 export async function apiFetch(path: string, init: RequestInitAuth = {}): Promise<Response> {

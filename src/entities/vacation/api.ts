@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { createQueryCache } from '@shared/lib/queryCache';
 import { fetchAttendanceRangeReport, fetchDailyAttendanceReport, type AttendanceRangeReportResponse } from '@entities/attendance';
 import type { DailyAttendanceItem } from '@entities/attendance';
 
@@ -9,37 +10,16 @@ const DAILY_MARKER_CONCURRENCY = 8;
 const DAILY_MARKER_FETCH_TIMEOUT_MS = 30_000;
 
 const ATTENDANCE_MARKERS_CACHE_TTL_MS = 10 * 60 * 1000;
-
-type MarkersCache = {
-    key: string;
-    markers: VacationAttendanceMarkerApi[];
-    expiresAt: number;
-};
-
-let _markersCache: MarkersCache | null = null;
+const attendanceMarkersCache = createQueryCache<VacationAttendanceMarkerApi[]>({
+    ttlMs: ATTENDANCE_MARKERS_CACHE_TTL_MS,
+    maxEntries: 8,
+});
 
 function makeMarkersCacheKey(dateFrom: string, dateTo: string): string {
     return `${dateFrom}__${dateTo}`;
 }
-function getCachedMarkers(dateFrom: string, dateTo: string): VacationAttendanceMarkerApi[] | null {
-    if (!_markersCache)
-        return null;
-    if (_markersCache.key !== makeMarkersCacheKey(dateFrom, dateTo))
-        return null;
-    if (Date.now() > _markersCache.expiresAt)
-        return null;
-    return _markersCache.markers;
-}
-function setCachedMarkers(dateFrom: string, dateTo: string, markers: VacationAttendanceMarkerApi[]): void {
-    _markersCache = {
-        key: makeMarkersCacheKey(dateFrom, dateTo),
-        markers,
-        expiresAt: Date.now() + ATTENDANCE_MARKERS_CACHE_TTL_MS,
-    };
-}
-
 export function invalidateAttendanceMarkersCache(): void {
-    _markersCache = null;
+    attendanceMarkersCache.invalidate();
 }
 
 function vacationApiFetch(path: string, init?: Parameters<typeof apiFetch>[1]): Promise<Response> {
@@ -396,28 +376,14 @@ export async function listVacationAttendanceMarkers(dateFrom: string, dateTo: st
     if (from > to)
         return [];
 
-    const cached = getCachedMarkers(dateFrom, dateTo);
-    if (cached !== null)
-        return cached;
-
-    let markers: VacationAttendanceMarkerApi[] = [];
-
-    try {
-        markers = await fetchVacationAttendanceMarkersRange(dateFrom, dateTo);
-        setCachedMarkers(dateFrom, dateTo, markers);
-        return markers;
-    }
-    catch {
-    }
-
-    try {
-        markers = await fetchVacationAttendanceMarkersDaily(dateFrom, dateTo);
-        setCachedMarkers(dateFrom, dateTo, markers);
-        return markers;
-    }
-    catch {
-        return [];
-    }
+    return attendanceMarkersCache.fetch(makeMarkersCacheKey(dateFrom, dateTo), async () => {
+        try {
+            return await fetchVacationAttendanceMarkersRange(dateFrom, dateTo);
+        }
+        catch {
+            return fetchVacationAttendanceMarkersDaily(dateFrom, dateTo);
+        }
+    }).catch(() => []);
 }
 export type VacationAbsenceDayItemApi = {
     id?: number;

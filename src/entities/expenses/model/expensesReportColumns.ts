@@ -1,12 +1,31 @@
 import type { ExpenseRequest, ExpenseStatus, ExpenseType } from './types';
-import { STATUS_META, TYPE_META, PAYMENT_META, REIMBURSABLE_META } from './constants';
+import { STATUS_META, TYPE_META, PAYMENT_META, REIMBURSABLE_META, getPartnerExpenseSubtypeLabel } from './constants';
 import { asExpenseNumber } from './coerceExpense';
-import { formatExpenseAuthorExport } from './expenseAuthor';
-export type ExpenseReportColumnId = 'expenseDate' | 'description' | 'expenseType' | 'status' | 'amountUzs' | 'equivalentUsd' | 'isReimbursable' | 'paymentMethod' | 'vendor' | 'projectId' | 'comment' | 'author' | 'createdAt' | 'paymentDeadline' | 'businessPurpose' | 'id';
+import { formatExpenseAuthorExport, formatPartnerUserLabel } from './expenseAuthor';
+export type ExpenseReportColumnId =
+    | 'expenseDate'
+    | 'description'
+    | 'expenseType'
+    | 'expenseSubtype'
+    | 'partnerUser'
+    | 'status'
+    | 'amountUzs'
+    | 'equivalentUsd'
+    | 'isReimbursable'
+    | 'paymentMethod'
+    | 'vendor'
+    | 'projectId'
+    | 'comment'
+    | 'author'
+    | 'createdAt'
+    | 'paymentDeadline'
+    | 'businessPurpose'
+    | 'id';
 export type ExpenseReportColumnDef = {
     id: ExpenseReportColumnId;
     label: string;
     defaultVisible: boolean;
+    partnerDefaultVisible?: boolean;
     minWidth?: number;
     value: (r: ExpenseRequest) => string;
 };
@@ -48,8 +67,25 @@ export const EXPENSE_REPORT_COLUMNS: ExpenseReportColumnDef[] = [
         id: 'expenseType',
         label: 'Тип',
         defaultVisible: true,
+        partnerDefaultVisible: false,
         minWidth: 130,
         value: r => TYPE_META[r.expenseType as ExpenseType]?.label ?? r.expenseType,
+    },
+    {
+        id: 'expenseSubtype',
+        label: 'Категория партнёра',
+        defaultVisible: false,
+        partnerDefaultVisible: true,
+        minWidth: 160,
+        value: r => getPartnerExpenseSubtypeLabel(r.expenseSubtype),
+    },
+    {
+        id: 'partnerUser',
+        label: 'Партнёр',
+        defaultVisible: false,
+        partnerDefaultVisible: true,
+        minWidth: 180,
+        value: r => formatPartnerUserLabel(r),
     },
     {
         id: 'status',
@@ -142,15 +178,17 @@ export const EXPENSE_REPORT_COLUMNS: ExpenseReportColumnDef[] = [
     },
 ];
 const COL_MAP = new Map(EXPENSE_REPORT_COLUMNS.map(c => [c.id, c]));
-export function getDefaultVisibleColumnIds(): ExpenseReportColumnId[] {
-    return EXPENSE_REPORT_COLUMNS.filter(c => c.defaultVisible).map(c => c.id);
+export function getDefaultVisibleColumnIds(scope: 'company' | 'partner' = 'company'): ExpenseReportColumnId[] {
+    return EXPENSE_REPORT_COLUMNS
+        .filter(c => (scope === 'partner' ? (c.partnerDefaultVisible ?? c.defaultVisible) : c.defaultVisible))
+        .map(c => c.id);
 }
-export function normalizeVisibleColumnIds(ids: unknown): ExpenseReportColumnId[] {
+export function normalizeVisibleColumnIds(ids: unknown, scope: 'company' | 'partner' = 'company'): ExpenseReportColumnId[] {
     if (!Array.isArray(ids))
-        return getDefaultVisibleColumnIds();
+        return getDefaultVisibleColumnIds(scope);
     const allowed = new Set(EXPENSE_REPORT_COLUMNS.map(c => c.id));
     const out = ids.filter((x): x is ExpenseReportColumnId => typeof x === 'string' && allowed.has(x as ExpenseReportColumnId));
-    return out.length ? out : getDefaultVisibleColumnIds();
+    return out.length ? out : getDefaultVisibleColumnIds(scope);
 }
 export function getColumnDef(id: ExpenseReportColumnId): ExpenseReportColumnDef | undefined {
     return COL_MAP.get(id);

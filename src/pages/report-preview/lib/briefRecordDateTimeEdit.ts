@@ -102,6 +102,29 @@ export function sortTimePreviewRowsChronologically(
     return [...rows].sort((a, b) => compareTimePreviewRowsChronologically(a, b, order));
 }
 
+function scopeColorSortKey(value: string | null | undefined): string {
+    const raw = String(value ?? '').trim().toUpperCase();
+    return /^#([0-9A-F]{6})$/.test(raw) ? raw : '';
+}
+
+/** Same Scope colors stay together; within a color group keep chronological order. Uncolored last. */
+export function sortTimePreviewRowsByScopeThenChrono(
+    rows: TimeExcelPreviewRow[],
+    order: 'asc' | 'desc' = 'asc',
+): TimeExcelPreviewRow[] {
+    return [...rows].sort((a, b) => {
+        const ca = scopeColorSortKey(a.scopeColor);
+        const cb = scopeColorSortKey(b.scopeColor);
+        const aHas = ca !== '';
+        const bHas = cb !== '';
+        if (aHas !== bHas)
+            return aHas ? -1 : 1;
+        if (ca !== cb)
+            return ca.localeCompare(cb);
+        return compareTimePreviewRowsChronologically(a, b, order);
+    });
+}
+
 export function isDateTimeOnlyPreviewPatch(patch: Partial<TimeExcelPreviewRow>): boolean {
     const keys = Object.keys(patch);
     return keys.length > 0 && keys.every((k) => k === 'recordedAt' || k === 'workDate');

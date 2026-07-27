@@ -1,53 +1,59 @@
 const DEFAULT_TTL_MS = 60_000;
 
 type CacheSlot<T> = {
-    key: string;
     data: T;
     expiresAt: number;
 };
 
-function readSlot<T>(slot: CacheSlot<T> | null, key: string): T | null {
-    if (!slot || slot.key !== key)
+type CacheKind = 'clients' | 'projects' | 'picker';
+
+const MAX_ENTRIES_PER_KIND = 20;
+const caches: Record<CacheKind, Map<string, CacheSlot<unknown>>> = {
+    clients: new Map(),
+    projects: new Map(),
+    picker: new Map(),
+};
+
+function readSlot<T>(cache: Map<string, CacheSlot<unknown>>, key: string): T | null {
+    const slot = cache.get(key) as CacheSlot<T> | undefined;
+    if (!slot)
         return null;
-    if (Date.now() >= slot.expiresAt)
+    if (Date.now() >= slot.expiresAt) {
+        cache.delete(key);
         return null;
+    }
+    // Touch the entry so the map iteration order acts as a small LRU.
+    cache.delete(key);
+    cache.set(key, slot as CacheSlot<unknown>);
     return slot.data;
 }
 
-function writeSlot<T>(data: T, key: string, ttlMs: number): CacheSlot<T> {
-    return { key, data, expiresAt: Date.now() + ttlMs };
+function writeSlot<T>(cache: Map<string, CacheSlot<unknown>>, data: T, key: string, ttlMs: number): void {
+    cache.delete(key);
+    cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+    while (cache.size > MAX_ENTRIES_PER_KIND) {
+        const oldestKey = cache.keys().next().value as string | undefined;
+        if (oldestKey === undefined)
+            break;
+        cache.delete(oldestKey);
+    }
 }
 
-let clientsMergedCache: CacheSlot<unknown> | null = null;
-let projectsMergedCache: CacheSlot<unknown> | null = null;
-let projectsPickerCache: CacheSlot<unknown> | null = null;
-
-export function getTimeTrackingCached<T>(kind: 'clients' | 'projects' | 'picker', key: string): T | null {
-    const slot = kind === 'clients'
-        ? clientsMergedCache
-        : kind === 'projects'
-            ? projectsMergedCache
-            : projectsPickerCache;
-    return readSlot(slot as CacheSlot<T> | null, key);
+export function getTimeTrackingCached<T>(kind: CacheKind, key: string): T | null {
+    return readSlot<T>(caches[kind], key);
 }
 
 export function setTimeTrackingCached<T>(
-    kind: 'clients' | 'projects' | 'picker',
+    kind: CacheKind,
     key: string,
     data: T,
     ttlMs = DEFAULT_TTL_MS,
 ): void {
-    const slot = writeSlot(data, key, ttlMs);
-    if (kind === 'clients')
-        clientsMergedCache = slot;
-    else if (kind === 'projects')
-        projectsMergedCache = slot;
-    else
-        projectsPickerCache = slot;
+    writeSlot(caches[kind], data, key, ttlMs);
 }
 
 export function invalidateTimeTrackingListCache(): void {
-    clientsMergedCache = null;
-    projectsMergedCache = null;
-    projectsPickerCache = null;
+    caches.clients.clear();
+    caches.projects.clear();
+    caches.picker.clear();
 }

@@ -1,8 +1,13 @@
 import { apiFetch, getApiUrl } from '@shared/api';
+import { createQueryCache } from '@shared/lib/queryCache';
 import type { CreateCategoryBody, InventoryCategory, InventoryItem, InventoryItemsPage, InventoryStatusItem, ItemsParams, UpdateCategoryBody, UpdateItemBody, } from './model/types';
 const BASE = '/api/v1/inventory';
 const CATEGORIES = `${BASE}/categories`;
 const ITEMS = `${BASE}/items`;
+const STATUSES_CACHE_KEY = 'inventory-statuses';
+const CATEGORIES_CACHE_KEY = 'inventory-categories';
+const statusesCache = createQueryCache<InventoryStatusItem[]>({ ttlMs: 30 * 60_000 });
+const categoriesCache = createQueryCache<InventoryCategory[]>({ ttlMs: 5 * 60_000 });
 async function parseError(res: Response, fallback: string): Promise<string> {
     const err = await res.json().catch(() => ({}));
     const detail = (err as { detail?: unknown })?.detail;
@@ -36,19 +41,32 @@ function buildItemsQuery(params: ItemsParams): string {
         q.set('include_archived', String(params.include_archived));
     return q.toString();
 }
-export async function getStatuses(): Promise<InventoryStatusItem[]> {
-    const res = await apiFetch(`${ITEMS}/statuses`);
+async function fetchStatusesFromApi(signal?: AbortSignal): Promise<InventoryStatusItem[]> {
+    const res = await apiFetch(`${ITEMS}/statuses`, { signal });
     if (!res.ok)
         throw new Error(await parseError(res, 'Failed to fetch statuses'));
     return res.json();
 }
-export async function getCategories(): Promise<InventoryCategory[]> {
-    const res = await apiFetch(CATEGORIES);
+
+export async function getStatuses(signal?: AbortSignal): Promise<InventoryStatusItem[]> {
+    return statusesCache.fetch(STATUSES_CACHE_KEY, fetchStatusesFromApi, { signal });
+}
+
+async function fetchCategoriesFromApi(signal?: AbortSignal): Promise<InventoryCategory[]> {
+    const res = await apiFetch(CATEGORIES, { signal });
     if (!res.ok)
         throw new Error(await parseError(res, 'Failed to fetch categories'));
     return res.json();
 }
+
+export async function getCategories(signal?: AbortSignal): Promise<InventoryCategory[]> {
+    return categoriesCache.fetch(CATEGORIES_CACHE_KEY, fetchCategoriesFromApi, { signal });
+}
+
 export async function getCategory(id: number): Promise<InventoryCategory> {
+    const cached = categoriesCache.get(CATEGORIES_CACHE_KEY)?.find((category) => category.id === id);
+    if (cached)
+        return cached;
     const res = await apiFetch(`${CATEGORIES}/${id}`);
     if (!res.ok)
         throw new Error(await parseError(res, 'Failed to fetch category'));
@@ -62,7 +80,13 @@ export async function createCategory(body: CreateCategoryBody): Promise<Inventor
     });
     if (!res.ok)
         throw new Error(await parseError(res, 'Failed to create category'));
-    return res.json();
+    const created = await res.json() as InventoryCategory;
+    const cached = categoriesCache.get(CATEGORIES_CACHE_KEY);
+    if (cached)
+        categoriesCache.prime(CATEGORIES_CACHE_KEY, [...cached, created]);
+    else
+        categoriesCache.invalidate(CATEGORIES_CACHE_KEY);
+    return created;
 }
 export async function updateCategory(id: number, body: UpdateCategoryBody): Promise<InventoryCategory> {
     const res = await apiFetch(`${CATEGORIES}/${id}`, {
@@ -72,16 +96,27 @@ export async function updateCategory(id: number, body: UpdateCategoryBody): Prom
     });
     if (!res.ok)
         throw new Error(await parseError(res, 'Failed to update category'));
-    return res.json();
+    const updated = await res.json() as InventoryCategory;
+    const cached = categoriesCache.get(CATEGORIES_CACHE_KEY);
+    if (cached)
+        categoriesCache.prime(CATEGORIES_CACHE_KEY, cached.map((category) => category.id === id ? updated : category));
+    else
+        categoriesCache.invalidate(CATEGORIES_CACHE_KEY);
+    return updated;
 }
 export async function deleteCategory(id: number): Promise<void> {
     const res = await apiFetch(`${CATEGORIES}/${id}`, { method: 'DELETE' });
     if (!res.ok)
         throw new Error(await parseError(res, 'Failed to delete category'));
+    const cached = categoriesCache.get(CATEGORIES_CACHE_KEY);
+    if (cached)
+        categoriesCache.prime(CATEGORIES_CACHE_KEY, cached.filter((category) => category.id !== id));
+    else
+        categoriesCache.invalidate(CATEGORIES_CACHE_KEY);
 }
-export async function getItems(params: ItemsParams = {}): Promise<InventoryItemsPage> {
+export async function getItems(params: ItemsParams = {}, signal?: AbortSignal): Promise<InventoryItemsPage> {
     const query = buildItemsQuery(params);
-    const res = await apiFetch(`${ITEMS}${query ? `?${query}` : ''}`);
+    const res = await apiFetch(`${ITEMS}${query ? `?${query}` : ''}`, { signal });
     if (!res.ok)
         throw new Error(await parseError(res, 'Failed to fetch items'));
     const data = await res.json() as {

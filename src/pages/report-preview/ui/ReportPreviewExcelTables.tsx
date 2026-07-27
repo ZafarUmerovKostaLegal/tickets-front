@@ -27,7 +27,7 @@ import {
     getLocalYmdAndHmFromIso,
     getLocalYmdFromIso,
     localYmdAndHmToIso,
-    sortTimePreviewRowsChronologically,
+    sortTimePreviewRowsByScopeThenChrono,
 } from '../lib/briefRecordDateTimeEdit';
 import {
     TIME_BRIEF_COLUMN_ORDER_DEFAULT,
@@ -879,7 +879,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return true;
             return briefFilterEmployeeQ(r, q) || briefFilterTaskQ(r, q) || briefFilterNoteQ(r, q);
         });
-        return sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
+        return sortTimePreviewRowsByScopeThenChrono(filtered, bfRecordedOrder);
     }, [isFull, rows, briefEmployeeQuery, bfWhen, bfTask, bfNote, bfBill, bfScopeColors, bfRecordedOrder, toolbarSearch]);
     const usedScopeColors = useMemo(() => collectUsedScopeColors(rows), [rows]);
     const usedScopeHint = usedScopeColors.length
@@ -892,12 +892,14 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const filtered = rows.filter((r) => {
             if (briefEmployeeQuery.trim() && !briefFilterEmployeeQ(r, briefEmployeeQuery))
                 return false;
+            if (bfScopeColors.length > 0 && !briefFilterScopeColorQ(r, bfScopeColors))
+                return false;
             if (!q)
                 return true;
             return briefFilterEmployeeQ(r, q) || briefFilterTaskQ(r, q) || briefFilterNoteQ(r, q);
         });
-        return sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
-    }, [isFull, rows, briefEmployeeQuery, bfRecordedOrder, toolbarSearch]);
+        return sortTimePreviewRowsByScopeThenChrono(filtered, bfRecordedOrder);
+    }, [isFull, rows, briefEmployeeQuery, bfScopeColors, bfRecordedOrder, toolbarSearch]);
     const displayRows = isFull ? fullNameFiltered : briefDisplayRows;
     const duplicateRowKeys = useMemo(() => buildTimePreviewDuplicateRowKeySet(displayRows), [displayRows]);
     const rowsForTotals = useMemo(() => timePreviewRowsForTotals(displayRows), [displayRows]);
@@ -1009,6 +1011,16 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               aria-label={`Scope цвет, строка ${i + 1}`}
               onPick={(color) => {
                   const next = normalizeHexColor(color);
+                  const hex = parseScopeHexColor(next);
+                  if (hex) {
+                      setBfScopeColors((prev) => {
+                          if (prev.length === 0)
+                              return prev;
+                          if (prev.includes(hex))
+                              return prev;
+                          return [...prev, hex];
+                      });
+                  }
                   onScopeColorValueChange?.(next);
                   void onApplyScopeColorToSelection?.(resolveScopeTargetKeys(r.rowKey), next);
               }}

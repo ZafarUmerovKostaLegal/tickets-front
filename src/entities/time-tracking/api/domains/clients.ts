@@ -2,6 +2,7 @@ import { apiFetch } from '@shared/api';
 import {
     getTimeTrackingCached,
     setTimeTrackingCached,
+    invalidateTimeTrackingListCache,
 } from '../../lib/timeTrackingListCache';
 import { isActiveTimeManagerClientRow } from '../../lib/projectTimeEntry';
 import {
@@ -96,7 +97,7 @@ export function normalizeTimeManagerClient(raw: unknown): TimeManagerClientRow {
         contact_phone: readStr(o.contactPhone ?? o.contact_phone),
         contact_email: readStr(o.contactEmail ?? o.contact_email),
         is_archived: Boolean(o.isArchived ?? o.is_archived),
-        extra_contacts: extra.length > 0 ? extra : undefined,
+        extra_contacts: Array.isArray(extraRaw) ? extra : undefined,
     };
 }
 export type TimeManagerClientCreatePayload = {
@@ -185,8 +186,8 @@ export function clientPatchJson(patch: TimeManagerClientPatchPayload): Record<st
     return payload;
 }
 export async function listTimeManagerClients(includeArchived?: boolean): Promise<TimeManagerClientRow[]>;
-export async function listTimeManagerClients(includeArchived: boolean, pagination: TimeTrackingPaginationParams): Promise<PaginatedResult<TimeManagerClientRow>>;
-export async function listTimeManagerClients(includeArchived = false, pagination?: TimeTrackingPaginationParams): Promise<TimeManagerClientRow[] | PaginatedResult<TimeManagerClientRow>> {
+export async function listTimeManagerClients(includeArchived: boolean, pagination: TimeTrackingPaginationParams, signal?: AbortSignal): Promise<PaginatedResult<TimeManagerClientRow>>;
+export async function listTimeManagerClients(includeArchived = false, pagination?: TimeTrackingPaginationParams, signal?: AbortSignal): Promise<TimeManagerClientRow[] | PaginatedResult<TimeManagerClientRow>> {
     const qs = new URLSearchParams();
     if (includeArchived)
         qs.set('includeArchived', 'true');
@@ -195,7 +196,7 @@ export async function listTimeManagerClients(includeArchived = false, pagination
         qs.set('offset', String(pagination.offset ?? 0));
     }
     const suffix = qs.toString() ? `?${qs}` : '';
-    const res = await apiFetch(`/api/v1/time-tracking/clients${suffix}`);
+    const res = await apiFetch(`/api/v1/time-tracking/clients${suffix}`, { signal });
     await throwIfNotOk(res);
     const raw = await res.json();
     if (pagination) {
@@ -222,6 +223,7 @@ export async function createTimeManagerClient(body: TimeManagerClientCreatePaylo
         body: JSON.stringify(clientCreateJson(body)),
     });
     await throwIfNotOk(res);
+    invalidateTimeTrackingListCache();
     return normalizeTimeManagerClient(await res.json());
 }
 export async function patchTimeManagerClient(clientId: string, patch: TimeManagerClientPatchPayload): Promise<TimeManagerClientRow> {
@@ -232,11 +234,13 @@ export async function patchTimeManagerClient(clientId: string, patch: TimeManage
         body: JSON.stringify(payload),
     });
     await throwIfNotOk(res);
+    invalidateTimeTrackingListCache();
     return normalizeTimeManagerClient(await res.json());
 }
 export async function deleteTimeManagerClient(clientId: string): Promise<void> {
     const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}`, { method: 'DELETE' });
     await throwIfNotOk(res);
+    invalidateTimeTrackingListCache();
 }
 export type TimeManagerClientContactCreatePayload = {
     name: string;
@@ -274,6 +278,7 @@ export async function createClientContact(clientId: string, body: TimeManagerCli
     const row = normalizeTimeManagerContact(await res.json());
     if (!row)
         throw new Error('Некорректный ответ при создании контакта');
+    invalidateTimeTrackingListCache();
     return row;
 }
 export async function patchClientContact(clientId: string, contactId: string, patch: TimeManagerClientContactPatchPayload): Promise<TimeManagerClientContactRow> {
@@ -291,11 +296,13 @@ export async function patchClientContact(clientId: string, contactId: string, pa
     const row = normalizeTimeManagerContact(await res.json());
     if (!row)
         throw new Error('Некорректный ответ при обновлении контакта');
+    invalidateTimeTrackingListCache();
     return row;
 }
 export async function deleteClientContact(clientId: string, contactId: string): Promise<void> {
     const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/contacts/${encodeURIComponent(contactId)}`, { method: 'DELETE' });
     await throwIfNotOk(res);
+    invalidateTimeTrackingListCache();
 }
 
 export type TimeManagerClientExpenseCategoryRow = {

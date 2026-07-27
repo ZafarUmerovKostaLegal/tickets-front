@@ -198,8 +198,9 @@ export function CorrespondenceRegistryView({
 
     useEffect(() => {
         let cancelled = false;
+        const controller = new AbortController();
         setStatsLoading(true);
-        void fetchCorrespondenceStats()
+        void fetchCorrespondenceStats(controller.signal)
             .then((s) => {
                 if (!cancelled)
                     setStats(s);
@@ -212,15 +213,19 @@ export function CorrespondenceRegistryView({
                 if (!cancelled)
                     setStatsLoading(false);
             });
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+            controller.abort();
+        };
     }, [reloadToken]);
 
     useEffect(() => {
         let cancelled = false;
+        const controller = new AbortController();
         setListLoading(true);
         setListError(null);
         const params = listParamsForTab(direction, tableTab, effectivePage, appliedDocTypes);
-        void listCorrespondence(params)
+        void listCorrespondence(params, controller.signal)
             .then((res) => {
                 if (cancelled)
                     return;
@@ -238,12 +243,11 @@ export function CorrespondenceRegistryView({
                 if (!cancelled)
                     setListLoading(false);
             });
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+            controller.abort();
+        };
     }, [direction, tableTab, effectivePage, appliedDocTypes, reloadToken]);
-
-    useEffect(() => {
-        setPage(1);
-    }, [direction, tableTab, appliedDocTypes]);
 
     const filtersBtnRef = useRef<HTMLButtonElement>(null);
     const settingsBtnRef = useRef<HTMLButtonElement>(null);
@@ -292,6 +296,7 @@ export function CorrespondenceRegistryView({
             return;
         }
         setAppliedDocTypes([...selected]);
+        setPage(1);
         setFiltersOpen(false);
     }, [filterDraft]);
 
@@ -398,6 +403,7 @@ export function CorrespondenceRegistryView({
             closeOverlays();
             onDirectionChange(tab.key);
             setTableTab('all');
+            setPage(1);
         },
     })), [closeOverlays, direction, onDirectionChange]);
 
@@ -467,6 +473,7 @@ export function CorrespondenceRegistryView({
                       onClick={() => {
                           closeOverlays();
                           setTableTab(t.key);
+                          setPage(1);
                       }}
                     >
                       {t.label}

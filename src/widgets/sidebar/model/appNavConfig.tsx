@@ -12,6 +12,7 @@ export type AppNavId =
     | 'home'
     | 'timeTracking'
     | 'expenses'
+    | 'expensesPartners'
     | 'todo'
     | 'tickets'
     | 'correspondence'
@@ -44,6 +45,7 @@ const EMPLOYEE_NAV_IDS = new Set<AppNavId>([
     'home',
     'timeTracking',
     'expenses',
+    'expensesPartners',
     'todo',
     'tickets',
     'correspondence',
@@ -58,6 +60,7 @@ export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { id: 'home', to: routes.home, icon: IconHome },
     { id: 'timeTracking', to: routes.timeTracking, icon: IconStopwatch },
     { id: 'expenses', to: routes.expenses, icon: IconWallet },
+    { id: 'expensesPartners', to: routes.expensesPartners, icon: IconContacts },
     { id: 'todo', to: routes.todo, icon: IconList },
     { id: 'tickets', to: routes.tickets, icon: IconTicket },
     { id: 'correspondence', to: routes.correspondence, icon: IconMailInbox },
@@ -92,7 +95,7 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
         visible = visible.filter((item) => item.id !== 'admin');
     }
     if (!loading && !canAccessExpensesSection(user?.role)) {
-        visible = visible.filter((item) => item.id !== 'expenses');
+        visible = visible.filter((item) => item.id !== 'expenses' && item.id !== 'expensesPartners');
     }
     if (!loading && !canAccessTimeTracking(user)) {
         visible = visible.filter((item) => item.id !== 'timeTracking');

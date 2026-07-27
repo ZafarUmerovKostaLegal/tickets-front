@@ -757,44 +757,65 @@
 .time-page__tabbar {
   flex-shrink: 0;
   display: flex;
-  gap: 0.25rem;
-  padding: 0 2rem;
-  background: var(--app-surface);
-  border-bottom: 1px solid var(--app-border);
-  min-height: 44px;
-  align-items: stretch;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: calc(100% - 2rem);
+  margin: 0.75rem 2rem 0.65rem;
+  padding: 0.3rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-surface, #fff) 72%, var(--app-border, #e2e8f0));
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  box-sizing: border-box;
+  min-height: 0;
 }
 
 .time-page__tab {
+  appearance: none;
   position: relative;
-  padding: 0 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  padding: 0.5rem 1.05rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--app-muted, #6b7280);
-  background: none;
+  line-height: 1.2;
+  color: var(--app-muted, #64748b);
+  background: transparent;
   border: none;
-  border-radius: 0;
+  border-radius: 9px;
   cursor: pointer;
-  transition: color 0.15s;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .time-page__tab:hover {
-  color: var(--app-text);
+  color: var(--app-text, #0f172a);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, transparent);
 }
 
 .time-page__tab--active {
-  color: var(--app-accent, #4f46e5);
+  color: var(--app-text, #0f172a);
+  font-weight: 700;
+  background: var(--app-surface, #fff);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 0 0 1px color-mix(in srgb, var(--app-accent, #4f46e5) 18%, transparent);
 }
 
 .time-page__tab--active::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 50%;
+  bottom: 0.28rem;
+  width: 1.1rem;
   height: 2px;
+  border-radius: 999px;
   background: var(--app-accent, #4f46e5);
-  border-radius: 2px 2px 0 0;
+  transform: translateX(-50%);
 }
 
 .tt-ecat-archive-toggle {
@@ -3520,9 +3541,8 @@ a.pp__proj-name--link:hover {
   position: sticky;
   top: 0;
   z-index: 6;
-  padding: 0.5rem 0 1rem;
+  padding: 0.5rem 0 0.85rem;
   margin-bottom: 0.75rem;
-  
   background: var(--app-bg);
   border-bottom: 1px solid var(--app-border, #e5e7eb);
 }
@@ -3538,13 +3558,17 @@ a.pp__proj-name--link:hover {
 
 .tt-reports__type-nav {
   display: flex;
-  gap: 0.2rem;
+  align-items: center;
+  gap: 0.25rem;
   flex-shrink: 0;
-  padding: 0.35rem 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.3rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-surface, #fff) 72%, var(--app-border, #e2e8f0));
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  box-sizing: border-box;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -3565,18 +3589,24 @@ a.pp__proj-name--link:hover {
 }
 
 .tt-reports__type-tab {
+  appearance: none;
   position: relative;
-  padding: 0.5rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.15rem;
+  padding: 0.45rem 0.9rem;
   font-family: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
+  line-height: 1.2;
   color: var(--app-muted, #64748b);
   background: transparent;
   border: none;
   border-radius: 9px;
   cursor: pointer;
   white-space: nowrap;
-  transition: color 0.15s, background 0.15s, box-shadow 0.15s;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tt-reports__type-tab-inner {
@@ -3604,18 +3634,57 @@ a.pp__proj-name--link:hover {
 }
 
 .tt-reports__type-tab:hover {
-  color: var(--app-text, #1e293b);
-  background: color-mix(in srgb, var(--app-surface, #fff) 55%, transparent);
+  color: var(--app-text, #0f172a);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, transparent);
 }
 
 .tt-reports__type-tab--active {
-  color: var(--app-accent, #4f46e5);
+  color: var(--app-text, #0f172a);
+  font-weight: 700;
   background: var(--app-surface, #fff);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 0 0 1px color-mix(in srgb, var(--app-accent, #4f46e5) 18%, transparent);
 }
 
 .tt-reports__type-tab--active::after {
-  display: none;
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0.26rem;
+  width: 1.1rem;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--app-accent, #4f46e5);
+  transform: translateX(-50%);
+  display: block;
+}
+
+body[data-theme='dark'] .tt-reports__type-nav,
+body[data-theme='dark'] .time-page__tabbar {
+  background: color-mix(in srgb, var(--app-surface, #0f172a) 70%, var(--app-border, #334155));
+  border-color: var(--app-border, #334155);
+  box-shadow: none;
+}
+
+body[data-theme='dark'] .tt-reports__type-tab,
+body[data-theme='dark'] .time-page__tab {
+  color: var(--app-muted, #94a3b8);
+}
+
+body[data-theme='dark'] .tt-reports__type-tab:hover,
+body[data-theme='dark'] .time-page__tab:hover {
+  color: var(--app-text, #e2e8f0);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 14%, transparent);
+}
+
+body[data-theme='dark'] .tt-reports__type-tab--active,
+body[data-theme='dark'] .time-page__tab--active {
+  color: var(--app-text, #f8fafc);
+  background: var(--app-surface, #1e293b);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 0 0 1px color-mix(in srgb, var(--app-accent, #4f46e5) 35%, transparent);
 }
 
 .tt-reports__header {
@@ -4036,15 +4105,22 @@ a.pp__proj-name--link:hover {
   position: relative;
   z-index: 4;
   display: flex;
-  gap: 0;
+  align-items: center;
+  gap: 0.25rem;
   flex-wrap: nowrap;
+  width: fit-content;
+  max-width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  border-bottom: 2px solid var(--app-border);
   margin-bottom: 1rem;
-  background: var(--app-bg);
+  padding: 0.3rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-surface, #fff) 72%, var(--app-border, #e2e8f0));
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  box-sizing: border-box;
 }
 
 .tt-reports__group-nav::-webkit-scrollbar {
@@ -4052,35 +4128,74 @@ a.pp__proj-name--link:hover {
 }
 
 .tt-reports__group-tab {
+  appearance: none;
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  padding: 0.75rem 1.25rem;
+  min-height: 2.25rem;
+  padding: 0.5rem 1.05rem;
   font-family: inherit;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  color: var(--app-muted);
-  background: none;
+  line-height: 1.2;
+  color: var(--app-muted, #64748b);
+  background: transparent;
   border: none;
+  border-radius: 9px;
   cursor: pointer;
-  transition: color 0.15s;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .tt-reports__group-tab:hover {
-  color: var(--app-text);
+  color: var(--app-text, #0f172a);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, transparent);
 }
 
 .tt-reports__group-tab--active {
-  color: var(--app-accent, #4f46e5);
+  color: var(--app-text, #0f172a);
+  font-weight: 700;
+  background: var(--app-surface, #fff);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 0 0 1px color-mix(in srgb, var(--app-accent, #4f46e5) 18%, transparent);
 }
 
 .tt-reports__group-tab--active::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  left: 50%;
+  bottom: 0.28rem;
+  width: 1.1rem;
   height: 2px;
+  border-radius: 999px;
   background: var(--app-accent, #4f46e5);
+  transform: translateX(-50%);
+}
+
+body[data-theme='dark'] .tt-reports__group-nav {
+  background: color-mix(in srgb, var(--app-surface, #0f172a) 70%, var(--app-border, #334155));
+  border-color: var(--app-border, #334155);
+  box-shadow: none;
+}
+
+body[data-theme='dark'] .tt-reports__group-tab {
+  color: var(--app-muted, #94a3b8);
+}
+
+body[data-theme='dark'] .tt-reports__group-tab:hover {
+  color: var(--app-text, #e2e8f0);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 14%, transparent);
+}
+
+body[data-theme='dark'] .tt-reports__group-tab--active {
+  color: var(--app-text, #f8fafc);
+  background: var(--app-surface, #1e293b);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.25),
+    0 0 0 1px color-mix(in srgb, var(--app-accent, #4f46e5) 35%, transparent);
 }
 
 .tt-reports__group-tab:focus-visible,

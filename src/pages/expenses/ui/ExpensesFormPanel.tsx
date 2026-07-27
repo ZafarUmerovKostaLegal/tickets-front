@@ -175,6 +175,8 @@ type Props = {
     receiptUploadPending?: boolean;
     currentUserId?: number | null;
     currentUserRole?: string | null;
+    /** company — без типа partner_expense; partner — только расход партнёра */
+    formScope?: 'company' | 'partner';
 };
 function PanelBtnSpinner({ className }: {
     className?: string;
@@ -314,7 +316,7 @@ function formatForeignFp(n: number): string {
     const x = Math.round(n * 1e6) / 1e6;
     return x.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
 }
-export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, }: Props) {
+export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, formScope = 'company', }: Props) {
     const [values, setValues] = useState<ExpenseFormValues>(EMPTY);
     const valuesRef = useRef(values);
     valuesRef.current = values;
@@ -397,12 +399,18 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setCbuParsed(null);
         setCbuError(null);
         setCbuLoading(false);
-        setValues({ ...EMPTY, expenseDate: todayIsoLocal() });
+        setValues({
+            ...EMPTY,
+            expenseDate: todayIsoLocal(),
+            ...(formScope === 'partner'
+                ? { expenseType: 'partner_expense', isReimbursable: false }
+                : {}),
+        });
         setFilesPaymentDoc([]);
         setFilesReceipt([]);
         setFileSizeHint(null);
         setErrors({});
-    }, [isOpen, mode]);
+    }, [isOpen, mode, formScope]);
     useEffect(() => {
         if (!isOpen || (mode !== 'edit' && mode !== 'view'))
             return;
@@ -832,7 +840,14 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         return null;
     }, [values.projectId, expenseClientsProjects]);
     const showAdditionalSection = useMemo(() => values.expenseType === EXPENSE_TYPE_CLIENT, [values.expenseType]);
-    const expenseTypeItems = useMemo(() => [...EXPENSE_TYPES], []);
+    const expenseTypeItems = useMemo(() => {
+        if (formScope === 'partner')
+            return EXPENSE_TYPES.filter(t => t.value === 'partner_expense');
+        const company = EXPENSE_TYPES.filter(t => t.value !== 'partner_expense');
+        if (editingRequest?.expenseType === 'partner_expense')
+            return [...company, ...EXPENSE_TYPES.filter(t => t.value === 'partner_expense')];
+        return company;
+    }, [formScope, editingRequest?.expenseType]);
     const partnerSubtypeItems = useMemo(() => [...PARTNER_EXPENSE_CATEGORIES], []);
     const partnerUserItems = useMemo(() => {
         type PartnerPick = { id: string; label: string; search: string };

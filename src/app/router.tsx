@@ -55,6 +55,8 @@ const InternalCommunicationPage = lazy(() => import('@pages/internal-communicati
 const ExpensesPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesPage })));
 const ExpensesRequestsPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesRequestsPage })));
 const ExpensesReportPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesReportPage })));
+const PartnerExpensesPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.PartnerExpensesPage })));
+const PartnerExpensesReportPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.PartnerExpensesReportPage })));
 const InvoicePreviewRouteLazy = lazy(() => import('@app/InvoicePreviewRoute').then(m => ({ default: m.InvoicePreviewRoute })));
 
 function LazyFallback() {
@@ -133,6 +135,16 @@ const router = createBrowserRouter([
                         path: 'report',
                         element: (<ExpensesMgmtRoute>
                 <Suspense fallback={<LazyFallback />}><ExpensesReportPage /></Suspense>
+              </ExpensesMgmtRoute>),
+                    },
+                    {
+                        path: 'partners',
+                        element: <Suspense fallback={<LazyFallback />}><PartnerExpensesPage /></Suspense>,
+                    },
+                    {
+                        path: 'partners/report',
+                        element: (<ExpensesMgmtRoute>
+                <Suspense fallback={<LazyFallback />}><PartnerExpensesReportPage /></Suspense>
               </ExpensesMgmtRoute>),
                     },
                     { path: ':expenseId', element: <Suspense fallback={<LazyFallback />}><ExpensesPage /></Suspense> },

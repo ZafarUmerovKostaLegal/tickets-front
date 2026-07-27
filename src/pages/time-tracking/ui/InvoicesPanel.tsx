@@ -249,9 +249,11 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
   const loadList = useCallback((opts?: {
     silent?: boolean;
     invoiceResponsePatch?: InvoiceDto;
+    signal?: AbortSignal;
   }) => {
     const silent = Boolean(opts?.silent);
     const invoiceResponsePatch = opts?.invoiceResponsePatch;
+    const signal = opts?.signal;
     if (!silent)
       setListLoading(true);
     setListErr(null);
@@ -266,8 +268,10 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       offset: (invoiceListPage - 1) * INV_PAGE,
       includeTotalCount: true,
       ...billingGate,
-    })
+    }, signal)
       .then((r) => {
+        if (signal?.aborted)
+          return;
         let rows = r.items;
         if (invoiceResponsePatch)
           rows = applyInvoiceMutationToListRows(rows, invoiceResponsePatch);
@@ -276,17 +280,19 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
         setInvoiceListTotalCount(typeof r.totalCount === 'number' ? r.totalCount : null);
       })
       .catch((e: unknown) => {
+        if (signal?.aborted)
+          return;
         setItems([]);
         setPartnerListBlocked(false);
         setInvoiceListTotalCount(null);
         setListErr(isForbiddenError(e) ? t('timeTrackingPage.invoices.errors.noInvoiceAccess') : (e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic')));
       })
       .finally(() => {
-        if (!silent)
+        if (!silent && !signal?.aborted)
           setListLoading(false);
       });
   }, [statusFilter, clientFilter, projectFilter, listDateFrom, listDateTo, invoiceListPage, INV_PAGE, t]);
-  const loadAggStats = useCallback(() => {
+  const loadAggStats = useCallback((signal?: AbortSignal) => {
     setAggStatsLoading(true);
     setAggStatsErr(null);
     const billingGate = invoiceListPartnerBillingGateOpts(projectFilter, listDateFrom, listDateTo);
@@ -299,10 +305,12 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       ...billingGate,
     };
     return Promise.all([
-      getInvoicesAggregatedStats(filterBase),
-      aggregateInvoicesMoneyExcludingCanceled(filterBase),
+      getInvoicesAggregatedStats(filterBase, signal),
+      aggregateInvoicesMoneyExcludingCanceled(filterBase, signal),
     ])
       .then(([s, ex]) => {
+        if (signal?.aborted)
+          return;
         setAggStats({
           ...s,
           byCurrency: ex.byCurrency,
@@ -311,21 +319,43 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
         });
       })
       .catch((e: unknown) => {
+        if (signal?.aborted)
+          return;
         setAggStats(null);
         setAggStatsErr(isForbiddenError(e) ? t('timeTrackingPage.invoices.errors.noStatsAccess') : (e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic')));
       })
       .finally(() => {
-        setAggStatsLoading(false);
+        if (!signal?.aborted)
+          setAggStatsLoading(false);
       });
   }, [statusFilter, clientFilter, projectFilter, listDateFrom, listDateTo, t]);
-  useEffect(() => {
+  const changeStatusFilter = useCallback((value: string) => {
+    setStatusFilter(value);
     setInvoiceListPage(1);
-  }, [statusFilter, clientFilter, projectFilter, listDateFrom, listDateTo]);
+  }, []);
+  const changeClientFilter = useCallback((value: string) => {
+    setClientFilter(value);
+    setProjectFilter('');
+    setInvoiceListPage(1);
+  }, []);
+  const changeProjectFilter = useCallback((value: string) => {
+    setProjectFilter(value);
+    setInvoiceListPage(1);
+  }, []);
+  const changeListDateFrom = useCallback((value: string) => {
+    setListDateFrom(value);
+    setInvoiceListPage(1);
+  }, []);
+  const changeListDateTo = useCallback((value: string) => {
+    setListDateTo(value);
+    setInvoiceListPage(1);
+  }, []);
   useEffect(() => {
-    void loadAggStats();
+    const controller = new AbortController();
+    void loadAggStats(controller.signal);
+    return () => controller.abort();
   }, [loadAggStats]);
   useEffect(() => {
-    setProjectFilter('');
     if (!clientFilter) {
       listAllClientProjectsForPicker()
         .then((rows) => setListProjectsFilter(rows.filter((p) => isActiveTimeManagerProjectRow(p))))
@@ -352,7 +382,9 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       pushToast({ message: aggStatsErr, variant: 'warning' });
   }, [aggStatsErr, pushToast]);
   useEffect(() => {
-    loadList();
+    const controller = new AbortController();
+    void loadList({ signal: controller.signal });
+    return () => controller.abort();
   }, [loadList]);
   const goToCreate = useCallback(() => {
     if (readOnly)
@@ -553,28 +585,28 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
           </p>)}
           <div className="tt-reports__sort-wrap">
             <label className="tt-reports__sort-label" htmlFor="tt-inv-filter-client-btn">{t('timeTrackingPage.invoices.filters.client')}</label>
-            <SearchableSelect className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-inv-filter-client-btn" portalDropdown portalZIndex={10050} portalMinWidth={420} placeholder={t('timeTrackingPage.invoices.filters.client')} emptyListText={t('timeTrackingPage.common.noClients')} noMatchText={t('timeTrackingPage.common.notFound')} value={clientFilter} items={clientFilterSearchItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => setClientFilter(o.id)} aria-label={t('timeTrackingPage.invoices.filters.clientFilterAria')} />
+            <SearchableSelect className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-inv-filter-client-btn" portalDropdown portalZIndex={10050} portalMinWidth={420} placeholder={t('timeTrackingPage.invoices.filters.client')} emptyListText={t('timeTrackingPage.common.noClients')} noMatchText={t('timeTrackingPage.common.notFound')} value={clientFilter} items={clientFilterSearchItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => changeClientFilter(o.id)} aria-label={t('timeTrackingPage.invoices.filters.clientFilterAria')} />
           </div>
           <div className="tt-reports__sort-wrap">
             <label className="tt-reports__sort-label" htmlFor="tt-inv-filter-status">{t('timeTrackingPage.invoices.filters.status')}</label>
-            <InvoicesSelectDropdown id="tt-inv-filter-status" variant="filter" value={statusFilter} options={statusFilterOptions} onChange={setStatusFilter} aria-label={t('timeTrackingPage.invoices.filters.statusFilterAria')} />
+            <InvoicesSelectDropdown id="tt-inv-filter-status" variant="filter" value={statusFilter} options={statusFilterOptions} onChange={changeStatusFilter} aria-label={t('timeTrackingPage.invoices.filters.statusFilterAria')} />
           </div>
           <div className="tt-reports__sort-wrap">
             <label className="tt-reports__sort-label" htmlFor="tt-inv-filter-project-btn">{t('timeTrackingPage.invoices.filters.project')}</label>
-            <SearchableSelect className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-inv-filter-project-btn" portalDropdown portalZIndex={10050} portalMinWidth={720} placeholder={t('timeTrackingPage.invoices.filters.allProjects')} emptyListText={t('timeTrackingPage.common.noProjects')} noMatchText={t('timeTrackingPage.common.notFound')} value={projectFilter} items={projectFilterSearchItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => setProjectFilter(o.id)} aria-label={t('timeTrackingPage.invoices.filters.projectFilterAria')} />
+            <SearchableSelect className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-inv-filter-project-btn" portalDropdown portalZIndex={10050} portalMinWidth={720} placeholder={t('timeTrackingPage.invoices.filters.allProjects')} emptyListText={t('timeTrackingPage.common.noProjects')} noMatchText={t('timeTrackingPage.common.notFound')} value={projectFilter} items={projectFilterSearchItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => changeProjectFilter(o.id)} aria-label={t('timeTrackingPage.invoices.filters.projectFilterAria')} />
           </div>
           <div className="tt-reports__sort-wrap tt-inv__filter-dates">
             <span className="tt-reports__sort-label">{t('timeTrackingPage.invoices.filters.issueDate')}</span>
             <div className="tt-inv__filter-dates-row">
-              <DatePicker value={listDateFrom} max={listDateTo || undefined} onChange={(iso) => setListDateFrom(iso)} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} portal portalZIndex={10050} buttonClassName="tt-reports__date-picker-btn" title={t('timeTrackingPage.invoices.filters.issueDateFrom')} showChevron />
-              {listDateFrom ? (<button type="button" className="tt-inv__date-clear" onClick={() => setListDateFrom('')} aria-label={t('timeTrackingPage.invoices.filters.clearDateFrom')} title={t('timeTrackingPage.invoices.filters.reset')}>
+              <DatePicker value={listDateFrom} max={listDateTo || undefined} onChange={changeListDateFrom} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} portal portalZIndex={10050} buttonClassName="tt-reports__date-picker-btn" title={t('timeTrackingPage.invoices.filters.issueDateFrom')} showChevron />
+              {listDateFrom ? (<button type="button" className="tt-inv__date-clear" onClick={() => changeListDateFrom('')} aria-label={t('timeTrackingPage.invoices.filters.clearDateFrom')} title={t('timeTrackingPage.invoices.filters.reset')}>
                 ×
               </button>) : null}
               <span className="tt-inv__date-sep" aria-hidden>
                 —
               </span>
-              <DatePicker value={listDateTo} min={listDateFrom || undefined} onChange={(iso) => setListDateTo(iso)} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} portal portalZIndex={10050} buttonClassName="tt-reports__date-picker-btn" title={t('timeTrackingPage.invoices.filters.issueDateTo')} showChevron />
-              {listDateTo ? (<button type="button" className="tt-inv__date-clear" onClick={() => setListDateTo('')} aria-label={t('timeTrackingPage.invoices.filters.clearDateTo')} title={t('timeTrackingPage.invoices.filters.reset')}>
+              <DatePicker value={listDateTo} min={listDateFrom || undefined} onChange={changeListDateTo} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} portal portalZIndex={10050} buttonClassName="tt-reports__date-picker-btn" title={t('timeTrackingPage.invoices.filters.issueDateTo')} showChevron />
+              {listDateTo ? (<button type="button" className="tt-inv__date-clear" onClick={() => changeListDateTo('')} aria-label={t('timeTrackingPage.invoices.filters.clearDateTo')} title={t('timeTrackingPage.invoices.filters.reset')}>
                 ×
               </button>) : null}
             </div>

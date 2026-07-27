@@ -35,6 +35,8 @@ export async function fetchAttendance(options: AttendanceQuery): Promise<Attenda
     }
     catch (e) {
         if (isAbortError(e)) {
+            if (options.signal?.aborted)
+                throw e;
             throw new Error('Превышено время ожидания ответа посещаемости. Проверьте, что API запущен (прокси / бэкенд).');
         }
         throw new Error('Сервис посещаемости недоступен. Проверьте подключение или настройки сети.');
@@ -59,6 +61,8 @@ export async function fetchDailyAttendanceReport(day: string, signal?: AbortSign
     }
     catch (e) {
         if (isAbortError(e)) {
+            if (signal?.aborted)
+                throw e;
             throw new Error('Превышено время ожидания ответа посещаемости.');
         }
         throw new Error('Сервис посещаемости недоступен.');
@@ -95,9 +99,11 @@ async function fetchWorkdaySettingsFromApi(signal?: AbortSignal): Promise<Workda
     return res.json() as Promise<WorkdaySettingsDto>;
 }
 export async function fetchWorkdaySettings(signal?: AbortSignal): Promise<WorkdaySettingsDto> {
-    if (signal)
-        return fetchWorkdaySettingsFromApi(signal);
-    return workdaySettingsCache.fetch(WORKDAY_SETTINGS_CACHE_KEY, () => fetchWorkdaySettingsFromApi());
+    return workdaySettingsCache.fetch(
+        WORKDAY_SETTINGS_CACHE_KEY,
+        (sharedSignal) => fetchWorkdaySettingsFromApi(sharedSignal),
+        { signal },
+    );
 }
 export async function patchWorkdaySettings(body: WorkdaySettingsDto, signal?: AbortSignal): Promise<WorkdaySettingsDto> {
     const path = '/api/v1/attendance/settings/workday';

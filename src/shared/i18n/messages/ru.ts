@@ -110,6 +110,7 @@ export const ruMessages: Messages = {
         home: 'Главная',
         timeTracking: 'Учёт времени',
         expenses: 'Расходы',
+        expensesPartners: 'Расходы партнёров',
         todo: 'Список дел',
         tickets: 'IT-заявки',
         correspondence: 'Корреспонденция',
@@ -141,6 +142,8 @@ export const ruMessages: Messages = {
         user: 'Пользователь',
         expensesRequests: 'Заявки на расходы',
         expensesReport: 'Отчёт по расходам',
+        expensesPartners: 'Расходы партнёров',
+        expensesPartnersReport: 'Отчёт по расходам партнёров',
     },
     header: {
         themeLight: 'Светлая тема',
@@ -682,6 +685,7 @@ export type Messages = {
         | 'home'
         | 'timeTracking'
         | 'expenses'
+        | 'expensesPartners'
         | 'todo'
         | 'tickets'
         | 'correspondence'
@@ -713,7 +717,9 @@ export type Messages = {
         | 'invoiceDetail'
         | 'user'
         | 'expensesRequests'
-        | 'expensesReport',
+        | 'expensesReport'
+        | 'expensesPartners'
+        | 'expensesPartnersReport',
         string
     >;
     header: Record<

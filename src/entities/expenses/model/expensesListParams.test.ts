@@ -50,4 +50,29 @@ describe('buildExpensesListParams', () => {
         });
         expect(p.status).toBe('pending_approval');
     });
+
+    it('applies company scopeMode and skips partner_expense type filter', () => {
+        const p = buildExpensesListParams({
+            ...base,
+            filterPeriod: 'all',
+            filterType: 'partner_expense' as const,
+            scopeMode: 'company',
+        });
+        expect(p.scopeMode).toBe('company');
+        expect(p.expenseType).toBeUndefined();
+    });
+
+    it('applies partner scope with subtype and partnerUserId', () => {
+        const p = buildExpensesListParams({
+            ...base,
+            filterPeriod: 'all',
+            scopeMode: 'partner',
+            filterSubtype: 'partner_fuel',
+            filterPartnerUserId: 42,
+        });
+        expect(p.scopeMode).toBe('partner');
+        expect(p.expenseType).toBe('partner_expense');
+        expect(p.expenseSubtype).toBe('partner_fuel');
+        expect(p.partnerUserId).toBe(42);
+    });
 });

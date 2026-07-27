@@ -91,8 +91,8 @@ function buildListQuery(params: ListCorrespondenceParams = {}): string {
     return s ? `?${s}` : '';
 }
 
-export async function listCorrespondence(params: ListCorrespondenceParams = {}): Promise<CorrespondenceListResponse> {
-    const res = await apiFetch(`${PREFIX}/${buildListQuery(params)}`);
+export async function listCorrespondence(params: ListCorrespondenceParams = {}, signal?: AbortSignal): Promise<CorrespondenceListResponse> {
+    const res = await apiFetch(`${PREFIX}/${buildListQuery(params)}`, { signal });
     await throwIfNotOk(res);
     const raw = await res.json() as {
         items?: unknown[];
@@ -111,8 +111,8 @@ export async function listCorrespondence(params: ListCorrespondenceParams = {}):
     };
 }
 
-export async function fetchCorrespondenceStats(): Promise<CorrespondenceStats> {
-    const res = await apiFetch(`${PREFIX}/stats`);
+export async function fetchCorrespondenceStats(signal?: AbortSignal): Promise<CorrespondenceStats> {
+    const res = await apiFetch(`${PREFIX}/stats`, { signal });
     await throwIfNotOk(res);
     return normalizeCorrespondenceStats(await res.json());
 }

@@ -7,6 +7,8 @@ import {
 } from '@entities/time-tracking/model/reportsPanelConfig';
 import { useI18n, ttReportPeriodLabel } from '@shared/i18n';
 import { ProjectStatisticsSection } from './ProjectStatisticsSection';
+import { TeamStatisticsSection } from './TeamStatisticsSection';
+import { UserStatisticsSection } from './UserStatisticsSection';
 import './StatisticsPanel.css';
 
 type StatisticsTabId = 'project' | 'team' | 'user';
@@ -190,6 +192,10 @@ export function StatisticsPanel() {
             >
                 {activeTab === 'project' ? (
                     <ProjectStatisticsSection dateFrom={dateFrom} dateTo={dateTo} />
+                ) : activeTab === 'team' ? (
+                    <TeamStatisticsSection dateFrom={dateFrom} dateTo={dateTo} />
+                ) : activeTab === 'user' ? (
+                    <UserStatisticsSection dateFrom={dateFrom} dateTo={dateTo} />
                 ) : (
                     <div className="tt-statistics-project__empty" role="status">
                         <p className="tt-statistics-project__empty-title">{t('timeTrackingPage.statistics.tabPlaceholder')}</p>

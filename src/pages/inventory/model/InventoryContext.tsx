@@ -192,7 +192,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
             setUsers([]);
         }
     }, [canEdit]);
-    const loadItems = useCallback(async () => {
+    const loadItems = useCallback(async (signal?: AbortSignal) => {
         setLoadingItems(true);
         setError(null);
         try {
@@ -206,7 +206,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
                     : undefined),
                 assigned_to_user_id: filterAssignedTo || undefined,
                 include_archived: includeArchived,
-            });
+            }, signal);
             setItems(page.items);
             setItemsTotal(page.total);
             setInUseCount(page.in_use_count);
@@ -214,6 +214,8 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
             setArchivedCount(page.archived_count);
         }
         catch (e) {
+            if (signal?.aborted)
+                return;
             setError(e instanceof Error ? e.message : 'Ошибка загрузки позиций');
             setItems([]);
             setItemsTotal(0);
@@ -222,7 +224,8 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
             setArchivedCount(0);
         }
         finally {
-            setLoadingItems(false);
+            if (!signal?.aborted)
+                setLoadingItems(false);
         }
     }, [skip, filterCategoryId, filterStatus, filterEquipmentClass, filterAssignedTo, includeArchived]);
     useEffect(() => {
@@ -235,7 +238,9 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         loadUsers();
     }, [loadUsers]);
     useEffect(() => {
-        loadItems();
+        const controller = new AbortController();
+        void loadItems(controller.signal);
+        return () => controller.abort();
     }, [loadItems]);
     const handleCategorySubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();

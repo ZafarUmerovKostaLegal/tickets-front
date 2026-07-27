@@ -7,7 +7,7 @@ import { ExpensesShell } from './ExpensesShell';
 import { fetchAllExpenses } from '@entities/expenses/lib/fetchAllExpenses';
 import { applyFilters, DEFAULT_REPORT_CONFIG, exportExpensesCustomTableToExcel, exportExpensesToExcel, type ReportConfig, } from '@entities/expenses/lib/exportExpenses';
 import type { ExpenseRequest, ExpenseStatus, ExpenseType, PaymentMethod } from '@entities/expenses/model/types';
-import { EXPENSE_TYPES, PAYMENT_METHODS, STATUS_META, TYPE_META, } from '@entities/expenses/model/constants';
+import { EXPENSE_TYPES, COMPANY_EXPENSE_TYPES, PAYMENT_METHODS, STATUS_META, TYPE_META, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { EXPENSE_REPORT_COLUMNS, getColumnDef, getDefaultVisibleColumnIds, normalizeVisibleColumnIds, type ExpenseReportColumnId, } from '@entities/expenses/model/expensesReportColumns';
 import './ExpensesPage.css';
@@ -15,6 +15,7 @@ import './ExpensesPage.css';
 const ExpensesReportCharts = lazy(() => import('./ExpensesReportCharts').then((m) => ({ default: m.ExpensesReportCharts })));
 
 const LS_COLUMNS = 'kl-expenses-report-columns-v1';
+const LS_COLUMNS_PARTNER = 'kl-expenses-partner-report-columns-v1';
 const LOAD_PERIOD_OPTIONS = [
     { id: 'all', label: 'Всё время' },
     { id: '90d', label: '90 дней' },
@@ -134,7 +135,9 @@ function ReportAllToggle({ id, label, checked, onToggle, }: {
       </button>
     </div>);
 }
-export function ExpensesReportPage() {
+export function ExpensesReportPage({ variant = 'company' }: { variant?: 'company' | 'partner' }) {
+    const isPartner = variant === 'partner';
+    const columnsLsKey = isPartner ? LS_COLUMNS_PARTNER : LS_COLUMNS;
     const loadRangeId = useId();
     const filterRangeId = useId();
     const periodDropdownRef = useRef<HTMLDivElement>(null);
@@ -149,11 +152,14 @@ export function ExpensesReportPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
-    const [reportConfig, setReportConfig] = useState<ReportConfig>(() => ({ ...DEFAULT_REPORT_CONFIG }));
+    const [reportConfig, setReportConfig] = useState<ReportConfig>(() => ({
+        ...DEFAULT_REPORT_CONFIG,
+        title: isPartner ? 'Отчёт по расходам партнёров' : DEFAULT_REPORT_CONFIG.title,
+    }));
     const [allTypes, setAllTypes] = useState(true);
     const [allStatuses, setAllStatuses] = useState(true);
     const [allPayments, setAllPayments] = useState(true);
-    const [visibleIds, setVisibleIds] = useState<ExpenseReportColumnId[]>(() => getDefaultVisibleColumnIds());
+    const [visibleIds, setVisibleIds] = useState<ExpenseReportColumnId[]>(() => getDefaultVisibleColumnIds(isPartner ? 'partner' : 'company'));
     const [columnsOpen, setColumnsOpen] = useState(true);
     const [excelBusy, setExcelBusy] = useState<'idle' | 'full' | 'custom'>('idle');
     const [excelError, setExcelError] = useState<string | null>(null);
@@ -200,20 +206,20 @@ export function ExpensesReportPage() {
     }, [periodDropdown]);
     useEffect(() => {
         try {
-            const raw = localStorage.getItem(LS_COLUMNS);
+            const raw = localStorage.getItem(columnsLsKey);
             if (raw)
-                setVisibleIds(normalizeVisibleColumnIds(JSON.parse(raw)));
+                setVisibleIds(normalizeVisibleColumnIds(JSON.parse(raw), isPartner ? 'partner' : 'company'));
         }
         catch {
         }
-    }, []);
+    }, [columnsLsKey, isPartner]);
     useEffect(() => {
         try {
-            localStorage.setItem(LS_COLUMNS, JSON.stringify(visibleIds));
+            localStorage.setItem(columnsLsKey, JSON.stringify(visibleIds));
         }
         catch {
         }
-    }, [visibleIds]);
+    }, [visibleIds, columnsLsKey]);
     useEffect(() => {
         const ac = new AbortController();
         let cancelled = false;
@@ -223,6 +229,7 @@ export function ExpensesReportPage() {
             ...apiRange,
             sortBy: 'expenseDate',
             sortOrder: 'desc',
+            scopeMode: isPartner ? 'partner' : 'company',
         }, ac.signal)
             .then(data => {
             if (!cancelled)
@@ -242,7 +249,7 @@ export function ExpensesReportPage() {
             cancelled = true;
             ac.abort();
         };
-    }, [apiRange, reloadKey]);
+    }, [apiRange, reloadKey, isPartner]);
     const setCfg = useCallback(<K extends keyof ReportConfig>(key: K, val: ReportConfig[K]) => {
         setReportConfig(prev => ({ ...prev, [key]: val }));
     }, []);
@@ -281,12 +288,13 @@ export function ExpensesReportPage() {
     const byType = useMemo(() => {
         const m = new Map<string, number>();
         for (const r of filteredItems) {
-            const key = r.expenseType as ExpenseType;
-            const label = TYPE_META[key]?.label ?? r.expenseType;
+            const label = isPartner
+                ? (getPartnerExpenseSubtypeLabel(r.expenseSubtype) || 'Без категории')
+                : (TYPE_META[r.expenseType as ExpenseType]?.label ?? r.expenseType);
             m.set(label, (m.get(label) ?? 0) + asExpenseNumber(r.amountUzs));
         }
         return [...m.entries()].map(([name, value]) => ({ name, value }));
-    }, [filteredItems]);
+    }, [filteredItems, isPartner]);
     const byStatus = useMemo(() => {
         const m = new Map<string, number>();
         for (const r of filteredItems) {
@@ -378,8 +386,8 @@ export function ExpensesReportPage() {
             return [...prev, id];
         });
     };
-    const resetColumns = () => setVisibleIds(getDefaultVisibleColumnIds());
-    return (<ExpensesShell title="Отчёты и аналитика">
+    const resetColumns = () => setVisibleIds(getDefaultVisibleColumnIds(isPartner ? 'partner' : 'company'));
+    return (<ExpensesShell title={isPartner ? 'Отчёт по расходам партнёров' : 'Отчёты и аналитика'}>
       <div className="exp-report-page">
         <header className="exp-report-hero exp-report-hero--visual">
           <div className="exp-report-hero__grid">
@@ -600,7 +608,7 @@ export function ExpensesReportPage() {
                 setReportConfig(prev => ({ ...prev, selectedTypes: [] }));
         }}/>
               {!allTypes && (<div className="rep-check-grid rep-check-grid--wide">
-                  {EXPENSE_TYPES.map(t => (<label key={t.value} className={`rep-check${reportConfig.selectedTypes.includes(t.value) ? ' rep-check--on' : ''}`}>
+                  {(!isPartner ? COMPANY_EXPENSE_TYPES : EXPENSE_TYPES.filter(t => t.value === 'partner_expense')).map(t => (<label key={t.value} className={`rep-check${reportConfig.selectedTypes.includes(t.value) ? ' rep-check--on' : ''}`}>
                       <input type="checkbox" checked={reportConfig.selectedTypes.includes(t.value)} onChange={() => toggleType(t.value)}/>
                       <span>{t.label}</span>
                     </label>))}

@@ -37,6 +37,12 @@ export async function fetchExpenses(params: ListParams = {}, init?: RequestInit)
         qs.set('status', params.status);
     if (params.expenseType)
         qs.set('expenseType', params.expenseType);
+    if (params.expenseSubtype)
+        qs.set('expenseSubtype', params.expenseSubtype);
+    if (params.scopeMode)
+        qs.set('scopeMode', params.scopeMode);
+    if (params.partnerUserId !== undefined)
+        qs.set('partnerUserId', String(params.partnerUserId));
     if (params.isReimbursable !== undefined)
         qs.set('isReimbursable', String(params.isReimbursable));
     if (params.dateFrom)

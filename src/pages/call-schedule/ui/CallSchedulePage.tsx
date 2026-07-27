@@ -359,10 +359,11 @@ export function CallSchedulePage() {
   const weeks = useMemo(() => buildMonthWeeks(anchorMonth), [anchorMonth]);
   useEffect(() => {
     let live = true;
+    const controller = new AbortController();
     setCalendarsLoading(true);
     (async () => {
       try {
-        const c = await getCallScheduleCalendars();
+        const c = await getCallScheduleCalendars(controller.signal);
         if (!live)
           return;
         setMailbox(c.mailbox);
@@ -392,12 +393,14 @@ export function CallSchedulePage() {
     })();
     return () => {
       live = false;
+      controller.abort();
     };
   }, [retryKey]);
   useEffect(() => {
     if (calendarsLoading || calendarsError)
       return;
     let live = true;
+    const controller = new AbortController();
     (async () => {
       setEventsLoading(true);
       setEventsError(null);
@@ -408,7 +411,7 @@ export function CallSchedulePage() {
           start: start.toISOString(),
           end: end.toISOString(),
           calendarId,
-        });
+        }, controller.signal);
         if (!live)
           return;
         setEvents(list);
@@ -427,6 +430,7 @@ export function CallSchedulePage() {
     })();
     return () => {
       live = false;
+      controller.abort();
     };
   }, [viewY, viewM, calendarId, retryKey, calendarsLoading, calendarsError, t]);
   const eventsByDate = useMemo(() => {

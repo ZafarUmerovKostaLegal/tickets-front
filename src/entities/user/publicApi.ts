@@ -1,15 +1,18 @@
 import { apiFetch } from '@shared/api';
 import { compareRuLabels, userPickerSortLabel } from '@shared/lib/sortByRuLabel';
+import { createQueryCache } from '@shared/lib/queryCache';
 import { normalizeUserPublic, normalizeUsersPublicBatch } from './lib/normalizeUserPublic';
 import type { UserPublic, UsersPublicBatchResponse } from './model/publicTypes';
 
 const PUBLIC_USERS_BATCH_LIMIT = 200;
+const PARTNERS_CACHE_KEY = 'user-partners';
+const partnersCache = createQueryCache<UserPublic[]>({ ttlMs: 5 * 60_000 });
 
 function sortPartnersByLabel(rows: UserPublic[]): UserPublic[] {
     return [...rows].sort((a, b) => compareRuLabels(userPickerSortLabel(a), userPickerSortLabel(b)));
 }
 
-export async function listPartners(): Promise<UserPublic[]> {
+async function fetchPartnersFromApi(): Promise<UserPublic[]> {
     const res = await apiFetch('/api/v1/users/partners');
     if (res.status === 401)
         throw new Error('Не авторизован');
@@ -29,6 +32,14 @@ export async function listPartners(): Promise<UserPublic[]> {
             .filter((x): x is UserPublic => x != null));
     }
     return [];
+}
+
+export async function listPartners(): Promise<UserPublic[]> {
+    return partnersCache.fetch(PARTNERS_CACHE_KEY, fetchPartnersFromApi);
+}
+
+export function invalidatePartnersCache(): void {
+    partnersCache.invalidate(PARTNERS_CACHE_KEY);
 }
 
 export async function getUserPublic(userId: number): Promise<UserPublic | null> {
@@ -81,6 +92,7 @@ export async function getUsersPublic(ids: readonly number[], includeArchived = t
     }
     if (unique.length === 0)
         return { items: [], missing_ids: [] };
+    unique.sort((a, b) => a - b);
 
     const chunks: number[][] = [];
     for (let i = 0; i < unique.length; i += PUBLIC_USERS_BATCH_LIMIT)

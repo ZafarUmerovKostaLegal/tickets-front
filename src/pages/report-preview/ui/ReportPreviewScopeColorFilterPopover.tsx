@@ -26,7 +26,7 @@ export function ReportPreviewScopeColorFilterPopover({
             active={active}
         >
             <div className="tt-rp-xlf__section">
-                <p className="tt-rp-xlf__hint">Показать строки с выбранными цветами. Можно отметить несколько.</p>
+                <p className="tt-rp-xlf__hint">Показать строки с выбранными цветами. Можно отметить несколько. Окрашенные строки в таблице сразу группируются по цвету.</p>
                 <div className="tt-rp-scope-filter__chips" role="group" aria-label="Цвета Scope">
                     <button
                         type="button"

@@ -77,12 +77,12 @@ export function useAttendanceData(dateFrom: string, dateTo: string, search: stri
     }, [dateFrom, dateTo]);
     const debouncedSearch = useDebouncedValue(search, 300);
     const requestSearch = singleDay ? '' : debouncedSearch.trim();
-    const load = useCallback(async () => {
+    const load = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         setError(null);
         try {
             if (singleDay) {
-                const res = await fetchDailyAttendanceReport(singleDay);
+                const res = await fetchDailyAttendanceReport(singleDay, signal);
                 setDailyReport(res);
                 setRecords([]);
             }
@@ -94,22 +94,28 @@ export function useAttendanceData(dateFrom: string, dateTo: string, search: stri
                     dateTo: to,
                     name: requestSearch || undefined,
                     maxRecordsPerDevice: 500,
+                    signal,
                 });
                 setRecords(res);
                 setDailyReport(null);
             }
         }
         catch (e) {
+            if (signal?.aborted)
+                return;
             setError(e instanceof Error ? e.message : t('attendancePage.errors.loadFailed'));
             setRecords([]);
             setDailyReport(null);
         }
         finally {
-            setLoading(false);
+            if (!signal?.aborted)
+                setLoading(false);
         }
     }, [dateFrom, dateTo, singleDay, requestSearch, t]);
     useEffect(() => {
-        load();
+        const controller = new AbortController();
+        void load(controller.signal);
+        return () => controller.abort();
     }, [load]);
     const groupedRecords = useMemo((): GroupedRow[] => {
         if (singleDay && dailyReport) {

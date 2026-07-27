@@ -164,41 +164,120 @@
   box-sizing: border-box;
 }
 
-.tt-statistics-project__bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.2rem;
-  min-height: 10rem;
-  width: 100%;
-  padding: 0.5rem 0 0;
-  box-sizing: border-box;
+.tt-statistics-project__chart {
+  padding: 0.85rem 1rem 0.65rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--app-surface, #fff);
 }
 
-.tt-statistics-project__bar-col {
+.tt-statistics-project__chart-head {
+  margin-bottom: 0.55rem;
+}
+
+.tt-statistics-project__chart-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1.15rem;
+  margin-bottom: 0.55rem;
+}
+
+.tt-statistics-project__chart-stat {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.3rem;
-  min-width: 0;
-  height: 10rem;
-  flex: 1 1 0;
+  gap: 0.1rem;
+  min-width: 5.5rem;
 }
 
-.tt-statistics-project__bar {
-  width: 100%;
-  max-width: 2.5rem;
-  border-radius: 4px 4px 2px 2px;
-  background: color-mix(in srgb, var(--app-accent, #4f46e5) 72%, #94a3b8);
-}
-
-.tt-statistics-project__bar-label {
-  font-size: 0.6rem;
+.tt-statistics-project__chart-stat span {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
   color: var(--app-muted, #64748b);
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.tt-statistics-project__chart-stat strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--app-text, #0f172a);
+}
+
+.tt-statistics-project__chart-stat--active strong {
+  color: var(--app-accent, #4f46e5);
+}
+
+.tt-statistics-project__chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin: 0 0 0.35rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--app-muted, #64748b);
+}
+
+.tt-statistics-project__chart-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.tt-statistics-project__chart-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tt-statistics-project__chart-plot {
+  width: 100%;
+  min-height: 300px;
+}
+
+.tt-statistics-project__tooltip {
+  min-width: 9rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.1);
+  font-size: 0.8125rem;
+}
+
+.tt-statistics-project__tooltip-title {
+  margin-bottom: 0.35rem;
+  font-weight: 700;
+  color: var(--app-text, #0f172a);
+}
+
+.tt-statistics-project__tooltip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.85rem;
+  margin-top: 0.2rem;
+  color: var(--app-muted, #64748b);
+}
+
+.tt-statistics-project__tooltip-row strong {
+  color: var(--app-text, #0f172a);
+  font-variant-numeric: tabular-nums;
+}
+
+.tt-statistics-project__tooltip-row--total {
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--app-border, #e2e8f0);
+  font-weight: 600;
+}
+
+.tt-statistics-project__tooltip-foot {
+  margin: 0.4rem 0 0;
+  font-size: 0.72rem;
+  color: var(--app-muted, #64748b);
 }
 
 .tt-statistics-project__user-list {
@@ -281,19 +360,21 @@
 
 .tt-statistics-project__table th:nth-child(1),
 .tt-statistics-project__table td:nth-child(1) {
-  width: 22%;
+  width: 18%;
 }
 
 .tt-statistics-project__table th:nth-child(2),
-.tt-statistics-project__table td:nth-child(2) {
-  width: 48%;
+.tt-statistics-project__table td:nth-child(2),
+.tt-statistics-project__table th:nth-child(3),
+.tt-statistics-project__table td:nth-child(3) {
   white-space: normal;
   word-break: break-word;
 }
 
-.tt-statistics-project__table th:nth-child(3),
-.tt-statistics-project__table td:nth-child(3),
-.tt-statistics-project__table th:nth-child(4),
-.tt-statistics-project__table td:nth-child(4) {
-  width: 15%;
+.tt-statistics-project__table th:nth-last-child(2),
+.tt-statistics-project__table td:nth-last-child(2),
+.tt-statistics-project__table th:nth-last-child(1),
+.tt-statistics-project__table td:nth-last-child(1) {
+  width: 12%;
+  white-space: nowrap;
 }

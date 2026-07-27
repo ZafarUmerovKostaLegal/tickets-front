@@ -18,6 +18,7 @@ import {
     translateTicketCategory,
 } from '@shared/i18n';
 import { hasFullTicketAccessRole } from '@shared/lib/orgRoles';
+import { createCoalescedRequest } from '@shared/lib/coalescedRequest';
 import { TICKET_CATEGORIES } from '@entities/ticket/lib/constants';
 import './TicketDetailPage.css';
 const IconUser = memo(function IconUser() {
@@ -173,19 +174,35 @@ export function TicketDetailPage() {
     useEffect(() => {
         if (!uuid)
             return;
+        let live = true;
+        const ticketRefresh = createCoalescedRequest(async () => {
+            const next = await getTicket(uuid);
+            if (live)
+                setTicket(next);
+        }, 100);
+        const commentsRefresh = createCoalescedRequest(async () => {
+            const next = await getComments(uuid);
+            if (live)
+                setComments(next);
+        }, 100);
         const off = subscribeTicketsWsPush((msg) => {
             const ticketU = typeof msg.ticket_uuid === 'string' ? msg.ticket_uuid : '';
             if (ticketU !== uuid)
                 return;
             const ev = typeof msg.event === 'string' ? msg.event : '';
             if (ev === 'ticket_created' || ev === 'ticket_updated' || ev === 'ticket_archived') {
-                getTicket(uuid).then(setTicket).catch(() => { });
+                ticketRefresh.schedule();
             }
             if (ev.startsWith('comment_')) {
-                getComments(uuid).then(setComments).catch(() => { });
+                commentsRefresh.schedule();
             }
         });
-        return off;
+        return () => {
+            live = false;
+            ticketRefresh.cancel();
+            commentsRefresh.cancel();
+            off();
+        };
     }, [uuid]);
     useEffect(() => {
         getStatuses().then(setStatuses).catch(() => setStatuses([]));

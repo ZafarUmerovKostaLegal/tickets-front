@@ -1,4 +1,4 @@
-import { apiFetch } from '@shared/api';
+import { apiFetch, invalidateApiGetReuse } from '@shared/api';
 import { getAccessToken } from '@shared/lib/auth';
 import { getTicketsWsUrl, isSessionCookieOnly } from '@shared/config';
 import type { Ticket, Comment, StatusItem, PriorityItem, TicketsParams } from './model/types';
@@ -69,7 +69,8 @@ function connect(token: string | null): Promise<WebSocket> {
                     error?: string;
                     push?: boolean;
                 };
-                if (msg.push === true && pushHandlers.size > 0) {
+                if (msg.push === true) {
+                    invalidateApiGetReuse();
                     for (const h of pushHandlers) {
                         try {
                             h(msg);

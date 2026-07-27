@@ -4,6 +4,7 @@ import {
     fetchChatMessages,
     CHAT_MESSAGES_MAX_LIMIT,
     fetchChatRooms,
+    invalidateChatRoomsCache,
     markChatRoomRead,
     postChatMessage,
     uploadChatFile,
@@ -184,6 +185,7 @@ export function useKostaDailyChat(
                 return;
             }
             if (event.type === 'room_created') {
+                invalidateChatRoomsCache();
                 void refreshRooms();
                 return;
             }
@@ -209,6 +211,7 @@ export function useKostaDailyChat(
                 return;
             }
             if (event.type === 'members_added') {
+                invalidateChatRoomsCache();
                 void refreshRooms();
             }
         });

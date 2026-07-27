@@ -95,15 +95,28 @@ export function ContactsPage() {
         setClientsError(null);
         try {
             const rows = await listAllContactsClientsMerged(false);
-            const enriched = await Promise.all(rows.map(async (client) => {
-                try {
-                    const extra_contacts = await listContactsClientContacts(client.id);
-                    return extra_contacts.length > 0 ? { ...client, extra_contacts } : client;
+            const enriched = [...rows];
+            const missingIndexes = rows
+                .map((client, index) => client.extra_contacts === undefined ? index : -1)
+                .filter((index) => index >= 0);
+            let cursor = 0;
+            const workers = Array.from(
+                { length: Math.min(6, missingIndexes.length) },
+                async () => {
+                    while (cursor < missingIndexes.length) {
+                        const index = missingIndexes[cursor++]!;
+                        const client = rows[index]!;
+                        try {
+                            const extra_contacts = await listContactsClientContacts(client.id);
+                            enriched[index] = { ...client, extra_contacts };
+                        }
+                        catch {
+                            // Keep the client row usable even when one contact list fails.
+                        }
+                    }
                 }
-                catch {
-                    return client;
-                }
-            }));
+            );
+            await Promise.all(workers);
             setClients(enriched);
         }
         catch (e) {

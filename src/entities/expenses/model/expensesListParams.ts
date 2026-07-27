@@ -1,4 +1,4 @@
-import type { ExpenseStatus, ExpenseType, ListParams } from './types';
+import type { ExpenseStatus, ExpenseType, ExpensesScopeMode, ListParams, PartnerExpenseCategory } from './types';
 import {
     defaultExpensesCustomRange,
     expensesPeriodPresetRange,
@@ -16,6 +16,8 @@ export function buildExpensesListParams(args: {
     search: string;
     filterStatus: ExpenseStatus | '';
     filterType: ExpenseType | '';
+    filterSubtype?: PartnerExpenseCategory | '';
+    filterPartnerUserId?: number | '';
     filterReimb: 'reimbursable' | 'non_reimbursable' | '';
     filterPeriod: ExpensesUiFilterPeriod;
     filterDateFrom?: string;
@@ -23,6 +25,7 @@ export function buildExpensesListParams(args: {
     sortBy?: ExpensesUiSortBy;
     page: number;
     pageSize?: number;
+    scopeMode?: ExpensesScopeMode;
 }): ListParams {
     const pageSize = args.pageSize ?? EXPENSES_LIST_PAGE_SIZE;
     const page = Math.max(1, args.page);
@@ -32,6 +35,8 @@ export function buildExpensesListParams(args: {
         sortBy: args.sortBy ?? 'createdAt',
         sortOrder: 'desc',
     };
+    if (args.scopeMode)
+        p.scopeMode = args.scopeMode;
     const q = args.search.trim();
     if (q)
         p.q = q;
@@ -41,8 +46,16 @@ export function buildExpensesListParams(args: {
     else if (args.filterStatus) {
         p.status = args.filterStatus;
     }
-    if (args.filterType)
+    if (args.scopeMode === 'partner') {
+        p.expenseType = 'partner_expense';
+        if (args.filterSubtype)
+            p.expenseSubtype = args.filterSubtype;
+        if (typeof args.filterPartnerUserId === 'number' && args.filterPartnerUserId > 0)
+            p.partnerUserId = args.filterPartnerUserId;
+    }
+    else if (args.filterType && args.filterType !== 'partner_expense') {
         p.expenseType = args.filterType;
+    }
     if (args.filterReimb === 'reimbursable')
         p.isReimbursable = true;
     if (args.filterReimb === 'non_reimbursable')

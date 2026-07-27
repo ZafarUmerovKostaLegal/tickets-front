@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { createQueryCache } from '@shared/lib/queryCache';
 import { mergeMessagesSorted } from './lib/kostaDailyUi';
 import type {
     ChatAttachment,
@@ -12,6 +13,12 @@ import type {
 } from './types';
 
 const CHAT = '/api/v1/chat';
+const chatRoomsCache = createQueryCache<ChatRoom[]>({ ttlMs: 2_500 });
+const CHAT_ROOMS_CACHE_KEY = 'chat-rooms';
+
+export function invalidateChatRoomsCache(): void {
+    chatRoomsCache.invalidate(CHAT_ROOMS_CACHE_KEY);
+}
 
 function parseAttachment(raw: Record<string, unknown>): ChatAttachment {
     return {
@@ -202,11 +209,15 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
     return text.trim() ? (JSON.parse(text) as Record<string, unknown>) : {};
 }
 
-export async function fetchChatRooms(): Promise<ChatRoom[]> {
+async function fetchChatRoomsFromApi(): Promise<ChatRoom[]> {
     const res = await apiFetch(`${CHAT}/rooms`);
     const raw = await readJson(res);
     const items = Array.isArray(raw.items) ? raw.items : [];
     return items.map((x) => parseRoom(x as Record<string, unknown>));
+}
+
+export async function fetchChatRooms(): Promise<ChatRoom[]> {
+    return chatRoomsCache.fetch(CHAT_ROOMS_CACHE_KEY, fetchChatRoomsFromApi);
 }
 
 export async function fetchChatRoom(roomId: number): Promise<ChatRoom> {
@@ -282,7 +293,9 @@ export async function postChatMessage(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
     });
-    return parseMessage(await readJson(res));
+    const message = parseMessage(await readJson(res));
+    invalidateChatRoomsCache();
+    return message;
 }
 
 export async function uploadChatFile(
@@ -301,7 +314,9 @@ export async function uploadChatFile(
         method: 'POST',
         body: form,
     });
-    return parseMessage(await readJson(res));
+    const message = parseMessage(await readJson(res));
+    invalidateChatRoomsCache();
+    return message;
 }
 
 export async function fetchChatAttachmentBlob(attachmentId: number): Promise<Blob> {
@@ -318,6 +333,7 @@ export async function markChatRoomRead(roomId: number, messageId?: number): Prom
         body: JSON.stringify(messageId != null ? { messageId } : {}),
     });
     await readJson(res);
+    invalidateChatRoomsCache();
 }
 
 export async function createChatGroupRoom(title: string, memberUserIds: number[]): Promise<ChatRoom> {
@@ -326,7 +342,9 @@ export async function createChatGroupRoom(title: string, memberUserIds: number[]
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, memberUserIds }),
     });
-    return parseRoom(await readJson(res));
+    const room = parseRoom(await readJson(res));
+    invalidateChatRoomsCache();
+    return room;
 }
 
 export async function createChatChannelRoom(title: string, memberUserIds: number[]): Promise<ChatRoom> {
@@ -335,7 +353,9 @@ export async function createChatChannelRoom(title: string, memberUserIds: number
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, memberUserIds }),
     });
-    return parseRoom(await readJson(res));
+    const room = parseRoom(await readJson(res));
+    invalidateChatRoomsCache();
+    return room;
 }
 
 export async function createChatPoll(roomId: number, input: CreatePollInput): Promise<ChatMessage> {
@@ -380,7 +400,9 @@ export async function createOrGetChatDmRoom(otherUserId: number): Promise<ChatRo
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otherUserId }),
     });
-    return parseRoom(await readJson(res));
+    const room = parseRoom(await readJson(res));
+    invalidateChatRoomsCache();
+    return room;
 }
 
 function parseRoomMembers(raw: unknown): ChatRoomMember[] {
@@ -407,7 +429,9 @@ export async function addChatRoomMembers(roomId: number, userIds: number[]): Pro
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userIds }),
     });
-    return parseRoomMembers(await readJson(res));
+    const members = parseRoomMembers(await readJson(res));
+    invalidateChatRoomsCache();
+    return members;
 }
 
 export async function patchChatMessage(messageId: number, body: string): Promise<ChatMessage> {

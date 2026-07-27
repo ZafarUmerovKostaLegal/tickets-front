@@ -19,6 +19,8 @@ import { createQueryCache } from '@shared/lib/queryCache';
 
 const CONTACTS_PREFIX = '/api/v1/contacts';
 const colleaguesCache = createQueryCache<TimeTrackingUserRow[]>({ ttlMs: 5 * 60_000 });
+const clientsMergedCache = createQueryCache<TimeManagerClientRow[]>({ ttlMs: 2 * 60_000, maxEntries: 4 });
+const clientContactsCache = createQueryCache<TimeManagerClientContactRow[]>({ ttlMs: 5 * 60_000, maxEntries: 200 });
 const COLLEAGUES_CACHE_KEY = 'contacts-colleagues';
 
 export class ContactsHttpError extends Error {
@@ -152,7 +154,7 @@ async function mergeContactsClientPages(
     return acc;
 }
 
-export async function listAllContactsClientsMerged(includeArchived = false): Promise<TimeManagerClientRow[]> {
+async function fetchAllContactsClientsMerged(includeArchived: boolean): Promise<TimeManagerClientRow[]> {
     const acc = await mergeContactsClientPages((offset) =>
         listContactsClients(includeArchived, {
             limit: CONTACTS_CLIENTS_PAGE_SIZE,
@@ -163,16 +165,22 @@ export async function listAllContactsClientsMerged(includeArchived = false): Pro
     return acc;
 }
 
+export async function listAllContactsClientsMerged(includeArchived = false): Promise<TimeManagerClientRow[]> {
+    return clientsMergedCache.fetch(`contacts-clients:${includeArchived}`, () => fetchAllContactsClientsMerged(includeArchived));
+}
+
 export async function listContactsClientContacts(clientId: string): Promise<TimeManagerClientContactRow[]> {
-    const res = await apiFetch(
-        `${CONTACTS_PREFIX}/clients/${encodeURIComponent(clientId)}/contacts`,
-    );
-    await throwIfNotOk(res);
-    const raw = await res.json();
-    const arr = unwrapTimeTrackingListArray(raw);
-    if (!arr)
-        return [];
-    return arr.map(normalizeTimeManagerContact).filter((x): x is TimeManagerClientContactRow => x != null);
+    return clientContactsCache.fetch(clientId, async () => {
+        const res = await apiFetch(
+            `${CONTACTS_PREFIX}/clients/${encodeURIComponent(clientId)}/contacts`,
+        );
+        await throwIfNotOk(res);
+        const raw = await res.json();
+        const arr = unwrapTimeTrackingListArray(raw);
+        if (!arr)
+            return [];
+        return arr.map(normalizeTimeManagerContact).filter((x): x is TimeManagerClientContactRow => x != null);
+    });
 }
 
 export async function createContactsClientContact(
@@ -196,6 +204,12 @@ export async function createContactsClientContact(
     const row = normalizeTimeManagerContact(await res.json());
     if (!row)
         throw new Error('Некорректный ответ при создании контакта');
+    const cached = clientContactsCache.get(clientId);
+    if (cached)
+        clientContactsCache.prime(clientId, [...cached, row]);
+    else
+        clientContactsCache.invalidate(clientId);
+    clientsMergedCache.invalidate();
     return row;
 }
 
@@ -225,6 +239,12 @@ export async function patchContactsClientContact(
     const row = normalizeTimeManagerContact(await res.json());
     if (!row)
         throw new Error('Некорректный ответ при обновлении контакта');
+    const cached = clientContactsCache.get(clientId);
+    if (cached)
+        clientContactsCache.prime(clientId, cached.map((contact) => contact.id === contactId ? row : contact));
+    else
+        clientContactsCache.invalidate(clientId);
+    clientsMergedCache.invalidate();
     return row;
 }
 
@@ -234,4 +254,10 @@ export async function deleteContactsClientContact(clientId: string, contactId: s
         { method: 'DELETE' },
     );
     await throwIfNotOk(res);
+    const cached = clientContactsCache.get(clientId);
+    if (cached)
+        clientContactsCache.prime(clientId, cached.filter((contact) => contact.id !== contactId));
+    else
+        clientContactsCache.invalidate(clientId);
+    clientsMergedCache.invalidate();
 }

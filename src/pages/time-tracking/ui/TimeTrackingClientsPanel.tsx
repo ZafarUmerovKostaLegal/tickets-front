@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useRef, useCallback, useId, useLayoutEffe
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatedLink, SearchableSelect, useAppDialog } from '@shared/ui';
-import { listTimeManagerClients, listClientProjects, getTimeManagerClient, createTimeManagerClient, patchTimeManagerClient, deleteTimeManagerClient, listClientContacts, createClientContact, patchClientContact, deleteClientContact, fetchProjectsBudgetMetrics, applyBudgetMetricsToProjects, patchClientProject, deleteClientProject, isForbiddenError, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientContactRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
+import { listTimeManagerClients, listAllTimeManagerClientsMerged, listClientProjects, getTimeManagerClient, createTimeManagerClient, patchTimeManagerClient, deleteTimeManagerClient, listClientContacts, createClientContact, patchClientContact, deleteClientContact, fetchProjectsBudgetMetrics, applyBudgetMetricsToProjects, patchClientProject, deleteClientProject, isForbiddenError, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientContactRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { Pagination } from '@shared/ui/Pagination';
 import { clientRowSearchText } from '@pages/time-tracking/lib/clientRowSearchText';
@@ -876,12 +876,12 @@ function AddClientContactModal({ includeArchived, canManage, onClose }: AddClien
     useEffect(() => {
         let cancelled = false;
         setListLoading(true);
-        void listTimeManagerClients(includeArchived)
+        void listAllTimeManagerClientsMerged(includeArchived)
             .then((rows) => {
             if (cancelled)
                 return;
-            rows.sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
-            setClients(rows);
+            const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
+            setClients(sorted);
         })
             .catch(() => {
             if (!cancelled)
@@ -1064,9 +1064,18 @@ export function TimeTrackingClientsPanel() {
     } | null>(null);
     const [restoreBusyId, setRestoreBusyId] = useState<string | null>(null);
     useEffect(() => {
-        const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 300);
+        const t = window.setTimeout(() => {
+            setDebouncedSearch(search.trim());
+            setClientsPage(1);
+            setClientsSearchPage(1);
+        }, 300);
         return () => window.clearTimeout(t);
     }, [search]);
+    const changeIncludeArchived = useCallback((value: boolean) => {
+        setIncludeArchived(value);
+        setClientsPage(1);
+        setClientsSearchPage(1);
+    }, []);
     const loadClientProjects = useCallback(async (clientId: string) => {
         setClientProjects((prev) => ({
             ...prev,
@@ -1108,17 +1117,19 @@ export function TimeTrackingClientsPanel() {
             }));
         }
     }, []);
-    const loadClients = useCallback(async (includeArchivedOverride?: boolean) => {
+    const loadClients = useCallback(async (includeArchivedOverride?: boolean, signal?: AbortSignal) => {
         const inc = includeArchivedOverride ?? includeArchived;
         setListLoading(true);
         setListError(null);
         try {
-            const r = await listTimeManagerClients(inc, { limit: PAGE, offset: (clientsPage - 1) * PAGE });
+            const r = await listTimeManagerClients(inc, { limit: PAGE, offset: (clientsPage - 1) * PAGE }, signal);
             const rows = [...r.items].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
             setClients(rows);
             setClientsTotal(r.total);
         }
         catch (e) {
+            if (signal?.aborted)
+                return;
             if (isForbiddenError(e)) {
                 setListError(t('timeTrackingPage.clients.errors.insufficientRightsView'));
             }
@@ -1129,16 +1140,20 @@ export function TimeTrackingClientsPanel() {
             setClientsTotal(0);
         }
         finally {
-            setListLoading(false);
+            if (!signal?.aborted)
+                setListLoading(false);
         }
     }, [includeArchived, clientsPage, PAGE, t]);
+    const hasClientsSearch = Boolean(debouncedSearch);
     useEffect(() => {
-        if (debouncedSearch)
+        if (hasClientsSearch)
             return;
-        void loadClients();
-    }, [loadClients, debouncedSearch]);
+        const controller = new AbortController();
+        void loadClients(undefined, controller.signal);
+        return () => controller.abort();
+    }, [loadClients, hasClientsSearch]);
     useEffect(() => {
-        if (!debouncedSearch) {
+        if (!hasClientsSearch) {
             setClientsSearchFull(null);
             setClientsSearchLoading(false);
             setClientsSearchPage(1);
@@ -1147,12 +1162,12 @@ export function TimeTrackingClientsPanel() {
         let cancelled = false;
         setClientsSearchLoading(true);
         setClientsSearchPage(1);
-        void listTimeManagerClients(includeArchived)
+        void listAllTimeManagerClientsMerged(includeArchived)
             .then((rows) => {
             if (cancelled)
                 return;
-            rows.sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
-            setClientsSearchFull(rows);
+            const sorted = [...rows].sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
+            setClientsSearchFull(sorted);
         })
             .catch(() => {
             if (!cancelled)
@@ -1165,11 +1180,7 @@ export function TimeTrackingClientsPanel() {
         return () => {
             cancelled = true;
         };
-    }, [includeArchived, debouncedSearch]);
-    useEffect(() => {
-        setClientsPage(1);
-        setClientsSearchPage(1);
-    }, [includeArchived, debouncedSearch]);
+    }, [includeArchived, hasClientsSearch]);
     const tableWrapRef = useRef<HTMLDivElement>(null);
     const handleClientsPageChange = useCallback((nextPage: number) => {
         if (debouncedSearch) {
@@ -1279,12 +1290,14 @@ export function TimeTrackingClientsPanel() {
     }, [displayClients, collapsed, listBusy, clientProjects, loadClientProjects]);
     const onSaved = useCallback((row: TimeManagerClientRow) => {
         if (row.is_archived) {
-            setIncludeArchived(true);
-            void loadClients(true);
+            if (includeArchived)
+                void loadClients(true);
+            else
+                changeIncludeArchived(true);
             return;
         }
         void loadClients();
-    }, [loadClients]);
+    }, [changeIncludeArchived, includeArchived, loadClients]);
     const handleRestoreFromArchive = useCallback(async (c: TimeManagerClientRow) => {
         setRestoreBusyId(c.id);
         try {
@@ -1389,7 +1402,7 @@ export function TimeTrackingClientsPanel() {
       <div className="pp__topbar">
         <div className="pp__topbar-left">
           <h1 className="pp__title">{t('timeTrackingPage.clients.title')}</h1>
-          <ClientsScopeDropdown includeArchived={includeArchived} totalCount={clientsPagerTotal} onSelect={setIncludeArchived} t={t}/>
+          <ClientsScopeDropdown includeArchived={includeArchived} totalCount={clientsPagerTotal} onSelect={changeIncludeArchived} t={t}/>
         </div>
         <div className="pp__topbar-right">
           <div className="tt-settings__search-wrap pp__projects-search">

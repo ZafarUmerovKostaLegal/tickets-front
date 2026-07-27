@@ -1,7 +1,8 @@
 import { getAccessToken } from '@shared/lib/auth';
 import { getNotificationsWsUrl, isSessionCookieOnly } from '@shared/config';
+import { invalidateApiGetReuse } from '@shared/api';
 import { normalizeNotificationItem } from './normalize';
-import { archiveNotificationRest, listNotificationsRest } from './restApi';
+import { archiveNotificationRest, invalidateNotificationsListCache, listNotificationsRest } from './restApi';
 import type { NotificationItem } from './types';
 
 export type { NotificationItem } from './types';
@@ -16,6 +17,8 @@ export function subscribeNotificationPush(handler: (item: NotificationItem) => v
     };
 }
 function emitNotificationPush(item: NotificationItem): void {
+    invalidateApiGetReuse();
+    invalidateNotificationsListCache();
     for (const h of [...pushListeners]) {
         try {
             h(item);
@@ -300,6 +303,7 @@ export async function createNotification(payload: CreateNotificationPayload): Pr
     });
     if (!result || typeof result !== 'object')
         throw new Error('Invalid response');
+    invalidateNotificationsListCache();
     return result as NotificationItem;
 }
 export type UpdateNotificationPayload = {
@@ -322,6 +326,7 @@ export async function updateNotification(payload: UpdateNotificationPayload): Pr
     });
     if (!result || typeof result !== 'object')
         throw new Error('Invalid response');
+    invalidateNotificationsListCache();
     return result as NotificationItem;
 }
 export async function archiveNotification(uuid: string, isArchived = true): Promise<NotificationItem> {
@@ -335,5 +340,8 @@ export async function deleteNotification(uuid: string): Promise<boolean> {
     const obj = result as {
         deleted?: unknown;
     } | null;
-    return Boolean(obj?.deleted);
+    const deleted = Boolean(obj?.deleted);
+    if (deleted)
+        invalidateNotificationsListCache();
+    return deleted;
 }

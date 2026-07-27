@@ -39,7 +39,12 @@ export function setCachedUser(user: User | null, error?: Error | null): void {
 }
 
 function currentAuthKey(): string {
-    return getAccessToken() ?? 'session-cookie';
+    try {
+        return getAccessToken() ?? 'session-cookie';
+    }
+    catch {
+        return 'session-cookie';
+    }
 }
 
 function startCurrentUserRequest(): Promise<User> {

@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { createQueryCache } from '@shared/lib/queryCache';
 import { mapGraphEventToCallEvent, type CallEvent } from './mapGraphEvent';
 
 export type { CallEvent } from './mapGraphEvent';
@@ -13,6 +14,10 @@ export type CallCalendarsResponse = {
     mailbox: string;
     calendars: CallScheduleCalendar[];
 };
+
+const CALENDARS_CACHE_KEY = 'call-schedule-calendars';
+const calendarsCache = createQueryCache<CallCalendarsResponse>({ ttlMs: 5 * 60_000 });
+const eventsCache = createQueryCache<CallEvent[]>({ ttlMs: 30_000, maxEntries: 24 });
 
 function humanizeError(status: number, text: string): string {
     const short = text && text.length < 500;
@@ -56,13 +61,17 @@ export class CallScheduleApiError extends Error {
     }
 }
 
-export async function getCallScheduleCalendars(): Promise<CallCalendarsResponse> {
-    const res = await apiFetch('/api/v1/call-schedule/calendars');
+async function fetchCallScheduleCalendarsFromApi(signal?: AbortSignal): Promise<CallCalendarsResponse> {
+    const res = await apiFetch('/api/v1/call-schedule/calendars', { signal });
     if (!res.ok) {
         const d = await readErrorDetail(res);
         throw new CallScheduleApiError(res.status, humanizeError(res.status, d));
     }
     return res.json() as Promise<CallCalendarsResponse>;
+}
+
+export async function getCallScheduleCalendars(signal?: AbortSignal): Promise<CallCalendarsResponse> {
+    return calendarsCache.fetch(CALENDARS_CACHE_KEY, fetchCallScheduleCalendarsFromApi, { signal });
 }
 
 export type GetCallScheduleEventsParams = {
@@ -71,21 +80,24 @@ export type GetCallScheduleEventsParams = {
     calendarId?: string;
 };
 
-export async function getCallScheduleEvents(params: GetCallScheduleEventsParams): Promise<CallEvent[]> {
+export async function getCallScheduleEvents(params: GetCallScheduleEventsParams, signal?: AbortSignal): Promise<CallEvent[]> {
     const q = new URLSearchParams();
     q.set('start', params.start);
     q.set('end', params.end);
     q.set('calendarId', params.calendarId && params.calendarId.length > 0 ? params.calendarId : 'default');
-    const res = await apiFetch(`/api/v1/call-schedule/events?${q.toString()}`);
-    if (!res.ok) {
-        const d = await readErrorDetail(res);
-        throw new CallScheduleApiError(res.status, humanizeError(res.status, d));
-    }
-    const j = (await res.json()) as { events?: unknown[] };
-    const arr = j.events;
-    if (!Array.isArray(arr))
-        return [];
-    return arr.map(mapGraphEventToCallEvent).filter((x): x is CallEvent => x != null);
+    const path = `/api/v1/call-schedule/events?${q.toString()}`;
+    return eventsCache.fetch(path, async (sharedSignal) => {
+        const res = await apiFetch(path, { signal: sharedSignal });
+        if (!res.ok) {
+            const d = await readErrorDetail(res);
+            throw new CallScheduleApiError(res.status, humanizeError(res.status, d));
+        }
+        const j = (await res.json()) as { events?: unknown[] };
+        const arr = j.events;
+        if (!Array.isArray(arr))
+            return [];
+        return arr.map(mapGraphEventToCallEvent).filter((x): x is CallEvent => x != null);
+    }, { signal });
 }
 
 export type CreateCallScheduleEventInput = {
@@ -119,5 +131,7 @@ export async function createCallScheduleEvent(
         const d = await readErrorDetail(res);
         throw new CallScheduleApiError(res.status, humanizeError(res.status, d));
     }
-    return res.json() as Promise<unknown>;
+    const created = await res.json() as unknown;
+    eventsCache.invalidate();
+    return created;
 }

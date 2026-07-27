@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode, } from 'react';
 import { createTicket, getTickets, getStatuses, getPriorities, subscribeTicketsWsPush, connectTicketsWsWhenReady, type Ticket, type StatusItem, type PriorityItem, } from '@entities/ticket';
-import { getUser, type User } from '@entities/user';
+import { loadPublicUsersByIds, type User } from '@entities/user';
 import { listColleaguesAsUsers } from '@entities/contacts';
 import { listNotifications, createNotification, subscribeNotificationPush, type NotificationItem, } from '@entities/notification/wsClient';
 import { openNotificationAsRead } from '@entities/notification/readNotification';
@@ -8,6 +8,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { useI18n, formatDateShortLocalized, formatUserRef } from '@shared/i18n';
 import { getPriorityTagClass, getStatusTagClass, ticketStatusBucketForStats, TICKET_CATEGORIES, isITRole, } from './constants';
 import { coerceTicketFormPriority, resolveDefaultTicketPriority } from '@entities/ticket/lib/ticketPriority';
+import { createCoalescedRequest } from '@shared/lib';
 import type { TicketStats } from './types';
 type HomeContextValue = {
     user: User | null;
@@ -219,22 +220,11 @@ export function HomeProvider({ children }: HomeProviderProps) {
             }
             const missing = ids.filter((id) => !names[id]);
             if (missing.length > 0) {
-                const CONCURRENCY = 4;
-                let cursor = 0;
-                const workers = Array.from({ length: Math.min(CONCURRENCY, missing.length) }, async () => {
-                    while (cursor < missing.length) {
-                        const idx = cursor++;
-                        const id = missing[idx]!;
-                        try {
-                            const u = await getUser(id);
-                            names[id] = u.display_name || t('ticketsPage.noName');
-                        }
-                        catch {
-                            names[id] = formatUserRef(id, t);
-                        }
-                    }
-                });
-                await Promise.all(workers);
+                const publicUsers = await loadPublicUsersByIds(missing);
+                for (const id of missing) {
+                    const u = publicUsers.get(id);
+                    names[id] = u?.display_name?.trim() || u?.email?.trim() || formatUserRef(id, t);
+                }
             }
             if (cancelled)
                 return;
@@ -399,14 +389,24 @@ export function HomeProvider({ children }: HomeProviderProps) {
         connectTicketsWsWhenReady().catch(() => { });
     }, [user]);
     useEffect(() => {
+        let live = true;
+        const refresh = createCoalescedRequest(async () => {
+            const list = await fetchTicketsForHome();
+            if (live)
+                setTickets(list);
+        }, 120);
         const off = subscribeTicketsWsPush((msg) => {
             const evRaw = msg.event ?? msg.type;
             const ev = typeof evRaw === 'string' ? evRaw : '';
             if (!(ev.startsWith('ticket_') || ev.startsWith('comment_')))
                 return;
-            fetchTicketsForHome().then(setTickets).catch(() => { });
+            refresh.schedule();
         });
-        return off;
+        return () => {
+            live = false;
+            refresh.cancel();
+            off();
+        };
     }, [fetchTicketsForHome]);
     const handleCreateSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
