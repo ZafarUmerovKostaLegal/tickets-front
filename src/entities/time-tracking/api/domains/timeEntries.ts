@@ -50,6 +50,8 @@ export type TimeEntryRow = {
     fxCrossRate?: number | string | null;
     fxRateDate?: string | null;
     fxRateSource?: string | null;
+    scope_color?: string | null;
+    scopeColor?: string | null;
 };
 export function pickTimeEntryStr(obj: Record<string, unknown>, keys: string[]): string | null {
     for (const k of keys) {
@@ -152,6 +154,8 @@ export type PatchTimeEntryBody = {
     description?: string | null;
     billableFxAsOf?: string | null;
     recordedAt?: string | null;
+    /** Report Scope highlight (#RRGGBB); null clears. */
+    scopeColor?: string | null;
 };
 export async function patchTimeEntry(authUserId: number, entryId: string, patch: PatchTimeEntryBody): Promise<TimeEntryRow> {
     const body: PatchTimeEntryBody = { ...patch };

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import type { ProjectOption, } from '@pages/time-tracking/ui/timesheetProjectLoader';
 import { ReportPreviewDateTimeFilterPopover } from './ReportPreviewDateTimeFilterPopover';
 import { ReportPreviewTextFilterPopover } from './ReportPreviewTextFilterPopover';
+import { ReportPreviewScopeColorFilterPopover, SCOPE_COLOR_NONE } from './ReportPreviewScopeColorFilterPopover';
 import { isClosedReportingWeekEditingBlockedForSubject, isWorkDateInClosedReportingPeriod, listProjectTasksCached, type ProjectPartnerAccessRow, } from '@entities/time-tracking';
 import { formatDecimalHoursAsHm, formatReportBillableHoursRu, sumDecimalHoursForMinuteDisplay, } from '@shared/lib/formatTrackingHours';
 import { syncTextareaHeightToContent } from '@shared/lib/syncTextareaHeight';
@@ -444,6 +445,28 @@ function parseScopeHexColor(value: string | null | undefined): string | null {
         return null;
     return raw;
 }
+
+function briefFilterScopeColorQ(r: TimeExcelPreviewRow, selected: readonly string[]): boolean {
+    if (selected.length === 0)
+        return true;
+    const color = parseScopeHexColor(r.scopeColor);
+    if (!color)
+        return selected.includes(SCOPE_COLOR_NONE);
+    return selected.includes(color);
+}
+
+function collectUsedScopeColors(rows: readonly TimeExcelPreviewRow[]): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const r of rows) {
+        const c = parseScopeHexColor(r.scopeColor);
+        if (!c || seen.has(c))
+            continue;
+        seen.add(c);
+        out.push(c);
+    }
+    return out.sort();
+}
 const IcoDownload = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
 </svg>);
@@ -631,7 +654,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     // In confirmed (read-only) preview still show delete when handler is provided.
     const showEntryActions = !isFull && (
         Boolean(onDeleteTimeEntry)
-        || Boolean(!readOnlyUi && onApplyScopeColorToSelection)
+        || Boolean(onApplyScopeColorToSelection)
         || (!readOnlyUi && (Boolean(onMoveTimeEntryToProject) || Boolean(onDuplicateTimeEntry) || Boolean(onGrantEditUnlock)))
     );
     const showActionsColumn = Boolean(showEntryActions);
@@ -696,6 +719,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     const [bfTask, setBfTask] = useState('');
     const [bfNote, setBfNote] = useState('');
     const [bfBill, setBfBill] = useState('');
+    const [bfScopeColors, setBfScopeColors] = useState<string[]>([]);
     const [toolbarSearch, setToolbarSearch] = useState('');
     const [moreMenuOpen, setMoreMenuOpen] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -847,14 +871,18 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             return rows;
         const q = toolbarSearch.trim();
         const filtered = rows.filter((r) => {
-            if (!(briefFilterEmployeeQ(r, briefEmployeeQuery) && briefFilterWhenQ(r, bfWhen) && briefFilterTaskQ(r, bfTask) && briefFilterNoteQ(r, bfNote) && briefFilterDurationQ(r, bfBill, (x) => x.billableHours)))
+            if (!(briefFilterEmployeeQ(r, briefEmployeeQuery) && briefFilterWhenQ(r, bfWhen) && briefFilterTaskQ(r, bfTask) && briefFilterNoteQ(r, bfNote) && briefFilterDurationQ(r, bfBill, (x) => x.billableHours) && briefFilterScopeColorQ(r, bfScopeColors)))
                 return false;
             if (!q)
                 return true;
             return briefFilterEmployeeQ(r, q) || briefFilterTaskQ(r, q) || briefFilterNoteQ(r, q);
         });
         return sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
-    }, [isFull, rows, briefEmployeeQuery, bfWhen, bfTask, bfNote, bfBill, bfRecordedOrder, toolbarSearch]);
+    }, [isFull, rows, briefEmployeeQuery, bfWhen, bfTask, bfNote, bfBill, bfScopeColors, bfRecordedOrder, toolbarSearch]);
+    const usedScopeColors = useMemo(() => collectUsedScopeColors(rows), [rows]);
+    const usedScopeHint = usedScopeColors.length
+        ? `Уже в отчёте: ${usedScopeColors.join(', ')}`
+        : 'В отчёте ещё нет окрашенных строк';
     const fullNameFiltered = useMemo(() => {
         if (!isFull)
             return rows;
@@ -966,9 +994,12 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const unlockBusy = Boolean(editUnlockPendingCompoundKey === `${r.authUserId}:${wdUnlock}`);
         const rowScope = parseScopeHexColor(r.scopeColor);
         const scopePickerValue = rowScope ?? normalizeHexColor(scopeColorValue ?? '#FFF2CC');
-        const canScope = Boolean(onApplyScopeColorToSelection) && !readOnlyUi;
+        const canScope = Boolean(onApplyScopeColorToSelection);
+        const scopeTitle = rowScope
+            ? `Scope: ${rowScope}${usedScopeColors.length ? `\n${usedScopeHint}` : ''}`
+            : `Scope — цвет строки (для выделенных применится ко всем)${usedScopeColors.length ? `\n${usedScopeHint}` : ''}`;
         return (<div className="tt-rp-mtable__brief-row-actions" role="group" aria-label={`Действия, строка ${i + 1}`}>
-          {canScope ? (<label className={`tt-rp-mtable__row-act tt-rp-mtable__row-act--scope${rowScope ? ' tt-rp-mtable__row-act--scope-on' : ''}`} title={rowScope ? `Scope: ${rowScope}` : 'Scope — цвет строки (для выделенных применится ко всем)'}>
+          {canScope ? (<label className={`tt-rp-mtable__row-act tt-rp-mtable__row-act--scope${rowScope ? ' tt-rp-mtable__row-act--scope-on' : ''}`} title={scopeTitle}>
               <span className="tt-rp-mtable__row-act-ico tt-rp-mtable__row-scope-swatch" aria-hidden style={rowScope ? { background: rowScope } : undefined} />
               <input
                 type="color"
@@ -1083,12 +1114,19 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 </th>);
             case 'sum':
                 return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--num tt-rp-brief-th tt-rp-brief-th--sum" title="Оплач. часы × ставка, без ручного ввода">
-                  <span className="tt-rp-brief-th__label">Сумма</span>
+                  <div className="tt-rp-brief-th__row">
+                    <span className="tt-rp-brief-th__label">Сумма</span>
+                  </div>
                 </th>);
             case 'actions':
-                return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--brief-actions tt-rp-brief-th" scope="col" title="Дублирование, перенос на другой проект или удаление записи">
+                return (<th key={colId} className="tt-rp-mtable__th tt-rp-mtable__th--brief-actions tt-rp-brief-th" scope="col" title="Scope-цвет, дублирование, перенос или удаление записи">
                   <div className="tt-rp-brief-th__row tt-rp-brief-th__row--actions">
                     <span className="tt-rp-brief-th__label">Действия</span>
+                    <ReportPreviewScopeColorFilterPopover
+                      usedColors={usedScopeColors}
+                      selected={bfScopeColors}
+                      onChange={setBfScopeColors}
+                    />
                   </div>
                 </th>);
             default:

@@ -177,7 +177,7 @@ export function briefColumnColWidth(
         case 'sum':
             return '9.5rem';
         case 'actions':
-            return '8.75rem';
+            return '10.5rem';
         default:
             return undefined;
     }

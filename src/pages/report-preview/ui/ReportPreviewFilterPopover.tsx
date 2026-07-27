@@ -9,9 +9,11 @@ export type ReportPreviewFilterPopoverProps = {
     title?: string;
     'aria-label': string;
     children: ReactNode;
+    /** When true, trigger looks “filtered” even if the panel is closed. */
+    active?: boolean;
 };
 
-export function ReportPreviewFilterPopover({ title, 'aria-label': ariaLabel, children, }: ReportPreviewFilterPopoverProps) {
+export function ReportPreviewFilterPopover({ title, 'aria-label': ariaLabel, children, active = false, }: ReportPreviewFilterPopoverProps) {
     const [open, setOpen] = useState(false);
     const [box, setBox] = useState<PanelBox | null>(null);
     const wrapRef = useRef<HTMLDivElement>(null);
@@ -78,7 +80,7 @@ export function ReportPreviewFilterPopover({ title, 'aria-label': ariaLabel, chi
           </div>, document.body)
         : null;
     return (<>
-      <div className={`tt-rp-xlf${open ? ' tt-rp-xlf--open' : ''}`} ref={wrapRef}>
+      <div className={`tt-rp-xlf${open ? ' tt-rp-xlf--open' : ''}${active ? ' tt-rp-xlf--active' : ''}`} ref={wrapRef}>
         <button type="button" className="tt-rp-xlf__trigger" aria-expanded={open} aria-haspopup="true" aria-label={ariaLabel} title={title} onClick={() => setOpen((o) => !o)}>
           <span className="tt-rp-xlf__chev" aria-hidden>
             ▼

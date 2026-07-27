@@ -426,6 +426,8 @@ export type TimeReportEntryLogItem = {
     cost_rate?: number | null;
     cost_amount?: number | null;
     external_reference_url?: string | null;
+    scope_color?: string | null;
+    scopeColor?: string | null;
     invoice_id?: string | null;
     invoice_number?: string | null;
     
@@ -645,6 +647,7 @@ const REPORT_ENTRY_LOG_CAMEL_TO_SNAKE: readonly [
         ['costRate', 'cost_rate'],
         ['costAmount', 'cost_amount'],
         ['externalReferenceUrl', 'external_reference_url'],
+        ['scopeColor', 'scope_color'],
         ['invoiceId', 'invoice_id'],
         ['invoiceNumber', 'invoice_number'],
         ['projectCode', 'project_code'],

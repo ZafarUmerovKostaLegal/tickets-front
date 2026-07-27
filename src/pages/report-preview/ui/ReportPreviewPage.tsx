@@ -130,6 +130,13 @@ function normalizeScopeHexColor(value: string): string {
     return raw.toUpperCase();
 }
 
+function parseStoredScopeHexColor(value: string | null | undefined): string | null {
+    const raw = String(value ?? '').trim().toUpperCase();
+    if (!/^#([0-9A-F]{6})$/.test(raw))
+        return null;
+    return raw;
+}
+
 export function ReportPreviewPage() {
     const { t } = useI18n();
     const { user } = useCurrentUser();
@@ -721,6 +728,13 @@ export function ReportPreviewPage() {
                         );
                         syncTimeEntryServerOwnersFromRows(timeEntryServerOwnerByEntryIdRef.current, rows);
                         setTimeExcelRows(rows);
+                        const colorsFromApi: Record<string, string> = {};
+                        for (const r of rows) {
+                            const c = parseStoredScopeHexColor(r.scopeColor);
+                            if (c)
+                                colorsFromApi[r.rowKey] = c;
+                        }
+                        setRowScopeColorsByKey(colorsFromApi);
                     }
                     return;
                 }
@@ -783,10 +797,10 @@ export function ReportPreviewPage() {
                     const entryId = String(display.timeEntryId ?? display.time_entry_id ?? '').trim();
                     if (!entryId)
                         continue;
-                    const scopeColor = normalizeScopeHexColor(String(display.scopeColor ?? display.scope_color ?? '').trim());
+                    const scopeColor = parseStoredScopeHexColor(String(display.scopeColor ?? display.scope_color ?? '').trim());
                     byEntryId.set(entryId, {
                         rowId: sr.id,
-                        scopeColor: /^#([0-9A-F]{6})$/.test(scopeColor) ? scopeColor : '',
+                        scopeColor: scopeColor ?? '',
                     });
                 }
                 const nextKeyMap: Record<string, string> = {};
@@ -803,7 +817,11 @@ export function ReportPreviewPage() {
                         nextColors[row.rowKey] = hit.scopeColor;
                 }
                 setSnapshotRowIdByPreviewKey(nextKeyMap);
-                setRowScopeColorsByKey((prev) => (Object.keys(prev).length > 0 ? { ...nextColors, ...prev } : nextColors));
+                setRowScopeColorsByKey((prev) => {
+                    // Prefer colors already loaded from live report / local edits; fill gaps from snapshot.
+                    const merged = { ...nextColors, ...prev };
+                    return merged;
+                });
             })
             .catch(() => {
                 if (!cancelled)
@@ -1448,16 +1466,34 @@ export function ReportPreviewPage() {
                 next[key] = picked;
             return next;
         });
-        const snapshotId = xferSnapshot?.partnerConfirmationSnapshotId?.trim() ?? '';
-        if (!snapshotId)
+        setTimeExcelRows((prev) => prev.map((r) => (keys.includes(r.rowKey) ? { ...r, scopeColor: picked } : r)));
+        const targets = keys
+            .map((rowKey) => timeExcelRowsRef.current.find((r) => r.rowKey === rowKey))
+            .filter((r): r is TimeExcelPreviewRow => Boolean(r?.timeEntryId?.trim() && r.rowKind === 'entry' && !r.isVoided));
+        if (targets.length === 0) {
+            showToast({ message: 'Цвет применён локально (нет id записи для сохранения)', variant: 'error' });
             return;
+        }
         setScopeColorBusy(true);
         try {
-            await Promise.all(keys.map(async (rowKey) => {
-                const rowId = snapshotRowIdByPreviewKey[rowKey];
-                if (!rowId)
-                    return;
-                await patchReportSnapshotRow(snapshotId, rowId, { scopeColor: picked });
+            await Promise.all(targets.map(async (row) => {
+                const entryId = row.timeEntryId.trim();
+                const owner = serverAuthUserIdForTimeEntry(
+                    timeEntryServerOwnerByEntryIdRef.current,
+                    entryId,
+                    row.authUserId,
+                );
+                await patchTimeEntry(owner, entryId, { scopeColor: picked });
+                const snapshotId = xferSnapshot?.partnerConfirmationSnapshotId?.trim() ?? '';
+                const rowId = snapshotRowIdByPreviewKey[row.rowKey];
+                if (snapshotId && rowId) {
+                    try {
+                        await patchReportSnapshotRow(snapshotId, rowId, { scopeColor: picked });
+                    }
+                    catch {
+                        /* snapshot stub may lack entry rows — time entry is source of truth */
+                    }
+                }
             }));
             showToast({ message: 'Цвет строк сохранён', variant: 'success' });
         }
@@ -1478,16 +1514,32 @@ export function ReportPreviewPage() {
                 delete next[key];
             return next;
         });
-        const snapshotId = xferSnapshot?.partnerConfirmationSnapshotId?.trim() ?? '';
-        if (!snapshotId)
+        setTimeExcelRows((prev) => prev.map((r) => (keys.includes(r.rowKey) ? { ...r, scopeColor: '' } : r)));
+        const targets = keys
+            .map((rowKey) => timeExcelRowsRef.current.find((r) => r.rowKey === rowKey))
+            .filter((r): r is TimeExcelPreviewRow => Boolean(r?.timeEntryId?.trim() && r.rowKind === 'entry' && !r.isVoided));
+        if (targets.length === 0)
             return;
         setScopeColorBusy(true);
         try {
-            await Promise.all(keys.map(async (rowKey) => {
-                const rowId = snapshotRowIdByPreviewKey[rowKey];
-                if (!rowId)
-                    return;
-                await patchReportSnapshotRow(snapshotId, rowId, { scopeColor: null });
+            await Promise.all(targets.map(async (row) => {
+                const entryId = row.timeEntryId.trim();
+                const owner = serverAuthUserIdForTimeEntry(
+                    timeEntryServerOwnerByEntryIdRef.current,
+                    entryId,
+                    row.authUserId,
+                );
+                await patchTimeEntry(owner, entryId, { scopeColor: null });
+                const snapshotId = xferSnapshot?.partnerConfirmationSnapshotId?.trim() ?? '';
+                const rowId = snapshotRowIdByPreviewKey[row.rowKey];
+                if (snapshotId && rowId) {
+                    try {
+                        await patchReportSnapshotRow(snapshotId, rowId, { scopeColor: null });
+                    }
+                    catch {
+                        /* ignore stub snapshot */
+                    }
+                }
             }));
             showToast({ message: 'Цвет строк очищен', variant: 'success' });
         }
