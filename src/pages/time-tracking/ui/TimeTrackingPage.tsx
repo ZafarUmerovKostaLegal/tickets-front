@@ -7,7 +7,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { isHiddenSystemUser } from '@shared/lib';
 import { useI18n } from '@shared/i18n';
 import type { TimeTabId } from '@entities/time-tracking/model/types';
-import { listTimeTrackingUsers, type TimeTrackingUserRow } from '@entities/time-tracking';
+import { isTimeTrackingHttpError, listTimeTrackingUsers, type TimeTrackingUserRow } from '@entities/time-tracking';
 import { usePartnerForReviewBadge } from '@entities/time-tracking/lib/usePartnerForReviewBadge';
 import { TABS } from '@entities/time-tracking/model/constants';
 import { canAccessTimeTracking, canViewTimeTrackingReports, getVisibleTimeTrackingTabs, hasFullTimeTrackingTabs, resolveInitialTimeTab, } from '@entities/time-tracking/model/timeTrackingAccess';
@@ -44,6 +44,14 @@ type ScopeUser = {
     display_name?: string | null;
     email?: string | null;
 };
+type ScopeLoadError = {
+    message: string;
+    forbidden: boolean;
+};
+function isAbortError(error: unknown): boolean {
+    return ((error instanceof DOMException && error.name === 'AbortError') ||
+        (error instanceof Error && error.name === 'AbortError'));
+}
 function UserAvatar({ user, size = 28 }: {
     user: ScopeUser;
     size?: number;
@@ -242,7 +250,7 @@ export function TimeTrackingPage() {
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [managedScopeUserId, setManagedScopeUserId] = useState<number | null>(() => readStoredScopeUserId());
     const [ttScopeUsers, setTtScopeUsers] = useState<TimeTrackingUserRow[]>([]);
-    const [ttScopeLoadError, setTtScopeLoadError] = useState<string | null>(null);
+    const [ttScopeLoadError, setTtScopeLoadError] = useState<ScopeLoadError | null>(null);
     const hasAccess = !loading && canAccessTimeTracking(user);
     const accessDenied = !loading && user != null && !canAccessTimeTracking(user);
     const { badge: forReviewBadge, count: forReviewCount } = usePartnerForReviewBadge(hasAccess && canViewTimeTrackingReports(user));
@@ -290,13 +298,17 @@ export function TimeTrackingPage() {
             setTtScopeLoadError(null);
         })
             .catch((e: unknown) => {
-            if (cancelled)
+            if (cancelled || isAbortError(e))
                 return;
-            setTtScopeUsers([]);
             const msg = e instanceof Error ? e.message : String(e);
-            setTtScopeLoadError(/403|forbidden|недостаточно|запрещ/i.test(msg)
-                ? t('timeTrackingPage.page.scopeLoadForbidden')
-                : msg || t('timeTrackingPage.page.scopeLoadFailed'));
+            const forbidden = isTimeTrackingHttpError(e, 403) ||
+                /403|forbidden|недостаточно|запрещ/i.test(msg);
+            setTtScopeLoadError({
+                forbidden,
+                message: forbidden
+                    ? t('timeTrackingPage.page.scopeLoadForbidden')
+                    : msg || t('timeTrackingPage.page.scopeLoadFailed'),
+            });
         });
         return () => {
             cancelled = true;
@@ -378,9 +390,11 @@ export function TimeTrackingPage() {
             return null;
         if (ttScopeLoadError) {
             return (<div className="time-page__navbar-manager">
-          <span className="time-page__navbar-manager-err" title={ttScopeLoadError}>
+          <span className="time-page__navbar-manager-err" title={ttScopeLoadError.message}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            {t('timeTrackingPage.page.noAccess')}
+            {ttScopeLoadError.forbidden
+                ? t('timeTrackingPage.page.noAccess')
+                : t('timeTrackingPage.page.scopeUnavailable')}
           </span>
         </div>);
         }

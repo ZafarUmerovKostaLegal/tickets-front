@@ -43,6 +43,7 @@ export const timeTrackingPageMessages = {
         scopeLoadForbidden:
             'Список сотрудников недоступен: вы не синхронизированы в учёте времени или нет роли менеджера. Обратитесь к администратору.',
         scopeLoadFailed: 'Не удалось загрузить список пользователей учёта времени',
+        scopeUnavailable: 'Список недоступен',
     },
     statistics: {
         pageAria: 'Статистика',
