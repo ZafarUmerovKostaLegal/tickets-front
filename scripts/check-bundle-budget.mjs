@@ -9,12 +9,12 @@ const assetsDir = path.join(distDir, 'assets');
 const htmlPath = path.join(distDir, 'index.html');
 
 const limits = {
-    initialJsKb: 1100,
-    initialJsGzipKb: 330,
-    initialCssKb: 360,
-    initialCssGzipKb: 65,
-    ordinaryJsChunkKb: 700,
-    cssChunkKb: 360,
+    initialJsKb: 575,
+    initialJsGzipKb: 180,
+    initialCssKb: 80,
+    initialCssGzipKb: 16,
+    ordinaryJsChunkKb: 450,
+    cssChunkKb: 180,
 };
 
 const optionalChunkLimits = [

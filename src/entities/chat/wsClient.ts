@@ -1,7 +1,7 @@
 import { getAccessToken } from '@shared/lib/auth';
 import { getChatWsUrl, isSessionCookieOnly } from '@shared/config';
 import { invalidateApiGetReuse } from '@shared/api';
-import { parseChatReactions } from './api';
+import { invalidateChatRoomsCache, parseChatReactions } from './api';
 import type { ChatReaction } from './types';
 
 export type ChatWsPayload = {
@@ -36,8 +36,10 @@ export function subscribeChatWs(handler: (event: ChatWsEvent) => void): () => vo
 }
 
 function emit(event: ChatWsEvent): void {
-    if (event.type !== 'connected' && event.type !== 'pong' && event.type !== 'error')
+    if (event.type !== 'connected' && event.type !== 'pong' && event.type !== 'error') {
         invalidateApiGetReuse();
+        invalidateChatRoomsCache();
+    }
     for (const h of [...listeners]) {
         try {
             h(event);

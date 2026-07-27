@@ -10,9 +10,9 @@ export function ExpensesErrorFallback() {
         u.searchParams.set('v', String(Date.now()));
         window.location.replace(u.toString());
     };
-    return (<div className="expenses-page" style={{ minHeight: '70vh' }}>
-      <main className="expenses-page__main">
-        <div className="expenses-page__content">
+    return (<div className="expenses-error-page">
+      <main className="expenses-error-page__main">
+        <div className="expenses-error-page__content">
           <div className="exp-service-err" role="alert">
             <h2 className="exp-service-err__title">Не удалось показать раздел расходов</h2>
             <p className="exp-service-err__desc">

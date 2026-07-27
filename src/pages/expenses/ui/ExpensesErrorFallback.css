@@ -1,10 +1,10 @@
-.expenses-page {
+.expenses-error-page {
   min-height: 70vh;
   color: var(--app-text, #111827);
   background: var(--app-bg, #f8fafc);
 }
 
-.expenses-page__main {
+.expenses-error-page__main {
   min-height: inherit;
   display: grid;
   place-items: center;
@@ -12,7 +12,7 @@
   box-sizing: border-box;
 }
 
-.expenses-page__content {
+.expenses-error-page__content {
   width: min(100%, 48rem);
 }
 

@@ -38,6 +38,9 @@ jobs:
       - name: Lint
         run: npm run lint:ci
 
+      - name: Check request hygiene
+        run: npm run requests:check
+
       - name: Run Vitest
         run: npm run test:unit:coverage
         env:

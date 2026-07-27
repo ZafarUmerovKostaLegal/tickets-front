@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
     clearApiRequestMetrics,
     getApiRequestMetrics,
+    getApiRequestEndpointSummaries,
     getApiRequestMetricsSummary,
     recordApiRequestMetric,
 } from './requestMetrics';
@@ -53,5 +54,28 @@ describe('API request metrics', () => {
             averageDurationMs: 25,
             p95DurationMs: 40,
         });
+    });
+
+    it('ranks endpoints by actual network traffic', () => {
+        for (const [url, delivery, durationMs] of [
+            ['/api/v1/slow?page=1', 'network', 40],
+            ['/api/v1/slow?page=2', 'network', 20],
+            ['/api/v1/slow?page=3', 'reused', 2],
+            ['/api/v1/other', 'network', 5],
+        ] as const) {
+            recordApiRequestMetric({
+                method: 'GET',
+                url,
+                delivery,
+                outcome: 'success',
+                status: 200,
+                durationMs,
+            });
+        }
+
+        expect(getApiRequestEndpointSummaries()).toEqual([
+            expect.objectContaining({ endpoint: '/api/v1/slow?page', requestCount: 3, networkCount: 2, avoidedNetworkCount: 1 }),
+            expect.objectContaining({ endpoint: '/api/v1/other', requestCount: 1, networkCount: 1 }),
+        ]);
     });
 });

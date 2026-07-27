@@ -22,6 +22,18 @@ export type ApiRequestMetricsSummary = {
     p95DurationMs: number;
 };
 
+export type ApiRequestEndpointSummary = {
+    method: string;
+    endpoint: string;
+    requestCount: number;
+    networkCount: number;
+    avoidedNetworkCount: number;
+    abortedCount: number;
+    errorCount: number;
+    averageDurationMs: number;
+    p95DurationMs: number;
+};
+
 type MetricInput = Omit<ApiRequestMetric, 'id' | 'endpoint' | 'recordedAt'> & {
     url: string;
 };
@@ -111,4 +123,36 @@ export function getApiRequestMetricsSummary(): ApiRequestMetricsSummary {
         averageDurationMs: requestCount > 0 ? Math.round((totalDuration / requestCount) * 10) / 10 : 0,
         p95DurationMs: sortedDurations[p95Index] ?? 0,
     };
+}
+
+export function getApiRequestEndpointSummaries(): readonly ApiRequestEndpointSummary[] {
+    const groups = new Map<string, ApiRequestMetric[]>();
+    for (const metric of metrics) {
+        const key = `${metric.method}\u0000${metric.endpoint}`;
+        const group = groups.get(key);
+        if (group)
+            group.push(metric);
+        else
+            groups.set(key, [metric]);
+    }
+    return [...groups.values()].map((group) => {
+        const durations = group.map((metric) => metric.durationMs).sort((a, b) => a - b);
+        const networkCount = group.filter((metric) => metric.delivery === 'network').length;
+        const totalDuration = durations.reduce((sum, duration) => sum + duration, 0);
+        const p95Index = Math.max(0, Math.ceil(durations.length * 0.95) - 1);
+        return {
+            method: group[0].method,
+            endpoint: group[0].endpoint,
+            requestCount: group.length,
+            networkCount,
+            avoidedNetworkCount: group.length - networkCount,
+            abortedCount: group.filter((metric) => metric.outcome === 'aborted').length,
+            errorCount: group.filter((metric) => metric.outcome === 'http-error' || metric.outcome === 'network-error').length,
+            averageDurationMs: Math.round((totalDuration / group.length) * 10) / 10,
+            p95DurationMs: durations[p95Index] ?? 0,
+        };
+    }).sort((a, b) => b.networkCount - a.networkCount
+        || b.requestCount - a.requestCount
+        || b.averageDurationMs - a.averageDurationMs
+        || a.endpoint.localeCompare(b.endpoint));
 }

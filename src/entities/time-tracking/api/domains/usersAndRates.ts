@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { createQueryCache } from '@shared/lib/queryCache';
 import type { User } from '@entities/user';
 import { reportCacheInvalidateAll as _invalidateReportCache } from '../../lib/reportApiCache';
 import { throwIfNotOk } from './httpShared';
@@ -102,6 +103,12 @@ export type HourlyRateRow = {
 export type UpsertTimeTrackingUserOptions = {
     weeklyCapacityHours?: number;
 };
+
+const timeTrackingUsersCache = createQueryCache<TimeTrackingUserRow[]>({
+    ttlMs: 60_000,
+    staleWhileRevalidateMs: 4 * 60_000,
+    maxEntries: 1,
+});
 export async function upsertTimeTrackingUser(user: User, options?: UpsertTimeTrackingUserOptions): Promise<void> {
     const email = (user.email ?? '').trim();
     if (!email) {
@@ -127,11 +134,13 @@ export async function upsertTimeTrackingUser(user: User, options?: UpsertTimeTra
         body: JSON.stringify(body),
     });
     await throwIfNotOk(res);
+    invalidateTimeTrackingUsersCache();
 }
 
 export async function deleteTimeTrackingUser(authUserId: number): Promise<void> {
     const res = await apiFetch(`/api/v1/time-tracking/users/${authUserId}`, { method: 'DELETE' });
     await throwIfNotOk(res);
+    invalidateTimeTrackingUsersCache();
 }
 
 export async function getTimeTrackingUser(authUserId: number): Promise<TimeTrackingUserRow> {
@@ -167,6 +176,7 @@ export async function createManualTimeTrackingUser(body: ManualTimeTrackingUserC
     const row = normalizeTimeTrackingUserRow(await res.json());
     if (!row)
         throw new Error('Некорректный ответ сервера');
+    invalidateTimeTrackingUsersCache();
     return { ...row, is_manual: true };
 }
 
@@ -180,6 +190,7 @@ export async function patchTimeTrackingUserWeeklyCapacity(authUserId: number, we
     const row = normalizeTimeTrackingUserRow(await res.json());
     if (!row)
         throw new Error('Не удалось обновить норму часов');
+    invalidateTimeTrackingUsersCache();
     return row;
 }
 
@@ -196,17 +207,16 @@ export async function patchTimeTrackingUserTransferWithoutProjectAccess(
     const row = normalizeTimeTrackingUserRow(await res.json());
     if (!row)
         throw new Error('Не удалось обновить право на перенос');
+    invalidateTimeTrackingUsersCache();
     return row;
 }
 
-export async function listTimeTrackingUsers(): Promise<TimeTrackingUserRow[]> {
-    return fetchTimeTrackingUsersCached();
+export async function listTimeTrackingUsers(signal?: AbortSignal): Promise<TimeTrackingUserRow[]> {
+    return fetchTimeTrackingUsersCached(signal);
 }
 
-let timeTrackingUsersInflight: Promise<TimeTrackingUserRow[]> | null = null;
-
-export async function fetchTimeTrackingUsersImpl(): Promise<TimeTrackingUserRow[]> {
-    const res = await apiFetch('/api/v1/time-tracking/users');
+export async function fetchTimeTrackingUsersImpl(signal?: AbortSignal): Promise<TimeTrackingUserRow[]> {
+    const res = await apiFetch('/api/v1/time-tracking/users', { signal, getReuseWindowMs: 5_000 });
     await throwIfNotOk(res);
     const raw: unknown = await res.json();
     let arr: unknown[] = [];
@@ -223,18 +233,16 @@ export async function fetchTimeTrackingUsersImpl(): Promise<TimeTrackingUserRow[
     return arr.map((item) => normalizeTimeTrackingUserRow(item)).filter((x): x is TimeTrackingUserRow => x != null);
 }
 
-export function fetchTimeTrackingUsersCached(): Promise<TimeTrackingUserRow[]> {
-    if (!timeTrackingUsersInflight) {
-        timeTrackingUsersInflight = fetchTimeTrackingUsersImpl().catch((err) => {
-            timeTrackingUsersInflight = null;
-            throw err;
-        });
-    }
-    return timeTrackingUsersInflight;
+export function fetchTimeTrackingUsersCached(signal?: AbortSignal): Promise<TimeTrackingUserRow[]> {
+    return timeTrackingUsersCache.fetch(
+        'all',
+        (sharedSignal) => fetchTimeTrackingUsersImpl(sharedSignal),
+        { signal },
+    );
 }
 
 export function invalidateTimeTrackingUsersCache(): void {
-    timeTrackingUsersInflight = null;
+    timeTrackingUsersCache.invalidate();
 }
 
 export type WeeklySubmissionResult = {

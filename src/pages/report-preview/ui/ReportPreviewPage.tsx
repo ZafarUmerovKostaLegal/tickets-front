@@ -250,9 +250,13 @@ export function ReportPreviewPage() {
         timeEntrySaveTimers.current.delete(rowKey);
     }, []);
     useEffect(() => {
+        let cancelled = false;
+        const controller = new AbortController();
         setUsersForFilterError(null);
-        void fetchReportsUsersForFilter()
+        void fetchReportsUsersForFilter(controller.signal)
             .then((list) => {
+                if (cancelled)
+                    return;
                 const filtered = list.filter((u) => !isHiddenSystemUser({ email: u.email, display_name: u.displayName }));
                 setUsersForFilter(filtered);
                 setUsersForFilterError(null);
@@ -262,10 +266,16 @@ export function ReportPreviewPage() {
                 }))));
             })
             .catch((e: unknown) => {
+                if (cancelled || (e instanceof Error && e.name === 'AbortError'))
+                    return;
                 setUsersForFilter([]);
                 if (isTimeTrackingHttpError(e, 401) || isTimeTrackingHttpError(e, 403))
                     setUsersForFilterError(t('timeTrackingPage.reports.header.usersFilterError'));
             });
+        return () => {
+            cancelled = true;
+            controller.abort();
+        };
     }, [t]);
     useEffect(() => {
         let cancelled = false;
@@ -294,7 +304,8 @@ export function ReportPreviewPage() {
     }, []);
     useEffect(() => {
         let cancelled = false;
-        void listTimeTrackingUsers()
+        const controller = new AbortController();
+        void listTimeTrackingUsers(controller.signal)
             .then((list) => {
                 if (cancelled)
                     return;
@@ -305,6 +316,7 @@ export function ReportPreviewPage() {
             });
         return () => {
             cancelled = true;
+            controller.abort();
         };
     }, []);
     useEffect(() => {
@@ -345,13 +357,21 @@ export function ReportPreviewPage() {
         });
     }, [authUserExportProfilesById]);
     useEffect(() => {
-        void fetchReportsMeta()
+        let cancelled = false;
+        const controller = new AbortController();
+        void fetchReportsMeta(controller.signal)
             .then((m) => {
-                setReportPageSizeMax(m.pageSizeMax);
+                if (!cancelled)
+                    setReportPageSizeMax(m.pageSizeMax);
             })
             .catch(() => {
-                setReportPageSizeMax(null);
+                if (!cancelled)
+                    setReportPageSizeMax(null);
             });
+        return () => {
+            cancelled = true;
+            controller.abort();
+        };
     }, []);
     useEffect(() => {
         const raw = readReportPreviewTransfer();

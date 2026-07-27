@@ -7,7 +7,6 @@ import {
     chatNotificationTitle,
     connectChatWs,
     fetchChatRoom,
-    fetchChatRooms,
     parseChatMessageFromWsPayload,
     shouldShowChatMessageNotification,
     subscribeChatWs,
@@ -53,6 +52,7 @@ export function ChatNotificationHost() {
     const [items, setItems] = useState<ChatNotificationItem[]>([]);
     const roomsRef = useRef<Map<number, ChatRoom>>(new Map());
     const labelsRef = useRef<Map<number, string>>(new Map());
+    const labelsLoadRef = useRef<Promise<void> | null>(null);
     const timersRef = useRef<Map<string, number>>(new Map());
 
     const labelByUserId = useCallback((id: number) => {
@@ -60,6 +60,26 @@ export function ChatNotificationHost() {
         if (cached)
             return cached;
         return `Пользователь ${id}`;
+    }, []);
+
+    const ensureLabels = useCallback((): Promise<void> => {
+        const existing = labelsLoadRef.current;
+        if (existing)
+            return existing;
+        const load = listContactsColleagues()
+            .then((rows) => {
+                for (const row of rows) {
+                    const name = row.display_name?.trim() || row.email?.trim();
+                    if (name)
+                        labelsRef.current.set(row.id, name);
+                }
+            })
+            .catch(() => {
+                if (labelsLoadRef.current === load)
+                    labelsLoadRef.current = null;
+            });
+        labelsLoadRef.current = load;
+        return load;
     }, []);
 
     const removeItem = useCallback((id: string) => {
@@ -98,33 +118,6 @@ export function ChatNotificationHost() {
         if (!isAuthenticated() || meId == null)
             return;
         let cancelled = false;
-        void listContactsColleagues()
-            .then((rows) => {
-                if (cancelled)
-                    return;
-                for (const row of rows) {
-                    const name = row.display_name?.trim() || row.email?.trim();
-                    if (name)
-                        labelsRef.current.set(row.id, name);
-                }
-            })
-            .catch(() => { });
-        void fetchChatRooms()
-            .then((rooms) => {
-                if (cancelled)
-                    return;
-                for (const room of rooms)
-                    roomsRef.current.set(room.id, room);
-            })
-            .catch(() => { });
-        return () => {
-            cancelled = true;
-        };
-    }, [meId]);
-
-    useEffect(() => {
-        if (!isAuthenticated() || meId == null)
-            return;
         const disconnect = connectChatWs();
         const unsub = subscribeChatWs((event) => {
             if (event.type !== 'message')
@@ -141,23 +134,25 @@ export function ChatNotificationHost() {
 
             const cachedRoom = roomsRef.current.get(roomId);
             const build = (room: ChatRoom) => {
+                if (cancelled)
+                    return;
                 roomsRef.current.set(room.id, room);
                 const title = chatNotificationTitle(room, meId, labelByUserId);
                 const preview = chatNotificationSenderLine(room, msg, labelByUserId);
                 upsertNotification(room, title, preview);
             };
 
-            if (cachedRoom) {
-                build(cachedRoom);
-                return;
-            }
-            void fetchChatRoom(roomId).then(build).catch(() => { });
+            const roomPromise = cachedRoom ? Promise.resolve(cachedRoom) : fetchChatRoom(roomId);
+            void Promise.all([roomPromise, ensureLabels()])
+                .then(([room]) => build(room))
+                .catch(() => { });
         });
         return () => {
+            cancelled = true;
             unsub();
             disconnect();
         };
-    }, [meId, labelByUserId, upsertNotification]);
+    }, [ensureLabels, meId, labelByUserId, upsertNotification]);
 
     useEffect(() => () => {
         for (const timer of timersRef.current.values())

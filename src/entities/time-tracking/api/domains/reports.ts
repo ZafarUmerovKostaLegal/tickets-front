@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { createQueryCache } from '@shared/lib/queryCache';
 import { pickAllowedSnapshotOverrides } from '../../lib/reportSnapshotOverrides';
 import {
     reportCacheGet,
@@ -11,6 +12,9 @@ import {
 } from './httpShared';
 import { listAllTimeManagerClientsMerged, type TimeManagerClientRow } from './clients';
 import { listAllClientProjectsMerged, type TimeManagerClientProjectRow } from './projects';
+
+const reportsMetaCache = createQueryCache<ReportsMeta>({ ttlMs: 10 * 60_000, staleWhileRevalidateMs: 30 * 60_000, maxEntries: 1 });
+const reportsFilterUsersCache = createQueryCache<ReportsFilterUser[]>({ ttlMs: 60_000, staleWhileRevalidateMs: 4 * 60_000, maxEntries: 1 });
 
 export type ReportTypeIdApi = 'time' | 'contractor' | 'uninvoiced';
 export type ReportGroupIdApi = 'tasks' | 'clients' | 'projects' | 'team';
@@ -169,16 +173,19 @@ export function buildReportsQs(params: ReportsTableParams & {
         qs.set('format', params.format);
     return qs.toString();
 }
-export async function fetchReportsMeta(): Promise<ReportsMeta> {
-    const res = await apiFetch('/api/v1/time-tracking/reports/meta');
-    await reportsThrowIfNotOk(res);
-    return res.json() as Promise<ReportsMeta>;
+export async function fetchReportsMeta(signal?: AbortSignal): Promise<ReportsMeta> {
+    return reportsMetaCache.fetch('meta', async (sharedSignal) => {
+        const res = await apiFetch('/api/v1/time-tracking/reports/meta', { signal: sharedSignal, getReuseWindowMs: 60_000 });
+        await reportsThrowIfNotOk(res);
+        return res.json() as Promise<ReportsMeta>;
+    }, { signal });
 }
-export async function fetchReportsUsersForFilter(): Promise<ReportsFilterUser[]> {
-    const res = await apiFetch('/api/v1/time-tracking/reports/users-for-filter');
-    await reportsThrowIfNotOk(res);
-    const raw = (await res.json()) as unknown[];
-    return raw.map((item) => {
+export async function fetchReportsUsersForFilter(signal?: AbortSignal): Promise<ReportsFilterUser[]> {
+    return reportsFilterUsersCache.fetch('users', async (sharedSignal) => {
+        const res = await apiFetch('/api/v1/time-tracking/reports/users-for-filter', { signal: sharedSignal, getReuseWindowMs: 5_000 });
+        await reportsThrowIfNotOk(res);
+        const raw = (await res.json()) as unknown[];
+        return raw.map((item) => {
         const o = item as Record<string, unknown>;
         const id = Number(o.id ?? o.authUserId ?? o.auth_user_id);
         const displayName = String(o.displayName ?? o.display_name ?? '').trim();
@@ -193,14 +200,15 @@ export async function fetchReportsUsersForFilter(): Promise<ReportsFilterUser[]>
             email,
             initials,
         };
-    }).sort((a, b) => {
+        }).sort((a, b) => {
         const la = a.displayName.trim() || a.email.trim();
         const lb = b.displayName.trim() || b.email.trim();
         const cmp = la.localeCompare(lb, 'ru', { sensitivity: 'base', numeric: true });
         if (cmp !== 0)
             return cmp;
         return a.email.localeCompare(b.email, 'ru', { sensitivity: 'base', numeric: true });
-    });
+        });
+    }, { signal });
 }
 export async function fetchReportsSummary(params: Pick<ReportsTableParams, 'reportType' | 'dateFrom' | 'dateTo' | 'userIds' | 'projectIds' | 'clientIds' | 'includeFixedFeeProjects'>): Promise<ReportsSummary> {
     const qs = buildReportsQs({ ...params, group: undefined, sort: undefined });
@@ -388,6 +396,21 @@ export type ReportFiltersV2 = {
     team_filter_partner_auth_user_id?: number;
     team_id?: string;
 };
+
+export type ReportFetchOptions = {
+    signal?: AbortSignal;
+};
+
+export type ReportFetchAllOptions = ReportFetchOptions & {
+    maxPages?: number;
+    perPage?: number;
+};
+
+function throwIfReportAborted(signal?: AbortSignal): void {
+    if (!signal?.aborted)
+        return;
+    throw signal.reason ?? new DOMException('The operation was aborted.', 'AbortError');
+}
 
 export type TimeReportEntryLogItem = {
     
@@ -962,6 +985,31 @@ export function scrubRubExpenseRollupUser(merged: Record<string, unknown>): Reco
     return merged;
 }
 
+const REPORT_V2_NUMERIC_FIELDS = [
+    'hours',
+    'total_hours',
+    'billable_hours',
+    'non_billable_hours',
+    'billable_amount',
+    'total_amount',
+    'reimbursable_amount',
+    'uninvoiced_hours',
+    'uninvoiced_amount',
+    'uninvoiced_expenses',
+    'hours_logged',
+    'amount_logged',
+    'budget',
+    'budget_spent',
+    'budget_remaining',
+    'progress_percent',
+    'budget_hours_budget',
+    'budget_hours_spent',
+    'budget_hours_remaining',
+    'budget_money_budget',
+    'budget_money_spent',
+    'budget_money_remaining',
+] as const;
+
 export function normalizeReportV2RowDeep(row: unknown): unknown {
     if (row == null || typeof row !== 'object')
         return row;
@@ -1039,6 +1087,11 @@ export function normalizeReportV2RowDeep(row: unknown): unknown {
     if (Array.isArray(merged.project_breakdown)) {
         merged.project_breakdown = merged.project_breakdown.map((e) => normalizeReportEntryLogItem(e)) as unknown[];
     }
+    for (const key of REPORT_V2_NUMERIC_FIELDS) {
+        const parsed = coerceReportNumber(merged[key]);
+        if (parsed !== undefined)
+            merged[key] = parsed;
+    }
     scrubExpenseReportAggregateRow(merged);
     return scrubRubExpenseRollupUser(merged);
 }
@@ -1050,8 +1103,7 @@ export function parseReportTotals(raw: unknown): ReportTotals | null {
     const num = (k1: string, k2?: string): number | null => {
         const v = r[k1] ?? (k2 ? r[k2] : undefined);
         if (v == null) return null;
-        const n = Number(v);
-        return Number.isFinite(n) ? n : null;
+        return coerceReportNumber(v) ?? null;
     };
     const str = (k1: string, k2?: string): string | null => {
         const v = r[k1] ?? (k2 ? r[k2] : undefined);
@@ -1144,12 +1196,13 @@ export function buildReportV2Qs(filters: ReportFiltersV2): string {
     p.set('per_page', String(pp));
     return p.toString();
 }
-export async function fetchTimeReport(groupBy: TimeReportGroupPath, filters: ReportFiltersV2): Promise<ReportResponse<TimeReportRow>> {
+export async function fetchTimeReport(groupBy: TimeReportGroupPath, filters: ReportFiltersV2, options: ReportFetchOptions = {}): Promise<ReportResponse<TimeReportRow>> {
+    throwIfReportAborted(options.signal);
     const qs = buildReportV2Qs(filters);
     const cacheKey = `time/${groupBy}?${qs}`;
     const cached = reportCacheGet<ReportResponse<TimeReportRow>>(cacheKey);
     if (cached) return cached;
-    const res = await apiFetch(`/api/v1/time-tracking/reports/time/${groupBy}?${qs}`);
+    const res = await apiFetch(`/api/v1/time-tracking/reports/time/${groupBy}?${qs}`, { signal: options.signal });
     await reportsThrowIfNotOk(res);
     const data = (await res.json()) as ReportResponse<TimeReportRow>;
     const result = normalizeReportV2Response(data);
@@ -1162,15 +1215,14 @@ export function reportV2ListChunkSize(filters: { pageSizeMax?: number }): number
         : 500;
     return Math.min(500, c);
 }
-export async function fetchAllTimeReportPagesForGroup<T>(groupBy: TimeReportGroupPath, filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: {
-    maxPages?: number;
-}): Promise<T[]> {
+export async function fetchAllTimeReportPagesForGroup<T>(groupBy: TimeReportGroupPath, filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options: ReportFetchAllOptions = {}): Promise<T[]> {
     const maxIter = Math.min(Math.max(options?.maxPages ?? 250, 1), 500);
     const out: T[] = [];
     let page = 1;
     const perChunk = reportV2ListChunkSize(filters);
     for (let i = 0; i < maxIter; i++) {
-        const data = await fetchTimeReport(groupBy, { ...filters, page, per_page: perChunk } as ReportFiltersV2);
+        throwIfReportAborted(options.signal);
+        const data = await fetchTimeReport(groupBy, { ...filters, page, per_page: perChunk } as ReportFiltersV2, options);
         out.push(...(data.results as T[]));
         const np = data.pagination.next_page;
         if (np == null || page >= data.pagination.total_pages)
@@ -1179,35 +1231,25 @@ export async function fetchAllTimeReportPagesForGroup<T>(groupBy: TimeReportGrou
     }
     return out;
 }
-export function fetchAllTimeReportClientRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: {
-    maxPages?: number;
-}): Promise<TimeRowClients[]> {
+export function fetchAllTimeReportClientRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: ReportFetchAllOptions): Promise<TimeRowClients[]> {
     return fetchAllTimeReportPagesForGroup<TimeRowClients>('clients', filters, options);
 }
-export function fetchAllTimeReportProjectRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: {
-    maxPages?: number;
-}): Promise<TimeRowProjects[]> {
+export function fetchAllTimeReportProjectRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: ReportFetchAllOptions): Promise<TimeRowProjects[]> {
     return fetchAllTimeReportPagesForGroup<TimeRowProjects>('projects', filters, options);
 }
-export function fetchAllTimeReportTaskRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: {
-    maxPages?: number;
-}): Promise<TimeRowTasks[]> {
+export function fetchAllTimeReportTaskRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: ReportFetchAllOptions): Promise<TimeRowTasks[]> {
     return fetchAllTimeReportPagesForGroup<TimeRowTasks>('tasks', filters, options);
 }
-export function fetchAllTimeReportTeamRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: {
-    maxPages?: number;
-}): Promise<TimeRowTeam[]> {
+export function fetchAllTimeReportTeamRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: ReportFetchAllOptions): Promise<TimeRowTeam[]> {
     return fetchAllTimeReportPagesForGroup<TimeRowTeam>('team', filters, options);
 }
-export async function fetchAllPagedReportRows<T>(fetchPage: (page: number, perPage: number) => Promise<ReportResponse<T>>, options?: {
-    maxPages?: number;
-    perPage?: number;
-}): Promise<T[]> {
+export async function fetchAllPagedReportRows<T>(fetchPage: (page: number, perPage: number) => Promise<ReportResponse<T>>, options: ReportFetchAllOptions = {}): Promise<T[]> {
     const maxIter = Math.min(Math.max(options?.maxPages ?? 250, 1), 500);
     const perPage = Math.min(Math.max(options?.perPage ?? 500, 1), 500);
     const out: T[] = [];
     let page = 1;
     for (let i = 0; i < maxIter; i++) {
+        throwIfReportAborted(options.signal);
         const data = await fetchPage(page, perPage);
         out.push(...data.results);
         const np = data.pagination.next_page;
@@ -1217,43 +1259,39 @@ export async function fetchAllPagedReportRows<T>(fetchPage: (page: number, perPa
     }
     return out;
 }
-export async function fetchAllExpenseReportRows(groupBy: 'clients' | 'projects' | 'categories' | 'team', filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: {
-    maxPages?: number;
-}): Promise<ExpRowClients[] | ExpRowProjects[] | ExpRowCategories[] | ExpRowTeam[]> {
+export async function fetchAllExpenseReportRows(groupBy: 'clients' | 'projects' | 'categories' | 'team', filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options: ReportFetchAllOptions = {}): Promise<ExpRowClients[] | ExpRowProjects[] | ExpRowCategories[] | ExpRowTeam[]> {
     const perPage = reportV2ListChunkSize(filters);
-    const rows = await fetchAllPagedReportRows<ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam>((page, perPg) => fetchExpenseReport(groupBy, { ...filters, page, per_page: perPg } as ReportFiltersV2), { ...options, perPage });
+    const rows = await fetchAllPagedReportRows<ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam>((page, perPg) => fetchExpenseReport(groupBy, { ...filters, page, per_page: perPg } as ReportFiltersV2, options), { ...options, perPage });
     return rows as ExpRowClients[] | ExpRowProjects[] | ExpRowCategories[] | ExpRowTeam[];
 }
-export async function fetchAllUninvoicedReportRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: {
-    maxPages?: number;
-}): Promise<UninvoicedRow[]> {
+export async function fetchAllUninvoicedReportRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options: ReportFetchAllOptions = {}): Promise<UninvoicedRow[]> {
     const perPage = reportV2ListChunkSize(filters);
-    return fetchAllPagedReportRows((page, perPg) => fetchUninvoicedReport({ ...filters, page, per_page: perPg } as ReportFiltersV2), { ...options, perPage });
+    return fetchAllPagedReportRows((page, perPg) => fetchUninvoicedReport({ ...filters, page, per_page: perPg } as ReportFiltersV2, options), { ...options, perPage });
 }
-export async function fetchAllBudgetReportRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options?: {
-    maxPages?: number;
-}): Promise<BudgetRow[]> {
+export async function fetchAllBudgetReportRows(filters: Omit<ReportFiltersV2, 'page' | 'per_page'>, options: ReportFetchAllOptions = {}): Promise<BudgetRow[]> {
     const perPage = reportV2ListChunkSize(filters);
-    return fetchAllPagedReportRows((page, perPg) => fetchBudgetReport({ ...filters, page, per_page: perPg } as ReportFiltersV2), { ...options, perPage });
+    return fetchAllPagedReportRows((page, perPg) => fetchBudgetReport({ ...filters, page, per_page: perPg } as ReportFiltersV2, options), { ...options, perPage });
 }
-export async function fetchExpenseReport(groupBy: 'clients' | 'projects' | 'categories' | 'team', filters: ReportFiltersV2): Promise<ReportResponse<ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam>> {
+export async function fetchExpenseReport(groupBy: 'clients' | 'projects' | 'categories' | 'team', filters: ReportFiltersV2, options: ReportFetchOptions = {}): Promise<ReportResponse<ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam>> {
+    throwIfReportAborted(options.signal);
     const qs = buildReportV2Qs(filters);
     const cacheKey = `expenses/${groupBy}?${qs}`;
     const cached = reportCacheGet<ReportResponse<ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam>>(cacheKey);
     if (cached) return cached;
-    const res = await apiFetch(`/api/v1/time-tracking/reports/expenses/${groupBy}?${qs}`);
+    const res = await apiFetch(`/api/v1/time-tracking/reports/expenses/${groupBy}?${qs}`, { signal: options.signal });
     await reportsThrowIfNotOk(res);
     const data = (await res.json()) as ReportResponse<ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam>;
     const result = normalizeReportV2Response(data);
     reportCacheSet(cacheKey, result);
     return result;
 }
-export async function fetchUninvoicedReport(filters: ReportFiltersV2): Promise<ReportResponse<UninvoicedRow>> {
+export async function fetchUninvoicedReport(filters: ReportFiltersV2, options: ReportFetchOptions = {}): Promise<ReportResponse<UninvoicedRow>> {
+    throwIfReportAborted(options.signal);
     const qs = buildReportV2Qs(filters);
     const cacheKey = `uninvoiced?${qs}`;
     const cached = reportCacheGet<ReportResponse<UninvoicedRow>>(cacheKey);
     if (cached) return cached;
-    const res = await apiFetch(`/api/v1/time-tracking/reports/uninvoiced?${qs}`);
+    const res = await apiFetch(`/api/v1/time-tracking/reports/uninvoiced?${qs}`, { signal: options.signal });
     await reportsThrowIfNotOk(res);
     const data = (await res.json()) as ReportResponse<UninvoicedRow>;
     const result = normalizeReportV2Response(data);
@@ -1365,12 +1403,13 @@ export function finalizeBudgetReportRow(row: BudgetRow): BudgetRow {
         ...(mr !== undefined ? { budget_money_remaining: mr } : {}),
     };
 }
-export async function fetchBudgetReport(filters: ReportFiltersV2): Promise<ReportResponse<BudgetRow>> {
+export async function fetchBudgetReport(filters: ReportFiltersV2, options: ReportFetchOptions = {}): Promise<ReportResponse<BudgetRow>> {
+    throwIfReportAborted(options.signal);
     const qs = buildReportV2Qs(filters);
     const cacheKey = `project-budget?${qs}`;
     const cached = reportCacheGet<ReportResponse<BudgetRow>>(cacheKey);
     if (cached) return cached;
-    const res = await apiFetch(`/api/v1/time-tracking/reports/project-budget?${qs}`);
+    const res = await apiFetch(`/api/v1/time-tracking/reports/project-budget?${qs}`, { signal: options.signal });
     await reportsThrowIfNotOk(res);
     const data = (await res.json()) as ReportResponse<BudgetRow>;
     const norm = normalizeReportV2Response(data);

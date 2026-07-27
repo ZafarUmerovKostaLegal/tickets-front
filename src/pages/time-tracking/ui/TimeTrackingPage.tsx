@@ -280,7 +280,8 @@ export function TimeTrackingPage() {
             return;
         }
         let cancelled = false;
-        void listTimeTrackingUsers()
+        const controller = new AbortController();
+        void listTimeTrackingUsers(controller.signal)
             .then((rows) => {
             if (cancelled)
                 return;
@@ -299,6 +300,7 @@ export function TimeTrackingPage() {
         });
         return () => {
             cancelled = true;
+            controller.abort();
         };
     }, [loading, user, isTtManager, t]);
     const managedEntriesUserRow = useMemo(() => {

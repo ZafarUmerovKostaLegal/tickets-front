@@ -131,6 +131,21 @@ describe('apiFetch GET deduplication', () => {
         expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
+    it('supports a longer endpoint-specific reuse window', async () => {
+        vi.useFakeTimers();
+        const fetchMock = vi.fn(() => Promise.resolve(new Response('cached')));
+        vi.stubGlobal('fetch', fetchMock);
+
+        await expect((await apiFetch('/api/v1/reference-data', { getReuseWindowMs: 5_000 })).text()).resolves.toBe('cached');
+        await vi.advanceTimersByTimeAsync(2_000);
+        await expect((await apiFetch('/api/v1/reference-data', { getReuseWindowMs: 5_000 })).text()).resolves.toBe('cached');
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+
+        await vi.advanceTimersByTimeAsync(3_001);
+        await apiFetch('/api/v1/reference-data', { getReuseWindowMs: 5_000 });
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
     it('does not reuse a completed GET after an external data invalidation', async () => {
         const fetchMock = vi.fn()
             .mockResolvedValueOnce(new Response('before-push'))

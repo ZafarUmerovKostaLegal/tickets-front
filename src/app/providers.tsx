@@ -1,11 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
 import { AppRouter } from './router';
-import { BirthdayPostcardHost } from '@widgets/birthday-postcard';
-import { CalendarReminder } from '@widgets/calendar-reminder';
-import { ChatNotificationHost } from '@widgets/chat-notification';
-import { GlobalTimerWidget } from '@widgets/global-timer';
 import { AppDialogProvider } from '@shared/ui/app-dialog';
 import { AppToastProvider } from '@shared/ui/app-toast';
+import { useCurrentUser } from '@shared/hooks';
+
+const BirthdayPostcardHost = lazy(() => import('@widgets/birthday-postcard').then((m) => ({ default: m.BirthdayPostcardHost })));
+const CalendarReminder = lazy(() => import('@widgets/calendar-reminder').then((m) => ({ default: m.CalendarReminder })));
+const ChatNotificationHost = lazy(() => import('@widgets/chat-notification').then((m) => ({ default: m.ChatNotificationHost })));
+const GlobalTimerWidget = lazy(() => import('@widgets/global-timer').then((m) => ({ default: m.GlobalTimerWidget })));
 
 type ProvidersProps = {
     children?: ReactNode;
@@ -13,6 +15,7 @@ type ProvidersProps = {
 
 
 function DeferredBackgroundWidgets() {
+    const { user } = useCurrentUser();
     const [ready, setReady] = useState(false);
     useEffect(() => {
         let cancelled = false;
@@ -39,13 +42,14 @@ function DeferredBackgroundWidgets() {
             window.clearTimeout(t);
         };
     }, []);
-    if (!ready)
+    if (!ready || !user || user.is_blocked || user.is_archived)
         return null;
     return (
         <>
-            <CalendarReminder />
-            <ChatNotificationHost />
-            <GlobalTimerWidget />
+            <Suspense fallback={null}><BirthdayPostcardHost /></Suspense>
+            <Suspense fallback={null}><CalendarReminder /></Suspense>
+            <Suspense fallback={null}><ChatNotificationHost /></Suspense>
+            <Suspense fallback={null}><GlobalTimerWidget /></Suspense>
         </>
     );
 }
@@ -55,7 +59,6 @@ export function Providers({ children }: ProvidersProps) {
         <AppDialogProvider>
             <AppToastProvider>
                 {children ?? <AppRouter />}
-                <BirthdayPostcardHost />
                 <DeferredBackgroundWidgets />
             </AppToastProvider>
         </AppDialogProvider>

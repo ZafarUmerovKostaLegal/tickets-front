@@ -13,11 +13,20 @@ import type {
 } from './types';
 
 const CHAT = '/api/v1/chat';
-const chatRoomsCache = createQueryCache<ChatRoom[]>({ ttlMs: 2_500 });
+const chatRoomsCache = createQueryCache<ChatRoom[]>({
+    ttlMs: 15_000,
+    staleWhileRevalidateMs: 45_000,
+});
+const chatRoomCache = createQueryCache<ChatRoom>({
+    ttlMs: 60_000,
+    staleWhileRevalidateMs: 4 * 60_000,
+    maxEntries: 100,
+});
 const CHAT_ROOMS_CACHE_KEY = 'chat-rooms';
 
 export function invalidateChatRoomsCache(): void {
     chatRoomsCache.invalidate(CHAT_ROOMS_CACHE_KEY);
+    chatRoomCache.invalidate();
 }
 
 function parseAttachment(raw: Record<string, unknown>): ChatAttachment {
@@ -209,20 +218,26 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
     return text.trim() ? (JSON.parse(text) as Record<string, unknown>) : {};
 }
 
-async function fetchChatRoomsFromApi(): Promise<ChatRoom[]> {
-    const res = await apiFetch(`${CHAT}/rooms`);
+async function fetchChatRoomsFromApi(signal?: AbortSignal): Promise<ChatRoom[]> {
+    const res = await apiFetch(`${CHAT}/rooms`, { signal, getReuseWindowMs: 10_000 });
     const raw = await readJson(res);
     const items = Array.isArray(raw.items) ? raw.items : [];
     return items.map((x) => parseRoom(x as Record<string, unknown>));
 }
 
-export async function fetchChatRooms(): Promise<ChatRoom[]> {
-    return chatRoomsCache.fetch(CHAT_ROOMS_CACHE_KEY, fetchChatRoomsFromApi);
+export async function fetchChatRooms(signal?: AbortSignal): Promise<ChatRoom[]> {
+    return chatRoomsCache.fetch(CHAT_ROOMS_CACHE_KEY, fetchChatRoomsFromApi, { signal });
 }
 
-export async function fetchChatRoom(roomId: number): Promise<ChatRoom> {
-    const res = await apiFetch(`${CHAT}/rooms/${roomId}`);
-    return parseRoom(await readJson(res));
+export async function fetchChatRoom(roomId: number, signal?: AbortSignal): Promise<ChatRoom> {
+    const key = String(roomId);
+    return chatRoomCache.fetch(key, async (sharedSignal) => {
+        const res = await apiFetch(`${CHAT}/rooms/${roomId}`, {
+            signal: sharedSignal,
+            getReuseWindowMs: 5_000,
+        });
+        return parseRoom(await readJson(res));
+    }, { signal });
 }
 
 export type FetchChatMessagesResult = {

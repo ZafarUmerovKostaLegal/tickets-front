@@ -1,11 +1,11 @@
-import { todoPageMessages } from '../todoPageMessages';
 import type { TodoPageMessages } from '../todoPageMessages';
 import type { TimeTrackingPageMessages } from '../timeTrackingPageMessages';
-import { contactsPageMessages } from '../contactsPageMessages';
 import type { ContactsPageMessages } from '../contactsPageMessages';
 
 
 const timeTrackingPageStub = {} as TimeTrackingPageMessages;
+const todoPageStub = {} as TodoPageMessages;
+const contactsPageStub = {} as ContactsPageMessages;
 
 export const ruMessages: Messages = {
     brand: {
@@ -538,9 +538,9 @@ export const ruMessages: Messages = {
         categoryAria: 'Категория',
         loading: 'Загрузка…',
     },
-    todoPage: todoPageMessages,
+    todoPage: todoPageStub,
     timeTrackingPage: timeTrackingPageStub,
-    contactsPage: contactsPageMessages,
+    contactsPage: contactsPageStub,
     callSchedulePage: {
         title: 'Расписание звонков',
         subtitleDefault: 'Календарь: события из Microsoft 365',

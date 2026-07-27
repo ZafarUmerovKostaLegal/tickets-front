@@ -357,6 +357,7 @@ export function ReportsPanel() {
       return;
     }
     let cancelled = false;
+    const controller = new AbortController();
     setSearchFullLoading(true);
     setSearchFullRows(null);
     const filtersBase = withPartnerReportScope({
@@ -366,7 +367,7 @@ export function ReportsPanel() {
       include_fixed_fee: reportType === 'time' ? includeFixed : undefined,
       pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,
     });
-        const searchFetchOpts = { maxPages: 6 } as const;
+        const searchFetchOpts = { maxPages: 6, signal: controller.signal } as const;
     void (async () => {
       try {
         let out: AnyRow[] = [];
@@ -403,12 +404,17 @@ export function ReportsPanel() {
     })();
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [fullSearchActive, reportType, groupBy, dateFrom, dateTo, selectedUserIds, includeFixed, reportPageSizeMax, withPartnerReportScope]);
   useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
     setUsersForFilterError(null);
-    fetchReportsUsersForFilter()
+    fetchReportsUsersForFilter(controller.signal)
       .then((list) => {
+        if (cancelled)
+          return;
         const filtered = list.filter((u) => !isHiddenSystemUser({ email: u.email, display_name: u.displayName }));
         setUsersForFilter(filtered);
         setUsersForFilterError(null);
@@ -417,10 +423,16 @@ export function ReportsPanel() {
         }
       })
       .catch((e: unknown) => {
+        if (cancelled || (e instanceof Error && e.name === 'AbortError'))
+          return;
         setUsersForFilter([]);
         if (isTimeTrackingHttpError(e, 401) || isTimeTrackingHttpError(e, 403))
           setUsersForFilterError(t('timeTrackingPage.reports.header.usersFilterError'));
       });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [user, t]);
   useEffect(() => {
     if (!partnerProjectsScopeActive || !user) {
@@ -448,13 +460,21 @@ export function ReportsPanel() {
     };
   }, [partnerProjectsScopeActive, user]);
   useEffect(() => {
-    void fetchReportsMeta()
+    let cancelled = false;
+    const controller = new AbortController();
+    void fetchReportsMeta(controller.signal)
       .then((m) => {
-        setReportPageSizeMax(m.pageSizeMax);
+        if (!cancelled)
+          setReportPageSizeMax(m.pageSizeMax);
       })
       .catch(() => {
-        setReportPageSizeMax(null);
+        if (!cancelled)
+          setReportPageSizeMax(null);
       });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, []);
 
   const reloadPartnerReportHints = useCallback(() => {

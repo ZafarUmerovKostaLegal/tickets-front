@@ -1,25 +1,37 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useI18n } from './I18nProvider';
-import { ensureTimeTrackingPageMessages, isTimeTrackingPageMessagesReady } from './messages';
+import {
+    ensureContactsPageMessages,
+    ensureTimeTrackingPageMessages,
+    ensureTodoPageMessages,
+    isContactsPageMessagesReady,
+    isTimeTrackingPageMessagesReady,
+    isTodoPageMessagesReady,
+} from './messages';
+import type { AppLocale } from './types';
 
 type Props = {
     children: ReactNode;
     fallback?: ReactNode;
 };
 
+type EnsureMessagesProps = Props & {
+    ensure: (locale: AppLocale) => Promise<void>;
+    isReady: (locale: AppLocale) => boolean;
+};
 
-export function EnsureTimeTrackingI18n({ children, fallback = null }: Props) {
+function EnsureMessages({ children, fallback = null, ensure, isReady }: EnsureMessagesProps) {
     const { locale } = useI18n();
-    const [ready, setReady] = useState(() => isTimeTrackingPageMessagesReady(locale));
+    const [ready, setReady] = useState(() => isReady(locale));
 
     useEffect(() => {
         let cancelled = false;
-        if (isTimeTrackingPageMessagesReady(locale)) {
+        if (isReady(locale)) {
             setReady(true);
             return;
         }
         setReady(false);
-        void ensureTimeTrackingPageMessages(locale)
+        void ensure(locale)
             .then(() => {
                 if (!cancelled)
                     setReady(true);
@@ -31,9 +43,21 @@ export function EnsureTimeTrackingI18n({ children, fallback = null }: Props) {
         return () => {
             cancelled = true;
         };
-    }, [locale]);
+    }, [ensure, isReady, locale]);
 
     if (!ready)
         return <>{fallback}</>;
     return <>{children}</>;
+}
+
+export function EnsureTimeTrackingI18n(props: Props) {
+    return <EnsureMessages {...props} ensure={ensureTimeTrackingPageMessages} isReady={isTimeTrackingPageMessagesReady} />;
+}
+
+export function EnsureTodoI18n(props: Props) {
+    return <EnsureMessages {...props} ensure={ensureTodoPageMessages} isReady={isTodoPageMessagesReady} />;
+}
+
+export function EnsureContactsI18n(props: Props) {
+    return <EnsureMessages {...props} ensure={ensureContactsPageMessages} isReady={isContactsPageMessagesReady} />;
 }

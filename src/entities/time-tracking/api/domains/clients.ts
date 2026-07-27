@@ -196,7 +196,7 @@ export async function listTimeManagerClients(includeArchived = false, pagination
         qs.set('offset', String(pagination.offset ?? 0));
     }
     const suffix = qs.toString() ? `?${qs}` : '';
-    const res = await apiFetch(`/api/v1/time-tracking/clients${suffix}`, { signal });
+    const res = await apiFetch(`/api/v1/time-tracking/clients${suffix}`, { signal, getReuseWindowMs: 10_000 });
     await throwIfNotOk(res);
     const raw = await res.json();
     if (pagination) {
@@ -255,7 +255,7 @@ export type TimeManagerClientContactPatchPayload = {
     sortOrder?: number | null;
 };
 export async function listClientContacts(clientId: string): Promise<TimeManagerClientContactRow[]> {
-    const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/contacts`);
+    const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/contacts`, { getReuseWindowMs: 10_000 });
     await throwIfNotOk(res);
     const raw = await res.json();
     const arr = unwrapTimeTrackingListArray(raw);
@@ -335,7 +335,7 @@ export async function listClientExpenseCategories(clientId: string, options?: {
     if (options?.includeArchived)
         qs.set('includeArchived', 'true');
     const suffix = qs.toString() ? `?${qs}` : '';
-    const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/expense-categories${suffix}`);
+    const res = await apiFetch(`/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/expense-categories${suffix}`, { getReuseWindowMs: 10_000 });
     await throwIfNotOk(res);
     return (await res.json()) as TimeManagerClientExpenseCategoryRow[];
 }

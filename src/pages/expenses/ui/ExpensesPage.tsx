@@ -1,12 +1,11 @@
-import { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef, type ReactNode, type CSSProperties } from 'react';
+import { lazy, Suspense, useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef, type ReactNode, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { routes, getExpensesOpenUrl } from '@shared/config';
 import { useCurrentUser, useMediaQuery } from '@shared/hooks';
 import { AppBackButton, AppHomeLogo, AppPageSettings, DatePicker, Pagination } from '@shared/ui';
-import { ExpensesFormPanel, type PanelMode } from './ExpensesFormPanel';
+import type { PanelMode } from './ExpensesFormPanel';
 import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
-import { ExpensesReportModal } from '@features/expense-report';
 import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseStatus, ExpenseType, ExpenseCreatedBy, PartnerExpenseCategory, } from '@entities/expenses/model/types';
 import { EXPENSE_REGISTRY_STATUSES, EXPENSE_REGISTRY_STATUS_SET, STATUS_META, TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
 import { approveExpense, payExpense, closeExpense, deleteExpense, fetchExpenses, fetchExpenseById, createExpense, updateExpense, submitExpense, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
@@ -31,6 +30,9 @@ import { getCloseExpenseUi, isModerationBlockedForOwnExpense, isReceiptUploadAll
 import { ExpensesPageBoundary } from './ExpensesPageBoundary';
 import '@pages/time-tracking/ui/TimeTrackingForms.css';
 import './ExpensesPage.css';
+
+const ExpensesFormPanel = lazy(() => import('./ExpensesFormPanel').then((m) => ({ default: m.ExpensesFormPanel })));
+const ExpensesReportModal = lazy(() => import('@features/expense-report').then((m) => ({ default: m.ExpensesReportModal })));
 export type ExpensesPageVariant = 'default' | 'moderationQueue' | 'partner';
 export type ExpensesPageProps = {
     variant?: ExpensesPageVariant;
@@ -1610,12 +1612,12 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                     }} onConfirm={runTableConfirm}/>)}
           </>, document.body)}
 
-      <ExpensesFormPanel isOpen={isPanelOpen} mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
+      {isPanelOpen && (<Suspense fallback={null}><ExpensesFormPanel isOpen mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
             setEditingReq(r);
             setRequests(prev => prev.map(x => (x.id === r.id ? r : x)));
-        }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} formScope={isPartnerScope ? 'partner' : 'company'}/>
+        }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} formScope={isPartnerScope ? 'partner' : 'company'}/></Suspense>)}
 
-      <ExpensesReportModal isOpen={canModerate && isReportOpen && !isPartnerScope} requests={requestsForUi} onClose={() => setIsReportOpen(false)}/>
+      {canModerate && isReportOpen && !isPartnerScope && (<Suspense fallback={null}><ExpensesReportModal isOpen requests={requestsForUi} onClose={() => setIsReportOpen(false)}/></Suspense>)}
     </div>);
 }
 export function ExpensesPage(props: ExpensesPageProps) {

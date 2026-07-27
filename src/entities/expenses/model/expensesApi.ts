@@ -1,5 +1,6 @@
 import { listProjectsForExpenses } from '@entities/time-tracking';
-import { apiFetch } from '@shared/api';
+import { apiFetch, type RequestInitAuth } from '@shared/api';
+import { createQueryCache } from '@shared/lib/queryCache';
 import { normalizeExpenseRequest } from './coerceExpense';
 import type { ExpenseRequest, ExpenseAttachmentKind, ListParams, ExpenseTypeRef, ProjectRef, } from './types';
 interface ListResponse {
@@ -15,6 +16,10 @@ interface ExchangeRateResponse {
     rate: number;
     pairLabel: string;
 }
+
+const expenseTypesCache = createQueryCache<ExpenseTypeRef[]>({ ttlMs: 10 * 60_000, staleWhileRevalidateMs: 30 * 60_000, maxEntries: 1 });
+const exchangeRatesCache = createQueryCache<ExchangeRateResponse>({ ttlMs: 60 * 60_000, staleWhileRevalidateMs: 6 * 60 * 60_000, maxEntries: 45 });
+const approvalRoutingCache = createQueryCache<ApprovalRoutingMeta>({ ttlMs: 5 * 60_000, staleWhileRevalidateMs: 15 * 60_000, maxEntries: 1 });
 async function throwIfNotOk(res: Response): Promise<Response> {
     if (!res.ok) {
         let msg = `HTTP ${res.status}`;
@@ -33,7 +38,7 @@ async function throwIfNotOk(res: Response): Promise<Response> {
     }
     return res;
 }
-export async function fetchExpenses(params: ListParams = {}, init?: RequestInit): Promise<ListResponse> {
+export async function fetchExpenses(params: ListParams = {}, init?: RequestInitAuth): Promise<ListResponse> {
     const qs = new URLSearchParams();
     if (params.status)
         qs.set('status', params.status);
@@ -66,7 +71,10 @@ export async function fetchExpenses(params: ListParams = {}, init?: RequestInit)
     if (params.projectId?.trim())
         qs.set('projectId', params.projectId.trim());
     const query = qs.toString();
-    const res = await apiFetch(`/api/v1/expenses${query ? `?${query}` : ''}`, init ?? {});
+    const res = await apiFetch(`/api/v1/expenses${query ? `?${query}` : ''}`, {
+        getReuseWindowMs: 2_000,
+        ...init,
+    });
     await throwIfNotOk(res);
     const j = await res.json() as ListResponse & Record<string, unknown>;
     const hasFilterTotals =
@@ -156,7 +164,7 @@ export async function reviseExpense(id: string, comment: string): Promise<Expens
     return normalizeExpenseRequest(await res.json() as ExpenseRequest);
 }
 export async function fetchExpenseById(id: string): Promise<ExpenseRequest> {
-    const res = await apiFetch(`/api/v1/expenses/${encodeURIComponent(id)}`);
+    const res = await apiFetch(`/api/v1/expenses/${encodeURIComponent(id)}`, { getReuseWindowMs: 5_000 });
     await throwIfNotOk(res);
     return normalizeExpenseRequest(await res.json() as ExpenseRequest);
 }
@@ -217,18 +225,23 @@ export async function openExpenseAttachmentInNewTab(expenseId: string, attachmen
     window.setTimeout(() => URL.revokeObjectURL(url), 120000);
 }
 export async function fetchExpenseTypes(): Promise<ExpenseTypeRef[]> {
-    const res = await apiFetch('/api/v1/expense-types');
-    await throwIfNotOk(res);
-    return res.json() as Promise<ExpenseTypeRef[]>;
+    return expenseTypesCache.fetch('types', async (signal) => {
+        const res = await apiFetch('/api/v1/expense-types', { signal, getReuseWindowMs: 60_000 });
+        await throwIfNotOk(res);
+        return res.json() as Promise<ExpenseTypeRef[]>;
+    });
 }
 export async function fetchProjects(): Promise<ProjectRef[]> {
     const rows = await listProjectsForExpenses();
     return rows.filter((p) => !p.isArchived).map((p) => ({ id: p.id, name: p.name }));
 }
 export async function fetchExchangeRate(date: string): Promise<ExchangeRateResponse> {
-    const res = await apiFetch(`/api/v1/exchange-rates?date=${date}`);
-    await throwIfNotOk(res);
-    return res.json() as Promise<ExchangeRateResponse>;
+    const key = date.trim().slice(0, 10);
+    return exchangeRatesCache.fetch(key, async (signal) => {
+        const res = await apiFetch(`/api/v1/exchange-rates?date=${encodeURIComponent(key)}`, { signal, getReuseWindowMs: 60_000 });
+        await throwIfNotOk(res);
+        return res.json() as Promise<ExchangeRateResponse>;
+    });
 }
 
 export interface ApprovalRoutingMeta {
@@ -238,7 +251,9 @@ export interface ApprovalRoutingMeta {
 }
 
 export async function fetchApprovalRoutingMeta(): Promise<ApprovalRoutingMeta> {
-    const res = await apiFetch('/api/v1/approval-routing-meta');
-    await throwIfNotOk(res);
-    return res.json() as Promise<ApprovalRoutingMeta>;
+    return approvalRoutingCache.fetch('meta', async (signal) => {
+        const res = await apiFetch('/api/v1/approval-routing-meta', { signal, getReuseWindowMs: 60_000 });
+        await throwIfNotOk(res);
+        return res.json() as Promise<ApprovalRoutingMeta>;
+    });
 }

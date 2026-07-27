@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, useRef, useEffect } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { AppBackButton, AppHomeLogo } from '@shared/ui';
 import { routes } from '@shared/config';
@@ -20,9 +20,6 @@ import { setCalendarCache } from '@entities/todo/lib/calendarCache';
 import { IconImage, IconSettings, IconDownload, IconUpload, IconPlus, IconTrash, } from './TodoIcons';
 import { TodoPlanner } from './TodoPlanner';
 import { TodoColumn } from './TodoColumn';
-import { TodoAddColumnModal } from './TodoAddColumnModal';
-import { TodoAddCardModal } from './TodoAddCardModal';
-import { TodoCardModal } from './TodoCardModal';
 import { TodoBoardsBar } from './TodoBoardsBar';
 import { formatTodoArchiveClear, formatTodoFromColumn, todoLocaleTag, useI18n } from '@shared/i18n';
 import {
@@ -38,8 +35,12 @@ import {
 } from '@entities/todo/lib/boardRoles';
 import { showToast } from '@shared/ui/app-toast/appToastGate';
 import { TodoInvitesPanel } from './TodoInvitesPanel';
-import { TodoBoardMembersModal } from './TodoBoardMembersModal';
 import './TodoPage.css';
+
+const TodoAddColumnModal = lazy(() => import('./TodoAddColumnModal').then((m) => ({ default: m.TodoAddColumnModal })));
+const TodoAddCardModal = lazy(() => import('./TodoAddCardModal').then((m) => ({ default: m.TodoAddCardModal })));
+const TodoCardModal = lazy(() => import('./TodoCardModal').then((m) => ({ default: m.TodoCardModal })));
+const TodoBoardMembersModal = lazy(() => import('./TodoBoardMembersModal').then((m) => ({ default: m.TodoBoardMembersModal })));
 function sortKeyTimeForColumnList(c: TodoCard): number {
     if (c.createdAt) {
         const t = new Date(c.createdAt).getTime();
@@ -1683,10 +1684,12 @@ export function TodoPage() {
                     </>)}
                 </div>
                 <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBackgroundChange} />
-                {addColumnOpen && (<TodoAddColumnModal title={addColumnTitle} onTitleChange={setAddColumnTitle} onClose={() => { setAddColumnOpen(false); setAddColumnTitle(''); }} onSubmit={handleAddColumn} />)}
-                {addCardColumn && (<TodoAddCardModal columnTitle={columnConfig.find((c) => c.id === addCardColumn)?.title ?? ''} title={addCardTitle} onTitleChange={setAddCardTitle} onClose={() => { if (!addCardSubmitting) { setAddCardColumn(null); setAddCardTitle(''); } }} onSubmit={() => void handleAddCard()} submitting={addCardSubmitting} />)}
-                {selectedCard && selectedCardData && activeBoardId != null && (<TodoCardModal boardId={activeBoardId} boardReadOnly={cardsReadOnly} card={selectedCardData} columnTitle={columnTitles[selectedCard.columnId] ?? ''} columnId={selectedCard.columnId} columns={modalColumnOptions} boardLabels={boardLabels} todoBoardUsers={todoBoardUsers} cardServerId={Number(selectedCard.cardId)} applyTodoBoard={applyTodoBoard} onMoveToColumn={handleModalMoveToColumn} onClose={() => setSelectedCard(null)} onCardUpdate={handleModalCardUpdate} onArchive={() => handleArchiveCard(selectedCard.columnId, selectedCard.cardId)} />)}
-                {membersModalOpen && activeBoardId != null && (<TodoBoardMembersModal boardId={activeBoardId} boardTitle={activeBoardSummary?.title ?? ''} themeVarsStyle={todoThemeVarsStyle} onClose={() => setMembersModalOpen(false)} onMembersChanged={() => void reloadBoardSummaries()} />)}
+                <Suspense fallback={null}>
+                    {addColumnOpen && (<TodoAddColumnModal title={addColumnTitle} onTitleChange={setAddColumnTitle} onClose={() => { setAddColumnOpen(false); setAddColumnTitle(''); }} onSubmit={handleAddColumn} />)}
+                    {addCardColumn && (<TodoAddCardModal columnTitle={columnConfig.find((c) => c.id === addCardColumn)?.title ?? ''} title={addCardTitle} onTitleChange={setAddCardTitle} onClose={() => { if (!addCardSubmitting) { setAddCardColumn(null); setAddCardTitle(''); } }} onSubmit={() => void handleAddCard()} submitting={addCardSubmitting} />)}
+                    {selectedCard && selectedCardData && activeBoardId != null && (<TodoCardModal boardId={activeBoardId} boardReadOnly={cardsReadOnly} card={selectedCardData} columnTitle={columnTitles[selectedCard.columnId] ?? ''} columnId={selectedCard.columnId} columns={modalColumnOptions} boardLabels={boardLabels} todoBoardUsers={todoBoardUsers} cardServerId={Number(selectedCard.cardId)} applyTodoBoard={applyTodoBoard} onMoveToColumn={handleModalMoveToColumn} onClose={() => setSelectedCard(null)} onCardUpdate={handleModalCardUpdate} onArchive={() => handleArchiveCard(selectedCard.columnId, selectedCard.cardId)} />)}
+                    {membersModalOpen && activeBoardId != null && (<TodoBoardMembersModal boardId={activeBoardId} boardTitle={activeBoardSummary?.title ?? ''} themeVarsStyle={todoThemeVarsStyle} onClose={() => setMembersModalOpen(false)} onMembersChanged={() => void reloadBoardSummaries()} />)}
+                </Suspense>
 
                 <TodoBoardsBar themeVarsStyle={todoThemeVarsStyle} boards={boardSummaries} currentBoardId={activeBoardId} listError={boardListError} onSelectBoard={handleSelectTodoBoard} onCreateBoard={handleCreateTodoBoard} />
 

@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { createQueryCache } from '@shared/lib/queryCache';
 import { assertHttpsMicrosoftOAuthRedirectUrl } from '@shared/lib/safeOAuthRedirect';
 import { normalizeCalendarEvents } from './calendarEventNormalize';
 export const CALENDAR_NOT_CONNECTED_MSG = 'Календарь не подключён';
@@ -22,6 +23,29 @@ export interface CalendarEvent {
 
     calendarId?: string;
 }
+
+const calendarStatusCache = createQueryCache<CalendarStatusResult>({
+    ttlMs: 30_000,
+    staleWhileRevalidateMs: 2 * 60_000,
+    maxEntries: 1,
+});
+const outlookCalendarsCache = createQueryCache<OutlookCalendarItem[]>({
+    ttlMs: 5 * 60_000,
+    staleWhileRevalidateMs: 15 * 60_000,
+    maxEntries: 1,
+});
+const calendarEventsCache = createQueryCache<CalendarEvent[]>({
+    ttlMs: 30_000,
+    staleWhileRevalidateMs: 2 * 60_000,
+    maxEntries: 32,
+});
+
+export function invalidateCalendarApiCache(): void {
+    calendarStatusCache.invalidate();
+    outlookCalendarsCache.invalidate();
+    calendarEventsCache.invalidate();
+}
+
 async function parseBody(res: Response): Promise<Record<string, unknown> | null> {
     try {
         return await res.json();
@@ -31,6 +55,7 @@ async function parseBody(res: Response): Promise<Record<string, unknown> | null>
     }
 }
 export async function connectOutlookCalendar(options?: { forceConsent?: boolean }): Promise<void> {
+    invalidateCalendarApiCache();
     const qs = options?.forceConsent ? '?force_consent=true' : '';
     const res = await apiFetch(`/api/v1/todos/calendar/connect${qs}`, {
         redirect: 'manual',
@@ -72,6 +97,7 @@ export async function connectOutlookCalendar(options?: { forceConsent?: boolean 
 /** Disconnect then start OAuth with prompt=consent (required after Mail.ReadWrite scope expansion). */
 export async function reconnectOutlookCalendar(): Promise<void> {
     const disc = await apiFetch('/api/v1/todos/calendar/disconnect', { method: 'DELETE' });
+    invalidateCalendarApiCache();
     // 404/405 = old gateway without disconnect route — still force consent on connect.
     if (!disc.ok && disc.status !== 404 && disc.status !== 405 && disc.status !== 409) {
         const body = await parseBody(disc);
@@ -94,6 +120,7 @@ export async function disconnectOutlookCalendar(): Promise<void> {
         const detail = typeof body?.detail === 'string' ? body.detail : null;
         throw new Error(detail ?? 'Не удалось отключить Outlook');
     }
+    invalidateCalendarApiCache();
 }
 export type CalendarStatusResult = {
     connected: boolean;
@@ -101,62 +128,71 @@ export type CalendarStatusResult = {
     mailReady?: boolean;
     detail?: string;
 };
-export async function getCalendarStatus(): Promise<CalendarStatusResult> {
-    const res = await apiFetch('/api/v1/todos/calendar/status', {
-        headers: { Accept: 'application/json' },
-    });
-    if (res.status === 401)
-        throw new Error('Требуется авторизация');
-    if (!res.ok) {
-        const body = await parseBody(res);
-        const detail = typeof body?.detail === 'string' ? body.detail : undefined;
-        return { connected: false, mailReady: false, detail };
-    }
-    const data = (await res.json()) as {
-        connected?: boolean;
-        mailReady?: boolean;
-        detail?: unknown;
-    };
-    const connected = !!data?.connected;
-    return {
-        connected,
-        mailReady: typeof data?.mailReady === 'boolean' ? data.mailReady : undefined,
-        detail: typeof data?.detail === 'string' ? data.detail : undefined,
-    };
+export async function getCalendarStatus(signal?: AbortSignal): Promise<CalendarStatusResult> {
+    return calendarStatusCache.fetch('status', async (sharedSignal) => {
+        const res = await apiFetch('/api/v1/todos/calendar/status', {
+            headers: { Accept: 'application/json' },
+            signal: sharedSignal,
+            getReuseWindowMs: 30_000,
+        });
+        if (res.status === 401)
+            throw new Error('Требуется авторизация');
+        if (!res.ok) {
+            const body = await parseBody(res);
+            const detail = typeof body?.detail === 'string' ? body.detail : undefined;
+            return { connected: false, mailReady: false, detail };
+        }
+        const data = (await res.json()) as {
+            connected?: boolean;
+            mailReady?: boolean;
+            detail?: unknown;
+        };
+        const connected = !!data?.connected;
+        return {
+            connected,
+            mailReady: typeof data?.mailReady === 'boolean' ? data.mailReady : undefined,
+            detail: typeof data?.detail === 'string' ? data.detail : undefined,
+        };
+    }, { signal });
 }
 export type OutlookCalendarItem = {
     id: string;
     name: string;
 };
 
-export async function getOutlookCalendars(): Promise<OutlookCalendarItem[]> {
-    const res = await apiFetch('/api/v1/todos/calendar/calendars', {
-        headers: { Accept: 'application/json' },
-    });
-    if (res.status === 401)
-        throw new Error('Требуется авторизация');
-    if (res.status === 403) {
-        throw new Error(CALENDAR_NOT_CONNECTED_MSG);
-    }
-    if (!res.ok) {
-        const body = await parseBody(res);
-        const detail = typeof body?.detail === 'string' ? body.detail : null;
-        throw new Error(detail ?? `Ошибка загрузки календарей (${res.status})`);
-    }
-    const data = await res.json();
-    const raw = Array.isArray(data) ? data : (Array.isArray(data?.value) ? data.value : []);
-    return raw
-        .map((item: { id?: unknown; name?: unknown }) => ({
-            id: String(item.id ?? '').trim(),
-            name: String(item.name ?? '').trim() || String(item.id ?? '').trim(),
-        }))
-        .filter((item: OutlookCalendarItem) => item.id.length > 0);
+export async function getOutlookCalendars(signal?: AbortSignal): Promise<OutlookCalendarItem[]> {
+    return outlookCalendarsCache.fetch('calendars', async (sharedSignal) => {
+        const res = await apiFetch('/api/v1/todos/calendar/calendars', {
+            headers: { Accept: 'application/json' },
+            signal: sharedSignal,
+            getReuseWindowMs: 30_000,
+        });
+        if (res.status === 401)
+            throw new Error('Требуется авторизация');
+        if (res.status === 403) {
+            throw new Error(CALENDAR_NOT_CONNECTED_MSG);
+        }
+        if (!res.ok) {
+            const body = await parseBody(res);
+            const detail = typeof body?.detail === 'string' ? body.detail : null;
+            throw new Error(detail ?? `Ошибка загрузки календарей (${res.status})`);
+        }
+        const data = await res.json();
+        const raw = Array.isArray(data) ? data : (Array.isArray(data?.value) ? data.value : []);
+        return raw
+            .map((item: { id?: unknown; name?: unknown }) => ({
+                id: String(item.id ?? '').trim(),
+                name: String(item.name ?? '').trim() || String(item.id ?? '').trim(),
+            }))
+            .filter((item: OutlookCalendarItem) => item.id.length > 0);
+    }, { signal });
 }
 
 export async function getCalendarEvents(
     start?: string,
     end?: string,
     calendarId?: string | null,
+    signal?: AbortSignal,
 ): Promise<CalendarEvent[]> {
     const qs = new URLSearchParams();
     if (start)
@@ -167,32 +203,34 @@ export async function getCalendarEvents(
     if (cid && cid !== 'default')
         qs.set('calendar_id', cid);
     const path = `/api/v1/todos/calendar/events${qs.toString() ? `?${qs}` : ''}`;
-    const res = await apiFetch(path);
-    if (res.status === 401)
-        throw new Error('Требуется авторизация');
-    if (res.status === 503) {
-        throw new Error(CALENDAR_NOT_CONNECTED_MSG);
-    }
-    if (res.status === 403) {
-        await parseBody(res);
-        throw new Error(CALENDAR_NOT_CONNECTED_MSG);
-    }
-    if (!res.ok) {
-        const body = await parseBody(res);
-        const detail = typeof body?.detail === 'string' ? body.detail : null;
-        throw new Error(detail ?? `Ошибка загрузки событий (${res.status})`);
-    }
-    const data = await res.json();
-    if (Array.isArray(data))
-        return normalizeCalendarEvents(data);
-    if (Array.isArray(data?.value))
-        return normalizeCalendarEvents(data.value);
-    if (Array.isArray(data?.events))
-        return normalizeCalendarEvents(data.events);
-    if (Array.isArray(data?.data))
-        return normalizeCalendarEvents(data.data);
-    console.warn('[CalendarAPI] Unexpected events response format:', data);
-    return [];
+    return calendarEventsCache.fetch(path, async (sharedSignal) => {
+        const res = await apiFetch(path, { signal: sharedSignal, getReuseWindowMs: 10_000 });
+        if (res.status === 401)
+            throw new Error('Требуется авторизация');
+        if (res.status === 503) {
+            throw new Error(CALENDAR_NOT_CONNECTED_MSG);
+        }
+        if (res.status === 403) {
+            await parseBody(res);
+            throw new Error(CALENDAR_NOT_CONNECTED_MSG);
+        }
+        if (!res.ok) {
+            const body = await parseBody(res);
+            const detail = typeof body?.detail === 'string' ? body.detail : null;
+            throw new Error(detail ?? `Ошибка загрузки событий (${res.status})`);
+        }
+        const data = await res.json();
+        if (Array.isArray(data))
+            return normalizeCalendarEvents(data);
+        if (Array.isArray(data?.value))
+            return normalizeCalendarEvents(data.value);
+        if (Array.isArray(data?.events))
+            return normalizeCalendarEvents(data.events);
+        if (Array.isArray(data?.data))
+            return normalizeCalendarEvents(data.data);
+        console.warn('[CalendarAPI] Unexpected events response format:', data);
+        return [];
+    }, { signal });
 }
 export async function createCalendarEvent(payload: {
     subject: string;
@@ -211,5 +249,7 @@ export async function createCalendarEvent(payload: {
         throw new Error(CALENDAR_NOT_CONNECTED_MSG);
     if (!res.ok)
         throw new Error('Ошибка создания события');
-    return res.json();
+    const event = await res.json() as CalendarEvent;
+    calendarEventsCache.invalidate();
+    return event;
 }

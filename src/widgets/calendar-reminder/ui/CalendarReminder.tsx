@@ -209,6 +209,7 @@ export function CalendarReminder() {
     useEffect(() => {
         let timer: ReturnType<typeof setTimeout>;
         let cancelled = false;
+        const controller = new AbortController();
         async function poll() {
             if (cancelled)
                 return;
@@ -228,7 +229,7 @@ export function CalendarReminder() {
                 return;
             }
             try {
-                const { connected: c } = await getCalendarStatus();
+                const { connected: c } = await getCalendarStatus(controller.signal);
                 if (cancelled)
                     return;
                 if (!c) {
@@ -243,7 +244,7 @@ export function CalendarReminder() {
                 start.setHours(0, 0, 0, 0);
                 const end = new Date(start);
                 end.setDate(end.getDate() + 2);
-                const events = await getCalendarEvents(start.toISOString(), end.toISOString());
+                const events = await getCalendarEvents(start.toISOString(), end.toISOString(), undefined, controller.signal);
                 if (cancelled)
                     return;
                 errorCountRef.current = 0;
@@ -251,6 +252,8 @@ export function CalendarReminder() {
                 schedulePoll(BASE_POLL_INTERVAL);
             }
             catch {
+                if (cancelled || controller.signal.aborted)
+                    return;
                 errorCountRef.current += 1;
                 const backoff = Math.min(BASE_POLL_INTERVAL * Math.pow(2, errorCountRef.current), MAX_POLL_INTERVAL);
                 schedulePoll(backoff);
@@ -271,6 +274,7 @@ export function CalendarReminder() {
         document.addEventListener('visibilitychange', onVisibility);
         return () => {
             cancelled = true;
+            controller.abort();
             clearTimeout(timer);
             document.removeEventListener('visibilitychange', onVisibility);
         };

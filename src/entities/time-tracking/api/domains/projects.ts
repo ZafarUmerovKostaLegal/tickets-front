@@ -74,7 +74,7 @@ export function projectTasksCollectionPath(clientId: string, projectId: string):
 }
 
 export async function listProjectTasks(clientId: string, projectId: string): Promise<TimeManagerClientTaskRow[]> {
-    const res = await apiFetch(projectTasksCollectionPath(clientId, projectId));
+    const res = await apiFetch(projectTasksCollectionPath(clientId, projectId), { getReuseWindowMs: 10_000 });
     await throwIfNotOk(res);
     const body = await res.json();
     if (!Array.isArray(body))
@@ -202,7 +202,7 @@ export async function listProjectsForExpenses(options?: {
         qs.set('offset', String(options.offset ?? 0));
     }
     const suffix = qs.toString() ? `?${qs}` : '';
-    const res = await apiFetch(`/api/v1/time-tracking/projects-for-expenses${suffix}`);
+    const res = await apiFetch(`/api/v1/time-tracking/projects-for-expenses${suffix}`, { getReuseWindowMs: 15_000 });
     await throwIfNotOk(res);
     const raw = await res.json();
     if (options?.limit != null) {

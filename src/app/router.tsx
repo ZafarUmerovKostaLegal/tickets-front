@@ -6,7 +6,6 @@ import { GuestOnlyRoute } from '@app/GuestOnlyRoute';
 import { PageTransition } from '@app/PageTransition';
 import { DocumentTitle } from '@app/ui/DocumentTitle';
 import { TimeTrackingRoute } from '@app/TimeTrackingRoute';
-import { ReportPreviewRoute } from '@app/ReportPreviewRoute';
 import { ExpensesAccessRoute } from '@app/ExpensesAccessRoute';
 import { AttendanceAccessRoute } from '@app/AttendanceAccessRoute';
 import { AdminOnlyModuleRoute } from '@app/AdminOnlyModuleRoute';
@@ -15,7 +14,7 @@ import { ExpensesNestedLayout } from '@app/ExpensesNestedLayout';
 import { ExpensesErrorFallback } from '@pages/expenses/ui/ExpensesErrorFallback';
 import { AppRouteError } from '@app/ui/AppRouteError';
 import { DesktopOnlyRoute } from '@app/DesktopOnlyRoute';
-import { EnsureTimeTrackingI18n } from '@shared/i18n';
+import { EnsureContactsI18n, EnsureTimeTrackingI18n, EnsureTodoI18n } from '@shared/i18n';
 
 
 function routerBasename(): string | undefined {
@@ -52,12 +51,13 @@ const HelpPage = lazy(() => import('@pages/help').then(m => ({ default: m.HelpPa
 const KostaDailyPage = lazy(() => import('@pages/kosta-daily').then(m => ({ default: m.KostaDailyPage })));
 const ContactsPage = lazy(() => import('@pages/contacts').then(m => ({ default: m.ContactsPage })));
 const InternalCommunicationPage = lazy(() => import('@pages/internal-communication').then(m => ({ default: m.InternalCommunicationPage })));
-const ExpensesPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesPage })));
-const ExpensesRequestsPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesRequestsPage })));
-const ExpensesReportPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.ExpensesReportPage })));
-const PartnerExpensesPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.PartnerExpensesPage })));
-const PartnerExpensesReportPage = lazy(() => import('@pages/expenses').then(m => ({ default: m.PartnerExpensesReportPage })));
+const ExpensesPage = lazy(() => import('@pages/expenses/ui/ExpensesPage').then(m => ({ default: m.ExpensesPage })));
+const ExpensesRequestsPage = lazy(() => import('@pages/expenses/ui/ExpensesRequestsPage').then(m => ({ default: m.ExpensesRequestsPage })));
+const ExpensesReportPage = lazy(() => import('@pages/expenses/ui/ExpensesReportPage').then(m => ({ default: m.ExpensesReportPage })));
+const PartnerExpensesPage = lazy(() => import('@pages/expenses/ui/PartnerExpensesPage').then(m => ({ default: m.PartnerExpensesPage })));
+const PartnerExpensesReportPage = lazy(() => import('@pages/expenses/ui/PartnerExpensesReportPage').then(m => ({ default: m.PartnerExpensesReportPage })));
 const InvoicePreviewRouteLazy = lazy(() => import('@app/InvoicePreviewRoute').then(m => ({ default: m.InvoicePreviewRoute })));
+const ReportPreviewRouteLazy = lazy(() => import('@app/ReportPreviewRoute').then(m => ({ default: m.ReportPreviewRoute })));
 
 function LazyFallback() {
     return (<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', minHeight: '60vh' }}>
@@ -112,7 +112,7 @@ const router = createBrowserRouter([
             { path: routes.inventory, element: withProtected(<InventoryPage />) },
             { path: routes.timeTracking, element: withProtected(<TimeTrackingRoute />) },
             { path: routes.timeTrackingNewProject, element: withProtected(<EnsureTimeTrackingI18n fallback={<LazyFallback />}><TimeTrackingNewProjectPage /></EnsureTimeTrackingI18n>) },
-            { path: routes.timeTrackingReportPreview, element: withProtected(<ReportPreviewRoute />) },
+            { path: routes.timeTrackingReportPreview, element: withProtected(<ReportPreviewRouteLazy />) },
             { path: routes.timeTrackingInvoicePreview, element: withProtected(<InvoicePreviewRouteLazy />) },
             { path: routes.timeTrackingInvoiceCreate, element: withProtected(<EnsureTimeTrackingI18n fallback={<LazyFallback />}><InvoiceCreatePage /></EnsureTimeTrackingI18n>) },
             { path: routes.timeTrackingInvoiceDetail, element: withProtected(<EnsureTimeTrackingI18n fallback={<LazyFallback />}><InvoiceDetailPage /></EnsureTimeTrackingI18n>) },
@@ -150,12 +150,12 @@ const router = createBrowserRouter([
                     { path: ':expenseId', element: <Suspense fallback={<LazyFallback />}><ExpensesPage /></Suspense> },
                 ],
             },
-            { path: routes.todo, element: withProtected(<TodoPage />) },
+            { path: routes.todo, element: withProtected(<EnsureTodoI18n fallback={<LazyFallback />}><TodoPage /></EnsureTodoI18n>) },
             { path: routes.rules, element: withProtected(<RulesPage />) },
             { path: routes.help, element: withProtected(<HelpPage />) },
             { path: routes.kostaDaily, element: withProtected(<KostaDailyPage />) },
             { path: routes.contacts, element: withProtected(<AdminOnlyModuleRoute>
-                    <ContactsPage />
+                    <EnsureContactsI18n fallback={<LazyFallback />}><ContactsPage /></EnsureContactsI18n>
                   </AdminOnlyModuleRoute>) },
             { path: routes.internalCommunication, element: withProtected(<InternalCommunicationPage />) },
             { path: routes.admin, element: withProtected(<AdminPage />, true) },

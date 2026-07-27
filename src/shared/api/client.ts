@@ -3,9 +3,11 @@ import { getAccessToken, removeAccessToken, setSessionCookieHint } from '@shared
 import { clearClientSessionSecrets } from '@shared/lib/authSessionCleanup';
 import { assertSafeRelativeApiPath, assertTrustedApiFetchPathOrUrl, } from '@shared/lib/trustedApiFetchUrl';
 import { apiRequestMetricNow, recordApiRequestMetric, type ApiRequestDelivery } from './requestMetrics';
-type RequestInitAuth = RequestInit & {
+export type RequestInitAuth = RequestInit & {
     skipAuth?: boolean;
     skipAuthRedirectOn401?: boolean;
+    /** Reuse a completed successful GET response for this many milliseconds. */
+    getReuseWindowMs?: number;
 };
 
 type InflightGet = {
@@ -185,7 +187,7 @@ type CoordinatedFetch = {
     delivery: ApiRequestDelivery;
 };
 
-function fetchWithGetDedupe(url: string, init: RequestInit, headers: Headers): CoordinatedFetch {
+function fetchWithGetDedupe(url: string, init: RequestInit, headers: Headers, reuseWindowMs = GET_REUSE_WINDOW_MS): CoordinatedFetch {
     const method = normalizedMethod(init);
     if (method !== 'GET' || init.body != null) {
         if (method !== 'GET' && method !== 'HEAD')
@@ -200,7 +202,7 @@ function fetchWithGetDedupe(url: string, init: RequestInit, headers: Headers): C
     let entry = inflightGets.get(key);
     let delivery: ApiRequestDelivery;
     if (!entry) {
-        entry = startGet(url, init, headers, key, init.cache === 'no-store' ? 0 : GET_REUSE_WINDOW_MS);
+        entry = startGet(url, init, headers, key, init.cache === 'no-store' ? 0 : Math.max(0, reuseWindowMs));
         delivery = 'network';
     }
     else {
@@ -224,7 +226,7 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
         assertSafeRelativeApiPath(rel);
     }
     const url = upgradeUrlToPageSecurity(path.startsWith('http') ? path : `${baseUrl}${rel}`);
-    const { skipAuth = false, skipAuthRedirectOn401 = false, ...rest } = init;
+    const { skipAuth = false, skipAuthRedirectOn401 = false, getReuseWindowMs = GET_REUSE_WINDOW_MS, ...rest } = init;
     const headers = new Headers(rest.headers);
     if (rest.body instanceof FormData)
         headers.delete('Content-Type');
@@ -238,7 +240,7 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
     let delivery: ApiRequestDelivery = 'network';
     let response: Response;
     try {
-        const coordinated = fetchWithGetDedupe(url, rest, headers);
+        const coordinated = fetchWithGetDedupe(url, rest, headers, getReuseWindowMs);
         delivery = coordinated.delivery;
         response = await coordinated.promise;
         recordApiRequestMetric({
