@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { formatPeriodLabel } from '@entities/time-tracking/lib/reportsPeriodRange';
+import { formatPeriodLabel, periodToDates } from '@entities/time-tracking/lib/reportsPeriodRange';
 import {
     PERIOD_OPTIONS,
     type PeriodGranularity,
 } from '@entities/time-tracking/model/reportsPanelConfig';
 import { useI18n, ttReportPeriodLabel } from '@shared/i18n';
+import { ProjectStatisticsSection } from './ProjectStatisticsSection';
 import './StatisticsPanel.css';
 
 type StatisticsTabId = 'project' | 'team' | 'user';
@@ -57,7 +58,6 @@ function shiftPeriodDate(date: Date, granularity: PeriodGranularity, direction: 
     return next;
 }
 
-/** Empty shell — previous statistics UI removed; rebuild here. */
 export function StatisticsPanel() {
     const { t } = useI18n();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -67,6 +67,11 @@ export function StatisticsPanel() {
     const [periodGranularity, setPeriodGranularity] = useState<PeriodGranularity>('month');
     const [periodDropdown, setPeriodDropdown] = useState(false);
     const periodDropdownRef = useRef<HTMLDivElement>(null);
+
+    const { dateFrom, dateTo } = useMemo(
+        () => periodToDates(periodDate, periodGranularity),
+        [periodDate, periodGranularity],
+    );
 
     const setActiveTab = useCallback((tab: StatisticsTabId) => {
         setSearchParams((prev) => {
@@ -182,7 +187,15 @@ export function StatisticsPanel() {
                 role="tabpanel"
                 className="tt-statistics__tab-panel"
                 aria-labelledby={`tt-stats-tab-${activeTab}`}
-            />
+            >
+                {activeTab === 'project' ? (
+                    <ProjectStatisticsSection dateFrom={dateFrom} dateTo={dateTo} />
+                ) : (
+                    <div className="tt-statistics-project__empty" role="status">
+                        <p className="tt-statistics-project__empty-title">{t('timeTrackingPage.statistics.tabPlaceholder')}</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
