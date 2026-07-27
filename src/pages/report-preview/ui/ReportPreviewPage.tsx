@@ -92,6 +92,7 @@ import {
     resolveReportPreviewHotkey,
 } from '../lib/reportPreviewHotkeys';
 import type { TimeExcelPreviewRow, ExpenseExcelPreviewRow, UninvoicedExcelPreviewRow, BudgetExcelPreviewRow, } from '../lib/previewExcelTypes';
+import { REPORT_PREVIEW_SCOPE_DEFAULT } from '../lib/reportPreviewScopePalette';
 import { useCurrentUser } from '@shared/hooks';
 import { useAppDialog } from '@shared/ui';
 import '@pages/time-tracking/ui/TimePageShell.css';
@@ -126,7 +127,7 @@ function reportPreviewEmptyBlock(rangeFrom: string, rangeTo: string) {
 function normalizeScopeHexColor(value: string): string {
     const raw = String(value).trim();
     if (!/^#([0-9a-fA-F]{6})$/.test(raw))
-        return '#FFF2CC';
+        return REPORT_PREVIEW_SCOPE_DEFAULT;
     return raw.toUpperCase();
 }
 
@@ -180,7 +181,7 @@ export function ReportPreviewPage() {
     const [uninvoicedExcelRows, setUninvoicedExcelRows] = useState<UninvoicedExcelPreviewRow[]>([]);
     const [budgetExcelRows, setBudgetExcelRows] = useState<BudgetExcelPreviewRow[]>([]);
     const [selectedRowKeys, setSelectedRowKeys] = useState<ReadonlySet<string>>(() => new Set());
-    const [scopeColorValue, setScopeColorValue] = useState('#FFF2CC');
+    const [scopeColorValue, setScopeColorValue] = useState(REPORT_PREVIEW_SCOPE_DEFAULT);
     const [scopeColorBusy, setScopeColorBusy] = useState(false);
     const [rowScopeColorsByKey, setRowScopeColorsByKey] = useState<Record<string, string>>({});
     const [snapshotRowIdByPreviewKey, setSnapshotRowIdByPreviewKey] = useState<Record<string, string>>({});

@@ -5,6 +5,8 @@ import type { ProjectOption, } from '@pages/time-tracking/ui/timesheetProjectLoa
 import { ReportPreviewDateTimeFilterPopover } from './ReportPreviewDateTimeFilterPopover';
 import { ReportPreviewTextFilterPopover } from './ReportPreviewTextFilterPopover';
 import { ReportPreviewScopeColorFilterPopover, SCOPE_COLOR_NONE } from './ReportPreviewScopeColorFilterPopover';
+import { ReportPreviewScopeColorPicker } from './ReportPreviewScopeColorPicker';
+import { REPORT_PREVIEW_SCOPE_DEFAULT } from '../lib/reportPreviewScopePalette';
 import { isClosedReportingWeekEditingBlockedForSubject, isWorkDateInClosedReportingPeriod, listProjectTasksCached, type ProjectPartnerAccessRow, } from '@entities/time-tracking';
 import { formatDecimalHoursAsHm, formatReportBillableHoursRu, sumDecimalHoursForMinuteDisplay, } from '@shared/lib/formatTrackingHours';
 import { syncTextareaHeightToContent } from '@shared/lib/syncTextareaHeight';
@@ -434,7 +436,7 @@ function PreviewServerReloadBtn({ onRequestServerReload, serverReloadBusy, }: Pr
 function normalizeHexColor(value: string): string {
     const raw = String(value).trim();
     if (!/^#([0-9a-fA-F]{6})$/.test(raw))
-        return '#FFF2CC';
+        return REPORT_PREVIEW_SCOPE_DEFAULT;
     return raw.toUpperCase();
 }
 
@@ -638,7 +640,7 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
       </div>
     </div>, document.body);
 }
-export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, scopeColorValue, scopeColorBusy, onScopeColorValueChange, onApplyScopeColorToSelection, onClearScopeColorFromSelection, }: {
+export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, scopeColorBusy, onScopeColorValueChange, onApplyScopeColorToSelection, onClearScopeColorFromSelection, }: {
     projectTitle: string;
 
     viewMode?: 'brief' | 'full';
@@ -993,27 +995,25 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const showUnlockBtn = Boolean(onGrantEditUnlock && canGrantEditUnlockForTarget?.(r.authUserId) && periodClosed);
         const unlockBusy = Boolean(editUnlockPendingCompoundKey === `${r.authUserId}:${wdUnlock}`);
         const rowScope = parseScopeHexColor(r.scopeColor);
-        const scopePickerValue = rowScope ?? normalizeHexColor(scopeColorValue ?? '#FFF2CC');
         const canScope = Boolean(onApplyScopeColorToSelection);
         const scopeTitle = rowScope
             ? `Scope: ${rowScope}${usedScopeColors.length ? `\n${usedScopeHint}` : ''}`
             : `Scope — цвет строки (для выделенных применится ко всем)${usedScopeColors.length ? `\n${usedScopeHint}` : ''}`;
         return (<div className="tt-rp-mtable__brief-row-actions" role="group" aria-label={`Действия, строка ${i + 1}`}>
-          {canScope ? (<label className={`tt-rp-mtable__row-act tt-rp-mtable__row-act--scope${rowScope ? ' tt-rp-mtable__row-act--scope-on' : ''}`} title={scopeTitle}>
-              <span className="tt-rp-mtable__row-act-ico tt-rp-mtable__row-scope-swatch" aria-hidden style={rowScope ? { background: rowScope } : undefined} />
-              <input
-                type="color"
-                className="tt-rp-mtable__row-scope-picker"
-                value={scopePickerValue}
-                disabled={scopedSelectionBusy || pending}
-                onChange={(e) => {
-                    const color = normalizeHexColor(e.target.value);
-                    onScopeColorValueChange?.(color);
-                    void onApplyScopeColorToSelection?.(resolveScopeTargetKeys(r.rowKey), color);
-                }}
-                aria-label={`Scope цвет, строка ${i + 1}`}
-              />
-            </label>) : null}
+          {canScope ? (
+            <ReportPreviewScopeColorPicker
+              value={rowScope}
+              usedColors={usedScopeColors}
+              disabled={scopedSelectionBusy || pending}
+              title={scopeTitle}
+              aria-label={`Scope цвет, строка ${i + 1}`}
+              onPick={(color) => {
+                  const next = normalizeHexColor(color);
+                  onScopeColorValueChange?.(next);
+                  void onApplyScopeColorToSelection?.(resolveScopeTargetKeys(r.rowKey), next);
+              }}
+            />
+          ) : null}
           {canScope && rowScope && onClearScopeColorFromSelection ? (<button type="button" className="tt-rp-mtable__row-act tt-rp-mtable__row-act--scope-clear" title="Убрать Scope-цвет" disabled={scopedSelectionBusy || pending} onClick={() => void onClearScopeColorFromSelection(resolveScopeTargetKeys(r.rowKey))} aria-label={`Убрать Scope цвет, строка ${i + 1}`}>
               <span className="tt-rp-mtable__row-act-ico" aria-hidden>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
