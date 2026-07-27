@@ -11,7 +11,10 @@ import { getAttendanceApiUrl } from './lib/config';
 import { buildAttendanceQuery } from './lib/query';
 import { flattenAttendanceByCamera } from './lib/transform';
 import { parseAttendanceJson } from './lib/parseResponse';
+import { createQueryCache } from '@shared/lib/queryCache';
 const FETCH_TIMEOUT_MS = 30000;
+const workdaySettingsCache = createQueryCache<WorkdaySettingsDto>({ ttlMs: 5 * 60_000 });
+const WORKDAY_SETTINGS_CACHE_KEY = 'attendance-workday-settings';
 function attendanceFetch(path: string, init?: Parameters<typeof apiFetch>[1]): Promise<Response> {
     return apiFetch(getAttendanceApiUrl(path), {
         skipAuthRedirectOn401: true,
@@ -69,7 +72,7 @@ export async function fetchDailyAttendanceReport(day: string, signal?: AbortSign
     }
     return res.json() as Promise<DailyAttendanceResponse>;
 }
-export async function fetchWorkdaySettings(signal?: AbortSignal): Promise<WorkdaySettingsDto> {
+async function fetchWorkdaySettingsFromApi(signal?: AbortSignal): Promise<WorkdaySettingsDto> {
     const path = '/api/v1/attendance/settings/workday';
     const sig = signal ?? AbortSignal.timeout(FETCH_TIMEOUT_MS);
     let res: Response;
@@ -90,6 +93,11 @@ export async function fetchWorkdaySettings(signal?: AbortSignal): Promise<Workda
         throw new Error(text || `Ошибка загрузки настроек (${res.status})`);
     }
     return res.json() as Promise<WorkdaySettingsDto>;
+}
+export async function fetchWorkdaySettings(signal?: AbortSignal): Promise<WorkdaySettingsDto> {
+    if (signal)
+        return fetchWorkdaySettingsFromApi(signal);
+    return workdaySettingsCache.fetch(WORKDAY_SETTINGS_CACHE_KEY, () => fetchWorkdaySettingsFromApi());
 }
 export async function patchWorkdaySettings(body: WorkdaySettingsDto, signal?: AbortSignal): Promise<WorkdaySettingsDto> {
     const path = '/api/v1/attendance/settings/workday';
@@ -116,15 +124,22 @@ export async function patchWorkdaySettings(body: WorkdaySettingsDto, signal?: Ab
         const text = await res.text().catch(() => '');
         throw new Error(text || `Ошибка сохранения настроек (${res.status})`);
     }
+    workdaySettingsCache.invalidate(WORKDAY_SETTINGS_CACHE_KEY);
     const raw = await res.text();
     if (!raw.trim()) {
-        return fetchWorkdaySettings(sig);
+        const updated = await fetchWorkdaySettingsFromApi(sig);
+        workdaySettingsCache.prime(WORKDAY_SETTINGS_CACHE_KEY, updated);
+        return updated;
     }
     try {
-        return JSON.parse(raw) as WorkdaySettingsDto;
+        const updated = JSON.parse(raw) as WorkdaySettingsDto;
+        workdaySettingsCache.prime(WORKDAY_SETTINGS_CACHE_KEY, updated);
+        return updated;
     }
     catch {
-        return fetchWorkdaySettings(sig);
+        const updated = await fetchWorkdaySettingsFromApi(sig);
+        workdaySettingsCache.prime(WORKDAY_SETTINGS_CACHE_KEY, updated);
+        return updated;
     }
 }
 export type UploadAttendanceExplanationParams = {

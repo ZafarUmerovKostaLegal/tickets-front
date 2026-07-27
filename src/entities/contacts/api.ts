@@ -15,8 +15,11 @@ import {
 import { timeTrackingRowToUser } from '@entities/time-tracking/model/manualUsers';
 import type { User } from '@entities/user';
 import { compareRuLabels, userPickerSortLabel } from '@shared/lib/sortByRuLabel';
+import { createQueryCache } from '@shared/lib/queryCache';
 
 const CONTACTS_PREFIX = '/api/v1/contacts';
+const colleaguesCache = createQueryCache<TimeTrackingUserRow[]>({ ttlMs: 5 * 60_000 });
+const COLLEAGUES_CACHE_KEY = 'contacts-colleagues';
 
 export class ContactsHttpError extends Error {
     readonly status: number;
@@ -55,7 +58,7 @@ async function throwIfNotOk(res: Response): Promise<Response> {
     throw new ContactsHttpError(res.status, msg);
 }
 
-export async function listContactsColleagues(): Promise<TimeTrackingUserRow[]> {
+async function fetchContactsColleagues(): Promise<TimeTrackingUserRow[]> {
     const res = await apiFetch(`${CONTACTS_PREFIX}/colleagues`);
     await throwIfNotOk(res);
     const raw: unknown = await res.json();
@@ -64,6 +67,10 @@ export async function listContactsColleagues(): Promise<TimeTrackingUserRow[]> {
     return raw
         .map((item) => normalizeTimeTrackingUserRow(item))
         .filter((x): x is TimeTrackingUserRow => x != null);
+}
+
+export async function listContactsColleagues(): Promise<TimeTrackingUserRow[]> {
+    return colleaguesCache.fetch(COLLEAGUES_CACHE_KEY, fetchContactsColleagues);
 }
 
 export async function listColleaguesAsUsers(): Promise<User[]> {

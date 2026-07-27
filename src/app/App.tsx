@@ -8,8 +8,7 @@ import '@shared/styles/index.css';
 import { APP_LOGO_PATH } from '@shared/config';
 import { useI18n } from '@shared/i18n';
 import { isAuthenticated } from '@shared/lib/auth';
-import { getMe } from '@entities/user';
-import { setCachedUser } from '@shared/hooks';
+import { ensureCurrentUserLoaded } from '@shared/hooks';
 const TT_MINUTE_MIGRATION_KEY = 'tt_minute_migration_v1';
 function runOneTimeTimeTrackingCacheReset(): void {
     if (typeof window === 'undefined')
@@ -77,13 +76,11 @@ export function App() {
         setStartupStatus(StartupStatus.Checking);
         setStartupError(null);
         runOneTimeTimeTrackingCacheReset();
-        getMe()
-            .then((user) => {
-            setCachedUser(user);
+        ensureCurrentUserLoaded()
+            .then(() => {
             setStartupStatus(StartupStatus.Ready);
         })
             .catch((e) => {
-            setCachedUser(null, e instanceof Error ? e : new Error(String(e)));
             setStartupError(e instanceof Error ? e.message : t('app.startupError'));
             setStartupStatus(StartupStatus.Error);
         });

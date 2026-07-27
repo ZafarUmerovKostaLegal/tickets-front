@@ -74,6 +74,24 @@ export function createQueryCache<T>(options: QueryCacheOptions): QueryCache<T> {
         }
     }
 
+    function startLoad(key: string, loader: () => Promise<T>): Promise<T> {
+        const existing = inflight.get(key);
+        if (existing) return existing;
+
+        const promise = (async () => {
+            try {
+                const value = await loader();
+                setEntry(key, value);
+                return value;
+            } finally {
+                inflight.delete(key);
+            }
+        })();
+
+        inflight.set(key, promise);
+        return promise;
+    }
+
     const cache: QueryCache<T> = {
         get(key: string): T | undefined {
             const entry = store.get(key);
@@ -99,32 +117,14 @@ export function createQueryCache<T>(options: QueryCacheOptions): QueryCache<T> {
                         return stored.value;
                     }
                     store.set(key, stored);
-                    void (async () => {
-                        try {
-                            const fresh = await loader();
-                            setEntry(key, fresh);
-                        } catch {
-                        }
-                    })();
+                    // Return stale persisted data immediately, but keep a single
+                    // background refresh for all callers mounting at once.
+                    void startLoad(key, loader).catch(() => { });
                     return stored.value;
                 }
             }
 
-            const existing = inflight.get(key);
-            if (existing) return existing;
-
-            const promise = (async () => {
-                try {
-                    const value = await loader();
-                    setEntry(key, value);
-                    return value;
-                } finally {
-                    inflight.delete(key);
-                }
-            })();
-
-            inflight.set(key, promise);
-            return promise;
+            return startLoad(key, loader);
         },
 
         prime(key: string, value: T): void {

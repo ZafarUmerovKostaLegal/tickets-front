@@ -3,6 +3,7 @@ import { fetchAttendance, fetchDailyAttendanceReport, type AttendanceRecord, typ
 import type { WorkdaySettings } from '@shared/lib/attendanceSettings';
 import { parseDateInput } from '../constants';
 import { useI18n } from '@shared/i18n';
+import { useDebouncedValue } from '@shared/hooks';
 import { timeToMinutes } from '../lib/timeToMinutes';
 import { groupRecords } from '../lib/groupRecords';
 import type { AttendanceSummary, GroupedRow } from '../types';
@@ -74,6 +75,8 @@ export function useAttendanceData(dateFrom: string, dateTo: string, search: stri
         const to = parseDateInput(dateTo);
         return from && to && from === to ? from : null;
     }, [dateFrom, dateTo]);
+    const debouncedSearch = useDebouncedValue(search, 300);
+    const requestSearch = singleDay ? '' : debouncedSearch.trim();
     const load = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -89,7 +92,7 @@ export function useAttendanceData(dateFrom: string, dateTo: string, search: stri
                 const res = await fetchAttendance({
                     dateFrom: from,
                     dateTo: to,
-                    name: search || undefined,
+                    name: requestSearch || undefined,
                     maxRecordsPerDevice: 500,
                 });
                 setRecords(res);
@@ -104,7 +107,7 @@ export function useAttendanceData(dateFrom: string, dateTo: string, search: stri
         finally {
             setLoading(false);
         }
-    }, [dateFrom, dateTo, singleDay, search, t]);
+    }, [dateFrom, dateTo, singleDay, requestSearch, t]);
     useEffect(() => {
         load();
     }, [load]);

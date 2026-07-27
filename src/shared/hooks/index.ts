@@ -1,5 +1,5 @@
 export { useMediaQuery } from './useMediaQuery';
-export { useCurrentUser, setCachedUser, refreshCurrentUser } from './useCurrentUser';
+export { useCurrentUser, setCachedUser, refreshCurrentUser, ensureCurrentUserLoaded } from './useCurrentUser';
 export { useFontsReady } from './useFontsReady';
 export { useAnimatedNumber } from './useAnimatedNumber';
 export { useUserPublic } from './useUserPublic';

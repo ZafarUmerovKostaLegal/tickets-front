@@ -113,7 +113,6 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
             const hay = [
                 r.lawyer_name,
                 r.task_name,
-                r.work_type,
                 r.team_name,
                 r.partner_name,
                 r.period_label,
@@ -278,9 +277,7 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
                                         <tr>
                                             <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.lawyer_name')}</th>
                                             <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.task_name')}</th>
-                                            <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.work_type')}</th>
                                             <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.hours')}</th>
-                                            <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.billable_amount')}</th>
                                             <th scope="col">{t('timeTrackingPage.statistics.detailTable.columns.payment')}</th>
                                         </tr>
                                     </thead>
@@ -289,9 +286,7 @@ export function ProjectStatisticsSection({ dateFrom, dateTo }: ProjectStatistics
                                             <tr key={r.id}>
                                                 <td>{r.lawyer_name || '—'}</td>
                                                 <td>{r.task_name || '—'}</td>
-                                                <td>{r.work_type || '—'}</td>
                                                 <td>{fmtH(r.hours)}</td>
-                                                <td>{fmtAmtWithIso(r.billable_amount, r.currency)}</td>
                                                 <td>{fmtAmtWithIso(r.payment, r.currency)}</td>
                                             </tr>
                                         ))}

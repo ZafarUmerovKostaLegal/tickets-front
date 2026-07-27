@@ -6,6 +6,69 @@ type RequestInitAuth = RequestInit & {
     skipAuth?: boolean;
     skipAuthRedirectOn401?: boolean;
 };
+
+type InflightGet = {
+    promise: Promise<Response>;
+};
+
+const inflightGets = new Map<string, InflightGet>();
+let mutationGeneration = 0;
+
+function normalizedMethod(init: RequestInit): string {
+    return (init.method ?? 'GET').trim().toUpperCase();
+}
+
+function getDedupeKey(url: string, init: RequestInit, headers: Headers): string {
+    const headerPairs = [...headers.entries()]
+        .sort(([a], [b]) => a.localeCompare(b));
+    return JSON.stringify({
+        generation: mutationGeneration,
+        url,
+        headers: headerPairs,
+        cache: init.cache ?? '',
+        integrity: init.integrity ?? '',
+        keepalive: init.keepalive ?? false,
+        mode: init.mode ?? '',
+        redirect: init.redirect ?? '',
+        referrer: init.referrer ?? '',
+        referrerPolicy: init.referrerPolicy ?? '',
+    });
+}
+
+function fetchWithGetDedupe(url: string, init: RequestInit, headers: Headers): Promise<Response> {
+    const method = normalizedMethod(init);
+    if (method !== 'GET' || init.signal != null || init.body != null) {
+        if (method !== 'GET' && method !== 'HEAD')
+            mutationGeneration += 1;
+        return fetch(url, { ...init, headers, credentials: 'include' });
+    }
+
+    const key = getDedupeKey(url, init, headers);
+    let entry = inflightGets.get(key);
+    if (!entry) {
+        const promise = fetch(url, { ...init, headers, credentials: 'include' });
+        entry = { promise };
+        inflightGets.set(key, entry);
+        const current = entry;
+        void promise.then(
+            (response) => {
+                if (inflightGets.get(key) === current)
+                    inflightGets.delete(key);
+                // Every consumer receives a clone. Cancel the unused source
+                // branch after all promise continuations had a chance to clone.
+                queueMicrotask(() => {
+                    void response.body?.cancel().catch(() => { });
+                });
+            },
+            () => {
+                if (inflightGets.get(key) === current)
+                    inflightGets.delete(key);
+            },
+        );
+    }
+    return entry.promise.then((response) => response.clone());
+}
+
 export async function apiFetch(path: string, init: RequestInitAuth = {}): Promise<Response> {
     assertTrustedApiFetchPathOrUrl(path);
     const baseUrl = getApiBaseUrl();
@@ -27,11 +90,7 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
         if (token)
             headers.set('Authorization', `Bearer ${token}`);
     }
-    const response = await fetch(url, {
-        ...rest,
-        headers,
-        credentials: 'include',
-    });
+    const response = await fetchWithGetDedupe(url, rest, headers);
     if (response.status === 401 && !skipAuth) {
         removeAccessToken();
 
