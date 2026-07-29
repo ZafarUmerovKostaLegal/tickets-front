@@ -214,7 +214,10 @@ function drawCoverPage(
 
     page.drawText(model.letterDateDisplay, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= COVER_DATE_AFTER;
+    // PDF positions text by its baseline, while the preview's CSS margins start
+    // after the current line box. Include both so exported block spacing matches
+    // the on-screen cover letter.
+    y -= DOC_LH + COVER_DATE_AFTER;
     page.drawText(model.recipientCompany, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
     y -= DOC_LH;
     page.drawText(model.recipientAddressLines[0], { x: ML, y, size: DOC_FS, font, color: BODY });
@@ -223,21 +226,23 @@ function drawCoverPage(
         page.drawText(model.recipientAddressLines[1], { x: ML, y, size: DOC_FS, font, color: BODY });
     }
 
-    y -= COVER_BLOCK_GAP;
+    y -= DOC_LH + COVER_BLOCK_GAP;
     const labels = getCoverLetterLabels(model.coverLanguage);
     page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
     y -= DOC_LH;
     page.drawText(model.attentionTitle, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= COVER_BLOCK_GAP;
+    y -= DOC_LH + COVER_BLOCK_GAP;
     page.drawText(`${labels.dear} ${model.attentionName},`, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= COVER_SALUTE_GAP;
+    y -= DOC_LH + COVER_SALUTE_GAP;
     const p1 = resolveCoverIntroParagraph(model);
     const maxW = W - ML - MR;
     y = wrapPlainParagraph(page, p1, ML, y, maxW, DOC_FS, font, COVER_PARA_GAP);
 
-    y -= COVER_PARA_GAP * 0.35;
+    // wrapPlainParagraph already advances by one line height after its last
+    // line; this is the paragraph's CSS margin-bottom.
+    y -= COVER_PARA_GAP;
     const p2 = resolveCoverInvoiceParagraph(model);
     y = wrapPlainParagraph(page, p2, ML, y, maxW, DOC_FS, font, COVER_PARA_GAP);
 
