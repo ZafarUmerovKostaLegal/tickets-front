@@ -12,7 +12,7 @@
   color: var(--tt-inv-paper-ink, #0f172a);
   background: var(--tt-inv-paper, #ffffff);
   text-align: left;
-  --tt-inv-tr-red: #9b1b30;
+  --tt-inv-tr-red: #e83337;
   --tt-inv-tr-red-dark: #1a0a0c;
   display: flex;
   flex-direction: column;
@@ -166,7 +166,7 @@
   font-weight: 800;
   color: var(--tt-inv-tr-red-dark);
   border: 1px solid var(--tt-inv-tr-red);
-  background: rgba(155, 27, 48, 0.06);
+  background: rgba(232, 51, 55, 0.06);
 }
 
 .tt-inv-tr__cell--amount,

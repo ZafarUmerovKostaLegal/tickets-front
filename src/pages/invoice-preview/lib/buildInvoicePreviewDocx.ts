@@ -179,7 +179,7 @@ const PAGE_MARGIN_TWIPS = {
     bottom: mmToTwip(20),
     left: mmToTwip(30),
 } as const;
-const INV_RED = '9B1B30';
+const INV_RED = 'E83337';
 
 const cellBorderGrid = {
     top: { style: BorderStyle.SINGLE, size: 1, color: 'DADADA' },
@@ -637,7 +637,7 @@ function legalInvoiceDocxBlocks(
     });
     const svcBodyBorders = {
         top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-        bottom: { style: BorderStyle.SINGLE, size: 8, color: 'E8928C', space: 1 },
+        bottom: { style: BorderStyle.SINGLE, size: 8, color: INV_RED, space: 1 },
         left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
         right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
     };
@@ -668,7 +668,7 @@ function legalInvoiceDocxBlocks(
         rows: [svcHead, svcBody],
     });
 
-    const coralLine = { style: BorderStyle.SINGLE, size: 8, color: 'E8928C', space: 1 };
+    const coralLine = { style: BorderStyle.SINGLE, size: 8, color: INV_RED, space: 1 };
     type TotalsBorders = {
         top: { style: (typeof BorderStyle)[keyof typeof BorderStyle]; size: number; color: string; space?: number };
         bottom: { style: (typeof BorderStyle)[keyof typeof BorderStyle]; size: number; color: string; space?: number };
@@ -690,7 +690,7 @@ function legalInvoiceDocxBlocks(
                     children: [new TextRun({
                         text: label,
                         bold: true,
-                        color: due ? 'E8928C' : '1E293B',
+                        color: due ? INV_RED : '1E293B',
                         size: DOC_SIZE,
                         font: DOC_FONT,
                     })],
@@ -704,7 +704,7 @@ function legalInvoiceDocxBlocks(
                     children: [new TextRun({
                         text: value,
                         bold: true,
-                        color: due ? 'E8928C' : '1E293B',
+                        color: due ? INV_RED : '1E293B',
                         size: DOC_SIZE,
                         font: DOC_FONT,
                     })],

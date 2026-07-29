@@ -49,11 +49,11 @@ const MR = mmToPt(12);
 const MT = mmToPt(20);
 const MB = mmToPt(20);
 
-const TR_RED = rgb(155 / 255, 27 / 255, 48 / 255);
+const TR_RED = rgb(232 / 255, 51 / 255, 55 / 255);
 const MUTED_TEXT = rgb(0.41, 0.44, 0.52);
 const GRID_LINE = rgb(0.74, 0.77, 0.8);
 const BODY = rgb(0.12, 0.14, 0.18);
-const CORAL = rgb(232 / 255, 146 / 255, 140 / 255);
+const CORAL = rgb(232 / 255, 51 / 255, 55 / 255);
 const CORAL_DARK = rgb(26 / 255, 5 / 255, 6 / 255);
 const PANEL_HEAD = rgb(0.28, 0.33, 0.39);
 const FIRM_NAME = rgb(0.12, 0.16, 0.23);

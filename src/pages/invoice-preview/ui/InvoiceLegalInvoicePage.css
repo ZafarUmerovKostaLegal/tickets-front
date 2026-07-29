@@ -13,7 +13,7 @@
   background: var(--tt-inv-paper, #ffffff);
   display: flex;
   flex-direction: column;
-  --tt-inv-li-coral: #e8928c;
+  --tt-inv-li-coral: #e83337;
   --tt-inv-li-coral-dark: #1a0506;
 }
 
