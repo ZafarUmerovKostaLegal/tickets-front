@@ -6548,3 +6548,185 @@ body[data-theme='dark'] .tt-rp-preview__partner-modal-partner {
 .tt-rp-preview__partner-modal-btn--primary:hover:not(:disabled) {
   filter: brightness(1.06);
 }
+
+.tt-rp-scope-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.tt-rp-scope-legend__label {
+  color: var(--app-muted, #64748b);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tt-rp-scope-legend__colors {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.tt-rp-scope-legend__color {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 2px solid var(--app-surface, #fff);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--app-border, #cbd5e1);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.tt-rp-scope-legend__color:hover:not(:disabled),
+.tt-rp-scope-legend__color:focus-visible {
+  z-index: 1;
+  transform: translateY(-1px) scale(1.08);
+  box-shadow: 0 0 0 2px var(--app-accent, #5b4fe5);
+  outline: none;
+}
+
+.tt-rp-scope-legend__color:disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.tt-rp-scope-legend__loading {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--app-border, #cbd5e1);
+  border-top-color: var(--app-accent, #5b4fe5);
+  border-radius: 999px;
+  animation: tt-rp-scope-spin 0.7s linear infinite;
+}
+
+@keyframes tt-rp-scope-spin {
+  to { transform: rotate(360deg); }
+}
+
+.tt-rp-scope-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 2200;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(2px);
+}
+
+.tt-rp-scope-modal__dialog {
+  width: min(31rem, 100%);
+  padding: 1.2rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 14px;
+  color: var(--app-text, #0f172a);
+  background: var(--app-surface, #fff);
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+}
+
+.tt-rp-scope-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tt-rp-scope-modal__title {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+.tt-rp-scope-modal__hint {
+  margin: 0.35rem 0 0;
+  color: var(--app-muted, #64748b);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.tt-rp-scope-modal__close {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--app-muted, #64748b);
+  background: var(--app-subtle, #f1f5f9);
+  font: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.tt-rp-scope-modal__color-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 1rem 0;
+}
+
+.tt-rp-scope-modal__swatch {
+  width: 1.8rem;
+  height: 1.8rem;
+  border: 2px solid var(--app-surface, #fff);
+  border-radius: 7px;
+  box-shadow: 0 0 0 1px var(--app-border, #cbd5e1);
+}
+
+.tt-rp-scope-modal__hex {
+  color: var(--app-muted, #64748b);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.tt-rp-scope-modal__field {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.tt-rp-scope-modal__field textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 6.5rem;
+  box-sizing: border-box;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--app-border, #cbd5e1);
+  border-radius: 9px;
+  color: var(--app-text, #0f172a);
+  background: var(--app-bg, #fff);
+  font: inherit;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.tt-rp-scope-modal__field textarea:focus {
+  border-color: var(--app-accent, #5b4fe5);
+  outline: 2px solid color-mix(in srgb, var(--app-accent, #5b4fe5) 18%, transparent);
+}
+
+.tt-rp-scope-modal__field small {
+  justify-self: end;
+  color: var(--app-muted, #64748b);
+  font-weight: 500;
+}
+
+.tt-rp-scope-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.tt-rp-scope-modal__save {
+  border-color: var(--app-accent, #5b4fe5);
+  color: #fff;
+  background: var(--app-accent, #5b4fe5);
+}

@@ -419,6 +419,7 @@ type TimeReportPersistenceProps = {
     canUndo?: boolean;
     onUndo?: () => void | Promise<void>;
     onSaveNow?: () => void | Promise<void>;
+    scopeDefinitionsSlot?: ReactNode;
     scopeColorValue?: string;
     scopeColorBusy?: boolean;
     onScopeColorValueChange?: (color: string) => void;
@@ -640,7 +641,7 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
       </div>
     </div>, document.body);
 }
-export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, scopeColorBusy, onScopeColorValueChange, onApplyScopeColorToSelection, onClearScopeColorFromSelection, }: {
+export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, scopeDefinitionsSlot = null, scopeColorBusy, onScopeColorValueChange, onApplyScopeColorToSelection, onClearScopeColorFromSelection, }: {
     projectTitle: string;
 
     viewMode?: 'brief' | 'full';
@@ -1011,16 +1012,6 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               aria-label={`Scope цвет, строка ${i + 1}`}
               onPick={(color) => {
                   const next = normalizeHexColor(color);
-                  const hex = parseScopeHexColor(next);
-                  if (hex) {
-                      setBfScopeColors((prev) => {
-                          if (prev.length === 0)
-                              return prev;
-                          if (prev.includes(hex))
-                              return prev;
-                          return [...prev, hex];
-                      });
-                  }
                   onScopeColorValueChange?.(next);
                   void onApplyScopeColorToSelection?.(resolveScopeTargetKeys(r.rowKey), next);
               }}
@@ -1476,6 +1467,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             {!readOnlyUi && onAddTimeEntry ? (<button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-mtable-toolbar__btn--add" onClick={() => void onAddTimeEntry()} disabled={Boolean(serverReloadBusy || timeSave?.ui === 'saving' || timeEntryActionPendingRowKey != null)} title="Создать новую запись времени">
                 + Добавить
               </button>) : null}
+            {scopeDefinitionsSlot}
             <div className="tt-rp-mtable-toolbar__trail">
               {!readOnlyUi ? (<div className="tt-rp-mtable-more" ref={moreMenuRef}>
                 <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-mtable-more__btn" onClick={() => setMoreMenuOpen((v) => !v)} aria-expanded={moreMenuOpen} aria-haspopup="menu" title="Дополнительные действия">

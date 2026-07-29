@@ -14,6 +14,52 @@ import {
     dashNum,
 } from './httpShared';
 
+export type ProjectScopeDefinition = {
+    projectId: string;
+    color: string;
+    description: string;
+    createdAt: string;
+    updatedAt: string | null;
+};
+
+function normalizeProjectScopeDefinition(raw: unknown): ProjectScopeDefinition {
+    const r = (raw ?? {}) as Record<string, unknown>;
+    return {
+        projectId: String(r.projectId ?? r.project_id ?? ''),
+        color: String(r.color ?? '').trim().toUpperCase(),
+        description: String(r.description ?? '').trim(),
+        createdAt: String(r.createdAt ?? r.created_at ?? ''),
+        updatedAt: r.updatedAt != null || r.updated_at != null
+            ? String(r.updatedAt ?? r.updated_at)
+            : null,
+    };
+}
+
+function projectScopeDefinitionsPath(projectId: string): string {
+    return `/api/v1/time-tracking/projects/${encodeURIComponent(projectId)}/scope-definitions`;
+}
+
+export async function listProjectScopeDefinitions(projectId: string): Promise<ProjectScopeDefinition[]> {
+    const res = await apiFetch(projectScopeDefinitionsPath(projectId));
+    await throwIfNotOk(res);
+    const body = await res.json();
+    return Array.isArray(body) ? body.map(normalizeProjectScopeDefinition) : [];
+}
+
+export async function upsertProjectScopeDefinition(
+    projectId: string,
+    color: string,
+    description: string,
+): Promise<ProjectScopeDefinition> {
+    const res = await apiFetch(projectScopeDefinitionsPath(projectId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ color, description }),
+    });
+    await throwIfNotOk(res);
+    return normalizeProjectScopeDefinition(await res.json());
+}
+
 export type TimeManagerClientTaskRow = {
     id: string;
 

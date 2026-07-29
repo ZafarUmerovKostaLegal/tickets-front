@@ -2,3 +2,4 @@ export { upsertTimeTrackingUser, deleteTimeTrackingUser, listTimeTrackingUsers, 
 export { INVOICE_STATUS_LABELS, INVOICE_STATUS_BADGE_CLASS, invoiceCanSend, invoiceCanMarkViewed, invoiceCanRegisterPayment, invoiceCanCancel, invoiceCanDeleteDraft, invoiceCanPatchDraft, invoiceSendActionLabel, } from './invoiceUi';
 export * from './model';
 export * from './lib';
+export { listProjectScopeDefinitions, upsertProjectScopeDefinition, type ProjectScopeDefinition } from './api';

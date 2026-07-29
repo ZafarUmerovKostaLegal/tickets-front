@@ -46,6 +46,9 @@ import {
     invalidateReportApiCache,
     getReportSnapshot,
     patchReportSnapshotRow,
+    listProjectScopeDefinitions,
+    upsertProjectScopeDefinition,
+    type ProjectScopeDefinition,
 } from '@entities/time-tracking';
 import {
     buildArchivedAuthUserIds,
@@ -116,6 +119,14 @@ import {
     persistXferFilters,
 } from '../lib/reportPreviewPageFilters';
 import { getSnapshotRowDisplayData } from '@entities/time-tracking/lib/reportSnapshotOverrides';
+import { ReportPreviewScopeDescriptionModal, ReportPreviewScopeLegend } from './ReportPreviewScopeDefinitions';
+
+type ScopeDescriptionEditorState = {
+    color: string;
+    description: string;
+    pendingRowKeys: ReadonlySet<string> | null;
+    firstUse: boolean;
+};
 
 function reportPreviewEmptyBlock(rangeFrom: string, rangeTo: string) {
     return (<div className="tt-rp-preview__no-table-wrap">
@@ -183,6 +194,10 @@ export function ReportPreviewPage() {
     const [selectedRowKeys, setSelectedRowKeys] = useState<ReadonlySet<string>>(() => new Set());
     const [scopeColorValue, setScopeColorValue] = useState(REPORT_PREVIEW_SCOPE_DEFAULT);
     const [scopeColorBusy, setScopeColorBusy] = useState(false);
+    const [scopeDefinitions, setScopeDefinitions] = useState<ProjectScopeDefinition[]>([]);
+    const [scopeDefinitionsLoading, setScopeDefinitionsLoading] = useState(false);
+    const [scopeDescriptionEditor, setScopeDescriptionEditor] = useState<ScopeDescriptionEditorState | null>(null);
+    const [scopeDescriptionSaving, setScopeDescriptionSaving] = useState(false);
     const [rowScopeColorsByKey, setRowScopeColorsByKey] = useState<Record<string, string>>({});
     const [snapshotRowIdByPreviewKey, setSnapshotRowIdByPreviewKey] = useState<Record<string, string>>({});
     const [employeeExcluded, setEmployeeExcluded] = useState<Set<string>>(() => new Set());
@@ -465,6 +480,40 @@ export function ReportPreviewPage() {
             cancelled = true;
         };
     }, [xferSnapshot, selectedProjectId]);
+    useEffect(() => {
+        const projectId = selectedProjectId.trim();
+        if (xferSnapshot?.reportType !== 'time' || !projectId) {
+            setScopeDefinitions([]);
+            setScopeDefinitionsLoading(false);
+            setScopeDescriptionEditor(null);
+            return;
+        }
+        let cancelled = false;
+        setScopeDefinitions([]);
+        setScopeDefinitionsLoading(true);
+        setScopeDescriptionEditor(null);
+        void listProjectScopeDefinitions(projectId)
+            .then((definitions) => {
+                if (!cancelled)
+                    setScopeDefinitions(definitions);
+            })
+            .catch((error) => {
+                if (!cancelled) {
+                    setScopeDefinitions([]);
+                    showToast({
+                        message: error instanceof Error ? error.message : 'Не удалось загрузить описания Scope',
+                        variant: 'error',
+                    });
+                }
+            })
+            .finally(() => {
+                if (!cancelled)
+                    setScopeDefinitionsLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedProjectId, xferSnapshot?.reportType]);
     const viewerIsPartner = useMemo(() => Boolean(user && isPartnerOrgRole(user.role, user.position)), [user]);
     const canPickTeamFilterPartner = Boolean(user && hasFullTimeTrackingTabs(user));
     const effectiveSelectedUserIds = useMemo(() => resolveEffectiveReportPreviewUserIds({
@@ -1474,7 +1523,7 @@ export function ReportPreviewPage() {
     const patchBudgetExcel = useCallback((rowKey: string, patch: Partial<BudgetExcelPreviewRow>) => {
         setBudgetExcelRows((prev) => prev.map((r) => (r.rowKey === rowKey ? { ...r, ...patch } : r)));
     }, []);
-    const applyScopeColorToSelection = useCallback(async (rowKeys: ReadonlySet<string>, color: string) => {
+    const persistScopeColorToSelection = useCallback(async (rowKeys: ReadonlySet<string>, color: string) => {
         const picked = normalizeScopeHexColor(color);
         const keys = [...rowKeys];
         if (keys.length === 0)
@@ -1524,6 +1573,73 @@ export function ReportPreviewPage() {
             setScopeColorBusy(false);
         }
     }, [xferSnapshot?.partnerConfirmationSnapshotId, snapshotRowIdByPreviewKey]);
+    const requestApplyScopeColorToSelection = useCallback(async (rowKeys: ReadonlySet<string>, color: string) => {
+        const projectId = selectedProjectId.trim();
+        if (!projectId) {
+            showToast({ message: 'Выберите проект, чтобы использовать Scope', variant: 'error' });
+            return;
+        }
+        if (scopeDefinitionsLoading) {
+            showToast({ message: 'Описания Scope ещё загружаются', variant: 'error' });
+            return;
+        }
+        const picked = normalizeScopeHexColor(color);
+        const existingDefinition = scopeDefinitions.find((definition) => definition.color === picked);
+        if (existingDefinition) {
+            await persistScopeColorToSelection(rowKeys, picked);
+            return;
+        }
+        setScopeColorValue(picked);
+        setScopeDescriptionEditor({
+            color: picked,
+            description: '',
+            pendingRowKeys: new Set(rowKeys),
+            firstUse: true,
+        });
+    }, [persistScopeColorToSelection, scopeDefinitions, scopeDefinitionsLoading, selectedProjectId]);
+    const editScopeDefinition = useCallback((definition: ProjectScopeDefinition) => {
+        setScopeDescriptionEditor({
+            color: definition.color,
+            description: definition.description,
+            pendingRowKeys: null,
+            firstUse: false,
+        });
+    }, []);
+    const closeScopeDescriptionEditor = useCallback(() => {
+        if (!scopeDescriptionSaving)
+            setScopeDescriptionEditor(null);
+    }, [scopeDescriptionSaving]);
+    const saveScopeDescription = useCallback(async (description: string) => {
+        const editor = scopeDescriptionEditor;
+        const projectId = selectedProjectId.trim();
+        if (!editor || !projectId)
+            return;
+        setScopeDescriptionSaving(true);
+        try {
+            const saved = await upsertProjectScopeDefinition(projectId, editor.color, description);
+            setScopeDefinitions((previous) => {
+                const next = previous.filter((definition) => definition.color !== saved.color);
+                next.push(saved);
+                return next.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+            });
+            if (editor.pendingRowKeys)
+                await persistScopeColorToSelection(editor.pendingRowKeys, editor.color);
+            setScopeDescriptionEditor(null);
+            showToast({
+                message: editor.firstUse ? 'Описание Scope сохранено' : 'Описание Scope обновлено',
+                variant: 'success',
+            });
+        }
+        catch (error) {
+            showToast({
+                message: error instanceof Error ? error.message : 'Не удалось сохранить описание Scope',
+                variant: 'error',
+            });
+        }
+        finally {
+            setScopeDescriptionSaving(false);
+        }
+    }, [persistScopeColorToSelection, scopeDescriptionEditor, selectedProjectId]);
     const clearScopeColorFromSelection = useCallback(async (rowKeys: ReadonlySet<string>) => {
         const keys = [...rowKeys];
         if (keys.length === 0)
@@ -1760,6 +1876,14 @@ export function ReportPreviewPage() {
                     <SearchableSelect<ProjectOption> portalDropdown className="tt-rp-preview__navbar-project-select" buttonClassName="tt-rp-preview__navbar-project-btn" aria-label="Проект" disabled={partnerConfirmedReadOnly || projectsLoading || projectItemsForSelect.length === 0} placeholder={projectsLoading ? 'Загрузка проектов…' : projectItemsForSelect.length === 0 ? 'Нет проектов' : 'Найдите или выберите проект…'} emptyListText={projectsLoading ? 'Загрузка…' : 'Нет доступных проектов'} noMatchText="Проект не найден" value={selectedProjectId} items={projectItemsForSelect} getOptionValue={(p) => p.id} getOptionLabel={previewProjectOptionLabel} getSearchText={(p) => `${p.name} ${p.client}`.replace(/\s+/g, ' ').trim()} onSelect={(p) => onProjectPick(p.id)} />
                 </div>))
             : undefined;
+    const scopeDefinitionsSlot = selectedProjectId.trim()
+        ? (<ReportPreviewScopeLegend
+            definitions={scopeDefinitions}
+            loading={scopeDefinitionsLoading}
+            disabled={partnerConfirmedReadOnly || scopeDescriptionSaving}
+            onEdit={editScopeDefinition}
+        />)
+        : null;
     const mainBody = (() => {
         if (!xferSnapshot || !rangeFrom || !rangeTo)
             return (<p className="tt-rp-preview__muted tt-rp-preview__no-table-msg">Укажите период (даты «С» и «По»).</p>);
@@ -1771,7 +1895,7 @@ export function ReportPreviewPage() {
             const showTimeLiveTitle = xferSnapshot.groupBy !== 'projects';
             return (<>
                 {showTimeLiveTitle ? (<p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>) : null}
-                <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={partnerConfirmedReadOnly ? undefined : setSelectedRowKeys} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick} onDownloadExcel={handleDownloadTimeExcel} downloadExcelBusy={timeExcelDownloadBusy} footerExtras={partnerSignFooterExtras} flashRowKey={partnerConfirmedReadOnly ? null : flashRestoredRowKey} hotkeyDuplicateRowKey={partnerConfirmedReadOnly ? null : hotkeyDuplicateRowKey} onHotkeyDuplicateConsumed={partnerConfirmedReadOnly ? undefined : clearHotkeyDuplicateRowKey} onActiveTimeRowKey={partnerConfirmedReadOnly ? undefined : setActiveTimeRowKey} canUndo={!partnerConfirmedReadOnly && canUndoTimeEdit} onUndo={partnerConfirmedReadOnly ? undefined : undoLastTimeEdit} onSaveNow={partnerConfirmedReadOnly ? undefined : flushAllPendingTimeEntrySaves} scopeColorValue={scopeColorValue} scopeColorBusy={scopeColorBusy} onScopeColorValueChange={setScopeColorValue} onApplyScopeColorToSelection={applyScopeColorToSelection} onClearScopeColorFromSelection={clearScopeColorFromSelection} />
+                <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={partnerConfirmedReadOnly ? undefined : setSelectedRowKeys} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick} onDownloadExcel={handleDownloadTimeExcel} downloadExcelBusy={timeExcelDownloadBusy} footerExtras={partnerSignFooterExtras} flashRowKey={partnerConfirmedReadOnly ? null : flashRestoredRowKey} hotkeyDuplicateRowKey={partnerConfirmedReadOnly ? null : hotkeyDuplicateRowKey} onHotkeyDuplicateConsumed={partnerConfirmedReadOnly ? undefined : clearHotkeyDuplicateRowKey} onActiveTimeRowKey={partnerConfirmedReadOnly ? undefined : setActiveTimeRowKey} canUndo={!partnerConfirmedReadOnly && canUndoTimeEdit} onUndo={partnerConfirmedReadOnly ? undefined : undoLastTimeEdit} onSaveNow={partnerConfirmedReadOnly ? undefined : flushAllPendingTimeEntrySaves} scopeDefinitionsSlot={scopeDefinitionsSlot} scopeColorValue={scopeColorValue} scopeColorBusy={scopeColorBusy || scopeDefinitionsLoading || scopeDescriptionSaving} onScopeColorValueChange={setScopeColorValue} onApplyScopeColorToSelection={requestApplyScopeColorToSelection} onClearScopeColorFromSelection={clearScopeColorFromSelection} />
             </>);
         }
         if (xferSnapshot.reportType === 'expenses') {
@@ -1820,6 +1944,15 @@ export function ReportPreviewPage() {
                 {mainBody}
             </div>
         </div>
+        <ReportPreviewScopeDescriptionModal
+            open={Boolean(scopeDescriptionEditor)}
+            color={scopeDescriptionEditor?.color ?? REPORT_PREVIEW_SCOPE_DEFAULT}
+            initialDescription={scopeDescriptionEditor?.description ?? ''}
+            firstUse={scopeDescriptionEditor?.firstUse ?? false}
+            saving={scopeDescriptionSaving}
+            onCancel={closeScopeDescriptionEditor}
+            onSave={saveScopeDescription}
+        />
     </div>);
 }
 export default ReportPreviewPage;
