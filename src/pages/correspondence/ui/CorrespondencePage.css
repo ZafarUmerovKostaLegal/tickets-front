@@ -4043,3 +4043,24 @@ body[data-theme='dark'] .corr-preview__attachments { border-color: var(--app-bor
     height: auto;
   }
 }
+
+/* Keep the fullscreen registry below its own navigation bar. */
+.corr-shell.corr-shell--full {
+  display: flex;
+  flex-direction: column;
+}
+
+.corr-shell.corr-shell--full > .corr-shell__header {
+  position: relative;
+  top: auto;
+  flex: 0 0 auto;
+}
+
+.corr-shell.corr-shell--full > .corr-shell__main {
+  position: relative;
+  flex: 1 1 0;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  overflow: hidden;
+}
