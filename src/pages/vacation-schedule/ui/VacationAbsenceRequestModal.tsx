@@ -39,9 +39,16 @@ type Props = {
 const FALLBACK_KINDS: VacationLeaveKindApi[] = [
     { kind_code: 1, kind: 'annual_vacation', label_ru: 'Ежегодный отпуск', color_hex: '#E8D5F2', color_text_hex: '#4A148C' },
     { kind_code: 2, kind: 'sick_leave', label_ru: 'Больничный', color_hex: '#FF1493', color_text_hex: '#880E4F' },
-    { kind_code: 3, kind: 'day_off', label_ru: 'Day Off (нерабочий)', color_hex: '#81D4FA', color_text_hex: '#01579B' },
+    { kind_code: 3, kind: 'day_off', label_ru: 'Неоплачиваемый отпуск', color_hex: '#81D4FA', color_text_hex: '#01579B' },
     { kind_code: 5, kind: 'remote_work', label_ru: 'Дистанционный режим', color_hex: '#FFF59D', color_text_hex: '#F57F17' },
 ];
+
+const KIND_DESCRIPTIONS: Record<VacationLeaveRequestKind, string> = {
+    annual_vacation: 'Оплачиваемый отпуск в пределах доступного остатка. Одна из частей отпуска должна быть непрерывной — не менее 14 календарных дней.',
+    sick_leave: 'Отсутствие по болезни. Укажите период нетрудоспособности.',
+    day_off: 'Отпуск без сохранения заработной платы. Эти дни не вычитаются из остатка ежегодного отпуска.',
+    remote_work: 'Работа вне офиса в течение согласованного периода.',
+};
 
 function mergeLeaveKinds(apiList: VacationLeaveKindApi[]): VacationLeaveKindApi[] {
     const byKind = new Map(apiList.map((k) => [k.kind, k]));
@@ -223,10 +230,10 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                     setError(
                         balance.flexible_days_remaining > 0
                             ? `Дробный ежегодный отпуск: осталось ${balance.flexible_days_remaining} из ${balance.flexible_days_max} дн., в заявке — ${dayCount}. `
-                                + `Иначе оформите непрерывные ${balance.min_continuous_days} дн. или Day Off (неоплачиваемый).`
+                                + `Иначе оформите непрерывные ${balance.min_continuous_days} дн. или неоплачиваемый отпуск.`
                             : `Дробные ${balance.flexible_days_max} дн. ежегодного отпуска исчерпаны. `
                                 + `Оформите непрерывный отпуск не менее ${balance.min_continuous_days} дн. `
-                                + `либо выберите Day Off (нерабочий / неоплачиваемый).`,
+                                + `либо выберите неоплачиваемый отпуск.`,
                     );
                     return;
                 }
@@ -275,8 +282,8 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
         ? (balance.continuous_14_satisfied
             ? `Остаток можно оформлять любыми частями (не больше ${balance.remaining_days} дн.).`
             : balance.flexible_days_remaining > 0
-                ? `Дробный ежегодный отпуск: ещё ${balance.flexible_days_remaining} из ${balance.flexible_days_max} дн. (по 1–2–3…). Дальше — непрерывные ${balance.min_continuous_days} дн. или Day Off (неоплачиваемый).`
-                : `Дробные ${balance.flexible_days_max} дн. исчерпаны. Оформите непрерывный ежегодный отпуск не менее ${balance.min_continuous_days} дн. либо выберите Day Off (нерабочий / неоплачиваемый).`)
+                ? `Дробный ежегодный отпуск: ещё ${balance.flexible_days_remaining} из ${balance.flexible_days_max} дн. (по 1–2–3…). Дальше — непрерывные ${balance.min_continuous_days} дн. или неоплачиваемый отпуск.`
+                : `Дробные ${balance.flexible_days_max} дн. исчерпаны. Оформите непрерывный ежегодный отпуск не менее ${balance.min_continuous_days} дн. либо выберите неоплачиваемый отпуск.`)
         : null;
 
     return createPortal(
@@ -358,7 +365,10 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                                         style={{ background: item.color_hex || 'var(--app-accent, #4f46e5)' }}
                                         aria-hidden
                                     />
-                                    <span className="vac-req-modal__cat-label">{leaveKindLabel(item.kind, kinds)}</span>
+                                    <span className="vac-req-modal__cat-copy">
+                                        <span className="vac-req-modal__cat-label">{leaveKindLabel(item.kind, kinds)}</span>
+                                        <span className="vac-req-modal__cat-description">{KIND_DESCRIPTIONS[item.kind]}</span>
+                                    </span>
                                 </label>
                             ))}
                         </div>

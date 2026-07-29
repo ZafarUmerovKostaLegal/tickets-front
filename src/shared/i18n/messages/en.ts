@@ -274,7 +274,7 @@ export const enMessages = {
             },
             vacationRequest: {
                 title: 'Leave and absence request',
-                text: 'In “Vacation schedule”, click “+”, choose the category (annual leave, day off, remote work), period, and approving partner. Review the application text, sign it, and download PDF or Word if needed. Days in the period are calculated automatically.',
+                text: 'In “Vacation schedule”, click “+”, choose the category (annual leave, unpaid leave, remote work), period, and approving partner. Review the application text, sign it, and download PDF or Word if needed. Days in the period are calculated automatically.',
             },
         },
     },

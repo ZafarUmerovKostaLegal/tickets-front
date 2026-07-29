@@ -22,7 +22,7 @@ export const VACATION_ABSENCE_LEGEND: ReadonlyArray<{
 }> = [
         { kind: 'annual', color: '#9C27FF', label: 'Ежегодный отпуск' },
         { kind: 'sick', color: '#FF1493', label: 'Отсутствие по болезни' },
-        { kind: 'dayoff', color: '#2196F3', label: 'Day Off (нерабочий)' },
+        { kind: 'dayoff', color: '#2196F3', label: 'Неоплачиваемый отпуск' },
         { kind: 'business', color: '#00E676', label: 'Командировка' },
         { kind: 'remote', color: '#FFEB3B', label: 'Дистанционный режим' },
         { kind: 'red_pass', color: '#FF1744', label: 'Пропуск красного цвета' },
@@ -79,7 +79,10 @@ function mergeVacationUiLegend(items: VacationUiLegendItem[]): VacationUiLegendI
     const byKind = new Map(items.map((x) => [x.kind, x]));
     const merged: VacationUiLegendItem[] = [];
     for (const fb of VACATION_ABSENCE_LEGEND) {
-        const existing = byKind.get(fb.kind);
+        const source = byKind.get(fb.kind);
+        const existing = source && source.kind === 'dayoff'
+            ? { ...source, label: fb.label }
+            : source;
         if (existing) {
             merged.push(existing.seal ? existing : { ...existing, seal: vacationKindSeal(existing.kind) });
             byKind.delete(fb.kind);
