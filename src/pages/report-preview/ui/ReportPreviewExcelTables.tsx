@@ -27,6 +27,7 @@ import {
     getLocalYmdAndHmFromIso,
     getLocalYmdFromIso,
     localYmdAndHmToIso,
+    sortTimePreviewRowsByScopeThenChrono,
     sortTimePreviewRowsChronologically,
 } from '../lib/briefRecordDateTimeEdit';
 import {
@@ -723,6 +724,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     const [bfNote, setBfNote] = useState('');
     const [bfBill, setBfBill] = useState('');
     const [bfScopeColors, setBfScopeColors] = useState<string[]>([]);
+    const [scopeGroupingEnabled, setScopeGroupingEnabled] = useState(false);
     const [toolbarSearch, setToolbarSearch] = useState('');
     const [moreMenuOpen, setMoreMenuOpen] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
@@ -880,8 +882,10 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return true;
             return briefFilterEmployeeQ(r, q) || briefFilterTaskQ(r, q) || briefFilterNoteQ(r, q);
         });
-        return sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
-    }, [isFull, rows, briefEmployeeQuery, bfWhen, bfTask, bfNote, bfBill, bfScopeColors, bfRecordedOrder, toolbarSearch]);
+        return scopeGroupingEnabled
+            ? sortTimePreviewRowsByScopeThenChrono(filtered, bfRecordedOrder)
+            : sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
+    }, [isFull, rows, briefEmployeeQuery, bfWhen, bfTask, bfNote, bfBill, bfScopeColors, bfRecordedOrder, scopeGroupingEnabled, toolbarSearch]);
     const usedScopeColors = useMemo(() => collectUsedScopeColors(rows), [rows]);
     const usedScopeHint = usedScopeColors.length
         ? `Уже в отчёте: ${usedScopeColors.join(', ')}`
@@ -899,8 +903,10 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return true;
             return briefFilterEmployeeQ(r, q) || briefFilterTaskQ(r, q) || briefFilterNoteQ(r, q);
         });
-        return sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
-    }, [isFull, rows, briefEmployeeQuery, bfScopeColors, bfRecordedOrder, toolbarSearch]);
+        return scopeGroupingEnabled
+            ? sortTimePreviewRowsByScopeThenChrono(filtered, bfRecordedOrder)
+            : sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
+    }, [isFull, rows, briefEmployeeQuery, bfScopeColors, bfRecordedOrder, scopeGroupingEnabled, toolbarSearch]);
     const displayRows = isFull ? fullNameFiltered : briefDisplayRows;
     const duplicateRowKeys = useMemo(() => buildTimePreviewDuplicateRowKeySet(displayRows), [displayRows]);
     const rowsForTotals = useMemo(() => timePreviewRowsForTotals(displayRows), [displayRows]);
@@ -1468,6 +1474,20 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 + Добавить
               </button>) : null}
             {scopeDefinitionsSlot}
+            {scopeDefinitionsSlot || usedScopeColors.length > 0 ? (<button
+              type="button"
+              className={`tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-scope-compose${scopeGroupingEnabled ? ' tt-rp-scope-compose--active' : ''}`}
+              aria-pressed={scopeGroupingEnabled}
+              title={scopeGroupingEnabled ? 'Вернуть обычный порядок строк по дате' : 'Сгруппировать строки по цветам Scope'}
+              onClick={() => setScopeGroupingEnabled((enabled) => !enabled)}
+            >
+              <span className="tt-rp-scope-compose__icon" aria-hidden>
+                <span style={{ backgroundColor: usedScopeColors[0] ?? REPORT_PREVIEW_SCOPE_DEFAULT }} />
+                <span style={{ backgroundColor: usedScopeColors[1] ?? usedScopeColors[0] ?? REPORT_PREVIEW_SCOPE_DEFAULT }} />
+                <span style={{ backgroundColor: usedScopeColors[2] ?? usedScopeColors[0] ?? REPORT_PREVIEW_SCOPE_DEFAULT }} />
+              </span>
+              По цветам
+            </button>) : null}
             <div className="tt-rp-mtable-toolbar__trail">
               {!readOnlyUi ? (<div className="tt-rp-mtable-more" ref={moreMenuRef}>
                 <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-mtable-more__btn" onClick={() => setMoreMenuOpen((v) => !v)} aria-expanded={moreMenuOpen} aria-haspopup="menu" title="Дополнительные действия">

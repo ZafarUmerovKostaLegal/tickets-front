@@ -6604,6 +6604,34 @@ body[data-theme='dark'] .tt-rp-preview__partner-modal-partner {
   animation: tt-rp-scope-spin 0.7s linear infinite;
 }
 
+.tt-rp-scope-compose {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.tt-rp-scope-compose--active {
+  border-color: var(--app-accent, #5b4fe5) !important;
+  color: var(--app-accent, #5b4fe5) !important;
+  background: color-mix(in srgb, var(--app-accent, #5b4fe5) 9%, var(--app-surface, #fff)) !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-accent, #5b4fe5) 18%, transparent);
+}
+
+.tt-rp-scope-compose__icon {
+  display: inline-grid;
+  gap: 1px;
+  width: 0.9rem;
+}
+
+.tt-rp-scope-compose__icon > span {
+  display: block;
+  height: 3px;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  border-radius: 2px;
+}
+
 @keyframes tt-rp-scope-spin {
   to { transform: rotate(360deg); }
 }
