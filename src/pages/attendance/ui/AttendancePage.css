@@ -2278,3 +2278,87 @@ body[data-theme='dark'] .att-modal__error {
     flex: 1 1 auto;
   }
 }
+
+/* Keep the attendance dashboard within the viewport; lists scroll inside cards. */
+.att {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.att__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+.att-daily {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.att-daily__side,
+.att-daily__status-grid,
+.att-daily__status {
+  min-height: 0;
+}
+
+.att-daily__status-grid {
+  height: 100%;
+  overflow: hidden;
+}
+
+.att-daily__status {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.att-daily__status-head {
+  flex-shrink: 0;
+}
+
+.att-daily__people {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.att-daily__people::-webkit-scrollbar {
+  width: 6px;
+}
+
+.att-daily__people::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-muted) 35%, transparent);
+}
+
+@media (max-width: 1180px) {
+  .att-daily {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 820px) {
+  .att-daily__status-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(17rem, 85vw);
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+  }
+
+  .att-daily__status {
+    min-height: 0;
+    scroll-snap-align: start;
+  }
+}

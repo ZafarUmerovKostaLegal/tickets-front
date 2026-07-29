@@ -105,10 +105,10 @@ export function AttendanceDailyStatusBoard({
     const sorted = useMemo(() => [...rows].sort((left, right) => left.name.localeCompare(right.name, locale === 'en' ? 'en' : 'ru')), [locale, rows]);
     const columns: StatusColumn[] = [
         {
-            key: 'present',
-            title: t('attendancePage.kpi.onTime'),
-            rows: sorted.filter((row) => row.status !== 'late' && row.status !== 'absent'),
-            symbol: '✓',
+            key: 'late',
+            title: t('attendancePage.kpi.lateDaily'),
+            rows: sorted.filter((row) => row.status === 'late'),
+            symbol: '!',
         },
         {
             key: 'absent',
@@ -117,10 +117,10 @@ export function AttendanceDailyStatusBoard({
             symbol: '×',
         },
         {
-            key: 'late',
-            title: t('attendancePage.kpi.lateDaily'),
-            rows: sorted.filter((row) => row.status === 'late'),
-            symbol: '!',
+            key: 'present',
+            title: t('attendancePage.kpi.onTime'),
+            rows: sorted.filter((row) => row.status !== 'late' && row.status !== 'absent'),
+            symbol: '✓',
         },
     ];
 
