@@ -980,14 +980,14 @@ body[data-theme='dark'] .corr-shell {
 }
 
 .corr-shell.corr-shell--full .corr-registry__table-card {
-  flex: 1 1 0;
-  height: 0;
+  flex: 1 1 auto;
+  height: auto;
   min-height: 0;
 }
 
 .corr-shell.corr-shell--full .corr-registry__table-panel,
 .corr-shell.corr-shell--full .corr__table-scroll {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-height: 0;
 }
 
