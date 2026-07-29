@@ -377,6 +377,365 @@ body[data-theme='dark'] .att__alert--muted {
   animation: att-shimmer 1.2s ease-in-out infinite;
 }
 
+/* Daily attendance workspace */
+.att-daily {
+  display: grid;
+  grid-template-columns: minmax(17.5rem, 20rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  width: 100%;
+  min-width: 0;
+}
+
+.att-daily__side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.att-daily__calendar,
+.att-daily__status {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.045);
+}
+
+.att-daily__calendar {
+  padding: 1rem;
+}
+
+.att-daily__calendar-head {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.att-daily__calendar-head h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--app-text);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.att-daily__calendar-head button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface-soft);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 1.25rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.att-daily__calendar-head button:hover {
+  border-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface));
+  color: var(--app-accent);
+}
+
+.att-daily__weekdays,
+.att-daily__calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.25rem;
+}
+
+.att-daily__weekdays {
+  margin-bottom: 0.35rem;
+}
+
+.att-daily__weekdays span {
+  color: var(--app-muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.att-daily__calendar-grid > span,
+.att-daily__calendar-grid > button {
+  aspect-ratio: 1;
+}
+
+.att-daily__calendar-grid > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, transform 0.15s;
+}
+
+.att-daily__calendar-grid > button:hover {
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-surface));
+  color: var(--app-accent);
+}
+
+.att-daily__calendar-grid > .att-daily__day--today {
+  border-color: color-mix(in srgb, var(--app-accent) 50%, transparent);
+  color: var(--app-accent);
+  font-weight: 700;
+}
+
+.att-daily__calendar-grid > .att-daily__day--active {
+  border-color: var(--app-accent);
+  background: var(--app-accent);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 5px 12px color-mix(in srgb, var(--app-accent) 28%, transparent);
+  transform: scale(1.02);
+}
+
+.att-daily__side .att__kpi {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.att-daily__side .att__kpi-card {
+  min-width: 0;
+  padding: 0.8rem;
+  border-radius: 14px;
+}
+
+.att-daily__side .att__kpi-icon {
+  width: 2rem;
+  height: 2rem;
+  margin-bottom: 0.55rem;
+  border-radius: 10px;
+}
+
+.att-daily__side .att__kpi-icon svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.att-daily__side .att__kpi-value {
+  font-size: 1.35rem;
+}
+
+.att-daily__side .att__kpi-label {
+  overflow: hidden;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.att-daily__side .att__kpi-sub {
+  display: none;
+}
+
+.att-daily__status-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.att-daily__status {
+  --att-status-color: var(--app-accent);
+  min-width: 0;
+  min-height: 34rem;
+  overflow: hidden;
+}
+
+.att-daily__status--absent {
+  --att-status-color: #ef4444;
+}
+
+.att-daily__status--late {
+  --att-status-color: #f59e0b;
+}
+
+.att-daily__status-head {
+  display: grid;
+  grid-template-columns: 1.7rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.9rem 0.85rem;
+  border-top: 3px solid var(--att-status-color);
+  border-bottom: 1px solid var(--app-border);
+  background: color-mix(in srgb, var(--att-status-color) 5%, var(--app-surface));
+}
+
+.att-daily__status-head h2 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.att-daily__status-symbol,
+.att-daily__status-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.att-daily__status-symbol {
+  width: 1.7rem;
+  height: 1.7rem;
+  background: color-mix(in srgb, var(--att-status-color) 14%, var(--app-surface));
+  color: var(--att-status-color);
+  font-size: 0.75rem;
+}
+
+.att-daily__status-count {
+  min-width: 1.6rem;
+  height: 1.6rem;
+  padding: 0 0.4rem;
+  background: var(--app-text);
+  color: var(--app-surface);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.att-daily__people {
+  padding: 0.25rem 0.75rem 0.65rem;
+}
+
+.att-daily__person {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.6rem;
+  min-height: 3.55rem;
+  padding: 0.55rem 0.1rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--app-border) 72%, transparent);
+}
+
+.att-daily__person:last-child {
+  border-bottom: 0;
+}
+
+.att-daily__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--att-status-color) 11%, var(--app-surface));
+  color: var(--att-status-color);
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.att-daily__person-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.att-daily__person-main strong,
+.att-daily__person-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.att-daily__person-main strong {
+  color: var(--app-text);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.att-daily__person-main small {
+  color: var(--app-muted);
+  font-size: 0.625rem;
+}
+
+.att-daily__person-time {
+  color: var(--app-muted);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.att-daily__status-empty {
+  margin: 0;
+  padding: 3rem 0.5rem;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.att-daily__person--skeleton {
+  height: 3.55rem;
+  border: 0;
+  background: linear-gradient(90deg, var(--app-surface-soft) 25%, color-mix(in srgb, var(--app-border) 65%, var(--app-surface)) 50%, var(--app-surface-soft) 75%);
+  background-size: 200% 100%;
+  animation: att-daily-shimmer 1.3s infinite;
+}
+
+@keyframes att-daily-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (max-width: 1180px) {
+  .att-daily {
+    grid-template-columns: 1fr;
+  }
+
+  .att-daily__side {
+    display: grid;
+    grid-template-columns: minmax(17.5rem, 21rem) minmax(0, 1fr);
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 820px) {
+  .att-daily__status-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .att-daily__status {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 660px) {
+  .att-daily__side {
+    display: flex;
+  }
+
+  .att-daily__calendar {
+    padding: 0.85rem;
+  }
+}
+
 .att__card {
   width: 100%;
   max-width: none;
