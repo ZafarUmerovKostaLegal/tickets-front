@@ -27,7 +27,7 @@ import {
     getLocalYmdAndHmFromIso,
     getLocalYmdFromIso,
     localYmdAndHmToIso,
-    sortTimePreviewRowsByScopeThenChrono,
+    sortTimePreviewRowsChronologically,
 } from '../lib/briefRecordDateTimeEdit';
 import {
     TIME_BRIEF_COLUMN_ORDER_DEFAULT,
@@ -880,7 +880,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return true;
             return briefFilterEmployeeQ(r, q) || briefFilterTaskQ(r, q) || briefFilterNoteQ(r, q);
         });
-        return sortTimePreviewRowsByScopeThenChrono(filtered, bfRecordedOrder);
+        return sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
     }, [isFull, rows, briefEmployeeQuery, bfWhen, bfTask, bfNote, bfBill, bfScopeColors, bfRecordedOrder, toolbarSearch]);
     const usedScopeColors = useMemo(() => collectUsedScopeColors(rows), [rows]);
     const usedScopeHint = usedScopeColors.length
@@ -899,7 +899,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return true;
             return briefFilterEmployeeQ(r, q) || briefFilterTaskQ(r, q) || briefFilterNoteQ(r, q);
         });
-        return sortTimePreviewRowsByScopeThenChrono(filtered, bfRecordedOrder);
+        return sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
     }, [isFull, rows, briefEmployeeQuery, bfScopeColors, bfRecordedOrder, toolbarSearch]);
     const displayRows = isFull ? fullNameFiltered : briefDisplayRows;
     const duplicateRowKeys = useMemo(() => buildTimePreviewDuplicateRowKeySet(displayRows), [displayRows]);
