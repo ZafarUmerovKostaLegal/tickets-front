@@ -29,7 +29,8 @@ export function invoiceCanMarkViewed(status: InvoiceUiStatus): boolean {
 export function invoiceCanRegisterPayment(status: InvoiceUiStatus, balanceDue: number): boolean {
     if (status === 'draft' || status === 'canceled' || status === 'paid')
         return false;
-    return Number.isFinite(balanceDue) && balanceDue > BALANCE_EPS;
+    const due = Number(balanceDue);
+    return Number.isFinite(due) && due > BALANCE_EPS;
 }
 export function invoiceCanCancel(status: InvoiceUiStatus): boolean {
     return status !== 'canceled' && status !== 'draft';

@@ -72,6 +72,7 @@ export function InvoiceDetailPage() {
   const [clients, setClients] = useState<TimeManagerClientRow[]>([]);
   const [detail, setDetail] = useState<InvoiceDto | null>(null);
   const [detailLoading, setDetailLoading] = useState(true);
+  const paySectionRef = useRef<HTMLElement | null>(null);
   const [payOpen, setPayOpen] = useState(false);
   const [payAmount, setPayAmount] = useState('');
   const [payAt, setPayAt] = useState('');
@@ -105,6 +106,20 @@ export function InvoiceDetailPage() {
       .then((rows) => setClients(rows.filter(isActiveTimeManagerClientRow)))
       .catch(() => setClients([]));
   }, []);
+
+  useEffect(() => {
+    if (!payOpen)
+      return;
+    const el = paySectionRef.current;
+    if (!el)
+      return;
+    requestAnimationFrame(() => {
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const amountInput = el.querySelector('input');
+      if (amountInput instanceof HTMLInputElement)
+        amountInput.focus();
+    });
+  }, [payOpen]);
 
   useEffect(() => {
     setPaymentConfirmDocUrl('');
@@ -372,6 +387,7 @@ export function InvoiceDetailPage() {
       amountPayload = /,/.test(trimmedAmount) ? trimmedAmount.replace(/\s/g, '') : n;
     }
     const paidAtPayload = buildPaidAtForPaymentApi(String(payAt));
+    const paidBefore = Number(detail.amountPaid) || 0;
     setActionBusy(true);
     try {
       const posted = await registerInvoicePayment(invoiceId, {
@@ -388,9 +404,15 @@ export function InvoiceDetailPage() {
       catch {
         next = posted;
       }
+      const paidAfter = Number(next.amountPaid) || 0;
+      if (paidAfter <= paidBefore + 1e-6) {
+        await showAlert({ message: t('timeTrackingPage.invoices.errors.paymentNotApplied') });
+        return;
+      }
       setDetail(next);
       setPayOpen(false);
       notifyReportsInvalidated();
+      pushToast({ message: t('timeTrackingPage.invoices.payment.recorded'), variant: 'info' });
       if (next.requiresPaymentConfirmationDocument === true)
         pushToast({ message: t('timeTrackingPage.invoices.payment.documentRequired'), variant: 'warning' });
     }
@@ -406,8 +428,18 @@ export function InvoiceDetailPage() {
     if (!invoiceId || !detail)
       return;
     const due = Number(detail.balanceDue);
-    if (!Number.isFinite(due) || due <= 1e-9)
+    if (!Number.isFinite(due) || due <= 1e-9) {
+      await showAlert({ message: t('timeTrackingPage.invoices.errors.alreadyPaid') });
       return;
+    }
+    if (!await showConfirm({
+      title: t('timeTrackingPage.invoices.confirm.fullPaymentTitle'),
+      message: t('timeTrackingPage.invoices.confirm.fullPaymentMessage')
+        .replace('{amount}', fmtMoney(due, detail.currency, locale)),
+      confirmLabel: t('timeTrackingPage.invoices.detail.fullPayment'),
+    }))
+      return;
+    const paidBefore = Number(detail.amountPaid) || 0;
     setActionBusy(true);
     try {
       const posted = await registerInvoicePayment(invoiceId, {});
@@ -419,9 +451,15 @@ export function InvoiceDetailPage() {
       catch {
         next = posted;
       }
+      const paidAfter = Number(next.amountPaid) || 0;
+      if (paidAfter <= paidBefore + 1e-6) {
+        await showAlert({ message: t('timeTrackingPage.invoices.errors.paymentNotApplied') });
+        return;
+      }
       setDetail(next);
       setPayOpen(false);
       notifyReportsInvalidated();
+      pushToast({ message: t('timeTrackingPage.invoices.payment.recorded'), variant: 'info' });
       if (next.requiresPaymentConfirmationDocument === true)
         pushToast({ message: t('timeTrackingPage.invoices.payment.documentRequired'), variant: 'warning' });
     }
@@ -431,7 +469,7 @@ export function InvoiceDetailPage() {
     finally {
       setActionBusy(false);
     }
-  }, [invoiceId, detail, showAlert, pushToast, t]);
+  }, [invoiceId, detail, locale, showAlert, showConfirm, pushToast, t]);
 
   const handleSubmitPaymentConfirmation = useCallback(async () => {
     if (!invoiceId)
@@ -715,6 +753,43 @@ export function InvoiceDetailPage() {
                   )}
                 </div>
 
+                {!readOnly && payOpen && (
+                  <section
+                    ref={paySectionRef}
+                    className="tt-inv-page__section tt-inv-page__section--soft"
+                    aria-labelledby="tt-inv-pay-section-title"
+                  >
+                    <div className="tt-inv-page__section-head">
+                      <h2 id="tt-inv-pay-section-title" className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.payment.title')}</h2>
+                    </div>
+                    <div className="tt-inv-pay">
+                      <p className="tt-inv-pay__hint">
+                        {t('timeTrackingPage.invoices.payment.hint')}
+                      </p>
+                      <label>
+                        {t('timeTrackingPage.invoices.payment.amountLabel')}
+                        <input className="tt-inv__input" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder={t('timeTrackingPage.invoices.payment.amountPlaceholder')} />
+                      </label>
+                      <label>
+                        {t('timeTrackingPage.invoices.payment.paidAtLabel')}
+                        <input type="text" className="tt-inv__input" value={payAt} onChange={(e) => setPayAt(e.target.value)} placeholder={t('timeTrackingPage.invoices.payment.paidAtPlaceholder')} />
+                      </label>
+                      <label>
+                        {t('timeTrackingPage.invoices.payment.methodLabel')}
+                        <input className="tt-inv__input" value={payMethod} onChange={(e) => setPayMethod(e.target.value)} />
+                      </label>
+                      <label>
+                        {t('timeTrackingPage.invoices.payment.noteLabel')}
+                        <input className="tt-inv__input" value={payNote} onChange={(e) => setPayNote(e.target.value)} />
+                      </label>
+                      <div className="tt-inv-page__draft-actions">
+                        <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setPayOpen(false)} disabled={actionBusy}>{t('timeTrackingPage.common.cancel')}</button>
+                        <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={() => void handlePayment()} disabled={actionBusy}>{t('timeTrackingPage.invoices.payment.recordPayment')}</button>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
                 {outlookSendWait && outlookSendWait.invoiceId === detail.id && (
                   <p className="tt-inv-outlook-wait" role="status">
                     {t('timeTrackingPage.invoices.sendDialog.outlookWaitingBanner').replace('{invoice}', outlookSendWait.label)}
@@ -817,39 +892,6 @@ export function InvoiceDetailPage() {
                         <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleSaveDraft()}>
                           {t('timeTrackingPage.invoices.detail.saveDraft')}
                         </button>
-                      </div>
-                    </div>
-                  </section>
-                )}
-
-                {!readOnly && payOpen && (
-                  <section className="tt-inv-page__section tt-inv-page__section--soft" aria-labelledby="tt-inv-pay-section-title">
-                    <div className="tt-inv-page__section-head">
-                      <h2 id="tt-inv-pay-section-title" className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.payment.title')}</h2>
-                    </div>
-                    <div className="tt-inv-pay">
-                      <p className="tt-inv-pay__hint">
-                        {t('timeTrackingPage.invoices.payment.hint')}
-                      </p>
-                      <label>
-                        {t('timeTrackingPage.invoices.payment.amountLabel')}
-                        <input className="tt-inv__input" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} placeholder={t('timeTrackingPage.invoices.payment.amountPlaceholder')} />
-                      </label>
-                      <label>
-                        {t('timeTrackingPage.invoices.payment.paidAtLabel')}
-                        <input type="text" className="tt-inv__input" value={payAt} onChange={(e) => setPayAt(e.target.value)} placeholder={t('timeTrackingPage.invoices.payment.paidAtPlaceholder')} />
-                      </label>
-                      <label>
-                        {t('timeTrackingPage.invoices.payment.methodLabel')}
-                        <input className="tt-inv__input" value={payMethod} onChange={(e) => setPayMethod(e.target.value)} />
-                      </label>
-                      <label>
-                        {t('timeTrackingPage.invoices.payment.noteLabel')}
-                        <input className="tt-inv__input" value={payNote} onChange={(e) => setPayNote(e.target.value)} />
-                      </label>
-                      <div className="tt-inv-page__draft-actions">
-                        <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setPayOpen(false)} disabled={actionBusy}>{t('timeTrackingPage.common.cancel')}</button>
-                        <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={() => void handlePayment()} disabled={actionBusy}>{t('timeTrackingPage.invoices.payment.recordPayment')}</button>
                       </div>
                     </div>
                   </section>
