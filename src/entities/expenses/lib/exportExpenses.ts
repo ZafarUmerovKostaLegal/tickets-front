@@ -100,12 +100,11 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
         views: [{ showGridLines: false, state: 'frozen', ySplit: 5 }],
         properties: { tabColor: C_ACCENT },
     });
-    const LAST_COL = 'O';
+    const LAST_COL = 'N';
     ws.columns = [
         { width: 6 },
         { width: 46 },
         { width: 28 },
-        { width: 14 },
         { width: 14 },
         { width: 20 },
         { width: 16 },
@@ -157,7 +156,6 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
         { ru: 'Описание расхода', en: 'Description of the expense', align: 'left' },
         { ru: 'Автор', en: 'Author / Submitter', align: 'left' },
         { ru: 'Дата расхода', en: 'Date of incurred expense', align: 'center' },
-        { ru: 'Срок оплаты', en: 'Payment due date', align: 'center' },
         { ru: 'Тип расхода', en: 'Expense type', align: 'center' },
         { ru: 'Возмещение', en: 'Reimbursable / Non-reimbursable', align: 'center' },
         { ru: 'Сумма в сумах', en: 'Amount in UZS', align: 'right' },
@@ -191,13 +189,11 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
         const bgColor = i % 2 === 0 ? C_ROW_ODD : C_ROW_EVEN;
         const brd = border();
         const reimbKey = r.isReimbursable ? 'reimbursable' : 'non_reimbursable';
-        const payDue = r.paymentDeadline ? fmtDate(r.paymentDeadline.slice(0, 10)) : '—';
         const values: (string | number)[] = [
             i + 1,
             r.description,
             formatExpenseAuthorExport(r),
             fmtDate(r.expenseDate),
-            payDue,
             TYPE_META[r.expenseType as ExpenseType]?.label ?? r.expenseType,
             REIMBURSABLE_META[reimbKey].label,
             asExpenseNumber(r.amountUzs as unknown),
@@ -210,7 +206,7 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
             r.comment ?? '',
         ];
         const aligns: Alignment['horizontal'][] = [
-            'center', 'left', 'left', 'center', 'center', 'center', 'center', 'right', 'right', 'right', 'center', 'center', 'left', 'left', 'left',
+            'center', 'left', 'left', 'center', 'center', 'center', 'right', 'right', 'right', 'center', 'center', 'left', 'left', 'left',
         ];
         values.forEach((val, ci) => {
             const cell = row.getCell(ci + 1);

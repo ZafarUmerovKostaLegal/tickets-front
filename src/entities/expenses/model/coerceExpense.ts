@@ -59,6 +59,10 @@ export function normalizeExpenseRequest(r: ExpenseRequest): ExpenseRequest {
     const approvedBy = approvedByRaw != null
         ? normalizeCreatedBy(approvedByRaw, approvedByUserId ?? 0)
         : undefined;
+    const rejectionReasonRaw = x.rejectionReason ?? x.rejection_reason;
+    const rejectionReason = rejectionReasonRaw == null || rejectionReasonRaw === ''
+        ? null
+        : String(rejectionReasonRaw);
     return {
         ...r,
         createdByUserId: Number.isFinite(createdByUserId) ? createdByUserId : r.createdByUserId,
@@ -68,6 +72,7 @@ export function normalizeExpenseRequest(r: ExpenseRequest): ExpenseRequest {
         expenseCategoryId,
         approvedByUserId,
         ...(approvedBy ? { approvedBy } : {}),
+        rejectionReason,
         partnerUserId,
         ...(partnerUser ? { partnerUser } : {}),
         amountUzs: asExpenseNumber(pickNumericField(x, 'amountUzs', 'amount_uzs')),

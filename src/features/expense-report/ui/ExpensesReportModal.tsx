@@ -194,7 +194,7 @@ export function ExpensesReportModal({ isOpen, requests, onClose }: Props) {
             <p className="rep-label" style={{ marginBottom: '0.35rem' }}>Содержимое файла</p>
             <p className="rep-field-hint">
               В таблицу выгружаются поля заявки: сумма в <strong>UZS</strong>, курс <strong>UZS/USD</strong>, эквивалент в <strong>USD</strong> (как в системе),
-              срок оплаты, проект, контрагент, комментарий, способ оплаты и статус.
+              проект, контрагент, комментарий, способ оплаты и статус.
             </p>
           </div>
 

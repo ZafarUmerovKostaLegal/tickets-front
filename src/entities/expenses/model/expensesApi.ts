@@ -103,7 +103,6 @@ function asListMoney(v: unknown): number {
 export interface ExpenseCreateBody {
     description: string;
     expenseDate: string;
-    paymentDeadline?: string | null;
     amountUzs: number;
     exchangeRate: number;
     expenseType: string;

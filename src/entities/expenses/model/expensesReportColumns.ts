@@ -18,7 +18,6 @@ export type ExpenseReportColumnId =
     | 'comment'
     | 'author'
     | 'createdAt'
-    | 'paymentDeadline'
     | 'businessPurpose'
     | 'id';
 export type ExpenseReportColumnDef = {
@@ -168,13 +167,6 @@ export const EXPENSE_REPORT_COLUMNS: ExpenseReportColumnDef[] = [
         defaultVisible: false,
         minWidth: 110,
         value: r => fmtDate(r.createdAt?.slice(0, 10)),
-    },
-    {
-        id: 'paymentDeadline',
-        label: 'Срок оплаты',
-        defaultVisible: false,
-        minWidth: 110,
-        value: r => fmtDate(r.paymentDeadline),
     },
 ];
 const COL_MAP = new Map(EXPENSE_REPORT_COLUMNS.map(c => [c.id, c]));

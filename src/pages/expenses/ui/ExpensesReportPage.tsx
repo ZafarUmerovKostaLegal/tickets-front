@@ -319,8 +319,8 @@ export function ExpensesReportPage({ variant = 'company' }: { variant?: 'company
     const byPayment = useMemo(() => {
         const m = new Map<string, number>();
         for (const r of filteredItems) {
-            const raw = (r.paymentMethod ?? 'other_payment') as PaymentMethod;
-            const label = PAYMENT_METHODS.find(p => p.value === raw)?.label ?? raw;
+            const raw = r.paymentMethod as PaymentMethod | null;
+            const label = raw ? (PAYMENT_METHODS.find(p => p.value === raw)?.label ?? raw) : 'Не указан';
             m.set(label, (m.get(label) ?? 0) + asExpenseNumber(r.amountUzs));
         }
         return [...m.entries()].map(([name, value]) => ({ name, value }));

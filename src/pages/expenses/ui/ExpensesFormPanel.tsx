@@ -168,7 +168,7 @@ type Props = {
     canModerate?: boolean;
     onExpenseUpdated?: (expense: ExpenseRequest) => void;
     onExpenseDeleted?: (expenseId: string) => void;
-    emailModerationIntent?: 'approve' | 'reject' | null;
+    emailModerationIntent?: 'approve' | 'reject' | 'pay' | null;
     onEmailModerationIntentConsumed?: () => void;
     allowPaymentReceiptUpload?: boolean;
     onUploadPaymentReceipts?: (files: File[]) => Promise<void>;
@@ -204,7 +204,6 @@ const EXPENSE_TYPE_CLIENT = 'client_expense';
 const EMPTY: ExpenseFormValues = {
     description: '',
     expenseDate: '',
-    paymentDeadline: '',
     expenseType: '',
     expenseSubtype: '',
     isReimbursable: false,
@@ -240,9 +239,6 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
         const today = todayIsoLocal();
         if (v.expenseDate > today)
             e.expenseDate = 'Дата не может быть в будущем';
-    }
-    if (v.paymentDeadline.trim() && v.expenseDate && v.paymentDeadline < v.expenseDate) {
-        e.paymentDeadline = 'Срок оплаты не может быть раньше даты расхода';
     }
     if (!v.expenseType)
         e.expenseType = 'Выберите тип расхода';
@@ -447,7 +443,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setValues({
             description: editingRequest.description,
             expenseDate: editingRequest.expenseDate?.slice(0, 10) ?? '',
-            paymentDeadline: editingRequest.paymentDeadline?.slice(0, 10) ?? '',
             expenseType: editingRequest.expenseType,
             expenseSubtype: editingRequest.expenseSubtype ?? '',
             isReimbursable: editingRequest.isReimbursable,
@@ -902,10 +897,11 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         }
         return rows;
     }, [partnerOptions]);
-    const paymentMethodItems = useMemo(() => [
-        { value: '', label: 'Не указан', search: 'не указан' },
-        ...PAYMENT_METHODS.map(m => ({ value: m.value, label: m.label, search: m.label.toLowerCase() })),
-    ], []);
+    const paymentMethodItems = useMemo(() => PAYMENT_METHODS.map(m => ({
+        value: m.value,
+        label: m.label,
+        search: m.label.toLowerCase(),
+    })), []);
     const currencyItems = useMemo(() => [...EXPENSE_CURRENCIES], []);
     const expenseCategoryItems = useMemo(() => [
         { id: '', name: 'Не указана', search: 'не указана' },
@@ -1271,7 +1267,16 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         const key = `${editingRequest.id}:${emailModerationIntent}`;
         if (emailIntentHandledRef.current === key)
             return;
-        const canEmailModerate = showPendingApprovalModeration(editingRequest, Boolean(canModerate), isModerationBlockedForOwnExpense(Boolean(canModerate), currentUserId, editingRequest));
+        const blockedOwn = isModerationBlockedForOwnExpense(Boolean(canModerate), currentUserId, editingRequest);
+        if (emailModerationIntent === 'pay') {
+            const canConfirmPayment = Boolean(canModerate) && showPayExpenseAction(editingRequest, blockedOwn);
+            emailIntentHandledRef.current = key;
+            onEmailModerationIntentConsumed?.();
+            if (canConfirmPayment)
+                setPanelConfirm({ kind: 'pay' });
+            return;
+        }
+        const canEmailModerate = showPendingApprovalModeration(editingRequest, Boolean(canModerate), blockedOwn);
         if (!canEmailModerate) {
             const cannotApply = !canModerate || editingRequest.status !== 'pending_approval';
             if (cannotApply) {
@@ -1379,6 +1384,16 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         </div>
 
         <div className="exp-panel__body" ref={bodyRef}>
+
+          {isView && editingRequest?.status === 'rejected' && editingRequest.rejectionReason ? (
+            <section className="exp-rejection-reason" role="note" aria-label="Причина отказа">
+              <div className="exp-rejection-reason__icon" aria-hidden>!</div>
+              <div>
+                <p className="exp-rejection-reason__title">Причина отказа</p>
+                <p className="exp-rejection-reason__text">{editingRequest.rejectionReason}</p>
+              </div>
+            </section>
+          ) : null}
 
           <div className="exp-form-block">
             <p className="exp-form-block__title">Основная информация</p>
@@ -1536,13 +1551,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 <div className="exp-form-label">Дата расхода</div>
                 <p className="exp-form-static">{fmtIsoDateRu(values.expenseDate)}</p>
               </div>)}
-
-            <div className={`exp-form-field${errors.paymentDeadline ? ' exp-form-field--err' : ''}`}>
-              <label className="exp-form-label">Конечный срок оплаты</label>
-              <input type="date" className="exp-form-input" value={values.paymentDeadline} onChange={e => set('paymentDeadline', e.target.value)} disabled={isView}/>
-              <p className="exp-form-hint">Необязательно: крайняя дата, к которой ожидается оплата</p>
-              {errors.paymentDeadline && <p className="exp-form-err-msg" data-err>{errors.paymentDeadline}</p>}
-            </div>
 
             <div className={`exp-form-field${errors.amountUzs ? ' exp-form-field--err' : ''}`}>
               <label className="exp-form-label">Сумма <span className="exp-form-req">*</span></label>

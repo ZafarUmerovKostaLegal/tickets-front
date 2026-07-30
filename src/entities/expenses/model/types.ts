@@ -1,7 +1,7 @@
 export type ExpenseStatus = 'draft' | 'pending_approval' | 'revision_required' | 'approved' | 'rejected' | 'paid' | 'closed' | 'not_reimbursable' | 'withdrawn';
 export type ExpenseType = 'transport' | 'food' | 'accommodation' | 'purchase' | 'services' | 'entertainment' | 'client_expense' | 'partner_expense' | 'other';
 export type PartnerExpenseCategory = 'partner_fuel' | 'partner_air' | 'partner_meetings_food' | 'partner_shop' | 'partner_misc';
-export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'other_payment';
+export type PaymentMethod = 'cash' | 'transfer' | 'card';
 export type ExpenseAmountCurrency = 'UZS' | 'USD' | 'RUB' | 'GBP' | 'EUR';
 export type ExpenseAttachmentKind = 'payment_document' | 'payment_receipt';
 export type ExpenseFilesByKind = Record<ExpenseAttachmentKind, File[]>;
@@ -28,7 +28,6 @@ export interface ExpenseRequest {
     id: string;
     description: string;
     expenseDate: string;
-    paymentDeadline?: string | null;
     amountUzs: number;
     exchangeRate: number;
     equivalentAmount: number;
@@ -53,6 +52,7 @@ export interface ExpenseRequest {
     approvedByUserId?: number | null;
     approvedBy?: ExpenseCreatedBy;
     rejectedAt: string | null;
+    rejectionReason?: string | null;
     paidAt: string | null;
     paidByUserId?: number | null;
     paidBy?: ExpenseCreatedBy;
@@ -66,7 +66,6 @@ export interface ExpenseRequest {
 export interface ExpenseFormValues {
     description: string;
     expenseDate: string;
-    paymentDeadline: string;
     expenseType: string;
     expenseSubtype: string;
     isReimbursable: boolean;
@@ -85,7 +84,6 @@ export interface ExpenseFormValues {
 export interface ExpenseFormErrors {
     description?: string;
     expenseDate?: string;
-    paymentDeadline?: string;
     expenseType?: string;
     expenseSubtype?: string;
     partnerUserId?: string;

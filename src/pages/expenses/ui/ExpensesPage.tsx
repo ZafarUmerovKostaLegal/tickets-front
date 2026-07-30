@@ -73,13 +73,6 @@ function fmtExpenseDateCell(raw: unknown): string {
     const k = expenseDateKey(raw);
     return k ? fmtDate(k) : '—';
 }
-function paymentDeadlineCell(raw: unknown): string {
-    if (raw == null || raw === '')
-        return '—';
-    const s = typeof raw === 'string' ? raw : String(raw);
-    const prefix = s.slice(0, 10);
-    return ISO_DATE_RE.test(prefix) ? fmtDate(prefix) : '—';
-}
 function fmtUzs(raw: unknown) {
     return asExpenseNumber(raw).toLocaleString('ru-RU');
 }
@@ -95,7 +88,6 @@ function ruExpenseRequestUnit(n: number): string {
     return 'заявок';
 }
 function formValuesToApiBody(values: ExpenseFormValues) {
-    const paymentDeadline = values.paymentDeadline.trim() ? values.paymentDeadline : null;
     const expenseSubtype = values.expenseType === 'partner_expense'
         ? values.expenseSubtype.trim() || null
         : null;
@@ -106,7 +98,6 @@ function formValuesToApiBody(values: ExpenseFormValues) {
     return {
         description: values.description,
         expenseDate: values.expenseDate,
-        paymentDeadline,
         amountUzs: computeAmountUzsForApi(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd),
         exchangeRate: parseFloat(values.exchangeRate) || 0,
         expenseType: values.expenseType,
@@ -173,7 +164,6 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
     const uzsAmt = asExpenseNumber(req.amountUzs);
     const equivUsd = asExpenseNumber(req.equivalentAmount);
     const rate = asExpenseNumber(req.exchangeRate);
-    const payDueLabel = paymentDeadlineCell(req.paymentDeadline);
     const blockedOwn = isModerationBlockedForOwnExpense(canModerate, currentUserId, req);
     const showMod = showPendingApprovalModeration(req, canModerate, blockedOwn);
     const showOwnModHint = showOwnPendingModerationBlockedHint(req, canModerate, blockedOwn);
@@ -256,9 +246,6 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
       <div className="exp-table__td exp-table__td--expdate" role="cell">
         {fmtExpenseDateCell(req.expenseDate)}
       </div>
-      <div className="exp-table__td exp-table__td--paydue" role="cell">
-        {payDueLabel}
-      </div>
       <div className="exp-table__td exp-table__td--type" role="cell" title={typeCellTitle}>
         {typeCellPrimary}
         {typeCellSecondary ? (<span className="exp-table__partner-sub">{typeCellSecondary}</span>) : null}
@@ -269,6 +256,11 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
       <div className="exp-table__td exp-table__td--status" role="cell">
         <div className="exp-table__status-tags">
           <StatusBadge status={req.status}/>
+          {req.status === 'rejected' && req.rejectionReason ? (
+            <span className="exp-table__rejection-reason" title={req.rejectionReason}>
+              Причина: {req.rejectionReason}
+            </span>
+          ) : null}
           {req.expenseType === 'partner_expense' && !partnerScope && (<span className="exp-card__partner-pill exp-card__partner-pill--table" title="Расход партнёра · без согласования модератором">
               Расход партнёра
             </span>)}
@@ -509,9 +501,6 @@ function SkeletonTableBody({ rowCount = 10 }: {
             <div className="exp-table__td exp-table__td--expdate">
               <SkeletonCell w={54} h={12}/>
             </div>
-            <div className="exp-table__td exp-table__td--paydue">
-              <SkeletonCell w={54} h={12}/>
-            </div>
             <div className="exp-table__td exp-table__td--type">
               <SkeletonCell w="90%" h={12}/>
             </div>
@@ -730,7 +719,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [panelSubmitPending, setPanelSubmitPending] = useState(false);
     const [receiptUploadPending, setReceiptUploadPending] = useState(false);
     const panelFormActionRef = useRef<'idle' | 'save' | 'submit'>('idle');
-    const [emailModerationIntent, setEmailModerationIntent] = useState<'approve' | 'reject' | null>(null);
+    const [emailModerationIntent, setEmailModerationIntent] = useState<'approve' | 'reject' | 'pay' | null>(null);
     const openedExpensePathRef = useRef<string | null>(null);
     useEffect(() => {
         if (!isPanelOpen) {
@@ -862,7 +851,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             return;
         let cancelled = false;
         const intentRaw = searchParams.get('intent');
-        const intentParsed = intentRaw === 'approve' || intentRaw === 'reject' ? intentRaw : null;
+        const intentParsed = intentRaw === 'approve' || intentRaw === 'reject' || intentRaw === 'pay' ? intentRaw : null;
         const stripSearch = searchParams.toString().length > 0;
         (async () => {
             try {
@@ -870,7 +859,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 if (cancelled)
                     return;
                 openedExpensePathRef.current = pathExpenseId;
-                if (intentParsed && canModerate && req.status === 'pending_approval') {
+                const intentMatchesStatus = intentParsed === 'pay'
+                    ? req.status === 'approved' && req.isReimbursable
+                    : req.status === 'pending_approval';
+                if (intentParsed && canModerate && intentMatchesStatus) {
                     setEmailModerationIntent(intentParsed);
                 }
                 else {
@@ -1528,9 +1520,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                           </div>
                           <div className="exp-table__th exp-table__th--expdate" role="columnheader">
                             Дата расхода
-                          </div>
-                          <div className="exp-table__th exp-table__th--paydue" role="columnheader">
-                            Срок оплаты
                           </div>
                           <div className="exp-table__th exp-table__th--type" role="columnheader">
                             {isPartnerScope ? 'Категория' : 'Тип'}

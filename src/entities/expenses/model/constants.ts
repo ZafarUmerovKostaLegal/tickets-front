@@ -40,10 +40,9 @@ export const TYPE_META: Record<ExpenseType, {
 export const PAYMENT_META: Record<PaymentMethod, {
     label: string;
 }> = {
-    cash: { label: 'Наличные' },
-    card: { label: 'Банковская карта' },
-    transfer: { label: 'Банковский перевод' },
-    other_payment: { label: 'Другое' },
+    cash: { label: 'Наличные/Личная карта' },
+    transfer: { label: 'Перечисление' },
+    card: { label: 'Корпоративная карта офиса' },
 };
 export const REIMBURSABLE_META: Record<string, {
     label: string;
@@ -122,8 +121,7 @@ export const PAYMENT_METHODS: {
     value: PaymentMethod;
     label: string;
 }[] = [
-    { value: 'cash', label: 'Наличные' },
-    { value: 'card', label: 'Банковская карта' },
-    { value: 'transfer', label: 'Банковский перевод' },
-    { value: 'other_payment', label: 'Другое' },
+    { value: 'cash', label: PAYMENT_META.cash.label },
+    { value: 'transfer', label: PAYMENT_META.transfer.label },
+    { value: 'card', label: PAYMENT_META.card.label },
 ];

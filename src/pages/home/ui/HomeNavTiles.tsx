@@ -10,6 +10,7 @@ import {
 } from '@widgets/sidebar/model/appNavConfig';
 import { usePartnerForReviewBadge } from '@entities/time-tracking/lib/usePartnerForReviewBadge';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
+import { useExpensePaymentConfirmationBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
 import {
     getHubSectionForTile,
     HUB_SECTIONS,
@@ -138,6 +139,13 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
     const { badge: forReviewBadge, count: forReviewCount } = usePartnerForReviewBadge(trackForReviewBadge);
     const forReviewBadgeAria = forReviewCount > 0
         ? t('homeHub.forReviewPendingBadgeAria').replace('{count}', String(forReviewCount))
+        : undefined;
+    const showExpensesTile = defaultTiles.some((tile) => tile.id === 'expenses');
+    const { badge: expensePaymentBadge, count: expensePaymentCount } = useExpensePaymentConfirmationBadge(
+        !loading && showExpensesTile,
+    );
+    const expensePaymentBadgeAria = expensePaymentCount > 0
+        ? `Ожидают подтверждения оплаты: ${expensePaymentCount}`
         : undefined;
 
     const [orderedTiles, setOrderedTiles] = useState<HubNavTile[]>([]);
@@ -316,6 +324,8 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                                     ? chatUnreadBadge || undefined
                                                     : tile.id === 'timeTracking'
                                                         ? forReviewBadge || undefined
+                                                        : tile.id === 'expenses'
+                                                            ? expensePaymentBadge || undefined
                                                         : undefined
                                             }
                                             badgeAriaLabel={
@@ -323,6 +333,8 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                                     ? chatUnreadAria
                                                     : tile.id === 'timeTracking'
                                                         ? forReviewBadgeAria
+                                                        : tile.id === 'expenses'
+                                                            ? expensePaymentBadgeAria
                                                         : undefined
                                             }
                                         />
