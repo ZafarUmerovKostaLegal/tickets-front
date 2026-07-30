@@ -70,19 +70,61 @@ async function fetchCbuRowsFrom(url: string): Promise<CbuJsonRow[]> {
 }
 export async function fetchCbuParsedForDate(isoDate: string): Promise<CbuParsed> {
     const base = getCbuOrigin();
-    const datedUrl = `${base}${CBU_JSON_BASE_PATH}/all/${isoDate}/`;
-    const latestUrl = `${base}${CBU_JSON_BASE_PATH}/`;
-    try {
-        return parseCbuRows(await fetchCbuRowsFrom(datedUrl));
+    const anchor = isoDate.trim().slice(0, 10);
+    const urls: string[] = [];
+    const [y, m, d] = anchor.split('-').map(Number);
+    if (y && m && d) {
+        const start = new Date(y, m - 1, d);
+        for (let back = 0; back < 8; back++) {
+            const dt = new Date(start);
+            dt.setDate(start.getDate() - back);
+            const yy = dt.getFullYear();
+            const mm = String(dt.getMonth() + 1).padStart(2, '0');
+            const dd = String(dt.getDate()).padStart(2, '0');
+            urls.push(`${base}${CBU_JSON_BASE_PATH}/all/${yy}-${mm}-${dd}/`);
+        }
     }
-    catch (first) {
-        const msg1 = first instanceof Error ? first.message : String(first);
+    else {
+        urls.push(`${base}${CBU_JSON_BASE_PATH}/all/${anchor}/`);
+    }
+    urls.push(`${base}${CBU_JSON_BASE_PATH}/`);
+    const errors: string[] = [];
+    for (const url of urls) {
         try {
-            return parseCbuRows(await fetchCbuRowsFrom(latestUrl));
+            return parseCbuRows(await fetchCbuRowsFrom(url));
         }
-        catch (second) {
-            const msg2 = second instanceof Error ? second.message : String(second);
-            throw new Error(`ЦБ РУз: архив за ${isoDate} — ${msg1}; запрос ${latestUrl} — ${msg2}`);
+        catch (err) {
+            errors.push(err instanceof Error ? err.message : String(err));
         }
     }
+    throw new Error(`ЦБ РУз: не удалось получить курс на ${anchor}. ${errors.slice(0, 2).join('; ')}`);
+}
+
+/** Build FX pairs for invoice ensure (1 from = rate to) covering `forDate`. */
+export function cbuParsedToInvoiceFxRates(parsed: CbuParsed, forDate: string): Array<{
+    fromCurrency: string;
+    toCurrency: string;
+    rateDate: string;
+    rate: number;
+}> {
+    const rateDate = forDate.trim().slice(0, 10);
+    const out: Array<{ fromCurrency: string; toCurrency: string; rateDate: string; rate: number }> = [];
+    const uzsUsd = parsed.uzsPerUsd;
+    if (!(uzsUsd > 0) || !/^\d{4}-\d{2}-\d{2}$/.test(rateDate))
+        return out;
+    out.push({ fromCurrency: 'USD', toCurrency: 'UZS', rateDate, rate: uzsUsd });
+    out.push({ fromCurrency: 'UZS', toCurrency: 'USD', rateDate, rate: 1 / uzsUsd });
+    for (const [ccy, uzsPer] of parsed.uzsPerUnit.entries()) {
+        const c = String(ccy).trim().toUpperCase();
+        if (!c || c === 'UZS' || c === 'USD' || !(uzsPer > 0))
+            continue;
+        out.push({ fromCurrency: c, toCurrency: 'UZS', rateDate, rate: uzsPer });
+        out.push({ fromCurrency: 'UZS', toCurrency: c, rateDate, rate: 1 / uzsPer });
+        const ccyPerUsd = uzsUsd / uzsPer;
+        if (ccyPerUsd > 0) {
+            out.push({ fromCurrency: 'USD', toCurrency: c, rateDate, rate: ccyPerUsd });
+            out.push({ fromCurrency: c, toCurrency: 'USD', rateDate, rate: 1 / ccyPerUsd });
+        }
+    }
+    return out;
 }

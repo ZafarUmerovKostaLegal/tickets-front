@@ -362,6 +362,12 @@ export async function fetchUnbilledExpenses(params: {
 export type EnsureInvoiceFxRatesInput = {
     dates: string[];
     currency?: string;
+    rates?: Array<{
+        fromCurrency: string;
+        toCurrency: string;
+        rateDate: string;
+        rate: number;
+    }>;
 };
 
 export type EnsureInvoiceFxRatesResult = {
@@ -370,16 +376,33 @@ export type EnsureInvoiceFxRatesResult = {
     currency: string;
 };
 
-/** Seed time_tracking_fx_rates from CBU for the given dates (used before invoice create/preview). */
+/** Seed time_tracking_fx_rates from CBU (client-fetched rates preferred). */
 export async function ensureInvoiceFxRates(body: EnsureInvoiceFxRatesInput): Promise<EnsureInvoiceFxRatesResult> {
     const dates = [...new Set(
         (body.dates ?? [])
             .map((d) => String(d ?? '').trim().slice(0, 10))
             .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)),
     )];
-    if (dates.length === 0)
+    const rates = Array.isArray(body.rates) ? body.rates.filter((r) =>
+        r
+        && /^\d{4}-\d{2}-\d{2}$/.test(String(r.rateDate ?? '').slice(0, 10))
+        && Number.isFinite(Number(r.rate))
+        && Number(r.rate) > 0
+        && String(r.fromCurrency ?? '').trim()
+        && String(r.toCurrency ?? '').trim(),
+    ) : [];
+    if (dates.length === 0 && rates.length === 0)
         return { ok: true, dates: [], currency: (body.currency ?? 'USD').trim().toUpperCase() || 'USD' };
-    const payload: Record<string, unknown> = { dates };
+    const payload: Record<string, unknown> = {};
+    if (dates.length)
+        payload.dates = dates;
+    if (rates.length)
+        payload.rates = rates.map((r) => ({
+            fromCurrency: String(r.fromCurrency).trim().toUpperCase(),
+            toCurrency: String(r.toCurrency).trim().toUpperCase(),
+            rateDate: String(r.rateDate).trim().slice(0, 10),
+            rate: Number(r.rate),
+        }));
     const ccy = body.currency?.trim().toUpperCase();
     if (ccy)
         payload.currency = ccy;
@@ -399,8 +422,8 @@ export async function ensureInvoiceFxRates(body: EnsureInvoiceFxRatesInput): Pro
 }
 
 /**
- * Prefetch CBU FX into backend for invoice period + issue date + expense dates.
- * Soft-fails: invoice create will still try to seed server-side.
+ * Load CBU rates in the browser and upsert them into time_tracking_fx_rates
+ * before invoice preview/create. Throws if CBU or ensure API fails.
  */
 export async function ensureInvoiceFxRatesForBilling(opts: {
     dateFrom?: string | null;
@@ -409,21 +432,45 @@ export async function ensureInvoiceFxRatesForBilling(opts: {
     expenseDates?: readonly string[] | null;
     currency?: string | null;
 }): Promise<void> {
-    const dates = [
+    const { cbuParsedToInvoiceFxRates, fetchCbuParsedForDate } = await import('@entities/expenses/model/cbuRates');
+    const dates = [...new Set([
         opts.issueDate,
         opts.dateFrom,
         opts.dateTo,
         ...(opts.expenseDates ?? []),
-    ].filter((d): d is string => Boolean(d && String(d).trim()));
-    try {
-        await ensureInvoiceFxRates({
-            dates,
-            currency: opts.currency?.trim() || undefined,
-        });
+    ]
+        .map((d) => String(d ?? '').trim().slice(0, 10))
+        .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)))];
+    if (dates.length === 0)
+        return;
+
+    const rates: Array<{
+        fromCurrency: string;
+        toCurrency: string;
+        rateDate: string;
+        rate: number;
+    }> = [];
+    const errors: string[] = [];
+    for (const d of dates) {
+        try {
+            const parsed = await fetchCbuParsedForDate(d);
+            rates.push(...cbuParsedToInvoiceFxRates(parsed, d));
+        }
+        catch (e) {
+            errors.push(`${d}: ${e instanceof Error ? e.message : String(e)}`);
+        }
     }
-    catch {
-        // Backend create/preview also seeds CBU; ignore prefetch errors.
+    if (rates.length === 0) {
+        throw new Error(
+            errors[0]
+                ?? 'Не удалось получить курсы ЦБ РУз для конвертации счёта',
+        );
     }
+    await ensureInvoiceFxRates({
+        dates,
+        currency: opts.currency?.trim() || undefined,
+        rates,
+    });
 }
 
 export async function fetchPartnerInvoicePreview(params: {
