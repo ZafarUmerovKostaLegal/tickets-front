@@ -35,6 +35,7 @@ export interface ExpenseRequest {
     expenseSubtype: string | null;
     isReimbursable: boolean;
     paymentMethod: string | null;
+    reimbursementCardNumber?: string | null;
     departmentId: string | null;
     projectId: string | null;
     expenseCategoryId?: string | null;
@@ -74,6 +75,7 @@ export interface ExpenseFormValues {
     amountUzs: string;
     exchangeRate: string;
     paymentMethod: string;
+    reimbursementCardNumber: string;
     projectId: string;
     expenseCategoryId: string;
     vendor: string;
@@ -91,6 +93,8 @@ export interface ExpenseFormErrors {
     amountUzs?: string;
     exchangeRate?: string;
     foreignPerUsd?: string;
+    paymentMethod?: string;
+    reimbursementCardNumber?: string;
     projectId?: string;
     expenseCategoryId?: string;
     comment?: string;

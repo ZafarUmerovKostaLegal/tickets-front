@@ -108,7 +108,8 @@ export interface ExpenseCreateBody {
     expenseType: string;
     expenseSubtype?: string | null;
     isReimbursable: boolean;
-    paymentMethod?: string;
+    paymentMethod: string;
+    reimbursementCardNumber?: string;
     projectId?: string;
     expenseCategoryId?: string | null;
     vendor?: string;

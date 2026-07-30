@@ -1791,7 +1791,13 @@
 .exp__form-top,
 .exp__form-attach,
 .exp__form-billable,
+.exp__form-payment,
 .exp__form-amount-bottom { margin-bottom: 0.875rem; }
+
+.exp__form-payment {
+  display: grid;
+  gap: 0.5rem;
+}
 
 .exp__form-top {
   display: grid;

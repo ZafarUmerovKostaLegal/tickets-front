@@ -10,12 +10,17 @@ import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseStat
 import { EXPENSE_REGISTRY_STATUSES, EXPENSE_REGISTRY_STATUS_SET, STATUS_META, TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
 import { approveExpense, payExpense, closeExpense, deleteExpense, fetchExpenses, fetchExpenseById, createExpense, updateExpense, submitExpense, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
 import { computeAmountUzsForApi } from '@entities/expenses/model/expenseCurrency';
+import { reimbursementCardDigits } from '@entities/expenses/model/expensePaymentDetails';
 import {
     buildExpensesListParams,
     EXPENSES_LIST_PAGE_SIZE,
     type ExpensesUiFilterPeriod,
     type ExpensesUiSortBy,
 } from '@entities/expenses/model/expensesListParams';
+import {
+    loadExpensesSavedFilters,
+    saveExpensesSavedFilters,
+} from '@entities/expenses/model/expensesFilterStorage';
 import {
     defaultExpensesCustomRange,
     EXPENSES_PERIOD_LABELS,
@@ -103,7 +108,10 @@ function formValuesToApiBody(values: ExpenseFormValues) {
         expenseType: values.expenseType,
         expenseSubtype,
         isReimbursable: values.isReimbursable,
-        paymentMethod: values.paymentMethod || undefined,
+        paymentMethod: values.paymentMethod,
+        reimbursementCardNumber: values.paymentMethod === 'cash'
+            ? reimbursementCardDigits(values.reimbursementCardNumber)
+            : undefined,
         projectId: isPartner || !isClient ? undefined : values.projectId || undefined,
         expenseCategoryId: isPartner || !isClient || !values.expenseCategoryId?.trim()
             ? undefined
@@ -422,8 +430,10 @@ type FilterDropProps = {
     children: ReactNode;
 };
 function FilterDrop({ label, active, isOpen, onToggle, children }: FilterDropProps) {
-    const ref = useRef<HTMLDivElement>(null);
-    return (<div className={`exp-filter${active ? ' exp-filter--active' : ''}`} ref={ref}>
+    return (<div
+      className={`exp-filter${active ? ' exp-filter--active' : ''}`}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
       <button type="button" className="exp-filter__btn" onClick={onToggle}>
         <span className="exp-filter__btn-text">{label}</span>
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
@@ -530,7 +540,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         expenseId?: string;
     }>();
     const [searchParams] = useSearchParams();
-    const { user } = useCurrentUser();
+    const { user, loading: currentUserLoading } = useCurrentUser();
     const canModerate = canViewExpensesRequestsAndReport(user?.role);
     const [isLoading, setIsLoading] = useState(true);
     const [listFetchPending, setListFetchPending] = useState(false);
@@ -545,6 +555,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const isModerationQueue = variant === 'moderationQueue';
     const isPartnerScope = variant === 'partner';
     const scopeMode = isPartnerScope ? 'partner' as const : (isModerationQueue ? undefined : 'company' as const);
+    const filterStorageUserId = user?.id ?? null;
+    const filterOwnerKey = !currentUserLoading && filterStorageUserId != null
+        ? `${filterStorageUserId}:${variant}`
+        : null;
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [filterStatus, setFilterStatus] = useState<ExpenseStatus | ''>('');
@@ -570,6 +584,56 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [listTotal, setListTotal] = useState<number | null>(null);
     const [listTotals, setListTotals] = useState<{ uzs: number; usd: number } | null>(null);
     const [listPage, setListPage] = useState(1);
+    const [hydratedFilterOwnerKey, setHydratedFilterOwnerKey] = useState<string | null>(null);
+    useEffect(() => {
+        if (!filterOwnerKey || filterStorageUserId == null)
+            return;
+        const restored = loadExpensesSavedFilters(filterStorageUserId, variant);
+        setSearch(restored.search);
+        setDebouncedSearch(restored.search.trim());
+        setFilterStatus(restored.status);
+        setFilterType(restored.type);
+        setFilterSubtype(restored.subtype);
+        setFilterPartnerUserId(restored.partnerUserId);
+        setFilterReimb(restored.reimbursable);
+        setFilterPeriod(restored.period);
+        setFilterDateFrom(restored.dateFrom);
+        setFilterDateTo(restored.dateTo);
+        setFilterSort(restored.sortBy);
+        setListPage(1);
+        setHydratedFilterOwnerKey(filterOwnerKey);
+    }, [filterOwnerKey, filterStorageUserId, variant]);
+    useEffect(() => {
+        if (!filterOwnerKey || hydratedFilterOwnerKey !== filterOwnerKey || filterStorageUserId == null)
+            return;
+        saveExpensesSavedFilters(filterStorageUserId, variant, {
+            search,
+            status: filterStatus,
+            type: filterType,
+            subtype: filterSubtype,
+            partnerUserId: filterPartnerUserId,
+            reimbursable: filterReimb,
+            period: filterPeriod,
+            dateFrom: filterDateFrom,
+            dateTo: filterDateTo,
+            sortBy: filterSort,
+        });
+    }, [
+        filterOwnerKey,
+        hydratedFilterOwnerKey,
+        filterStorageUserId,
+        variant,
+        search,
+        filterStatus,
+        filterType,
+        filterSubtype,
+        filterPartnerUserId,
+        filterReimb,
+        filterPeriod,
+        filterDateFrom,
+        filterDateTo,
+        filterSort,
+    ]);
     const filterDepsKey = useMemo(() => [
         debouncedSearch,
         filterStatus,
@@ -631,6 +695,8 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             window.scrollTo({ top: 0, left: 0, behavior });
     }, [listPage]);
     useEffect(() => {
+        if (!filterOwnerKey || hydratedFilterOwnerKey !== filterOwnerKey)
+            return;
         let cancelled = false;
         const controller = new AbortController();
         setLoadError(null);
@@ -657,6 +723,12 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             .then(data => {
             if (cancelled)
                 return;
+            const nextTotal = typeof data.total === 'number' ? data.total : 0;
+            const lastAvailablePage = Math.max(1, Math.ceil(nextTotal / EXPENSES_LIST_PAGE_SIZE));
+            if (listPage > lastAvailablePage) {
+                setListPage(lastAvailablePage);
+                return;
+            }
             isFirstListFetchRef.current = false;
             setRequests(Array.isArray(data.items) ? data.items : []);
             setListTotal(typeof data.total === 'number' ? data.total : null);
@@ -702,6 +774,8 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         filterDateFrom,
         filterDateTo,
         filterSort,
+        filterOwnerKey,
+        hydratedFilterOwnerKey,
     ]);
     useEffect(() => {
         if (isModerationQueue)
@@ -830,6 +904,20 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         setExpenseTableMenuForId(null);
         const auto = resolveExpensePanelMode(req.status) === 'edit' ? 'edit' : 'view';
         const mode = opts?.mode ?? auto;
+        if (mode === 'edit' && req.reimbursementCardNumber === undefined) {
+            fetchExpenseById(req.id)
+                .then(full => {
+                    setEditingReq(full);
+                    setPanelMode(mode);
+                    setIsPanelOpen(true);
+                })
+                .catch(() => {
+                    setEditingReq(req);
+                    setPanelMode(mode);
+                    setIsPanelOpen(true);
+                });
+            return;
+        }
         setEditingReq(req);
         setPanelMode(mode);
         setIsPanelOpen(true);
@@ -899,6 +987,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             return prev.map(x => (x.id === r.id ? r : x));
         });
         setEditingReq(prev => (prev?.id === r.id ? r : prev));
+        setLoadKey(k => k + 1);
     }, [isModerationQueue]);
     const handleExpenseUpdated = useCallback((r: ExpenseRequest) => {
         applyModerationToList(r);
@@ -933,6 +1022,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         setEditingReq(prev => (prev?.id === id ? null : prev));
         setIsPanelOpen(false);
         setExpenseTableMenuForId(null);
+        setLoadKey(k => k + 1);
     }, []);
     const runTableConfirm = useCallback(async () => {
         if (!tableConfirm || tableModerationBusyId)
@@ -1486,12 +1576,12 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                   </span>)}
                   <span className="exp-stats-tile__unit">{ruExpenseRequestUnit(listTotal ?? filtered.length)}</span>
                 </div>
-                <div className="exp-stats-tile" title="Суммы по заявкам на текущей странице списка">
+                <div className="exp-stats-tile" title="Сумма по всем заявкам, соответствующим фильтрам">
                   <span className="exp-stats-tile__label">Сумма, UZS</span>
                   <span className="exp-stats-tile__value exp-stats-tile__value--uzs">{fmtUzs(filteredTotals.uzs)}</span>
                   <span className="exp-stats-tile__unit">UZS</span>
                 </div>
-                <div className="exp-stats-tile" title="Эквивалент по заявкам на текущей странице списка">
+                <div className="exp-stats-tile" title="Эквивалент по всем заявкам, соответствующим фильтрам">
                   <span className="exp-stats-tile__label">Эквивалент</span>
                   <span className="exp-stats-tile__value exp-stats-tile__value--usd">
                     {filteredTotals.usd > 0

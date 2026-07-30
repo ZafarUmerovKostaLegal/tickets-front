@@ -4,8 +4,10 @@ import { useCurrentUser } from '@shared/hooks';
 import { listProjectExpenseCategories, type ProjectExpenseCategoryRow, } from '@entities/time-tracking';
 import { createExpense, fetchExpenses, submitExpense, uploadAttachment, } from '@entities/expenses/model/expensesApi';
 import type { ExpenseRequest, ListParams } from '@entities/expenses/model/types';
+import type { PaymentMethod } from '@entities/expenses/model/types';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { computeAmountUzsForApi } from '@entities/expenses/model/expenseCurrency';
+import { formatReimbursementCardNumber, isValidReimbursementCardNumber, reimbursementCardDigits } from '@entities/expenses/model/expensePaymentDetails';
 import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import { EXPENSE_STATUS_META, EXPENSE_CATEGORY_META } from '@entities/time-tracking/model/constants';
 import type { ExpenseCategory, ExpenseStatus, ExpenseRow } from '@entities/time-tracking/model/types';
@@ -264,6 +266,8 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
     const [formNotes, setFormNotes] = useState('');
     const [formAmount, setFormAmount] = useState('');
     const [formBillable, setFormBillable] = useState(true);
+    const [formPaymentMethod, setFormPaymentMethod] = useState<PaymentMethod | ''>('');
+    const [formReimbursementCardNumber, setFormReimbursementCardNumber] = useState('');
     const [formFile, setFormFile] = useState<File | null>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const [expenseCategories, setExpenseCategories] = useState<ProjectExpenseCategoryRow[]>([]);
@@ -452,6 +456,8 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         setFormNotes('');
         setFormAmount('');
         setFormBillable(true);
+        setFormPaymentMethod('');
+        setFormReimbursementCardNumber('');
         setFormFile(null);
         setShowForm(true);
     }
@@ -483,6 +489,14 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             setFormErr(t('timeTrackingPage.expenses.errors.amountRequired'));
             return;
         }
+        if (!formPaymentMethod) {
+            setFormErr(t('timeTrackingPage.expenses.errors.paymentMethodRequired'));
+            return;
+        }
+        if (formPaymentMethod === 'cash' && !isValidReimbursementCardNumber(formReimbursementCardNumber)) {
+            setFormErr(t('timeTrackingPage.expenses.errors.reimbursementCardNumberRequired'));
+            return;
+        }
         if (formBillable && expenseCategories.length > 0 && !formCat.trim()) {
             setFormErr(t('timeTrackingPage.expenses.errors.categoryRequired'));
             return;
@@ -512,11 +526,14 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             const body = {
                 description,
                 expenseDate: formDate,
-                paymentDeadline: null as string | null,
                 amountUzs: amountUzsForApi,
                 exchangeRate: formCbu.uzsPerUsd,
                 expenseType,
                 isReimbursable: formBillable,
+                paymentMethod: formPaymentMethod,
+                reimbursementCardNumber: formPaymentMethod === 'cash'
+                    ? reimbursementCardDigits(formReimbursementCardNumber)
+                    : undefined,
                 projectId: formProject.trim(),
                 expenseCategoryId: formBillable && formCat.trim() ? formCat.trim() : undefined,
                 comment: formNotes.trim() || undefined,
@@ -834,6 +851,50 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
                 <input type="checkbox" checked={formBillable} disabled={formBusy} onChange={(e) => setFormBillable(e.target.checked)} tabIndex={-1}/>
                 {t('timeTrackingPage.expenses.form.billableCheckbox')}
               </label>
+
+              <div className="exp__form-payment">
+                <label className="exp__form-label">
+                  {t('timeTrackingPage.expenses.form.paymentMethodLabel')} *
+                </label>
+                <div className="exp__form-select-wrap">
+                  <select
+                    className="exp__form-select"
+                    value={formPaymentMethod}
+                    disabled={formBusy}
+                    required
+                    onChange={(event) => {
+                        const method = event.target.value as PaymentMethod | '';
+                        setFormPaymentMethod(method);
+                        if (method !== 'cash')
+                            setFormReimbursementCardNumber('');
+                    }}
+                  >
+                    <option value="">{t('timeTrackingPage.expenses.form.paymentMethodPlaceholder')}</option>
+                    <option value="cash">{t('timeTrackingPage.expenses.form.paymentCash')}</option>
+                    <option value="transfer">{t('timeTrackingPage.expenses.form.paymentTransfer')}</option>
+                    <option value="card">{t('timeTrackingPage.expenses.form.paymentCorporateCard')}</option>
+                  </select>
+                  <span className="exp__form-select-icon"><IcoChevron /></span>
+                </div>
+                {formPaymentMethod === 'cash' && (<>
+                    <label className="exp__form-label">
+                      {t('timeTrackingPage.expenses.form.reimbursementCardNumberLabel')} *
+                    </label>
+                    <input
+                      type="text"
+                      className="exp__form-input"
+                      inputMode="numeric"
+                      autoComplete="cc-number"
+                      maxLength={19}
+                      required
+                      placeholder="0000 0000 0000 0000"
+                      value={formReimbursementCardNumber}
+                      disabled={formBusy}
+                      onChange={(event) => setFormReimbursementCardNumber(formatReimbursementCardNumber(event.target.value))}
+                    />
+                    <p className="exp__form-hint">{t('timeTrackingPage.expenses.form.reimbursementCardNumberHint')}</p>
+                  </>)}
+              </div>
 
               <div className="exp__form-amount-bottom">
                 <label className="exp__form-label" htmlFor={expenseFormAmountFieldId}>{t('timeTrackingPage.expenses.form.amountUzsLabel')}</label>

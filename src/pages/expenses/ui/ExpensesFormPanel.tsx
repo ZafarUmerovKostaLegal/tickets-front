@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { type ExpenseRequest, type ExpenseFormValues, type ExpenseFormErrors, type ExpenseFilesByKind, type AttachmentItem, EXPENSE_ATTACHMENT_MAX_BYTES, } from '@entities/expenses/model/types';
 import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, STATUS_META, } from '@entities/expenses/model/constants';
 import { computeAmountUzsForApi, computeUsdEquivalent, needsForeignUsdRate } from '@entities/expenses/model/expenseCurrency';
+import { formatReimbursementCardNumber, isValidReimbursementCardNumber } from '@entities/expenses/model/expensePaymentDetails';
 import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import type { ExpenseAmountCurrency } from '@entities/expenses/model/types';
 import { approveExpense, rejectExpense, reviseExpense, deleteAttachment, deleteExpense, fetchExpenseAttachmentBlob, openExpenseAttachmentInNewTab, payExpense, closeExpense, withdrawExpense, fetchApprovalRoutingMeta, type ApprovalRoutingMeta, } from '@entities/expenses/model/expensesApi';
@@ -212,6 +213,7 @@ const EMPTY: ExpenseFormValues = {
     amountUzs: '',
     exchangeRate: '',
     paymentMethod: '',
+    reimbursementCardNumber: '',
     projectId: '',
     expenseCategoryId: '',
     vendor: '',
@@ -262,6 +264,17 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
         const fx = parseFloat(v.foreignPerUsd);
         if (!v.foreignPerUsd || isNaN(fx) || fx <= 0) {
             e.foreignPerUsd = 'Укажите, сколько единиц валюты за 1 USD (например, 90 для рубля)';
+        }
+    }
+    if (!v.paymentMethod.trim()) {
+        e.paymentMethod = 'Выберите способ оплаты';
+    }
+    if (v.paymentMethod === 'cash') {
+        if (!v.reimbursementCardNumber.trim()) {
+            e.reimbursementCardNumber = 'Укажите номер карты для возмещения';
+        }
+        else if (!isValidReimbursementCardNumber(v.reimbursementCardNumber)) {
+            e.reimbursementCardNumber = 'Номер карты должен содержать 16 цифр';
         }
     }
     if (opts?.forSubmit && v.isReimbursable === true && v.expenseType !== 'partner_expense') {
@@ -451,6 +464,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             amountUzs: String(editingRequest.amountUzs),
             exchangeRate: String(editingRequest.exchangeRate),
             paymentMethod: editingRequest.paymentMethod ?? '',
+            reimbursementCardNumber: formatReimbursementCardNumber(editingRequest.reimbursementCardNumber),
             projectId: editingRequest.projectId ?? '',
             expenseCategoryId: editingRequest.expenseCategoryId?.trim() ?? '',
             vendor: editingRequest.vendor ?? '',
@@ -666,6 +680,9 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 next.vendor = '';
                 next.comment = '';
             }
+            if (field === 'paymentMethod' && val !== 'cash') {
+                next.reimbursementCardNumber = '';
+            }
             return next;
         });
         setErrors(prev => ({
@@ -673,6 +690,9 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             [field]: undefined,
             ...(field === 'expenseType'
                 ? { expenseSubtype: undefined, partnerUserId: undefined, projectId: undefined, expenseCategoryId: undefined, comment: undefined, vendor: undefined }
+                : {}),
+            ...(field === 'paymentMethod'
+                ? { reimbursementCardNumber: undefined }
                 : {}),
         }));
     }, []);
@@ -1599,8 +1619,8 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
               <p className="exp-form-hint">{equivHint}</p>
             </div>
 
-            <div className="exp-form-field">
-              <label className="exp-form-label">Способ оплаты</label>
+            <div className={`exp-form-field${errors.paymentMethod ? ' exp-form-field--err' : ''}`}>
+              <label className="exp-form-label">Способ оплаты <span className="exp-form-req">*</span></label>
               {isView ? (
                 <p className="exp-form-static">
                   {paymentMethodItems.find(m => m.value === values.paymentMethod)?.label || values.paymentMethod || '—'}
@@ -1608,7 +1628,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
               ) : (
                 <ExpenseSearchableSelect
                   portalDropdown
-                  placeholder="Не указан"
+                  placeholder="Выберите способ оплаты"
                   emptyListText="Нет вариантов"
                   noMatchText="Не найдено"
                   value={values.paymentMethod}
@@ -1617,10 +1637,37 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                   getOptionLabel={m => m.label}
                   getSearchText={m => m.search}
                   onSelect={m => set('paymentMethod', m.value)}
+                  aria-invalid={Boolean(errors.paymentMethod)}
                   aria-label="Способ оплаты"
                 />
               )}
+              {errors.paymentMethod && <p className="exp-form-err-msg" data-err>{errors.paymentMethod}</p>}
             </div>
+
+            {values.paymentMethod === 'cash' && (<div className={`exp-form-field${errors.reimbursementCardNumber ? ' exp-form-field--err' : ''}`}>
+              <label className="exp-form-label">
+                Номер карты для возмещения <span className="exp-form-req">*</span>
+              </label>
+              {isView ? (<p className="exp-form-static">
+                  {formatReimbursementCardNumber(values.reimbursementCardNumber) || '—'}
+                </p>) : (<input
+                  type="text"
+                  className="exp-form-input"
+                  inputMode="numeric"
+                  autoComplete="cc-number"
+                  maxLength={19}
+                  placeholder="0000 0000 0000 0000"
+                  value={values.reimbursementCardNumber}
+                  onChange={event => set('reimbursementCardNumber', formatReimbursementCardNumber(event.target.value))}
+                  aria-invalid={Boolean(errors.reimbursementCardNumber)}
+                />)}
+              {!isView && (<p className="exp-form-hint">
+                  Карта, на которую нужно перечислить возмещение.
+                </p>)}
+              {errors.reimbursementCardNumber && (<p className="exp-form-err-msg" data-err>
+                  {errors.reimbursementCardNumber}
+                </p>)}
+            </div>)}
 
             <div className="exp-form-field">
               <div className="exp-form-switch-row">

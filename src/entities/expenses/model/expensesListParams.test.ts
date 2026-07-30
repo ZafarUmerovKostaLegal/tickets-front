@@ -62,6 +62,17 @@ describe('buildExpensesListParams', () => {
         expect(p.expenseType).toBeUndefined();
     });
 
+    it('sends the selected expense type together with company scope', () => {
+        const p = buildExpensesListParams({
+            ...base,
+            filterPeriod: 'all',
+            filterType: 'transport',
+            scopeMode: 'company',
+        });
+        expect(p.scopeMode).toBe('company');
+        expect(p.expenseType).toBe('transport');
+    });
+
     it('applies partner scope with subtype and partnerUserId', () => {
         const p = buildExpensesListParams({
             ...base,
