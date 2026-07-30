@@ -122,7 +122,7 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
             // Align with confirmed report total (pre-tax). Tax/discount can be edited on the draft.
             taxPercent: 0,
             tax2Percent: 0,
-            discountPercent: 0,
+            discountAmount: 0,
             partnerBillingPeriodFrom: dateFrom,
             partnerBillingPeriodTo: dateTo,
             partnerConfirmationRequestId: String(row.id ?? '').trim() || undefined,

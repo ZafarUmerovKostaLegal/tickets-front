@@ -87,7 +87,7 @@ export function InvoiceDetailPage() {
   const [draftDueDate, setDraftDueDate] = useState('');
   const [draftTaxPct, setDraftTaxPct] = useState('');
   const [draftTax2Pct, setDraftTax2Pct] = useState('');
-  const [draftDiscPct, setDraftDiscPct] = useState('');
+  const [draftDiscAmt, setDraftDiscAmt] = useState('');
 
   const clientNameById = useMemo(() => {
     const m = new Map<string, string>();
@@ -144,7 +144,9 @@ export function InvoiceDetailPage() {
     setDraftDueDate((detail.dueDate ?? '').slice(0, 10));
     setDraftTaxPct(detail.taxPercent != null ? String(detail.taxPercent) : '');
     setDraftTax2Pct(detail.tax2Percent != null ? String(detail.tax2Percent) : '');
-    setDraftDiscPct(detail.discountPercent != null ? String(detail.discountPercent) : '');
+    setDraftDiscAmt(detail.discountAmount != null && detail.discountAmount > 0
+      ? String(detail.discountAmount)
+      : '');
   }, [detail]);
 
   useEffect(() => () => {
@@ -482,13 +484,22 @@ export function InvoiceDetailPage() {
     };
     const t1 = parseOptionalPercentField(draftTaxPct);
     const t2 = parseOptionalPercentField(draftTax2Pct);
-    const d = parseOptionalPercentField(draftDiscPct);
+    const discRaw = draftDiscAmt.trim();
+    if (discRaw) {
+      const d = parseMoneyRu(discRaw);
+      if (!Number.isFinite(d) || d < 0) {
+        await showAlert({ message: t('timeTrackingPage.invoices.errors.invalidAmount') });
+        return;
+      }
+      body.discountAmount = d;
+    }
+    else {
+      body.discountAmount = 0;
+    }
     if (t1 !== undefined)
       body.taxPercent = t1;
     if (t2 !== undefined)
       body.tax2Percent = t2;
-    if (d !== undefined)
-      body.discountPercent = d;
     setActionBusy(true);
     try {
       await patchInvoice(detail.id, body);
@@ -500,7 +511,7 @@ export function InvoiceDetailPage() {
     finally {
       setActionBusy(false);
     }
-  }, [detail, draftIssueDate, draftDueDate, draftTaxPct, draftTax2Pct, draftDiscPct, refreshDetail, showAlert, t]);
+  }, [detail, draftIssueDate, draftDueDate, draftTaxPct, draftTax2Pct, draftDiscAmt, refreshDetail, showAlert, t]);
 
   const title = detailLoading
     ? t('timeTrackingPage.invoices.detail.loading')
@@ -789,7 +800,7 @@ export function InvoiceDetailPage() {
                         </div>
                         <div className="tt-inv-dialog__field">
                           <label className="tt-inv-dialog__label" htmlFor="inv-disc">{t('timeTrackingPage.invoices.detail.discount')}</label>
-                          <input id="inv-disc" type="text" inputMode="decimal" className="tt-inv-dialog__control" value={draftDiscPct} onChange={(e) => setDraftDiscPct(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.optionalPlaceholder')} />
+                          <input id="inv-disc" type="text" inputMode="decimal" className="tt-inv-dialog__control" value={draftDiscAmt} onChange={(e) => setDraftDiscAmt(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.discountPlaceholder')} />
                         </div>
                       </div>
                       <div className="tt-inv-draft__notes">

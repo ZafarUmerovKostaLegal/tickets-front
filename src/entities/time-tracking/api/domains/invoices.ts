@@ -187,6 +187,7 @@ export type InvoiceCreateInput = {
     taxPercent?: number | null;
     tax2Percent?: number | null;
     discountPercent?: number | null;
+    discountAmount?: number | null;
     clientNote?: string | null;
     internalNote?: string | null;
     timeEntryIds?: string[];
@@ -205,6 +206,7 @@ export type InvoicePatchInput = {
     taxPercent?: number | null;
     tax2Percent?: number | null;
     discountPercent?: number | null;
+    discountAmount?: number | null;
     projectId?: string | null;
     lines?: Record<string, unknown>[] | null;
 };
