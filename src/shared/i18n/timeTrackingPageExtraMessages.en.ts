@@ -1544,7 +1544,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             invoiceNumberHint: 'Leave empty for automatic numbering',
             unbilledSectionTitle: 'Unbilled lines',
             unbilledSectionDesc: 'Select a project and period, then click “Load” to fetch unbilled time and expenses for the invoice.',
-            unbilledReimbursableNote: 'Expenses in this list are only client-reimbursable (`is_reimbursable`). Non-reimbursable requests are not included.',
+            unbilledReimbursableNote: 'Expenses in this list are only client-reimbursable and already paid (`paid`). Approved but unpaid requests are not included.',
             fromLabel: 'From',
             toLabel: 'To',
             openReportsLink: 'Open Reports',

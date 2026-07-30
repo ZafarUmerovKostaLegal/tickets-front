@@ -1542,7 +1542,7 @@ export const timeTrackingPageExtraMessages = {
             invoiceNumberHint: 'Оставьте пустым для автоматической нумерации',
             unbilledSectionTitle: 'Невыставленные строки',
             unbilledSectionDesc: 'Выберите проект, период и нажмите «Загрузить», чтобы отобрать невыставленное время и расходы для включения в счёт.',
-            unbilledReimbursableNote: 'Расходы в этом списке — только возмещаемые к клиенту (`is_reimbursable`). Невозмещаемые заявки сюда не попадают.',
+            unbilledReimbursableNote: 'Расходы в этом списке — только возмещаемые и уже оплаченные (`paid`). Согласованные, но ещё не оплаченные заявки сюда не попадают.',
             fromLabel: 'С',
             toLabel: 'По',
             openReportsLink: 'Открыть раздел «Отчёты»',
