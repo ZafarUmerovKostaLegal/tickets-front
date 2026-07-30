@@ -580,9 +580,10 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
     useEffect(() => {
         const allRows = [...rows, ...archiveRows];
         const pending = allRows.filter((row) => {
-            if (!row.snapshotId.trim())
+            const sid = row.snapshotId.trim();
+            if (!sid)
                 return false;
-            if (snapshotMetaAttemptedRef.current.has(row.projectId))
+            if (snapshotMetaAttemptedRef.current.has(sid))
                 return false;
             const meta = resolvePartnerReportDisplayMeta(row, projectRows, clientNamesById, extraRowMetaByProjectId, clientMetaByProjectId);
             return !meta.projectName || !meta.clientName;
@@ -593,11 +594,12 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         void (async () => {
             const updates = new Map<string, PartnerReportRowDisplayMeta>();
             await Promise.all(pending.map(async (row) => {
-                snapshotMetaAttemptedRef.current.add(row.projectId);
+                const sid = row.snapshotId.trim();
+                snapshotMetaAttemptedRef.current.add(sid);
                 if (updates.has(row.projectId))
                     return;
                 try {
-                    const snapshot = await getReportSnapshot(row.snapshotId);
+                    const snapshot = await getReportSnapshot(sid);
                     updates.set(row.projectId, buildPartnerReportDisplayMetaFromSnapshot(snapshot, row));
                 }
                 catch {

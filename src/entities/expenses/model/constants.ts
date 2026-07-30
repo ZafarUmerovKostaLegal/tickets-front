@@ -1,25 +1,32 @@
 import type { ExpenseAmountCurrency, ExpenseStatus, ExpenseType, PartnerExpenseCategory, PaymentMethod, } from './types';
+
+/**
+ * User-facing statuses in registry filters / reports.
+ * Workflow statuses (draft, pending_approval) stay for create/moderation, not in this list.
+ */
 export const EXPENSE_REGISTRY_STATUSES: ExpenseStatus[] = [
-    'draft',
-    'pending_approval',
-    'revision_required',
     'approved',
-    'rejected',
+    'revision_required',
     'paid',
-    'closed',
-    'not_reimbursable',
-    'withdrawn',
+    'rejected',
 ];
 export const EXPENSE_REGISTRY_STATUS_SET = new Set<ExpenseStatus>(EXPENSE_REGISTRY_STATUSES);
+
+/** Create / submit / moderation queue — not shown in registry status filter. */
+export const EXPENSE_WORKFLOW_STATUSES: ExpenseStatus[] = [
+    'draft',
+    'pending_approval',
+];
+
 export const STATUS_META: Record<ExpenseStatus, {
     label: string;
 }> = {
     draft: { label: 'Черновик' },
     pending_approval: { label: 'На согласовании' },
-    revision_required: { label: 'На доработке' },
+    revision_required: { label: 'На доработку' },
     approved: { label: 'Одобрено' },
-    rejected: { label: 'Отклонено' },
-    paid: { label: 'Выплачено автору' },
+    rejected: { label: 'Отказано' },
+    paid: { label: 'Оплачено' },
     closed: { label: 'Закрыто' },
     not_reimbursable: { label: 'Невозмещаемый' },
     withdrawn: { label: 'Отозвана' },

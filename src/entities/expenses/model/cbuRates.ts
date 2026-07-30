@@ -1,3 +1,5 @@
+import { apiFetch, throwIfNotOk } from '@shared/api/client';
+
 export const CBU_JSON_BASE_PATH = '/ru/arkhiv-kursov-valyut/json';
 export interface CbuJsonRow {
     id: number;
@@ -11,12 +13,15 @@ export interface CbuParsed {
     uzsPerUsd: number;
     uzsPerUnit: Map<string, number>;
 }
+
+/** Dev-only direct/proxy origin; production always goes through gateway (no browser CORS to cbu.uz). */
 function getCbuOrigin(): string {
     const v = import.meta.env.VITE_CBU_ORIGIN as string | undefined;
     if (v?.trim())
         return v.replace(/\/$/, '');
     return import.meta.env.DEV ? '/cbu-json' : 'https://cbu.uz';
 }
+
 function parseNum(s: string): number {
     const n = parseFloat(String(s).replace(',', '.'));
     return Number.isFinite(n) ? n : NaN;
@@ -56,6 +61,7 @@ export function foreignUnitsPerUsd(parsed: CbuParsed, ccy: string): number | und
         return undefined;
     return parsed.uzsPerUsd / uzsX;
 }
+
 async function fetchCbuRowsFrom(url: string): Promise<CbuJsonRow[]> {
     const res = await fetch(url, {
         headers: { Accept: 'application/json' },
@@ -68,14 +74,30 @@ async function fetchCbuRowsFrom(url: string): Promise<CbuJsonRow[]> {
     }
     return rows;
 }
-export async function fetchCbuParsedForDate(isoDate: string): Promise<CbuParsed> {
+
+const cbuCache = new Map<string, Promise<CbuParsed>>();
+
+/** Prefer gateway proxy (same-origin) so prod browsers don't hit cbu.uz CORS / 404 spam. */
+async function fetchCbuViaGateway(isoDate: string): Promise<CbuParsed> {
+    const res = await apiFetch(
+        `/api/v1/cbu-rates?date=${encodeURIComponent(isoDate)}`,
+        { getReuseWindowMs: 60_000 },
+    );
+    await throwIfNotOk(res);
+    const raw = await res.json() as { rows?: CbuJsonRow[] } | CbuJsonRow[];
+    const rows = Array.isArray(raw) ? raw : (raw.rows ?? []);
+    return parseCbuRows(rows);
+}
+
+async function fetchCbuDirectWithFallback(isoDate: string): Promise<CbuParsed> {
     const base = getCbuOrigin();
     const anchor = isoDate.trim().slice(0, 10);
     const urls: string[] = [];
     const [y, m, d] = anchor.split('-').map(Number);
+    // At most exact day + 2 previous + latest — avoid 8× console noise.
     if (y && m && d) {
         const start = new Date(y, m - 1, d);
-        for (let back = 0; back < 8; back++) {
+        for (let back = 0; back < 3; back++) {
             const dt = new Date(start);
             dt.setDate(start.getDate() - back);
             const yy = dt.getFullYear();
@@ -98,6 +120,32 @@ export async function fetchCbuParsedForDate(isoDate: string): Promise<CbuParsed>
         }
     }
     throw new Error(`ЦБ РУз: не удалось получить курс на ${anchor}. ${errors.slice(0, 2).join('; ')}`);
+}
+
+export async function fetchCbuParsedForDate(isoDate: string): Promise<CbuParsed> {
+    const anchor = isoDate.trim().slice(0, 10);
+    const hit = cbuCache.get(anchor);
+    if (hit)
+        return hit;
+    const pending = (async () => {
+        if (!import.meta.env.DEV) {
+            try {
+                return await fetchCbuViaGateway(anchor);
+            }
+            catch {
+                // Gateway not deployed yet — fall back carefully (may CORS in browser).
+            }
+        }
+        return fetchCbuDirectWithFallback(anchor);
+    })();
+    cbuCache.set(anchor, pending);
+    try {
+        return await pending;
+    }
+    catch (e) {
+        cbuCache.delete(anchor);
+        throw e;
+    }
 }
 
 /** Build FX pairs for invoice ensure (1 from = rate to) covering `forDate`. */

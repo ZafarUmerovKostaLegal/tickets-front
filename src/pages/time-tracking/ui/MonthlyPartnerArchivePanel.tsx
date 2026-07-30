@@ -211,9 +211,10 @@ export function MonthlyPartnerArchivePanel({ embedded = false }: {
     useEffect(() => {
         let cancelled = false;
         const pending = rows.filter((row) => {
-            if (!row.snapshotId.trim())
+            const sid = row.snapshotId.trim();
+            if (!sid)
                 return false;
-            if (snapshotMetaAttemptedRef.current.has(row.projectId))
+            if (snapshotMetaAttemptedRef.current.has(sid))
                 return false;
             const meta = resolvePartnerReportDisplayMeta(row, projectRows, clientNamesById, extraRowMetaByProjectId, clientMetaByProjectId);
             return !meta.projectName || !meta.clientName;
@@ -223,9 +224,10 @@ export function MonthlyPartnerArchivePanel({ embedded = false }: {
         void (async () => {
             const updates = new Map<string, PartnerReportRowDisplayMeta>();
             for (const row of pending.slice(0, 12)) {
-                snapshotMetaAttemptedRef.current.add(row.projectId);
+                const sid = row.snapshotId.trim();
+                snapshotMetaAttemptedRef.current.add(sid);
                 try {
-                    const snapshot = await getReportSnapshot(row.snapshotId);
+                    const snapshot = await getReportSnapshot(sid);
                     if (cancelled)
                         return;
                     updates.set(row.projectId, buildPartnerReportDisplayMetaFromSnapshot(snapshot, row));

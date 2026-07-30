@@ -58,9 +58,10 @@ export async function hydratePartnerConfirmationCommentsSummaries(
         return next;
 
     let cursor = 0;
+    let stopHydration = false;
     const workers = Array.from({ length: Math.min(concurrency, indexes.length) }, async () => {
         while (cursor < indexes.length) {
-            if (options?.signal?.aborted)
+            if (options?.signal?.aborted || stopHydration)
                 return;
             const current = indexes[cursor++];
             if (!current)
@@ -74,7 +75,18 @@ export async function hydratePartnerConfirmationCommentsSummaries(
                     summarizePartnerConfirmationComments(comments),
                 );
             }
-            catch {
+            catch (err) {
+                // Mark as hydrated (0 comments) so remounts don't re-spam 404/CORS in the console.
+                next[current.index] = applyPartnerConfirmationCommentsSummary(
+                    current.row,
+                    { commentsCount: 0, lastComment: null },
+                );
+                const status = typeof err === 'object' && err && 'status' in err
+                    ? Number((err as { status?: number }).status)
+                    : NaN;
+                if (status === 404 || status === 501 || status === 502) {
+                    stopHydration = true;
+                }
             }
         }
     });

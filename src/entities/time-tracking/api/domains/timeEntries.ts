@@ -102,11 +102,6 @@ export async function listTimeEntries(authUserId: number, from: string, to: stri
     const mapRows = (raw: TimeEntryRow[]) => raw.map(normalizeTimeEntryRow);
     if (primary.ok)
         return mapRows((await primary.json()) as TimeEntryRow[]);
-    if (primary.status === 404) {
-        const alias = await apiFetch(`/api/v1/users/${authUserId}/time-entries?${qs}`);
-        await throwIfNotOk(alias);
-        return mapRows((await alias.json()) as TimeEntryRow[]);
-    }
     await throwIfNotOk(primary);
     return mapRows((await primary.json()) as TimeEntryRow[]);
 }
@@ -175,14 +170,10 @@ export async function fetchTimeEntry(authUserId: number, entryId: string): Promi
     const uid = String(entryId ?? '').trim();
     if (!uid)
         return null;
-    let res = await apiFetch(`/api/v1/time-tracking/users/${authUserId}/time-entries/${encodeURIComponent(uid)}`, {
+    const res = await apiFetch(`/api/v1/time-tracking/users/${authUserId}/time-entries/${encodeURIComponent(uid)}`, {
         method: 'GET',
     });
-    if (res.status === 404) {
-        res = await apiFetch(`/api/v1/users/${authUserId}/time-entries/${encodeURIComponent(uid)}`, {
-            method: 'GET',
-        });
-    }
+    // Do not probe legacy `/api/v1/users/...` — that doubles console 404 noise on prod.
     if (res.status === 404)
         return null;
     await throwIfNotOk(res);

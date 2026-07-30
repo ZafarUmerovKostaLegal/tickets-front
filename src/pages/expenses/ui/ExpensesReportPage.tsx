@@ -7,7 +7,7 @@ import { ExpensesShell } from './ExpensesShell';
 import { fetchAllExpenses } from '@entities/expenses/lib/fetchAllExpenses';
 import { applyFilters, DEFAULT_REPORT_CONFIG, exportExpensesCustomTableToExcel, exportExpensesToExcel, type ReportConfig, } from '@entities/expenses/lib/exportExpenses';
 import type { ExpenseRequest, ExpenseStatus, ExpenseType, PaymentMethod } from '@entities/expenses/model/types';
-import { EXPENSE_TYPES, COMPANY_EXPENSE_TYPES, PAYMENT_METHODS, STATUS_META, TYPE_META, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
+import { EXPENSE_REGISTRY_STATUSES, EXPENSE_TYPES, COMPANY_EXPENSE_TYPES, PAYMENT_METHODS, STATUS_META, TYPE_META, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { EXPENSE_REPORT_COLUMNS, getColumnDef, getDefaultVisibleColumnIds, normalizeVisibleColumnIds, type ExpenseReportColumnId, } from '@entities/expenses/model/expensesReportColumns';
 import './ExpensesPage.css';
@@ -51,7 +51,7 @@ function formatUzsCompact(n: number): string {
     return n.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
 }
 const PIE_COLORS = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#94a3b8'];
-const STATUS_OPTIONS = (Object.keys(STATUS_META) as ExpenseStatus[]).map(s => ({
+const STATUS_OPTIONS = EXPENSE_REGISTRY_STATUSES.map(s => ({
     value: s,
     label: STATUS_META[s].label,
 }));
