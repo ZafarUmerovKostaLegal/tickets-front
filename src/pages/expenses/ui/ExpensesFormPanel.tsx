@@ -421,7 +421,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             return;
         setCbuParsed(null);
         setCbuError(null);
-        setCbuLoading(false);
+        // Do not touch cbuLoading here — the CBU fetch effect owns it (avoids stuck «Загрузка…»).
         setValues({
             ...EMPTY,
             expenseDate: todayIsoLocal(),
@@ -490,11 +490,16 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setFileSizeHint(null);
         setErrors({});
     }, [isOpen, mode, editingRequest]);
+    const partnerExpenseDateKey = allowPartnerBackdate
+        ? values.expenseDate.trim().slice(0, 10)
+        : '';
     useEffect(() => {
-        if (!isOpen || mode !== 'create')
+        if (!isOpen || mode !== 'create') {
+            setCbuLoading(false);
             return;
-        const iso = allowPartnerBackdate && valuesRef.current.expenseDate.trim()
-            ? valuesRef.current.expenseDate.trim().slice(0, 10)
+        }
+        const iso = allowPartnerBackdate && partnerExpenseDateKey
+            ? partnerExpenseDateKey
             : todayIsoLocal();
         let cancelled = false;
         setCbuLoading(true);
@@ -516,6 +521,8 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 const nextDate = allowPartnerBackdate && prev.expenseDate.trim()
                     ? prev.expenseDate.trim().slice(0, 10)
                     : iso;
+                if (prev.expenseDate === nextDate && prev.exchangeRate === er && prev.foreignPerUsd === fr)
+                    return prev;
                 return { ...prev, expenseDate: nextDate, exchangeRate: er, foreignPerUsd: fr };
             });
         })
@@ -526,8 +533,10 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             setCbuLoading(false);
             setCbuError(err instanceof Error ? err.message : 'Не удалось загрузить курс ЦБ');
         });
-        return () => { cancelled = true; };
-    }, [isOpen, mode, allowPartnerBackdate, values.expenseDate]);
+        return () => {
+            cancelled = true;
+        };
+    }, [isOpen, mode, allowPartnerBackdate, partnerExpenseDateKey]);
     useEffect(() => {
         if (!isOpen || values.expenseType !== 'partner_expense') {
             setPartnerOptions([]);

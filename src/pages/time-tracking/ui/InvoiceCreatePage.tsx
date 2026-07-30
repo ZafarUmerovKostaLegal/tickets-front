@@ -46,7 +46,7 @@ import {
 import {
   assertNoApprovedUnpaidProjectExpenses,
   formatUnpaidExpenseListLines,
-  ProjectUnpaidExpensesError,
+  isProjectUnpaidExpensesError,
 } from '../lib/projectUnpaidExpenses';
 import './TimeTrackingPage.css';
 import './TimesheetPanel.css';
@@ -252,7 +252,7 @@ export function InvoiceCreatePage() {
         await assertNoApprovedUnpaidProjectExpenses(createProjectId);
       }
       catch (e) {
-        if (e instanceof ProjectUnpaidExpensesError) {
+        if (isProjectUnpaidExpensesError(e)) {
           const msg = unpaidExpensesAlertMessage(e.expenses);
           setUnbilledTime([]);
           setUnbilledExp([]);
@@ -383,7 +383,7 @@ export function InvoiceCreatePage() {
         await assertNoApprovedUnpaidProjectExpenses(billProjectId);
       }
       catch (e) {
-        if (e instanceof ProjectUnpaidExpensesError) {
+        if (isProjectUnpaidExpensesError(e)) {
           await showAlert({ message: unpaidExpensesAlertMessage(e.expenses) });
           return;
         }
@@ -442,7 +442,7 @@ export function InvoiceCreatePage() {
       await assertNoApprovedUnpaidProjectExpenses(billProjectId);
     }
     catch (e) {
-      if (e instanceof ProjectUnpaidExpensesError) {
+      if (isProjectUnpaidExpensesError(e)) {
         const msg = unpaidExpensesAlertMessage(e.expenses);
         setUnpaidExpensesBlockReason(msg);
         await showAlert({ message: msg });

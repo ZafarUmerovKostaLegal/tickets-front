@@ -1,7 +1,17 @@
 import { fetchExpenses } from '@entities/expenses/model/expensesApi';
 import type { ExpenseRequest, ListParams } from '@entities/expenses/model/types';
+import type { RequestInitAuth } from '@shared/api';
+
 const PAGE = 200;
-export async function fetchAllExpenses(base: Omit<ListParams, 'skip' | 'limit'>, signal?: AbortSignal): Promise<ExpenseRequest[]> {
+
+export async function fetchAllExpenses(
+    base: Omit<ListParams, 'skip' | 'limit'>,
+    initOrSignal?: RequestInitAuth | AbortSignal,
+): Promise<ExpenseRequest[]> {
+    const init: RequestInitAuth | undefined =
+        initOrSignal instanceof AbortSignal
+            ? { signal: initOrSignal }
+            : initOrSignal;
     const out: ExpenseRequest[] = [];
     let skip = 0;
     for (;;) {
@@ -11,7 +21,7 @@ export async function fetchAllExpenses(base: Omit<ListParams, 'skip' | 'limit'>,
             limit: PAGE,
             sortBy: base.sortBy ?? 'expenseDate',
             sortOrder: base.sortOrder ?? 'desc',
-        }, signal ? { signal } : undefined);
+        }, init);
         out.push(...data.items);
         if (data.items.length < PAGE)
             break;

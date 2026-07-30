@@ -39,7 +39,7 @@ import {
 } from '@pages/time-tracking/lib/partnerConfirmedInvoice';
 import {
     formatUnpaidExpenseListLines,
-    ProjectUnpaidExpensesError,
+    isProjectUnpaidExpensesError,
 } from '@pages/time-tracking/lib/projectUnpaidExpenses';
 import { openConfirmedPartnerReportPreview } from '@pages/time-tracking/lib/partnerReportPreviewNav';
 import { exportPartnerConfirmedReportExcel } from '@pages/time-tracking/lib/exportPartnerConfirmedReportExcel';
@@ -721,12 +721,17 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             openInvoiceForRow(created.id);
         }
         catch (e) {
-            if (e instanceof ProjectUnpaidExpensesError) {
+            if (isProjectUnpaidExpensesError(e)) {
                 await showAlert({
                     message: t('timeTrackingPage.reports.partnerConfirmed.invoiceUnpaidExpenses')
                         .replace('{count}', String(e.expenses.length))
                         .replace('{list}', formatUnpaidExpenseListLines(e.expenses)),
                 });
+                return;
+            }
+            const unpaidMsg = e instanceof Error ? e.message : '';
+            if (/неоплаченн|unpaid|PROJECT_UNPAID_EXPENSES/i.test(unpaidMsg)) {
+                await showAlert({ message: unpaidMsg });
                 return;
             }
             if (e instanceof PartnerConfirmedInvoiceNoLinesError) {

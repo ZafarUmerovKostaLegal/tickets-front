@@ -1,6 +1,8 @@
 import { apiFetch } from '@shared/api/client';
 
 export const CBU_JSON_BASE_PATH = '/ru/arkhiv-kursov-valyut/json';
+const CBU_FETCH_TIMEOUT_MS = 12_000;
+
 export interface CbuJsonRow {
     id: number;
     Ccy: string;
@@ -62,10 +64,25 @@ export function foreignUnitsPerUsd(parsed: CbuParsed, ccy: string): number | und
     return parsed.uzsPerUsd / uzsX;
 }
 
-async function fetchCbuRowsFrom(url: string): Promise<CbuJsonRow[]> {
-    const res = await fetch(url, {
-        headers: { Accept: 'application/json' },
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+            reject(new Error(`${label}: превышено время ожидания (${Math.round(ms / 1000)} с)`));
+        }, ms);
     });
+    return Promise.race([promise, timeout]).finally(() => {
+        if (timer != null)
+            clearTimeout(timer);
+    });
+}
+
+async function fetchCbuRowsFrom(url: string): Promise<CbuJsonRow[]> {
+    const res = await withTimeout(
+        fetch(url, { headers: { Accept: 'application/json' } }),
+        CBU_FETCH_TIMEOUT_MS,
+        'ЦБ РУз',
+    );
     if (!res.ok)
         throw new Error(`HTTP ${res.status}`);
     const rows = (await res.json()) as CbuJsonRow[];
@@ -75,13 +92,19 @@ async function fetchCbuRowsFrom(url: string): Promise<CbuJsonRow[]> {
     return rows;
 }
 
-const cbuCache = new Map<string, Promise<CbuParsed>>();
+/** Resolved ok results only — never cache a hung/rejected in-flight promise. */
+const cbuOkCache = new Map<string, CbuParsed>();
+const cbuInflight = new Map<string, Promise<CbuParsed>>();
 
 /** Prefer gateway proxy (same-origin) so prod browsers don't hit cbu.uz CORS / 404 spam. */
 async function fetchCbuViaGateway(isoDate: string): Promise<CbuParsed> {
-    const res = await apiFetch(
-        `/api/v1/cbu-rates?date=${encodeURIComponent(isoDate)}`,
-        { getReuseWindowMs: 60_000 },
+    const res = await withTimeout(
+        apiFetch(
+            `/api/v1/cbu-rates?date=${encodeURIComponent(isoDate)}`,
+            { getReuseWindowMs: 0 },
+        ),
+        CBU_FETCH_TIMEOUT_MS,
+        'Курс ЦБ (шлюз)',
     );
     if (!res.ok) {
         let msg = `HTTP ${res.status}`;
@@ -132,30 +155,36 @@ async function fetchCbuDirectWithFallback(isoDate: string): Promise<CbuParsed> {
     throw new Error(`ЦБ РУз: не удалось получить курс на ${anchor}. ${errors.slice(0, 2).join('; ')}`);
 }
 
+async function loadCbuParsed(anchor: string): Promise<CbuParsed> {
+    if (!import.meta.env.DEV) {
+        try {
+            return await fetchCbuViaGateway(anchor);
+        }
+        catch {
+            // Gateway missing/slow — fall back (may CORS in browser).
+        }
+    }
+    return fetchCbuDirectWithFallback(anchor);
+}
+
 export async function fetchCbuParsedForDate(isoDate: string): Promise<CbuParsed> {
     const anchor = isoDate.trim().slice(0, 10);
-    const hit = cbuCache.get(anchor);
-    if (hit)
-        return hit;
-    const pending = (async () => {
-        if (!import.meta.env.DEV) {
-            try {
-                return await fetchCbuViaGateway(anchor);
-            }
-            catch {
-                // Gateway not deployed yet — fall back carefully (may CORS in browser).
-            }
-        }
-        return fetchCbuDirectWithFallback(anchor);
-    })();
-    cbuCache.set(anchor, pending);
-    try {
-        return await pending;
-    }
-    catch (e) {
-        cbuCache.delete(anchor);
-        throw e;
-    }
+    const cached = cbuOkCache.get(anchor);
+    if (cached)
+        return cached;
+    const inflight = cbuInflight.get(anchor);
+    if (inflight)
+        return inflight;
+    const pending = loadCbuParsed(anchor)
+        .then((parsed) => {
+            cbuOkCache.set(anchor, parsed);
+            return parsed;
+        })
+        .finally(() => {
+            cbuInflight.delete(anchor);
+        });
+    cbuInflight.set(anchor, pending);
+    return pending;
 }
 
 /** Build FX pairs for invoice ensure (1 from = rate to) covering `forDate`. */
