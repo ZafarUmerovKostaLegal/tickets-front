@@ -423,7 +423,8 @@ export async function ensureInvoiceFxRates(body: EnsureInvoiceFxRatesInput): Pro
 
 /**
  * Load CBU rates in the browser and upsert them into time_tracking_fx_rates
- * before invoice preview/create. Throws if CBU or ensure API fails.
+ * before invoice preview/create. Uses expense/work dates — not invoice issue date.
+ * Throws if CBU or ensure API fails.
  */
 export async function ensureInvoiceFxRatesForBilling(opts: {
     dateFrom?: string | null;
@@ -433,8 +434,9 @@ export async function ensureInvoiceFxRatesForBilling(opts: {
     currency?: string | null;
 }): Promise<void> {
     const { cbuParsedToInvoiceFxRates, fetchCbuParsedForDate } = await import('@entities/expenses/model/cbuRates');
+    // Prefer explicit expense dates; fall back to billing period bounds.
+    // Do not use issueDate — FX for expenses must follow дата расхода.
     const dates = [...new Set([
-        opts.issueDate,
         opts.dateFrom,
         opts.dateTo,
         ...(opts.expenseDates ?? []),

@@ -414,7 +414,6 @@ export function InvoiceCreatePage() {
       await ensureInvoiceFxRatesForBilling({
         dateFrom: unbilledFrom,
         dateTo: unbilledTo,
-        issueDate,
         expenseDates,
         currency,
       });

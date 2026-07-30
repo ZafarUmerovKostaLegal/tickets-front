@@ -86,11 +86,10 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
         throw new Error('INVALID_PARTNER_CONFIRMED_ROW');
 
     const issueDate = todayIso();
-    // Prefetch CBU FX into time_tracking_fx_rates (expense + issue dates).
+    // Prefetch CBU FX by billing period (expense/work dates) — never by invoice issue date alone.
     await ensureInvoiceFxRatesForBilling({
         dateFrom,
         dateTo,
-        issueDate,
         currency: args.currency?.trim() || undefined,
     });
     // The backend builds partner-confirmed invoice lines strictly from the confirmed report
