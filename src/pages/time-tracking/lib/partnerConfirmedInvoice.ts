@@ -5,6 +5,7 @@ import {
     type InvoiceDto,
     type PartnerReportConfirmationRequest,
 } from '@entities/time-tracking';
+import { assertNoApprovedUnpaidProjectExpenses } from './projectUnpaidExpenses';
 
 function todayIso(): string {
     const d = new Date();
@@ -84,6 +85,8 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
     const dateTo = sliceIsoDate(row.dateTo);
     if (!clientId.trim() || !projectId || !dateFrom || !dateTo)
         throw new Error('INVALID_PARTNER_CONFIRMED_ROW');
+
+    await assertNoApprovedUnpaidProjectExpenses(projectId);
 
     const issueDate = todayIso();
     // Prefetch CBU FX by billing period (expense/work dates) — never by invoice issue date alone.

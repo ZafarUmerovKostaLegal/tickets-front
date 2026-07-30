@@ -9,7 +9,7 @@ import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
 import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseStatus, ExpenseType, ExpenseCreatedBy, PartnerExpenseCategory, } from '@entities/expenses/model/types';
 import { EXPENSE_REGISTRY_STATUSES, EXPENSE_REGISTRY_STATUS_SET, STATUS_META, TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
 import { approveExpense, payExpense, closeExpense, deleteExpense, fetchExpenses, fetchExpenseById, createExpense, updateExpense, submitExpense, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
-import { computeAmountUzsForApi } from '@entities/expenses/model/expenseCurrency';
+import { computeAmountUzsForApi, parseExpenseMoney } from '@entities/expenses/model/expenseCurrency';
 import { reimbursementCardDigits } from '@entities/expenses/model/expensePaymentDetails';
 import {
     buildExpensesListParams,
@@ -104,7 +104,7 @@ function formValuesToApiBody(values: ExpenseFormValues) {
         description: values.description,
         expenseDate: values.expenseDate,
         amountUzs: computeAmountUzsForApi(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd),
-        exchangeRate: parseFloat(values.exchangeRate) || 0,
+        exchangeRate: parseExpenseMoney(values.exchangeRate) || 0,
         expenseType: values.expenseType,
         expenseSubtype,
         isReimbursable: values.isReimbursable,
@@ -724,7 +724,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             pageSize: EXPENSES_LIST_PAGE_SIZE,
             scopeMode,
         });
-        fetchExpenses(params, { signal: controller.signal })
+        fetchExpenses(params, { signal: controller.signal, getReuseWindowMs: 0 })
             .then(data => {
                 if (cancelled)
                     return;
@@ -982,10 +982,8 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     }, []);
     const applyModerationToList = useCallback((r: ExpenseRequest) => {
         setRequests(prev => {
+            // Moderation queue only shows pending_approval — drop row after decision.
             if (isModerationQueue && r.status !== 'pending_approval') {
-                return prev.filter(x => x.id !== r.id);
-            }
-            if (!isModerationQueue && !EXPENSE_REGISTRY_STATUS_SET.has(r.status)) {
                 return prev.filter(x => x.id !== r.id);
             }
             return prev.map(x => (x.id === r.id ? r : x));
@@ -1305,10 +1303,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             setReceiptUploadPending(false);
         }
     }, [editingReq]);
-    const filtered = useMemo(() => requestsForUi.filter(r => {
-        const st = r.status as ExpenseStatus;
-        return EXPENSE_REGISTRY_STATUS_SET.has(st);
-    }), [requestsForUi]);
+    // Show all rows returned by the API. Registry status set is only for the
+    // status filter dropdown — do not hide draft / pending_approval here
+    // (that caused «1 заявка» in stats with an empty table after create).
+    const filtered = requestsForUi;
     const filteredTotals = useMemo(() => {
         if (listTotals)
             return listTotals;

@@ -37,6 +37,10 @@ import {
     PartnerConfirmedInvoiceMismatchError,
     PartnerConfirmedInvoiceNoLinesError,
 } from '@pages/time-tracking/lib/partnerConfirmedInvoice';
+import {
+    formatUnpaidExpenseListLines,
+    ProjectUnpaidExpensesError,
+} from '@pages/time-tracking/lib/projectUnpaidExpenses';
 import { openConfirmedPartnerReportPreview } from '@pages/time-tracking/lib/partnerReportPreviewNav';
 import { exportPartnerConfirmedReportExcel } from '@pages/time-tracking/lib/exportPartnerConfirmedReportExcel';
 import {
@@ -717,6 +721,14 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             openInvoiceForRow(created.id);
         }
         catch (e) {
+            if (e instanceof ProjectUnpaidExpensesError) {
+                await showAlert({
+                    message: t('timeTrackingPage.reports.partnerConfirmed.invoiceUnpaidExpenses')
+                        .replace('{count}', String(e.expenses.length))
+                        .replace('{list}', formatUnpaidExpenseListLines(e.expenses)),
+                });
+                return;
+            }
             if (e instanceof PartnerConfirmedInvoiceNoLinesError) {
                 await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.invoiceNoLines') });
                 return;

@@ -43,6 +43,11 @@ import {
   collectConfirmedSnapshotTimeEntryIds,
   intersectPreviewTimeEntryIdsWithSnapshot,
 } from '../lib/confirmedSnapshotInvoiceLines';
+import {
+  assertNoApprovedUnpaidProjectExpenses,
+  formatUnpaidExpenseListLines,
+  ProjectUnpaidExpensesError,
+} from '../lib/projectUnpaidExpenses';
 import './TimeTrackingPage.css';
 import './TimesheetPanel.css';
 import './InvoicePage.css';
@@ -85,6 +90,7 @@ export function InvoiceCreatePage() {
   const timeSelectAllRef = useRef<HTMLInputElement>(null);
   const expSelectAllRef = useRef<HTMLInputElement>(null);
   const [unbilledPartnerBlockReason, setUnbilledPartnerBlockReason] = useState<string | null>(null);
+  const [unpaidExpensesBlockReason, setUnpaidExpensesBlockReason] = useState<string | null>(null);
   const [unbilledLoading, setUnbilledLoading] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
 
@@ -227,6 +233,12 @@ export function InvoiceCreatePage() {
       && String(r.status ?? '').trim().toLowerCase() === 'fully_confirmed');
   }, []);
 
+  const unpaidExpensesAlertMessage = useCallback((expenses: Parameters<typeof formatUnpaidExpenseListLines>[0]) => {
+    return t('timeTrackingPage.invoices.errors.unpaidExpensesBlock')
+      .replace('{count}', String(expenses.length))
+      .replace('{list}', formatUnpaidExpenseListLines(expenses));
+  }, [t]);
+
   const loadUnbilled = useCallback(async (opts?: { preserveSelections?: boolean }) => {
     if (!createProjectId) {
       await showAlert({ message: t('timeTrackingPage.invoices.errors.selectProjectUnbilled') });
@@ -235,6 +247,21 @@ export function InvoiceCreatePage() {
     setUnbilledLoading(true);
     try {
       setUnbilledPartnerBlockReason(null);
+      setUnpaidExpensesBlockReason(null);
+      try {
+        await assertNoApprovedUnpaidProjectExpenses(createProjectId);
+      }
+      catch (e) {
+        if (e instanceof ProjectUnpaidExpensesError) {
+          const msg = unpaidExpensesAlertMessage(e.expenses);
+          setUnbilledTime([]);
+          setUnbilledExp([]);
+          setUnpaidExpensesBlockReason(msg);
+          await showAlert({ message: msg });
+          return;
+        }
+        throw e;
+      }
       const allowed = await requireFullyConfirmedPeriod(createProjectId, unbilledFrom, unbilledTo);
       if (!allowed) {
         const msg = t('timeTrackingPage.invoices.errors.confirmedOnlyRequired');
@@ -304,7 +331,7 @@ export function InvoiceCreatePage() {
     finally {
       setUnbilledLoading(false);
     }
-  }, [createProjectId, unbilledFrom, unbilledTo, confirmedReportsForCreate, requireFullyConfirmedPeriod, showAlert, t]);
+  }, [createProjectId, unbilledFrom, unbilledTo, confirmedReportsForCreate, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, showAlert, t]);
 
   useEffect(() => {
     if (resumeAppliedRef.current)
@@ -349,7 +376,23 @@ export function InvoiceCreatePage() {
     void loadUnbilled({ preserveSelections: true });
   }, [createProjectId, projects, loadUnbilled]);
 
-  const openInvoicePreview = useCallback(() => {
+  const openInvoicePreview = useCallback(async () => {
+    const billProjectId = createProjectId.trim();
+    if (billProjectId) {
+      try {
+        await assertNoApprovedUnpaidProjectExpenses(billProjectId);
+      }
+      catch (e) {
+        if (e instanceof ProjectUnpaidExpensesError) {
+          await showAlert({ message: unpaidExpensesAlertMessage(e.expenses) });
+          return;
+        }
+        await showAlert({
+          message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.previewFailed'),
+        });
+        return;
+      }
+    }
     const clientRow = clients.find((c) => c.id === createClientId);
     const clientLabel = clientRow?.name?.trim();
     const proj = projects.find((p) => p.id === createProjectId);
@@ -377,7 +420,7 @@ export function InvoiceCreatePage() {
       },
     });
     navigate(routes.timeTrackingInvoicePreview);
-  }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, createInvoiceNumber, selTime, selExp, projects, navigate]);
+  }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, createInvoiceNumber, selTime, selExp, projects, navigate, unpaidExpensesAlertMessage, showAlert, t]);
 
   const handleCreate = useCallback(async () => {
     if (!createClientId) {
@@ -392,6 +435,21 @@ export function InvoiceCreatePage() {
     if (!billProjectId) {
       await showAlert({
         message: t('timeTrackingPage.invoices.errors.selectProject'),
+      });
+      return;
+    }
+    try {
+      await assertNoApprovedUnpaidProjectExpenses(billProjectId);
+    }
+    catch (e) {
+      if (e instanceof ProjectUnpaidExpensesError) {
+        const msg = unpaidExpensesAlertMessage(e.expenses);
+        setUnpaidExpensesBlockReason(msg);
+        await showAlert({ message: msg });
+        return;
+      }
+      await showAlert({
+        message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.createFailed'),
       });
       return;
     }
@@ -444,7 +502,7 @@ export function InvoiceCreatePage() {
     finally {
       setCreateBusy(false);
     }
-  }, [createClientId, createProjectId, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledFrom, unbilledTo, unbilledExp, requireFullyConfirmedPeriod, clients, navigate, showAlert, t]);
+  }, [createClientId, createProjectId, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledFrom, unbilledTo, unbilledExp, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, clients, navigate, showAlert, t]);
 
   const toInvoices = () => {
     void navigate(getInvoicesListUrl());
@@ -602,9 +660,20 @@ export function InvoiceCreatePage() {
               </div>
             </section>
 
+            {unpaidExpensesBlockReason ? (
+              <section className="tt-inv-page__section tt-inv-dialog__partner-gate" role="alert">
+                <p className="tt-inv-page__section-desc" style={{ marginBottom: '0.75rem', whiteSpace: 'pre-wrap' }}>{unpaidExpensesBlockReason}</p>
+                <p style={{ margin: 0 }} className="tt-inv-page__section-desc">
+                  <Link className="tt-inv-dialog__partner-gate-link" to={routes.expenses}>
+                    {t('timeTrackingPage.invoices.createDialog.openExpensesLink')}
+                  </Link>
+                </p>
+              </section>
+            ) : null}
+
             {unbilledPartnerBlockReason ? (
               <section className="tt-inv-page__section tt-inv-dialog__partner-gate" role="alert">
-                <p className="tt-inv-page__section-desc" style={{ marginBottom: '0.75rem' }}>{unbilledPartnerBlockReason}</p>
+                <p className="tt-inv-page__section-desc" style={{ marginBottom: '0.75rem', whiteSpace: 'pre-wrap' }}>{unbilledPartnerBlockReason}</p>
                 <p style={{ margin: 0 }} className="tt-inv-page__section-desc">
                   <Link className="tt-inv-dialog__partner-gate-link" to={`${routes.timeTracking}?tab=reports`}>{t('timeTrackingPage.invoices.createDialog.openReportsLink')}</Link>
                   {createProjectId.trim() !== '' ? (

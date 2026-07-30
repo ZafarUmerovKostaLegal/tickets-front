@@ -516,7 +516,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         setFormBusy(true);
         try {
             const amountNorm = formAmount.replace(/\s/g, '').replace(',', '.').trim();
-            const amountUzsForApi = Math.round(computeAmountUzsForApi('UZS', amountNorm, String(formCbu.uzsPerUsd), ''));
+            const amountUzsForApi = computeAmountUzsForApi('UZS', amountNorm, String(formCbu.uzsPerUsd), '');
             if (!amountUzsForApi || amountUzsForApi <= 0) {
                 setFormErr(t('timeTrackingPage.expenses.errors.uzsAmountInvalid'));
                 return;

@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo, type Dispatch, type 
 import { createPortal } from 'react-dom';
 import { type ExpenseRequest, type ExpenseFormValues, type ExpenseFormErrors, type ExpenseFilesByKind, type AttachmentItem, EXPENSE_ATTACHMENT_MAX_BYTES, } from '@entities/expenses/model/types';
 import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, STATUS_META, } from '@entities/expenses/model/constants';
-import { computeAmountUzsForApi, computeUsdEquivalent, needsForeignUsdRate } from '@entities/expenses/model/expenseCurrency';
+import { computeAmountUzsForApi, computeUsdEquivalent, formatExchangeRate, needsForeignUsdRate, parseExpenseMoney, roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import { formatReimbursementCardNumber, isValidReimbursementCardNumber } from '@entities/expenses/model/expensePaymentDetails';
 import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import type { ExpenseAmountCurrency } from '@entities/expenses/model/types';
@@ -247,7 +247,7 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
     if (v.expenseType === 'partner_expense' && !v.expenseSubtype.trim()) {
         e.expenseSubtype = 'Выберите категорию расхода партнёра';
     }
-    const amt = parseFloat(v.amountUzs);
+    const amt = parseExpenseMoney(v.amountUzs);
     if (!v.amountUzs || isNaN(amt) || amt <= 0)
         e.amountUzs = 'Укажите сумму больше 0';
     if (opts?.mode === 'create') {
@@ -256,12 +256,12 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
         }
     }
     else {
-        const rate = parseFloat(v.exchangeRate);
+        const rate = parseExpenseMoney(v.exchangeRate);
         if (!v.exchangeRate || isNaN(rate) || rate <= 0)
             e.exchangeRate = 'Укажите курс больше 0';
     }
     if (needsForeignUsdRate(v.amountCurrency)) {
-        const fx = parseFloat(v.foreignPerUsd);
+        const fx = parseExpenseMoney(v.foreignPerUsd);
         if (!v.foreignPerUsd || isNaN(fx) || fx <= 0) {
             e.foreignPerUsd = 'Укажите, сколько единиц валюты за 1 USD (например, 90 для рубля)';
         }
@@ -330,6 +330,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
     const [values, setValues] = useState<ExpenseFormValues>(EMPTY);
     const valuesRef = useRef(values);
     valuesRef.current = values;
+    const uzsAmountAnchorRef = useRef<number | null>(null);
     const [errors, setErrors] = useState<ExpenseFormErrors>({});
     const [partnerOptions, setPartnerOptions] = useState<UserPublic[]>([]);
     const [partnersLoad, setPartnersLoad] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
@@ -374,11 +375,18 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
     const [expenseCategoriesError, setExpenseCategoriesError] = useState<string | null>(null);
     const [approvalRoutingMeta, setApprovalRoutingMeta] = useState<ApprovalRoutingMeta | null>(null);
     const equivUsd = useMemo(() => computeUsdEquivalent(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd), [values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd]);
-    const equiv = equivUsd != null ? asExpenseNumber(equivUsd).toFixed(2) : '';
+    const equiv = equivUsd != null ? roundMoney2(asExpenseNumber(equivUsd)).toFixed(2) : '';
     const amountUzsForRouting = useMemo(
         () => computeAmountUzsForApi(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd),
         [values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd],
     );
+    const amountUzsSaveHint = useMemo(() => {
+        if (isView || values.amountCurrency === 'UZS')
+            return '';
+        if (!(amountUzsForRouting > 0))
+            return '';
+        return `К сохранению: ${amountUzsForRouting.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} UZS`;
+    }, [isView, values.amountCurrency, amountUzsForRouting]);
     const viewEquivFromServer = useMemo(() => {
         const n = asExpenseNumber(editingRequest?.equivalentAmount);
         return n > 0 ? n.toFixed(2) : '';
@@ -421,6 +429,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 ? { expenseType: 'partner_expense', isReimbursable: false }
                 : {}),
         });
+        uzsAmountAnchorRef.current = null;
         setFilesPaymentDoc([]);
         setFilesReceipt([]);
         setFileSizeHint(null);
@@ -472,6 +481,10 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             comment: editingRequest.comment ?? '',
             partnerUserId: editingRequest.partnerUserId != null ? String(editingRequest.partnerUserId) : '',
         });
+        {
+            const n = asExpenseNumber(editingRequest.amountUzs);
+            uzsAmountAnchorRef.current = n > 0 ? roundMoney2(n) : null;
+        }
         setFilesPaymentDoc([]);
         setFilesReceipt([]);
         setFileSizeHint(null);
@@ -493,7 +506,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             setCbuParsed(parsed);
             setCbuLoading(false);
             setValues((prev) => {
-                const er = parsed.uzsPerUsd.toFixed(2);
+                const er = formatExchangeRate(parsed.uzsPerUsd);
                 let fr = '';
                 if (needsForeignUsdRate(prev.amountCurrency)) {
                     const fp = foreignUnitsPerUsd(parsed, prev.amountCurrency);
@@ -740,14 +753,71 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             return [...rows];
         return rows.filter(r => r.client.id === expenseProjectClientId);
     }, [expenseProjectClientId]);
+    const setAmount = useCallback((raw: string) => {
+        set('amountUzs', raw);
+        if (valuesRef.current.amountCurrency === 'UZS') {
+            const n = parseExpenseMoney(raw);
+            uzsAmountAnchorRef.current = Number.isFinite(n) && n > 0 ? roundMoney2(n) : null;
+        }
+        else {
+            uzsAmountAnchorRef.current = null;
+        }
+    }, [set]);
     const setCurrency = useCallback((c: ExpenseAmountCurrency) => {
-        setValues(prev => ({
-            ...prev,
-            amountCurrency: c,
-            foreignPerUsd: '',
-        }));
+        setValues(prev => {
+            if (c === prev.amountCurrency) {
+                return {
+                    ...prev,
+                    foreignPerUsd: needsForeignUsdRate(c) ? prev.foreignPerUsd : '',
+                };
+            }
+            const rate = parseExpenseMoney(prev.exchangeRate);
+            let lockedUzs = 0;
+            if (prev.amountCurrency === 'UZS') {
+                const n = parseExpenseMoney(prev.amountUzs);
+                if (Number.isFinite(n) && n > 0) {
+                    lockedUzs = roundMoney2(n);
+                    uzsAmountAnchorRef.current = lockedUzs;
+                }
+            }
+            else {
+                lockedUzs = computeAmountUzsForApi(
+                    prev.amountCurrency,
+                    prev.amountUzs,
+                    prev.exchangeRate,
+                    prev.foreignPerUsd,
+                );
+            }
+            let nextForeign = '';
+            if (needsForeignUsdRate(c) && cbuParsed) {
+                const fp = foreignUnitsPerUsd(cbuParsed, c);
+                if (fp != null && fp > 0)
+                    nextForeign = formatForeignFp(fp);
+            }
+            let nextAmount = prev.amountUzs;
+            if (c === 'UZS') {
+                const anchor = uzsAmountAnchorRef.current;
+                nextAmount = String(anchor != null && anchor > 0
+                    ? anchor
+                    : (lockedUzs > 0 ? roundMoney2(lockedUzs) : prev.amountUzs));
+            }
+            else if (c === 'USD' && rate > 0 && lockedUzs > 0) {
+                nextAmount = roundMoney2(lockedUzs / rate).toFixed(2);
+            }
+            else if (needsForeignUsdRate(c) && rate > 0 && lockedUzs > 0) {
+                const fp = parseExpenseMoney(nextForeign);
+                if (fp > 0)
+                    nextAmount = roundMoney2((lockedUzs / rate) * fp).toFixed(2);
+            }
+            return {
+                ...prev,
+                amountCurrency: c,
+                amountUzs: nextAmount,
+                foreignPerUsd: nextForeign,
+            };
+        });
         setErrors(prev => ({ ...prev, foreignPerUsd: undefined }));
-    }, []);
+    }, [cbuParsed]);
     const setReimb = useCallback((val: boolean) => {
         if (val === false) {
             setExpenseProjectClientId('');
@@ -1582,7 +1652,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             <div className={`exp-form-field${errors.amountUzs ? ' exp-form-field--err' : ''}`}>
               <label className="exp-form-label">Сумма <span className="exp-form-req">*</span></label>
               <div className="exp-form-input-wrap">
-                <input type="number" min={0} className="exp-form-input" placeholder="0" value={values.amountUzs} onChange={e => set('amountUzs', e.target.value)} disabled={isView}/>
+                <input type="number" min={0} step="any" className="exp-form-input" placeholder="0" value={values.amountUzs} onChange={e => setAmount(e.target.value)} disabled={isView}/>
                 <ExpenseSearchableSelect
                   portalDropdown
                   className="exp-form-currency-searchable"
@@ -1599,6 +1669,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 />
               </div>
               {errors.amountUzs && <p className="exp-form-err-msg" data-err>{errors.amountUzs}</p>}
+              {amountUzsSaveHint && <p className="exp-form-hint">{amountUzsSaveHint}</p>}
               {approvalRoutingHint && <p className="exp-form-hint">{approvalRoutingHint}</p>}
             </div>
 
