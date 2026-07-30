@@ -2,6 +2,8 @@ export {
     fetchUnbilledTimeEntries,
     fetchUnbilledExpenses,
     fetchPartnerInvoicePreview,
+    ensureInvoiceFxRates,
+    ensureInvoiceFxRatesForBilling,
     listInvoices,
     fetchAllInvoices,
     getInvoicesAggregatedStats,
@@ -39,4 +41,6 @@ export {
     type InvoiceOutlookDraftResult,
     type InvoiceOutlookDraftStatusResult,
     type InvoiceOutlookDraftDeliveryState,
+    type EnsureInvoiceFxRatesInput,
+    type EnsureInvoiceFxRatesResult,
 } from './monolith';

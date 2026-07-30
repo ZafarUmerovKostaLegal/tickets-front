@@ -1,5 +1,6 @@
 import {
     createInvoice,
+    ensureInvoiceFxRatesForBilling,
     fetchPartnerInvoicePreview,
     type InvoiceDto,
     type PartnerReportConfirmationRequest,
@@ -85,6 +86,13 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
         throw new Error('INVALID_PARTNER_CONFIRMED_ROW');
 
     const issueDate = todayIso();
+    // Prefetch CBU FX into time_tracking_fx_rates (expense + issue dates).
+    await ensureInvoiceFxRatesForBilling({
+        dateFrom,
+        dateTo,
+        issueDate,
+        currency: args.currency?.trim() || undefined,
+    });
     // The backend builds partner-confirmed invoice lines strictly from the confirmed report
     // snapshot; the preview is only used here to detect an empty period up-front.
     const preview = await fetchPartnerInvoicePreview({

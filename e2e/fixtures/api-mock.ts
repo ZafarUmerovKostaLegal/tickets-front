@@ -216,6 +216,10 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
         await json(route, { date: '2024-06-01', rates: { USD: 12500, EUR: 13500 } });
         return;
     }
+    if (path === '/api/v1/time-tracking/invoices/fx-rates/ensure' && method === 'POST') {
+        await json(route, { ok: true, dates: ['2026-07-30'], currency: 'UZS' });
+        return;
+    }
     if (path.startsWith('/api/v1/expenses')) {
         if (method === 'GET')
             await emptyList(route);

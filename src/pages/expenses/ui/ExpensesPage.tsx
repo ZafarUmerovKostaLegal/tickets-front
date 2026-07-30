@@ -132,9 +132,9 @@ function StatusBadge({ status }: {
 }
 function IconDotsVertical() {
     return (<svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <circle cx="12" cy="5" r="1.85"/>
-      <circle cx="12" cy="12" r="1.85"/>
-      <circle cx="12" cy="19" r="1.85"/>
+        <circle cx="12" cy="5" r="1.85" />
+        <circle cx="12" cy="12" r="1.85" />
+        <circle cx="12" cy="19" r="1.85" />
     </svg>);
 }
 function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserRole, moderationBusyId, onApprove, onRejectClick, onReviseClick, onPay, onCloseLifecycle, onDeleteClick, isActionMenuOpen, onToggleActionMenu, onCloseActionMenu, partnerScope = false, }: {
@@ -239,133 +239,133 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
         ? `Курс: ${rate.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 4 })} UZS за 1 USD`
         : undefined;
     return (<div className="exp-table__row" role="row" onClick={() => onOpen(req)}>
-      <div className="exp-table__td exp-table__td--num" role="cell">
-        <span className="exp-table__num">{req.id}</span>
-      </div>
-      <div className="exp-table__td exp-table__td--desc" role="cell">
-        <span className="exp-table__desc">{String(req.description ?? '')}</span>
-      </div>
-      <div className="exp-table__td exp-table__td--author" role="cell">
-        <span className="exp-table__author">{formatExpenseAuthorLabel(req)}</span>
-      </div>
-      <div className="exp-table__td exp-table__td--approvedby" role="cell">
-        <span className="exp-table__author">{formatExpenseApprovedByLabel(req)}</span>
-      </div>
-      <div className="exp-table__td exp-table__td--expdate" role="cell">
-        {fmtExpenseDateCell(req.expenseDate)}
-      </div>
-      <div className="exp-table__td exp-table__td--type" role="cell" title={typeCellTitle}>
-        {typeCellPrimary}
-        {typeCellSecondary ? (<span className="exp-table__partner-sub">{typeCellSecondary}</span>) : null}
-      </div>
-      <div className="exp-table__td exp-table__td--reimb" role="cell">
-        <span className={`exp-reimb exp-reimb--${reimbKey}`}>{reimbLabel}</span>
-      </div>
-      <div className="exp-table__td exp-table__td--status" role="cell">
-        <div className="exp-table__status-tags">
-          <StatusBadge status={req.status}/>
-          {req.status === 'rejected' && req.rejectionReason ? (
-            <span className="exp-table__rejection-reason" title={req.rejectionReason}>
-              Причина: {req.rejectionReason}
-            </span>
-          ) : null}
-          {req.expenseType === 'partner_expense' && !partnerScope && (<span className="exp-card__partner-pill exp-card__partner-pill--table" title="Расход партнёра · без согласования модератором">
-              Расход партнёра
-            </span>)}
+        <div className="exp-table__td exp-table__td--num" role="cell">
+            <span className="exp-table__num">{req.id}</span>
         </div>
-      </div>
-      <div className="exp-table__td exp-table__td--uzs" role="cell">
-        <span className="exp-table__money-uzs">{fmtUzs(uzsAmt)}</span>
-      </div>
-      <div className="exp-table__td exp-table__td--usd" role="cell" title={usdTitle}>
-        {equivUsd > 0 ? (<span className="exp-table__usd-one-line">
-            <span className="exp-table__usd-num">
-              {equivUsd.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-            <span className="exp-table__usd-suffix">USD</span>
-          </span>) : (<span className="exp-table__money-empty">—</span>)}
-      </div>
-      <div className="exp-table__td exp-table__td--action" role="cell" onClick={e => e.stopPropagation()}>
-        <div className="exp-table__action-trigger-wrap">
-          <button ref={triggerRef} type="button" className={`exp-table__actions-trigger${isActionMenuOpen ? ' exp-table__actions-trigger--open' : ''}`} aria-haspopup="menu" aria-expanded={isActionMenuOpen} aria-label="Действия по заявке" disabled={busy} onClick={e => {
+        <div className="exp-table__td exp-table__td--desc" role="cell">
+            <span className="exp-table__desc">{String(req.description ?? '')}</span>
+        </div>
+        <div className="exp-table__td exp-table__td--author" role="cell">
+            <span className="exp-table__author">{formatExpenseAuthorLabel(req)}</span>
+        </div>
+        <div className="exp-table__td exp-table__td--approvedby" role="cell">
+            <span className="exp-table__author">{formatExpenseApprovedByLabel(req)}</span>
+        </div>
+        <div className="exp-table__td exp-table__td--expdate" role="cell">
+            {fmtExpenseDateCell(req.expenseDate)}
+        </div>
+        <div className="exp-table__td exp-table__td--type" role="cell" title={typeCellTitle}>
+            {typeCellPrimary}
+            {typeCellSecondary ? (<span className="exp-table__partner-sub">{typeCellSecondary}</span>) : null}
+        </div>
+        <div className="exp-table__td exp-table__td--reimb" role="cell">
+            <span className={`exp-reimb exp-reimb--${reimbKey}`}>{reimbLabel}</span>
+        </div>
+        <div className="exp-table__td exp-table__td--status" role="cell">
+            <div className="exp-table__status-tags">
+                <StatusBadge status={req.status} />
+                {req.status === 'rejected' && req.rejectionReason ? (
+                    <span className="exp-table__rejection-reason" title={req.rejectionReason}>
+                        Причина: {req.rejectionReason}
+                    </span>
+                ) : null}
+                {req.expenseType === 'partner_expense' && !partnerScope && (<span className="exp-card__partner-pill exp-card__partner-pill--table" title="Расход партнёра · без согласования модератором">
+                    Расход партнёра
+                </span>)}
+            </div>
+        </div>
+        <div className="exp-table__td exp-table__td--uzs" role="cell">
+            <span className="exp-table__money-uzs">{fmtUzs(uzsAmt)}</span>
+        </div>
+        <div className="exp-table__td exp-table__td--usd" role="cell" title={usdTitle}>
+            {equivUsd > 0 ? (<span className="exp-table__usd-one-line">
+                <span className="exp-table__usd-num">
+                    {equivUsd.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+                <span className="exp-table__usd-suffix">USD</span>
+            </span>) : (<span className="exp-table__money-empty">—</span>)}
+        </div>
+        <div className="exp-table__td exp-table__td--action" role="cell" onClick={e => e.stopPropagation()}>
+            <div className="exp-table__action-trigger-wrap">
+                <button ref={triggerRef} type="button" className={`exp-table__actions-trigger${isActionMenuOpen ? ' exp-table__actions-trigger--open' : ''}`} aria-haspopup="menu" aria-expanded={isActionMenuOpen} aria-label="Действия по заявке" disabled={busy} onClick={e => {
                     e.stopPropagation();
                     onToggleActionMenu();
                 }}>
-            <IconDotsVertical />
-          </button>
-        </div>
-        {isActionMenuOpen && menuFixedStyle && typeof document !== 'undefined' && createPortal(<div ref={menuRef} className="exp-table__actions-menu exp-table__actions-menu--portal" style={{
+                    <IconDotsVertical />
+                </button>
+            </div>
+            {isActionMenuOpen && menuFixedStyle && typeof document !== 'undefined' && createPortal(<div ref={menuRef} className="exp-table__actions-menu exp-table__actions-menu--portal" style={{
                 position: 'fixed',
                 top: menuFixedStyle.top,
                 left: menuFixedStyle.left,
                 minWidth: menuFixedStyle.minWidth,
                 zIndex: 12040,
             }} role="menu" onClick={e => e.stopPropagation()}>
-            {showOwnModHint && (<p className="exp-table__menu-hint" role="note">
-                Свою заявку согласовать нельзя — обратитесь к другому модератору.
-              </p>)}
-            {actionsModeration && (<>
-                <button type="button" className="exp-table__menu-item exp-table__menu-item--accent" role="menuitem" disabled={busy} onClick={() => {
+                {showOwnModHint && (<p className="exp-table__menu-hint" role="note">
+                    Свою заявку согласовать нельзя — обратитесь к другому модератору.
+                </p>)}
+                {actionsModeration && (<>
+                    <button type="button" className="exp-table__menu-item exp-table__menu-item--accent" role="menuitem" disabled={busy} onClick={() => {
                         onCloseActionMenu();
                         onApprove(req);
                     }}>
-                  Одобрить
-                </button>
-                <button type="button" className="exp-table__menu-item exp-table__menu-item--danger" role="menuitem" disabled={busy} onClick={() => {
+                        Одобрить
+                    </button>
+                    <button type="button" className="exp-table__menu-item exp-table__menu-item--danger" role="menuitem" disabled={busy} onClick={() => {
                         onCloseActionMenu();
                         onRejectClick(req);
                     }}>
-                  Отклонить
-                </button>
-                <button type="button" className="exp-table__menu-item" role="menuitem" disabled={busy} onClick={() => {
+                        Отклонить
+                    </button>
+                    <button type="button" className="exp-table__menu-item" role="menuitem" disabled={busy} onClick={() => {
                         onCloseActionMenu();
                         onReviseClick(req);
                     }}>
-                  На доработку
-                </button>
-                <div className="exp-table__menu-sep" role="separator"/>
-              </>)}
-            {(showPay || closeUi) && (<>
-                {showPay && (<button type="button" className="exp-table__menu-item" role="menuitem" disabled={busy} onClick={() => {
+                        На доработку
+                    </button>
+                    <div className="exp-table__menu-sep" role="separator" />
+                </>)}
+                {(showPay || closeUi) && (<>
+                    {showPay && (<button type="button" className="exp-table__menu-item" role="menuitem" disabled={busy} onClick={() => {
                         onCloseActionMenu();
                         onPay(req);
                     }}>
-                    Оплачено
-                  </button>)}
-                {closeUi && (<button type="button" className="exp-table__menu-item" role="menuitem" disabled={busy} onClick={() => {
+                        Оплачено
+                    </button>)}
+                    {closeUi && (<button type="button" className="exp-table__menu-item" role="menuitem" disabled={busy} onClick={() => {
                         onCloseActionMenu();
                         onCloseLifecycle(req);
                     }}>
-                    {closeUi.label}
-                  </button>)}
-                <div className="exp-table__menu-sep" role="separator"/>
-              </>)}
-            <button type="button" className="exp-table__menu-item" role="menuitem" onClick={() => {
+                        {closeUi.label}
+                    </button>)}
+                    <div className="exp-table__menu-sep" role="separator" />
+                </>)}
+                <button type="button" className="exp-table__menu-item" role="menuitem" onClick={() => {
                     onCloseActionMenu();
                     onOpen(req, { mode: 'view' });
                 }}>
-              Сведения
-            </button>
-            {canEditFromList && (<button type="button" className="exp-table__menu-item" role="menuitem" onClick={() => {
+                    Сведения
+                </button>
+                {canEditFromList && (<button type="button" className="exp-table__menu-item" role="menuitem" onClick={() => {
                     onCloseActionMenu();
                     onOpen(req, { mode: 'edit' });
                 }}>
-                Редактировать
-              </button>)}
-            {showDelete && (<button type="button" className="exp-table__menu-item exp-table__menu-item--danger" role="menuitem" disabled={busy} onClick={() => {
+                    Редактировать
+                </button>)}
+                {showDelete && (<button type="button" className="exp-table__menu-item exp-table__menu-item--danger" role="menuitem" disabled={busy} onClick={() => {
                     onCloseActionMenu();
                     onDeleteClick(req);
                 }}>
-                Удалить
-              </button>)}
-            <button type="button" className="exp-table__menu-item exp-table__menu-item--primary" role="menuitem" disabled={busy} onClick={() => {
+                    Удалить
+                </button>)}
+                <button type="button" className="exp-table__menu-item exp-table__menu-item--primary" role="menuitem" disabled={busy} onClick={() => {
                     onCloseActionMenu();
                     onOpen(req);
                 }}>
-              Открыть
-            </button>
-          </div>, document.body)}
-      </div>
+                    Открыть
+                </button>
+            </div>, document.body)}
+        </div>
     </div>);
 }
 function EmptyState({ hasFilters, onCreate, moderationQueue, }: {
@@ -375,50 +375,50 @@ function EmptyState({ hasFilters, onCreate, moderationQueue, }: {
 }) {
     if (moderationQueue) {
         return (<div className="exp-empty">
+            <div className="exp-empty__icon">
+                <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="8" y="10" width="32" height="36" rx="3" />
+                    <line x1="16" y1="20" x2="32" y2="20" />
+                    <line x1="16" y1="27" x2="28" y2="27" />
+                    <line x1="16" y1="34" x2="24" y2="34" />
+                </svg>
+            </div>
+            {hasFilters ? (<>
+                <p className="exp-empty__title">Заявок не найдено</p>
+                <p className="exp-empty__desc">Попробуйте изменить поиск или фильтры</p>
+            </>) : (<>
+                <p className="exp-empty__title">Нет заявок на согласовании</p>
+                <p className="exp-empty__desc">
+                    Отправленные сотрудниками заявки появятся в этом списке. Расходы партнёра сразу в статусе «Одобрено» и
+                    сюда не попадают.
+                </p>
+            </>)}
+        </div>);
+    }
+    return (<div className="exp-empty">
         <div className="exp-empty__icon">
-          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="8" y="10" width="32" height="36" rx="3"/>
-            <line x1="16" y1="20" x2="32" y2="20"/>
-            <line x1="16" y1="27" x2="28" y2="27"/>
-            <line x1="16" y1="34" x2="24" y2="34"/>
-          </svg>
+            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="8" y="10" width="32" height="36" rx="3" />
+                <line x1="16" y1="20" x2="32" y2="20" />
+                <line x1="16" y1="27" x2="28" y2="27" />
+                <line x1="16" y1="34" x2="24" y2="34" />
+                <circle cx="38" cy="10" r="8" fill="var(--app-accent)" stroke="none" />
+                <line x1="38" y1="7" x2="38" y2="13" stroke="white" strokeWidth="2" />
+                <line x1="35" y1="10" x2="41" y2="10" stroke="white" strokeWidth="2" />
+            </svg>
         </div>
         {hasFilters ? (<>
             <p className="exp-empty__title">Заявок не найдено</p>
-            <p className="exp-empty__desc">Попробуйте изменить поиск или фильтры</p>
-          </>) : (<>
-            <p className="exp-empty__title">Нет заявок на согласовании</p>
-            <p className="exp-empty__desc">
-              Отправленные сотрудниками заявки появятся в этом списке. Расходы партнёра сразу в статусе «Одобрено» и
-              сюда не попадают.
-            </p>
-          </>)}
-      </div>);
-    }
-    return (<div className="exp-empty">
-      <div className="exp-empty__icon">
-        <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="8" y="10" width="32" height="36" rx="3"/>
-          <line x1="16" y1="20" x2="32" y2="20"/>
-          <line x1="16" y1="27" x2="28" y2="27"/>
-          <line x1="16" y1="34" x2="24" y2="34"/>
-          <circle cx="38" cy="10" r="8" fill="var(--app-accent)" stroke="none"/>
-          <line x1="38" y1="7" x2="38" y2="13" stroke="white" strokeWidth="2"/>
-          <line x1="35" y1="10" x2="41" y2="10" stroke="white" strokeWidth="2"/>
-        </svg>
-      </div>
-      {hasFilters ? (<>
-          <p className="exp-empty__title">Заявок не найдено</p>
-          <p className="exp-empty__desc">Попробуйте изменить фильтры или поисковый запрос</p>
+            <p className="exp-empty__desc">Попробуйте изменить фильтры или поисковый запрос</p>
         </>) : (<>
-          <p className="exp-empty__title">Заявок пока нет</p>
-          <p className="exp-empty__desc">Создайте первую заявку на расход</p>
-          <button type="button" className="exp-empty__btn" onClick={onCreate}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Создать заявку
-          </button>
+            <p className="exp-empty__title">Заявок пока нет</p>
+            <p className="exp-empty__desc">Создайте первую заявку на расход</p>
+            <button type="button" className="exp-empty__btn" onClick={onCreate}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Создать заявку
+            </button>
         </>)}
     </div>);
 }
@@ -431,16 +431,16 @@ type FilterDropProps = {
 };
 function FilterDrop({ label, active, isOpen, onToggle, children }: FilterDropProps) {
     return (<div
-      className={`exp-filter${active ? ' exp-filter--active' : ''}`}
-      onMouseDown={(event) => event.stopPropagation()}
+        className={`exp-filter${active ? ' exp-filter--active' : ''}`}
+        onMouseDown={(event) => event.stopPropagation()}
     >
-      <button type="button" className="exp-filter__btn" onClick={onToggle}>
-        <span className="exp-filter__btn-text">{label}</span>
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-          <polyline points={isOpen ? '4 10 8 6 12 10' : '4 6 8 10 12 6'}/>
-        </svg>
-      </button>
-      {isOpen && <div className="exp-filter__drop">{children}</div>}
+        <button type="button" className="exp-filter__btn" onClick={onToggle}>
+            <span className="exp-filter__btn-text">{label}</span>
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                <polyline points={isOpen ? '4 10 8 6 12 10' : '4 6 8 10 12 6'} />
+            </svg>
+        </button>
+        {isOpen && <div className="exp-filter__drop">{children}</div>}
     </div>);
 }
 function ServiceUnavailable({ message, onRetry }: {
@@ -449,28 +449,28 @@ function ServiceUnavailable({ message, onRetry }: {
 }) {
     const isServiceDown = /unavailable|503|недоступ/i.test(message);
     return (<div className="exp-service-err">
-      <div className="exp-service-err__icon">
-        <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="32" cy="32" r="28"/>
-          <path d="M20 26c0-6.627 5.373-12 12-12s12 5.373 12 12c0 4-2 7-5 9l-1 7H26l-1-7c-3-2-5-5-5-9z"/>
-          <line x1="32" y1="50" x2="32" y2="52"/>
-        </svg>
-      </div>
-      <h2 className="exp-service-err__title">
-        {isServiceDown ? 'Сервис временно недоступен' : 'Не удалось загрузить данные'}
-      </h2>
-      <p className="exp-service-err__desc">
-        {isServiceDown
-            ? 'Сервис расходов сейчас не отвечает. Попробуйте обновить страницу или повторите попытку через несколько минут.'
-            : message}
-      </p>
-      <button type="button" className="exp-service-err__btn" onClick={onRetry}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="23 4 23 10 17 10"/>
-          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
-        Повторить попытку
-      </button>
+        <div className="exp-service-err__icon">
+            <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="32" cy="32" r="28" />
+                <path d="M20 26c0-6.627 5.373-12 12-12s12 5.373 12 12c0 4-2 7-5 9l-1 7H26l-1-7c-3-2-5-5-5-9z" />
+                <line x1="32" y1="50" x2="32" y2="52" />
+            </svg>
+        </div>
+        <h2 className="exp-service-err__title">
+            {isServiceDown ? 'Сервис временно недоступен' : 'Не удалось загрузить данные'}
+        </h2>
+        <p className="exp-service-err__desc">
+            {isServiceDown
+                ? 'Сервис расходов сейчас не отвечает. Попробуйте обновить страницу или повторите попытку через несколько минут.'
+                : message}
+        </p>
+        <button type="button" className="exp-service-err__btn" onClick={onRetry}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 4 23 10 17 10" />
+                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+            </svg>
+            Повторить попытку
+        </button>
     </div>);
 }
 function SkeletonCell({ w, h = 14, style }: {
@@ -478,14 +478,14 @@ function SkeletonCell({ w, h = 14, style }: {
     h?: number;
     style?: CSSProperties;
 }) {
-    return <span className="exp-skel" style={{ width: w, height: h, ...style }}/>;
+    return <span className="exp-skel" style={{ width: w, height: h, ...style }} />;
 }
 function SkeletonStatsTiles() {
     return (<div className="exp-stats-row exp-stats-row--skel" aria-hidden>
-      {Array.from({ length: 3 }).map((_, i) => (<div key={i} className="exp-stats-tile exp-stats-tile--skel">
-          <SkeletonCell w="55%" h={10}/>
-          <SkeletonCell w="75%" h={20}/>
-          <SkeletonCell w={32} h={10}/>
+        {Array.from({ length: 3 }).map((_, i) => (<div key={i} className="exp-stats-tile exp-stats-tile--skel">
+            <SkeletonCell w="55%" h={10} />
+            <SkeletonCell w="75%" h={20} />
+            <SkeletonCell w={32} h={10} />
         </div>))}
     </div>);
 }
@@ -493,44 +493,44 @@ function SkeletonTableBody({ rowCount = 10 }: {
     rowCount?: number;
 }) {
     return (<div className="exp-table" aria-busy>
-      <div className="exp-table__body">
-        {Array.from({ length: rowCount }).map((_, i) => (<div key={i} className="exp-table__row exp-table__row--skel" aria-hidden>
-            <div className="exp-table__td exp-table__td--num">
-              <SkeletonCell w={52} h={13}/>
-            </div>
-            <div className="exp-table__td exp-table__td--desc">
-              <SkeletonCell w="92%" h={12}/>
-              <SkeletonCell w="70%" h={12}/>
-            </div>
-            <div className="exp-table__td exp-table__td--author">
-              <SkeletonCell w="88%" h={12}/>
-            </div>
-            <div className="exp-table__td exp-table__td--approvedby">
-              <SkeletonCell w="88%" h={12}/>
-            </div>
-            <div className="exp-table__td exp-table__td--expdate">
-              <SkeletonCell w={54} h={12}/>
-            </div>
-            <div className="exp-table__td exp-table__td--type">
-              <SkeletonCell w="90%" h={12}/>
-            </div>
-            <div className="exp-table__td exp-table__td--reimb">
-              <SkeletonCell w={72} h={20} style={{ borderRadius: 20 }}/>
-            </div>
-            <div className="exp-table__td exp-table__td--status">
-              <SkeletonCell w={76} h={22} style={{ borderRadius: 20 }}/>
-            </div>
-            <div className="exp-table__td exp-table__td--uzs">
-              <SkeletonCell w={72} h={12} style={{ marginLeft: 'auto' }}/>
-            </div>
-            <div className="exp-table__td exp-table__td--usd">
-              <SkeletonCell w={80} h={12} style={{ marginLeft: 'auto' }}/>
-            </div>
-            <div className="exp-table__td exp-table__td--action">
-              <SkeletonCell w={32} h={32} style={{ borderRadius: 8, marginLeft: 'auto' }}/>
-            </div>
-          </div>))}
-      </div>
+        <div className="exp-table__body">
+            {Array.from({ length: rowCount }).map((_, i) => (<div key={i} className="exp-table__row exp-table__row--skel" aria-hidden>
+                <div className="exp-table__td exp-table__td--num">
+                    <SkeletonCell w={52} h={13} />
+                </div>
+                <div className="exp-table__td exp-table__td--desc">
+                    <SkeletonCell w="92%" h={12} />
+                    <SkeletonCell w="70%" h={12} />
+                </div>
+                <div className="exp-table__td exp-table__td--author">
+                    <SkeletonCell w="88%" h={12} />
+                </div>
+                <div className="exp-table__td exp-table__td--approvedby">
+                    <SkeletonCell w="88%" h={12} />
+                </div>
+                <div className="exp-table__td exp-table__td--expdate">
+                    <SkeletonCell w={54} h={12} />
+                </div>
+                <div className="exp-table__td exp-table__td--type">
+                    <SkeletonCell w="90%" h={12} />
+                </div>
+                <div className="exp-table__td exp-table__td--reimb">
+                    <SkeletonCell w={72} h={20} style={{ borderRadius: 20 }} />
+                </div>
+                <div className="exp-table__td exp-table__td--status">
+                    <SkeletonCell w={76} h={22} style={{ borderRadius: 20 }} />
+                </div>
+                <div className="exp-table__td exp-table__td--uzs">
+                    <SkeletonCell w={72} h={12} style={{ marginLeft: 'auto' }} />
+                </div>
+                <div className="exp-table__td exp-table__td--usd">
+                    <SkeletonCell w={80} h={12} style={{ marginLeft: 'auto' }} />
+                </div>
+                <div className="exp-table__td exp-table__td--action">
+                    <SkeletonCell w={32} h={32} style={{ borderRadius: 8, marginLeft: 'auto' }} />
+                </div>
+            </div>))}
+        </div>
     </div>);
 }
 function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
@@ -721,39 +721,39 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         });
         fetchExpenses(params, { signal: controller.signal })
             .then(data => {
-            if (cancelled)
-                return;
-            const nextTotal = typeof data.total === 'number' ? data.total : 0;
-            const lastAvailablePage = Math.max(1, Math.ceil(nextTotal / EXPENSES_LIST_PAGE_SIZE));
-            if (listPage > lastAvailablePage) {
-                setListPage(lastAvailablePage);
-                return;
-            }
-            isFirstListFetchRef.current = false;
-            setRequests(Array.isArray(data.items) ? data.items : []);
-            setListTotal(typeof data.total === 'number' ? data.total : null);
-            if (data.totalAmountUzs != null || data.totalEquivalentAmount != null) {
-                setListTotals({
-                    uzs: asExpenseNumber(data.totalAmountUzs),
-                    usd: asExpenseNumber(data.totalEquivalentAmount),
-                });
-            }
-            else {
-                setListTotals(null);
-            }
-            setIsLoading(false);
-            setListFetchPending(false);
-        })
+                if (cancelled)
+                    return;
+                const nextTotal = typeof data.total === 'number' ? data.total : 0;
+                const lastAvailablePage = Math.max(1, Math.ceil(nextTotal / EXPENSES_LIST_PAGE_SIZE));
+                if (listPage > lastAvailablePage) {
+                    setListPage(lastAvailablePage);
+                    return;
+                }
+                isFirstListFetchRef.current = false;
+                setRequests(Array.isArray(data.items) ? data.items : []);
+                setListTotal(typeof data.total === 'number' ? data.total : null);
+                if (data.totalAmountUzs != null || data.totalEquivalentAmount != null) {
+                    setListTotals({
+                        uzs: asExpenseNumber(data.totalAmountUzs),
+                        usd: asExpenseNumber(data.totalEquivalentAmount),
+                    });
+                }
+                else {
+                    setListTotals(null);
+                }
+                setIsLoading(false);
+                setListFetchPending(false);
+            })
             .catch(err => {
-            if (cancelled || (err instanceof Error && err.name === 'AbortError'))
-                return;
-            setListTotal(null);
-            setListTotals(null);
-            setLoadError(err instanceof Error ? err.message : 'Ошибка загрузки данных');
-            isFirstListFetchRef.current = false;
-            setIsLoading(false);
-            setListFetchPending(false);
-        });
+                if (cancelled || (err instanceof Error && err.name === 'AbortError'))
+                    return;
+                setListTotal(null);
+                setListTotals(null);
+                setLoadError(err instanceof Error ? err.message : 'Ошибка загрузки данных');
+                isFirstListFetchRef.current = false;
+                setIsLoading(false);
+                setListFetchPending(false);
+            });
         return () => {
             cancelled = true;
             controller.abort();
@@ -817,20 +817,19 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 continue;
             try {
                 const n = normalizeExpenseRequest(r as ExpenseRequest);
-                if (!needsAuthorEnrichment(n))
-                    {
-                        const approvedId = n.approvedByUserId ?? null;
-                        const approvedKnown = approvedId != null
-                            && (
-                                n.approvedBy?.displayName?.trim()
-                                || n.approvedBy?.email?.trim()
-                            );
-                        if (approvedId != null && approvedId > 0 && !approvedKnown && !authorFetchStartedRef.current.has(approvedId)) {
-                            authorFetchStartedRef.current.add(approvedId);
-                            pending.push(approvedId);
-                        }
-                        continue;
+                if (!needsAuthorEnrichment(n)) {
+                    const approvedId = n.approvedByUserId ?? null;
+                    const approvedKnown = approvedId != null
+                        && (
+                            n.approvedBy?.displayName?.trim()
+                            || n.approvedBy?.email?.trim()
+                        );
+                    if (approvedId != null && approvedId > 0 && !approvedKnown && !authorFetchStartedRef.current.has(approvedId)) {
+                        authorFetchStartedRef.current.add(approvedId);
+                        pending.push(approvedId);
                     }
+                    continue;
+                }
                 const id = n.createdByUserId;
                 if (!authorFetchStartedRef.current.has(id)) {
                     authorFetchStartedRef.current.add(id);
@@ -1234,29 +1233,29 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         return requests
             .filter((r): r is ExpenseRequest => r != null && typeof r === 'object')
             .map(r => {
-            try {
-                const n = normalizeExpenseRequest(r);
-                const withAuthor = mergeExpenseAuthorFromCache(n, authorCache);
-                const approvedId = withAuthor.approvedByUserId ?? null;
-                const approvedCached = approvedId != null ? authorCache[approvedId] : undefined;
-                if (approvedCached && !(withAuthor.approvedBy?.displayName?.trim() || withAuthor.approvedBy?.email?.trim())) {
-                    return {
-                        ...withAuthor,
-                        approvedBy: {
-                            id: approvedId ?? approvedCached.id,
-                            displayName: approvedCached.displayName ?? null,
-                            email: approvedCached.email ?? null,
-                            picture: approvedCached.picture ?? null,
-                            position: approvedCached.position ?? null,
-                        },
-                    };
+                try {
+                    const n = normalizeExpenseRequest(r);
+                    const withAuthor = mergeExpenseAuthorFromCache(n, authorCache);
+                    const approvedId = withAuthor.approvedByUserId ?? null;
+                    const approvedCached = approvedId != null ? authorCache[approvedId] : undefined;
+                    if (approvedCached && !(withAuthor.approvedBy?.displayName?.trim() || withAuthor.approvedBy?.email?.trim())) {
+                        return {
+                            ...withAuthor,
+                            approvedBy: {
+                                id: approvedId ?? approvedCached.id,
+                                displayName: approvedCached.displayName ?? null,
+                                email: approvedCached.email ?? null,
+                                picture: approvedCached.picture ?? null,
+                                position: approvedCached.position ?? null,
+                            },
+                        };
+                    }
+                    return withAuthor;
                 }
-                return withAuthor;
-            }
-            catch {
-                return null;
-            }
-        })
+                catch {
+                    return null;
+                }
+            })
             .filter((r): r is ExpenseRequest => r !== null);
     }, [requests, authorCache]);
     const editingRequestForPanel = useMemo(() => {
@@ -1352,355 +1351,355 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         return p?.display_name?.trim() || p?.email || `Партнёр #${filterPartnerUserId}`;
     }, [filterPartnerUserId, partnerFilterOptions]);
     return (<div className="expenses-page">
-      <main className="expenses-page__main">
-        <header className="expenses-page__header">
-          <div className="expenses-page__header-inner">
-            <div className="expenses-page__header-start">
-              <AppBackButton className="app-back-btn" />
-              <AppHomeLogo withSeparator />
-              <div className="expenses-page__header-titles">
-                <h1 className="expenses-page__title">
-                  {isModerationQueue
-                    ? 'Заявки на согласование'
-                    : isPartnerScope
-                      ? 'Расходы партнёров'
-                      : 'Расходы компании'}
-                </h1>
-                {((canModerate && !isModerationQueue) || isModerationQueue || isPartnerScope) && (<div className="exp-header-queue-wrap">
-                    {canModerate && !isModerationQueue && !isPartnerScope && (<>
-                        <NavLink to={routes.expensesRequests} className="exp-queue-nav">
-                          На согласование
-                        </NavLink>
-                        <NavLink to={routes.expensesReport} className="exp-queue-nav">
-                          Аналитика
-                        </NavLink>
-                        <NavLink to={routes.expensesPartners} className="exp-queue-nav">
-                          Расходы партнёров
-                        </NavLink>
-                      </>)}
-                    {isPartnerScope && (<>
-                        <NavLink to={routes.expenses} className="exp-queue-nav">
-                          Расходы компании
-                        </NavLink>
-                        {canModerate && (<NavLink to={routes.expensesPartnersReport} className="exp-queue-nav">
-                          Отчёт
-                        </NavLink>)}
-                      </>)}
-                    {isModerationQueue && (<NavLink to={routes.expenses} className="exp-queue-nav">
-                        Утверждённые расходы
-                      </NavLink>)}
-                  </div>)}
-              </div>
-            </div>
-            <div className="app-page-header-end">
-              <AppPageSettings />
-            </div>
-          </div>
-        </header>
-
-        <div className="expenses-page__content">
-          {actionError && (<div className="exp-error-banner" role="alert">
-              <span>{actionError}</span>
-              <button type="button" className="exp-error-banner__close" onClick={() => setActionError(null)} aria-label="Закрыть">✕</button>
-            </div>)}
-
-          
-          <div className={`tt-settings__actions-row tt-settings__actions-row--clients exp-tt-toolbar${isLoading || listFetchPending ? ' exp-tt-toolbar--loading' : ''}`}>
-            <div className="tt-settings__toolbar-left tt-settings__toolbar-left--inline">
-              {!isModerationQueue && (<button type="button" className="tt-settings__btn tt-settings__btn--primary" onClick={handleCreate}>
-                  {isPartnerScope ? '+ Записать расход' : '+ Создать заявку'}
-                </button>)}
-              {canModerate && (<button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={() => {
-                    if (isPartnerScope) {
-                        navigate(routes.expensesPartnersReport);
-                        return;
-                    }
-                    setIsReportOpen(true);
-                }} title="Создать отчёт Excel" aria-label="Создать отчёт Excel">
-                  Отчёт Excel
-                </button>)}
-            </div>
-            <div className="tt-settings__actions-end">
-              <div className="tt-settings__search-wrap">
-                <span className="tt-settings__search-icon" aria-hidden>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                    <circle cx="11" cy="11" r="8"/>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                  </svg>
-                </span>
-                <input type="search" className="tt-settings__search" placeholder="По описанию, номеру заявки или автору" value={search} onChange={e => setSearch(e.target.value)} aria-label="Поиск по заявкам"/>
-              </div>
-              {isMobile && (<button type="button" className={`exp-filters-toggle${activeFilterChipCount > 0 ? ' exp-filters-toggle--active' : ''}`} aria-expanded={mobileFiltersOpen} onClick={() => {
-                    setMobileFiltersOpen(v => {
-                        const next = !v;
-                        if (!next)
-                            setOpenFilter(null);
-                        return next;
-                    });
-                }}>
-                  <svg className="exp-filters-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
-                  </svg>
-                  <span>Фильтры</span>
-                  {activeFilterChipCount > 0 && (<span className="exp-filters-toggle__badge" aria-hidden>
-                      {activeFilterChipCount}
-                    </span>)}
-                </button>)}
-            </div>
-          </div>
-
-          <div className="exp-tt-filters-outer" onMouseDown={e => e.stopPropagation()}>
-            <div className={`exp-filters${isMobile && !mobileFiltersOpen ? ' exp-filters--mobile-collapsed' : ''}`}>
-              {!isModerationQueue && (<FilterDrop label={filterStatus ? STATUS_META[filterStatus].label : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')}>
-                  <button className={`exp-filter__opt${!filterStatus ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(''); setOpenFilter(null); }}>
-                    Все статусы
-                  </button>
-                  {statuses.map(s => (<button key={s} className={`exp-filter__opt${filterStatus === s ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(s); setOpenFilter(null); }}>
-                      <span className={`exp-filter__dot exp-filter__dot--${s}`}/>
-                      {STATUS_META[s].label}
-                    </button>))}
-                </FilterDrop>)}
-
-              
-              {!isPartnerScope && (<FilterDrop label={filterType ? TYPE_META[filterType].label : 'Тип расхода'} active={!!filterType} isOpen={openFilter === 'type'} onToggle={() => toggleFilter('type')}>
-                <button className={`exp-filter__opt${!filterType ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(''); setOpenFilter(null); }}>
-                  Все типы
-                </button>
-                {types.map(t => (<button key={t} className={`exp-filter__opt${filterType === t ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(t); setOpenFilter(null); }}>
-                    {TYPE_META[t].label}
-                  </button>))}
-              </FilterDrop>)}
-
-              {isPartnerScope && (<FilterDrop label={filterSubtype ? getPartnerExpenseSubtypeLabel(filterSubtype) : 'Категория'} active={!!filterSubtype} isOpen={openFilter === 'subtype'} onToggle={() => toggleFilter('subtype')}>
-                <button className={`exp-filter__opt${!filterSubtype ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSubtype(''); setOpenFilter(null); }}>
-                  Все категории
-                </button>
-                {PARTNER_EXPENSE_CATEGORIES.map(c => (<button key={c.value} className={`exp-filter__opt${filterSubtype === c.value ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSubtype(c.value); setOpenFilter(null); }}>
-                    {c.label}
-                  </button>))}
-              </FilterDrop>)}
-
-              {isPartnerScope && (<FilterDrop label={partnerFilterLabel} active={!!filterPartnerUserId} isOpen={openFilter === 'partner'} onToggle={() => toggleFilter('partner')}>
-                <button className={`exp-filter__opt${!filterPartnerUserId ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(''); setOpenFilter(null); }}>
-                  Все партнёры
-                </button>
-                {partnerFilterOptions.map(p => (<button key={p.id} className={`exp-filter__opt${filterPartnerUserId === p.id ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(p.id); setOpenFilter(null); }}>
-                    {p.display_name?.trim() || p.email || `#${p.id}`}
-                  </button>))}
-              </FilterDrop>)}
-
-              
-              <FilterDrop label={filterReimb ? REIMBURSABLE_META[filterReimb].label : 'Возмещение'} active={!!filterReimb} isOpen={openFilter === 'reimbursable'} onToggle={() => toggleFilter('reimbursable')}>
-                <button className={`exp-filter__opt${!filterReimb ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb(''); setOpenFilter(null); }}>
-                  Любое
-                </button>
-                <button className={`exp-filter__opt${filterReimb === 'reimbursable' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb('reimbursable'); setOpenFilter(null); }}>
-                  Возмещаемый
-                </button>
-                <button className={`exp-filter__opt${filterReimb === 'non_reimbursable' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb('non_reimbursable'); setOpenFilter(null); }}>
-                  Невозмещаемый
-                </button>
-              </FilterDrop>
-
-              
-              <FilterDrop label={periodFilterLabel} active={filterPeriod !== 'all'} isOpen={openFilter === 'period'} onToggle={() => toggleFilter('period')}>
-                <button className={`exp-filter__opt${filterPeriod === 'all' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod('all'); setOpenFilter(null); }}>
-                  {EXPENSES_PERIOD_LABELS.all}
-                </button>
-                {EXPENSES_PERIOD_PRESET_IDS.map(p => (<button key={p} className={`exp-filter__opt${filterPeriod === p ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod(p); setOpenFilter(null); }}>
-                    {EXPENSES_PERIOD_LABELS[p]}
-                  </button>))}
-                <div className="exp-filter__sep" role="separator"/>
-                <button className={`exp-filter__opt${filterPeriod === 'custom' ? ' exp-filter__opt--on' : ''}`} onClick={selectCustomPeriod}>
-                  {EXPENSES_PERIOD_LABELS.custom}
-                </button>
-              </FilterDrop>
-
-              <FilterDrop label={SORT_LABELS[filterSort]} active={filterSort !== 'createdAt'} isOpen={openFilter === 'sort'} onToggle={() => toggleFilter('sort')}>
-                {(Object.keys(SORT_LABELS) as ExpensesUiSortBy[]).map(sort => (<button key={sort} className={`exp-filter__opt${filterSort === sort ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSort(sort); setOpenFilter(null); }}>
-                    {SORT_LABELS[sort]}
-                  </button>))}
-              </FilterDrop>
-
-              {hasFilters && (<button type="button" className="exp-filters-reset" onClick={resetFilters}>
-                  Сбросить
-                </button>)}
-            </div>
-
-            {filterPeriod === 'custom' && (<div className="exp-filters-custom-range" aria-label="Свой период">
-                <span className="exp-filters-custom-range__label">Период:</span>
-                <div className="exp-filters-custom-range__field">
-                  <span className="exp-filters-custom-range__field-label">С</span>
-                  <DatePicker
-                    value={filterDateFrom}
-                    max={filterDateTo || undefined}
-                    onChange={(iso) => {
-                        setFilterDateFrom(iso);
-                        if (filterDateTo && iso > filterDateTo)
-                            setFilterDateTo(iso);
-                        setFilterPeriod('custom');
-                    }}
-                    portal
-                    buttonClassName="exp-filters-custom-range__picker"
-                  />
-                </div>
-                <div className="exp-filters-custom-range__field">
-                  <span className="exp-filters-custom-range__field-label">По</span>
-                  <DatePicker
-                    value={filterDateTo}
-                    min={filterDateFrom || undefined}
-                    onChange={(iso) => {
-                        setFilterDateTo(iso);
-                        if (filterDateFrom && iso < filterDateFrom)
-                            setFilterDateFrom(iso);
-                        setFilterPeriod('custom');
-                    }}
-                    portal
-                    buttonClassName="exp-filters-custom-range__picker"
-                  />
-                </div>
-              </div>)}
-          </div>
-
-          
-          {isLoading ? (<>
-              <SkeletonStatsTiles/>
-              <SkeletonTableBody rowCount={10}/>
-            </>) : loadError ? (<ServiceUnavailable message={loadError} onRetry={() => setLoadKey(k => k + 1)}/>) : (<>
-              <div className="exp-stats-row" role="region" aria-label="Сводка по списку">
-                <div className="exp-stats-tile">
-                  <span className="exp-stats-tile__label">Заявок по фильтру</span>
-                  <span className="exp-stats-tile__value">{listTotal ?? filtered.length}</span>
-                  {listTotal != null && (listTotal > EXPENSES_LIST_PAGE_SIZE || listPage > 1) && (<span className="exp-stats-tile__sub" role="status">
-                    Стр. {listPage} — на экране {filtered.length}
-                  </span>)}
-                  <span className="exp-stats-tile__unit">{ruExpenseRequestUnit(listTotal ?? filtered.length)}</span>
-                </div>
-                <div className="exp-stats-tile" title="Сумма по всем заявкам, соответствующим фильтрам">
-                  <span className="exp-stats-tile__label">Сумма, UZS</span>
-                  <span className="exp-stats-tile__value exp-stats-tile__value--uzs">{fmtUzs(filteredTotals.uzs)}</span>
-                  <span className="exp-stats-tile__unit">UZS</span>
-                </div>
-                <div className="exp-stats-tile" title="Эквивалент по всем заявкам, соответствующим фильтрам">
-                  <span className="exp-stats-tile__label">Эквивалент</span>
-                  <span className="exp-stats-tile__value exp-stats-tile__value--usd">
-                    {filteredTotals.usd > 0
-                ? filteredTotals.usd.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                : '—'}
-                  </span>
-                  {filteredTotals.usd > 0 && <span className="exp-stats-tile__unit">USD</span>}
-                </div>
-              </div>
-
-              {filtered.length === 0 ? (<EmptyState hasFilters={hasFilters} onCreate={handleCreate} moderationQueue={isModerationQueue}/>) : (<>
-                  <div className="exp-table" role="region" aria-label="Список заявок на расход">
-                      <div className="exp-table__body">
-                        <div className="exp-table__row exp-table__row--head" role="row">
-                          <div className="exp-table__th exp-table__th--num" role="columnheader">
-                            №
-                          </div>
-                          <div className="exp-table__th exp-table__th--desc" role="columnheader">
-                            Описание
-                          </div>
-                          <div className="exp-table__th exp-table__th--author" role="columnheader">
-                            Автор
-                          </div>
-                          <div className="exp-table__th exp-table__th--approvedby" role="columnheader">
-                            Одобрил
-                          </div>
-                          <div className="exp-table__th exp-table__th--expdate" role="columnheader">
-                            Дата расхода
-                          </div>
-                          <div className="exp-table__th exp-table__th--type" role="columnheader">
-                            {isPartnerScope ? 'Категория' : 'Тип'}
-                          </div>
-                          <div className="exp-table__th exp-table__th--reimb" role="columnheader">
-                            Возмещение
-                          </div>
-                          <div className="exp-table__th exp-table__th--status" role="columnheader">
-                            Статус
-                          </div>
-                          <div className="exp-table__th exp-table__th--uzs" role="columnheader">
-                            Сумма, UZS
-                          </div>
-                          <div className="exp-table__th exp-table__th--usd exp-table__th--rate" role="columnheader">
-                            Эквивалент, USD
-                          </div>
-                          <div className="exp-table__th exp-table__th--action" role="columnheader">
-                            <span className="exp-table__sr-only">Действия</span>
-                          </div>
+        <main className="expenses-page__main">
+            <header className="expenses-page__header">
+                <div className="expenses-page__header-inner">
+                    <div className="expenses-page__header-start">
+                        <AppBackButton className="app-back-btn" />
+                        <AppHomeLogo withSeparator />
+                        <div className="expenses-page__header-titles">
+                            <h1 className="expenses-page__title">
+                                {isModerationQueue
+                                    ? 'Заявки на согласование'
+                                    : isPartnerScope
+                                        ? 'Расходы партнёров'
+                                        : 'Расходы компании'}
+                            </h1>
+                            {((canModerate && !isModerationQueue) || isModerationQueue || isPartnerScope) && (<div className="exp-header-queue-wrap">
+                                {canModerate && !isModerationQueue && !isPartnerScope && (<>
+                                    <NavLink to={routes.expensesRequests} className="exp-queue-nav">
+                                        На согласование
+                                    </NavLink>
+                                    <NavLink to={routes.expensesReport} className="exp-queue-nav">
+                                        Аналитика
+                                    </NavLink>
+                                    <NavLink to={routes.expensesPartners} className="exp-queue-nav">
+                                        Расходы партнёров
+                                    </NavLink>
+                                </>)}
+                                {isPartnerScope && (<>
+                                    <NavLink to={routes.expenses} className="exp-queue-nav">
+                                        Расходы компании
+                                    </NavLink>
+                                    {canModerate && (<NavLink to={routes.expensesPartnersReport} className="exp-queue-nav">
+                                        Отчёт
+                                    </NavLink>)}
+                                </>)}
+                                {isModerationQueue && (<NavLink to={routes.expenses} className="exp-queue-nav">
+                                    Утверждённые расходы
+                                </NavLink>)}
+                            </div>)}
                         </div>
-                        {filtered.map(r => (<ExpenseTableRow key={r.id} req={r} onOpen={handleOpenReq} canModerate={canModerate} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} moderationBusyId={tableModerationBusyId} onApprove={handleTableApprove} onRejectClick={openTableReject} onReviseClick={openTableRevise} onPay={handleTablePay} onCloseLifecycle={handleTableCloseLifecycle} onDeleteClick={handleTableDeleteClick} isActionMenuOpen={expenseTableMenuForId === r.id} onToggleActionMenu={() => setExpenseTableMenuForId(prev => prev === r.id ? null : r.id)} onCloseActionMenu={() => setExpenseTableMenuForId(null)} partnerScope={isPartnerScope}/>))}
-                      </div>
                     </div>
-                  {listTotal != null && listTotal > 0 ? (<Pagination className="exp-cards-pager" page={listPage} totalCount={listTotal} pageSize={EXPENSES_LIST_PAGE_SIZE} onPageChange={setListPage} loading={listFetchPending}/>) : null}
-                </>)}
-            </>)}
-        </div>
-      </main>
+                    <div className="app-page-header-end">
+                        <AppPageSettings />
+                    </div>
+                </div>
+            </header>
 
-      {tableOverlayOpen &&
+            <div className="expenses-page__content">
+                {actionError && (<div className="exp-error-banner" role="alert">
+                    <span>{actionError}</span>
+                    <button type="button" className="exp-error-banner__close" onClick={() => setActionError(null)} aria-label="Закрыть">✕</button>
+                </div>)}
+
+
+                <div className={`tt-settings__actions-row tt-settings__actions-row--clients exp-tt-toolbar${isLoading || listFetchPending ? ' exp-tt-toolbar--loading' : ''}`}>
+                    <div className="tt-settings__toolbar-left tt-settings__toolbar-left--inline">
+                        {!isModerationQueue && (<button type="button" className="tt-settings__btn tt-settings__btn--primary" onClick={handleCreate}>
+                            {isPartnerScope ? '+ Записать расход' : '+ Создать заявку'}
+                        </button>)}
+                        {canModerate && (<button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={() => {
+                            if (isPartnerScope) {
+                                navigate(routes.expensesPartnersReport);
+                                return;
+                            }
+                            setIsReportOpen(true);
+                        }} title="Создать отчёт Excel" aria-label="Создать отчёт Excel">
+                            Отчёт Excel
+                        </button>)}
+                    </div>
+                    <div className="tt-settings__actions-end">
+                        <div className="tt-settings__search-wrap">
+                            <span className="tt-settings__search-icon" aria-hidden>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                                    <circle cx="11" cy="11" r="8" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                            </span>
+                            <input type="search" className="tt-settings__search" placeholder="По описанию, номеру заявки или автору" value={search} onChange={e => setSearch(e.target.value)} aria-label="Поиск по заявкам" />
+                        </div>
+                        {isMobile && (<button type="button" className={`exp-filters-toggle${activeFilterChipCount > 0 ? ' exp-filters-toggle--active' : ''}`} aria-expanded={mobileFiltersOpen} onClick={() => {
+                            setMobileFiltersOpen(v => {
+                                const next = !v;
+                                if (!next)
+                                    setOpenFilter(null);
+                                return next;
+                            });
+                        }}>
+                            <svg className="exp-filters-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                            </svg>
+                            <span>Фильтры</span>
+                            {activeFilterChipCount > 0 && (<span className="exp-filters-toggle__badge" aria-hidden>
+                                {activeFilterChipCount}
+                            </span>)}
+                        </button>)}
+                    </div>
+                </div>
+
+                <div className="exp-tt-filters-outer" onMouseDown={e => e.stopPropagation()}>
+                    <div className={`exp-filters${isMobile && !mobileFiltersOpen ? ' exp-filters--mobile-collapsed' : ''}`}>
+                        {!isModerationQueue && (<FilterDrop label={filterStatus ? STATUS_META[filterStatus].label : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')}>
+                            <button className={`exp-filter__opt${!filterStatus ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(''); setOpenFilter(null); }}>
+                                Все статусы
+                            </button>
+                            {statuses.map(s => (<button key={s} className={`exp-filter__opt${filterStatus === s ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(s); setOpenFilter(null); }}>
+                                <span className={`exp-filter__dot exp-filter__dot--${s}`} />
+                                {STATUS_META[s].label}
+                            </button>))}
+                        </FilterDrop>)}
+
+
+                        {!isPartnerScope && (<FilterDrop label={filterType ? TYPE_META[filterType].label : 'Тип расхода'} active={!!filterType} isOpen={openFilter === 'type'} onToggle={() => toggleFilter('type')}>
+                            <button className={`exp-filter__opt${!filterType ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(''); setOpenFilter(null); }}>
+                                Все типы
+                            </button>
+                            {types.map(t => (<button key={t} className={`exp-filter__opt${filterType === t ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(t); setOpenFilter(null); }}>
+                                {TYPE_META[t].label}
+                            </button>))}
+                        </FilterDrop>)}
+
+                        {isPartnerScope && (<FilterDrop label={filterSubtype ? getPartnerExpenseSubtypeLabel(filterSubtype) : 'Категория'} active={!!filterSubtype} isOpen={openFilter === 'subtype'} onToggle={() => toggleFilter('subtype')}>
+                            <button className={`exp-filter__opt${!filterSubtype ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSubtype(''); setOpenFilter(null); }}>
+                                Все категории
+                            </button>
+                            {PARTNER_EXPENSE_CATEGORIES.map(c => (<button key={c.value} className={`exp-filter__opt${filterSubtype === c.value ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSubtype(c.value); setOpenFilter(null); }}>
+                                {c.label}
+                            </button>))}
+                        </FilterDrop>)}
+
+                        {isPartnerScope && (<FilterDrop label={partnerFilterLabel} active={!!filterPartnerUserId} isOpen={openFilter === 'partner'} onToggle={() => toggleFilter('partner')}>
+                            <button className={`exp-filter__opt${!filterPartnerUserId ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(''); setOpenFilter(null); }}>
+                                Все партнёры
+                            </button>
+                            {partnerFilterOptions.map(p => (<button key={p.id} className={`exp-filter__opt${filterPartnerUserId === p.id ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(p.id); setOpenFilter(null); }}>
+                                {p.display_name?.trim() || p.email || `#${p.id}`}
+                            </button>))}
+                        </FilterDrop>)}
+
+
+                        <FilterDrop label={filterReimb ? REIMBURSABLE_META[filterReimb].label : 'Возмещение'} active={!!filterReimb} isOpen={openFilter === 'reimbursable'} onToggle={() => toggleFilter('reimbursable')}>
+                            <button className={`exp-filter__opt${!filterReimb ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb(''); setOpenFilter(null); }}>
+                                Любое
+                            </button>
+                            <button className={`exp-filter__opt${filterReimb === 'reimbursable' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb('reimbursable'); setOpenFilter(null); }}>
+                                Возмещаемый
+                            </button>
+                            <button className={`exp-filter__opt${filterReimb === 'non_reimbursable' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb('non_reimbursable'); setOpenFilter(null); }}>
+                                Невозмещаемый
+                            </button>
+                        </FilterDrop>
+
+
+                        <FilterDrop label={periodFilterLabel} active={filterPeriod !== 'all'} isOpen={openFilter === 'period'} onToggle={() => toggleFilter('period')}>
+                            <button className={`exp-filter__opt${filterPeriod === 'all' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod('all'); setOpenFilter(null); }}>
+                                {EXPENSES_PERIOD_LABELS.all}
+                            </button>
+                            {EXPENSES_PERIOD_PRESET_IDS.map(p => (<button key={p} className={`exp-filter__opt${filterPeriod === p ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod(p); setOpenFilter(null); }}>
+                                {EXPENSES_PERIOD_LABELS[p]}
+                            </button>))}
+                            <div className="exp-filter__sep" role="separator" />
+                            <button className={`exp-filter__opt${filterPeriod === 'custom' ? ' exp-filter__opt--on' : ''}`} onClick={selectCustomPeriod}>
+                                {EXPENSES_PERIOD_LABELS.custom}
+                            </button>
+                        </FilterDrop>
+
+                        <FilterDrop label={SORT_LABELS[filterSort]} active={filterSort !== 'createdAt'} isOpen={openFilter === 'sort'} onToggle={() => toggleFilter('sort')}>
+                            {(Object.keys(SORT_LABELS) as ExpensesUiSortBy[]).map(sort => (<button key={sort} className={`exp-filter__opt${filterSort === sort ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSort(sort); setOpenFilter(null); }}>
+                                {SORT_LABELS[sort]}
+                            </button>))}
+                        </FilterDrop>
+
+                        {hasFilters && (<button type="button" className="exp-filters-reset" onClick={resetFilters}>
+                            Сбросить
+                        </button>)}
+                    </div>
+
+                    {filterPeriod === 'custom' && (<div className="exp-filters-custom-range" aria-label="Свой период">
+                        <span className="exp-filters-custom-range__label">Период:</span>
+                        <div className="exp-filters-custom-range__field">
+                            <span className="exp-filters-custom-range__field-label">С</span>
+                            <DatePicker
+                                value={filterDateFrom}
+                                max={filterDateTo || undefined}
+                                onChange={(iso) => {
+                                    setFilterDateFrom(iso);
+                                    if (filterDateTo && iso > filterDateTo)
+                                        setFilterDateTo(iso);
+                                    setFilterPeriod('custom');
+                                }}
+                                portal
+                                buttonClassName="exp-filters-custom-range__picker"
+                            />
+                        </div>
+                        <div className="exp-filters-custom-range__field">
+                            <span className="exp-filters-custom-range__field-label">По</span>
+                            <DatePicker
+                                value={filterDateTo}
+                                min={filterDateFrom || undefined}
+                                onChange={(iso) => {
+                                    setFilterDateTo(iso);
+                                    if (filterDateFrom && iso < filterDateFrom)
+                                        setFilterDateFrom(iso);
+                                    setFilterPeriod('custom');
+                                }}
+                                portal
+                                buttonClassName="exp-filters-custom-range__picker"
+                            />
+                        </div>
+                    </div>)}
+                </div>
+
+
+                {isLoading ? (<>
+                    <SkeletonStatsTiles />
+                    <SkeletonTableBody rowCount={10} />
+                </>) : loadError ? (<ServiceUnavailable message={loadError} onRetry={() => setLoadKey(k => k + 1)} />) : (<>
+                    <div className="exp-stats-row" role="region" aria-label="Сводка по списку">
+                        <div className="exp-stats-tile">
+                            <span className="exp-stats-tile__label">Заявок по фильтру</span>
+                            <span className="exp-stats-tile__value">{listTotal ?? filtered.length}</span>
+                            {listTotal != null && (listTotal > EXPENSES_LIST_PAGE_SIZE || listPage > 1) && (<span className="exp-stats-tile__sub" role="status">
+                                Стр. {listPage} — на экране {filtered.length}
+                            </span>)}
+                            <span className="exp-stats-tile__unit">{ruExpenseRequestUnit(listTotal ?? filtered.length)}</span>
+                        </div>
+                        <div className="exp-stats-tile" title="Сумма по всем заявкам, соответствующим фильтрам">
+                            <span className="exp-stats-tile__label">Сумма, UZS</span>
+                            <span className="exp-stats-tile__value exp-stats-tile__value--uzs">{fmtUzs(filteredTotals.uzs)}</span>
+                            <span className="exp-stats-tile__unit">UZS</span>
+                        </div>
+                        <div className="exp-stats-tile" title="Эквивалент по всем заявкам, соответствующим фильтрам">
+                            <span className="exp-stats-tile__label">Эквивалент</span>
+                            <span className="exp-stats-tile__value exp-stats-tile__value--usd">
+                                {filteredTotals.usd > 0
+                                    ? filteredTotals.usd.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                                    : '—'}
+                            </span>
+                            {filteredTotals.usd > 0 && <span className="exp-stats-tile__unit">USD</span>}
+                        </div>
+                    </div>
+
+                    {filtered.length === 0 ? (<EmptyState hasFilters={hasFilters} onCreate={handleCreate} moderationQueue={isModerationQueue} />) : (<>
+                        <div className="exp-table" role="region" aria-label="Список заявок на расход">
+                            <div className="exp-table__body">
+                                <div className="exp-table__row exp-table__row--head" role="row">
+                                    <div className="exp-table__th exp-table__th--num" role="columnheader">
+                                        №
+                                    </div>
+                                    <div className="exp-table__th exp-table__th--desc" role="columnheader">
+                                        Описание
+                                    </div>
+                                    <div className="exp-table__th exp-table__th--author" role="columnheader">
+                                        Автор
+                                    </div>
+                                    <div className="exp-table__th exp-table__th--approvedby" role="columnheader">
+                                        Одобрил
+                                    </div>
+                                    <div className="exp-table__th exp-table__th--expdate" role="columnheader">
+                                        Дата расхода
+                                    </div>
+                                    <div className="exp-table__th exp-table__th--type" role="columnheader">
+                                        {isPartnerScope ? 'Категория' : 'Тип'}
+                                    </div>
+                                    <div className="exp-table__th exp-table__th--reimb" role="columnheader">
+                                        Возмещение
+                                    </div>
+                                    <div className="exp-table__th exp-table__th--status" role="columnheader">
+                                        Статус
+                                    </div>
+                                    <div className="exp-table__th exp-table__th--uzs" role="columnheader">
+                                        Сумма, UZS
+                                    </div>
+                                    <div className="exp-table__th exp-table__th--usd exp-table__th--rate" role="columnheader">
+                                        Эквивалент, USD
+                                    </div>
+                                    <div className="exp-table__th exp-table__th--action" role="columnheader">
+                                        <span className="exp-table__sr-only">Действия</span>
+                                    </div>
+                                </div>
+                                {filtered.map(r => (<ExpenseTableRow key={r.id} req={r} onOpen={handleOpenReq} canModerate={canModerate} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} moderationBusyId={tableModerationBusyId} onApprove={handleTableApprove} onRejectClick={openTableReject} onReviseClick={openTableRevise} onPay={handleTablePay} onCloseLifecycle={handleTableCloseLifecycle} onDeleteClick={handleTableDeleteClick} isActionMenuOpen={expenseTableMenuForId === r.id} onToggleActionMenu={() => setExpenseTableMenuForId(prev => prev === r.id ? null : r.id)} onCloseActionMenu={() => setExpenseTableMenuForId(null)} partnerScope={isPartnerScope} />))}
+                            </div>
+                        </div>
+                        {listTotal != null && listTotal > 0 ? (<Pagination className="exp-cards-pager" page={listPage} totalCount={listTotal} pageSize={EXPENSES_LIST_PAGE_SIZE} onPageChange={setListPage} loading={listFetchPending} />) : null}
+                    </>)}
+                </>)}
+            </div>
+        </main>
+
+        {tableOverlayOpen &&
             typeof document !== 'undefined' &&
             createPortal(<>
-            {tableReject && (<div className="exp-mod-backdrop" role="presentation">
-                <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-table-reject-title" onClick={e => e.stopPropagation()}>
-                  <h3 id="exp-table-reject-title" className="exp-mod-dialog__title">Отклонить заявку</h3>
-                  <p className="exp-mod-dialog__sub">Заявка {tableReject.id}. Укажите причину — автор её увидит в истории.</p>
-                  <textarea className="exp-mod-dialog__textarea" rows={4} placeholder="Причина отклонения" value={tableRejectReason} onChange={e => setTableRejectReason(e.target.value)} disabled={tableModBusy}/>
-                  {tableModErr && <p className="exp-mod-err" role="alert">{tableModErr}</p>}
-                  <div className="exp-mod-dialog__ft">
-                    <button type="button" className="exp-panel-btn exp-panel-btn--ghost" disabled={tableModBusy} onClick={() => { setTableReject(null); setTableModErr(null); }}>Отмена</button>
-                    <button type="button" className="exp-panel-btn exp-panel-btn--primary exp-panel-btn--danger" disabled={tableModBusy} onClick={confirmTableReject}>Отклонить</button>
-                  </div>
-                </div>
-              </div>)}
-            {tableRevise && (<div className="exp-mod-backdrop" role="presentation">
-                <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-table-revise-title" onClick={e => e.stopPropagation()}>
-                  <h3 id="exp-table-revise-title" className="exp-mod-dialog__title">Вернуть на доработку</h3>
-                  <p className="exp-mod-dialog__sub">Заявка {tableRevise.id}. Автор сможет исправить заявку и отправить снова.</p>
-                  <textarea className="exp-mod-dialog__textarea" rows={4} placeholder="Что нужно исправить или дополнить" value={tableReviseComment} onChange={e => setTableReviseComment(e.target.value)} disabled={tableModBusy}/>
-                  {tableModErr && <p className="exp-mod-err" role="alert">{tableModErr}</p>}
-                  <div className="exp-mod-dialog__ft">
-                    <button type="button" className="exp-panel-btn exp-panel-btn--ghost" disabled={tableModBusy} onClick={() => { setTableRevise(null); setTableModErr(null); }}>Отмена</button>
-                    <button type="button" className="exp-panel-btn exp-panel-btn--primary" disabled={tableModBusy} onClick={confirmTableRevise}>Вернуть</button>
-                  </div>
-                </div>
-              </div>)}
-            {tableConfirm && (<ExpenseConfirmDialog isOpen title={tableConfirm.kind === 'approve'
-                        ? 'Одобрить заявку?'
-                        : tableConfirm.kind === 'pay'
-                            ? 'Отметить оплату?'
-                            : tableConfirm.kind === 'delete'
-                                ? 'Удалить заявку?'
-                                : 'Подтверждение'} message={tableConfirm.kind === 'approve' ? (<>
-                      <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
-                      {tableConfirm.req.isReimbursable ? (<p className="exp-mod-dialog__sub">
-                          После одобрения, когда компания оплатит расход, откройте заявку и нажмите «Оплачено».
-                        </p>) : null}
-                    </>) : tableConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">Заявка будет переведена в статус «Выплачено».</p>) : tableConfirm.kind === 'delete' ? (<p className="exp-mod-dialog__sub">
-                      Заявка {tableConfirm.req.id} будет удалена безвозвратно вместе с вложениями.
-                    </p>) : (<p className="exp-mod-dialog__sub">{tableConfirm.message}</p>)} confirmLabel={tableConfirm.kind === 'approve'
-                        ? 'Одобрить'
-                        : tableConfirm.kind === 'pay'
-                            ? 'Оплачено'
-                            : tableConfirm.kind === 'delete'
-                                ? 'Удалить'
-                                : tableConfirm.confirmLabel} confirmVariant={tableConfirm.kind === 'delete' ? 'danger' : 'primary'} busy={tableModBusy} onClose={() => {
-                        if (!tableModBusy)
-                            setTableConfirm(null);
-                    }} onConfirm={runTableConfirm}/>)}
-          </>, document.body)}
+                {tableReject && (<div className="exp-mod-backdrop" role="presentation">
+                    <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-table-reject-title" onClick={e => e.stopPropagation()}>
+                        <h3 id="exp-table-reject-title" className="exp-mod-dialog__title">Отклонить заявку</h3>
+                        <p className="exp-mod-dialog__sub">Заявка {tableReject.id}. Укажите причину — автор её увидит в истории.</p>
+                        <textarea className="exp-mod-dialog__textarea" rows={4} placeholder="Причина отклонения" value={tableRejectReason} onChange={e => setTableRejectReason(e.target.value)} disabled={tableModBusy} />
+                        {tableModErr && <p className="exp-mod-err" role="alert">{tableModErr}</p>}
+                        <div className="exp-mod-dialog__ft">
+                            <button type="button" className="exp-panel-btn exp-panel-btn--ghost" disabled={tableModBusy} onClick={() => { setTableReject(null); setTableModErr(null); }}>Отмена</button>
+                            <button type="button" className="exp-panel-btn exp-panel-btn--primary exp-panel-btn--danger" disabled={tableModBusy} onClick={confirmTableReject}>Отклонить</button>
+                        </div>
+                    </div>
+                </div>)}
+                {tableRevise && (<div className="exp-mod-backdrop" role="presentation">
+                    <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-table-revise-title" onClick={e => e.stopPropagation()}>
+                        <h3 id="exp-table-revise-title" className="exp-mod-dialog__title">Вернуть на доработку</h3>
+                        <p className="exp-mod-dialog__sub">Заявка {tableRevise.id}. Автор сможет исправить заявку и отправить снова.</p>
+                        <textarea className="exp-mod-dialog__textarea" rows={4} placeholder="Что нужно исправить или дополнить" value={tableReviseComment} onChange={e => setTableReviseComment(e.target.value)} disabled={tableModBusy} />
+                        {tableModErr && <p className="exp-mod-err" role="alert">{tableModErr}</p>}
+                        <div className="exp-mod-dialog__ft">
+                            <button type="button" className="exp-panel-btn exp-panel-btn--ghost" disabled={tableModBusy} onClick={() => { setTableRevise(null); setTableModErr(null); }}>Отмена</button>
+                            <button type="button" className="exp-panel-btn exp-panel-btn--primary" disabled={tableModBusy} onClick={confirmTableRevise}>Вернуть</button>
+                        </div>
+                    </div>
+                </div>)}
+                {tableConfirm && (<ExpenseConfirmDialog isOpen title={tableConfirm.kind === 'approve'
+                    ? 'Одобрить заявку?'
+                    : tableConfirm.kind === 'pay'
+                        ? 'Отметить оплату?'
+                        : tableConfirm.kind === 'delete'
+                            ? 'Удалить заявку?'
+                            : 'Подтверждение'} message={tableConfirm.kind === 'approve' ? (<>
+                                <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
+                                {tableConfirm.req.isReimbursable ? (<p className="exp-mod-dialog__sub">
+                                    После одобрения, когда компания оплатит расход, откройте заявку и нажмите «Оплачено».
+                                </p>) : null}
+                            </>) : tableConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">Заявка будет переведена в статус «Выплачено».</p>) : tableConfirm.kind === 'delete' ? (<p className="exp-mod-dialog__sub">
+                                Заявка {tableConfirm.req.id} будет удалена безвозвратно вместе с вложениями.
+                            </p>) : (<p className="exp-mod-dialog__sub">{tableConfirm.message}</p>)} confirmLabel={tableConfirm.kind === 'approve'
+                                ? 'Одобрить'
+                                : tableConfirm.kind === 'pay'
+                                    ? 'Оплачено'
+                                    : tableConfirm.kind === 'delete'
+                                        ? 'Удалить'
+                                        : tableConfirm.confirmLabel} confirmVariant={tableConfirm.kind === 'delete' ? 'danger' : 'primary'} busy={tableModBusy} onClose={() => {
+                                            if (!tableModBusy)
+                                                setTableConfirm(null);
+                                        }} onConfirm={runTableConfirm} />)}
+            </>, document.body)}
 
-      {isPanelOpen && (<Suspense fallback={null}><ExpensesFormPanel isOpen mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
+        {isPanelOpen && (<Suspense fallback={null}><ExpensesFormPanel isOpen mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
             setEditingReq(r);
             setRequests(prev => prev.map(x => (x.id === r.id ? r : x)));
-        }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} formScope={isPartnerScope ? 'partner' : 'company'}/></Suspense>)}
+        }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} formScope={isPartnerScope ? 'partner' : 'company'} /></Suspense>)}
 
-      {canModerate && isReportOpen && !isPartnerScope && (<Suspense fallback={null}><ExpensesReportModal isOpen requests={requestsForUi} onClose={() => setIsReportOpen(false)}/></Suspense>)}
+        {canModerate && isReportOpen && !isPartnerScope && (<Suspense fallback={null}><ExpensesReportModal isOpen requests={requestsForUi} onClose={() => setIsReportOpen(false)} /></Suspense>)}
     </div>);
 }
 export function ExpensesPage(props: ExpensesPageProps) {
     return (<ExpensesPageBoundary>
-      <ExpensesPageInner {...props}/>
+        <ExpensesPageInner {...props} />
     </ExpensesPageBoundary>);
 }

@@ -9,6 +9,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
 import {
   createInvoice,
+  ensureInvoiceFxRatesForBilling,
   fetchUnbilledTimeEntries,
   fetchUnbilledExpenses,
   getReportSnapshot,
@@ -406,6 +407,17 @@ export function InvoiceCreatePage() {
       const manualNumber = createInvoiceNumber.trim();
       const clientRow = clients.find((c) => c.id === createClientId);
       const currency = String(clientRow?.currency ?? '').trim().toUpperCase() || undefined;
+      const expenseDates = unbilledExp
+        .filter((x) => selExp.has(x.id))
+        .map((x) => String(x.expenseDate ?? '').trim().slice(0, 10))
+        .filter(Boolean);
+      await ensureInvoiceFxRatesForBilling({
+        dateFrom: unbilledFrom,
+        dateTo: unbilledTo,
+        issueDate,
+        expenseDates,
+        currency,
+      });
       const created = await createInvoice({
         clientId: createClientId,
         projectId: billProjectId,
@@ -433,7 +445,7 @@ export function InvoiceCreatePage() {
     finally {
       setCreateBusy(false);
     }
-  }, [createClientId, createProjectId, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledFrom, unbilledTo, requireFullyConfirmedPeriod, clients, navigate, showAlert, t]);
+  }, [createClientId, createProjectId, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledFrom, unbilledTo, unbilledExp, requireFullyConfirmedPeriod, clients, navigate, showAlert, t]);
 
   const toInvoices = () => {
     void navigate(getInvoicesListUrl());

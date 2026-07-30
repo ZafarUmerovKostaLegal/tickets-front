@@ -359,6 +359,73 @@ export async function fetchUnbilledExpenses(params: {
     return res.json() as Promise<UnbilledExpenseEntryDto[]>;
 }
 
+export type EnsureInvoiceFxRatesInput = {
+    dates: string[];
+    currency?: string;
+};
+
+export type EnsureInvoiceFxRatesResult = {
+    ok: boolean;
+    dates: string[];
+    currency: string;
+};
+
+/** Seed time_tracking_fx_rates from CBU for the given dates (used before invoice create/preview). */
+export async function ensureInvoiceFxRates(body: EnsureInvoiceFxRatesInput): Promise<EnsureInvoiceFxRatesResult> {
+    const dates = [...new Set(
+        (body.dates ?? [])
+            .map((d) => String(d ?? '').trim().slice(0, 10))
+            .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)),
+    )];
+    if (dates.length === 0)
+        return { ok: true, dates: [], currency: (body.currency ?? 'USD').trim().toUpperCase() || 'USD' };
+    const payload: Record<string, unknown> = { dates };
+    const ccy = body.currency?.trim().toUpperCase();
+    if (ccy)
+        payload.currency = ccy;
+    const res = await apiFetch('/api/v1/time-tracking/invoices/fx-rates/ensure', {
+        ...invoiceApiFetchInit,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    await throwIfNotOk(res);
+    const raw = await res.json() as Record<string, unknown>;
+    return {
+        ok: raw.ok !== false,
+        dates: Array.isArray(raw.dates) ? raw.dates.map(String) : dates,
+        currency: String(raw.currency ?? ccy ?? 'USD'),
+    };
+}
+
+/**
+ * Prefetch CBU FX into backend for invoice period + issue date + expense dates.
+ * Soft-fails: invoice create will still try to seed server-side.
+ */
+export async function ensureInvoiceFxRatesForBilling(opts: {
+    dateFrom?: string | null;
+    dateTo?: string | null;
+    issueDate?: string | null;
+    expenseDates?: readonly string[] | null;
+    currency?: string | null;
+}): Promise<void> {
+    const dates = [
+        opts.issueDate,
+        opts.dateFrom,
+        opts.dateTo,
+        ...(opts.expenseDates ?? []),
+    ].filter((d): d is string => Boolean(d && String(d).trim()));
+    try {
+        await ensureInvoiceFxRates({
+            dates,
+            currency: opts.currency?.trim() || undefined,
+        });
+    }
+    catch {
+        // Backend create/preview also seeds CBU; ignore prefetch errors.
+    }
+}
+
 export async function fetchPartnerInvoicePreview(params: {
     projectId: string;
     dateFrom: string;

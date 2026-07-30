@@ -28,6 +28,7 @@ export const FRONTEND_API_ROUTES: ApiRouteSpec[] = [
     { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/reports/partner-confirmations/pending' },
     { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/reports/partner-confirmations/confirmed' },
     { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/invoices' },
+    { module: 'time-tracking', method: 'POST', path: '/api/v1/time-tracking/invoices/fx-rates/ensure' },
     { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/statistics/labor/meta' },
     { module: 'time-tracking', method: 'GET', path: '/api/v1/time-tracking/teams' },
     { module: 'vacation', method: 'GET', path: '/api/v1/vacations/schedule/employees' },
