@@ -123,9 +123,14 @@ function globalDetailRowOffset(chunks: InvoiceTimeReportDetailRow[][], chunkInde
 
 export function InvoicePreviewPage() {
     const { pushToast } = useAppToast();
-    useLocation();
+    const location = useLocation();
     const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | null>(null);
-    const session = readInvoicePreviewSession();
+    // Stabilize session identity — readInvoicePreviewSession() returns a new object every call;
+    // using it bare in effect deps cancels pack loading on every re-render (empty tables, PDF still works).
+    const session = useMemo(
+        () => readInvoicePreviewSession(),
+        [location.key, location.pathname],
+    );
     const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel | null>(null);
     const [editMode, setEditMode] = useState(false);
     const [legalOverrides, setLegalOverrides] = useState<InvoiceLegalPageOverrides>(() => firmBankingToLegalOverrides());
