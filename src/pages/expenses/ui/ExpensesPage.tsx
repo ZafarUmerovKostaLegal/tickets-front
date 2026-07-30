@@ -264,9 +264,14 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
         <div className="exp-table__td exp-table__td--status" role="cell">
             <div className="exp-table__status-tags">
                 <StatusBadge status={req.status} />
-                {req.status === 'rejected' && req.rejectionReason ? (
-                    <span className="exp-table__rejection-reason" title={req.rejectionReason}>
-                        Причина: {req.rejectionReason}
+                {(req.status === 'rejected' || req.status === 'revision_required') && req.rejectionReason ? (
+                    <span
+                        className={`exp-table__status-reason${req.status === 'revision_required' ? ' exp-table__status-reason--revision' : ''}`}
+                        title={req.rejectionReason}
+                    >
+                        <span className="exp-table__status-reason-label">Причина:</span>
+                        {' '}
+                        <span className="exp-table__status-reason-text">{req.rejectionReason}</span>
                     </span>
                 ) : null}
                 {req.expenseType === 'partner_expense' && !partnerScope && (<span className="exp-card__partner-pill exp-card__partner-pill--table" title="Расход партнёра · без согласования модератором">

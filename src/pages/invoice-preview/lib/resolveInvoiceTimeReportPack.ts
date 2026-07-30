@@ -433,23 +433,14 @@ export async function resolveInvoiceTimeReportPack(
                 return null;
             if (entryCache.has(k))
                 return entryCache.get(k) ?? null;
-            let found: TimeEntryRow | null = null;
+            // Only fetch with the known author — do NOT probe every user
+            // (that caused dozens of 404s in Network for the same timeEntryId).
             const hint = preferredAuthUserId != null && Number.isFinite(preferredAuthUserId)
                 ? Math.trunc(preferredAuthUserId)
                 : null;
+            let found: TimeEntryRow | null = null;
             if (hint != null)
-                found = await fetchTimeEntry(hint, k);
-            if (!found) {
-                for (const u of users) {
-                    if (hint != null && u.id === hint)
-                        continue;
-                    const row = await fetchTimeEntry(u.id, k);
-                    if (row) {
-                        found = row;
-                        break;
-                    }
-                }
-            }
+                found = await fetchTimeEntry(hint, k).catch(() => null);
             entryCache.set(k, found);
             return found;
         }

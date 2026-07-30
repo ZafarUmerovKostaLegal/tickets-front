@@ -1405,11 +1405,18 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
 
         <div className="exp-panel__body" ref={bodyRef}>
 
-          {isView && editingRequest?.status === 'rejected' && editingRequest.rejectionReason ? (
-            <section className="exp-rejection-reason" role="note" aria-label="Причина отказа">
+          {(editingRequest?.status === 'rejected' || editingRequest?.status === 'revision_required')
+            && editingRequest.rejectionReason ? (
+            <section
+              className={`exp-rejection-reason${editingRequest.status === 'revision_required' ? ' exp-rejection-reason--revision' : ''}`}
+              role="note"
+              aria-label={editingRequest.status === 'revision_required' ? 'Комментарий к доработке' : 'Причина отказа'}
+            >
               <div className="exp-rejection-reason__icon" aria-hidden>!</div>
               <div>
-                <p className="exp-rejection-reason__title">Причина отказа</p>
+                <p className="exp-rejection-reason__title">
+                  {editingRequest.status === 'revision_required' ? 'Что исправить' : 'Причина отказа'}
+                </p>
                 <p className="exp-rejection-reason__text">{editingRequest.rejectionReason}</p>
               </div>
             </section>

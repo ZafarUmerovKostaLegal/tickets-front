@@ -862,23 +862,48 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
   overflow: visible;
 }
 
-.exp-table__status-tags {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  min-width: min-content;
+.exp-table__td--status {
+  align-self: start;
+  padding-top: 0.65rem;
+  padding-bottom: 0.65rem;
 }
 
-.exp-table__rejection-reason {
-  flex-basis: 100%;
-  max-width: 15rem;
+.exp-table__status-tags {
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 0.35rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.exp-table__rejection-reason,
+.exp-table__status-reason {
+  display: block;
+  max-width: 14rem;
+  margin: 0;
+  padding: 0;
   overflow: hidden;
-  color: #b91c1c;
-  font-size: 0.72rem;
+  color: #991b1b;
+  font-size: 0.6875rem;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.exp-table__status-reason-label {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.exp-table__status-reason-text {
+  font-weight: 500;
+  color: #991b1b;
+}
+
+.exp-table__status-reason--revision .exp-table__status-reason-text {
+  color: #6d28d9;
 }
 
 .expenses-page .exp-card__partner-pill--table {
@@ -2256,11 +2281,23 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   grid-template-columns: 2rem minmax(0, 1fr);
   gap: 0.75rem;
   align-items: start;
+  margin-bottom: 1rem;
   padding: 0.9rem 1rem;
   border: 1px solid rgba(220, 38, 38, 0.28);
   border-radius: 12px;
   background: rgba(254, 242, 242, 0.92);
   color: #7f1d1d;
+}
+
+.exp-rejection-reason--revision {
+  border-color: rgba(124, 58, 237, 0.28);
+  background: rgba(245, 243, 255, 0.95);
+  color: #5b21b6;
+}
+
+.exp-rejection-reason--revision .exp-rejection-reason__icon {
+  background: rgba(124, 58, 237, 0.12);
+  color: #7c3aed;
 }
 
 .exp-rejection-reason__icon {
@@ -2296,6 +2333,24 @@ body[data-theme='dark'] .exp-rejection-reason {
   border-color: rgba(248, 113, 113, 0.3);
   background: rgba(127, 29, 29, 0.18);
   color: #fecaca;
+}
+
+body[data-theme='dark'] .exp-rejection-reason--revision {
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(76, 29, 149, 0.22);
+  color: #ddd6fe;
+}
+
+body[data-theme='dark'] .exp-table__status-reason-label {
+  color: #94a3b8;
+}
+
+body[data-theme='dark'] .exp-table__status-reason-text {
+  color: #fca5a5;
+}
+
+body[data-theme='dark'] .exp-table__status-reason--revision .exp-table__status-reason-text {
+  color: #c4b5fd;
 }
 
 .exp-form-block--docs {

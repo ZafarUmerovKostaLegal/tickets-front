@@ -1,4 +1,4 @@
-import { apiFetch, throwIfNotOk } from '@shared/api/client';
+import { apiFetch } from '@shared/api/client';
 
 export const CBU_JSON_BASE_PATH = '/ru/arkhiv-kursov-valyut/json';
 export interface CbuJsonRow {
@@ -83,7 +83,17 @@ async function fetchCbuViaGateway(isoDate: string): Promise<CbuParsed> {
         `/api/v1/cbu-rates?date=${encodeURIComponent(isoDate)}`,
         { getReuseWindowMs: 60_000 },
     );
-    await throwIfNotOk(res);
+    if (!res.ok) {
+        let msg = `HTTP ${res.status}`;
+        try {
+            const j = await res.clone().json() as { detail?: string; message?: string };
+            msg = String(j.detail ?? j.message ?? msg);
+        }
+        catch {
+            /* keep status message */
+        }
+        throw new Error(msg);
+    }
     const raw = await res.json() as { rows?: CbuJsonRow[] } | CbuJsonRow[];
     const rows = Array.isArray(raw) ? raw : (raw.rows ?? []);
     return parseCbuRows(rows);
