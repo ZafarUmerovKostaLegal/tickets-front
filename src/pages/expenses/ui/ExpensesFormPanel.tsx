@@ -381,12 +381,12 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         [values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd],
     );
     const amountUzsSaveHint = useMemo(() => {
-        if (isView || values.amountCurrency === 'UZS')
+        if (mode === 'view' || values.amountCurrency === 'UZS')
             return '';
         if (!(amountUzsForRouting > 0))
             return '';
         return `К сохранению: ${amountUzsForRouting.toLocaleString('ru-RU', { maximumFractionDigits: 2 })} UZS`;
-    }, [isView, values.amountCurrency, amountUzsForRouting]);
+    }, [mode, values.amountCurrency, amountUzsForRouting]);
     const viewEquivFromServer = useMemo(() => {
         const n = asExpenseNumber(editingRequest?.equivalentAmount);
         return n > 0 ? n.toFixed(2) : '';
