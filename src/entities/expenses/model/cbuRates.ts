@@ -187,6 +187,12 @@ export async function fetchCbuParsedForDate(isoDate: string): Promise<CbuParsed>
     return pending;
 }
 
+/** Sync peek of successful CBU cache (no network). */
+export function peekCachedCbuParsedForDate(isoDate: string): CbuParsed | null {
+    const anchor = isoDate.trim().slice(0, 10);
+    return cbuOkCache.get(anchor) ?? null;
+}
+
 /** Build FX pairs for invoice ensure (1 from = rate to) covering `forDate`. */
 export function cbuParsedToInvoiceFxRates(parsed: CbuParsed, forDate: string): Array<{
     fromCurrency: string;

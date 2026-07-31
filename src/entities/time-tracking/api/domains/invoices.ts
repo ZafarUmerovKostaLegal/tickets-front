@@ -424,9 +424,9 @@ export async function ensureInvoiceFxRates(body: EnsureInvoiceFxRatesInput): Pro
 }
 
 /**
- * Load CBU rates in the browser and upsert them into time_tracking_fx_rates
- * before invoice preview/create. Uses expense/work dates — not invoice issue date.
- * Throws if CBU or ensure API fails.
+ * Ask the backend to seed time_tracking_fx_rates for billing dates.
+ * Prefer server-side CBU fetch (one POST) — avoids browser /cbu-rates + direct cbu.uz spam.
+ * Optionally attach client-fetched rates when already cached.
  */
 export async function ensureInvoiceFxRatesForBilling(opts: {
     dateFrom?: string | null;
@@ -435,9 +435,6 @@ export async function ensureInvoiceFxRatesForBilling(opts: {
     expenseDates?: readonly string[] | null;
     currency?: string | null;
 }): Promise<void> {
-    const { cbuParsedToInvoiceFxRates, fetchCbuParsedForDate } = await import('@entities/expenses/model/cbuRates');
-    // Prefer explicit expense dates; fall back to billing period bounds.
-    // Do not use issueDate — FX for expenses must follow дата расхода.
     const dates = [...new Set([
         opts.dateFrom,
         opts.dateTo,
@@ -448,32 +445,34 @@ export async function ensureInvoiceFxRatesForBilling(opts: {
     if (dates.length === 0)
         return;
 
-    const rates: Array<{
+    const currency = opts.currency?.trim().toUpperCase() || undefined;
+
+    // Reuse in-memory CBU cache if present (expenses form may have warmed it).
+    // Do not trigger new gateway/direct CBU calls here — backend ensure seeds from CBU.
+    let rates: Array<{
         fromCurrency: string;
         toCurrency: string;
         rateDate: string;
         rate: number;
     }> = [];
-    const errors: string[] = [];
-    for (const d of dates) {
-        try {
-            const parsed = await fetchCbuParsedForDate(d);
-            rates.push(...cbuParsedToInvoiceFxRates(parsed, d));
-        }
-        catch (e) {
-            errors.push(`${d}: ${e instanceof Error ? e.message : String(e)}`);
+    try {
+        const { cbuParsedToInvoiceFxRates, peekCachedCbuParsedForDate } = await import('@entities/expenses/model/cbuRates');
+        if (typeof peekCachedCbuParsedForDate === 'function') {
+            for (const d of dates) {
+                const parsed = peekCachedCbuParsedForDate(d);
+                if (parsed)
+                    rates.push(...cbuParsedToInvoiceFxRates(parsed, d));
+            }
         }
     }
-    if (rates.length === 0) {
-        throw new Error(
-            errors[0]
-                ?? 'Не удалось получить курсы ЦБ РУз для конвертации счёта',
-        );
+    catch {
+        rates = [];
     }
+
     await ensureInvoiceFxRates({
         dates,
-        currency: opts.currency?.trim() || undefined,
-        rates,
+        currency,
+        ...(rates.length > 0 ? { rates } : {}),
     });
 }
 
