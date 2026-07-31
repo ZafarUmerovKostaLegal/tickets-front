@@ -788,8 +788,7 @@ function legalInvoiceDocxBlocks(
         }),
         panels,
         new Paragraph({
-            spacing: { before: 160, after: 200 },
-            border: { bottom: { style: BorderStyle.SINGLE, color: '334155', size: 12, space: 1 } },
+            spacing: { before: 120, after: 160 },
             children: [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
         }),
         svcTbl,

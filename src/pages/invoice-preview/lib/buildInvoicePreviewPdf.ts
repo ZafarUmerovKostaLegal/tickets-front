@@ -1282,14 +1282,7 @@ function drawLegalInvoicePdfPage(
     page.drawText(labels.caseDetails, { x: splitX, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
     const yRight = wrapTextBlock(page, caseLine, splitX, panelsTop - DOC_LH, rightColW, DOC_FS, font, BODY, DOC_LH);
 
-    y = Math.min(yLeft, yRight) - DOC_LH * 0.7;
-    page.drawLine({
-        start: { x: ML, y },
-        end: { x: ML + contentW, y },
-        thickness: 1.1,
-        color: rgb(0.2, 0.25, 0.33),
-    });
-    y -= LEGAL_PANELS_PT + 4;
+    y = Math.min(yLeft, yRight) - LEGAL_PANELS_PT;
 
     const descColW = contentW * 0.72;
     const headH = DOC_FS + 10;

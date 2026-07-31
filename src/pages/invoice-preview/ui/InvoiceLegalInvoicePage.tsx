@@ -264,8 +264,6 @@ export function InvoiceLegalInvoicePage({
         </div>
       </div>
 
-      <div className="tt-inv-li__after-panels-rule" aria-hidden/>
-
       <table className="tt-inv-li__svc-table" role="presentation">
         <thead>
           <tr>
