@@ -13,6 +13,7 @@ export {
     getInvoiceAudit,
     patchInvoice,
     sendInvoice,
+    notifyInvoiceAccountingLastPage,
     createInvoiceOutlookDraft,
     getInvoiceOutlookDraftStatus,
     markInvoiceViewed,

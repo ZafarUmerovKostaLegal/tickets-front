@@ -18,6 +18,43 @@ export async function blobToBase64(blob: Blob): Promise<string> {
   return btoa(binary);
 }
 
+/** Build PDF of the last invoice preview page (legal invoice) and email it to accounting. */
+export async function notifyAccountingLastInvoicePage(opts: {
+  invoiceId: string;
+  model: import('@pages/invoice-preview/lib/invoiceCoverLetterModel').InvoiceCoverLetterModel;
+  session: import('@entities/time-tracking/model/invoicePreviewSession').InvoicePreviewSessionV1;
+  clientLabel: string;
+  invoiceNumber: string | null | undefined;
+  issueDateIso: string;
+}): Promise<void> {
+  const { buildInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewPdf');
+  const { resolveInvoiceTimeReportPack } = await import('@pages/invoice-preview/lib/resolveInvoiceTimeReportPack');
+  const { splitDetailRowsForPagedTimeReport } = await import('@pages/invoice-preview/lib/invoiceTimeReportChunking');
+  const { invoicePreviewPageCount } = await import('@pages/invoice-preview/lib/invoiceLegalPageModel');
+  const { buildInvoicePreviewExportBasename } = await import('@pages/invoice-preview/lib/invoicePreviewDownload');
+  const { notifyInvoiceAccountingLastPage } = await import('@entities/time-tracking');
+
+  const pack = await resolveInvoiceTimeReportPack(opts.session, opts.model);
+  const pageCount = invoicePreviewPageCount(splitDetailRowsForPagedTimeReport(pack.detailSlots).length);
+  const blob = await buildInvoicePreviewPdfBlob({
+    model: opts.model,
+    session: opts.session,
+    timeReportPack: pack,
+    selectedPageNumbers: [pageCount],
+  });
+  const pdfBase64 = await blobToBase64(blob);
+  const pdfFileName = `${buildInvoicePreviewExportBasename({
+    invoiceNumber: opts.invoiceNumber,
+    clientLabel: opts.clientLabel,
+    issueDateIso: opts.issueDateIso,
+  })}-invoice-page.pdf`;
+  await notifyInvoiceAccountingLastPage(opts.invoiceId, {
+    pdfBase64,
+    pdfFileName,
+    clientName: opts.clientLabel,
+  });
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

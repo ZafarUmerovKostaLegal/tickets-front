@@ -48,6 +48,7 @@ import {
   invoiceLineKindLabel,
   invoiceLineKindSlug,
   invoicePreviewMetaForExisting,
+  notifyAccountingLastInvoicePage,
   notifyReportsInvalidated,
   openOutlookComposePopup,
   parseMoneyRu,
@@ -179,6 +180,7 @@ export function InvoiceDetailPage() {
     messageId: string;
     subject: string;
     label: string;
+    afterSent?: () => void | Promise<void>;
   }) => {
     outlookWaitAbortRef.current?.abort();
     const ac = new AbortController();
@@ -216,6 +218,12 @@ export function InvoiceDetailPage() {
         if (st.state === 'sent') {
           await sendInvoice(opts.invoiceId);
           await refreshDetail(opts.invoiceId);
+          try {
+            await opts.afterSent?.();
+          }
+          catch (e) {
+            console.warn('invoice accounting last-page notify failed', e);
+          }
           pushToast({
             message: t('timeTrackingPage.invoices.sendDialog.outlookSentStatusUpdated').replace('{invoice}', opts.label),
             variant: 'info',
@@ -1012,6 +1020,15 @@ export function InvoiceDetailPage() {
                 pdfFileName,
               });
 
+              const notifyAccounting = () => notifyAccountingLastInvoicePage({
+                invoiceId: detail.id,
+                model,
+                session: previewSession,
+                clientLabel,
+                invoiceNumber: detail.invoiceNumber,
+                issueDateIso: detail.issueDate.slice(0, 10),
+              });
+
               const opened = openOutlookComposePopup(draft.webLink);
               if (!opened)
                 await showAlert({ message: t('timeTrackingPage.invoices.errors.outlookOpenFailed') });
@@ -1022,6 +1039,12 @@ export function InvoiceDetailPage() {
               if (!messageId) {
                 await sendInvoice(detail.id);
                 await refreshDetail(detail.id);
+                try {
+                  await notifyAccounting();
+                }
+                catch (e) {
+                  console.warn('invoice accounting last-page notify failed', e);
+                }
                 pushToast({
                   message: t('timeTrackingPage.invoices.sendDialog.outlookSentStatusUpdated').replace('{invoice}', invoiceLabel),
                   variant: 'info',
@@ -1034,6 +1057,7 @@ export function InvoiceDetailPage() {
                 messageId,
                 subject,
                 label: invoiceLabel,
+                afterSent: notifyAccounting,
               });
             }
             catch (e) {

@@ -976,6 +976,54 @@ export async function sendInvoice(id: string): Promise<InvoiceDto> {
     return normalizeInvoiceDto(await res.json());
 }
 
+export type InvoiceAccountingLastPageNotifyInput = {
+    pdfBase64: string;
+    pdfFileName?: string | null;
+    clientName?: string | null;
+};
+
+export type InvoiceAccountingLastPageNotifyResult = {
+    sent: boolean;
+    recipients: string[];
+    skippedReason: string | null;
+};
+
+export async function notifyInvoiceAccountingLastPage(
+    invoiceId: string,
+    body: InvoiceAccountingLastPageNotifyInput,
+): Promise<InvoiceAccountingLastPageNotifyResult> {
+    const payload: Record<string, unknown> = {
+        pdfBase64: String(body.pdfBase64 ?? '').trim(),
+    };
+    const pdfFileName = body.pdfFileName != null ? String(body.pdfFileName).trim() : '';
+    if (pdfFileName)
+        payload.pdfFileName = pdfFileName;
+    const clientName = body.clientName != null ? String(body.clientName).trim() : '';
+    if (clientName)
+        payload.clientName = clientName;
+
+    const res = await apiFetch(
+        `/api/v1/time-tracking/invoices/${encodeURIComponent(invoiceId)}/notify-accounting-last-page`,
+        {
+            ...invoiceApiFetchInit,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        },
+    );
+    await throwIfNotOk(res);
+    const raw = await res.json();
+    const o = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+    const recipients = Array.isArray(o.recipients)
+        ? o.recipients.map((x) => String(x).trim()).filter(Boolean)
+        : [];
+    return {
+        sent: o.sent === true,
+        recipients,
+        skippedReason: o.skippedReason != null ? String(o.skippedReason) : null,
+    };
+}
+
 export type InvoiceOutlookDraftInput = {
     toEmail: string;
     toName?: string | null;
