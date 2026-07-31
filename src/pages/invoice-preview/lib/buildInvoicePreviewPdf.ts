@@ -53,9 +53,7 @@ const TR_RED = rgb(232 / 255, 51 / 255, 55 / 255);
 const MUTED_TEXT = rgb(0.41, 0.44, 0.52);
 const GRID_LINE = rgb(0.74, 0.77, 0.8);
 const BODY = rgb(0.12, 0.14, 0.18);
-/** Matches legal invoice service-table header (#1a1a1a). */
-const CORAL = rgb(26 / 255, 26 / 255, 26 / 255);
-const CORAL_DARK = rgb(1, 1, 1);
+const CORAL = rgb(232 / 255, 51 / 255, 55 / 255);
 const PANEL_HEAD = rgb(0.28, 0.33, 0.39);
 const FIRM_NAME = rgb(0.12, 0.16, 0.23);
 const THANKS_TEXT = rgb(0.42, 0.45, 0.5);
@@ -1222,7 +1220,7 @@ function drawLegalInvoicePdfPage(
         y: ribbonTextY,
         size: DOC_FS,
         font: fontBold,
-        color: CORAL_DARK,
+        color: rgb(1, 1, 1),
     });
     const ribbonDateW = fontBold.widthOfTextAtSize(ribbonIssue, DOC_FS);
     page.drawText(ribbonIssue, {
@@ -1230,15 +1228,15 @@ function drawLegalInvoicePdfPage(
         y: ribbonTextY,
         size: DOC_FS,
         font: fontBold,
-        color: CORAL_DARK,
+        color: rgb(1, 1, 1),
     });
     y -= ribbonH + LEGAL_RIBBON_MB;
 
     page.drawLine({
         start: { x: ML, y: y + 3 },
         end: { x: ML + contentW, y: y + 3 },
-        thickness: 0.5,
-        color: GRID_LINE,
+        thickness: 0.55,
+        color: rgb(0.2, 0.25, 0.33),
     });
     y -= LEGAL_PANELS_PT;
 
@@ -1300,7 +1298,7 @@ function drawLegalInvoicePdfPage(
         color: rgb(1, 1, 1),
     });
 
-    const svcLines = splitTextLines(svcLine, descColW - 10, DOC_FS, fontBold);
+    const svcLines = splitTextLines(svcLine, descColW - 10, DOC_FS, font);
     const rowPad = 8;
     const rowH = Math.max(DOC_LH, svcLines.length * DOC_LH) + rowPad;
     const yRowTop = yHeadBot;
@@ -1313,7 +1311,7 @@ function drawLegalInvoicePdfPage(
     });
     let svcY = yRowTop - rowPad - DOC_FS;
     for (const ln of svcLines) {
-        page.drawText(ln, { x: ML + 5, y: svcY, size: DOC_FS, font: fontBold, color: BODY });
+        page.drawText(ln, { x: ML + 5, y: svcY, size: DOC_FS, font, color: BODY });
         svcY -= DOC_LH;
     }
     const totW = fontBold.widthOfTextAtSize(model.totalFormatted, DOC_FS);
@@ -1334,7 +1332,7 @@ function drawLegalInvoicePdfPage(
 
     const drawTotalRow = (label: string, value: string, due = false) => {
         const labelColor = due ? CORAL : BODY;
-        const valueColor = due ? CORAL : BODY;
+        const valueColor = BODY;
         const labelMaxW = totalsW - valueReserve;
         const valW = fontBold.widthOfTextAtSize(value, DOC_FS);
         const labelLines = splitTextLines(label, labelMaxW, DOC_FS, fontBold);
@@ -1361,23 +1359,10 @@ function drawLegalInvoicePdfPage(
         y -= blockH + (due ? 3 : 1);
     };
 
-    page.drawLine({
-        start: { x: totalsLeft, y: y + 4 },
-        end: { x: rightX, y: y + 4 },
-        thickness: 0.6,
-        color: CORAL,
-    });
-    y -= 6;
     drawTotalRow(labels.subtotal, model.totalFormatted);
     drawTotalRow(labels.vat, vatAmount);
     drawTotalRow(labels.extraExpenses, extraExpensesAmount);
     drawTotalRow(labels.totalDueBy(dueBanner), model.totalFormatted, true);
-    page.drawLine({
-        start: { x: totalsLeft, y: y + 4 },
-        end: { x: rightX, y: y + 4 },
-        thickness: 0.6,
-        color: CORAL,
-    });
     y -= DOC_LH * 3.1;
 
     const thanks = labels.thanks;

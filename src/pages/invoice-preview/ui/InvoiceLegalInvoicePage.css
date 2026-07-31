@@ -13,8 +13,8 @@
   background: var(--tt-inv-paper, #ffffff);
   display: flex;
   flex-direction: column;
-  --tt-inv-li-coral: #1a1a1a;
-  --tt-inv-li-coral-dark: #ffffff;
+  --tt-inv-li-coral: #e83337;
+  --tt-inv-li-coral-dark: #1a0506;
 }
 
 .tt-inv-li__masthead {
@@ -81,7 +81,7 @@
   font-weight: 800;
   letter-spacing: 0.045em;
   text-transform: uppercase;
-  color: var(--tt-inv-li-coral-dark);
+  color: #ffffff;
   white-space: nowrap;
 }
 
@@ -95,7 +95,7 @@
   gap: 1rem 1.75rem;
   padding-top: 0.65rem;
   margin-bottom: 0.95rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid #334155;
 }
 
 .tt-inv-li__panel-h {
@@ -180,34 +180,34 @@
 .tt-inv-li__svc-table td {
   padding: 0.55rem 0.55rem 0.45rem;
   font-size: inherit;
-  font-weight: 700;
+  font-weight: 400;
   vertical-align: bottom;
   border-bottom: 1px solid var(--tt-inv-li-coral);
-  color: var(--tt-inv-paper-ink, #0f172a);
+  color: #334155;
 }
 
 .tt-inv-li__svc-amt {
   text-align: right;
   white-space: nowrap;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  color: #1e293b;
 }
 
 .tt-inv-li__totals {
   align-self: flex-end;
   width: min(100%, 22rem);
-  margin: 0.35rem 0 1.1rem;
-  padding: 0.4rem 0;
-  border-top: 1px solid var(--tt-inv-li-coral);
-  border-bottom: 1px solid var(--tt-inv-li-coral);
+  margin: 0.15rem 0 1.1rem;
+  padding: 0;
+  border: none;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.15rem;
   font-family: Calibri, Carlito, 'Segoe UI', sans-serif;
   font-size: inherit;
   font-weight: 700;
   line-height: 1.45;
-  color: var(--tt-inv-paper-ink, #0f172a);
+  color: #1e293b;
 }
 
 .tt-inv-li__total-line {
@@ -222,16 +222,19 @@
   text-transform: uppercase;
   font-weight: 700;
   font-size: inherit;
+  color: #334155;
 }
 
 .tt-inv-li__total-value {
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  font-weight: 700;
+  font-weight: 600;
+  color: #1e293b;
 }
 
 .tt-inv-li__total-line--due {
+  margin-top: 0.15rem;
   color: var(--tt-inv-li-coral);
   font-weight: 700;
 }
@@ -242,6 +245,7 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   min-width: 0;
+  color: var(--tt-inv-li-coral);
 }
 
 .tt-inv-li__total-due-amt {
@@ -249,7 +253,7 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: inherit;
+  color: #1e293b;
 }
 
 .tt-inv-li__closing {
@@ -328,9 +332,27 @@
   flex-shrink: 0;
 }
 
+.tt-inv-li--editable .tt-inv-li__field--ribbon {
+  width: auto;
+  min-width: 8rem;
+  max-width: 14rem;
+  border-color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.tt-inv-li--editable .tt-inv-li__field--ribbon-date {
+  min-width: 9rem;
+  text-align: right;
+}
+
 .tt-inv-li--editable .tt-inv-li__field--due {
   font-weight: 700;
   font-size: inherit;
+  color: #1e293b;
 }
 
 .tt-inv-li--editable .tt-inv-li__field--due-date {
@@ -339,7 +361,7 @@
   text-transform: uppercase;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: inherit;
+  color: var(--tt-inv-li-coral);
 }
 
 .tt-inv-li--editable .tt-inv-li__field--firm-addr {
@@ -356,21 +378,4 @@
   gap: 0.35rem;
   min-width: 0;
   white-space: normal;
-}
-
-.tt-inv-li--editable .tt-inv-li__field--ribbon {
-  width: auto;
-  min-width: 8rem;
-  max-width: 14rem;
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--tt-inv-li-coral-dark);
-  font-weight: 800;
-  letter-spacing: 0.045em;
-  text-transform: uppercase;
-}
-
-.tt-inv-li--editable .tt-inv-li__field--ribbon-date {
-  min-width: 9rem;
-  text-align: right;
 }
