@@ -250,17 +250,23 @@ function drawCoverPage(
     page.drawText(labels.closing, { x: ML, y, size: DOC_FS, font, color: BODY });
 
     y -= COVER_SIG_BEFORE * 0.45;
-    const sigLineW = 160;
+    const sigLineW = 200;
     if (signatureImage) {
-        const sigH = 28;
-        const sigW = Math.min(sigLineW, sigH * (signatureImage.width / Math.max(1, signatureImage.height)));
+        const maxSigH = 54;
+        const aspect = signatureImage.width / Math.max(1, signatureImage.height);
+        let sigW = sigLineW;
+        let sigH = sigW / aspect;
+        if (sigH > maxSigH) {
+            sigH = maxSigH;
+            sigW = sigH * aspect;
+        }
         page.drawImage(signatureImage, {
             x: ML,
             y: y - sigH,
             width: sigW,
             height: sigH,
         });
-        y -= sigH + 4;
+        y -= sigH + 6;
     }
     else {
         y -= COVER_SIG_BEFORE * 0.55;
@@ -1276,14 +1282,14 @@ function drawLegalInvoicePdfPage(
     page.drawText(labels.caseDetails, { x: splitX, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
     const yRight = wrapTextBlock(page, caseLine, splitX, panelsTop - DOC_LH, rightColW, DOC_FS, font, BODY, DOC_LH);
 
-    y = Math.min(yLeft, yRight) - DOC_LH * 0.55;
+    y = Math.min(yLeft, yRight) - DOC_LH * 0.7;
     page.drawLine({
         start: { x: ML, y },
         end: { x: ML + contentW, y },
-        thickness: 0.55,
+        thickness: 1.1,
         color: rgb(0.2, 0.25, 0.33),
     });
-    y -= LEGAL_PANELS_PT;
+    y -= LEGAL_PANELS_PT + 4;
 
     const descColW = contentW * 0.72;
     const headH = DOC_FS + 10;

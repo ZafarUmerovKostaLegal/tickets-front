@@ -123,11 +123,11 @@
 .tt-inv-cover__sig-image {
   display: block;
   width: auto;
-  max-width: 11rem;
-  height: 3.4rem;
+  max-width: 14rem;
+  height: 5rem;
   object-fit: contain;
   object-position: left bottom;
-  margin: 0.25rem 0 0.1rem;
+  margin: 0.35rem 0 0.15rem;
 }
 
 .tt-inv-cover__sig-image--empty {
@@ -136,7 +136,7 @@
 
 .tt-inv-cover__sig-line {
   display: block;
-  width: 11rem;
+  width: 14rem;
   border-bottom: 1px solid rgba(var(--app-accent-rgb, 79, 70, 229), 0.35);
   margin-bottom: 0.35rem;
 }

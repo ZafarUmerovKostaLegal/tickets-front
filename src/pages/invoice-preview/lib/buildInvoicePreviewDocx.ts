@@ -788,8 +788,8 @@ function legalInvoiceDocxBlocks(
         }),
         panels,
         new Paragraph({
-            spacing: { before: 120, after: 160 },
-            border: { bottom: { style: BorderStyle.SINGLE, color: '334155', size: 8, space: 1 } },
+            spacing: { before: 160, after: 200 },
+            border: { bottom: { style: BorderStyle.SINGLE, color: '334155', size: 12, space: 1 } },
             children: [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
         }),
         svcTbl,
@@ -852,8 +852,15 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
             }));
         }
         if (signatureRaster?.png.length && signatureRaster.widthPx > 0) {
-            const tw = 140;
-            const th = Math.max(1, Math.round((signatureRaster.heightPx / signatureRaster.widthPx) * tw));
+            const maxW = 220;
+            const maxH = 72;
+            const aspect = signatureRaster.widthPx / Math.max(1, signatureRaster.heightPx);
+            let tw = maxW;
+            let th = Math.max(1, Math.round(tw / aspect));
+            if (th > maxH) {
+                th = maxH;
+                tw = Math.max(1, Math.round(th * aspect));
+            }
             coverSignatureRuns.push(new ImageRun({
                 type: 'png',
                 data: signatureRaster.png,
