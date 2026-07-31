@@ -499,7 +499,7 @@
   gap: 0.35rem;
   flex-shrink: 1;
   min-width: 0;
-  max-width: 16rem;
+  max-width: 18rem;
 }
 
 .tt-inv-preview__bank-select-label {
@@ -510,22 +510,141 @@
   white-space: nowrap;
 }
 
-.tt-inv-preview__bank-select-input {
+.tt-inv-preview__bank-dd {
   min-width: 0;
-  max-width: 14rem;
+  flex: 1 1 auto;
+  max-width: 15rem;
+}
+
+.tt-inv-preview__bank-dd.tsp-srch,
+.tt-inv-preview__bank-dd .tsp-srch {
+  width: auto;
+  min-width: 0;
+}
+
+.tt-inv-preview__bank-dd .tsp-srch__btn,
+.tt-inv-preview__bank-dd-btn.tsp-srch__btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 1.875rem;
   height: 1.875rem;
-  padding: 0 0.45rem;
+  padding: 0 0.45rem 0 0.55rem;
   border: 1px solid var(--tt-inv-shell-divider);
   border-radius: 6px;
   background: var(--tt-inv-paper);
   color: var(--tt-inv-shell-doc-text);
   font-size: 0.75rem;
   font-weight: 600;
+  box-shadow: none;
+  cursor: pointer;
+  text-align: left;
 }
 
-.tt-inv-preview__bank-select-input:disabled {
+.tt-inv-preview__bank-dd .tsp-srch__btn:hover:not(:disabled),
+.tt-inv-preview__bank-dd-btn.tsp-srch__btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 45%, var(--tt-inv-shell-divider));
+}
+
+.tt-inv-preview__bank-dd .tsp-srch__btn:focus,
+.tt-inv-preview__bank-dd-btn.tsp-srch__btn:focus {
+  border-color: var(--app-accent, #4f46e5);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent, #4f46e5) 18%, transparent);
+}
+
+.tt-inv-preview__bank-dd .tsp-srch__btn:disabled,
+.tt-inv-preview__bank-dd-btn.tsp-srch__btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.tt-inv-preview__bank-dd .tsp-srch__btn-text,
+.tt-inv-preview__bank-dd .tsp-srch__btn-text--custom {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tt-inv-shell-doc-text);
+}
+
+.tt-inv-preview__bank-dd .tsp-srch__chev {
+  flex-shrink: 0;
+  width: 0.85rem;
+  height: 0.85rem;
+  opacity: 0.55;
+}
+
+.tt-inv-preview__bank-dd-btn-text {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.tt-inv-preview__bank-dd-btn-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.tt-inv-preview__bank-dd-btn-meta {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--tt-inv-shell-muted-text);
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tt-inv-shell-divider) 70%, transparent);
+}
+
+.tt-inv-preview__bank-dd-menu .tt-inv-preview__bank-dd-opt,
+.tt-inv-preview__bank-dd-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  padding: 0.1rem 0;
+}
+
+.tt-inv-preview__bank-dd-opt-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--tt-inv-shell-doc-text, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tt-inv-preview__bank-dd-opt-badge {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--app-accent, #4f46e5);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 12%, transparent);
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+}
+
+.tt-inv-preview__bank-dd-opt-meta {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--tt-inv-shell-muted-text, #64748b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tt-inv-preview__lang-btn--active {

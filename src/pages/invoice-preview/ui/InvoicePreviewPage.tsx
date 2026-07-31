@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getInvoiceCreateUrl, getInvoiceDetailUrl } from '@shared/config';
-import { AppBackButton, AppHomeLogo, AppPageSettings, useAppToast } from '@shared/ui';
+import { AppBackButton, AppHomeLogo, AppPageSettings, SearchableSelect, useAppToast } from '@shared/ui';
 import { readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
 import { firmBankingToLegalOverrides, applyFirmBankingProfileToLegalOverrides, profileDisplayTitle, type FirmBankingProfile } from '@entities/time-tracking/lib/firmBankingDetailsStorage';
 import { loadFirmBankingProfiles, pickFirmBankingProfileForCurrency } from '@entities/time-tracking/api';
@@ -629,27 +629,65 @@ export function InvoicePreviewPage() {
                   </button>
                 </div>
                 {bankProfiles.length > 0 ? (
-                  <label className="tt-inv-preview__bank-select" title="Банковские реквизиты на странице счёта">
-                    <span className="tt-inv-preview__bank-select-label">Реквизиты</span>
-                    <select
-                      className="tt-inv-preview__bank-select-input"
+                  <div className="tt-inv-preview__bank-select" title="Банковские реквизиты на странице счёта">
+                    <span className="tt-inv-preview__bank-select-label" id="tt-inv-bank-select-lbl">Реквизиты</span>
+                    <SearchableSelect<FirmBankingProfile>
+                      className="tt-inv-preview__bank-dd"
+                      buttonClassName="tt-inv-preview__bank-dd-btn"
                       value={selectedBankProfileId}
-                      disabled={!coverModel}
-                      aria-label="Банковские реквизиты для счёта"
-                      onChange={(e) => {
-                          const next = bankProfiles.find((p) => p.id === e.target.value) ?? null;
-                          applyBankProfile(next, { userInitiated: true });
+                      items={bankProfiles}
+                      getOptionValue={(p) => p.id}
+                      getOptionLabel={(p) => {
+                          const title = profileDisplayTitle(p, 'Без названия');
+                          const bits = [title];
+                          if (p.isDefault)
+                              bits.push('по умолчанию');
+                          if (p.accountCurrency.trim())
+                              bits.push(p.accountCurrency.trim());
+                          return bits.join(' · ');
                       }}
-                    >
-                      {bankProfiles.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {profileDisplayTitle(p, 'Без названия')}
-                          {p.isDefault ? ' · по умолчанию' : ''}
-                          {p.accountCurrency ? ` · ${p.accountCurrency}` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      getSearchText={(p) => [
+                          p.title,
+                          p.bankName,
+                          p.accountCurrency,
+                          p.accountNumber,
+                          p.swift,
+                      ].filter(Boolean).join(' ')}
+                      renderButtonContent={(p) => (
+                        <span className="tt-inv-preview__bank-dd-btn-text">
+                          <span className="tt-inv-preview__bank-dd-btn-title">
+                            {profileDisplayTitle(p, 'Без названия')}
+                          </span>
+                          {p.accountCurrency.trim() ? (
+                            <span className="tt-inv-preview__bank-dd-btn-meta">{p.accountCurrency.trim()}</span>
+                          ) : null}
+                        </span>
+                      )}
+                      renderOption={(p, { selected }) => (
+                        <span className={`tt-inv-preview__bank-dd-opt${selected ? ' tt-inv-preview__bank-dd-opt--selected' : ''}`}>
+                          <span className="tt-inv-preview__bank-dd-opt-title">
+                            {profileDisplayTitle(p, 'Без названия')}
+                            {p.isDefault ? (
+                              <span className="tt-inv-preview__bank-dd-opt-badge">по умолчанию</span>
+                            ) : null}
+                          </span>
+                          <span className="tt-inv-preview__bank-dd-opt-meta">
+                            {[p.accountCurrency, p.bankName, p.accountNumber].map((x) => x.trim()).filter(Boolean).join(' · ')}
+                          </span>
+                        </span>
+                      )}
+                      onSelect={(p) => applyBankProfile(p, { userInitiated: true })}
+                      placeholder="Выберите реквизиты"
+                      emptyListText="Нет реквизитов"
+                      noMatchText="Ничего не найдено"
+                      disabled={!coverModel}
+                      portalDropdown
+                      portalZIndex={12000}
+                      portalMinWidth={280}
+                      portalDropdownClassName="tt-inv-preview__bank-dd-menu"
+                      aria-labelledby="tt-inv-bank-select-lbl"
+                    />
+                  </div>
                 ) : null}
                 <button
                   type="button"
