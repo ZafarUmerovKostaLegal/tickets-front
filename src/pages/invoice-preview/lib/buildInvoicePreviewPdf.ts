@@ -1259,7 +1259,17 @@ function drawLegalInvoicePdfPage(
     const panelsTop = y;
 
     page.drawText(labels.billTo, { x: ML, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
-    let yLeft = panelsTop - DOC_LH;
+    page.drawText(labels.caseDetails, { x: splitX, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
+
+    const headsRuleY = panelsTop - DOC_LH * 0.55;
+    page.drawLine({
+        start: { x: ML, y: headsRuleY },
+        end: { x: ML + contentW, y: headsRuleY },
+        thickness: 1.1,
+        color: rgb(0.2, 0.25, 0.33),
+    });
+
+    let yLeft = headsRuleY - DOC_LH * 0.95;
     page.drawText(model.recipientCompany, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: BODY });
     yLeft -= DOC_LH;
     page.drawText(`${labels.address}:`, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: MUTED_TEXT });
@@ -1279,8 +1289,7 @@ function drawLegalInvoicePdfPage(
     page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yLeft, size: DOC_FS, font, color: MUTED_TEXT });
     yLeft -= DOC_LH * 0.92;
 
-    page.drawText(labels.caseDetails, { x: splitX, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
-    const yRight = wrapTextBlock(page, caseLine, splitX, panelsTop - DOC_LH, rightColW, DOC_FS, font, BODY, DOC_LH);
+    const yRight = wrapTextBlock(page, caseLine, splitX, headsRuleY - DOC_LH * 0.95, rightColW, DOC_FS, font, BODY, DOC_LH);
 
     y = Math.min(yLeft, yRight) - LEGAL_PANELS_PT;
 

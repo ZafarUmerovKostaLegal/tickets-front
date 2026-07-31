@@ -195,8 +195,10 @@ export function InvoiceLegalInvoicePage({
       </div>
 
       <div className="tt-inv-li__panels">
-        <div className="tt-inv-li__panel">
-          <h3 className="tt-inv-li__panel-h">{labels.billTo}</h3>
+        <h3 className="tt-inv-li__panel-h tt-inv-li__panel-h--bill">{labels.billTo}</h3>
+        <h3 className="tt-inv-li__panel-h tt-inv-li__panel-h--case">{labels.caseDetails}</h3>
+        <div className="tt-inv-li__panel-heads-rule" aria-hidden/>
+        <div className="tt-inv-li__panel tt-inv-li__panel--bill">
           <p className="tt-inv-li__panel-strong">
             <LiField
               editable={editable}
@@ -251,7 +253,6 @@ export function InvoiceLegalInvoicePage({
           </p>
         </div>
         <div className="tt-inv-li__panel tt-inv-li__panel--right">
-          <h3 className="tt-inv-li__panel-h">{labels.caseDetails}</h3>
           <p className="tt-inv-li__panel-text">
             <LiField
               editable={editable}

@@ -583,11 +583,12 @@ function legalInvoiceDocxBlocks(
 
     const billChildren: Paragraph[] = [
         new Paragraph({
-            spacing: { after: 80 },
+            spacing: { after: 60 },
+            border: { bottom: { style: BorderStyle.SINGLE, color: '334155', size: 12, space: 4 } },
             children: [new TextRun({ text: labels.billTo, bold: true, color: '1E293B', size: DOC_SIZE, font: DOC_FONT })],
         }),
         new Paragraph({
-            spacing: { after: 40 },
+            spacing: { before: 80, after: 40 },
             children: [new TextRun({ text: model.recipientCompany, bold: true, color: '0F172A', size: DOC_SIZE, font: DOC_FONT })],
         }),
         new Paragraph({
@@ -625,10 +626,12 @@ function legalInvoiceDocxBlocks(
 
     const caseChildren: Paragraph[] = [
         new Paragraph({
-            spacing: { after: 80 },
+            spacing: { after: 60 },
+            border: { bottom: { style: BorderStyle.SINGLE, color: '334155', size: 12, space: 4 } },
             children: [new TextRun({ text: labels.caseDetails, bold: true, color: '1E293B', size: DOC_SIZE, font: DOC_FONT })],
         }),
         new Paragraph({
+            spacing: { before: 80 },
             children: [new TextRun({ text: caseLine, size: DOC_SIZE, font: DOC_FONT })],
         }),
     ];
