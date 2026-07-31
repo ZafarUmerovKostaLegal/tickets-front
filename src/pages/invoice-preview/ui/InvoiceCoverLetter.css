@@ -130,6 +130,10 @@
   margin: 0.25rem 0 0.1rem;
 }
 
+.tt-inv-cover__sig-image--empty {
+  visibility: hidden;
+}
+
 .tt-inv-cover__sig-line {
   display: block;
   width: 11rem;
@@ -144,6 +148,16 @@
 
 .tt-inv-cover__sig-name {
   font-weight: 700;
+}
+
+.tt-inv-cover__partner-select {
+  width: min(100%, 16rem);
+}
+
+.tt-inv-cover__partner-select-btn {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
 }
 
 .tt-inv-cover--editable .tt-inv-cover__field {

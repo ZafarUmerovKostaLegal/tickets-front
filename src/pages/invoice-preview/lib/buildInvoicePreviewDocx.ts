@@ -831,7 +831,7 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
         const [coverRaster, legalRaster, signatureRaster] = await Promise.all([
             rasterizeInvoiceLogoSvg(420, 'cover'),
             rasterizeInvoiceLogoSvg(160, 'legal'),
-            loadCoverSignaturePng(),
+            loadCoverSignaturePng(model.signatoryInitials || model.signatoryName),
         ]);
         if (coverRaster?.png.length && coverRaster.widthPx > 0) {
             const tw = 200;

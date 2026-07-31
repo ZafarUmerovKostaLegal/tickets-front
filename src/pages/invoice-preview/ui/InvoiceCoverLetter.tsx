@@ -1,6 +1,12 @@
 import type { ChangeEvent } from 'react';
+import { SearchableSelect } from '@shared/ui';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
-import { COVER_SIGNATURE_PUBLIC_URL } from '../lib/invoiceCoverSignature';
+import {
+    COVER_SIGNATORY_PARTNERS,
+    coverSignaturePublicUrl,
+    resolveCoverSignatoryPartner,
+    type CoverSignatoryPartner,
+} from '../lib/invoiceCoverSignature';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import {
     KOSTA_LEGAL_FIRM,
@@ -48,6 +54,13 @@ function CoverField({
     return <input type="text" {...shared} />;
 }
 
+function resolveActiveSignatory(model: InvoiceCoverLetterModel): CoverSignatoryPartner | null {
+    return resolveCoverSignatoryPartner({
+        initials: model.signatoryInitials,
+        name: model.signatoryName,
+    });
+}
+
 export function InvoiceCoverLetter({
     model,
     editable = false,
@@ -62,6 +75,22 @@ export function InvoiceCoverLetter({
     const showSecondParagraph = secondParagraphMode === 'invoice'
         || editable
         || Boolean(model.invoiceParagraphOverride?.trim());
+    const activePartner = resolveActiveSignatory(model);
+    const signatureUrl = coverSignaturePublicUrl(activePartner);
+    const partnerItems: CoverSignatoryPartner[] = (() => {
+        if (activePartner || !model.signatoryName.trim())
+            return [...COVER_SIGNATORY_PARTNERS];
+        return [
+            {
+                initials: '__current__',
+                displayName: model.signatoryName.trim(),
+                fileName: '',
+            },
+            ...COVER_SIGNATORY_PARTNERS,
+        ];
+    })();
+    const selectValue = activePartner?.initials
+        ?? (model.signatoryName.trim() ? '__current__' : '');
 
     return (<div className={`tt-inv-cover${editable ? ' tt-inv-cover--editable' : ''}`}>
       <header className="tt-inv-cover__header">
@@ -182,20 +211,45 @@ export function InvoiceCoverLetter({
         <p className="tt-inv-cover__closing">{labels.closing}</p>
 
         <div className="tt-inv-cover__signature">
-          <img
-            className="tt-inv-cover__sig-image"
-            src={COVER_SIGNATURE_PUBLIC_URL}
-            alt=""
-            decoding="async"
-          />
+          {signatureUrl ? (
+            <img
+              className="tt-inv-cover__sig-image"
+              src={signatureUrl}
+              alt=""
+              decoding="async"
+            />
+          ) : (
+            <span className="tt-inv-cover__sig-image tt-inv-cover__sig-image--empty" aria-hidden/>
+          )}
           <span className="tt-inv-cover__sig-line" aria-hidden/>
           <p className="tt-inv-cover__sig-name">
-            <CoverField
-              editable={editable}
-              value={model.signatoryName}
-              ariaLabel="Подписант"
-              onChange={(signatoryName) => patch?.({ signatoryName })}
-            />
+            {editable ? (
+              <SearchableSelect<CoverSignatoryPartner>
+                className="tt-inv-cover__partner-select"
+                buttonClassName="tt-inv-cover__field tt-inv-cover__partner-select-btn"
+                value={selectValue}
+                items={partnerItems}
+                getOptionValue={(p) => p.initials}
+                getOptionLabel={(p) => p.displayName}
+                getSearchText={(p) => `${p.displayName} ${p.initials === '__current__' ? '' : p.initials}`}
+                onSelect={(p) => {
+                    if (p.initials === '__current__')
+                        return;
+                    patch?.({
+                        signatoryName: p.displayName,
+                        signatoryInitials: p.initials,
+                    });
+                }}
+                placeholder="Выберите партнёра"
+                emptyListText="Нет партнёров"
+                noMatchText="Ничего не найдено"
+                portalDropdown
+                portalZIndex={12000}
+                portalMinWidth={240}
+              />
+            ) : (
+              <span>{model.signatoryName}</span>
+            )}
           </p>
           <p className="tt-inv-cover__sig-title">
             <CoverField

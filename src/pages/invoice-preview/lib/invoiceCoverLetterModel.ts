@@ -33,6 +33,8 @@ export type InvoiceCoverLetterModel = {
     servicesMonthYear: string;
     totalFormatted: string;
     signatoryName: string;
+    /** Partner initials matching `public/signatures/{initials}.*` when known. */
+    signatoryInitials: string;
     signatoryTitle: string;
 
     introParagraphOverride?: string | null;
@@ -55,6 +57,7 @@ import {
     getCoverLetterLabels,
     normalizeCoverLanguage,
 } from './invoiceCoverLetterI18n';
+import { findCoverSignatoryPartnerByName } from './invoiceCoverSignature';
 import { formatTimeReportAmount } from './invoiceTimeReportModel';
 
 export function formatCoverLetterTotal(amount: number | null, currency: string): string {
@@ -98,6 +101,8 @@ export function buildInvoiceCoverLetterModel(input: InvoiceCoverLetterInput): In
         servicesMonthYear: formatCoverServicesPeriod(iso, lang),
         totalFormatted: formatCoverLetterTotal(input.totalAmount, input.currency),
         signatoryName: KOSTA_LEGAL_FIRM.defaultSignatoryName,
+        signatoryInitials: findCoverSignatoryPartnerByName(KOSTA_LEGAL_FIRM.defaultSignatoryName)?.initials
+            ?? 'AAA',
         signatoryTitle: labels.defaultSignatoryTitle,
     };
 }

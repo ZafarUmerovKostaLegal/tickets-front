@@ -3,6 +3,7 @@ import {
     resolveCoverIntroParagraph,
     type InvoiceCoverLetterModel,
 } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
+import { resolveCoverSignatoryPartner } from '@pages/invoice-preview/lib/invoiceCoverSignature';
 
 export type MockLetterCoverMeta = {
     recipientAddressLine1?: string;
@@ -58,6 +59,10 @@ export function mockLetterToCoverModel(letter: LetterCoverSource): InvoiceCoverL
         attentionName: meta?.attentionName?.trim() || base.attentionName,
         attentionTitle: meta?.attentionTitle?.trim() || base.attentionTitle,
         signatoryName: meta?.signatoryName?.trim() || base.signatoryName,
+        signatoryInitials: resolveCoverSignatoryPartner({
+            name: meta?.signatoryName?.trim() || base.signatoryName,
+            initials: base.signatoryInitials,
+        })?.initials ?? base.signatoryInitials,
         signatoryTitle: meta?.signatoryTitle?.trim() || base.signatoryTitle,
         introParagraphOverride: body || null,
         invoiceParagraphOverride: meta?.bodyParagraph2?.trim() || null,

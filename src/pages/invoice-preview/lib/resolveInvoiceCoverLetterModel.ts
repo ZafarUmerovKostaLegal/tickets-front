@@ -2,6 +2,10 @@ import { getInvoice, getTimeManagerClient, listAllClientProjectsMerged, listTime
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
 import { buildInvoiceCoverLetterModel, KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { coverLanguageFromRecordsLanguage, type InvoiceCoverLanguage } from './invoiceCoverLetterI18n';
+import {
+    normalizeCoverSignatureCode,
+    resolveCoverSignatoryPartner,
+} from './invoiceCoverSignature';
 
 function fallbackInput(coverLanguage: InvoiceCoverLanguage = 'ENG') {
     const iso = new Date().toISOString().slice(0, 10);
@@ -38,11 +42,43 @@ async function resolveCoverLanguageFromSession(session: InvoicePreviewSessionV1)
     }
 }
 
-async function resolveProjectPartnerName(session: InvoicePreviewSessionV1): Promise<string | null> {
+type ResolvedSignatory = {
+    signatoryName: string;
+    signatoryInitials: string;
+};
+
+function resolveSignatoryFromPartner(name: string | null, initialsRaw: string | null): ResolvedSignatory {
+    const partner = resolveCoverSignatoryPartner({ name, initials: initialsRaw });
+    if (partner) {
+        return {
+            signatoryName: partner.displayName,
+            signatoryInitials: partner.initials,
+        };
+    }
+    const code = normalizeCoverSignatureCode(initialsRaw);
+    if (code) {
+        return {
+            signatoryName: name?.trim() || KOSTA_LEGAL_FIRM.defaultSignatoryName,
+            signatoryInitials: code,
+        };
+    }
+    if (!name?.trim()) {
+        return {
+            signatoryName: KOSTA_LEGAL_FIRM.defaultSignatoryName,
+            signatoryInitials: 'AAA',
+        };
+    }
+    return {
+        signatoryName: name.trim(),
+        signatoryInitials: '',
+    };
+}
+
+async function resolveProjectPartnerSignatory(session: InvoicePreviewSessionV1): Promise<ResolvedSignatory> {
     try {
         const projectId = await resolveProjectIdFromSession(session);
         if (!projectId)
-            return null;
+            return resolveSignatoryFromPartner(null, null);
         const [projects, users] = await Promise.all([
             listAllClientProjectsMerged(true),
             listTimeTrackingUsers().catch(() => []),
@@ -50,25 +86,34 @@ async function resolveProjectPartnerName(session: InvoicePreviewSessionV1): Prom
         const project = projects.find((p) => p.id === projectId);
         const partnerIds: number[] = project?.partnerAuthUserIds ?? [];
         if (partnerIds.length === 0)
-            return null;
+            return resolveSignatoryFromPartner(null, null);
         const partnerUser = users.find((u) => partnerIds.includes(u.id));
         if (!partnerUser)
-            return null;
-        return (partnerUser.display_name ?? '').trim() || null;
+            return resolveSignatoryFromPartner(null, null);
+        const name = (partnerUser.display_name ?? '').trim() || null;
+        const initials = (partnerUser.initials ?? '').trim() || null;
+        return resolveSignatoryFromPartner(name, initials);
     }
     catch {
-        return null;
+        return resolveSignatoryFromPartner(null, null);
     }
+}
+
+function withSignatory(model: InvoiceCoverLetterModel, signatory: ResolvedSignatory): InvoiceCoverLetterModel {
+    return {
+        ...model,
+        signatoryName: signatory.signatoryName,
+        signatoryInitials: signatory.signatoryInitials,
+    };
 }
 
 export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSessionV1 | null): Promise<InvoiceCoverLetterModel> {
     if (!session)
         return buildInvoiceCoverLetterModel(fallbackInput());
-    const [coverLanguage, partnerName] = await Promise.all([
+    const [coverLanguage, signatory] = await Promise.all([
         resolveCoverLanguageFromSession(session),
-        resolveProjectPartnerName(session),
+        resolveProjectPartnerSignatory(session),
     ]);
-    const signatoryName = partnerName || KOSTA_LEGAL_FIRM.defaultSignatoryName;
     try {
         if (session.mode === 'existing') {
             const inv = await getInvoice(session.invoiceId, true);
@@ -82,7 +127,7 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
                 currency: inv.currency,
                 coverLanguage,
             });
-            return { ...model, signatoryName };
+            return withSignatory(model, signatory);
         }
         const f = session.form;
         const iso = f.issueDate.slice(0, 10);
@@ -96,7 +141,7 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
                 currency: 'EUR',
                 coverLanguage,
             });
-            return { ...model, signatoryName };
+            return withSignatory(model, signatory);
         }
         const client = await getTimeManagerClient(f.createClientId);
         const model = buildInvoiceCoverLetterModel({
@@ -108,10 +153,10 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
             currency: client.currency || 'EUR',
             coverLanguage,
         });
-        return { ...model, signatoryName };
+        return withSignatory(model, signatory);
     }
     catch {
         const model = buildInvoiceCoverLetterModel(fallbackInput(coverLanguage));
-        return { ...model, signatoryName };
+        return withSignatory(model, signatory);
     }
 }
