@@ -27,6 +27,7 @@ import {
 } from './invoiceLegalPageModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { COVER_LETTERHEAD_LOGO_ASPECT, LEGAL_VERT_LOGO_ASPECT, rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
+import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
 import {
@@ -170,6 +171,7 @@ function drawCoverPage(
     font: PDFFont,
     fontBold: PDFFont,
     logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null,
+    signatureImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null,
 ): void {
     const logoTop = H - MT;
     let headerContentBottom = logoTop - COVER_LOGO_H_PT;
@@ -247,9 +249,24 @@ function drawCoverPage(
     y -= COVER_CLOSING_BEFORE;
     page.drawText(labels.closing, { x: ML, y, size: DOC_FS, font, color: BODY });
 
-    y -= COVER_SIG_BEFORE;
-    const sigW = 160;
-    page.drawLine({ start: { x: ML, y }, end: { x: ML + sigW, y }, thickness: 0.5, color: rgb(0.35, 0.38, 0.45) });
+    y -= COVER_SIG_BEFORE * 0.45;
+    const sigLineW = 160;
+    if (signatureImage) {
+        const sigH = 28;
+        const sigW = Math.min(sigLineW, sigH * (signatureImage.width / Math.max(1, signatureImage.height)));
+        page.drawImage(signatureImage, {
+            x: ML,
+            y: y - sigH,
+            width: sigW,
+            height: sigH,
+        });
+        y -= sigH + 4;
+    }
+    else {
+        y -= COVER_SIG_BEFORE * 0.55;
+    }
+
+    page.drawLine({ start: { x: ML, y }, end: { x: ML + sigLineW, y }, thickness: 0.5, color: rgb(0.35, 0.38, 0.45) });
     y -= DOC_LH * 1.6;
 
     page.drawText(model.signatoryName, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
@@ -1429,10 +1446,12 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
 
     let coverLogoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
     let legalLogoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
+    let coverSignatureImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
     if (typeof window !== 'undefined') {
-        const [coverRaster, legalRaster] = await Promise.all([
+        const [coverRaster, legalRaster, signatureRaster] = await Promise.all([
             rasterizeInvoiceLogoSvg(500, 'cover'),
             rasterizeInvoiceLogoSvg(180, 'legal'),
+            loadCoverSignaturePng(),
         ]);
         if (coverRaster?.png.length) {
             try {
@@ -1448,6 +1467,14 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
             }
             catch {
                 legalLogoImage = null;
+            }
+        }
+        if (signatureRaster?.png.length) {
+            try {
+                coverSignatureImage = await doc.embedPng(signatureRaster.png);
+            }
+            catch {
+                coverSignatureImage = null;
             }
         }
     }
@@ -1469,7 +1496,7 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
 
     if (includePage(1)) {
         const p1 = doc.addPage([W, H]);
-        drawCoverPage(p1, model, font, fontBold, coverLogoImage);
+        drawCoverPage(p1, model, font, fontBold, coverLogoImage, coverSignatureImage);
     }
 
     let trPageTag = 2;

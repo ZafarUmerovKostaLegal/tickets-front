@@ -1,5 +1,6 @@
 import type { ChangeEvent } from 'react';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
+import { COVER_SIGNATURE_PUBLIC_URL } from '../lib/invoiceCoverSignature';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import {
     KOSTA_LEGAL_FIRM,
@@ -181,6 +182,12 @@ export function InvoiceCoverLetter({
         <p className="tt-inv-cover__closing">{labels.closing}</p>
 
         <div className="tt-inv-cover__signature">
+          <img
+            className="tt-inv-cover__sig-image"
+            src={COVER_SIGNATURE_PUBLIC_URL}
+            alt=""
+            decoding="async"
+          />
           <span className="tt-inv-cover__sig-line" aria-hidden/>
           <p className="tt-inv-cover__sig-name">
             <CoverField

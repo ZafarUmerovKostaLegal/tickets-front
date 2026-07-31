@@ -36,6 +36,7 @@ import {
 import { trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
+import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
@@ -79,7 +80,11 @@ function contactParagraph(text: string, spacingAfter = 20): Paragraph {
     });
 }
 
-function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: ParagraphChild[]): (Paragraph | Table)[] {
+function coverChildren(
+    model: InvoiceCoverLetterModel,
+    logoHeaderRuns: ParagraphChild[],
+    signatureRuns: ParagraphChild[] = [],
+): (Paragraph | Table)[] {
     const headerTable = new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         borders: {
@@ -161,7 +166,13 @@ function coverChildren(model: InvoiceCoverLetterModel, logoHeaderRuns: Paragraph
             })],
         }),
         new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: labels.closing, size: DOC_SIZE, font: DOC_FONT })] }),
-        new Paragraph({ spacing: { before: 280 }, children: [new TextRun({ text: '_________________________', size: DOC_SIZE, font: DOC_FONT, color: '666666' })] }),
+        new Paragraph({
+            spacing: { before: signatureRuns.length ? 120 : 280, after: 40 },
+            children: signatureRuns.length
+                ? signatureRuns
+                : [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
+        }),
+        new Paragraph({ spacing: { before: 40 }, children: [new TextRun({ text: '_________________________', size: DOC_SIZE, font: DOC_FONT, color: '666666' })] }),
         new Paragraph({ spacing: { before: 80 }, children: [new TextRun({ text: model.signatoryName, size: DOC_SIZE, font: DOC_FONT })] }),
         new Paragraph({ children: [new TextRun({ text: model.signatoryTitle, size: DOC_SIZE, font: DOC_FONT })] }),
     );
@@ -815,10 +826,12 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
     const { model, session, timeReportPack: timeReportOverride, legalOverrides, selectedPageNumbers } = input;
     const coverLogoRuns: ParagraphChild[] = [];
     const legalLogoRuns: ParagraphChild[] = [];
+    const coverSignatureRuns: ParagraphChild[] = [];
     if (typeof window !== 'undefined') {
-        const [coverRaster, legalRaster] = await Promise.all([
+        const [coverRaster, legalRaster, signatureRaster] = await Promise.all([
             rasterizeInvoiceLogoSvg(420, 'cover'),
             rasterizeInvoiceLogoSvg(160, 'legal'),
+            loadCoverSignaturePng(),
         ]);
         if (coverRaster?.png.length && coverRaster.widthPx > 0) {
             const tw = 200;
@@ -835,6 +848,15 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
             legalLogoRuns.push(new ImageRun({
                 type: 'png',
                 data: legalRaster.png,
+                transformation: { width: tw, height: th },
+            }));
+        }
+        if (signatureRaster?.png.length && signatureRaster.widthPx > 0) {
+            const tw = 140;
+            const th = Math.max(1, Math.round((signatureRaster.heightPx / signatureRaster.widthPx) * tw));
+            coverSignatureRuns.push(new ImageRun({
+                type: 'png',
+                data: signatureRaster.png,
                 transformation: { width: tw, height: th },
             }));
         }
@@ -864,7 +886,7 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
     if (includePage(1)) {
         sections.push({
             ...sectionPage,
-            children: coverChildren(model, coverLogoRuns),
+            children: coverChildren(model, coverLogoRuns, coverSignatureRuns),
         });
     }
 

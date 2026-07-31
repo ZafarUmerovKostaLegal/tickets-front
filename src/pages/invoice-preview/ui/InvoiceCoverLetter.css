@@ -120,6 +120,16 @@
   margin-top: 2rem;
 }
 
+.tt-inv-cover__sig-image {
+  display: block;
+  width: auto;
+  max-width: 11rem;
+  height: 3.4rem;
+  object-fit: contain;
+  object-position: left bottom;
+  margin: 0.25rem 0 0.1rem;
+}
+
 .tt-inv-cover__sig-line {
   display: block;
   width: 11rem;
