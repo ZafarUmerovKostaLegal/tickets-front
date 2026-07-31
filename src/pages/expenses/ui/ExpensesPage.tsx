@@ -1701,6 +1701,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         {canModerate && isReportOpen && !isPartnerScope && (<Suspense fallback={null}><ExpensesReportModal isOpen requests={requestsForUi} onClose={() => setIsReportOpen(false)} /></Suspense>)}
     </div>);
 }
+
 export function ExpensesPage(props: ExpensesPageProps) {
     return (<ExpensesPageBoundary>
         <ExpensesPageInner {...props} />

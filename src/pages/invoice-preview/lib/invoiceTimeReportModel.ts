@@ -22,9 +22,12 @@ export type InvoiceTimeReportSummaryRow = {
 export type InvoiceTimeReportPack = {
     currency: string;
     detailSlots: InvoiceTimeReportDetailRow[];
+    /** Expense lines shown in a separate table (not mixed into time details). */
+    expenseSlots: InvoiceTimeReportDetailRow[];
     summarySlots: InvoiceTimeReportSummaryRow[];
     detailTotalHoursDisplay: string;
     detailTotalAmountDisplay: string;
+    expenseTotalAmountDisplay: string;
     summaryGrandHoursDisplay: string;
     summaryGrandAmountDisplay: string;
 };
@@ -41,9 +44,11 @@ export function emptyInvoiceTimeReportPack(currency: string): InvoiceTimeReportP
     return {
         currency,
         detailSlots: Array.from({ length: TIME_REPORT_DETAIL_ROWS }, emptyDetailRow),
+        expenseSlots: [],
         summarySlots: Array.from({ length: TIME_REPORT_SUMMARY_ROWS }, emptySummaryRow),
         detailTotalHoursDisplay: '',
         detailTotalAmountDisplay: '',
+        expenseTotalAmountDisplay: '',
         summaryGrandHoursDisplay: '',
         summaryGrandAmountDisplay: '',
     };

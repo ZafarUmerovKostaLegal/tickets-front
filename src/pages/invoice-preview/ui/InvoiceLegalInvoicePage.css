@@ -13,8 +13,8 @@
   background: var(--tt-inv-paper, #ffffff);
   display: flex;
   flex-direction: column;
-  --tt-inv-li-coral: #e83337;
-  --tt-inv-li-coral-dark: #1a0506;
+  --tt-inv-li-coral: #1a1a1a;
+  --tt-inv-li-coral-dark: #ffffff;
 }
 
 .tt-inv-li__masthead {
@@ -362,8 +362,8 @@
   width: auto;
   min-width: 8rem;
   max-width: 14rem;
-  border-color: rgba(26, 5, 6, 0.28);
-  background: rgba(255, 255, 255, 0.72);
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
   color: var(--tt-inv-li-coral-dark);
   font-weight: 800;
   letter-spacing: 0.045em;

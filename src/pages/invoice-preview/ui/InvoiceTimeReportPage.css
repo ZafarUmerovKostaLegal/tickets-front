@@ -86,12 +86,15 @@
 .tt-inv-tr__thead th:nth-child(5):nth-last-child(3),
 .tt-inv-tr__thead th:nth-child(6):nth-last-child(2),
 .tt-inv-tr__table[aria-label='Сводка по сервисам'] .tt-inv-tr__thead th:nth-child(n + 4),
+.tt-inv-tr__table--expenses .tt-inv-tr__thead th:last-child,
 .tt-inv-tr__tbody td:last-child,
 .tt-inv-tr__tbody td:nth-child(5):nth-last-child(3),
 .tt-inv-tr__tbody td:nth-child(6):nth-last-child(2),
 .tt-inv-tr__tbody td.tt-inv-tr__cell--num,
 .tt-inv-tr__tfoot td:last-child,
-.tt-inv-tr__tfoot td.tt-inv-tr__cell--num {
+.tt-inv-tr__tfoot td.tt-inv-tr__cell--num,
+.tt-inv-tr__table--expenses .tt-inv-tr__tbody td:last-child,
+.tt-inv-tr__table--expenses .tt-inv-tr__tfoot td:last-child {
   text-align: right;
 }
 

@@ -53,8 +53,9 @@ const TR_RED = rgb(232 / 255, 51 / 255, 55 / 255);
 const MUTED_TEXT = rgb(0.41, 0.44, 0.52);
 const GRID_LINE = rgb(0.74, 0.77, 0.8);
 const BODY = rgb(0.12, 0.14, 0.18);
-const CORAL = rgb(232 / 255, 51 / 255, 55 / 255);
-const CORAL_DARK = rgb(26 / 255, 5 / 255, 6 / 255);
+/** Matches legal invoice service-table header (#1a1a1a). */
+const CORAL = rgb(26 / 255, 26 / 255, 26 / 255);
+const CORAL_DARK = rgb(1, 1, 1);
 const PANEL_HEAD = rgb(0.28, 0.33, 0.39);
 const FIRM_NAME = rgb(0.12, 0.16, 0.23);
 const THANKS_TEXT = rgb(0.42, 0.45, 0.5);
@@ -503,7 +504,22 @@ function paginateDetailRowsForPdf(
     const summaryHeaders = [labels.initials, labels.name, labels.titleCol, labels.hours, labels.hourlyRate, labels.totalPrice(cur)] as const;
     const summaryBody = trimTrailingEmptySummarySlots(pack.summarySlots)
         .map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
-    const summaryReserve = TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
+    const expenseBody = trimTrailingEmptyDetailSlots(pack.expenseSlots)
+        .map((r) => [r.date, r.description, r.amount] as const);
+    const expenseReserve = expenseBody.length
+        ? TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
+            + estimateGridTableHeight(
+                tableW,
+                TIME_REPORT_PDF_EXPENSE_WEIGHTS,
+                [labels.date, labels.description, labels.amount(cur)],
+                expenseBody,
+                new Set([1]),
+                font,
+                fontBold,
+                true,
+            )
+        : 0;
+    const summaryReserve = expenseReserve + TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
         + estimateGridTableHeight(
             tableW,
             TIME_REPORT_PDF_SUMMARY_WEIGHTS,
@@ -620,8 +636,9 @@ function trimDetailSliceToFitSummary(
     showDetailTotals: boolean,
     font: PDFFont,
     fontBold: PDFFont,
+    expenseReserve = 0,
 ): InvoiceTimeReportDetailRow[] {
-    const summaryReserve = TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
+    const summaryReserve = expenseReserve + TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
         + estimateGridTableHeight(
             tableW,
             TIME_REPORT_PDF_SUMMARY_WEIGHTS,
@@ -745,9 +762,8 @@ function drawTimeReportGridTable(
         const { text, size } = headerCells[i]!;
         if (!text)
             continue;
-        const rightAlign = footerKind === 'detail'
-            ? i >= 4
-            : i >= 3;
+        const rightAlign = rightAlignedBodyCols?.has(i)
+            ?? (footerKind === 'detail' ? i >= 4 : i >= 3);
         const tw = fontBold.widthOfTextAtSize(text, size);
         let xDraw = xs[i]! + CELL_PAD_X;
         if (rightAlign)
@@ -826,12 +842,19 @@ function drawTimeReportGridTable(
 
         if (footerKind === 'detail' && footerTotals?.detail) {
             const { hours, amount } = footerTotals.detail;
-            const hi = 4;
-            const ai = 6;
-            if (hours?.trim())
-                drawRightFitPdfBold(page, hours, xs[hi]!, widths[hi]!, yFoot, fontBold);
-            if (amount?.trim())
-                drawRightFitPdfBold(page, amount, xs[ai]!, widths[ai]!, yFoot, fontBold);
+            if (colWeights.length <= 3) {
+                const ai = colWeights.length - 1;
+                if (amount?.trim())
+                    drawRightFitPdfBold(page, amount, xs[ai]!, widths[ai]!, yFoot, fontBold);
+            }
+            else {
+                const hi = 4;
+                const ai = 6;
+                if (hours?.trim())
+                    drawRightFitPdfBold(page, hours, xs[hi]!, widths[hi]!, yFoot, fontBold);
+                if (amount?.trim())
+                    drawRightFitPdfBold(page, amount, xs[ai]!, widths[ai]!, yFoot, fontBold);
+            }
         }
 
         if (footerKind === 'summary' && footerTotals?.summary) {
@@ -865,6 +888,7 @@ function drawTimeReportGridTable(
 
 /** Wider Date so `25 Mar 2026` / `25 мар 2026` fit at DOC_FS (no shrink). */
 const TIME_REPORT_PDF_DETAIL_WEIGHTS = [15, 9, 13, 18, 8, 18, 19] as const;
+const TIME_REPORT_PDF_EXPENSE_WEIGHTS = [18, 52, 30] as const;
 const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 20, 18, 12, 18, 23] as const;
 /** Task, Description, Rate, Amount — wrap at spaces; keep full font (no mid-word splits). */
 const TR_DETAIL_WRAP_COLS = new Set([2, 3, 5, 6]);
@@ -971,6 +995,21 @@ function drawSingleTimeReportPdfPage(
 
     let detailSlice = slice;
     if (opts.showSummarySection) {
+        const expenseBodyForReserve = trimTrailingEmptyDetailSlots(pack.expenseSlots)
+            .map((r) => [r.date, r.description, r.amount] as const);
+        const expenseReserve = expenseBodyForReserve.length
+            ? TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
+                + estimateGridTableHeight(
+                    tableW,
+                    TIME_REPORT_PDF_EXPENSE_WEIGHTS,
+                    [labels.date, labels.description, amountHdr],
+                    expenseBodyForReserve,
+                    new Set([1]),
+                    font,
+                    fontBold,
+                    true,
+                )
+            : 0;
         detailSlice = trimDetailSliceToFitSummary(
             slice,
             yGridTop,
@@ -981,6 +1020,7 @@ function drawSingleTimeReportPdfPage(
             opts.showDetailTotals,
             font,
             fontBold,
+            expenseReserve,
         );
     }
     else {
@@ -1023,6 +1063,48 @@ function drawSingleTimeReportPdfPage(
     }
 
     let yMid = yAfterDetail - TR_SECTION_GAP;
+
+    const expenseRows = trimTrailingEmptyDetailSlots(pack.expenseSlots);
+    if (expenseRows.length > 0) {
+        page.drawText(labels.expensesTitle, {
+            x: ML,
+            y: yMid,
+            size: DOC_FS,
+            font: fontBold,
+            color: TR_RED,
+        });
+        yMid -= TR_SUMMARY_TITLE_GAP;
+        const expenseHeaders = [labels.date, labels.description, amountHdr] as const;
+        const expenseBody = expenseRows.map((r) => [r.date, r.description, r.amount] as const);
+        yMid = drawTimeReportGridTable(page, {
+            tableLeft: ML,
+            tableW,
+            yTopPdf: yMid,
+            colWeights: TIME_REPORT_PDF_EXPENSE_WEIGHTS,
+            headers: expenseHeaders,
+            bodyRows: Math.max(expenseBody.length, 1),
+            footerKind: 'detail',
+            summaryCurrency: null,
+            font,
+            fontBold,
+            bodyTexts: expenseBody.length ? expenseBody : [['', '', '']],
+            rightAlignedBodyCols: new Set([2]),
+            wrapBodyCols: new Set([1]),
+            fixedFsBodyCols: new Set([2]),
+            showInnerTotal: true,
+            totalLabel: labels.total,
+            footerTotals: {
+                detail: {
+                    hours: '',
+                    amount: pack.expenseTotalAmountDisplay,
+                },
+            },
+        });
+        // Expense footer uses detail kind which expects hours in col 4 — for 3-col table
+        // the draw function may misplace. Check drawTimeReportGridTable footer for detail.
+        yMid -= TR_SECTION_GAP;
+    }
+
     page.drawText(labels.summaryTitle, {
         x: ML,
         y: yMid,

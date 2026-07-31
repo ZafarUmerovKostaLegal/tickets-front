@@ -337,7 +337,18 @@ export function InvoicePreviewPage() {
         });
     }, [resolvedTimeReportPack]);
 
-    const patchTimeReportPack = useCallback((patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay'>>) => {
+    const patchExpenseRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        setTimeReportPack((prev) => {
+            const base = prev ?? resolvedTimeReportPack;
+            const nextSlots = [...(base.expenseSlots ?? [])];
+            while (nextSlots.length <= rowIndex)
+                nextSlots.push({ date: '', initials: '', task: '', description: '', hours: '', hourlyRate: '', amount: '' });
+            nextSlots[rowIndex] = { ...nextSlots[rowIndex]!, [field]: value };
+            return { ...base, expenseSlots: nextSlots };
+        });
+    }, [resolvedTimeReportPack]);
+
+    const patchTimeReportPack = useCallback((patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay'>>) => {
         setTimeReportPack((prev) => ({ ...(prev ?? resolvedTimeReportPack), ...patch }));
     }, [resolvedTimeReportPack]);
 
@@ -563,6 +574,7 @@ export function InvoicePreviewPage() {
                                       detailRows={timeReportChunks[thumbTrIdx]}
                                       continuation={thumbTrIdx > 0}
                                       showDetailTotalRow={thumbTrIdx === timeReportChunks.length - 1}
+                                      showExpenseSection={thumbTrIdx === timeReportChunks.length - 1}
                                       showSummarySection={thumbTrIdx === timeReportChunks.length - 1}
                                     />
                                   </div>
@@ -790,9 +802,11 @@ export function InvoicePreviewPage() {
                             detailRows={chunk}
                             continuation={i > 0}
                             showDetailTotalRow={i === timeReportChunks.length - 1}
+                            showExpenseSection={i === timeReportChunks.length - 1}
                             showSummarySection={i === timeReportChunks.length - 1}
                             editable={editingPage === pageNum}
                             onPatchDetailRow={(rowIndex, field, value) => patchDetailRowInChunk(i, rowIndex, field, value)}
+                            onPatchExpenseRow={patchExpenseRow}
                             onPatchSummaryRow={patchSummaryRow}
                             onPatchPack={patchTimeReportPack}
                           />

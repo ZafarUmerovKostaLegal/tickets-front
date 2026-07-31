@@ -223,6 +223,7 @@ export function ReportPreviewPage() {
     const [timeEntrySaveMessage, setTimeEntrySaveMessage] = useState<string | null>(null);
     const [timeEntryActionPendingRowKey, setTimeEntryActionPendingRowKey] = useState<string | null>(null);
     const [timeExcelDownloadBusy, setTimeExcelDownloadBusy] = useState(false);
+
     useLayoutEffect(() => {
         timeExcelRowsRef.current = timeExcelRows;
     }, [timeExcelRows]);
@@ -236,6 +237,7 @@ export function ReportPreviewPage() {
                 clearTimeout(flashRestoredTimerRef.current);
         };
     }, []);
+
     useEffect(() => {
         if (timeEntrySaveUI !== 'err' || !timeEntrySaveMessage)
             return;
@@ -402,6 +404,7 @@ export function ReportPreviewPage() {
         }
         const xfer = normalizeReportPreviewTransfer(raw);
         const base = stripReportPagination(xfer.filters);
+        
         setXferSnapshot(xfer);
         setRangeFrom(base.dateFrom);
         setRangeTo(base.dateTo);

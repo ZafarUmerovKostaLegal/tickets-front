@@ -180,6 +180,8 @@ const PAGE_MARGIN_TWIPS = {
     left: mmToTwip(30),
 } as const;
 const INV_RED = 'E83337';
+/** Legal invoice accents — matches service-table header. */
+const LEGAL_TABLE = '1A1A1A';
 
 const cellBorderGrid = {
     top: { style: BorderStyle.SINGLE, size: 1, color: 'DADADA' },
@@ -368,6 +370,47 @@ function timeReportDocxSectionChildren(
     ];
 
     if (opts.isLastChunk) {
+        const expenseRows = trimTrailingEmptyDetailSlots(pack.expenseSlots);
+        if (expenseRows.length > 0) {
+            const EW = pctWidths([18, 52, 30]);
+            const expenseHeader = new TableRow({
+                children: [
+                    trHeadCell(labels.date, EW[0] ?? 18),
+                    trHeadCell(labels.description, EW[1] ?? 52),
+                    trHeadCell(amountHdr, EW[2] ?? 30),
+                ],
+            });
+            const expenseDataRows: TableRow[] = expenseRows.map((r) => new TableRow({
+                children: [
+                    trBodyTextCell(r.date, EW[0]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.description, EW[1]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.amount, EW[2]!, AlignmentType.RIGHT),
+                ],
+            }));
+            expenseDataRows.push(new TableRow({
+                children: [
+                    new TableCell({
+                        borders: cellBorderGrid,
+                        columnSpan: 2,
+                        children: [new Paragraph({
+                            children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                        })],
+                    }),
+                    trFootValueCell(pack.expenseTotalAmountDisplay, EW[2]!, AlignmentType.RIGHT),
+                ],
+            }));
+            out.push(
+                new Paragraph({
+                    spacing: { before: 260, after: 120 },
+                    children: [new TextRun({ text: labels.expensesTitle, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                }),
+                new Table({
+                    ...tableOpts,
+                    rows: [expenseHeader, ...expenseDataRows],
+                }),
+            );
+        }
+
         const summaryHeader = new TableRow({
             children: [
                 trHeadCell(labels.initials, SW[0] ?? 9),
@@ -441,7 +484,7 @@ function invoiceRibbonTable(leftText: string, rightText: string): Table {
         new TableCell({
             borders: cellBorderNil,
             width: { size: widthPct, type: WidthType.PERCENTAGE },
-            shading: { type: ShadingType.SOLID, fill: INV_RED, color: INV_RED },
+            shading: { type: ShadingType.SOLID, fill: LEGAL_TABLE, color: LEGAL_TABLE },
             margins: { top: 72, bottom: 72, left: 112, right: 112 },
             children: [new Paragraph({
                 alignment: align,
@@ -493,7 +536,7 @@ function legalInvoiceDocxBlocks(
     const firmParas = [
         new Paragraph({
             spacing: { after: 40 },
-            children: [new TextRun({ text: `${KOSTA_LEGAL_FIRM.brandName} LF`, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+            children: [new TextRun({ text: `${KOSTA_LEGAL_FIRM.brandName} LF`, bold: true, color: LEGAL_TABLE, size: DOC_SIZE, font: DOC_FONT })],
         }),
         ...[firmAddress, ...resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage)].map((txt) =>
             new Paragraph({
@@ -532,7 +575,7 @@ function legalInvoiceDocxBlocks(
     const billChildren: Paragraph[] = [
         new Paragraph({
             spacing: { after: 80 },
-            children: [new TextRun({ text: labels.billTo, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+            children: [new TextRun({ text: labels.billTo, bold: true, color: LEGAL_TABLE, size: DOC_SIZE, font: DOC_FONT })],
         }),
         new Paragraph({
             spacing: { after: 40 },
@@ -574,7 +617,7 @@ function legalInvoiceDocxBlocks(
     const caseChildren: Paragraph[] = [
         new Paragraph({
             spacing: { after: 80 },
-            children: [new TextRun({ text: labels.caseDetails, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+            children: [new TextRun({ text: labels.caseDetails, bold: true, color: LEGAL_TABLE, size: DOC_SIZE, font: DOC_FONT })],
         }),
         new Paragraph({
             children: [new TextRun({ text: caseLine, size: DOC_SIZE, font: DOC_FONT })],
@@ -637,7 +680,7 @@ function legalInvoiceDocxBlocks(
     });
     const svcBodyBorders = {
         top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-        bottom: { style: BorderStyle.SINGLE, size: 8, color: INV_RED, space: 1 },
+        bottom: { style: BorderStyle.SINGLE, size: 8, color: LEGAL_TABLE, space: 1 },
         left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
         right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
     };
@@ -668,7 +711,7 @@ function legalInvoiceDocxBlocks(
         rows: [svcHead, svcBody],
     });
 
-    const coralLine = { style: BorderStyle.SINGLE, size: 8, color: INV_RED, space: 1 };
+    const coralLine = { style: BorderStyle.SINGLE, size: 8, color: LEGAL_TABLE, space: 1 };
     type TotalsBorders = {
         top: { style: (typeof BorderStyle)[keyof typeof BorderStyle]; size: number; color: string; space?: number };
         bottom: { style: (typeof BorderStyle)[keyof typeof BorderStyle]; size: number; color: string; space?: number };
@@ -690,7 +733,7 @@ function legalInvoiceDocxBlocks(
                     children: [new TextRun({
                         text: label,
                         bold: true,
-                        color: due ? INV_RED : '1E293B',
+                        color: due ? LEGAL_TABLE : '1E293B',
                         size: DOC_SIZE,
                         font: DOC_FONT,
                     })],
@@ -704,7 +747,7 @@ function legalInvoiceDocxBlocks(
                     children: [new TextRun({
                         text: value,
                         bold: true,
-                        color: due ? INV_RED : '1E293B',
+                        color: due ? LEGAL_TABLE : '1E293B',
                         size: DOC_SIZE,
                         font: DOC_FONT,
                     })],

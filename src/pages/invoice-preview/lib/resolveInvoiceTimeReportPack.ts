@@ -168,6 +168,7 @@ type BuildingDetail = InvoiceTimeReportDetailRow & {
     hoursNum: number;
     amtNum: number;
     rateNum: number;
+    rowKind: 'time' | 'expense' | 'other';
 };
 
 async function loadProjectTaskNameById(clientId: string, projectId: string): Promise<Map<string, string>> {
@@ -217,6 +218,7 @@ function buildSummaryAndTotals(
     currency: string,
     initialsByAuthId: ReadonlyMap<number, string>,
 ): Pick<InvoiceTimeReportPack, 'summarySlots' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay'> {
+    const timeLike = details.filter((d) => d.rowKind !== 'expense');
     const agg = new Map<number, {
         hours: number;
         amount: number;
@@ -224,7 +226,7 @@ function buildSummaryAndTotals(
         rateByHours: Map<number, number>;
     }>();
     let otherAmount = 0;
-    for (const d of details) {
+    for (const d of timeLike) {
         if (d.authId != null) {
             const cur = agg.get(d.authId) ?? {
                 hours: 0,
@@ -272,8 +274,8 @@ function buildSummaryAndTotals(
         });
     }
 
-    const totalH = details.reduce((s, d) => s + d.hoursNum, 0);
-    const totalA = details.reduce((s, d) => s + d.amtNum, 0);
+    const totalH = timeLike.reduce((s, d) => s + d.hoursNum, 0);
+    const totalA = timeLike.reduce((s, d) => s + d.amtNum, 0);
     const sumH = [...agg.values()].reduce((s, v) => s + v.hours, 0);
     const sumA = [...agg.values()].reduce((s, v) => s + v.amount, 0) + otherAmount;
 
@@ -283,6 +285,26 @@ function buildSummaryAndTotals(
         summaryGrandHoursDisplay: formatTimeReportHours(sumH),
         summaryGrandAmountDisplay: formatTimeReportAmount(sumA, currency),
         summarySlots: padSummaryRows(summaryRows),
+    };
+}
+
+function packFromDetails(
+    details: BuildingDetail[],
+    users: TimeTrackingUserRow[],
+    currency: string,
+    initialsByAuthId: ReadonlyMap<number, string>,
+    empty: InvoiceTimeReportPack,
+): InvoiceTimeReportPack {
+    const timeRows = details.filter((d) => d.rowKind !== 'expense');
+    const expenseRows = details.filter((d) => d.rowKind === 'expense');
+    const expenseTotal = expenseRows.reduce((s, d) => s + d.amtNum, 0);
+    const tail = buildSummaryAndTotals(details, users, currency, initialsByAuthId);
+    return {
+        currency,
+        detailSlots: timeRows.length ? finalizeDetailSlots(timeRows.map(toPublicRow)) : empty.detailSlots,
+        expenseSlots: expenseRows.length ? finalizeDetailSlots(expenseRows.map(toPublicRow)) : [],
+        expenseTotalAmountDisplay: expenseRows.length ? formatTimeReportAmount(expenseTotal, currency) : '',
+        ...tail,
     };
 }
 
@@ -392,6 +414,7 @@ export async function resolveInvoiceTimeReportPack(
                     hoursNum: h,
                     amtNum: a,
                     rateNum: rate,
+                    rowKind: 'time',
                 });
             }
 
@@ -410,15 +433,11 @@ export async function resolveInvoiceTimeReportPack(
                     hoursNum: 0,
                     amtNum: a,
                     rateNum: 0,
+                    rowKind: 'expense',
                 });
             }
 
-            const tail = buildSummaryAndTotals(details, users, currency, initialsByAuthId);
-            return {
-                currency,
-                detailSlots: details.length ? finalizeDetailSlots(details.map(toPublicRow)) : empty.detailSlots,
-                ...tail,
-            };
+            return packFromDetails(details, users, currency, initialsByAuthId, empty);
         }
 
         const inv = await getInvoice(session.invoiceId, true);
@@ -517,6 +536,7 @@ export async function resolveInvoiceTimeReportPack(
                     hoursNum: hours,
                     amtNum: amt,
                     rateNum: rate,
+                    rowKind: 'time',
                 });
             }
             else if (kind === 'expense') {
@@ -533,6 +553,7 @@ export async function resolveInvoiceTimeReportPack(
                     hoursNum: 0,
                     amtNum: amt,
                     rateNum: 0,
+                    rowKind: 'expense',
                 });
             }
             else {
@@ -549,16 +570,12 @@ export async function resolveInvoiceTimeReportPack(
                     hoursNum: 0,
                     amtNum: amt,
                     rateNum: 0,
+                    rowKind: 'other',
                 });
             }
         }
 
-        const tail = buildSummaryAndTotals(details, users, currency, initialsByAuthId);
-        return {
-            currency,
-            detailSlots: details.length ? finalizeDetailSlots(details.map(toPublicRow)) : empty.detailSlots,
-            ...tail,
-        };
+        return packFromDetails(details, users, currency, initialsByAuthId, empty);
     }
     catch (err) {
         console.error('resolveInvoiceTimeReportPack failed', err);
