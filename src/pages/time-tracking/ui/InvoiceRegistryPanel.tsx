@@ -16,6 +16,7 @@ import {
     getInvoiceRegistrySheet as getInvoiceRegistrySheetApi,
     getInvoiceRegistryYears,
     patchInvoiceRegistryRow2026,
+    replaceInvoiceRegistryArchiveSheet,
     replaceInvoiceRegistryRows2026,
     type InvoiceRegistryYearMeta,
 } from '@entities/time-tracking/api/domains/invoiceRegistry';
@@ -347,36 +348,70 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
     const columnKeys = useMemo(() => columns.map((c) => c.key), [columns]);
 
     const canEditYear = !readOnly && year === '2026' && sheetMode === 'active';
+    const seededYearsRef = useRef<Set<string>>(new Set());
+
+    const refreshYears = useCallback(() => {
+        void getInvoiceRegistryYears()
+            .then((items) => setYears(items))
+            .catch(() => {
+                showToast({
+                    message: t('timeTrackingPage.invoices.registry.loadFailed'),
+                    variant: 'error',
+                });
+            });
+    }, [t]);
 
     useEffect(() => {
-        let cancelled = false;
-        void getInvoiceRegistryYears()
-            .then((items) => {
-                if (!cancelled)
-                    setYears(items);
-            })
-            .catch(() => {
-                if (!cancelled)
-                    setYears([]);
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+        refreshYears();
+    }, [refreshYears]);
+
     useEffect(() => {
         let cancelled = false;
         setLoading(true);
         setFocus(null);
         setSearch('');
-        void getInvoiceRegistrySheetApi(year)
-            .then((loadedSheet) => {
+
+        const loadSheet = async () => {
+            try {
+                let loadedSheet = await getInvoiceRegistrySheetApi(year);
+                if (cancelled)
+                    return;
+
+                const apiRows = Array.isArray(loadedSheet.rows) ? loadedSheet.rows : [];
+                const needsSeed = apiRows.length === 0 && !seededYearsRef.current.has(year) && !readOnly;
+
+                if (needsSeed) {
+                    seededYearsRef.current.add(year);
+                    const { rows: seedRows } = await loadInvoiceRegistryRows(year);
+                    if (cancelled)
+                        return;
+                    if (seedRows.length > 0) {
+                        if (year === '2026') {
+                            await replaceInvoiceRegistryRows2026(seedRows);
+                        }
+                        else {
+                            await replaceInvoiceRegistryArchiveSheet(year as Exclude<InvoiceRegistryYearId, '2026'>, seedRows);
+                        }
+                        loadedSheet = await getInvoiceRegistrySheetApi(year);
+                        if (cancelled)
+                            return;
+                        showToast({
+                            message: t('timeTrackingPage.invoices.registry.seedImported')
+                                .replace('{count}', String(seedRows.length))
+                                .replace('{year}', year === 'checklist' ? 'check list' : year),
+                            variant: 'info',
+                        });
+                        refreshYears();
+                    }
+                }
+
                 if (cancelled)
                     return;
                 setRows(Array.isArray(loadedSheet.rows) ? loadedSheet.rows : []);
                 setSheetMode(loadedSheet.mode === 'archive' ? 'archive' : 'active');
                 setDirty(false);
-            })
-            .catch(() => {
+            }
+            catch {
                 if (cancelled)
                     return;
                 setRows([]);
@@ -384,15 +419,18 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                     message: t('timeTrackingPage.invoices.registry.loadFailed'),
                     variant: 'error',
                 });
-            })
-            .finally(() => {
+            }
+            finally {
                 if (!cancelled)
                     setLoading(false);
-            });
+            }
+        };
+
+        void loadSheet();
         return () => {
             cancelled = true;
         };
-    }, [year, t]);
+    }, [year, t, readOnly, refreshYears]);
 
     const filteredRows = useMemo(() => {
         const q = search.trim().toLowerCase();
@@ -442,28 +480,42 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
         }).then((created) => {
             setRows((prev) => [...prev.filter((r) => !r.id.includes('-new-')), created]);
             setDirty(true);
+            refreshYears();
         }).catch(() => {
             showToast({ message: t('timeTrackingPage.invoices.registry.loadFailed'), variant: 'error' });
         });
-    }, [canEditYear, year, columnKeys, t]);
+    }, [canEditYear, year, columnKeys, t, refreshYears]);
 
     const resetToSeed = useCallback(() => {
-        if (!canEditYear)
+        if (readOnly)
             return;
         setLoading(true);
-        void loadInvoiceRegistryRows('2026')
-            .then(({ rows: seedRows }) => replaceInvoiceRegistryRows2026(seedRows))
-            .then(() => getInvoiceRegistrySheetApi('2026'))
+        void loadInvoiceRegistryRows(year)
+            .then(async ({ rows: seedRows }) => {
+                if (year === '2026')
+                    await replaceInvoiceRegistryRows2026(seedRows, { force: seedRows.length === 0 });
+                else
+                    await replaceInvoiceRegistryArchiveSheet(year as Exclude<InvoiceRegistryYearId, '2026'>, seedRows, { force: seedRows.length === 0 });
+                return getInvoiceRegistrySheetApi(year);
+            })
             .then((loadedSheet) => {
                 setRows(Array.isArray(loadedSheet.rows) ? loadedSheet.rows : []);
+                setSheetMode(loadedSheet.mode === 'archive' ? 'archive' : 'active');
                 setDirty(false);
                 showToast({
                     message: t('timeTrackingPage.invoices.registry.resetDone'),
                     variant: 'info',
                 });
+                refreshYears();
+            })
+            .catch(() => {
+                showToast({
+                    message: t('timeTrackingPage.invoices.registry.loadFailed'),
+                    variant: 'error',
+                });
             })
             .finally(() => setLoading(false));
-    }, [canEditYear, t]);
+    }, [readOnly, year, t, refreshYears]);
 
     useEffect(() => {
         if (!fullscreen)
@@ -511,19 +563,25 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                         onChange={(e) => setSearch(e.target.value)}
                         aria-label={t('timeTrackingPage.invoices.registry.searchAria')}
                     />
-                    {canEditYear && (
+                    {!readOnly && (
                         <>
-                            <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={addRow} disabled={loading}>
-                                {t('timeTrackingPage.invoices.registry.addRow')}
-                            </button>
+                            {canEditYear && (
+                                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={addRow} disabled={loading}>
+                                    {t('timeTrackingPage.invoices.registry.addRow')}
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 className="tt-reports__btn tt-reports__btn--outline"
                                 onClick={resetToSeed}
-                                disabled={loading || !dirty}
-                                title={t('timeTrackingPage.invoices.registry.resetHint')}
+                                disabled={loading}
+                                title={rows.length === 0
+                                    ? t('timeTrackingPage.invoices.registry.seedHint')
+                                    : t('timeTrackingPage.invoices.registry.resetHint')}
                             >
-                                {t('timeTrackingPage.invoices.registry.reset')}
+                                {rows.length === 0
+                                    ? t('timeTrackingPage.invoices.registry.seedFromExcel')
+                                    : t('timeTrackingPage.invoices.registry.reset')}
                             </button>
                         </>
                     )}
@@ -550,8 +608,8 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                 {t('timeTrackingPage.invoices.registry.rowCount')
                     .replace('{shown}', String(filteredRows.length))
                     .replace('{total}', String(rows.length))}
-                {dirty ? ` · ${t('timeTrackingPage.invoices.registry.savedLocally')}` : ''}
-                {sheetMode === 'archive' ? ' · read-only' : ''}
+                {dirty ? ` · ${t('timeTrackingPage.invoices.registry.savedOnServer')}` : ''}
+                {sheetMode === 'archive' ? ` · ${t('timeTrackingPage.invoices.registry.archiveReadonly')}` : ''}
             </p>
 
             {loading ? (
@@ -580,7 +638,9 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                                         className="tt-inv-reg__empty-cell"
                                         colSpan={columns.length}
                                     >
-                                        {t('timeTrackingPage.invoices.registry.noRows')}
+                                        {search.trim()
+                                            ? t('timeTrackingPage.invoices.registry.noRows')
+                                            : t('timeTrackingPage.invoices.registry.emptyDb')}
                                     </td>
                                 </tr>
                             ) : filteredRows.map((row, idx) => (

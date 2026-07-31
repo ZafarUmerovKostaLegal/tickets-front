@@ -61,8 +61,26 @@ export async function patchInvoiceRegistryRow2026(rowId: string, patch: Partial<
     return res.json() as Promise<InvoiceRegistryRow>;
 }
 
-export async function replaceInvoiceRegistryRows2026(rows: InvoiceRegistryRow[]): Promise<void> {
-    const res = await apiFetch('/api/v1/time-tracking/invoice-registry/2026/rows', {
+export async function replaceInvoiceRegistryRows2026(
+    rows: InvoiceRegistryRow[],
+    opts?: { force?: boolean },
+): Promise<void> {
+    const qs = opts?.force ? '?force=true' : '';
+    const res = await apiFetch(`/api/v1/time-tracking/invoice-registry/2026/rows${qs}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows }),
+    });
+    await reportsThrowIfNotOk(res);
+}
+
+export async function replaceInvoiceRegistryArchiveSheet(
+    year: Exclude<InvoiceRegistryYearId, '2026'>,
+    rows: InvoiceRegistryRow[],
+    opts?: { force?: boolean },
+): Promise<void> {
+    const qs = opts?.force ? '?force=true' : '';
+    const res = await apiFetch(`/api/v1/time-tracking/invoice-registry/archive/${encodeURIComponent(year)}${qs}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rows }),
@@ -76,4 +94,3 @@ export async function getInvoiceRegistryStatistics(year: '2026' | 'all' = '2026'
     await reportsThrowIfNotOk(res);
     return res.json() as Promise<InvoiceRegistryStatisticsDto>;
 }
-
