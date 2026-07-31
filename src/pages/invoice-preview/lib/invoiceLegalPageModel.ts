@@ -54,6 +54,11 @@ function resolveBankingValue(override?: string | null): string {
     return t || BANKING_PLACEHOLDER;
 }
 
+export function isBankingPlaceholderValue(value: string | null | undefined): boolean {
+    const t = (value ?? '').trim();
+    return !t || t === BANKING_PLACEHOLDER || t === '-' || t === '–';
+}
+
 export function legalBankingInputValue(override?: string | null): string {
     return override ?? '';
 }
@@ -62,10 +67,11 @@ export function legalFirmBankingRows(
     currencyCode: string,
     overrides?: InvoiceLegalPageOverrides | null,
     lang?: InvoiceCoverLanguage | null,
+    options?: { omitPlaceholders?: boolean },
 ): LegalBankingRow[] {
     const cur = (currencyCode || 'EUR').toUpperCase();
     const labels = getLegalInvoiceLabels(lang);
-    return [
+    const rows: LegalBankingRow[] = [
         { field: 'tin', label: labels.tin, value: resolveBankingValue(overrides?.tin) },
         { field: 'bankName', label: labels.bankName, value: resolveBankingValue(overrides?.bankName) },
         { field: 'bankAddress', label: labels.bankAddress, value: resolveBankingValue(overrides?.bankAddress) },
@@ -75,6 +81,9 @@ export function legalFirmBankingRows(
         { field: 'correspondentBank', label: labels.correspondentBank, value: resolveBankingValue(overrides?.correspondentBank) },
         { field: 'correspondentAccount', label: labels.correspondentAccount(cur), value: resolveBankingValue(overrides?.correspondentAccount) },
     ];
+    if (!options?.omitPlaceholders)
+        return rows;
+    return rows.filter((row) => !isBankingPlaceholderValue(row.value));
 }
 
 export function resolveLegalFirmBankingLines(
@@ -82,7 +91,8 @@ export function resolveLegalFirmBankingLines(
     overrides?: InvoiceLegalPageOverrides | null,
     lang?: InvoiceCoverLanguage | null,
 ): string[] {
-    return legalFirmBankingRows(currencyCode, overrides, lang).map((row) => `${row.label}: ${row.value}`);
+    return legalFirmBankingRows(currencyCode, overrides, lang, { omitPlaceholders: true })
+        .map((row) => `${row.label}: ${row.value}`);
 }
 
 export function resolveLegalBillToBankName(overrides?: InvoiceLegalPageOverrides | null): string {

@@ -573,11 +573,11 @@ function legalInvoiceDocxBlocks(
     const billChildren: Paragraph[] = [
         new Paragraph({
             spacing: { after: 80 },
-            children: [new TextRun({ text: labels.billTo, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+            children: [new TextRun({ text: labels.billTo, bold: true, color: '1E293B', size: DOC_SIZE, font: DOC_FONT })],
         }),
         new Paragraph({
             spacing: { after: 40 },
-            children: [new TextRun({ text: model.recipientCompany, bold: true, size: DOC_SIZE, font: DOC_FONT })],
+            children: [new TextRun({ text: model.recipientCompany, bold: true, color: '0F172A', size: DOC_SIZE, font: DOC_FONT })],
         }),
         new Paragraph({
             spacing: { after: 30 },
@@ -615,7 +615,7 @@ function legalInvoiceDocxBlocks(
     const caseChildren: Paragraph[] = [
         new Paragraph({
             spacing: { after: 80 },
-            children: [new TextRun({ text: labels.caseDetails, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+            children: [new TextRun({ text: labels.caseDetails, bold: true, color: '1E293B', size: DOC_SIZE, font: DOC_FONT })],
         }),
         new Paragraph({
             children: [new TextRun({ text: caseLine, size: DOC_SIZE, font: DOC_FONT })],
@@ -772,12 +772,13 @@ function legalInvoiceDocxBlocks(
         }),
         ribbon,
         new Paragraph({
-            spacing: { before: 200, after: 120 },
+            spacing: { before: 160, after: 80 },
             children: [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
         }),
         panels,
         new Paragraph({
-            spacing: { before: 220, after: 120 },
+            spacing: { before: 120, after: 160 },
+            border: { bottom: { style: BorderStyle.SINGLE, color: '334155', size: 8, space: 1 } },
             children: [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
         }),
         svcTbl,

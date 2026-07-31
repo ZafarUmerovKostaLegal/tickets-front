@@ -93,9 +93,11 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem 1.75rem;
-  padding-top: 0.65rem;
+  padding-top: 0.55rem;
+  padding-bottom: 0.75rem;
   margin-bottom: 0.95rem;
-  border-top: 1px solid #334155;
+  border-top: none;
+  border-bottom: 1px solid #334155;
 }
 
 .tt-inv-li__panel-h {
@@ -104,14 +106,18 @@
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #475569;
+  color: #1e293b;
 }
 
 .tt-inv-li__panel-strong {
   margin: 0 0 0.35rem;
-  font-weight: 700;
+  font-weight: 800;
   font-size: inherit;
   color: #0f172a;
+}
+
+.tt-inv-li__panel-strong .tt-inv-li__field {
+  font-weight: 800;
 }
 
 .tt-inv-li__panel-label {

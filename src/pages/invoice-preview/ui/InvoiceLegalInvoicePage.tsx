@@ -15,6 +15,7 @@ import { getLegalInvoiceLabels } from '../lib/invoiceLegalPageI18n';
 import {
     legalBankingInputValue,
     legalFirmBankingRows,
+    isBankingPlaceholderValue,
     resolveLegalBillToBankName,
     resolveLegalBillToSwift,
     resolveLegalCaseDetailLine,
@@ -147,7 +148,9 @@ export function InvoiceLegalInvoicePage({
               onChange={(next) => onChangeLegalOverrides?.({ firmAddress: next })}
             />
           </p>
-          {firmBankingRows.map((row) => (
+          {firmBankingRows
+            .filter((row) => editable || !isBankingPlaceholderValue(row.value))
+            .map((row) => (
             <BankingLine
               key={row.field}
               label={row.label}

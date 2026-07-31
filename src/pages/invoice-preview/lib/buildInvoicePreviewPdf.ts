@@ -54,7 +54,6 @@ const MUTED_TEXT = rgb(0.41, 0.44, 0.52);
 const GRID_LINE = rgb(0.74, 0.77, 0.8);
 const BODY = rgb(0.12, 0.14, 0.18);
 const CORAL = rgb(232 / 255, 51 / 255, 55 / 255);
-const PANEL_HEAD = rgb(0.28, 0.33, 0.39);
 const FIRM_NAME = rgb(0.12, 0.16, 0.23);
 const THANKS_TEXT = rgb(0.42, 0.45, 0.5);
 const DISCLAIMER_TEXT = rgb(0.29, 0.33, 0.39);
@@ -1232,19 +1231,11 @@ function drawLegalInvoicePdfPage(
     });
     y -= ribbonH + LEGAL_RIBBON_MB;
 
-    page.drawLine({
-        start: { x: ML, y: y + 3 },
-        end: { x: ML + contentW, y: y + 3 },
-        thickness: 0.55,
-        color: rgb(0.2, 0.25, 0.33),
-    });
-    y -= LEGAL_PANELS_PT;
-
     const splitX = ML + contentW * 0.52;
     const rightColW = W - MR - splitX - 8;
     const panelsTop = y;
 
-    page.drawText(labels.billTo, { x: ML, y: panelsTop, size: DOC_FS, font: fontBold, color: PANEL_HEAD });
+    page.drawText(labels.billTo, { x: ML, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
     let yLeft = panelsTop - DOC_LH;
     page.drawText(model.recipientCompany, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: BODY });
     yLeft -= DOC_LH;
@@ -1265,10 +1256,17 @@ function drawLegalInvoicePdfPage(
     page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yLeft, size: DOC_FS, font, color: MUTED_TEXT });
     yLeft -= DOC_LH * 0.92;
 
-    page.drawText(labels.caseDetails, { x: splitX, y: panelsTop, size: DOC_FS, font: fontBold, color: PANEL_HEAD });
+    page.drawText(labels.caseDetails, { x: splitX, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
     const yRight = wrapTextBlock(page, caseLine, splitX, panelsTop - DOC_LH, rightColW, DOC_FS, font, BODY, DOC_LH);
 
-    y = Math.min(yLeft, yRight) - DOC_LH;
+    y = Math.min(yLeft, yRight) - DOC_LH * 0.55;
+    page.drawLine({
+        start: { x: ML, y },
+        end: { x: ML + contentW, y },
+        thickness: 0.55,
+        color: rgb(0.2, 0.25, 0.33),
+    });
+    y -= LEGAL_PANELS_PT;
 
     const descColW = contentW * 0.72;
     const headH = DOC_FS + 10;
