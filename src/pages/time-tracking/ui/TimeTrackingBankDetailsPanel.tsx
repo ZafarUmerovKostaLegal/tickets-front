@@ -1,14 +1,17 @@
 import './TimeTrackingForms.css';
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useState } from 'react';
+import {
+    createFirmBankProfile,
+    deleteFirmBankProfile,
+    loadFirmBankingProfiles,
+    patchFirmBankProfile,
+    setDefaultFirmBankProfile,
+} from '@entities/time-tracking/api';
 import { TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerProjectCurrency } from '@entities/time-tracking';
 import {
     createEmptyFirmBankingProfile,
-    deleteFirmBankingProfile,
     EMPTY_FIRM_BANKING_DETAILS,
-    listFirmBankingProfiles,
     profileDisplayTitle,
-    setDefaultFirmBankingProfile,
-    upsertFirmBankingProfile,
     type FirmBankingDetails,
     type FirmBankingProfile,
 } from '@entities/time-tracking/lib/firmBankingDetailsStorage';
@@ -88,11 +91,12 @@ type BankModalProps = {
     initial: FirmBankingProfile | null;
     profilesCount: number;
     onClose: () => void;
-    onSaved: (list: FirmBankingProfile[]) => void;
+    onSaved: () => void;
 };
 
 function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: BankModalProps) {
     const { t } = useI18n();
+    const { pushToast } = useAppToast();
     const uid = useId();
     const [form, setForm] = useState<FormState>(() => (initial ? profileToForm(initial) : emptyForm()));
     const [saving, setSaving] = useState(false);
@@ -104,7 +108,7 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
 
     const patch = (partial: Partial<FormState>) => setForm((f) => ({ ...f, ...partial }));
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (saving)
             return;
         setSaving(true);
@@ -124,9 +128,32 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
                 correspondentAccount: form.correspondentAccount.trim(),
                 isDefault: form.isDefault || profilesCount === 0,
             };
-            const list = upsertFirmBankingProfile(next, { makeDefault: next.isDefault });
-            onSaved(list);
+            if (mode === 'create' || !initial) {
+                await createFirmBankProfile(next, { makeDefault: next.isDefault });
+            }
+            else {
+                await patchFirmBankProfile(initial.id, {
+                    title: next.title,
+                    tin: next.tin,
+                    bankName: next.bankName,
+                    bankAddress: next.bankAddress,
+                    accountCurrency: next.accountCurrency,
+                    accountNumber: next.accountNumber,
+                    bankCode: next.bankCode,
+                    swift: next.swift,
+                    correspondentBank: next.correspondentBank,
+                    correspondentAccount: next.correspondentAccount,
+                    isDefault: next.isDefault,
+                });
+            }
+            onSaved();
             onClose();
+        }
+        catch (e) {
+            pushToast({
+                message: e instanceof Error ? e.message : t('timeTrackingPage.bankDetails.saveError'),
+                variant: 'error',
+            });
         }
         finally {
             setSaving(false);
@@ -273,7 +300,7 @@ function BankDetailsModal({ mode, initial, profilesCount, onClose, onSaved }: Ba
                     <button type="button" className="tt-settings__btn tt-settings__btn--ghost" disabled={saving} onClick={onClose}>
                         {t('timeTrackingPage.cancel')}
                     </button>
-                    <button type="button" className="tt-settings__btn tt-settings__btn--primary" disabled={saving} onClick={handleSubmit}>
+                    <button type="button" className="tt-settings__btn tt-settings__btn--primary" disabled={saving} onClick={() => void handleSubmit()}>
                         {saving
                             ? t('timeTrackingPage.saving')
                             : mode === 'create'
@@ -292,10 +319,40 @@ export function TimeTrackingBankDetailsPanel() {
     const { showConfirm } = useAppDialog();
     const { user } = useCurrentUser();
     const canManage = canManageTimeTrackingClients(user);
-    const [profiles, setProfiles] = useState<FirmBankingProfile[]>(() => listFirmBankingProfiles());
+    const [profiles, setProfiles] = useState<FirmBankingProfile[]>([]);
+    const [loading, setLoading] = useState(true);
     const [modal, setModal] = useState<{ mode: 'create' | 'edit'; row: FirmBankingProfile | null } | null>(null);
 
     const untitled = t('timeTrackingPage.bankDetails.untitled');
+
+    const reload = async () => {
+        const list = await loadFirmBankingProfiles({ migrateLocal: canManage });
+        setProfiles(list);
+        return list;
+    };
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            setLoading(true);
+            try {
+                const list = await loadFirmBankingProfiles({ migrateLocal: canManage });
+                if (!cancelled)
+                    setProfiles(list);
+            }
+            catch {
+                if (!cancelled)
+                    setProfiles([]);
+            }
+            finally {
+                if (!cancelled)
+                    setLoading(false);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [canManage]);
 
     const handleDelete = async (row: FirmBankingProfile) => {
         if (!canManage)
@@ -311,15 +368,33 @@ export function TimeTrackingBankDetailsPanel() {
         });
         if (!ok)
             return;
-        setProfiles(deleteFirmBankingProfile(row.id));
-        pushToast({ message: t('timeTrackingPage.bankDetails.deleted'), variant: 'info' });
+        try {
+            await deleteFirmBankProfile(row.id);
+            await reload();
+            pushToast({ message: t('timeTrackingPage.bankDetails.deleted'), variant: 'info' });
+        }
+        catch (e) {
+            pushToast({
+                message: e instanceof Error ? e.message : t('timeTrackingPage.bankDetails.saveError'),
+                variant: 'error',
+            });
+        }
     };
 
-    const handleSetDefault = (row: FirmBankingProfile) => {
+    const handleSetDefault = async (row: FirmBankingProfile) => {
         if (!canManage || row.isDefault)
             return;
-        setProfiles(setDefaultFirmBankingProfile(row.id));
-        pushToast({ message: t('timeTrackingPage.bankDetails.defaultSet'), variant: 'success' });
+        try {
+            await setDefaultFirmBankProfile(row.id);
+            await reload();
+            pushToast({ message: t('timeTrackingPage.bankDetails.defaultSet'), variant: 'success' });
+        }
+        catch (e) {
+            pushToast({
+                message: e instanceof Error ? e.message : t('timeTrackingPage.bankDetails.saveError'),
+                variant: 'error',
+            });
+        }
     };
 
     return (
@@ -337,7 +412,7 @@ export function TimeTrackingBankDetailsPanel() {
                             <button
                                 type="button"
                                 className="tt-settings__btn tt-settings__btn--primary tt-ecat-toolbar__new-btn"
-                                disabled={!canManage}
+                                disabled={!canManage || loading}
                                 title={!canManage ? t('timeTrackingPage.common.manageRoleHint') : undefined}
                                 onClick={() => setModal({ mode: 'create', row: null })}
                             >
@@ -362,7 +437,11 @@ export function TimeTrackingBankDetailsPanel() {
             <h2 className="tt-tasks-page__list-heading">{t('timeTrackingPage.bankDetails.listHeading')}</h2>
 
             <div className="tt-settings__list tt-tasks-page__list tt-bank-page__list">
-                {profiles.length === 0 ? (
+                {loading ? (
+                    <div className="tt-settings__rates-empty tt-settings__list-empty-inner tt-tasks-page__empty">
+                        {t('timeTrackingPage.bankDetails.loading')}
+                    </div>
+                ) : profiles.length === 0 ? (
                     <div className="tt-settings__rates-empty tt-settings__list-empty-inner tt-tasks-page__empty">
                         {t('timeTrackingPage.bankDetails.empty')}
                     </div>
@@ -406,7 +485,7 @@ export function TimeTrackingBankDetailsPanel() {
                                         <button
                                             type="button"
                                             className="tt-task-card__text-btn"
-                                            onClick={() => handleSetDefault(row)}
+                                            onClick={() => void handleSetDefault(row)}
                                         >
                                             {t('timeTrackingPage.bankDetails.actions.makeDefault')}
                                         </button>
@@ -444,13 +523,14 @@ export function TimeTrackingBankDetailsPanel() {
                     initial={modal.row}
                     profilesCount={profiles.length}
                     onClose={() => setModal(null)}
-                    onSaved={(list) => {
-                        setProfiles(list);
-                        pushToast({
-                            message: modal.mode === 'create'
-                                ? t('timeTrackingPage.bankDetails.created')
-                                : t('timeTrackingPage.bankDetails.saved'),
-                            variant: 'success',
+                    onSaved={() => {
+                        void reload().then(() => {
+                            pushToast({
+                                message: modal.mode === 'create'
+                                    ? t('timeTrackingPage.bankDetails.created')
+                                    : t('timeTrackingPage.bankDetails.saved'),
+                                variant: 'success',
+                            });
                         });
                     }}
                 />

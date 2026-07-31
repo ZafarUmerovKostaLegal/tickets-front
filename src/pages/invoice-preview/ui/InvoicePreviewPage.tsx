@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom';
 import { getInvoiceCreateUrl, getInvoiceDetailUrl } from '@shared/config';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppToast } from '@shared/ui';
 import { readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
-import { firmBankingToLegalOverrides } from '@entities/time-tracking/lib/firmBankingDetailsStorage';
+import { firmBankingToLegalOverrides, applyFirmBankingProfileToLegalOverrides, profileDisplayTitle, type FirmBankingProfile } from '@entities/time-tracking/lib/firmBankingDetailsStorage';
+import { loadFirmBankingProfiles, pickFirmBankingProfileForCurrency } from '@entities/time-tracking/api';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { applyCoverLetterLanguage, type InvoiceCoverLanguage } from '../lib/invoiceCoverLetterI18n';
@@ -134,6 +135,9 @@ export function InvoicePreviewPage() {
     const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel | null>(null);
     const [editMode, setEditMode] = useState(false);
     const [legalOverrides, setLegalOverrides] = useState<InvoiceLegalPageOverrides>(() => firmBankingToLegalOverrides());
+    const [bankProfiles, setBankProfiles] = useState<FirmBankingProfile[]>([]);
+    const [selectedBankProfileId, setSelectedBankProfileId] = useState<string>('');
+    const userPickedBankRef = useRef(false);
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
     const [selectedPages, setSelectedPages] = useState<Set<number>>(() => new Set([1, 2, 3]));
     const sheetStackRef = useRef<HTMLDivElement>(null);
@@ -189,6 +193,39 @@ export function InvoicePreviewPage() {
     const patchLegalOverrides = useCallback((patch: Partial<InvoiceLegalPageOverrides>) => {
         setLegalOverrides((prev) => ({ ...prev, ...patch }));
     }, []);
+
+    const applyBankProfile = useCallback((profile: FirmBankingProfile | null, opts?: { userInitiated?: boolean }) => {
+        if (opts?.userInitiated)
+            userPickedBankRef.current = true;
+        setSelectedBankProfileId(profile?.id ?? '');
+        setLegalOverrides((prev) => applyFirmBankingProfileToLegalOverrides(prev, profile));
+    }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        userPickedBankRef.current = false;
+        (async () => {
+            const profiles = await loadFirmBankingProfiles({ migrateLocal: true });
+            if (cancelled)
+                return;
+            setBankProfiles(profiles);
+            const picked = pickFirmBankingProfileForCurrency(profiles, null);
+            if (picked)
+                applyBankProfile(picked);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [location.key, location.pathname, applyBankProfile]);
+
+    useEffect(() => {
+        if (!bankProfiles.length || !coverModel || userPickedBankRef.current)
+            return;
+        const currency = packCurrencyCode(coverModel);
+        const picked = pickFirmBankingProfileForCurrency(bankProfiles, currency);
+        if (picked && picked.id !== selectedBankProfileId)
+            applyBankProfile(picked);
+    }, [coverModel, bankProfiles, selectedBankProfileId, applyBankProfile]);
 
     const togglePageEdit = useCallback(() => {
         setEditMode((on) => !on);
@@ -591,6 +628,29 @@ export function InvoicePreviewPage() {
                     RU
                   </button>
                 </div>
+                {bankProfiles.length > 0 ? (
+                  <label className="tt-inv-preview__bank-select" title="Банковские реквизиты на странице счёта">
+                    <span className="tt-inv-preview__bank-select-label">Реквизиты</span>
+                    <select
+                      className="tt-inv-preview__bank-select-input"
+                      value={selectedBankProfileId}
+                      disabled={!coverModel}
+                      aria-label="Банковские реквизиты для счёта"
+                      onChange={(e) => {
+                          const next = bankProfiles.find((p) => p.id === e.target.value) ?? null;
+                          applyBankProfile(next, { userInitiated: true });
+                      }}
+                    >
+                      {bankProfiles.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {profileDisplayTitle(p, 'Без названия')}
+                          {p.isDefault ? ' · по умолчанию' : ''}
+                          {p.accountCurrency ? ` · ${p.accountCurrency}` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
                 <button
                   type="button"
                   className={`tt-inv-preview__pdf-toolbar-edit-btn${isEditingActivePage ? ' tt-inv-preview__pdf-toolbar-edit-btn--active' : ''}`}

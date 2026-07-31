@@ -493,6 +493,41 @@
   cursor: not-allowed;
 }
 
+.tt-inv-preview__bank-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 1;
+  min-width: 0;
+  max-width: 16rem;
+}
+
+.tt-inv-preview__bank-select-label {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--tt-inv-shell-muted-text);
+  white-space: nowrap;
+}
+
+.tt-inv-preview__bank-select-input {
+  min-width: 0;
+  max-width: 14rem;
+  height: 1.875rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--tt-inv-shell-divider);
+  border-radius: 6px;
+  background: var(--tt-inv-paper);
+  color: var(--tt-inv-shell-doc-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.tt-inv-preview__bank-select-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .tt-inv-preview__lang-btn--active {
   color: var(--app-accent, #4f46e5);
   background: color-mix(in srgb, var(--app-accent, #4f46e5) 12%, var(--tt-inv-paper));

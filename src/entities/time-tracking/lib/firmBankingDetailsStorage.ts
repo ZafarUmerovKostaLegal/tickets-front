@@ -234,3 +234,37 @@ export function firmBankingToLegalOverrides(
         correspondentAccount: orNull(details.correspondentAccount),
     };
 }
+
+export function pickFirmBankingProfileForCurrency(
+    profiles: FirmBankingProfile[],
+    currency: string | null | undefined,
+): FirmBankingProfile | null {
+    if (!profiles.length)
+        return null;
+    const cur = clean(currency).toUpperCase();
+    if (cur) {
+        const match = profiles.find((p) => p.accountCurrency.toUpperCase() === cur);
+        if (match)
+            return match;
+    }
+    return getDefaultFirmBankingProfile(profiles);
+}
+
+/** Merge bank fields from a profile into legal overrides (keeps invoice-number / dates / etc.). */
+export function applyFirmBankingProfileToLegalOverrides(
+    prev: InvoiceLegalPageOverrides,
+    profile: FirmBankingProfile | null,
+): InvoiceLegalPageOverrides {
+    const bank = firmBankingToLegalOverrides(profile);
+    return {
+        ...prev,
+        tin: bank.tin ?? null,
+        bankName: bank.bankName ?? null,
+        bankAddress: bank.bankAddress ?? null,
+        accountNumber: bank.accountNumber ?? null,
+        bankCode: bank.bankCode ?? null,
+        swift: bank.swift ?? null,
+        correspondentBank: bank.correspondentBank ?? null,
+        correspondentAccount: bank.correspondentAccount ?? null,
+    };
+}

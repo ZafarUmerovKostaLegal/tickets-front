@@ -69,6 +69,8 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
         toolbarHint: 'Add separate profiles for different currencies or banks.',
         listHeading: 'Saved profiles',
         empty: 'No banking profiles yet. Click “Add banking details”.',
+        loading: 'Loading banking details…',
+        saveError: 'Could not save banking details',
         untitled: 'Untitled',
         optional: 'optional',
         noFieldsFilled: 'No fields filled yet',
@@ -79,7 +81,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
         defaultSet: 'Default profile updated',
         policy: {
             title: 'How it is used',
-            text: 'The default profile is applied in the invoice preview. Keep other profiles for different currencies and switch the default when needed.',
+            text: 'The default profile is applied in the invoice preview. Keep other profiles for different currencies and switch them in the preview toolbar.',
         },
         cta: {
             newProfile: '+ Add banking details',
