@@ -4,6 +4,7 @@ import { isAuthenticated } from '@shared/lib/auth';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { canAccessAdminPanel } from '@shared/lib/orgRoles';
+import { isMeetingRoomAccount, isMeetingRoomAllowedPath } from '@shared/lib/meetingRoomAccounts';
 import { resolveDesktopBackgroundDisplayUrl } from '@entities/user';
 import './ProtectedRoute.css';
 
@@ -58,6 +59,9 @@ export function ProtectedRoute({ children, adminOnly = false, fallback = null }:
         else if (!canAccessAdminPanel(user.role, user.position)) {
             return <Navigate to={routes.home} replace/>;
         }
+    }
+    if (isMeetingRoomAccount(user) && !isMeetingRoomAllowedPath(location.pathname)) {
+        return <Navigate to={routes.home} replace/>;
     }
     const desktopBgUrl = resolveDesktopBackgroundDisplayUrl(user.desktop_background);
     return (<>

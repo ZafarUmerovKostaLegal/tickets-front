@@ -5,6 +5,7 @@ import type { User } from '@entities/user';
 import { canAccessExpensesSection } from '@entities/expenses/model/expenseModeration';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
 import { canAccessAdminPanel, canAccessAdminOnlyModules, canAccessAttendance, isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
+import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconMailInbox, IconMessages, IconContacts, IconAccounting, } from '../ui/SidebarIcons';
 
@@ -56,6 +57,8 @@ const EMPLOYEE_NAV_IDS = new Set<AppNavId>([
     'internalCommunication',
 ]);
 
+const MEETING_ROOM_NAV_IDS = new Set<AppNavId>(['home', 'callSchedule']);
+
 export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { id: 'home', to: routes.home, icon: IconHome },
     { id: 'timeTracking', to: routes.timeTracking, icon: IconStopwatch },
@@ -83,6 +86,9 @@ export function getNavTranslationKey(id: AppNavId): TranslationKey {
 }
 
 export function getVisibleAppNavItems(user: User | null | undefined, loading: boolean): AppNavItemDef[] {
+    if (!loading && isMeetingRoomAccount(user)) {
+        return APP_NAV_DEFINITIONS.filter((item) => MEETING_ROOM_NAV_IDS.has(item.id));
+    }
     const role = user?.role?.toLowerCase() || '';
     const isEmployee = !loading && role.includes('сотрудник');
     const rk = normalizeOrgRoleKey(user?.role);

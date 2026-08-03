@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useI18n } from '@shared/i18n';
+import { useCurrentUser } from '@shared/hooks';
+import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import { AppPageSettings } from '@shared/ui';
 import { HeaderNotifications } from '@pages/home/ui/HeaderNotifications';
 import './HomeHubTopBar.css';
@@ -21,10 +23,12 @@ function IconSearch() {
 
 export function HomeHubTopBar({ searchQuery, onSearchChange }: HomeHubTopBarProps) {
     const { t } = useI18n();
+    const { user, loading } = useCurrentUser();
+    const meetingRoom = !loading && isMeetingRoomAccount(user);
 
     return (
         <header className="home-hub-topbar">
-            <div className="home-hub-topbar__inner">
+            <div className={`home-hub-topbar__inner${meetingRoom ? ' home-hub-topbar__inner--meeting-room' : ''}`}>
                 <Link
                     to={routes.home}
                     className="home-hub-topbar__brand"
@@ -40,6 +44,7 @@ export function HomeHubTopBar({ searchQuery, onSearchChange }: HomeHubTopBarProp
                     />
                 </Link>
 
+                {meetingRoom ? null : (
                 <label className="home-hub-topbar__search">
                     <span className="home-hub-topbar__search-icon" aria-hidden>
                         <IconSearch />
@@ -56,9 +61,13 @@ export function HomeHubTopBar({ searchQuery, onSearchChange }: HomeHubTopBarProp
                     />
                     <kbd className="home-hub-topbar__search-kbd" aria-hidden>/</kbd>
                 </label>
+                )}
 
                 <div className="home-hub-topbar__actions">
-                    <AppPageSettings showUserMenu beforeUserMenu={<HeaderNotifications />} />
+                    <AppPageSettings
+                        showUserMenu
+                        beforeUserMenu={meetingRoom ? null : <HeaderNotifications />}
+                    />
                 </div>
             </div>
         </header>

@@ -26,6 +26,11 @@ body[data-theme='dark'] .home-hub-topbar {
     box-sizing: border-box;
 }
 
+.home-hub-topbar__inner--meeting-room {
+    display: flex;
+    justify-content: space-between;
+}
+
 @media (max-width: 768px) {
     .home-hub-topbar__inner {
         grid-template-columns: minmax(0, 1fr) auto;

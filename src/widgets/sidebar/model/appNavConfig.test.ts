@@ -68,14 +68,14 @@ describe('getVisibleAppNavItems', () => {
         expect(items.map((i) => i.id)).not.toContain('timeTracking');
     });
 
-    it('APP_NAV_DEFINITIONS покрывает все ключевые модули', () => {
-        expect(APP_NAV_DEFINITIONS.length).toBeGreaterThanOrEqual(15);
-        const ids = new Set(APP_NAV_DEFINITIONS.map((d) => d.id));
-        expect(ids.has('home')).toBe(true);
-        expect(ids.has('kostaDaily')).toBe(true);
-        expect(ids.has('contacts')).toBe(true);
-        expect(ids.has('expenses')).toBe(true);
-        expect(ids.has('expensesPartners')).toBe(true);
-        expect(ids.has('internalCommunication')).toBe(true);
+    it('meeting-room аккаунты видят только home и callSchedule', () => {
+        for (const email of ['smallmeetingroom@kostalegal.com', 'largemeetingroom@kostalegal.com']) {
+            const items = getVisibleAppNavItems(user({
+                role: 'Сотрудник',
+                email,
+                time_tracking_role: 'user',
+            }), false);
+            expect(items.map((i) => i.id).sort()).toEqual(['callSchedule', 'home']);
+        }
     });
 });

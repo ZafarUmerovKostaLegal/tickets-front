@@ -11,6 +11,7 @@ import {
 import { usePartnerForReviewBadge } from '@entities/time-tracking/lib/usePartnerForReviewBadge';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
 import { useExpensePaymentConfirmationBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
+import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import {
     getHubSectionForTile,
     HUB_SECTIONS,
@@ -123,6 +124,8 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                 to: i.to,
                 icon: i.icon,
             }));
+        if (isMeetingRoomAccount(user))
+            return fromNav;
         return [KOSTA_LEGAL_AI_TILE, ...fromNav];
     }, [user, loading]);
 
