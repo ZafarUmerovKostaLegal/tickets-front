@@ -300,6 +300,11 @@ export function ReportsPanel() {
     setTableSearch('');
     setDebouncedTableSearch('');
     setSearchFullRows(null);
+    setResults([]);
+    setPagination(null);
+    setServerTotals(null);
+    setError(null);
+    setResultsViewKey(null);
   }
   function changeGroupBy(g: GroupByV2) {
     setGroupBy(g);
@@ -308,6 +313,10 @@ export function ReportsPanel() {
     setTableSearch('');
     setDebouncedTableSearch('');
     setSearchFullRows(null);
+    setResults([]);
+    setPagination(null);
+    setError(null);
+    setResultsViewKey(null);
   }
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>(() => {
     if (!Array.isArray(savedPrefs?.selectedUserIds))
@@ -321,6 +330,9 @@ export function ReportsPanel() {
   const [usersForFilterError, setUsersForFilterError] = useState<string | null>(null);
   type AnyRow = TimeReportRow | ExpRowClients | ExpRowProjects | ExpRowCategories | ExpRowTeam | UninvoicedRow | BudgetRow;
   const [results, setResults] = useState<AnyRow[]>([]);
+  /** Rows belong to this view; ignore stale payloads after tab switches. */
+  const [resultsViewKey, setResultsViewKey] = useState<string | null>(null);
+  const reportFetchGenRef = useRef(0);
   const [serverTotals, setServerTotals] = useState<ReportTotals | null>(null);
   const [pagination, setPagination] = useState<ReportPagination | null>(null);
   const [page, setPage] = useState(1);
@@ -590,12 +602,16 @@ export function ReportsPanel() {
     partnerConfirmedSubview,
   ]);
   useEffect(() => {
-    const aborted = { current: false };
+    const viewKey = `${reportType}|${groupBy}`;
+    const fetchGen = ++reportFetchGenRef.current;
     setLoading(true);
     setError(null);
     if (!dateFrom || !dateTo) {
+      if (fetchGen !== reportFetchGenRef.current)
+        return;
       setError(t('timeTrackingPage.reports.errors.datesRequired'));
       setResults([]);
+      setResultsViewKey(null);
       setServerTotals(null);
       setPagination(null);
       setLoading(false);
@@ -603,8 +619,11 @@ export function ReportsPanel() {
       return;
     }
     if (dateFrom > dateTo) {
+      if (fetchGen !== reportFetchGenRef.current)
+        return;
       setError(t('timeTrackingPage.reports.errors.dateFromAfterTo'));
       setResults([]);
+      setResultsViewKey(null);
       setServerTotals(null);
       setPagination(null);
       setLoading(false);
@@ -639,9 +658,10 @@ export function ReportsPanel() {
     }
     promise
       .then((data) => {
-        if (aborted.current)
+        if (fetchGen !== reportFetchGenRef.current)
           return;
         setResults(data.results as AnyRow[]);
+        setResultsViewKey(viewKey);
         setPagination(data.pagination);
         setExpandedRows(new Set());
         const respAny = data as { meta?: { totals_all_groups?: ReportTotals | null }; summary?: ReportTotals | null; totals?: ReportTotals | null };
@@ -649,22 +669,26 @@ export function ReportsPanel() {
         setServerTotals(st && typeof st === 'object' ? st : null);
       })
       .catch((e: unknown) => {
-        if (aborted.current)
+        if (fetchGen !== reportFetchGenRef.current)
           return;
         setError(e instanceof Error ? e.message : t('timeTrackingPage.reports.errors.loadFailed'));
         setResults([]);
+        setResultsViewKey(null);
         setServerTotals(null);
         setPagination(null);
       })
       .finally(() => {
-        if (aborted.current)
+        if (fetchGen !== reportFetchGenRef.current)
           return;
         setLoading(false);
         setInitialLoading(false);
       });
-    return () => { aborted.current = true; };
   }, [reportType, groupBy, dateFrom, dateTo, selectedUserIds, includeFixed, page, reportPageSizeMax, effectivePerPage, t, withPartnerReportScope]);
+  const activeViewKey = `${reportType}|${groupBy}`;
+  const viewResultsReady = resultsViewKey === activeViewKey;
   const scopedResults = useMemo((): AnyRow[] => {
+    if (!viewResultsReady)
+      return [];
     if (!partnerProjectsScopeActive)
       return results;
     if (partnerAllowedProjectIds === null)
@@ -676,7 +700,7 @@ export function ReportsPanel() {
       reportType,
       groupBy,
     );
-  }, [results, partnerProjectsScopeActive, partnerAllowedProjectIds, partnerAllowedClientIds, reportType, groupBy]);
+  }, [results, viewResultsReady, partnerProjectsScopeActive, partnerAllowedProjectIds, partnerAllowedClientIds, reportType, groupBy]);
   const tableSearchQ = debouncedTableSearch.trim().toLowerCase();
   const filteredTableRows = useMemo(() => {
     if (!tableSearchQ)
@@ -749,7 +773,9 @@ export function ReportsPanel() {
 
   const partnerProjectBadgeFn = useCallback((projectId: string) => partnerProjectBadgeMap?.get(String(projectId ?? '').trim()) ?? 'none', [partnerProjectBadgeMap]);
   const partnerClientBadgeFn = useCallback((clientId: string) => partnerClientBadgeMap?.get(String(clientId ?? '').trim()) ?? 'none', [partnerClientBadgeMap]);
-  const tableDataLoading = loading || (Boolean(tableSearchQ) && searchFullLoading);
+  const tableDataLoading = loading
+    || (!viewResultsReady && !error)
+    || (Boolean(tableSearchQ) && searchFullLoading);
   const tableSearchPlaceholder = useMemo(() => {
     if (reportType === 'time') {
       if (groupBy === 'projects')
