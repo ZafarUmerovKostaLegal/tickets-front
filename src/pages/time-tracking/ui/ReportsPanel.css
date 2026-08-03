@@ -6,12 +6,13 @@
   --rp2-text: var(--app-text, #0f172a);
   --rp2-muted: var(--app-muted, #64748b);
   --rp2-radius: 10px;
-  --rp2-chev: 2.25rem;
-
-  --rp2-h1: 6.5rem;
-  --rp2-h2: 7.25rem;
-  --rp2-pct: 11.5rem;
-  --rp2-amount: 10.5rem;
+  --rp2-chev: 2rem;
+  /* Name capped; metrics share leftover width so no empty middle. */
+  --rp2-name: minmax(12rem, 26rem);
+  --rp2-h1: minmax(5.25rem, 1fr);
+  --rp2-h2: minmax(6.25rem, 1.1fr);
+  --rp2-pct: minmax(9.5rem, 1.55fr);
+  --rp2-amount: minmax(7.5rem, 1.2fr);
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -27,14 +28,15 @@
 }
 
 .tt-reports__table-wrap--scroll-x > .rp2 {
-  display: grid;
-  grid-template-columns: minmax(100%, max-content);
+  display: flex;
+  flex-direction: column;
   width: 100%;
+  min-width: 52rem;
+  box-sizing: border-box;
 }
 
 .tt-reports__table-wrap--scroll-x > .rp2 .rp2__head,
 .tt-reports__table-wrap--scroll-x > .rp2 .rp2__body {
-  grid-column: 1;
   width: 100%;
   min-width: 0;
 }
@@ -69,31 +71,29 @@
 .rp2--clients .rp2__user-head {
   display: grid;
   grid-template-columns:
-    minmax(16rem, 1fr)
+    var(--rp2-name)
     var(--rp2-h1)
     var(--rp2-h2)
     var(--rp2-pct)
     var(--rp2-amount)
     var(--rp2-chev);
   align-items: center;
-  gap: 0.85rem 1.15rem;
-  column-gap: clamp(0.85rem, 2vw, 1.75rem);
+  gap: 0.75rem 1rem;
 }
 
 .rp2--projects .rp2__head,
 .rp2--projects .rp2__group-row {
   display: grid;
   grid-template-columns:
-    minmax(14rem, 1.4fr)
-    minmax(10rem, 1fr)
-    0.75rem
+    minmax(12rem, 1.35fr)
+    minmax(9rem, 1fr)
+    0.5rem
     var(--rp2-h1)
     var(--rp2-h2)
     var(--rp2-pct)
     var(--rp2-amount);
   align-items: center;
-  gap: 0.65rem 0.95rem;
-  column-gap: clamp(0.75rem, 1.6vw, 1.35rem);
+  gap: 0.65rem 0.85rem;
 }
 
 .rp2--projects .rp2__group-row {
@@ -163,16 +163,15 @@
 .rp2--projects .rp2__user-head {
   display: grid;
   grid-template-columns:
-    minmax(14rem, 1.4fr)
-    minmax(10rem, 1fr)
-    0.75rem
+    minmax(12rem, 1.35fr)
+    minmax(9rem, 1fr)
+    0.5rem
     var(--rp2-h1)
     var(--rp2-h2)
     var(--rp2-pct)
     var(--rp2-amount);
   align-items: center;
-  gap: 0.65rem 0.95rem;
-  column-gap: clamp(0.75rem, 1.6vw, 1.35rem);
+  gap: 0.65rem 0.85rem;
 }
 
 .rp2--projects .rp2__user-head .rp2__user-name {
@@ -180,47 +179,40 @@
 }
 
 .rp2--tasks .rp2__head,
-.rp2--tasks .rp2__group-row {
-  display: grid;
-  grid-template-columns:
-    minmax(16rem, 1fr)
-    var(--rp2-h1)
-    var(--rp2-h2)
-    var(--rp2-pct)
-    var(--rp2-amount)
-    var(--rp2-chev);
-  align-items: center;
-  gap: 0.75rem 1.15rem;
-  column-gap: clamp(0.85rem, 2vw, 1.75rem);
-}
-
+.rp2--tasks .rp2__group-row,
 .rp2--tasks .rp2__user-head {
   display: grid;
   grid-template-columns:
-    minmax(16rem, 1fr)
+    var(--rp2-name)
     var(--rp2-h1)
     var(--rp2-h2)
     var(--rp2-pct)
     var(--rp2-amount)
     var(--rp2-chev);
   align-items: center;
-  gap: 0.75rem 1.15rem;
-  column-gap: clamp(0.85rem, 2vw, 1.75rem);
+  gap: 0.75rem 1rem;
 }
 
 .rp2--team .rp2__head,
 .rp2--team .rp2__group-row {
   display: grid;
   grid-template-columns:
-    minmax(16rem, 1fr)
+    var(--rp2-name)
     var(--rp2-h1)
     var(--rp2-h2)
     var(--rp2-pct)
     var(--rp2-amount)
-    var(--rp2-h1);
+    var(--rp2-chev);
   align-items: center;
-  gap: 0.85rem 1.15rem;
-  column-gap: clamp(0.85rem, 2vw, 1.75rem);
+  gap: 0.75rem 1rem;
+}
+
+.rp2--team .rp2__head-chev,
+.rp2--team .rp2__group-chev {
+  width: var(--rp2-chev);
+  min-width: var(--rp2-chev);
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .rp2__head {
@@ -280,8 +272,8 @@
   border-bottom: 1px solid var(--rp2-border);
   border-radius: 0;
   background: transparent;
-  overflow: hidden;
-  transition: border-color 0.12s;
+  overflow: visible;
+  transition: border-color 0.12s, background-color 0.12s;
 }
 .rp2__body > .rp2__group:last-child {
   border-bottom: none;
@@ -319,14 +311,14 @@
 .rp2--clients .rp2__group-row--split {
   display: grid;
   grid-template-columns:
-    minmax(14rem, 1.6fr)
+    var(--rp2-name)
     var(--rp2-h1)
     var(--rp2-h2)
     var(--rp2-pct)
     var(--rp2-amount)
     var(--rp2-chev);
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.75rem 1rem;
   padding: 0.7rem 0.9rem;
   width: 100%;
   box-sizing: border-box;
@@ -927,7 +919,7 @@
   .rp2--projects,
   .rp2--tasks,
   .rp2--team {
-    min-width: 920px;
+    min-width: 52rem;
   }
 }
 
