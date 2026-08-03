@@ -29,6 +29,8 @@ export const todoPageMessages = {
         settings: 'Настройки',
         exportData: 'Экспорт данных',
         importData: 'Импорт данных',
+        exporting: 'Экспорт…',
+        importing: 'Импорт…',
         addColumn: 'Добавьте еще одну колонку',
         addColumnAria: 'Добавить колонку',
     },
@@ -53,6 +55,9 @@ export const todoPageMessages = {
         updateBoard: 'Не удалось обновить доску',
         uploadFile: 'Не удалось загрузить файл',
         openFile: 'Не удалось открыть файл',
+        exportBoard: 'Не удалось экспортировать доску',
+        importBoard: 'Не удалось импортировать доску',
+        importJsonOnly: 'Выберите JSON-файл (экспорт Kosta или Trello)',
     },
     archive: {
         title: 'Архив',

@@ -31,6 +31,8 @@ export const todoPageMessagesEn: TodoPageMessages = {
         settings: 'Settings',
         exportData: 'Export data',
         importData: 'Import data',
+        exporting: 'Exporting…',
+        importing: 'Importing…',
         addColumn: 'Add another column',
         addColumnAria: 'Add column',
     },
@@ -56,6 +58,9 @@ export const todoPageMessagesEn: TodoPageMessages = {
         updateBoard: 'Failed to update board',
         uploadFile: 'Failed to upload file',
         openFile: 'Failed to open file',
+        exportBoard: 'Failed to export board',
+        importBoard: 'Failed to import board',
+        importJsonOnly: 'Choose a JSON file (Kosta or Trello export)',
     },
     archive: {
         title: 'Archive',

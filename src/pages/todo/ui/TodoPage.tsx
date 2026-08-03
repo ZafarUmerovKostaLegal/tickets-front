@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { AppBackButton, AppHomeLogo } from '@shared/ui';
 import { routes } from '@shared/config';
 import { stripHtmlToText } from '@shared/lib/sanitizeHtml';
-import { createTodoBoard, createTodoCard, createTodoColumn, deleteTodoBoardBackground, deleteTodoCard, deleteTodoColumn, fetchTodoBoardById, fetchTodoBoardCurrent, fetchTodoBoardsList, findNewestCardInColumn, patchTodoCard, patchTodoColumn, pickPreferredTodoBoardId, putTodoBoardCurrent, reorderTodoCardsInColumn, reorderTodoColumns, uploadTodoBoardBackground, type CreateTodoBoardBody, type PatchTodoCardPayload, type TodoBoard, type TodoBoardLabel, type TodoBoardSummary, } from '@entities/todo';
+import { createTodoBoard, createTodoCard, createTodoColumn, deleteTodoBoardBackground, deleteTodoCard, deleteTodoColumn, exportTodoBoard, fetchTodoBoardById, fetchTodoBoardCurrent, fetchTodoBoardsList, findNewestCardInColumn, importTodoBoard, patchTodoCard, patchTodoColumn, pickPreferredTodoBoardId, putTodoBoardCurrent, reorderTodoCardsInColumn, reorderTodoColumns, uploadTodoBoardBackground, type CreateTodoBoardBody, type PatchTodoCardPayload, type TodoBoard, type TodoBoardLabel, type TodoBoardSummary, } from '@entities/todo';
 import { boardBackgroundStorageKey, pickBoardBackgroundApiPath, resolveBoardBackgroundDisplayUrl, } from '@entities/todo/lib/boardBackgroundUrl';
 import { fetchMediaBlob } from '@shared/api';
+import { downloadBlob } from '@shared/lib/downloadBlob';
 import { resolveCalendarColumnId, unpackBoard } from '@entities/todo/lib/boardMapper';
 import { cardDueDateTimeToIso } from '@entities/todo/lib/todoDueAt';
 import { buildMonthGrid, type TodoCard, type ArchivedCard, type ColumnId, type TodoColumnListSortMode, } from '@entities/todo/lib/todoUtils';
@@ -227,6 +228,8 @@ export function TodoPage() {
     const [addEventSaving, setAddEventSaving] = useState(false);
     const menuRef = useRef<HTMLDivElement | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const importFileInputRef = useRef<HTMLInputElement | null>(null);
+    const [boardIoBusy, setBoardIoBusy] = useState<'export' | 'import' | null>(null);
     const columnRefs = useRef<Record<string, HTMLDivElement | null>>({});
     const columnsScrollRef = useRef<HTMLDivElement | null>(null);
     const panStartXRef = useRef(0);
@@ -534,6 +537,61 @@ export function TodoPage() {
     const handlePickBackground = () => {
         fileInputRef.current?.click();
         setMenuOpen(false);
+    };
+    const handleExportBoard = useCallback(async () => {
+        setMenuOpen(false);
+        if (activeBoardId == null || boardIoBusy)
+            return;
+        setBoardIoBusy('export');
+        try {
+            const { blob, filename } = await exportTodoBoard(activeBoardId);
+            downloadBlob(blob, filename);
+            setBoardError(null);
+        }
+        catch (e: unknown) {
+            setBoardError(e instanceof Error ? e.message : t('todoPage.errors.exportBoard'));
+        }
+        finally {
+            setBoardIoBusy(null);
+        }
+    }, [activeBoardId, boardIoBusy, t]);
+    const handlePickImport = () => {
+        importFileInputRef.current?.click();
+        setMenuOpen(false);
+    };
+    const handleImportFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file || boardIoBusy)
+            return;
+        const name = (file.name || '').toLowerCase();
+        if (!name.endsWith('.json')) {
+            setBoardError(t('todoPage.errors.importJsonOnly'));
+            return;
+        }
+        if (file.size > 15 * 1024 * 1024) {
+            setBoardError(t('todoPage.errors.fileTooLarge'));
+            return;
+        }
+        setBoardIoBusy('import');
+        setInitialLoading(true);
+        try {
+            const board = await importTodoBoard(file);
+            const list = await fetchTodoBoardsList();
+            setBoardSummaries(list.items);
+            setBoardListError(null);
+            applyBoardFromApi(board, list.items);
+            setActiveBoardId(board.id);
+            setBoardError(null);
+            void putTodoBoardCurrent(board.id).catch(() => { });
+        }
+        catch (err: unknown) {
+            setBoardError(err instanceof Error ? err.message : t('todoPage.errors.importBoard'));
+        }
+        finally {
+            setBoardIoBusy(null);
+            setInitialLoading(false);
+        }
     };
     const handleBackgroundChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -1607,13 +1665,13 @@ export function TodoPage() {
                                     <span className="todo-page__menu-icon"><IconSettings /></span>
                                     <span className="todo-page__menu-text">{t('todoPage.members.menuItem')}</span>
                                 </button>)}
-                                <button type="button" className="todo-page__menu-item">
+                                <button type="button" className="todo-page__menu-item" onClick={() => void handleExportBoard()} disabled={activeBoardId == null || boardIoBusy != null}>
                                     <span className="todo-page__menu-icon"><IconDownload /></span>
-                                    <span className="todo-page__menu-text">{t('todoPage.page.exportData')}</span>
+                                    <span className="todo-page__menu-text">{boardIoBusy === 'export' ? t('todoPage.page.exporting') : t('todoPage.page.exportData')}</span>
                                 </button>
-                                <button type="button" className="todo-page__menu-item">
+                                <button type="button" className="todo-page__menu-item" onClick={handlePickImport} disabled={boardIoBusy != null}>
                                     <span className="todo-page__menu-icon"><IconUpload /></span>
-                                    <span className="todo-page__menu-text">{t('todoPage.page.importData')}</span>
+                                    <span className="todo-page__menu-text">{boardIoBusy === 'import' ? t('todoPage.page.importing') : t('todoPage.page.importData')}</span>
                                 </button>
                             </div>)}
                         </div>
@@ -1684,6 +1742,7 @@ export function TodoPage() {
                     </>)}
                 </div>
                 <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBackgroundChange} />
+                <input ref={importFileInputRef} type="file" accept="application/json,.json" style={{ display: 'none' }} onChange={(e) => void handleImportFileChange(e)} />
                 <Suspense fallback={null}>
                     {addColumnOpen && (<TodoAddColumnModal title={addColumnTitle} onTitleChange={setAddColumnTitle} onClose={() => { setAddColumnOpen(false); setAddColumnTitle(''); }} onSubmit={handleAddColumn} />)}
                     {addCardColumn && (<TodoAddCardModal columnTitle={columnConfig.find((c) => c.id === addCardColumn)?.title ?? ''} title={addCardTitle} onTitleChange={setAddCardTitle} onClose={() => { if (!addCardSubmitting) { setAddCardColumn(null); setAddCardTitle(''); } }} onSubmit={() => void handleAddCard()} submitting={addCardSubmitting} />)}

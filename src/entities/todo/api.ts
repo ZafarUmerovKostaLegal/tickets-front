@@ -291,6 +291,52 @@ export async function uploadTodoBoardBackground(boardId: number, file: File, ini
     return readBoardResponse(res);
 }
 
+function filenameFromContentDisposition(header: string | null, fallback: string): string {
+    if (!header)
+        return fallback;
+    const utf = /filename\*=UTF-8''([^;]+)/i.exec(header);
+    if (utf?.[1]) {
+        try {
+            return decodeURIComponent(utf[1].trim());
+        }
+        catch {
+            return utf[1].trim();
+        }
+    }
+    const plain = /filename="([^"]+)"/i.exec(header) || /filename=([^;]+)/i.exec(header);
+    if (plain?.[1])
+        return plain[1].trim().replace(/^["']|["']$/g, '');
+    return fallback;
+}
+
+/** Скачать доску как JSON (kosta_todos). */
+export async function exportTodoBoard(boardId: number): Promise<{ blob: Blob; filename: string }> {
+    const res = await apiFetch(`${todoBoardPath(boardId)}/export`);
+    if (!res.ok) {
+        const text = await res.text();
+        throw parseHttpError(res.status, text);
+    }
+    const blob = await res.blob();
+    const filename = filenameFromContentDisposition(
+        res.headers.get('Content-Disposition'),
+        `board-${boardId}.json`,
+    );
+    return { blob, filename };
+}
+
+/** Импорт JSON (наш экспорт или Trello) → новая доска. */
+export async function importTodoBoard(file: File, init?: Pick<RequestInit, 'signal'>): Promise<TodoBoard> {
+    const fd = new FormData();
+    fd.append('file', file, file.name || 'board.json');
+    const res = await apiFetch(`${TODOS}/boards/import`, {
+        method: 'POST',
+        body: fd,
+        ...init,
+    });
+    invalidateTodoBoardsListCache();
+    return readBoardResponse(res);
+}
+
 export async function deleteTodoBoardBackground(boardId: number): Promise<TodoBoard> {
     const res = await apiFetch(`${todoBoardPath(boardId)}/background`, { method: 'DELETE' });
     const text = await res.text();
