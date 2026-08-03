@@ -46,4 +46,9 @@ export const FRONTEND_API_ROUTES: ApiRouteSpec[] = [
     { module: 'contacts', method: 'GET', path: '/api/v1/contacts/clients' },
     { module: 'call-schedule', method: 'GET', path: '/api/v1/call-schedule/calendars' },
     { module: 'call-schedule', method: 'GET', path: '/api/v1/call-schedule/events' },
+    { module: 'call-schedule', method: 'GET', path: '/api/v1/call-schedule/days/files-counts' },
+    { module: 'call-schedule', method: 'GET', path: '/api/v1/call-schedule/days/{day}/files' },
+    { module: 'call-schedule', method: 'POST', path: '/api/v1/call-schedule/days/{day}/files' },
+    { module: 'call-schedule', method: 'GET', path: '/api/v1/call-schedule/days/{day}/files/{id}/file' },
+    { module: 'call-schedule', method: 'DELETE', path: '/api/v1/call-schedule/days/{day}/files/{id}' },
 ];

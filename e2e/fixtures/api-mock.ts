@@ -349,9 +349,32 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
     
     if (path.startsWith('/api/v1/call-schedule/')) {
         if (path.endsWith('/calendars'))
-            await json(route, { items: [{ id: 'primary', name: 'Календарь', is_default: true }] });
-        else if (path.endsWith('/events'))
-            await emptyList(route);
+            await json(route, { mailbox: 'info@kostalegal.com', calendars: [{ id: 'primary', name: 'Календарь' }] });
+        else if (path.includes('/files-counts'))
+            await json(route, { counts: {} });
+        else if (/\/days\/[^/]+\/files\/[^/]+\/file$/.test(path) && method === 'GET') {
+            await route.fulfill({
+                status: 200,
+                contentType: 'application/pdf',
+                body: Buffer.from('%PDF-demo'),
+                headers: { 'Content-Disposition': 'attachment; filename="brief.pdf"' },
+            });
+        }
+        else if (/\/days\/[^/]+\/files$/.test(path) && method === 'GET')
+            await json(route, []);
+        else if (/\/days\/[^/]+\/files$/.test(path) && method === 'POST') {
+            await json(route, {
+                id: 'file-1',
+                day: '2026-08-03',
+                originalName: 'brief.pdf',
+                contentType: 'application/pdf',
+                sizeBytes: 9,
+                uploadedByUserId: 1,
+                uploadedAt: new Date().toISOString(),
+            });
+        }
+        else if (path.includes('/events'))
+            await json(route, { events: [] });
         else
             await json(route, { ok: true });
         return;

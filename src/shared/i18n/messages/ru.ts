@@ -627,6 +627,23 @@ export const ruMessages: Messages = {
             browser: 'Открыть ссылку встречи в браузере',
             meetingLink: 'Ссылка на встречу',
         },
+        dayFiles: {
+            title: 'Файлы дня',
+            empty: 'Пока нет файлов. Загрузите материалы для звонка.',
+            upload: 'Загрузить файл',
+            uploading: 'Загрузка…',
+            download: 'Скачать',
+            delete: 'Удалить',
+            deleting: 'Удаление…',
+            loading: 'Загрузка файлов…',
+            errLoad: 'Не удалось загрузить список файлов',
+            errUpload: 'Не удалось загрузить файл',
+            errDownload: 'Не удалось скачать файл',
+            errDelete: 'Не удалось удалить файл',
+            badgeAria: 'файлов на день',
+            openDayAria: 'Открыть день',
+            noEvents: 'Нет событий в календаре',
+        },
     },
 };
 
@@ -1089,5 +1106,22 @@ export type Messages = {
         events: Record<'one' | 'few' | 'many', string>;
         weekdays: Record<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', string>;
         join: Record<'teams' | 'zoom' | 'meet' | 'webex' | 'outlook' | 'browser' | 'meetingLink', string>;
+        dayFiles: {
+            title: string;
+            empty: string;
+            upload: string;
+            uploading: string;
+            download: string;
+            delete: string;
+            deleting: string;
+            loading: string;
+            errLoad: string;
+            errUpload: string;
+            errDownload: string;
+            errDelete: string;
+            badgeAria: string;
+            openDayAria: string;
+            noEvents: string;
+        };
     };
 };

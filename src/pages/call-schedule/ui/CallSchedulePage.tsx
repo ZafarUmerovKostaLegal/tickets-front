@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef, useId, type FormEvent } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef, useId, type FormEvent, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
 import {
   buildCallJoinLinkList,
@@ -6,11 +6,19 @@ import {
   getCallScheduleCalendars,
   getCallScheduleEvents,
   hasAnyJoinLink,
+  listCallScheduleDayFiles,
+  uploadCallScheduleDayFile,
+  downloadCallScheduleDayFile,
+  deleteCallScheduleDayFile,
+  fetchCallScheduleDayFileCounts,
   CallScheduleApiError,
   type CallEvent,
+  type CallScheduleDayFile,
 } from '@entities/call-schedule';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
+import { useCurrentUser } from '@shared/hooks';
+import { canAccessAdminOnlyModules } from '@shared/lib/orgRoles';
 import { sanitizeHttpsWebUrl } from '@shared/lib/safeWebLink';
 import {
   eventCountLabel,
@@ -28,6 +36,13 @@ function pad2(n: number): string {
 }
 function toIso(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024)
+    return `${bytes} B`;
+  if (bytes < 1024 * 1024)
+    return `${(bytes / 1024).toFixed(bytes < 10 * 1024 ? 1 : 0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`;
 }
 function sameYmd(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -149,14 +164,52 @@ function CallEventDetailModal({ event, onClose }: {
     </div>
   </div>, document.body);
 }
-function CallDayListModal({ dateIso, events, onClose, onSelectEvent, }: {
+function CallDayListModal({ dateIso, events, onClose, onSelectEvent, onFilesChanged, }: {
   dateIso: string;
   events: CallEvent[];
   onClose: () => void;
   onSelectEvent: (ev: CallEvent) => void;
+  onFilesChanged?: () => void;
 }) {
   const { t, locale } = useI18n();
+  const { user } = useCurrentUser();
   const uid = useId();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [files, setFiles] = useState<CallScheduleDayFile[]>([]);
+  const [filesLoading, setFilesLoading] = useState(true);
+  const [filesError, setFilesError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const canAdminDelete = canAccessAdminOnlyModules(user?.role);
+
+  const reloadFiles = useCallback(async (signal?: AbortSignal) => {
+    setFilesLoading(true);
+    setFilesError(null);
+    try {
+      const list = await listCallScheduleDayFiles(dateIso, signal);
+      if (signal?.aborted)
+        return;
+      setFiles(list);
+    }
+    catch (e) {
+      if (signal?.aborted)
+        return;
+      const msg = e instanceof CallScheduleApiError ? e.message : t('callSchedulePage.dayFiles.errLoad');
+      setFilesError(msg);
+      setFiles([]);
+    }
+    finally {
+      if (!signal?.aborted)
+        setFilesLoading(false);
+    }
+  }, [dateIso, t]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void reloadFiles(controller.signal);
+    return () => controller.abort();
+  }, [reloadFiles]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape')
@@ -165,6 +218,60 @@ function CallDayListModal({ dateIso, events, onClose, onSelectEvent, }: {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  const onUploadPick = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file)
+      return;
+    setUploading(true);
+    setFilesError(null);
+    try {
+      const created = await uploadCallScheduleDayFile(dateIso, file);
+      setFiles((prev) => [created, ...prev.filter((f) => f.id !== created.id)]);
+      onFilesChanged?.();
+    }
+    catch (err) {
+      const msg = err instanceof CallScheduleApiError ? err.message : t('callSchedulePage.dayFiles.errUpload');
+      setFilesError(msg);
+    }
+    finally {
+      setUploading(false);
+    }
+  };
+
+  const onDownload = async (f: CallScheduleDayFile) => {
+    setBusyId(f.id);
+    setFilesError(null);
+    try {
+      await downloadCallScheduleDayFile(dateIso, f.id, f.originalName);
+    }
+    catch (err) {
+      const msg = err instanceof CallScheduleApiError ? err.message : t('callSchedulePage.dayFiles.errDownload');
+      setFilesError(msg);
+    }
+    finally {
+      setBusyId(null);
+    }
+  };
+
+  const onDelete = async (f: CallScheduleDayFile) => {
+    setBusyId(f.id);
+    setFilesError(null);
+    try {
+      await deleteCallScheduleDayFile(dateIso, f.id);
+      setFiles((prev) => prev.filter((x) => x.id !== f.id));
+      onFilesChanged?.();
+    }
+    catch (err) {
+      const msg = err instanceof CallScheduleApiError ? err.message : t('callSchedulePage.dayFiles.errDelete');
+      setFilesError(msg);
+    }
+    finally {
+      setBusyId(null);
+    }
+  };
+
   return createPortal(<div className="csched-modal-overlay" role="presentation">
     <div className="csched-modal csched-daylist" role="dialog" aria-modal="true" aria-labelledby={`${uid}-daylist`} onClick={(e) => e.stopPropagation()}>
       <div className="csched-modal__head">
@@ -178,15 +285,46 @@ function CallDayListModal({ dateIso, events, onClose, onSelectEvent, }: {
         </button>
       </div>
       <div className="csched-modal__body csched-daylist__body">
-        <p className="csched-daylist__meta">{eventCountLabel(events.length, locale, t)}</p>
-        <ul className="csched-daylist__list" role="list">
+        <p className="csched-daylist__meta">{events.length > 0 ? eventCountLabel(events.length, locale, t) : t('callSchedulePage.dayFiles.noEvents')}</p>
+        {events.length > 0 ? (<ul className="csched-daylist__list" role="list">
           {events.map((ev) => (<li key={ev.id} className="csched-daylist__item">
             <button type="button" className="csched-daylist__row" onClick={() => onSelectEvent(ev)}>
               <span className="csched-daylist__time">{ev.time}</span>
               <span className="csched-daylist__etitle">{ev.title}</span>
             </button>
           </li>))}
-        </ul>
+        </ul>) : null}
+
+        <section className="csched-dayfiles" aria-labelledby={`${uid}-dayfiles`}>
+          <div className="csched-dayfiles__head">
+            <h3 id={`${uid}-dayfiles`} className="csched-dayfiles__title">{t('callSchedulePage.dayFiles.title')}</h3>
+            <input ref={fileInputRef} type="file" className="csched-dayfiles__input" onChange={onUploadPick} disabled={uploading} />
+            <button type="button" className="csched-dayfiles__upload" disabled={uploading} onClick={() => fileInputRef.current?.click()}>
+              {uploading ? t('callSchedulePage.dayFiles.uploading') : t('callSchedulePage.dayFiles.upload')}
+            </button>
+          </div>
+          {filesError ? <p className="csched-dayfiles__error" role="alert">{filesError}</p> : null}
+          {filesLoading ? (<p className="csched-dayfiles__hint">{t('callSchedulePage.dayFiles.loading')}</p>) : files.length === 0 ? (<p className="csched-dayfiles__hint">{t('callSchedulePage.dayFiles.empty')}</p>) : (<ul className="csched-dayfiles__list" role="list">
+            {files.map((f) => {
+              const canDelete = user?.id != null && (f.uploadedByUserId === user.id || canAdminDelete);
+              const busy = busyId === f.id;
+              return (<li key={f.id} className="csched-dayfiles__item">
+                <div className="csched-dayfiles__meta">
+                  <span className="csched-dayfiles__name" title={f.originalName}>{f.originalName}</span>
+                  <span className="csched-dayfiles__size">{formatFileSize(f.sizeBytes)}</span>
+                </div>
+                <div className="csched-dayfiles__actions">
+                  <button type="button" className="csched-dayfiles__btn" disabled={busy || uploading} onClick={() => void onDownload(f)}>
+                    {t('callSchedulePage.dayFiles.download')}
+                  </button>
+                  {canDelete ? (<button type="button" className="csched-dayfiles__btn csched-dayfiles__btn--danger" disabled={busy || uploading} onClick={() => void onDelete(f)}>
+                    {busy ? t('callSchedulePage.dayFiles.deleting') : t('callSchedulePage.dayFiles.delete')}
+                  </button>) : null}
+                </div>
+              </li>);
+            })}
+          </ul>)}
+        </section>
       </div>
       <div className="csched-modal__foot">
         <button type="button" className="csched-modal__btn csched-modal__btn--primary" onClick={onClose}>
@@ -352,6 +490,8 @@ export function CallSchedulePage() {
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [retryKey, setRetryKey] = useState(0);
+  const [fileCounts, setFileCounts] = useState<Record<string, number>>({});
+  const [fileCountsTick, setFileCountsTick] = useState(0);
 
   const applyKostaAsPrimaryOnceRef = useRef(true);
   const viewY = anchorMonth.getFullYear();
@@ -433,6 +573,32 @@ export function CallSchedulePage() {
       controller.abort();
     };
   }, [viewY, viewM, calendarId, retryKey, calendarsLoading, calendarsError, t]);
+  useEffect(() => {
+    let live = true;
+    const controller = new AbortController();
+    const flat = weeks.flat();
+    if (flat.length === 0)
+      return;
+    const from = toIso(flat[0].d);
+    const to = toIso(flat[flat.length - 1].d);
+    (async () => {
+      try {
+        const counts = await fetchCallScheduleDayFileCounts(from, to, controller.signal);
+        if (!live)
+          return;
+        setFileCounts(counts);
+      }
+      catch {
+        if (!live)
+          return;
+        setFileCounts({});
+      }
+    })();
+    return () => {
+      live = false;
+      controller.abort();
+    };
+  }, [weeks, fileCountsTick, retryKey]);
   const eventsByDate = useMemo(() => {
     const m = new Map<string, CallEvent[]>();
     for (const e of events) {
@@ -561,8 +727,13 @@ export function CallSchedulePage() {
                 const moreCount = dayEvents.length > MONTH_CELL_EVENT_CAP
                   ? dayEvents.length - MONTH_CELL_EVENT_CAP
                   : 0;
+                const filesCount = fileCounts[iso] ?? 0;
                 const sel = sameYmd(d, selected);
                 const today = isToday(d);
+                const openDay = () => {
+                  setSelected(new Date(d));
+                  setAgendaForDay({ dateIso: iso, events: dayEvents });
+                };
                 return (<div key={`${wi}-${di}`} role="gridcell" tabIndex={0} className={`csched-cal__cell${!inMonth ? ' csched-cal__cell--muted' : ''}${today ? ' csched-cal__cell--today' : ''}${sel ? ' csched-cal__cell--selected' : ''}`} onClick={() => setSelected(new Date(d))} onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
@@ -570,13 +741,15 @@ export function CallSchedulePage() {
                   }
                 }}>
                   <div className="csched-cal__cell-head">
-                    {dayEvents.length > 0 ? (<button type="button" className="csched-cal__cell-num csched-cal__date-open" title={t('callSchedulePage.allDayEventsTitle')} aria-label={`${t('callSchedulePage.allDayEventsAria')} ${eventCountLabel(dayEvents.length, locale, t)}`} onClick={(e) => {
+                    <button type="button" className="csched-cal__cell-num csched-cal__date-open" title={t('callSchedulePage.allDayEventsTitle')} aria-label={`${t('callSchedulePage.dayFiles.openDayAria')} ${formatDateLong(iso, locale)}`} onClick={(e) => {
                       e.stopPropagation();
-                      setSelected(new Date(d));
-                      setAgendaForDay({ dateIso: iso, events: dayEvents });
+                      openDay();
                     }}>
                       {d.getDate()}
-                    </button>) : (<span className="csched-cal__cell-num">{d.getDate()}</span>)}
+                    </button>
+                    {filesCount > 0 ? (<span className="csched-cal__files-badge" title={`${filesCount} ${t('callSchedulePage.dayFiles.badgeAria')}`} aria-label={`${filesCount} ${t('callSchedulePage.dayFiles.badgeAria')}`}>
+                      {filesCount}
+                    </span>) : null}
                     {!inMonth && (<span className="csched-cal__cell-month">{d.toLocaleDateString(localeTag(locale), { month: 'short' })}</span>)}
                   </div>
                   <div className="csched-cal__events">
@@ -589,8 +762,7 @@ export function CallSchedulePage() {
                     </button>))}
                     {moreCount > 0 ? (<button type="button" className="csched-cal__more" title={`${t('callSchedulePage.moreInDayTitle')} ${dayEvents.length}. ${t('callSchedulePage.moreInDayTitleSuffix')}`} aria-label={`${t('callSchedulePage.showHiddenAria')} ${eventCountLabel(moreCount, locale, t)}`} onClick={(e) => {
                       e.stopPropagation();
-                      setSelected(new Date(d));
-                      setAgendaForDay({ dateIso: iso, events: dayEvents });
+                      openDay();
                     }}>
                       {t('callSchedulePage.moreCount')} {moreCount}
                     </button>) : null}
@@ -605,7 +777,7 @@ export function CallSchedulePage() {
     {agendaForDay ? (<CallDayListModal dateIso={agendaForDay.dateIso} events={agendaForDay.events} onClose={() => setAgendaForDay(null)} onSelectEvent={(ev) => {
       setDetailEvent(ev);
       setAgendaForDay(null);
-    }} />) : null}
+    }} onFilesChanged={() => setFileCountsTick((n) => n + 1)} />) : null}
     {detailEvent ? <CallEventDetailModal event={detailEvent} onClose={() => setDetailEvent(null)} /> : null}
     <CreateCallEventModal open={createOpen} onClose={() => setCreateOpen(false)} onCreated={() => setRetryKey((k) => k + 1)} initialDateIso={toIso(selected)} calendarId={calendarId} />
   </div>);

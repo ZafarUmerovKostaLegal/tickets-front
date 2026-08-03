@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { downloadBlob } from '@shared/lib/downloadBlob';
 import { createQueryCache } from '@shared/lib/queryCache';
 import { mapGraphEventToCallEvent, type CallEvent } from './mapGraphEvent';
 
@@ -134,4 +135,102 @@ export async function createCallScheduleEvent(
     const created = await res.json() as unknown;
     eventsCache.invalidate();
     return created;
+}
+
+export type CallScheduleDayFile = {
+    id: string;
+    day: string;
+    originalName: string;
+    contentType: string | null;
+    sizeBytes: number;
+    uploadedByUserId: number;
+    uploadedAt: string;
+};
+
+function normalizeDayFile(raw: Record<string, unknown>): CallScheduleDayFile {
+    return {
+        id: String(raw.id ?? ''),
+        day: String(raw.day ?? ''),
+        originalName: String(raw.originalName ?? raw.original_name ?? 'file'),
+        contentType: (raw.contentType ?? raw.content_type ?? null) as string | null,
+        sizeBytes: Number(raw.sizeBytes ?? raw.size_bytes ?? 0) || 0,
+        uploadedByUserId: Number(raw.uploadedByUserId ?? raw.uploaded_by_user_id ?? 0) || 0,
+        uploadedAt: String(raw.uploadedAt ?? raw.uploaded_at ?? ''),
+    };
+}
+
+export async function listCallScheduleDayFiles(day: string, signal?: AbortSignal): Promise<CallScheduleDayFile[]> {
+    const d = encodeURIComponent(day.trim().slice(0, 10));
+    const res = await apiFetch(`/api/v1/call-schedule/days/${d}/files`, { signal });
+    if (!res.ok) {
+        const detail = await readErrorDetail(res);
+        throw new CallScheduleApiError(res.status, humanizeError(res.status, detail));
+    }
+    const arr = await res.json() as unknown;
+    if (!Array.isArray(arr))
+        return [];
+    return arr.map((row) => normalizeDayFile((row ?? {}) as Record<string, unknown>));
+}
+
+export async function uploadCallScheduleDayFile(day: string, file: File): Promise<CallScheduleDayFile> {
+    const d = encodeURIComponent(day.trim().slice(0, 10));
+    const form = new FormData();
+    form.append('file', file);
+    const res = await apiFetch(`/api/v1/call-schedule/days/${d}/files`, {
+        method: 'POST',
+        body: form,
+    });
+    if (!res.ok) {
+        const detail = await readErrorDetail(res);
+        throw new CallScheduleApiError(res.status, humanizeError(res.status, detail));
+    }
+    return normalizeDayFile(await res.json() as Record<string, unknown>);
+}
+
+export async function downloadCallScheduleDayFile(day: string, id: string, filename: string): Promise<void> {
+    const d = encodeURIComponent(day.trim().slice(0, 10));
+    const fid = encodeURIComponent(id);
+    const res = await apiFetch(`/api/v1/call-schedule/days/${d}/files/${fid}/file`);
+    if (!res.ok) {
+        const detail = await readErrorDetail(res);
+        throw new CallScheduleApiError(res.status, humanizeError(res.status, detail));
+    }
+    const blob = await res.blob();
+    downloadBlob(blob, filename || 'file');
+}
+
+export async function deleteCallScheduleDayFile(day: string, id: string): Promise<void> {
+    const d = encodeURIComponent(day.trim().slice(0, 10));
+    const fid = encodeURIComponent(id);
+    const res = await apiFetch(`/api/v1/call-schedule/days/${d}/files/${fid}`, { method: 'DELETE' });
+    if (!res.ok) {
+        const detail = await readErrorDetail(res);
+        throw new CallScheduleApiError(res.status, humanizeError(res.status, detail));
+    }
+}
+
+export async function fetchCallScheduleDayFileCounts(
+    dateFrom: string,
+    dateTo: string,
+    signal?: AbortSignal,
+): Promise<Record<string, number>> {
+    const q = new URLSearchParams();
+    q.set('from', dateFrom.trim().slice(0, 10));
+    q.set('to', dateTo.trim().slice(0, 10));
+    const res = await apiFetch(`/api/v1/call-schedule/days/files-counts?${q.toString()}`, { signal });
+    if (!res.ok) {
+        const detail = await readErrorDetail(res);
+        throw new CallScheduleApiError(res.status, humanizeError(res.status, detail));
+    }
+    const j = await res.json() as { counts?: Record<string, number> };
+    const counts = j.counts;
+    if (!counts || typeof counts !== 'object')
+        return {};
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(counts)) {
+        const n = Number(v);
+        if (n > 0)
+            out[k] = n;
+    }
+    return out;
 }

@@ -2,6 +2,11 @@ export {
     getCallScheduleCalendars,
     getCallScheduleEvents,
     createCallScheduleEvent,
+    listCallScheduleDayFiles,
+    uploadCallScheduleDayFile,
+    downloadCallScheduleDayFile,
+    deleteCallScheduleDayFile,
+    fetchCallScheduleDayFileCounts,
     CallScheduleApiError,
 } from './api';
 export type {
@@ -10,6 +15,7 @@ export type {
     CallScheduleCalendar,
     GetCallScheduleEventsParams,
     CreateCallScheduleEventInput,
+    CallScheduleDayFile,
 } from './api';
 export type { CallMeetingLinkItem } from './mapGraphEvent';
 export { mapGraphEventToCallEvent } from './mapGraphEvent';
