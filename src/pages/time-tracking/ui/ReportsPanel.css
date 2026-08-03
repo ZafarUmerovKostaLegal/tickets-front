@@ -1663,11 +1663,13 @@
   word-break: normal;
   overflow-wrap: break-word;
   hyphens: auto;
+  font-size: 0.875rem;
+  line-height: 1.45;
 }
 
 .tt-partner-confirmed__table--for-review .tt-partner-confirmed__td-client-text {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -1676,12 +1678,12 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem 0.4rem;
+  gap: 0.4rem 0.5rem;
 }
 
 .tt-partner-confirmed__table--for-review .tt-partner-confirmed__project-cell > span:not(.tt-partner-confirmed__card-client):not(.tt-partner-confirmed__empty-badge) {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   min-width: 0;
@@ -1691,7 +1693,13 @@
 .tt-partner-confirmed__table--for-review .tt-partner-confirmed__td-period {
   white-space: normal;
   overflow-wrap: break-word;
-  line-height: 1.35;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.tt-partner-confirmed__table--for-review .tt-partner-confirmed__td-nowrap {
+  font-size: 0.875rem;
+  line-height: 1.45;
 }
 
 .tt-partner-confirmed__table--for-review .tt-partner-confirmed__td-priority {
@@ -1701,12 +1709,17 @@
 .tt-partner-confirmed__table--for-review .tt-for-review__priority-dd {
   display: flex;
   width: 100%;
-  max-width: 9.75rem;
+  max-width: 11rem;
 }
 
 .tt-partner-confirmed__table--for-review .tt-for-review__priority-trigger {
   width: 100%;
   justify-content: flex-start;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.55rem 0.35rem 0.65rem;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  border-radius: 9px;
 }
 
 .tt-partner-confirmed__table--for-review .tt-for-review__priority-chev {
@@ -1719,17 +1732,25 @@
 
 .tt-partner-confirmed__table--for-review .tt-for-review__priority-badge {
   max-width: 100%;
+  min-height: 2.25rem;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.8125rem;
+  border-radius: 9px;
+  gap: 0.4rem;
 }
 
 .tt-partner-confirmed__table--for-review .rp-partner-initials {
   flex-wrap: wrap;
-  gap: 0.3rem;
+  gap: 0.4rem;
   max-width: 100%;
 }
 
 .tt-partner-confirmed__table--for-review .rp-partner-initials__chip {
-  min-width: 1.85rem;
-  padding: 0.1rem 0.35rem;
+  min-width: 2.25rem;
+  min-height: 1.75rem;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.8125rem;
+  border-radius: 7px;
 }
 
 .tt-partner-confirmed__table--for-review .tt-partner-confirmed__td-comments {
@@ -1738,13 +1759,24 @@
 
 .tt-partner-confirmed__table--for-review .tt-partner-confirmed__comments-btn--compact {
   width: 100%;
-  max-width: 11.5rem;
-  min-height: 2.15rem;
-  padding: 0.35rem 0.55rem;
+  max-width: 12.5rem;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 9px;
 }
 
 .tt-partner-confirmed__table--for-review .tt-partner-confirmed__td-actions .tt-partner-confirmed__actions {
   width: auto;
+  padding: 0.25rem;
+  gap: 0.1rem;
+}
+
+.tt-partner-confirmed__table--for-review .tt-partner-confirmed__icon-btn.tt-reports__btn--icon {
+  min-width: 2.35rem;
+  min-height: 2.35rem;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 8px;
 }
 
 .tt-partner-confirmed__td-partners {
@@ -2241,7 +2273,8 @@
 .tt-partner-confirmed__table--for-review {
   table-layout: fixed;
   width: 100%;
-  min-width: 68rem;
+  min-width: 78rem;
+  border-spacing: 0;
 }
 
 .tt-partner-confirmed__table--for-review thead th {
@@ -2249,15 +2282,18 @@
   top: 0;
   z-index: 2;
   box-shadow: 0 1px 0 var(--app-border, #e2e8f0);
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
+  letter-spacing: 0.01em;
 }
 
 .tt-partner-confirmed__table--for-review th,
 .tt-partner-confirmed__table--for-review td {
   vertical-align: middle;
-  padding-top: 0.7rem;
-  padding-bottom: 0.7rem;
-  padding-left: 0.7rem;
-  padding-right: 0.7rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
 }
 
 .tt-partner-confirmed__table--for-review tbody tr {
@@ -2271,50 +2307,50 @@
 /* client */
 .tt-partner-confirmed__table--for-review th:nth-child(1),
 .tt-partner-confirmed__table--for-review td:nth-child(1) {
-  width: 13%;
-  min-width: 8.5rem;
+  width: 17%;
+  min-width: 12rem;
 }
 
 /* project */
 .tt-partner-confirmed__table--for-review th:nth-child(2),
 .tt-partner-confirmed__table--for-review td:nth-child(2) {
-  width: 16%;
-  min-width: 10rem;
+  width: 17%;
+  min-width: 12rem;
 }
 
 /* period */
 .tt-partner-confirmed__table--for-review th:nth-child(3),
 .tt-partner-confirmed__table--for-review td:nth-child(3) {
-  width: 15%;
-  min-width: 13.5rem;
+  width: 14%;
+  min-width: 14rem;
 }
 
 /* priority */
 .tt-partner-confirmed__table--for-review th:nth-child(4),
 .tt-partner-confirmed__table--for-review td:nth-child(4) {
-  width: 10%;
-  min-width: 8.75rem;
+  width: 11%;
+  min-width: 10rem;
 }
 
 /* partners */
 .tt-partner-confirmed__table--for-review th:nth-child(5),
 .tt-partner-confirmed__table--for-review td:nth-child(5) {
   width: 11%;
-  min-width: 6.75rem;
+  min-width: 8.5rem;
 }
 
 /* created at */
 .tt-partner-confirmed__table--for-review th:nth-child(6),
 .tt-partner-confirmed__table--for-review td:nth-child(6) {
-  width: 9%;
-  min-width: 7.5rem;
+  width: 10%;
+  min-width: 8.75rem;
 }
 
 /* comments */
 .tt-partner-confirmed__table--for-review th:nth-child(7),
 .tt-partner-confirmed__table--for-review td:nth-child(7) {
-  width: 13%;
-  min-width: 10rem;
+  width: 12%;
+  min-width: 11rem;
 }
 
 /* actions — up to 3 icon buttons */
@@ -2322,9 +2358,9 @@
 .tt-partner-confirmed__table--for-review td:nth-child(8),
 .tt-partner-confirmed__table--for-review .tt-partner-confirmed__th-actions,
 .tt-partner-confirmed__table--for-review .tt-partner-confirmed__td-actions {
-  width: 8.5rem;
-  min-width: 8.5rem;
-  max-width: 8.5rem;
+  width: 9.75rem;
+  min-width: 9.75rem;
+  max-width: 9.75rem;
 }
 
 .tt-partner-confirmed__td-client {
@@ -2609,7 +2645,7 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
 
   .tt-reports--fluid .tt-partner-confirmed__table--for-review {
     width: 100%;
-    min-width: 68rem;
+    min-width: 78rem;
   }
 
   .tt-reports--fluid .tt-partner-confirmed__table--confirmed th:nth-child(1),
@@ -2648,53 +2684,53 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
 
   .tt-reports--fluid .tt-partner-confirmed__table--for-review th:nth-child(1),
   .tt-reports--fluid .tt-partner-confirmed__table--for-review td:nth-child(1) {
-    width: 13%;
-    min-width: 8.5rem;
+    width: 17%;
+    min-width: 12rem;
   }
 
   .tt-reports--fluid .tt-partner-confirmed__table--for-review th:nth-child(2),
   .tt-reports--fluid .tt-partner-confirmed__table--for-review td:nth-child(2) {
-    width: 16%;
-    min-width: 10rem;
+    width: 17%;
+    min-width: 12rem;
   }
 
   .tt-reports--fluid .tt-partner-confirmed__table--for-review th:nth-child(3),
   .tt-reports--fluid .tt-partner-confirmed__table--for-review td:nth-child(3) {
-    width: 15%;
-    min-width: 13.5rem;
+    width: 14%;
+    min-width: 14rem;
   }
 
   .tt-reports--fluid .tt-partner-confirmed__table--for-review th:nth-child(4),
   .tt-reports--fluid .tt-partner-confirmed__table--for-review td:nth-child(4) {
-    width: 10%;
-    min-width: 8.75rem;
+    width: 11%;
+    min-width: 10rem;
   }
 
   .tt-reports--fluid .tt-partner-confirmed__table--for-review th:nth-child(5),
   .tt-reports--fluid .tt-partner-confirmed__table--for-review td:nth-child(5) {
     width: 11%;
-    min-width: 6.75rem;
+    min-width: 8.5rem;
   }
 
   .tt-reports--fluid .tt-partner-confirmed__table--for-review th:nth-child(6),
   .tt-reports--fluid .tt-partner-confirmed__table--for-review td:nth-child(6) {
-    width: 9%;
-    min-width: 7.5rem;
+    width: 10%;
+    min-width: 8.75rem;
   }
 
   .tt-reports--fluid .tt-partner-confirmed__table--for-review th:nth-child(7),
   .tt-reports--fluid .tt-partner-confirmed__table--for-review td:nth-child(7) {
-    width: 13%;
-    min-width: 10rem;
+    width: 12%;
+    min-width: 11rem;
   }
 
   .tt-reports--fluid .tt-partner-confirmed__table--for-review th:nth-child(8),
   .tt-reports--fluid .tt-partner-confirmed__table--for-review td:nth-child(8),
   .tt-reports--fluid .tt-partner-confirmed__table--for-review .tt-partner-confirmed__th-actions,
   .tt-reports--fluid .tt-partner-confirmed__table--for-review .tt-partner-confirmed__td-actions {
-    width: 8.5rem;
-    min-width: 8.5rem;
-    max-width: 8.5rem;
+    width: 9.75rem;
+    min-width: 9.75rem;
+    max-width: 9.75rem;
   }
 
   .tt-reports--fluid .tt-drive__content {
@@ -2709,15 +2745,19 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
   }
 
   .tt-partner-confirmed__table--for-review {
-    min-width: 68rem;
+    min-width: 78rem;
   }
 
   .tt-partner-confirmed__table--confirmed th,
-  .tt-partner-confirmed__table--confirmed td,
-  .tt-partner-confirmed__table--for-review th,
-  .tt-partner-confirmed__table--for-review td {
+  .tt-partner-confirmed__table--confirmed td {
     padding-left: 0.65rem;
     padding-right: 0.65rem;
+  }
+
+  .tt-partner-confirmed__table--for-review th,
+  .tt-partner-confirmed__table--for-review td {
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
   }
 
   .tt-partner-confirmed__icon-btn.tt-reports__btn--icon {
@@ -2725,6 +2765,13 @@ body[data-theme='dark'] .tt-partner-confirmed__table--for-review tbody tr:hover 
     min-height: 2rem;
     width: 2rem;
     height: 2rem;
+  }
+
+  .tt-partner-confirmed__table--for-review .tt-partner-confirmed__icon-btn.tt-reports__btn--icon {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    width: 2.25rem;
+    height: 2.25rem;
   }
 }
 
