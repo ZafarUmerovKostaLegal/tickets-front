@@ -2,24 +2,49 @@ import { memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import type { NotificationItem } from '@entities/notification/wsClient';
-import { getExpensesOpenUrl } from '@shared/config';
+import { getCorrespondenceOutgoingUrl, getExpensesOpenUrl, routes } from '@shared/config';
 import { AuthImg } from '@shared/ui';
+
 type NotificationDetailModalProps = {
     notification: NotificationItem;
     onClose: () => void;
 };
+
+function correspondenceOpenUrl(notificationType: string | undefined): string | null {
+    const kind = (notificationType ?? '').trim().toLowerCase();
+    if (kind === 'correspondence_review')
+        return getCorrespondenceOutgoingUrl();
+    if (kind === 'correspondence_incoming')
+        return `${routes.correspondence}?tab=incoming`;
+    if (kind === 'correspondence_registered' || kind === 'correspondence_rejected')
+        return getCorrespondenceOutgoingUrl();
+    if (kind === 'correspondence')
+        return routes.correspondence;
+    return null;
+}
+
 export const NotificationDetailModal = memo(function NotificationDetailModal({ notification, onClose }: NotificationDetailModalProps) {
     const navigate = useNavigate();
     const expenseMatch = notification.notification_type === 'expense_payment_confirmation'
         ? /заявк[аи]\s+([\p{L}\p{N}_/-]+)/iu.exec(`${notification.title} ${notification.description}`)
         : null;
     const expenseId = expenseMatch?.[1] ?? null;
+    const correspondenceUrl = correspondenceOpenUrl(notification.notification_type);
+
     const openExpense = () => {
         if (!expenseId)
             return;
         onClose();
         navigate(`${getExpensesOpenUrl(expenseId)}?intent=pay`);
     };
+
+    const openCorrespondence = () => {
+        if (!correspondenceUrl)
+            return;
+        onClose();
+        navigate(correspondenceUrl);
+    };
+
     const modal = (<div className="tm" role="dialog" aria-modal="true">
       <div className="tm__backdrop" aria-hidden/>
       <div className="tm__box">
@@ -52,6 +77,10 @@ export const NotificationDetailModal = memo(function NotificationDetailModal({ n
           {expenseId ? (
             <button type="button" className="tm__btn tm__btn--primary" onClick={openExpense}>
               Перейти к заявке
+            </button>
+          ) : correspondenceUrl ? (
+            <button type="button" className="tm__btn tm__btn--primary" onClick={openCorrespondence}>
+              Открыть корреспонденцию
             </button>
           ) : null}
         </div>

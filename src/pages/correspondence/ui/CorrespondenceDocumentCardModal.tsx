@@ -5,6 +5,7 @@ import {
     correspondenceErrorMessage,
     fetchCorrespondenceDocument,
     formatCorrRegisteredAt,
+    invalidateCorrespondencePartnerAttention,
     openCorrespondenceAttachmentInNewTab,
     rejectOutgoingCorrespondence,
     submitOutgoingForReview,
@@ -13,6 +14,7 @@ import {
 } from '@entities/correspondence';
 import { listPartners, type UserPublic } from '@entities/user';
 import { useCurrentUser } from '@shared/hooks';
+import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { useAppDialog } from '@shared/ui';
 import {
     CORR_COUNTERPARTY_COLUMN,
@@ -38,10 +40,6 @@ function formatBytes(bytes: number): string {
 
 function userLabel(name: string | null | undefined, email: string | null | undefined, id: number): string {
     return name?.trim() || email?.trim() || `User #${id}`;
-}
-
-function isPartnerRole(role: string | null | undefined): boolean {
-    return (role || '').trim().toLowerCase().replace('ё', 'е') === 'партнер';
 }
 
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
@@ -165,7 +163,7 @@ export function CorrespondenceDocumentCardModal({
         && doc.status === 'pending_review'
         && uid != null
         && doc.partnerUserId === uid
-        && isPartnerRole(user?.role),
+        && isPartnerOrgRole(user?.role, user?.position),
     );
     const canAuthorResubmit = Boolean(
         doc
@@ -193,6 +191,7 @@ export function CorrespondenceDocumentCardModal({
         try {
             const next = await approveOutgoingCorrespondence(doc.id);
             await refresh(next);
+            invalidateCorrespondencePartnerAttention();
             void showAlert({
                 title: 'Зарегистрировано',
                 message: `Письмо зарегистрировано как ${next.registryNumber}.`,
@@ -224,6 +223,7 @@ export function CorrespondenceDocumentCardModal({
         try {
             const next = await rejectOutgoingCorrespondence(doc.id, comment);
             await refresh(next);
+            invalidateCorrespondencePartnerAttention();
             void showAlert({ title: 'Отклонено', message: 'Заявитель получит уведомление с комментарием.' });
         }
         catch (err) {
@@ -264,6 +264,7 @@ export function CorrespondenceDocumentCardModal({
         try {
             const next = await submitOutgoingForReview(doc.id, partnerId);
             await refresh(next);
+            invalidateCorrespondencePartnerAttention();
             void showAlert({ title: 'Отправлено', message: 'Письмо снова отправлено на проверку партнёру.' });
         }
         catch (err) {

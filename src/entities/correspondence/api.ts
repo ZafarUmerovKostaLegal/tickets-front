@@ -90,6 +90,8 @@ function buildListQuery(params: ListCorrespondenceParams = {}): string {
         qs.set('includeArchived', 'true');
     if (params.registeredOnly)
         qs.set('registeredOnly', 'true');
+    if (params.partnerUserId != null && params.partnerUserId > 0)
+        qs.set('partnerUserId', String(params.partnerUserId));
     const s = qs.toString();
     return s ? `?${s}` : '';
 }

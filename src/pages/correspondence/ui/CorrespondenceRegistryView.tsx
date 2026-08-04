@@ -6,6 +6,7 @@ import {
     correspondenceErrorMessage,
     fetchCorrespondenceDocument,
     fetchCorrespondenceStats,
+    invalidateCorrespondencePartnerAttention,
     listCorrespondence,
     mapDocumentToCorrRow,
     openCorrespondenceAttachmentInNewTab,
@@ -154,6 +155,7 @@ const EMPTY_STATS: CorrespondenceStats = {
     outgoingTotal: 0,
     approvalTotal: 0,
     incomingNewTotal: 0,
+    partnerAttentionTotal: 0,
 };
 
 export type CorrespondenceRegistryViewProps = {
@@ -320,6 +322,7 @@ export function CorrespondenceRegistryView({
                 scanFiles: payload.scanFiles,
             });
             setIncomingModalOpen(false);
+            invalidateCorrespondencePartnerAttention();
             reloadAll();
             void showAlert({
                 title: 'Входящее сохранено',

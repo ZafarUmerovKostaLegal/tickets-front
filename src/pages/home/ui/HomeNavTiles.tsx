@@ -11,6 +11,7 @@ import {
 import { usePartnerForReviewBadge } from '@entities/time-tracking/lib/usePartnerForReviewBadge';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
 import { useExpensePaymentConfirmationBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
+import { useCorrespondencePartnerAttentionBadge } from '@entities/correspondence';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import {
     getHubSectionForTile,
@@ -149,6 +150,13 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
     );
     const expensePaymentBadgeAria = expensePaymentCount > 0
         ? `Ожидают подтверждения оплаты: ${expensePaymentCount}`
+        : undefined;
+    const showCorrespondenceTile = defaultTiles.some((tile) => tile.id === 'correspondence');
+    const { badge: correspondenceBadge, count: correspondenceCount } = useCorrespondencePartnerAttentionBadge(
+        !loading && showCorrespondenceTile,
+    );
+    const correspondenceBadgeAria = correspondenceCount > 0
+        ? t('homeHub.correspondencePendingBadgeAria').replace('{count}', String(correspondenceCount))
         : undefined;
 
     const [orderedTiles, setOrderedTiles] = useState<HubNavTile[]>([]);
@@ -329,7 +337,9 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                                         ? forReviewBadge || undefined
                                                         : tile.id === 'expenses'
                                                             ? expensePaymentBadge || undefined
-                                                        : undefined
+                                                            : tile.id === 'correspondence'
+                                                                ? correspondenceBadge || undefined
+                                                                : undefined
                                             }
                                             badgeAriaLabel={
                                                 tile.id === 'kostaDaily'
@@ -338,7 +348,9 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                                         ? forReviewBadgeAria
                                                         : tile.id === 'expenses'
                                                             ? expensePaymentBadgeAria
-                                                        : undefined
+                                                            : tile.id === 'correspondence'
+                                                                ? correspondenceBadgeAria
+                                                                : undefined
                                             }
                                         />
                                     </NavLink>

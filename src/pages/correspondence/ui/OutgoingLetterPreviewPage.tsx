@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { invalidateCorrespondencePartnerAttention } from '@entities/correspondence';
 import { getCorrespondenceOutgoingUrl, routes } from '@shared/config';
 import { useAppDialog } from '@shared/ui';
 import { coverModelToMockLetter } from '../lib/correspondenceCoverLetterModel';
@@ -94,6 +95,7 @@ export function OutgoingLetterPreviewPage() {
             });
             clearOutgoingLetterDraft();
             setReviewOpen(false);
+            invalidateCorrespondencePartnerAttention();
             void showAlert({
                 title: 'Отправлено на проверку',
                 message: `Письмо отправлено партнёру «${partnerName}». После подтверждения оно будет зарегистрировано автоматически.`,

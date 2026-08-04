@@ -24,6 +24,13 @@ export {
 } from './lib/normalize';
 
 export {
+    invalidateCorrespondencePartnerAttention,
+    CORRESPONDENCE_PARTNER_ATTENTION_INVALIDATE_EVENT,
+} from './lib/partnerAttentionEvents';
+
+export { useCorrespondencePartnerAttentionBadge } from './lib/useCorrespondencePartnerAttentionBadge';
+
+export {
     approveOutgoingCorrespondence,
     archiveCorrespondence,
     correspondenceErrorMessage,

@@ -63,6 +63,8 @@ export type CorrespondenceStats = {
     outgoingTotal: number;
     approvalTotal: number;
     incomingNewTotal: number;
+    /** For partner: pending outgoing reviews + new incoming assigned to them. */
+    partnerAttentionTotal: number;
 };
 
 export type ListCorrespondenceParams = {
@@ -75,6 +77,7 @@ export type ListCorrespondenceParams = {
     limit?: number;
     includeArchived?: boolean;
     registeredOnly?: boolean;
+    partnerUserId?: number;
 };
 
 export type RegisterIncomingBody = {

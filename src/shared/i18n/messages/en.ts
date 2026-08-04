@@ -26,6 +26,7 @@ export const enMessages = {
         dragTileAria: 'Reorder',
         unreadMessagesAria: '{count} unread messages',
         forReviewPendingBadgeAria: '{count} reports awaiting your signature',
+        correspondencePendingBadgeAria: '{count} letters need your attention',
         internalPortal: 'Internal portal',
         searchPlaceholder: 'Find a section…',
         searchEmpty: 'No sections found',

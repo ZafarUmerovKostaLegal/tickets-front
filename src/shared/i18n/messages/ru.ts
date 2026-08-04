@@ -26,6 +26,7 @@ export const ruMessages: Messages = {
         dragTileAria: 'Изменить порядок',
         unreadMessagesAria: '{count} непрочитанных сообщений',
         forReviewPendingBadgeAria: '{count} отчётов ожидают вашей подписи',
+        correspondencePendingBadgeAria: '{count} писем требуют вашего внимания',
         internalPortal: 'Внутренний портал',
         searchPlaceholder: 'Найти раздел…',
         searchEmpty: 'Разделы не найдены',
@@ -657,6 +658,7 @@ export type Messages = {
         dragTileAria: string;
         unreadMessagesAria: string;
         forReviewPendingBadgeAria: string;
+        correspondencePendingBadgeAria: string;
         internalPortal: string;
         searchPlaceholder: string;
         searchEmpty: string;
