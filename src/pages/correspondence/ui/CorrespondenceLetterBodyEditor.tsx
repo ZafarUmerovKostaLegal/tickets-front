@@ -14,6 +14,7 @@ import {
 } from 'react';
 import {
     letterBodyIsEmpty,
+    ensureLetterEditorHtml,
     normalizeLetterBodyHtml,
     plainTextToLetterHtml,
     sanitizeLetterHtml,
@@ -43,9 +44,7 @@ type LetterEditorContextValue = {
     editorId: string;
     empty: boolean;
     active: ActiveMap;
-    fontSizePx: number;
     run: (cmd: LetterFormatCmd, arg?: string) => void;
-    setFontSizePx: (px: number) => void;
     adjustIndent: (deltaPx: number) => void;
     refreshActive: () => void;
     editorRef: RefObject<HTMLDivElement | null>;
@@ -65,7 +64,6 @@ type LetterEditorContextValue = {
 const LetterEditorContext = createContext<LetterEditorContextValue | null>(null);
 
 const INDENT_STEP_PX = 36;
-const FONT_SIZES = [10, 11, 12, 14, 16, 18, 20] as const;
 
 function getClosestBlock(node: Node | null, root: HTMLElement): HTMLElement | null {
     let cur: Node | null = node;
@@ -119,18 +117,19 @@ export function CorrespondenceLetterEditorProvider({
     const lastEmittedRef = useRef(normalizeLetterBodyHtml(value));
     const [empty, setEmpty] = useState(() => letterBodyIsEmpty(value));
     const [active, setActive] = useState<ActiveMap>({});
-    const [fontSizePx, setFontSizePxState] = useState(12);
 
     const syncFromProp = useCallback((next: string) => {
         const normalized = normalizeLetterBodyHtml(next);
         const el = editorRef.current;
         if (!el)
             return;
-        if (normalized === lastEmittedRef.current && el.innerHTML === normalized)
+        // While typing, never rewrite DOM from props — that kills Enter / caret.
+        if (document.activeElement === el)
             return;
-        if (document.activeElement === el && normalized === lastEmittedRef.current)
+        const seed = ensureLetterEditorHtml(normalized);
+        if (seed === el.innerHTML)
             return;
-        el.innerHTML = normalized || '';
+        el.innerHTML = seed;
         lastEmittedRef.current = normalized;
         setEmpty(letterBodyIsEmpty(normalized));
     }, []);
@@ -149,12 +148,18 @@ export function CorrespondenceLetterEditorProvider({
         catch {
             // ignore
         }
+        const el = editorRef.current;
+        if (el && !el.innerHTML.trim())
+            el.innerHTML = '<p><br></p>';
     }, [editable]);
 
     const emitChange = useCallback(() => {
         const el = editorRef.current;
         if (!el)
             return;
+        // Keep a seed paragraph so the next Enter still works after clearing.
+        if (!el.innerHTML.trim() || el.innerHTML === '<br>')
+            el.innerHTML = '<p><br></p>';
         const html = sanitizeLetterHtml(el.innerHTML);
         lastEmittedRef.current = html;
         setEmpty(letterBodyIsEmpty(html));
@@ -178,11 +183,30 @@ export function CorrespondenceLetterEditorProvider({
         });
     }, [editable]);
 
+    const ensureEditableStructure = useCallback(() => {
+        const root = editorRef.current;
+        if (!root || !editable)
+            return;
+        if (!root.innerHTML.trim() || root.innerHTML === '<br>') {
+            root.innerHTML = '<p><br></p>';
+            const sel = window.getSelection();
+            const p = root.querySelector('p');
+            if (sel && p) {
+                const range = document.createRange();
+                range.setStart(p, 0);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+            }
+        }
+    }, [editable]);
+
     const adjustIndent = useCallback((deltaPx: number) => {
         const root = editorRef.current;
         if (!root || !editable)
             return;
         root.focus();
+        ensureEditableStructure();
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0)
             return;
@@ -190,7 +214,6 @@ export function CorrespondenceLetterEditorProvider({
         if (!block || !root.contains(block))
             return;
 
-        // Nested list indent uses the browser command (Word-like for bullets/numbers).
         if (block.closest('ul, ol')) {
             try {
                 document.execCommand(deltaPx > 0 ? 'indent' : 'outdent');
@@ -210,63 +233,14 @@ export function CorrespondenceLetterEditorProvider({
             block.style.marginLeft = `${next}px`;
         emitChange();
         refreshActive();
-    }, [editable, emitChange, refreshActive]);
-
-    const applyFontSize = useCallback((px: number) => {
-        const root = editorRef.current;
-        if (!root || !editable)
-            return;
-        root.focus();
-        const sel = window.getSelection();
-        if (!sel || sel.rangeCount === 0)
-            return;
-
-        if (sel.isCollapsed) {
-            const block = getClosestBlock(sel.anchorNode, root);
-            if (block) {
-                block.style.fontSize = `${px}px`;
-                emitChange();
-            }
-            return;
-        }
-
-        try {
-            document.execCommand('styleWithCSS', false, 'true');
-            document.execCommand('fontSize', false, '7');
-            root.querySelectorAll('font[size], span[style*="font-size"]').forEach((node) => {
-                if (!(node instanceof HTMLElement))
-                    return;
-                if (!sel.containsNode(node, true))
-                    return;
-                if (node.tagName === 'FONT') {
-                    const span = document.createElement('span');
-                    span.style.fontSize = `${px}px`;
-                    while (node.firstChild)
-                        span.appendChild(node.firstChild);
-                    node.replaceWith(span);
-                }
-                else {
-                    node.style.fontSize = `${px}px`;
-                }
-            });
-        }
-        catch {
-            // ignore
-        }
-        emitChange();
-        refreshActive();
-    }, [editable, emitChange, refreshActive]);
-
-    const setFontSizePx = useCallback((px: number) => {
-        setFontSizePxState(px);
-        applyFontSize(px);
-    }, [applyFontSize]);
+    }, [editable, emitChange, ensureEditableStructure, refreshActive]);
 
     const run = useCallback((cmd: LetterFormatCmd, arg?: string) => {
         const el = editorRef.current;
         if (!el || !editable)
             return;
         el.focus();
+        ensureEditableStructure();
         if (cmd === 'indent') {
             adjustIndent(INDENT_STEP_PX);
             return;
@@ -284,12 +258,38 @@ export function CorrespondenceLetterEditorProvider({
         }
         emitChange();
         refreshActive();
-    }, [editable, adjustIndent, emitChange, refreshActive]);
+    }, [editable, adjustIndent, emitChange, ensureEditableStructure, refreshActive]);
 
     const onKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
         if (e.key === 'Tab') {
             e.preventDefault();
             adjustIndent(e.shiftKey ? -INDENT_STEP_PX : INDENT_STEP_PX);
+            return;
+        }
+        if (e.key === 'Enter') {
+            ensureEditableStructure();
+            if (e.shiftKey) {
+                e.preventDefault();
+                try {
+                    document.execCommand('insertLineBreak');
+                }
+                catch {
+                    document.execCommand('insertHTML', false, '<br>');
+                }
+                emitChange();
+                return;
+            }
+            // Hard line break → new paragraph (Word-like).
+            e.preventDefault();
+            try {
+                const ok = document.execCommand('insertParagraph');
+                if (!ok)
+                    document.execCommand('insertHTML', false, '<p><br></p>');
+            }
+            catch {
+                document.execCommand('insertHTML', false, '<p><br></p>');
+            }
+            emitChange();
             return;
         }
         const mod = e.ctrlKey || e.metaKey;
@@ -316,32 +316,53 @@ export function CorrespondenceLetterEditorProvider({
             e.preventDefault();
             run('redo');
         }
-    }, [adjustIndent, run]);
+    }, [adjustIndent, emitChange, ensureEditableStructure, run]);
 
     const onPaste = useCallback((e: ClipboardEvent<HTMLDivElement>) => {
         e.preventDefault();
+        ensureEditableStructure();
         const htmlClip = e.clipboardData.getData('text/html');
         const textClip = e.clipboardData.getData('text/plain');
-        const safe = htmlClip
-            ? sanitizeLetterHtml(htmlClip)
-            : plainTextToLetterHtml(textClip);
+        // Prefer plain text paragraphs so pasted Word fonts never sneak in.
+        const safe = textClip
+            ? plainTextToLetterHtml(textClip)
+            : sanitizeLetterHtml(htmlClip);
         try {
-            document.execCommand('insertHTML', false, safe || '<p><br></p>');
+            // insertHTML of full <p> blocks can nest poorly — insert fragment lines.
+            if (textClip) {
+                const parts = textClip.replace(/\r\n/g, '\n').split('\n');
+                const html = parts.map((line, i) => {
+                    const esc = line
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;');
+                    if (i === 0)
+                        return esc || '<br>';
+                    return `</p><p>${esc || '<br>'}`;
+                }).join('');
+                document.execCommand('insertHTML', false, html);
+            }
+            else {
+                document.execCommand('insertHTML', false, safe || '<br>');
+            }
         }
         catch {
             document.execCommand('insertText', false, textClip);
         }
         emitChange();
-    }, [emitChange]);
+    }, [emitChange, ensureEditableStructure]);
+
+    const onFocus = useCallback(() => {
+        ensureEditableStructure();
+        refreshActive();
+    }, [ensureEditableStructure, refreshActive]);
 
     const ctx = useMemo<LetterEditorContextValue>(() => ({
         editable,
         editorId,
         empty,
         active,
-        fontSizePx,
         run,
-        setFontSizePx,
         adjustIndent,
         refreshActive,
         editorRef,
@@ -352,7 +373,7 @@ export function CorrespondenceLetterEditorProvider({
             onBlur: emitChange,
             onKeyUp: refreshActive,
             onMouseUp: refreshActive,
-            onFocus: refreshActive,
+            onFocus,
             onKeyDown,
             onPaste,
         },
@@ -361,13 +382,12 @@ export function CorrespondenceLetterEditorProvider({
         editorId,
         empty,
         active,
-        fontSizePx,
         run,
-        setFontSizePx,
         adjustIndent,
         refreshActive,
         emitChange,
         placeholder,
+        onFocus,
         onKeyDown,
         onPaste,
     ]);
@@ -415,7 +435,7 @@ export function CorrespondenceLetterEditorToolbar() {
     const ctx = useLetterEditorOptional();
     if (!ctx?.editable)
         return null;
-    const { active, run, editorId, fontSizePx, setFontSizePx } = ctx;
+    const { active, run, editorId } = ctx;
 
     return (
         <div
@@ -436,23 +456,6 @@ export function CorrespondenceLetterEditorToolbar() {
             <ToolbarBtn title="Зачёркнутый" active={active.strikeThrough} onClick={() => run('strikeThrough')}>
                 <span className="corr-letter-editor__glyph corr-letter-editor__glyph--strike">S</span>
             </ToolbarBtn>
-
-            <span className="corr-letter-editor__sep" aria-hidden />
-
-            <label className="corr-letter-editor__size" title="Размер шрифта">
-                <span className="corr-letter-editor__size-lbl">Размер</span>
-                <select
-                    className="corr-letter-editor__size-select"
-                    value={fontSizePx}
-                    aria-label="Размер шрифта"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onChange={(e) => setFontSizePx(Number(e.target.value))}
-                >
-                    {FONT_SIZES.map((px) => (
-                        <option key={px} value={px}>{px}</option>
-                    ))}
-                </select>
-            </label>
 
             <span className="corr-letter-editor__sep" aria-hidden />
 

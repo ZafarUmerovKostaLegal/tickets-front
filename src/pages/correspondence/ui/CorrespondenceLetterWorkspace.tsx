@@ -52,9 +52,11 @@ export function CorrespondenceLetterWorkspace({
     const [activePage, setActivePage] = useState(1);
     const [sheetZoomPct, setSheetZoomPct] = useState(100);
 
-    const pagesZoomStyle = useMemo(() => ({
-        zoom: `${sheetZoomPct}%`,
-    } as CSSProperties), [sheetZoomPct]);
+    const pagesZoomStyle = useMemo(() => {
+        // CSS `zoom` breaks contentEditable (Enter / caret) in Chromium — lock 100% while editing.
+        const pct = editable ? 100 : sheetZoomPct;
+        return { zoom: `${pct}%` } as CSSProperties;
+    }, [editable, sheetZoomPct]);
 
     const toolbarTitle = `${letter.registryNumber} · ${typeMeta.label}`;
 
@@ -156,20 +158,22 @@ export function CorrespondenceLetterWorkspace({
                             type="button"
                             className="tt-inv-preview__pdf-toolbar-zoom-btn"
                             onClick={zoomOut}
-                            disabled={sheetZoomPct <= SHEET_ZOOM_MIN}
+                            disabled={editable || sheetZoomPct <= SHEET_ZOOM_MIN}
                             aria-label="Уменьшить масштаб"
-                            title="Уменьшить"
+                            title={editable ? 'Масштаб недоступен при редактировании' : 'Уменьшить'}
                         >
                             −
                         </button>
-                        <span className="tt-inv-preview__pdf-toolbar-zoom-val" aria-live="polite">{sheetZoomPct}%</span>
+                        <span className="tt-inv-preview__pdf-toolbar-zoom-val" aria-live="polite">
+                            {editable ? 100 : sheetZoomPct}%
+                        </span>
                         <button
                             type="button"
                             className="tt-inv-preview__pdf-toolbar-zoom-btn"
                             onClick={zoomIn}
-                            disabled={sheetZoomPct >= SHEET_ZOOM_MAX}
+                            disabled={editable || sheetZoomPct >= SHEET_ZOOM_MAX}
                             aria-label="Увеличить масштаб"
-                            title="Увеличить"
+                            title={editable ? 'Масштаб недоступен при редактировании' : 'Увеличить'}
                         >
                             +
                         </button>
@@ -177,7 +181,8 @@ export function CorrespondenceLetterWorkspace({
                             type="button"
                             className="tt-inv-preview__pdf-toolbar-zoom-btn tt-inv-preview__pdf-toolbar-zoom-btn--narrow"
                             onClick={zoomReset}
-                            title="Масштаб 100%"
+                            disabled={editable}
+                            title={editable ? 'Масштаб недоступен при редактировании' : 'Масштаб 100%'}
                         >
                             100%
                         </button>
@@ -185,7 +190,8 @@ export function CorrespondenceLetterWorkspace({
                             type="button"
                             className="tt-inv-preview__pdf-toolbar-zoom-btn tt-inv-preview__pdf-toolbar-zoom-btn--narrow"
                             onClick={zoomFitWidth}
-                            title="Подогнать ширину листа к окну просмотра"
+                            disabled={editable}
+                            title={editable ? 'Масштаб недоступен при редактировании' : 'Подогнать ширину листа к окну просмотра'}
                         >
                             По ширине
                         </button>
@@ -248,7 +254,7 @@ export function CorrespondenceLetterWorkspace({
                         <CorrespondenceLetterEditorProvider
                             value={bodyHtml}
                             editable
-                            placeholder="Начните писать письмо — как в Word. Tab увеличивает отступ, Shift+Tab уменьшает."
+                            placeholder="Начните писать письмо. Enter — новый абзац, Shift+Enter — перенос строки."
                             onChange={(html) => onCoverModelChange?.({ introParagraphOverride: html || null })}
                         >
                             {stage}
