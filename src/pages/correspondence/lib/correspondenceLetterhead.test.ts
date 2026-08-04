@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     formatOutgoingLetterheadDate,
     formatOutgoingRefLine,
-} from '../ui/CorrespondenceLetterSheet';
+} from './correspondenceLetterhead';
 
 describe('formatOutgoingRefLine', () => {
     it('prefixes registry numbers', () => {

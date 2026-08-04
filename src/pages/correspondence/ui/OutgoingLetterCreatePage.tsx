@@ -98,6 +98,24 @@ export function OutgoingLetterCreatePage() {
         return id;
     }, [coverModel, letterDateIso, sessionId, subject]);
 
+    // Autosave draft while composing (body / recipient / subject).
+    useEffect(() => {
+        if (!hydrated)
+            return;
+        const t = window.setTimeout(() => {
+            const id = writeOutgoingLetterDraft({
+                sessionId: sessionId ?? undefined,
+                subject,
+                letterDateIso,
+                coverModel,
+                files,
+                attachmentMeta,
+            });
+            setSessionId((prev) => prev ?? id);
+        }, 600);
+        return () => window.clearTimeout(t);
+    }, [hydrated, subject, letterDateIso, coverModel, files, attachmentMeta, sessionId]);
+
     const goBack = useCallback(() => {
         navigate(getCorrespondenceOutgoingUrl());
     }, [navigate]);

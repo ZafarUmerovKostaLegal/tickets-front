@@ -171,8 +171,10 @@
 }
 
 .corr-letter__body {
-  min-height: 180mm;
-  margin-top: 1.75rem;
+  min-height: 170mm;
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .corr-letter--editable .corr-letter__field {
@@ -193,6 +195,179 @@
 
 .corr-letter--editable .corr-letter__field:focus {
   border-bottom-color: var(--app-accent, #4f46e5);
+}
+
+/* ── Word-like body editor ───────────────────────────────────────── */
+
+.corr-letter-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 0.55rem;
+}
+
+.corr-letter-editor__toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.3rem 0.35rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+.corr-letter-editor__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.7rem;
+  height: 1.7rem;
+  padding: 0 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  color: #334155;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.corr-letter-editor__btn:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+.corr-letter-editor__btn--active {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 12%, #ffffff);
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 45%, #cbd5e1);
+  color: var(--app-accent, #4f46e5);
+}
+
+.corr-letter-editor__btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.corr-letter-editor__sep {
+  width: 1px;
+  height: 1.1rem;
+  margin: 0 0.15rem;
+  background: #cbd5e1;
+}
+
+.corr-letter-editor__glyph--bold {
+  font-weight: 800;
+}
+
+.corr-letter-editor__glyph--italic {
+  font-style: italic;
+}
+
+.corr-letter-editor__glyph--underline {
+  text-decoration: underline;
+}
+
+.corr-letter-editor__glyph--strike {
+  text-decoration: line-through;
+}
+
+.corr-letter-editor__surface-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 150mm;
+}
+
+.corr-letter-editor__placeholder {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.1rem;
+  right: 0.1rem;
+  pointer-events: none;
+  color: #94a3b8;
+  font-size: 12px;
+  line-height: 1.55;
+  font-style: italic;
+}
+
+.corr-letter-editor__surface {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 150mm;
+  padding: 0.1rem 0.15rem 1rem;
+  outline: none;
+  color: #1e293b;
+  font-family: 'Carlito', Calibri, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  line-height: 1.55;
+  cursor: text;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.corr-letter-editor__surface:focus {
+  outline: none;
+}
+
+.corr-letter-editor__surface p {
+  margin: 0 0 0.65em;
+}
+
+.corr-letter-editor__surface p:last-child {
+  margin-bottom: 0;
+}
+
+.corr-letter-editor__surface ul,
+.corr-letter-editor__surface ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.4em;
+}
+
+.corr-letter-editor__surface li {
+  margin: 0.15em 0;
+}
+
+.corr-letter-editor__surface h1,
+.corr-letter-editor__surface h2,
+.corr-letter-editor__surface h3 {
+  margin: 0.4em 0 0.5em;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #0f172a;
+}
+
+.corr-letter-editor__surface h1 { font-size: 1.35em; }
+.corr-letter-editor__surface h2 { font-size: 1.2em; }
+.corr-letter-editor__surface h3 { font-size: 1.08em; }
+
+.corr-letter-editor__readonly {
+  min-height: 150mm;
+  color: #1e293b;
+  font-family: 'Carlito', Calibri, 'Segoe UI', sans-serif;
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.corr-letter-editor__readonly p {
+  margin: 0 0 0.65em;
+}
+
+.corr-letter-editor__readonly ul,
+.corr-letter-editor__readonly ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.4em;
+}
+
+.corr-letter-editor__readonly--empty {
+  min-height: 40mm;
 }
 
 .corr-doc-preview__loading {
