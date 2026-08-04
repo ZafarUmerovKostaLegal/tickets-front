@@ -13,7 +13,6 @@ import {
     type CorrespondenceAttachment,
     type CorrespondenceDocument,
 } from '@entities/correspondence';
-import { listPartners, type UserPublic } from '@entities/user';
 import { useCurrentUser } from '@shared/hooks';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { useAppDialog } from '@shared/ui';
@@ -22,6 +21,8 @@ import {
     CORR_STATUS_BADGE,
     CORR_TYPE_BADGE,
 } from '../model/constants';
+import { CorrespondenceRejectModal } from './CorrespondenceRejectModal';
+import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
 
 export type CorrespondenceDocumentCardModalProps = {
     open: boolean;
@@ -132,6 +133,8 @@ export function CorrespondenceDocumentCardModal({
     const [acting, setActing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [fileError, setFileError] = useState<string | null>(null);
+    const [rejectOpen, setRejectOpen] = useState(false);
+    const [resubmitOpen, setResubmitOpen] = useState(false);
 
     useEffect(() => {
         if (!open || !documentId) {
@@ -139,6 +142,8 @@ export function CorrespondenceDocumentCardModal({
             setError(null);
             setFileError(null);
             setLoading(false);
+            setRejectOpen(false);
+            setResubmitOpen(false);
             return;
         }
         let cancelled = false;
@@ -233,22 +238,15 @@ export function CorrespondenceDocumentCardModal({
         }
     };
 
-    const handleReject = async () => {
+    const handleReject = async (comment: string) => {
         if (!doc)
             return;
-        const reason = window.prompt('Комментарий при отказе (обязательно):');
-        if (reason == null)
-            return;
-        const comment = reason.trim();
-        if (!comment) {
-            void showAlert({ title: 'Нужен комментарий', message: 'Укажите причину отказа.' });
-            return;
-        }
         setActing(true);
         try {
             const next = await rejectOutgoingCorrespondence(doc.id, comment);
             await refresh(next);
             invalidateCorrespondencePartnerAttention();
+            setRejectOpen(false);
             void showAlert({ title: 'Отклонено', message: 'Заявитель получит уведомление с комментарием.' });
         }
         catch (err) {
@@ -262,34 +260,15 @@ export function CorrespondenceDocumentCardModal({
         }
     };
 
-    const handleResubmit = async () => {
+    const handleResubmit = async (partnerUserId: number, _partnerName: string) => {
         if (!doc)
             return;
-        let partners: UserPublic[] = [];
-        try {
-            partners = await listPartners();
-        }
-        catch {
-            void showAlert({ title: 'Ошибка', message: 'Не удалось загрузить список партнёров.' });
-            return;
-        }
-        const names = partners.map((p) => `${p.id}: ${userLabel(p.display_name, p.email, p.id)}`).join('\n');
-        const raw = window.prompt(
-            `Введите ID партнёра для повторной проверки:\n${names.slice(0, 800)}`,
-            doc.partnerUserId ? String(doc.partnerUserId) : '',
-        );
-        if (raw == null)
-            return;
-        const partnerId = Number(raw.trim());
-        if (!Number.isFinite(partnerId) || partnerId <= 0) {
-            void showAlert({ title: 'Неверный ID', message: 'Укажите числовой ID партнёра.' });
-            return;
-        }
         setActing(true);
         try {
-            const next = await submitOutgoingForReview(doc.id, partnerId);
+            const next = await submitOutgoingForReview(doc.id, partnerUserId);
             await refresh(next);
             invalidateCorrespondencePartnerAttention();
+            setResubmitOpen(false);
             void showAlert({ title: 'Отправлено', message: 'Письмо снова отправлено на проверку партнёру.' });
         }
         catch (err) {
@@ -421,7 +400,7 @@ export function CorrespondenceDocumentCardModal({
                                 type="button"
                                 className="corr-modal__btn corr-modal__btn--ghost"
                                 disabled={acting}
-                                onClick={() => void handleReject()}
+                                onClick={() => setRejectOpen(true)}
                             >
                                 Отклонить
                             </button>
@@ -440,7 +419,7 @@ export function CorrespondenceDocumentCardModal({
                             type="button"
                             className="corr-modal__btn corr-modal__btn--primary"
                             disabled={acting}
-                            onClick={() => void handleResubmit()}
+                            onClick={() => setResubmitOpen(true)}
                         >
                             Отправить повторно
                         </button>
@@ -450,6 +429,19 @@ export function CorrespondenceDocumentCardModal({
                     </button>
                 </div>
             </div>
+            <CorrespondenceRejectModal
+                open={rejectOpen}
+                onClose={() => { if (!acting) setRejectOpen(false); }}
+                onConfirm={(comment) => { void handleReject(comment); }}
+                submitPending={acting}
+            />
+            <OutgoingSubmitReviewModal
+                open={resubmitOpen}
+                nested
+                onClose={() => { if (!acting) setResubmitOpen(false); }}
+                onSubmit={(partnerUserId, partnerName) => { void handleResubmit(partnerUserId, partnerName); }}
+                submitPending={acting}
+            />
         </div>,
         document.body,
     );

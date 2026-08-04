@@ -9,6 +9,8 @@ export type OutgoingSubmitReviewModalProps = {
     onClose: () => void;
     onSubmit: (partnerUserId: number, partnerName: string) => void;
     submitPending?: boolean;
+    /** Raise above another open corr-modal (e.g. document card). */
+    nested?: boolean;
 };
 
 function partnerLabel(p: UserPublic): string {
@@ -20,6 +22,7 @@ export function OutgoingSubmitReviewModal({
     onClose,
     onSubmit,
     submitPending = false,
+    nested = false,
 }: OutgoingSubmitReviewModalProps) {
     const titleId = useId();
     const [partnerUserId, setPartnerUserId] = useState('');
@@ -90,7 +93,7 @@ export function OutgoingSubmitReviewModal({
 
     return createPortal(
         <div
-            className="corr-modal corr-modal--enter"
+            className={`corr-modal corr-modal--enter${nested ? ' corr-modal--nested' : ''}`}
             role="presentation"
             onMouseDown={(e) => {
                 if (e.target === e.currentTarget && !submitPending)

@@ -886,6 +886,10 @@ body[data-theme='dark'] .corr__popover {
   box-sizing: border-box;
 }
 
+.corr-modal--nested {
+  z-index: 10090;
+}
+
 .corr-modal__panel {
   width: 100%;
   max-width: 480px;
@@ -1048,6 +1052,22 @@ body[data-theme='dark'] .corr-modal__panel {
 }
 
 .corr-modal__btn--primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.corr-modal__btn--danger {
+  border: 1px solid #b91c1c;
+  background: #b91c1c;
+  color: #fff;
+}
+
+.corr-modal__btn--danger:hover:not(:disabled) {
+  background: #991b1b;
+  border-color: #991b1b;
+}
+
+.corr-modal__btn--danger:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
