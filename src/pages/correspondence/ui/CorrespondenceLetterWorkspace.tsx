@@ -4,6 +4,10 @@ import type { InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoice
 import '@pages/time-tracking/ui/TimePageShell.css';
 import '@pages/invoice-preview/ui/InvoicePreviewPage.css';
 import { DOC_TYPE_META, type MockLetter } from './CorrespondencePage';
+import {
+    CorrespondenceLetterEditorProvider,
+    CorrespondenceLetterEditorToolbar,
+} from './CorrespondenceLetterBodyEditor';
 import { CorrespondenceLetterSheet } from './CorrespondenceLetterSheet';
 import './CorrespondenceLetterPreview.css';
 
@@ -96,6 +100,122 @@ export function CorrespondenceLetterWorkspace({
         onCoverModelChange,
     } as const;
 
+    const bodyHtml = coverModel.introParagraphOverride ?? '';
+
+    const stage = (
+        <div className="tt-inv-preview__viewer" aria-label="Область просмотра документа">
+            <aside className="tt-inv-preview__thumbs" aria-label="Миниатюры страниц">
+                <div className="tt-inv-preview__thumbs-head">
+                    <span className="tt-inv-preview__thumbs-title">Страницы</span>
+                </div>
+                <div className={`tt-inv-preview__thumb-wrap${activePage === 1 ? ' tt-inv-preview__thumb-wrap--active' : ''}`}>
+                    <button
+                        type="button"
+                        className={`tt-inv-preview__thumb${activePage === 1 ? ' tt-inv-preview__thumb--active' : ''}`}
+                        aria-current={activePage === 1 ? 'page' : undefined}
+                        aria-label="Страница 1 из 1"
+                        onClick={scrollToPage}
+                    >
+                        <span className="tt-inv-preview__thumb-sheet" aria-hidden>
+                            <span className="tt-inv-preview__thumb-scale">
+                                <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--letter">
+                                    <CorrespondenceLetterSheet {...letterSheetProps} editable={false} />
+                                </div>
+                            </span>
+                        </span>
+                    </button>
+                    <div className="tt-inv-preview__thumb-meta">
+                        <span className="tt-inv-preview__thumb-num">1</span>
+                    </div>
+                </div>
+            </aside>
+
+            <div className="tt-inv-preview__stage">
+                <div className="tt-inv-preview__pdf-toolbar" role="toolbar" aria-label="Просмотр документа">
+                    <div className="tt-inv-preview__pdf-toolbar-meta">
+                        <span className="tt-inv-preview__pdf-toolbar-doc" title={toolbarTitle}>{toolbarTitle}</span>
+                        {toolbarSubject ?? (
+                            <span className="tt-inv-preview__pdf-toolbar-export" title={letter.subject}>
+                                {letter.subject}
+                            </span>
+                        )}
+                        {statusNote && (
+                            <span
+                                className={`corr-doc-preview__status-note${statusTone ? ` corr-doc-preview__status-note--${statusTone}` : ''}`}
+                                title={statusNote}
+                            >
+                                {statusIcon && (
+                                    <span className="corr-doc-preview__status-icon" aria-hidden>{statusIcon}</span>
+                                )}
+                                {statusNote}
+                            </span>
+                        )}
+                    </div>
+                    <div className="tt-inv-preview__pdf-toolbar-zoom" role="group" aria-label="Масштаб страницы документа">
+                        <button
+                            type="button"
+                            className="tt-inv-preview__pdf-toolbar-zoom-btn"
+                            onClick={zoomOut}
+                            disabled={sheetZoomPct <= SHEET_ZOOM_MIN}
+                            aria-label="Уменьшить масштаб"
+                            title="Уменьшить"
+                        >
+                            −
+                        </button>
+                        <span className="tt-inv-preview__pdf-toolbar-zoom-val" aria-live="polite">{sheetZoomPct}%</span>
+                        <button
+                            type="button"
+                            className="tt-inv-preview__pdf-toolbar-zoom-btn"
+                            onClick={zoomIn}
+                            disabled={sheetZoomPct >= SHEET_ZOOM_MAX}
+                            aria-label="Увеличить масштаб"
+                            title="Увеличить"
+                        >
+                            +
+                        </button>
+                        <button
+                            type="button"
+                            className="tt-inv-preview__pdf-toolbar-zoom-btn tt-inv-preview__pdf-toolbar-zoom-btn--narrow"
+                            onClick={zoomReset}
+                            title="Масштаб 100%"
+                        >
+                            100%
+                        </button>
+                        <button
+                            type="button"
+                            className="tt-inv-preview__pdf-toolbar-zoom-btn tt-inv-preview__pdf-toolbar-zoom-btn--narrow"
+                            onClick={zoomFitWidth}
+                            title="Подогнать ширину листа к окну просмотра"
+                        >
+                            По ширине
+                        </button>
+                    </div>
+                    <div className="tt-inv-preview__pdf-toolbar-pages" aria-live="polite">
+                        страница {activePage}&nbsp;/&nbsp;{PAGE_COUNT}
+                    </div>
+                </div>
+
+                {editable ? (
+                    <div className="corr-letter-editor__chrome-bar">
+                        <CorrespondenceLetterEditorToolbar />
+                    </div>
+                ) : null}
+
+                <div ref={sheetStackRef} className="tt-inv-preview__sheet-stack" aria-label="Документ">
+                    <div className="tt-inv-preview__pages" style={pagesZoomStyle}>
+                        <div
+                            ref={pageRef}
+                            className={`tt-inv-a4-page tt-inv-a4-page--cover corr-preview-a4${editable ? ' tt-inv-a4-page--editing' : ''}`}
+                            aria-label={`Страница 1 из ${PAGE_COUNT} — ${typeMeta.label}${editable ? ', режим редактирования' : ''}`}
+                        >
+                            <CorrespondenceLetterSheet {...letterSheetProps} />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <div className="corr-doc-preview">
             <div className="tt-inv-preview">
@@ -124,112 +244,17 @@ export function CorrespondenceLetterWorkspace({
                 <main className="tt-inv-preview__main">
                     {loading ? (
                         <div className="corr-doc-preview__loading" role="status">Загрузка документа…</div>
+                    ) : editable ? (
+                        <CorrespondenceLetterEditorProvider
+                            value={bodyHtml}
+                            editable
+                            placeholder="Начните писать письмо — как в Word. Tab увеличивает отступ, Shift+Tab уменьшает."
+                            onChange={(html) => onCoverModelChange?.({ introParagraphOverride: html || null })}
+                        >
+                            {stage}
+                        </CorrespondenceLetterEditorProvider>
                     ) : (
-                        <div className="tt-inv-preview__viewer" aria-label="Область просмотра документа">
-                            <aside className="tt-inv-preview__thumbs" aria-label="Миниатюры страниц">
-                                <div className="tt-inv-preview__thumbs-head">
-                                    <span className="tt-inv-preview__thumbs-title">Страницы</span>
-                                </div>
-                                <div className={`tt-inv-preview__thumb-wrap${activePage === 1 ? ' tt-inv-preview__thumb-wrap--active' : ''}`}>
-                                    <button
-                                        type="button"
-                                        className={`tt-inv-preview__thumb${activePage === 1 ? ' tt-inv-preview__thumb--active' : ''}`}
-                                        aria-current={activePage === 1 ? 'page' : undefined}
-                                        aria-label="Страница 1 из 1"
-                                        onClick={scrollToPage}
-                                    >
-                                        <span className="tt-inv-preview__thumb-sheet" aria-hidden>
-                                            <span className="tt-inv-preview__thumb-scale">
-                                                <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--letter">
-                                                    <CorrespondenceLetterSheet {...letterSheetProps} editable={false} />
-                                                </div>
-                                            </span>
-                                        </span>
-                                    </button>
-                                    <div className="tt-inv-preview__thumb-meta">
-                                        <span className="tt-inv-preview__thumb-num">1</span>
-                                    </div>
-                                </div>
-                            </aside>
-
-                            <div className="tt-inv-preview__stage">
-                                <div className="tt-inv-preview__pdf-toolbar" role="toolbar" aria-label="Просмотр документа">
-                                    <div className="tt-inv-preview__pdf-toolbar-meta">
-                                        <span className="tt-inv-preview__pdf-toolbar-doc" title={toolbarTitle}>{toolbarTitle}</span>
-                                        {toolbarSubject ?? (
-                                            <span className="tt-inv-preview__pdf-toolbar-export" title={letter.subject}>
-                                                {letter.subject}
-                                            </span>
-                                        )}
-                                        {statusNote && (
-                                            <span
-                                                className={`corr-doc-preview__status-note${statusTone ? ` corr-doc-preview__status-note--${statusTone}` : ''}`}
-                                                title={statusNote}
-                                            >
-                                                {statusIcon && (
-                                                    <span className="corr-doc-preview__status-icon" aria-hidden>{statusIcon}</span>
-                                                )}
-                                                {statusNote}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="tt-inv-preview__pdf-toolbar-zoom" role="group" aria-label="Масштаб страницы документа">
-                                        <button
-                                            type="button"
-                                            className="tt-inv-preview__pdf-toolbar-zoom-btn"
-                                            onClick={zoomOut}
-                                            disabled={sheetZoomPct <= SHEET_ZOOM_MIN}
-                                            aria-label="Уменьшить масштаб"
-                                            title="Уменьшить"
-                                        >
-                                            −
-                                        </button>
-                                        <span className="tt-inv-preview__pdf-toolbar-zoom-val" aria-live="polite">{sheetZoomPct}%</span>
-                                        <button
-                                            type="button"
-                                            className="tt-inv-preview__pdf-toolbar-zoom-btn"
-                                            onClick={zoomIn}
-                                            disabled={sheetZoomPct >= SHEET_ZOOM_MAX}
-                                            aria-label="Увеличить масштаб"
-                                            title="Увеличить"
-                                        >
-                                            +
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="tt-inv-preview__pdf-toolbar-zoom-btn tt-inv-preview__pdf-toolbar-zoom-btn--narrow"
-                                            onClick={zoomReset}
-                                            title="Масштаб 100%"
-                                        >
-                                            100%
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="tt-inv-preview__pdf-toolbar-zoom-btn tt-inv-preview__pdf-toolbar-zoom-btn--narrow"
-                                            onClick={zoomFitWidth}
-                                            title="Подогнать ширину листа к окну просмотра"
-                                        >
-                                            По ширине
-                                        </button>
-                                    </div>
-                                    <div className="tt-inv-preview__pdf-toolbar-pages" aria-live="polite">
-                                        страница {activePage}&nbsp;/&nbsp;{PAGE_COUNT}
-                                    </div>
-                                </div>
-
-                                <div ref={sheetStackRef} className="tt-inv-preview__sheet-stack" aria-label="Документ">
-                                    <div className="tt-inv-preview__pages" style={pagesZoomStyle}>
-                                        <div
-                                            ref={pageRef}
-                                            className={`tt-inv-a4-page tt-inv-a4-page--cover corr-preview-a4${editable ? ' tt-inv-a4-page--editing' : ''}`}
-                                            aria-label={`Страница 1 из ${PAGE_COUNT} — ${typeMeta.label}${editable ? ', режим редактирования' : ''}`}
-                                        >
-                                            <CorrespondenceLetterSheet {...letterSheetProps} />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        stage
                     )}
                 </main>
             </div>

@@ -6,7 +6,10 @@ import {
     formatOutgoingLetterheadDate,
     formatOutgoingRefLine,
 } from '../lib/correspondenceLetterhead';
-import { CorrespondenceLetterBodyEditor } from './CorrespondenceLetterBodyEditor';
+import {
+    CorrespondenceLetterBodyReadonly,
+    CorrespondenceLetterEditorSurface,
+} from './CorrespondenceLetterBodyEditor';
 
 export {
     CORRESPONDENCE_LETTERHEAD_CONTACT,
@@ -94,12 +97,11 @@ export function CorrespondenceLetterSheet({
             </header>
 
             <div className="corr-letter__body">
-                <CorrespondenceLetterBodyEditor
-                    value={bodyHtml}
-                    editable={editable}
-                    placeholder="Начните писать письмо — как в Word. Можно выделять текст и форматировать панелькой сверху."
-                    onChange={(html) => onCoverModelChange?.({ introParagraphOverride: html || null })}
-                />
+                {editable ? (
+                    <CorrespondenceLetterEditorSurface />
+                ) : (
+                    <CorrespondenceLetterBodyReadonly value={bodyHtml} />
+                )}
             </div>
         </div>
     );
