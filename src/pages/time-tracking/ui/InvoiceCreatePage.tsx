@@ -4,9 +4,11 @@ import { getInvoiceDetailUrl, getInvoicesListUrl, getProjectDetailUrl, routes } 
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, useAppToast } from '@shared/ui';
-import { useI18n } from '@shared/i18n';
+import { useI18n, ttReportPeriodLabel } from '@shared/i18n';
 import { useCurrentUser } from '@shared/hooks';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
+import { periodToDates } from '@entities/time-tracking/lib/reportsPeriodRange';
+import { PERIOD_OPTIONS, type PeriodGranularity } from '@entities/time-tracking/model/reportsPanelConfig';
 import {
   createInvoice,
   ensureInvoiceFxRatesForBilling,
@@ -59,6 +61,11 @@ const IcoRefresh = () => (
     <path d="M23 4v6h-6" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
   </svg>
 );
+const IcoChevDown = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+    <path d="M6 9l6 6 6-6" />
+  </svg>
+);
 
 export function InvoiceCreatePage() {
   const { t, locale } = useI18n();
@@ -95,6 +102,9 @@ export function InvoiceCreatePage() {
   const [unbilledLoading, setUnbilledLoading] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
   const [skipPartnerSaving, setSkipPartnerSaving] = useState(false);
+  const [unbilledPeriodGranularity, setUnbilledPeriodGranularity] = useState<PeriodGranularity>('month');
+  const [unbilledPeriodDropdown, setUnbilledPeriodDropdown] = useState(false);
+  const unbilledPeriodDropdownRef = useRef<HTMLDivElement>(null);
 
   /** All clients that have at least one active project. */
   const clientsForCreate = useMemo(
@@ -118,6 +128,27 @@ export function InvoiceCreatePage() {
     return pid !== '' && confirmedProjectIdsForCreate.has(pid);
   }, [createProjectId, confirmedProjectIdsForCreate]);
   const showSkipPartnerToggle = Boolean(createProjectId && createClientId);
+  const unbilledPeriodEditable = selectedProjectSkipsPartner;
+
+  const applyUnbilledPeriodPreset = useCallback((granularity: PeriodGranularity) => {
+    const range = periodToDates(new Date(), granularity);
+    setUnbilledPeriodGranularity(granularity);
+    setUnbilledFrom(range.dateFrom);
+    setUnbilledTo(range.dateTo);
+    setUnbilledPeriodDropdown(false);
+  }, []);
+
+  useEffect(() => {
+    if (!unbilledPeriodDropdown)
+      return;
+    const onDoc = (e: MouseEvent) => {
+      if (unbilledPeriodDropdownRef.current && !unbilledPeriodDropdownRef.current.contains(e.target as Node))
+        setUnbilledPeriodDropdown(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [unbilledPeriodDropdown]);
+
   useEffect(() => {
     const ti = timeSelectAllRef.current;
     if (ti) {
@@ -748,13 +779,43 @@ export function InvoiceCreatePage() {
               <div className="tt-inv-dialog__period-bar">
                 <div className="tt-inv-dialog__field">
                   <span id="tt-inv-unbill-from-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.fromLabel')}</span>
-                  <DatePicker id="tt-inv-unbill-from" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledFrom} max={unbilledTo || undefined} onChange={selectedProjectSkipsPartner ? (iso) => setUnbilledFrom(iso) : () => {}} disabled={!selectedProjectSkipsPartner} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledFrom')} showChevron aria-labelledby="tt-inv-unbill-from-lbl" />
+                  <DatePicker id="tt-inv-unbill-from" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledFrom} max={unbilledTo || undefined} onChange={unbilledPeriodEditable ? (iso) => setUnbilledFrom(iso) : () => {}} disabled={!unbilledPeriodEditable} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledFrom')} showChevron aria-labelledby="tt-inv-unbill-from-lbl" />
                 </div>
                 <div className="tt-inv-dialog__field">
                   <span id="tt-inv-unbill-to-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.toLabel')}</span>
-                  <DatePicker id="tt-inv-unbill-to" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledTo} min={unbilledFrom || undefined} onChange={selectedProjectSkipsPartner ? (iso) => setUnbilledTo(iso) : () => {}} disabled={!selectedProjectSkipsPartner} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledTo')} showChevron aria-labelledby="tt-inv-unbill-to-lbl" />
+                  <DatePicker id="tt-inv-unbill-to" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledTo} min={unbilledFrom || undefined} onChange={unbilledPeriodEditable ? (iso) => setUnbilledTo(iso) : () => {}} disabled={!unbilledPeriodEditable} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledTo')} showChevron aria-labelledby="tt-inv-unbill-to-lbl" />
                 </div>
                 <div className="tt-inv-dialog__period-action">
+                  <div className="tt-reports__period-dropdown-wrap" ref={unbilledPeriodDropdownRef}>
+                    <button
+                      type="button"
+                      className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--dropdown"
+                      onClick={() => unbilledPeriodEditable && setUnbilledPeriodDropdown((v) => !v)}
+                      aria-expanded={unbilledPeriodDropdown}
+                      disabled={!unbilledPeriodEditable}
+                      title={t('timeTrackingPage.invoices.createDialog.periodPresetTitle')}
+                    >
+                      {ttReportPeriodLabel(unbilledPeriodGranularity, t)}
+                      {' '}
+                      <IcoChevDown />
+                    </button>
+                    {unbilledPeriodDropdown && unbilledPeriodEditable ? (
+                      <div className="tt-reports__period-dropdown" role="listbox">
+                        {PERIOD_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            role="option"
+                            aria-selected={unbilledPeriodGranularity === opt.id}
+                            className={`tt-reports__period-opt${unbilledPeriodGranularity === opt.id ? ' tt-reports__period-opt--active' : ''}`}
+                            onClick={() => applyUnbilledPeriodPreset(opt.id)}
+                          >
+                            {ttReportPeriodLabel(opt.id, t)}
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                   <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" onClick={() => void loadUnbilled()} disabled={unbilledLoading || !createProjectId} title={!createProjectId ? t('timeTrackingPage.invoices.createDialog.selectProjectFirst') : t('timeTrackingPage.invoices.createDialog.loadUnbilledTitle')}>
                     <IcoRefresh />
                     {unbilledLoading ? t('timeTrackingPage.common.loading') : t('timeTrackingPage.invoices.createDialog.loadUnbilled')}

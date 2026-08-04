@@ -4399,6 +4399,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   padding-bottom: 0.05rem;
 }
 
