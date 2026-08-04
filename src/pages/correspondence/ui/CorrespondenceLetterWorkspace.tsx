@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import type { InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
-import { InvoiceCoverLetter } from '@pages/invoice-preview/ui/InvoiceCoverLetter';
-import '@pages/invoice-preview/ui/InvoiceCoverLetter.css';
 import '@pages/time-tracking/ui/TimePageShell.css';
 import '@pages/invoice-preview/ui/InvoicePreviewPage.css';
 import { DOC_TYPE_META, type MockLetter } from './CorrespondencePage';
@@ -29,26 +27,21 @@ export type CorrespondenceLetterWorkspaceProps = {
     onBack: () => void;
 };
 
-function renderCoverSheet(
-    model: InvoiceCoverLetterModel,
-    editable: boolean,
-    onChange?: (patch: Partial<InvoiceCoverLetterModel>) => void,
-) {
+/** Temporary blank A4 sheet until the outgoing letter template is finalized. */
+function BlankLetterSheet({ editable }: { editable?: boolean }) {
     return (
-        <InvoiceCoverLetter
-            model={model}
-            editable={editable}
-            onChange={onChange}
-            secondParagraphMode="freeform"
+        <div
+            className={`corr-blank-sheet${editable ? ' corr-blank-sheet--editable' : ''}`}
+            aria-label={editable ? 'Пустой лист письма' : 'Лист письма'}
         />
     );
 }
 
 export function CorrespondenceLetterWorkspace({
     letter,
-    coverModel,
+    coverModel: _coverModel,
     editable = false,
-    onCoverModelChange,
+    onCoverModelChange: _onCoverModelChange,
     loading,
     navbarTab,
     navbarActions,
@@ -150,7 +143,7 @@ export function CorrespondenceLetterWorkspace({
                                         <span className="tt-inv-preview__thumb-sheet" aria-hidden>
                                             <span className="tt-inv-preview__thumb-scale">
                                                 <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--letter">
-                                                    {renderCoverSheet(coverModel, false)}
+                                                    <BlankLetterSheet />
                                                 </div>
                                             </span>
                                         </span>
@@ -233,7 +226,7 @@ export function CorrespondenceLetterWorkspace({
                                             className={`tt-inv-a4-page tt-inv-a4-page--cover corr-preview-a4${editable ? ' tt-inv-a4-page--editing' : ''}`}
                                             aria-label={`Страница 1 из ${PAGE_COUNT} — ${typeMeta.label}${editable ? ', режим редактирования' : ''}`}
                                         >
-                                            {renderCoverSheet(coverModel, editable, onCoverModelChange)}
+                                            <BlankLetterSheet editable={editable} />
                                         </div>
                                     </div>
                                 </div>

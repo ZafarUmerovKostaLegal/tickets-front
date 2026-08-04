@@ -148,7 +148,7 @@ export function OutgoingLetterCreatePage() {
             });
             const { clearOutgoingLetterDraft } = await import('../lib/outgoingLetterSession');
             clearOutgoingLetterDraft();
-            void showAlert({ title: 'Исходящее сохранено', message: 'Письмо зарегистрировано в реестре с PDF по шаблону.' });
+            void showAlert({ title: 'Исходящее сохранено', message: 'Документ зарегистрирован в реестре.' });
             navigate(getCorrespondenceOutgoingUrl());
         }
         catch (err) {
@@ -174,18 +174,32 @@ export function OutgoingLetterCreatePage() {
             navbarTab="compose"
             onBack={goBack}
             toolbarSubject={(
-                <label className="corr-doc-preview__subject-field">
-                    <span className="corr-doc-preview__subject-label">Тема</span>
-                    <input
-                        type="text"
-                        className="corr-doc-preview__subject-input"
-                        placeholder="Краткое описание письма"
-                        value={subject}
-                        onChange={(e) => setSubject(e.target.value)}
-                        required
-                        disabled={busy}
-                    />
-                </label>
+                <div className="corr-doc-preview__toolbar-fields">
+                    <label className="corr-doc-preview__subject-field">
+                        <span className="corr-doc-preview__subject-label">Получатель</span>
+                        <input
+                            type="text"
+                            className="corr-doc-preview__subject-input"
+                            placeholder="Компания / адресат"
+                            value={coverModel.recipientCompany === 'Company Name' ? '' : coverModel.recipientCompany}
+                            onChange={(e) => patchCoverModel({ recipientCompany: e.target.value })}
+                            required
+                            disabled={busy}
+                        />
+                    </label>
+                    <label className="corr-doc-preview__subject-field">
+                        <span className="corr-doc-preview__subject-label">Тема</span>
+                        <input
+                            type="text"
+                            className="corr-doc-preview__subject-input"
+                            placeholder="Краткое описание письма"
+                            value={subject}
+                            onChange={(e) => setSubject(e.target.value)}
+                            required
+                            disabled={busy}
+                        />
+                    </label>
+                </div>
             )}
             navbarActions={(
                 <>

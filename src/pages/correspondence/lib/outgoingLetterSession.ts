@@ -149,6 +149,6 @@ export function isOutgoingLetterDraftValid(subject: string, coverModel: InvoiceC
         return { ok: false, message: 'Укажите тему письма.' };
     const counterparty = resolveOutgoingCounterparty(coverModel);
     if (!counterparty || counterparty === 'Company Name')
-        return { ok: false, message: 'Укажите получателя (компанию) на бланке письма.' };
+        return { ok: false, message: 'Укажите получателя.' };
     return { ok: true };
 }

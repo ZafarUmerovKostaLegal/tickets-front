@@ -32,6 +32,8 @@ export type InvoiceLegalPageOverrides = {
     tin?: string | null;
     bankName?: string | null;
     bankAddress?: string | null;
+    /** Currency shown in AC / Corr. ACC labels; usually from the selected firm banking profile. */
+    accountCurrency?: string | null;
     accountNumber?: string | null;
     bankCode?: string | null;
     swift?: string | null;
@@ -63,13 +65,26 @@ export function legalBankingInputValue(override?: string | null): string {
     return override ?? '';
 }
 
+export function resolveLegalAccountCurrencyCode(
+    packCurrencyCode: string,
+    overrides?: InvoiceLegalPageOverrides | null,
+): string {
+    const fromOverride = (overrides?.accountCurrency ?? '')
+        .trim()
+        .replace(/[^A-Za-z]/g, '')
+        .toUpperCase();
+    if (fromOverride)
+        return fromOverride;
+    return (packCurrencyCode || 'EUR').toUpperCase() || 'EUR';
+}
+
 export function legalFirmBankingRows(
     currencyCode: string,
     overrides?: InvoiceLegalPageOverrides | null,
     lang?: InvoiceCoverLanguage | null,
     options?: { omitPlaceholders?: boolean },
 ): LegalBankingRow[] {
-    const cur = (currencyCode || 'EUR').toUpperCase();
+    const cur = resolveLegalAccountCurrencyCode(currencyCode, overrides);
     const labels = getLegalInvoiceLabels(lang);
     const rows: LegalBankingRow[] = [
         { field: 'tin', label: labels.tin, value: resolveBankingValue(overrides?.tin) },

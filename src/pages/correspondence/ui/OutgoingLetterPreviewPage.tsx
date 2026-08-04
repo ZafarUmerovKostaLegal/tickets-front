@@ -85,7 +85,7 @@ export function OutgoingLetterPreviewPage() {
                 extraFiles: files,
             });
             clearOutgoingLetterDraft();
-            void showAlert({ title: 'Исходящее сохранено', message: 'Письмо зарегистрировано в реестре с PDF по шаблону.' });
+            void showAlert({ title: 'Исходящее сохранено', message: 'Документ зарегистрирован в реестре.' });
             navigate(getCorrespondenceOutgoingUrl());
         }
         catch (err) {

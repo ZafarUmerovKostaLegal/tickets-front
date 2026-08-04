@@ -1,8 +1,14 @@
-import { buildCoverLetterOnlyPdfBlob } from '@pages/invoice-preview/lib/buildInvoicePreviewPdf';
+import { PDFDocument } from 'pdf-lib';
 import type { InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
 
-export async function buildOutgoingLetterPdfBlob(model: InvoiceCoverLetterModel): Promise<Blob> {
-    return buildCoverLetterOnlyPdfBlob(model);
+/** Temporary blank A4 PDF until the outgoing letter template is finalized. */
+export async function buildOutgoingLetterPdfBlob(_model: InvoiceCoverLetterModel): Promise<Blob> {
+    const doc = await PDFDocument.create();
+    doc.addPage([595.28, 841.89]);
+    const bytes = await doc.save();
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    return new Blob([copy], { type: 'application/pdf' });
 }
 
 export function outgoingLetterPdfFileName(subject: string, dateIso: string): string {

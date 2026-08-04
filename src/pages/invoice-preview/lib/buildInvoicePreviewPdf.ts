@@ -1349,14 +1349,21 @@ function drawLegalInvoicePdfPage(
     y = yRowBot - DOC_LH;
 
     const rightX = ML + contentW;
-    const totalsW = contentW * 0.46;
+    const valueGap = 12;
+    const totalsValues = [model.totalFormatted, vatAmount, extraExpensesAmount, model.totalFormatted];
+    const maxValW = Math.max(
+        ...totalsValues.map((v) => fontBold.widthOfTextAtSize(v, DOC_FS)),
+        fontBold.widthOfTextAtSize('EUR 0.00', DOC_FS),
+    );
+    // Long amounts (e.g. UZS 48,748,000.00) need real width — fixed 78pt overlapped the due label.
+    const valueReserve = maxValW + valueGap;
+    const totalsW = Math.min(contentW, Math.max(contentW * 0.46, valueReserve + contentW * 0.28));
     const totalsLeft = rightX - totalsW;
-    const valueReserve = 78;
+    const labelMaxW = Math.max(48, totalsW - valueReserve);
 
     const drawTotalRow = (label: string, value: string, due = false) => {
         const labelColor = due ? CORAL : BODY;
         const valueColor = BODY;
-        const labelMaxW = totalsW - valueReserve;
         const valW = fontBold.widthOfTextAtSize(value, DOC_FS);
         const labelLines = splitTextLines(label, labelMaxW, DOC_FS, fontBold);
         const blockH = Math.max(labelLines.length, 1) * (DOC_LH * 0.95);
