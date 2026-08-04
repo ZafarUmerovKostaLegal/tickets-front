@@ -52,6 +52,8 @@ export type InvoiceDto = {
     balanceDue: number;
     clientNote: string | null;
     internalNote: string | null;
+    /** Preview polish (legal / cover / time report). */
+    documentOverrides?: Record<string, unknown> | null;
     sentAt: string | null;
     lastSentAt: string | null;
     viewedAt: string | null;
@@ -201,6 +203,7 @@ export type InvoiceCreateInput = {
 export type InvoicePatchInput = {
     issueDate?: string;
     dueDate?: string;
+    invoiceNumber?: string | null;
     clientNote?: string | null;
     internalNote?: string | null;
     taxPercent?: number | null;
@@ -209,6 +212,8 @@ export type InvoicePatchInput = {
     discountAmount?: number | null;
     projectId?: string | null;
     lines?: Record<string, unknown>[] | null;
+    /** Preview document overrides; `null` clears stored overrides. */
+    documentOverrides?: Record<string, unknown> | null;
 };
 export type InvoicePaymentInput = {
     amount?: number | string | null;
@@ -895,6 +900,15 @@ export function normalizeInvoiceDto(raw: unknown): InvoiceDto {
     const pcDocUrl = pickInvoicePartnerStr(o, ['paymentConfirmationDocumentUrl', 'payment_confirmation_document_url']);
     const pcRecAt = pickInvoicePartnerStr(o, ['paymentConfirmationRecordedAt', 'payment_confirmation_recorded_at']);
 
+    let documentOverrides: Record<string, unknown> | null | undefined;
+    const docOvrRaw = o.documentOverrides ?? o.document_overrides;
+    if (docOvrRaw === null) {
+        documentOverrides = null;
+    }
+    else if (docOvrRaw != null && typeof docOvrRaw === 'object' && !Array.isArray(docOvrRaw)) {
+        documentOverrides = docOvrRaw as Record<string, unknown>;
+    }
+
     const paymentsNorm = normalizeInvoicePaymentsArray(o);
     const paidFromPayments = paymentsNorm.reduce((sum, p) => sum + (Number.isFinite(p.amount) ? p.amount : 0), 0);
     const totalAmount = coalesceInvoiceMoney(o.totalAmount, o.total_amount, invoice.totalAmount);
@@ -931,6 +945,7 @@ export function normalizeInvoiceDto(raw: unknown): InvoiceDto {
         ...(requiresPaymentConfirmationDocument !== undefined ? { requiresPaymentConfirmationDocument } : {}),
         ...(pcDocUrl ? { paymentConfirmationDocumentUrl: pcDocUrl } : {}),
         ...(pcRecAt ? { paymentConfirmationRecordedAt: pcRecAt } : {}),
+        ...(documentOverrides !== undefined ? { documentOverrides } : {}),
     };
 }
 

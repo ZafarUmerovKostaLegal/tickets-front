@@ -272,11 +272,22 @@ export function InvoiceDetailPage() {
       try {
         const clientLabel = (clientNameById.get(inv.clientId) ?? inv.clientId).trim();
         const meta = await invoicePreviewMetaForExisting(inv, clientLabel);
+        let documentOverrides = inv.documentOverrides ?? undefined;
+        if (documentOverrides === undefined) {
+          try {
+            const fresh = await getInvoice(inv.id, false);
+            documentOverrides = fresh.documentOverrides ?? undefined;
+          }
+          catch {
+            documentOverrides = undefined;
+          }
+        }
         writeInvoicePreviewSession({
           v: 1,
           mode: 'existing',
           invoiceId: inv.id,
           meta,
+          ...(documentOverrides ? { documentOverrides } : {}),
         });
         navigate(routes.timeTrackingInvoicePreview);
       }
@@ -289,25 +300,47 @@ export function InvoiceDetailPage() {
   const handleDetailDownloadPdf = useCallback(async (inv: InvoiceDto) => {
     setDetailExportBusy('pdf');
     try {
-      const client = await getTimeManagerClient(inv.clientId);
-      const model = buildInvoiceCoverLetterModel({
-        issueDateIso: inv.issueDate.slice(0, 10),
+      const fresh = inv.documentOverrides != null ? inv : await getInvoice(inv.id, false);
+      const { applyCoverDocumentOverrides, parseInvoiceDocumentOverrides } = await import('@pages/invoice-preview/lib/invoiceDocumentOverrides');
+      const doc = parseInvoiceDocumentOverrides(fresh.documentOverrides);
+      const client = await getTimeManagerClient(fresh.clientId);
+      const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({
+        issueDateIso: fresh.issueDate.slice(0, 10),
         clientName: client.name,
         clientAddress: client.address,
         contactName: client.contact_name ?? null,
-        totalAmount: inv.totalAmount,
-        currency: inv.currency,
-      });
-      const clientLabel = (clientNameById.get(inv.clientId) ?? inv.clientId).trim();
-      const meta = await invoicePreviewMetaForExisting(inv, clientLabel);
-      const previewSession = { v: 1 as const, mode: 'existing' as const, invoiceId: inv.id, meta };
+        totalAmount: fresh.totalAmount,
+        currency: fresh.currency,
+      }), doc?.cover);
+      const clientLabel = (clientNameById.get(fresh.clientId) ?? fresh.clientId).trim();
+      const meta = await invoicePreviewMetaForExisting(fresh, clientLabel);
+      if (doc?.legal?.invoiceNumber?.trim())
+        meta.invoiceNumber = doc.legal.invoiceNumber.trim();
+      const previewSession = {
+        v: 1 as const,
+        mode: 'existing' as const,
+        invoiceId: fresh.id,
+        meta,
+        ...(fresh.documentOverrides ? { documentOverrides: fresh.documentOverrides } : {}),
+      };
 
       const { buildInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewPdf');
-      const blob = await buildInvoicePreviewPdfBlob({ model, session: previewSession });
+      const { splitDetailRowsForPagedTimeReport } = await import('@pages/invoice-preview/lib/invoiceTimeReportChunking');
+      const { pageNumbersForIncludedKeys } = await import('@pages/invoice-preview/lib/invoicePreviewPageSlots');
+      const trChunks = doc?.timeReport
+        ? splitDetailRowsForPagedTimeReport(doc.timeReport.detailSlots).length
+        : 1;
+      const blob = await buildInvoicePreviewPdfBlob({
+        model,
+        session: previewSession,
+        timeReportPack: doc?.timeReport ?? undefined,
+        legalOverrides: doc?.legal ?? undefined,
+        selectedPageNumbers: pageNumbersForIncludedKeys(doc?.includedPageKeys, trChunks),
+      });
       const base = buildInvoicePreviewExportBasename({
-        invoiceNumber: inv.invoiceNumber,
-        clientLabel: clientNameById.get(inv.clientId) ?? inv.clientId,
-        issueDateIso: inv.issueDate.slice(0, 10),
+        invoiceNumber: fresh.invoiceNumber,
+        clientLabel: clientNameById.get(fresh.clientId) ?? fresh.clientId,
+        issueDateIso: fresh.issueDate.slice(0, 10),
       });
       triggerBrowserDownload(blob, `${base}.pdf`);
     }
@@ -322,25 +355,47 @@ export function InvoiceDetailPage() {
   const handleDetailDownloadWord = useCallback(async (inv: InvoiceDto) => {
     setDetailExportBusy('word');
     try {
-      const client = await getTimeManagerClient(inv.clientId);
-      const model = buildInvoiceCoverLetterModel({
-        issueDateIso: inv.issueDate.slice(0, 10),
+      const fresh = inv.documentOverrides != null ? inv : await getInvoice(inv.id, false);
+      const { applyCoverDocumentOverrides, parseInvoiceDocumentOverrides } = await import('@pages/invoice-preview/lib/invoiceDocumentOverrides');
+      const doc = parseInvoiceDocumentOverrides(fresh.documentOverrides);
+      const client = await getTimeManagerClient(fresh.clientId);
+      const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({
+        issueDateIso: fresh.issueDate.slice(0, 10),
         clientName: client.name,
         clientAddress: client.address,
         contactName: client.contact_name ?? null,
-        totalAmount: inv.totalAmount,
-        currency: inv.currency,
-      });
-      const clientLabel = (clientNameById.get(inv.clientId) ?? inv.clientId).trim();
-      const meta = await invoicePreviewMetaForExisting(inv, clientLabel);
-      const previewSession = { v: 1 as const, mode: 'existing' as const, invoiceId: inv.id, meta };
+        totalAmount: fresh.totalAmount,
+        currency: fresh.currency,
+      }), doc?.cover);
+      const clientLabel = (clientNameById.get(fresh.clientId) ?? fresh.clientId).trim();
+      const meta = await invoicePreviewMetaForExisting(fresh, clientLabel);
+      if (doc?.legal?.invoiceNumber?.trim())
+        meta.invoiceNumber = doc.legal.invoiceNumber.trim();
+      const previewSession = {
+        v: 1 as const,
+        mode: 'existing' as const,
+        invoiceId: fresh.id,
+        meta,
+        ...(fresh.documentOverrides ? { documentOverrides: fresh.documentOverrides } : {}),
+      };
 
       const { buildInvoicePreviewDocxBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewDocx');
-      const blob = await buildInvoicePreviewDocxBlob({ model, session: previewSession });
+      const { splitDetailRowsForPagedTimeReport } = await import('@pages/invoice-preview/lib/invoiceTimeReportChunking');
+      const { pageNumbersForIncludedKeys } = await import('@pages/invoice-preview/lib/invoicePreviewPageSlots');
+      const trChunks = doc?.timeReport
+        ? splitDetailRowsForPagedTimeReport(doc.timeReport.detailSlots).length
+        : 1;
+      const blob = await buildInvoicePreviewDocxBlob({
+        model,
+        session: previewSession,
+        timeReportPack: doc?.timeReport ?? undefined,
+        legalOverrides: doc?.legal ?? undefined,
+        selectedPageNumbers: pageNumbersForIncludedKeys(doc?.includedPageKeys, trChunks),
+      });
       const base = buildInvoicePreviewExportBasename({
-        invoiceNumber: inv.invoiceNumber,
-        clientLabel: clientNameById.get(inv.clientId) ?? inv.clientId,
-        issueDateIso: inv.issueDate.slice(0, 10),
+        invoiceNumber: fresh.invoiceNumber,
+        clientLabel: clientNameById.get(fresh.clientId) ?? fresh.clientId,
+        issueDateIso: fresh.issueDate.slice(0, 10),
       });
       triggerBrowserDownload(blob, `${base}.docx`);
     }

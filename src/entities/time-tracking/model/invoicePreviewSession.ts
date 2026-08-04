@@ -30,6 +30,8 @@ export type InvoicePreviewSessionCreateV1 = {
     mode: 'create';
     form: InvoicePreviewFormDraftV1;
     meta: InvoicePreviewMeta;
+    /** Preview polish while creating (session-only until invoice exists). */
+    documentOverrides?: Record<string, unknown>;
 };
 
 export type InvoicePreviewSessionExistingV1 = {
@@ -37,6 +39,8 @@ export type InvoicePreviewSessionExistingV1 = {
     mode: 'existing';
     invoiceId: string;
     meta: InvoicePreviewMeta;
+    /** Cached preview polish; authoritative copy lives on the invoice API. */
+    documentOverrides?: Record<string, unknown>;
 };
 
 export type InvoicePreviewSessionV1 = InvoicePreviewSessionCreateV1 | InvoicePreviewSessionExistingV1;
@@ -76,6 +80,12 @@ function parseMeta(raw: unknown): InvoicePreviewMeta {
     return meta;
 }
 
+function parseDocumentOverrides(raw: unknown): Record<string, unknown> | undefined {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw))
+        return undefined;
+    return raw as Record<string, unknown>;
+}
+
 export function writeInvoicePreviewSession(payload: InvoicePreviewSessionV1): void {
     try {
         sessionStorage.setItem(INVOICE_PREVIEW_SESSION_KEY, JSON.stringify(payload));
@@ -96,15 +106,28 @@ export function readInvoicePreviewSession(): InvoicePreviewSessionV1 | null {
         if (rec.v !== 1)
             return null;
         const meta = parseMeta(rec.meta);
+        const documentOverrides = parseDocumentOverrides(rec.documentOverrides);
         if (rec.mode === 'existing') {
             const invoiceId = typeof rec.invoiceId === 'string' ? rec.invoiceId.trim() : '';
             if (!invoiceId)
                 return null;
-            return { v: 1, mode: 'existing', invoiceId, meta };
+            return {
+                v: 1,
+                mode: 'existing',
+                invoiceId,
+                meta,
+                ...(documentOverrides ? { documentOverrides } : {}),
+            };
         }
         if (!isFormDraft(rec.form))
             return null;
-        return { v: 1, mode: 'create', form: rec.form, meta };
+        return {
+            v: 1,
+            mode: 'create',
+            form: rec.form,
+            meta,
+            ...(documentOverrides ? { documentOverrides } : {}),
+        };
     }
     catch {
         return null;

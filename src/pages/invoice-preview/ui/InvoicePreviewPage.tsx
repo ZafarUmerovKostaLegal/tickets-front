@@ -2,9 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { useLocation } from 'react-router-dom';
 import { getInvoiceCreateUrl, getInvoiceDetailUrl } from '@shared/config';
 import { AppBackButton, AppHomeLogo, AppPageSettings, SearchableSelect, useAppToast } from '@shared/ui';
-import { readInvoicePreviewSession } from '@entities/time-tracking/model/invoicePreviewSession';
+import { getInvoice, loadFirmBankingProfiles, patchInvoice, pickFirmBankingProfileForCurrency } from '@entities/time-tracking/api';
+import {
+    readInvoicePreviewSession,
+    writeInvoicePreviewSession,
+} from '@entities/time-tracking/model/invoicePreviewSession';
 import { firmBankingToLegalOverrides, applyFirmBankingProfileToLegalOverrides, profileDisplayTitle, type FirmBankingProfile } from '@entities/time-tracking/lib/firmBankingDetailsStorage';
-import { loadFirmBankingProfiles, pickFirmBankingProfileForCurrency } from '@entities/time-tracking/api';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { applyCoverLetterLanguage, type InvoiceCoverLanguage } from '../lib/invoiceCoverLetterI18n';
@@ -12,7 +15,19 @@ import { emptyInvoiceTimeReportPack, type InvoiceTimeReportDetailRow, type Invoi
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { splitDetailRowsForPagedTimeReport } from '../lib/invoiceTimeReportChunking';
-import { invoicePreviewPageCount, type InvoiceLegalPageOverrides } from '../lib/invoiceLegalPageModel';
+import { type InvoiceLegalPageOverrides } from '../lib/invoiceLegalPageModel';
+import {
+    applyCoverDocumentOverrides,
+    buildInvoiceDocumentOverridesPayload,
+    parseInvoiceDocumentOverrides,
+    type InvoiceDocumentOverridesV1,
+} from '../lib/invoiceDocumentOverrides';
+import {
+    buildInvoicePreviewPageSlots,
+    normalizeIncludedPageKeys,
+    pageKindLabelForSlot,
+    type InvoicePreviewPageKey,
+} from '../lib/invoicePreviewPageSlots';
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
 import { resolveInvoiceTimeReportPack } from '../lib/resolveInvoiceTimeReportPack';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
@@ -108,13 +123,6 @@ function fallbackCoverModel(): InvoiceCoverLetterModel {
     });
 }
 
-function allPagesSet(count: number): Set<number> {
-    const s = new Set<number>();
-    for (let i = 1; i <= count; i += 1)
-        s.add(i);
-    return s;
-}
-
 function globalDetailRowOffset(chunks: InvoiceTimeReportDetailRow[][], chunkIndex: number): number {
     let offset = 0;
     for (let c = 0; c < chunkIndex; c += 1)
@@ -125,7 +133,8 @@ function globalDetailRowOffset(chunks: InvoiceTimeReportDetailRow[][], chunkInde
 export function InvoicePreviewPage() {
     const { pushToast } = useAppToast();
     const location = useLocation();
-    const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | null>(null);
+    const [downloadBusy, setDownloadBusy] = useState<'word' | 'pdf' | 'page' | null>(null);
+    const [saveBusy, setSaveBusy] = useState(false);
     // Stabilize session identity — readInvoicePreviewSession() returns a new object every call;
     // using it bare in effect deps cancels pack loading on every re-render (empty tables, PDF still works).
     const session = useMemo(
@@ -138,11 +147,14 @@ export function InvoicePreviewPage() {
     const [bankProfiles, setBankProfiles] = useState<FirmBankingProfile[]>([]);
     const [selectedBankProfileId, setSelectedBankProfileId] = useState<string>('');
     const userPickedBankRef = useRef(false);
+    const pendingDocOverridesRef = useRef<InvoiceDocumentOverridesV1 | null>(null);
+    const skipNextAutosaveRef = useRef(true);
+    const includedPagesHydratedRef = useRef(false);
+    const [invoiceStatus, setInvoiceStatus] = useState<string | null>(null);
+    const [includedPageKeys, setIncludedPageKeys] = useState<Set<InvoicePreviewPageKey> | null>(null);
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
-    const [selectedPages, setSelectedPages] = useState<Set<number>>(() => new Set([1, 2, 3]));
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const prevPageCountRef = useRef(0);
     const [activePage, setActivePage] = useState(1);
     const [sheetZoomPct, setSheetZoomPct] = useState(100);
 
@@ -201,22 +213,99 @@ export function InvoicePreviewPage() {
         setLegalOverrides((prev) => applyFirmBankingProfileToLegalOverrides(prev, profile));
     }, []);
 
+    const applyDocumentOverridesToState = useCallback((doc: InvoiceDocumentOverridesV1 | null | undefined, metaInvoiceNumber?: string | null) => {
+        if (!doc)
+            return;
+        pendingDocOverridesRef.current = doc;
+        userPickedBankRef.current = true;
+        skipNextAutosaveRef.current = true;
+        if (doc.includedPageKeys?.length) {
+            includedPagesHydratedRef.current = true;
+            setIncludedPageKeys(new Set(doc.includedPageKeys));
+        }
+        setLegalOverrides((prev) => ({
+            ...prev,
+            ...(doc.legal ?? {}),
+            invoiceNumber: (doc.legal?.invoiceNumber ?? metaInvoiceNumber ?? prev.invoiceNumber) || null,
+        }));
+        if (doc.cover) {
+            setCoverModel((prev) => (prev ? applyCoverDocumentOverrides(prev, doc.cover) : prev));
+        }
+        if (doc.timeReport) {
+            setTimeReportPack(doc.timeReport);
+        }
+    }, []);
+
     useEffect(() => {
         let cancelled = false;
         userPickedBankRef.current = false;
+        pendingDocOverridesRef.current = null;
+        skipNextAutosaveRef.current = true;
+        includedPagesHydratedRef.current = false;
+        setInvoiceStatus(null);
+        setIncludedPageKeys(null);
+        setLegalOverrides(firmBankingToLegalOverrides());
+        const sessionNow = readInvoicePreviewSession();
         (async () => {
             const profiles = await loadFirmBankingProfiles({ migrateLocal: true });
             if (cancelled)
                 return;
             setBankProfiles(profiles);
+
+            let docFromApi: InvoiceDocumentOverridesV1 | null = null;
+            if (sessionNow?.mode === 'existing') {
+                try {
+                    const inv = await getInvoice(sessionNow.invoiceId, false);
+                    if (cancelled)
+                        return;
+                    setInvoiceStatus(String(inv.status ?? '').toLowerCase() || null);
+                    docFromApi = parseInvoiceDocumentOverrides(inv.documentOverrides);
+                    if (!docFromApi?.legal?.invoiceNumber && inv.invoiceNumber?.trim()) {
+                        docFromApi = {
+                            ...(docFromApi ?? { v: 1 }),
+                            v: 1,
+                            legal: {
+                                ...(docFromApi?.legal ?? {}),
+                                invoiceNumber: inv.invoiceNumber.trim(),
+                            },
+                        };
+                    }
+                }
+                catch (e) {
+                    console.error(e);
+                    if (!cancelled) {
+                        pushToast({
+                            message: e instanceof Error ? e.message : 'Не удалось загрузить сохранённые правки счёта',
+                            variant: 'warning',
+                        });
+                    }
+                }
+            }
+
+            const docFromSession = parseInvoiceDocumentOverrides(sessionNow?.documentOverrides);
+            const doc = docFromApi ?? docFromSession;
+
             const picked = pickFirmBankingProfileForCurrency(profiles, null);
-            if (picked)
+            if (picked && !doc?.legal)
                 applyBankProfile(picked);
+            else if (picked)
+                setSelectedBankProfileId(picked.id);
+
+            if (doc) {
+                applyDocumentOverridesToState(doc, sessionNow?.meta.invoiceNumber);
+            }
+            else if (sessionNow?.meta.invoiceNumber?.trim()) {
+                skipNextAutosaveRef.current = true;
+                setLegalOverrides((prev) => ({
+                    ...prev,
+                    invoiceNumber: sessionNow.meta.invoiceNumber,
+                }));
+            }
         })();
         return () => {
             cancelled = true;
         };
-    }, [location.key, location.pathname, applyBankProfile]);
+    }, [location.key, location.pathname, applyBankProfile, applyDocumentOverridesToState, pushToast]);
 
     useEffect(() => {
         if (!bankProfiles.length || !coverModel || userPickedBankRef.current)
@@ -227,32 +316,242 @@ export function InvoicePreviewPage() {
             applyBankProfile(picked);
     }, [coverModel, bankProfiles, selectedBankProfileId, applyBankProfile]);
 
+    const persistPreviewEdits = useCallback(async (opts?: { silent?: boolean }) => {
+        if (!session || !coverModel)
+            return false;
+        const pack = timeReportPack ?? emptyInvoiceTimeReportPack(packCurrencyCode(coverModel));
+        const trChunks = splitDetailRowsForPagedTimeReport(pack.detailSlots);
+        const slots = buildInvoicePreviewPageSlots(trChunks.length);
+        const included = normalizeIncludedPageKeys(includedPageKeys, slots);
+        const doc = buildInvoiceDocumentOverridesPayload({
+            legal: legalOverrides,
+            cover: coverModel,
+            timeReport: pack,
+            includedPageKeys: included,
+            persistIncludedPages: true,
+        });
+        const invNo = (legalOverrides.invoiceNumber ?? session.meta.invoiceNumber ?? '').trim();
+
+        if (session.mode === 'create') {
+            writeInvoicePreviewSession({
+                ...session,
+                form: {
+                    ...session.form,
+                    ...(invNo ? { invoiceNumber: invNo } : { invoiceNumber: session.form.invoiceNumber }),
+                },
+                meta: {
+                    ...session.meta,
+                    ...(invNo ? { invoiceNumber: invNo } : {}),
+                },
+                documentOverrides: doc as unknown as Record<string, unknown>,
+            });
+            return true;
+        }
+
+        setSaveBusy(true);
+        try {
+            let status = invoiceStatus;
+            if (!status) {
+                try {
+                    const inv = await getInvoice(session.invoiceId, false);
+                    status = String(inv.status ?? '').toLowerCase() || null;
+                    if (status)
+                        setInvoiceStatus(status);
+                }
+                catch {
+                    status = null;
+                }
+            }
+            const body: Parameters<typeof patchInvoice>[1] = {
+                documentOverrides: doc as unknown as Record<string, unknown>,
+            };
+            if (status === 'draft' && invNo)
+                body.invoiceNumber = invNo;
+            const updated = await patchInvoice(session.invoiceId, body);
+            setInvoiceStatus(String(updated.status ?? status ?? '').toLowerCase() || status);
+            writeInvoicePreviewSession({
+                v: 1,
+                mode: 'existing',
+                invoiceId: session.invoiceId,
+                meta: {
+                    ...session.meta,
+                    invoiceNumber: updated.invoiceNumber?.trim() || invNo || session.meta.invoiceNumber,
+                },
+                documentOverrides: (updated.documentOverrides
+                    ?? doc) as Record<string, unknown>,
+            });
+            if (updated.invoiceNumber?.trim()) {
+                skipNextAutosaveRef.current = true;
+                setLegalOverrides((prev) => ({
+                    ...prev,
+                    invoiceNumber: updated.invoiceNumber.trim(),
+                }));
+            }
+            if (!opts?.silent) {
+                pushToast({ message: 'Правки счёта сохранены', variant: 'info' });
+            }
+            return true;
+        }
+        catch (e) {
+            pushToast({
+                message: e instanceof Error ? e.message : 'Не удалось сохранить правки счёта',
+                variant: 'error',
+            });
+            return false;
+        }
+        finally {
+            setSaveBusy(false);
+        }
+    }, [session, coverModel, timeReportPack, legalOverrides, includedPageKeys, invoiceStatus, pushToast]);
+
     const togglePageEdit = useCallback(() => {
-        setEditMode((on) => !on);
-    }, []);
+        if (editMode) {
+            void persistPreviewEdits({ silent: false }).finally(() => setEditMode(false));
+            return;
+        }
+        setEditMode(true);
+    }, [editMode, persistPreviewEdits]);
+
+    // Autosave while editing (debounced).
+    useEffect(() => {
+        if (!editMode || !session || !coverModel)
+            return;
+        if (skipNextAutosaveRef.current) {
+            skipNextAutosaveRef.current = false;
+            return;
+        }
+        const t = window.setTimeout(() => {
+            void persistPreviewEdits({ silent: true });
+        }, 900);
+        return () => window.clearTimeout(t);
+    }, [editMode, session, coverModel, legalOverrides, timeReportPack, includedPageKeys, persistPreviewEdits]);
 
     const editingPage = editMode ? activePage : null;
 
-    const togglePageExport = useCallback((pageNum: number, checked: boolean) => {
-        setSelectedPages((prev) => {
-            const next = new Set(prev);
-            if (checked)
-                next.add(pageNum);
-            else
-                next.delete(pageNum);
+    const timeReportFallback = useMemo(
+        () => emptyInvoiceTimeReportPack(packCurrencyCode(displayModel)),
+        [displayModel],
+    );
+    const resolvedTimeReportPack = timeReportPack ?? timeReportFallback;
+
+    const timeReportChunks = useMemo(
+        () => splitDetailRowsForPagedTimeReport(resolvedTimeReportPack.detailSlots),
+        [resolvedTimeReportPack.detailSlots],
+    );
+
+    const allPageSlots = useMemo(
+        () => buildInvoicePreviewPageSlots(timeReportChunks.length),
+        [timeReportChunks.length],
+    );
+
+    const resolvedIncludedKeys = useMemo(
+        () => normalizeIncludedPageKeys(includedPageKeys, allPageSlots),
+        [includedPageKeys, allPageSlots],
+    );
+
+    const visiblePageSlots = useMemo(
+        () => allPageSlots.filter((slot) => resolvedIncludedKeys.has(slot.key)),
+        [allPageSlots, resolvedIncludedKeys],
+    );
+
+    const pageCount = visiblePageSlots.length;
+    const fullPackPageCount = allPageSlots.length;
+
+    const exportPageNumbers = useMemo(() => {
+        const nums: number[] = [];
+        allPageSlots.forEach((slot, idx) => {
+            if (resolvedIncludedKeys.has(slot.key))
+                nums.push(idx + 1);
+        });
+        return nums;
+    }, [allPageSlots, resolvedIncludedKeys]);
+
+    // Seed included pages once slots are known (after hydrate or fresh open).
+    useEffect(() => {
+        if (includedPagesHydratedRef.current && includedPageKeys != null)
+            return;
+        if (allPageSlots.length === 0)
+            return;
+        const pending = pendingDocOverridesRef.current?.includedPageKeys;
+        if (pending?.length) {
+            includedPagesHydratedRef.current = true;
+            setIncludedPageKeys(normalizeIncludedPageKeys(pending, allPageSlots));
+            return;
+        }
+        if (includedPageKeys == null) {
+            setIncludedPageKeys(new Set(allPageSlots.map((s) => s.key)));
+        }
+    }, [allPageSlots, includedPageKeys]);
+
+    const removePageKey = useCallback((key: InvoicePreviewPageKey) => {
+        setIncludedPageKeys((prev) => {
+            const base = normalizeIncludedPageKeys(prev, allPageSlots);
+            if (base.size <= 1) {
+                pushToast({ variant: 'warning', message: 'В счёте должна остаться хотя бы одна страница' });
+                return prev ?? base;
+            }
+            if (!base.has(key))
+                return prev ?? base;
+            const next = new Set(base);
+            next.delete(key);
+            skipNextAutosaveRef.current = false;
             return next;
         });
-    }, []);
+    }, [allPageSlots, pushToast]);
 
-    const selectAllPagesForExport = useCallback((pageCount: number) => {
-        setSelectedPages(allPagesSet(pageCount));
-    }, []);
+    const restorePageKey = useCallback((key: InvoicePreviewPageKey) => {
+        setIncludedPageKeys((prev) => {
+            const base = normalizeIncludedPageKeys(prev, allPageSlots);
+            if (base.has(key))
+                return prev ?? base;
+            const next = new Set(base);
+            next.add(key);
+            skipNextAutosaveRef.current = false;
+            return next;
+        });
+    }, [allPageSlots]);
+
+    const restoreAllPages = useCallback(() => {
+        skipNextAutosaveRef.current = false;
+        setIncludedPageKeys(new Set(allPageSlots.map((s) => s.key)));
+    }, [allPageSlots]);
+
+    const persistPreviewEditsRef = useRef(persistPreviewEdits);
+    persistPreviewEditsRef.current = persistPreviewEdits;
+
+    // Persist page inclusion changes (even outside edit mode).
+    useEffect(() => {
+        if (!session || !coverModel || includedPageKeys == null)
+            return;
+        if (skipNextAutosaveRef.current)
+            return;
+        const t = window.setTimeout(() => {
+            void persistPreviewEditsRef.current({ silent: true }).finally(() => {
+                skipNextAutosaveRef.current = true;
+            });
+        }, 500);
+        return () => window.clearTimeout(t);
+    }, [includedPageKeys, session, coverModel]);
+
+    const selectAllPagesForExport = useCallback(() => {
+        restoreAllPages();
+    }, [restoreAllPages]);
+
+    useEffect(() => {
+        setActivePage((prev) => (prev > pageCount ? Math.max(1, pageCount) : prev));
+    }, [pageCount]);
+
+    useEffect(() => {
+        setEditMode(false);
+    }, [pageCount]);
 
     useEffect(() => {
         let cancel = false;
         void resolveInvoiceCoverLetterModel(session).then((m) => {
-            if (!cancel)
-                setCoverModel(m);
+            if (cancel)
+                return;
+            const withCover = applyCoverDocumentOverrides(m, pendingDocOverridesRef.current?.cover);
+            setCoverModel(withCover);
         });
         return () => {
             cancel = true;
@@ -262,6 +561,10 @@ export function InvoicePreviewPage() {
     useEffect(() => {
         if (!session || coverModel == null)
             return;
+        if (pendingDocOverridesRef.current?.timeReport) {
+            setTimeReportPack(pendingDocOverridesRef.current.timeReport);
+            return;
+        }
         let cancel = false;
         void resolveInvoiceTimeReportPack(session, coverModel, {
             onPartnerConfirmationBlocked(message) {
@@ -280,38 +583,6 @@ export function InvoicePreviewPage() {
             cancel = true;
         };
     }, [session, coverLanguage, coverModel, pushToast]);
-
-    const timeReportFallback = useMemo(
-        () => emptyInvoiceTimeReportPack(packCurrencyCode(displayModel)),
-        [displayModel],
-    );
-    const resolvedTimeReportPack = timeReportPack ?? timeReportFallback;
-
-    const timeReportChunks = useMemo(
-        () => splitDetailRowsForPagedTimeReport(resolvedTimeReportPack.detailSlots),
-        [resolvedTimeReportPack.detailSlots],
-    );
-    const pageCount = invoicePreviewPageCount(timeReportChunks.length);
-
-    useEffect(() => {
-        setSelectedPages((prev) => {
-            const next = new Set<number>();
-            const oldCount = prevPageCountRef.current;
-            for (let i = 1; i <= pageCount; i += 1) {
-                if (prev.has(i) || i > oldCount)
-                    next.add(i);
-            }
-            prevPageCountRef.current = pageCount;
-            if (next.size === 0)
-                return allPagesSet(pageCount);
-            return next;
-        });
-        setActivePage((prev) => (prev > pageCount ? pageCount : prev));
-    }, [pageCount]);
-
-    useEffect(() => {
-        setEditMode(false);
-    }, [pageCount]);
 
     const patchDetailRowInChunk = useCallback((chunkIndex: number, rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
         setTimeReportPack((prev) => {
@@ -398,7 +669,10 @@ export function InvoicePreviewPage() {
     }, []);
 
     const subtitleParts = session?.mode === 'existing'
-        ? [session.meta.invoiceNumber, session.meta.clientLabel].filter(Boolean)
+        ? [
+            (legalOverrides.invoiceNumber ?? session.meta.invoiceNumber)?.trim() || null,
+            session.meta.clientLabel,
+        ].filter(Boolean)
         : [session?.meta.clientLabel, session?.meta.projectLabel].filter(Boolean);
     const subtitle = subtitleParts.length > 0 ? subtitleParts.join(' · ') : null;
 
@@ -407,7 +681,7 @@ export function InvoicePreviewPage() {
             return 'Schet_predprosmotr';
         if (session.mode === 'existing') {
             return buildInvoicePreviewExportBasename({
-                invoiceNumber: session.meta.invoiceNumber,
+                invoiceNumber: legalOverrides.invoiceNumber ?? session.meta.invoiceNumber,
                 clientLabel: session.meta.clientLabel,
                 issueDateIso: session.meta.issueDateIso,
             });
@@ -416,7 +690,7 @@ export function InvoicePreviewPage() {
             clientLabel: session.meta.clientLabel,
             issueDateIso: session.form.issueDate.slice(0, 10),
         });
-    }, [session]);
+    }, [session, legalOverrides.invoiceNumber]);
 
     const backHref = session?.mode === 'existing'
         ? getInvoiceDetailUrl(session.invoiceId)
@@ -427,11 +701,11 @@ export function InvoicePreviewPage() {
         session,
         timeReportPack: resolvedTimeReportPack,
         legalOverrides,
-        selectedPageNumbers: [...selectedPages].sort((a, b) => a - b),
-    }), [coverModel, session, resolvedTimeReportPack, legalOverrides, selectedPages]);
+        selectedPageNumbers: exportPageNumbers,
+    }), [coverModel, session, resolvedTimeReportPack, legalOverrides, exportPageNumbers]);
 
     const handleDownloadWord = useCallback(async () => {
-        if (selectedPages.size === 0) {
+        if (exportPageNumbers.length === 0) {
             pushToast({ variant: 'warning', message: 'Выберите хотя бы одну страницу для экспорта' });
             return;
         }
@@ -450,10 +724,10 @@ export function InvoicePreviewPage() {
         finally {
             setDownloadBusy(null);
         }
-    }, [defaultFilename, exportInput, pushToast, selectedPages.size]);
+    }, [defaultFilename, exportInput, pushToast, exportPageNumbers.length]);
 
     const handleDownloadPdf = useCallback(async () => {
-        if (selectedPages.size === 0) {
+        if (exportPageNumbers.length === 0) {
             pushToast({ variant: 'warning', message: 'Выберите хотя бы одну страницу для экспорта' });
             return;
         }
@@ -472,23 +746,60 @@ export function InvoicePreviewPage() {
         finally {
             setDownloadBusy(null);
         }
-    }, [defaultFilename, exportInput, pushToast, selectedPages.size]);
+    }, [defaultFilename, exportInput, pushToast, exportPageNumbers.length]);
+
+    const handleDownloadActivePage = useCallback(async () => {
+        const slot = visiblePageSlots[activePage - 1];
+        if (!slot) {
+            pushToast({ variant: 'warning', message: 'Нет активной страницы для сохранения' });
+            return;
+        }
+        const fullIdx = allPageSlots.findIndex((s) => s.key === slot.key);
+        if (fullIdx < 0)
+            return;
+        setDownloadBusy('page');
+        try {
+            // Persist latest edits first so the downloaded page matches what is on screen.
+            await persistPreviewEdits({ silent: true });
+            const { buildInvoicePreviewPdfBlob } = await import('../lib/buildInvoicePreviewPdf');
+            const blob = await buildInvoicePreviewPdfBlob({
+                ...exportInput,
+                selectedPageNumbers: [fullIdx + 1],
+            });
+            const pageSuffix = slot.kind === 'cover'
+                ? 'letter'
+                : slot.kind === 'invoice'
+                    ? 'invoice'
+                    : `time-report-${slot.chunkIndex + 1}`;
+            triggerBrowserDownload(blob, `${defaultFilename}_${pageSuffix}.pdf`);
+            pushToast({ message: `Страница «${pageKindLabelForSlot(slot)}» сохранена`, variant: 'info' });
+        }
+        catch (e) {
+            pushToast({
+                variant: 'error',
+                message: e instanceof Error ? e.message : 'Не удалось сохранить страницу',
+            });
+        }
+        finally {
+            setDownloadBusy(null);
+        }
+    }, [visiblePageSlots, activePage, allPageSlots, persistPreviewEdits, exportInput, defaultFilename, pushToast]);
+
+    const handleSaveActivePageEdits = useCallback(async () => {
+        const ok = await persistPreviewEdits({ silent: false });
+        if (ok && editMode)
+            setEditMode(false);
+    }, [persistPreviewEdits, editMode]);
 
     const toolbarTitle = subtitle ?? defaultFilename;
-    const trRangeEnd = 1 + timeReportChunks.length;
+    const deletedPageCount = fullPackPageCount - pageCount;
     const isEditingActivePage = editMode;
-    const exportSelectionLabel = selectedPages.size === pageCount
+    const exportSelectionLabel = deletedPageCount === 0
         ? `все ${pageCount}`
-        : `${selectedPages.size} из ${pageCount}`;
-    const pdfToolbarTip = `Лист 1 — сопроводительное письмо; листы 2–${trRangeEnd} — отчёт времени${timeReportChunks.length > 1 ? ' (продолжение при большом объёме)' : ''}; лист ${pageCount} — счёт (invoice). Отметьте страницы слева для экспорта. «Редактировать» действует на текущую страницу.`;
+        : `${pageCount} из ${fullPackPageCount}`;
+    const pdfToolbarTip = 'Удалите ненужные страницы слева — состав сохраняется вместе с правками. «Скачать страницу» экспортирует только текущий лист. «Редактировать» / «Готово» сохраняет правки документа.';
 
-    const pageKindLabel = (num: number): string => {
-        if (num === 1)
-            return 'сопроводительное письмо';
-        if (num === pageCount)
-            return 'счёт';
-        return 'time report';
-    };
+    const activeSlot = visiblePageSlots[activePage - 1] ?? null;
 
     return (<div className="tt-inv-preview">
       <nav className="time-page__navbar tt-inv-preview__navbar" aria-label="Предпросмотр счёта">
@@ -504,10 +815,19 @@ export function InvoicePreviewPage() {
         </div>
         <div className="time-page__navbar-spacer"/>
         <div className="tt-inv-preview__downloads" role="group" aria-label="Скачать предпросмотр">
-          <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-inv-preview__download-btn" disabled={downloadBusy != null || selectedPages.size === 0} onClick={() => void handleDownloadPdf()}>
+          <button
+            type="button"
+            className="tt-reports__btn tt-reports__btn--outline tt-inv-preview__download-btn"
+            disabled={downloadBusy != null || !activeSlot}
+            onClick={() => void handleDownloadActivePage()}
+            title="Сохранить только текущую страницу в PDF"
+          >
+            {downloadBusy === 'page' ? 'Подготовка…' : 'Скачать страницу'}
+          </button>
+          <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-inv-preview__download-btn" disabled={downloadBusy != null || exportPageNumbers.length === 0} onClick={() => void handleDownloadPdf()}>
             {downloadBusy === 'pdf' ? 'Подготовка…' : 'Скачать PDF'}
           </button>
-          <button type="button" className="tt-reports__btn tt-reports__btn--accent tt-inv-preview__download-btn" disabled={downloadBusy != null || selectedPages.size === 0} onClick={() => void handleDownloadWord()}>
+          <button type="button" className="tt-reports__btn tt-reports__btn--accent tt-inv-preview__download-btn" disabled={downloadBusy != null || exportPageNumbers.length === 0} onClick={() => void handleDownloadWord()}>
             {downloadBusy === 'word' ? 'Подготовка…' : 'Скачать Word'}
           </button>
         </div>
@@ -523,7 +843,7 @@ export function InvoicePreviewPage() {
               <span className="tt-inv-preview__thumbs-title">Страницы</span>
               {coverModel
                 ? (
-                    <button type="button" className="tt-inv-preview__thumbs-all" onClick={() => selectAllPagesForExport(pageCount)}>
+                    <button type="button" className="tt-inv-preview__thumbs-all" onClick={selectAllPagesForExport} title="Восстановить все страницы">
                       Все
                     </button>
                   )
@@ -544,42 +864,54 @@ export function InvoicePreviewPage() {
                 )
               : null}
             {coverModel
-              ? Array.from({ length: pageCount }, (_, i) => i + 1).map((num) => {
-                const thumbTrIdx = num >= 2 && num < pageCount ? num - 2 : null;
-                const exportOn = selectedPages.has(num);
+              ? allPageSlots.map((slot) => {
+                const included = resolvedIncludedKeys.has(slot.key);
+                const visibleIdx = included
+                    ? visiblePageSlots.findIndex((s) => s.key === slot.key)
+                    : -1;
+                const displayNum = visibleIdx >= 0 ? visibleIdx + 1 : null;
+                const isActive = included && displayNum === activePage;
+                const lastTr = timeReportChunks.length - 1;
                 return (
-                  <div key={num} className={`tt-inv-preview__thumb-wrap${num === activePage ? ' tt-inv-preview__thumb-wrap--active' : ''}${!exportOn ? ' tt-inv-preview__thumb-wrap--off' : ''}`}>
+                  <div
+                    key={slot.key}
+                    className={`tt-inv-preview__thumb-wrap${isActive ? ' tt-inv-preview__thumb-wrap--active' : ''}${!included ? ' tt-inv-preview__thumb-wrap--off tt-inv-preview__thumb-wrap--deleted' : ''}`}
+                  >
                     <button
                       type="button"
-                      className={`tt-inv-preview__thumb${num === activePage ? ' tt-inv-preview__thumb--active' : ''}`}
-                      aria-current={num === activePage ? 'page' : undefined}
-                      aria-label={`Страница ${num} из ${pageCount}, ${pageKindLabel(num)}`}
-                      onClick={() => scrollToPage(num)}
+                      className={`tt-inv-preview__thumb${isActive ? ' tt-inv-preview__thumb--active' : ''}`}
+                      aria-current={isActive ? 'page' : undefined}
+                      aria-label={`${pageKindLabelForSlot(slot)}${included ? '' : ', удалена'}`}
+                      disabled={!included}
+                      onClick={() => {
+                          if (displayNum != null)
+                              scrollToPage(displayNum);
+                      }}
                     >
                       <span className="tt-inv-preview__thumb-sheet" aria-hidden>
                         <span className="tt-inv-preview__thumb-scale">
-                          {num === 1
+                          {slot.kind === 'cover'
                             ? (
                                 <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--letter">
                                   <InvoiceCoverLetter model={displayModel}/>
                                 </div>
                               )
-                            : thumbTrIdx !== null && timeReportChunks[thumbTrIdx]
+                            : slot.kind === 'timeReport' && timeReportChunks[slot.chunkIndex]
                               ? (
                                   <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--timerpt">
                                     <InvoiceTimeReportPage
                                       model={displayModel}
                                       pack={resolvedTimeReportPack}
-                                      pageNumber={2 + thumbTrIdx}
-                                      detailRows={timeReportChunks[thumbTrIdx]}
-                                      continuation={thumbTrIdx > 0}
-                                      showDetailTotalRow={thumbTrIdx === timeReportChunks.length - 1}
-                                      showExpenseSection={thumbTrIdx === timeReportChunks.length - 1}
-                                      showSummarySection={thumbTrIdx === timeReportChunks.length - 1}
+                                      pageNumber={2 + slot.chunkIndex}
+                                      detailRows={timeReportChunks[slot.chunkIndex]}
+                                      continuation={slot.chunkIndex > 0}
+                                      showDetailTotalRow={slot.chunkIndex === lastTr}
+                                      showExpenseSection={slot.chunkIndex === lastTr}
+                                      showSummarySection={slot.chunkIndex === lastTr}
                                     />
                                   </div>
                                 )
-                              : num === pageCount
+                              : slot.kind === 'invoice'
                                 ? (
                                     <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--invoice">
                                       <InvoiceLegalInvoicePage model={displayModel} session={session} legalOverrides={legalOverrides}/>
@@ -592,17 +924,32 @@ export function InvoicePreviewPage() {
                       </span>
                     </button>
                     <div className="tt-inv-preview__thumb-meta">
-                      <label className="tt-inv-preview__thumb-check" title={exportOn ? 'Исключить из экспорта' : 'Включить в экспорт'}>
-                        <input
-                          type="checkbox"
-                          className="tt-inv-preview__thumb-check-input"
-                          checked={exportOn}
-                          onChange={(e) => togglePageExport(num, e.target.checked)}
-                          aria-label={`Включить страницу ${num} в экспорт`}
-                        />
-                        <span className="tt-inv-preview__thumb-check-ui" aria-hidden="true" />
-                      </label>
-                      <span className="tt-inv-preview__thumb-num">{num}</span>
+                      {included
+                        ? (
+                            <button
+                              type="button"
+                              className="tt-inv-preview__thumb-remove"
+                              title={`Удалить страницу «${pageKindLabelForSlot(slot)}» из счёта`}
+                              aria-label={`Удалить страницу «${pageKindLabelForSlot(slot)}»`}
+                              onClick={() => removePageKey(slot.key)}
+                            >
+                              ×
+                            </button>
+                          )
+                        : (
+                            <button
+                              type="button"
+                              className="tt-inv-preview__thumb-restore"
+                              title={`Вернуть страницу «${pageKindLabelForSlot(slot)}»`}
+                              aria-label={`Вернуть страницу «${pageKindLabelForSlot(slot)}»`}
+                              onClick={() => restorePageKey(slot.key)}
+                            >
+                              ↩
+                            </button>
+                          )}
+                      <span className="tt-inv-preview__thumb-num">
+                        {included ? displayNum : '—'}
+                      </span>
                     </div>
                   </div>
                 );
@@ -615,8 +962,8 @@ export function InvoicePreviewPage() {
               <div className="tt-inv-preview__pdf-toolbar-meta">
                 <span className="tt-inv-preview__pdf-toolbar-doc" title={toolbarTitle}>{toolbarTitle}</span>
                 {!coverModel ? <span className="tt-inv-preview__pdf-toolbar-status" role="status">Загрузка…</span> : null}
-                <span className="tt-inv-preview__pdf-toolbar-export" title="Страницы для PDF и Word">
-                  Экспорт: {exportSelectionLabel}
+                <span className="tt-inv-preview__pdf-toolbar-export" title="Страницы, входящие в счёт">
+                  В счёте: {exportSelectionLabel}
                 </span>
                 <div className="tt-inv-preview__lang-toggle" role="group" aria-label="Язык документа">
                   <button
@@ -703,11 +1050,20 @@ export function InvoicePreviewPage() {
                 ) : null}
                 <button
                   type="button"
+                  className="tt-inv-preview__pdf-toolbar-edit-btn"
+                  onClick={() => void handleSaveActivePageEdits()}
+                  disabled={!coverModel || saveBusy || downloadBusy != null}
+                  title="Сохранить правки документа (включая состав страниц)"
+                >
+                  {saveBusy ? 'Сохранение…' : 'Сохранить'}
+                </button>
+                <button
+                  type="button"
                   className={`tt-inv-preview__pdf-toolbar-edit-btn${isEditingActivePage ? ' tt-inv-preview__pdf-toolbar-edit-btn--active' : ''}`}
                   onClick={togglePageEdit}
-                  disabled={!coverModel}
+                  disabled={!coverModel || saveBusy}
                   aria-pressed={isEditingActivePage}
-                  title={editMode ? 'Завершить редактирование' : `Редактировать страницу ${activePage}`}
+                  title={editMode ? 'Сохранить и завершить редактирование' : `Редактировать страницу ${activePage}`}
                 >
                   {editMode ? 'Готово' : 'Редактировать'}
                 </button>
@@ -767,72 +1123,76 @@ export function InvoicePreviewPage() {
                     )
                   : null}
                 {coverModel
-                  ? (
-                      <div
-                        ref={(el) => {
-                          pageRefs.current[0] = el;
-                        }}
-                        className={`tt-inv-a4-page tt-inv-a4-page--cover${editingPage === 1 ? ' tt-inv-a4-page--editing' : ''}${!selectedPages.has(1) ? ' tt-inv-a4-page--export-off' : ''}`}
-                        aria-label={`Страница 1 из ${pageCount} — сопроводительное письмо${editingPage === 1 ? ', режим редактирования' : ''}`}
-                      >
-                        <InvoiceCoverLetter
-                          model={displayModel}
-                          editable={editingPage === 1}
-                          onChange={patchCoverModel}
-                        />
-                      </div>
-                    )
-                  : null}
-                {coverModel
-                  ? timeReportChunks.map((chunk, i) => {
-                      const pageNum = 2 + i;
+                  ? visiblePageSlots.map((slot, visibleIdx) => {
+                      const pageNum = visibleIdx + 1;
+                      const lastTr = timeReportChunks.length - 1;
+                      if (slot.kind === 'cover') {
+                          return (
+                            <div
+                              key={slot.key}
+                              ref={(el) => {
+                                pageRefs.current[visibleIdx] = el;
+                              }}
+                              className={`tt-inv-a4-page tt-inv-a4-page--cover${editingPage === pageNum ? ' tt-inv-a4-page--editing' : ''}`}
+                              aria-label={`Страница ${pageNum} из ${pageCount} — сопроводительное письмо${editingPage === pageNum ? ', режим редактирования' : ''}`}
+                            >
+                              <InvoiceCoverLetter
+                                model={displayModel}
+                                editable={editingPage === pageNum}
+                                onChange={patchCoverModel}
+                              />
+                            </div>
+                          );
+                      }
+                      if (slot.kind === 'timeReport') {
+                          const chunk = timeReportChunks[slot.chunkIndex] ?? [];
+                          return (
+                            <div
+                              key={slot.key}
+                              ref={(el) => {
+                                pageRefs.current[visibleIdx] = el;
+                              }}
+                              className={`tt-inv-a4-page tt-inv-a4-page--timerpt${editingPage === pageNum ? ' tt-inv-a4-page--editing' : ''}`}
+                              aria-label={`Страница ${pageNum} из ${pageCount} — time report${slot.chunkIndex > 0 ? ', продолжение' : ''}`}
+                            >
+                              <InvoiceTimeReportPage
+                                model={displayModel}
+                                pack={resolvedTimeReportPack}
+                                pageNumber={pageNum}
+                                detailRows={chunk}
+                                continuation={slot.chunkIndex > 0}
+                                showDetailTotalRow={slot.chunkIndex === lastTr}
+                                showExpenseSection={slot.chunkIndex === lastTr}
+                                showSummarySection={slot.chunkIndex === lastTr}
+                                editable={editingPage === pageNum}
+                                onPatchDetailRow={(rowIndex, field, value) => patchDetailRowInChunk(slot.chunkIndex, rowIndex, field, value)}
+                                onPatchExpenseRow={patchExpenseRow}
+                                onPatchSummaryRow={patchSummaryRow}
+                                onPatchPack={patchTimeReportPack}
+                              />
+                            </div>
+                          );
+                      }
                       return (
                         <div
-                          key={`tr-${i}`}
+                          key={slot.key}
                           ref={(el) => {
-                              pageRefs.current[1 + i] = el;
+                            pageRefs.current[visibleIdx] = el;
                           }}
-                          className={`tt-inv-a4-page tt-inv-a4-page--timerpt${editingPage === pageNum ? ' tt-inv-a4-page--editing' : ''}${!selectedPages.has(pageNum) ? ' tt-inv-a4-page--export-off' : ''}`}
-                          aria-label={`Страница ${pageNum} из ${pageCount} — time report${i > 0 ? ', продолжение' : ''}`}
+                          className={`tt-inv-a4-page tt-inv-a4-page--invoice${editingPage === pageNum ? ' tt-inv-a4-page--editing' : ''}`}
+                          aria-label={`Страница ${pageNum} из ${pageCount} — счёт`}
                         >
-                          <InvoiceTimeReportPage
+                          <InvoiceLegalInvoicePage
                             model={displayModel}
-                            pack={resolvedTimeReportPack}
-                            pageNumber={pageNum}
-                            detailRows={chunk}
-                            continuation={i > 0}
-                            showDetailTotalRow={i === timeReportChunks.length - 1}
-                            showExpenseSection={i === timeReportChunks.length - 1}
-                            showSummarySection={i === timeReportChunks.length - 1}
+                            session={session}
                             editable={editingPage === pageNum}
-                            onPatchDetailRow={(rowIndex, field, value) => patchDetailRowInChunk(i, rowIndex, field, value)}
-                            onPatchExpenseRow={patchExpenseRow}
-                            onPatchSummaryRow={patchSummaryRow}
-                            onPatchPack={patchTimeReportPack}
+                            legalOverrides={legalOverrides}
+                            onChangeLegalOverrides={patchLegalOverrides}
+                            onChangeModel={patchCoverModel}
                           />
                         </div>
                       );
                   })
-                  : null}
-                {coverModel
-                  ? (
-                      <div
-                        ref={(el) => {
-                          pageRefs.current[1 + timeReportChunks.length] = el;
-                        }}
-                        className={`tt-inv-a4-page tt-inv-a4-page--invoice${editingPage === pageCount ? ' tt-inv-a4-page--editing' : ''}${!selectedPages.has(pageCount) ? ' tt-inv-a4-page--export-off' : ''}`}
-                        aria-label={`Страница ${pageCount} из ${pageCount} — счёт`}
-                      >
-                        <InvoiceLegalInvoicePage
-                          model={displayModel}
-                          session={session}
-                          editable={editingPage === pageCount}
-                          legalOverrides={legalOverrides}
-                          onChangeLegalOverrides={patchLegalOverrides}
-                          onChangeModel={patchCoverModel}
-                        />
-                      </div>
-                    )
                   : null}
               </div>
             </div>

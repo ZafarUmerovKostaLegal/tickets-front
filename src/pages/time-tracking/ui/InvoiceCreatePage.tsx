@@ -428,6 +428,7 @@ export function InvoiceCreatePage() {
     const projectLabel = proj
       ? (proj.code ? `${proj.name} (${proj.code})` : proj.name).trim()
       : undefined;
+    const prevSession = readInvoicePreviewSession();
     writeInvoicePreviewSession({
       v: 1,
       mode: 'create',
@@ -447,6 +448,9 @@ export function InvoiceCreatePage() {
         ...(projectLabel ? { projectLabel } : {}),
         ...(createInvoiceNumber.trim() ? { invoiceNumber: createInvoiceNumber.trim() } : {}),
       },
+      ...(prevSession?.mode === 'create' && prevSession.documentOverrides
+        ? { documentOverrides: prevSession.documentOverrides }
+        : {}),
     });
     navigate(routes.timeTrackingInvoicePreview);
   }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, createInvoiceNumber, selTime, selExp, projects, navigate, unpaidExpensesAlertMessage, showAlert, t]);

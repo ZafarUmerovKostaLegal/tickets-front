@@ -194,6 +194,39 @@
   opacity: 0.42;
 }
 
+.tt-inv-preview__thumb-wrap--deleted .tt-inv-preview__thumb {
+  cursor: default;
+}
+
+.tt-inv-preview__thumb-remove,
+.tt-inv-preview__thumb-restore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  padding: 0;
+  border-radius: 3px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tt-inv-preview__thumb-remove:hover {
+  border-color: #ef4444;
+  color: #dc2626;
+  background: #fef2f2;
+}
+
+.tt-inv-preview__thumb-restore:hover {
+  border-color: var(--app-accent, #4f46e5);
+  color: var(--app-accent, #4f46e5);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, #ffffff);
+}
+
 .tt-inv-preview__thumb-meta {
   display: inline-flex;
   align-items: center;
