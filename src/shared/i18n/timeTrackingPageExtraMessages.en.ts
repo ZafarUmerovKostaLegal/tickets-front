@@ -1557,6 +1557,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             unbilledSectionDesc: 'Select a project and period, then click “Load” to fetch unbilled time and expenses for the invoice.',
             unbilledReimbursableNote: 'Expenses in this list are only client-reimbursable and already paid (`paid`). Approved but unpaid requests are not included; while any exist on the project, invoice creation is blocked.',
             skipPartnerProjectHint: 'Exception project (no partner confirmation): pick From/To freely; the invoice is built from loaded unbilled lines.',
+            skipPartnerToggleNeed: 'This project has no fully_confirmed report. Turn on the option above to pick dates and create an invoice without partner confirmation.',
             fromLabel: 'From',
             toLabel: 'To',
             openReportsLink: 'Open Reports',

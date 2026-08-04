@@ -18,6 +18,7 @@ import {
   listAllClientProjectsMerged,
   listAllClientProjectsForClientMerged,
   isForbiddenError,
+  patchClientProject,
   projectSkipsPartnerInvoiceConfirmation,
   writeInvoicePreviewSession,
   readInvoicePreviewSession,
@@ -74,7 +75,6 @@ export function InvoiceCreatePage() {
   const [clientIdsWithActiveProjects, setClientIdsWithActiveProjects] = useState<Set<string>>(() => new Set());
   const [confirmedReportsForCreate, setConfirmedReportsForCreate] = useState<PartnerReportConfirmationRequest[]>([]);
   const [confirmedProjectIdsForCreate, setConfirmedProjectIdsForCreate] = useState<Set<string>>(() => new Set());
-  const [confirmedClientIdsForCreate, setConfirmedClientIdsForCreate] = useState<Set<string>>(() => new Set());
   const [clientsErr, setClientsErr] = useState<string | null>(null);
   const [createClientId, setCreateClientId] = useState('');
   const [createProjectId, setCreateProjectId] = useState('');
@@ -94,30 +94,30 @@ export function InvoiceCreatePage() {
   const [unpaidExpensesBlockReason, setUnpaidExpensesBlockReason] = useState<string | null>(null);
   const [unbilledLoading, setUnbilledLoading] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
+  const [skipPartnerSaving, setSkipPartnerSaving] = useState(false);
 
+  /** All clients that have at least one active project. */
   const clientsForCreate = useMemo(
-    () => clients.filter((c) => {
-      if (!clientIdsWithActiveProjects.has(c.id))
-        return false;
-      if (confirmedClientIdsForCreate.has(c.id))
-        return true;
-      return activeProjectsAll.some(
-        (p) => String(p.client_id) === c.id && projectSkipsPartnerInvoiceConfirmation(p),
-      );
-    }),
-    [clients, clientIdsWithActiveProjects, confirmedClientIdsForCreate, activeProjectsAll],
+    () => clients.filter((c) => clientIdsWithActiveProjects.has(c.id)),
+    [clients, clientIdsWithActiveProjects],
   );
-  const selectedProjectSkipsPartner = useMemo(() => {
+  const selectedProject = useMemo(() => {
     const pid = createProjectId.trim();
     if (!pid)
-      return false;
-    const fromList = projects.find((p) => p.id === pid);
-    if (fromList)
-      return projectSkipsPartnerInvoiceConfirmation(fromList);
-    const fromAll = activeProjectsAll.find((p) => p.id === pid);
-    return projectSkipsPartnerInvoiceConfirmation(fromAll);
+      return null;
+    return projects.find((p) => p.id === pid)
+      ?? activeProjectsAll.find((p) => p.id === pid)
+      ?? null;
   }, [createProjectId, projects, activeProjectsAll]);
-
+  const selectedProjectSkipsPartner = useMemo(
+    () => projectSkipsPartnerInvoiceConfirmation(selectedProject),
+    [selectedProject],
+  );
+  const selectedProjectHasConfirmed = useMemo(() => {
+    const pid = createProjectId.trim();
+    return pid !== '' && confirmedProjectIdsForCreate.has(pid);
+  }, [createProjectId, confirmedProjectIdsForCreate]);
+  const showSkipPartnerToggle = Boolean(createProjectId && createClientId);
   useEffect(() => {
     const ti = timeSelectAllRef.current;
     if (ti) {
@@ -170,25 +170,18 @@ export function InvoiceCreatePage() {
         const confirmed = rows.filter((r) => String(r.status ?? '').trim().toLowerCase() === 'fully_confirmed');
         setConfirmedReportsForCreate(confirmed);
         const projectIds = new Set(confirmed.map((r) => String(r.projectId ?? '').trim()).filter(Boolean));
-        const clientIds = new Set<string>();
-        for (const p of activeProjectsAll) {
-          if (projectIds.has(String(p.id)))
-            clientIds.add(String(p.client_id));
-        }
         setConfirmedProjectIdsForCreate(projectIds);
-        setConfirmedClientIdsForCreate(clientIds);
       })
       .catch(() => {
         if (cancelled)
           return;
         setConfirmedReportsForCreate([]);
         setConfirmedProjectIdsForCreate(new Set());
-        setConfirmedClientIdsForCreate(new Set());
       });
     return () => {
       cancelled = true;
     };
-  }, [activeProjectsAll]);
+  }, []);
 
   useEffect(() => {
     setUnbilledPartnerBlockReason(null);
@@ -205,14 +198,49 @@ export function InvoiceCreatePage() {
       return;
     }
     listAllClientProjectsForClientMerged(createClientId)
-      .then((rows) => setProjects(rows.filter((p) => {
-        if (!isActiveTimeManagerProjectRow(p))
-          return false;
-        return confirmedProjectIdsForCreate.has(String(p.id))
-          || projectSkipsPartnerInvoiceConfirmation(p);
-      })))
+      .then((rows) => setProjects(rows.filter((p) => isActiveTimeManagerProjectRow(p))))
       .catch(() => setProjects([]));
-  }, [createClientId, confirmedProjectIdsForCreate]);
+  }, [createClientId]);
+
+  const applyUpdatedProjectLocally = useCallback((updated: TimeManagerClientProjectRow) => {
+    setProjects((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setActiveProjectsAll((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+  }, []);
+
+  const onToggleSkipPartnerInvoice = useCallback(async (next: boolean) => {
+    const clientId = createClientId.trim();
+    const projectId = createProjectId.trim();
+    if (!clientId || !projectId || skipPartnerSaving)
+      return;
+    if (selectedProjectSkipsPartner === next)
+      return;
+    setSkipPartnerSaving(true);
+    try {
+      const updated = await patchClientProject(clientId, projectId, {
+        skipPartnerInvoiceConfirmation: next,
+      });
+      applyUpdatedProjectLocally(updated);
+      if (next)
+        setUnbilledPartnerBlockReason(null);
+    }
+    catch (e: unknown) {
+      const msg = isForbiddenError(e)
+        ? t('timeTrackingPage.invoices.errors.noClientAccess')
+        : (e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic'));
+      await showAlert({ message: msg });
+    }
+    finally {
+      setSkipPartnerSaving(false);
+    }
+  }, [
+    applyUpdatedProjectLocally,
+    createClientId,
+    createProjectId,
+    selectedProjectSkipsPartner,
+    showAlert,
+    skipPartnerSaving,
+    t,
+  ]);
 
   useEffect(() => {
     if (createClientId && !clientsForCreate.some((c) => c.id === createClientId))
@@ -635,6 +663,33 @@ export function InvoiceCreatePage() {
                   }} getSearchText={(p) => `${p.name} ${p.code ?? ''} ${p.id}`.trim()} onSelect={(p) => setCreateProjectId(p.id)} disabled={!createClientId} aria-labelledby="tt-inv-create-project-lbl" />
                 </div>
               </div>
+              {showSkipPartnerToggle ? (
+                <div className="tt-inv-dialog__field" style={{ marginTop: '0.85rem' }}>
+                  <label className="tt-ios-toggle-row">
+                    <span className="tt-ios-toggle-row__text">
+                      {t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmation')}
+                    </span>
+                    <span className="tt-ios-toggle">
+                      <input
+                        type="checkbox"
+                        className="tt-ios-toggle__input"
+                        checked={selectedProjectSkipsPartner}
+                        onChange={(e) => void onToggleSkipPartnerInvoice(e.target.checked)}
+                        disabled={skipPartnerSaving || createBusy}
+                        aria-describedby="tt-inv-skip-partner-hint"
+                      />
+                      <span className="tt-ios-toggle__slider" aria-hidden />
+                    </span>
+                  </label>
+                  <p id="tt-inv-skip-partner-hint" className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                    {selectedProjectSkipsPartner
+                      ? t('timeTrackingPage.invoices.createDialog.skipPartnerProjectHint')
+                      : selectedProjectHasConfirmed
+                        ? t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmationHint')
+                        : t('timeTrackingPage.invoices.createDialog.skipPartnerToggleNeed')}
+                  </p>
+                </div>
+              ) : null}
             </section>
 
             <section className="tt-inv-page__section">
@@ -679,11 +734,6 @@ export function InvoiceCreatePage() {
                   <p className="tt-inv-page__section-desc">
                     {t('timeTrackingPage.invoices.createDialog.unbilledReimbursableNote')}
                   </p>
-                  {selectedProjectSkipsPartner ? (
-                    <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
-                      {t('timeTrackingPage.invoices.createDialog.skipPartnerProjectHint')}
-                    </p>
-                  ) : null}
                 </div>
               </div>
               <div className="tt-inv-dialog__period-bar">

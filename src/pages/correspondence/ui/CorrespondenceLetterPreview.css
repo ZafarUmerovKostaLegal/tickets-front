@@ -84,6 +84,117 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border, #e2e8f0) 80%, transparent);
 }
 
+.corr-letter {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 297mm;
+  padding: 18mm 18mm 22mm;
+  background: #ffffff;
+  color: #333333;
+  font-family: 'Montserrat', 'Gotham Pro', 'Avenir Next', 'Segoe UI', sans-serif;
+}
+
+.corr-letter--editable {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-border, #e2e8f0) 80%, transparent);
+}
+
+.corr-letter__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem 2rem;
+}
+
+.corr-letter__brand-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.15rem;
+  min-width: 0;
+}
+
+.corr-letter__brand {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.corr-letter__logo {
+  display: block;
+  width: auto;
+  height: 52px;
+  max-width: min(220px, 48vw);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.corr-letter__meta {
+  margin: 0;
+  padding: 0;
+}
+
+.corr-letter__meta-line {
+  margin: 0;
+  font-size: 11px;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.45;
+  color: #4a4a4a;
+}
+
+.corr-letter__meta-label {
+  font-style: italic;
+}
+
+.corr-letter__meta-date,
+.corr-letter__field.corr-letter__meta-date {
+  font: inherit;
+  font-style: italic;
+  color: inherit;
+}
+
+.corr-letter__contact {
+  margin: 0;
+  padding: 0;
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: #666666;
+  text-align: right;
+  max-width: 14.5rem;
+  flex-shrink: 0;
+}
+
+.corr-letter__contact > span {
+  display: block;
+}
+
+.corr-letter__body {
+  min-height: 180mm;
+  margin-top: 1.75rem;
+}
+
+.corr-letter--editable .corr-letter__field {
+  box-sizing: border-box;
+  width: auto;
+  min-width: 8rem;
+  max-width: 100%;
+  margin: 0;
+  padding: 0 0.15rem;
+  border: none;
+  border-bottom: 1px dashed color-mix(in srgb, #94a3b8 70%, transparent);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-style: italic;
+  outline: none;
+}
+
+.corr-letter--editable .corr-letter__field:focus {
+  border-bottom-color: var(--app-accent, #4f46e5);
+}
+
 .corr-doc-preview__loading {
   flex: 1;
   display: flex;
