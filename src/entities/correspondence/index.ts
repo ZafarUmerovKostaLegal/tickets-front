@@ -9,6 +9,7 @@ export type {
     CorrespondenceListResponse,
     CorrespondenceStats,
     CorrespondenceUserSnippet,
+    CreateOutgoingDraftBody,
     ListCorrespondenceParams,
     PatchCorrespondenceBody,
     RegisterIncomingBody,
@@ -23,9 +24,11 @@ export {
 } from './lib/normalize';
 
 export {
+    approveOutgoingCorrespondence,
     archiveCorrespondence,
     correspondenceErrorMessage,
     CorrespondenceHttpError,
+    createOutgoingDraft,
     fetchCorrespondenceAttachmentBlob,
     fetchCorrespondenceDocument,
     fetchCorrespondenceStats,
@@ -35,4 +38,6 @@ export {
     patchCorrespondence,
     registerIncomingCorrespondence,
     registerOutgoingCorrespondence,
+    rejectOutgoingCorrespondence,
+    submitOutgoingForReview,
 } from './api';

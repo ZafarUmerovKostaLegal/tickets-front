@@ -1,12 +1,18 @@
-import { registerOutgoingCorrespondence, type CorrespondenceDocument } from '@entities/correspondence';
+import {
+    createOutgoingDraft,
+    submitOutgoingForReview,
+    type CorrespondenceDocument,
+} from '@entities/correspondence';
 import type { InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
 import { buildOutgoingLetterPdfBlob, outgoingLetterPdfFileName } from './buildOutgoingLetterPdf';
 import { resolveOutgoingCounterparty } from './outgoingLetterSession';
 
-export async function registerOutgoingLetterDocument(input: {
+/** Create draft + send to partner for review (registration happens after approve). */
+export async function submitOutgoingLetterForReview(input: {
     subject: string;
     coverModel: InvoiceCoverLetterModel;
     letterDateIso: string;
+    partnerUserId: number;
     extraFiles?: File[];
     comment?: string;
 }): Promise<CorrespondenceDocument> {
@@ -19,11 +25,13 @@ export async function registerOutgoingLetterDocument(input: {
         { type: 'application/pdf' },
     );
     const attachmentFiles = [pdfFile, ...(input.extraFiles ?? [])];
-    return registerOutgoingCorrespondence({
+    const draft = await createOutgoingDraft({
         counterparty,
         subject,
         docType: 'letter',
         comment: input.comment,
+        partnerUserId: input.partnerUserId,
         attachmentFiles,
     });
+    return submitOutgoingForReview(draft.id, input.partnerUserId);
 }

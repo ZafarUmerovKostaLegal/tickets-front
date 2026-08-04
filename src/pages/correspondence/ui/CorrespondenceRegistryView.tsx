@@ -671,6 +671,10 @@ export function CorrespondenceRegistryView({
         open={cardDocId !== null}
         documentId={cardDocId}
         onClose={() => setCardDocId(null)}
+        onChanged={() => {
+          // Refresh list after approve/reject/resubmit
+          setReloadToken((n) => n + 1);
+        }}
       />
       <CorrespondenceRegisterIncomingModal
         open={incomingModalOpen}

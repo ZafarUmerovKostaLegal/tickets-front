@@ -36,6 +36,9 @@ export const CORR_DOC_TYPE_OPTIONS: { key: CorrDocType; label: string }[] = [
 ];
 
 export const CORR_STATUS_BADGE: Record<CorrDocStatus, { label: string; className: string }> = {
+    draft: { label: 'Черновик', className: 'corr__badge corr__badge--status-progress' },
+    pending_review: { label: 'На проверке', className: 'corr__badge corr__badge--status-approval' },
+    rejected: { label: 'Отклонено', className: 'corr__badge corr__badge--status-done' },
     new: { label: 'Новое', className: 'corr__badge corr__badge--status-new' },
     progress: { label: 'В работе', className: 'corr__badge corr__badge--status-progress' },
     approval: { label: 'На согласовании', className: 'corr__badge corr__badge--status-approval' },

@@ -1,4 +1,8 @@
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
+import { PDFDocument, rgb } from 'pdf-lib';
+import dejavuSansBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
+import dejavuSansObliqueUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Oblique.ttf?url';
+import dejavuSansRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
 import type { InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
 import { letterHtmlToPlainText } from './correspondenceLetterHtml';
 import {
@@ -12,6 +16,13 @@ const PAGE_H = 841.89;
 const ML = 54;
 const MR = 54;
 const MT = 48;
+
+async function fetchFontBytes(url: string): Promise<ArrayBuffer> {
+    const res = await fetch(url);
+    if (!res.ok)
+        throw new Error(`Не удалось загрузить шрифт PDF (${res.status})`);
+    return res.arrayBuffer();
+}
 
 function wrapText(text: string, font: { widthOfTextAtSize: (t: string, s: number) => number }, size: number, maxWidth: number): string[] {
     const words = text.split(/\s+/).filter(Boolean);
@@ -32,16 +43,22 @@ function wrapText(text: string, font: { widthOfTextAtSize: (t: string, s: number
     return lines;
 }
 
-/** Outgoing letter PDF with letterhead + free-form body text. */
+/** Outgoing letter PDF with letterhead + free-form body text (Unicode / Cyrillic via DejaVu). */
 export async function buildOutgoingLetterPdfBlob(
     model: InvoiceCoverLetterModel,
     opts?: { registryNumber?: string | null },
 ): Promise<Blob> {
     const doc = await PDFDocument.create();
+    doc.registerFontkit(fontkit);
+    const [regularBytes, boldBytes, obliqueBytes] = await Promise.all([
+        fetchFontBytes(dejavuSansRegularUrl),
+        fetchFontBytes(dejavuSansBoldUrl),
+        fetchFontBytes(dejavuSansObliqueUrl),
+    ]);
     const page = doc.addPage([PAGE_W, PAGE_H]);
-    const font = await doc.embedFont(StandardFonts.Helvetica);
-    const fontItalic = await doc.embedFont(StandardFonts.HelveticaOblique);
-    const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    const font = await doc.embedFont(regularBytes, { subset: true });
+    const fontItalic = await doc.embedFont(obliqueBytes, { subset: true });
+    const fontBold = await doc.embedFont(boldBytes, { subset: true });
     const ink = rgb(0.2, 0.2, 0.2);
     const muted = rgb(0.4, 0.4, 0.4);
     const maxW = PAGE_W - ML - MR;

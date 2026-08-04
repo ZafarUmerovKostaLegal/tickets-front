@@ -11,7 +11,15 @@ import type {
 } from '../model/types';
 
 const DOC_TYPES = new Set<CorrDocType>(['letter', 'contract', 'note']);
-const STATUSES = new Set<CorrDocStatus>(['new', 'progress', 'approval', 'done']);
+const STATUSES = new Set<CorrDocStatus>([
+    'draft',
+    'pending_review',
+    'rejected',
+    'new',
+    'progress',
+    'approval',
+    'done',
+]);
 const DIRECTIONS = new Set<CorrDirection>(['incoming', 'outgoing']);
 const ATT_KINDS = new Set<CorrAttachmentKind>(['scan', 'attachment']);
 
@@ -51,7 +59,9 @@ function userLabel(u: CorrespondenceUserSnippet | null | undefined): string {
     return u.displayName?.trim() || u.email?.trim() || `User #${u.id}`;
 }
 
-export function formatCorrRegisteredAt(iso: string): string {
+export function formatCorrRegisteredAt(iso: string | null | undefined): string {
+    if (!iso)
+        return '—';
     const d = new Date(iso);
     if (Number.isNaN(d.getTime()))
         return iso;
@@ -85,9 +95,9 @@ export function normalizeCorrespondenceDocument(raw: unknown): CorrespondenceDoc
         return null;
     const o = raw as Record<string, unknown>;
     const id = pickStr(o, 'id');
-    const registryNumber = pickStr(o, 'registryNumber', 'registry_number');
-    if (!id || !registryNumber)
+    if (!id)
         return null;
+    const registryNumber = pickStr(o, 'registryNumber', 'registry_number') || null;
     const directionRaw = pickStr(o, 'direction').toLowerCase();
     if (!DIRECTIONS.has(directionRaw as CorrDirection))
         return null;
@@ -101,6 +111,8 @@ export function normalizeCorrespondenceDocument(raw: unknown): CorrespondenceDoc
     const attachments = Array.isArray(attachmentsRaw)
         ? attachmentsRaw.map(normalizeCorrespondenceAttachment).filter((x): x is CorrespondenceAttachment => x != null)
         : undefined;
+    const registeredAt = pickStr(o, 'registeredAt', 'registered_at') || null;
+    const createdAt = pickStr(o, 'createdAt', 'created_at') || null;
     return {
         id,
         registryNumber,
@@ -109,7 +121,7 @@ export function normalizeCorrespondenceDocument(raw: unknown): CorrespondenceDoc
         subject: pickStr(o, 'subject'),
         docType,
         status,
-        registeredAt: pickStr(o, 'registeredAt', 'registered_at') || new Date().toISOString(),
+        registeredAt,
         responsibleUserId,
         responsibleUser: normalizeUserSnippet(o.responsibleUser ?? o.responsible_user),
         partnerUserId,
@@ -117,6 +129,8 @@ export function normalizeCorrespondenceDocument(raw: unknown): CorrespondenceDoc
         attachmentsCount: num(o.attachmentsCount ?? o.attachments_count) ?? attachments?.length ?? 0,
         hasScan: Boolean(o.hasScan ?? o.has_scan),
         comment: pickStr(o, 'comment') || null,
+        rejectionComment: pickStr(o, 'rejectionComment', 'rejection_comment') || null,
+        createdAt,
         ...(attachments ? { attachments } : {}),
     };
 }
@@ -134,12 +148,18 @@ export function normalizeCorrespondenceStats(raw: unknown): CorrespondenceStats 
 export function mapDocumentToCorrRow(doc: CorrespondenceDocument): CorrRow {
     return {
         id: doc.id,
-        registryNumber: doc.registryNumber,
+        registryNumber: doc.registryNumber || (doc.status === 'pending_review'
+            ? 'На проверке'
+            : doc.status === 'rejected'
+                ? 'Отклонено'
+                : doc.status === 'draft'
+                    ? 'Черновик'
+                    : '—'),
         direction: doc.direction,
         counterparty: doc.counterparty,
         subject: doc.subject,
         type: doc.docType,
-        date: formatCorrRegisteredAt(doc.registeredAt),
+        date: formatCorrRegisteredAt(doc.registeredAt || doc.createdAt),
         responsible: userLabel(doc.responsibleUser),
         status: doc.status,
         partnerUserId: doc.partnerUserId ?? undefined,

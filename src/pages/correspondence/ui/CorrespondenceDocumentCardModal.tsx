@@ -1,13 +1,19 @@
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
+    approveOutgoingCorrespondence,
     correspondenceErrorMessage,
     fetchCorrespondenceDocument,
     formatCorrRegisteredAt,
     openCorrespondenceAttachmentInNewTab,
+    rejectOutgoingCorrespondence,
+    submitOutgoingForReview,
     type CorrespondenceAttachment,
     type CorrespondenceDocument,
 } from '@entities/correspondence';
+import { listPartners, type UserPublic } from '@entities/user';
+import { useCurrentUser } from '@shared/hooks';
+import { useAppDialog } from '@shared/ui';
 import {
     CORR_COUNTERPARTY_COLUMN,
     CORR_STATUS_BADGE,
@@ -19,6 +25,7 @@ export type CorrespondenceDocumentCardModalProps = {
     documentId: string | null;
     onClose: () => void;
     onArchived?: () => void;
+    onChanged?: () => void;
 };
 
 function formatBytes(bytes: number): string {
@@ -31,6 +38,10 @@ function formatBytes(bytes: number): string {
 
 function userLabel(name: string | null | undefined, email: string | null | undefined, id: number): string {
     return name?.trim() || email?.trim() || `User #${id}`;
+}
+
+function isPartnerRole(role: string | null | undefined): boolean {
+    return (role || '').trim().toLowerCase().replace('ё', 'е') === 'партнер';
 }
 
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
@@ -88,10 +99,14 @@ export function CorrespondenceDocumentCardModal({
     open,
     documentId,
     onClose,
+    onChanged,
 }: CorrespondenceDocumentCardModalProps) {
     const titleId = useId();
+    const { user } = useCurrentUser();
+    const { showAlert, showConfirm } = useAppDialog();
     const [doc, setDoc] = useState<CorrespondenceDocument | null>(null);
     const [loading, setLoading] = useState(false);
+    const [acting, setActing] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [fileError, setFileError] = useState<string | null>(null);
 
@@ -127,14 +142,14 @@ export function CorrespondenceDocumentCardModal({
         if (!open)
             return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') {
+            if (e.key === 'Escape' && !acting) {
                 e.preventDefault();
                 onClose();
             }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [open, onClose]);
+    }, [open, onClose, acting]);
 
     if (!open || !documentId)
         return null;
@@ -143,13 +158,131 @@ export function CorrespondenceDocumentCardModal({
     const typeBadge = doc ? CORR_TYPE_BADGE[doc.docType] : null;
     const statusBadge = doc ? CORR_STATUS_BADGE[doc.status] : null;
     const attachments = doc?.attachments ?? [];
+    const uid = user?.id != null ? Number(user.id) : null;
+    const canPartnerAct = Boolean(
+        doc
+        && doc.direction === 'outgoing'
+        && doc.status === 'pending_review'
+        && uid != null
+        && doc.partnerUserId === uid
+        && isPartnerRole(user?.role),
+    );
+    const canAuthorResubmit = Boolean(
+        doc
+        && doc.direction === 'outgoing'
+        && doc.status === 'rejected'
+        && uid != null
+        && doc.responsibleUserId === uid,
+    );
+
+    const refresh = async (next: CorrespondenceDocument) => {
+        setDoc(next);
+        onChanged?.();
+    };
+
+    const handleApprove = async () => {
+        if (!doc)
+            return;
+        const ok = await showConfirm({
+            title: 'Подтвердить письмо?',
+            message: 'После подтверждения документ будет зарегистрирован в реестре исходящих.',
+        });
+        if (!ok)
+            return;
+        setActing(true);
+        try {
+            const next = await approveOutgoingCorrespondence(doc.id);
+            await refresh(next);
+            void showAlert({
+                title: 'Зарегистрировано',
+                message: `Письмо зарегистрировано как ${next.registryNumber}.`,
+            });
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось подтвердить',
+                message: correspondenceErrorMessage(err, 'Ошибка подтверждения'),
+            });
+        }
+        finally {
+            setActing(false);
+        }
+    };
+
+    const handleReject = async () => {
+        if (!doc)
+            return;
+        const reason = window.prompt('Комментарий при отказе (обязательно):');
+        if (reason == null)
+            return;
+        const comment = reason.trim();
+        if (!comment) {
+            void showAlert({ title: 'Нужен комментарий', message: 'Укажите причину отказа.' });
+            return;
+        }
+        setActing(true);
+        try {
+            const next = await rejectOutgoingCorrespondence(doc.id, comment);
+            await refresh(next);
+            void showAlert({ title: 'Отклонено', message: 'Заявитель получит уведомление с комментарием.' });
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось отклонить',
+                message: correspondenceErrorMessage(err, 'Ошибка отклонения'),
+            });
+        }
+        finally {
+            setActing(false);
+        }
+    };
+
+    const handleResubmit = async () => {
+        if (!doc)
+            return;
+        let partners: UserPublic[] = [];
+        try {
+            partners = await listPartners();
+        }
+        catch {
+            void showAlert({ title: 'Ошибка', message: 'Не удалось загрузить список партнёров.' });
+            return;
+        }
+        const names = partners.map((p) => `${p.id}: ${userLabel(p.display_name, p.email, p.id)}`).join('\n');
+        const raw = window.prompt(
+            `Введите ID партнёра для повторной проверки:\n${names.slice(0, 800)}`,
+            doc.partnerUserId ? String(doc.partnerUserId) : '',
+        );
+        if (raw == null)
+            return;
+        const partnerId = Number(raw.trim());
+        if (!Number.isFinite(partnerId) || partnerId <= 0) {
+            void showAlert({ title: 'Неверный ID', message: 'Укажите числовой ID партнёра.' });
+            return;
+        }
+        setActing(true);
+        try {
+            const next = await submitOutgoingForReview(doc.id, partnerId);
+            await refresh(next);
+            void showAlert({ title: 'Отправлено', message: 'Письмо снова отправлено на проверку партнёру.' });
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось отправить',
+                message: correspondenceErrorMessage(err, 'Ошибка повторной отправки'),
+            });
+        }
+        finally {
+            setActing(false);
+        }
+    };
 
     return createPortal(
         <div
             className="corr-modal corr-modal--enter"
             role="presentation"
             onMouseDown={(e) => {
-                if (e.target === e.currentTarget)
+                if (e.target === e.currentTarget && !acting)
                     onClose();
             }}
         >
@@ -165,13 +298,15 @@ export function CorrespondenceDocumentCardModal({
                         <h2 id={titleId} className="corr-modal__title">Карточка документа</h2>
                         {doc ? (
                             <p className="corr-modal__lead corr-card-modal__lead">
-                                <span className="corr-card-modal__mono">{doc.registryNumber}</span>
+                                <span className="corr-card-modal__mono">
+                                    {doc.registryNumber || CORR_STATUS_BADGE[doc.status]?.label || '—'}
+                                </span>
                                 {' · '}
                                 {doc.direction === 'incoming' ? 'Входящее' : 'Исходящее'}
                             </p>
                         ) : null}
                     </div>
-                    <button type="button" className="corr-modal__close" onClick={onClose} aria-label="Закрыть">
+                    <button type="button" className="corr-modal__close" onClick={onClose} aria-label="Закрыть" disabled={acting}>
                         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                             <line x1="18" y1="6" x2="6" y2="18"/>
                             <line x1="6" y1="6" x2="18" y2="18"/>
@@ -196,14 +331,12 @@ export function CorrespondenceDocumentCardModal({
                     <div className="corr-card-modal__body">
                         <dl className="corr-card-modal__grid">
                             <DetailRow label="Номер реестра">
-                                <span className="corr-card-modal__mono">{doc.registryNumber}</span>
+                                <span className="corr-card-modal__mono">{doc.registryNumber || '—'}</span>
                             </DetailRow>
                             <DetailRow label={counterpartyLabel}>{doc.counterparty || '—'}</DetailRow>
-                            {doc.direction === 'incoming' ? (
+                            {doc.partnerUser ? (
                                 <DetailRow label="Партнёр">
-                                    {doc.partnerUser
-                                        ? userLabel(doc.partnerUser.displayName, doc.partnerUser.email, doc.partnerUser.id)
-                                        : '—'}
+                                    {userLabel(doc.partnerUser.displayName, doc.partnerUser.email, doc.partnerUser.id)}
                                 </DetailRow>
                             ) : null}
                             <DetailRow label="Тема">{doc.subject || '—'}</DetailRow>
@@ -224,6 +357,11 @@ export function CorrespondenceDocumentCardModal({
                             {doc.comment ? (
                                 <DetailRow label="Комментарий">
                                     <span className="corr-card-modal__comment">{doc.comment}</span>
+                                </DetailRow>
+                            ) : null}
+                            {doc.rejectionComment ? (
+                                <DetailRow label="Комментарий отказа">
+                                    <span className="corr-card-modal__comment">{doc.rejectionComment}</span>
                                 </DetailRow>
                             ) : null}
                         </dl>
@@ -250,8 +388,38 @@ export function CorrespondenceDocumentCardModal({
                     </div>
                 ) : null}
 
-                <div className="corr-modal__actions corr-modal__actions--solo">
-                    <button type="button" className="corr-modal__btn corr-modal__btn--primary" onClick={onClose}>
+                <div className="corr-modal__actions">
+                    {canPartnerAct ? (
+                        <>
+                            <button
+                                type="button"
+                                className="corr-modal__btn corr-modal__btn--ghost"
+                                disabled={acting}
+                                onClick={() => void handleReject()}
+                            >
+                                Отклонить
+                            </button>
+                            <button
+                                type="button"
+                                className="corr-modal__btn corr-modal__btn--primary"
+                                disabled={acting}
+                                onClick={() => void handleApprove()}
+                            >
+                                {acting ? '…' : 'Подтвердить'}
+                            </button>
+                        </>
+                    ) : null}
+                    {canAuthorResubmit ? (
+                        <button
+                            type="button"
+                            className="corr-modal__btn corr-modal__btn--primary"
+                            disabled={acting}
+                            onClick={() => void handleResubmit()}
+                        >
+                            Отправить повторно
+                        </button>
+                    ) : null}
+                    <button type="button" className="corr-modal__btn corr-modal__btn--primary" onClick={onClose} disabled={acting}>
                         Закрыть
                     </button>
                 </div>

@@ -10,18 +10,18 @@ import {
     readOutgoingLetterDraft,
     type OutgoingLetterDraftV1,
 } from '../lib/outgoingLetterSession';
-import { registerOutgoingLetterDocument } from '../lib/registerOutgoingLetter';
+import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
 import { CorrespondenceLetterWorkspace } from './CorrespondenceLetterWorkspace';
+import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
 import { IcoEdit, type MockAttachment, type MockLetter } from './CorrespondencePage';
 import './CorrespondenceLetterPreview.css';
 import './CorrespondencePage.css';
 
-function IcoSave() {
+function IcoSend() {
     return (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-            <polyline points="17 21 17 13 7 13 7 21" />
-            <polyline points="7 3 7 8 15 8" />
+            <line x1="22" y1="2" x2="11" y2="13" />
+            <polygon points="22 2 15 22 11 13 2 9 22 2" />
         </svg>
     );
 }
@@ -31,6 +31,7 @@ export function OutgoingLetterPreviewPage() {
     const { showAlert } = useAppDialog();
     const [draft, setDraft] = useState<OutgoingLetterDraftV1 | null | undefined>(undefined);
     const [busy, setBusy] = useState(false);
+    const [reviewOpen, setReviewOpen] = useState(false);
 
     useEffect(() => {
         setDraft(readOutgoingLetterDraft());
@@ -68,7 +69,7 @@ export function OutgoingLetterPreviewPage() {
         navigate(getCorrespondenceOutgoingUrl());
     }, [navigate]);
 
-    const handleRegister = async () => {
+    const openReviewModal = () => {
         if (!draft)
             return;
         const check = isOutgoingLetterDraftValid(draft.subject, draft.coverModel);
@@ -76,22 +77,33 @@ export function OutgoingLetterPreviewPage() {
             void showAlert({ title: 'Проверьте поля', message: check.message ?? 'Заполните обязательные поля.' });
             return;
         }
+        setReviewOpen(true);
+    };
+
+    const handleSubmitReview = async (partnerUserId: number, partnerName: string) => {
+        if (!draft)
+            return;
         setBusy(true);
         try {
-            await registerOutgoingLetterDocument({
+            await submitOutgoingLetterForReview({
                 subject: draft.subject,
                 coverModel: draft.coverModel,
                 letterDateIso: draft.letterDateIso,
+                partnerUserId,
                 extraFiles: files,
             });
             clearOutgoingLetterDraft();
-            void showAlert({ title: 'Исходящее сохранено', message: 'Документ зарегистрирован в реестре.' });
+            setReviewOpen(false);
+            void showAlert({
+                title: 'Отправлено на проверку',
+                message: `Письмо отправлено партнёру «${partnerName}». После подтверждения оно будет зарегистрировано автоматически.`,
+            });
             navigate(getCorrespondenceOutgoingUrl());
         }
         catch (err) {
             const message = err instanceof Error && err.message
                 ? err.message
-                : 'Не удалось зарегистрировать исходящее письмо.';
+                : 'Не удалось отправить письмо на проверку.';
             void showAlert({ title: 'Не удалось сохранить', message });
         }
         finally {
@@ -105,34 +117,42 @@ export function OutgoingLetterPreviewPage() {
         return <Navigate to={routes.correspondenceOutgoingCreate} replace />;
 
     return (
-        <CorrespondenceLetterWorkspace
-            letter={letter}
-            coverModel={draft.coverModel}
-            editable={false}
-            navbarTab="preview"
-            onBack={goBackToEdit}
-            toolbarSubject={(
-                <span className="tt-inv-preview__pdf-toolbar-export" title={draft.subject}>
-                    {draft.subject}
-                </span>
-            )}
-            navbarActions={(
-                <>
-                    <button type="button" className="corr-n__btn-secondary" onClick={goRegistry} disabled={busy}>
-                        К реестру
-                    </button>
-                    <button type="button" className="corr-n__btn-secondary" onClick={goBackToEdit} disabled={busy}>
-                        <IcoEdit />
-                        {' '}
-                        Редактировать
-                    </button>
-                    <button type="button" className="corr-n__btn-primary" onClick={() => void handleRegister()} disabled={busy}>
-                        <IcoSave />
-                        {' '}
-                        {busy ? 'Сохранение…' : 'Зарегистрировать'}
-                    </button>
-                </>
-            )}
-        />
+        <>
+            <CorrespondenceLetterWorkspace
+                letter={letter}
+                coverModel={draft.coverModel}
+                editable={false}
+                navbarTab="preview"
+                onBack={goBackToEdit}
+                toolbarSubject={(
+                    <span className="tt-inv-preview__pdf-toolbar-export" title={draft.subject}>
+                        {draft.subject}
+                    </span>
+                )}
+                navbarActions={(
+                    <>
+                        <button type="button" className="corr-n__btn-secondary" onClick={goRegistry} disabled={busy}>
+                            К реестру
+                        </button>
+                        <button type="button" className="corr-n__btn-secondary" onClick={goBackToEdit} disabled={busy}>
+                            <IcoEdit />
+                            {' '}
+                            Редактировать
+                        </button>
+                        <button type="button" className="corr-n__btn-primary" onClick={openReviewModal} disabled={busy}>
+                            <IcoSend />
+                            {' '}
+                            {busy ? 'Отправка…' : 'На проверку'}
+                        </button>
+                    </>
+                )}
+            />
+            <OutgoingSubmitReviewModal
+                open={reviewOpen}
+                onClose={() => { if (!busy) setReviewOpen(false); }}
+                onSubmit={(partnerUserId, partnerName) => { void handleSubmitReview(partnerUserId, partnerName); }}
+                submitPending={busy}
+            />
+        </>
     );
 }

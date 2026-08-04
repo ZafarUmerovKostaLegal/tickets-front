@@ -2,7 +2,14 @@ export type CorrDirection = 'incoming' | 'outgoing';
 
 export type CorrDocType = 'letter' | 'contract' | 'note';
 
-export type CorrDocStatus = 'new' | 'progress' | 'approval' | 'done';
+export type CorrDocStatus =
+    | 'draft'
+    | 'pending_review'
+    | 'rejected'
+    | 'new'
+    | 'progress'
+    | 'approval'
+    | 'done';
 
 export type CorrAttachmentKind = 'scan' | 'attachment';
 
@@ -25,13 +32,13 @@ export type CorrespondenceAttachment = {
 
 export type CorrespondenceDocument = {
     id: string;
-    registryNumber: string;
+    registryNumber: string | null;
     direction: CorrDirection;
     counterparty: string;
     subject: string;
     docType: CorrDocType;
     status: CorrDocStatus;
-    registeredAt: string;
+    registeredAt: string | null;
     responsibleUserId: number;
     responsibleUser: CorrespondenceUserSnippet | null;
     partnerUserId: number | null;
@@ -39,6 +46,8 @@ export type CorrespondenceDocument = {
     attachmentsCount: number;
     hasScan: boolean;
     comment: string | null;
+    rejectionComment: string | null;
+    createdAt: string | null;
     attachments?: CorrespondenceAttachment[];
 };
 
@@ -58,13 +67,14 @@ export type CorrespondenceStats = {
 
 export type ListCorrespondenceParams = {
     direction?: CorrDirection;
-    status?: CorrDocStatus;
+    status?: CorrDocStatus | string;
     statusGroup?: 'work';
     docType?: CorrDocType[];
     q?: string;
     skip?: number;
     limit?: number;
     includeArchived?: boolean;
+    registeredOnly?: boolean;
 };
 
 export type RegisterIncomingBody = {
@@ -84,10 +94,17 @@ export type RegisterOutgoingBody = {
     attachmentFiles?: File[];
 };
 
+export type CreateOutgoingDraftBody = RegisterOutgoingBody & {
+    partnerUserId?: number;
+};
+
 export type PatchCorrespondenceBody = {
     status?: CorrDocStatus;
     responsibleUserId?: number;
     comment?: string;
+    counterparty?: string;
+    subject?: string;
+    partnerUserId?: number;
 };
 
 export type CorrRow = {

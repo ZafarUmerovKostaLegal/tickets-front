@@ -12,8 +12,9 @@ import {
     getOutgoingLetterDraftFiles,
     type OutgoingLetterAttachmentMeta,
 } from '../lib/outgoingLetterSession';
-import { registerOutgoingLetterDocument } from '../lib/registerOutgoingLetter';
+import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
 import { CorrespondenceLetterWorkspace } from './CorrespondenceLetterWorkspace';
+import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
 import { IcoEye, IcoPaperclip, type MockAttachment, type MockLetter } from './CorrespondencePage';
 import './CorrespondenceLetterPreview.css';
 import './CorrespondencePage.css';
@@ -50,6 +51,7 @@ export function OutgoingLetterCreatePage() {
     const [attachmentMeta, setAttachmentMeta] = useState<OutgoingLetterAttachmentMeta[]>([]);
     const [busy, setBusy] = useState(false);
     const [hydrated, setHydrated] = useState(false);
+    const [reviewOpen, setReviewOpen] = useState(false);
 
     useEffect(() => {
         const draft = readOutgoingLetterDraft();
@@ -149,30 +151,39 @@ export function OutgoingLetterCreatePage() {
         navigate(routes.correspondenceOutgoingPreview);
     };
 
-    const handleRegister = async () => {
+    const openReviewModal = () => {
         const check = isOutgoingLetterDraftValid(subject, coverModel);
         if (!check.ok) {
             void showAlert({ title: 'Проверьте поля', message: check.message ?? 'Заполните обязательные поля.' });
             return;
         }
+        persistDraft(files, attachmentMeta);
+        setReviewOpen(true);
+    };
+
+    const handleSubmitReview = async (partnerUserId: number, partnerName: string) => {
         setBusy(true);
         try {
-            persistDraft(files, attachmentMeta);
-            await registerOutgoingLetterDocument({
+            await submitOutgoingLetterForReview({
                 subject,
                 coverModel,
                 letterDateIso,
+                partnerUserId,
                 extraFiles: files,
             });
             const { clearOutgoingLetterDraft } = await import('../lib/outgoingLetterSession');
             clearOutgoingLetterDraft();
-            void showAlert({ title: 'Исходящее сохранено', message: 'Документ зарегистрирован в реестре.' });
+            setReviewOpen(false);
+            void showAlert({
+                title: 'Отправлено на проверку',
+                message: `Письмо отправлено партнёру «${partnerName}». После подтверждения оно будет зарегистрировано автоматически.`,
+            });
             navigate(getCorrespondenceOutgoingUrl());
         }
         catch (err) {
             const message = err instanceof Error && err.message
                 ? err.message
-                : 'Не удалось зарегистрировать исходящее письмо.';
+                : 'Не удалось отправить письмо на проверку.';
             void showAlert({ title: 'Не удалось сохранить', message });
         }
         finally {
@@ -184,6 +195,7 @@ export function OutgoingLetterCreatePage() {
         return null;
 
     return (
+        <>
         <CorrespondenceLetterWorkspace
             letter={draftLetter}
             coverModel={coverModel}
@@ -244,13 +256,20 @@ export function OutgoingLetterCreatePage() {
                         {' '}
                         Предпросмотр
                     </button>
-                    <button type="button" className="corr-n__btn-primary" onClick={() => void handleRegister()} disabled={busy}>
+                    <button type="button" className="corr-n__btn-primary" onClick={openReviewModal} disabled={busy}>
                         <IcoSave />
                         {' '}
-                        {busy ? 'Сохранение…' : 'Зарегистрировать'}
+                        {busy ? 'Отправка…' : 'На проверку'}
                     </button>
                 </>
             )}
         />
+        <OutgoingSubmitReviewModal
+            open={reviewOpen}
+            onClose={() => { if (!busy) setReviewOpen(false); }}
+            onSubmit={(partnerUserId, partnerName) => { void handleSubmitReview(partnerUserId, partnerName); }}
+            submitPending={busy}
+        />
+        </>
     );
 }

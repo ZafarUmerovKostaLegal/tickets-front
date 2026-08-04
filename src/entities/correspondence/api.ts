@@ -7,6 +7,7 @@ import type {
     CorrespondenceDocument,
     CorrespondenceListResponse,
     CorrespondenceStats,
+    CreateOutgoingDraftBody,
     ListCorrespondenceParams,
     PatchCorrespondenceBody,
     RegisterIncomingBody,
@@ -87,6 +88,8 @@ function buildListQuery(params: ListCorrespondenceParams = {}): string {
         qs.set('limit', String(params.limit));
     if (params.includeArchived)
         qs.set('includeArchived', 'true');
+    if (params.registeredOnly)
+        qs.set('registeredOnly', 'true');
     const s = qs.toString();
     return s ? `?${s}` : '';
 }
@@ -154,6 +157,60 @@ export async function registerOutgoingCorrespondence(body: RegisterOutgoingBody)
     for (const file of body.attachmentFiles ?? [])
         form.append('files', file);
     const res = await apiFetch(`${PREFIX}/outgoing`, { method: 'POST', body: form });
+    await throwIfNotOk(res);
+    const doc = normalizeCorrespondenceDocument(await res.json());
+    if (!doc)
+        throw new CorrespondenceHttpError(500, 'Некорректный ответ сервера');
+    return doc;
+}
+
+export async function createOutgoingDraft(body: CreateOutgoingDraftBody): Promise<CorrespondenceDocument> {
+    const form = new FormData();
+    form.append('counterparty', body.counterparty);
+    form.append('subject', body.subject);
+    form.append('docType', body.docType);
+    if (body.comment?.trim())
+        form.append('comment', body.comment.trim());
+    if (body.partnerUserId != null && body.partnerUserId > 0)
+        form.append('partnerUserId', String(body.partnerUserId));
+    for (const file of body.attachmentFiles ?? [])
+        form.append('files', file);
+    const res = await apiFetch(`${PREFIX}/outgoing/draft`, { method: 'POST', body: form });
+    await throwIfNotOk(res);
+    const doc = normalizeCorrespondenceDocument(await res.json());
+    if (!doc)
+        throw new CorrespondenceHttpError(500, 'Некорректный ответ сервера');
+    return doc;
+}
+
+export async function submitOutgoingForReview(id: string, partnerUserId: number): Promise<CorrespondenceDocument> {
+    const res = await apiFetch(`${PREFIX}/${encodeURIComponent(id)}/submit-review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnerUserId }),
+    });
+    await throwIfNotOk(res);
+    const doc = normalizeCorrespondenceDocument(await res.json());
+    if (!doc)
+        throw new CorrespondenceHttpError(500, 'Некорректный ответ сервера');
+    return doc;
+}
+
+export async function approveOutgoingCorrespondence(id: string): Promise<CorrespondenceDocument> {
+    const res = await apiFetch(`${PREFIX}/${encodeURIComponent(id)}/approve`, { method: 'POST' });
+    await throwIfNotOk(res);
+    const doc = normalizeCorrespondenceDocument(await res.json());
+    if (!doc)
+        throw new CorrespondenceHttpError(500, 'Некорректный ответ сервера');
+    return doc;
+}
+
+export async function rejectOutgoingCorrespondence(id: string, comment: string): Promise<CorrespondenceDocument> {
+    const res = await apiFetch(`${PREFIX}/${encodeURIComponent(id)}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment }),
+    });
     await throwIfNotOk(res);
     const doc = normalizeCorrespondenceDocument(await res.json());
     if (!doc)
