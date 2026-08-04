@@ -10,6 +10,7 @@ import {
     listCorrespondence,
     mapDocumentToCorrRow,
     openCorrespondenceAttachmentInNewTab,
+    downloadCorrespondenceAttachment,
     registerIncomingCorrespondence,
     type CorrDocType,
     type CorrespondenceStats,
@@ -359,6 +360,27 @@ export function CorrespondenceRegistryView({
         }
     };
 
+    const downloadAttachment = async (row: CorrRow) => {
+        setRowMenuOpenId(null);
+        try {
+            const doc = await fetchCorrespondenceDocument(row.id);
+            const file = doc.attachments?.find((a) => a.attachmentKind === 'scan')
+                ?? doc.attachments?.find((a) => a.attachmentKind === 'attachment')
+                ?? doc.attachments?.[0];
+            if (!file) {
+                void showAlert({ title: 'Вложения', message: 'У документа нет файлов для скачивания.' });
+                return;
+            }
+            await downloadCorrespondenceAttachment(row.id, file.id, file.fileName);
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось скачать файл',
+                message: err instanceof Error ? err.message : 'Ошибка загрузки',
+            });
+        }
+    };
+
     const archiveRow = async (row: CorrRow) => {
         setRowMenuOpenId(null);
         try {
@@ -663,6 +685,9 @@ export function CorrespondenceRegistryView({
               Просмотреть скан
             </button>
           ) : null}
+          <button type="button" className="corr__popover-item" role="menuitem" onClick={() => void downloadAttachment(rowMenuRow)}>
+            Скачать файл
+          </button>
           <div className="corr__popover-divider"/>
           <button type="button" className="corr__popover-item" role="menuitem" onClick={() => void archiveRow(rowMenuRow)}>
             В архив

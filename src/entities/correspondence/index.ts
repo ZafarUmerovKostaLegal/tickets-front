@@ -42,6 +42,7 @@ export {
     isCorrespondenceHttpError,
     listCorrespondence,
     openCorrespondenceAttachmentInNewTab,
+    downloadCorrespondenceAttachment,
     patchCorrespondence,
     registerIncomingCorrespondence,
     registerOutgoingCorrespondence,

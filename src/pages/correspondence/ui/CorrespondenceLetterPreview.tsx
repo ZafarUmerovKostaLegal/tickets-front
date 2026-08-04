@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
     STATUS_META, MOCK_PARTNERS,
     IcoAlert, IcoCheck, IcoCross, IcoSend, IcoEdit,
     type MockLetter, type MockPartner,
 } from './CorrespondencePage';
 import { mockLetterToCoverModel } from '../lib/correspondenceCoverLetterModel';
+import { downloadOutgoingLetterPdf } from '../lib/buildOutgoingLetterPdf';
 import { CorrespondenceLetterWorkspace } from './CorrespondenceLetterWorkspace';
 import './CorrespondenceLetterPreview.css';
 
@@ -47,10 +48,28 @@ export function CorrespondenceLetterPreview({
 }: Props) {
     const sm = STATUS_META[letter.status];
     const coverModel = useMemo(() => mockLetterToCoverModel(letter), [letter]);
+    const [pdfBusy, setPdfBusy] = useState(false);
 
     const canSendToReview = mode === 'employee' && (letter.status === 'draft' || letter.status === 'rejected');
     const canEdit = mode === 'employee' && (letter.status === 'draft' || letter.status === 'rejected');
     const canPartnerAct = mode === 'partner' && letter.status === 'pending_review';
+
+    const handleDownloadPdf = useCallback(async () => {
+        setPdfBusy(true);
+        try {
+            await downloadOutgoingLetterPdf(coverModel, {
+                registryNumber: letter.registryNumber,
+                subject: letter.subject,
+                dateIso: letter.date,
+            });
+        }
+        catch {
+            // keep silent; sheet remains available for print
+        }
+        finally {
+            setPdfBusy(false);
+        }
+    }, [coverModel, letter.date, letter.registryNumber, letter.subject]);
 
     const partnerObj: MockPartner | undefined = letter.partnerId
         ? MOCK_PARTNERS.find(p => p.id === letter.partnerId)
@@ -118,8 +137,14 @@ export function CorrespondenceLetterPreview({
                     <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-inv-preview__download-btn" onClick={() => window.print()} title="Печать">
                         <IcoPrint /> Печать
                     </button>
-                    <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-inv-preview__download-btn" title="Скачать PDF">
-                        <IcoDownload /> PDF
+                    <button
+                        type="button"
+                        className="tt-reports__btn tt-reports__btn--outline tt-inv-preview__download-btn"
+                        title="Скачать PDF"
+                        disabled={pdfBusy}
+                        onClick={() => { void handleDownloadPdf(); }}
+                    >
+                        <IcoDownload /> {pdfBusy ? 'PDF…' : 'PDF'}
                     </button>
                 </>
             )}

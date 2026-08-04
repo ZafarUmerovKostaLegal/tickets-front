@@ -266,3 +266,20 @@ export async function openCorrespondenceAttachmentInNewTab(documentId: string, a
     }
     window.setTimeout(() => URL.revokeObjectURL(url), 120000);
 }
+
+export async function downloadCorrespondenceAttachment(
+    documentId: string,
+    attachmentId: string,
+    fileName?: string,
+): Promise<void> {
+    const { blob } = await fetchCorrespondenceAttachmentBlob(documentId, attachmentId);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = (fileName || 'document').trim() || 'document';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}

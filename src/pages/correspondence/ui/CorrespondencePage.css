@@ -1185,6 +1185,14 @@ body[data-theme='dark'] .corr-modal__panel {
   color: var(--app-muted);
 }
 
+.corr-card-modal__file-actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
 .corr-card-modal__file-btn {
   flex-shrink: 0;
   font-family: inherit;

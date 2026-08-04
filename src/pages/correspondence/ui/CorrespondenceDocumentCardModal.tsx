@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import {
     approveOutgoingCorrespondence,
     correspondenceErrorMessage,
+    downloadCorrespondenceAttachment,
     fetchCorrespondenceDocument,
     formatCorrRegisteredAt,
     invalidateCorrespondencePartnerAttention,
@@ -61,6 +62,7 @@ function AttachmentRow({
     onOpenError: (msg: string) => void;
 }) {
     const [opening, setOpening] = useState(false);
+    const [downloading, setDownloading] = useState(false);
 
     const open = async () => {
         setOpening(true);
@@ -75,20 +77,43 @@ function AttachmentRow({
         }
     };
 
+    const download = async () => {
+        setDownloading(true);
+        try {
+            await downloadCorrespondenceAttachment(docId, file.id, file.fileName);
+        }
+        catch (err) {
+            onOpenError(err instanceof Error ? err.message : 'Не удалось скачать файл');
+        }
+        finally {
+            setDownloading(false);
+        }
+    };
+
     return (
         <li className="corr-card-modal__file">
             <div className="corr-card-modal__file-meta">
                 <span className="corr-card-modal__file-name" title={file.fileName}>{file.fileName}</span>
                 <span className="corr-card-modal__file-size">{formatBytes(file.sizeBytes)}</span>
             </div>
-            <button
-                type="button"
-                className="corr-card-modal__file-btn"
-                disabled={opening}
-                onClick={() => void open()}
-            >
-                {opening ? 'Открытие…' : 'Открыть'}
-            </button>
+            <div className="corr-card-modal__file-actions">
+                <button
+                    type="button"
+                    className="corr-card-modal__file-btn"
+                    disabled={opening || downloading}
+                    onClick={() => void open()}
+                >
+                    {opening ? 'Открытие…' : 'Открыть'}
+                </button>
+                <button
+                    type="button"
+                    className="corr-card-modal__file-btn"
+                    disabled={opening || downloading}
+                    onClick={() => void download()}
+                >
+                    {downloading ? 'Скачивание…' : 'Скачать'}
+                </button>
+            </div>
         </li>
     );
 }

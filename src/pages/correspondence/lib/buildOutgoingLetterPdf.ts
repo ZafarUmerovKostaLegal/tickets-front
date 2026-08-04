@@ -4,18 +4,25 @@ import dejavuSansBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
 import dejavuSansObliqueUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Oblique.ttf?url';
 import dejavuSansRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
 import type { InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
+import {
+    COVER_LETTERHEAD_LOGO_ASPECT,
+    rasterizeInvoiceLogoSvg,
+} from '@pages/invoice-preview/lib/invoiceCoverLogoRaster';
 import { letterHtmlToPlainText } from './correspondenceLetterHtml';
 import {
     CORRESPONDENCE_LETTERHEAD_CONTACT,
     formatOutgoingLetterheadDate,
     formatOutgoingRefLine,
 } from './correspondenceLetterhead';
+import { triggerPdfDownload } from './correspondencePdfEditorModel';
 
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;
 const ML = 54;
 const MR = 54;
 const MT = 48;
+const LOGO_H_PT = 42;
+const LOGO_W_PT = LOGO_H_PT * COVER_LETTERHEAD_LOGO_ASPECT;
 
 async function fetchFontBytes(url: string): Promise<ArrayBuffer> {
     const res = await fetch(url);
@@ -50,29 +57,50 @@ export async function buildOutgoingLetterPdfBlob(
 ): Promise<Blob> {
     const doc = await PDFDocument.create();
     doc.registerFontkit(fontkit);
-    const [regularBytes, boldBytes, obliqueBytes] = await Promise.all([
+    const [regularBytes, boldBytes, obliqueBytes, logoRaster] = await Promise.all([
         fetchFontBytes(dejavuSansRegularUrl),
         fetchFontBytes(dejavuSansBoldUrl),
         fetchFontBytes(dejavuSansObliqueUrl),
+        rasterizeInvoiceLogoSvg(Math.round(LOGO_W_PT * 3), 'cover'),
     ]);
     const page = doc.addPage([PAGE_W, PAGE_H]);
     const font = await doc.embedFont(regularBytes, { subset: true });
     const fontItalic = await doc.embedFont(obliqueBytes, { subset: true });
     const fontBold = await doc.embedFont(boldBytes, { subset: true });
+    let logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
+    if (logoRaster) {
+        try {
+            logoImage = await doc.embedPng(logoRaster.png);
+        }
+        catch {
+            logoImage = null;
+        }
+    }
     const ink = rgb(0.2, 0.2, 0.2);
     const muted = rgb(0.4, 0.4, 0.4);
     const maxW = PAGE_W - ML - MR;
 
     let y = PAGE_H - MT;
 
-    page.drawText('KOSTA LEGAL', {
-        x: ML,
-        y,
-        size: 16,
-        font: fontBold,
-        color: ink,
-    });
-    y -= 22;
+    if (logoImage) {
+        page.drawImage(logoImage, {
+            x: ML,
+            y: y - LOGO_H_PT,
+            width: LOGO_W_PT,
+            height: LOGO_H_PT,
+        });
+        y -= LOGO_H_PT + 16;
+    }
+    else {
+        page.drawText('KOSTA LEGAL', {
+            x: ML,
+            y: y - 12,
+            size: 16,
+            font: fontBold,
+            color: ink,
+        });
+        y -= 28;
+    }
 
     const refLine = formatOutgoingRefLine(opts?.registryNumber);
     const dateLine = `Дата: ${formatOutgoingLetterheadDate(model)}`;
@@ -110,10 +138,8 @@ export async function buildOutgoingLetterPdfBlob(
         }
         const lines = wrapText(para, font, 11, maxW);
         for (const line of lines) {
-            if (y < 56) {
-                // Keep simple single-page for now; truncate gracefully.
+            if (y < 56)
                 break;
-            }
             page.drawText(line, {
                 x: ML,
                 y,
@@ -142,4 +168,14 @@ export function outgoingLetterPdfFileName(subject: string, dateIso: string): str
         .slice(0, 60) || 'письмо';
     const day = (dateIso || '').slice(0, 10) || 'date';
     return `ИСХ_${safe}_${day}.pdf`;
+}
+
+/** Build and trigger browser download of the outgoing letter PDF. */
+export async function downloadOutgoingLetterPdf(
+    model: InvoiceCoverLetterModel,
+    opts?: { registryNumber?: string | null; subject?: string; dateIso?: string },
+): Promise<void> {
+    const blob = await buildOutgoingLetterPdfBlob(model, { registryNumber: opts?.registryNumber });
+    const name = outgoingLetterPdfFileName(opts?.subject ?? '', opts?.dateIso ?? '');
+    triggerPdfDownload(blob, name);
 }

@@ -12,6 +12,7 @@ import {
     type OutgoingLetterDraftV1,
 } from '../lib/outgoingLetterSession';
 import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
+import { downloadOutgoingLetterPdf } from '../lib/buildOutgoingLetterPdf';
 import { CorrespondenceLetterWorkspace } from './CorrespondenceLetterWorkspace';
 import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
 import { IcoEdit, type MockAttachment, type MockLetter } from './CorrespondencePage';
@@ -27,11 +28,22 @@ function IcoSend() {
     );
 }
 
+function IcoDownload() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+    );
+}
+
 export function OutgoingLetterPreviewPage() {
     const navigate = useNavigate();
     const { showAlert } = useAppDialog();
     const [draft, setDraft] = useState<OutgoingLetterDraftV1 | null | undefined>(undefined);
     const [busy, setBusy] = useState(false);
+    const [pdfBusy, setPdfBusy] = useState(false);
     const [reviewOpen, setReviewOpen] = useState(false);
 
     useEffect(() => {
@@ -79,6 +91,27 @@ export function OutgoingLetterPreviewPage() {
             return;
         }
         setReviewOpen(true);
+    };
+
+    const handleDownloadPdf = async () => {
+        if (!draft)
+            return;
+        setPdfBusy(true);
+        try {
+            await downloadOutgoingLetterPdf(draft.coverModel, {
+                subject: draft.subject,
+                dateIso: draft.letterDateIso,
+            });
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось скачать PDF',
+                message: err instanceof Error ? err.message : 'Ошибка формирования файла',
+            });
+        }
+        finally {
+            setPdfBusy(false);
+        }
     };
 
     const handleSubmitReview = async (partnerUserId: number, partnerName: string) => {
@@ -133,15 +166,25 @@ export function OutgoingLetterPreviewPage() {
                 )}
                 navbarActions={(
                     <>
-                        <button type="button" className="corr-n__btn-secondary" onClick={goRegistry} disabled={busy}>
+                        <button type="button" className="corr-n__btn-secondary" onClick={goRegistry} disabled={busy || pdfBusy}>
                             К реестру
                         </button>
-                        <button type="button" className="corr-n__btn-secondary" onClick={goBackToEdit} disabled={busy}>
+                        <button
+                            type="button"
+                            className="corr-n__btn-secondary"
+                            onClick={() => { void handleDownloadPdf(); }}
+                            disabled={busy || pdfBusy}
+                        >
+                            <IcoDownload />
+                            {' '}
+                            {pdfBusy ? 'PDF…' : 'Скачать PDF'}
+                        </button>
+                        <button type="button" className="corr-n__btn-secondary" onClick={goBackToEdit} disabled={busy || pdfBusy}>
                             <IcoEdit />
                             {' '}
                             Редактировать
                         </button>
-                        <button type="button" className="corr-n__btn-primary" onClick={openReviewModal} disabled={busy}>
+                        <button type="button" className="corr-n__btn-primary" onClick={openReviewModal} disabled={busy || pdfBusy}>
                             <IcoSend />
                             {' '}
                             {busy ? 'Отправка…' : 'На проверку'}
