@@ -210,20 +210,28 @@ export function InvoiceCreatePage() {
   const onToggleSkipPartnerInvoice = useCallback(async (next: boolean) => {
     const clientId = createClientId.trim();
     const projectId = createProjectId.trim();
-    if (!clientId || !projectId || skipPartnerSaving)
+    if (!clientId || !projectId || skipPartnerSaving || !selectedProject)
       return;
     if (selectedProjectSkipsPartner === next)
       return;
+    const previous = selectedProject;
+    const optimistic: TimeManagerClientProjectRow = {
+      ...previous,
+      skipPartnerInvoiceConfirmation: next,
+      skip_partner_invoice_confirmation: next,
+    };
     setSkipPartnerSaving(true);
+    applyUpdatedProjectLocally(optimistic);
+    if (next)
+      setUnbilledPartnerBlockReason(null);
     try {
       const updated = await patchClientProject(clientId, projectId, {
         skipPartnerInvoiceConfirmation: next,
       });
       applyUpdatedProjectLocally(updated);
-      if (next)
-        setUnbilledPartnerBlockReason(null);
     }
     catch (e: unknown) {
+      applyUpdatedProjectLocally(previous);
       const msg = isForbiddenError(e)
         ? t('timeTrackingPage.invoices.errors.noClientAccess')
         : (e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic'));
@@ -236,6 +244,7 @@ export function InvoiceCreatePage() {
     applyUpdatedProjectLocally,
     createClientId,
     createProjectId,
+    selectedProject,
     selectedProjectSkipsPartner,
     showAlert,
     skipPartnerSaving,
