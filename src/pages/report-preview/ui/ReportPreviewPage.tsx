@@ -60,7 +60,7 @@ import { readReportPreviewTransfer, normalizeReportPreviewTransfer, resolveRepor
 import { hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
 import { notifyPartnerConfirmedReportsListInvalidate } from '@entities/time-tracking/model/partnerConfirmedReports';
 import { coerceGroupByForType, type ExpenseGroup, type TimeGroup, type PeriodGranularity, } from '@entities/time-tracking/model/reportsPanelConfig';
-import { formatIsoRangeTitle, formatPeriodLabel, periodToDates, } from '@entities/time-tracking/lib/reportsPeriodRange';
+import { formatIsoRangeTitle, formatPeriodLabel, periodToDates, clampReportsDateRange, REPORTS_ALL_TIME_DATE_FROM, } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { useI18n } from '@shared/i18n';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { showToast } from '@shared/ui/app-toast';
@@ -404,14 +404,27 @@ export function ReportPreviewPage() {
         }
         const xfer = normalizeReportPreviewTransfer(raw);
         const base = stripReportPagination(xfer.filters);
-        
+        const clamped = clampReportsDateRange(base.dateFrom, base.dateTo);
         setXferSnapshot(xfer);
-        setRangeFrom(base.dateFrom);
-        setRangeTo(base.dateTo);
-        const resolvedPeriod = resolveReportPreviewPeriodState(base.dateFrom, base.dateTo, xfer.period);
-        setPeriodDate(resolvedPeriod.periodDate);
-        setPeriodGranularity(resolvedPeriod.periodGranularity);
-        setCustomRangeActive(resolvedPeriod.customRangeActive);
+        setRangeFrom(clamped.dateFrom);
+        setRangeTo(clamped.dateTo);
+        const resolvedPeriod = resolveReportPreviewPeriodState(clamped.dateFrom, clamped.dateTo, xfer.period);
+        // Oversized legacy "all time" (2000-01-01) must not stay as a custom range — use clamped preset.
+        if (
+            xfer.period?.customRangeActive
+            && (base.dateFrom.slice(0, 10) !== clamped.dateFrom || base.dateTo.slice(0, 10) !== clamped.dateTo)
+            && base.dateFrom.slice(0, 10) === REPORTS_ALL_TIME_DATE_FROM
+        ) {
+            const end = resolvedPeriod.periodDate;
+            setPeriodDate(end);
+            setPeriodGranularity('all');
+            setCustomRangeActive(false);
+        }
+        else {
+            setPeriodDate(resolvedPeriod.periodDate);
+            setPeriodGranularity(resolvedPeriod.periodGranularity);
+            setCustomRangeActive(resolvedPeriod.customRangeActive);
+        }
         setSelectedUserIds(parseUserIdsFromFilter(base.user_id));
         setTeamFilterEnabled(base.team_filter_enabled === true);
         const storedPartnerId = Number(base.team_filter_partner_auth_user_id);
@@ -625,6 +638,16 @@ export function ReportPreviewPage() {
         setRangeFrom(presetRange.dateFrom);
         setRangeTo(presetRange.dateTo);
     }, [xferHydrated, presetRange.dateFrom, presetRange.dateTo, customRangeActive]);
+    // Legacy / custom ranges may still hold 2000-01-01 → far dateTo; clamp to API max (~10y).
+    useEffect(() => {
+        if (!xferHydrated || !rangeFrom || !rangeTo)
+            return;
+        const clamped = clampReportsDateRange(rangeFrom, rangeTo);
+        if (clamped.dateFrom !== rangeFrom || clamped.dateTo !== rangeTo) {
+            setRangeFrom(clamped.dateFrom);
+            setRangeTo(clamped.dateTo);
+        }
+    }, [xferHydrated, rangeFrom, rangeTo]);
     const periodTitle = useMemo(() => {
         if (customRangeActive)
             return formatIsoRangeTitle(rangeFrom, rangeTo);

@@ -1,5 +1,12 @@
 import type { ReportFiltersV2 } from '@entities/time-tracking';
-import { parseIsoDateLocal, periodToDates, REPORTS_ALL_TIME_DATE_FROM, isoDateLocal } from '@entities/time-tracking/lib/reportsPeriodRange';
+import {
+    parseIsoDateLocal,
+    periodToDates,
+    REPORTS_ALL_TIME_DATE_FROM,
+    REPORTS_MAX_RANGE_DAYS,
+    isoDateLocal,
+    clampReportsDateRange,
+} from '@entities/time-tracking/lib/reportsPeriodRange';
 import { readInitialReportsRangeState } from '@entities/time-tracking/lib/reportsPrefsStorage';
 import { isPeriodGranularity, type PeriodGranularity } from './reportsPanelConfig';
 export const REPORT_PREVIEW_TRANSFER_KEY = 'tt-report-preview-v1';
@@ -100,16 +107,35 @@ export function inferReportPreviewPeriodState(dateFrom: string, dateTo: string):
         };
     }
     const allPreset = periodToDates(new Date(), 'all');
-    if (dateFrom === REPORTS_ALL_TIME_DATE_FROM && dateTo === allPreset.dateTo) {
-        const today = new Date();
+    const fromIso = dateFrom.slice(0, 10);
+    const toIso = dateTo.slice(0, 10);
+    // Legacy "all time" used absolute floor 2000-01-01; also accept current clamped all-preset.
+    if (
+        (fromIso === REPORTS_ALL_TIME_DATE_FROM || fromIso === allPreset.dateFrom)
+        && (toIso === allPreset.dateTo || fromIso === REPORTS_ALL_TIME_DATE_FROM)
+    ) {
+        const end = parseIsoDateLocal(toIso) ?? new Date();
         return {
-            periodDate: today,
+            periodDate: end,
             periodGranularity: 'all',
-            periodAnchorIso: isoDateLocal(today),
+            periodAnchorIso: isoDateLocal(end),
             customRangeActive: false,
         };
     }
-    const end = parseIsoDateLocal(dateTo) ?? new Date();
+    const from = parseIsoDateLocal(fromIso);
+    const to = parseIsoDateLocal(toIso);
+    if (from && to) {
+        const spanDays = Math.round((to.getTime() - from.getTime()) / 86_400_000);
+        if (spanDays > REPORTS_MAX_RANGE_DAYS && fromIso === REPORTS_ALL_TIME_DATE_FROM) {
+            return {
+                periodDate: to,
+                periodGranularity: 'all',
+                periodAnchorIso: isoDateLocal(to),
+                customRangeActive: false,
+            };
+        }
+    }
+    const end = parseIsoDateLocal(toIso) ?? new Date();
     return {
         periodDate: end,
         periodGranularity: prefs.periodGranularity,
@@ -141,6 +167,7 @@ export function resolveReportPreviewPeriodState(dateFrom: string, dateTo: string
 
 export function normalizeReportPreviewTransfer(raw: ReportPreviewTransferPayload): ReportPreviewTransferV2 {
     const snap = transferExtrasFromUnknown(raw);
+    let normalized: ReportPreviewTransferV2;
     if (raw.v === 2) {
         const r = raw as ReportPreviewTransferV2 | {
             v: 2;
@@ -148,17 +175,34 @@ export function normalizeReportPreviewTransfer(raw: ReportPreviewTransferPayload
             groupBy?: ReportPreviewExpenseGroup;
             filters: ReportFiltersV2;
         };
-        if (r.reportType === 'confirmed-expenses' && r.groupBy != null)
-            return { v: 2, reportType: 'expenses', groupBy: r.groupBy, filters: { ...r.filters, confirmed_payment_only: true }, ...snap };
-        return { ...(raw as ReportPreviewTransferV2), ...snap };
+        if (r.reportType === 'confirmed-expenses' && r.groupBy != null) {
+            normalized = { v: 2, reportType: 'expenses', groupBy: r.groupBy, filters: { ...r.filters, confirmed_payment_only: true }, ...snap };
+        }
+        else {
+            normalized = { ...(raw as ReportPreviewTransferV2), ...snap };
+        }
     }
-    return {
-        v: 2,
-        reportType: 'time',
-        groupBy: 'projects',
-        filters: raw.filters,
-        ...snap,
-    };
+    else {
+        normalized = {
+            v: 2,
+            reportType: 'time',
+            groupBy: 'projects',
+            filters: raw.filters,
+            ...snap,
+        };
+    }
+    const clamped = clampReportsDateRange(normalized.filters.dateFrom, normalized.filters.dateTo);
+    if (clamped.dateFrom !== normalized.filters.dateFrom || clamped.dateTo !== normalized.filters.dateTo) {
+        normalized = {
+            ...normalized,
+            filters: {
+                ...normalized.filters,
+                dateFrom: clamped.dateFrom,
+                dateTo: clamped.dateTo,
+            },
+        };
+    }
+    return normalized;
 }
 export function writeReportPreviewTransfer(payload: ReportPreviewTransferV2): void {
     try {

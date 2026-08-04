@@ -1019,9 +1019,10 @@ export function ReportsPanel() {
     if (tableDataLoading || filteredTableRows.length === 0)
       return;
     const period = buildPreviewTransferPeriod();
+    const range = clampReportsDateRange(dateFrom, dateTo);
     const filters: ReportFiltersV2 = withPartnerReportScope({
-      dateFrom,
-      dateTo,
+      dateFrom: range.dateFrom,
+      dateTo: range.dateTo,
       user_id: selectedUserIds.length ? selectedUserIds.join(',') : undefined,
       include_fixed_fee: reportType === 'time' ? includeFixed : undefined,
       pageSizeMax: reportPageSizeMax != null && reportPageSizeMax > 0 ? reportPageSizeMax : undefined,
@@ -1052,9 +1053,10 @@ export function ReportsPanel() {
     if (!trimmed)
       return null;
     const period = buildPreviewTransferPeriod();
+    const range = clampReportsDateRange(dateFrom, dateTo);
     const filters: ReportFiltersV2 = withPartnerReportScope({
-      dateFrom,
-      dateTo,
+      dateFrom: range.dateFrom,
+      dateTo: range.dateTo,
       user_id: selectedUserIds.length ? selectedUserIds.join(',') : undefined,
       include_fixed_fee: includeFixed,
       project_id: trimmed,
@@ -1077,9 +1079,10 @@ export function ReportsPanel() {
     if (!trimmed)
       return null;
     const period = buildPreviewTransferPeriod();
+    const range = clampReportsDateRange(dateFrom, dateTo);
     const filters: ReportFiltersV2 = withPartnerReportScope({
-      dateFrom,
-      dateTo,
+      dateFrom: range.dateFrom,
+      dateTo: range.dateTo,
       user_id: selectedUserIds.length ? selectedUserIds.join(',') : undefined,
       include_fixed_fee: includeFixed,
       client_id: trimmed,
