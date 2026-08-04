@@ -18,6 +18,7 @@ import {
   listAllClientProjectsMerged,
   listAllClientProjectsForClientMerged,
   isForbiddenError,
+  projectSkipsPartnerInvoiceConfirmation,
   writeInvoicePreviewSession,
   readInvoicePreviewSession,
   isInvoicePreviewSessionCreate,
@@ -95,9 +96,27 @@ export function InvoiceCreatePage() {
   const [createBusy, setCreateBusy] = useState(false);
 
   const clientsForCreate = useMemo(
-    () => clients.filter((c) => clientIdsWithActiveProjects.has(c.id) && confirmedClientIdsForCreate.has(c.id)),
-    [clients, clientIdsWithActiveProjects, confirmedClientIdsForCreate],
+    () => clients.filter((c) => {
+      if (!clientIdsWithActiveProjects.has(c.id))
+        return false;
+      if (confirmedClientIdsForCreate.has(c.id))
+        return true;
+      return activeProjectsAll.some(
+        (p) => String(p.client_id) === c.id && projectSkipsPartnerInvoiceConfirmation(p),
+      );
+    }),
+    [clients, clientIdsWithActiveProjects, confirmedClientIdsForCreate, activeProjectsAll],
   );
+  const selectedProjectSkipsPartner = useMemo(() => {
+    const pid = createProjectId.trim();
+    if (!pid)
+      return false;
+    const fromList = projects.find((p) => p.id === pid);
+    if (fromList)
+      return projectSkipsPartnerInvoiceConfirmation(fromList);
+    const fromAll = activeProjectsAll.find((p) => p.id === pid);
+    return projectSkipsPartnerInvoiceConfirmation(fromAll);
+  }, [createProjectId, projects, activeProjectsAll]);
 
   useEffect(() => {
     const ti = timeSelectAllRef.current;
@@ -176,8 +195,37 @@ export function InvoiceCreatePage() {
   }, [unbilledFrom, unbilledTo, createProjectId]);
 
   useEffect(() => {
+    if (clientsErr)
+      pushToast({ message: clientsErr, variant: 'warning' });
+  }, [clientsErr, pushToast]);
+
+  useEffect(() => {
+    if (!createClientId) {
+      setProjects([]);
+      return;
+    }
+    listAllClientProjectsForClientMerged(createClientId)
+      .then((rows) => setProjects(rows.filter((p) => {
+        if (!isActiveTimeManagerProjectRow(p))
+          return false;
+        return confirmedProjectIdsForCreate.has(String(p.id))
+          || projectSkipsPartnerInvoiceConfirmation(p);
+      })))
+      .catch(() => setProjects([]));
+  }, [createClientId, confirmedProjectIdsForCreate]);
+
+  useEffect(() => {
+    if (createClientId && !clientsForCreate.some((c) => c.id === createClientId))
+      setCreateClientId('');
+    if (createProjectId && !projects.some((p) => p.id === createProjectId))
+      setCreateProjectId('');
+  }, [createClientId, createProjectId, clientsForCreate, projects]);
+
+  useEffect(() => {
     const pid = createProjectId.trim();
     if (!pid)
+      return;
+    if (selectedProjectSkipsPartner)
       return;
     const candidates = confirmedReportsForCreate.filter((r) => String(r.projectId ?? '').trim() === pid);
     if (candidates.length === 0)
@@ -195,29 +243,7 @@ export function InvoiceCreatePage() {
       setUnbilledFrom(nextFrom);
     if (unbilledTo !== nextTo)
       setUnbilledTo(nextTo);
-  }, [createProjectId, confirmedReportsForCreate, unbilledFrom, unbilledTo]);
-
-  useEffect(() => {
-    if (clientsErr)
-      pushToast({ message: clientsErr, variant: 'warning' });
-  }, [clientsErr, pushToast]);
-
-  useEffect(() => {
-    if (!createClientId) {
-      setProjects([]);
-      return;
-    }
-    listAllClientProjectsForClientMerged(createClientId)
-      .then((rows) => setProjects(rows.filter((p) => isActiveTimeManagerProjectRow(p) && confirmedProjectIdsForCreate.has(String(p.id)))))
-      .catch(() => setProjects([]));
-  }, [createClientId, confirmedProjectIdsForCreate]);
-
-  useEffect(() => {
-    if (createClientId && !clientsForCreate.some((c) => c.id === createClientId))
-      setCreateClientId('');
-    if (createProjectId && !projects.some((p) => p.id === createProjectId))
-      setCreateProjectId('');
-  }, [createClientId, createProjectId, clientsForCreate, projects]);
+  }, [createProjectId, confirmedReportsForCreate, unbilledFrom, unbilledTo, selectedProjectSkipsPartner]);
 
   const requireFullyConfirmedPeriod = useCallback(async (projectIdRaw: string, fromRaw: string, toRaw: string): Promise<boolean> => {
     const projectId = projectIdRaw.trim();
@@ -262,7 +288,8 @@ export function InvoiceCreatePage() {
         }
         throw e;
       }
-      const allowed = await requireFullyConfirmedPeriod(createProjectId, unbilledFrom, unbilledTo);
+      const allowed = selectedProjectSkipsPartner
+        || await requireFullyConfirmedPeriod(createProjectId, unbilledFrom, unbilledTo);
       if (!allowed) {
         const msg = t('timeTrackingPage.invoices.errors.confirmedOnlyRequired');
         setUnbilledTime([]);
@@ -276,28 +303,30 @@ export function InvoiceCreatePage() {
       ]);
 
       let filteredTime = timeRows;
-      const matchingConfirm = confirmedReportsForCreate.find((r) =>
-        String(r.projectId ?? '').trim() === createProjectId.trim()
-        && String(r.dateFrom ?? '').slice(0, 10) === unbilledFrom.trim().slice(0, 10)
-        && String(r.dateTo ?? '').slice(0, 10) === unbilledTo.trim().slice(0, 10)
-        && String(r.status ?? '').trim().toLowerCase() === 'fully_confirmed');
-      const snapId = String(matchingConfirm?.snapshotId ?? '').trim();
-      if (snapId) {
-        try {
-          const snapshot = await getReportSnapshot(snapId);
-          const snapRows = await loadSnapshotRowsForPartnerExcel(snapId, snapshot);
-          const snapTeIds = collectConfirmedSnapshotTimeEntryIds(snapRows);
-          if (snapTeIds.length > 0) {
-            const { timeEntryIds } = intersectPreviewTimeEntryIdsWithSnapshot(
-              timeRows.map((r) => r.id),
-              snapTeIds,
-            );
-            const keep = new Set(timeEntryIds);
-            filteredTime = timeRows.filter((r) => keep.has(r.id));
+      if (!selectedProjectSkipsPartner) {
+        const matchingConfirm = confirmedReportsForCreate.find((r) =>
+          String(r.projectId ?? '').trim() === createProjectId.trim()
+          && String(r.dateFrom ?? '').slice(0, 10) === unbilledFrom.trim().slice(0, 10)
+          && String(r.dateTo ?? '').slice(0, 10) === unbilledTo.trim().slice(0, 10)
+          && String(r.status ?? '').trim().toLowerCase() === 'fully_confirmed');
+        const snapId = String(matchingConfirm?.snapshotId ?? '').trim();
+        if (snapId) {
+          try {
+            const snapshot = await getReportSnapshot(snapId);
+            const snapRows = await loadSnapshotRowsForPartnerExcel(snapId, snapshot);
+            const snapTeIds = collectConfirmedSnapshotTimeEntryIds(snapRows);
+            if (snapTeIds.length > 0) {
+              const { timeEntryIds } = intersectPreviewTimeEntryIdsWithSnapshot(
+                timeRows.map((r) => r.id),
+                snapTeIds,
+              );
+              const keep = new Set(timeEntryIds);
+              filteredTime = timeRows.filter((r) => keep.has(r.id));
+            }
           }
-        }
-        catch {
-          /* keep unfiltered unbilled if snapshot load fails */
+          catch {
+            /* keep unfiltered unbilled if snapshot load fails */
+          }
         }
       }
 
@@ -331,7 +360,7 @@ export function InvoiceCreatePage() {
     finally {
       setUnbilledLoading(false);
     }
-  }, [createProjectId, unbilledFrom, unbilledTo, confirmedReportsForCreate, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, showAlert, t]);
+  }, [createProjectId, unbilledFrom, unbilledTo, confirmedReportsForCreate, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, showAlert, t, selectedProjectSkipsPartner]);
 
   useEffect(() => {
     if (resumeAppliedRef.current)
@@ -453,7 +482,8 @@ export function InvoiceCreatePage() {
       });
       return;
     }
-    const confirmedAllowed = await requireFullyConfirmedPeriod(billProjectId, unbilledFrom, unbilledTo);
+    const confirmedAllowed = selectedProjectSkipsPartner
+      || await requireFullyConfirmedPeriod(billProjectId, unbilledFrom, unbilledTo);
     if (!confirmedAllowed) {
       const msg = t('timeTrackingPage.invoices.errors.confirmedOnlyRequired');
       setUnbilledPartnerBlockReason(msg);
@@ -494,7 +524,7 @@ export function InvoiceCreatePage() {
       const raw = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.createFailed');
       const conflict = /409|уже существует|already exists/i.test(raw);
       const base = conflict ? t('timeTrackingPage.invoices.errors.invoiceNumberConflict') : raw;
-      const hint = isForbiddenError(e)
+      const hint = isForbiddenError(e) && !selectedProjectSkipsPartner
         ? t('timeTrackingPage.invoices.errors.partnerConfirmHint')
         : '';
       await showAlert({ message: `${base}${hint}` });
@@ -502,7 +532,7 @@ export function InvoiceCreatePage() {
     finally {
       setCreateBusy(false);
     }
-  }, [createClientId, createProjectId, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledFrom, unbilledTo, unbilledExp, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, clients, navigate, showAlert, t]);
+  }, [createClientId, createProjectId, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledFrom, unbilledTo, unbilledExp, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, clients, navigate, showAlert, t, selectedProjectSkipsPartner]);
 
   const toInvoices = () => {
     void navigate(getInvoicesListUrl());
@@ -593,7 +623,12 @@ export function InvoiceCreatePage() {
                 </div>
                 <div className="tt-inv-dialog__field">
                   <label id="tt-inv-create-project-lbl" className="tt-inv-dialog__label" htmlFor="tt-inv-create-project-btn">{t('timeTrackingPage.invoices.createDialog.project')}</label>
-                  <SearchableSelect<TimeManagerClientProjectRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-project-btn" portalDropdown portalZIndex={12050} portalMinWidth={560} placeholder={!createClientId ? t('timeTrackingPage.common.selectClientFirst') : projects.length === 0 ? t('timeTrackingPage.common.noProjects') : t('timeTrackingPage.invoices.createDialog.selectProject')} emptyListText={t('timeTrackingPage.common.noProjects')} noMatchText={t('timeTrackingPage.common.projectNotFound')} value={createProjectId} items={projects} getOptionValue={(p) => p.id} getOptionLabel={(p) => p.code ? `${p.name} (${p.code})` : p.name} getSearchText={(p) => `${p.name} ${p.code ?? ''} ${p.id}`.trim()} onSelect={(p) => setCreateProjectId(p.id)} disabled={!createClientId} aria-labelledby="tt-inv-create-project-lbl" />
+                  <SearchableSelect<TimeManagerClientProjectRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-project-btn" portalDropdown portalZIndex={12050} portalMinWidth={560} placeholder={!createClientId ? t('timeTrackingPage.common.selectClientFirst') : projects.length === 0 ? t('timeTrackingPage.common.noProjects') : t('timeTrackingPage.invoices.createDialog.selectProject')} emptyListText={t('timeTrackingPage.common.noProjects')} noMatchText={t('timeTrackingPage.common.projectNotFound')} value={createProjectId} items={projects} getOptionValue={(p) => p.id} getOptionLabel={(p) => {
+                    const base = p.code ? `${p.name} (${p.code})` : p.name;
+                    return projectSkipsPartnerInvoiceConfirmation(p)
+                      ? `${base} — ${t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmation')}`
+                      : base;
+                  }} getSearchText={(p) => `${p.name} ${p.code ?? ''} ${p.id}`.trim()} onSelect={(p) => setCreateProjectId(p.id)} disabled={!createClientId} aria-labelledby="tt-inv-create-project-lbl" />
                 </div>
               </div>
             </section>
@@ -640,16 +675,21 @@ export function InvoiceCreatePage() {
                   <p className="tt-inv-page__section-desc">
                     {t('timeTrackingPage.invoices.createDialog.unbilledReimbursableNote')}
                   </p>
+                  {selectedProjectSkipsPartner ? (
+                    <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                      {t('timeTrackingPage.invoices.createDialog.skipPartnerProjectHint')}
+                    </p>
+                  ) : null}
                 </div>
               </div>
               <div className="tt-inv-dialog__period-bar">
                 <div className="tt-inv-dialog__field">
                   <span id="tt-inv-unbill-from-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.fromLabel')}</span>
-                  <DatePicker id="tt-inv-unbill-from" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledFrom} max={unbilledTo || undefined} onChange={() => {}} disabled portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledFrom')} showChevron aria-labelledby="tt-inv-unbill-from-lbl" />
+                  <DatePicker id="tt-inv-unbill-from" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledFrom} max={unbilledTo || undefined} onChange={selectedProjectSkipsPartner ? (iso) => setUnbilledFrom(iso) : () => {}} disabled={!selectedProjectSkipsPartner} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledFrom')} showChevron aria-labelledby="tt-inv-unbill-from-lbl" />
                 </div>
                 <div className="tt-inv-dialog__field">
                   <span id="tt-inv-unbill-to-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.toLabel')}</span>
-                  <DatePicker id="tt-inv-unbill-to" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledTo} min={unbilledFrom || undefined} onChange={() => {}} disabled portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledTo')} showChevron aria-labelledby="tt-inv-unbill-to-lbl" />
+                  <DatePicker id="tt-inv-unbill-to" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledTo} min={unbilledFrom || undefined} onChange={selectedProjectSkipsPartner ? (iso) => setUnbilledTo(iso) : () => {}} disabled={!selectedProjectSkipsPartner} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledTo')} showChevron aria-labelledby="tt-inv-unbill-to-lbl" />
                 </div>
                 <div className="tt-inv-dialog__period-action">
                   <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" onClick={() => void loadUnbilled()} disabled={unbilledLoading || !createProjectId} title={!createProjectId ? t('timeTrackingPage.invoices.createDialog.selectProjectFirst') : t('timeTrackingPage.invoices.createDialog.loadUnbilledTitle')}>

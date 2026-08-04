@@ -220,6 +220,7 @@ type ProjectFormState = {
   budgetIncludesExpenses: boolean;
   sendBudgetAlerts: boolean;
   budgetAlertThresholdPercent: string;
+  skipPartnerInvoiceConfirmation: boolean;
 };
 
 function projectTypeUsesBillableRates(pt: ProjectFormState['projectType'] | string): boolean {
@@ -256,6 +257,7 @@ function emptyProjectForm(): ProjectFormState {
     budgetIncludesExpenses: false,
     sendBudgetAlerts: false,
     budgetAlertThresholdPercent: '70',
+    skipPartnerInvoiceConfirmation: false,
   };
 }
 function rowToForm(row: TimeManagerClientProjectRow): ProjectFormState {
@@ -283,6 +285,8 @@ function rowToForm(row: TimeManagerClientProjectRow): ProjectFormState {
     budgetAlertThresholdPercent: row.budget_alert_threshold_percent != null && row.budget_alert_threshold_percent !== ''
       ? String(row.budget_alert_threshold_percent)
       : '70',
+    skipPartnerInvoiceConfirmation: row.skip_partner_invoice_confirmation === true
+      || row.skipPartnerInvoiceConfirmation === true,
   };
 }
 function parseOptionalDecimal(raw: string): string | number | null {
@@ -395,6 +399,7 @@ function buildCreatePayload(
     budgetIncludesExpenses: form.budgetIncludesExpenses,
     sendBudgetAlerts: form.sendBudgetAlerts,
     budgetAlertThresholdPercent,
+    skipPartnerInvoiceConfirmation: form.skipPartnerInvoiceConfirmation,
     ...team,
   };
 }
@@ -1165,7 +1170,17 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
             <span className="tt-ios-toggle__slider" aria-hidden />
           </span>
         </label>
+        <label className="tt-ios-toggle-row">
+          <span className="tt-ios-toggle-row__text">{t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmation')}</span>
+          <span className="tt-ios-toggle">
+            <input type="checkbox" className="tt-ios-toggle__input" checked={form.skipPartnerInvoiceConfirmation} onChange={(e) => setForm((f) => ({ ...f, skipPartnerInvoiceConfirmation: e.target.checked }))} disabled={saving || !canManage} />
+            <span className="tt-ios-toggle__slider" aria-hidden />
+          </span>
+        </label>
       </div>
+      {form.skipPartnerInvoiceConfirmation && (
+        <p className="tt-tm-hint tt-tm-fieldset--budget__extra">{t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmationHint')}</p>
+      )}
       {form.sendBudgetAlerts && (<div className="tt-tm-field tt-tm-fieldset--budget__extra">
         <label className="tt-tm-label" htmlFor={`${uid}-thr`}>
           {t('timeTrackingPage.projects.modal.budgetAlertThreshold')}

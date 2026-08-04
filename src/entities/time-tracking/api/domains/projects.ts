@@ -375,7 +375,19 @@ export type TimeManagerClientProjectRow = {
     isArchived?: boolean;
     is_paused?: boolean;
     isPaused?: boolean;
+    skip_partner_invoice_confirmation?: boolean;
+    skipPartnerInvoiceConfirmation?: boolean;
 };
+
+/** True when project allows invoices without fully_confirmed partner period. */
+export function projectSkipsPartnerInvoiceConfirmation(
+    row: TimeManagerClientProjectRow | Record<string, unknown> | null | undefined,
+): boolean {
+    if (!row || typeof row !== 'object')
+        return false;
+    const o = row as Record<string, unknown>;
+    return o.skip_partner_invoice_confirmation === true || o.skipPartnerInvoiceConfirmation === true;
+}
 
 /** API may return `recordsLanguage` (alias) or `records_language`. */
 export function readProjectRecordsLanguage(
@@ -401,6 +413,9 @@ export function normalizeTimeManagerClientProjectRow(raw: unknown): TimeManagerC
     row.id = id;
     row.client_id = clientId;
     row.records_language = readProjectRecordsLanguage(o);
+    const skipPartner = o.skip_partner_invoice_confirmation === true || o.skipPartnerInvoiceConfirmation === true;
+    row.skip_partner_invoice_confirmation = skipPartner;
+    row.skipPartnerInvoiceConfirmation = skipPartner;
     if (o.clientId != null && row.client_id)
         (row as Record<string, unknown>).clientId = row.client_id;
     return row;
@@ -801,6 +816,7 @@ export type TimeManagerClientProjectCreatePayload = {
     fixedFeeAmount?: string | number | null;
     packageHoursPerMonth?: string | number | null;
     packageFeeAmount?: string | number | null;
+    skipPartnerInvoiceConfirmation?: boolean;
 
     initialTimeTrackingUserAuthIds?: number[];
 
@@ -833,6 +849,7 @@ export type TimeManagerClientProjectPatchPayload = {
     packageFeeAmount?: string | number | null;
     isArchived?: boolean;
     isPaused?: boolean;
+    skipPartnerInvoiceConfirmation?: boolean;
 };
 export function projectCreateBody(body: TimeManagerClientProjectCreatePayload): Record<string, unknown> {
     const o: Record<string, unknown> = { name: body.name };
@@ -888,6 +905,8 @@ export function projectCreateBody(body: TimeManagerClientProjectCreatePayload): 
         o.packageHoursPerMonth = body.packageHoursPerMonth;
     if (body.packageFeeAmount !== undefined)
         o.packageFeeAmount = body.packageFeeAmount;
+    if (body.skipPartnerInvoiceConfirmation !== undefined)
+        o.skipPartnerInvoiceConfirmation = body.skipPartnerInvoiceConfirmation;
     if (hasMembers) {
         o.initialProjectAccessMembers = members.map((m) => {
             const row: Record<string, unknown> = { authUserId: m.authUserId };
@@ -983,6 +1002,10 @@ export function projectPatchBody(patch: TimeManagerClientProjectPatchPayload): R
     if (patch.isPaused !== undefined) {
         o.isPaused = patch.isPaused;
         o.is_paused = patch.isPaused;
+    }
+    if (patch.skipPartnerInvoiceConfirmation !== undefined) {
+        o.skipPartnerInvoiceConfirmation = patch.skipPartnerInvoiceConfirmation;
+        o.skip_partner_invoice_confirmation = patch.skipPartnerInvoiceConfirmation;
     }
     return o;
 }
