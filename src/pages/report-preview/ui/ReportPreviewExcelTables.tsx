@@ -212,13 +212,19 @@ function TimePreviewNoteTextarea({ value, disabled, ariaLabel, variant, onValue,
     onValue: (next: string) => void;
 }) {
     const ref = useRef<HTMLTextAreaElement>(null);
-    useLayoutEffect(() => {
+    const syncHeight = () => {
         syncTextareaHeightToContent(ref.current, variant === 'brief' ? undefined : TIME_PREVIEW_NOTE_AUTOSIZE_MAX_FULL_PX);
-    }, [value, variant]);
+    };
+    useLayoutEffect(() => {
+        syncHeight();
+    }, [value, variant, disabled]);
     const cls = variant === 'brief'
         ? 'tt-rp-mtable__input tt-rp-mtable__textarea tt-rp-mtable__textarea--brief tt-rp-mtable__textarea--autosize'
         : 'tt-rp-mtable__input tt-rp-mtable__textarea tt-rp-mtable__textarea--autosize';
-    return (<textarea ref={ref} className={cls} rows={variant === 'brief' ? 1 : 2} value={value} disabled={disabled} placeholder="note = description" aria-label={ariaLabel} onChange={(e) => onValue(e.target.value)}/>);
+    return (<textarea ref={ref} className={cls} rows={variant === 'brief' ? 1 : 2} value={value} disabled={disabled} placeholder="note = description" aria-label={ariaLabel} onChange={(e) => {
+            onValue(e.target.value);
+            requestAnimationFrame(syncHeight);
+        }}/>);
 }
 
 function isReportRowSelected(rowKey: string, selectedRowKeys: ReadonlySet<string> | null | undefined): boolean {

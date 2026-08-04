@@ -2441,9 +2441,13 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
   vertical-align: middle;
 }
 
+.tt-rp-mtable--time-brief tbody .tt-rp-mtable__td:has(.tt-rp-mtable__textarea--autosize) {
+  vertical-align: top;
+}
+
 .tt-rp-mtable--time-brief .tt-rp-mtable__input,
 .tt-rp-mtable--time-brief .tt-rp-brief-dt__input,
-.tt-rp-mtable--time-brief .tt-rp-mtable__textarea--brief,
+.tt-rp-mtable--time-brief .tt-rp-mtable__textarea--brief:not(.tt-rp-mtable__textarea--autosize),
 .tt-rp-mtable--time-brief .tt-rp-mtable__srch-btn.tsp-srch__btn,
 .tt-rp-mtable--time-brief .tt-rp-mtable__td--num .tt-rp-mtable__input--duration {
   box-sizing: border-box;
@@ -2458,6 +2462,23 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
 .tt-rp-mtable--time-brief .tt-rp-mtable__textarea--brief {
   resize: none;
   overflow: hidden;
+}
+
+.tt-rp-mtable--time-brief .tt-rp-mtable__textarea--brief.tt-rp-mtable__textarea--autosize {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 1.75rem;
+  height: auto;
+  max-height: none;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  resize: none;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  field-sizing: content;
 }
 
 .tt-rp-mtable--time-brief .tt-rp-mtable__srch-btn.tsp-srch__btn {
@@ -4347,10 +4368,16 @@ body[data-theme='dark'] .tt-rp-mtable__tr--scoped.tt-rp-mtable__tr--alt .tt-rp-m
   field-sizing: fixed;
 }
 
+.tt-rp-mtable--time-brief .tt-rp-mtable__textarea--brief.tt-rp-mtable__textarea--autosize {
+  min-height: 1.75rem;
+  max-height: none;
+  field-sizing: content;
+}
+
 .tt-rp-mtable__textarea--autosize {
   resize: none;
   overflow-x: hidden;
-  field-sizing: fixed;
+  field-sizing: content;
 }
 
 .tt-rp-mtable tfoot {
