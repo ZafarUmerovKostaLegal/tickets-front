@@ -139,6 +139,8 @@ export const ruMessages: Messages = {
         invoicePreview: 'Предпросмотр счёта',
         invoiceCreate: 'Новый счёт',
         invoiceDetail: 'Счёт',
+        outgoingLetterCreate: 'Исходящее письмо',
+        outgoingLetterPreview: 'Предпросмотр письма',
         user: 'Пользователь',
         expensesRequests: 'Заявки на расходы',
         expensesReport: 'Отчёт по расходам',
@@ -732,6 +734,8 @@ export type Messages = {
         | 'invoicePreview'
         | 'invoiceCreate'
         | 'invoiceDetail'
+        | 'outgoingLetterCreate'
+        | 'outgoingLetterPreview'
         | 'user'
         | 'expensesRequests'
         | 'expensesReport'

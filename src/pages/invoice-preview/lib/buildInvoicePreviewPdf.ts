@@ -1532,3 +1532,48 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     copy.set(bytes);
     return new Blob([copy], { type: 'application/pdf' });
 }
+
+/** Cover letter only (no time-report / legal pages) — for outgoing correspondence. */
+export async function buildCoverLetterOnlyPdfBlob(model: InvoiceCoverLetterModel): Promise<Blob> {
+    const doc = await PDFDocument.create();
+    doc.registerFontkit(fontkit);
+    const [regularBytes, boldBytes] = await Promise.all([
+        fetchFontBytes(dejavuSansRegularUrl),
+        fetchFontBytes(dejavuSansBoldUrl),
+    ]);
+    const font = await doc.embedFont(regularBytes, { subset: true });
+    const fontBold = await doc.embedFont(boldBytes, { subset: true });
+
+    let coverLogoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
+    let coverSignatureImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
+    if (typeof window !== 'undefined') {
+        const [coverRaster, signatureRaster] = await Promise.all([
+            rasterizeInvoiceLogoSvg(500, 'cover'),
+            loadCoverSignaturePng(model.signatoryInitials || model.signatoryName),
+        ]);
+        if (coverRaster?.png.length) {
+            try {
+                coverLogoImage = await doc.embedPng(coverRaster.png);
+            }
+            catch {
+                coverLogoImage = null;
+            }
+        }
+        if (signatureRaster?.png.length) {
+            try {
+                coverSignatureImage = await doc.embedPng(signatureRaster.png);
+            }
+            catch {
+                coverSignatureImage = null;
+            }
+        }
+    }
+
+    const page = doc.addPage([W, H]);
+    drawCoverPage(page, model, font, fontBold, coverLogoImage, coverSignatureImage);
+
+    const bytes = await doc.save();
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    return new Blob([copy], { type: 'application/pdf' });
+}

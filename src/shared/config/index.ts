@@ -1,4 +1,4 @@
-export { routes, getTicketDetailUrl, getUserEditUrl, getProjectDetailUrl, getTimeTrackingNewProjectUrl, getExpensesOpenUrl, getInvoiceCreateUrl, getInvoiceDetailUrl, getInvoicesListUrl, } from './routes';
+export { routes, getTicketDetailUrl, getUserEditUrl, getProjectDetailUrl, getTimeTrackingNewProjectUrl, getExpensesOpenUrl, getInvoiceCreateUrl, getInvoiceDetailUrl, getInvoicesListUrl, getCorrespondenceOutgoingUrl, } from './routes';
 export { getApiBaseUrl, getAuthCallbackUrl, getAzureLoginUrl, getAzureLogoutUrl, getTicketsWsUrl, getNotificationsWsUrl, getChatWsUrl, getAttendanceApiBase, upgradeUrlToPageSecurity, AUTH_ERROR_AUTH_FAILED, isSessionCookieOnly, } from './env';
 export { isTauriDesktopClient } from './desktopClient';
 export { injectPublicEnv } from './injectPublicEnv';

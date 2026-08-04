@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import {
     archiveCorrespondence,
     correspondenceErrorMessage,
@@ -9,10 +10,10 @@ import {
     mapDocumentToCorrRow,
     openCorrespondenceAttachmentInNewTab,
     registerIncomingCorrespondence,
-    registerOutgoingCorrespondence,
     type CorrDocType,
     type CorrespondenceStats,
 } from '@entities/correspondence';
+import { routes } from '@shared/config';
 import { showAlert } from '@shared/ui';
 import {
     CORR_COUNTERPARTY_COLUMN,
@@ -23,10 +24,9 @@ import {
     CORR_TYPE_BADGE,
     type CorrTableTabKey,
 } from '../model/constants';
-import type { CorrDirection, CorrRow, IncomingRegisterPayload, OutgoingRegisterPayload } from '../model/types';
+import type { CorrDirection, CorrRow, IncomingRegisterPayload } from '../model/types';
 import { CorrespondenceDocumentCardModal } from './CorrespondenceDocumentCardModal';
 import { CorrespondenceRegisterIncomingModal } from './CorrespondenceRegisterIncomingModal';
-import { CorrespondenceRegisterOutgoingModal } from './CorrespondenceRegisterOutgoingModal';
 import { CorrespondenceRegistrySkeleton } from './CorrespondenceSkeleton';
 import { CorrespondenceShell } from './CorrespondenceShell';
 import './CorrespondencePage.css';
@@ -165,6 +165,7 @@ export function CorrespondenceRegistryView({
     direction,
     onDirectionChange,
 }: CorrespondenceRegistryViewProps) {
+    const navigate = useNavigate();
     const [tableTab, setTableTab] = useState<CorrTableTabKey>('all');
     const [page, setPage] = useState(1);
     const [rows, setRows] = useState<CorrRow[]>([]);
@@ -257,7 +258,6 @@ export function CorrespondenceRegistryView({
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [rowMenuOpenId, setRowMenuOpenId] = useState<string | null>(null);
     const [incomingModalOpen, setIncomingModalOpen] = useState(false);
-    const [outgoingModalOpen, setOutgoingModalOpen] = useState(false);
     const [registerPending, setRegisterPending] = useState(false);
     const [cardDocId, setCardDocId] = useState<string | null>(null);
 
@@ -305,7 +305,7 @@ export function CorrespondenceRegistryView({
         if (direction === 'incoming')
             setIncomingModalOpen(true);
         else
-            setOutgoingModalOpen(true);
+            navigate(routes.correspondenceOutgoingCreate);
     };
 
     const handleIncomingSubmit = async (payload: IncomingRegisterPayload) => {
@@ -325,31 +325,6 @@ export function CorrespondenceRegistryView({
                 title: 'Входящее сохранено',
                 message: `Письмо зарегистрировано для партнёра «${payload.partnerName}».`,
             });
-        }
-        catch (err) {
-            void showAlert({
-                title: 'Не удалось сохранить',
-                message: correspondenceErrorMessage(err, 'Ошибка регистрации'),
-            });
-        }
-        finally {
-            setRegisterPending(false);
-        }
-    };
-
-    const handleOutgoingSubmit = async (payload: OutgoingRegisterPayload) => {
-        setRegisterPending(true);
-        try {
-            await registerOutgoingCorrespondence({
-                counterparty: payload.counterparty,
-                subject: payload.subject,
-                docType: payload.type,
-                comment: payload.comment,
-                attachmentFiles: payload.attachmentFiles,
-            });
-            setOutgoingModalOpen(false);
-            reloadAll();
-            void showAlert({ title: 'Исходящее сохранено', message: 'Документ зарегистрирован в реестре.' });
         }
         catch (err) {
             void showAlert({
@@ -434,7 +409,7 @@ export function CorrespondenceRegistryView({
               <p className="corr-registry__sidebar-note">
                 {direction === 'incoming'
                     ? 'Для входящих обязательны партнёр и файл скана или фото документа.'
-                    : 'Для исходящих достаточно получателя и темы; вложение по желанию.'}
+                    : 'Исходящее письмо заполняется строго по шаблону бланка; PDF сохраняется во вложении.'}
               </p>
             </div>
           </aside>
@@ -701,12 +676,6 @@ export function CorrespondenceRegistryView({
         open={incomingModalOpen}
         onClose={() => setIncomingModalOpen(false)}
         onSubmit={handleIncomingSubmit}
-        submitPending={registerPending}
-      />
-      <CorrespondenceRegisterOutgoingModal
-        open={outgoingModalOpen}
-        onClose={() => setOutgoingModalOpen(false)}
-        onSubmit={handleOutgoingSubmit}
         submitPending={registerPending}
       />
     </CorrespondenceShell>);

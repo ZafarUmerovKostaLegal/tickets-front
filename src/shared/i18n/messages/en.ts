@@ -139,6 +139,8 @@ export const enMessages = {
         invoicePreview: 'Invoice preview',
         invoiceCreate: 'New invoice',
         invoiceDetail: 'Invoice',
+        outgoingLetterCreate: 'Outgoing letter',
+        outgoingLetterPreview: 'Letter preview',
         user: 'User',
         expensesRequests: 'Expense requests',
         expensesReport: 'Expense report',

@@ -37,6 +37,8 @@ const AttendancePage = lazy(() => import('@pages/attendance').then(m => ({ defau
 const VacationSchedulePage = lazy(() => import('@pages/vacation-schedule').then(m => ({ default: m.VacationSchedulePage })));
 const CallSchedulePage = lazy(() => import('@pages/call-schedule').then(m => ({ default: m.CallSchedulePage })));
 const CorrespondencePage = lazy(() => import('@pages/correspondence').then(m => ({ default: m.CorrespondencePage })));
+const OutgoingLetterCreatePage = lazy(() => import('@pages/correspondence').then(m => ({ default: m.OutgoingLetterCreatePage })));
+const OutgoingLetterPreviewPage = lazy(() => import('@pages/correspondence').then(m => ({ default: m.OutgoingLetterPreviewPage })));
 const AccountingPage = lazy(() => import('@pages/accounting').then(m => ({ default: m.AccountingPage })));
 const InventoryPage = lazy(() => import('@pages/inventory').then(m => ({ default: m.InventoryPage })));
 const ProjectDetailPage = lazy(() => import('@pages/project-detail').then(m => ({ default: m.ProjectDetailPage })));
@@ -106,6 +108,8 @@ const router = createBrowserRouter([
             { path: routes.vacationSchedule, element: withProtected(<VacationSchedulePage />) },
             { path: routes.callSchedule, element: withProtected(<CallSchedulePage />) },
             { path: routes.correspondence, element: withProtected(<CorrespondencePage />) },
+            { path: routes.correspondenceOutgoingCreate, element: withProtected(<OutgoingLetterCreatePage />) },
+            { path: routes.correspondenceOutgoingPreview, element: withProtected(<OutgoingLetterPreviewPage />) },
             { path: routes.accounting, element: withProtected(<AdminOnlyModuleRoute>
                     <AccountingPage />
                   </AdminOnlyModuleRoute>) },

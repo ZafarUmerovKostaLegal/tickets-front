@@ -28,6 +28,8 @@ export const routes = {
     help: '/help',
     callSchedule: '/call-schedule',
     correspondence: '/correspondence',
+    correspondenceOutgoingCreate: '/correspondence/outgoing/new',
+    correspondenceOutgoingPreview: '/correspondence/outgoing/preview',
     accounting: '/accounting',
     kostaLegalAi: '/kosta-legal-ai',
     kostaDaily: '/kosta-daily',
@@ -69,4 +71,8 @@ export function getInvoicesListUrl(opts?: { variant?: 'accounting' }): string {
     if (opts?.variant === 'accounting')
         return routes.accounting;
     return `${routes.timeTracking}?tab=invoices`;
+}
+
+export function getCorrespondenceOutgoingUrl(): string {
+    return `${routes.correspondence}?tab=outgoing`;
 }

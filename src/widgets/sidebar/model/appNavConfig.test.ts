@@ -78,4 +78,15 @@ describe('getVisibleAppNavItems', () => {
             expect(items.map((i) => i.id).sort()).toEqual(['callSchedule', 'home']);
         }
     });
+
+    it('APP_NAV_DEFINITIONS покрывает все ключевые модули', () => {
+        expect(APP_NAV_DEFINITIONS.length).toBeGreaterThanOrEqual(15);
+        const ids = new Set(APP_NAV_DEFINITIONS.map((d) => d.id));
+        expect(ids.has('home')).toBe(true);
+        expect(ids.has('kostaDaily')).toBe(true);
+        expect(ids.has('contacts')).toBe(true);
+        expect(ids.has('expenses')).toBe(true);
+        expect(ids.has('expensesPartners')).toBe(true);
+        expect(ids.has('internalCommunication')).toBe(true);
+    });
 });
