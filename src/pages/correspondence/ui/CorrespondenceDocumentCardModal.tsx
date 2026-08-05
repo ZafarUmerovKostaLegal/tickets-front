@@ -4,10 +4,10 @@ import {
     approveOutgoingCorrespondence,
     correspondenceErrorMessage,
     downloadCorrespondenceAttachment,
+    fetchCorrespondenceAttachmentBlob,
     fetchCorrespondenceDocument,
     formatCorrRegisteredAt,
     invalidateCorrespondencePartnerAttention,
-    openCorrespondenceAttachmentInNewTab,
     rejectOutgoingCorrespondence,
     submitOutgoingForReview,
     type CorrespondenceAttachment,
@@ -44,6 +44,23 @@ function userLabel(name: string | null | undefined, email: string | null | undef
     return name?.trim() || email?.trim() || `User #${id}`;
 }
 
+function pickPrimaryAttachment(attachments: CorrespondenceAttachment[]): CorrespondenceAttachment | null {
+    return attachments.find((a) => a.attachmentKind === 'scan')
+        ?? attachments.find((a) => a.attachmentKind === 'attachment')
+        ?? attachments[0]
+        ?? null;
+}
+
+function resolvePreviewKind(file: CorrespondenceAttachment, contentType: string | null): 'pdf' | 'image' | 'other' {
+    const ct = (contentType || file.contentType || '').toLowerCase();
+    const name = file.fileName.toLowerCase();
+    if (ct.includes('pdf') || name.endsWith('.pdf'))
+        return 'pdf';
+    if (ct.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(name))
+        return 'image';
+    return 'other';
+}
+
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
     return (
         <div className="corr-card-modal__row">
@@ -54,67 +71,32 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
 }
 
 function AttachmentRow({
-    docId,
     file,
-    onOpenError,
+    active,
+    downloading,
+    onSelect,
+    onDownload,
 }: {
-    docId: string;
     file: CorrespondenceAttachment;
-    onOpenError: (msg: string) => void;
+    active: boolean;
+    downloading: boolean;
+    onSelect: () => void;
+    onDownload: () => void;
 }) {
-    const [opening, setOpening] = useState(false);
-    const [downloading, setDownloading] = useState(false);
-
-    const open = async () => {
-        setOpening(true);
-        try {
-            await openCorrespondenceAttachmentInNewTab(docId, file.id);
-        }
-        catch (err) {
-            onOpenError(err instanceof Error ? err.message : 'Не удалось открыть файл');
-        }
-        finally {
-            setOpening(false);
-        }
-    };
-
-    const download = async () => {
-        setDownloading(true);
-        try {
-            await downloadCorrespondenceAttachment(docId, file.id, file.fileName);
-        }
-        catch (err) {
-            onOpenError(err instanceof Error ? err.message : 'Не удалось скачать файл');
-        }
-        finally {
-            setDownloading(false);
-        }
-    };
-
     return (
-        <li className="corr-card-modal__file">
-            <div className="corr-card-modal__file-meta">
+        <li className={`corr-card-modal__file${active ? ' corr-card-modal__file--active' : ''}`}>
+            <button type="button" className="corr-card-modal__file-select" onClick={onSelect} title="Показать предпросмотр">
                 <span className="corr-card-modal__file-name" title={file.fileName}>{file.fileName}</span>
                 <span className="corr-card-modal__file-size">{formatBytes(file.sizeBytes)}</span>
-            </div>
-            <div className="corr-card-modal__file-actions">
-                <button
-                    type="button"
-                    className="corr-card-modal__file-btn"
-                    disabled={opening || downloading}
-                    onClick={() => void open()}
-                >
-                    {opening ? 'Открытие…' : 'Открыть'}
-                </button>
-                <button
-                    type="button"
-                    className="corr-card-modal__file-btn"
-                    disabled={opening || downloading}
-                    onClick={() => void download()}
-                >
-                    {downloading ? 'Скачивание…' : 'Скачать'}
-                </button>
-            </div>
+            </button>
+            <button
+                type="button"
+                className="corr-card-modal__file-btn"
+                disabled={downloading}
+                onClick={onDownload}
+            >
+                {downloading ? '…' : 'Скачать'}
+            </button>
         </li>
     );
 }
@@ -135,6 +117,12 @@ export function CorrespondenceDocumentCardModal({
     const [fileError, setFileError] = useState<string | null>(null);
     const [rejectOpen, setRejectOpen] = useState(false);
     const [resubmitOpen, setResubmitOpen] = useState(false);
+    const [activeFileId, setActiveFileId] = useState<string | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [previewKind, setPreviewKind] = useState<'pdf' | 'image' | 'other' | null>(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewError, setPreviewError] = useState<string | null>(null);
+    const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!open || !documentId) {
@@ -144,16 +132,24 @@ export function CorrespondenceDocumentCardModal({
             setLoading(false);
             setRejectOpen(false);
             setResubmitOpen(false);
+            setActiveFileId(null);
+            setPreviewUrl(null);
+            setPreviewKind(null);
+            setPreviewError(null);
             return;
         }
         let cancelled = false;
         setLoading(true);
         setError(null);
         setDoc(null);
+        setActiveFileId(null);
         void fetchCorrespondenceDocument(documentId)
             .then((d) => {
-                if (!cancelled)
-                    setDoc(d);
+                if (cancelled)
+                    return;
+                setDoc(d);
+                const primary = pickPrimaryAttachment(d.attachments ?? []);
+                setActiveFileId(primary?.id ?? null);
             })
             .catch((err) => {
                 if (!cancelled)
@@ -167,17 +163,77 @@ export function CorrespondenceDocumentCardModal({
     }, [open, documentId]);
 
     useEffect(() => {
+        if (!open || !documentId || !activeFileId || !doc) {
+            setPreviewUrl((prev) => {
+                if (prev)
+                    URL.revokeObjectURL(prev);
+                return null;
+            });
+            setPreviewKind(null);
+            setPreviewError(null);
+            setPreviewLoading(false);
+            return;
+        }
+        const file = (doc.attachments ?? []).find((a) => a.id === activeFileId);
+        if (!file)
+            return;
+
+        let cancelled = false;
+        let objectUrl: string | null = null;
+        setPreviewLoading(true);
+        setPreviewError(null);
+        setPreviewUrl((prev) => {
+            if (prev)
+                URL.revokeObjectURL(prev);
+            return null;
+        });
+        setPreviewKind(null);
+
+        void fetchCorrespondenceAttachmentBlob(documentId, file.id)
+            .then(({ blob, contentType }) => {
+                if (cancelled)
+                    return;
+                const kind = resolvePreviewKind(file, contentType);
+                const typedBlob = kind === 'pdf' && blob.type !== 'application/pdf'
+                    ? new Blob([blob], { type: 'application/pdf' })
+                    : blob;
+                objectUrl = URL.createObjectURL(typedBlob);
+                setPreviewKind(kind);
+                setPreviewUrl(objectUrl);
+            })
+            .catch((err) => {
+                if (!cancelled)
+                    setPreviewError(err instanceof Error ? err.message : 'Не удалось загрузить файл');
+            })
+            .finally(() => {
+                if (!cancelled)
+                    setPreviewLoading(false);
+            });
+
+        return () => {
+            cancelled = true;
+            if (objectUrl)
+                URL.revokeObjectURL(objectUrl);
+        };
+    }, [open, documentId, activeFileId, doc]);
+
+    useEffect(() => {
         if (!open)
             return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && !acting) {
+            if (e.key === 'Escape' && !acting && !rejectOpen && !resubmitOpen) {
                 e.preventDefault();
                 onClose();
             }
         };
         window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, [open, onClose, acting]);
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+        return () => {
+            window.removeEventListener('keydown', onKey);
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [open, onClose, acting, rejectOpen, resubmitOpen]);
 
     if (!open || !documentId)
         return null;
@@ -186,6 +242,7 @@ export function CorrespondenceDocumentCardModal({
     const typeBadge = doc ? CORR_TYPE_BADGE[doc.docType] : null;
     const statusBadge = doc ? CORR_STATUS_BADGE[doc.status] : null;
     const attachments = doc?.attachments ?? [];
+    const activeFile = attachments.find((a) => a.id === activeFileId) ?? null;
     const uid = user?.id != null ? Number(user.id) : null;
     const canPartnerAct = Boolean(
         doc
@@ -282,9 +339,29 @@ export function CorrespondenceDocumentCardModal({
         }
     };
 
+    const handleDownload = async (file: CorrespondenceAttachment) => {
+        if (!doc)
+            return;
+        setDownloadingId(file.id);
+        setFileError(null);
+        try {
+            await downloadCorrespondenceAttachment(doc.id, file.id, file.fileName);
+        }
+        catch (err) {
+            setFileError(err instanceof Error ? err.message : 'Не удалось скачать файл');
+        }
+        finally {
+            setDownloadingId(null);
+        }
+    };
+
+    const previewTitle = activeFile
+        ? activeFile.fileName
+        : (doc?.registryNumber || doc?.subject || 'Документ');
+
     return createPortal(
         <div
-            className="corr-modal corr-modal--enter"
+            className="corr-modal corr-modal--enter corr-card-modal"
             role="presentation"
             onMouseDown={(e) => {
                 if (e.target === e.currentTarget && !acting)
@@ -298,7 +375,7 @@ export function CorrespondenceDocumentCardModal({
                 aria-labelledby={titleId}
                 onMouseDown={(e) => e.stopPropagation()}
             >
-                <header className="corr-modal__head">
+                <header className="corr-modal__head corr-card-modal__head">
                     <div className="corr-card-modal__head-text">
                         <h2 id={titleId} className="corr-modal__title">Карточка документа</h2>
                         {doc ? (
@@ -308,6 +385,7 @@ export function CorrespondenceDocumentCardModal({
                                 </span>
                                 {' · '}
                                 {doc.direction === 'incoming' ? 'Входящее' : 'Исходящее'}
+                                {doc.subject ? ` · ${doc.subject}` : ''}
                             </p>
                         ) : null}
                     </div>
@@ -321,75 +399,124 @@ export function CorrespondenceDocumentCardModal({
 
                 {loading ? (
                     <div className="corr-card-modal__loading" aria-busy="true">
-                        {Array.from({ length: 6 }).map((_, i) => (
-                            <div key={i} className="corr-card-modal__skel-row">
-                                <span className="corr-skel__bone corr-card-modal__skel-label" />
-                                <span className="corr-skel__bone corr-card-modal__skel-value" style={{ width: `${48 + (i % 3) * 14}%` }} />
-                            </div>
-                        ))}
+                        <div className="corr-card-modal__preview corr-card-modal__preview--loading">
+                            <span className="corr-skel__bone corr-card-modal__preview-skel" />
+                        </div>
+                        <div className="corr-card-modal__side">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                                <div key={i} className="corr-card-modal__skel-row">
+                                    <span className="corr-skel__bone corr-card-modal__skel-label" />
+                                    <span className="corr-skel__bone corr-card-modal__skel-value" style={{ width: `${48 + (i % 3) * 14}%` }} />
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 ) : null}
 
                 {error ? <p className="corr-modal__err corr-card-modal__err" role="alert">{error}</p> : null}
 
                 {doc && !loading ? (
-                    <div className="corr-card-modal__body">
-                        <dl className="corr-card-modal__grid">
-                            <DetailRow label="Номер реестра">
-                                <span className="corr-card-modal__mono">{doc.registryNumber || '—'}</span>
-                            </DetailRow>
-                            <DetailRow label={counterpartyLabel}>{doc.counterparty || '—'}</DetailRow>
-                            {doc.partnerUser ? (
-                                <DetailRow label="Партнёр">
-                                    {userLabel(doc.partnerUser.displayName, doc.partnerUser.email, doc.partnerUser.id)}
-                                </DetailRow>
+                    <div className="corr-card-modal__layout">
+                        <section className="corr-card-modal__preview" aria-label="Предпросмотр документа">
+                            {previewLoading ? (
+                                <div className="corr-card-modal__preview-msg" role="status">Загрузка документа…</div>
                             ) : null}
-                            <DetailRow label="Тема">{doc.subject || '—'}</DetailRow>
-                            <DetailRow label="Тип">
-                                {typeBadge ? <span className={typeBadge.className}>{typeBadge.label}</span> : '—'}
-                            </DetailRow>
-                            <DetailRow label="Статус">
-                                {statusBadge ? <span className={statusBadge.className}>{statusBadge.label}</span> : '—'}
-                            </DetailRow>
-                            <DetailRow label="Дата регистрации">
-                                {formatCorrRegisteredAt(doc.registeredAt)}
-                            </DetailRow>
-                            <DetailRow label="Ответственный">
-                                {doc.responsibleUser
-                                    ? userLabel(doc.responsibleUser.displayName, doc.responsibleUser.email, doc.responsibleUser.id)
-                                    : '—'}
-                            </DetailRow>
-                            {doc.comment ? (
-                                <DetailRow label="Комментарий">
-                                    <span className="corr-card-modal__comment">{doc.comment}</span>
-                                </DetailRow>
+                            {!previewLoading && previewError ? (
+                                <div className="corr-card-modal__preview-msg corr-card-modal__preview-msg--err" role="alert">
+                                    {previewError}
+                                </div>
                             ) : null}
-                            {doc.rejectionComment ? (
-                                <DetailRow label="Комментарий отказа">
-                                    <span className="corr-card-modal__comment">{doc.rejectionComment}</span>
-                                </DetailRow>
+                            {!previewLoading && !previewError && !activeFile ? (
+                                <div className="corr-card-modal__preview-msg">Вложения отсутствуют</div>
                             ) : null}
-                        </dl>
+                            {!previewLoading && !previewError && previewUrl && previewKind === 'pdf' ? (
+                                <iframe
+                                    className="corr-card-modal__iframe"
+                                    src={`${previewUrl}#toolbar=1`}
+                                    title={previewTitle}
+                                />
+                            ) : null}
+                            {!previewLoading && !previewError && previewUrl && previewKind === 'image' ? (
+                                <img className="corr-card-modal__img" src={previewUrl} alt={previewTitle} />
+                            ) : null}
+                            {!previewLoading && !previewError && previewUrl && previewKind === 'other' && activeFile ? (
+                                <div className="corr-card-modal__preview-msg">
+                                    <p>Предпросмотр для этого типа файла недоступен.</p>
+                                    <button
+                                        type="button"
+                                        className="corr-modal__btn corr-modal__btn--primary"
+                                        disabled={downloadingId === activeFile.id}
+                                        onClick={() => void handleDownload(activeFile)}
+                                    >
+                                        Скачать {activeFile.fileName}
+                                    </button>
+                                </div>
+                            ) : null}
+                        </section>
 
-                        {attachments.length > 0 ? (
-                            <section className="corr-card-modal__files" aria-label="Вложения">
-                                <h3 className="corr-card-modal__files-title">Вложения ({attachments.length})</h3>
-                                <ul className="corr-card-modal__files-list">
-                                    {attachments.map((file) => (
-                                        <AttachmentRow
-                                            key={file.id}
-                                            docId={doc.id}
-                                            file={file}
-                                            onOpenError={setFileError}
-                                        />
-                                    ))}
-                                </ul>
-                            </section>
-                        ) : (
-                            <p className="corr-card-modal__no-files">Вложения отсутствуют</p>
-                        )}
+                        <aside className="corr-card-modal__side">
+                            <dl className="corr-card-modal__grid">
+                                <DetailRow label="Номер реестра">
+                                    <span className="corr-card-modal__mono">{doc.registryNumber || '—'}</span>
+                                </DetailRow>
+                                <DetailRow label={counterpartyLabel}>{doc.counterparty || '—'}</DetailRow>
+                                {doc.partnerUser ? (
+                                    <DetailRow label="Партнёр">
+                                        {userLabel(doc.partnerUser.displayName, doc.partnerUser.email, doc.partnerUser.id)}
+                                    </DetailRow>
+                                ) : null}
+                                <DetailRow label="Тема">{doc.subject || '—'}</DetailRow>
+                                <DetailRow label="Тип">
+                                    {typeBadge ? <span className={typeBadge.className}>{typeBadge.label}</span> : '—'}
+                                </DetailRow>
+                                <DetailRow label="Статус">
+                                    {statusBadge ? <span className={statusBadge.className}>{statusBadge.label}</span> : '—'}
+                                </DetailRow>
+                                <DetailRow label="Дата регистрации">
+                                    {formatCorrRegisteredAt(doc.registeredAt)}
+                                </DetailRow>
+                                <DetailRow label="Ответственный">
+                                    {doc.responsibleUser
+                                        ? userLabel(doc.responsibleUser.displayName, doc.responsibleUser.email, doc.responsibleUser.id)
+                                        : '—'}
+                                </DetailRow>
+                                {doc.comment ? (
+                                    <DetailRow label="Комментарий">
+                                        <span className="corr-card-modal__comment">{doc.comment}</span>
+                                    </DetailRow>
+                                ) : null}
+                                {doc.rejectionComment ? (
+                                    <DetailRow label="Комментарий отказа">
+                                        <span className="corr-card-modal__comment">{doc.rejectionComment}</span>
+                                    </DetailRow>
+                                ) : null}
+                            </dl>
 
-                        {fileError ? <p className="corr-modal__err" role="alert">{fileError}</p> : null}
+                            {attachments.length > 0 ? (
+                                <section className="corr-card-modal__files" aria-label="Вложения">
+                                    <h3 className="corr-card-modal__files-title">Вложения ({attachments.length})</h3>
+                                    <ul className="corr-card-modal__files-list">
+                                        {attachments.map((file) => (
+                                            <AttachmentRow
+                                                key={file.id}
+                                                file={file}
+                                                active={file.id === activeFileId}
+                                                downloading={downloadingId === file.id}
+                                                onSelect={() => {
+                                                    setFileError(null);
+                                                    setActiveFileId(file.id);
+                                                }}
+                                                onDownload={() => void handleDownload(file)}
+                                            />
+                                        ))}
+                                    </ul>
+                                </section>
+                            ) : (
+                                <p className="corr-card-modal__no-files">Вложения отсутствуют</p>
+                            )}
+
+                            {fileError ? <p className="corr-modal__err" role="alert">{fileError}</p> : null}
+                        </aside>
                     </div>
                 ) : null}
 
@@ -422,6 +549,16 @@ export function CorrespondenceDocumentCardModal({
                             onClick={() => setResubmitOpen(true)}
                         >
                             Отправить повторно
+                        </button>
+                    ) : null}
+                    {activeFile && previewUrl ? (
+                        <button
+                            type="button"
+                            className="corr-modal__btn corr-modal__btn--ghost"
+                            disabled={downloadingId === activeFile.id}
+                            onClick={() => void handleDownload(activeFile)}
+                        >
+                            Скачать файл
                         </button>
                     ) : null}
                     <button type="button" className="corr-modal__btn corr-modal__btn--primary" onClick={onClose} disabled={acting}>

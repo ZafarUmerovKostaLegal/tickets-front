@@ -9,7 +9,6 @@ import {
     invalidateCorrespondencePartnerAttention,
     listCorrespondence,
     mapDocumentToCorrRow,
-    openCorrespondenceAttachmentInNewTab,
     downloadCorrespondenceAttachment,
     registerIncomingCorrespondence,
     type CorrDocType,
@@ -399,23 +398,9 @@ export function CorrespondenceRegistryView({
         }
     };
 
-    const viewScan = async (row: CorrRow) => {
+    const viewScan = (row: CorrRow) => {
         setRowMenuOpenId(null);
-        try {
-            const doc = await fetchCorrespondenceDocument(row.id);
-            const scan = doc.attachments?.find((a) => a.attachmentKind === 'scan') ?? doc.attachments?.[0];
-            if (!scan) {
-                void showAlert({ title: 'Скан', message: 'У документа нет вложений.' });
-                return;
-            }
-            await openCorrespondenceAttachmentInNewTab(row.id, scan.id);
-        }
-        catch (err) {
-            void showAlert({
-                title: 'Не удалось открыть файл',
-                message: err instanceof Error ? err.message : 'Ошибка загрузки',
-            });
-        }
+        setCardDocId(row.id);
     };
 
     const downloadAttachment = async (row: CorrRow) => {
