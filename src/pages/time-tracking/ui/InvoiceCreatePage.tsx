@@ -577,10 +577,6 @@ export function InvoiceCreatePage() {
       await showAlert({ message: t('timeTrackingPage.invoices.errors.selectClient') });
       return;
     }
-    if (selTime.size === 0 && selExp.size === 0) {
-      await showAlert({ message: t('timeTrackingPage.invoices.errors.selectLines') });
-      return;
-    }
     let billedAmountNum: number | undefined;
     let serviceDescription: string | undefined;
     if (customBilledEnabled) {
@@ -597,6 +593,12 @@ export function InvoiceCreatePage() {
       }
       billedAmountNum = Math.round(n * 100) / 100;
       serviceDescription = desc;
+    }
+    const closingReportLines = selTime.size > 0 || selExp.size > 0;
+    // Custom billed amount alone is enough; report lines are optional.
+    if (!closingReportLines && billedAmountNum == null) {
+      await showAlert({ message: t('timeTrackingPage.invoices.errors.selectLines') });
+      return;
     }
     const billProjectId = createProjectId.trim();
     if (!billProjectId) {
@@ -620,13 +622,16 @@ export function InvoiceCreatePage() {
       });
       return;
     }
-    const confirmedAllowed = selectedProjectSkipsPartner
-      || await requireFullyConfirmedPeriod(billProjectId, unbilledFrom, unbilledTo);
-    if (!confirmedAllowed) {
-      const msg = t('timeTrackingPage.invoices.errors.confirmedOnlyRequired');
-      setUnbilledPartnerBlockReason(msg);
-      await showAlert({ message: msg });
-      return;
+    // Pure custom-billed invoice does not close a partner period — skip confirmation gate.
+    if (closingReportLines) {
+      const confirmedAllowed = selectedProjectSkipsPartner
+        || await requireFullyConfirmedPeriod(billProjectId, unbilledFrom, unbilledTo);
+      if (!confirmedAllowed) {
+        const msg = t('timeTrackingPage.invoices.errors.confirmedOnlyRequired');
+        setUnbilledPartnerBlockReason(msg);
+        await showAlert({ message: msg });
+        return;
+      }
     }
     setCreateBusy(true);
     try {
@@ -637,12 +642,14 @@ export function InvoiceCreatePage() {
         .filter((x) => selExp.has(x.id))
         .map((x) => String(x.expenseDate ?? '').trim().slice(0, 10))
         .filter(Boolean);
-      await ensureInvoiceFxRatesForBilling({
-        dateFrom: unbilledFrom,
-        dateTo: unbilledTo,
-        expenseDates,
-        currency,
-      });
+      if (closingReportLines) {
+        await ensureInvoiceFxRatesForBilling({
+          dateFrom: unbilledFrom,
+          dateTo: unbilledTo,
+          expenseDates,
+          currency,
+        });
+      }
       const created = await createInvoice({
         clientId: createClientId,
         projectId: billProjectId,
@@ -650,10 +657,16 @@ export function InvoiceCreatePage() {
         dueDate,
         ...(manualNumber ? { invoiceNumber: manualNumber } : {}),
         ...(currency ? { currency } : {}),
-        timeEntryIds: [...selTime],
-        expenseIds: [...selExp],
-        partnerBillingPeriodFrom: unbilledFrom.trim().slice(0, 10),
-        partnerBillingPeriodTo: unbilledTo.trim().slice(0, 10),
+        ...(closingReportLines
+          ? {
+              timeEntryIds: [...selTime],
+              expenseIds: [...selExp],
+              // Only send billing period when closing report lines — otherwise partner
+              // snapshot would pull the whole period into the invoice.
+              partnerBillingPeriodFrom: unbilledFrom.trim().slice(0, 10),
+              partnerBillingPeriodTo: unbilledTo.trim().slice(0, 10),
+            }
+          : {}),
         ...(billedAmountNum != null
           ? {
               billedAmount: billedAmountNum,
@@ -671,7 +684,7 @@ export function InvoiceCreatePage() {
       const raw = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.createFailed');
       const conflict = /409|уже существует|already exists/i.test(raw);
       const base = conflict ? t('timeTrackingPage.invoices.errors.invoiceNumberConflict') : raw;
-      const hint = isForbiddenError(e) && !selectedProjectSkipsPartner
+      const hint = isForbiddenError(e) && !selectedProjectSkipsPartner && closingReportLines
         ? t('timeTrackingPage.invoices.errors.partnerConfirmHint')
         : '';
       await showAlert({ message: `${base}${hint}` });
@@ -1065,7 +1078,7 @@ export function InvoiceCreatePage() {
               </section>
             )}
 
-            {(unbilledTime.length > 0 || unbilledExp.length > 0) && (
+            {(createClientId && createProjectId) ? (
               <section className="tt-inv-page__section">
                 <div className="tt-inv-page__section-head">
                   <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.customBilledToggle')}</h2>
@@ -1140,7 +1153,7 @@ export function InvoiceCreatePage() {
                   </div>
                 ) : null}
               </section>
-            )}
+            ) : null}
           </div>
         </div>
       </main>

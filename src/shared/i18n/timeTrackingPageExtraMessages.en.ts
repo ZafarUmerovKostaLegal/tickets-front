@@ -1591,7 +1591,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             hoursTitle: 'Hours (×1.00 rate for invoice line)',
             packageCovered: 'package-covered',
             customBilledToggle: 'Bill a custom amount',
-            customBilledHint: 'Time and expenses will be closed as usual, but the invoice and statistics will use the amount you enter. Only the legal invoice page is included in the document.',
+            customBilledHint: 'Report lines are optional: client, project, amount, and description are enough. If you select time/expenses they will be closed, and the invoice will use your amount. Only the legal invoice page is included in the document.',
             customBilledAmount: 'Amount to bill',
             customBilledDescription: 'Service description',
             customBilledWorkedTime: 'Worked (time): {amount}',

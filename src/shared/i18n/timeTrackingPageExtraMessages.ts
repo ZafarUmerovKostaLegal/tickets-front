@@ -1589,7 +1589,7 @@ export const timeTrackingPageExtraMessages = {
             hoursTitle: 'Часы (×1.00 ставка для строки счёта)',
             packageCovered: 'в пакете',
             customBilledToggle: 'Выставить свою сумму',
-            customBilledHint: 'Время и расходы закроются как обычно, а в счёт и статистику попадёт указанная сумма. В документ войдёт только страница счёта.',
+            customBilledHint: 'Можно без строк отчёта: клиент, проект, сумма и описание. Если отметите время/расходы — они закроются, а в счёт попадёт указанная сумма. В документ войдёт только страница счёта.',
             customBilledAmount: 'Сумма к выставлению',
             customBilledDescription: 'Описание услуги',
             customBilledWorkedTime: 'Наработано (время): {amount}',
