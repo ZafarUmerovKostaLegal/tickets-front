@@ -94,6 +94,16 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
     );
 }
 
+function MetaPerson({ name, email, id }: { name: string | null | undefined; email: string | null | undefined; id: number }) {
+    const label = userLabel(name, email, id);
+    return (
+        <span className="corr-card-modal__person">
+            <span className="corr-card-modal__person-avatar" aria-hidden>{userInitials(label)}</span>
+            <span className="corr-card-modal__person-name">{label}</span>
+        </span>
+    );
+}
+
 function AttachmentRow({
     file,
     active,
@@ -551,42 +561,62 @@ export function CorrespondenceDocumentCardModal({
                         </section>
 
                         <aside className="corr-card-modal__side">
-                            <dl className="corr-card-modal__grid">
-                                <DetailRow label="Номер реестра">
-                                    <span className="corr-card-modal__mono">{doc.registryNumber || '—'}</span>
-                                </DetailRow>
-                                <DetailRow label={counterpartyLabel}>{doc.counterparty || '—'}</DetailRow>
-                                {doc.partnerUser ? (
-                                    <DetailRow label="Партнёр">
-                                        {userLabel(doc.partnerUser.displayName, doc.partnerUser.email, doc.partnerUser.id)}
+                            <section className="corr-card-modal__meta" aria-label="Сведения о документе">
+                                <header className="corr-card-modal__meta-head">
+                                    <span className="corr-card-modal__meta-kicker">Сведения</span>
+                                    <div className="corr-card-modal__meta-chips">
+                                        {typeBadge ? <span className={typeBadge.className}>{typeBadge.label}</span> : null}
+                                        {statusBadge ? <span className={statusBadge.className}>{statusBadge.label}</span> : null}
+                                    </div>
+                                </header>
+
+                                <div className="corr-card-modal__meta-reg">
+                                    <span className="corr-card-modal__meta-reg-label">Номер реестра</span>
+                                    <span className="corr-card-modal__meta-reg-value">
+                                        {doc.registryNumber || '—'}
+                                    </span>
+                                </div>
+
+                                <dl className="corr-card-modal__grid">
+                                    <DetailRow label={counterpartyLabel}>{doc.counterparty || '—'}</DetailRow>
+                                    {doc.partnerUser ? (
+                                        <DetailRow label="Партнёр">
+                                            <MetaPerson
+                                                name={doc.partnerUser.displayName}
+                                                email={doc.partnerUser.email}
+                                                id={doc.partnerUser.id}
+                                            />
+                                        </DetailRow>
+                                    ) : null}
+                                    <DetailRow label="Тема">{doc.subject || '—'}</DetailRow>
+                                    <DetailRow label="Дата регистрации">
+                                        {formatCorrRegisteredAt(doc.registeredAt)}
                                     </DetailRow>
-                                ) : null}
-                                <DetailRow label="Тема">{doc.subject || '—'}</DetailRow>
-                                <DetailRow label="Тип">
-                                    {typeBadge ? <span className={typeBadge.className}>{typeBadge.label}</span> : '—'}
-                                </DetailRow>
-                                <DetailRow label="Статус">
-                                    {statusBadge ? <span className={statusBadge.className}>{statusBadge.label}</span> : '—'}
-                                </DetailRow>
-                                <DetailRow label="Дата регистрации">
-                                    {formatCorrRegisteredAt(doc.registeredAt)}
-                                </DetailRow>
-                                <DetailRow label="Ответственный">
-                                    {doc.responsibleUser
-                                        ? userLabel(doc.responsibleUser.displayName, doc.responsibleUser.email, doc.responsibleUser.id)
-                                        : '—'}
-                                </DetailRow>
-                                {doc.comment ? (
-                                    <DetailRow label="Комментарий">
-                                        <span className="corr-card-modal__note-text">{doc.comment}</span>
+                                    <DetailRow label="Ответственный">
+                                        {doc.responsibleUser
+                                            ? (
+                                                <MetaPerson
+                                                    name={doc.responsibleUser.displayName}
+                                                    email={doc.responsibleUser.email}
+                                                    id={doc.responsibleUser.id}
+                                                />
+                                            )
+                                            : '—'}
                                     </DetailRow>
-                                ) : null}
-                                {doc.rejectionComment ? (
-                                    <DetailRow label="Комментарий отказа">
-                                        <span className="corr-card-modal__note-text">{doc.rejectionComment}</span>
-                                    </DetailRow>
-                                ) : null}
-                            </dl>
+                                    {doc.comment ? (
+                                        <DetailRow label="Комментарий">
+                                            <span className="corr-card-modal__note-text">{doc.comment}</span>
+                                        </DetailRow>
+                                    ) : null}
+                                    {doc.rejectionComment ? (
+                                        <DetailRow label="Комментарий отказа">
+                                            <span className="corr-card-modal__note-text corr-card-modal__note-text--reject">
+                                                {doc.rejectionComment}
+                                            </span>
+                                        </DetailRow>
+                                    ) : null}
+                                </dl>
+                            </section>
 
                             {attachments.length > 0 ? (
                                 <section className="corr-card-modal__files" aria-label="Вложения">
