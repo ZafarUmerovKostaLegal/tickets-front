@@ -292,7 +292,10 @@ export function InvoiceDetailPage() {
         const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || null;
         const scrubbed = scrubStaleBillingPeriodDocumentOverrides(
           parseInvoiceDocumentOverrides(documentOverrides),
-          { issueDateIso: meta.issueDateIso, billingPeriodIso: periodIso },
+          {
+            issueDateIso: meta.issueDateIso ?? inv.issueDate.slice(0, 10),
+            billingPeriodIso: periodIso,
+          },
         );
         writeInvoicePreviewSession({
           v: 1,
@@ -319,7 +322,10 @@ export function InvoiceDetailPage() {
       const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || null;
       const doc = scrubStaleBillingPeriodDocumentOverrides(
         parseInvoiceDocumentOverrides(fresh.documentOverrides),
-        { issueDateIso: meta.issueDateIso, billingPeriodIso: periodIso },
+        {
+          issueDateIso: meta.issueDateIso ?? fresh.issueDate.slice(0, 10),
+          billingPeriodIso: periodIso,
+        },
       );
       const client = await getTimeManagerClient(fresh.clientId);
       const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({
@@ -379,7 +385,10 @@ export function InvoiceDetailPage() {
       const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || null;
       const doc = scrubStaleBillingPeriodDocumentOverrides(
         parseInvoiceDocumentOverrides(fresh.documentOverrides),
-        { issueDateIso: meta.issueDateIso, billingPeriodIso: periodIso },
+        {
+          issueDateIso: meta.issueDateIso ?? fresh.issueDate.slice(0, 10),
+          billingPeriodIso: periodIso,
+        },
       );
       const client = await getTimeManagerClient(fresh.clientId);
       const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({
