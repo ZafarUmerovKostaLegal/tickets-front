@@ -6,6 +6,7 @@ import {
 } from './invoiceTimeReportI18n';
 import {
     formatLegalRibbonDate,
+    formatLegalRibbonPeriodMonth,
     getLegalInvoiceLabels,
     resolveLocalizedLegalServiceDescription,
 } from './invoiceLegalPageI18n';
@@ -35,9 +36,12 @@ describe('invoiceLegalPageI18n', () => {
         expect(labels.invoiceNo('INV-1')).toBe('СЧЁТ № INV-1');
         expect(labels.billTo).toBe('Плательщик');
         expect(formatLegalRibbonDate('2026-07-09', 'RU')).toMatch(/ИЮЛ/i);
+        expect(formatLegalRibbonPeriodMonth('2026-07-31', 'ENG')).toBe('JULY');
+        expect(formatLegalRibbonPeriodMonth('2026-07-31', 'RU')).toBe('ИЮЛЬ');
 
         const model = buildInvoiceCoverLetterModel({
-            issueDateIso: '2026-07-20',
+            issueDateIso: '2026-08-05',
+            billingPeriodIso: '2026-07-31',
             clientName: 'GOR',
             clientAddress: null,
             contactName: null,
@@ -45,6 +49,8 @@ describe('invoiceLegalPageI18n', () => {
             currency: 'EUR',
             coverLanguage: 'RU',
         });
+        expect(model.servicesMonthYear).toBe('июле 2026 года');
         expect(resolveLocalizedLegalServiceDescription(model)).toMatch(/Юридические услуги/i);
+        expect(resolveLocalizedLegalServiceDescription(model)).toMatch(/июле 2026/i);
     });
 });

@@ -199,6 +199,12 @@ export async function invoicePreviewMetaForExisting(inv: InvoiceDto, clientLabel
     issueDateIso: inv.issueDate.slice(0, 10),
     dueDateIso: inv.dueDate.slice(0, 10),
   };
+  const pf = String(inv.partnerBillingPeriodFrom ?? '').trim().slice(0, 10);
+  const pt = String(inv.partnerBillingPeriodTo ?? '').trim().slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(pf))
+    meta.billingPeriodFrom = pf;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(pt))
+    meta.billingPeriodTo = pt;
   if (!inv.projectId?.trim())
     return meta;
   try {

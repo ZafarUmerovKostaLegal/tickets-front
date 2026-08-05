@@ -120,6 +120,36 @@ export function formatLegalRibbonDate(
     }).toUpperCase();
 }
 
+/** Ribbon period label: month only (e.g. JULY / ИЮЛЬ), not the invoice issue date. */
+const RU_MONTH_NOMINATIVE = [
+    'январь',
+    'февраль',
+    'март',
+    'апрель',
+    'май',
+    'июнь',
+    'июль',
+    'август',
+    'сентябрь',
+    'октябрь',
+    'ноябрь',
+    'декабрь',
+] as const;
+
+export function formatLegalRibbonPeriodMonth(
+    isoYmd: string,
+    lang?: InvoiceCoverLanguage | null,
+): string {
+    if (!isoYmd || !/^\d{4}-\d{2}-\d{2}/.test(isoYmd))
+        return '—';
+    const d = new Date(`${isoYmd.slice(0, 10)}T12:00:00`);
+    if (Number.isNaN(d.getTime()))
+        return '—';
+    if (normalizeCoverLanguage(lang) === 'RU')
+        return (RU_MONTH_NOMINATIVE[d.getMonth()] ?? '—').toUpperCase();
+    return d.toLocaleDateString('en-US', { month: 'long' }).toUpperCase();
+}
+
 export function resolveLocalizedLegalServiceDescription(
     model: InvoiceCoverLetterModel,
     override?: string | null,

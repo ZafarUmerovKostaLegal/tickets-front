@@ -7,9 +7,11 @@ import {
     type InvoicePreviewPackInput,
     packCurrencyCode,
     packInvoiceNumberDisplay,
+    packResolveBillingPeriodIso,
     packResolveDueIso,
     packResolveIssueIso,
     packUppercaseRibbonDate,
+    packUppercaseRibbonPeriodMonth,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
 import { trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
@@ -1084,47 +1086,6 @@ function drawSingleTimeReportPdfPage(
 
     let yMid = yAfterDetail - TR_SECTION_GAP;
 
-    const expenseRows = trimTrailingEmptyDetailSlots(pack.expenseSlots);
-    if (expenseRows.length > 0) {
-        page.drawText(labels.expensesTitle, {
-            x: ML,
-            y: yMid,
-            size: DOC_FS,
-            font: fontBold,
-            color: TR_RED,
-        });
-        yMid -= TR_SUMMARY_TITLE_GAP;
-        const expenseHeaders = [labels.date, labels.description, amountHdr] as const;
-        const expenseBody = expenseRows.map((r) => [r.date, r.description, r.amount] as const);
-        yMid = drawTimeReportGridTable(page, {
-            tableLeft: ML,
-            tableW,
-            yTopPdf: yMid,
-            colWeights: TIME_REPORT_PDF_EXPENSE_WEIGHTS,
-            headers: expenseHeaders,
-            bodyRows: Math.max(expenseBody.length, 1),
-            footerKind: 'detail',
-            summaryCurrency: null,
-            font,
-            fontBold,
-            bodyTexts: expenseBody.length ? expenseBody : [['', '', '']],
-            rightAlignedBodyCols: new Set([2]),
-            wrapBodyCols: new Set([1]),
-            fixedFsBodyCols: new Set([2]),
-            showInnerTotal: true,
-            totalLabel: labels.total,
-            footerTotals: {
-                detail: {
-                    hours: '',
-                    amount: pack.expenseTotalAmountDisplay,
-                },
-            },
-        });
-        // Expense footer uses detail kind which expects hours in col 4 — for 3-col table
-        // the draw function may misplace. Check drawTimeReportGridTable footer for detail.
-        yMid -= TR_SECTION_GAP;
-    }
-
     page.drawText(labels.summaryTitle, {
         x: ML,
         y: yMid,
@@ -1134,7 +1095,7 @@ function drawSingleTimeReportPdfPage(
     });
     yMid -= TR_SUMMARY_TITLE_GAP;
 
-    drawTimeReportGridTable(page, {
+    yMid = drawTimeReportGridTable(page, {
         tableLeft: ML,
         tableW,
         yTopPdf: yMid,
@@ -1159,6 +1120,45 @@ function drawSingleTimeReportPdfPage(
         },
     });
 
+    const expenseRows = trimTrailingEmptyDetailSlots(pack.expenseSlots);
+    if (expenseRows.length > 0) {
+        yMid -= TR_SECTION_GAP;
+        page.drawText(labels.expensesTitle, {
+            x: ML,
+            y: yMid,
+            size: DOC_FS,
+            font: fontBold,
+            color: TR_RED,
+        });
+        yMid -= TR_SUMMARY_TITLE_GAP;
+        const expenseHeaders = [labels.date, labels.description, amountHdr] as const;
+        const expenseBody = expenseRows.map((r) => [r.date, r.description, r.amount] as const);
+        drawTimeReportGridTable(page, {
+            tableLeft: ML,
+            tableW,
+            yTopPdf: yMid,
+            colWeights: TIME_REPORT_PDF_EXPENSE_WEIGHTS,
+            headers: expenseHeaders,
+            bodyRows: Math.max(expenseBody.length, 1),
+            footerKind: 'detail',
+            summaryCurrency: null,
+            font,
+            fontBold,
+            bodyTexts: expenseBody.length ? expenseBody : [['', '', '']],
+            rightAlignedBodyCols: new Set([2]),
+            wrapBodyCols: new Set([1]),
+            fixedFsBodyCols: new Set([2]),
+            showInnerTotal: true,
+            totalLabel: labels.total,
+            footerTotals: {
+                detail: {
+                    hours: '',
+                    amount: pack.expenseTotalAmountDisplay,
+                },
+            },
+        });
+    }
+
     drawTimeReportBandFooter(page, fontBold, pageTag);
 }
 
@@ -1173,11 +1173,12 @@ function drawLegalInvoicePdfPage(
 ): void {
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
+    const periodIso = packResolveBillingPeriodIso(session);
     const labels = getLegalInvoiceLabels(model.coverLanguage);
     const zeroFallback = packZeroCommaAmount(model);
     const ribbonIssue = resolveLegalOverrideText(
         legalOverrides?.issueDateDisplay,
-        packUppercaseRibbonDate(issueIso, model.coverLanguage),
+        packUppercaseRibbonPeriodMonth(periodIso, model.coverLanguage),
     );
     const dueBanner = resolveLegalOverrideText(
         legalOverrides?.dueDateDisplay,

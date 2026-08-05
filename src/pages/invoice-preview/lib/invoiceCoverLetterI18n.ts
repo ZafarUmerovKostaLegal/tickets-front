@@ -124,7 +124,10 @@ export function applyCoverLetterLanguage(
         coverLanguage: nextLang,
         issueDateIso: iso,
         letterDateDisplay: formatCoverLetterDate(iso, nextLang),
-        servicesMonthYear: formatCoverServicesPeriod(iso, nextLang),
+        servicesMonthYear: formatCoverServicesPeriod(
+            (model.billingPeriodIso || iso).slice(0, 10),
+            nextLang,
+        ),
         introParagraphOverride: null,
         invoiceParagraphOverride: null,
     };

@@ -23,6 +23,10 @@ export type InvoicePreviewMeta = {
     issueDateIso?: string;
 
     dueDateIso?: string;
+
+    /** Billing period for ribbon month / services period (not invoice issue date). */
+    billingPeriodFrom?: string;
+    billingPeriodTo?: string;
 };
 
 export type InvoicePreviewSessionCreateV1 = {
@@ -77,6 +81,10 @@ function parseMeta(raw: unknown): InvoicePreviewMeta {
         meta.issueDateIso = m.issueDateIso.slice(0, 10);
     if (typeof m.dueDateIso === 'string' && /^\d{4}-\d{2}-\d{2}/.test(m.dueDateIso))
         meta.dueDateIso = m.dueDateIso.slice(0, 10);
+    if (typeof m.billingPeriodFrom === 'string' && /^\d{4}-\d{2}-\d{2}/.test(m.billingPeriodFrom))
+        meta.billingPeriodFrom = m.billingPeriodFrom.slice(0, 10);
+    if (typeof m.billingPeriodTo === 'string' && /^\d{4}-\d{2}-\d{2}/.test(m.billingPeriodTo))
+        meta.billingPeriodTo = m.billingPeriodTo.slice(0, 10);
     return meta;
 }
 

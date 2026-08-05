@@ -118,8 +118,16 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
         if (session.mode === 'existing') {
             const inv = await getInvoice(session.invoiceId, true);
             const client = await getTimeManagerClient(inv.clientId);
+            const billingPeriodIso = (
+                session.meta.billingPeriodTo
+                || inv.partnerBillingPeriodTo
+                || session.meta.billingPeriodFrom
+                || inv.partnerBillingPeriodFrom
+                || inv.issueDate
+            )?.toString().slice(0, 10);
             const model = buildInvoiceCoverLetterModel({
                 issueDateIso: inv.issueDate.slice(0, 10),
+                billingPeriodIso,
                 clientName: client.name,
                 clientAddress: client.address,
                 contactName: client.contact_name ?? null,
@@ -131,9 +139,11 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
         }
         const f = session.form;
         const iso = f.issueDate.slice(0, 10);
+        const billingPeriodIso = (f.unbilledTo || f.unbilledFrom || iso).slice(0, 10);
         if (!f.createClientId.trim()) {
             const model = buildInvoiceCoverLetterModel({
                 issueDateIso: iso,
+                billingPeriodIso,
                 clientName: session.meta.clientLabel ?? 'Company Name',
                 clientAddress: null,
                 contactName: null,
@@ -146,6 +156,7 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
         const client = await getTimeManagerClient(f.createClientId);
         const model = buildInvoiceCoverLetterModel({
             issueDateIso: iso,
+            billingPeriodIso,
             clientName: client.name,
             clientAddress: client.address,
             contactName: client.contact_name ?? null,

@@ -19,11 +19,15 @@ export type InvoiceCoverLetterInput = {
     totalAmount: number | null;
     currency: string;
     coverLanguage?: InvoiceCoverLanguage;
+    /** Billing period date for «services rendered in …»; defaults to issueDateIso. */
+    billingPeriodIso?: string | null;
 };
 
 export type InvoiceCoverLetterModel = {
     coverLanguage: InvoiceCoverLanguage;
     issueDateIso: string;
+    /** ISO date used for services month / ribbon period (billing period). */
+    billingPeriodIso: string;
     letterDateDisplay: string;
     recipientCompany: string;
     recipientAddressLines: [string, string];
@@ -83,12 +87,15 @@ export function buildInvoiceCoverLetterModel(input: InvoiceCoverLetterInput): In
     const lang = normalizeCoverLanguage(input.coverLanguage);
     const labels = getCoverLetterLabels(lang);
     const iso = input.issueDateIso.slice(0, 10);
+    const periodRaw = (input.billingPeriodIso ?? iso).slice(0, 10);
+    const periodIso = /^\d{4}-\d{2}-\d{2}$/.test(periodRaw) ? periodRaw : iso;
     const [a1, a2] = splitAddress(input.clientAddress, lang);
     const company = input.clientName.trim() || 'Company Name';
     const contact = (input.contactName ?? '').trim();
     return {
         coverLanguage: lang,
         issueDateIso: iso,
+        billingPeriodIso: periodIso,
         letterDateDisplay: formatCoverLetterDate(iso, lang),
         recipientCompany: company,
         recipientAddressLines: [
@@ -98,7 +105,7 @@ export function buildInvoiceCoverLetterModel(input: InvoiceCoverLetterInput): In
         attentionName: contact || labels.defaultAttentionName,
         attentionTitle: labels.defaultAttentionTitle,
         quotedCompanyName: company,
-        servicesMonthYear: formatCoverServicesPeriod(iso, lang),
+        servicesMonthYear: formatCoverServicesPeriod(periodIso, lang),
         totalFormatted: formatCoverLetterTotal(input.totalAmount, input.currency),
         signatoryName: KOSTA_LEGAL_FIRM.defaultSignatoryName,
         signatoryInitials: findCoverSignatoryPartnerByName(KOSTA_LEGAL_FIRM.defaultSignatoryName)?.initials

@@ -18,6 +18,29 @@ export function packResolveIssueIso(session: InvoicePreviewSessionV1 | null): st
     return session.form.issueDate.slice(0, 10);
 }
 
+/** Billing period month anchor (prefer period end); falls back to issue date. */
+export function packResolveBillingPeriodIso(session: InvoicePreviewSessionV1 | null): string {
+    const issue = packResolveIssueIso(session);
+    if (!session)
+        return issue;
+    if (session.mode === 'create') {
+        const to = session.form.unbilledTo?.trim().slice(0, 10);
+        const from = session.form.unbilledFrom?.trim().slice(0, 10);
+        if (to && /^\d{4}-\d{2}-\d{2}$/.test(to))
+            return to;
+        if (from && /^\d{4}-\d{2}-\d{2}$/.test(from))
+            return from;
+        return issue;
+    }
+    const to = session.meta.billingPeriodTo?.trim().slice(0, 10);
+    const from = session.meta.billingPeriodFrom?.trim().slice(0, 10);
+    if (to && /^\d{4}-\d{2}-\d{2}$/.test(to))
+        return to;
+    if (from && /^\d{4}-\d{2}-\d{2}$/.test(from))
+        return from;
+    return issue;
+}
+
 export function packResolveDueIso(session: InvoicePreviewSessionV1 | null, issueIso: string): string {
     if (session?.mode === 'create')
         return session.form.dueDate.slice(0, 10);
@@ -28,6 +51,7 @@ export function packResolveDueIso(session: InvoicePreviewSessionV1 | null, issue
 }
 
 export { formatLegalRibbonDate as packUppercaseRibbonDate } from './invoiceLegalPageI18n';
+export { formatLegalRibbonPeriodMonth as packUppercaseRibbonPeriodMonth } from './invoiceLegalPageI18n';
 
 export function packInvoiceNumberDisplay(session: InvoicePreviewSessionV1 | null): string {
     const n = session?.meta.invoiceNumber?.trim();

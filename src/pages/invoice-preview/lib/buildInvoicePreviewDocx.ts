@@ -28,9 +28,11 @@ import {
     type InvoicePreviewPackInput,
     packCurrencyCode,
     packInvoiceNumberDisplay,
+    packResolveBillingPeriodIso,
     packResolveDueIso,
     packResolveIssueIso,
     packUppercaseRibbonDate,
+    packUppercaseRibbonPeriodMonth,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
 import { trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
@@ -379,47 +381,6 @@ function timeReportDocxSectionChildren(
     ];
 
     if (opts.isLastChunk) {
-        const expenseRows = trimTrailingEmptyDetailSlots(pack.expenseSlots);
-        if (expenseRows.length > 0) {
-            const EW = pctWidths([18, 52, 30]);
-            const expenseHeader = new TableRow({
-                children: [
-                    trHeadCell(labels.date, EW[0] ?? 18),
-                    trHeadCell(labels.description, EW[1] ?? 52),
-                    trHeadCell(amountHdr, EW[2] ?? 30),
-                ],
-            });
-            const expenseDataRows: TableRow[] = expenseRows.map((r) => new TableRow({
-                children: [
-                    trBodyTextCell(r.date, EW[0]!, AlignmentType.LEFT),
-                    trBodyTextCell(r.description, EW[1]!, AlignmentType.LEFT),
-                    trBodyTextCell(r.amount, EW[2]!, AlignmentType.RIGHT),
-                ],
-            }));
-            expenseDataRows.push(new TableRow({
-                children: [
-                    new TableCell({
-                        borders: cellBorderGrid,
-                        columnSpan: 2,
-                        children: [new Paragraph({
-                            children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
-                        })],
-                    }),
-                    trFootValueCell(pack.expenseTotalAmountDisplay, EW[2]!, AlignmentType.RIGHT),
-                ],
-            }));
-            out.push(
-                new Paragraph({
-                    spacing: { before: 260, after: 120 },
-                    children: [new TextRun({ text: labels.expensesTitle, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
-                }),
-                new Table({
-                    ...tableOpts,
-                    rows: [expenseHeader, ...expenseDataRows],
-                }),
-            );
-        }
-
         const summaryHeader = new TableRow({
             children: [
                 trHeadCell(labels.initials, SW[0] ?? 9),
@@ -470,6 +431,47 @@ function timeReportDocxSectionChildren(
             }),
             sumTbl,
         );
+
+        const expenseRows = trimTrailingEmptyDetailSlots(pack.expenseSlots);
+        if (expenseRows.length > 0) {
+            const EW = pctWidths([18, 52, 30]);
+            const expenseHeader = new TableRow({
+                children: [
+                    trHeadCell(labels.date, EW[0] ?? 18),
+                    trHeadCell(labels.description, EW[1] ?? 52),
+                    trHeadCell(amountHdr, EW[2] ?? 30),
+                ],
+            });
+            const expenseDataRows: TableRow[] = expenseRows.map((r) => new TableRow({
+                children: [
+                    trBodyTextCell(r.date, EW[0]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.description, EW[1]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.amount, EW[2]!, AlignmentType.RIGHT),
+                ],
+            }));
+            expenseDataRows.push(new TableRow({
+                children: [
+                    new TableCell({
+                        borders: cellBorderGrid,
+                        columnSpan: 2,
+                        children: [new Paragraph({
+                            children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                        })],
+                    }),
+                    trFootValueCell(pack.expenseTotalAmountDisplay, EW[2]!, AlignmentType.RIGHT),
+                ],
+            }));
+            out.push(
+                new Paragraph({
+                    spacing: { before: 260, after: 120 },
+                    children: [new TextRun({ text: labels.expensesTitle, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                }),
+                new Table({
+                    ...tableOpts,
+                    rows: [expenseHeader, ...expenseDataRows],
+                }),
+            );
+        }
     }
 
     out.push(
@@ -524,10 +526,11 @@ function legalInvoiceDocxBlocks(
     const labels = getLegalInvoiceLabels(model.coverLanguage);
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
+    const periodIso = packResolveBillingPeriodIso(session);
     const zeroFallback = packZeroCommaAmount(model);
     const ribbonIssue = resolveLegalOverrideText(
         legalOverrides?.issueDateDisplay,
-        packUppercaseRibbonDate(issueIso, model.coverLanguage),
+        packUppercaseRibbonPeriodMonth(periodIso, model.coverLanguage),
     );
     const dueBanner = resolveLegalOverrideText(
         legalOverrides?.dueDateDisplay,

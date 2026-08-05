@@ -158,55 +158,6 @@ export function InvoiceTimeReportPage({
         </table>
       </div>
 
-      {showExpenseSection && expenses.length > 0 ? (
-          <>
-            <h3 className="tt-inv-tr__subtitle">{labels.expensesTitle}</h3>
-            <div className="tt-inv-tr__table-wrap">
-              <table className="tt-inv-tr__table tt-inv-tr__table--expenses" role="grid" aria-label={labels.expensesTitle}>
-                <thead className="tt-inv-tr__thead">
-                  <tr>
-                    <th scope="col" style={{ width: '18%' }}>{labels.date}</th>
-                    <th scope="col" style={{ width: '52%' }}>{labels.description}</th>
-                    <th scope="col" style={{ width: '30%' }}>{amountHeader}</th>
-                  </tr>
-                </thead>
-                <tbody className="tt-inv-tr__tbody">
-                  {expenses.map((r, i) => {
-                      const empty = !([r.date, r.description, r.amount].some((c) => String(c).trim().length > 0));
-                      const cellClass = empty ? 'tt-inv-tr__cell--empty' : undefined;
-                      const moneyClass = `tt-inv-tr__cell--num tt-inv-tr__cell--amount${empty ? ' tt-inv-tr__cell--empty' : ''}`;
-                      return (
-                          <tr key={i}>
-                            <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'date', v)} />
-                            <TrCell editable={editable} className={cellClass} value={r.description} ariaLabel={`${labels.description}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'description', v)} />
-                            <TrCell editable={editable} className={moneyClass} value={r.amount} ariaLabel={`${labels.amount(cur)}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'amount', v)} />
-                          </tr>
-                      );
-                  })}
-                </tbody>
-                <tfoot className="tt-inv-tr__tfoot">
-                  <tr>
-                    <td colSpan={2}>{labels.total}</td>
-                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num tt-inv-tr__cell--amount">
-                      {editable
-                        ? (
-                            <input
-                              type="text"
-                              className="tt-inv-tr__cell-input tt-inv-tr__cell-input--foot"
-                              value={pack.expenseTotalAmountDisplay}
-                              aria-label={`${labels.expensesTitle} ${labels.total}`}
-                              onChange={(e) => onPatchPack?.({ expenseTotalAmountDisplay: e.target.value })}
-                            />
-                          )
-                        : (pack.expenseTotalAmountDisplay || '\u00a0')}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          </>
-        ) : null}
-
       {showSummarySection ? (
           <>
             <h3 className="tt-inv-tr__subtitle">{labels.summaryTitle}</h3>
@@ -269,6 +220,55 @@ export function InvoiceTimeReportPage({
                             />
                           )
                         : sumGrandAmt}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </>
+        ) : null}
+
+      {showExpenseSection && expenses.length > 0 ? (
+          <>
+            <h3 className="tt-inv-tr__subtitle">{labels.expensesTitle}</h3>
+            <div className="tt-inv-tr__table-wrap">
+              <table className="tt-inv-tr__table tt-inv-tr__table--expenses" role="grid" aria-label={labels.expensesTitle}>
+                <thead className="tt-inv-tr__thead">
+                  <tr>
+                    <th scope="col" style={{ width: '18%' }}>{labels.date}</th>
+                    <th scope="col" style={{ width: '52%' }}>{labels.description}</th>
+                    <th scope="col" style={{ width: '30%' }}>{amountHeader}</th>
+                  </tr>
+                </thead>
+                <tbody className="tt-inv-tr__tbody">
+                  {expenses.map((r, i) => {
+                      const empty = !([r.date, r.description, r.amount].some((c) => String(c).trim().length > 0));
+                      const cellClass = empty ? 'tt-inv-tr__cell--empty' : undefined;
+                      const moneyClass = `tt-inv-tr__cell--num tt-inv-tr__cell--amount${empty ? ' tt-inv-tr__cell--empty' : ''}`;
+                      return (
+                          <tr key={i}>
+                            <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'date', v)} />
+                            <TrCell editable={editable} className={cellClass} value={r.description} ariaLabel={`${labels.description}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'description', v)} />
+                            <TrCell editable={editable} className={moneyClass} value={r.amount} ariaLabel={`${labels.amount(cur)}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'amount', v)} />
+                          </tr>
+                      );
+                  })}
+                </tbody>
+                <tfoot className="tt-inv-tr__tfoot">
+                  <tr>
+                    <td colSpan={2}>{labels.total}</td>
+                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num tt-inv-tr__cell--amount">
+                      {editable
+                        ? (
+                            <input
+                              type="text"
+                              className="tt-inv-tr__cell-input tt-inv-tr__cell-input--foot"
+                              value={pack.expenseTotalAmountDisplay}
+                              aria-label={`${labels.expensesTitle} ${labels.total}`}
+                              onChange={(e) => onPatchPack?.({ expenseTotalAmountDisplay: e.target.value })}
+                            />
+                          )
+                        : (pack.expenseTotalAmountDisplay || '\u00a0')}
                     </td>
                   </tr>
                 </tfoot>
