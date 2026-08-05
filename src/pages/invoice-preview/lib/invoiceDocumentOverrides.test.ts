@@ -3,8 +3,10 @@ import {
     applyCoverDocumentOverrides,
     buildInvoiceDocumentOverridesPayload,
     parseInvoiceDocumentOverrides,
+    scrubStaleBillingPeriodDocumentOverrides,
 } from './invoiceDocumentOverrides';
 import { buildInvoiceCoverLetterModel } from './invoiceCoverLetterModel';
+import { formatLegalRibbonPeriodMonth } from './invoiceLegalPageI18n';
 
 describe('parseInvoiceDocumentOverrides', () => {
     it('accepts v1 payload with legal invoice number', () => {
@@ -17,6 +19,24 @@ describe('parseInvoiceDocumentOverrides', () => {
 
     it('rejects unknown versions', () => {
         expect(parseInvoiceDocumentOverrides({ v: 2, legal: {} })).toBeNull();
+    });
+});
+
+describe('scrubStaleBillingPeriodDocumentOverrides', () => {
+    it('clears issue-month ribbon and auto service line when period is earlier', () => {
+        const issue = '2026-08-05';
+        const period = '2026-07-31';
+        const scrubbed = scrubStaleBillingPeriodDocumentOverrides({
+            v: 1,
+            legal: {
+                issueDateDisplay: formatLegalRibbonPeriodMonth(issue, 'ENG'),
+                serviceDescriptionLine: 'Legal services rendered in August 2026',
+            },
+            cover: { servicesMonthYear: 'August 2026' },
+        }, { issueDateIso: issue, billingPeriodIso: period });
+        expect(scrubbed?.legal?.issueDateDisplay).toBeNull();
+        expect(scrubbed?.legal?.serviceDescriptionLine).toBeNull();
+        expect(scrubbed?.cover?.servicesMonthYear).toBeUndefined();
     });
 });
 

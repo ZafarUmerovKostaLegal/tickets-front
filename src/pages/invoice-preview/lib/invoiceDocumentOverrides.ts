@@ -1,4 +1,6 @@
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
+import { formatCoverServicesPeriod } from './invoiceCoverLetterI18n';
+import { formatLegalRibbonPeriodMonth } from './invoiceLegalPageI18n';
 import type { InvoiceLegalPageOverrides } from './invoiceLegalPageModel';
 import type { InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import {
@@ -6,6 +8,84 @@ import {
     parseIncludedPageKeys,
     type InvoicePreviewPageKey,
 } from './invoicePreviewPageSlots';
+
+function isoMonthKey(iso: string): string {
+    return iso.trim().slice(0, 7);
+}
+
+function textMentionsPeriodMonth(text: string, isoYmd: string): boolean {
+    const iso = isoYmd.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso))
+        return false;
+    const t = text.toLowerCase();
+    const eng = formatCoverServicesPeriod(iso, 'ENG').toLowerCase();
+    const ru = formatCoverServicesPeriod(iso, 'RU').toLowerCase();
+    const engMonth = eng.split(/\s+/)[0] ?? '';
+    const ruMonth = ru.split(/\s+/)[0] ?? '';
+    const ribbonEng = formatLegalRibbonPeriodMonth(iso, 'ENG').toLowerCase();
+    const ribbonRu = formatLegalRibbonPeriodMonth(iso, 'RU').toLowerCase();
+    return Boolean(
+        (engMonth && t.includes(engMonth))
+        || (ruMonth && t.includes(ruMonth))
+        || (ribbonEng && t.includes(ribbonEng))
+        || (ribbonRu && t.includes(ribbonRu))
+        || t.includes(eng)
+        || t.includes(ru),
+    );
+}
+
+function looksLikeAutoServiceDescription(text: string): boolean {
+    return /^(Legal services rendered in |Юридические услуги, оказанные в )/i.test(text.trim());
+}
+
+/**
+ * When billing period month ≠ issue month, drop auto-generated period display
+ * fields that were baked from the issue date (e.g. AUGUST ribbon / «rendered in August»).
+ */
+export function scrubStaleBillingPeriodDocumentOverrides(
+    doc: InvoiceDocumentOverridesV1 | null | undefined,
+    opts: { issueDateIso: string; billingPeriodIso: string | null | undefined },
+): InvoiceDocumentOverridesV1 | null {
+    if (!doc)
+        return null;
+    const issue = String(opts.issueDateIso ?? '').trim().slice(0, 10);
+    const period = String(opts.billingPeriodIso ?? '').trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(issue) || !/^\d{4}-\d{2}-\d{2}$/.test(period))
+        return doc;
+    if (isoMonthKey(period) === isoMonthKey(issue))
+        return doc;
+
+    const next: InvoiceDocumentOverridesV1 = { ...doc };
+    if (doc.legal) {
+        const legal: InvoiceLegalPageOverrides = { ...doc.legal };
+        const ribbon = legal.issueDateDisplay?.trim();
+        if (ribbon && (
+            textMentionsPeriodMonth(ribbon, issue)
+            || ribbon === formatLegalRibbonPeriodMonth(issue, 'ENG')
+            || ribbon === formatLegalRibbonPeriodMonth(issue, 'RU')
+        )) {
+            legal.issueDateDisplay = null;
+        }
+        const svc = legal.serviceDescriptionLine?.trim();
+        if (svc && looksLikeAutoServiceDescription(svc) && textMentionsPeriodMonth(svc, issue)
+            && !textMentionsPeriodMonth(svc, period)) {
+            legal.serviceDescriptionLine = null;
+        }
+        next.legal = legal;
+    }
+    if (doc.cover) {
+        const cover: InvoiceCoverDocumentOverrides = { ...doc.cover };
+        const smy = cover.servicesMonthYear?.trim();
+        if (smy && textMentionsPeriodMonth(smy, issue) && !textMentionsPeriodMonth(smy, period)) {
+            const { servicesMonthYear: _drop, ...rest } = cover;
+            next.cover = rest;
+        }
+        else {
+            next.cover = cover;
+        }
+    }
+    return next;
+}
 
 /** Cover fields that can be polished in preview (not regenerated from invoice totals). */
 export type InvoiceCoverDocumentOverrides = Partial<Pick<

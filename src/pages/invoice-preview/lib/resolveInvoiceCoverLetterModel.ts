@@ -1,5 +1,6 @@
 import { getInvoice, getTimeManagerClient, listAllClientProjectsMerged, listTimeTrackingUsers, readProjectRecordsLanguage } from '@entities/time-tracking';
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
+import { inferBillingPeriodIsoFromDates } from '@pages/time-tracking/lib/invoicePageShared';
 import { buildInvoiceCoverLetterModel, KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { coverLanguageFromRecordsLanguage, type InvoiceCoverLanguage } from './invoiceCoverLetterI18n';
 import {
@@ -118,15 +119,33 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
         if (session.mode === 'existing') {
             const inv = await getInvoice(session.invoiceId, true);
             const client = await getTimeManagerClient(inv.clientId);
-            const billingPeriodIso = (
+            const issueIso = inv.issueDate.slice(0, 10);
+            const storedPeriod = (
                 session.meta.billingPeriodTo
                 || inv.partnerBillingPeriodTo
                 || session.meta.billingPeriodFrom
                 || inv.partnerBillingPeriodFrom
-                || inv.issueDate
-            )?.toString().slice(0, 10);
+            )?.toString().slice(0, 10) || '';
+            const lineDates = (inv.lines ?? []).flatMap((ln) => {
+                const out: string[] = [];
+                if (ln.timeEntryWorkDate)
+                    out.push(ln.timeEntryWorkDate);
+                if (ln.expenseDate)
+                    out.push(ln.expenseDate);
+                return out;
+            });
+            const inferred = inferBillingPeriodIsoFromDates(lineDates);
+            let billingPeriodIso = storedPeriod;
+            if (inferred && (
+                !/^\d{4}-\d{2}-\d{2}$/.test(storedPeriod)
+                || storedPeriod.slice(0, 7) !== inferred.slice(0, 7)
+            )) {
+                billingPeriodIso = inferred;
+            }
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(billingPeriodIso))
+                billingPeriodIso = issueIso;
             const model = buildInvoiceCoverLetterModel({
-                issueDateIso: inv.issueDate.slice(0, 10),
+                issueDateIso: issueIso,
                 billingPeriodIso,
                 clientName: client.name,
                 clientAddress: client.address,

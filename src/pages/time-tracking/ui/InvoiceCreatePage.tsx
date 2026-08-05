@@ -650,6 +650,10 @@ export function InvoiceCreatePage() {
           currency,
         });
       }
+      const periodFrom = unbilledFrom.trim().slice(0, 10);
+      const periodTo = unbilledTo.trim().slice(0, 10);
+      const hasBillingPeriod = /^\d{4}-\d{2}-\d{2}$/.test(periodFrom)
+        && /^\d{4}-\d{2}-\d{2}$/.test(periodTo);
       const created = await createInvoice({
         clientId: createClientId,
         projectId: billProjectId,
@@ -661,10 +665,14 @@ export function InvoiceCreatePage() {
           ? {
               timeEntryIds: [...selTime],
               expenseIds: [...selExp],
-              // Only send billing period when closing report lines — otherwise partner
-              // snapshot would pull the whole period into the invoice.
-              partnerBillingPeriodFrom: unbilledFrom.trim().slice(0, 10),
-              partnerBillingPeriodTo: unbilledTo.trim().slice(0, 10),
+            }
+          : {}),
+        // Always persist billing period for ribbon / «services rendered in …»
+        // (pure billedAmount skips partner snapshot materialization on the backend).
+        ...(hasBillingPeriod
+          ? {
+              partnerBillingPeriodFrom: periodFrom,
+              partnerBillingPeriodTo: periodTo,
             }
           : {}),
         ...(billedAmountNum != null

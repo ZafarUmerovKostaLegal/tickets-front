@@ -192,6 +192,35 @@ export function fmtDisplayDate(iso: string, locale: AppLocale): string {
   return d.toLocaleDateString(localeTag(locale), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** Pick billing-period anchor ISO from work/expense dates (densest month, latest day). */
+export function inferBillingPeriodIsoFromDates(dates: readonly string[]): string | null {
+  const valid = dates
+    .map((d) => String(d ?? '').trim().slice(0, 10))
+    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .sort();
+  if (valid.length === 0)
+    return null;
+  const byMonth = new Map<string, string[]>();
+  for (const d of valid) {
+    const key = d.slice(0, 7);
+    const bucket = byMonth.get(key);
+    if (bucket)
+      bucket.push(d);
+    else
+      byMonth.set(key, [d]);
+  }
+  let bestMonth = '';
+  let bestCount = 0;
+  for (const [month, days] of byMonth) {
+    if (days.length > bestCount || (days.length === bestCount && month > bestMonth)) {
+      bestCount = days.length;
+      bestMonth = month;
+    }
+  }
+  const inMonth = (byMonth.get(bestMonth) ?? []).sort();
+  return inMonth[inMonth.length - 1] ?? null;
+}
+
 export async function invoicePreviewMetaForExisting(inv: InvoiceDto, clientLabel: string): Promise<InvoicePreviewMeta> {
   const meta: InvoicePreviewMeta = {
     clientLabel,
@@ -205,6 +234,22 @@ export async function invoicePreviewMetaForExisting(inv: InvoiceDto, clientLabel
     meta.billingPeriodFrom = pf;
   if (/^\d{4}-\d{2}-\d{2}$/.test(pt))
     meta.billingPeriodTo = pt;
+  const lineDates = (inv.lines ?? []).flatMap((ln) => {
+    const out: string[] = [];
+    if (ln.timeEntryWorkDate)
+      out.push(ln.timeEntryWorkDate);
+    if (ln.expenseDate)
+      out.push(ln.expenseDate);
+    return out;
+  });
+  const inferred = inferBillingPeriodIsoFromDates(lineDates);
+  if (inferred) {
+    const storedAnchor = meta.billingPeriodTo || meta.billingPeriodFrom;
+    // Prefer actual work/expense dates when they point to a different month than the
+    // stored partner period (often left as the current calendar month by mistake).
+    if (!storedAnchor || storedAnchor.slice(0, 7) !== inferred.slice(0, 7))
+      meta.billingPeriodTo = inferred;
+  }
   if (!inv.projectId?.trim())
     return meta;
   try {

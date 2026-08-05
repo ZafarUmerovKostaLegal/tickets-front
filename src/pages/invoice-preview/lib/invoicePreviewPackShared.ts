@@ -19,7 +19,13 @@ export function packResolveIssueIso(session: InvoicePreviewSessionV1 | null): st
 }
 
 /** Billing period month anchor (prefer period end); falls back to issue date. */
-export function packResolveBillingPeriodIso(session: InvoicePreviewSessionV1 | null): string {
+export function packResolveBillingPeriodIso(
+    session: InvoicePreviewSessionV1 | null,
+    model?: Pick<InvoiceCoverLetterModel, 'billingPeriodIso'> | null,
+): string {
+    const fromModel = String(model?.billingPeriodIso ?? '').trim().slice(0, 10);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(fromModel))
+        return fromModel;
     const issue = packResolveIssueIso(session);
     if (!session)
         return issue;

@@ -526,7 +526,7 @@ function legalInvoiceDocxBlocks(
     const labels = getLegalInvoiceLabels(model.coverLanguage);
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
-    const periodIso = packResolveBillingPeriodIso(session);
+    const periodIso = packResolveBillingPeriodIso(session, model);
     const zeroFallback = packZeroCommaAmount(model);
     const ribbonIssue = resolveLegalOverrideText(
         legalOverrides?.issueDateDisplay,

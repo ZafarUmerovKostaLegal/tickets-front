@@ -1173,7 +1173,7 @@ function drawLegalInvoicePdfPage(
 ): void {
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
-    const periodIso = packResolveBillingPeriodIso(session);
+    const periodIso = packResolveBillingPeriodIso(session, model);
     const labels = getLegalInvoiceLabels(model.coverLanguage);
     const zeroFallback = packZeroCommaAmount(model);
     const ribbonIssue = resolveLegalOverrideText(

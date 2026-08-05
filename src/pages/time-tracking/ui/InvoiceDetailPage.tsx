@@ -288,12 +288,18 @@ export function InvoiceDetailPage() {
             documentOverrides = undefined;
           }
         }
+        const { parseInvoiceDocumentOverrides, scrubStaleBillingPeriodDocumentOverrides } = await import('@pages/invoice-preview/lib/invoiceDocumentOverrides');
+        const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || null;
+        const scrubbed = scrubStaleBillingPeriodDocumentOverrides(
+          parseInvoiceDocumentOverrides(documentOverrides),
+          { issueDateIso: meta.issueDateIso, billingPeriodIso: periodIso },
+        );
         writeInvoicePreviewSession({
           v: 1,
           mode: 'existing',
           invoiceId: inv.id,
           meta,
-          ...(documentOverrides ? { documentOverrides } : {}),
+          ...(scrubbed ? { documentOverrides: scrubbed as unknown as Record<string, unknown> } : {}),
         });
         navigate(routes.timeTrackingInvoicePreview);
       }
@@ -307,19 +313,24 @@ export function InvoiceDetailPage() {
     setDetailExportBusy('pdf');
     try {
       const fresh = inv.documentOverrides != null ? inv : await getInvoice(inv.id, false);
-      const { applyCoverDocumentOverrides, parseInvoiceDocumentOverrides } = await import('@pages/invoice-preview/lib/invoiceDocumentOverrides');
-      const doc = parseInvoiceDocumentOverrides(fresh.documentOverrides);
+      const { applyCoverDocumentOverrides, parseInvoiceDocumentOverrides, scrubStaleBillingPeriodDocumentOverrides } = await import('@pages/invoice-preview/lib/invoiceDocumentOverrides');
+      const clientLabel = (clientNameById.get(fresh.clientId) ?? fresh.clientId).trim();
+      const meta = await invoicePreviewMetaForExisting(fresh, clientLabel);
+      const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || null;
+      const doc = scrubStaleBillingPeriodDocumentOverrides(
+        parseInvoiceDocumentOverrides(fresh.documentOverrides),
+        { issueDateIso: meta.issueDateIso, billingPeriodIso: periodIso },
+      );
       const client = await getTimeManagerClient(fresh.clientId);
       const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({
         issueDateIso: fresh.issueDate.slice(0, 10),
+        billingPeriodIso: periodIso ?? fresh.issueDate.slice(0, 10),
         clientName: client.name,
         clientAddress: client.address,
         contactName: client.contact_name ?? null,
         totalAmount: fresh.totalAmount,
         currency: fresh.currency,
       }), doc?.cover);
-      const clientLabel = (clientNameById.get(fresh.clientId) ?? fresh.clientId).trim();
-      const meta = await invoicePreviewMetaForExisting(fresh, clientLabel);
       if (doc?.legal?.invoiceNumber?.trim())
         meta.invoiceNumber = doc.legal.invoiceNumber.trim();
       const previewSession = {
@@ -327,7 +338,7 @@ export function InvoiceDetailPage() {
         mode: 'existing' as const,
         invoiceId: fresh.id,
         meta,
-        ...(fresh.documentOverrides ? { documentOverrides: fresh.documentOverrides } : {}),
+        ...(doc ? { documentOverrides: doc as unknown as Record<string, unknown> } : {}),
       };
 
       const { buildInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewPdf');
@@ -362,19 +373,24 @@ export function InvoiceDetailPage() {
     setDetailExportBusy('word');
     try {
       const fresh = inv.documentOverrides != null ? inv : await getInvoice(inv.id, false);
-      const { applyCoverDocumentOverrides, parseInvoiceDocumentOverrides } = await import('@pages/invoice-preview/lib/invoiceDocumentOverrides');
-      const doc = parseInvoiceDocumentOverrides(fresh.documentOverrides);
+      const { applyCoverDocumentOverrides, parseInvoiceDocumentOverrides, scrubStaleBillingPeriodDocumentOverrides } = await import('@pages/invoice-preview/lib/invoiceDocumentOverrides');
+      const clientLabel = (clientNameById.get(fresh.clientId) ?? fresh.clientId).trim();
+      const meta = await invoicePreviewMetaForExisting(fresh, clientLabel);
+      const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || null;
+      const doc = scrubStaleBillingPeriodDocumentOverrides(
+        parseInvoiceDocumentOverrides(fresh.documentOverrides),
+        { issueDateIso: meta.issueDateIso, billingPeriodIso: periodIso },
+      );
       const client = await getTimeManagerClient(fresh.clientId);
       const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({
         issueDateIso: fresh.issueDate.slice(0, 10),
+        billingPeriodIso: periodIso ?? fresh.issueDate.slice(0, 10),
         clientName: client.name,
         clientAddress: client.address,
         contactName: client.contact_name ?? null,
         totalAmount: fresh.totalAmount,
         currency: fresh.currency,
       }), doc?.cover);
-      const clientLabel = (clientNameById.get(fresh.clientId) ?? fresh.clientId).trim();
-      const meta = await invoicePreviewMetaForExisting(fresh, clientLabel);
       if (doc?.legal?.invoiceNumber?.trim())
         meta.invoiceNumber = doc.legal.invoiceNumber.trim();
       const previewSession = {
@@ -382,7 +398,7 @@ export function InvoiceDetailPage() {
         mode: 'existing' as const,
         invoiceId: fresh.id,
         meta,
-        ...(fresh.documentOverrides ? { documentOverrides: fresh.documentOverrides } : {}),
+        ...(doc ? { documentOverrides: doc as unknown as Record<string, unknown> } : {}),
       };
 
       const { buildInvoicePreviewDocxBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewDocx');
@@ -1054,16 +1070,18 @@ export function InvoiceDetailPage() {
             setActionBusy(true);
             try {
               const client = await getTimeManagerClient(detail.clientId);
+              const clientLabel = (clientNameById.get(detail.clientId) ?? detail.clientId).trim();
+              const meta = await invoicePreviewMetaForExisting(detail, clientLabel);
+              const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || detail.issueDate.slice(0, 10);
               const model = buildInvoiceCoverLetterModel({
                 issueDateIso: detail.issueDate.slice(0, 10),
+                billingPeriodIso: periodIso,
                 clientName: client.name,
                 clientAddress: client.address,
                 contactName: client.contact_name ?? null,
                 totalAmount: detail.totalAmount,
                 currency: detail.currency,
               });
-              const clientLabel = (clientNameById.get(detail.clientId) ?? detail.clientId).trim();
-              const meta = await invoicePreviewMetaForExisting(detail, clientLabel);
               const previewSession = { v: 1 as const, mode: 'existing' as const, invoiceId: detail.id, meta };
               const { buildInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewPdf');
               const blob = await buildInvoicePreviewPdfBlob({ model, session: previewSession });

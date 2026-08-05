@@ -20,6 +20,7 @@ import {
     applyCoverDocumentOverrides,
     buildInvoiceDocumentOverridesPayload,
     parseInvoiceDocumentOverrides,
+    scrubStaleBillingPeriodDocumentOverrides,
     type InvoiceDocumentOverridesV1,
 } from '../lib/invoiceDocumentOverrides';
 import {
@@ -283,7 +284,21 @@ export function InvoicePreviewPage() {
             }
 
             const docFromSession = parseInvoiceDocumentOverrides(sessionNow?.documentOverrides);
-            const doc = docFromApi ?? docFromSession;
+            const rawDoc = docFromApi ?? docFromSession;
+            const periodIso = sessionNow?.mode === 'existing'
+                ? (sessionNow.meta.billingPeriodTo || sessionNow.meta.billingPeriodFrom || null)
+                : (sessionNow?.mode === 'create'
+                    ? (sessionNow.form.unbilledTo || sessionNow.form.unbilledFrom || null)
+                    : null);
+            const issueIso = sessionNow?.mode === 'existing'
+                ? (sessionNow.meta.issueDateIso ?? null)
+                : (sessionNow?.mode === 'create' ? sessionNow.form.issueDate : null);
+            const doc = issueIso
+                ? scrubStaleBillingPeriodDocumentOverrides(rawDoc, {
+                    issueDateIso: issueIso,
+                    billingPeriodIso: periodIso,
+                })
+                : rawDoc;
 
             const picked = pickFirmBankingProfileForCurrency(profiles, null);
             if (picked && !doc?.legal)
@@ -550,8 +565,22 @@ export function InvoicePreviewPage() {
         void resolveInvoiceCoverLetterModel(session).then((m) => {
             if (cancel)
                 return;
-            const withCover = applyCoverDocumentOverrides(m, pendingDocOverridesRef.current?.cover);
+            const pending = pendingDocOverridesRef.current;
+            const scrubbed = scrubStaleBillingPeriodDocumentOverrides(pending, {
+                issueDateIso: m.issueDateIso,
+                billingPeriodIso: m.billingPeriodIso,
+            });
+            if (scrubbed)
+                pendingDocOverridesRef.current = scrubbed;
+            const coverSrc = scrubbed?.cover ?? pending?.cover;
+            const withCover = applyCoverDocumentOverrides(m, coverSrc);
             setCoverModel(withCover);
+            if (scrubbed?.legal) {
+                setLegalOverrides((prev) => ({
+                    ...prev,
+                    ...scrubbed.legal,
+                }));
+            }
         });
         return () => {
             cancel = true;
