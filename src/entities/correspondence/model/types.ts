@@ -30,6 +30,14 @@ export type CorrespondenceAttachment = {
     createdAt: string;
 };
 
+export type CorrespondenceDocumentComment = {
+    id: string;
+    body: string;
+    authorUserId: number;
+    authorUser: CorrespondenceUserSnippet | null;
+    createdAt: string;
+};
+
 export type CorrespondenceDocument = {
     id: string;
     registryNumber: string | null;

@@ -1,17 +1,20 @@
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
     approveOutgoingCorrespondence,
     correspondenceErrorMessage,
+    createCorrespondenceComment,
     downloadCorrespondenceAttachment,
     fetchCorrespondenceAttachmentBlob,
     fetchCorrespondenceDocument,
     formatCorrRegisteredAt,
     invalidateCorrespondencePartnerAttention,
+    listCorrespondenceComments,
     rejectOutgoingCorrespondence,
     submitOutgoingForReview,
     type CorrespondenceAttachment,
     type CorrespondenceDocument,
+    type CorrespondenceDocumentComment,
 } from '@entities/correspondence';
 import { useCurrentUser } from '@shared/hooks';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
@@ -59,6 +62,27 @@ function resolvePreviewKind(file: CorrespondenceAttachment, contentType: string 
     if (ct.startsWith('image/') || /\.(png|jpe?g|gif|webp|bmp)$/i.test(name))
         return 'image';
     return 'other';
+}
+
+function userInitials(label: string): string {
+    const parts = label.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0)
+        return '?';
+    if (parts.length === 1)
+        return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+}
+
+function formatCommentTime(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime()))
+        return iso;
+    return d.toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
 }
 
 function DetailRow({ label, children }: { label: string; children: ReactNode }) {
@@ -123,6 +147,12 @@ export function CorrespondenceDocumentCardModal({
     const [previewLoading, setPreviewLoading] = useState(false);
     const [previewError, setPreviewError] = useState<string | null>(null);
     const [downloadingId, setDownloadingId] = useState<string | null>(null);
+    const [comments, setComments] = useState<CorrespondenceDocumentComment[]>([]);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [commentsError, setCommentsError] = useState<string | null>(null);
+    const [commentDraft, setCommentDraft] = useState('');
+    const [commentSending, setCommentSending] = useState(false);
+    const commentsFeedRef = useRef<HTMLDivElement | null>(null);
 
     useEffect(() => {
         if (!open || !documentId) {
@@ -136,6 +166,10 @@ export function CorrespondenceDocumentCardModal({
             setPreviewUrl(null);
             setPreviewKind(null);
             setPreviewError(null);
+            setComments([]);
+            setCommentsError(null);
+            setCommentDraft('');
+            setCommentSending(false);
             return;
         }
         let cancelled = false;
@@ -143,6 +177,9 @@ export function CorrespondenceDocumentCardModal({
         setError(null);
         setDoc(null);
         setActiveFileId(null);
+        setComments([]);
+        setCommentsError(null);
+        setCommentDraft('');
         void fetchCorrespondenceDocument(documentId)
             .then((d) => {
                 if (cancelled)
@@ -161,6 +198,39 @@ export function CorrespondenceDocumentCardModal({
             });
         return () => { cancelled = true; };
     }, [open, documentId]);
+
+    useEffect(() => {
+        if (!open || !documentId) {
+            setComments([]);
+            setCommentsLoading(false);
+            setCommentsError(null);
+            return;
+        }
+        let cancelled = false;
+        setCommentsLoading(true);
+        setCommentsError(null);
+        void listCorrespondenceComments(documentId)
+            .then((items) => {
+                if (!cancelled)
+                    setComments(items);
+            })
+            .catch((err) => {
+                if (!cancelled)
+                    setCommentsError(correspondenceErrorMessage(err, 'Не удалось загрузить комментарии'));
+            })
+            .finally(() => {
+                if (!cancelled)
+                    setCommentsLoading(false);
+            });
+        return () => { cancelled = true; };
+    }, [open, documentId]);
+
+    useEffect(() => {
+        const el = commentsFeedRef.current;
+        if (!el)
+            return;
+        el.scrollTop = el.scrollHeight;
+    }, [comments.length, commentsLoading]);
 
     useEffect(() => {
         if (!open || !documentId || !activeFileId || !doc) {
@@ -355,6 +425,27 @@ export function CorrespondenceDocumentCardModal({
         }
     };
 
+    const handleSendComment = async () => {
+        if (!doc || !documentId)
+            return;
+        const text = commentDraft.trim();
+        if (!text || commentSending)
+            return;
+        setCommentSending(true);
+        setCommentsError(null);
+        try {
+            const created = await createCorrespondenceComment(documentId, text);
+            setComments((prev) => [...prev, created]);
+            setCommentDraft('');
+        }
+        catch (err) {
+            setCommentsError(correspondenceErrorMessage(err, 'Не удалось отправить комментарий'));
+        }
+        finally {
+            setCommentSending(false);
+        }
+    };
+
     const previewTitle = activeFile
         ? activeFile.fileName
         : (doc?.registryNumber || doc?.subject || 'Документ');
@@ -409,6 +500,11 @@ export function CorrespondenceDocumentCardModal({
                                     <span className="corr-skel__bone corr-card-modal__skel-value" style={{ width: `${48 + (i % 3) * 14}%` }} />
                                 </div>
                             ))}
+                        </div>
+                        <div className="corr-card-modal__comments corr-card-modal__comments--loading">
+                            <span className="corr-skel__bone" style={{ height: '1rem', width: '40%' }} />
+                            <span className="corr-skel__bone" style={{ height: '4rem', width: '100%' }} />
+                            <span className="corr-skel__bone" style={{ height: '4rem', width: '85%' }} />
                         </div>
                     </div>
                 ) : null}
@@ -482,12 +578,12 @@ export function CorrespondenceDocumentCardModal({
                                 </DetailRow>
                                 {doc.comment ? (
                                     <DetailRow label="Комментарий">
-                                        <span className="corr-card-modal__comment">{doc.comment}</span>
+                                        <span className="corr-card-modal__note-text">{doc.comment}</span>
                                     </DetailRow>
                                 ) : null}
                                 {doc.rejectionComment ? (
                                     <DetailRow label="Комментарий отказа">
-                                        <span className="corr-card-modal__comment">{doc.rejectionComment}</span>
+                                        <span className="corr-card-modal__note-text">{doc.rejectionComment}</span>
                                     </DetailRow>
                                 ) : null}
                             </dl>
@@ -517,6 +613,86 @@ export function CorrespondenceDocumentCardModal({
 
                             {fileError ? <p className="corr-modal__err" role="alert">{fileError}</p> : null}
                         </aside>
+
+                        <section className="corr-card-modal__comments" aria-label="Комментарии">
+                            <h3 className="corr-card-modal__comments-title">
+                                Комментарии
+                                {comments.length > 0 ? ` (${comments.length})` : ''}
+                            </h3>
+                            <div ref={commentsFeedRef} className="corr-card-modal__comments-feed">
+                                {commentsLoading ? (
+                                    <p className="corr-card-modal__comments-empty">Загрузка…</p>
+                                ) : null}
+                                {!commentsLoading && comments.length === 0 ? (
+                                    <p className="corr-card-modal__comments-empty">
+                                        Пока нет сообщений. Напишите первый комментарий.
+                                    </p>
+                                ) : null}
+                                {!commentsLoading
+                                    ? comments.map((cm) => {
+                                        const author = userLabel(
+                                            cm.authorUser?.displayName,
+                                            cm.authorUser?.email,
+                                            cm.authorUserId,
+                                        );
+                                        const mine = uid != null && cm.authorUserId === uid;
+                                        return (
+                                            <article
+                                                key={cm.id}
+                                                className={`corr-card-modal__comment${mine ? ' corr-card-modal__comment--mine' : ''}`}
+                                            >
+                                                <div className="corr-card-modal__comment-avatar" aria-hidden title={author}>
+                                                    {userInitials(author)}
+                                                </div>
+                                                <div className="corr-card-modal__comment-body">
+                                                    <p className="corr-card-modal__comment-text">{cm.body}</p>
+                                                    <span className="corr-card-modal__comment-meta">
+                                                        {author}
+                                                        {' · '}
+                                                        {formatCommentTime(cm.createdAt)}
+                                                    </span>
+                                                </div>
+                                            </article>
+                                        );
+                                    })
+                                    : null}
+                            </div>
+                            {commentsError ? (
+                                <p className="corr-modal__err corr-card-modal__comments-err" role="alert">{commentsError}</p>
+                            ) : null}
+                            <div className="corr-card-modal__comment-compose">
+                                <textarea
+                                    className="corr-card-modal__comment-input"
+                                    rows={2}
+                                    maxLength={4000}
+                                    placeholder="Написать комментарий…"
+                                    value={commentDraft}
+                                    disabled={commentSending || acting}
+                                    onChange={(e) => setCommentDraft(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            void handleSendComment();
+                                        }
+                                    }}
+                                    aria-label="Текст комментария"
+                                />
+                                <button
+                                    type="button"
+                                    className="corr-card-modal__comment-send"
+                                    disabled={commentSending || !commentDraft.trim() || acting}
+                                    onClick={() => void handleSendComment()}
+                                    aria-label="Отправить комментарий"
+                                >
+                                    {commentSending ? '…' : (
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                            <line x1="22" y1="2" x2="11" y2="13"/>
+                                            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                        </svg>
+                                    )}
+                                </button>
+                            </div>
+                        </section>
                     </div>
                 ) : null}
 

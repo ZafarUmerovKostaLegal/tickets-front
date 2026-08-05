@@ -6,6 +6,7 @@ import type {
     CorrRow,
     CorrespondenceAttachment,
     CorrespondenceDocument,
+    CorrespondenceDocumentComment,
     CorrespondenceStats,
     CorrespondenceUserSnippet,
 } from '../model/types';
@@ -86,6 +87,24 @@ export function normalizeCorrespondenceAttachment(raw: unknown): CorrespondenceA
         contentType: pickStr(o, 'contentType', 'content_type') || null,
         sizeBytes: num(o.sizeBytes ?? o.size_bytes) ?? 0,
         attachmentKind,
+        createdAt: pickStr(o, 'createdAt', 'created_at') || new Date().toISOString(),
+    };
+}
+
+export function normalizeCorrespondenceComment(raw: unknown): CorrespondenceDocumentComment | null {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const o = raw as Record<string, unknown>;
+    const id = pickStr(o, 'id');
+    const body = pickStr(o, 'body');
+    const authorUserId = num(o.authorUserId ?? o.author_user_id);
+    if (!id || !body || authorUserId == null || authorUserId <= 0)
+        return null;
+    return {
+        id,
+        body,
+        authorUserId,
+        authorUser: normalizeUserSnippet(o.authorUser ?? o.author_user),
         createdAt: pickStr(o, 'createdAt', 'created_at') || new Date().toISOString(),
     };
 }

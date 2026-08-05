@@ -1,10 +1,12 @@
 import { apiFetch } from '@shared/api';
 import {
+    normalizeCorrespondenceComment,
     normalizeCorrespondenceDocument,
     normalizeCorrespondenceStats,
 } from './lib/normalize';
 import type {
     CorrespondenceDocument,
+    CorrespondenceDocumentComment,
     CorrespondenceListResponse,
     CorrespondenceStats,
     CreateOutgoingDraftBody,
@@ -254,6 +256,35 @@ export async function fetchCorrespondenceAttachmentBlob(
         blob: await res.blob(),
         contentType: res.headers.get('Content-Type'),
     };
+}
+
+export async function listCorrespondenceComments(
+    documentId: string,
+    signal?: AbortSignal,
+): Promise<CorrespondenceDocumentComment[]> {
+    const res = await apiFetch(`${PREFIX}/${encodeURIComponent(documentId)}/comments`, { signal });
+    await throwIfNotOk(res);
+    const raw = await res.json() as { items?: unknown[] };
+    const items = Array.isArray(raw.items) ? raw.items : [];
+    return items
+        .map(normalizeCorrespondenceComment)
+        .filter((x): x is CorrespondenceDocumentComment => x != null);
+}
+
+export async function createCorrespondenceComment(
+    documentId: string,
+    body: string,
+): Promise<CorrespondenceDocumentComment> {
+    const res = await apiFetch(`${PREFIX}/${encodeURIComponent(documentId)}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body }),
+    });
+    await throwIfNotOk(res);
+    const comment = normalizeCorrespondenceComment(await res.json());
+    if (!comment)
+        throw new CorrespondenceHttpError(500, 'Некорректный ответ сервера');
+    return comment;
 }
 
 export async function openCorrespondenceAttachmentInNewTab(documentId: string, attachmentId: string): Promise<void> {
