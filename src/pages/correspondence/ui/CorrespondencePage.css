@@ -304,9 +304,42 @@
   transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
+button.corr__stat--clickable {
+  width: 100%;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+button.corr__stat--clickable:focus-visible {
+  outline: 2px solid var(--app-accent, #4f46e5);
+  outline-offset: 2px;
+}
+
+button.corr__stat--clickable:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.corr__stat--clickable.corr__stat--active {
+  border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-accent) 28%, transparent), 0 8px 24px rgba(15, 23, 42, 0.08);
+  background: color-mix(in srgb, var(--app-accent) 6%, var(--app-surface));
+}
+
 .corr__stat:hover {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
   border-color: color-mix(in srgb, var(--app-accent) 18%, var(--app-border));
+  transform: translateY(-1px);
+}
+
+button.corr__stat--clickable:hover:not(:disabled) {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  border-color: color-mix(in srgb, var(--app-accent) 28%, var(--app-border));
   transform: translateY(-1px);
 }
 
@@ -3748,6 +3781,18 @@ body[data-theme='dark'] .corr-preview__attachments { border-color: var(--app-bor
 .corr-shell .corr__stat:hover {
   transform: none;
   border-color: var(--corr-line);
+  box-shadow: var(--corr-shadow);
+}
+
+.corr-shell button.corr__stat--clickable:hover:not(:disabled) {
+  transform: none;
+  border-color: color-mix(in srgb, var(--corr-brass, #8b7355) 45%, var(--corr-line));
+  box-shadow: var(--corr-shadow);
+}
+
+.corr-shell .corr__stat--clickable.corr__stat--active {
+  border-color: color-mix(in srgb, var(--corr-brass, #8b7355) 55%, var(--corr-line));
+  background: color-mix(in srgb, var(--corr-brass-soft, #f5f0e8) 70%, var(--corr-card));
   box-shadow: var(--corr-shadow);
 }
 

@@ -190,11 +190,47 @@ export function CorrespondenceRegistryView({
     const counterpartyColumn = CORR_COUNTERPARTY_COLUMN[direction];
 
     const statCards = useMemo(() => ([
-        { key: 'in', label: 'Входящие', value: String(stats.incomingTotal), delta: 'в реестре', deltaVariant: 'blue' as const, icon: 'inbox' as const },
-        { key: 'out', label: 'Исходящие', value: String(stats.outgoingTotal), delta: 'в реестре', deltaVariant: 'green' as const, icon: 'send' as const },
-        { key: 'approval', label: 'На согласовании', value: String(stats.approvalTotal), delta: 'активные', deltaVariant: 'orange' as const, icon: 'users' as const },
-        { key: 'overdue', label: 'Новые входящие', value: String(stats.incomingNewTotal), delta: 'без обработки', deltaVariant: 'red' as const, icon: 'clock' as const },
-    ]), [stats]);
+        {
+            key: 'in' as const,
+            label: 'Входящие',
+            value: String(stats.incomingTotal),
+            delta: 'в реестре',
+            deltaVariant: 'blue' as const,
+            icon: 'inbox' as const,
+            active: direction === 'incoming' && tableTab === 'all',
+            actionLabel: 'Показать входящие',
+        },
+        {
+            key: 'out' as const,
+            label: 'Исходящие',
+            value: String(stats.outgoingTotal),
+            delta: 'в реестре',
+            deltaVariant: 'green' as const,
+            icon: 'send' as const,
+            active: direction === 'outgoing' && tableTab === 'all',
+            actionLabel: 'Показать исходящие',
+        },
+        {
+            key: 'approval' as const,
+            label: 'На согласовании',
+            value: String(stats.approvalTotal),
+            delta: 'активные',
+            deltaVariant: 'orange' as const,
+            icon: 'users' as const,
+            active: direction === 'outgoing' && tableTab === 'work',
+            actionLabel: 'Показать документы на согласовании',
+        },
+        {
+            key: 'overdue' as const,
+            label: 'Новые входящие',
+            value: String(stats.incomingNewTotal),
+            delta: 'без обработки',
+            deltaVariant: 'red' as const,
+            icon: 'clock' as const,
+            active: direction === 'incoming' && tableTab === 'new',
+            actionLabel: 'Показать новые входящие',
+        },
+    ]), [stats, direction, tableTab]);
 
     const reloadAll = useCallback(() => {
         setReloadToken((t) => t + 1);
@@ -273,6 +309,28 @@ export function CorrespondenceRegistryView({
         setSettingsOpen(false);
         setRowMenuOpenId(null);
     }, []);
+
+    const handleStatCardClick = useCallback((key: 'in' | 'out' | 'approval' | 'overdue') => {
+        closeOverlays();
+        setPage(1);
+        if (key === 'in') {
+            onDirectionChange('incoming');
+            setTableTab('all');
+            return;
+        }
+        if (key === 'out') {
+            onDirectionChange('outgoing');
+            setTableTab('all');
+            return;
+        }
+        if (key === 'approval') {
+            onDirectionChange('outgoing');
+            setTableTab('work');
+            return;
+        }
+        onDirectionChange('incoming');
+        setTableTab('new');
+    }, [closeOverlays, onDirectionChange]);
 
     useEffect(() => {
         if (!filtersOpen && !settingsOpen && !rowMenuOpenId)
@@ -444,10 +502,16 @@ export function CorrespondenceRegistryView({
               <CorrespondenceRegistrySkeleton rows={CORR_PAGE_SIZE} />
             ) : (<>
             <section className="corr__stats corr-registry__stats" aria-label="Показатели">
-              {statCards.map((s, i) => (<article
+              {statCards.map((s, i) => (
+                <button
                   key={s.key}
-                  className={`corr__stat corr__stat--${s.deltaVariant}${statsLoading ? ' corr__stat--dim' : ''}`}
+                  type="button"
+                  className={`corr__stat corr__stat--clickable corr__stat--${s.deltaVariant}${s.active ? ' corr__stat--active' : ''}${statsLoading ? ' corr__stat--dim' : ''}`}
                   style={{ '--corr-stagger': i } as CSSProperties}
+                  aria-pressed={s.active}
+                  aria-label={`${s.actionLabel}: ${s.value}`}
+                  disabled={statsLoading}
+                  onClick={() => handleStatCardClick(s.key)}
                 >
                   <div className={`corr__stat-icon-wrap corr__stat-icon-wrap--${s.deltaVariant}`}>
                     <StatIcon name={s.icon}/>
@@ -457,7 +521,8 @@ export function CorrespondenceRegistryView({
                     <span className="corr__stat-value">{s.value}</span>
                     <span className="corr__stat-delta">{s.delta}</span>
                   </div>
-                </article>))}
+                </button>
+              ))}
             </section>
 
             <section className="corr__table-card corr-registry__table-card" aria-label="Реестр документов">
