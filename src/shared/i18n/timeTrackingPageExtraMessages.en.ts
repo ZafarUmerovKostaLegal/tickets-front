@@ -1610,6 +1610,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             amount: 'Amount',
             paid: 'Paid',
             balance: 'Balance',
+            workedAmount: 'Worked',
             preview: 'Preview',
             markViewed: 'Mark as viewed',
             fullPayment: 'Paid in full',

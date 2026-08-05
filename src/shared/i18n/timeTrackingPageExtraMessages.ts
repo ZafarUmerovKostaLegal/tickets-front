@@ -1608,6 +1608,7 @@ export const timeTrackingPageExtraMessages = {
             amount: 'Сумма',
             paid: 'Оплачено',
             balance: 'Остаток',
+            workedAmount: 'Наработано',
             preview: 'Предпросмотр',
             markViewed: 'Отметить просмотренным',
             fullPayment: 'Оплачено полностью',

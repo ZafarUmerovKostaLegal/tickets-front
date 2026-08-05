@@ -119,13 +119,20 @@ export function invoiceLineKindLabel(ln: InvoiceLineDto, t: TimeTrackingT): stri
 }
 
 /** Detect billed-override invoices: money on manual line(s), zeroed time/expense linkage. */
-export function summarizeBilledOverrideLines(lines: readonly InvoiceLineDto[] | null | undefined): {
+export function summarizeBilledOverrideLines(
+  lines: readonly InvoiceLineDto[] | null | undefined,
+  invoiceCurrency?: string | null,
+): {
   isBilledOverride: boolean;
   visibleLines: InvoiceLineDto[];
   closedTimeCount: number;
   closedExpenseCount: number;
+  /** Worked/accrued total from closed linkage (invoice currency when available). */
+  workedAmount: number;
+  workedCurrency: string;
 } {
   const all = lines ?? [];
+  const invCcy = String(invoiceCurrency ?? '').trim().toUpperCase() || 'USD';
   const zeroTimeExpense = all.filter((ln) => {
     const slug = invoiceLineKindSlug(ln);
     if (slug !== 'time' && slug !== 'expense')
@@ -142,14 +149,37 @@ export function summarizeBilledOverrideLines(lines: readonly InvoiceLineDto[] | 
       visibleLines: [...all],
       closedTimeCount: 0,
       closedExpenseCount: 0,
+      workedAmount: 0,
+      workedCurrency: invCcy,
     };
   }
+  // Zeroed non-manual lines carry worked totals in sourceAmount (invoice ccy after override).
+  const zeroedNonManual = all.filter((ln) => {
+    if (invoiceLineKindSlug(ln) === 'manual')
+      return false;
+    return Math.abs(Number(ln.lineTotal) || 0) < 1e-9;
+  });
+  let workedAmount = 0;
+  let workedCurrency = invCcy;
+  const sourceCcys = new Set<string>();
+  for (const ln of zeroedNonManual) {
+    const amt = Number(ln.sourceAmount);
+    if (!Number.isFinite(amt) || Math.abs(amt) < 1e-9)
+      continue;
+    workedAmount += amt;
+    const sc = String(ln.sourceCurrency ?? '').trim().toUpperCase();
+    if (sc)
+      sourceCcys.add(sc);
+  }
+  if (sourceCcys.size === 1)
+    workedCurrency = [...sourceCcys][0]!;
   return {
     isBilledOverride: true,
-    // Hide zeroed linkage / package lines — billed money is on the manual service line.
     visibleLines: all.filter((ln) => Math.abs(Number(ln.lineTotal) || 0) > 1e-9),
     closedTimeCount: zeroTimeExpense.filter((ln) => invoiceLineKindSlug(ln) === 'time').length,
     closedExpenseCount: zeroTimeExpense.filter((ln) => invoiceLineKindSlug(ln) === 'expense').length,
+    workedAmount,
+    workedCurrency,
   };
 }
 

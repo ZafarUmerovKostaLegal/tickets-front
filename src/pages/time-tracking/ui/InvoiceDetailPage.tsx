@@ -99,8 +99,8 @@ export function InvoiceDetailPage() {
   }, [clients]);
 
   const billedLinesSummary = useMemo(
-    () => summarizeBilledOverrideLines(detail?.lines),
-    [detail?.lines],
+    () => summarizeBilledOverrideLines(detail?.lines, detail?.currency),
+    [detail?.lines, detail?.currency],
   );
 
   const listHref = getInvoicesListUrl(accountingVariant ? { variant: 'accounting' } : undefined);
@@ -720,6 +720,14 @@ export function InvoiceDetailPage() {
                     <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.amount')}</span>
                     <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtMoney(detail.totalAmount, detail.currency, locale)}</span>
                   </div>
+                  {billedLinesSummary.isBilledOverride && billedLinesSummary.workedAmount > 1e-9 ? (
+                    <div className="tt-reports__summary-card">
+                      <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.workedAmount')}</span>
+                      <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>
+                        {fmtMoney(billedLinesSummary.workedAmount, billedLinesSummary.workedCurrency, locale)}
+                      </span>
+                    </div>
+                  ) : null}
                   <div className="tt-reports__summary-card tt-inv__summary-card--success">
                     <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.paid')}</span>
                     <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtMoney(detail.amountPaid, detail.currency, locale)}</span>

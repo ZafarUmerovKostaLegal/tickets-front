@@ -27,16 +27,18 @@ describe('summarizeBilledOverrideLines', () => {
 
   it('hides zero linkage and keeps billed manual line', () => {
     const lines = [
-      line({ id: '1', lineKind: 'time', lineTotal: 0, timeEntryId: 't1', sourceAmount: 100 }),
-      line({ id: '2', lineKind: 'expense', lineTotal: 0, expenseRequestId: 'e1', sourceAmount: 20 }),
-      line({ id: '3', lineKind: 'package_fee', lineTotal: 0 }),
+      line({ id: '1', lineKind: 'time', lineTotal: 0, timeEntryId: 't1', sourceAmount: 100, sourceCurrency: 'USD' }),
+      line({ id: '2', lineKind: 'expense', lineTotal: 0, expenseRequestId: 'e1', sourceAmount: 20, sourceCurrency: 'USD' }),
+      line({ id: '3', lineKind: 'package_fee', lineTotal: 0, sourceAmount: 50, sourceCurrency: 'USD' }),
       line({ id: '4', lineKind: 'manual', lineTotal: 360, description: 'Legal services' }),
     ];
-    const s = summarizeBilledOverrideLines(lines);
+    const s = summarizeBilledOverrideLines(lines, 'USD');
     expect(s.isBilledOverride).toBe(true);
     expect(s.closedTimeCount).toBe(1);
     expect(s.closedExpenseCount).toBe(1);
     expect(s.visibleLines).toHaveLength(1);
     expect(s.visibleLines[0]?.id).toBe('4');
+    expect(s.workedAmount).toBe(170);
+    expect(s.workedCurrency).toBe('USD');
   });
 });
