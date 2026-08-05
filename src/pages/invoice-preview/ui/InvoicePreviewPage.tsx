@@ -218,7 +218,8 @@ export function InvoicePreviewPage() {
         if (!doc)
             return;
         pendingDocOverridesRef.current = doc;
-        userPickedBankRef.current = true;
+        // Do not set userPickedBankRef — saved legal edits must not block auto-pick of
+        // firm banking by invoice currency (USD invoice → USD реквизиты).
         skipNextAutosaveRef.current = true;
         if (doc.includedPageKeys?.length) {
             includedPagesHydratedRef.current = true;
@@ -254,12 +255,14 @@ export function InvoicePreviewPage() {
             setBankProfiles(profiles);
 
             let docFromApi: InvoiceDocumentOverridesV1 | null = null;
+            let invoiceCurrency: string | null = null;
             if (sessionNow?.mode === 'existing') {
                 try {
                     const inv = await getInvoice(sessionNow.invoiceId, false);
                     if (cancelled)
                         return;
                     setInvoiceStatus(String(inv.status ?? '').toLowerCase() || null);
+                    invoiceCurrency = String(inv.currency ?? '').trim().toUpperCase() || null;
                     docFromApi = parseInvoiceDocumentOverrides(inv.documentOverrides);
                     if (!docFromApi?.legal?.invoiceNumber && inv.invoiceNumber?.trim()) {
                         docFromApi = {
@@ -300,12 +303,6 @@ export function InvoicePreviewPage() {
                 })
                 : rawDoc;
 
-            const picked = pickFirmBankingProfileForCurrency(profiles, null);
-            if (picked && !doc?.legal)
-                applyBankProfile(picked);
-            else if (picked)
-                setSelectedBankProfileId(picked.id);
-
             if (doc) {
                 applyDocumentOverridesToState(doc, sessionNow?.meta.invoiceNumber);
             }
@@ -316,6 +313,11 @@ export function InvoicePreviewPage() {
                     invoiceNumber: sessionNow.meta.invoiceNumber,
                 }));
             }
+
+            // Prefer invoice currency immediately; coverModel effect will refine once totals load.
+            const picked = pickFirmBankingProfileForCurrency(profiles, invoiceCurrency);
+            if (picked && !userPickedBankRef.current)
+                applyBankProfile(picked);
         })();
         return () => {
             cancelled = true;
@@ -327,7 +329,13 @@ export function InvoicePreviewPage() {
             return;
         const currency = packCurrencyCode(coverModel);
         const picked = pickFirmBankingProfileForCurrency(bankProfiles, currency);
-        if (picked && picked.id !== selectedBankProfileId)
+        if (!picked)
+            return;
+        const selected = bankProfiles.find((p) => p.id === selectedBankProfileId);
+        const selectedCur = (selected?.accountCurrency ?? '').trim().toUpperCase();
+        const needsSwitch = picked.id !== selectedBankProfileId
+            || (Boolean(currency) && selectedCur !== currency);
+        if (needsSwitch)
             applyBankProfile(picked);
     }, [coverModel, bankProfiles, selectedBankProfileId, applyBankProfile]);
 
