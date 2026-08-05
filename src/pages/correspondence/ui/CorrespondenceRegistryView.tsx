@@ -634,8 +634,22 @@ export function CorrespondenceRegistryView({
                           </tr>
                         ) : rows.map((row, rowIdx) => (<tr
                             key={row.id}
-                            className="corr-registry__row"
+                            className="corr-registry__row corr-registry__row--clickable"
                             style={{ '--corr-stagger': rowIdx } as CSSProperties}
+                            tabIndex={0}
+                            role="link"
+                            aria-label={`Открыть карточку ${row.registryNumber}: ${row.subject}`}
+                            onClick={() => {
+                                closeOverlays();
+                                setCardDocId(row.id);
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    closeOverlays();
+                                    setCardDocId(row.id);
+                                }
+                            }}
                           >
                             <td className="corr__mono">{row.registryNumber}</td>
                             <td className="corr-registry__cell-clip">{row.counterparty}</td>

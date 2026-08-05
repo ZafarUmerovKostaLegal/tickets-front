@@ -697,6 +697,16 @@ button.corr__stat--clickable:hover:not(:disabled) {
   background: rgba(79, 70, 229, 0.04);
 }
 
+.corr__table tbody tr.corr-registry__row--clickable {
+  cursor: pointer;
+}
+
+.corr__table tbody tr.corr-registry__row--clickable:focus-visible {
+  outline: 2px solid var(--app-accent, #4f46e5);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, transparent);
+}
+
 .corr__th-actions,
 .corr__td-actions {
   width: 48px;
@@ -3928,6 +3938,11 @@ body[data-theme='dark'] .corr-preview__attachments { border-color: var(--app-bor
 }
 
 .corr-shell .corr__table tbody tr:hover {
+  background: var(--corr-paper-alt);
+}
+
+.corr-shell .corr__table tbody tr.corr-registry__row--clickable:focus-visible {
+  outline-color: var(--corr-brass, #8b7355);
   background: var(--corr-paper-alt);
 }
 
