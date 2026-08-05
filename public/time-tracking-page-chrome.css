@@ -1,0 +1,95 @@
+:root {
+  --app-font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --app-accent: #4f46e5;
+  --app-accent-hover: #4338ca;
+  --app-accent-focus: rgba(79, 70, 229, 0.15);
+  --app-text: #0f172a;
+  --app-muted: #64748b;
+  --app-surface: #ffffff;
+  --app-bg: #f8fafc;
+  --app-border: #e2e8f0;
+  --app-surface-soft: #f8fafc;
+}
+
+.time-page__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.time-page__header-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.time-page__header h1 {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.time-page__tabbar {
+  flex-shrink: 0;
+  display: flex;
+  gap: 0.25rem;
+  padding: 0 1.5rem;
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+  min-height: 44px;
+  align-items: stretch;
+  overflow-x: auto;
+}
+
+.time-page__tab {
+  position: relative;
+  padding: 0 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--app-muted);
+  background: none;
+  border: none;
+  cursor: default;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+}
+
+.time-page__tab--active {
+  color: var(--app-accent);
+}
+
+.time-page__tab--active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--app-accent);
+}
+
+.time-page__panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tsp {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--app-surface);
+  border-top: 1.5px solid var(--app-border);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

@@ -199,6 +199,10 @@ export type InvoiceCreateInput = {
     partnerBillingPeriodFrom?: string;
     partnerBillingPeriodTo?: string;
     partnerConfirmationRequestId?: string;
+    /** Client-facing total; closes selected time/expenses but bills this amount. */
+    billedAmount?: number | null;
+    /** Service line on the legal invoice page (with billedAmount). */
+    serviceDescription?: string | null;
 };
 export type InvoicePatchInput = {
     issueDate?: string;

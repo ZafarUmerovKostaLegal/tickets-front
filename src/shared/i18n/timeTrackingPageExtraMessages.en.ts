@@ -1590,6 +1590,14 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             hours: 'Hours',
             hoursTitle: 'Hours (×1.00 rate for invoice line)',
             packageCovered: 'package-covered',
+            customBilledToggle: 'Bill a custom amount',
+            customBilledHint: 'Time and expenses will be closed as usual, but the invoice and statistics will use the amount you enter. Only the legal invoice page is included in the document.',
+            customBilledAmount: 'Amount to bill',
+            customBilledDescription: 'Service description',
+            customBilledWorkedTime: 'Worked (time): {amount}',
+            customBilledWorkedExpenses: 'Worked (expenses, USD): {amount}',
+            customBilledRequired: 'Enter an amount to bill greater than 0',
+            customBilledDescriptionRequired: 'Enter a service description',
         },
         detail: {
             loading: 'Loading…',
@@ -1644,6 +1652,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             linesQty: 'Qty',
             linesPrice: 'Price',
             linesAmount: 'Amount',
+            closedLinkageSummary: 'Closed: {time} time, {expense} expenses (amount is on the service line above)',
             paymentsTitle: 'Payments',
         },
         payment: {

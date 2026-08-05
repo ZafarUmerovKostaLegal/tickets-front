@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Правила учёта времени · Kosta Legal</title>
+  <meta name="description" content="Правила учёта времени для сотрудников Kosta Legal" />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" />
+  <link rel="stylesheet" href="./public/time-page-shell.css" data-fallback="/time-page-shell.css" />
+  <link rel="stylesheet" href="./public/time-tracking-page-chrome.css" data-fallback="/time-tracking-page-chrome.css" />
+  <link rel="stylesheet" href="./public/timesheet-panel.css" data-fallback="/timesheet-panel.css" />
+  <link rel="stylesheet" href="./public/time-tracking-training.css" data-fallback="/time-tracking-training.css" />
+  <script>
+    if (location.protocol !== 'file:') {
+      document.querySelectorAll('link[data-fallback]').forEach(function (link) {
+        link.href = link.getAttribute('data-fallback');
+      });
+    }
+  </script>
+  <style>
+    :root {
+      --app-font-family: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --brand: #e6282c;
+      --brand-dark: #b91c1f;
+      --brand-soft: #fef2f2;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --surface: #ffffff;
+      --bg: #f8fafc;
+      --accent: #1e40af;
+      --accent-soft: #eff6ff;
+      --success-soft: #ecfdf5;
+      --success: #047857;
+      --warn-soft: #fffbeb;
+      --warn: #b45309;
+      --radius: 16px;
+      --shadow: 0 10px 40px rgba(15, 23, 42, 0.08);
+      --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+      --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(22px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes heroGlow {
+      0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.55; }
+      50% { transform: translate(-18px, -12px) scale(1.08); opacity: 0.85; }
+    }
+
+    @keyframes pulseDot {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(230, 40, 44, 0.25); }
+      50% { box-shadow: 0 0 0 8px rgba(230, 40, 44, 0.12); }
+    }
+
+    @keyframes answerReveal {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes countPop {
+      0% { transform: scale(0.92); opacity: 0.5; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes shimmer {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+
+    * { box-sizing: border-box; }
+
+    html {
+      scroll-behavior: smooth;
+      font-family: var(--app-font-family);
+    }
+
+    body {
+      margin: 0;
+      font-family: var(--app-font-family);
+      font-weight: 400;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 600px at 100% -10%, rgba(230, 40, 44, 0.08), transparent 60%),
+        radial-gradient(900px 500px at -10% 20%, rgba(30, 64, 175, 0.06), transparent 55%),
+        var(--bg);
+      line-height: 1.6;
+    }
+
+    .reveal {
+      opacity: 0;
+      transform: translateY(22px);
+    }
+
+    body.is-ready .reveal {
+      animation: fadeInUp 0.65s var(--ease-out) forwards;
+    }
+
+    body.is-ready .reveal--hero { animation-delay: 0.05s; }
+    body.is-ready .reveal--toolbar { animation-delay: 0.14s; }
+    body.is-ready .reveal--notices { animation-delay: 0.22s; }
+    body.is-ready .reveal--footer { animation-delay: 0.08s; }
+
+    body.is-ready .faq-item.reveal:nth-child(1) { animation-delay: 0.28s; }
+    body.is-ready .faq-item.reveal:nth-child(2) { animation-delay: 0.31s; }
+    body.is-ready .faq-item.reveal:nth-child(3) { animation-delay: 0.34s; }
+    body.is-ready .faq-item.reveal:nth-child(4) { animation-delay: 0.37s; }
+    body.is-ready .faq-item.reveal:nth-child(5) { animation-delay: 0.40s; }
+    body.is-ready .faq-item.reveal:nth-child(6) { animation-delay: 0.43s; }
+    body.is-ready .faq-item.reveal:nth-child(7) { animation-delay: 0.46s; }
+    body.is-ready .faq-item.reveal:nth-child(8) { animation-delay: 0.49s; }
+    body.is-ready .faq-item.reveal:nth-child(9) { animation-delay: 0.52s; }
+    body.is-ready .faq-item.reveal:nth-child(10) { animation-delay: 0.55s; }
+    body.is-ready .faq-item.reveal:nth-child(11) { animation-delay: 0.58s; }
+    body.is-ready .faq-item.reveal:nth-child(12) { animation-delay: 0.61s; }
+    body.is-ready .faq-item.reveal:nth-child(13) { animation-delay: 0.64s; }
+    body.is-ready .faq-item.reveal:nth-child(14) { animation-delay: 0.67s; }
+    body.is-ready .faq-item.reveal:nth-child(15) { animation-delay: 0.70s; }
+    body.is-ready .faq-item.reveal:nth-child(16) { animation-delay: 0.73s; }
+    body.is-ready .faq-item.reveal:nth-child(17) { animation-delay: 0.76s; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal,
+      body.is-ready .reveal,
+      body.is-ready .faq-item.reveal { opacity: 1; transform: none; animation: none !important; }
+      .hero::after,
+      .hero-badge-dot,
+      .hero h1,
+      .count.is-updating,
+      body.is-ready .hero h1 { animation: none !important; color: #fff; background: none; -webkit-background-clip: border-box; background-clip: border-box; }
+      .faq-item,
+      .faq-item[open] .answer,
+      .num,
+      .chev,
+      .tag,
+      .notice,
+      .search input,
+      .footer a::after { transition: none !important; }
+    }
+
+    .page {
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #111827 0%, #1f2937 55%, #374151 100%);
+      color: #fff;
+      border-radius: calc(var(--radius) + 4px);
+      padding: 40px 36px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.4s var(--ease-out), box-shadow 0.4s var(--ease-out);
+    }
+
+    body.is-ready .hero:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 48px rgba(15, 23, 42, 0.14);
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: -40% auto auto -20%;
+      width: 320px;
+      height: 320px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(79, 70, 229, 0.18), transparent 68%);
+      pointer-events: none;
+      animation: heroGlow 8s ease-in-out infinite;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: auto -80px -80px auto;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(230, 40, 44, 0.45), transparent 70%);
+      pointer-events: none;
+      animation: heroGlow 6s ease-in-out infinite reverse;
+    }
+
+    .hero > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      font-size: 13px;
+      letter-spacing: 0.02em;
+      margin-bottom: 18px;
+    }
+
+    .hero-badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand);
+      box-shadow: 0 0 0 4px rgba(230, 40, 44, 0.25);
+      animation: pulseDot 2.4s ease-in-out infinite;
+    }
+
+    .hero h1 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 4vw, 38px);
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      max-width: 18ch;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    body.is-ready .hero h1 {
+      background: linear-gradient(90deg, #fff 0%, #fecaca 45%, #fff 90%);
+      background-size: 200% auto;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: shimmer 6s linear infinite;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 62ch;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 17px;
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .hero-chip {
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.9);
+      transition: transform 0.25s var(--ease-out), background 0.25s, border-color 0.25s;
+    }
+
+    .hero-chip:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      margin: 24px 0 18px;
+    }
+
+    .search {
+      flex: 1 1 260px;
+      position: relative;
+    }
+
+    .search input {
+      width: 100%;
+      padding: 14px 16px 14px 44px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface);
+      font: inherit;
+      font-weight: 500;
+      color: var(--ink);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      transition: border-color 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out), transform 0.25s var(--ease-out);
+    }
+
+    .search input:focus {
+      outline: none;
+      border-color: rgba(230, 40, 44, 0.45);
+      box-shadow: 0 0 0 4px rgba(230, 40, 44, 0.12), 0 8px 24px rgba(15, 23, 42, 0.06);
+      transform: translateY(-1px);
+    }
+
+    .search svg {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      color: var(--muted);
+      transition: color 0.25s, transform 0.25s var(--ease-out);
+    }
+
+    .search:focus-within svg {
+      color: var(--brand);
+      transform: translateY(-50%) scale(1.08);
+    }
+
+    .count {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      white-space: nowrap;
+      transition: opacity 0.2s;
+    }
+
+    .count.is-updating {
+      animation: countPop 0.28s var(--ease-spring);
+    }
+
+    .notice-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .notice {
+      padding: 16px 18px;
+      border-radius: 14px;
+      border: 1px solid transparent;
+      font-size: 14px;
+      transition: transform 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+    }
+
+    .notice:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    }
+
+    .notice strong {
+      display: block;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    .notice--brand {
+      background: var(--brand-soft);
+      border-color: #fecaca;
+      color: #7f1d1d;
+    }
+
+    .notice--accent {
+      background: var(--accent-soft);
+      border-color: #bfdbfe;
+      color: #1e3a8a;
+    }
+
+    .notice--warn {
+      background: var(--warn-soft);
+      border-color: #fde68a;
+      color: #92400e;
+    }
+
+    .faq-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .faq-item {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+      transition: box-shadow 0.3s var(--ease-out), border-color 0.3s var(--ease-out), transform 0.3s var(--ease-out);
+    }
+
+    .faq-item:hover {
+      border-color: #cbd5e1;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      transform: translateY(-1px);
+    }
+
+    .faq-item[open] {
+      border-color: rgba(230, 40, 44, 0.25);
+      box-shadow: 0 10px 30px rgba(230, 40, 44, 0.08);
+      transform: translateY(-2px);
+    }
+
+    .faq-item.hidden {
+      display: none;
+      animation: none !important;
+    }
+
+    summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 18px 20px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 14px;
+      align-items: start;
+      transition: background 0.25s;
+    }
+
+    summary:hover {
+      background: rgba(248, 250, 252, 0.85);
+    }
+
+    .faq-item[open] summary {
+      background: linear-gradient(180deg, rgba(254, 242, 242, 0.55), transparent);
+    }
+
+    summary::-webkit-details-marker { display: none; }
+
+    .num {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: var(--bg);
+      color: var(--brand-dark);
+      font-weight: 700;
+      font-size: 14px;
+      flex-shrink: 0;
+      transition: background 0.3s var(--ease-out), color 0.3s var(--ease-out), transform 0.3s var(--ease-spring);
+    }
+
+    .faq-item[open] .num {
+      background: var(--brand);
+      color: #fff;
+      transform: scale(1.06);
+    }
+
+    .q {
+      font-weight: 600;
+      line-height: 1.45;
+      padding-top: 4px;
+    }
+
+    .chev {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      color: var(--muted);
+      transition: transform 0.35s var(--ease-spring), background 0.25s, color 0.25s;
+      margin-top: 2px;
+    }
+
+    .faq-item[open] .chev {
+      transform: rotate(180deg);
+      background: var(--brand-soft);
+      color: var(--brand-dark);
+    }
+
+    .answer {
+      padding: 0 20px 20px 68px;
+      color: #334155;
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .faq-item[open] .answer {
+      animation: answerReveal 0.45s var(--ease-out) both;
+    }
+
+    .answer p { margin: 0 0 12px; }
+    .answer p:last-child { margin-bottom: 0; }
+
+    .answer ul {
+      margin: 0 0 12px;
+      padding-left: 1.2rem;
+    }
+
+    .answer li + li { margin-top: 6px; }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 12px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+      transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+    }
+
+    .tag:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+
+    .tag--billable {
+      background: #ecfdf5;
+      color: var(--success);
+    }
+
+    .tag--nonbillable {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+
+    .tag--ui {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #e2e8f0;
+    }
+
+    .example {
+      margin-top: 12px;
+      padding: 14px 16px;
+      border-radius: 12px;
+      background: #f8fafc;
+      border: 1px dashed #cbd5e1;
+      font-size: 14px;
+      transition: border-color 0.25s, background 0.25s, transform 0.25s var(--ease-out);
+    }
+
+    .faq-item[open] .example {
+      border-color: #fca5a5;
+      background: #fffafa;
+    }
+
+    .example dt {
+      font-weight: 650;
+      color: var(--ink);
+      margin-top: 8px;
+    }
+
+    .example dt:first-child { margin-top: 0; }
+
+    .example dd {
+      margin: 4px 0 0;
+      color: #475569;
+    }
+
+    .footer {
+      margin-top: 36px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .footer a {
+      position: relative;
+      color: var(--brand-dark);
+      text-decoration: none;
+      font-weight: 700;
+      transition: color 0.2s;
+    }
+
+    .footer a::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: -2px;
+      width: 100%;
+      height: 2px;
+      background: var(--brand);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s var(--ease-out);
+    }
+
+    .footer a:hover {
+      color: var(--brand);
+    }
+
+    .footer a:hover::after {
+      transform: scaleX(1);
+    }
+
+    .contact-mail {
+      color: var(--brand-dark);
+      font-weight: 700;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(230, 40, 44, 0.35);
+      transition: color 0.2s, border-color 0.2s;
+    }
+
+    .contact-mail:hover {
+      color: var(--brand);
+      border-bottom-color: var(--brand);
+    }
+
+    @media (max-width: 640px) {
+      .page { padding-inline: 16px; }
+      .hero { padding: 28px 22px; }
+      summary { padding: 16px; }
+      .answer { padding: 0 16px 18px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page page--rules">
+    <header class="hero reveal reveal--hero">
+      <div class="hero-badge">
+        <span class="hero-badge-dot" aria-hidden="true"></span>
+        Kosta Legal · Тикет-система
+      </div>
+      <h1>Правила учёта времени</h1>
+      <p>
+        Обязательные правила для всех сотрудников: как фиксировать рабочее время,
+        оформлять записи и сдавать отчёты в разделе «Учёт времени».
+      </p>
+      <div class="hero-meta">
+        <span class="hero-chip">Учёт времени → Расписание</span>
+        <span class="hero-chip">17 правил</span>
+        <span class="hero-chip">7 шагов тренинга</span>
+        <span class="hero-chip">Обновлено: август 2026</span>
+      </div>
+    </header>
+
+    <nav class="page-mode-switch reveal reveal--toolbar" aria-label="Режим страницы">
+      <button type="button" class="page-mode-switch__btn is-active" data-page-mode="rules">Правила</button>
+      <button type="button" class="page-mode-switch__btn" data-page-mode="training">Тренинг</button>
+    </nav>
+
+    <div id="panel-rules">
+    <div class="toolbar reveal reveal--toolbar">
+      <label class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="M20 20l-3.5-3.5"></path>
+        </svg>
+        <input id="search" type="search" placeholder="Поиск по правилам…" autocomplete="off" />
+      </label>
+      <span class="count" id="count"></span>
+    </div>
+
+    <div class="notice-grid reveal reveal--notices">
+      <div class="notice notice--brand">
+        <strong>Главный принцип</strong>
+        Учёт ведётся в режиме реального времени — не в конце дня «на память».
+      </div>
+      <div class="notice notice--accent">
+        <strong>Где работать</strong>
+        Веб-приложение «Тикет-система Kosta Legal» → боковое меню → «Учёт времени».
+      </div>
+      <div class="notice notice--warn">
+        <strong>Срок сдачи недели</strong>
+        Отправить на утверждение — не позднее понедельника, 12:00 (Ташкент).
+      </div>
+    </div>
+
+    <div class="faq-list" id="faq">
+      <details class="faq-item reveal" open>
+        <summary>
+          <span class="num">1</span>
+          <span class="q">Каково назначение учёта времени в тикет-системе?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Раздел «Учёт времени» предназначен для фиксации выполняемых задач,
+            контроля временных затрат по проектам, подготовки отчётов, выставления счетов и оплаты.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">2</span>
+          <span class="q">Как получить доступ к учёту времени и проектам?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Доступ к тикет-системе и разделу «Учёт времени» настраивает IT-администратор:
+            <a class="contact-mail" href="mailto:zumerov@kostalegal.com">zumerov@kostalegal.com</a>.
+          </p>
+          <p>
+            Добавление сотрудников в проекты выполняет администратор учёта времени:
+            <a class="contact-mail" href="mailto:gtemirova@kostalegal.com">gtemirova@kostalegal.com</a>.
+          </p>
+          <p>
+            Если нет доступа к системе — пишите IT-администратору.
+            Если доступ есть, но вас нет в нужном проекте — администратору учёта времени.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">3</span>
+          <span class="q">Кем и когда вводятся данные по проекту?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Записи вносит сам сотрудник в течение рабочего дня, по мере выполнения задач.
+            Откройте раздел <strong>«Учёт времени»</strong> → вкладку
+            <strong>«Расписание (Время)»</strong> и нажмите
+            <span class="tag tag--ui">Добавить время</span>
+            либо запустите таймер
+            <span class="tag tag--ui">Старт</span>
+            у нужной записи.
+          </p>
+          <p>
+            Таймер фиксирует длительность автоматически после нажатия
+            <span class="tag tag--ui">Стоп</span>.
+            Ручной ввод часов также допускается, но только по фактически выполненной работе.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">4</span>
+          <span class="q">Можно ли заполнить табель в конце дня за весь день?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Учёт постфактум не допускается: время фиксируется в режиме реального времени
+            или сразу после завершения конкретного действия.
+          </p>
+          <p>
+            Важно указывать точное, а не приблизительное время. Завышение «обкрадывает» клиента,
+            занижение — фирму.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">5</span>
+          <span class="q">Что важно учитывать при внесении данных с точки зрения клиента?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Для клиента записи в учёте времени — это информация о том, за какие действия,
+            услуги и «продукты» он платит фирме. Каждая заметка должна быть понятной
+            человеку, который не участвовал в работе, но оплачивает её.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">6</span>
+          <span class="q">Какие действия вносить в табель, а какие — нет?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>Отражайте все рабочие активности, кроме:</p>
+          <ul>
+            <li>обеда;</li>
+            <li>гигиенических перерывов;</li>
+            <li>общих корпоративных мероприятий (собрания, поздравления и т. п.).</li>
+          </ul>
+          <p>
+            Подлежат учёту: обсуждения с коллегами по делу, звонки, работа с почтой,
+            изучение документов — если это часть рабочего времени по проекту или внутренним задачам.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">7</span>
+          <span class="q">Куда записывать внутренние обсуждения, например «Обсуждение плана действий со старшим коллегой»?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Такие активности относятся к проекту
+            <span class="tag tag--nonbillable">Kosta Legal Internal</span>
+            с неоплачиваемой (<em>non-billable</em>) задачей.
+          </p>
+          <p>Руководствуйтесь двумя принципами:</p>
+          <ul>
+            <li>клиенту важен результат — готовый продукт, а не внутренние процессы;</li>
+            <li>фирме важно видеть затраты времени, чтобы повышать качество и эффективность.</li>
+          </ul>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">8</span>
+          <span class="q">Какой должен быть стиль описания в заметке?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>Описание должно быть:</p>
+          <ul>
+            <li><strong>кратким</strong> по форме;</li>
+            <li><strong>ёмким</strong> по содержанию;</li>
+            <li><strong>конкретным</strong> по характеру действия.</li>
+          </ul>
+          <p>
+            Если вы составляли договор (<em>Drafting</em>), достаточно:
+            «Составление договора продажи доли» / <em>Drafting Share Sale Contract</em>.
+          </p>
+          <p>
+            Нельзя жертвовать ясностью ради краткости: перечисление вопросов без ответов
+            или ответов без контекста не допускается.
+          </p>
+          <dl class="example">
+            <dt>Клиент</dt>
+            <dd>Kosta Legal (или клиент проекта)</dd>
+            <dt>Проект</dt>
+            <dd>Название проекта клиента</dd>
+            <dt>Задача</dt>
+            <dd>Drafting</dd>
+            <dt>Примечание</dt>
+            <dd>Employment contract with company general director / supply agreement between the company and [supplier name]</dd>
+          </dl>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">9</span>
+          <span class="q">Как вести учёт по проектам и этапам?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Каждому проекту — отдельные записи времени. Не смешивайте часы разных проектов
+            в одной строке.
+          </p>
+          <p>
+            У проекта есть справочник задач (этапов): <em>Drafting</em>, <em>Document Review</em>,
+            <em>Emails</em>, <em>Telephone calls</em>, <em>Meetings</em>, <em>Research</em> и др.
+            Выбирайте задачу, соответствующую фактическому действию.
+          </p>
+          <p>
+            Если для проекта не отображаются нужные задачи — сообщите об этом менеджеру
+            учёта времени или партнёру проекта.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">10</span>
+          <span class="q">На каком языке писать описание?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Как правило — на языке клиента (чаще всего на языке переписки с клиентом).
+            В карточке проекта указан «Язык записей» — ориентируйтесь на него.
+          </p>
+          <p>
+            При подключении к новому проекту уточните язык у партнёра, ведущего проект.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">11</span>
+          <span class="q">Что делать, если сотрудник не добавлен в проект, но получил поручение?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Напишите администратору учёта времени
+            <a class="contact-mail" href="mailto:gtemirova@kostalegal.com">gtemirova@kostalegal.com</a>
+            и сообщите старшему коллеге, давшему задание (желательно по почте),
+            чтобы вас добавили в проект.
+          </p>
+          <p>
+            Пока доступ не выдан, фиксируйте время в проекте
+            <span class="tag tag--nonbillable">Business Development</span>
+            с подробным описанием выполненной работы.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">12</span>
+          <span class="q">Учитывается ли время на профессиональное саморазвитие?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>Да. Такие активности также вносятся в проект</p>
+          <p>
+            <span class="tag tag--nonbillable">Business Development</span>
+            с конкретным описанием: чтение профессиональной литературы, изучение образцов
+            документов, мониторинг законодательства, научная литература по специализации и т. п.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">13</span>
+          <span class="q">Какое минимальное время можно внести?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Минимальная длительность одной записи — <strong>1 минута</strong>.
+            Указывайте фактически затраченное время, не округляя «на глаз».
+          </p>
+          <p>
+            Максимум за одну запись — 8 часов.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">14</span>
+          <span class="q">Где и когда фиксировать время?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Ведите учёт в тикет-системе с рабочего компьютера в течение рабочего дня.
+          </p>
+          <p>
+            Если вы на встрече, в суде или в разъезде — не откладывайте запись на вечер.
+            Зафиксируйте время сразу после завершения действия.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">15</span>
+          <span class="q">Как отправить неделю на утверждение?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            На вкладке «Расписание (Время)» внизу табеля нажмите
+            <span class="tag tag--ui">Отправить на утверждение</span>.
+            После отправки неделя закрывается для правок (кроме временной разблокировки
+            от менеджера учёта времени).
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">16</span>
+          <span class="q">Когда отчёт должен быть сдан руководству?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>Отчёт сдаётся в трёх случаях:</p>
+          <ul>
+            <li>
+              <strong>Еженедельно</strong> — не позднее <strong>понедельника, 12:00 (Ташкент)</strong>.
+              После этого срока неделя закрывается для правок; опоздание может не засчитываться
+              как своевременная сдача табеля.
+            </li>
+            <li>
+              <strong>Ежемесячно</strong> — не позднее <strong>18:00 последнего рабочего дня</strong>
+              отчётного месяца.
+            </li>
+            <li>
+              <strong>По отдельному запросу</strong> руководства или партнёра проекта.
+            </li>
+          </ul>
+          <p>
+            Опоздание или несдача отчёта в срок считается нарушением дисциплины и может
+            трактоваться как отсутствие зафиксированной рабочей деятельности за отчётный период,
+            с возможными дисциплинарными последствиями.
+          </p>
+          <p>
+            Перед отправкой проверьте: все дни заполнены, проекты и задачи выбраны верно,
+            описания понятны клиенту.
+          </p>
+        </div>
+      </details>
+
+      <details class="faq-item reveal">
+        <summary>
+          <span class="num">17</span>
+          <span class="q">Что делать, если запись внесена неверно или не в тот проект?</span>
+          <span class="chev" aria-hidden="true">▾</span>
+        </summary>
+        <div class="answer">
+          <p>
+            Исправьте запись, пока неделя открыта: нажмите
+            <span class="tag tag--ui">Изменить запись</span>
+            в строке табеля или откройте карточку записи и сохраните правки.
+          </p>
+          <p>
+            Если неделя уже отправлена на утверждение, правки недоступны — обратитесь
+            к менеджеру учёта времени.
+          </p>
+        </div>
+      </details>
+    </div>
+    </div>
+
+    <footer class="footer reveal reveal--footer">
+      <span>© Kosta Legal · внутренний регламент учёта времени</span>
+      <a href="/time-tracking">Открыть раздел «Учёт времени»</a>
+    </footer>
+  </div>
+
+  <div id="training-fullscreen" class="training-fullscreen" aria-label="Тренинг учёта времени">
+    <div class="training-fullscreen__topbar">
+      <div>
+        <div class="training-fullscreen__topbar-title">Тренинг · Учёт времени</div>
+        <div class="training-fullscreen__topbar-sub">Учебный режим — данные не сохраняются</div>
+      </div>
+      <button type="button" class="training-fullscreen__exit" id="training-exit">← К правилам</button>
+    </div>
+
+    <div class="training-fullscreen__body">
+      <aside class="train-coach">
+        <div class="train-coach__badge" id="train-coach-badge">Шаг 1 из 7</div>
+        <h2 class="train-coach__title" id="train-coach-title">Тренинг учёта времени</h2>
+        <p class="train-coach__text" id="train-coach-text">
+          Практический симулятор табеля — тот же интерфейс, что в тикет-системе.
+        </p>
+        <div class="train-coach__progress" id="train-progress"></div>
+        <div class="train-coach__hint" id="train-coach-hint"></div>
+        <div class="train-coach__done" id="train-coach-done" style="display:none"></div>
+        <div class="train-coach__actions">
+          <button type="button" class="train-coach__btn" id="train-back">Назад</button>
+          <button type="button" class="train-coach__btn train-coach__btn--primary" id="train-next">Далее</button>
+          <button type="button" class="train-coach__btn" id="train-restart" style="display:none">Начать заново</button>
+        </div>
+      </aside>
+
+      <div class="train-app">
+        <div class="train-app__main time-page">
+          <header class="time-page__header">
+            <div class="time-page__header-inner">
+              <h1>Учёт времени</h1>
+            </div>
+          </header>
+
+          <nav class="time-page__tabbar" data-train="tabbar">
+            <span class="time-page__tab">Расходы</span>
+            <span class="time-page__tab time-page__tab--active">Расписание (Время)</span>
+          </nav>
+
+          <div class="time-page__panel">
+            <div class="tsp" id="train-sandbox">
+              <div class="tsp__view-stack">
+                <div class="tsp__view-live">
+                  <div class="tsp__top">
+                    <div class="tsp__top-l">
+                      <button type="button" class="tsp__arr" aria-label="Предыдущая неделя">←</button>
+                      <button type="button" class="tsp__arr" aria-label="Следующая неделя">→</button>
+                      <p class="tsp__heading" id="train-heading">Эта неделя ·</p>
+                      <button type="button" class="tsp__return">Сегодня</button>
+                    </div>
+                    <div class="tsp__top-r">
+                      <div class="tsp__seg">
+                        <button type="button" class="tsp__seg-btn">День</button>
+                        <button type="button" class="tsp__seg-btn tsp__seg-btn--on">Неделя</button>
+                        <button type="button" class="tsp__seg-btn">Календарь</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="tsp__strip" id="train-week-strip" data-train="strip"></div>
+
+                  <div class="tsp__content" id="train-content"></div>
+
+                  <div class="tsp__foot">
+                    <div class="tsp__foot-total">
+                      <span class="tsp__foot-total-lbl">Итого за неделю:</span>
+                      <span class="tsp__foot-total-n" id="train-foot-total-n">0:00</span>
+                    </div>
+                    <div class="tsp__submit-wrap" data-train="submit-week">
+                      <button type="button" class="tsp__submit" id="train-submit">Отправить на утверждение</button>
+                      <button type="button" class="tsp__submit-arr" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tsp-ov tsp-ov--entry tsp-ov--train" id="train-modal-overlay">
+    <div class="tsp-m tsp-m--time-entry" id="train-entry-modal" data-train="entry-modal">
+      <div class="tsp-m__head tsp-m__head--time-entry">
+        <button type="button" class="tsp-m__x" id="train-modal-close" aria-label="Закрыть">×</button>
+        <h3 class="tsp-m__title tsp-m__title--time-entry">Добавить время</h3>
+      </div>
+      <div class="tsp-m__body tsp-m__body--time-entry">
+        <p class="tsp-m__lbl tsp-m__lbl--section">Проект / задача</p>
+        <div class="tsp-m__te-field">
+          <select class="tsp-m__sel tsp-m__sel--project" id="train-modal-project"></select>
+          <p class="tsp-m__te-meta-line" id="train-modal-meta"></p>
+        </div>
+        <div class="tsp-m__te-field">
+          <select class="tsp-m__sel" id="train-modal-task"></select>
+        </div>
+        <div class="tsp-m__row tsp-m__row--notes-time">
+          <div class="tsp-m__te-notes">
+            <label class="tsp-m__lbl" for="train-modal-notes">Примечание</label>
+            <textarea class="tsp-m__inp tsp-m__inp--te-notes" id="train-modal-notes" placeholder="Примечание (мин. 5 символов)…"></textarea>
+          </div>
+          <div class="tsp-m__f tsp-m__f--te-hours">
+            <label class="tsp-m__lbl" for="train-modal-hours">Часы</label>
+            <input class="tsp-m__inp" id="train-modal-hours" type="text" value="1:30" placeholder="0:00" />
+          </div>
+        </div>
+        <p class="tsp-m__err" id="train-modal-err" role="alert"></p>
+      </div>
+      <div class="tsp-m__foot tsp-m__foot--time-entry">
+        <div class="tsp-m__foot-date">
+          <span class="tsp-m__foot-date-lbl">Дата</span>
+          <span class="tsp-m__foot-date-val" id="train-modal-date"></span>
+        </div>
+        <div class="tsp-m__foot-actions">
+          <button type="button" class="tsp-m__btn tsp-m__btn--cancel" id="train-modal-cancel">Отмена</button>
+          <button type="button" class="tsp-m__btn tsp-m__btn--primary" id="train-modal-save">Добавить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="train-toast" id="train-toast" aria-live="polite"></div>
+
+  <script>
+    (function () {
+      var input = document.getElementById('search');
+      var items = Array.prototype.slice.call(document.querySelectorAll('.faq-item'));
+      var countEl = document.getElementById('count');
+
+      function normalize(text) {
+        return (text || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      }
+
+      function updateCount(visible) {
+        countEl.textContent = visible + ' из ' + items.length + ' правил';
+        countEl.classList.remove('is-updating');
+        void countEl.offsetWidth;
+        countEl.classList.add('is-updating');
+      }
+
+      function filter() {
+        var q = normalize(input.value);
+        var visible = 0;
+        items.forEach(function (item) {
+          var text = normalize(item.textContent);
+          var show = !q || text.indexOf(q) !== -1;
+          item.classList.toggle('hidden', !show);
+          if (show) visible += 1;
+        });
+        updateCount(visible);
+      }
+
+      function markReady() {
+        document.body.classList.add('is-ready');
+      }
+
+      input.addEventListener('input', filter);
+      updateCount(items.length);
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(markReady).catch(markReady);
+      } else {
+        window.addEventListener('load', markReady);
+      }
+    })();
+  </script>
+  <script src="./public/time-tracking-training.js" data-fallback="/time-tracking-training.js"></script>
+  <script>
+    (function () {
+      var s = document.querySelector('script[data-fallback]');
+      if (s && location.protocol !== 'file:') s.src = s.getAttribute('data-fallback');
+    })();
+  </script>
+</body>
+</html>

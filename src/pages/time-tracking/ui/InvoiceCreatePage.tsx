@@ -52,6 +52,9 @@ import {
   formatUnpaidExpenseListLines,
   isProjectUnpaidExpensesError,
 } from '../lib/projectUnpaidExpenses';
+import { formatCoverServicesPeriod } from '../../invoice-preview/lib/invoiceCoverLetterI18n';
+import { getLegalInvoiceLabels } from '../../invoice-preview/lib/invoiceLegalPageI18n';
+import type { InvoiceCoverLanguage } from '../../invoice-preview/lib/invoiceCoverLetterModel';
 import './TimeTrackingPage.css';
 import './TimesheetPanel.css';
 import './InvoicePage.css';
@@ -105,6 +108,9 @@ export function InvoiceCreatePage() {
   const [unbilledPeriodGranularity, setUnbilledPeriodGranularity] = useState<PeriodGranularity>('month');
   const [unbilledPeriodDropdown, setUnbilledPeriodDropdown] = useState(false);
   const unbilledPeriodDropdownRef = useRef<HTMLDivElement>(null);
+  const [customBilledEnabled, setCustomBilledEnabled] = useState(false);
+  const [customBilledAmount, setCustomBilledAmount] = useState('');
+  const [customBilledDescription, setCustomBilledDescription] = useState('');
 
   /** All clients that have at least one active project. */
   const clientsForCreate = useMemo(
@@ -123,6 +129,49 @@ export function InvoiceCreatePage() {
     () => projectSkipsPartnerInvoiceConfirmation(selectedProject),
     [selectedProject],
   );
+  const invoiceCurrency = useMemo(() => {
+    const row = clients.find((c) => c.id === createClientId);
+    return String(row?.currency ?? 'USD').trim().toUpperCase() || 'USD';
+  }, [clients, createClientId]);
+  const workedTimeTotal = useMemo(() => {
+    return unbilledTime
+      .filter((x) => selTime.has(x.id))
+      .reduce((s, x) => s + (Number(x.billableAmount) || 0), 0);
+  }, [unbilledTime, selTime]);
+  const workedTimeCurrency = useMemo(() => {
+    const row = unbilledTime.find((x) => selTime.has(x.id));
+    return String(row?.currency ?? invoiceCurrency).trim().toUpperCase() || invoiceCurrency;
+  }, [unbilledTime, selTime, invoiceCurrency]);
+  const workedExpUsdTotal = useMemo(() => {
+    return unbilledExp
+      .filter((x) => selExp.has(x.id))
+      .reduce((s, x) => s + (Number(x.equivalentAmount) || 0), 0);
+  }, [unbilledExp, selExp]);
+  const defaultServiceDescription = useCallback(() => {
+    const coverLang: InvoiceCoverLanguage = locale === 'ru' ? 'RU' : 'ENG';
+    const periodIso = (unbilledTo || issueDate || todayIso()).slice(0, 10);
+    const period = formatCoverServicesPeriod(periodIso, coverLang);
+    return getLegalInvoiceLabels(coverLang).serviceDescription(period);
+  }, [locale, unbilledTo, issueDate]);
+  const enableCustomBilled = useCallback((on: boolean) => {
+    setCustomBilledEnabled(on);
+    if (!on)
+      return;
+    const prefill = workedTimeCurrency === invoiceCurrency
+      ? workedTimeTotal
+      : workedTimeTotal;
+    if (!customBilledAmount.trim() && prefill > 0)
+      setCustomBilledAmount(String(Math.round(prefill * 100) / 100));
+    if (!customBilledDescription.trim())
+      setCustomBilledDescription(defaultServiceDescription());
+  }, [
+    workedTimeTotal,
+    workedTimeCurrency,
+    invoiceCurrency,
+    customBilledAmount,
+    customBilledDescription,
+    defaultServiceDescription,
+  ]);
   const selectedProjectHasConfirmed = useMemo(() => {
     const pid = createProjectId.trim();
     return pid !== '' && confirmedProjectIdsForCreate.has(pid);
@@ -532,6 +581,23 @@ export function InvoiceCreatePage() {
       await showAlert({ message: t('timeTrackingPage.invoices.errors.selectLines') });
       return;
     }
+    let billedAmountNum: number | undefined;
+    let serviceDescription: string | undefined;
+    if (customBilledEnabled) {
+      const raw = customBilledAmount.trim().replace(/\s/g, '').replace(',', '.');
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n <= 0) {
+        await showAlert({ message: t('timeTrackingPage.invoices.createDialog.customBilledRequired') });
+        return;
+      }
+      const desc = customBilledDescription.trim();
+      if (!desc) {
+        await showAlert({ message: t('timeTrackingPage.invoices.createDialog.customBilledDescriptionRequired') });
+        return;
+      }
+      billedAmountNum = Math.round(n * 100) / 100;
+      serviceDescription = desc;
+    }
     const billProjectId = createProjectId.trim();
     if (!billProjectId) {
       await showAlert({
@@ -588,6 +654,15 @@ export function InvoiceCreatePage() {
         expenseIds: [...selExp],
         partnerBillingPeriodFrom: unbilledFrom.trim().slice(0, 10),
         partnerBillingPeriodTo: unbilledTo.trim().slice(0, 10),
+        ...(billedAmountNum != null
+          ? {
+              billedAmount: billedAmountNum,
+              serviceDescription,
+              taxPercent: 0,
+              tax2Percent: 0,
+              discountPercent: 0,
+            }
+          : {}),
       });
       notifyReportsInvalidated();
       navigate(getInvoiceDetailUrl(created.id), { replace: true });
@@ -604,7 +679,28 @@ export function InvoiceCreatePage() {
     finally {
       setCreateBusy(false);
     }
-  }, [createClientId, createProjectId, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledFrom, unbilledTo, unbilledExp, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, clients, navigate, showAlert, t, selectedProjectSkipsPartner]);
+  }, [
+    createClientId,
+    createProjectId,
+    issueDate,
+    dueDate,
+    createInvoiceNumber,
+    selTime,
+    selExp,
+    unbilledFrom,
+    unbilledTo,
+    unbilledExp,
+    requireFullyConfirmedPeriod,
+    unpaidExpensesAlertMessage,
+    clients,
+    navigate,
+    showAlert,
+    t,
+    selectedProjectSkipsPartner,
+    customBilledEnabled,
+    customBilledAmount,
+    customBilledDescription,
+  ]);
 
   const toInvoices = () => {
     void navigate(getInvoicesListUrl());
@@ -966,6 +1062,83 @@ export function InvoiceCreatePage() {
                     </tbody>
                   </table>
                 </div>
+              </section>
+            )}
+
+            {(unbilledTime.length > 0 || unbilledExp.length > 0) && (
+              <section className="tt-inv-page__section">
+                <div className="tt-inv-page__section-head">
+                  <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.customBilledToggle')}</h2>
+                </div>
+                <label className="tt-ios-toggle-row">
+                  <span className="tt-ios-toggle-row__text">
+                    {t('timeTrackingPage.invoices.createDialog.customBilledToggle')}
+                  </span>
+                  <span className="tt-ios-toggle">
+                    <input
+                      type="checkbox"
+                      className="tt-ios-toggle__input"
+                      checked={customBilledEnabled}
+                      onChange={(e) => enableCustomBilled(e.target.checked)}
+                      disabled={createBusy}
+                    />
+                    <span className="tt-ios-toggle__slider" aria-hidden />
+                  </span>
+                </label>
+                <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                  {t('timeTrackingPage.invoices.createDialog.customBilledHint')}
+                </p>
+                {selTime.size > 0 ? (
+                  <p className="tt-inv-page__section-desc">
+                    {t('timeTrackingPage.invoices.createDialog.customBilledWorkedTime').replace(
+                      '{amount}',
+                      fmtMoney(workedTimeTotal, workedTimeCurrency, locale),
+                    )}
+                  </p>
+                ) : null}
+                {selExp.size > 0 ? (
+                  <p className="tt-inv-page__section-desc">
+                    {t('timeTrackingPage.invoices.createDialog.customBilledWorkedExpenses').replace(
+                      '{amount}',
+                      fmtMoney(workedExpUsdTotal, 'USD', locale),
+                    )}
+                  </p>
+                ) : null}
+                {customBilledEnabled ? (
+                  <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2" style={{ marginTop: '0.75rem' }}>
+                    <div className="tt-inv-dialog__field">
+                      <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-amount">
+                        {t('timeTrackingPage.invoices.createDialog.customBilledAmount')}
+                        {' '}
+                        (
+                        {invoiceCurrency}
+                        )
+                      </label>
+                      <input
+                        id="tt-inv-custom-billed-amount"
+                        type="text"
+                        inputMode="decimal"
+                        className="tt-inv-dialog__control"
+                        value={customBilledAmount}
+                        onChange={(e) => setCustomBilledAmount(e.target.value)}
+                        disabled={createBusy}
+                      />
+                    </div>
+                    <div className="tt-inv-dialog__field">
+                      <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-desc">
+                        {t('timeTrackingPage.invoices.createDialog.customBilledDescription')}
+                      </label>
+                      <input
+                        id="tt-inv-custom-billed-desc"
+                        type="text"
+                        className="tt-inv-dialog__control"
+                        value={customBilledDescription}
+                        onChange={(e) => setCustomBilledDescription(e.target.value)}
+                        disabled={createBusy}
+                      />
+                    </div>
+                  </div>
+                ) : null}
               </section>
             )}
           </div>

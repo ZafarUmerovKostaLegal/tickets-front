@@ -118,6 +118,41 @@ export function invoiceLineKindLabel(ln: InvoiceLineDto, t: TimeTrackingT): stri
   }
 }
 
+/** Detect billed-override invoices: money on manual line(s), zeroed time/expense linkage. */
+export function summarizeBilledOverrideLines(lines: readonly InvoiceLineDto[] | null | undefined): {
+  isBilledOverride: boolean;
+  visibleLines: InvoiceLineDto[];
+  closedTimeCount: number;
+  closedExpenseCount: number;
+} {
+  const all = lines ?? [];
+  const zeroTimeExpense = all.filter((ln) => {
+    const slug = invoiceLineKindSlug(ln);
+    if (slug !== 'time' && slug !== 'expense')
+      return false;
+    return Math.abs(Number(ln.lineTotal) || 0) < 1e-9;
+  });
+  const moneyManual = all.filter((ln) => {
+    return invoiceLineKindSlug(ln) === 'manual' && Math.abs(Number(ln.lineTotal) || 0) > 1e-9;
+  });
+  const isBilledOverride = moneyManual.length > 0 && zeroTimeExpense.length > 0;
+  if (!isBilledOverride) {
+    return {
+      isBilledOverride: false,
+      visibleLines: [...all],
+      closedTimeCount: 0,
+      closedExpenseCount: 0,
+    };
+  }
+  return {
+    isBilledOverride: true,
+    // Hide zeroed linkage / package lines — billed money is on the manual service line.
+    visibleLines: all.filter((ln) => Math.abs(Number(ln.lineTotal) || 0) > 1e-9),
+    closedTimeCount: zeroTimeExpense.filter((ln) => invoiceLineKindSlug(ln) === 'time').length,
+    closedExpenseCount: zeroTimeExpense.filter((ln) => invoiceLineKindSlug(ln) === 'expense').length,
+  };
+}
+
 export function fmtDisplayDate(iso: string, locale: AppLocale): string {
   if (!iso || !/^\d{4}-\d{2}-\d{2}/.test(iso))
     return iso || '—';

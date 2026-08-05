@@ -53,6 +53,7 @@ import {
   openOutlookComposePopup,
   parseMoneyRu,
   parseOptionalPercentField,
+  summarizeBilledOverrideLines,
 } from '../lib/invoicePageShared';
 import './TimeTrackingPage.css';
 import './TimesheetPanel.css';
@@ -96,6 +97,11 @@ export function InvoiceDetailPage() {
     clients.forEach((c) => m.set(String(c.id), c.name));
     return m;
   }, [clients]);
+
+  const billedLinesSummary = useMemo(
+    () => summarizeBilledOverrideLines(detail?.lines),
+    [detail?.lines],
+  );
 
   const listHref = getInvoicesListUrl(accountingVariant ? { variant: 'accounting' } : undefined);
   const toInvoices = () => {
@@ -964,7 +970,9 @@ export function InvoiceDetailPage() {
                   <div className="tt-inv-page__section-head">
                     <h2 id="tt-inv-lines-section-title" className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.detail.linesTitle')}</h2>
                     <span className="tt-inv-page__section-desc">
-                      {(detail.lines ?? []).length}
+                      {billedLinesSummary.isBilledOverride
+                        ? billedLinesSummary.visibleLines.length
+                        : (detail.lines ?? []).length}
                     </span>
                   </div>
                   <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
@@ -979,7 +987,7 @@ export function InvoiceDetailPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(detail.lines ?? []).map((ln) => (
+                        {billedLinesSummary.visibleLines.map((ln) => (
                           <tr key={ln.id}>
                             <td>
                               <span className={`tt-inv-line-kind tt-inv-line-kind--${invoiceLineKindSlug(ln)}`}>
@@ -1000,6 +1008,13 @@ export function InvoiceDetailPage() {
                       </tbody>
                     </table>
                   </div>
+                  {billedLinesSummary.isBilledOverride ? (
+                    <p className="tt-inv-page__section-desc" style={{ marginTop: '0.65rem' }}>
+                      {t('timeTrackingPage.invoices.detail.closedLinkageSummary')
+                        .replace('{time}', String(billedLinesSummary.closedTimeCount))
+                        .replace('{expense}', String(billedLinesSummary.closedExpenseCount))}
+                    </p>
+                  ) : null}
 
                   {(detail.payments ?? []).length > 0 && (
                     <>

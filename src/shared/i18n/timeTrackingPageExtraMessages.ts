@@ -1588,6 +1588,14 @@ export const timeTrackingPageExtraMessages = {
             hours: 'Часы',
             hoursTitle: 'Часы (×1.00 ставка для строки счёта)',
             packageCovered: 'в пакете',
+            customBilledToggle: 'Выставить свою сумму',
+            customBilledHint: 'Время и расходы закроются как обычно, а в счёт и статистику попадёт указанная сумма. В документ войдёт только страница счёта.',
+            customBilledAmount: 'Сумма к выставлению',
+            customBilledDescription: 'Описание услуги',
+            customBilledWorkedTime: 'Наработано (время): {amount}',
+            customBilledWorkedExpenses: 'Наработано (расходы, USD): {amount}',
+            customBilledRequired: 'Укажите сумму к выставлению больше 0',
+            customBilledDescriptionRequired: 'Укажите описание услуги',
         },
         detail: {
             loading: 'Загрузка…',
@@ -1642,6 +1650,7 @@ export const timeTrackingPageExtraMessages = {
             linesQty: 'Кол-во',
             linesPrice: 'Цена',
             linesAmount: 'Сумма',
+            closedLinkageSummary: 'Закрыто: {time} времени, {expense} расходов (сумма в строке услуги выше)',
             paymentsTitle: 'Платежи',
         },
         payment: {
