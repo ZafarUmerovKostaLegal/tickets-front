@@ -3,7 +3,7 @@ import { formatDateOnly } from '@shared/lib/formatDate';
 import type { User } from '@entities/user';
 import { useAppDialog, useAppToast } from '@shared/ui';
 import { queueBirthdayGreeting } from '@widgets/birthday-postcard';
-import { getPositionMeta } from '../model/constants';
+import { getPositionMeta, positionCatalogIncludes } from '../model/constants';
 import type { KnownRole } from '../model/constants';
 type UserCardProps = {
   user: User;
@@ -79,7 +79,7 @@ export function UserCard({ user: u, savingUserId, openRoleDropdown, setOpenRoleD
   const currentTT = TT_ROLE_OPTIONS.find((o) => o.value === u.time_tracking_role) ?? TT_ROLE_OPTIONS[0];
   const currPos = u.position?.trim() ? u.position.trim() : null;
   const posMeta = currPos ? getPositionMeta(currPos) : null;
-  const posOptions = currPos && !TT_POSITIONS.includes(currPos)
+  const posOptions = currPos && !positionCatalogIncludes(TT_POSITIONS, currPos)
     ? [currPos, ...TT_POSITIONS]
     : TT_POSITIONS;
   const handleSendBirthday = async () => {

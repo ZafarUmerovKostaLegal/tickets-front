@@ -52,10 +52,10 @@ export const TIME_TRACKING_ROLE_META: Record<TimeTrackingRole, {
     'Associate': { color: '#4f46e5', bg: 'rgba(37,99,235,0.08)' },
     'Contracts Manager': { color: '#7c3aed', bg: 'rgba(124,58,237,0.08)' },
     'Counsel': { color: '#0891b2', bg: 'rgba(8,145,178,0.08)' },
-    'Junior Associate': { color: '#64748b', bg: 'rgba(100,116,139,0.08)' },
+    'Junior Associate': { color: '#475569', bg: 'rgba(71,85,105,0.1)' },
     'Partner': { color: '#b45309', bg: 'rgba(180,83,9,0.08)' },
     'Senior Associate': { color: '#0f766e', bg: 'rgba(15,118,110,0.08)' },
-    'Trainee': { color: '#9333ea', bg: 'rgba(147,51,234,0.08)' },
+    'Trainee': { color: '#7e22ce', bg: 'rgba(126,34,206,0.1)' },
 };
 export const MOCK_USERS: TimeUserRow[] = [];
 export const DEFAULT_TOTALS = {

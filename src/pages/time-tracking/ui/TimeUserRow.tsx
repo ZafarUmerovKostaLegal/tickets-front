@@ -2,6 +2,7 @@ import { AnimatedLink } from '@shared/ui';
 import { getUserEditUrl } from '@shared/config';
 import { useI18n } from '@shared/i18n';
 import type { TimeUserRow as TimeUserRowType } from '@entities/time-tracking/model/types';
+import { resolveTimeTrackingPositionColor } from '@entities/time-tracking/lib/positionMeta';
 
 function fmtHM(decimalHours: number): string {
     const totalMinutes = Math.round(decimalHours * 60);
@@ -23,6 +24,7 @@ type TimeUserRowProps = {
 export function TimeUserRow({ user, index, isActionsOpen, onActionsToggle, onActionsClose, actionsMenuRef, onOpenProjectAccess, }: TimeUserRowProps) {
     const { t } = useI18n();
     const billablePct = user.hours > 0 ? (user.billableHours / user.hours) * 100 : 0;
+    const positionColor = resolveTimeTrackingPositionColor(user.position);
     const rowTitle = user.hours > 0
         ? t('timeTrackingPage.users.row.hoursTooltip')
             .replace('{billable}', fmtHM(user.billableHours))
@@ -44,7 +46,15 @@ export function TimeUserRow({ user, index, isActionsOpen, onActionsToggle, onAct
               {user.isManual ? (<span className="time-users__badge time-users__badge--manual">{t('timeTrackingPage.users.badge.noAuth')}</span>) : null}
               {user.isManual && user.isArchived ? (<span className="time-users__badge time-users__badge--archived">{t('timeTrackingPage.users.badge.archived')}</span>) : null}
             </span>)}
-          {user.position ? (<span className="time-users__position" title={user.position}>{user.position}</span>) : null}
+          {user.position ? (
+            <span
+              className="time-users__position"
+              title={user.position}
+              style={positionColor ? { color: positionColor } : undefined}
+            >
+              {user.position}
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="time-users__cell time-users__cell--hours">

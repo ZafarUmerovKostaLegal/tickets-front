@@ -16,6 +16,7 @@ export * from './exportProjectsListExcel';
 export * from './projectsFiltersStorage';
 export * from './reportEmployeeInitials';
 export * from './reportEmployeePosition';
+export * from './positionMeta';
 export * from './userFacingProjectAccessError';
 export * from './expenseReportDisplay';
 export * from './projectTasksCache';

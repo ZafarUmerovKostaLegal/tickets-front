@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { formatDateOnly } from '@shared/lib/formatDate';
 import type { User } from '@entities/user';
-import { getPositionMeta } from '../model/constants';
+import { getPositionMeta, positionCatalogIncludes } from '../model/constants';
 import type { KnownRole } from '../model/constants';
 type UserRowProps = {
     user: User;
@@ -75,7 +75,7 @@ export function UserRow({ user: u, savingUserId, openRoleDropdown, setOpenRoleDr
     const currentTT = TT_ROLE_OPTIONS.find((o) => o.value === u.time_tracking_role) ?? TT_ROLE_OPTIONS[0];
     const currPos = u.position?.trim() ? u.position.trim() : null;
     const posMeta = currPos ? getPositionMeta(currPos) : null;
-    const posOptions = currPos && !TT_POSITIONS.includes(currPos)
+    const posOptions = currPos && !positionCatalogIncludes(TT_POSITIONS, currPos)
         ? [currPos, ...TT_POSITIONS]
         : TT_POSITIONS;
     return (<tr className={statusKey !== 'active' ? 'ap__row--dim' : ''}>

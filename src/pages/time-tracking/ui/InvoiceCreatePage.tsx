@@ -130,9 +130,12 @@ export function InvoiceCreatePage() {
     [selectedProject],
   );
   const invoiceCurrency = useMemo(() => {
+    const projectCur = String(selectedProject?.currency ?? '').trim().toUpperCase();
+    if (projectCur)
+      return projectCur;
     const row = clients.find((c) => c.id === createClientId);
     return String(row?.currency ?? 'USD').trim().toUpperCase() || 'USD';
-  }, [clients, createClientId]);
+  }, [clients, createClientId, selectedProject]);
   const workedTimeTotal = useMemo(() => {
     return unbilledTime
       .filter((x) => selTime.has(x.id))
@@ -636,8 +639,10 @@ export function InvoiceCreatePage() {
     setCreateBusy(true);
     try {
       const manualNumber = createInvoiceNumber.trim();
-      const clientRow = clients.find((c) => c.id === createClientId);
-      const currency = String(clientRow?.currency ?? '').trim().toUpperCase() || undefined;
+      // Invoice currency follows the project (billing currency), not the client default.
+      const projectCur = String(selectedProject?.currency ?? '').trim().toUpperCase();
+      const clientCur = String(clients.find((c) => c.id === createClientId)?.currency ?? '').trim().toUpperCase();
+      const currency = projectCur || clientCur || undefined;
       const expenseDates = unbilledExp
         .filter((x) => selExp.has(x.id))
         .map((x) => String(x.expenseDate ?? '').trim().slice(0, 10))
@@ -718,6 +723,7 @@ export function InvoiceCreatePage() {
     showAlert,
     t,
     selectedProjectSkipsPartner,
+    selectedProject,
     customBilledEnabled,
     customBilledAmount,
     customBilledDescription,

@@ -467,9 +467,9 @@
 
 .time-users__position {
   font-size: 0.75rem;
-  font-weight: 400;
+  font-weight: 600;
   line-height: 1.2;
-  color: var(--app-muted);
+  color: var(--app-text-dim, #334155);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
