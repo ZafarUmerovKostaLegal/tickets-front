@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { getUsersPage, getPositions, setUserRole, setUserBlocked, setUserArchived, setTimeTrackingRole, setUserPosition, invalidateUsersListCache, type User, } from '@entities/user';
+import { getUsersPage, getPositions, setUserRole, setUserBlocked, setUserArchived, setTimeTrackingRole, setUserPosition, invalidateUsersListCache, invalidatePositionsCache, type User, } from '@entities/user';
 import type { AdminMetrics } from '../types';
 import type { AdminUserFieldPendingConfirm } from '../AdminContext.types';
 import { TT_POSITIONS_FALLBACK, type TTRole } from '../constants';
@@ -47,10 +47,25 @@ export function useAdminUsers(closePosDropdown: ClosePosDropdown) {
 
     useEffect(() => {
         let cancelled = false;
+        invalidatePositionsCache();
         getPositions()
             .then((list) => {
-                if (!cancelled && list.length > 0)
-                    setApiPositions(list);
+                if (cancelled)
+                    return;
+                // Merge API catalog with local fallback so new titles (e.g. Trainee)
+                // appear even if the API/cache is still on an older list.
+                const seen = new Set<string>();
+                const merged: string[] = [];
+                for (const p of [...list, ...TT_POSITIONS_FALLBACK]) {
+                    const v = String(p ?? '').trim();
+                    const k = v.toLowerCase();
+                    if (!v || seen.has(k))
+                        continue;
+                    seen.add(k);
+                    merged.push(v);
+                }
+                if (merged.length > 0)
+                    setApiPositions(merged);
             })
             .catch(() => {  });
         return () => {

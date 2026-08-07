@@ -1,5 +1,6 @@
 import { useState, useId, useEffect } from 'react';
 import { createManualTimeTrackingUser, isForbiddenError, type TimeTrackingUserRow } from '@entities/time-tracking';
+import { TIME_TRACKING_ROLES } from '@entities/time-tracking/model/constants';
 import { getPositions } from '@entities/user';
 import { useI18n } from '@shared/i18n';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
@@ -10,6 +11,20 @@ export type CreateManualTimeTrackingUserModalProps = {
     onCreated: (row: TimeTrackingUserRow) => void;
 };
 
+function mergePositionOptions(api: string[]): string[] {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const p of [...api, ...TIME_TRACKING_ROLES]) {
+        const v = String(p ?? '').trim();
+        const k = v.toLowerCase();
+        if (!v || seen.has(k))
+            continue;
+        seen.add(k);
+        out.push(v);
+    }
+    return out;
+}
+
 export function CreateManualTimeTrackingUserModal({ canManage, onClose, onCreated }: CreateManualTimeTrackingUserModalProps) {
     const { t } = useI18n();
     const uid = useId();
@@ -19,14 +34,14 @@ export function CreateManualTimeTrackingUserModal({ canManage, onClose, onCreate
     const [isArchived, setIsArchived] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
-    const [positionOptions, setPositionOptions] = useState<string[]>([]);
+    const [positionOptions, setPositionOptions] = useState<string[]>(() => mergePositionOptions([]));
 
     useEffect(() => {
         let cancelled = false;
         getPositions()
             .then((list) => {
                 if (!cancelled)
-                    setPositionOptions(list);
+                    setPositionOptions(mergePositionOptions(list));
             })
             .catch(() => { /* подсказки необязательны */ });
         return () => {

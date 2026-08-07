@@ -34,6 +34,12 @@ export const TT_POSITIONS_FALLBACK = [
     'Contracts and BD Assistant',
     'Accountant',
     'Office Manager',
+    'Associate',
+    'Contracts Manager',
+    'Counsel',
+    'Junior Associate',
+    'Partner',
+    'Senior Associate',
     'Trainee',
 ] as const;
 export type TTPosition = string;
