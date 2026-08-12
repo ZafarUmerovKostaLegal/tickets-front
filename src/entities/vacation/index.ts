@@ -19,6 +19,7 @@ export {
     getVacationPartners,
     createVacationLeaveRequest,
     listVacationLeaveRequests,
+    fetchVacationLeavePendingBadgeCount,
     getVacationLeaveRequest,
     approveVacationLeaveRequest,
     declineVacationLeaveRequest,
@@ -62,4 +63,15 @@ export {
     type VacationManualEntryDocumentApi,
     type CreateVacationManualEntryInput,
     type ListVacationManualEntriesOptions,
+    type VacationLeavePendingBadgeCountsApi,
 } from './api';
+
+export { useVacationLeavePendingBadge } from './lib/useVacationLeavePendingBadge';
+export {
+    formatVacationLeavePendingBadge,
+    type VacationLeavePendingBadgeCounts,
+} from './lib/vacationLeavePendingBadge';
+export {
+    invalidateVacationLeaveRequests,
+    VACATION_LEAVE_REQUESTS_INVALIDATE_EVENT,
+} from './model/vacationLeaveRequestEvents';

@@ -27,6 +27,8 @@ export const enMessages = {
         unreadMessagesAria: '{count} unread messages',
         forReviewPendingBadgeAria: '{count} reports awaiting your signature',
         correspondencePendingBadgeAria: '{count} letters need your attention',
+        vacationToDecideBadgeAria: '{count} leave requests await your approval',
+        vacationMinePendingBadgeAria: '{count} of your leave requests are pending',
         internalPortal: 'Internal portal',
         searchPlaceholder: 'Find a section…',
         searchEmpty: 'No sections found',
@@ -105,6 +107,14 @@ export const enMessages = {
                 title: 'Legal document design',
                 description: 'Checks structure, language, and technical drafting',
             },
+        },
+    },
+    vacationSchedule: {
+        attention: {
+            toDecide: 'You have {count} leave requests awaiting your approval.',
+            goToDecide: 'Go to approvals →',
+            minePending: 'You have {count} leave requests pending partner review.',
+            goToMine: 'My requests →',
         },
     },
     nav: {

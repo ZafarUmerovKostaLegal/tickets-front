@@ -718,6 +718,30 @@ export async function listVacationLeaveRequests(options?: ListVacationLeaveReque
         .filter((x): x is VacationLeaveRequestApi => x != null);
 }
 
+export type VacationLeavePendingBadgeCountsApi = {
+    count: number;
+    toDecideCount: number;
+    minePendingCount: number;
+};
+
+export async function fetchVacationLeavePendingBadgeCount(): Promise<VacationLeavePendingBadgeCountsApi> {
+    const res = await vacationApiFetch('/api/v1/vacations/leave-requests/pending/badge');
+    if (res.status === 401)
+        throw new Error('Не авторизован');
+    if (!res.ok)
+        await throwVacationRequestError(res);
+    const raw = (await res.json()) as Record<string, unknown>;
+    const num = (v: unknown) => {
+        const n = Number(v);
+        return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+    };
+    return {
+        count: num(raw.count),
+        toDecideCount: num(raw.to_decide_count ?? raw.toDecideCount),
+        minePendingCount: num(raw.mine_pending_count ?? raw.minePendingCount),
+    };
+}
+
 export async function getVacationLeaveRequest(id: number): Promise<VacationLeaveRequestApi | null> {
     const res = await vacationApiFetch(`/api/v1/vacations/leave-requests/${id}`);
     if (res.status === 401)

@@ -5,6 +5,7 @@ import {
     getVacationLeaveBalance,
     getVacationLeaveKinds,
     getVacationPartners,
+    invalidateVacationLeaveRequests,
     type VacationLeaveBalanceApi,
     type VacationLeaveKindApi,
     type VacationLeaveRequestApi,
@@ -257,6 +258,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                 variant: 'success',
                 message: `Заявка #${created.id} отправлена партнёру ${partner.label}.`,
             });
+            invalidateVacationLeaveRequests();
             onSubmitted?.(created);
             onClose();
         }

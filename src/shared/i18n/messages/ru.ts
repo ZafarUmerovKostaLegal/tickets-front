@@ -27,6 +27,8 @@ export const ruMessages: Messages = {
         unreadMessagesAria: '{count} непрочитанных сообщений',
         forReviewPendingBadgeAria: '{count} отчётов ожидают вашей подписи',
         correspondencePendingBadgeAria: '{count} писем требуют вашего внимания',
+        vacationToDecideBadgeAria: '{count} заявок на отпуск ждут вашего согласования',
+        vacationMinePendingBadgeAria: '{count} ваших заявок на рассмотрении',
         internalPortal: 'Внутренний портал',
         searchPlaceholder: 'Найти раздел…',
         searchEmpty: 'Разделы не найдены',
@@ -105,6 +107,14 @@ export const ruMessages: Messages = {
                 title: 'Дизайн юридических документов',
                 description: 'Проверяет структуру, язык и техническое оформление',
             },
+        },
+    },
+    vacationSchedule: {
+        attention: {
+            toDecide: 'У вас {count} заявок на отпуск, ожидающих согласования.',
+            goToDecide: 'Перейти к согласованию →',
+            minePending: 'У вас {count} заявок на рассмотрении у партнёра.',
+            goToMine: 'Мои заявки →',
         },
     },
     nav: {
@@ -659,12 +669,17 @@ export type Messages = {
         unreadMessagesAria: string;
         forReviewPendingBadgeAria: string;
         correspondencePendingBadgeAria: string;
+        vacationToDecideBadgeAria: string;
+        vacationMinePendingBadgeAria: string;
         internalPortal: string;
         searchPlaceholder: string;
         searchEmpty: string;
         greetingSubtitle: string;
         greeting: Record<'morning' | 'afternoon' | 'evening', string>;
         sections: Record<'daily' | 'finance' | 'team', string>;
+    };
+    vacationSchedule: {
+        attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;
     };
     kostaLegalAi: {
         heroTitle: string;

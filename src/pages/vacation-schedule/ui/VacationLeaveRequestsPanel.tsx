@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     cancelVacationLeaveRequest,
     getVacationLeaveKinds,
+    invalidateVacationLeaveRequests,
     listVacationLeaveRequests,
     type VacationLeaveKindApi,
     type VacationLeaveRequestApi,
@@ -145,6 +146,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         try {
             await cancelVacationLeaveRequest(req.id);
             pushToast({ variant: 'info', message: `Заявка #${req.id} отменена.` });
+            invalidateVacationLeaveRequests();
             setReloadTick((t) => t + 1);
         }
         catch (e) {
@@ -159,6 +161,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         setItems((prev) => prev.map((it) => (it.id === next.id ? next : it)));
         if (next.status === 'approved')
             onScheduleMayHaveChanged?.();
+        invalidateVacationLeaveRequests();
         if (status === 'pending' && next.status !== 'pending')
             setReloadTick((t) => t + 1);
     }, [onScheduleMayHaveChanged, status]);

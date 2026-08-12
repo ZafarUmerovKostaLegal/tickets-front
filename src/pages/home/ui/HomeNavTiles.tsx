@@ -12,6 +12,7 @@ import { usePartnerForReviewBadge } from '@entities/time-tracking/lib/usePartner
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
 import { useExpensePaymentConfirmationBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
 import { useCorrespondencePartnerAttentionBadge } from '@entities/correspondence';
+import { useVacationLeavePendingBadge, formatVacationLeavePendingBadge } from '@entities/vacation';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import {
     getHubSectionForTile,
@@ -158,6 +159,25 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
     const correspondenceBadgeAria = correspondenceCount > 0
         ? t('homeHub.correspondencePendingBadgeAria').replace('{count}', String(correspondenceCount))
         : undefined;
+    const showVacationTile = defaultTiles.some((tile) => tile.id === 'vacationSchedule');
+    const { counts: vacationCounts } = useVacationLeavePendingBadge(
+        !loading && showVacationTile,
+    );
+    const vacationDisplayBadge = vacationCounts.toDecideCount > 0
+        ? formatVacationLeavePendingBadge(vacationCounts.toDecideCount)
+        : vacationCounts.minePendingCount > 0
+            ? formatVacationLeavePendingBadge(vacationCounts.minePendingCount)
+            : '';
+    const vacationBadgeAria = vacationCounts.count > 0
+        ? t('homeHub.vacationToDecideBadgeAria').replace('{count}', String(vacationCounts.count))
+        : vacationCounts.minePendingCount > 0
+            ? t('homeHub.vacationMinePendingBadgeAria').replace('{count}', String(vacationCounts.minePendingCount))
+            : undefined;
+    const vacationTileTo = vacationCounts.toDecideCount > 0
+        ? `${routes.vacationSchedule}?tab=to_decide`
+        : vacationCounts.minePendingCount > 0
+            ? `${routes.vacationSchedule}?tab=mine`
+            : routes.vacationSchedule;
 
     const [orderedTiles, setOrderedTiles] = useState<HubNavTile[]>([]);
     const [draggingId, setDraggingId] = useState<HubTileId | null>(null);
@@ -322,9 +342,9 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                         </button>
                                     ) : null}
                                     <NavLink
-                                        to={tile.to}
+                                        to={tile.id === 'vacationSchedule' ? vacationTileTo : tile.to}
                                         className={({ isActive }) => `home-nav-tiles__link${isActive ? ' active' : ''}`}
-                                        end
+                                        end={tile.id !== 'vacationSchedule'}
                                         draggable={false}
                                     >
                                         <HubTileContent
@@ -339,7 +359,9 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                                             ? expensePaymentBadge || undefined
                                                             : tile.id === 'correspondence'
                                                                 ? correspondenceBadge || undefined
-                                                                : undefined
+                                                                : tile.id === 'vacationSchedule'
+                                                                    ? vacationDisplayBadge || undefined
+                                                                    : undefined
                                             }
                                             badgeAriaLabel={
                                                 tile.id === 'kostaDaily'
@@ -350,7 +372,9 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                                             ? expensePaymentBadgeAria
                                                             : tile.id === 'correspondence'
                                                                 ? correspondenceBadgeAria
-                                                                : undefined
+                                                                : tile.id === 'vacationSchedule'
+                                                                    ? vacationBadgeAria
+                                                                    : undefined
                                             }
                                         />
                                     </NavLink>
