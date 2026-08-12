@@ -36,6 +36,31 @@ function userLabel(u: TimeTrackingUserRow): string {
     return (u.display_name?.trim() || u.email || `#${u.id}`).trim();
 }
 
+function isStubAuthUserEmail(email: string | null | undefined): boolean {
+    const v = String(email ?? '').trim().toLowerCase();
+    return /^auth-user-\d+@tt\.local$/.test(v);
+}
+
+function resolveTeamMemberName(
+    id: number,
+    fromRow: { display_name?: string | null; email?: string } | undefined,
+    usersById: Map<number, TimeTrackingUserRow>,
+): string {
+    const fromCatalog = usersById.get(id);
+    const catalogName = fromCatalog?.display_name?.trim();
+    if (catalogName)
+        return catalogName;
+    const rowName = fromRow?.display_name?.trim();
+    if (rowName)
+        return rowName;
+    if (fromCatalog)
+        return userLabel(fromCatalog);
+    const email = fromRow?.email?.trim();
+    if (email && !isStubAuthUserEmail(email))
+        return email;
+    return `#${id}`;
+}
+
 function userSearchText(u: TimeTrackingUserRow): string {
     return [u.display_name, u.email, u.position, String(u.id)].filter(Boolean).join(' ').trim();
 }
@@ -295,12 +320,7 @@ function teamMemberEntries(
 ): { id: number; name: string }[] {
     return row.member_auth_user_ids.map((id) => {
         const fromRow = row.members?.find((m) => m.auth_user_id === id);
-        if (fromRow?.display_name?.trim())
-            return { id, name: fromRow.display_name.trim() };
-        if (fromRow?.email)
-            return { id, name: fromRow.email };
-        const u = usersById.get(id);
-        return { id, name: u ? userLabel(u) : `#${id}` };
+        return { id, name: resolveTeamMemberName(id, fromRow, usersById) };
     });
 }
 
