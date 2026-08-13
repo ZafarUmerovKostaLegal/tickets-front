@@ -1,9 +1,10 @@
 import { lazy, Suspense, useCallback, useMemo, useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { AppBackButton, AppHomeLogo } from '@shared/ui';
+import { useSearchParams } from 'react-router-dom';
+import { AppBackButton, AppHomeLogo, AttentionBanner } from '@shared/ui';
 import { routes } from '@shared/config';
 import { stripHtmlToText } from '@shared/lib/sanitizeHtml';
-import { createTodoBoard, createTodoCard, createTodoColumn, deleteTodoBoardBackground, deleteTodoCard, deleteTodoColumn, exportTodoBoard, fetchTodoBoardById, fetchTodoBoardCurrent, fetchTodoBoardsList, findNewestCardInColumn, importTodoBoard, patchTodoCard, patchTodoColumn, pickPreferredTodoBoardId, putTodoBoardCurrent, reorderTodoCardsInColumn, reorderTodoColumns, uploadTodoBoardBackground, type CreateTodoBoardBody, type PatchTodoCardPayload, type TodoBoard, type TodoBoardLabel, type TodoBoardSummary, } from '@entities/todo';
+import { createTodoBoard, createTodoCard, createTodoColumn, deleteTodoBoardBackground, deleteTodoCard, deleteTodoColumn, exportTodoBoard, fetchTodoBoardById, fetchTodoBoardCurrent, fetchTodoBoardsList, findNewestCardInColumn, importTodoBoard, invalidateTodoInvites, patchTodoCard, patchTodoColumn, pickPreferredTodoBoardId, putTodoBoardCurrent, reorderTodoCardsInColumn, reorderTodoColumns, uploadTodoBoardBackground, useTodoInvitesBadge, type CreateTodoBoardBody, type PatchTodoCardPayload, type TodoBoard, type TodoBoardLabel, type TodoBoardSummary, } from '@entities/todo';
 import { boardBackgroundStorageKey, pickBoardBackgroundApiPath, resolveBoardBackgroundDisplayUrl, } from '@entities/todo/lib/boardBackgroundUrl';
 import { fetchMediaBlob } from '@shared/api';
 import { downloadBlob } from '@shared/lib/downloadBlob';
@@ -110,6 +111,8 @@ function computeManualCardOrderAfterDrop(displayCards: TodoCard[], manualCards: 
 }
 export function TodoPage() {
     const { t, locale } = useI18n();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const { count: invitesCount } = useTodoInvitesBadge(true);
     const dateLocale = todoLocaleTag(locale);
     const [plannerCollapsed, setPlannerCollapsed] = useState(false);
     const [mobilePlannerOpen, setMobilePlannerOpen] = useState(false);
@@ -128,7 +131,17 @@ export function TodoPage() {
     const [boardListError, setBoardListError] = useState<string | null>(null);
 
     const [effectiveBoardMyRole, setEffectiveBoardMyRole] = useState<string | null>(null);
-    const [invitesOpen, setInvitesOpen] = useState(false);
+    const [invitesOpen, setInvitesOpen] = useState(() => searchParams.get('invites') === '1');
+    useEffect(() => {
+        if (searchParams.get('invites') !== '1')
+            return;
+        setInvitesOpen(true);
+        setSearchParams((prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('invites');
+            return next;
+        }, { replace: true });
+    }, [searchParams, setSearchParams]);
     const [membersModalOpen, setMembersModalOpen] = useState(false);
     const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
     const [columnListSort, setColumnListSort] = useState<Record<string, TodoColumnListSortMode>>({});
@@ -761,8 +774,10 @@ export function TodoPage() {
             if (text)
                 showToast({ message: text, variant: 'info' });
             void reloadBoardSummaries();
-            if (kind === TODO_NOTIFICATION_TYPES.boardInvited)
+            if (kind === TODO_NOTIFICATION_TYPES.boardInvited) {
+                invalidateTodoInvites();
                 setInvitesOpen(true);
+            }
             const titleFromDesc = parseBoardTitleFromNotificationDescription(n.description ?? '');
             if (titleFromDesc && (kind === TODO_NOTIFICATION_TYPES.boardAdded || kind === TODO_NOTIFICATION_TYPES.boardInvited)) {
                 void fetchTodoBoardsList().then((data) => {
@@ -1639,7 +1654,10 @@ export function TodoPage() {
                             open={invitesOpen}
                             onOpenChange={setInvitesOpen}
                             onAccepted={handleInviteAccepted}
-                            onInvitesChanged={() => void reloadBoardSummaries()}
+                            onInvitesChanged={() => {
+                                invalidateTodoInvites();
+                                void reloadBoardSummaries();
+                            }}
                         />
                         <button type="button" className={`todo-page__header-btn${archiveOpen ? ' todo-page__header-btn--active' : ''}`} onClick={() => { setArchiveOpen((v) => !v); setMobilePlannerOpen(false); }}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.6 5H8.4a2 2 0 0 0-1.9 1.3L5 10 3 8" /><path d="M3.5 13H6a2 2 0 0 1 2 2v0a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v0a2 2 0 0 1 2-2h2.5" /><rect x="2" y="8" width="20" height="13" rx="2" /></svg>
@@ -1679,6 +1697,14 @@ export function TodoPage() {
                 </>)}
             </div>
         </header>
+        {invitesCount > 0 && !invitesOpen ? (
+            <AttentionBanner
+                className="todo-page__attention"
+                text={t('attentionBanner.todoInvites').replace('{count}', String(invitesCount))}
+                actionLabel={t('attentionBanner.todoInvitesGo')}
+                onAction={() => setInvitesOpen(true)}
+            />
+        ) : null}
         {draggingCard && dragPreviewPosition && draggingCardData && createPortal(<div className="todo-card-drag-preview" style={{ left: dragPreviewPosition.x, top: dragPreviewPosition.y }}>
             <div className="todo-card-drag-preview__inner">
                 {draggingCardData.fromCalendar && (<span className="todo-card-drag-preview__badge">Outlook</span>)}

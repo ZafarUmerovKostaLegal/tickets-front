@@ -29,6 +29,9 @@ export const ruMessages: Messages = {
         correspondencePendingBadgeAria: '{count} писем требуют вашего внимания',
         vacationToDecideBadgeAria: '{count} заявок на отпуск ждут вашего согласования',
         vacationMinePendingBadgeAria: '{count} ваших заявок на рассмотрении',
+        expensesPayBadgeAria: '{count} расходов ждут подтверждения оплаты',
+        expensesModerationBadgeAria: '{count} заявок на согласование расходов',
+        todoInvitesBadgeAria: '{count} приглашений на доски',
         internalPortal: 'Внутренний портал',
         searchPlaceholder: 'Найти раздел…',
         searchEmpty: 'Разделы не найдены',
@@ -116,6 +119,21 @@ export const ruMessages: Messages = {
             minePending: 'У вас {count} заявок на рассмотрении у партнёра.',
             goToMine: 'Мои заявки →',
         },
+    },
+    attentionBanner: {
+        reportsForReview: 'У вас {count} отчётов, ожидающих подписи.',
+        reportsGo: 'Сформированные для проверки →',
+        expensesPay: 'У вас {count} расходов, ожидающих подтверждения оплаты.',
+        expensesPayGo: 'Показать к оплате →',
+        expensesModeration: 'У вас {count} заявок на согласование расходов.',
+        expensesModerationGo: 'На согласование →',
+        correspondenceOutgoing: 'У вас {count} исходящих писем на проверке.',
+        correspondenceIncoming: 'У вас {count} новых входящих, назначенных вам.',
+        correspondenceGo: 'Показать →',
+        todoInvites: 'У вас {count} приглашений на доски.',
+        todoInvitesGo: 'Открыть приглашения →',
+        chatUnread: 'У вас {count} непрочитанных сообщений.',
+        chatUnreadGo: 'К непрочитанным →',
     },
     nav: {
         home: 'Главная',
@@ -671,6 +689,9 @@ export type Messages = {
         correspondencePendingBadgeAria: string;
         vacationToDecideBadgeAria: string;
         vacationMinePendingBadgeAria: string;
+        expensesPayBadgeAria: string;
+        expensesModerationBadgeAria: string;
+        todoInvitesBadgeAria: string;
         internalPortal: string;
         searchPlaceholder: string;
         searchEmpty: string;
@@ -681,6 +702,22 @@ export type Messages = {
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;
     };
+    attentionBanner: Record<
+        | 'reportsForReview'
+        | 'reportsGo'
+        | 'expensesPay'
+        | 'expensesPayGo'
+        | 'expensesModeration'
+        | 'expensesModerationGo'
+        | 'correspondenceOutgoing'
+        | 'correspondenceIncoming'
+        | 'correspondenceGo'
+        | 'todoInvites'
+        | 'todoInvitesGo'
+        | 'chatUnread'
+        | 'chatUnreadGo',
+        string
+    >;
     kostaLegalAi: {
         heroTitle: string;
         queryLabel: string;

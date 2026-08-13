@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { routes, getExpensesOpenUrl } from '@shared/config';
 import { useCurrentUser, useMediaQuery } from '@shared/hooks';
-import { AppBackButton, AppHomeLogo, AppPageSettings, DatePicker, Pagination } from '@shared/ui';
+import { AppBackButton, AppHomeLogo, AppPageSettings, AttentionBanner, DatePicker, Pagination } from '@shared/ui';
+import { useI18n } from '@shared/i18n';
 import type { PanelMode } from './ExpensesFormPanel';
 import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
 import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseStatus, ExpenseType, ExpenseCreatedBy, PartnerExpenseCategory, } from '@entities/expenses/model/types';
@@ -31,6 +32,7 @@ import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/mod
 import { listPartners, loadPublicUsersByIds, type UserPublic } from '@entities/user';
 import { formatExpenseApprovedByLabel, formatExpenseAuthorLabel, mergeExpenseAuthorFromCache, needsAuthorEnrichment, formatPartnerUserLabel, } from '@entities/expenses/model/expenseAuthor';
 import { canViewExpensesRequestsAndReport } from '@entities/expenses/model/expenseModeration';
+import { useExpenseAttentionBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
 import { getCloseExpenseUi, isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, showOwnPendingModerationBlockedHint, resolveExpensePanelMode, showPayExpenseAction, showPendingApprovalModeration, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
 import { ExpensesPageBoundary } from './ExpensesPageBoundary';
 import '@pages/time-tracking/ui/TimeTrackingForms.css';
@@ -539,6 +541,7 @@ function SkeletonTableBody({ rowCount = 10 }: {
     </div>);
 }
 function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
+    const { t } = useI18n();
     const isMobile = useMediaQuery('(max-width: 768px)');
     const navigate = useNavigate();
     const { expenseId: pathExpenseId } = useParams<{
@@ -547,6 +550,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [searchParams] = useSearchParams();
     const { user, loading: currentUserLoading } = useCurrentUser();
     const canModerate = canViewExpensesRequestsAndReport(user?.role);
+    const { payCount, moderationCount } = useExpenseAttentionBadge(!currentUserLoading);
     const [isLoading, setIsLoading] = useState(true);
     const [listFetchPending, setListFetchPending] = useState(false);
     const isFirstListFetchRef = useRef(true);
@@ -608,6 +612,17 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         setListPage(1);
         setHydratedFilterOwnerKey(filterOwnerKey);
     }, [filterOwnerKey, filterStorageUserId, variant]);
+    useEffect(() => {
+        if (!filterOwnerKey || hydratedFilterOwnerKey !== filterOwnerKey)
+            return;
+        if (isModerationQueue)
+            return;
+        if (searchParams.get('focus') !== 'pay')
+            return;
+        setFilterStatus('approved');
+        setFilterReimb('reimbursable');
+        setListPage(1);
+    }, [filterOwnerKey, hydratedFilterOwnerKey, isModerationQueue, searchParams]);
     useEffect(() => {
         if (!filterOwnerKey || hydratedFilterOwnerKey !== filterOwnerKey || filterStorageUserId == null)
             return;
@@ -1372,6 +1387,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                 {canModerate && !isModerationQueue && !isPartnerScope && (<>
                                     <NavLink to={routes.expensesRequests} className="exp-queue-nav">
                                         На согласование
+                                        {moderationCount > 0 ? (
+                                            <span className="app-count-badge" aria-hidden>{moderationCount > 99 ? '99+' : String(moderationCount)}</span>
+                                        ) : null}
                                     </NavLink>
                                     <NavLink to={routes.expensesReport} className="exp-queue-nav">
                                         Аналитика
@@ -1399,6 +1417,25 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                     </div>
                 </div>
             </header>
+
+            {!isModerationQueue && payCount > 0 ? (
+                <AttentionBanner
+                    text={t('attentionBanner.expensesPay').replace('{count}', String(payCount))}
+                    actionLabel={t('attentionBanner.expensesPayGo')}
+                    onAction={() => {
+                        setFilterStatus('approved');
+                        setFilterReimb('reimbursable');
+                        setListPage(1);
+                    }}
+                />
+            ) : null}
+            {canModerate && !isModerationQueue && moderationCount > 0 ? (
+                <AttentionBanner
+                    text={t('attentionBanner.expensesModeration').replace('{count}', String(moderationCount))}
+                    actionLabel={t('attentionBanner.expensesModerationGo')}
+                    to={routes.expensesRequests}
+                />
+            ) : null}
 
             <div className="expenses-page__content">
                 {actionError && (<div className="exp-error-banner" role="alert">

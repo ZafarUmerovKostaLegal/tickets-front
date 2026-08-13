@@ -4333,6 +4333,16 @@ body[data-theme='dark'] .corr-preview__attachments { border-color: var(--app-bor
   font-size: 0.8125rem;
 }
 
+.corr__table-tab-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.corr-registry__attention {
+  margin: 0.75rem 1.15rem 0;
+}
+
 .corr-shell .corr__table-tab:hover {
   background: var(--corr-paper-alt);
   color: var(--corr-ink);

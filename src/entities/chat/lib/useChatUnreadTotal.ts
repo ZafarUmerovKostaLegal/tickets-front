@@ -6,13 +6,23 @@ import { connectChatWs, subscribeChatWs } from '../wsClient';
 import type { ChatRoom } from '../types';
 import { sumChatUnreadTotal } from './kostaDailyUi';
 
-export function useChatUnreadTotal(enabled = true): number {
-    const [total, setTotal] = useState(0);
+function firstUnreadRoomId(rooms: ChatRoom[]): number | null {
+    const hit = rooms.find((room) => room.unread_count > 0);
+    return hit ? hit.id : null;
+}
+
+export function useChatUnreadTotal(enabled = true): {
+    count: number;
+    firstUnreadRoomId: number | null;
+} {
+    const [count, setCount] = useState(0);
+    const [unreadRoomId, setUnreadRoomId] = useState<number | null>(null);
     const location = useLocation();
     const onKostaDaily = location.pathname.startsWith(routes.kostaDaily);
 
     const applyRooms = useCallback((rooms: ChatRoom[]) => {
-        setTotal(sumChatUnreadTotal(rooms));
+        setCount(sumChatUnreadTotal(rooms));
+        setUnreadRoomId(firstUnreadRoomId(rooms));
     }, []);
 
     const refresh = useCallback(async () => {
@@ -29,7 +39,8 @@ export function useChatUnreadTotal(enabled = true): number {
 
     useEffect(() => {
         if (!enabled) {
-            setTotal(0);
+            setCount(0);
+            setUnreadRoomId(null);
             return;
         }
         void refresh();
@@ -44,7 +55,7 @@ export function useChatUnreadTotal(enabled = true): number {
                 if (onKostaDaily)
                     void refresh();
                 else
-                    setTotal((prev) => prev + 1);
+                    setCount((prev) => prev + 1);
             }
             if (event.type === 'members_added')
                 void refresh();
@@ -63,5 +74,5 @@ export function useChatUnreadTotal(enabled = true): number {
         return () => window.removeEventListener('focus', onFocus);
     }, [enabled, refresh]);
 
-    return total;
+    return { count, firstUnreadRoomId: unreadRoomId };
 }

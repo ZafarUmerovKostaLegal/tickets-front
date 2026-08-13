@@ -10,7 +10,7 @@ import { ReportsSkeleton } from './ReportsSkeleton';
 import { ConfirmedPartnerReportsPanel } from './ConfirmedPartnerReportsPanel';
 import { ForReviewReportsPanel } from './ForReviewReportsPanel';
 import { DatePicker } from '@shared/ui/DatePicker';
-import { useAppDialog } from '@shared/ui';
+import { AttentionBanner, useAppDialog } from '@shared/ui';
 import { useI18n, ttReportGroupLabel, ttReportPeriodLabel, ttReportTypeLabel } from '@shared/i18n';
 import { writeReportPreviewTransfer, buildReportPreviewTransferUrl, type ReportPreviewTransferV2, type ReportPreviewTimeGroup, type ReportPreviewPeriodState, } from '@entities/time-tracking/model/reportPreviewTransfer';
 import { ReportsRowContextMenu, type ReportsRowContextMenuState } from './ReportsRowContextMenu';
@@ -139,7 +139,7 @@ export function ReportsPanel() {
   const reportsDateRangeId = useId();
   const { user } = useCurrentUser();
   const { showAlert, showConfirm } = useAppDialog();
-  const { badge: forReviewBadge } = usePartnerForReviewBadge(Boolean(user));
+  const { badge: forReviewBadge, count: forReviewCount } = usePartnerForReviewBadge(Boolean(user));
   const savedPrefs = useMemo(() => readReportsPrefsFromStorage(), []);
   const initRange = useMemo(() => readInitialReportsRangeState(), []);
   const [reportsSection, setReportsSection] = useState<ReportsSection>(() => {
@@ -1200,6 +1200,14 @@ export function ReportsPanel() {
         </button>
       </nav>
     </div>);
+  const forReviewAttention = forReviewCount > 0 && reportsSection !== 'for-review' ? (
+    <AttentionBanner
+      className="tt-reports__attention"
+      text={t('attentionBanner.reportsForReview').replace('{count}', String(forReviewCount))}
+      actionLabel={t('attentionBanner.reportsGo')}
+      onAction={() => selectReportsSection('for-review')}
+    />
+  ) : null;
   if (reportsSection === 'for-review') {
     return (<div className="tt-reports tt-reports--fluid">
         {reportsSectionSwitcher}
@@ -1209,18 +1217,21 @@ export function ReportsPanel() {
   if (reportsSection === 'partner-confirmed') {
     return (<div className="tt-reports tt-reports--fluid">
         {reportsSectionSwitcher}
+        {forReviewAttention}
         <ConfirmedPartnerReportsPanel subView={partnerConfirmedSubview} onSubViewChange={selectPartnerConfirmedSubview} />
       </div>);
   }
   if (initialLoading) {
     return (<div className="tt-reports">
         {reportsSectionSwitcher}
+        {forReviewAttention}
         <ReportsSkeleton />
       </div>);
   }
   return (<div className="tt-reports">
 
     {reportsSectionSwitcher}
+    {forReviewAttention}
 
     {partnerScopeSectionActive ? (<div className="tt-reports__type-block tt-reports__partner-scope" role="group" aria-label={t('timeTrackingPage.reports.partnerScope.aria')}>
         <p className="tt-reports__type-block-title">{t('timeTrackingPage.reports.partnerScope.aria')}</p>

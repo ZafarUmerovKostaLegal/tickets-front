@@ -316,6 +316,7 @@ function buildCreatePayload(
   initialTimeTrackingUserAuthIds?: number[],
   initialProjectAccessMembers?: TimeManagerInitialProjectAccessMember[],
   initialTimeTrackingUserBillableHourlyAmounts?: (number | null)[],
+  initialTaskNames?: string[],
 ): TimeManagerClientProjectCreatePayload {
   const name = form.name.trim();
   const pt = form.projectType;
@@ -400,8 +401,35 @@ function buildCreatePayload(
     sendBudgetAlerts: form.sendBudgetAlerts,
     budgetAlertThresholdPercent,
     skipPartnerInvoiceConfirmation: form.skipPartnerInvoiceConfirmation,
+    ...(initialTaskNames !== undefined ? { initialTaskNames } : {}),
     ...team,
   };
+}
+
+function isTransientNetworkError(e: unknown): boolean {
+  if (!(e instanceof Error))
+    return false;
+  const msg = e.message.trim().toLowerCase();
+  return msg === 'failed to fetch'
+    || msg.includes('networkerror')
+    || msg.includes('network request failed')
+    || msg.includes('load failed');
+}
+
+async function withTaskSyncRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
+  let last: unknown;
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      return await fn();
+    }
+    catch (e) {
+      last = e;
+      if (!isTransientNetworkError(e) || i === attempts - 1)
+        throw e;
+      await new Promise((r) => setTimeout(r, 200 * (i + 1)));
+    }
+  }
+  throw last;
 }
 
 async function syncSelectedProjectTasksAfterCreate(
@@ -413,19 +441,25 @@ async function syncSelectedProjectTasksAfterCreate(
 ): Promise<string[]> {
   const selected = new Set(selectedNames.map((n) => n.trim().toLocaleLowerCase('ru')));
   const errors: string[] = [];
-  let tasks = await listProjectTasks(clientId, projectId);
+  let tasks = await withTaskSyncRetry(() => listProjectTasks(clientId, projectId, { bypassGetReuse: true }));
+  const existingKeys = new Set(tasks.map((t) => t.name.trim().toLocaleLowerCase('ru')));
+  const alreadyMatched = selected.size === existingKeys.size
+    && [...selected].every((key) => existingKeys.has(key));
+  if (alreadyMatched)
+    return [];
+
   for (const t of tasks) {
     const key = t.name.trim().toLocaleLowerCase('ru');
     if (!selected.has(key)) {
       try {
-        await deleteProjectTask(clientId, projectId, t.id);
+        await withTaskSyncRetry(() => deleteProjectTask(clientId, projectId, t.id));
       }
       catch (e) {
         errors.push(`${t.name}: ${e instanceof Error ? e.message : genericError}`);
       }
     }
   }
-  tasks = await listProjectTasks(clientId, projectId);
+  tasks = await withTaskSyncRetry(() => listProjectTasks(clientId, projectId, { bypassGetReuse: true }));
   const existing = new Set(tasks.map((t) => t.name.trim().toLocaleLowerCase('ru')));
   for (const name of selectedNames) {
     const trimmed = name.trim();
@@ -433,7 +467,7 @@ async function syncSelectedProjectTasksAfterCreate(
     if (!trimmed || existing.has(key))
       continue;
     try {
-      await createProjectTask(clientId, projectId, {
+      await withTaskSyncRetry(() => createProjectTask(clientId, projectId, {
         name: trimmed,
         defaultBillableRate: null,
         billableByDefault: billableByTaskName.get(trimmed) ?? true,
@@ -444,7 +478,7 @@ async function syncSelectedProjectTasksAfterCreate(
               flatFeeCurrency: DEFAULT_PROJECT_TASK_FLAT_FEE_MAP.get(trimmed)!.flatFeeCurrency ?? 'UZS',
             }
           : {}),
-      });
+      }));
     }
     catch (e) {
       errors.push(`${trimmed}: ${e instanceof Error ? e.message : genericError}`);
@@ -934,6 +968,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
             initialProjectAccessMembers != null && initialProjectAccessMembers.length > 0 ? undefined : assignedUserIds,
             initialProjectAccessMembers != null && initialProjectAccessMembers.length > 0 ? initialProjectAccessMembers : undefined,
             initialTimeTrackingUserBillableHourlyAmounts,
+            normalizedInitialTaskNames,
           )
         : buildCreatePayload(form);
       if (mode === 'create') {

@@ -2,12 +2,13 @@ import { useMemo, useRef, useEffect, useLayoutEffect, useState, useCallback, typ
 import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { routes } from '@shared/config';
-import { AppBackButton, AppPageSettings, TwemojiEmoji, useAppDialog } from '@shared/ui';
+import { AppBackButton, AppPageSettings, AttentionBanner, TwemojiEmoji, useAppDialog } from '@shared/ui';
 import { useCurrentUser, useDebouncedValue, useMediaQuery } from '@shared/hooks';
 import { isHiddenSystemUser } from '@shared/lib';
 import { listContactsColleagues } from '@entities/contacts';
 import type { TimeTrackingUserRow } from '@entities/time-tracking';
 import { formatReplyPreview, setChatNotificationContext, type ChatPreview, type DailyMessage, type RenderBlock } from '@entities/chat';
+import { useI18n } from '@shared/i18n';
 import { useKostaDailyChat } from '../model/useKostaDailyChat';
 import {
     KostaDailyChatListSkeleton,
@@ -128,6 +129,7 @@ function IconChevronDown() {
 }
 
 export function KostaDailyPage() {
+    const { t } = useI18n();
     const { user } = useCurrentUser();
     const [searchParams, setSearchParams] = useSearchParams();
     const isMobile = useMediaQuery(MOBILE_LAYOUT_MQ);
@@ -208,6 +210,12 @@ export function KostaDailyPage() {
     const { showConfirm } = useAppDialog();
 
     const activeChatId = activeRoomId != null ? String(activeRoomId) : '';
+    const unreadTotal = useMemo(
+        () => Object.values(unreadByChat).reduce((sum, n) => sum + n, 0),
+        [unreadByChat],
+    );
+    const firstUnreadChatId = useMemo(() => Object.keys(unreadByChat)[0] ?? null, [unreadByChat]);
+    const unreadBadge = unreadTotal > 99 ? '99+' : String(unreadTotal);
     const activeChat: ChatPreview = activePreview ?? {
         id: activeChatId || '0',
         roomId: activeRoomId ?? 0,
@@ -885,6 +893,11 @@ export function KostaDailyPage() {
               onClick={() => setSidebarView('chats')}
             >
               Чаты
+              {unreadTotal > 0 ? (
+                <span className="kd-tg__chat-unread" aria-label={`${unreadTotal} непрочитанных`}>
+                  {unreadBadge}
+                </span>
+              ) : null}
             </button>
             <button
               type="button"
@@ -899,6 +912,19 @@ export function KostaDailyPage() {
               ) : null}
             </button>
           </div>
+
+          {sidebarView === 'members' && unreadTotal > 0 ? (
+            <AttentionBanner
+              className="kd-tg__attention"
+              text={t('attentionBanner.chatUnread').replace('{count}', String(unreadTotal))}
+              actionLabel={t('attentionBanner.chatUnreadGo')}
+              onAction={() => {
+                  setSidebarView('chats');
+                  if (firstUnreadChatId)
+                      handleChatSelect(firstUnreadChatId);
+              }}
+            />
+          ) : null}
 
           {roomsError && sidebarView === 'chats' && (
             <p className="kd-tg__members-status kd-tg__members-status--error" role="alert">{roomsError}</p>

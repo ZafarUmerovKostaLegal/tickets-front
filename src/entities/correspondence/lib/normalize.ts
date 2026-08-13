@@ -162,6 +162,8 @@ export function normalizeCorrespondenceStats(raw: unknown): CorrespondenceStats 
         approvalTotal: num(o.approvalTotal ?? o.approval_total) ?? 0,
         incomingNewTotal: num(o.incomingNewTotal ?? o.incoming_new_total) ?? 0,
         partnerAttentionTotal: num(o.partnerAttentionTotal ?? o.partner_attention_total) ?? 0,
+        partnerOutgoingPending: num(o.partnerOutgoingPending ?? o.partner_outgoing_pending) ?? 0,
+        partnerIncomingNew: num(o.partnerIncomingNew ?? o.partner_incoming_new) ?? 0,
     };
 }
 

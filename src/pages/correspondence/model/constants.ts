@@ -16,6 +16,7 @@ export const CORR_SHELL_NAV_TABS: { key: CorrDirection; label: string }[] = [
 
 export const CORR_TABLE_TABS = [
     { key: 'all', label: 'Все' },
+    { key: 'attention', label: 'Нужно посмотреть' },
     { key: 'new', label: 'Новые' },
     { key: 'work', label: 'В работе' },
     { key: 'done', label: 'Завершено' },

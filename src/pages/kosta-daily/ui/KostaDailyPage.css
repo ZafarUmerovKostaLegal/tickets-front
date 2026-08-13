@@ -263,6 +263,11 @@ body[data-theme='dark'] .kd-tg {
   background: var(--kd-tg-accent);
 }
 
+.kd-tg__attention {
+  flex-shrink: 0;
+  margin: 0.35rem 0.75rem 0.65rem;
+}
+
 .kd-tg__members {
   flex: 1;
   min-height: 0;

@@ -119,8 +119,15 @@ export function projectTasksCollectionPath(clientId: string, projectId: string):
     return `/api/v1/time-tracking/clients/${encodeURIComponent(clientId)}/projects/${encodeURIComponent(projectId)}/tasks`;
 }
 
-export async function listProjectTasks(clientId: string, projectId: string): Promise<TimeManagerClientTaskRow[]> {
-    const res = await apiFetch(projectTasksCollectionPath(clientId, projectId), { getReuseWindowMs: 10_000 });
+export async function listProjectTasks(
+    clientId: string,
+    projectId: string,
+    opts?: { bypassGetReuse?: boolean },
+): Promise<TimeManagerClientTaskRow[]> {
+    const res = await apiFetch(projectTasksCollectionPath(clientId, projectId), {
+        getReuseWindowMs: opts?.bypassGetReuse ? 0 : 10_000,
+        ...(opts?.bypassGetReuse ? { cache: 'no-store' as RequestCache } : {}),
+    });
     await throwIfNotOk(res);
     const body = await res.json();
     if (!Array.isArray(body))
@@ -823,6 +830,9 @@ export type TimeManagerClientProjectCreatePayload = {
     initialTimeTrackingUserBillableHourlyAmounts?: (number | null)[];
 
     initialProjectAccessMembers?: TimeManagerInitialProjectAccessMember[];
+
+    /** When set, backend should seed only these catalog task names (empty = none). */
+    initialTaskNames?: string[];
 };
 export type TimeManagerClientProjectPatchPayload = {
     name?: string;
@@ -947,6 +957,8 @@ export function projectCreateBody(body: TimeManagerClientProjectCreatePayload): 
         if (useAmts)
             o.initialTimeTrackingUserBillableHourlyAmounts = amtsOut;
     }
+    if (body.initialTaskNames !== undefined)
+        o.initialTaskNames = body.initialTaskNames;
     return o;
 }
 export function projectPatchBody(patch: TimeManagerClientProjectPatchPayload): Record<string, unknown> {

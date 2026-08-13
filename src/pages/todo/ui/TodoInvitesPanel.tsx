@@ -4,6 +4,7 @@ import {
     acceptTodoInvite,
     declineTodoInvite,
     fetchMyTodoInvites,
+    invalidateTodoInvites,
     type TodoBoard,
     type TodoBoardInvite,
 } from '@entities/todo';
@@ -55,6 +56,7 @@ export function TodoInvitesPanel({ open, onOpenChange, onAccepted, onInvitesChan
             const board = await acceptTodoInvite(invite.id);
             await onAccepted(board);
             await reload();
+            invalidateTodoInvites();
             onInvitesChanged?.();
             onOpenChange(false);
         }
@@ -72,6 +74,7 @@ export function TodoInvitesPanel({ open, onOpenChange, onAccepted, onInvitesChan
         try {
             await declineTodoInvite(invite.id);
             await reload();
+            invalidateTodoInvites();
             onInvitesChanged?.();
         }
         catch (e: unknown) {

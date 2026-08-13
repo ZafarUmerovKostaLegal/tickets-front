@@ -2236,6 +2236,7 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 .exp-queue-nav {
   display: inline-flex;
   align-items: center;
+  gap: 0.4rem;
   height: 38px;
   padding: 0 1rem;
   border-radius: 10px;

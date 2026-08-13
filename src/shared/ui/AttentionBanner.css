@@ -1,0 +1,76 @@
+.app-attention {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin: 0.65rem 1.15rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, #ff3b30 28%, var(--app-border, #e2e8f0));
+  background: color-mix(in srgb, #ff3b30 7%, var(--app-surface, #fff));
+  box-sizing: border-box;
+}
+
+.app-attention--info {
+  border-color: color-mix(in srgb, #f59e0b 32%, var(--app-border, #e2e8f0));
+  background: color-mix(in srgb, #f59e0b 8%, var(--app-surface, #fff));
+}
+
+.app-attention__text {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--app-text, #334155);
+}
+
+.app-attention__action {
+  flex-shrink: 0;
+  padding: 0.35rem 0.75rem;
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--app-accent, #4f46e5);
+  background: var(--app-surface, #fff);
+  border: 1px solid color-mix(in srgb, var(--app-accent, #4f46e5) 35%, var(--app-border, #e2e8f0));
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+a.app-attention__action {
+  display: inline-flex;
+  align-items: center;
+}
+
+.app-attention__action:hover {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface, #fff));
+  border-color: var(--app-accent, #4f46e5);
+}
+
+.app-count-badge {
+  box-sizing: border-box;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.28rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #fff;
+  background: #ff3b30;
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(255, 59, 48, 0.35);
+}
+
+body[data-theme='dark'] .app-attention {
+  background: color-mix(in srgb, #ff3b30 14%, var(--app-surface, #1e293b));
+}
+
+body[data-theme='dark'] .app-attention--info {
+  background: color-mix(in srgb, #f59e0b 14%, var(--app-surface, #1e293b));
+}

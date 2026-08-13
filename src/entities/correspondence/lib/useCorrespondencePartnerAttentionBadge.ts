@@ -15,9 +15,13 @@ function formatBadge(count: number): string {
 export function useCorrespondencePartnerAttentionBadge(enabled = true): {
     count: number;
     badge: string;
+    outgoingPending: number;
+    incomingNew: number;
 } {
     const { user } = useCurrentUser();
     const [count, setCount] = useState(0);
+    const [outgoingPending, setOutgoingPending] = useState(0);
+    const [incomingNew, setIncomingNew] = useState(0);
     const shouldTrack = enabled
         && user != null
         && isPartnerOrgRole(user.role, user.position);
@@ -25,14 +29,20 @@ export function useCorrespondencePartnerAttentionBadge(enabled = true): {
     const refresh = useCallback(async () => {
         if (!shouldTrack) {
             setCount(0);
+            setOutgoingPending(0);
+            setIncomingNew(0);
             return;
         }
         try {
             const stats = await fetchCorrespondenceStats();
             setCount(Math.max(0, stats.partnerAttentionTotal ?? 0));
+            setOutgoingPending(Math.max(0, stats.partnerOutgoingPending ?? 0));
+            setIncomingNew(Math.max(0, stats.partnerIncomingNew ?? 0));
         }
         catch {
             setCount(0);
+            setOutgoingPending(0);
+            setIncomingNew(0);
         }
     }, [shouldTrack]);
 
@@ -60,5 +70,7 @@ export function useCorrespondencePartnerAttentionBadge(enabled = true): {
     return {
         count,
         badge: useMemo(() => formatBadge(count), [count]),
+        outgoingPending,
+        incomingNew,
     };
 }

@@ -15,7 +15,10 @@ import {
     type CorrespondenceStats,
 } from '@entities/correspondence';
 import { routes } from '@shared/config';
-import { showAlert } from '@shared/ui';
+import { AttentionBanner, formatCountBadge, showAlert } from '@shared/ui';
+import { useCurrentUser } from '@shared/hooks';
+import { useI18n } from '@shared/i18n';
+import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import {
     CORR_COUNTERPARTY_COLUMN,
     CORR_PAGE_SIZE,
@@ -99,13 +102,18 @@ function listParamsForTab(
     tableTab: CorrTableTabKey,
     page: number,
     docTypes: CorrDocType[],
+    partnerUserId?: number | null,
 ) {
     const params: Parameters<typeof listCorrespondence>[0] = {
         direction,
         skip: (page - 1) * CORR_PAGE_SIZE,
         limit: CORR_PAGE_SIZE,
     };
-    if (tableTab === 'new')
+    if (tableTab === 'attention' && partnerUserId != null && partnerUserId > 0) {
+        params.partnerUserId = partnerUserId;
+        params.status = direction === 'outgoing' ? 'pending_review' : 'new';
+    }
+    else if (tableTab === 'new')
         params.status = 'new';
     else if (tableTab === 'work')
         params.statusGroup = 'work';
@@ -156,19 +164,26 @@ const EMPTY_STATS: CorrespondenceStats = {
     approvalTotal: 0,
     incomingNewTotal: 0,
     partnerAttentionTotal: 0,
+    partnerOutgoingPending: 0,
+    partnerIncomingNew: 0,
 };
 
 export type CorrespondenceRegistryViewProps = {
     direction: CorrDirection;
     onDirectionChange: (direction: CorrDirection) => void;
+    initialTableTab?: CorrTableTabKey;
 };
 
 export function CorrespondenceRegistryView({
     direction,
     onDirectionChange,
+    initialTableTab,
 }: CorrespondenceRegistryViewProps) {
+    const { t } = useI18n();
+    const { user } = useCurrentUser();
+    const isPartner = isPartnerOrgRole(user?.role, user?.position);
     const navigate = useNavigate();
-    const [tableTab, setTableTab] = useState<CorrTableTabKey>('all');
+    const [tableTab, setTableTab] = useState<CorrTableTabKey>(() => initialTableTab ?? 'all');
     const [page, setPage] = useState(1);
     const [rows, setRows] = useState<CorrRow[]>([]);
     const [total, setTotal] = useState(0);
@@ -263,7 +278,7 @@ export function CorrespondenceRegistryView({
         const controller = new AbortController();
         setListLoading(true);
         setListError(null);
-        const params = listParamsForTab(direction, tableTab, effectivePage, appliedDocTypes);
+        const params = listParamsForTab(direction, tableTab, effectivePage, appliedDocTypes, user?.id);
         void listCorrespondence(params, controller.signal)
             .then((res) => {
                 if (cancelled)
@@ -286,7 +301,7 @@ export function CorrespondenceRegistryView({
             cancelled = true;
             controller.abort();
         };
-    }, [direction, tableTab, effectivePage, appliedDocTypes, reloadToken]);
+    }, [direction, tableTab, effectivePage, appliedDocTypes, reloadToken, user?.id]);
 
     const filtersBtnRef = useRef<HTMLButtonElement>(null);
     const settingsBtnRef = useRef<HTMLButtonElement>(null);
@@ -438,17 +453,26 @@ export function CorrespondenceRegistryView({
         }
     };
 
+    const outgoingBadge = formatCountBadge(stats.partnerOutgoingPending);
+    const incomingBadge = formatCountBadge(stats.partnerIncomingNew);
+    const attentionCountForDirection = direction === 'outgoing'
+        ? stats.partnerOutgoingPending
+        : stats.partnerIncomingNew;
+    const attentionBadge = formatCountBadge(attentionCountForDirection);
+
     const shellTabs = useMemo(() => CORR_SHELL_NAV_TABS.map((tab) => ({
         id: tab.key,
         label: tab.label,
         active: direction === tab.key,
+        badge: tab.key === 'outgoing' ? outgoingBadge || undefined : incomingBadge || undefined,
         onClick: () => {
             closeOverlays();
             onDirectionChange(tab.key);
-            setTableTab('all');
+            const nextCount = tab.key === 'outgoing' ? stats.partnerOutgoingPending : stats.partnerIncomingNew;
+            setTableTab(nextCount > 0 ? 'attention' : 'all');
             setPage(1);
         },
-    })), [closeOverlays, direction, onDirectionChange]);
+    })), [closeOverlays, direction, incomingBadge, onDirectionChange, outgoingBadge, stats.partnerIncomingNew, stats.partnerOutgoingPending]);
 
     const activeShellTab = CORR_SHELL_NAV_TABS.find((tab) => tab.key === direction)?.label ?? 'Входящие';
 
@@ -461,6 +485,42 @@ export function CorrespondenceRegistryView({
       fullHeight
       contentClassName="corr-shell__content--registry"
     >
+      {isPartner && attentionCountForDirection > 0 && tableTab !== 'attention' ? (
+        <AttentionBanner
+          className="corr-registry__attention"
+          text={direction === 'outgoing'
+              ? t('attentionBanner.correspondenceOutgoing').replace('{count}', String(attentionCountForDirection))
+              : t('attentionBanner.correspondenceIncoming').replace('{count}', String(attentionCountForDirection))}
+          actionLabel={t('attentionBanner.correspondenceGo')}
+          onAction={() => {
+              setTableTab('attention');
+              setPage(1);
+          }}
+        />
+      ) : isPartner && direction === 'incoming' && stats.partnerOutgoingPending > 0 ? (
+        <AttentionBanner
+          className="corr-registry__attention"
+          text={t('attentionBanner.correspondenceOutgoing').replace('{count}', String(stats.partnerOutgoingPending))}
+          actionLabel={t('attentionBanner.correspondenceGo')}
+          onAction={() => {
+              onDirectionChange('outgoing');
+              setTableTab('attention');
+              setPage(1);
+          }}
+        />
+      ) : isPartner && direction === 'outgoing' && stats.partnerIncomingNew > 0 && stats.partnerOutgoingPending === 0 ? (
+        <AttentionBanner
+          className="corr-registry__attention"
+          tone="info"
+          text={t('attentionBanner.correspondenceIncoming').replace('{count}', String(stats.partnerIncomingNew))}
+          actionLabel={t('attentionBanner.correspondenceGo')}
+          onAction={() => {
+              onDirectionChange('incoming');
+              setTableTab('attention');
+              setPage(1);
+          }}
+        />
+      ) : null}
       <div className="corr-registry corr-registry--enter">
         <div className="corr__body corr-registry__layout">
           <aside className="corr-registry__sidebar" aria-label="Боковая панель">
@@ -513,20 +573,25 @@ export function CorrespondenceRegistryView({
             <section className="corr__table-card corr-registry__table-card" aria-label="Реестр документов">
               <div className="corr__table-toolbar">
                 <div className="corr__table-tabs" role="tablist" aria-label="Фильтр по статусу">
-                  {CORR_TABLE_TABS.map((t) => (<button
-                      key={t.key}
+                  {CORR_TABLE_TABS.filter((tab) => tab.key !== 'attention' || isPartner).map((tabItem) => (<button
+                      key={tabItem.key}
                       type="button"
                       role="tab"
-                      aria-selected={tableTab === t.key}
-                      className={`corr__table-tab${tableTab === t.key ? ' corr__table-tab--active' : ''}`}
+                      aria-selected={tableTab === tabItem.key}
+                      className={`corr__table-tab${tableTab === tabItem.key ? ' corr__table-tab--active' : ''}`}
                       disabled={listLoading}
                       onClick={() => {
                           closeOverlays();
-                          setTableTab(t.key);
+                          setTableTab(tabItem.key);
                           setPage(1);
                       }}
                     >
-                      {t.label}
+                      <span className="corr__table-tab-inner">
+                        {tabItem.label}
+                        {tabItem.key === 'attention' && attentionBadge ? (
+                            <span className="app-count-badge" aria-hidden>{attentionBadge}</span>
+                        ) : null}
+                      </span>
                     </button>))}
                 </div>
                 <div className="corr__table-actions">

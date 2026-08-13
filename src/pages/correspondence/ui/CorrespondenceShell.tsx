@@ -1,12 +1,14 @@
 import type { ReactNode } from 'react';
 import { AppBackButton, AppPageSettings } from '@shared/ui';
 import './CorrespondenceShell.css';
+import '@shared/ui/AttentionBanner.css';
 
 export type CorrespondenceNavTab = {
     id: string;
     label: string;
     active?: boolean;
     onClick?: () => void;
+    badge?: string;
 };
 
 type CorrespondenceShellProps = {
@@ -61,7 +63,12 @@ export function CorrespondenceShell({
                                         className={`corr-shell__tab${isActive ? ' corr-shell__tab--active' : ''}`}
                                         onClick={tab.onClick}
                                     >
-                                        {tab.label}
+                                        <span className="corr-shell__tab-inner">
+                                            {tab.label}
+                                            {tab.badge ? (
+                                                <span className="app-count-badge" aria-hidden>{tab.badge}</span>
+                                            ) : null}
+                                        </span>
                                     </button>
                                 );
                             }

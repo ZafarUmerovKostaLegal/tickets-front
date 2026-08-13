@@ -289,6 +289,12 @@ body[data-theme='dark'] .corr-shell {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
+.corr-shell__tab-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .corr-shell__tab:hover {
   background: var(--corr-paper-alt);
   color: var(--corr-ink);

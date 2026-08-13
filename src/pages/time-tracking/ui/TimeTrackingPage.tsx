@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { routes } from '@shared/config';
-import { AppBackButton, AppPageSettings } from '@shared/ui';
+import { AppBackButton, AppPageSettings, AttentionBanner } from '@shared/ui';
 import { useCurrentUser } from '@shared/hooks';
 import { isHiddenSystemUser } from '@shared/lib';
 import { useI18n } from '@shared/i18n';
@@ -470,6 +470,21 @@ export function TimeTrackingPage() {
           </div>
           {headerManagerTrailing}
         </nav>
+        {hasAccess && user && forReviewCount > 0 && activeTab !== 'reports' ? (
+            <AttentionBanner
+                text={t('attentionBanner.reportsForReview').replace('{count}', String(forReviewCount))}
+                actionLabel={t('attentionBanner.reportsGo')}
+                onAction={() => {
+                    setActiveTab('reports');
+                    setSearchParams((prev) => {
+                        const p = new URLSearchParams(prev);
+                        p.set('tab', 'reports');
+                        p.set('reportsSection', 'for-review');
+                        return p;
+                    }, { replace: true });
+                }}
+            />
+        ) : null}
         {typeof document !== 'undefined' && hasAccess && user ? createPortal(<>
             <button
               type="button"

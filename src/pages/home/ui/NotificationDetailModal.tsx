@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import type { NotificationItem } from '@entities/notification/wsClient';
+import { TODO_NOTIFICATION_TYPES, type NotificationItem } from '@entities/notification/wsClient';
 import { getCorrespondenceOutgoingUrl, getExpensesOpenUrl, routes } from '@shared/config';
 import { AuthImg } from '@shared/ui';
 
@@ -10,39 +10,56 @@ type NotificationDetailModalProps = {
     onClose: () => void;
 };
 
-function correspondenceOpenUrl(notificationType: string | undefined): string | null {
-    const kind = (notificationType ?? '').trim().toLowerCase();
-    if (kind === 'correspondence_review')
+type NotificationGoTarget = {
+    to: string;
+    label: string;
+};
+
+function correspondenceOpenUrl(notificationType: string): string | null {
+    if (notificationType === 'correspondence_review')
+        return `${getCorrespondenceOutgoingUrl()}&view=attention`;
+    if (notificationType === 'correspondence_incoming')
+        return `${routes.correspondence}?view=attention`;
+    if (notificationType === 'correspondence_registered' || notificationType === 'correspondence_rejected')
         return getCorrespondenceOutgoingUrl();
-    if (kind === 'correspondence_incoming')
-        return `${routes.correspondence}?tab=incoming`;
-    if (kind === 'correspondence_registered' || kind === 'correspondence_rejected')
-        return getCorrespondenceOutgoingUrl();
-    if (kind === 'correspondence')
+    if (notificationType === 'correspondence')
         return routes.correspondence;
+    return null;
+}
+
+function notificationGoTarget(notification: NotificationItem): NotificationGoTarget | null {
+    const kind = (notification.notification_type ?? '').trim().toLowerCase();
+    if (kind === 'expense_payment_confirmation') {
+        const match = /заявк[аи]\s+([\p{L}\p{N}_/-]+)/iu.exec(`${notification.title} ${notification.description}`);
+        if (match?.[1])
+            return { to: `${getExpensesOpenUrl(match[1])}?intent=pay`, label: 'Перейти к заявке' };
+        return { to: `${routes.expenses}?focus=pay`, label: 'Показать к оплате' };
+    }
+    if (kind.includes('expense') && (kind.includes('approv') || kind.includes('moderat')))
+        return { to: routes.expensesRequests, label: 'На согласование' };
+    const correspondenceUrl = correspondenceOpenUrl(kind);
+    if (correspondenceUrl)
+        return { to: correspondenceUrl, label: 'Открыть корреспонденцию' };
+    if (kind === TODO_NOTIFICATION_TYPES.boardInvited)
+        return { to: `${routes.todo}?invites=1`, label: 'Открыть приглашения' };
+    if (kind === TODO_NOTIFICATION_TYPES.boardAdded || kind === TODO_NOTIFICATION_TYPES.cardAssigned)
+        return { to: routes.todo, label: 'Открыть список дел' };
+    if (kind.includes('vacation') || kind.includes('leave_request'))
+        return { to: `${routes.vacationSchedule}?tab=to_decide`, label: 'Перейти к согласованию' };
+    if (kind.includes('for_review') || kind.includes('partner_confirm'))
+        return { to: `${routes.timeTracking}?tab=reports&reportsSection=for-review`, label: 'Открыть отчёты' };
     return null;
 }
 
 export const NotificationDetailModal = memo(function NotificationDetailModal({ notification, onClose }: NotificationDetailModalProps) {
     const navigate = useNavigate();
-    const expenseMatch = notification.notification_type === 'expense_payment_confirmation'
-        ? /заявк[аи]\s+([\p{L}\p{N}_/-]+)/iu.exec(`${notification.title} ${notification.description}`)
-        : null;
-    const expenseId = expenseMatch?.[1] ?? null;
-    const correspondenceUrl = correspondenceOpenUrl(notification.notification_type);
+    const go = notificationGoTarget(notification);
 
-    const openExpense = () => {
-        if (!expenseId)
+    const openTarget = () => {
+        if (!go)
             return;
         onClose();
-        navigate(`${getExpensesOpenUrl(expenseId)}?intent=pay`);
-    };
-
-    const openCorrespondence = () => {
-        if (!correspondenceUrl)
-            return;
-        onClose();
-        navigate(correspondenceUrl);
+        navigate(go.to);
     };
 
     const modal = (<div className="tm" role="dialog" aria-modal="true">
@@ -56,7 +73,7 @@ export const NotificationDetailModal = memo(function NotificationDetailModal({ n
             <h2 className="tm__title">Уведомление</h2>
           </div>
           <button type="button" className="tm__close" onClick={onClose}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/></svg>
           </button>
         </div>
         <div className="tm__body">
@@ -74,13 +91,9 @@ export const NotificationDetailModal = memo(function NotificationDetailModal({ n
         </div>
         <div className="tm__foot">
           <button type="button" className="tm__btn tm__btn--ghost" onClick={onClose}>Закрыть</button>
-          {expenseId ? (
-            <button type="button" className="tm__btn tm__btn--primary" onClick={openExpense}>
-              Перейти к заявке
-            </button>
-          ) : correspondenceUrl ? (
-            <button type="button" className="tm__btn tm__btn--primary" onClick={openCorrespondence}>
-              Открыть корреспонденцию
+          {go ? (
+            <button type="button" className="tm__btn tm__btn--primary" onClick={openTarget}>
+              {go.label}
             </button>
           ) : null}
         </div>

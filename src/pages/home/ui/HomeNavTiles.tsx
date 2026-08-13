@@ -10,9 +10,10 @@ import {
 } from '@widgets/sidebar/model/appNavConfig';
 import { usePartnerForReviewBadge } from '@entities/time-tracking/lib/usePartnerForReviewBadge';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
-import { useExpensePaymentConfirmationBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
+import { useExpenseAttentionBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
 import { useCorrespondencePartnerAttentionBadge } from '@entities/correspondence';
 import { useVacationLeavePendingBadge, formatVacationLeavePendingBadge } from '@entities/vacation';
+import { useTodoInvitesBadge } from '@entities/todo';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import {
     getHubSectionForTile,
@@ -135,7 +136,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         () => defaultTiles.some((tile) => tile.id === 'kostaDaily'),
         [defaultTiles],
     );
-    const chatUnreadTotal = useChatUnreadTotal(!loading && showKostaDailyTile);
+    const { count: chatUnreadTotal, firstUnreadRoomId } = useChatUnreadTotal(!loading && showKostaDailyTile);
     const chatUnreadBadge = formatChatUnreadBadge(chatUnreadTotal);
     const chatUnreadAria = chatUnreadTotal > 0
         ? t('homeHub.unreadMessagesAria').replace('{count}', String(chatUnreadTotal))
@@ -146,16 +147,23 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         ? t('homeHub.forReviewPendingBadgeAria').replace('{count}', String(forReviewCount))
         : undefined;
     const showExpensesTile = defaultTiles.some((tile) => tile.id === 'expenses');
-    const { badge: expensePaymentBadge, count: expensePaymentCount } = useExpensePaymentConfirmationBadge(
-        !loading && showExpensesTile,
-    );
-    const expensePaymentBadgeAria = expensePaymentCount > 0
-        ? `Ожидают подтверждения оплаты: ${expensePaymentCount}`
-        : undefined;
+    const {
+        badge: expenseAttentionBadge,
+        payCount: expensePayCount,
+        moderationCount: expenseModerationCount,
+    } = useExpenseAttentionBadge(!loading && showExpensesTile);
+    const expenseBadgeAria = expensePayCount > 0
+        ? t('homeHub.expensesPayBadgeAria').replace('{count}', String(expensePayCount))
+        : expenseModerationCount > 0
+            ? t('homeHub.expensesModerationBadgeAria').replace('{count}', String(expenseModerationCount))
+            : undefined;
     const showCorrespondenceTile = defaultTiles.some((tile) => tile.id === 'correspondence');
-    const { badge: correspondenceBadge, count: correspondenceCount } = useCorrespondencePartnerAttentionBadge(
-        !loading && showCorrespondenceTile,
-    );
+    const {
+        badge: correspondenceBadge,
+        count: correspondenceCount,
+        outgoingPending: correspondenceOutgoingPending,
+        incomingNew: correspondenceIncomingNew,
+    } = useCorrespondencePartnerAttentionBadge(!loading && showCorrespondenceTile);
     const correspondenceBadgeAria = correspondenceCount > 0
         ? t('homeHub.correspondencePendingBadgeAria').replace('{count}', String(correspondenceCount))
         : undefined;
@@ -168,16 +176,55 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         : vacationCounts.minePendingCount > 0
             ? formatVacationLeavePendingBadge(vacationCounts.minePendingCount)
             : '';
-    const vacationBadgeAria = vacationCounts.count > 0
-        ? t('homeHub.vacationToDecideBadgeAria').replace('{count}', String(vacationCounts.count))
+    const vacationBadgeAria = vacationCounts.toDecideCount > 0
+        ? t('homeHub.vacationToDecideBadgeAria').replace('{count}', String(vacationCounts.toDecideCount))
         : vacationCounts.minePendingCount > 0
             ? t('homeHub.vacationMinePendingBadgeAria').replace('{count}', String(vacationCounts.minePendingCount))
             : undefined;
-    const vacationTileTo = vacationCounts.toDecideCount > 0
-        ? `${routes.vacationSchedule}?tab=to_decide`
-        : vacationCounts.minePendingCount > 0
-            ? `${routes.vacationSchedule}?tab=mine`
-            : routes.vacationSchedule;
+    const showTodoTile = defaultTiles.some((tile) => tile.id === 'todo');
+    const { badge: todoInvitesBadge, count: todoInvitesCount } = useTodoInvitesBadge(
+        !loading && showTodoTile,
+    );
+    const todoInvitesBadgeAria = todoInvitesCount > 0
+        ? t('homeHub.todoInvitesBadgeAria').replace('{count}', String(todoInvitesCount))
+        : undefined;
+
+    const tileDestinations = useMemo((): Partial<Record<HubTileId, string>> => ({
+        vacationSchedule: vacationCounts.toDecideCount > 0
+            ? `${routes.vacationSchedule}?tab=to_decide`
+            : vacationCounts.minePendingCount > 0
+                ? `${routes.vacationSchedule}?tab=mine`
+                : routes.vacationSchedule,
+        timeTracking: forReviewCount > 0
+            ? `${routes.timeTracking}?tab=reports&reportsSection=for-review`
+            : routes.timeTracking,
+        expenses: expensePayCount > 0
+            ? `${routes.expenses}?focus=pay`
+            : expenseModerationCount > 0
+                ? routes.expensesRequests
+                : routes.expenses,
+        correspondence: correspondenceOutgoingPending > 0
+            ? `${routes.correspondence}?tab=outgoing&view=attention`
+            : correspondenceIncomingNew > 0
+                ? `${routes.correspondence}?view=attention`
+                : routes.correspondence,
+        todo: todoInvitesCount > 0
+            ? `${routes.todo}?invites=1`
+            : routes.todo,
+        kostaDaily: firstUnreadRoomId != null
+            ? `${routes.kostaDaily}?room=${firstUnreadRoomId}`
+            : routes.kostaDaily,
+    }), [
+        vacationCounts.toDecideCount,
+        vacationCounts.minePendingCount,
+        forReviewCount,
+        expensePayCount,
+        expenseModerationCount,
+        correspondenceOutgoingPending,
+        correspondenceIncomingNew,
+        todoInvitesCount,
+        firstUnreadRoomId,
+    ]);
 
     const [orderedTiles, setOrderedTiles] = useState<HubNavTile[]>([]);
     const [draggingId, setDraggingId] = useState<HubTileId | null>(null);
@@ -342,9 +389,9 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                         </button>
                                     ) : null}
                                     <NavLink
-                                        to={tile.id === 'vacationSchedule' ? vacationTileTo : tile.to}
+                                        to={tileDestinations[tile.id] ?? tile.to}
                                         className={({ isActive }) => `home-nav-tiles__link${isActive ? ' active' : ''}`}
-                                        end={tile.id !== 'vacationSchedule'}
+                                        end={tile.id !== 'vacationSchedule' && tile.id !== 'expenses'}
                                         draggable={false}
                                     >
                                         <HubTileContent
@@ -356,12 +403,14 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                                     : tile.id === 'timeTracking'
                                                         ? forReviewBadge || undefined
                                                         : tile.id === 'expenses'
-                                                            ? expensePaymentBadge || undefined
+                                                            ? expenseAttentionBadge || undefined
                                                             : tile.id === 'correspondence'
                                                                 ? correspondenceBadge || undefined
                                                                 : tile.id === 'vacationSchedule'
                                                                     ? vacationDisplayBadge || undefined
-                                                                    : undefined
+                                                                    : tile.id === 'todo'
+                                                                        ? todoInvitesBadge || undefined
+                                                                        : undefined
                                             }
                                             badgeAriaLabel={
                                                 tile.id === 'kostaDaily'
@@ -369,12 +418,14 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                                     : tile.id === 'timeTracking'
                                                         ? forReviewBadgeAria
                                                         : tile.id === 'expenses'
-                                                            ? expensePaymentBadgeAria
+                                                            ? expenseBadgeAria
                                                             : tile.id === 'correspondence'
                                                                 ? correspondenceBadgeAria
                                                                 : tile.id === 'vacationSchedule'
                                                                     ? vacationBadgeAria
-                                                                    : undefined
+                                                                    : tile.id === 'todo'
+                                                                        ? todoInvitesBadgeAria
+                                                                        : undefined
                                             }
                                         />
                                     </NavLink>

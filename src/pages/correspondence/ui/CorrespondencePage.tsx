@@ -644,6 +644,13 @@ function initialMailboxScreen(searchParams: URLSearchParams): Screen {
         : { kind: 'incoming' };
 }
 
+function initialCorrTableTab(searchParams: URLSearchParams): 'all' | 'attention' | 'new' | 'work' | 'done' | undefined {
+    const view = searchParams.get('view');
+    if (view === 'attention' || view === 'new' || view === 'work' || view === 'done' || view === 'all')
+        return view;
+    return undefined;
+}
+
 export function CorrespondencePage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const [letters, setLetters] = useState<MockLetter[]>(INITIAL_LETTERS);
@@ -708,6 +715,7 @@ export function CorrespondencePage() {
             <CorrespondenceRegistryView
                 key={viewKey}
                 direction={screen.kind}
+                initialTableTab={initialCorrTableTab(searchParams)}
                 onDirectionChange={(dir) => navigateMailbox({ kind: dir })}
             />
         );
