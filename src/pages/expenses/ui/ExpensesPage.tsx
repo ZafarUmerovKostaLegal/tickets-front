@@ -1496,9 +1496,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
 
                 <div className={`tt-settings__actions-row tt-settings__actions-row--clients exp-tt-toolbar${isLoading || listFetchPending ? ' exp-tt-toolbar--loading' : ''}`}>
                     <div className="tt-settings__toolbar-left tt-settings__toolbar-left--inline">
-                        {!isModerationQueue && (<button type="button" className="tt-settings__btn tt-settings__btn--primary" onClick={handleCreate}>
+                        <button type="button" className="tt-settings__btn tt-settings__btn--primary" onClick={handleCreate}>
                             {isPartnerScope ? '+ Записать расход' : '+ Создать заявку'}
-                        </button>)}
+                        </button>
                         {canModerate && !isClientScope && (<button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={() => {
                             if (isPartnerScope) {
                                 navigate(routes.expensesPartnersReport);
