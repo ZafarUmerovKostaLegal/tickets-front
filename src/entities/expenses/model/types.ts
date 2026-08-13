@@ -115,6 +115,7 @@ export type ExpensesScopeMode = 'company' | 'partner';
 export interface ListParams {
     status?: string;
     expenseType?: string;
+    excludeExpenseType?: string;
     expenseSubtype?: string;
     scopeMode?: ExpensesScopeMode;
     partnerUserId?: number;

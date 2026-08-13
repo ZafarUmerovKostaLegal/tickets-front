@@ -77,6 +77,8 @@ export function resolvePageTitleSection(pathname: string, search: string, t: (ke
         return t('pageTitle.expensesPartnersReport');
     if (path === routes.expensesPartners)
         return t('pageTitle.expensesPartners');
+    if (path === routes.expensesClients)
+        return t('pageTitle.expensesClients');
 
     const routeTitleByPath: Record<string, TranslationKey> = {
         [routes.tickets]: 'nav.tickets',
@@ -85,6 +87,7 @@ export function resolvePageTitleSection(pathname: string, search: string, t: (ke
         [routes.inventory]: 'nav.inventory',
         [routes.todo]: 'nav.todo',
         [routes.expenses]: 'nav.expenses',
+        [routes.expensesClients]: 'nav.expensesClients',
         [routes.expensesPartners]: 'nav.expensesPartners',
         [routes.rules]: 'nav.rules',
         [routes.help]: 'nav.help',
@@ -104,6 +107,8 @@ export function resolvePageTitleSection(pathname: string, search: string, t: (ke
 
     if (path.startsWith('/expenses/partners'))
         return t('nav.expensesPartners');
+    if (path.startsWith('/expenses/clients'))
+        return t('nav.expensesClients');
     if (path.startsWith('/expenses/'))
         return t('nav.expenses');
 

@@ -29,7 +29,7 @@ export const ruMessages: Messages = {
         correspondencePendingBadgeAria: '{count} писем требуют вашего внимания',
         vacationToDecideBadgeAria: '{count} заявок на отпуск ждут вашего согласования',
         vacationMinePendingBadgeAria: '{count} ваших заявок на рассмотрении',
-        expensesPayBadgeAria: '{count} расходов ждут подтверждения оплаты',
+        expensesPayBadgeAria: '{count} расходов ждут подтверждения возмещения',
         expensesModerationBadgeAria: '{count} заявок на согласование расходов',
         todoInvitesBadgeAria: '{count} приглашений на доски',
         internalPortal: 'Внутренний портал',
@@ -123,8 +123,8 @@ export const ruMessages: Messages = {
     attentionBanner: {
         reportsForReview: 'У вас {count} отчётов, ожидающих подписи.',
         reportsGo: 'Сформированные для проверки →',
-        expensesPay: 'У вас {count} расходов, ожидающих подтверждения оплаты.',
-        expensesPayGo: 'Показать к оплате →',
+        expensesPay: 'У вас {count} расходов, ожидающих подтверждения возмещения.',
+        expensesPayGo: 'Показать к возмещению →',
         expensesModeration: 'У вас {count} заявок на согласование расходов.',
         expensesModerationGo: 'На согласование →',
         correspondenceOutgoing: 'У вас {count} исходящих писем на проверке.',
@@ -139,6 +139,7 @@ export const ruMessages: Messages = {
         home: 'Главная',
         timeTracking: 'Учёт времени',
         expenses: 'Расходы',
+        expensesClients: 'Расходы за клиентов',
         expensesPartners: 'Расходы партнёров',
         todo: 'Список дел',
         tickets: 'IT-заявки',
@@ -173,6 +174,7 @@ export const ruMessages: Messages = {
         user: 'Пользователь',
         expensesRequests: 'Заявки на расходы',
         expensesReport: 'Отчёт по расходам',
+        expensesClients: 'Расходы за клиентов',
         expensesPartners: 'Расходы партнёров',
         expensesPartnersReport: 'Отчёт по расходам партнёров',
     },
@@ -758,6 +760,7 @@ export type Messages = {
         | 'home'
         | 'timeTracking'
         | 'expenses'
+        | 'expensesClients'
         | 'expensesPartners'
         | 'todo'
         | 'tickets'
@@ -793,6 +796,7 @@ export type Messages = {
         | 'user'
         | 'expensesRequests'
         | 'expensesReport'
+        | 'expensesClients'
         | 'expensesPartners'
         | 'expensesPartnersReport',
         string

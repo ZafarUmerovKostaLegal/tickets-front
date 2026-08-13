@@ -2,7 +2,7 @@ import type { ExpenseStatus, ExpenseType, PartnerExpenseCategory } from './types
 import { EXPENSE_REGISTRY_STATUSES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES } from './constants';
 import type { ExpensesUiFilterPeriod, ExpensesUiSortBy } from './expensesListParams';
 
-export type ExpensesFiltersVariant = 'default' | 'moderationQueue' | 'partner';
+export type ExpensesFiltersVariant = 'default' | 'moderationQueue' | 'partner' | 'client';
 export type ExpensesReimbursableFilter = 'reimbursable' | 'non_reimbursable' | '';
 
 export type ExpensesSavedFilters = {

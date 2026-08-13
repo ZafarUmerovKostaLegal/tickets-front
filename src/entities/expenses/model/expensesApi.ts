@@ -44,6 +44,8 @@ export async function fetchExpenses(params: ListParams = {}, init?: RequestInitA
         qs.set('status', params.status);
     if (params.expenseType)
         qs.set('expenseType', params.expenseType);
+    if (params.excludeExpenseType)
+        qs.set('excludeExpenseType', params.excludeExpenseType);
     if (params.expenseSubtype)
         qs.set('expenseSubtype', params.expenseSubtype);
     if (params.scopeMode)

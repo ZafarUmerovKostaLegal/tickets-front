@@ -22,6 +22,7 @@ export const routes = {
     expenses: '/expenses',
     expensesRequests: '/expenses/requests',
     expensesReport: '/expenses/report',
+    expensesClients: '/expenses/clients',
     expensesPartners: '/expenses/partners',
     expensesPartnersReport: '/expenses/partners/report',
     rules: '/rules',

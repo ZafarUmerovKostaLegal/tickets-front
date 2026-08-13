@@ -118,12 +118,15 @@ export const EXPENSE_TYPES: {
     { value: 'partner_expense', label: 'Расход партнёра' },
     { value: 'other', label: 'Прочее' },
 ];
-/** Types available on «Расходы компании» (без partner_expense). */
+/** Types on «Расходы компании» (без partner и без client — клиентские в отдельном табе). */
 export const COMPANY_EXPENSE_TYPES: {
-    value: Exclude<ExpenseType, 'partner_expense'>;
+    value: Exclude<ExpenseType, 'partner_expense' | 'client_expense'>;
     label: string;
-}[] = EXPENSE_TYPES.filter((t): t is { value: Exclude<ExpenseType, 'partner_expense'>; label: string } => t.value !== 'partner_expense');
-export const COMPANY_EXPENSE_TYPE_CODES: Exclude<ExpenseType, 'partner_expense'>[] = COMPANY_EXPENSE_TYPES.map(t => t.value);
+}[] = EXPENSE_TYPES.filter(
+    (t): t is { value: Exclude<ExpenseType, 'partner_expense' | 'client_expense'>; label: string } =>
+        t.value !== 'partner_expense' && t.value !== 'client_expense',
+);
+export const COMPANY_EXPENSE_TYPE_CODES: Exclude<ExpenseType, 'partner_expense' | 'client_expense'>[] = COMPANY_EXPENSE_TYPES.map(t => t.value);
 export const PAYMENT_METHODS: {
     value: PaymentMethod;
     label: string;

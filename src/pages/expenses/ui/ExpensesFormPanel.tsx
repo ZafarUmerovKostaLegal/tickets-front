@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { createPortal } from 'react-dom';
 import { type ExpenseRequest, type ExpenseFormValues, type ExpenseFormErrors, type ExpenseFilesByKind, type AttachmentItem, EXPENSE_ATTACHMENT_MAX_BYTES, } from '@entities/expenses/model/types';
-import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, STATUS_META, } from '@entities/expenses/model/constants';
+import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, } from '@entities/expenses/model/constants';
 import { computeAmountUzsForApi, computeUsdEquivalent, formatExchangeRate, needsForeignUsdRate, parseExpenseMoney, roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import { formatReimbursementCardNumber, isValidReimbursementCardNumber } from '@entities/expenses/model/expensePaymentDetails';
 import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
@@ -10,6 +10,8 @@ import { approveExpense, rejectExpense, reviseExpense, deleteAttachment, deleteE
 import type { AttachmentPreviewModel } from '@entities/expenses/lib/buildAttachmentPreview';
 import { ExpenseAttachmentPreviewModal } from './ExpenseAttachmentPreviewModal';
 import { getCloseExpenseUi, isModerationBlockedForOwnExpense, showLifecycleModerationRow, showOwnPendingModerationBlockedHint, showPayExpenseAction, showPendingApprovalModeration, showWithdrawExpenseAction, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
+import { expensePayActionLabel, expenseStatusLabel } from '@entities/expenses/model/expenseStatusLabels';
+import { isExpensePaymentConfirmer } from '@entities/expenses/model/expensePaymentConfirmer';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { formatExpenseAuthorLabel, formatExpensePaidByLabel } from '@entities/expenses/model/expenseAuthor';
 import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
@@ -176,8 +178,9 @@ type Props = {
     receiptUploadPending?: boolean;
     currentUserId?: number | null;
     currentUserRole?: string | null;
-    /** company — без типа partner_expense; partner — только расход партнёра */
-    formScope?: 'company' | 'partner';
+    currentUserEmail?: string | null;
+    /** company — без partner/client; client — только «За клиента»; partner — только расход партнёра */
+    formScope?: 'company' | 'partner' | 'client';
 };
 function PanelBtnSpinner({ className }: {
     className?: string;
@@ -269,7 +272,12 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
     if (!v.paymentMethod.trim()) {
         e.paymentMethod = 'Выберите способ оплаты';
     }
-    if (v.paymentMethod === 'cash') {
+    if (opts?.forSubmit && v.isReimbursable === true && v.expenseType !== 'partner_expense') {
+        if (v.paymentMethod !== 'cash') {
+            e.paymentMethod = 'Для возмещения укажите способ «Наличные» и номер карты';
+        }
+    }
+    if (v.paymentMethod === 'cash' || (opts?.forSubmit && v.isReimbursable === true && v.expenseType !== 'partner_expense')) {
         if (!v.reimbursementCardNumber.trim()) {
             e.reimbursementCardNumber = 'Укажите номер карты для возмещения';
         }
@@ -326,7 +334,7 @@ function formatForeignFp(n: number): string {
     const x = Math.round(n * 1e6) / 1e6;
     return x.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
 }
-export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, formScope = 'company', }: Props) {
+export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, currentUserEmail = null, formScope = 'company', }: Props) {
     const [values, setValues] = useState<ExpenseFormValues>(EMPTY);
     const valuesRef = useRef(values);
     valuesRef.current = values;
@@ -427,7 +435,9 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             expenseDate: todayIsoLocal(),
             ...(formScope === 'partner'
                 ? { expenseType: 'partner_expense', isReimbursable: false }
-                : {}),
+                : formScope === 'client'
+                    ? { expenseType: EXPENSE_TYPE_CLIENT }
+                    : {}),
         });
         uzsAmountAnchorRef.current = null;
         setFilesPaymentDoc([]);
@@ -834,6 +844,9 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setValues(prev => ({
             ...prev,
             isReimbursable: val,
+            ...(val === true
+                ? { paymentMethod: 'cash' }
+                : {}),
             ...(val === false
                 ? { projectId: '', expenseCategoryId: '', vendor: '', comment: '' }
                 : {}),
@@ -845,6 +858,9 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setErrors(prev => ({
             ...prev,
             isReimbursable: undefined,
+            ...(val === true
+                ? { paymentMethod: undefined }
+                : {}),
             ...(val === false
                 ? {
                     projectId: undefined,
@@ -977,9 +993,13 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
     const expenseTypeItems = useMemo(() => {
         if (formScope === 'partner')
             return EXPENSE_TYPES.filter(t => t.value === 'partner_expense');
-        const company = EXPENSE_TYPES.filter(t => t.value !== 'partner_expense');
+        if (formScope === 'client')
+            return EXPENSE_TYPES.filter(t => t.value === 'client_expense');
+        const company = EXPENSE_TYPES.filter(t => t.value !== 'partner_expense' && t.value !== 'client_expense');
         if (editingRequest?.expenseType === 'partner_expense')
             return [...company, ...EXPENSE_TYPES.filter(t => t.value === 'partner_expense')];
+        if (editingRequest?.expenseType === 'client_expense')
+            return [...company, ...EXPENSE_TYPES.filter(t => t.value === 'client_expense')];
         return company;
     }, [formScope, editingRequest?.expenseType]);
     const partnerSubtypeItems = useMemo(() => [...PARTNER_EXPENSE_CATEGORIES], []);
@@ -996,11 +1016,16 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         }
         return rows;
     }, [partnerOptions]);
-    const paymentMethodItems = useMemo(() => PAYMENT_METHODS.map(m => ({
-        value: m.value,
-        label: m.label,
-        search: m.label.toLowerCase(),
-    })), []);
+    const paymentMethodItems = useMemo(() => {
+        const methods = values.isReimbursable === true && values.expenseType !== 'partner_expense'
+            ? PAYMENT_METHODS.filter(m => m.value === 'cash')
+            : PAYMENT_METHODS;
+        return methods.map(m => ({
+            value: m.value,
+            label: m.label,
+            search: m.label.toLowerCase(),
+        }));
+    }, [values.isReimbursable, values.expenseType]);
     const currencyItems = useMemo(() => [...EXPENSE_CURRENCIES], []);
     const expenseCategoryItems = useMemo(() => [
         { id: '', name: 'Не указана', search: 'не указана' },
@@ -1146,17 +1171,18 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
     }, [onUploadPaymentReceipts, filesReceipt]);
     const blockedModerationOwn = Boolean(editingRequest &&
         isModerationBlockedForOwnExpense(Boolean(canModerate), currentUserId, editingRequest));
+    const isPaymentConfirmer = isExpensePaymentConfirmer(currentUserEmail);
     const showOwnModerationBlockedHint = Boolean(isView &&
         editingRequest &&
         showOwnPendingModerationBlockedHint(editingRequest, Boolean(canModerate), blockedModerationOwn));
     const showModerationActions = Boolean(isView &&
         editingRequest &&
         showPendingApprovalModeration(editingRequest, Boolean(canModerate), blockedModerationOwn));
-    const showPayAction = Boolean(isView && canModerate && editingRequest && showPayExpenseAction(editingRequest, blockedModerationOwn));
+    const showPayAction = Boolean(isView && editingRequest && showPayExpenseAction(editingRequest, blockedModerationOwn, { isPaymentConfirmer }));
     const closeExpenseUi = isView && canModerate && editingRequest ? getCloseExpenseUi(editingRequest, blockedModerationOwn) : null;
     const showLifecycleRow = Boolean(isView &&
         editingRequest &&
-        showLifecycleModerationRow(editingRequest, Boolean(canModerate), blockedModerationOwn));
+        showLifecycleModerationRow(editingRequest, Boolean(canModerate), blockedModerationOwn, { isPaymentConfirmer }));
     const showWithdrawAction = Boolean(isView && editingRequest && showWithdrawExpenseAction(editingRequest, currentUserId));
     const showDeleteAction = Boolean(editingRequest && showDeleteExpenseAction(editingRequest, currentUserId, currentUserRole));
     const openApproveConfirm = useCallback(() => {
@@ -1368,7 +1394,9 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             return;
         const blockedOwn = isModerationBlockedForOwnExpense(Boolean(canModerate), currentUserId, editingRequest);
         if (emailModerationIntent === 'pay') {
-            const canConfirmPayment = Boolean(canModerate) && showPayExpenseAction(editingRequest, blockedOwn);
+            const canConfirmPayment = showPayExpenseAction(editingRequest, blockedOwn, {
+                isPaymentConfirmer: isExpensePaymentConfirmer(currentUserEmail),
+            });
             emailIntentHandledRef.current = key;
             onEmailModerationIntentConsumed?.();
             if (canConfirmPayment)
@@ -1396,6 +1424,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         emailModerationIntent,
         editingRequest,
         currentUserId,
+        currentUserEmail,
         canModerate,
         onEmailModerationIntentConsumed,
     ]);
@@ -1438,7 +1467,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
       {panelConfirm && (<ExpenseConfirmDialog isOpen title={panelConfirm.kind === 'approve'
                 ? 'Одобрить заявку?'
                 : panelConfirm.kind === 'pay'
-                    ? 'Отметить оплату?'
+                    ? 'Подтвердить возмещение?'
                     : panelConfirm.kind === 'close'
                         ? 'Подтверждение'
                         : panelConfirm.kind === 'delete'
@@ -1446,14 +1475,16 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                             : 'Отозвать заявку?'} message={panelConfirm.kind === 'approve' ? (<>
                 <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
                 {editingRequest?.isReimbursable ? (<p className="exp-mod-dialog__sub">
-                    После одобрения, когда компания оплатит расход, нажмите «Оплачено».
+                    После одобрения заявка уйдёт на возмещение: подтверждение выполняет назначенный сотрудник, статус станет «Ожидает возмещения».
                   </p>) : null}
-              </>) : panelConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">Заявка будет переведена в статус «Выплачено».</p>) : panelConfirm.kind === 'close' ? (<p className="exp-mod-dialog__sub">{panelConfirm.message}</p>) : panelConfirm.kind === 'delete' ? (<p className="exp-mod-dialog__sub">
+              </>) : panelConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">
+                Статус станет «Возмещено». Убедитесь, что перевод на карту сотрудника выполнен.
+              </p>) : panelConfirm.kind === 'close' ? (<p className="exp-mod-dialog__sub">{panelConfirm.message}</p>) : panelConfirm.kind === 'delete' ? (<p className="exp-mod-dialog__sub">
                 Заявка {editingRequest?.id} будет удалена безвозвратно вместе с вложениями.
               </p>) : (<p className="exp-mod-dialog__sub">Статус заявки станет «Отозвана».</p>)} confirmLabel={panelConfirm.kind === 'approve'
                 ? 'Одобрить'
                 : panelConfirm.kind === 'pay'
-                    ? 'Оплачено'
+                    ? (editingRequest ? expensePayActionLabel(editingRequest) : 'Возмещено')
                     : panelConfirm.kind === 'close'
                         ? panelConfirm.confirmLabel
                         : panelConfirm.kind === 'delete'
@@ -1471,7 +1502,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         <div className="exp-panel__hd">
           <div className="exp-panel__hd-left">
             {isView && editingRequest && (<span className={`exp-status exp-status--${editingRequest.status}`}>
-                {STATUS_META[editingRequest.status]?.label ?? editingRequest.status}
+                {expenseStatusLabel(editingRequest)}
               </span>)}
             <h2 className="exp-panel__title">{title}</h2>
           </div>
@@ -1731,7 +1762,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
               {errors.paymentMethod && <p className="exp-form-err-msg" data-err>{errors.paymentMethod}</p>}
             </div>
 
-            {values.paymentMethod === 'cash' && (<div className={`exp-form-field${errors.reimbursementCardNumber ? ' exp-form-field--err' : ''}`}>
+            {(values.paymentMethod === 'cash' || values.isReimbursable === true) && values.expenseType !== 'partner_expense' && (<div className={`exp-form-field${errors.reimbursementCardNumber ? ' exp-form-field--err' : ''}`}>
               <label className="exp-form-label">
                 Номер карты для возмещения <span className="exp-form-req">*</span>
               </label>
@@ -1763,8 +1794,8 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     Возмещаемый расход
                   </span>
                   <p className="exp-form-hint" style={{ margin: '0.25rem 0 0 0' }}>
-                    Включите для заявок с документом для оплаты. Проект, клиент и прочее в блоке «Дополнительно» — только
-                    при типе расхода «За клиента».
+                    Для возмещения: способ оплаты «Наличные», номер карты и документ для оплаты. После согласования
+                    возмещение подтверждает назначенный сотрудник.
                   </p>
                 </div>
                 <button type="button" role="switch" aria-checked={values.isReimbursable === true} className={`exp-form-switch${values.isReimbursable === true ? ' exp-form-switch--on' : ''}${isView ? ' exp-form-switch--disabled' : ''}`} onClick={() => { if (!isView)
@@ -2023,7 +2054,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     <label className="exp-form-label">Квитанция об оплате</label>
                     {showReceiptUploadZone && (<>
                         <p className="exp-form-static exp-form-static--muted" style={{ margin: '0 0 0.5rem 0' }}>
-                          Чек, скрин или выписка о факте оплаты. Можно прикрепить заранее или после статуса «Выплачено».
+                          Чек, скрин или выписка о факте оплаты. Можно прикрепить заранее или после статуса «Возмещено».
                           {!isView
                             ? ' Файлы уйдут на сервер вместе с сохранением черновика или отправкой заявки.'
                             : ' Загрузить может автор заявки или модератор.'}
@@ -2152,18 +2183,28 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 {editingRequest.expenseType === 'partner_expense' ? (<>
                     Расход партнёра учтён без согласования. Дальнейшие действия по оплате — по внутренним правилам; ожидание
                     решения модератора не требуется.
-                  </>) : editingRequest.isReimbursable ? (<>Заявка одобрена. После оплаты со стороны компании нажмите «Оплачено» — статус станет «Выплачено».</>) : (<>Заявка одобрена (невозмещаемая). «Оплачено» — компания оплатила расход; «Не оплачено» — завершить без оплаты со стороны компании.</>)}
+                  </>) : (<>Заявка одобрена и ожидает возмещения. После перевода на карту сотрудника нажмите «Возмещено».</>)}
               </p>)}
             {showLifecycleRow && (<div className="exp-panel__ft-moderate">
                 <div className="exp-panel__ft-moderate-btns">
                   {showPayAction && editingRequest && (<button type="button" className="exp-panel-btn exp-panel-btn--primary" disabled={moderationBusy || lifecycleBusy} onClick={openPayConfirm}>
-                      Оплачено
+                      {expensePayActionLabel(editingRequest)}
                     </button>)}
                   {closeExpenseUi && (<button type="button" className="exp-panel-btn exp-panel-btn--outline" disabled={moderationBusy || lifecycleBusy} onClick={openCloseLifecycleConfirm}>
                       {closeExpenseUi.label}
                     </button>)}
                 </div>
               </div>)}
+            {!showPayAction &&
+                isView &&
+                editingRequest?.status === 'approved' &&
+                editingRequest.isReimbursable &&
+                editingRequest.expenseType !== 'partner_expense' && (<p className="exp-panel__ft-hint" role="status">
+                  Статус «Ожидает возмещения». Подтверждение выплаты выполняет назначенный сотрудник.
+                </p>)}
+            {closeExpenseUi && !showPayAction && editingRequest?.status === 'approved' && !editingRequest.isReimbursable && (<p className="exp-panel__ft-hint" role="status">
+                Заявка одобрена (невозмещаемая). Нажмите «Не оплачено», чтобы завершить без выплаты со стороны компании.
+              </p>)}
             {showWithdrawAction && (<div className="exp-panel__ft-moderate">
                 <button type="button" className="exp-panel-btn exp-panel-btn--outline exp-panel-btn--danger-outline" disabled={moderationBusy || lifecycleBusy} onClick={openWithdrawConfirm}>
                   Отозвать заявку

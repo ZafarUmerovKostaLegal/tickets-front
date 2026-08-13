@@ -26,6 +26,9 @@ export function buildExpensesListParams(args: {
     page: number;
     pageSize?: number;
     scopeMode?: ExpensesScopeMode;
+    /** Force type (client tab) or exclude type (company tab without client expenses). */
+    forceExpenseType?: ExpenseType;
+    excludeExpenseType?: ExpenseType;
 }): ListParams {
     const pageSize = args.pageSize ?? EXPENSES_LIST_PAGE_SIZE;
     const page = Math.max(1, args.page);
@@ -53,8 +56,14 @@ export function buildExpensesListParams(args: {
         if (typeof args.filterPartnerUserId === 'number' && args.filterPartnerUserId > 0)
             p.partnerUserId = args.filterPartnerUserId;
     }
+    else if (args.forceExpenseType) {
+        p.expenseType = args.forceExpenseType;
+    }
     else if (args.filterType && args.filterType !== 'partner_expense') {
         p.expenseType = args.filterType;
+    }
+    else if (args.excludeExpenseType) {
+        p.excludeExpenseType = args.excludeExpenseType;
     }
     if (args.filterReimb === 'reimbursable')
         p.isReimbursable = true;

@@ -34,13 +34,15 @@ import { formatExpenseApprovedByLabel, formatExpenseAuthorLabel, mergeExpenseAut
 import { canViewExpensesRequestsAndReport } from '@entities/expenses/model/expenseModeration';
 import { useExpenseAttentionBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
 import { getCloseExpenseUi, isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, showOwnPendingModerationBlockedHint, resolveExpensePanelMode, showPayExpenseAction, showPendingApprovalModeration, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
+import { expensePayActionLabel, expenseStatusLabel } from '@entities/expenses/model/expenseStatusLabels';
+import { isExpensePaymentConfirmer } from '@entities/expenses/model/expensePaymentConfirmer';
 import { ExpensesPageBoundary } from './ExpensesPageBoundary';
 import '@pages/time-tracking/ui/TimeTrackingForms.css';
 import './ExpensesPage.css';
 
 const ExpensesFormPanel = lazy(() => import('./ExpensesFormPanel').then((m) => ({ default: m.ExpensesFormPanel })));
 const ExpensesReportModal = lazy(() => import('@features/expense-report').then((m) => ({ default: m.ExpensesReportModal })));
-export type ExpensesPageVariant = 'default' | 'moderationQueue' | 'partner';
+export type ExpensesPageVariant = 'default' | 'moderationQueue' | 'partner' | 'client';
 export type ExpensesPageProps = {
     variant?: ExpensesPageVariant;
 };
@@ -126,11 +128,11 @@ function formValuesToApiBody(values: ExpenseFormValues) {
             : {}),
     };
 }
-function StatusBadge({ status }: {
+function StatusBadge({ status, isReimbursable }: {
     status: ExpenseStatus;
+    isReimbursable?: boolean;
 }) {
-    const meta = STATUS_META[status];
-    return <span className={`exp-status exp-status--${status}`}>{meta?.label ?? status}</span>;
+    return <span className={`exp-status exp-status--${status}`}>{expenseStatusLabel({ status, isReimbursable })}</span>;
 }
 function IconDotsVertical() {
     return (<svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -139,10 +141,11 @@ function IconDotsVertical() {
         <circle cx="12" cy="19" r="1.85" />
     </svg>);
 }
-function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserRole, moderationBusyId, onApprove, onRejectClick, onReviseClick, onPay, onCloseLifecycle, onDeleteClick, isActionMenuOpen, onToggleActionMenu, onCloseActionMenu, partnerScope = false, }: {
+function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, currentUserId, currentUserRole, moderationBusyId, onApprove, onRejectClick, onReviseClick, onPay, onCloseLifecycle, onDeleteClick, isActionMenuOpen, onToggleActionMenu, onCloseActionMenu, partnerScope = false, }: {
     req: ExpenseRequest;
     onOpen: (r: ExpenseRequest, opts?: { mode?: 'view' | 'edit' }) => void;
     canModerate: boolean;
+    isPaymentConfirmer: boolean;
     currentUserId: number | null;
     currentUserRole: string | null;
     moderationBusyId: string | null;
@@ -177,7 +180,7 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
     const blockedOwn = isModerationBlockedForOwnExpense(canModerate, currentUserId, req);
     const showMod = showPendingApprovalModeration(req, canModerate, blockedOwn);
     const showOwnModHint = showOwnPendingModerationBlockedHint(req, canModerate, blockedOwn);
-    const showPay = canModerate && showPayExpenseAction(req, blockedOwn);
+    const showPay = showPayExpenseAction(req, blockedOwn, { isPaymentConfirmer });
     const closeUi = canModerate ? getCloseExpenseUi(req, blockedOwn) : null;
     const showDelete = showDeleteExpenseAction(req, currentUserId, currentUserRole);
     const busy = moderationBusyId === req.id;
@@ -265,7 +268,7 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
         </div>
         <div className="exp-table__td exp-table__td--status" role="cell">
             <div className="exp-table__status-tags">
-                <StatusBadge status={req.status} />
+                <StatusBadge status={req.status} isReimbursable={req.isReimbursable} />
                 {(req.status === 'rejected' || req.status === 'revision_required') && req.rejectionReason ? (
                     <span
                         className={`exp-table__status-reason${req.status === 'revision_required' ? ' exp-table__status-reason--revision' : ''}`}
@@ -337,7 +340,7 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
                         onCloseActionMenu();
                         onPay(req);
                     }}>
-                        Оплачено
+                        {expensePayActionLabel(req)}
                     </button>)}
                     {closeUi && (<button type="button" className="exp-table__menu-item" role="menuitem" disabled={busy} onClick={() => {
                         onCloseActionMenu();
@@ -550,7 +553,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [searchParams] = useSearchParams();
     const { user, loading: currentUserLoading } = useCurrentUser();
     const canModerate = canViewExpensesRequestsAndReport(user?.role);
-    const { payCount, moderationCount } = useExpenseAttentionBadge(!currentUserLoading);
+    const { companyPayCount, clientPayCount, moderationCount } = useExpenseAttentionBadge(!currentUserLoading);
     const [isLoading, setIsLoading] = useState(true);
     const [listFetchPending, setListFetchPending] = useState(false);
     const isFirstListFetchRef = useRef(true);
@@ -563,7 +566,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [expenseTableMenuForId, setExpenseTableMenuForId] = useState<string | null>(null);
     const isModerationQueue = variant === 'moderationQueue';
     const isPartnerScope = variant === 'partner';
+    const isClientScope = variant === 'client';
     const scopeMode = isPartnerScope ? 'partner' as const : (isModerationQueue ? undefined : 'company' as const);
+    const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email);
+    const payBannerCount = isClientScope ? clientPayCount : (isPartnerScope || isModerationQueue ? 0 : companyPayCount);
     const filterStorageUserId = user?.id ?? null;
     const filterOwnerKey = !currentUserLoading && filterStorageUserId != null
         ? `${filterStorageUserId}:${variant}`
@@ -727,7 +733,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             isModerationQueue,
             search: debouncedSearch,
             filterStatus,
-            filterType,
+            filterType: isClientScope ? '' : filterType,
             filterSubtype,
             filterPartnerUserId,
             filterReimb,
@@ -738,6 +744,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             page: listPage,
             pageSize: EXPENSES_LIST_PAGE_SIZE,
             scopeMode,
+            forceExpenseType: isClientScope ? 'client_expense' : undefined,
+            excludeExpenseType: !isModerationQueue && !isPartnerScope && !isClientScope && !filterType
+                ? 'client_expense'
+                : undefined,
         });
         fetchExpenses(params, { signal: controller.signal, getReuseWindowMs: 0 })
             .then(data => {
@@ -783,6 +793,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         listPage,
         isModerationQueue,
         isPartnerScope,
+        isClientScope,
         scopeMode,
         debouncedSearch,
         filterStatus,
@@ -969,8 +980,14 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 const intentMatchesStatus = intentParsed === 'pay'
                     ? req.status === 'approved' && req.isReimbursable
                     : req.status === 'pending_approval';
-                if (intentParsed && canModerate && intentMatchesStatus) {
-                    setEmailModerationIntent(intentParsed);
+                if (intentParsed && intentMatchesStatus) {
+                    const allowIntent = intentParsed === 'pay'
+                        ? isPaymentConfirmer
+                        : canModerate;
+                    if (allowIntent)
+                        setEmailModerationIntent(intentParsed);
+                    else
+                        setEmailModerationIntent(null);
                 }
                 else {
                     setEmailModerationIntent(null);
@@ -990,7 +1007,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         return () => {
             cancelled = true;
         };
-    }, [pathExpenseId, isLoading, searchParams, navigate, handleOpenReq, canModerate]);
+    }, [pathExpenseId, isLoading, searchParams, navigate, handleOpenReq, canModerate, isPaymentConfirmer]);
     const handleClosePanel = useCallback(() => {
         setIsPanelOpen(false);
         setEmailModerationIntent(null);
@@ -1334,7 +1351,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         ? !!(filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
         : isPartnerScope
             ? !!(filterStatus || filterSubtype || filterPartnerUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
-            : !!(filterStatus || filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search);
+            : isClientScope
+                ? !!(filterStatus || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
+                : !!(filterStatus || filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search);
     const activeFilterChipCount = useMemo(() => {
         let n = 0;
         if (!isModerationQueue && filterStatus)
@@ -1345,7 +1364,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             if (filterPartnerUserId)
                 n++;
         }
-        else if (filterType) {
+        else if (!isClientScope && filterType) {
             n++;
         }
         if (filterReimb)
@@ -1355,7 +1374,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         if (filterSort !== 'createdAt')
             n++;
         return n;
-    }, [isModerationQueue, isPartnerScope, filterStatus, filterType, filterSubtype, filterPartnerUserId, filterReimb, filterPeriod, filterSort]);
+    }, [isModerationQueue, isPartnerScope, isClientScope, filterStatus, filterType, filterSubtype, filterPartnerUserId, filterReimb, filterPeriod, filterSort]);
     const periodFilterLabel = useMemo(
         () => expensesPeriodFilterLabel(filterPeriod, filterDateFrom, filterDateTo),
         [filterPeriod, filterDateFrom, filterDateTo],
@@ -1381,19 +1400,42 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                     ? 'Заявки на согласование'
                                     : isPartnerScope
                                         ? 'Расходы партнёров'
-                                        : 'Расходы компании'}
+                                        : isClientScope
+                                            ? 'Расходы за клиентов'
+                                            : 'Расходы компании'}
                             </h1>
-                            {((canModerate && !isModerationQueue) || isModerationQueue || isPartnerScope) && (<div className="exp-header-queue-wrap">
-                                {canModerate && !isModerationQueue && !isPartnerScope && (<>
+                            <div className="exp-header-queue-wrap">
+                                {!isModerationQueue && !isPartnerScope && !isClientScope && (<>
+                                    {canModerate && (
                                     <NavLink to={routes.expensesRequests} className="exp-queue-nav">
                                         На согласование
                                         {moderationCount > 0 ? (
                                             <span className="app-count-badge" aria-hidden>{moderationCount > 99 ? '99+' : String(moderationCount)}</span>
                                         ) : null}
                                     </NavLink>
+                                    )}
+                                    <NavLink to={routes.expensesClients} className="exp-queue-nav">
+                                        За клиента
+                                        {clientPayCount > 0 ? (
+                                            <span className="app-count-badge" aria-hidden>{clientPayCount > 99 ? '99+' : String(clientPayCount)}</span>
+                                        ) : null}
+                                    </NavLink>
+                                    {canModerate && (
                                     <NavLink to={routes.expensesReport} className="exp-queue-nav">
                                         Аналитика
                                     </NavLink>
+                                    )}
+                                    <NavLink to={routes.expensesPartners} className="exp-queue-nav">
+                                        Расходы партнёров
+                                    </NavLink>
+                                </>)}
+                                {isClientScope && (<>
+                                    <NavLink to={routes.expenses} className="exp-queue-nav">
+                                        Расходы компании
+                                    </NavLink>
+                                    {canModerate && (<NavLink to={routes.expensesRequests} className="exp-queue-nav">
+                                        На согласование
+                                    </NavLink>)}
                                     <NavLink to={routes.expensesPartners} className="exp-queue-nav">
                                         Расходы партнёров
                                     </NavLink>
@@ -1402,14 +1444,22 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                     <NavLink to={routes.expenses} className="exp-queue-nav">
                                         Расходы компании
                                     </NavLink>
+                                    <NavLink to={routes.expensesClients} className="exp-queue-nav">
+                                        За клиента
+                                    </NavLink>
                                     {canModerate && (<NavLink to={routes.expensesPartnersReport} className="exp-queue-nav">
                                         Отчёт
                                     </NavLink>)}
                                 </>)}
-                                {isModerationQueue && (<NavLink to={routes.expenses} className="exp-queue-nav">
-                                    Утверждённые расходы
-                                </NavLink>)}
-                            </div>)}
+                                {isModerationQueue && (<>
+                                    <NavLink to={routes.expenses} className="exp-queue-nav">
+                                        Утверждённые расходы
+                                    </NavLink>
+                                    <NavLink to={routes.expensesClients} className="exp-queue-nav">
+                                        За клиента
+                                    </NavLink>
+                                </>)}
+                            </div>
                         </div>
                     </div>
                     <div className="app-page-header-end">
@@ -1418,9 +1468,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 </div>
             </header>
 
-            {!isModerationQueue && payCount > 0 ? (
+            {!isModerationQueue && !isPartnerScope && isPaymentConfirmer && payBannerCount > 0 ? (
                 <AttentionBanner
-                    text={t('attentionBanner.expensesPay').replace('{count}', String(payCount))}
+                    text={t('attentionBanner.expensesPay').replace('{count}', String(payBannerCount))}
                     actionLabel={t('attentionBanner.expensesPayGo')}
                     onAction={() => {
                         setFilterStatus('approved');
@@ -1449,7 +1499,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                         {!isModerationQueue && (<button type="button" className="tt-settings__btn tt-settings__btn--primary" onClick={handleCreate}>
                             {isPartnerScope ? '+ Записать расход' : '+ Создать заявку'}
                         </button>)}
-                        {canModerate && (<button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={() => {
+                        {canModerate && !isClientScope && (<button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={() => {
                             if (isPartnerScope) {
                                 navigate(routes.expensesPartnersReport);
                                 return;
@@ -1501,7 +1551,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                         </FilterDrop>)}
 
 
-                        {!isPartnerScope && (<FilterDrop label={filterType ? TYPE_META[filterType].label : 'Тип расхода'} active={!!filterType} isOpen={openFilter === 'type'} onToggle={() => toggleFilter('type')}>
+                        {!isPartnerScope && !isClientScope && (<FilterDrop label={filterType ? TYPE_META[filterType].label : 'Тип расхода'} active={!!filterType} isOpen={openFilter === 'type'} onToggle={() => toggleFilter('type')}>
                             <button className={`exp-filter__opt${!filterType ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(''); setOpenFilter(null); }}>
                                 Все типы
                             </button>
@@ -1669,7 +1719,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                         <span className="exp-table__sr-only">Действия</span>
                                     </div>
                                 </div>
-                                {filtered.map(r => (<ExpenseTableRow key={r.id} req={r} onOpen={handleOpenReq} canModerate={canModerate} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} moderationBusyId={tableModerationBusyId} onApprove={handleTableApprove} onRejectClick={openTableReject} onReviseClick={openTableRevise} onPay={handleTablePay} onCloseLifecycle={handleTableCloseLifecycle} onDeleteClick={handleTableDeleteClick} isActionMenuOpen={expenseTableMenuForId === r.id} onToggleActionMenu={() => setExpenseTableMenuForId(prev => prev === r.id ? null : r.id)} onCloseActionMenu={() => setExpenseTableMenuForId(null)} partnerScope={isPartnerScope} />))}
+                                {filtered.map(r => (<ExpenseTableRow key={r.id} req={r} onOpen={handleOpenReq} canModerate={canModerate} isPaymentConfirmer={isPaymentConfirmer} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} moderationBusyId={tableModerationBusyId} onApprove={handleTableApprove} onRejectClick={openTableReject} onReviseClick={openTableRevise} onPay={handleTablePay} onCloseLifecycle={handleTableCloseLifecycle} onDeleteClick={handleTableDeleteClick} isActionMenuOpen={expenseTableMenuForId === r.id} onToggleActionMenu={() => setExpenseTableMenuForId(prev => prev === r.id ? null : r.id)} onCloseActionMenu={() => setExpenseTableMenuForId(null)} partnerScope={isPartnerScope} />))}
                             </div>
                         </div>
                         {listTotal != null && listTotal > 0 ? (<Pagination className="exp-cards-pager" page={listPage} totalCount={listTotal} pageSize={EXPENSES_LIST_PAGE_SIZE} onPageChange={setListPage} loading={listFetchPending} />) : null}
@@ -1708,20 +1758,22 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 {tableConfirm && (<ExpenseConfirmDialog isOpen title={tableConfirm.kind === 'approve'
                     ? 'Одобрить заявку?'
                     : tableConfirm.kind === 'pay'
-                        ? 'Отметить оплату?'
+                        ? 'Подтвердить возмещение?'
                         : tableConfirm.kind === 'delete'
                             ? 'Удалить заявку?'
                             : 'Подтверждение'} message={tableConfirm.kind === 'approve' ? (<>
                                 <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
                                 {tableConfirm.req.isReimbursable ? (<p className="exp-mod-dialog__sub">
-                                    После одобрения, когда компания оплатит расход, откройте заявку и нажмите «Оплачено».
+                                    После одобрения заявка уйдёт на возмещение: подтверждение оплаты выполняет назначенный сотрудник, статус станет «Ожидает возмещения».
                                 </p>) : null}
-                            </>) : tableConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">Заявка будет переведена в статус «Выплачено».</p>) : tableConfirm.kind === 'delete' ? (<p className="exp-mod-dialog__sub">
+                            </>) : tableConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">
+                                Статус станет «Возмещено». Убедитесь, что перевод на карту сотрудника выполнен.
+                            </p>) : tableConfirm.kind === 'delete' ? (<p className="exp-mod-dialog__sub">
                                 Заявка {tableConfirm.req.id} будет удалена безвозвратно вместе с вложениями.
                             </p>) : (<p className="exp-mod-dialog__sub">{tableConfirm.message}</p>)} confirmLabel={tableConfirm.kind === 'approve'
                                 ? 'Одобрить'
                                 : tableConfirm.kind === 'pay'
-                                    ? 'Оплачено'
+                                    ? expensePayActionLabel(tableConfirm.req)
                                     : tableConfirm.kind === 'delete'
                                         ? 'Удалить'
                                         : tableConfirm.confirmLabel} confirmVariant={tableConfirm.kind === 'delete' ? 'danger' : 'primary'} busy={tableModBusy} onClose={() => {
@@ -1733,9 +1785,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         {isPanelOpen && (<Suspense fallback={null}><ExpensesFormPanel isOpen mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
             setEditingReq(r);
             setRequests(prev => prev.map(x => (x.id === r.id ? r : x)));
-        }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} formScope={isPartnerScope ? 'partner' : 'company'} /></Suspense>)}
+        }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} currentUserEmail={user?.email ?? null} formScope={isPartnerScope ? 'partner' : isClientScope ? 'client' : 'company'} /></Suspense>)}
 
-        {canModerate && isReportOpen && !isPartnerScope && (<Suspense fallback={null}><ExpensesReportModal isOpen requests={requestsForUi} onClose={() => setIsReportOpen(false)} /></Suspense>)}
+        {canModerate && isReportOpen && !isPartnerScope && !isClientScope && (<Suspense fallback={null}><ExpensesReportModal isOpen requests={requestsForUi} onClose={() => setIsReportOpen(false)} /></Suspense>)}
     </div>);
 }
 

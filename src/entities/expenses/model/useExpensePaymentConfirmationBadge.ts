@@ -2,8 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCurrentUser } from '@shared/hooks';
 import { fetchExpenses } from './expensesApi';
 import { canModerateExpenseRequests } from './expenseModeration';
-
-const PAYMENT_CONFIRMER_EMAIL = 'aakhmadjonov@kostalegal.com';
+import { isExpensePaymentConfirmer } from './expensePaymentConfirmer';
 
 function formatBadge(count: number): string {
     if (count <= 0)
@@ -13,20 +12,24 @@ function formatBadge(count: number): string {
 
 export function useExpenseAttentionBadge(enabled = true): {
     payCount: number;
+    companyPayCount: number;
+    clientPayCount: number;
     moderationCount: number;
     count: number;
     badge: string;
 } {
     const { user } = useCurrentUser();
-    const [payCount, setPayCount] = useState(0);
+    const [companyPayCount, setCompanyPayCount] = useState(0);
+    const [clientPayCount, setClientPayCount] = useState(0);
     const [moderationCount, setModerationCount] = useState(0);
-    const isPaymentConfirmer = (user?.email ?? '').trim().toLowerCase() === PAYMENT_CONFIRMER_EMAIL;
+    const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email);
     const isModerator = canModerateExpenseRequests(user?.role);
     const shouldTrack = enabled && user != null && (isPaymentConfirmer || isModerator);
 
     const refresh = useCallback(async () => {
         if (!shouldTrack) {
-            setPayCount(0);
+            setCompanyPayCount(0);
+            setClientPayCount(0);
             setModerationCount(0);
             return;
         }
@@ -38,15 +41,29 @@ export function useExpenseAttentionBadge(enabled = true): {
                         status: 'approved',
                         scopeMode: 'company',
                         isReimbursable: true,
+                        excludeExpenseType: 'client_expense',
                         skip: 0,
                         limit: 1,
                     }).then((response) => {
-                        setPayCount(Math.max(0, response.total));
+                        setCompanyPayCount(Math.max(0, response.total));
+                    }),
+                );
+                jobs.push(
+                    fetchExpenses({
+                        status: 'approved',
+                        scopeMode: 'company',
+                        isReimbursable: true,
+                        expenseType: 'client_expense',
+                        skip: 0,
+                        limit: 1,
+                    }).then((response) => {
+                        setClientPayCount(Math.max(0, response.total));
                     }),
                 );
             }
             else {
-                setPayCount(0);
+                setCompanyPayCount(0);
+                setClientPayCount(0);
             }
             if (isModerator) {
                 jobs.push(
@@ -65,7 +82,8 @@ export function useExpenseAttentionBadge(enabled = true): {
             await Promise.all(jobs);
         }
         catch {
-            setPayCount(0);
+            setCompanyPayCount(0);
+            setClientPayCount(0);
             setModerationCount(0);
         }
     }, [shouldTrack, isPaymentConfirmer, isModerator]);
@@ -82,9 +100,12 @@ export function useExpenseAttentionBadge(enabled = true): {
         return () => window.removeEventListener('focus', onFocus);
     }, [refresh, shouldTrack]);
 
+    const payCount = companyPayCount + clientPayCount;
     const count = payCount + moderationCount;
     return {
         payCount,
+        companyPayCount,
+        clientPayCount,
         moderationCount,
         count,
         badge: useMemo(() => formatBadge(count), [count]),

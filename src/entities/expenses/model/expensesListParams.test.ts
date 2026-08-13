@@ -86,4 +86,26 @@ describe('buildExpensesListParams', () => {
         expect(p.expenseSubtype).toBe('partner_fuel');
         expect(p.partnerUserId).toBe(42);
     });
+
+    it('forces client_expense type for client tab', () => {
+        const p = buildExpensesListParams({
+            ...base,
+            filterPeriod: 'all',
+            scopeMode: 'company',
+            forceExpenseType: 'client_expense',
+        });
+        expect(p.expenseType).toBe('client_expense');
+        expect(p.excludeExpenseType).toBeUndefined();
+    });
+
+    it('excludes client_expense on company tab', () => {
+        const p = buildExpensesListParams({
+            ...base,
+            filterPeriod: 'all',
+            scopeMode: 'company',
+            excludeExpenseType: 'client_expense',
+        });
+        expect(p.excludeExpenseType).toBe('client_expense');
+        expect(p.expenseType).toBeUndefined();
+    });
 });

@@ -34,6 +34,10 @@ describe('routes helpers', () => {
         expect(getExpensesOpenUrl('exp/1')).toBe('/expenses/exp%2F1');
     });
 
+    it('expensesClients route exists', () => {
+        expect(routes.expensesClients).toBe('/expenses/clients');
+    });
+
     it('getInvoiceCreateUrl и getInvoiceDetailUrl', () => {
         expect(getInvoiceCreateUrl()).toBe(routes.timeTrackingInvoiceCreate);
         expect(getInvoiceCreateUrl({ resume: true })).toBe(`${routes.timeTrackingInvoiceCreate}?resume=1`);

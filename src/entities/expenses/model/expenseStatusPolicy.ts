@@ -1,6 +1,12 @@
 import { canAccessAdminOnlyModules } from '@shared/lib/orgRoles';
 import { canModerateExpenseRequests } from './expenseModeration';
 import type { ExpenseRequest, ExpenseStatus } from './types';
+
+export type ExpensePayActionOpts = {
+    /** Only the designated payment confirmer may mark reimbursable expenses as paid. */
+    isPaymentConfirmer?: boolean;
+};
+
 export function resolveExpensePanelMode(status: ExpenseStatus): 'edit' | 'view' {
     return status === 'draft' || status === 'revision_required' ? 'edit' : 'view';
 }
@@ -34,10 +40,23 @@ export function showOwnPendingModerationBlockedHint(expense: ExpenseRequest, can
         return false;
     return expense.status === 'pending_approval' && canModerate && blockedForOwn;
 }
-export function showPayExpenseAction(expense: ExpenseRequest, blockedForOwn: boolean): boolean {
+
+/**
+ * Reimbursable payout: approved → confirmer marks «Возмещено» (paid).
+ * Non-reimbursable expenses use close / «Не оплачено», not pay.
+ */
+export function showPayExpenseAction(
+    expense: ExpenseRequest,
+    blockedForOwn: boolean,
+    opts?: ExpensePayActionOpts,
+): boolean {
     if (blockedForOwn)
         return false;
-    return expense.status === 'approved';
+    if (expense.status !== 'approved')
+        return false;
+    if (!expense.isReimbursable)
+        return false;
+    return Boolean(opts?.isPaymentConfirmer);
 }
 export type CloseExpenseUi = {
     label: string;
@@ -92,8 +111,15 @@ export function showDeleteExpenseAction(expense: ExpenseRequest, currentUserId: 
         return false;
     return DELETE_AUTHOR_STATUSES.has(expense.status);
 }
-export function showLifecycleModerationRow(expense: ExpenseRequest, canModerate: boolean, blockedForOwn: boolean): boolean {
-    if (!canModerate || blockedForOwn)
+export function showLifecycleModerationRow(
+    expense: ExpenseRequest,
+    canModerate: boolean,
+    blockedForOwn: boolean,
+    opts?: ExpensePayActionOpts,
+): boolean {
+    if (blockedForOwn)
         return false;
-    return showPayExpenseAction(expense, false) || getCloseExpenseUi(expense, false) != null;
+    const canPay = showPayExpenseAction(expense, false, opts);
+    const closeUi = canModerate ? getCloseExpenseUi(expense, false) : null;
+    return canPay || closeUi != null;
 }
