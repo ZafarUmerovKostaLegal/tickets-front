@@ -240,7 +240,7 @@ function ExpenseTableRow({ req, onOpen, canModerate, currentUserId, currentUserR
     const usdTitle = equivUsd > 0 && rate > 0
         ? `Курс: ${rate.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 4 })} UZS за 1 USD`
         : undefined;
-    return (<div className="exp-table__row" role="row" onClick={() => onOpen(req)}>
+    return (<div className={`exp-table__row exp-table__row--${req.status}`} role="row" onClick={() => onOpen(req)}>
         <div className="exp-table__td exp-table__td--num" role="cell">
             <span className="exp-table__num">{req.id}</span>
         </div>
