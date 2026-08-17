@@ -44,8 +44,7 @@ export function computePortalDropdownBox(
     const obstacle = opts?.obstacleBottom ?? vh;
     const spaceBelow = obstacle - trigger.bottom - MARGIN;
     const spaceAbove = trigger.top - MARGIN;
-    const inLowerBand = trigger.bottom > vh * 0.48;
-    const openAbove = (inLowerBand || spaceBelow < MIN_MENU) && spaceAbove >= 80;
+    const openAbove = spaceBelow < MIN_MENU && spaceAbove > spaceBelow && spaceAbove >= 80;
 
     if (openAbove) {
         return {

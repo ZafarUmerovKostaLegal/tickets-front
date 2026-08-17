@@ -15,14 +15,15 @@ describe('computePortalDropdownBox', () => {
         expect(box.maxH).toBeGreaterThan(200);
     });
 
-    it('opens upward for triggers in the lower half of the viewport', () => {
+    it('opens downward when there is room below', () => {
         const box = computePortalDropdownBox(
             { top: 500, bottom: 528, left: 40, width: 180 },
             viewport,
             { minWidth: 220 },
         );
-        expect(box.top).toBeUndefined();
-        expect(box.bottom).toBeDefined();
+        expect(box.top).toBeGreaterThan(528);
+        expect(box.bottom).toBeUndefined();
+        expect(box.maxH).toBeGreaterThan(200);
     });
 
     it('opens downward when there is room below in the upper half', () => {

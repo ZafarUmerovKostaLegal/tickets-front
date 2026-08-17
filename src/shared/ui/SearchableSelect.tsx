@@ -486,8 +486,9 @@ function SearchableSelectInner<T>({
                     onKeyDown={onDropdownKeyDown}
                     style={{
                         position: 'fixed',
-                        ...(portalBox.top != null ? { top: portalBox.top } : {}),
-                        ...(portalBox.bottom != null ? { bottom: portalBox.bottom } : {}),
+                        top: portalBox.top ?? 'auto',
+                        bottom: portalBox.bottom ?? 'auto',
+                        right: 'auto',
                         left: portalBox.left,
                         width: portalBox.width,
                         zIndex: portalZIndex,
