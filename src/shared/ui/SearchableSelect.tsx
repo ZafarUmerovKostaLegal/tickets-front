@@ -14,6 +14,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import './SearchableSelect.css';
+import { computePortalDropdownBox, readViewportBottomObstacle } from './searchableSelectPlacement';
 
 export type SearchableSelectRef = {
     focusTrigger: () => void;
@@ -215,40 +216,14 @@ function SearchableSelectInner<T>({
             if (typeof window === 'undefined')
                 return;
             const r = el.getBoundingClientRect();
-            const minW = portalMinWidth ?? 300;
-            const w = Math.max(r.width, minW);
-            const maxW = Math.max(0, window.innerWidth - 16);
-            const width = maxW > 0 ? Math.min(w, maxW) : w;
-            let left = r.left;
-            if (maxW > 0) {
-                const rightEdge = r.left + width;
-                if (rightEdge > window.innerWidth - 8)
-                    left = Math.max(8, window.innerWidth - 8 - width);
-            }
-            const margin = 8;
-            const gap = 4;
-            // Reserve room for sticky page docks / footers so lists near the bottom flip up.
-            const bottomInset = 88;
-            const spaceBelow = window.innerHeight - r.bottom - margin - bottomInset;
-            const spaceAbove = r.top - margin;
-            const minFlip = 220;
-            const openAbove = spaceBelow < minFlip && spaceAbove > spaceBelow;
-            let top: number | undefined;
-            let bottom: number | undefined;
-            let maxH: number;
-            const minMenu = 220;
-            if (openAbove) {
-                bottom = window.innerHeight - r.top + gap;
-                top = undefined;
-                maxH = Math.max(minMenu, r.top - margin - gap);
-            }
-            else {
-                top = r.bottom + gap;
-                bottom = undefined;
-                maxH = Math.max(minMenu, Math.min(spaceBelow + bottomInset - gap, window.innerHeight - top - margin));
-            }
-            maxH = Math.min(maxH, Math.max(80, window.innerHeight - 16));
-            setPortalBox({ top, bottom, left, width, maxH });
+            setPortalBox(computePortalDropdownBox(
+                { top: r.top, bottom: r.bottom, left: r.left, width: r.width },
+                { width: window.innerWidth, height: window.innerHeight },
+                {
+                    minWidth: portalMinWidth ?? 300,
+                    obstacleBottom: readViewportBottomObstacle(r.bottom),
+                },
+            ));
         };
         update();
         window.addEventListener('resize', update);

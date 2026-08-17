@@ -898,7 +898,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
               <div className="tt-rp-mtable__emp-cell">
                 {r.isSessionCopy ? <SessionCopyMark row={r} /> : null}
-                <SearchableSelect<PartnerEmployeeSelectItem> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Сотрудник, строка ${i + 1}`} placeholder={items.length === 0 ? 'Нет участников с доступом к проекту' : 'Выберите сотрудника…'} emptyListText="Нет в списке" noMatchText="Не найдено" value={value} items={items} getOptionValue={(o) => o.id} getOptionLabel={(o) => (o.position ? `${o.label} (${o.position})` : o.label)} getSearchText={(o) => o.search} disabled={wk} onSelect={(o) => {
+                <SearchableSelect<PartnerEmployeeSelectItem> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} portalDropdownClassName="tsp-srch__dropdown--tall" className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Сотрудник, строка ${i + 1}`} placeholder={items.length === 0 ? 'Нет участников с доступом к проекту' : 'Выберите сотрудника…'} emptyListText="Нет в списке" noMatchText="Не найдено" value={value} items={items} getOptionValue={(o) => o.id} getOptionLabel={(o) => (o.position ? `${o.label} (${o.position})` : o.label)} getSearchText={(o) => o.search} disabled={wk} onSelect={(o) => {
                     const id = Number(o.id);
                     if (!Number.isFinite(id))
                         return;
@@ -1202,6 +1202,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             <SearchableSelect<LabeledOption>
                 portalDropdown
                 portalZIndex={TT_RP_SELECT_PORTAL_Z}
+                portalDropdownClassName="tsp-srch__dropdown--tall"
                 className="tt-rp-mtable__srch"
                 buttonClassName="tt-rp-mtable__srch-btn"
                 aria-label={`Задача, ${r.userName}`}
