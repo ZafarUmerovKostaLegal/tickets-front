@@ -1341,10 +1341,11 @@ export function ReportPreviewPage() {
             bumpEditHistory();
             activeTimeRowKeyRef.current = newRow.rowKey;
             setTimeExcelRows((prev) => {
-                const next = [...prev, newRow];
+                const next = [...prev, { ...newRow, isSessionCopy: true }];
                 timeExcelRowsRef.current = next;
                 return next;
             });
+            flashRestoredRow(newRow.rowKey);
             setTimeEntrySaveUI('saved');
             setTimeEntrySaveMessage('Запись продублирована');
             setTimeout(() => {
@@ -1364,7 +1365,7 @@ export function ReportPreviewPage() {
         finally {
             setTimeEntryActionPendingRowKey(null);
         }
-    }, [canOverrideWeeklyLock, rangeFrom, rangeTo, showAlert, bumpEditHistory]);
+    }, [canOverrideWeeklyLock, flashRestoredRow, rangeFrom, rangeTo, showAlert, bumpEditHistory]);
     const undoLastTimeEdit = useCallback(async () => {
         if (undoBusyRef.current)
             return;

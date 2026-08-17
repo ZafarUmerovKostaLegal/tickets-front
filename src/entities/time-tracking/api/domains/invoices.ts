@@ -441,12 +441,16 @@ export async function ensureInvoiceFxRatesForBilling(opts: {
     dateFrom?: string | null;
     dateTo?: string | null;
     issueDate?: string | null;
+    /** Extra rate dates (e.g. last day of previous month for custom-billed FX). */
+    extraDates?: readonly string[] | null;
     expenseDates?: readonly string[] | null;
     currency?: string | null;
 }): Promise<void> {
     const dates = [...new Set([
         opts.dateFrom,
         opts.dateTo,
+        opts.issueDate,
+        ...(opts.extraDates ?? []),
         ...(opts.expenseDates ?? []),
     ]
         .map((d) => String(d ?? '').trim().slice(0, 10))

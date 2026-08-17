@@ -54,6 +54,13 @@ const AMOUNT_RECALC_PATCH_KEYS: (keyof TimeExcelPreviewRow)[] = [
 export function applyTimePreviewRowPatch(row: TimeExcelPreviewRow, patch: Partial<TimeExcelPreviewRow>, allRows: TimeExcelPreviewRow[]): TimeExcelPreviewRow {
     const prevAuth = row.authUserId;
     const merged: TimeExcelPreviewRow = { ...row, ...patch };
+    // Any real edit clears the «Копия» session badge (scope color alone does not count).
+    if (row.isSessionCopy) {
+        const keys = Object.keys(patch) as (keyof TimeExcelPreviewRow)[];
+        const contentEdit = keys.some((k) => k !== 'isSessionCopy' && k !== 'scopeColor');
+        if (contentEdit)
+            merged.isSessionCopy = false;
+    }
     const authChanged = patch.authUserId != null && patch.authUserId !== prevAuth;
     const rateExplicitlyPatched = patch.billableRate != null && Number.isFinite(patch.billableRate);
     if (authChanged && !rateExplicitlyPatched) {

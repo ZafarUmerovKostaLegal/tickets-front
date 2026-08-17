@@ -43,6 +43,9 @@ export type TimeExcelPreviewRow = {
     isVoided: boolean;
 
     voidKind: 'rejected' | 'reallocated' | null;
+
+    /** Session-only: row just created via «Дублировать», until the user edits it. */
+    isSessionCopy?: boolean;
 };
 export type ExpenseExcelPreviewRow = {
     rowKey: string;

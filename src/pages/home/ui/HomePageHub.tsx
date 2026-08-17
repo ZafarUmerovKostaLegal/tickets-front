@@ -8,6 +8,12 @@ export function HomePageHub() {
     const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
+        // Modals elsewhere may leave body overflow locked; hub must always scroll.
+        document.body.style.overflow = '';
+        document.documentElement.style.overflow = '';
+    }, []);
+
+    useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey)
                 return;

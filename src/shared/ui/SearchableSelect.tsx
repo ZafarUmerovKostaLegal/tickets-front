@@ -227,9 +227,11 @@ function SearchableSelectInner<T>({
             }
             const margin = 8;
             const gap = 4;
-            const spaceBelow = window.innerHeight - r.bottom - margin;
+            // Reserve room for sticky page docks / footers so lists near the bottom flip up.
+            const bottomInset = 88;
+            const spaceBelow = window.innerHeight - r.bottom - margin - bottomInset;
             const spaceAbove = r.top - margin;
-            const minFlip = 120;
+            const minFlip = 140;
             const openAbove = spaceBelow < minFlip && spaceAbove > spaceBelow;
             let top: number | undefined;
             let bottom: number | undefined;
@@ -242,7 +244,8 @@ function SearchableSelectInner<T>({
             else {
                 top = r.bottom + gap;
                 bottom = undefined;
-                maxH = Math.max(80, spaceBelow - gap);
+                // Cap height so the menu does not sit under a sticky footer band.
+                maxH = Math.max(80, Math.min(spaceBelow + bottomInset - gap, window.innerHeight - top - margin));
             }
             setPortalBox({ top, bottom, left, width, maxH });
         };

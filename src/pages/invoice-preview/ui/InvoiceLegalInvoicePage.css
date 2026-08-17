@@ -287,6 +287,15 @@
   font-weight: 700;
 }
 
+.tt-inv-li__total-line--fx .tt-inv-li__total-label,
+.tt-inv-li__total-fx {
+  font-weight: 600;
+  color: #64748b;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
 .tt-inv-li__total-due-label {
   font-size: inherit;
   font-weight: 700;

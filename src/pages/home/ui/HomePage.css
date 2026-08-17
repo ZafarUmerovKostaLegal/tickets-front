@@ -2594,11 +2594,13 @@
 
 .home-page--hub {
   min-height: 100dvh;
+  height: auto;
   width: 100%;
   max-width: none;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  overflow: visible;
   background: #f5f6f8;
   --hub-divider: #e8eaee;
   --hub-heading: #1a1f2e;
@@ -2614,10 +2616,12 @@ body[data-theme='dark'] .home-page--hub {
 }
 
 .home-page__main--hub {
-  flex: 1;
-  min-height: 0;
+  /* Grow with tiles; do not use min-height:0 — that clips content without a scrollport */
+  flex: 1 0 auto;
+  min-height: auto;
   width: 100%;
   max-width: none;
+  overflow: visible;
   background: transparent;
 }
 
@@ -2626,7 +2630,7 @@ body[data-theme='dark'] .home-page__main--hub {
 }
 
 .home-page__main-inner--hub {
-  flex: 1;
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -2634,7 +2638,8 @@ body[data-theme='dark'] .home-page__main--hub {
   width: 100%;
   max-width: none;
   margin: 0;
-  min-height: 0;
+  min-height: auto;
+  overflow: visible;
   padding: 0.875rem max(0.75rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)))
     max(1rem, calc(var(--mob-safe-bottom, env(safe-area-inset-bottom, 0px)) + 0.35rem))
     max(0.75rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)));

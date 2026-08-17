@@ -17,6 +17,8 @@ export type LegalInvoiceLabels = {
     subtotal: string;
     vat: string;
     extraExpenses: string;
+    exchangeRate: string;
+    exchangeRateValue: (base: string, rate: string, quote: string) => string;
     totalDueBy: (dueBanner: string) => string;
     totalDueByPrefix: string;
     thanks: string;
@@ -45,6 +47,8 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         subtotal: 'SUBTOTAL',
         vat: 'VAT',
         extraExpenses: 'EXTRA EXPENSES',
+        exchangeRate: 'EXCHANGE RATE',
+        exchangeRateValue: (base, rate, quote) => `1 ${base} = ${rate} ${quote}`,
         totalDueBy: (due) => `TOTAL DUE BY ${due}`,
         totalDueByPrefix: 'TOTAL DUE BY',
         thanks: 'Thank you for your business!',
@@ -75,6 +79,8 @@ const LABELS: Record<InvoiceCoverLanguage, LegalInvoiceLabels> = {
         subtotal: 'ПРОМЕЖУТОЧНЫЙ ИТОГ',
         vat: 'НДС',
         extraExpenses: 'ДОП. РАСХОДЫ',
+        exchangeRate: 'КУС',
+        exchangeRateValue: (base, rate, quote) => `1 ${base} = ${rate} ${quote}`,
         totalDueBy: (due) => `ИТОГО К ОПЛАТЕ ДО ${due}`,
         totalDueByPrefix: 'ИТОГО К ОПЛАТЕ ДО',
         thanks: 'Благодарим за сотрудничество!',

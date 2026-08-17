@@ -27,6 +27,10 @@ import {
     invoicePreviewPageCount,
     type InvoiceLegalPageOverrides,
 } from './invoiceLegalPageModel';
+import {
+    formatLegalExchangeRateValue,
+    formatLegalTotalWithFxAlt,
+} from './invoiceLegalFxDisplay';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { COVER_LETTERHEAD_LOGO_ASPECT, LEGAL_VERT_LOGO_ASPECT, rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
@@ -1192,6 +1196,8 @@ function drawLegalInvoicePdfPage(
     const cur = packCurrencyCode(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
+    const totalWithFx = formatLegalTotalWithFxAlt(model.totalFormatted, legalOverrides);
+    const exchangeRateValue = formatLegalExchangeRateValue(legalOverrides, model.coverLanguage);
 
     const contentW = W - ML - MR;
     let y = H - MT;
@@ -1338,8 +1344,8 @@ function drawLegalInvoicePdfPage(
         page.drawText(ln, { x: ML + 5, y: svcY, size: DOC_FS, font, color: BODY });
         svcY -= DOC_LH;
     }
-    const totW = fontBold.widthOfTextAtSize(model.totalFormatted, DOC_FS);
-    page.drawText(model.totalFormatted, {
+    const totW = fontBold.widthOfTextAtSize(totalWithFx, DOC_FS);
+    page.drawText(totalWithFx, {
         x: ML + contentW - 6 - totW,
         y: yRowTop - rowPad - DOC_FS,
         size: DOC_FS,
@@ -1351,7 +1357,13 @@ function drawLegalInvoicePdfPage(
 
     const rightX = ML + contentW;
     const valueGap = 12;
-    const totalsValues = [model.totalFormatted, vatAmount, extraExpensesAmount, model.totalFormatted];
+    const totalsValues = [
+        totalWithFx,
+        vatAmount,
+        extraExpensesAmount,
+        totalWithFx,
+        ...(exchangeRateValue ? [exchangeRateValue] : []),
+    ];
     const maxValW = Math.max(
         ...totalsValues.map((v) => fontBold.widthOfTextAtSize(v, DOC_FS)),
         fontBold.widthOfTextAtSize('EUR 0.00', DOC_FS),
@@ -1390,10 +1402,12 @@ function drawLegalInvoicePdfPage(
         y -= blockH + (due ? 3 : 1);
     };
 
-    drawTotalRow(labels.subtotal, model.totalFormatted);
+    drawTotalRow(labels.subtotal, totalWithFx);
     drawTotalRow(labels.vat, vatAmount);
     drawTotalRow(labels.extraExpenses, extraExpensesAmount);
-    drawTotalRow(labels.totalDueBy(dueBanner), model.totalFormatted, true);
+    if (exchangeRateValue)
+        drawTotalRow(labels.exchangeRate, exchangeRateValue);
+    drawTotalRow(labels.totalDueBy(dueBanner), totalWithFx, true);
     y -= DOC_LH * 3.1;
 
     const thanks = labels.thanks;

@@ -28,6 +28,14 @@ export type InvoiceLegalPageOverrides = {
     dueDateDisplay?: string | null;
     vatAmount?: string | null;
     extraExpensesAmount?: string | null;
+    /** Dual-total alt amount, e.g. ``USD 2,000.00`` next to UZS primary (custom billed). */
+    fxAltAmountFormatted?: string | null;
+    /** CBU rate used for custom billed dual total (``1 fxBase = fxRate fxQuote``). */
+    fxRate?: string | null;
+    fxBaseCurrency?: string | null;
+    fxQuoteCurrency?: string | null;
+    /** ISO date the CBU rate was taken for (usually last day of previous month). */
+    fxRateDate?: string | null;
     firmAddress?: string | null;
     tin?: string | null;
     bankName?: string | null;

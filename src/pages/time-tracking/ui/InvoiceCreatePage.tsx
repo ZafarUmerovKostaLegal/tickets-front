@@ -25,12 +25,15 @@ import {
   writeInvoicePreviewSession,
   readInvoicePreviewSession,
   isInvoicePreviewSessionCreate,
+  TIME_TRACKING_PROJECT_CURRENCIES,
   type TimeManagerClientRow,
   type TimeManagerClientProjectRow,
+  type TimeManagerProjectCurrency,
   type UnbilledTimeEntryDto,
   type UnbilledExpenseEntryDto,
   type PartnerReportConfirmationRequest,
 } from '@entities/time-tracking';
+import { fetchCbuParsedForDate, foreignUnitsPerUsd } from '@entities/expenses/model/cbuRates';
 import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
 import { loadSnapshotRowsForPartnerExcel } from '@entities/time-tracking/lib/exportPartnerConfirmedSnapshotExcel';
 import { formatHM } from '@shared/lib/formatTrackingHours';
@@ -38,6 +41,7 @@ import {
   addDaysIso,
   firstOfMonthIso,
   fmtMoney,
+  lastDayOfPreviousMonthIso,
   lastOfMonthIso,
   notifyReportsInvalidated,
   todayIso,
@@ -111,6 +115,10 @@ export function InvoiceCreatePage() {
   const [customBilledEnabled, setCustomBilledEnabled] = useState(false);
   const [customBilledAmount, setCustomBilledAmount] = useState('');
   const [customBilledDescription, setCustomBilledDescription] = useState('');
+  const [customBilledCurrency, setCustomBilledCurrency] = useState<TimeManagerProjectCurrency>('USD');
+  const [customBilledFxLoading, setCustomBilledFxLoading] = useState(false);
+  const [customBilledFxError, setCustomBilledFxError] = useState<string | null>(null);
+  const [customBilledFxHint, setCustomBilledFxHint] = useState<string | null>(null);
 
   /** All clients that have at least one active project. */
   const clientsForCreate = useMemo(
@@ -136,6 +144,15 @@ export function InvoiceCreatePage() {
     const row = clients.find((c) => c.id === createClientId);
     return String(row?.currency ?? 'USD').trim().toUpperCase() || 'USD';
   }, [clients, createClientId, selectedProject]);
+  const effectiveInvoiceCurrency = customBilledEnabled ? customBilledCurrency : invoiceCurrency;
+  const customBilledFxRateDate = useMemo(
+    () => lastDayOfPreviousMonthIso(issueDate),
+    [issueDate],
+  );
+  const currencySelectItems = useMemo(
+    () => TIME_TRACKING_PROJECT_CURRENCIES.map((c) => ({ id: c, label: c, search: c })),
+    [],
+  );
   const workedTimeTotal = useMemo(() => {
     return unbilledTime
       .filter((x) => selTime.has(x.id))
@@ -158,23 +175,98 @@ export function InvoiceCreatePage() {
   }, [locale, unbilledTo, issueDate]);
   const enableCustomBilled = useCallback((on: boolean) => {
     setCustomBilledEnabled(on);
-    if (!on)
+    if (!on) {
+      setCustomBilledFxHint(null);
+      setCustomBilledFxError(null);
       return;
-    const prefill = workedTimeCurrency === invoiceCurrency
-      ? workedTimeTotal
-      : workedTimeTotal;
+    }
+    const baseCur = TIME_TRACKING_PROJECT_CURRENCIES.includes(invoiceCurrency as TimeManagerProjectCurrency)
+      ? (invoiceCurrency as TimeManagerProjectCurrency)
+      : 'USD';
+    setCustomBilledCurrency(baseCur);
+    const prefill = workedTimeTotal;
     if (!customBilledAmount.trim() && prefill > 0)
       setCustomBilledAmount(String(Math.round(prefill * 100) / 100));
     if (!customBilledDescription.trim())
       setCustomBilledDescription(defaultServiceDescription());
   }, [
     workedTimeTotal,
-    workedTimeCurrency,
     invoiceCurrency,
     customBilledAmount,
     customBilledDescription,
     defaultServiceDescription,
   ]);
+
+  useEffect(() => {
+    if (!customBilledEnabled) {
+      setCustomBilledFxHint(null);
+      setCustomBilledFxError(null);
+      setCustomBilledFxLoading(false);
+      return;
+    }
+    const rateDate = customBilledFxRateDate;
+    const ccy = customBilledCurrency;
+    if (!rateDate) {
+      setCustomBilledFxHint(null);
+      setCustomBilledFxError(t('timeTrackingPage.invoices.createDialog.customBilledFxDateInvalid'));
+      return;
+    }
+    let cancelled = false;
+    setCustomBilledFxLoading(true);
+    setCustomBilledFxError(null);
+    void fetchCbuParsedForDate(rateDate)
+      .then((parsed) => {
+        if (cancelled)
+          return;
+        if (ccy === 'USD') {
+          const uzs = parsed.uzsPerUsd;
+          setCustomBilledFxHint(
+            t('timeTrackingPage.invoices.createDialog.customBilledFxHintUsd')
+              .replace('{rate}', uzs.toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 4 }))
+              .replace('{date}', rateDate.split('-').reverse().join('.')),
+          );
+          return;
+        }
+        if (ccy === 'UZS') {
+          setCustomBilledFxHint(
+            t('timeTrackingPage.invoices.createDialog.customBilledFxHintUzs')
+              .replace('{date}', rateDate.split('-').reverse().join('.')),
+          );
+          return;
+        }
+        const units = foreignUnitsPerUsd(parsed, ccy);
+        const uzsPer = parsed.uzsPerUnit.get(ccy);
+        if (units == null || !(units > 0) || uzsPer == null || !(uzsPer > 0)) {
+          setCustomBilledFxHint(null);
+          setCustomBilledFxError(
+            t('timeTrackingPage.invoices.createDialog.customBilledFxMissing')
+              .replace('{currency}', ccy)
+              .replace('{date}', rateDate.split('-').reverse().join('.')),
+          );
+          return;
+        }
+        setCustomBilledFxHint(
+          t('timeTrackingPage.invoices.createDialog.customBilledFxHint')
+            .replace('{currency}', ccy)
+            .replace('{uzs}', uzsPer.toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 4 }))
+            .replace('{perUsd}', units.toLocaleString(locale === 'ru' ? 'ru-RU' : 'en-US', { maximumFractionDigits: 6 }))
+            .replace('{date}', rateDate.split('-').reverse().join('.')),
+        );
+      })
+      .catch((e) => {
+        if (cancelled)
+          return;
+        setCustomBilledFxHint(null);
+        setCustomBilledFxError(e instanceof Error ? e.message : t('timeTrackingPage.invoices.createDialog.customBilledFxFailed'));
+      })
+      .finally(() => {
+        if (!cancelled)
+          setCustomBilledFxLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customBilledEnabled, customBilledCurrency, customBilledFxRateDate, locale, t]);
   const selectedProjectHasConfirmed = useMemo(() => {
     const pid = createProjectId.trim();
     return pid !== '' && confirmedProjectIdsForCreate.has(pid);
@@ -639,19 +731,24 @@ export function InvoiceCreatePage() {
     setCreateBusy(true);
     try {
       const manualNumber = createInvoiceNumber.trim();
-      // Invoice currency follows the project (billing currency), not the client default.
+      // Custom billed: selected currency; otherwise project → client.
       const projectCur = String(selectedProject?.currency ?? '').trim().toUpperCase();
       const clientCur = String(clients.find((c) => c.id === createClientId)?.currency ?? '').trim().toUpperCase();
-      const currency = projectCur || clientCur || undefined;
+      const currency = customBilledEnabled
+        ? customBilledCurrency
+        : (projectCur || clientCur || undefined);
       const expenseDates = unbilledExp
         .filter((x) => selExp.has(x.id))
         .map((x) => String(x.expenseDate ?? '').trim().slice(0, 10))
         .filter(Boolean);
-      if (closingReportLines) {
+      const prevMonthEnd = customBilledEnabled ? lastDayOfPreviousMonthIso(issueDate) : null;
+      if (closingReportLines || customBilledEnabled) {
         await ensureInvoiceFxRatesForBilling({
-          dateFrom: unbilledFrom,
-          dateTo: unbilledTo,
-          expenseDates,
+          dateFrom: closingReportLines ? unbilledFrom : undefined,
+          dateTo: closingReportLines ? unbilledTo : undefined,
+          issueDate,
+          expenseDates: closingReportLines ? expenseDates : undefined,
+          extraDates: prevMonthEnd ? [prevMonthEnd] : undefined,
           currency,
         });
       }
@@ -727,6 +824,7 @@ export function InvoiceCreatePage() {
     customBilledEnabled,
     customBilledAmount,
     customBilledDescription,
+    customBilledCurrency,
   ]);
 
   const toInvoices = () => {
@@ -1136,10 +1234,6 @@ export function InvoiceCreatePage() {
                     <div className="tt-inv-dialog__field">
                       <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-amount">
                         {t('timeTrackingPage.invoices.createDialog.customBilledAmount')}
-                        {' '}
-                        (
-                        {invoiceCurrency}
-                        )
                       </label>
                       <input
                         id="tt-inv-custom-billed-amount"
@@ -1152,6 +1246,35 @@ export function InvoiceCreatePage() {
                       />
                     </div>
                     <div className="tt-inv-dialog__field">
+                      <label className="tt-inv-dialog__label" id="tt-inv-custom-billed-ccy-lbl">
+                        {t('timeTrackingPage.invoices.createDialog.customBilledCurrency')}
+                      </label>
+                      <SearchableSelect<{ id: string; label: string; search: string }>
+                        className="tsp-srch tt-inv-dialog-searchable"
+                        buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn"
+                        buttonId="tt-inv-custom-billed-ccy"
+                        portalDropdown
+                        portalZIndex={12050}
+                        portalMinWidth={220}
+                        value={customBilledCurrency}
+                        items={currencySelectItems}
+                        getOptionValue={(o) => o.id}
+                        getOptionLabel={(o) => o.label}
+                        getSearchText={(o) => o.search}
+                        onSelect={(o) => {
+                          const next = TIME_TRACKING_PROJECT_CURRENCIES.includes(o.id as TimeManagerProjectCurrency)
+                            ? (o.id as TimeManagerProjectCurrency)
+                            : 'USD';
+                          setCustomBilledCurrency(next);
+                        }}
+                        placeholder={t('timeTrackingPage.invoices.createDialog.customBilledCurrencyPlaceholder')}
+                        emptyListText={t('timeTrackingPage.projects.modal.noCurrencies')}
+                        noMatchText={t('timeTrackingPage.common.notFound')}
+                        disabled={createBusy}
+                        aria-labelledby="tt-inv-custom-billed-ccy-lbl"
+                      />
+                    </div>
+                    <div className="tt-inv-dialog__field" style={{ gridColumn: '1 / -1' }}>
                       <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-desc">
                         {t('timeTrackingPage.invoices.createDialog.customBilledDescription')}
                       </label>
@@ -1164,6 +1287,15 @@ export function InvoiceCreatePage() {
                         disabled={createBusy}
                       />
                     </div>
+                    <p className="tt-inv-page__section-desc" style={{ gridColumn: '1 / -1', margin: 0 }} role="status">
+                      {customBilledFxLoading
+                        ? t('timeTrackingPage.invoices.createDialog.customBilledFxLoading')
+                        : customBilledFxError
+                          ? customBilledFxError
+                          : (customBilledFxHint ?? t('timeTrackingPage.invoices.createDialog.customBilledFxRule')
+                            .replace('{currency}', effectiveInvoiceCurrency)
+                            .replace('{date}', (customBilledFxRateDate ?? '').split('-').reverse().join('.') || '—'))}
+                    </p>
                   </div>
                 ) : null}
               </section>

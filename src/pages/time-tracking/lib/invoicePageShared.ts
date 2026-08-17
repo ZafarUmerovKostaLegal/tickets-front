@@ -322,6 +322,20 @@ export function lastOfMonthIso(): string {
   return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
 }
 
+/** Last calendar day of the month before `isoDate` (YYYY-MM-DD). Used for custom-billed FX. */
+export function lastDayOfPreviousMonthIso(isoDate: string): string | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(isoDate ?? '').trim().slice(0, 10));
+  if (!m)
+    return null;
+  const y = Number(m[1]);
+  const month = Number(m[2]); // 1–12
+  if (!Number.isFinite(y) || month < 1 || month > 12)
+    return null;
+  // Day 0 of current month = last day of previous month (local calendar, no TZ shift).
+  const last = new Date(y, month - 1, 0);
+  return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
+}
+
 export function notifyReportsInvalidated() {
   window.dispatchEvent(new Event('tt-reports-invalidate'));
 }

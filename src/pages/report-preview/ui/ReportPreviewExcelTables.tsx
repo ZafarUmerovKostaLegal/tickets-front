@@ -13,6 +13,9 @@ import { syncTextareaHeightToContent } from '@shared/lib/syncTextareaHeight';
 import { fmtAmtWithIso } from '@entities/time-tracking/lib/reportsFormatUtils';
 import { DecimalDurationInput } from './DecimalDurationInput';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
+
+/** Above `.tt-rp-mtable-wrap--fullscreen` (12000) and dock so bottom-row menus stay visible. */
+const TT_RP_SELECT_PORTAL_Z = 15000;
 import { PREVIEW_CATEGORY_OPTIONS, PREVIEW_TASK_OPTIONS, } from '../lib/previewFormOptions';
 import {
     computeTimePreviewRowAmountToPay,
@@ -86,6 +89,9 @@ function timeEntryVoidTrModifier(r: TimeExcelPreviewRow): string {
 }
 function timeEntryDuplicateTrModifier(isDuplicate: boolean): string {
     return isDuplicate ? ' tt-rp-mtable__tr--duplicate' : '';
+}
+function timeEntrySessionCopyTrModifier(r: TimeExcelPreviewRow): string {
+    return r.isSessionCopy ? ' tt-rp-mtable__tr--session-copy' : '';
 }
 function timePreviewRowsForTotals(displayRows: TimeExcelPreviewRow[]): TimeExcelPreviewRow[] {
     return timePreviewRowsForPageExport(displayRows);
@@ -857,7 +863,13 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             const selId = String(r.authUserId);
             const value = items.some((x) => x.id === selId) ? selId : '';
             return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
-              <SearchableSelect<PartnerEmployeeSelectItem> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Сотрудник, строка ${i + 1}`} placeholder={items.length === 0 ? 'Нет участников с доступом к проекту' : 'Выберите сотрудника…'} emptyListText="Нет в списке" noMatchText="Не найдено" value={value} items={items} getOptionValue={(o) => o.id} getOptionLabel={(o) => (o.position ? `${o.label} (${o.position})` : o.label)} getSearchText={(o) => o.search} disabled={wk} onSelect={(o) => {
+              <div className="tt-rp-mtable__emp-cell">
+                {r.isSessionCopy ? (
+                  <span className="tt-rp-mtable__copy-badge" title="Копия, созданная в этой сессии. Бейдж исчезнет после изменения данных строки.">
+                    Копия
+                  </span>
+                ) : null}
+                <SearchableSelect<PartnerEmployeeSelectItem> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Сотрудник, строка ${i + 1}`} placeholder={items.length === 0 ? 'Нет участников с доступом к проекту' : 'Выберите сотрудника…'} emptyListText="Нет в списке" noMatchText="Не найдено" value={value} items={items} getOptionValue={(o) => o.id} getOptionLabel={(o) => (o.position ? `${o.label} (${o.position})` : o.label)} getSearchText={(o) => o.search} disabled={wk} onSelect={(o) => {
                     const id = Number(o.id);
                     if (!Number.isFinite(id))
                         return;
@@ -868,13 +880,21 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                         employeePosition: o.position,
                     });
                 }}/>
+              </div>
             </td>);
         }
         return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
-          <input className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="text" value={r.employeeName} onChange={(e) => {
+          <div className="tt-rp-mtable__emp-cell">
+            {r.isSessionCopy ? (
+              <span className="tt-rp-mtable__copy-badge" title="Копия, созданная в этой сессии. Бейдж исчезнет после изменения данных строки.">
+                Копия
+              </span>
+            ) : null}
+            <input className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="text" value={r.employeeName} onChange={(e) => {
                 const v = e.target.value;
                 onPatch(r.rowKey, { employeeName: v, userName: v });
             }} disabled={wk} aria-label={`Сотрудник, строка ${i + 1}`}/>
+          </div>
         </td>);
     };
     const briefDisplayRows = useMemo(() => {
@@ -977,7 +997,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
         const scopeColor = parseScopeHexColor(r.scopeColor);
         const hasScopeColor = Boolean(scopeColor);
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor! } : undefined} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntrySessionCopyTrModifier(r)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor! } : undefined} title={r.isSessionCopy ? 'Копия, созданная в этой сессии — измените данные, чтобы убрать метку' : isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
             <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
             {visibleFullIds.map((colId) => renderFullBodyCell(colId, r, i, wk))}
             {showEntryActions ? (<td key="actions-full" className="tt-rp-mtable__td tt-rp-mtable__td--brief-actions" onClick={(e) => e.stopPropagation()}>
@@ -991,7 +1011,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
         const scopeColor = parseScopeHexColor(r.scopeColor);
         const hasScopeColor = Boolean(scopeColor);
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor! } : undefined} title={isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntrySessionCopyTrModifier(r)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor! } : undefined} title={r.isSessionCopy ? 'Копия, созданная в этой сессии — измените данные, чтобы убрать метку' : isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
             <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
             {visibleBriefIds.map((colId) => renderBriefBodyCell(colId, r, i, wk))}
         </tr>);
@@ -1166,7 +1186,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                   {readOnlyUi
                     ? (<span className="tt-rp-mtable__readonly">{((r.taskName || r.taskId || '').trim() || '—')}</span>)
                     : (<div className="tt-rp-mtable__brief-task">
-                      <SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByProject.get(timeReportTaskProjectKey(r.clientId?.trim() ?? '', r.projectId?.trim() ?? '')) ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>
+                      <SearchableSelect<LabeledOption> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByProject.get(timeReportTaskProjectKey(r.clientId?.trim() ?? '', r.projectId?.trim() ?? '')) ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>
                     </div>)}
                 </td>);
             case 'note':
@@ -1339,7 +1359,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
                   {readOnlyUi
                       ? (<span className="tt-rp-mtable__readonly">{((r.taskName || r.taskId || '').trim() || '—')}</span>)
-                      : (<SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByProject.get(timeReportTaskProjectKey(r.clientId?.trim() ?? '', r.projectId?.trim() ?? '')) ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>)}
+                      : (<SearchableSelect<LabeledOption> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByProject.get(timeReportTaskProjectKey(r.clientId?.trim() ?? '', r.projectId?.trim() ?? '')) ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>)}
                 </td>);
             case 'note':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--comment">
@@ -1664,7 +1684,7 @@ export function ExpenseExcelPreviewTable({ rows, onPatch, selectedRowKeys = null
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
-                    <SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label="Категория" placeholder="Категория…" emptyListText="Нет" noMatchText="Не найдено" value={r.categoryId} items={categoryOptions} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} onSelect={(o) => onPatch(r.rowKey, { categoryId: o.id })}/>
+                    <SearchableSelect<LabeledOption> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label="Категория" placeholder="Категория…" emptyListText="Нет" noMatchText="Не найдено" value={r.categoryId} items={categoryOptions} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} onSelect={(o) => onPatch(r.rowKey, { categoryId: o.id })}/>
                   </td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--comment">
                     <textarea className="tt-rp-mtable__input tt-rp-mtable__textarea" rows={2} value={r.comment} onChange={(e) => onPatch(r.rowKey, { comment: e.target.value })}/>
@@ -1741,7 +1761,7 @@ export function UninvoicedExcelPreviewTable({ rows, onPatch, selectedRowKeys = n
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
-                    <SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label="Проект" placeholder="Проект…" emptyListText="Нет" noMatchText="Не найдено" value={r.taskId} items={taskOptions} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id })}/>
+                    <SearchableSelect<LabeledOption> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label="Проект" placeholder="Проект…" emptyListText="Нет" noMatchText="Не найдено" value={r.taskId} items={taskOptions} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id })}/>
                   </td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--comment">
                     <textarea className="tt-rp-mtable__input tt-rp-mtable__textarea" rows={2} value={r.comment} onChange={(e) => onPatch(r.rowKey, { comment: e.target.value })}/>
@@ -1811,7 +1831,7 @@ export function BudgetExcelPreviewTable({ rows, onPatch, selectedRowKeys = null,
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--rn">{i + 1}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--strong">{r.userName}</td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--pick">
-                    <SearchableSelect<LabeledOption> portalDropdown className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label="Проект" placeholder="Проект…" emptyListText="Нет" noMatchText="Не найдено" value={r.taskId} items={taskOptions} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id })}/>
+                    <SearchableSelect<LabeledOption> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label="Проект" placeholder="Проект…" emptyListText="Нет" noMatchText="Не найдено" value={r.taskId} items={taskOptions} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id })}/>
                   </td>
                   <td className="tt-rp-mtable__td tt-rp-mtable__td--num">
                     <DecimalDurationInput className="tt-rp-mtable__input tt-rp-mtable__input--duration" valueHours={r.hoursLogged} onCommit={(hours) => onPatch(r.rowKey, { hoursLogged: hours })} aria-label={`Часы (факт), ${r.userName}`}/>

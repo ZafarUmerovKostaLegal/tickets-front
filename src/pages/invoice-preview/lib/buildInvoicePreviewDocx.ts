@@ -43,6 +43,10 @@ import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
 import {
+    formatLegalExchangeRateValue,
+    formatLegalTotalWithFxAlt,
+} from './invoiceLegalFxDisplay';
+import {
     invoicePreviewPageCount,
     resolveLegalBillToBankName,
     resolveLegalBillToSwift,
@@ -544,6 +548,8 @@ function legalInvoiceDocxBlocks(
     const cur = packCurrencyCode(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
+    const totalWithFx = formatLegalTotalWithFxAlt(model.totalFormatted, legalOverrides);
+    const exchangeRateValue = formatLegalExchangeRateValue(legalOverrides, model.coverLanguage);
 
     const firmParas = [
         new Paragraph({
@@ -715,7 +721,7 @@ function legalInvoiceDocxBlocks(
                 verticalAlign: VerticalAlignTable.BOTTOM,
                 children: [new Paragraph({
                     alignment: AlignmentType.RIGHT,
-                    children: [new TextRun({ text: model.totalFormatted, bold: true, color: '1E293B', size: DOC_SIZE, font: DOC_FONT })],
+                    children: [new TextRun({ text: totalWithFx, bold: true, color: '1E293B', size: DOC_SIZE, font: DOC_FONT })],
                 })],
             }),
         ],
@@ -774,10 +780,13 @@ function legalInvoiceDocxBlocks(
         layout: TableLayoutType.FIXED,
         alignment: AlignmentType.RIGHT,
         rows: [
-            mkTotalRow(labels.subtotal, model.totalFormatted, false, totalsNil),
+            mkTotalRow(labels.subtotal, totalWithFx, false, totalsNil),
             mkTotalRow(labels.vat, vatAmount, false, totalsNil),
             mkTotalRow(labels.extraExpenses, extraExpensesAmount, false, totalsNil),
-            mkTotalRow(labels.totalDueBy(dueBanner), model.totalFormatted, true, totalsNil),
+            ...(exchangeRateValue
+                ? [mkTotalRow(labels.exchangeRate, exchangeRateValue, false, totalsNil)]
+                : []),
+            mkTotalRow(labels.totalDueBy(dueBanner), totalWithFx, true, totalsNil),
         ],
     });
 
