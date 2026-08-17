@@ -45,6 +45,7 @@ export const timeTrackingPageMessagesEn: TimeTrackingPageMessages = {
             'Employee list unavailable: you are not synced in time tracking or do not have the manager role. Contact an administrator.',
         scopeLoadFailed: 'Could not load time tracking user list',
         scopeUnavailable: 'List unavailable',
+        serviceUnavailable: 'Time tracking is temporarily unavailable. Refresh the page in a minute.',
     },
     statistics: {
         pageAria: 'Statistics',

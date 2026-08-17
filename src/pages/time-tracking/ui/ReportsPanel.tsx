@@ -671,7 +671,9 @@ export function ReportsPanel() {
       .catch((e: unknown) => {
         if (fetchGen !== reportFetchGenRef.current)
           return;
-        setError(e instanceof Error ? e.message : t('timeTrackingPage.reports.errors.loadFailed'));
+        setError(isTimeTrackingHttpError(e, 502) || isTimeTrackingHttpError(e, 503)
+          ? t('timeTrackingPage.page.serviceUnavailable')
+          : e instanceof Error ? e.message : t('timeTrackingPage.reports.errors.loadFailed'));
         setResults([]);
         setResultsViewKey(null);
         setServerTotals(null);

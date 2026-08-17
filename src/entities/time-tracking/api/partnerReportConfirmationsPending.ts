@@ -128,9 +128,11 @@ export async function fetchPartnerForReviewBadgeCount(options?: {
 
             );
 
-            if (!res.ok)
-
+            if (!res.ok) {
+                if (res.status === 502 || res.status === 503)
+                    return 0;
                 throw new Error(`HTTP ${res.status}`);
+            }
 
             const data = await res.json();
 
@@ -196,9 +198,11 @@ export async function listPartnerReportConfirmationsPendingForBadge(options?: {
 
             const res = await apiFetch(`/api/v1/time-tracking/reports/partner-confirmations/pending?${qs}`);
 
-            if (!res.ok)
-
+            if (!res.ok) {
+                if (res.status === 502 || res.status === 503)
+                    return [];
                 throw new Error(`HTTP ${res.status}`);
+            }
 
             return parsePartnerPendingBadgeList(await res.json());
 

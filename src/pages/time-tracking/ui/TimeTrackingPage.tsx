@@ -303,11 +303,14 @@ export function TimeTrackingPage() {
             const msg = e instanceof Error ? e.message : String(e);
             const forbidden = isTimeTrackingHttpError(e, 403) ||
                 /403|forbidden|недостаточно|запрещ/i.test(msg);
+            const unavailable = isTimeTrackingHttpError(e, 502) || isTimeTrackingHttpError(e, 503);
             setTtScopeLoadError({
                 forbidden,
                 message: forbidden
                     ? t('timeTrackingPage.page.scopeLoadForbidden')
-                    : msg || t('timeTrackingPage.page.scopeLoadFailed'),
+                    : unavailable
+                        ? t('timeTrackingPage.page.serviceUnavailable')
+                        : msg || t('timeTrackingPage.page.scopeLoadFailed'),
             });
         });
         return () => {

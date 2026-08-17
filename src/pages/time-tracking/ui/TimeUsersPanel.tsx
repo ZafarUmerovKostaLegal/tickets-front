@@ -3,7 +3,7 @@ import './TimeUsersShared.css';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listColleaguesAsUsers } from '@entities/contacts';
-import { getTeamWorkload, listTimeTrackingUsers, type TeamWorkloadMember, type TimeTrackingUserRow, } from '@entities/time-tracking';
+import { getTeamWorkload, isTimeTrackingHttpError, listTimeTrackingUsers, type TeamWorkloadMember, type TimeTrackingUserRow, } from '@entities/time-tracking';
 import { canManageTimeTrackingOrgUsers } from '@entities/time-tracking/model/timeTrackingAccess';
 import { isWithoutAuthRegistration } from '@entities/time-tracking/model/manualUsers';
 import { getUserEditUrl } from '@shared/config';
@@ -207,9 +207,11 @@ export function TimeUsersPanel() {
                 setPeriodLabel(null);
                 setUsers([]);
                 const msg = err instanceof Error ? err.message : t('timeTrackingPage.users.panel.loadFailed');
-                setError(/403|forbidden|недостаточно|запрещ/i.test(msg)
-                    ? `${msg}${t('timeTrackingPage.users.panel.accessHint')}`
-                    : msg);
+                setError(isTimeTrackingHttpError(err, 502) || isTimeTrackingHttpError(err, 503)
+                    ? t('timeTrackingPage.page.serviceUnavailable')
+                    : /403|forbidden|недостаточно|запрещ/i.test(msg)
+                        ? `${msg}${t('timeTrackingPage.users.panel.accessHint')}`
+                        : msg);
             }
             finally {
                 if (!cancelled)

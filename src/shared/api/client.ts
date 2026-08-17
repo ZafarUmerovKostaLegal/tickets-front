@@ -187,6 +187,34 @@ type CoordinatedFetch = {
     delivery: ApiRequestDelivery;
 };
 
+function isTimeTrackingApiPath(pathOrUrl: string): boolean {
+    try {
+        const pathname = pathOrUrl.startsWith('http')
+            ? new URL(pathOrUrl).pathname
+            : pathOrUrl;
+        return pathname.includes('/api/v1/time-tracking');
+    }
+    catch {
+        return pathOrUrl.includes('/api/v1/time-tracking');
+    }
+}
+
+function waitMs(ms: number, signal?: AbortSignal): Promise<void> {
+    if (signal?.aborted)
+        return Promise.reject(abortError(signal));
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            signal?.removeEventListener('abort', onAbort);
+            resolve();
+        }, ms);
+        const onAbort = () => {
+            clearTimeout(timer);
+            reject(abortError(signal));
+        };
+        signal?.addEventListener('abort', onAbort, { once: true });
+    });
+}
+
 function fetchWithGetDedupe(url: string, init: RequestInit, headers: Headers, reuseWindowMs = GET_REUSE_WINDOW_MS): CoordinatedFetch {
     const method = normalizedMethod(init);
     if (method !== 'GET' || init.body != null) {
@@ -243,6 +271,16 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
         const coordinated = fetchWithGetDedupe(url, rest, headers, getReuseWindowMs);
         delivery = coordinated.delivery;
         response = await coordinated.promise;
+        const retryableOutage = (response.status === 502 || response.status === 503)
+            && (method === 'GET' || method === 'HEAD')
+            && isTimeTrackingApiPath(rel)
+            && !rest.signal?.aborted;
+        if (retryableOutage) {
+            await waitMs(500, rest.signal ?? undefined);
+            const retry = fetchWithGetDedupe(url, rest, headers, 0);
+            delivery = retry.delivery;
+            response = await retry.promise;
+        }
         recordApiRequestMetric({
             method,
             url,

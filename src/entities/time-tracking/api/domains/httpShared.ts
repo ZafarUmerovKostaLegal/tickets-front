@@ -111,6 +111,21 @@ export class TimeTrackingHttpError extends Error {
 export function isTimeTrackingHttpError(e: unknown, status?: number): e is TimeTrackingHttpError {
     return e instanceof TimeTrackingHttpError && (status === undefined || e.status === status);
 }
+
+/** Gateway returns 502/503 when the time-tracking upstream is down or not configured. */
+export const TIME_TRACKING_UNAVAILABLE_MESSAGE =
+    'Сервис учёта времени временно недоступен. Обновите страницу через минуту.';
+
+export function isTimeTrackingUnavailableStatus(status: number): boolean {
+    return status === 502 || status === 503;
+}
+
+export function isTimeTrackingUnavailableError(e: unknown): boolean {
+    if (isTimeTrackingHttpError(e, 502) || isTimeTrackingHttpError(e, 503))
+        return true;
+    const msg = e instanceof Error ? e.message : String(e ?? '');
+    return /503|502|service unavailable|сервис учёта времени временно недоступен|time tracking service unavailable/i.test(msg);
+}
 export function normalizeLegacyTimeTrackingUsersError(message: string): string {
     const m = String(message ?? '').trim();
     if (!m)
@@ -148,7 +163,10 @@ export async function throwIfNotOk(res: Response): Promise<Response> {
                 (trimmed && msg !== `HTTP ${res.status}` ? msg : '') ||
                 'Недостаточно прав для этой операции (403). Это ограничение доступа, а не сбой сети — обратитесь к администратору.';
         }
-        if (res.status >= 500) {
+        if (isTimeTrackingUnavailableStatus(res.status)) {
+            msg = TIME_TRACKING_UNAVAILABLE_MESSAGE;
+        }
+        else if (res.status >= 500) {
             console.error('[time-tracking api]', res.status, msg);
         }
         throw new TimeTrackingHttpError(res.status, normalizeLegacyTimeTrackingUsersError(msg));
@@ -188,6 +206,8 @@ export async function reportsThrowIfNotOk(res: Response): Promise<void> {
             msg = 'Требуется вход или сессия истекла';
         else if (res.status === 403 && msg === 'HTTP 403')
             msg = 'Нет доступа к этой операции';
+        else if (isTimeTrackingUnavailableStatus(res.status))
+            msg = TIME_TRACKING_UNAVAILABLE_MESSAGE;
         throw new TimeTrackingHttpError(res.status, normalizeLegacyTimeTrackingUsersError(msg));
     }
 }

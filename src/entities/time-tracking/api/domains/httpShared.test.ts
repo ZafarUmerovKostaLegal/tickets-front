@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
     isForbiddenError,
     isTimeTrackingHttpError,
+    isTimeTrackingUnavailableError,
     parseTimeTrackingPagedResponse,
+    reportsThrowIfNotOk,
+    TIME_TRACKING_UNAVAILABLE_MESSAGE,
     TimeTrackingHttpError,
+    throwIfNotOk,
     unwrapTimeTrackingListArray,
 } from './httpShared';
 
@@ -64,5 +68,24 @@ describe('TimeTrackingHttpError / isForbiddenError', () => {
         expect(isForbiddenError(new Error('Недостаточно прав'))).toBe(true);
         expect(isForbiddenError(new Error('timeout'))).toBe(false);
         expect(isForbiddenError('403')).toBe(false);
+    });
+});
+
+describe('time-tracking unavailable mapping', () => {
+    it('maps 503 responses to a stable user-facing message without console.error', async () => {
+        const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+        const res503 = new Response(JSON.stringify({ detail: 'Time tracking service unavailable' }), { status: 503 });
+        await expect(throwIfNotOk(res503)).rejects.toMatchObject({
+            status: 503,
+            message: TIME_TRACKING_UNAVAILABLE_MESSAGE,
+        });
+        expect(spy).not.toHaveBeenCalled();
+        const reportsRes = new Response(JSON.stringify({ detail: 'Time tracking service unavailable' }), { status: 503 });
+        await expect(reportsThrowIfNotOk(reportsRes)).rejects.toMatchObject({
+            status: 503,
+            message: TIME_TRACKING_UNAVAILABLE_MESSAGE,
+        });
+        expect(isTimeTrackingUnavailableError(new TimeTrackingHttpError(503, TIME_TRACKING_UNAVAILABLE_MESSAGE))).toBe(true);
+        spy.mockRestore();
     });
 });
