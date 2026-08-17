@@ -149,10 +149,6 @@ export function InvoiceCreatePage() {
     () => lastDayOfPreviousMonthIso(issueDate),
     [issueDate],
   );
-  const currencySelectItems = useMemo(
-    () => TIME_TRACKING_PROJECT_CURRENCIES.map((c) => ({ id: c, label: c, search: c })),
-    [],
-  );
   const workedTimeTotal = useMemo(() => {
     return unbilledTime
       .filter((x) => selTime.has(x.id))
@@ -1246,33 +1242,27 @@ export function InvoiceCreatePage() {
                       />
                     </div>
                     <div className="tt-inv-dialog__field">
-                      <label className="tt-inv-dialog__label" id="tt-inv-custom-billed-ccy-lbl">
+                      <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-ccy">
                         {t('timeTrackingPage.invoices.createDialog.customBilledCurrency')}
                       </label>
-                      <SearchableSelect<{ id: string; label: string; search: string }>
-                        className="tsp-srch tt-inv-dialog-searchable"
-                        buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn"
-                        buttonId="tt-inv-custom-billed-ccy"
-                        portalDropdown
-                        portalZIndex={12050}
-                        portalMinWidth={220}
+                      <select
+                        id="tt-inv-custom-billed-ccy"
+                        className="tt-inv-dialog__control"
                         value={customBilledCurrency}
-                        items={currencySelectItems}
-                        getOptionValue={(o) => o.id}
-                        getOptionLabel={(o) => o.label}
-                        getSearchText={(o) => o.search}
-                        onSelect={(o) => {
-                          const next = TIME_TRACKING_PROJECT_CURRENCIES.includes(o.id as TimeManagerProjectCurrency)
-                            ? (o.id as TimeManagerProjectCurrency)
-                            : 'USD';
-                          setCustomBilledCurrency(next);
-                        }}
-                        placeholder={t('timeTrackingPage.invoices.createDialog.customBilledCurrencyPlaceholder')}
-                        emptyListText={t('timeTrackingPage.projects.modal.noCurrencies')}
-                        noMatchText={t('timeTrackingPage.common.notFound')}
                         disabled={createBusy}
-                        aria-labelledby="tt-inv-custom-billed-ccy-lbl"
-                      />
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setCustomBilledCurrency(
+                            TIME_TRACKING_PROJECT_CURRENCIES.includes(next as TimeManagerProjectCurrency)
+                              ? (next as TimeManagerProjectCurrency)
+                              : 'USD',
+                          );
+                        }}
+                      >
+                        {TIME_TRACKING_PROJECT_CURRENCIES.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
                     </div>
                     <div className="tt-inv-dialog__field" style={{ gridColumn: '1 / -1' }}>
                       <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-desc">

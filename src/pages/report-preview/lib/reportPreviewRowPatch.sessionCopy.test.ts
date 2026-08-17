@@ -47,15 +47,17 @@ function row(partial: Partial<TimeExcelPreviewRow> = {}): TimeExcelPreviewRow {
 }
 
 describe('applyTimePreviewRowPatch session copy badge', () => {
-    it('clears isSessionCopy after a content edit', () => {
+    it('keeps isSessionCopy after a content edit and marks it edited', () => {
         const next = applyTimePreviewRowPatch(row(), { note: 'changed' }, []);
-        expect(next.isSessionCopy).toBe(false);
+        expect(next.isSessionCopy).toBe(true);
+        expect(next.sessionCopyEdited).toBe(true);
         expect(next.note).toBe('changed');
     });
 
     it('keeps isSessionCopy when only scopeColor changes', () => {
         const next = applyTimePreviewRowPatch(row(), { scopeColor: '#ff0000' }, []);
         expect(next.isSessionCopy).toBe(true);
+        expect(next.sessionCopyEdited).toBeFalsy();
         expect(next.scopeColor).toBe('#ff0000');
     });
 });

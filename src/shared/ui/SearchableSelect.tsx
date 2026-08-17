@@ -231,22 +231,23 @@ function SearchableSelectInner<T>({
             const bottomInset = 88;
             const spaceBelow = window.innerHeight - r.bottom - margin - bottomInset;
             const spaceAbove = r.top - margin;
-            const minFlip = 140;
+            const minFlip = 220;
             const openAbove = spaceBelow < minFlip && spaceAbove > spaceBelow;
             let top: number | undefined;
             let bottom: number | undefined;
             let maxH: number;
+            const minMenu = 220;
             if (openAbove) {
                 bottom = window.innerHeight - r.top + gap;
                 top = undefined;
-                maxH = Math.max(80, r.top - margin - gap);
+                maxH = Math.max(minMenu, r.top - margin - gap);
             }
             else {
                 top = r.bottom + gap;
                 bottom = undefined;
-                // Cap height so the menu does not sit under a sticky footer band.
-                maxH = Math.max(80, Math.min(spaceBelow + bottomInset - gap, window.innerHeight - top - margin));
+                maxH = Math.max(minMenu, Math.min(spaceBelow + bottomInset - gap, window.innerHeight - top - margin));
             }
+            maxH = Math.min(maxH, Math.max(80, window.innerHeight - 16));
             setPortalBox({ top, bottom, left, width, maxH });
         };
         update();
@@ -280,13 +281,13 @@ function SearchableSelectInner<T>({
             return;
         if (portalDropdown)
             return;
-        requestAnimationFrame(() => inputRef.current?.focus());
+        requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
     }, [open, portalDropdown]);
 
     useEffect(() => {
         if (!open || !portalDropdown || !portalBox)
             return;
-        requestAnimationFrame(() => inputRef.current?.focus());
+        requestAnimationFrame(() => inputRef.current?.focus({ preventScroll: true }));
     }, [open, portalDropdown, portalBox]);
 
     useEffect(() => {

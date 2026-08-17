@@ -12,6 +12,7 @@ import {
     unwrapTimeTrackingListArray,
     throwIfNotOk,
     dashNum,
+    isTimeTrackingUnavailableError,
 } from './httpShared';
 
 export type ProjectScopeDefinition = {
@@ -1061,10 +1062,6 @@ export type ProjectBudgetMetricsEntry = {
 };
 
 export type ProjectBudgetMetricsMap = Record<string, ProjectBudgetMetricsEntry>;
-
-export function isTimeTrackingUnavailableError(e: unknown): boolean {
-    return e instanceof Error && /503|unavailable|недоступ/i.test(e.message);
-}
 
 export async function listAllClientProjectsMergedFallback(includeArchived: boolean): Promise<TimeManagerClientProjectRow[]> {
     const flat = await listProjectsForExpenses({ includeArchived }) as TimeTrackingProjectForExpense[];

@@ -44,8 +44,10 @@ export type TimeExcelPreviewRow = {
 
     voidKind: 'rejected' | 'reallocated' | null;
 
-    /** Session-only: row just created via «Дублировать», until the user edits it. */
+    /** Session-only: row created via «Дублировать» in this preview. Kept after edits. */
     isSessionCopy?: boolean;
+    /** True after the user changes copy content (badge shrinks to a dot). */
+    sessionCopyEdited?: boolean;
 };
 export type ExpenseExcelPreviewRow = {
     rowKey: string;

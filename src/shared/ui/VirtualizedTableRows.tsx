@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 
 export const VIRTUAL_TABLE_MIN_ROWS = 12;
 
-const VIRTUAL_TABLE_OVERSCAN = 10;
+const VIRTUAL_TABLE_OVERSCAN = 18;
 
 export type VirtualTableRowMeasureProps = {
     ref: (node: HTMLTableRowElement | null) => void;
@@ -67,8 +67,8 @@ export function VirtualizedTableRows({
     const virtualItems = virtualizer.getVirtualItems();
     const paddingTop = virtualItems.length > 0 ? virtualItems[0].start : 0;
     const paddingBottom = virtualItems.length > 0
-        ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end
-        : 0;
+        ? Math.max(0, virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1].end) + 48
+        : 48;
 
     return (
         <>

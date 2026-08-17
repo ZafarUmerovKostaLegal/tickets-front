@@ -2734,6 +2734,15 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
   border: 1px solid color-mix(in srgb, #fb7185 35%, transparent);
 }
 
+.tt-rp-mtable__copy-dot {
+  flex-shrink: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #e11d48;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #fda4af 45%, transparent);
+}
+
 .tt-rp-mtable__tr--session-copy .tt-rp-mtable__td:first-child {
   box-shadow: inset 3px 0 0 color-mix(in srgb, #f43f5e 75%, #e11d48);
 }
@@ -2742,6 +2751,11 @@ body[data-theme='dark'] .tt-rp-mtable__copy-badge {
   color: #fecdd3;
   background: color-mix(in srgb, #9f1239 35%, var(--app-surface));
   border-color: color-mix(in srgb, #fb7185 40%, transparent);
+}
+
+body[data-theme='dark'] .tt-rp-mtable__copy-dot {
+  background: #fb7185;
+  box-shadow: 0 0 0 2px color-mix(in srgb, #9f1239 50%, transparent);
 }
 
 body[data-theme='dark'] .tt-rp-mtable__tr--session-copy .tt-rp-mtable__td:first-child {

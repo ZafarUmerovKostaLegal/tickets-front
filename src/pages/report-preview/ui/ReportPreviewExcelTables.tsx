@@ -93,6 +93,24 @@ function timeEntryDuplicateTrModifier(isDuplicate: boolean): string {
 function timeEntrySessionCopyTrModifier(r: TimeExcelPreviewRow): string {
     return r.isSessionCopy ? ' tt-rp-mtable__tr--session-copy' : '';
 }
+function SessionCopyMark({ row }: { row: TimeExcelPreviewRow }) {
+    if (!row.isSessionCopy)
+        return null;
+    if (row.sessionCopyEdited) {
+        return (
+            <span
+                className="tt-rp-mtable__copy-dot"
+                title="Копия, созданная в этой сессии"
+                aria-label="Копия"
+            />
+        );
+    }
+    return (
+        <span className="tt-rp-mtable__copy-badge" title="Копия, созданная в этой сессии">
+            Копия
+        </span>
+    );
+}
 function timePreviewRowsForTotals(displayRows: TimeExcelPreviewRow[]): TimeExcelPreviewRow[] {
     return timePreviewRowsForPageExport(displayRows);
 }
@@ -311,40 +329,55 @@ function buildTimeReportTaskOptionsForProject(clientId: string, projectId: strin
 }
 function useTimeReportTaskOptionsByProject(rows: TimeExcelPreviewRow[]) {
     const [tasksByProjectKey, setTasksByProjectKey] = useState<Record<string, LabeledOption[]>>({});
-    const projectPairsKey = useMemo(() => {
+    const projectPairs = useMemo(() => {
         const uniq = new Set<string>();
         for (const r of rows) {
             const cid = String(r.clientId ?? '').trim();
             const pid = String(r.projectId ?? '').trim();
             if (cid && pid)
-                uniq.add(`${cid}\x1f${pid}`);
+                uniq.add(timeReportTaskProjectKey(cid, pid));
         }
-        return [...uniq].sort().join('\0');
+        return [...uniq].sort();
     }, [rows]);
+    const projectPairsKey = projectPairs.join('\0');
     useEffect(() => {
-        const pairs = projectPairsKey ? projectPairsKey.split('\0').map((s) => s.split('\x1f')) : [];
-        if (pairs.length === 0 || pairs.some((p) => p.length !== 2)) {
-            setTasksByProjectKey({});
-            return;
-        }
-        let cancelled = false;
-        (async () => {
+        const pairs = projectPairsKey ? projectPairsKey.split('\0').filter(Boolean) : [];
+        const wanted = new Set(pairs);
+        setTasksByProjectKey((prev) => {
+            let changed = false;
             const next: Record<string, LabeledOption[]> = {};
-            await Promise.all(pairs.map(async ([cid, pid]) => {
-                try {
-                    const list = await listProjectTasksCached(cid, pid);
+            for (const [k, v] of Object.entries(prev)) {
+                if (wanted.has(k))
+                    next[k] = v;
+                else
+                    changed = true;
+            }
+            return changed ? next : prev;
+        });
+        if (wanted.size === 0)
+            return;
+        let cancelled = false;
+        for (const key of pairs) {
+            const sep = key.indexOf('\x1f');
+            if (sep <= 0 || sep === key.length - 1)
+                continue;
+            const cid = key.slice(0, sep);
+            const pid = key.slice(sep + 1);
+            void listProjectTasksCached(cid, pid)
+                .then((list) => {
                     if (cancelled)
                         return;
-                    next[timeReportTaskProjectKey(cid, pid)] = list.map((t) => ({ id: t.id, label: t.name }));
-                }
-                catch {
-                    if (!cancelled)
-                        next[timeReportTaskProjectKey(cid, pid)] = [];
-                }
-            }));
-            if (!cancelled)
-                setTasksByProjectKey(next);
-        })();
+                    setTasksByProjectKey((prev) => ({
+                        ...prev,
+                        [key]: list.map((t) => ({ id: t.id, label: t.name })),
+                    }));
+                })
+                .catch(() => {
+                    if (cancelled)
+                        return;
+                    setTasksByProjectKey((prev) => (prev[key] ? prev : { ...prev, [key]: [] }));
+                });
+        }
         return () => {
             cancelled = true;
         };
@@ -864,11 +897,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             const value = items.some((x) => x.id === selId) ? selId : '';
             return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
               <div className="tt-rp-mtable__emp-cell">
-                {r.isSessionCopy ? (
-                  <span className="tt-rp-mtable__copy-badge" title="Копия, созданная в этой сессии. Бейдж исчезнет после изменения данных строки.">
-                    Копия
-                  </span>
-                ) : null}
+                {r.isSessionCopy ? <SessionCopyMark row={r} /> : null}
                 <SearchableSelect<PartnerEmployeeSelectItem> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Сотрудник, строка ${i + 1}`} placeholder={items.length === 0 ? 'Нет участников с доступом к проекту' : 'Выберите сотрудника…'} emptyListText="Нет в списке" noMatchText="Не найдено" value={value} items={items} getOptionValue={(o) => o.id} getOptionLabel={(o) => (o.position ? `${o.label} (${o.position})` : o.label)} getSearchText={(o) => o.search} disabled={wk} onSelect={(o) => {
                     const id = Number(o.id);
                     if (!Number.isFinite(id))
@@ -885,11 +914,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         }
         return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
           <div className="tt-rp-mtable__emp-cell">
-            {r.isSessionCopy ? (
-              <span className="tt-rp-mtable__copy-badge" title="Копия, созданная в этой сессии. Бейдж исчезнет после изменения данных строки.">
-                Копия
-              </span>
-            ) : null}
+            {r.isSessionCopy ? <SessionCopyMark row={r} /> : null}
             <input className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="text" value={r.employeeName} onChange={(e) => {
                 const v = e.target.value;
                 onPatch(r.rowKey, { employeeName: v, userName: v });
@@ -997,7 +1022,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
         const scopeColor = parseScopeHexColor(r.scopeColor);
         const hasScopeColor = Boolean(scopeColor);
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntrySessionCopyTrModifier(r)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor! } : undefined} title={r.isSessionCopy ? 'Копия, созданная в этой сессии — измените данные, чтобы убрать метку' : isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntrySessionCopyTrModifier(r)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor! } : undefined} title={r.isSessionCopy ? 'Копия, созданная в этой сессии' : isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
             <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
             {visibleFullIds.map((colId) => renderFullBodyCell(colId, r, i, wk))}
             {showEntryActions ? (<td key="actions-full" className="tt-rp-mtable__td tt-rp-mtable__td--brief-actions" onClick={(e) => e.stopPropagation()}>
@@ -1011,7 +1036,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         const isDuplicate = duplicateRowKeys.has(r.rowKey);
         const scopeColor = parseScopeHexColor(r.scopeColor);
         const hasScopeColor = Boolean(scopeColor);
-        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntrySessionCopyTrModifier(r)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor! } : undefined} title={r.isSessionCopy ? 'Копия, созданная в этой сессии — измените данные, чтобы убрать метку' : isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
+        return (<tr key={r.rowKey} ref={measure.ref} data-index={measure['data-index']} className={`${rowTrClass(i, r.rowKey, selectedRowKeys, wk)}${hasScopeColor ? ' tt-rp-mtable__tr--scoped' : ''}${timeEntryVoidTrModifier(r)}${timeEntryDuplicateTrModifier(isDuplicate)}${timeEntrySessionCopyTrModifier(r)}${timeEntryFlashTrModifier(r.rowKey, flashRowKey)}`} style={hasScopeColor ? { ['--tt-rp-row-scope-bg' as string]: scopeColor! } : undefined} title={r.isSessionCopy ? 'Копия, созданная в этой сессии' : isDuplicate ? TIME_PREVIEW_DUPLICATE_ROW_TITLE : undefined} aria-selected={isReportRowSelected(r.rowKey, selectedRowKeys) ? true : undefined}>
             <ReportRowSelectCell rowKey={r.rowKey} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={onSelectedRowKeysChange}/>
             {visibleBriefIds.map((colId) => renderBriefBodyCell(colId, r, i, wk))}
         </tr>);
@@ -1169,6 +1194,30 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         }
     };
 
+    const timeReportTaskSelect = (r: TimeExcelPreviewRow, wk: boolean) => {
+        const key = timeReportTaskProjectKey(r.clientId?.trim() ?? '', r.projectId?.trim() ?? '');
+        const items = taskOptionsByProject.get(key) ?? [];
+        const catalogReady = Object.prototype.hasOwnProperty.call(tasksByProjectKey, key);
+        return (
+            <SearchableSelect<LabeledOption>
+                portalDropdown
+                portalZIndex={TT_RP_SELECT_PORTAL_Z}
+                className="tt-rp-mtable__srch"
+                buttonClassName="tt-rp-mtable__srch-btn"
+                aria-label={`Задача, ${r.userName}`}
+                placeholder={catalogReady ? 'Задача…' : 'Загрузка задач…'}
+                emptyListText={catalogReady ? 'Нет задач' : 'Загрузка задач…'}
+                noMatchText="Не найдено"
+                value={r.taskId}
+                items={items}
+                getOptionValue={(o) => o.id}
+                getOptionLabel={(o) => o.label}
+                getSearchText={(o) => o.label}
+                disabled={wk}
+                onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}
+            />
+        );
+    };
     const renderBriefBodyCell = (colId: TimeBriefColumnId, r: TimeExcelPreviewRow, i: number, wk: boolean): ReactNode => {
         switch (colId) {
             case 'employee':
@@ -1186,7 +1235,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                   {readOnlyUi
                     ? (<span className="tt-rp-mtable__readonly">{((r.taskName || r.taskId || '').trim() || '—')}</span>)
                     : (<div className="tt-rp-mtable__brief-task">
-                      <SearchableSelect<LabeledOption> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByProject.get(timeReportTaskProjectKey(r.clientId?.trim() ?? '', r.projectId?.trim() ?? '')) ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>
+                      {timeReportTaskSelect(r, wk)}
                     </div>)}
                 </td>);
             case 'note':
@@ -1359,7 +1408,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
                   {readOnlyUi
                       ? (<span className="tt-rp-mtable__readonly">{((r.taskName || r.taskId || '').trim() || '—')}</span>)
-                      : (<SearchableSelect<LabeledOption> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Задача, ${r.userName}`} placeholder="Задача…" emptyListText="Нет задач" noMatchText="Не найдено" value={r.taskId} items={taskOptionsByProject.get(timeReportTaskProjectKey(r.clientId?.trim() ?? '', r.projectId?.trim() ?? '')) ?? []} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={(o) => o.label} disabled={wk} onSelect={(o) => onPatch(r.rowKey, { taskId: o.id, taskName: o.label })}/>)}
+                      : timeReportTaskSelect(r, wk)}
                 </td>);
             case 'note':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--comment">
