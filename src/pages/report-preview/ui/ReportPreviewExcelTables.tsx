@@ -13,6 +13,7 @@ import { syncTextareaHeightToContent } from '@shared/lib/syncTextareaHeight';
 import { fmtAmtWithIso } from '@entities/time-tracking/lib/reportsFormatUtils';
 import { DecimalDurationInput } from './DecimalDurationInput';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
+import { isKostaLegalInternalTask } from '../lib/reportPreviewInternalTask';
 
 /** Above `.tt-rp-mtable-wrap--fullscreen` (12000) and dock so bottom-row menus stay visible. */
 const TT_RP_SELECT_PORTAL_Z = 15000;
@@ -108,6 +109,15 @@ function SessionCopyMark({ row }: { row: TimeExcelPreviewRow }) {
     return (
         <span className="tt-rp-mtable__copy-badge" title="Копия, созданная в этой сессии">
             Копия
+        </span>
+    );
+}
+function InternalTaskMark({ row }: { row: TimeExcelPreviewRow }) {
+    if (!isKostaLegalInternalTask(row.taskName, row.taskId))
+        return null;
+    return (
+        <span className="tt-rp-mtable__internal-badge" title="Kosta Legal Internal">
+            INT
         </span>
     );
 }
@@ -1234,8 +1244,12 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             case 'task':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
                   {readOnlyUi
-                    ? (<span className="tt-rp-mtable__readonly">{((r.taskName || r.taskId || '').trim() || '—')}</span>)
+                    ? (<span className="tt-rp-mtable__readonly tt-rp-mtable__task-with-badge">
+                        <InternalTaskMark row={r} />
+                        {((r.taskName || r.taskId || '').trim() || '—')}
+                      </span>)
                     : (<div className="tt-rp-mtable__brief-task">
+                      <InternalTaskMark row={r} />
                       {timeReportTaskSelect(r, wk)}
                     </div>)}
                 </td>);
@@ -1408,8 +1422,14 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             case 'task':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
                   {readOnlyUi
-                      ? (<span className="tt-rp-mtable__readonly">{((r.taskName || r.taskId || '').trim() || '—')}</span>)
-                      : timeReportTaskSelect(r, wk)}
+                      ? (<span className="tt-rp-mtable__readonly tt-rp-mtable__task-with-badge">
+                          <InternalTaskMark row={r} />
+                          {((r.taskName || r.taskId || '').trim() || '—')}
+                        </span>)
+                      : (<div className="tt-rp-mtable__brief-task">
+                          <InternalTaskMark row={r} />
+                          {timeReportTaskSelect(r, wk)}
+                        </div>)}
                 </td>);
             case 'note':
                 return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--comment">
