@@ -14,6 +14,13 @@ type ProvidersProps = {
 };
 
 
+function ImmediatePostcardHost() {
+    const { user } = useCurrentUser();
+    if (!user || user.is_blocked || user.is_archived)
+        return null;
+    return <Suspense fallback={null}><BirthdayPostcardHost /></Suspense>;
+}
+
 function DeferredBackgroundWidgets() {
     const { user } = useCurrentUser();
     const [ready, setReady] = useState(false);
@@ -46,7 +53,6 @@ function DeferredBackgroundWidgets() {
         return null;
     return (
         <>
-            <Suspense fallback={null}><BirthdayPostcardHost /></Suspense>
             <Suspense fallback={null}><CalendarReminder /></Suspense>
             <Suspense fallback={null}><ChatNotificationHost /></Suspense>
             <Suspense fallback={null}><GlobalTimerWidget /></Suspense>
@@ -59,8 +65,10 @@ export function Providers({ children }: ProvidersProps) {
         <AppDialogProvider>
             <AppToastProvider>
                 {children ?? <AppRouter />}
+                <ImmediatePostcardHost />
                 <DeferredBackgroundWidgets />
             </AppToastProvider>
         </AppDialogProvider>
     );
 }
+

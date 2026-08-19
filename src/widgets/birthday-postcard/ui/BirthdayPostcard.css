@@ -839,6 +839,73 @@
   transition: opacity 0.75s ease 0.32s, transform 0.75s cubic-bezier(0.22, 1, 0.36, 1) 0.32s;
 }
 
+.bday-pc__letter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 22rem;
+}
+
+.bday-pc__letter .bday-pc__message {
+  max-width: none;
+}
+
+.bday-pc--firm .bday-pc__theater {
+  width: min(96vw, 980px);
+  height: min(78vh, 720px);
+}
+
+.bday-pc--firm.bday-pc--cover-open .bday-pc__theater {
+  width: min(98vw, 1040px);
+}
+
+.bday-pc--firm .bday-pc__card {
+  width: min(92vw, 560px);
+  height: min(74vh, 680px);
+}
+
+.bday-pc--firm .bday-pc__card-back {
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: left;
+  overflow: auto;
+  padding: clamp(1.4rem, 2.6vw, 2.2rem) clamp(1.25rem, 2.4vw, 2.1rem) 1.5rem;
+}
+
+.bday-pc--firm .bday-pc__to-name {
+  font-size: clamp(1.25rem, 2.6vw, 1.7rem);
+  margin-top: 0.45rem;
+}
+
+.bday-pc--firm .bday-pc__letter {
+  max-width: none;
+  flex: 1;
+}
+
+.bday-pc--firm .bday-pc__letter .bday-pc__message {
+  font-size: clamp(0.92rem, 1.6vw, 1.02rem);
+  line-height: 1.55;
+}
+
+.bday-pc--firm .bday-pc__letter .bday-pc__message:last-child {
+  color: var(--bday-ink);
+  font-weight: 500;
+}
+
+.bday-pc--firm .bday-pc__from-wrap {
+  margin-top: auto;
+  padding-top: 0.85rem;
+}
+
+.bday-pc--firm .bday-pc__env-name {
+  white-space: normal;
+}
+
+.bday-pc--firm .bday-pc__cover-title {
+  font-size: clamp(2rem, 5vw, 2.6rem);
+}
+
 .bday-pc__from-wrap {
   margin-top: 1.25rem;
   font-family: var(--app-font-family, 'Montserrat', system-ui, sans-serif);
@@ -869,6 +936,12 @@
 .bday-pc__card-back--reveal .bday-pc__divider {
   transform: scaleX(1);
 }
+
+.bday-pc__card-back--reveal .bday-pc__letter .bday-pc__message:nth-child(1) { transition-delay: 0.32s; }
+.bday-pc__card-back--reveal .bday-pc__letter .bday-pc__message:nth-child(2) { transition-delay: 0.42s; }
+.bday-pc__card-back--reveal .bday-pc__letter .bday-pc__message:nth-child(3) { transition-delay: 0.52s; }
+.bday-pc__card-back--reveal .bday-pc__letter .bday-pc__message:nth-child(4) { transition-delay: 0.62s; }
+.bday-pc__card-back--reveal .bday-pc__letter .bday-pc__message:nth-child(5) { transition-delay: 0.72s; }
 
 .bday-pc__sparkle {
   position: absolute;
@@ -988,6 +1061,17 @@
 
   .bday-pc__message {
     max-width: 18rem;
+  }
+
+  .bday-pc--firm .bday-pc__theater,
+  .bday-pc--firm.bday-pc--cover-open .bday-pc__theater {
+    width: min(96vw, 420px);
+    height: min(78vh, 640px);
+  }
+
+  .bday-pc--firm .bday-pc__card {
+    width: min(92vw, 360px);
+    height: min(70vh, 560px);
   }
 }
 

@@ -96,13 +96,26 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
         }
     };
 
-    const name = politeGreetingName(greeting.recipientName);
-    const toLine = /^[A-Za-z]/.test(name) ? `Dear ${name}` : `Дорогой(ая) ${name}`;
+    const isFirm = greeting.kind === 'firm';
+    const name = isFirm ? 'Kosta Legal' : politeGreetingName(greeting.recipientName);
+    const toLine = greeting.insideTitle
+        || (/^[A-Za-z]/.test(name) ? `Dear ${name}` : `Дорогой(ая) ${name}`);
+    const paragraphs = greeting.paragraphs?.filter(Boolean)
+        ?? greeting.message.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+    const coverTitle = greeting.coverTitle || 'С Днём Рождения';
+    const coverBadge = greeting.coverBadge || 'открытка';
+    const insideEyebrow = greeting.insideEyebrow || (isFirm ? 'День рождения фирмы' : 'С днём рождения');
+    const envelopeTo = isFirm ? 'Для команды' : 'Для';
+    const envelopeName = isFirm ? 'партнёров и коллег' : name;
+    const eyebrow = isFirm ? 'День рождения фирмы' : 'Поздравление от команды';
+    const hint = isFirm ? 'нажмите на печать, чтобы открыть поздравление' : 'нажмите на печать, чтобы открыть';
+    const fromLabel = greeting.senderName || (isFirm ? 'вся команда Kosta Legal' : 'команда Kosta Legal');
 
     return createPortal(
         <div
             className={[
                 'bday-pc',
+                isFirm ? 'bday-pc--firm' : '',
                 noAnim ? 'bday-pc--no-anim' : '',
                 burst ? 'bday-pc--burst' : '',
                 stage === 'open' ? 'bday-pc--open' : '',
@@ -166,7 +179,7 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
 
             <div className="bday-pc__frame">
                 <p className={`bday-pc__eyebrow${stage !== 'envelope' ? ' bday-pc__eyebrow--fade' : ''}`}>
-                    Поздравление от команды
+                    {eyebrow}
                 </p>
 
                 <div className="bday-pc__theater">
@@ -178,8 +191,8 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
                                 <div className="bday-pc__env-body" aria-hidden>
                                     <div className="bday-pc__env-liner" />
                                     <div className="bday-pc__env-address">
-                                        <span className="bday-pc__env-to">Для</span>
-                                        <span className="bday-pc__env-name">{name}</span>
+                                        <span className="bday-pc__env-to">{envelopeTo}</span>
+                                        <span className="bday-pc__env-name">{envelopeName}</span>
                                     </div>
                                     <img
                                         className="bday-pc__env-logo"
@@ -212,7 +225,7 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
                                 </button>
                             </div>
                             <p className={`bday-pc__hint${stage !== 'envelope' ? ' bday-pc__hint--fade' : ''}`}>
-                                нажмите на печать, чтобы открыть
+                                {hint}
                             </p>
                         </div>
                     </div>
@@ -221,28 +234,34 @@ export function BirthdayPostcardOverlay({ greeting, onClose }: Props) {
                         <div className="bday-pc__card">
                             <div className={`bday-pc__card-back${reveal ? ' bday-pc__card-back--reveal' : ''}`}>
                                 <div className="bday-pc__card-shine" aria-hidden />
-                                <p className="bday-pc__inside-eyebrow">С днём рождения</p>
+                                <p className="bday-pc__inside-eyebrow">{insideEyebrow}</p>
                                 <h1 id="bday-pc-title" className="bday-pc__to-name">{toLine}</h1>
                                 <div className="bday-pc__divider" aria-hidden>
                                     <span />
                                     <i />
                                     <span />
                                 </div>
-                                <p className="bday-pc__message">{greeting.message}</p>
-                                <div className="bday-pc__from-wrap">
-                                    — <span className="bday-pc__from-name">{greeting.senderName || 'команда Kosta Legal'}</span>
+                                <div className="bday-pc__letter">
+                                    {paragraphs.map((paragraph, index) => (
+                                        <p key={index} className="bday-pc__message">{paragraph}</p>
+                                    ))}
                                 </div>
+                                {isFirm ? null : (
+                                    <div className="bday-pc__from-wrap">
+                                        — <span className="bday-pc__from-name">{fromLabel}</span>
+                                    </div>
+                                )}
                             </div>
 
                             <div className={`bday-pc__cover${coverOpen ? ' bday-pc__cover--open' : ''}`}>
                                 <div className="bday-pc__cover-face bday-pc__cover-face--front">
                                     <div className="bday-pc__cover-pattern" aria-hidden />
                                     <p className="bday-pc__cover-sub">Kosta Legal</p>
-                                    <h2 className="bday-pc__cover-title">С Днём Рождения</h2>
+                                    <h2 className="bday-pc__cover-title">{coverTitle}</h2>
                                     <svg className="bday-pc__flourish" viewBox="0 0 90 18" aria-hidden>
                                         <path d="M2 9 C 20 -2, 30 20, 45 9 C 60 -2, 70 20, 88 9" />
                                     </svg>
-                                    <p className="bday-pc__cover-badge">открытка</p>
+                                    <p className="bday-pc__cover-badge">{coverBadge}</p>
                                 </div>
                                 <div className="bday-pc__cover-face bday-pc__cover-face--inside" aria-hidden>
                                     <div className="bday-pc__cover-inside-deco" />

@@ -1,14 +1,22 @@
 const STORAGE_KEY = 'kosta.birthday.greetings.v1';
 
+export type BirthdayGreetingKind = 'personal' | 'firm';
+
 export type BirthdayGreetingPayload = {
     id: string;
+    kind?: BirthdayGreetingKind;
     recipientEmail: string;
     recipientUserId: number;
     recipientName: string;
     message: string;
+    paragraphs?: string[];
     senderName: string;
     sentAt: string;
     consumedAt: string | null;
+    coverTitle?: string;
+    coverBadge?: string;
+    insideEyebrow?: string;
+    insideTitle?: string;
 };
 
 /** Demo / QA: set an email to force postcard on login. Empty = disabled. */

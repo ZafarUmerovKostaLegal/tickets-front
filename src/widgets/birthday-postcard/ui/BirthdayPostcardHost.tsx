@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useCurrentUser } from '@shared/hooks';
 import { isAuthenticated } from '@shared/lib/auth';
+import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import {
     buildDemoBirthdayGreeting,
     consumeBirthdayGreeting,
@@ -8,6 +9,12 @@ import {
     isBirthdayDemoForceEmail,
     type BirthdayGreetingPayload,
 } from '../lib/birthdayGreetingStorage';
+import {
+    buildFirmAnniversaryGreeting,
+    hasSeenFirmAnniversary,
+    isFirmAnniversaryDate,
+    markFirmAnniversarySeen,
+} from '../lib/firmAnniversaryStorage';
 import { BirthdayPostcardOverlay } from './BirthdayPostcardOverlay';
 
 export function BirthdayPostcardHost() {
@@ -16,7 +23,7 @@ export function BirthdayPostcardHost() {
     const [dismissedDemo, setDismissedDemo] = useState(false);
 
     useEffect(() => {
-        if (loading || !isAuthenticated() || !user?.email) {
+        if (loading || !isAuthenticated() || !user?.email || isMeetingRoomAccount(user)) {
             setGreeting(null);
             return;
         }
@@ -26,8 +33,13 @@ export function BirthdayPostcardHost() {
             return;
         }
 
-        const pending = getPendingBirthdayGreeting(user.email);
-        setGreeting(pending);
+        const now = new Date();
+        if (isFirmAnniversaryDate(now) && !hasSeenFirmAnniversary(user.email, now.getFullYear())) {
+            setGreeting(buildFirmAnniversaryGreeting(user, now));
+            return;
+        }
+
+        setGreeting(getPendingBirthdayGreeting(user.email));
     }, [user, loading, dismissedDemo]);
 
     const handleClose = useCallback(() => {
@@ -35,6 +47,11 @@ export function BirthdayPostcardHost() {
             return;
         if (greeting.id === 'bday_demo_force') {
             setDismissedDemo(true);
+            setGreeting(null);
+            return;
+        }
+        if (greeting.kind === 'firm') {
+            markFirmAnniversarySeen(greeting.recipientEmail, new Date().getFullYear());
             setGreeting(null);
             return;
         }
