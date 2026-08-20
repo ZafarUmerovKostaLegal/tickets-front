@@ -45,11 +45,20 @@ describe('normalizeExpensesSavedFilters', () => {
         });
     });
 
+    it('restores authorUserId', () => {
+        expect(normalizeExpensesSavedFilters({
+            authorUserId: 38,
+        }, 'default')).toMatchObject({
+            authorUserId: 38,
+        });
+    });
+
     it('drops invalid persisted values', () => {
         expect(normalizeExpensesSavedFilters({
             status: 'unknown',
             type: 'unknown',
             partnerUserId: -1,
+            authorUserId: 0,
             reimbursable: 'yes',
             period: 'forever',
             dateFrom: '31.07.2026',
@@ -60,6 +69,7 @@ describe('normalizeExpensesSavedFilters', () => {
             type: '',
             subtype: '',
             partnerUserId: '',
+            authorUserId: '',
             reimbursable: '',
             period: 'all',
             dateFrom: '',

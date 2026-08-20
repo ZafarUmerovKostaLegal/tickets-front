@@ -29,6 +29,9 @@ import {
 } from '@entities/expenses/model/expensesPeriodPresets';
 import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/model/coerceExpense';
 import { listPartners, loadPublicUsersByIds, type UserPublic } from '@entities/user';
+import { listColleaguesAsUsers } from '@entities/contacts';
+import type { User } from '@entities/user/model/types';
+import { isHiddenSystemUser } from '@shared/lib';
 import { formatExpenseApprovedByLabel, formatExpenseAuthorLabel, mergeExpenseAuthorFromCache, needsAuthorEnrichment, formatPartnerUserLabel, } from '@entities/expenses/model/expenseAuthor';
 import { canViewExpensesRequestsAndReport } from '@entities/expenses/model/expenseModeration';
 import { useExpenseAttentionBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
@@ -55,7 +58,11 @@ type TableConfirmState = null | {
     kind: 'delete';
     req: ExpenseRequest;
 };
-type ActiveFilter = 'status' | 'type' | 'subtype' | 'partner' | 'reimbursable' | 'period' | 'sort' | null;
+type ActiveFilter = 'status' | 'type' | 'subtype' | 'partner' | 'author' | 'reimbursable' | 'period' | 'sort' | null;
+
+function authorFilterLabel(u: Pick<User, 'display_name' | 'email' | 'id'>): string {
+    return u.display_name?.trim() || u.email?.trim() || `Пользователь #${u.id}`;
+}
 
 const SORT_LABELS: Record<ExpensesUiSortBy, string> = {
     createdAt: 'По дате создания',
@@ -414,10 +421,11 @@ type FilterDropProps = {
     onToggle: () => void;
     children: ReactNode;
     badgeCount?: number;
+    wide?: boolean;
 };
-function FilterDrop({ label, active, isOpen, onToggle, children, badgeCount = 0 }: FilterDropProps) {
+function FilterDrop({ label, active, isOpen, onToggle, children, badgeCount = 0, wide = false }: FilterDropProps) {
     return (<div
-        className={`exp-filter${active ? ' exp-filter--active' : ''}`}
+        className={`exp-filter${active ? ' exp-filter--active' : ''}${wide ? ' exp-filter--wide' : ''}`}
         onMouseDown={(event) => event.stopPropagation()}
     >
         <button type="button" className="exp-filter__btn" onClick={onToggle}>
@@ -551,6 +559,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [filterSubtype, setFilterSubtype] = useState<PartnerExpenseCategory | ''>('');
     const [filterPartnerUserId, setFilterPartnerUserId] = useState<number | ''>('');
     const [partnerFilterOptions, setPartnerFilterOptions] = useState<UserPublic[]>([]);
+    const [filterAuthorUserId, setFilterAuthorUserId] = useState<number | ''>('');
+    const [authorFilterOptions, setAuthorFilterOptions] = useState<User[]>([]);
+    const [authorFilterQuery, setAuthorFilterQuery] = useState('');
     const [filterReimb, setFilterReimb] = useState<'reimbursable' | 'non_reimbursable' | ''>('');
     const [filterPeriod, setFilterPeriod] = useState<ExpensesUiFilterPeriod>('all');
     const [filterDateFrom, setFilterDateFrom] = useState('');
@@ -562,6 +573,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         if (!isMobile)
             setMobileFiltersOpen(false);
     }, [isMobile]);
+    useEffect(() => {
+        if (openFilter !== 'author')
+            setAuthorFilterQuery('');
+    }, [openFilter]);
     useEffect(() => {
         const t = window.setTimeout(() => setDebouncedSearch(search.trim()), 320);
         return () => window.clearTimeout(t);
@@ -579,6 +594,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         setFilterType(restored.type);
         setFilterSubtype(restored.subtype);
         setFilterPartnerUserId(restored.partnerUserId);
+        setFilterAuthorUserId(restored.authorUserId);
         setFilterReimb(restored.reimbursable);
         setFilterPeriod(restored.period);
         setFilterDateFrom(restored.dateFrom);
@@ -608,6 +624,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             type: filterType,
             subtype: filterSubtype,
             partnerUserId: filterPartnerUserId,
+            authorUserId: filterAuthorUserId,
             reimbursable: filterReimb,
             period: filterPeriod,
             dateFrom: filterDateFrom,
@@ -624,6 +641,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         filterType,
         filterSubtype,
         filterPartnerUserId,
+        filterAuthorUserId,
         filterReimb,
         filterPeriod,
         filterDateFrom,
@@ -636,6 +654,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         filterType,
         filterSubtype,
         filterPartnerUserId,
+        filterAuthorUserId,
         filterReimb,
         filterPeriod,
         filterDateFrom,
@@ -644,7 +663,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         isModerationQueue,
         isPartnerScope,
         scopeMode ?? '',
-    ].join('\0'), [debouncedSearch, filterStatus, filterType, filterSubtype, filterPartnerUserId, filterReimb, filterPeriod, filterDateFrom, filterDateTo, filterSort, isModerationQueue, isPartnerScope, scopeMode]);
+    ].join('\0'), [debouncedSearch, filterStatus, filterType, filterSubtype, filterPartnerUserId, filterAuthorUserId, filterReimb, filterPeriod, filterDateFrom, filterDateTo, filterSort, isModerationQueue, isPartnerScope, scopeMode]);
     useEffect(() => {
         setExpenseTableMenuForId(null);
     }, [listPage, filterDepsKey, loadKey]);
@@ -665,6 +684,26 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             cancelled = true;
         };
     }, [isPartnerScope]);
+    useEffect(() => {
+        if (!canModerate)
+            return;
+        let cancelled = false;
+        void listColleaguesAsUsers()
+            .then((rows) => {
+                if (cancelled)
+                    return;
+                setAuthorFilterOptions(
+                    (Array.isArray(rows) ? rows : []).filter((u) => !isHiddenSystemUser(u) && !u.is_blocked && !u.is_archived),
+                );
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setAuthorFilterOptions([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [canModerate]);
     const filterDepsKeyRef = useRef<string | null>(null);
     useLayoutEffect(() => {
         if (filterDepsKeyRef.current === null) {
@@ -706,6 +745,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             filterType: isClientScope ? '' : filterType,
             filterSubtype,
             filterPartnerUserId,
+            filterAuthorUserId: canModerate ? filterAuthorUserId : '',
             filterReimb,
             filterPeriod,
             filterDateFrom,
@@ -757,6 +797,8 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         filterType,
         filterSubtype,
         filterPartnerUserId,
+        filterAuthorUserId,
+        canModerate,
         filterReimb,
         filterPeriod,
         filterDateFrom,
@@ -1184,6 +1226,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         setFilterType('');
         setFilterSubtype('');
         setFilterPartnerUserId('');
+        setFilterAuthorUserId('');
         setFilterReimb('');
         setFilterPeriod('all');
         setFilterDateFrom('');
@@ -1283,12 +1326,12 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     // (that caused «1 заявка» in stats with an empty table after create).
     const filtered = requestsForUi;
     const hasFilters = isModerationQueue
-        ? !!(filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
+        ? !!(filterAuthorUserId || filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
         : isPartnerScope
-            ? !!(filterStatus || filterSubtype || filterPartnerUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
+            ? !!(filterStatus || filterSubtype || filterPartnerUserId || filterAuthorUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
             : isClientScope
-                ? !!(filterStatus || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
-                : !!(filterStatus || filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search);
+                ? !!(filterStatus || filterAuthorUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
+                : !!(filterStatus || filterType || filterAuthorUserId || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search);
     const activeFilterChipCount = useMemo(() => {
         let n = 0;
         if (!isModerationQueue && filterStatus)
@@ -1302,6 +1345,8 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         else if (!isClientScope && filterType) {
             n++;
         }
+        if (canModerate && filterAuthorUserId)
+            n++;
         if (filterReimb)
             n++;
         if (filterPeriod !== 'all')
@@ -1309,7 +1354,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         if (filterSort !== 'createdAt')
             n++;
         return n;
-    }, [isModerationQueue, isPartnerScope, isClientScope, filterStatus, filterType, filterSubtype, filterPartnerUserId, filterReimb, filterPeriod, filterSort]);
+    }, [isModerationQueue, isPartnerScope, isClientScope, canModerate, filterStatus, filterType, filterSubtype, filterPartnerUserId, filterAuthorUserId, filterReimb, filterPeriod, filterSort]);
     const periodFilterLabel = useMemo(
         () => expensesPeriodFilterLabel(filterPeriod, filterDateFrom, filterDateTo),
         [filterPeriod, filterDateFrom, filterDateTo],
@@ -1322,6 +1367,23 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         const p = partnerFilterOptions.find(x => x.id === filterPartnerUserId);
         return p?.display_name?.trim() || p?.email || `Партнёр #${filterPartnerUserId}`;
     }, [filterPartnerUserId, partnerFilterOptions]);
+    const authorFilterChipLabel = useMemo(() => {
+        if (!filterAuthorUserId)
+            return 'Автор';
+        const u = authorFilterOptions.find(x => x.id === filterAuthorUserId);
+        if (u)
+            return authorFilterLabel(u);
+        return `Автор #${filterAuthorUserId}`;
+    }, [filterAuthorUserId, authorFilterOptions]);
+    const filteredAuthorOptions = useMemo(() => {
+        const q = authorFilterQuery.trim().toLowerCase();
+        if (!q)
+            return authorFilterOptions;
+        return authorFilterOptions.filter((u) => {
+            const hay = [u.display_name, u.email, String(u.id)].filter(Boolean).join(' ').toLowerCase();
+            return hay.includes(q);
+        });
+    }, [authorFilterOptions, authorFilterQuery]);
     return (<div className="expenses-page">
         <main className="expenses-page__main">
             <header className="expenses-page__header">
@@ -1468,6 +1530,27 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                             {partnerFilterOptions.map(p => (<button key={p.id} className={`exp-filter__opt${filterPartnerUserId === p.id ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(p.id); setOpenFilter(null); }}>
                                 {p.display_name?.trim() || p.email || `#${p.id}`}
                             </button>))}
+                        </FilterDrop>)}
+                        {canModerate && (<FilterDrop label={authorFilterChipLabel} active={!!filterAuthorUserId} isOpen={openFilter === 'author'} onToggle={() => toggleFilter('author')} wide>
+                            <div className="exp-filter__author-search" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                    type="search"
+                                    className="exp-filter__author-search-input"
+                                    placeholder="Поиск автора…"
+                                    value={authorFilterQuery}
+                                    onChange={(e) => setAuthorFilterQuery(e.target.value)}
+                                    aria-label="Поиск автора"
+                                />
+                            </div>
+                            <div className="exp-filter__author-list">
+                                <button type="button" className={`exp-filter__opt${!filterAuthorUserId ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterAuthorUserId(''); setOpenFilter(null); }}>
+                                    Все авторы
+                                </button>
+                                {filteredAuthorOptions.map(u => (<button key={u.id} type="button" className={`exp-filter__opt${filterAuthorUserId === u.id ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterAuthorUserId(u.id); setOpenFilter(null); }}>
+                                    <span className="exp-filter__opt-label">{authorFilterLabel(u)}</span>
+                                </button>))}
+                                {filteredAuthorOptions.length === 0 && (<p className="exp-filter__empty" role="status">Никого не найдено</p>)}
+                            </div>
                         </FilterDrop>)}
 
 

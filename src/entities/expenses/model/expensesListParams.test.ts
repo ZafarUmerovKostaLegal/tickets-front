@@ -87,6 +87,15 @@ describe('buildExpensesListParams', () => {
         expect(p.partnerUserId).toBe(42);
     });
 
+    it('maps author filter to employeeUserId', () => {
+        const p = buildExpensesListParams({
+            ...base,
+            filterPeriod: 'all',
+            filterAuthorUserId: 38,
+        });
+        expect(p.employeeUserId).toBe(38);
+    });
+
     it('forces client_expense type for client tab', () => {
         const p = buildExpensesListParams({
             ...base,

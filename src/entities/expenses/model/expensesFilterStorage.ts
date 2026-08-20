@@ -11,6 +11,7 @@ export type ExpensesSavedFilters = {
     type: ExpenseType | '';
     subtype: PartnerExpenseCategory | '';
     partnerUserId: number | '';
+    authorUserId: number | '';
     reimbursable: ExpensesReimbursableFilter;
     period: ExpensesUiFilterPeriod;
     dateFrom: string;
@@ -18,7 +19,7 @@ export type ExpensesSavedFilters = {
     sortBy: ExpensesUiSortBy;
 };
 
-const STORAGE_PREFIX = 'tickets.expenses.filters.v2';
+const STORAGE_PREFIX = 'tickets.expenses.filters.v3';
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const PERIODS = new Set<ExpensesUiFilterPeriod>([
     'all',
@@ -51,12 +52,21 @@ export function defaultExpensesSavedFilters(): ExpensesSavedFilters {
         type: '',
         subtype: '',
         partnerUserId: '',
+        authorUserId: '',
         reimbursable: '',
         period: 'all',
         dateFrom: '',
         dateTo: '',
         sortBy: 'createdAt',
     };
+}
+
+function positiveUserId(value: unknown): number | '' {
+    return typeof value === 'number'
+        && Number.isInteger(value)
+        && value > 0
+        ? value
+        : '';
 }
 
 export function normalizeExpensesSavedFilters(
@@ -76,11 +86,8 @@ export function normalizeExpensesSavedFilters(
     const subtype = typeof value.subtype === 'string' && SUBTYPES.has(value.subtype as PartnerExpenseCategory)
         ? value.subtype as PartnerExpenseCategory
         : '';
-    const partnerUserId = typeof value.partnerUserId === 'number'
-        && Number.isInteger(value.partnerUserId)
-        && value.partnerUserId > 0
-        ? value.partnerUserId
-        : '';
+    const partnerUserId = positiveUserId(value.partnerUserId);
+    const authorUserId = positiveUserId(value.authorUserId);
     const reimbursable = value.reimbursable === 'reimbursable' || value.reimbursable === 'non_reimbursable'
         ? value.reimbursable
         : '';
@@ -97,6 +104,7 @@ export function normalizeExpensesSavedFilters(
         type: variant === 'partner' || type === 'partner_expense' ? '' : type,
         subtype: variant === 'partner' ? subtype : '',
         partnerUserId: variant === 'partner' ? partnerUserId : '',
+        authorUserId,
         reimbursable,
         period,
         dateFrom: dateValue(value.dateFrom),

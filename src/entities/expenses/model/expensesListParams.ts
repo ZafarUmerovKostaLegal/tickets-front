@@ -18,6 +18,8 @@ export function buildExpensesListParams(args: {
     filterType: ExpenseType | '';
     filterSubtype?: PartnerExpenseCategory | '';
     filterPartnerUserId?: number | '';
+    /** Author (created_by) — API `employeeUserId`. */
+    filterAuthorUserId?: number | '';
     filterReimb: 'reimbursable' | 'non_reimbursable' | '';
     filterPeriod: ExpensesUiFilterPeriod;
     filterDateFrom?: string;
@@ -49,6 +51,8 @@ export function buildExpensesListParams(args: {
     else if (args.filterStatus) {
         p.status = args.filterStatus;
     }
+    if (typeof args.filterAuthorUserId === 'number' && args.filterAuthorUserId > 0)
+        p.employeeUserId = args.filterAuthorUserId;
     if (args.scopeMode === 'partner') {
         p.expenseType = 'partner_expense';
         if (args.filterSubtype)
