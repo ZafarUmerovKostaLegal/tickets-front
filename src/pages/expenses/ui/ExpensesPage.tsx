@@ -183,7 +183,7 @@ function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, current
     const blockedOwn = isModerationBlockedForOwnExpense(canModerate, currentUserId, req);
     const showMod = showPendingApprovalModeration(req, canModerate, blockedOwn);
     const showOwnModHint = showOwnPendingModerationBlockedHint(req, canModerate, blockedOwn);
-    const showPay = showPayExpenseAction(req, blockedOwn, { isPaymentConfirmer });
+    const showPay = showPayExpenseAction(req, blockedOwn, { isPaymentConfirmer, canModerate });
     const showDelete = showDeleteExpenseAction(req, currentUserId, currentUserRole);
     const busy = moderationBusyId === req.id;
     const canEditFromList = resolveExpensePanelMode(req.status) === 'edit';
@@ -1160,8 +1160,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                     ? req.status === 'approved' && req.isReimbursable
                     : req.status === 'pending_approval';
                 if (intentParsed && intentMatchesStatus) {
+                    const blockedOwn = isModerationBlockedForOwnExpense(canModerate, user?.id, req);
                     const allowIntent = intentParsed === 'pay'
-                        ? isPaymentConfirmer
+                        ? showPayExpenseAction(req, blockedOwn, { isPaymentConfirmer, canModerate })
                         : canModerate;
                     if (allowIntent)
                         setEmailModerationIntent(intentParsed);

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { ExpenseRequest } from './types';
-import { showDeleteExpenseAction, showPayExpenseAction } from './expenseStatusPolicy';
+import {
+    showDeleteExpenseAction,
+    showPayExpenseAction,
+    showUnapproveExpenseAction,
+    showUnpayExpenseAction,
+} from './expenseStatusPolicy';
 import { expensePayActionLabel, expenseStatusLabel } from './expenseStatusLabels';
 
 function expense(overrides: Partial<ExpenseRequest> = {}): ExpenseRequest {
@@ -13,6 +18,7 @@ function expense(overrides: Partial<ExpenseRequest> = {}): ExpenseRequest {
         equivalentAmount: 0.08,
         expenseType: 'client_expense',
         isReimbursable: true,
+        paymentMethod: 'cash',
         status: 'draft',
         createdByUserId: 42,
         ...overrides,
@@ -38,12 +44,9 @@ describe('showDeleteExpenseAction', () => {
         expect(showDeleteExpenseAction(expense({ status: 'draft' }), 99, 'Сотрудник')).toBe(false);
     });
 
-    it('allows administrators to delete any expense', () => {
-        expect(showDeleteExpenseAction(expense({ status: 'approved', createdByUserId: 99 }), 42, 'Администратор')).toBe(true);
-        expect(showDeleteExpenseAction(expense({ status: 'paid', createdByUserId: 99 }), 42, 'Главный администратор')).toBe(true);
-    });
-
-    it('allows moderators to delete except paid and closed', () => {
+    it('allows admin delete always; partner except paid/closed', () => {
+        expect(showDeleteExpenseAction(expense({ status: 'paid', createdByUserId: 99 }), 42, 'Администратор')).toBe(true);
+        expect(showDeleteExpenseAction(expense({ status: 'closed', createdByUserId: 99 }), 42, 'Главный администратор')).toBe(true);
         expect(showDeleteExpenseAction(expense({ status: 'pending_approval', createdByUserId: 99 }), 42, 'Партнер')).toBe(true);
         expect(showDeleteExpenseAction(expense({ status: 'approved', createdByUserId: 99 }), 42, 'Партнёр')).toBe(true);
         expect(showDeleteExpenseAction(expense({ status: 'paid', createdByUserId: 99 }), 42, 'Партнер')).toBe(false);
@@ -52,11 +55,19 @@ describe('showDeleteExpenseAction', () => {
 });
 
 describe('showPayExpenseAction', () => {
-    it('allows only payment confirmer for approved reimbursable', () => {
-        const approved = expense({ status: 'approved', isReimbursable: true });
+    it('allows only payment confirmer for cash reimbursable', () => {
+        const approved = expense({ status: 'approved', isReimbursable: true, paymentMethod: 'cash' });
         expect(showPayExpenseAction(approved, false)).toBe(false);
         expect(showPayExpenseAction(approved, false, { isPaymentConfirmer: true })).toBe(true);
+        expect(showPayExpenseAction(approved, false, { canModerate: true })).toBe(false);
         expect(showPayExpenseAction(approved, true, { isPaymentConfirmer: true })).toBe(false);
+    });
+
+    it('allows moderators for transfer reimbursable', () => {
+        const approved = expense({ status: 'approved', isReimbursable: true, paymentMethod: 'transfer' });
+        expect(showPayExpenseAction(approved, false, { isPaymentConfirmer: true })).toBe(false);
+        expect(showPayExpenseAction(approved, false, { canModerate: true })).toBe(true);
+        expect(showPayExpenseAction(approved, true, { canModerate: true })).toBe(false);
     });
 
     it('hides pay for non-reimbursable and non-approved', () => {
@@ -65,10 +76,38 @@ describe('showPayExpenseAction', () => {
     });
 });
 
+describe('showUnpayExpenseAction', () => {
+    it('mirrors pay rights for paid cash/transfer', () => {
+        const paidCash = expense({ status: 'paid', isReimbursable: true, paymentMethod: 'cash' });
+        expect(showUnpayExpenseAction(paidCash, false, { isPaymentConfirmer: true })).toBe(true);
+        expect(showUnpayExpenseAction(paidCash, false, { canModerate: true })).toBe(false);
+
+        const paidTransfer = expense({ status: 'paid', isReimbursable: true, paymentMethod: 'transfer' });
+        expect(showUnpayExpenseAction(paidTransfer, false, { canModerate: true })).toBe(true);
+        expect(showUnpayExpenseAction(paidTransfer, false, { isPaymentConfirmer: true })).toBe(false);
+    });
+});
+
+describe('showUnapproveExpenseAction', () => {
+    it('allows moderator for approved (not own)', () => {
+        const approved = expense({ status: 'approved' });
+        expect(showUnapproveExpenseAction(approved, true, false)).toBe(true);
+        expect(showUnapproveExpenseAction(approved, true, true)).toBe(false);
+        expect(showUnapproveExpenseAction(approved, false, false)).toBe(false);
+        expect(showUnapproveExpenseAction(expense({ status: 'paid' }), true, false)).toBe(false);
+    });
+});
+
 describe('expenseStatusLabels', () => {
-    it('uses reimbursement wording for reimbursable approved/paid', () => {
-        expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: true }))).toBe('Ожидает возмещения');
-        expect(expenseStatusLabel(expense({ status: 'paid', isReimbursable: true }))).toBe('Возмещено');
-        expect(expensePayActionLabel(expense({ isReimbursable: true }))).toBe('Возмещено');
+    it('uses reimbursement wording for cash reimbursable approved/paid', () => {
+        expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: true, paymentMethod: 'cash' }))).toBe('Ожидает возмещения');
+        expect(expenseStatusLabel(expense({ status: 'paid', isReimbursable: true, paymentMethod: 'cash' }))).toBe('Возмещено');
+        expect(expensePayActionLabel(expense({ isReimbursable: true, paymentMethod: 'cash' }))).toBe('Возмещено');
+    });
+
+    it('uses payment wording for transfer reimbursable', () => {
+        expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: true, paymentMethod: 'transfer' }))).toBe('Ожидает оплаты');
+        expect(expenseStatusLabel(expense({ status: 'paid', isReimbursable: true, paymentMethod: 'transfer' }))).toBe('Оплачено');
+        expect(expensePayActionLabel(expense({ isReimbursable: true, paymentMethod: 'transfer' }))).toBe('Оплачено');
     });
 });

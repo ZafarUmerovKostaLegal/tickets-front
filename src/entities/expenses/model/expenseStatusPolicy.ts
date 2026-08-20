@@ -1,11 +1,31 @@
 import { canAccessAdminOnlyModules } from '@shared/lib/orgRoles';
 import { canModerateExpenseRequests } from './expenseModeration';
-import type { ExpenseRequest, ExpenseStatus } from './types';
+import type { ExpenseRequest, ExpenseStatus, PaymentMethod } from './types';
 
 export type ExpensePayActionOpts = {
-    /** Only the designated payment confirmer may mark reimbursable expenses as paid. */
+    /** Designated payment confirmer (cash reimbursements). */
     isPaymentConfirmer?: boolean;
+    /** Registry moderator (admin / partner) — may pay transfer/card reimbursements. */
+    canModerate?: boolean;
 };
+
+function paymentMethodOf(expense: ExpenseRequest): PaymentMethod | string {
+    return String(expense.paymentMethod ?? '').trim().toLowerCase();
+}
+
+/** Who may mark reimbursable expense as paid / undo pay for this payment method. */
+export function canConfirmExpensePayout(
+    expense: ExpenseRequest,
+    opts?: ExpensePayActionOpts,
+): boolean {
+    if (!expense.isReimbursable)
+        return false;
+    const method = paymentMethodOf(expense);
+    if (method === 'cash')
+        return Boolean(opts?.isPaymentConfirmer);
+    // transfer, card, or unknown non-cash → registry moderators
+    return Boolean(opts?.canModerate);
+}
 
 export function resolveExpensePanelMode(status: ExpenseStatus): 'edit' | 'view' {
     return status === 'draft' || status === 'revision_required' ? 'edit' : 'view';
@@ -42,8 +62,8 @@ export function showOwnPendingModerationBlockedHint(expense: ExpenseRequest, can
 }
 
 /**
- * Reimbursable payout: approved → confirmer marks «Возмещено» (paid).
- * Close / «Не оплачено» lifecycle actions are not offered in the UI.
+ * Reimbursable payout: approved → paid.
+ * Cash → confirmer; transfer/card → registry moderator.
  */
 export function showPayExpenseAction(
     expense: ExpenseRequest,
@@ -54,10 +74,31 @@ export function showPayExpenseAction(
         return false;
     if (expense.status !== 'approved')
         return false;
-    if (!expense.isReimbursable)
-        return false;
-    return Boolean(opts?.isPaymentConfirmer);
+    return canConfirmExpensePayout(expense, opts);
 }
+
+export function showUnpayExpenseAction(
+    expense: ExpenseRequest,
+    blockedForOwn: boolean,
+    opts?: ExpensePayActionOpts,
+): boolean {
+    if (blockedForOwn)
+        return false;
+    if (expense.status !== 'paid')
+        return false;
+    return canConfirmExpensePayout(expense, opts);
+}
+
+export function showUnapproveExpenseAction(
+    expense: ExpenseRequest,
+    canModerate: boolean,
+    blockedForOwn: boolean,
+): boolean {
+    if (blockedForOwn || !canModerate)
+        return false;
+    return expense.status === 'approved';
+}
+
 export type CloseExpenseUi = {
     label: string;
     confirmMessage: string;
@@ -99,11 +140,15 @@ export function showDeleteExpenseAction(expense: ExpenseRequest, currentUserId: 
 }
 export function showLifecycleModerationRow(
     expense: ExpenseRequest,
-    _canModerate: boolean,
+    canModerate: boolean,
     blockedForOwn: boolean,
     opts?: ExpensePayActionOpts,
 ): boolean {
     if (blockedForOwn)
         return false;
-    return showPayExpenseAction(expense, false, opts);
+    return (
+        showPayExpenseAction(expense, false, opts)
+        || showUnpayExpenseAction(expense, false, opts)
+        || showUnapproveExpenseAction(expense, canModerate, false)
+    );
 }

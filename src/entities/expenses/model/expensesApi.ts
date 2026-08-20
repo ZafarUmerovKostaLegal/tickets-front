@@ -184,6 +184,24 @@ export async function payExpense(id: string): Promise<ExpenseRequest> {
     await throwIfNotOk(res);
     return normalizeExpenseRequest(await res.json() as ExpenseRequest);
 }
+export async function unpayExpense(id: string, comment: string): Promise<ExpenseRequest> {
+    const res = await apiFetch(`/api/v1/expenses/${encodeURIComponent(id)}/unpay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: comment.trim() }),
+    });
+    await throwIfNotOk(res);
+    return normalizeExpenseRequest(await res.json() as ExpenseRequest);
+}
+export async function unapproveExpense(id: string, comment: string): Promise<ExpenseRequest> {
+    const res = await apiFetch(`/api/v1/expenses/${encodeURIComponent(id)}/unapprove`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment: comment.trim() }),
+    });
+    await throwIfNotOk(res);
+    return normalizeExpenseRequest(await res.json() as ExpenseRequest);
+}
 export async function closeExpense(id: string): Promise<ExpenseRequest> {
     const res = await apiFetch(`/api/v1/expenses/${encodeURIComponent(id)}/close`, { method: 'POST' });
     await throwIfNotOk(res);
