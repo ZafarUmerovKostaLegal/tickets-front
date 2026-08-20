@@ -1,18 +1,22 @@
 import type { ExpenseAmountCurrency, ExpenseStatus, ExpenseType, PartnerExpenseCategory, PaymentMethod, } from './types';
 
 /**
- * User-facing statuses in registry filters / reports.
- * Workflow statuses (draft, pending_approval) stay for create/moderation, not in this list.
+ * User-facing statuses in company registry filters / reports.
+ * Includes workflow statuses so the main list can show all expenses.
  */
 export const EXPENSE_REGISTRY_STATUSES: ExpenseStatus[] = [
-    'approved',
+    'draft',
+    'pending_approval',
     'revision_required',
+    'approved',
     'paid',
     'rejected',
+    'closed',
+    'withdrawn',
 ];
 export const EXPENSE_REGISTRY_STATUS_SET = new Set<ExpenseStatus>(EXPENSE_REGISTRY_STATUSES);
 
-/** Create / submit / moderation queue — not shown in registry status filter. */
+/** Create / submit / moderation queue — subset of workflow statuses. */
 export const EXPENSE_WORKFLOW_STATUSES: ExpenseStatus[] = [
     'draft',
     'pending_approval',
@@ -118,15 +122,15 @@ export const EXPENSE_TYPES: {
     { value: 'partner_expense', label: 'Расход партнёра' },
     { value: 'other', label: 'Прочее' },
 ];
-/** Types on «Расходы компании» (без partner и без client — клиентские в отдельном табе). */
+/** Types on «Расходы компании» (без partner — партнёрские в отдельном табе). */
 export const COMPANY_EXPENSE_TYPES: {
-    value: Exclude<ExpenseType, 'partner_expense' | 'client_expense'>;
+    value: Exclude<ExpenseType, 'partner_expense'>;
     label: string;
 }[] = EXPENSE_TYPES.filter(
-    (t): t is { value: Exclude<ExpenseType, 'partner_expense' | 'client_expense'>; label: string } =>
-        t.value !== 'partner_expense' && t.value !== 'client_expense',
+    (t): t is { value: Exclude<ExpenseType, 'partner_expense'>; label: string } =>
+        t.value !== 'partner_expense',
 );
-export const COMPANY_EXPENSE_TYPE_CODES: Exclude<ExpenseType, 'partner_expense' | 'client_expense'>[] = COMPANY_EXPENSE_TYPES.map(t => t.value);
+export const COMPANY_EXPENSE_TYPE_CODES: Exclude<ExpenseType, 'partner_expense'>[] = COMPANY_EXPENSE_TYPES.map(t => t.value);
 export const PAYMENT_METHODS: {
     value: PaymentMethod;
     label: string;

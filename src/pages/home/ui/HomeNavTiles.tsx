@@ -201,7 +201,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         expenses: expensePayCount > 0
             ? `${routes.expenses}?focus=pay`
             : expenseModerationCount > 0
-                ? routes.expensesRequests
+                ? `${routes.expenses}?focus=moderation`
                 : routes.expenses,
         correspondence: correspondenceOutgoingPending > 0
             ? `${routes.correspondence}?tab=outgoing&view=attention`

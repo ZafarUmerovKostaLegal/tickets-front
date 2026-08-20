@@ -98,7 +98,17 @@ describe('buildExpensesListParams', () => {
         expect(p.excludeExpenseType).toBeUndefined();
     });
 
-    it('excludes client_expense on company tab', () => {
+    it('includes client_expense on company tab when not filtered', () => {
+        const p = buildExpensesListParams({
+            ...base,
+            filterPeriod: 'all',
+            scopeMode: 'company',
+        });
+        expect(p.excludeExpenseType).toBeUndefined();
+        expect(p.expenseType).toBeUndefined();
+    });
+
+    it('can still exclude client_expense when requested', () => {
         const p = buildExpensesListParams({
             ...base,
             filterPeriod: 'all',

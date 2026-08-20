@@ -569,7 +569,11 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const isClientScope = variant === 'client';
     const scopeMode = isPartnerScope ? 'partner' as const : (isModerationQueue ? undefined : 'company' as const);
     const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email);
-    const payBannerCount = isClientScope ? clientPayCount : (isPartnerScope || isModerationQueue ? 0 : companyPayCount);
+    const payBannerCount = isPartnerScope || isModerationQueue
+        ? 0
+        : isClientScope
+            ? clientPayCount
+            : companyPayCount + clientPayCount;
     const filterStorageUserId = user?.id ?? null;
     const filterOwnerKey = !currentUserLoading && filterStorageUserId != null
         ? `${filterStorageUserId}:${variant}`
@@ -623,11 +627,18 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             return;
         if (isModerationQueue)
             return;
-        if (searchParams.get('focus') !== 'pay')
+        const focus = searchParams.get('focus');
+        if (focus === 'pay') {
+            setFilterStatus('approved');
+            setFilterReimb('reimbursable');
+            setListPage(1);
             return;
-        setFilterStatus('approved');
-        setFilterReimb('reimbursable');
-        setListPage(1);
+        }
+        if (focus === 'moderation') {
+            setFilterStatus('pending_approval');
+            setFilterReimb('');
+            setListPage(1);
+        }
     }, [filterOwnerKey, hydratedFilterOwnerKey, isModerationQueue, searchParams]);
     useEffect(() => {
         if (!filterOwnerKey || hydratedFilterOwnerKey !== filterOwnerKey || filterStorageUserId == null)
@@ -745,9 +756,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             pageSize: EXPENSES_LIST_PAGE_SIZE,
             scopeMode,
             forceExpenseType: isClientScope ? 'client_expense' : undefined,
-            excludeExpenseType: !isModerationQueue && !isPartnerScope && !isClientScope && !filterType
-                ? 'client_expense'
-                : undefined,
         });
         fetchExpenses(params, { signal: controller.signal, getReuseWindowMs: 0 })
             .then(data => {
@@ -1405,21 +1413,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                             : 'Расходы компании'}
                             </h1>
                             <div className="exp-header-queue-wrap">
-                                {!isModerationQueue && !isPartnerScope && !isClientScope && (<>
-                                    {canModerate && (
-                                    <NavLink to={routes.expensesRequests} className="exp-queue-nav">
-                                        На согласование
-                                        {moderationCount > 0 ? (
-                                            <span className="app-count-badge" aria-hidden>{moderationCount > 99 ? '99+' : String(moderationCount)}</span>
-                                        ) : null}
-                                    </NavLink>
-                                    )}
-                                    <NavLink to={routes.expensesClients} className="exp-queue-nav">
-                                        За клиента
-                                        {clientPayCount > 0 ? (
-                                            <span className="app-count-badge" aria-hidden>{clientPayCount > 99 ? '99+' : String(clientPayCount)}</span>
-                                        ) : null}
-                                    </NavLink>
+                                {!isPartnerScope && (<>
                                     {canModerate && (
                                     <NavLink to={routes.expensesReport} className="exp-queue-nav">
                                         Аналитика
@@ -1429,35 +1423,20 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                         Расходы партнёров
                                     </NavLink>
                                 </>)}
-                                {isClientScope && (<>
-                                    <NavLink to={routes.expenses} className="exp-queue-nav">
-                                        Расходы компании
-                                    </NavLink>
-                                    {canModerate && (<NavLink to={routes.expensesRequests} className="exp-queue-nav">
-                                        На согласование
-                                    </NavLink>)}
-                                    <NavLink to={routes.expensesPartners} className="exp-queue-nav">
-                                        Расходы партнёров
-                                    </NavLink>
-                                </>)}
                                 {isPartnerScope && (<>
                                     <NavLink to={routes.expenses} className="exp-queue-nav">
                                         Расходы компании
                                     </NavLink>
-                                    <NavLink to={routes.expensesClients} className="exp-queue-nav">
-                                        За клиента
+                                    {canModerate && (
+                                    <NavLink to={routes.expensesReport} className="exp-queue-nav">
+                                        Аналитика
                                     </NavLink>
-                                    {canModerate && (<NavLink to={routes.expensesPartnersReport} className="exp-queue-nav">
+                                    )}
+                                    {canModerate && (
+                                    <NavLink to={routes.expensesPartnersReport} className="exp-queue-nav">
                                         Отчёт
-                                    </NavLink>)}
-                                </>)}
-                                {isModerationQueue && (<>
-                                    <NavLink to={routes.expenses} className="exp-queue-nav">
-                                        Утверждённые расходы
                                     </NavLink>
-                                    <NavLink to={routes.expensesClients} className="exp-queue-nav">
-                                        За клиента
-                                    </NavLink>
+                                    )}
                                 </>)}
                             </div>
                         </div>
@@ -1479,11 +1458,14 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                     }}
                 />
             ) : null}
-            {canModerate && !isModerationQueue && moderationCount > 0 ? (
+            {canModerate && !isModerationQueue && !isPartnerScope && moderationCount > 0 ? (
                 <AttentionBanner
                     text={t('attentionBanner.expensesModeration').replace('{count}', String(moderationCount))}
                     actionLabel={t('attentionBanner.expensesModerationGo')}
-                    to={routes.expensesRequests}
+                    onAction={() => {
+                        setFilterStatus('pending_approval');
+                        setListPage(1);
+                    }}
                 />
             ) : null}
 
