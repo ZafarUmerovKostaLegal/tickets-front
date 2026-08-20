@@ -276,7 +276,9 @@ function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, current
                         className={`exp-table__status-reason${req.status === 'revision_required' ? ' exp-table__status-reason--revision' : ''}`}
                         title={req.rejectionReason}
                     >
-                        <span className="exp-table__status-reason-label">Причина:</span>
+                        <span className="exp-table__status-reason-label">
+                            {req.status === 'revision_required' ? 'Что исправить:' : 'Причина:'}
+                        </span>
                         {' '}
                         <span className="exp-table__status-reason-text">{req.rejectionReason}</span>
                     </span>
