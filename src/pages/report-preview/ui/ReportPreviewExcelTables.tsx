@@ -23,7 +23,7 @@ import {
     recomputeTimePreviewRowAmountToPay,
     timePreviewRowsForPageExport,
 } from '../lib/reportPreviewPartnerExcel';
-import { buildReportPreviewPositionShare } from '../lib/reportPreviewPositionShare';
+import { buildReportPreviewPositionShare, itemMatchesPositionShareFilter, rowMatchesPositionShareFilter, togglePositionShareFilter } from '../lib/reportPreviewPositionShare';
 import { buildTimePreviewDuplicateRowKeySet, TIME_PREVIEW_DUPLICATE_ROW_TITLE, } from '../lib/reportPreviewDuplicateRows';
 import {
     formatRuHmFromIso,
@@ -779,6 +779,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
     const [bfNote, setBfNote] = useState('');
     const [bfBill, setBfBill] = useState('');
     const [bfScopeColors, setBfScopeColors] = useState<string[]>([]);
+    const [bfPositions, setBfPositions] = useState<string[]>([]);
     const [scopeGroupingEnabled, setScopeGroupingEnabled] = useState(false);
     const [toolbarSearch, setToolbarSearch] = useState('');
     const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -872,8 +873,10 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 });
             }
         }
-        return [...m.values()].sort((a, b) => a.label.localeCompare(b.label, 'ru', { sensitivity: 'base' }));
-    }, [employeePartnerPick, rows]);
+        return [...m.values()]
+            .filter((item) => itemMatchesPositionShareFilter(item.position, bfPositions))
+            .sort((a, b) => a.label.localeCompare(b.label, 'ru', { sensitivity: 'base' }));
+    }, [employeePartnerPick, rows, bfPositions]);
     const renderEmployeeBodyCell = (colId: TimeBriefColumnId | TimeFullColumnId, r: TimeExcelPreviewRow, i: number, wk: boolean): ReactNode => {
         if (readOnlyUi) {
             const label = (r.employeeName || r.userName || '').trim() || '—';
@@ -937,7 +940,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             return rows;
         const q = toolbarSearch.trim();
         const filtered = rows.filter((r) => {
-            if (!(briefFilterEmployeeQ(r, briefEmployeeQuery) && briefFilterWhenQ(r, bfWhen) && briefFilterTaskQ(r, bfTask) && briefFilterNoteQ(r, bfNote) && briefFilterDurationQ(r, bfBill, (x) => x.billableHours) && briefFilterScopeColorQ(r, bfScopeColors)))
+            if (!(briefFilterEmployeeQ(r, briefEmployeeQuery) && briefFilterWhenQ(r, bfWhen) && briefFilterTaskQ(r, bfTask) && briefFilterNoteQ(r, bfNote) && briefFilterDurationQ(r, bfBill, (x) => x.billableHours) && briefFilterScopeColorQ(r, bfScopeColors) && rowMatchesPositionShareFilter(r, bfPositions)))
                 return false;
             if (!q)
                 return true;
@@ -946,7 +949,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         return scopeGroupingEnabled
             ? sortTimePreviewRowsByScopeThenChrono(filtered, bfRecordedOrder)
             : sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
-    }, [isFull, rows, briefEmployeeQuery, bfWhen, bfTask, bfNote, bfBill, bfScopeColors, bfRecordedOrder, scopeGroupingEnabled, toolbarSearch]);
+    }, [isFull, rows, briefEmployeeQuery, bfWhen, bfTask, bfNote, bfBill, bfScopeColors, bfPositions, bfRecordedOrder, scopeGroupingEnabled, toolbarSearch]);
     const usedScopeColors = useMemo(() => collectUsedScopeColors(rows), [rows]);
     const usedScopeHint = usedScopeColors.length
         ? `Уже в отчёте: ${usedScopeColors.join(', ')}`
@@ -960,6 +963,8 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
                 return false;
             if (bfScopeColors.length > 0 && !briefFilterScopeColorQ(r, bfScopeColors))
                 return false;
+            if (!rowMatchesPositionShareFilter(r, bfPositions))
+                return false;
             if (!q)
                 return true;
             return briefFilterEmployeeQ(r, q) || briefFilterTaskQ(r, q) || briefFilterNoteQ(r, q);
@@ -967,7 +972,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         return scopeGroupingEnabled
             ? sortTimePreviewRowsByScopeThenChrono(filtered, bfRecordedOrder)
             : sortTimePreviewRowsChronologically(filtered, bfRecordedOrder);
-    }, [isFull, rows, briefEmployeeQuery, bfScopeColors, bfRecordedOrder, scopeGroupingEnabled, toolbarSearch]);
+    }, [isFull, rows, briefEmployeeQuery, bfScopeColors, bfPositions, bfRecordedOrder, scopeGroupingEnabled, toolbarSearch]);
     const displayRows = isFull ? fullNameFiltered : briefDisplayRows;
     const duplicateRowKeys = useMemo(() => buildTimePreviewDuplicateRowKeySet(displayRows), [displayRows]);
     const rowsForTotals = useMemo(() => timePreviewRowsForTotals(displayRows), [displayRows]);
@@ -996,8 +1001,8 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         };
     }, [rowsForTotals, displayRows, rows]);
     const positionShares = useMemo(
-        () => buildReportPreviewPositionShare(rowsForTotals),
-        [rowsForTotals],
+        () => buildReportPreviewPositionShare(timePreviewRowsForTotals(rows)),
+        [rows],
     );
     const positionSharesRef = useRef(positionShares);
     if (!serverReloadBusy)
@@ -1639,17 +1644,25 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
           </div>
           {headerPositionShares.length > 0 ? (
             <div className="tt-rp-mtable-position-shares" aria-label="Доля по должностям">
-              {headerPositionShares.map((share) => (
-                <span
+              {headerPositionShares.map((share) => {
+                const active = bfPositions.includes(share.position);
+                return (
+                <button
+                  type="button"
                   key={share.position}
-                  className="tt-rp-mtable-position-shares__item"
-                  title={`${share.position}: ${formatDecimalHoursAsHm(share.billableHours)} (${share.percent}%)`}
+                  className={`tt-rp-mtable-position-shares__item${active ? ' tt-rp-mtable-position-shares__item--on' : ''}${bfPositions.length > 0 && !active ? ' tt-rp-mtable-position-shares__item--dim' : ''}`}
+                  title={active
+                    ? `Скрыть ${share.position}`
+                    : `Показать только ${share.position}: ${formatDecimalHoursAsHm(share.billableHours)} (${share.percent}%)`}
+                  aria-pressed={active}
+                  onClick={() => setBfPositions((prev) => togglePositionShareFilter(prev, share.position))}
                 >
                   <strong>{share.percent}%</strong>
                   {' '}
                   {share.position}
-                </span>
-              ))}
+                </button>
+                );
+              })}
             </div>
           ) : null}
         </header>

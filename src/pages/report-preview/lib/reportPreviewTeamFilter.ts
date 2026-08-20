@@ -1,4 +1,8 @@
-import type { TimeTrackingTeamRow } from '@entities/time-tracking';
+import {
+    type ProjectPartnerAccessRow,
+    type TimeTrackingTeamRow,
+    type TimeTrackingUserRow,
+} from '@entities/time-tracking';
 
 export function activeTimeTrackingTeams(teams: TimeTrackingTeamRow[]): TimeTrackingTeamRow[] {
     return teams.filter((t) => !t.is_archived);
@@ -70,4 +74,103 @@ export function resolveEffectiveReportPreviewUserIds(params: {
     const allowed = new Set(teamMemberIds);
     const picked = selectedUserIds.filter((id) => allowed.has(id));
     return picked.length > 0 ? picked : teamMemberIds;
+}
+
+type NamedUser = {
+    id: number;
+    displayName: string;
+    email: string;
+    initials?: string | null;
+};
+
+function catalogUserToNamed(u: TimeTrackingUserRow): NamedUser | null {
+    if (u.is_archived || u.is_blocked || u.id <= 0)
+        return null;
+    return {
+        id: u.id,
+        displayName: (u.display_name?.trim() || u.email || `Пользователь ${u.id}`).trim(),
+        email: u.email,
+        initials: u.initials ?? null,
+    };
+}
+
+function mergeAccessRows(
+    primary: readonly ProjectPartnerAccessRow[],
+    extra: readonly ProjectPartnerAccessRow[],
+): ProjectPartnerAccessRow[] {
+    const byId = new Map<number, ProjectPartnerAccessRow>();
+    for (const row of extra) {
+        if (row.authUserId > 0)
+            byId.set(row.authUserId, row);
+    }
+    for (const row of primary) {
+        if (row.authUserId > 0)
+            byId.set(row.authUserId, row);
+    }
+    return [...byId.values()].sort((a, b) => a.displayName.localeCompare(b.displayName, 'ru', { sensitivity: 'base' }));
+}
+
+function catalogUserToAccessRow(u: TimeTrackingUserRow): ProjectPartnerAccessRow | null {
+    const named = catalogUserToNamed(u);
+    if (!named)
+        return null;
+    return {
+        authUserId: named.id,
+        displayName: named.displayName,
+        position: (u.position ?? '').trim(),
+    };
+}
+
+export function mergeNamedUsersForPartnerTeam(params: {
+    teamFilterEnabled: boolean;
+    partnerAuthUserId: number;
+    teamId: string;
+    teams: TimeTrackingTeamRow[];
+    users: NamedUser[];
+    catalog: TimeTrackingUserRow[];
+}): NamedUser[] {
+    const { teamFilterEnabled, partnerAuthUserId, teamId, teams, users, catalog } = params;
+    if (!teamFilterEnabled || partnerAuthUserId <= 0)
+        return users;
+    const allowedIds = resolveTeamMemberUserIds(teams, partnerAuthUserId, teamId.trim() || undefined);
+    if (allowedIds.length === 0)
+        return users;
+    const allowed = new Set(allowedIds);
+    const byId = new Map<number, NamedUser>();
+    for (const user of users) {
+        if (allowed.has(user.id))
+            byId.set(user.id, user);
+    }
+    for (const row of catalog) {
+        if (!allowed.has(row.id) || byId.has(row.id))
+            continue;
+        const named = catalogUserToNamed(row);
+        if (named)
+            byId.set(named.id, named);
+    }
+    return allowedIds.map((id) => byId.get(id)).filter((u): u is NamedUser => Boolean(u));
+}
+
+export function mergeProjectMembersWithPartnerTeam(params: {
+    members: ProjectPartnerAccessRow[];
+    teamFilterEnabled: boolean;
+    partnerAuthUserId: number;
+    teamId: string;
+    teams: TimeTrackingTeamRow[];
+    catalog: TimeTrackingUserRow[];
+}): ProjectPartnerAccessRow[] {
+    const { members, teamFilterEnabled, partnerAuthUserId, teamId, teams, catalog } = params;
+    if (!teamFilterEnabled || partnerAuthUserId <= 0)
+        return members;
+    const allowedIds = resolveTeamMemberUserIds(teams, partnerAuthUserId, teamId.trim() || undefined);
+    if (allowedIds.length === 0)
+        return members;
+    const extra = catalog
+        .filter((u) => allowedIds.includes(u.id))
+        .map(catalogUserToAccessRow)
+        .filter((row): row is ProjectPartnerAccessRow => Boolean(row));
+    const merged = mergeAccessRows(members, extra);
+    const allowed = new Set(allowedIds);
+    const scoped = merged.filter((row) => allowed.has(row.authUserId));
+    return scoped.length > 0 ? scoped : merged;
 }

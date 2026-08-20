@@ -76,6 +76,14 @@ export function trimTrailingEmptyDetailSlots(rows: readonly InvoiceTimeReportDet
     return out;
 }
 
+/** True when the pack has at least one non-empty time or expense row (not a placeholder). */
+export function timeReportPackHasContent(pack: InvoiceTimeReportPack | null | undefined): boolean {
+    if (!pack)
+        return false;
+    return trimTrailingEmptyDetailSlots(pack.detailSlots).length > 0
+        || trimTrailingEmptyDetailSlots(pack.expenseSlots ?? []).length > 0;
+}
+
 export function finalizeDetailSlots(rows: InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {
     return trimTrailingEmptyDetailSlots(rows);
 }

@@ -11,7 +11,7 @@ import { firmBankingToLegalOverrides, applyFirmBankingProfileToLegalOverrides, p
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { applyCoverLetterLanguage, type InvoiceCoverLanguage } from '../lib/invoiceCoverLetterI18n';
-import { emptyInvoiceTimeReportPack, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
+import { emptyInvoiceTimeReportPack, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { splitDetailRowsForPagedTimeReport } from '../lib/invoiceTimeReportChunking';
@@ -27,6 +27,7 @@ import {
 } from '../lib/invoiceDocumentOverrides';
 import {
     buildInvoicePreviewPageSlots,
+    expandIncludedPageKeysIfCompleteSubset,
     normalizeIncludedPageKeys,
     pageKindLabelForSlot,
     type InvoicePreviewPageKey,
@@ -153,6 +154,7 @@ export function InvoicePreviewPage() {
     const pendingDocOverridesRef = useRef<InvoiceDocumentOverridesV1 | null>(null);
     const skipNextAutosaveRef = useRef(true);
     const includedPagesHydratedRef = useRef(false);
+    const prevTrChunkCountRef = useRef(0);
     const [invoiceStatus, setInvoiceStatus] = useState<string | null>(null);
     const [includedPageKeys, setIncludedPageKeys] = useState<Set<InvoicePreviewPageKey> | null>(null);
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
@@ -223,10 +225,8 @@ export function InvoicePreviewPage() {
         // Do not set userPickedBankRef — saved legal edits must not block auto-pick of
         // firm banking by invoice currency (USD invoice → USD реквизиты).
         skipNextAutosaveRef.current = true;
-        if (doc.includedPageKeys?.length) {
-            includedPagesHydratedRef.current = true;
-            setIncludedPageKeys(new Set(doc.includedPageKeys));
-        }
+        // Keep includedPageKeys in pendingDocOverridesRef only — hydrate after the real
+        // time-report pack is ready so tr:1+ are not dropped against the empty 1-chunk pack.
         setLegalOverrides((prev) => ({
             ...prev,
             ...(doc.legal ?? {}),
@@ -235,7 +235,7 @@ export function InvoicePreviewPage() {
         if (doc.cover) {
             setCoverModel((prev) => (prev ? applyCoverDocumentOverrides(prev, doc.cover) : prev));
         }
-        if (doc.timeReport) {
+        if (doc.timeReport && timeReportPackHasContent(doc.timeReport)) {
             setTimeReportPack(doc.timeReport);
         }
     }, []);
@@ -246,8 +246,10 @@ export function InvoicePreviewPage() {
         pendingDocOverridesRef.current = null;
         skipNextAutosaveRef.current = true;
         includedPagesHydratedRef.current = false;
+        prevTrChunkCountRef.current = 0;
         setInvoiceStatus(null);
         setIncludedPageKeys(null);
+        setTimeReportPack(null);
         setLegalOverrides(firmBankingToLegalOverrides());
         const sessionNow = readInvoicePreviewSession();
         (async () => {
@@ -373,12 +375,15 @@ export function InvoicePreviewPage() {
     }, [coverModel, bankProfiles, selectedBankProfileId, applyBankProfile]);
 
     const persistPreviewEdits = useCallback(async (opts?: { silent?: boolean }) => {
-        if (!session || !coverModel)
+        if (!session || !coverModel || timeReportPack == null)
             return false;
-        const pack = timeReportPack ?? emptyInvoiceTimeReportPack(packCurrencyCode(coverModel));
+        const pack = timeReportPack;
         const trChunks = splitDetailRowsForPagedTimeReport(pack.detailSlots);
         const slots = buildInvoicePreviewPageSlots(trChunks.length);
-        const included = normalizeIncludedPageKeys(includedPageKeys, slots);
+        const included = expandIncludedPageKeysIfCompleteSubset(
+            includedPageKeys ?? slots.map((s) => s.key),
+            slots,
+        );
         const doc = buildInvoiceDocumentOverridesPayload({
             legal: legalOverrides,
             cover: coverModel,
@@ -522,8 +527,10 @@ export function InvoicePreviewPage() {
         return nums;
     }, [allPageSlots, resolvedIncludedKeys]);
 
-    // Seed included pages once slots are known (after hydrate or fresh open).
+    // Seed included pages only after the real time-report pack is loaded (not the empty fallback).
     useEffect(() => {
+        if (timeReportPack == null)
+            return;
         if (includedPagesHydratedRef.current && includedPageKeys != null)
             return;
         if (allPageSlots.length === 0)
@@ -531,13 +538,35 @@ export function InvoicePreviewPage() {
         const pending = pendingDocOverridesRef.current?.includedPageKeys;
         if (pending?.length) {
             includedPagesHydratedRef.current = true;
-            setIncludedPageKeys(normalizeIncludedPageKeys(pending, allPageSlots));
+            setIncludedPageKeys(expandIncludedPageKeysIfCompleteSubset(pending, allPageSlots));
             return;
         }
         if (includedPageKeys == null) {
+            includedPagesHydratedRef.current = true;
             setIncludedPageKeys(new Set(allPageSlots.map((s) => s.key)));
         }
-    }, [allPageSlots, includedPageKeys]);
+    }, [timeReportPack, allPageSlots, includedPageKeys]);
+
+    // If the pack grows after hydrate (more TR chunks) and the current selection is still a
+    // complete smaller pack, treat that as the load race / row growth — include new pages.
+    useEffect(() => {
+        if (timeReportPack == null || includedPageKeys == null || !includedPagesHydratedRef.current)
+            return;
+        const nextCount = timeReportChunks.length;
+        const prevCount = prevTrChunkCountRef.current;
+        prevTrChunkCountRef.current = nextCount;
+        if (prevCount <= 0 || nextCount <= prevCount)
+            return;
+        setIncludedPageKeys((prev) => {
+            if (prev == null)
+                return prev;
+            const expanded = expandIncludedPageKeysIfCompleteSubset(prev, allPageSlots);
+            if (expanded.size === prev.size && [...expanded].every((k) => prev.has(k)))
+                return prev;
+            skipNextAutosaveRef.current = false;
+            return expanded;
+        });
+    }, [timeReportPack, timeReportChunks.length, allPageSlots, includedPageKeys]);
 
     const removePageKey = useCallback((key: InvoicePreviewPageKey) => {
         setIncludedPageKeys((prev) => {
@@ -631,8 +660,9 @@ export function InvoicePreviewPage() {
     useEffect(() => {
         if (!session || coverModel == null)
             return;
-        if (pendingDocOverridesRef.current?.timeReport) {
-            setTimeReportPack(pendingDocOverridesRef.current.timeReport);
+        const savedPack = pendingDocOverridesRef.current?.timeReport;
+        if (savedPack && timeReportPackHasContent(savedPack)) {
+            setTimeReportPack(savedPack);
             return;
         }
         let cancel = false;

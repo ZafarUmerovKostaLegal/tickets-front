@@ -1136,12 +1136,34 @@ body[data-theme='dark'] .tt-rp-brief-columns__list::-webkit-scrollbar-thumb {
   display: inline-flex;
   align-items: baseline;
   gap: 0.25rem;
+  margin: 0;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: var(--app-muted, #64748b);
   text-transform: uppercase;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.tt-rp-mtable-position-shares__item:hover {
+  background: color-mix(in srgb, var(--app-text, #0f172a) 6%, transparent);
+  color: var(--app-text, #0f172a);
+}
+
+.tt-rp-mtable-position-shares__item--on {
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 35%, transparent);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 12%, transparent);
+  color: var(--app-text, #0f172a);
+}
+
+.tt-rp-mtable-position-shares__item--dim {
+  opacity: 0.45;
 }
 
 .tt-rp-mtable-position-shares__item strong {

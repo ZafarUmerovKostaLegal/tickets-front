@@ -1,14 +1,9 @@
-import { useEffect, useId, useMemo } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { PartnerReportConfirmationRequest } from '@entities/time-tracking';
+import type { PartnerConfirmedReportComment, PartnerReportConfirmationRequest } from '@entities/time-tracking';
 import { localeTag } from '@shared/i18n/ticketUi';
 
-export type PartnerConfirmedReportComment = {
-    id: string;
-    authUserId: number;
-    text: string;
-    createdAt: string;
-};
+export type { PartnerConfirmedReportComment };
 
 function fmtCommentWhen(iso: string, locale: 'ru' | 'en'): string {
     try {
@@ -94,7 +89,7 @@ export function PartnerConfirmedCommentsCell({ count, preview, countLabel, openL
     </button>);
 }
 
-export function PartnerConfirmedCommentsDrawer({ open, row, projectLabel, clientLabel, periodLabel, comments, usersById, locale, draft, onDraftChange, onAdd, onClose, labels, currentUserId, loading, submitting, error, allowCompose: allowComposeProp, }: {
+export function PartnerConfirmedCommentsDrawer({ open, row, projectLabel, clientLabel, periodLabel, comments, usersById, locale, draft, onDraftChange, onAdd, onEdit, onClose, labels, currentUserId, loading, submitting, error, allowCompose: allowComposeProp, canModerateComments, }: {
     open: boolean;
     row: PartnerReportConfirmationRequest | null;
     projectLabel: string;
@@ -106,12 +101,14 @@ export function PartnerConfirmedCommentsDrawer({ open, row, projectLabel, client
     draft: string;
     onDraftChange: (value: string) => void;
     onAdd: () => void | Promise<void>;
+    onEdit?: (commentId: string, text: string) => void | Promise<void | boolean>;
     onClose: () => void;
     currentUserId: number | null;
     loading?: boolean;
     submitting?: boolean;
     error?: string | null;
     allowCompose?: boolean;
+    canModerateComments?: boolean;
     labels: {
         title: string;
         empty: string;
@@ -121,6 +118,10 @@ export function PartnerConfirmedCommentsDrawer({ open, row, projectLabel, client
         close: string;
         you: string;
         composeDisabledPartial?: string;
+        edit?: string;
+        save?: string;
+        cancel?: string;
+        edited?: string;
     };
 }) {
     const uid = useId();
@@ -129,34 +130,72 @@ export function PartnerConfirmedCommentsDrawer({ open, row, projectLabel, client
     const status = String(row?.status || '').trim().toLowerCase();
     const canComposeByStatus = status === 'fully_confirmed' || status === 'pending_partners';
     const allowCompose = allowComposeProp ?? canComposeByStatus;
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editDraft, setEditDraft] = useState('');
+
+    useEffect(() => {
+        if (!open) {
+            setEditingId(null);
+            setEditDraft('');
+        }
+    }, [open, row?.id]);
 
     useEffect(() => {
         if (!open)
             return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape')
-                onClose();
+            if (e.key !== 'Escape')
+                return;
+            if (editingId) {
+                e.preventDefault();
+                setEditingId(null);
+                setEditDraft('');
+                return;
+            }
+            onClose();
         };
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
-    }, [open, onClose]);
+    }, [open, onClose, editingId]);
 
     const canSubmit = draft.trim().length > 0
         && currentUserId != null
         && !isSubmitting
         && !isLoading
-        && allowCompose;
+        && allowCompose
+        && !editingId;
 
-    const content = useMemo(() => {
-        if (!open || !row)
-            return null;
-        const disabledPartial = !allowCompose ? labels.composeDisabledPartial : undefined;
-        const submitIfAllowed = () => {
-            if (!canSubmit)
+    if (!open || !row || typeof document === 'undefined')
+        return null;
+
+    const disabledPartial = !allowCompose ? labels.composeDisabledPartial : undefined;
+    const submitIfAllowed = () => {
+        if (!canSubmit)
+            return;
+        void onAdd();
+    };
+    const startEdit = (comment: PartnerConfirmedReportComment) => {
+        setEditingId(comment.id);
+        setEditDraft(comment.text);
+    };
+    const cancelEdit = () => {
+        setEditingId(null);
+        setEditDraft('');
+    };
+    const saveEdit = () => {
+        const text = editDraft.trim();
+        if (!editingId || !text || !onEdit || isSubmitting)
+            return;
+        void Promise.resolve(onEdit(editingId, text)).then((ok) => {
+            if (ok === false)
                 return;
-            void onAdd();
-        };
-        return (<div className="tt-partner-confirmed__comments-drawer-ov" role="presentation" onClick={onClose}>
+            setEditingId(null);
+            setEditDraft('');
+        }).catch(() => undefined);
+    };
+
+    const content = (
+      <div className="tt-partner-confirmed__comments-drawer-ov" role="presentation" onClick={onClose}>
           <aside className="tt-partner-confirmed__comments-drawer" role="dialog" aria-modal="true" aria-labelledby={`${uid}-title`} onClick={(e) => e.stopPropagation()}>
             <header className="tt-partner-confirmed__comments-drawer-head">
               <div className="tt-partner-confirmed__comments-drawer-head-text">
@@ -183,15 +222,62 @@ export function PartnerConfirmedCommentsDrawer({ open, row, projectLabel, client
               {!isLoading && comments.length > 0 ? (<ul className="tt-partner-confirmed__comments-thread">
                   {comments.map((comment) => {
                 const isYou = currentUserId != null && comment.authUserId === currentUserId;
+                const canEdit = Boolean(onEdit)
+                    && allowCompose
+                    && (isYou || Boolean(canModerateComments));
+                const isEditing = editingId === comment.id;
+                const editedAt = comment.updatedAt?.trim();
                 return (<li key={comment.id} className="tt-partner-confirmed__comments-item">
                       <div className="tt-partner-confirmed__comments-item-head">
                         <span className="tt-partner-confirmed__comments-item-author">
                           {userLabel(usersById, comment.authUserId)}
                           {isYou ? <span className="tt-partner-confirmed__comments-item-you">{labels.you}</span> : null}
                         </span>
-                        <time className="tt-partner-confirmed__comments-item-when" dateTime={comment.createdAt}>{fmtCommentWhen(comment.createdAt, locale)}</time>
+                        <span className="tt-partner-confirmed__comments-item-meta">
+                          <time className="tt-partner-confirmed__comments-item-when" dateTime={editedAt || comment.createdAt}>{fmtCommentWhen(editedAt || comment.createdAt, locale)}</time>
+                          {editedAt && labels.edited ? <span className="tt-partner-confirmed__comments-item-edited">{labels.edited}</span> : null}
+                        </span>
                       </div>
-                      <p className="tt-partner-confirmed__comments-item-text">{comment.text}</p>
+                      {isEditing ? (
+                        <div className="tt-partner-confirmed__comments-item-edit">
+                          <textarea
+                            className="tt-partner-confirmed__comments-compose tt-partner-confirmed__comments-compose--inline"
+                            rows={3}
+                            value={editDraft}
+                            onChange={(e) => setEditDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Escape') {
+                                    e.preventDefault();
+                                    cancelEdit();
+                                    return;
+                                }
+                                if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing)
+                                    return;
+                                e.preventDefault();
+                                saveEdit();
+                            }}
+                            disabled={isSubmitting}
+                            autoFocus
+                          />
+                          <div className="tt-partner-confirmed__comments-item-edit-actions">
+                            <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={cancelEdit} disabled={isSubmitting}>
+                              {labels.cancel ?? labels.close}
+                            </button>
+                            <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={saveEdit} disabled={isSubmitting || !editDraft.trim()}>
+                              {labels.save ?? labels.add}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="tt-partner-confirmed__comments-item-text">{comment.text}</p>
+                          {canEdit ? (
+                            <button type="button" className="tt-partner-confirmed__comments-item-edit-btn" onClick={() => startEdit(comment)} disabled={isSubmitting || Boolean(editingId)}>
+                              {labels.edit ?? 'Edit'}
+                            </button>
+                          ) : null}
+                        </>
+                      )}
                     </li>);
             })}
                 </ul>) : null}
@@ -214,7 +300,7 @@ export function PartnerConfirmedCommentsDrawer({ open, row, projectLabel, client
                 }}
                 placeholder={labels.composePlaceholder}
                 spellCheck
-                disabled={currentUserId == null || isSubmitting || !allowCompose}
+                disabled={currentUserId == null || isSubmitting || !allowCompose || Boolean(editingId)}
               />
               <div className="tt-partner-confirmed__comments-drawer-actions">
                 <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={onClose}>{labels.close}</button>
@@ -224,8 +310,8 @@ export function PartnerConfirmedCommentsDrawer({ open, row, projectLabel, client
               </div>
             </footer>
           </aside>
-        </div>);
-    }, [allowCompose, canSubmit, clientLabel, comments, currentUserId, draft, error, isLoading, isSubmitting, labels, locale, onAdd, onClose, onDraftChange, open, periodLabel, projectLabel, row, uid, usersById]);
+        </div>
+    );
 
-    return typeof document !== 'undefined' && content ? createPortal(content, document.body) : null;
+    return createPortal(content, document.body);
 }

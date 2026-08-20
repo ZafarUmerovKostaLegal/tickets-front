@@ -17,6 +17,41 @@ function positionLabelForShare(raw: string): string {
     return normalized || UNKNOWN_POSITION_LABEL;
 }
 
+export function reportPreviewPositionShareLabel(raw: string | null | undefined): string {
+    return positionLabelForShare(raw ?? '');
+}
+
+export function rowMatchesPositionShareFilter(
+    row: Pick<TimeExcelPreviewRow, 'employeePosition'>,
+    selectedPositions: readonly string[],
+): boolean {
+    if (selectedPositions.length === 0)
+        return true;
+    const allowed = new Set(selectedPositions);
+    return allowed.has(positionLabelForShare(row.employeePosition ?? ''));
+}
+
+export function itemMatchesPositionShareFilter(
+    position: string | null | undefined,
+    selectedPositions: readonly string[],
+): boolean {
+    if (selectedPositions.length === 0)
+        return true;
+    return selectedPositions.includes(positionLabelForShare(position ?? ''));
+}
+
+export function togglePositionShareFilter(
+    selected: readonly string[],
+    position: string,
+): string[] {
+    const next = new Set(selected);
+    if (next.has(position))
+        next.delete(position);
+    else
+        next.add(position);
+    return [...next];
+}
+
 export function buildReportPreviewPositionShare(
     rows: Iterable<TimeExcelPreviewRow>,
 ): ReportPreviewPositionShareRow[] {

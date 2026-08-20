@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { TimeTrackingTeamRow } from '@entities/time-tracking';
 import {
+    mergeNamedUsersForPartnerTeam,
+    mergeProjectMembersWithPartnerTeam,
     partnerOptionsFromTeams,
     resolveEffectiveReportPreviewUserIds,
     resolveTeamMemberUserIds,
@@ -70,5 +72,54 @@ describe('reportPreviewTeamFilter', () => {
             team({ id: 't4', partner_auth_user_id: 10, is_archived: true, member_auth_user_ids: [999] }),
         ];
         expect(teamsForPartner(archived, 10)).toHaveLength(2);
+    });
+
+    it('adds missing team members to the employee list when partner filter is on', () => {
+        const catalog = [
+            { id: 10, email: 'p@x.com', display_name: 'Partner A', position: 'Partner', is_blocked: false, is_archived: false, created_at: '' },
+            { id: 101, email: 'a@x.com', display_name: 'Associate A', position: 'Associate', is_blocked: false, is_archived: false, created_at: '' },
+            { id: 102, email: 'j@x.com', display_name: 'Junior A', position: 'Junior Associate', is_blocked: false, is_archived: false, created_at: '' },
+        ];
+        const named = mergeNamedUsersForPartnerTeam({
+            teamFilterEnabled: true,
+            partnerAuthUserId: 10,
+            teamId: '',
+            teams,
+            users: [{ id: 10, displayName: 'Partner A', email: 'p@x.com' }],
+            catalog,
+        });
+        expect(named.map((u) => u.id).sort((a, b) => a - b)).toEqual([10, 101, 102]);
+        expect(named.find((u) => u.id === 101)?.displayName).toBe('Associate A');
+    });
+
+    it('keeps the full user list when partner filter is off', () => {
+        const named = mergeNamedUsersForPartnerTeam({
+            teamFilterEnabled: false,
+            partnerAuthUserId: 10,
+            teamId: '',
+            teams,
+            users: [{ id: 1, displayName: 'All', email: 'all@x.com' }],
+            catalog: [],
+        });
+        expect(named).toEqual([{ id: 1, displayName: 'All', email: 'all@x.com' }]);
+    });
+
+    it('includes team members missing from project assignees in the pick list', () => {
+        const catalog = [
+            { id: 10, email: 'p@x.com', display_name: 'Partner A', position: 'Partner', is_blocked: false, is_archived: false, created_at: '' },
+            { id: 101, email: 'a@x.com', display_name: 'Associate A', position: 'Associate', is_blocked: false, is_archived: false, created_at: '' },
+            { id: 999, email: 'other@x.com', display_name: 'Other', position: 'Associate', is_blocked: false, is_archived: false, created_at: '' },
+        ];
+        const members = mergeProjectMembersWithPartnerTeam({
+            members: [{ authUserId: 10, displayName: 'Partner A', position: 'Partner' }],
+            teamFilterEnabled: true,
+            partnerAuthUserId: 10,
+            teamId: 't1',
+            teams,
+            catalog,
+        });
+        expect(members.map((m) => m.authUserId).sort((a, b) => a - b)).toEqual([10, 101]);
+        expect(members.find((m) => m.authUserId === 101)?.position).toBe('Associate');
+        expect(members.some((m) => m.authUserId === 999)).toBe(false);
     });
 });

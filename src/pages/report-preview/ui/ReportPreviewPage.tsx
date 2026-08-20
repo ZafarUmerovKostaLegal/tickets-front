@@ -71,6 +71,8 @@ import {
     pickDefaultTeamId,
     resolveEffectiveReportPreviewUserIds,
     resolveTeamMemberUserIds,
+    mergeNamedUsersForPartnerTeam,
+    mergeProjectMembersWithPartnerTeam,
 } from '../lib/reportPreviewTeamFilter';
 import {
     flattenTimeReportToExcelRows,
@@ -539,18 +541,14 @@ export function ReportPreviewPage() {
         teams: teamsCatalog,
         selectedUserIds,
     }), [teamFilterEnabled, teamFilterPartnerId, teamFilterTeamId, teamsCatalog, selectedUserIds]);
-    const usersForEmployeeFilter = useMemo(() => {
-        if (!teamFilterEnabled || teamFilterPartnerId <= 0)
-            return usersForFilter;
-        const allowed = new Set(resolveTeamMemberUserIds(
-            teamsCatalog,
-            teamFilterPartnerId,
-            teamFilterTeamId.trim() || undefined,
-        ));
-        if (allowed.size === 0)
-            return usersForFilter;
-        return usersForFilter.filter((u) => allowed.has(u.id));
-    }, [usersForFilter, teamFilterEnabled, teamFilterPartnerId, teamFilterTeamId, teamsCatalog]);
+    const usersForEmployeeFilter = useMemo(() => mergeNamedUsersForPartnerTeam({
+        teamFilterEnabled,
+        partnerAuthUserId: teamFilterPartnerId,
+        teamId: teamFilterTeamId,
+        teams: teamsCatalog,
+        users: usersForFilter,
+        catalog: ttUsersCatalog,
+    }), [usersForFilter, teamFilterEnabled, teamFilterPartnerId, teamFilterTeamId, teamsCatalog, ttUsersCatalog]);
     const handleTeamFilterEnabledChange = useCallback((enabled: boolean) => {
         setTeamFilterEnabled(enabled);
         if (!enabled) {
@@ -1749,9 +1747,16 @@ export function ReportPreviewPage() {
             return null;
         return {
             loading: projectMembersPickLoading,
-            members: projectMembersForEmployeePick,
+            members: mergeProjectMembersWithPartnerTeam({
+                members: projectMembersForEmployeePick,
+                teamFilterEnabled,
+                partnerAuthUserId: teamFilterPartnerId,
+                teamId: teamFilterTeamId,
+                teams: teamsCatalog,
+                catalog: ttUsersCatalog,
+            }),
         };
-    }, [xferSnapshot, selectedProjectId, projectMembersPickLoading, projectMembersForEmployeePick]);
+    }, [xferSnapshot, selectedProjectId, projectMembersPickLoading, projectMembersForEmployeePick, teamFilterEnabled, teamFilterPartnerId, teamFilterTeamId, teamsCatalog, ttUsersCatalog]);
     const expenseDisplayRows = useMemo(() => {
         const base = expenseExcelRows.filter((r) => !employeeExcluded.has(r.userName));
         return sortRowsByUserName(base, employeeSortAsc);

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     createPartnerConfirmationComment,
+    patchPartnerConfirmationComment,
     deletePartnerReportConfirmation,
     revokePartnerReportConfirmationSignature,
     getReportSnapshot,
@@ -428,6 +429,31 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             setCommentsSubmitting(false);
         }
     }, [commentComposeDraft, commentsDrawerRow, commentsSubmitting, drawerComments, patchRowCommentsSummary, t]);
+
+    const editCommentForOpenRow = useCallback(async (commentId: string, text: string) => {
+        const row = commentsDrawerRow;
+        const nextText = text.trim();
+        if (!row || !commentId || !nextText || commentsSubmitting)
+            return false;
+        setCommentsSubmitting(true);
+        setCommentsError(null);
+        try {
+            const updated = await patchPartnerConfirmationComment(row.id, commentId, nextText);
+            const next = drawerComments.map((c) => (c.id === updated.id ? updated : c));
+            setDrawerComments(next);
+            patchRowCommentsSummary(row.id, next);
+        }
+        catch (e: unknown) {
+            const msg = e instanceof Error && e.message.trim()
+                ? e.message
+                : t('timeTrackingPage.reports.partnerConfirmed.commentsEditError');
+            setCommentsError(msg);
+            throw e;
+        }
+        finally {
+            setCommentsSubmitting(false);
+        }
+    }, [commentsDrawerRow, commentsSubmitting, drawerComments, patchRowCommentsSummary, t]);
 
     const loadUsers = useCallback(() => {
         void Promise.all([
@@ -1142,7 +1168,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             </div>) : null}
         </div>
 
-        <PartnerConfirmedCommentsDrawer open={commentsDrawerRow != null} row={commentsDrawerRow} projectLabel={commentsDrawerRow ? resolveProjectLabel(commentsDrawerRow) : ''} clientLabel={commentsDrawerRow ? resolveClientLabel(commentsDrawerRow) : ''} periodLabel={commentsDrawerRow ? formatIsoRangeTitle(commentsDrawerRow.dateFrom, commentsDrawerRow.dateTo, { prefix: false, locale: localeTag(locale) }) : ''} comments={drawerComments} usersById={usersLabelById} locale={locale} draft={commentComposeDraft} onDraftChange={setCommentComposeDraft} onAdd={addCommentForOpenRow} onClose={closeCommentsDrawer} currentUserId={currentUser?.id ?? null} loading={commentsLoading} submitting={commentsSubmitting} error={commentsError} labels={{
+        <PartnerConfirmedCommentsDrawer open={commentsDrawerRow != null} row={commentsDrawerRow} projectLabel={commentsDrawerRow ? resolveProjectLabel(commentsDrawerRow) : ''} clientLabel={commentsDrawerRow ? resolveClientLabel(commentsDrawerRow) : ''} periodLabel={commentsDrawerRow ? formatIsoRangeTitle(commentsDrawerRow.dateFrom, commentsDrawerRow.dateTo, { prefix: false, locale: localeTag(locale) }) : ''} comments={drawerComments} usersById={usersLabelById} locale={locale} draft={commentComposeDraft} onDraftChange={setCommentComposeDraft} onAdd={addCommentForOpenRow} onEdit={editCommentForOpenRow} onClose={closeCommentsDrawer} currentUserId={currentUser?.id ?? null} loading={commentsLoading} submitting={commentsSubmitting} error={commentsError} canModerateComments={canManageAll} labels={{
             title: t('timeTrackingPage.reports.partnerConfirmed.commentsDrawerTitle'),
             empty: t('timeTrackingPage.reports.partnerConfirmed.commentsEmpty'),
             loading: t('timeTrackingPage.reports.partnerConfirmed.loading'),
@@ -1151,6 +1177,10 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             close: t('timeTrackingPage.reports.partnerConfirmed.commentsClose'),
             you: t('timeTrackingPage.reports.partnerConfirmed.commentsYou'),
             composeDisabledPartial: t('timeTrackingPage.reports.partnerConfirmed.commentsComposeDisabledPartial'),
+            edit: t('timeTrackingPage.reports.partnerConfirmed.commentsEdit'),
+            save: t('timeTrackingPage.reports.partnerConfirmed.commentsSave'),
+            cancel: t('timeTrackingPage.reports.partnerConfirmed.commentsCancel'),
+            edited: t('timeTrackingPage.reports.partnerConfirmed.commentsEdited'),
         }} />
         </>)}
     </div>);

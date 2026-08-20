@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
     buildInvoicePreviewPageSlots,
+    expandIncludedPageKeysIfCompleteSubset,
     normalizeIncludedPageKeys,
     parseIncludedPageKeys,
     timeReportPageKey,
@@ -42,5 +43,25 @@ describe('parseIncludedPageKeys', () => {
             'tr:0',
             'invoice',
         ]);
+    });
+});
+
+describe('expandIncludedPageKeysIfCompleteSubset', () => {
+    it('expands a frozen 1-chunk full pack when real pack has more chunks', () => {
+        const slots = buildInvoicePreviewPageSlots(3);
+        const next = expandIncludedPageKeysIfCompleteSubset(['cover', 'tr:0', 'invoice'], slots);
+        expect([...next]).toEqual(['cover', 'tr:0', 'tr:1', 'tr:2', 'invoice']);
+    });
+
+    it('keeps intentional invoice-only selection', () => {
+        const slots = buildInvoicePreviewPageSlots(3);
+        const next = expandIncludedPageKeysIfCompleteSubset(['invoice'], slots);
+        expect([...next]).toEqual(['invoice']);
+    });
+
+    it('keeps deliberate partial selections', () => {
+        const slots = buildInvoicePreviewPageSlots(3);
+        const next = expandIncludedPageKeysIfCompleteSubset(['cover', 'invoice'], slots);
+        expect([...next]).toEqual(['cover', 'invoice']);
     });
 });

@@ -14,6 +14,7 @@ export type PartnerConfirmedReportComment = {
     authUserId: number;
     text: string;
     createdAt: string;
+    updatedAt?: string | null;
 };
 export type PartnerReportConfirmationRequest = {
     id: string;
@@ -74,9 +75,10 @@ export function parsePartnerConfirmedReportComment(raw: unknown): PartnerConfirm
     );
     const text = String(o.text ?? o.body ?? o.comment ?? o.message ?? '').trim();
     const createdAt = String(o.createdAt ?? o.created_at ?? o.created ?? '').trim();
+    const updatedRaw = String(o.updatedAt ?? o.updated_at ?? '').trim();
     if (!id || authUserId == null || !text || !createdAt)
         return null;
-    return { id, authUserId, text, createdAt };
+    return { id, authUserId, text, createdAt, updatedAt: updatedRaw || null };
 }
 export function parsePartnerConfirmedReportCommentList(raw: unknown): PartnerConfirmedReportComment[] {
     if (!Array.isArray(raw))
@@ -482,6 +484,36 @@ export async function createPartnerConfirmationComment(requestId: string, text: 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: bodyText }),
     });
+    await reportsThrowIfNotOk(res);
+    const parsed = parsePartnerConfirmedReportComment(await res.json());
+    if (!parsed)
+        throw new TimeTrackingHttpError(500, 'Некорректный ответ сервера');
+    invalidatePartnerReportConfirmationsCache();
+    return parsed;
+}
+
+export async function patchPartnerConfirmationComment(
+    requestId: string,
+    commentId: string,
+    text: string,
+): Promise<PartnerConfirmedReportComment> {
+    const rid = String(requestId ?? '').trim();
+    const cid = String(commentId ?? '').trim();
+    const bodyText = String(text ?? '').trim();
+    if (!rid)
+        throw new Error('Не указан запрос подтверждения');
+    if (!cid)
+        throw new Error('Не указан комментарий');
+    if (!bodyText)
+        throw new Error('Текст комментария не может быть пустым');
+    const res = await apiFetch(
+        `/api/v1/time-tracking/reports/partner-confirmations/${encodeURIComponent(rid)}/comments/${encodeURIComponent(cid)}`,
+        {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: bodyText }),
+        },
+    );
     await reportsThrowIfNotOk(res);
     const parsed = parsePartnerConfirmedReportComment(await res.json());
     if (!parsed)

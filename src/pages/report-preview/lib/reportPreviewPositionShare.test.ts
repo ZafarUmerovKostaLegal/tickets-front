@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TimeExcelPreviewRow } from './previewExcelTypes';
-import { buildReportPreviewPositionShare } from './reportPreviewPositionShare';
+import { buildReportPreviewPositionShare, rowMatchesPositionShareFilter, togglePositionShareFilter } from './reportPreviewPositionShare';
 
 function row(partial: Partial<TimeExcelPreviewRow> & Pick<TimeExcelPreviewRow, 'rowKey'>): TimeExcelPreviewRow {
     return {
@@ -71,5 +71,22 @@ describe('buildReportPreviewPositionShare', () => {
         expect(buildReportPreviewPositionShare([
             row({ rowKey: 'a', billableHours: 0 }),
         ])).toEqual([]);
+    });
+});
+
+describe('position share row filter', () => {
+    it('keeps all rows when no positions are selected', () => {
+        expect(rowMatchesPositionShareFilter(row({ rowKey: 'a', employeePosition: 'Partner' }), [])).toBe(true);
+    });
+
+    it('matches normalized partner labels', () => {
+        expect(rowMatchesPositionShareFilter(row({ rowKey: 'a', employeePosition: 'Партнёр' }), ['Partner'])).toBe(true);
+        expect(rowMatchesPositionShareFilter(row({ rowKey: 'a', employeePosition: 'Associate' }), ['Partner'])).toBe(false);
+    });
+
+    it('toggles a position on and off', () => {
+        expect(togglePositionShareFilter([], 'Partner')).toEqual(['Partner']);
+        expect(togglePositionShareFilter(['Partner'], 'Partner')).toEqual([]);
+        expect(togglePositionShareFilter(['Partner'], 'Associate').sort()).toEqual(['Associate', 'Partner']);
     });
 });

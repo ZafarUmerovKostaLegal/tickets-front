@@ -22,6 +22,7 @@ export {
     listPartnerReportConfirmationsConfirmed,
     listPartnerConfirmationComments,
     createPartnerConfirmationComment,
+    patchPartnerConfirmationComment,
     submitPartnerReportConfirmation,
     submitPartnerReportConfirmationFromPreview,
     confirmPartnerReportConfirmation,

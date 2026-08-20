@@ -63,6 +63,32 @@ export function normalizeIncludedPageKeys(
     return next;
 }
 
+/**
+ * If saved keys are exactly a full pack for fewer TR chunks (typical race: keys frozen
+ * against the empty 1-chunk placeholder before the real pack loaded), expand to the
+ * current full pack. Keeps intentional invoice-only and other deliberate subsets.
+ */
+export function expandIncludedPageKeysIfCompleteSubset(
+    included: Iterable<InvoicePreviewPageKey>,
+    allSlots: readonly InvoicePreviewPageSlot[],
+): Set<InvoicePreviewPageKey> {
+    const saved = [...included].filter(isInvoicePreviewPageKey);
+    const savedSet = new Set(saved);
+    const allKeys = allSlots.map((s) => s.key);
+    const trCount = allSlots.filter((s) => s.kind === 'timeReport').length;
+
+    if (savedSet.size === 1 && savedSet.has('invoice'))
+        return new Set<InvoicePreviewPageKey>(['invoice']);
+
+    for (let n = 1; n < trCount; n += 1) {
+        const smallerKeys = buildInvoicePreviewPageSlots(n).map((s) => s.key);
+        if (smallerKeys.length === savedSet.size && smallerKeys.every((k) => savedSet.has(k)))
+            return new Set(allKeys);
+    }
+
+    return normalizeIncludedPageKeys(saved, allSlots);
+}
+
 export function pageKindLabelForSlot(slot: InvoicePreviewPageSlot): string {
     if (slot.kind === 'cover')
         return 'сопроводительное письмо';
