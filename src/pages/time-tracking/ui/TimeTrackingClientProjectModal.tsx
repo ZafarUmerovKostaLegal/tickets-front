@@ -7,6 +7,7 @@ import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 import { QuickCreateClientModal } from './QuickCreateClientModal';
 import { ProjectMembersField, type ProjectMemberRateDraft } from './ProjectMembersField';
 import { clientRowSearchText } from '../lib/clientRowSearchText';
+import './TimeTrackingForms.css';
 import './TimeTrackingPage.css';
 
 const TM_DD_PORTAL_Z = 12000;
