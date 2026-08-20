@@ -991,11 +991,10 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             return EXPENSE_TYPES.filter(t => t.value === 'partner_expense');
         if (formScope === 'client')
             return EXPENSE_TYPES.filter(t => t.value === 'client_expense');
-        const company = EXPENSE_TYPES.filter(t => t.value !== 'partner_expense' && t.value !== 'client_expense');
+        // Company create/edit: all types except partner (partners use their own page).
+        const company = EXPENSE_TYPES.filter(t => t.value !== 'partner_expense');
         if (editingRequest?.expenseType === 'partner_expense')
             return [...company, ...EXPENSE_TYPES.filter(t => t.value === 'partner_expense')];
-        if (editingRequest?.expenseType === 'client_expense')
-            return [...company, ...EXPENSE_TYPES.filter(t => t.value === 'client_expense')];
         return company;
     }, [formScope, editingRequest?.expenseType]);
     const partnerSubtypeItems = useMemo(() => [...PARTNER_EXPENSE_CATEGORIES], []);
