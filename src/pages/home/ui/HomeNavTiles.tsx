@@ -200,9 +200,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
             : routes.timeTracking,
         expenses: expensePayCount > 0
             ? `${routes.expenses}?focus=pay`
-            : expenseModerationCount > 0
-                ? `${routes.expenses}?focus=moderation`
-                : routes.expenses,
+            : routes.expenses,
         correspondence: correspondenceOutgoingPending > 0
             ? `${routes.correspondence}?tab=outgoing&view=attention`
             : correspondenceIncomingNew > 0
@@ -219,7 +217,6 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         vacationCounts.minePendingCount,
         forReviewCount,
         expensePayCount,
-        expenseModerationCount,
         correspondenceOutgoingPending,
         correspondenceIncomingNew,
         todoInvitesCount,

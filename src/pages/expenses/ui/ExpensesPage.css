@@ -374,6 +374,20 @@ body[data-theme='dark'] .expenses-page {
   white-space: nowrap;
 }
 
+.exp-filter__opt-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.exp-filter__opt-badge {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.exp-filter__btn-badge {
+  flex-shrink: 0;
+}
+
 .exp-filter__opt:hover { background: var(--app-surface-soft, #f8fafc); }
 .exp-filter__opt--on {
   background: rgba(79, 70, 229, 0.07);

@@ -18,7 +18,7 @@ export type ExpensesSavedFilters = {
     sortBy: ExpensesUiSortBy;
 };
 
-const STORAGE_PREFIX = 'tickets.expenses.filters.v1';
+const STORAGE_PREFIX = 'tickets.expenses.filters.v2';
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const PERIODS = new Set<ExpensesUiFilterPeriod>([
     'all',

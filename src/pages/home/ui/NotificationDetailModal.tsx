@@ -36,7 +36,7 @@ function notificationGoTarget(notification: NotificationItem): NotificationGoTar
         return { to: `${routes.expenses}?focus=pay`, label: 'Показать к оплате' };
     }
     if (kind.includes('expense') && (kind.includes('approv') || kind.includes('moderat')))
-        return { to: `${routes.expenses}?focus=moderation`, label: 'На согласование' };
+        return { to: routes.expenses, label: 'К расходам' };
     const correspondenceUrl = correspondenceOpenUrl(kind);
     if (correspondenceUrl)
         return { to: correspondenceUrl, label: 'Открыть корреспонденцию' };

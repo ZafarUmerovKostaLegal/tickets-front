@@ -31,6 +31,7 @@ import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/mod
 import { listPartners, loadPublicUsersByIds, type UserPublic } from '@entities/user';
 import { formatExpenseApprovedByLabel, formatExpenseAuthorLabel, mergeExpenseAuthorFromCache, needsAuthorEnrichment, formatPartnerUserLabel, } from '@entities/expenses/model/expenseAuthor';
 import { canViewExpensesRequestsAndReport } from '@entities/expenses/model/expenseModeration';
+import { useExpenseAttentionBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
 import { isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, showOwnPendingModerationBlockedHint, resolveExpensePanelMode, showPayExpenseAction, showPendingApprovalModeration, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
 import { expensePayActionLabel, expenseStatusLabel } from '@entities/expenses/model/expenseStatusLabels';
 import { isExpensePaymentConfirmer } from '@entities/expenses/model/expensePaymentConfirmer';
@@ -412,14 +413,20 @@ type FilterDropProps = {
     isOpen: boolean;
     onToggle: () => void;
     children: ReactNode;
+    badgeCount?: number;
 };
-function FilterDrop({ label, active, isOpen, onToggle, children }: FilterDropProps) {
+function FilterDrop({ label, active, isOpen, onToggle, children, badgeCount = 0 }: FilterDropProps) {
     return (<div
         className={`exp-filter${active ? ' exp-filter--active' : ''}`}
         onMouseDown={(event) => event.stopPropagation()}
     >
         <button type="button" className="exp-filter__btn" onClick={onToggle}>
             <span className="exp-filter__btn-text">{label}</span>
+            {badgeCount > 0 ? (
+                <span className="app-count-badge exp-filter__btn-badge" aria-hidden>
+                    {badgeCount > 99 ? '99+' : String(badgeCount)}
+                </span>
+            ) : null}
             <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
                 <polyline points={isOpen ? '4 10 8 6 12 10' : '4 6 8 10 12 6'} />
             </svg>
@@ -517,6 +524,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [searchParams] = useSearchParams();
     const { user, loading: currentUserLoading } = useCurrentUser();
     const canModerate = canViewExpensesRequestsAndReport(user?.role);
+    const { moderationCount } = useExpenseAttentionBadge(!currentUserLoading && canModerate);
     const [isLoading, setIsLoading] = useState(true);
     const [listFetchPending, setListFetchPending] = useState(false);
     const isFirstListFetchRef = useRef(true);
@@ -588,12 +596,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         if (focus === 'pay') {
             setFilterStatus('approved');
             setFilterReimb('reimbursable');
-            setListPage(1);
-            return;
-        }
-        if (focus === 'moderation') {
-            setFilterStatus('pending_approval');
-            setFilterReimb('');
             setListPage(1);
         }
     }, [filterOwnerKey, hydratedFilterOwnerKey, isModerationQueue, searchParams]);
@@ -1425,13 +1427,18 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
 
                 <div className="exp-tt-filters-outer" onMouseDown={e => e.stopPropagation()}>
                     <div className={`exp-filters${isMobile && !mobileFiltersOpen ? ' exp-filters--mobile-collapsed' : ''}`}>
-                        {!isModerationQueue && (<FilterDrop label={filterStatus ? STATUS_META[filterStatus].label : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')}>
+                        {!isModerationQueue && (<FilterDrop label={filterStatus ? STATUS_META[filterStatus].label : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')} badgeCount={!filterStatus && canModerate ? moderationCount : 0}>
                             <button className={`exp-filter__opt${!filterStatus ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(''); setOpenFilter(null); }}>
                                 Все статусы
                             </button>
                             {statuses.map(s => (<button key={s} className={`exp-filter__opt${filterStatus === s ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(s); setOpenFilter(null); }}>
                                 <span className={`exp-filter__dot exp-filter__dot--${s}`} />
-                                {STATUS_META[s].label}
+                                <span className="exp-filter__opt-label">{STATUS_META[s].label}</span>
+                                {s === 'pending_approval' && canModerate && moderationCount > 0 ? (
+                                    <span className="app-count-badge exp-filter__opt-badge" aria-label={`${moderationCount} на согласовании`}>
+                                        {moderationCount > 99 ? '99+' : String(moderationCount)}
+                                    </span>
+                                ) : null}
                             </button>))}
                         </FilterDrop>)}
 

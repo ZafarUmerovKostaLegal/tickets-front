@@ -120,10 +120,10 @@ function groupProjectsForExpenseForm(rows: TimeTrackingProjectForExpense[]): Exp
 }
 function formatExpenseProjectDateShort(iso: string | null | undefined): string {
     if (!iso)
-        return '—';
+        return '';
     const s = String(iso).slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(s))
-        return '—';
+        return '';
     const [y, m, d] = s.split('-');
     return `${d}.${m}.${y}`;
 }
@@ -131,17 +131,25 @@ function ExpenseProjectCardBody({ project }: {
     project: TimeManagerClientProjectRow;
 }) {
     const { t } = useI18n();
+    const typeLabel = ttProjectTypeLabel(project.project_type, t);
+    const dateFrom = formatExpenseProjectDateShort(project.start_date);
+    const dateTo = formatExpenseProjectDateShort(project.end_date);
+    const dateRange = dateFrom && dateTo
+        ? `${dateFrom} — ${dateTo}`
+        : (dateFrom || dateTo || '');
+    const metaParts = [
+        typeLabel,
+        dateRange,
+        project.usage_count > 0 ? `записей времени: ${project.usage_count}` : '',
+    ].filter(Boolean);
     return (<div className="exp-project-picker__card-body">
         <div className="exp-project-picker__card-title">
             <span className="exp-project-picker__card-name">{project.name}</span>
             {project.code ? <span className="exp-project-picker__code">{project.code}</span> : null}
         </div>
-        <p className="exp-project-picker__meta">
-            {ttProjectTypeLabel(project.project_type, t)}
-            {' · '}
-            {formatExpenseProjectDateShort(project.start_date)} — {formatExpenseProjectDateShort(project.end_date)}
-            {project.usage_count > 0 ? ` · записей времени: ${project.usage_count}` : ''}
-        </p>
+        {metaParts.length > 0 ? (
+            <p className="exp-project-picker__meta">{metaParts.join(' · ')}</p>
+        ) : null}
     </div>);
 }
 export type PanelMode = 'create' | 'edit' | 'view';

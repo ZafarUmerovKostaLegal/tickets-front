@@ -1,8 +1,10 @@
 import type { ExpenseAmountCurrency, ExpenseStatus, ExpenseType, PartnerExpenseCategory, PaymentMethod, } from './types';
 
 /**
- * User-facing statuses in company registry filters / reports.
- * Includes workflow statuses so the main list can show all expenses.
+ * Statuses in company/partner registry filters and reports.
+ * Matches the live UI workflow (create → approve → pay / reject / revise / withdraw).
+ * `closed` / `not_reimbursable` remain in STATUS_META for legacy rows but are not
+ * offered as filters after close / «Не оплачено» actions were removed.
  */
 export const EXPENSE_REGISTRY_STATUSES: ExpenseStatus[] = [
     'draft',
@@ -11,7 +13,6 @@ export const EXPENSE_REGISTRY_STATUSES: ExpenseStatus[] = [
     'approved',
     'paid',
     'rejected',
-    'closed',
     'withdrawn',
 ];
 export const EXPENSE_REGISTRY_STATUS_SET = new Set<ExpenseStatus>(EXPENSE_REGISTRY_STATUSES);

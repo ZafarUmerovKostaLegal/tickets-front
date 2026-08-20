@@ -48,6 +48,8 @@ export function ttProjectStatusLabel(status: string, t: TimeTrackingT): string {
 
 export function ttProjectTypeLabel(type: string, t: TimeTrackingT): string {
     const raw = String(type ?? '').trim();
+    if (!raw)
+        return '';
     const normalized = raw.toLowerCase().replace(/[\s-]+/g, '_');
     const map: Record<string, TranslationKey> = {
         // Canonical UI values (stored on ProjectRow)
@@ -69,8 +71,31 @@ export function ttProjectTypeLabel(type: string, t: TimeTrackingT): string {
         non_billable: 'timeTrackingPage.projects.modal.projectTypes.nonBillable',
         nonbillable: 'timeTrackingPage.projects.modal.projectTypes.nonBillable',
     };
+    const fallbackRu: Record<string, string> = {
+        'Время и материалы': 'Время и материалы',
+        'Фиксированная ставка': 'Фиксированный гонорар',
+        'Фиксированный гонорар': 'Фиксированный гонорар',
+        'Без бюджета': 'Не оплачиваемый',
+        'Не оплачиваемый': 'Не оплачиваемый',
+        'Пакет часов': 'Пакет часов',
+        hourly: 'Время и материалы',
+        time_and_materials: 'Время и материалы',
+        tm: 'Время и материалы',
+        fixed: 'Фиксированный гонорар',
+        fixed_fee: 'Фиксированный гонорар',
+        flat_fee: 'Фиксированный гонорар',
+        capped: 'Пакет часов',
+        hour_package: 'Пакет часов',
+        non_billable: 'Не оплачиваемый',
+        nonbillable: 'Не оплачиваемый',
+    };
     const key = map[raw] ?? map[normalized];
-    return key ? t(key) : raw;
+    if (!key)
+        return raw;
+    const label = t(key);
+    if (label.startsWith('timeTrackingPage.'))
+        return fallbackRu[raw] ?? fallbackRu[normalized] ?? raw;
+    return label;
 }
 
 export function ttProjectPluralWord(count: number, t: TimeTrackingT, locale: 'ru' | 'en'): string {
