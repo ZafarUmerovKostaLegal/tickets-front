@@ -118,8 +118,29 @@ function formatDetailPeriodLabel(period: {
     const right = b.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
     return `${left} — ${right}`;
 }
-function teamWorkloadMemberToTimeUserRow(m: TeamWorkloadMember, periodDays: number, profileWeeklyHours: number | undefined, position: string | undefined,): TimeUserRow {
-    const name = (m.display_name?.trim() || m.email || `Пользователь ${m.auth_user_id}`).trim();
+function isStubAuthUserEmail(email: string | null | undefined): boolean {
+    return /^auth-user-\d+@tt\.local$/i.test(String(email ?? '').trim());
+}
+
+function pickUserDisplayLabel(displayName: string | null | undefined, email: string | null | undefined, fallbackId: number): string {
+    const name = displayName?.trim();
+    if (name && !isStubAuthUserEmail(name))
+        return name;
+    const mail = email?.trim();
+    if (mail && !isStubAuthUserEmail(mail))
+        return mail;
+    return `Пользователь ${fallbackId}`;
+}
+
+function teamWorkloadMemberToTimeUserRow(
+    m: TeamWorkloadMember,
+    periodDays: number,
+    profileWeeklyHours: number | undefined,
+    position: string | undefined,
+    resolvedName?: string,
+): TimeUserRow {
+    const name = (resolvedName?.trim()
+        || pickUserDisplayLabel(m.display_name, m.email, m.auth_user_id)).trim();
     const pos = position?.trim();
     return {
         id: String(m.auth_user_id),
@@ -1309,6 +1330,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
     const [projectTeamWl, setProjectTeamWl] = useState<TeamWorkloadResponse | null>(null);
     const [teamProfileWeeklyById, setTeamProfileWeeklyById] = useState<Map<number, number>>(() => new Map());
     const [projectTeamPositionById, setProjectTeamPositionById] = useState<Map<number, string>>(() => new Map());
+    const [projectTeamNameById, setProjectTeamNameById] = useState<Map<number, string>>(() => new Map());
     const [projectTeamLoad, setProjectTeamLoad] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
     const [teamActionsOpen, setTeamActionsOpen] = useState<string | null>(null);
     useEffect(() => {
@@ -1319,6 +1341,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
         setProjectTeamWl(null);
         setTeamProfileWeeklyById(new Map());
         setProjectTeamPositionById(new Map());
+        setProjectTeamNameById(new Map());
         void Promise.all([
             getProjectTeamWorkload(project.clientId, project.id, detailPeriod.from, detailPeriod.to),
             listTimeTrackingUsers().catch(() => []),
@@ -1338,10 +1361,26 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                         weekly.set(r.id, w);
                 }
                 const posAuth = new Map<number, string>();
+                const namesById = new Map<number, string>();
                 for (const u of orgUsers) {
                     const p = u.position?.trim();
                     if (p)
                         posAuth.set(u.id, p);
+                    const label = pickUserDisplayLabel(u.display_name, u.email, u.id);
+                    if (!label.startsWith('Пользователь '))
+                        namesById.set(u.id, label);
+                }
+                for (const t of ttUsers) {
+                    const dn = t.display_name?.trim();
+                    if (dn && !isStubAuthUserEmail(dn)) {
+                        namesById.set(t.id, dn);
+                        continue;
+                    }
+                    if (namesById.has(t.id))
+                        continue;
+                    const label = pickUserDisplayLabel(t.display_name, t.email, t.id);
+                    if (!label.startsWith('Пользователь '))
+                        namesById.set(t.id, label);
                 }
                 const posMerged = new Map<number, string>();
                 for (const t of ttUsers) {
@@ -1360,8 +1399,13 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                         if (fb)
                             posMerged.set(mem.auth_user_id, fb);
                     }
+                    if (!namesById.has(mem.auth_user_id)) {
+                        const label = pickUserDisplayLabel(mem.display_name, mem.email, mem.auth_user_id);
+                        namesById.set(mem.auth_user_id, label);
+                    }
                 }
                 setProjectTeamPositionById(posMerged);
+                setProjectTeamNameById(namesById);
                 setTeamProfileWeeklyById(weekly);
                 setProjectTeamWl(d);
                 setProjectTeamLoad('ok');
@@ -1371,6 +1415,7 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                     setProjectTeamWl(null);
                     setTeamProfileWeeklyById(new Map());
                     setProjectTeamPositionById(new Map());
+                    setProjectTeamNameById(new Map());
                     setProjectTeamLoad('error');
                 }
             });
@@ -1382,8 +1427,14 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
         if (!projectTeamWl?.members?.length)
             return [];
         const days = projectTeamWl.period_days > 0 ? projectTeamWl.period_days : 1;
-        return projectTeamWl.members.map((m) => teamWorkloadMemberToTimeUserRow(m, days, teamProfileWeeklyById.get(m.auth_user_id), projectTeamPositionById.get(m.auth_user_id)));
-    }, [projectTeamWl, teamProfileWeeklyById, projectTeamPositionById]);
+        return projectTeamWl.members.map((m) => teamWorkloadMemberToTimeUserRow(
+            m,
+            days,
+            teamProfileWeeklyById.get(m.auth_user_id),
+            projectTeamPositionById.get(m.auth_user_id),
+            projectTeamNameById.get(m.auth_user_id),
+        ));
+    }, [projectTeamWl, teamProfileWeeklyById, projectTeamPositionById, projectTeamNameById]);
     const projectTeamTotals: TimeUsersTotals | null = useMemo(() => {
         if (!projectTeamWl)
             return null;
