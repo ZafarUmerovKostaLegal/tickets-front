@@ -6,10 +6,10 @@ import { computeAmountUzsForApi, computeUsdEquivalent, formatExchangeRate, needs
 import { formatReimbursementCardNumber, isValidReimbursementCardNumber } from '@entities/expenses/model/expensePaymentDetails';
 import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import type { ExpenseAmountCurrency } from '@entities/expenses/model/types';
-import { approveExpense, rejectExpense, reviseExpense, deleteAttachment, deleteExpense, fetchExpenseAttachmentBlob, openExpenseAttachmentInNewTab, payExpense, closeExpense, withdrawExpense, fetchApprovalRoutingMeta, type ApprovalRoutingMeta, } from '@entities/expenses/model/expensesApi';
+import { approveExpense, rejectExpense, reviseExpense, deleteAttachment, deleteExpense, fetchExpenseAttachmentBlob, openExpenseAttachmentInNewTab, payExpense, withdrawExpense, fetchApprovalRoutingMeta, type ApprovalRoutingMeta, } from '@entities/expenses/model/expensesApi';
 import type { AttachmentPreviewModel } from '@entities/expenses/lib/buildAttachmentPreview';
 import { ExpenseAttachmentPreviewModal } from './ExpenseAttachmentPreviewModal';
-import { getCloseExpenseUi, isModerationBlockedForOwnExpense, showLifecycleModerationRow, showOwnPendingModerationBlockedHint, showPayExpenseAction, showPendingApprovalModeration, showWithdrawExpenseAction, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
+import { isModerationBlockedForOwnExpense, showLifecycleModerationRow, showOwnPendingModerationBlockedHint, showPayExpenseAction, showPendingApprovalModeration, showWithdrawExpenseAction, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
 import { expensePayActionLabel, expenseStatusLabel } from '@entities/expenses/model/expenseStatusLabels';
 import { isExpensePaymentConfirmer } from '@entities/expenses/model/expensePaymentConfirmer';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
@@ -132,16 +132,16 @@ function ExpenseProjectCardBody({ project }: {
 }) {
     const { t } = useI18n();
     return (<div className="exp-project-picker__card-body">
-      <div className="exp-project-picker__card-title">
-        <span className="exp-project-picker__card-name">{project.name}</span>
-        {project.code ? <span className="exp-project-picker__code">{project.code}</span> : null}
-      </div>
-      <p className="exp-project-picker__meta">
-        {ttProjectTypeLabel(project.project_type, t)}
-        {' · '}
-        {formatExpenseProjectDateShort(project.start_date)} — {formatExpenseProjectDateShort(project.end_date)}
-        {project.usage_count > 0 ? ` · записей времени: ${project.usage_count}` : ''}
-      </p>
+        <div className="exp-project-picker__card-title">
+            <span className="exp-project-picker__card-name">{project.name}</span>
+            {project.code ? <span className="exp-project-picker__code">{project.code}</span> : null}
+        </div>
+        <p className="exp-project-picker__meta">
+            {ttProjectTypeLabel(project.project_type, t)}
+            {' · '}
+            {formatExpenseProjectDateShort(project.start_date)} — {formatExpenseProjectDateShort(project.end_date)}
+            {project.usage_count > 0 ? ` · записей времени: ${project.usage_count}` : ''}
+        </p>
     </div>);
 }
 export type PanelMode = 'create' | 'edit' | 'view';
@@ -149,10 +149,6 @@ type PanelConfirmState = null | {
     kind: 'approve';
 } | {
     kind: 'pay';
-} | {
-    kind: 'close';
-    message: string;
-    confirmLabel: string;
 } | {
     kind: 'withdraw';
 } | {
@@ -186,8 +182,8 @@ function PanelBtnSpinner({ className }: {
     className?: string;
 }) {
     return (<svg className={className ?? 'exp-panel-btn__spinner'} viewBox="0 0 24 24" aria-hidden width={18} height={18}>
-      <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.5" opacity={0.2}/>
-      <path fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M12 3a9 9 0 0 1 9 9"/>
+        <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.5" opacity={0.2} />
+        <path fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" d="M12 3a9 9 0 0 1 9 9" />
     </svg>);
 }
 function todayIsoLocal(): string {
@@ -516,33 +512,33 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setCbuError(null);
         fetchCbuParsedForDate(iso)
             .then((parsed) => {
-            if (cancelled)
-                return;
-            setCbuParsed(parsed);
-            setCbuLoading(false);
-            setValues((prev) => {
-                const er = formatExchangeRate(parsed.uzsPerUsd);
-                let fr = '';
-                if (needsForeignUsdRate(prev.amountCurrency)) {
-                    const fp = foreignUnitsPerUsd(parsed, prev.amountCurrency);
-                    if (fp != null && fp > 0)
-                        fr = formatForeignFp(fp);
-                }
-                const nextDate = allowPartnerBackdate && prev.expenseDate.trim()
-                    ? prev.expenseDate.trim().slice(0, 10)
-                    : iso;
-                if (prev.expenseDate === nextDate && prev.exchangeRate === er && prev.foreignPerUsd === fr)
-                    return prev;
-                return { ...prev, expenseDate: nextDate, exchangeRate: er, foreignPerUsd: fr };
-            });
-        })
+                if (cancelled)
+                    return;
+                setCbuParsed(parsed);
+                setCbuLoading(false);
+                setValues((prev) => {
+                    const er = formatExchangeRate(parsed.uzsPerUsd);
+                    let fr = '';
+                    if (needsForeignUsdRate(prev.amountCurrency)) {
+                        const fp = foreignUnitsPerUsd(parsed, prev.amountCurrency);
+                        if (fp != null && fp > 0)
+                            fr = formatForeignFp(fp);
+                    }
+                    const nextDate = allowPartnerBackdate && prev.expenseDate.trim()
+                        ? prev.expenseDate.trim().slice(0, 10)
+                        : iso;
+                    if (prev.expenseDate === nextDate && prev.exchangeRate === er && prev.foreignPerUsd === fr)
+                        return prev;
+                    return { ...prev, expenseDate: nextDate, exchangeRate: er, foreignPerUsd: fr };
+                });
+            })
             .catch((err) => {
-            if (cancelled)
-                return;
-            setCbuParsed(null);
-            setCbuLoading(false);
-            setCbuError(err instanceof Error ? err.message : 'Не удалось загрузить курс ЦБ');
-        });
+                if (cancelled)
+                    return;
+                setCbuParsed(null);
+                setCbuLoading(false);
+                setCbuError(err instanceof Error ? err.message : 'Не удалось загрузить курс ЦБ');
+            });
         return () => {
             cancelled = true;
         };
@@ -559,18 +555,18 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setPartnersLoadErr(null);
         void listPartners()
             .then((rows) => {
-            if (cancelled)
-                return;
-            setPartnerOptions(rows);
-            setPartnersLoad('ok');
-        })
+                if (cancelled)
+                    return;
+                setPartnerOptions(rows);
+                setPartnersLoad('ok');
+            })
             .catch((err) => {
-            if (cancelled)
-                return;
-            setPartnerOptions([]);
-            setPartnersLoad('error');
-            setPartnersLoadErr(err instanceof Error ? err.message : 'Не удалось загрузить партнёров');
-        });
+                if (cancelled)
+                    return;
+                setPartnerOptions([]);
+                setPartnersLoad('error');
+                setPartnersLoadErr(err instanceof Error ? err.message : 'Не удалось загрузить партнёров');
+            });
         return () => { cancelled = true; };
     }, [isOpen, values.expenseType]);
     useEffect(() => {
@@ -634,27 +630,27 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setExpenseCategoriesError(null);
         void listProjectExpenseCategories(pid)
             .then((rows) => {
-            if (cancelled)
-                return;
-            const active = rows.filter((r) => !r.isArchived);
-            setExpenseProjectCategories(active);
-            setValues((prev) => {
-                const cur = prev.expenseCategoryId.trim();
-                if (!cur)
-                    return prev;
-                return active.some((r) => r.id === cur) ? prev : { ...prev, expenseCategoryId: '' };
-            });
-        })
+                if (cancelled)
+                    return;
+                const active = rows.filter((r) => !r.isArchived);
+                setExpenseProjectCategories(active);
+                setValues((prev) => {
+                    const cur = prev.expenseCategoryId.trim();
+                    if (!cur)
+                        return prev;
+                    return active.some((r) => r.id === cur) ? prev : { ...prev, expenseCategoryId: '' };
+                });
+            })
             .catch((e) => {
-            if (!cancelled) {
-                setExpenseProjectCategories([]);
-                setExpenseCategoriesError(e instanceof Error ? e.message : 'Не удалось загрузить категории');
-            }
-        })
+                if (!cancelled) {
+                    setExpenseProjectCategories([]);
+                    setExpenseCategoriesError(e instanceof Error ? e.message : 'Не удалось загрузить категории');
+                }
+            })
             .finally(() => {
-            if (!cancelled)
-                setExpenseCategoriesLoading(false);
-        });
+                if (!cancelled)
+                    setExpenseCategoriesLoading(false);
+            });
         return () => {
             cancelled = true;
         };
@@ -1179,7 +1175,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         editingRequest &&
         showPendingApprovalModeration(editingRequest, Boolean(canModerate), blockedModerationOwn));
     const showPayAction = Boolean(isView && editingRequest && showPayExpenseAction(editingRequest, blockedModerationOwn, { isPaymentConfirmer }));
-    const closeExpenseUi = isView && canModerate && editingRequest ? getCloseExpenseUi(editingRequest, blockedModerationOwn) : null;
     const showLifecycleRow = Boolean(isView &&
         editingRequest &&
         showLifecycleModerationRow(editingRequest, Boolean(canModerate), blockedModerationOwn, { isPaymentConfirmer }));
@@ -1245,16 +1240,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setModerationErr(null);
         setPanelConfirm({ kind: 'pay' });
     }, [editingRequest, lifecycleBusy, moderationBusy]);
-    const openCloseLifecycleConfirm = useCallback(() => {
-        if (!editingRequest || lifecycleBusy || moderationBusy || !closeExpenseUi)
-            return;
-        setModerationErr(null);
-        setPanelConfirm({
-            kind: 'close',
-            message: closeExpenseUi.confirmMessage,
-            confirmLabel: closeExpenseUi.label,
-        });
-    }, [editingRequest, lifecycleBusy, moderationBusy, closeExpenseUi]);
     const openWithdrawConfirm = useCallback(() => {
         if (!editingRequest || lifecycleBusy || moderationBusy)
             return;
@@ -1312,24 +1297,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 fail(e instanceof Error
                     ? e.message
                     : 'Не удалось отметить оплату');
-            }
-            finally {
-                setLifecycleBusy(false);
-            }
-            return;
-        }
-        if (panelConfirm.kind === 'close') {
-            if (lifecycleBusy || moderationBusy)
-                return;
-            setModerationErr(null);
-            setLifecycleBusy(true);
-            try {
-                const r = await closeExpense(editingRequest.id);
-                setPanelConfirm(null);
-                onExpenseUpdated?.(r);
-            }
-            catch (e) {
-                fail(e instanceof Error ? e.message : 'Не удалось выполнить закрытие');
             }
             finally {
                 setLifecycleBusy(false);
@@ -1440,812 +1407,804 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         };
     }, [scrollLockActive]);
     const portalLayer = (<>
-      {rejectOpen && editingRequest && (<div className="exp-mod-backdrop" role="presentation">
-          <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-mod-reject-title" onClick={e => e.stopPropagation()}>
-            <h3 id="exp-mod-reject-title" className="exp-mod-dialog__title">Отклонить заявку</h3>
-            <p className="exp-mod-dialog__sub">Заявка {editingRequest.id}. Укажите причину — автор её увидит в истории.</p>
-            <textarea className="exp-mod-dialog__textarea" rows={4} placeholder="Причина отклонения" value={rejectReason} onChange={e => setRejectReason(e.target.value)} disabled={moderationBusy}/>
-            {moderationErr && rejectOpen && <p className="exp-mod-err" role="alert">{moderationErr}</p>}
-            <div className="exp-mod-dialog__ft">
-              <button type="button" className="exp-panel-btn exp-panel-btn--ghost" disabled={moderationBusy} onClick={() => { setRejectOpen(false); setModerationErr(null); }}>Отмена</button>
-              <button type="button" className="exp-panel-btn exp-panel-btn--primary exp-panel-btn--danger" disabled={moderationBusy} onClick={handleRejectConfirm}>Отклонить</button>
-            </div>
-          </div>
-        </div>)}
-      {reviseOpen && editingRequest && (<div className="exp-mod-backdrop" role="presentation">
-          <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-mod-revise-title" onClick={e => e.stopPropagation()}>
-            <h3 id="exp-mod-revise-title" className="exp-mod-dialog__title">Вернуть на доработку</h3>
-            <p className="exp-mod-dialog__sub">Заявка {editingRequest.id}. Автор сможет исправить заявку и отправить снова.</p>
-            <textarea className="exp-mod-dialog__textarea" rows={4} placeholder="Что нужно исправить или дополнить" value={reviseComment} onChange={e => setReviseComment(e.target.value)} disabled={moderationBusy}/>
-            {moderationErr && reviseOpen && <p className="exp-mod-err" role="alert">{moderationErr}</p>}
-            <div className="exp-mod-dialog__ft">
-              <button type="button" className="exp-panel-btn exp-panel-btn--ghost" disabled={moderationBusy} onClick={() => { setReviseOpen(false); setModerationErr(null); }}>Отмена</button>
-              <button type="button" className="exp-panel-btn exp-panel-btn--primary" disabled={moderationBusy} onClick={handleReviseConfirm}>Вернуть</button>
-            </div>
-          </div>
-        </div>)}
-      {panelConfirm && (<ExpenseConfirmDialog isOpen title={panelConfirm.kind === 'approve'
-                ? 'Одобрить заявку?'
-                : panelConfirm.kind === 'pay'
-                    ? 'Подтвердить возмещение?'
-                    : panelConfirm.kind === 'close'
-                        ? 'Подтверждение'
-                        : panelConfirm.kind === 'delete'
-                            ? 'Удалить заявку?'
-                            : 'Отозвать заявку?'} message={panelConfirm.kind === 'approve' ? (<>
-                <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
-                {editingRequest?.isReimbursable ? (<p className="exp-mod-dialog__sub">
-                    После одобрения заявка уйдёт на возмещение: подтверждение выполняет назначенный сотрудник, статус станет «Ожидает возмещения».
-                  </p>) : null}
-              </>) : panelConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">
-                Статус станет «Возмещено». Убедитесь, что перевод на карту сотрудника выполнен.
-              </p>) : panelConfirm.kind === 'close' ? (<p className="exp-mod-dialog__sub">{panelConfirm.message}</p>) : panelConfirm.kind === 'delete' ? (<p className="exp-mod-dialog__sub">
-                Заявка {editingRequest?.id} будет удалена безвозвратно вместе с вложениями.
-              </p>) : (<p className="exp-mod-dialog__sub">Статус заявки станет «Отозвана».</p>)} confirmLabel={panelConfirm.kind === 'approve'
-                ? 'Одобрить'
-                : panelConfirm.kind === 'pay'
-                    ? (editingRequest ? expensePayActionLabel(editingRequest) : 'Возмещено')
-                    : panelConfirm.kind === 'close'
-                        ? panelConfirm.confirmLabel
-                        : panelConfirm.kind === 'delete'
-                            ? 'Удалить'
-                            : 'Отозвать'} confirmVariant={panelConfirm.kind === 'withdraw' || panelConfirm.kind === 'delete' ? 'danger' : 'primary'} busy={panelConfirm.kind === 'approve' ? moderationBusy : lifecycleBusy} onClose={() => {
-                const busy = panelConfirm.kind === 'approve' ? moderationBusy : lifecycleBusy;
-                if (!busy)
-                    setPanelConfirm(null);
-            }} onConfirm={handlePanelConfirmSubmit}/>)}
-      <ExpenseAttachmentPreviewModal isOpen={attachPreview != null} fileName={attachPreview?.fileName ?? ''} loading={attachPreview?.loading ?? false} error={attachPreview?.error ?? null} model={attachPreview?.model ?? null} canOpenExternal={Boolean(attachPreview &&
-            (attachPreview.server || attachPreview.localFile || attachPreview.previewObjectUrl))} onClose={closeAttachPreview} onOpenExternal={openAttachmentExternal}/>
-      <div className={`exp-panel-overlay${isOpen ? ' exp-panel-overlay--open' : ''}`} aria-hidden/>
-      <aside className={`exp-panel${isOpen ? ' exp-panel--open' : ''}${formAsyncBusy ? ' exp-panel--async-busy' : ''}`} aria-modal aria-busy={formAsyncBusy} aria-label={title}>
-
-        <div className="exp-panel__hd">
-          <div className="exp-panel__hd-left">
-            {isView && editingRequest && (<span className={`exp-status exp-status--${editingRequest.status}`}>
-                {expenseStatusLabel(editingRequest)}
-              </span>)}
-            <h2 className="exp-panel__title">{title}</h2>
-          </div>
-          <button type="button" className="exp-panel__close" onClick={onClose} aria-label="Закрыть" disabled={formAsyncBusy}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
-
-        <div className="exp-panel__body" ref={bodyRef}>
-
-          {(editingRequest?.status === 'rejected' || editingRequest?.status === 'revision_required')
-            && editingRequest.rejectionReason ? (
-            <section
-              className={`exp-rejection-reason${editingRequest.status === 'revision_required' ? ' exp-rejection-reason--revision' : ''}`}
-              role="note"
-              aria-label={editingRequest.status === 'revision_required' ? 'Комментарий к доработке' : 'Причина отказа'}
-            >
-              <div className="exp-rejection-reason__icon" aria-hidden>!</div>
-              <div>
-                <p className="exp-rejection-reason__title">
-                  {editingRequest.status === 'revision_required' ? 'Что исправить' : 'Причина отказа'}
-                </p>
-                <p className="exp-rejection-reason__text">{editingRequest.rejectionReason}</p>
-              </div>
-            </section>
-          ) : null}
-
-          <div className="exp-form-block">
-            <p className="exp-form-block__title">Основная информация</p>
-
-            {editingRequest && (<div className="exp-form-field">
-                <div className="exp-form-label">Автор заявки</div>
-                <p className="exp-form-static">{formatExpenseAuthorLabel(editingRequest)}</p>
-                {editingRequest.createdBy?.position && (<p className="exp-form-static exp-form-static--muted">{editingRequest.createdBy.position}</p>)}
-                {editingRequest.createdBy?.displayName && editingRequest.createdBy?.email && (<p className="exp-form-static exp-form-static--muted">{editingRequest.createdBy.email}</p>)}
-              </div>)}
-
-            {editingRequest?.status === 'paid' && (<div className="exp-form-field">
-                <div className="exp-form-label">Оплату отметил(а)</div>
-                <p className="exp-form-static">{formatExpensePaidByLabel(editingRequest)}</p>
-                {editingRequest.paidBy?.email && (<p className="exp-form-static exp-form-static--muted">{editingRequest.paidBy.email}</p>)}
-              </div>)}
-
-            <div className={`exp-form-field${errors.expenseType ? ' exp-form-field--err' : ''}`}>
-              <label className="exp-form-label">Тип расхода <span className="exp-form-req">*</span></label>
-              {isView ? (
-                <p className="exp-form-static">
-                  {expenseTypeItems.find(t => t.value === values.expenseType)?.label || values.expenseType || '—'}
-                </p>
-              ) : (
-                <ExpenseSearchableSelect
-                  portalDropdown
-                  placeholder="Выберите тип"
-                  emptyListText="Нет типов"
-                  noMatchText="Тип не найден"
-                  value={values.expenseType}
-                  items={expenseTypeItems}
-                  getOptionValue={t => t.value}
-                  getOptionLabel={t => t.label}
-                  getSearchText={t => t.label}
-                  onSelect={t => set('expenseType', t.value)}
-                  aria-invalid={Boolean(errors.expenseType)}
-                  aria-label="Тип расхода"
-                />
-              )}
-              {errors.expenseType && <p className="exp-form-err-msg" data-err>{errors.expenseType}</p>}
-            </div>
-
-            {values.expenseType === 'partner_expense' && (<div className={`exp-form-field${errors.expenseSubtype ? ' exp-form-field--err' : ''}`}>
-                <label className="exp-form-label">
-                  Категория расхода партнёра <span className="exp-form-req">*</span>
-                </label>
-                {isView ? (<p className="exp-form-static">
-                    {values.expenseSubtype
-                    ? getPartnerExpenseSubtypeLabel(values.expenseSubtype) || values.expenseSubtype
-                    : '—'}
-                  </p>) : (
-                  <ExpenseSearchableSelect
-                    portalDropdown
-                    placeholder="Выберите категорию"
-                    emptyListText="Нет категорий"
-                    noMatchText="Категория не найдена"
-                    value={values.expenseSubtype}
-                    items={partnerSubtypeItems}
-                    getOptionValue={c => c.value}
-                    getOptionLabel={c => c.label}
-                    getSearchText={c => c.label}
-                    onSelect={c => set('expenseSubtype', c.value)}
-                    aria-invalid={Boolean(errors.expenseSubtype)}
-                    aria-label="Категория расхода партнёра"
-                  />
-                )}
-                {!isView && (<p className="exp-form-hint" style={{ marginTop: '0.35rem' }}>
-                    Расход записывается сразу в статус <strong>«Одобрено»</strong> — согласование не требуется. Можно указать дату задним числом.
-                  </p>)}
-                {errors.expenseSubtype && <p className="exp-form-err-msg" data-err>{errors.expenseSubtype}</p>}
-              </div>)}
-
-            {values.expenseType === 'partner_expense' && (<div className={`exp-form-field${errors.partnerUserId ? ' exp-form-field--err' : ''}`}>
-                <label className="exp-form-label">Партнёр (чей расход)</label>
-                {isView ? (<p className="exp-form-static">
-                    {editingRequest?.partnerUser?.displayName?.trim()
-                        || editingRequest?.partnerUser?.email?.trim()
-                        || '—'}
-                  </p>) : (
-                  <ExpenseSearchableSelect
-                    portalDropdown
-                    placeholder={partnersLoad === 'loading' ? 'Загрузка…' : 'Не указан'}
-                    emptyListText="Партнёры не найдены"
-                    noMatchText="Партнёр не найден"
-                    value={values.partnerUserId}
-                    items={partnerUserItems}
-                    getOptionValue={p => p.id}
-                    getOptionLabel={p => p.label}
-                    getSearchText={p => p.search}
-                    disabled={partnersLoad === 'loading'}
-                    onSelect={p => set('partnerUserId', p.id)}
-                    aria-invalid={Boolean(errors.partnerUserId)}
-                    aria-label="Партнёр"
-                  />
-                )}
-                {!isView && (<p className="exp-form-hint" style={{ marginTop: '0.35rem' }}>
-                    Необязательно: укажите партнёра, за которого фиксируется расход.
-                  </p>)}
-                {partnersLoad === 'error' && partnersLoadErr ? (<p className="exp-form-err-msg" role="alert">{partnersLoadErr}</p>) : null}
-                {errors.partnerUserId && <p className="exp-form-err-msg" data-err>{errors.partnerUserId}</p>}
-              </div>)}
-
-            <div className={`exp-form-field${errors.description ? ' exp-form-field--err' : ''}`}>
-              <div className="exp-form-label-row">
-                <label className="exp-form-label">Описание расхода <span className="exp-form-req">*</span></label>
-                <button type="button" className="exp-form-copy-btn" onClick={() => void handleCopyDescription()} disabled={!values.description.trim()} title={values.description.trim() ? 'Копировать описание' : 'Нет описания'} aria-label="Копировать описание">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                    <rect x="9" y="9" width="13" height="13" rx="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                  </svg>
-                </button>
-              </div>
-              <textarea className="exp-form-textarea" placeholder="Например: оплата такси, покупка канцтоваров, бронь гостиницы" value={values.description} onChange={e => set('description', e.target.value)} disabled={isView} rows={3}/>
-              {errors.description && <p className="exp-form-err-msg" data-err>{errors.description}</p>}
-            </div>
-
-            {values.expenseType === 'other' && values.isReimbursable && (<div className={`exp-form-field${errors.comment ? ' exp-form-field--err' : ''}`}>
-                <label className="exp-form-label">
-                  Комментарий к типу «Прочее» <span className="exp-form-req">*</span>
-                </label>
-                <p className="exp-form-hint" style={{ margin: '0 0 0.4rem' }}>
-                  Обязателен при возмещаемом расходе. Поле отдельно от блока «Дополнительно» (он только для типа «За клиента»).
-                </p>
-                {isView ? (<p className="exp-form-static">
-                    {values.comment.trim() ? values.comment : '—'}
-                  </p>) : (<textarea className="exp-form-textarea" placeholder="Поясните суть расхода" value={values.comment} onChange={e => {
-                set('comment', e.target.value);
-                if (errors.comment) {
-                    setErrors(prev => ({ ...prev, comment: undefined }));
-                }
-            }} rows={3} aria-invalid={Boolean(errors.comment)}/>)}
-                {errors.comment && <p className="exp-form-err-msg" data-err>{errors.comment}</p>}
-              </div>)}
-          </div>
-
-          <div className="exp-form-block">
-            <p className="exp-form-block__title">Финансы</p>
-
-            {mode === 'create' && !allowPartnerBackdate && (<p className="exp-form-hint">
-                Дата расхода — сегодняшний день; курс UZS/USD и кросс-курсы подставляются автоматически с cbu.uz на эту дату.
-              </p>)}
-
-            {mode === 'create' && allowPartnerBackdate && (<div className={`exp-form-field${errors.expenseDate ? ' exp-form-field--err' : ''}`}>
-                <label className="exp-form-label">Дата расхода <span className="exp-form-req">*</span></label>
-                <input type="date" className="exp-form-input" value={values.expenseDate} max={todayIsoLocal()} onChange={e => set('expenseDate', e.target.value)} disabled={isView || cbuLoading}/>
-                <p className="exp-form-hint">Можно указать прошедшую дату; курс подставится с cbu.uz на выбранный день.</p>
-                {errors.expenseDate && <p className="exp-form-err-msg" data-err>{errors.expenseDate}</p>}
-              </div>)}
-
-            {mode === 'create' && cbuLoading && (<p className="exp-form-hint">Загрузка курса ЦБ РУз…</p>)}
-            {mode === 'create' && cbuParsed && !cbuLoading && (<p className="exp-form-hint">Курс UZS/USD подставлен с ЦБ РУз ({cbuParsed.rateDateRu}).</p>)}
-            {mode === 'create' && (cbuError || errors.exchangeRate) && !cbuLoading && (<p className="exp-form-err-msg" role="alert" data-err>{cbuError || errors.exchangeRate}</p>)}
-
-            {(mode === 'edit' || mode === 'view') && values.expenseDate && (<div className="exp-form-field">
-                <div className="exp-form-label">Дата расхода</div>
-                <p className="exp-form-static">{fmtIsoDateRu(values.expenseDate)}</p>
-              </div>)}
-
-            <div className={`exp-form-field${errors.amountUzs ? ' exp-form-field--err' : ''}`}>
-              <label className="exp-form-label">Сумма <span className="exp-form-req">*</span></label>
-              <div className="exp-form-input-wrap">
-                <input type="number" min={0} step="any" className="exp-form-input" placeholder="0" value={values.amountUzs} onChange={e => setAmount(e.target.value)} disabled={isView}/>
-                <ExpenseSearchableSelect
-                  portalDropdown
-                  className="exp-form-currency-searchable"
-                  buttonClassName="exp-form-currency-select"
-                  placeholder="Валюта"
-                  value={values.amountCurrency}
-                  items={currencyItems}
-                  getOptionValue={c => c.value}
-                  getOptionLabel={c => c.label}
-                  getSearchText={c => `${c.label} ${c.value}`}
-                  disabled={isView}
-                  onSelect={c => setCurrency(c.value as ExpenseAmountCurrency)}
-                  aria-label="Валюта суммы"
-                />
-              </div>
-              {errors.amountUzs && <p className="exp-form-err-msg" data-err>{errors.amountUzs}</p>}
-              {amountUzsSaveHint && <p className="exp-form-hint">{amountUzsSaveHint}</p>}
-              {approvalRoutingHint && <p className="exp-form-hint">{approvalRoutingHint}</p>}
-            </div>
-
-            {showForeignRate && (<div className={`exp-form-field${errors.foreignPerUsd ? ' exp-form-field--err' : ''}`}>
-                <label className="exp-form-label">
-                  Единиц валюты за 1 USD <span className="exp-form-req">*</span>
-                </label>
-                <div className="exp-form-input-wrap">
-                  <input type="number" min={0} step="any" className="exp-form-input" placeholder="Например: 90" value={values.foreignPerUsd} onChange={e => set('foreignPerUsd', e.target.value)} disabled={isView} readOnly={!isView && foreignLocked}/>
+        {rejectOpen && editingRequest && (<div className="exp-mod-backdrop" role="presentation">
+            <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-mod-reject-title" onClick={e => e.stopPropagation()}>
+                <h3 id="exp-mod-reject-title" className="exp-mod-dialog__title">Отклонить заявку</h3>
+                <p className="exp-mod-dialog__sub">Заявка {editingRequest.id}. Укажите причину — автор её увидит в истории.</p>
+                <textarea className="exp-mod-dialog__textarea" rows={4} placeholder="Причина отклонения" value={rejectReason} onChange={e => setRejectReason(e.target.value)} disabled={moderationBusy} />
+                {moderationErr && rejectOpen && <p className="exp-mod-err" role="alert">{moderationErr}</p>}
+                <div className="exp-mod-dialog__ft">
+                    <button type="button" className="exp-panel-btn exp-panel-btn--ghost" disabled={moderationBusy} onClick={() => { setRejectOpen(false); setModerationErr(null); }}>Отмена</button>
+                    <button type="button" className="exp-panel-btn exp-panel-btn--primary exp-panel-btn--danger" disabled={moderationBusy} onClick={handleRejectConfirm}>Отклонить</button>
                 </div>
-                <p className="exp-form-hint">
-                  {foreignLocked
-                ? 'Рассчитано по курсам ЦБ РУз (через сум к USD и к выбранной валюте)'
-                : 'Сколько единиц выбранной валюты составляет 1 USD на дату расхода'}
-                </p>
-                {errors.foreignPerUsd && <p className="exp-form-err-msg" data-err>{errors.foreignPerUsd}</p>}
-              </div>)}
-
-            <div className="exp-form-field">
-              <label className="exp-form-label">Эквивалентная сумма</label>
-              <div className="exp-form-input-wrap">
-                <input type="text" className="exp-form-input exp-form-input--calc" value={equiv || (isView ? viewEquivFromServer : '')} readOnly tabIndex={-1} placeholder="—"/>
-                <span className="exp-form-suffix">USD</span>
-              </div>
-              <p className="exp-form-hint">{equivHint}</p>
             </div>
-
-            <div className={`exp-form-field${errors.paymentMethod ? ' exp-form-field--err' : ''}`}>
-              <label className="exp-form-label">Способ оплаты <span className="exp-form-req">*</span></label>
-              {isView ? (
-                <p className="exp-form-static">
-                  {paymentMethodItems.find(m => m.value === values.paymentMethod)?.label || values.paymentMethod || '—'}
-                </p>
-              ) : (
-                <ExpenseSearchableSelect
-                  portalDropdown
-                  placeholder="Выберите способ оплаты"
-                  emptyListText="Нет вариантов"
-                  noMatchText="Не найдено"
-                  value={values.paymentMethod}
-                  items={paymentMethodItems}
-                  getOptionValue={m => m.value}
-                  getOptionLabel={m => m.label}
-                  getSearchText={m => m.search}
-                  onSelect={m => set('paymentMethod', m.value)}
-                  aria-invalid={Boolean(errors.paymentMethod)}
-                  aria-label="Способ оплаты"
-                />
-              )}
-              {errors.paymentMethod && <p className="exp-form-err-msg" data-err>{errors.paymentMethod}</p>}
-            </div>
-
-            {(values.paymentMethod === 'cash' || values.isReimbursable === true) && values.expenseType !== 'partner_expense' && (<div className={`exp-form-field${errors.reimbursementCardNumber ? ' exp-form-field--err' : ''}`}>
-              <label className="exp-form-label">
-                Номер карты для возмещения <span className="exp-form-req">*</span>
-              </label>
-              {isView ? (<p className="exp-form-static">
-                  {formatReimbursementCardNumber(values.reimbursementCardNumber) || '—'}
-                </p>) : (<input
-                  type="text"
-                  className="exp-form-input"
-                  inputMode="numeric"
-                  autoComplete="cc-number"
-                  maxLength={19}
-                  placeholder="0000 0000 0000 0000"
-                  value={values.reimbursementCardNumber}
-                  onChange={event => set('reimbursementCardNumber', formatReimbursementCardNumber(event.target.value))}
-                  aria-invalid={Boolean(errors.reimbursementCardNumber)}
-                />)}
-              {!isView && (<p className="exp-form-hint">
-                  Карта, на которую нужно перечислить возмещение.
-                </p>)}
-              {errors.reimbursementCardNumber && (<p className="exp-form-err-msg" data-err>
-                  {errors.reimbursementCardNumber}
-                </p>)}
-            </div>)}
-
-            <div className="exp-form-field">
-              <div className="exp-form-switch-row">
-                <div className="exp-form-switch-info">
-                  <span className="exp-form-label" style={{ marginBottom: 0 }}>
-                    Возмещаемый расход
-                  </span>
-                  <p className="exp-form-hint" style={{ margin: '0.25rem 0 0 0' }}>
-                    Для возмещения: способ оплаты «Наличные», номер карты и документ для оплаты. После согласования
-                    возмещение подтверждает назначенный сотрудник.
-                  </p>
+        </div>)}
+        {reviseOpen && editingRequest && (<div className="exp-mod-backdrop" role="presentation">
+            <div className="exp-mod-dialog" role="dialog" aria-modal aria-labelledby="exp-mod-revise-title" onClick={e => e.stopPropagation()}>
+                <h3 id="exp-mod-revise-title" className="exp-mod-dialog__title">Вернуть на доработку</h3>
+                <p className="exp-mod-dialog__sub">Заявка {editingRequest.id}. Автор сможет исправить заявку и отправить снова.</p>
+                <textarea className="exp-mod-dialog__textarea" rows={4} placeholder="Что нужно исправить или дополнить" value={reviseComment} onChange={e => setReviseComment(e.target.value)} disabled={moderationBusy} />
+                {moderationErr && reviseOpen && <p className="exp-mod-err" role="alert">{moderationErr}</p>}
+                <div className="exp-mod-dialog__ft">
+                    <button type="button" className="exp-panel-btn exp-panel-btn--ghost" disabled={moderationBusy} onClick={() => { setReviseOpen(false); setModerationErr(null); }}>Отмена</button>
+                    <button type="button" className="exp-panel-btn exp-panel-btn--primary" disabled={moderationBusy} onClick={handleReviseConfirm}>Вернуть</button>
                 </div>
-                <button type="button" role="switch" aria-checked={values.isReimbursable === true} className={`exp-form-switch${values.isReimbursable === true ? ' exp-form-switch--on' : ''}${isView ? ' exp-form-switch--disabled' : ''}`} onClick={() => { if (!isView)
-        setReimb(values.isReimbursable !== true); }}>
-                  <span className="exp-form-switch__thumb"/>
-                </button>
-              </div>
             </div>
-          </div>
+        </div>)}
+        {panelConfirm && (<ExpenseConfirmDialog isOpen title={panelConfirm.kind === 'approve'
+            ? 'Одобрить заявку?'
+            : panelConfirm.kind === 'pay'
+                ? 'Подтвердить возмещение?'
+                : panelConfirm.kind === 'delete'
+                    ? 'Удалить заявку?'
+                    : 'Отозвать заявку?'} message={panelConfirm.kind === 'approve' ? (<>
+                            <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
+                            {editingRequest?.isReimbursable ? (<p className="exp-mod-dialog__sub">
+                                После одобрения заявка уйдёт на возмещение: подтверждение выполняет назначенный сотрудник, статус станет «Ожидает возмещения».
+                            </p>) : null}
+                        </>) : panelConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">
+                            Статус станет «Возмещено». Убедитесь, что перевод на карту сотрудника выполнен.
+                        </p>) : panelConfirm.kind === 'delete' ? (<p className="exp-mod-dialog__sub">
+                            Заявка {editingRequest?.id} будет удалена безвозвратно вместе с вложениями.
+                        </p>) : (<p className="exp-mod-dialog__sub">Статус заявки станет «Отозвана».</p>)} confirmLabel={panelConfirm.kind === 'approve'
+                            ? 'Одобрить'
+                            : panelConfirm.kind === 'pay'
+                                ? (editingRequest ? expensePayActionLabel(editingRequest) : 'Возмещено')
+                                : panelConfirm.kind === 'delete'
+                                    ? 'Удалить'
+                                    : 'Отозвать'} confirmVariant={panelConfirm.kind === 'withdraw' || panelConfirm.kind === 'delete' ? 'danger' : 'primary'} busy={panelConfirm.kind === 'approve' ? moderationBusy : lifecycleBusy} onClose={() => {
+                                            const busy = panelConfirm.kind === 'approve' ? moderationBusy : lifecycleBusy;
+                                            if (!busy)
+                                                setPanelConfirm(null);
+                                        }} onConfirm={handlePanelConfirmSubmit} />)}
+        <ExpenseAttachmentPreviewModal isOpen={attachPreview != null} fileName={attachPreview?.fileName ?? ''} loading={attachPreview?.loading ?? false} error={attachPreview?.error ?? null} model={attachPreview?.model ?? null} canOpenExternal={Boolean(attachPreview &&
+            (attachPreview.server || attachPreview.localFile || attachPreview.previewObjectUrl))} onClose={closeAttachPreview} onOpenExternal={openAttachmentExternal} />
+        <div className={`exp-panel-overlay${isOpen ? ' exp-panel-overlay--open' : ''}`} aria-hidden />
+        <aside className={`exp-panel${isOpen ? ' exp-panel--open' : ''}${formAsyncBusy ? ' exp-panel--async-busy' : ''}`} aria-modal aria-busy={formAsyncBusy} aria-label={title}>
 
-          {showAdditionalSection && (<div className="exp-form-block">
-              <p className="exp-form-block__title">Дополнительно</p>
-              <p className="exp-form-hint" style={{ margin: '-0.35rem 0 0.75rem 0' }}>
-                Только для типа <strong>«За клиента»</strong>: привязка к клиенту и проекту из учёта времени, контрагент, комментарий
-                к заявке.
-              </p>
-              {values.isReimbursable === false && (<p className="exp-form-hint" style={{ margin: '0 0 0.75rem 0' }}>
-                  Для <strong>невозмещаемого</strong> расхода проект, контрагент и комментарий не обязательны, если не нужны для учёта.
-                </p>)}
-              {values.isReimbursable === true && (<p className="exp-form-hint" style={{ margin: '0 0 0.75rem 0' }}>
-                  <strong>Проект</strong> обязателен (справочник учёта времени). В «Контрагент / Поставщик» подставляется клиент
-                  проекта. При настроенных категориях у проекта — укажите категорию расхода.
-                </p>)}
+            <div className="exp-panel__hd">
+                <div className="exp-panel__hd-left">
+                    {isView && editingRequest && (<span className={`exp-status exp-status--${editingRequest.status}`}>
+                        {expenseStatusLabel(editingRequest)}
+                    </span>)}
+                    <h2 className="exp-panel__title">{title}</h2>
+                </div>
+                <button type="button" className="exp-panel__close" onClick={onClose} aria-label="Закрыть" disabled={formAsyncBusy}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
 
-              <div className={`exp-form-field exp-form-field--project${errors.projectId ? ' exp-form-field--err' : ''}`}>
-                {expenseProjectsError && (<p className="exp-form-err-msg" role="alert">
-                    {expenseProjectsError}
-                  </p>)}
+            <div className="exp-panel__body" ref={bodyRef}>
 
-                {isView ? (<>
-                    {selectedExpenseProjectMeta ? (<div className="exp-project-picker__card exp-project-picker__card--selected exp-project-picker__card--readonly" aria-label="Выбранный проект">
-                        <ExpenseProjectCardBody project={selectedExpenseProjectMeta.project}/>
-                        <p className="exp-project-picker__client-line">{selectedExpenseProjectMeta.client.name}</p>
-                      </div>) : values.projectId.trim() ? (<p className="exp-form-static">Проект не найден в справочнике (ID сохранён в заявке).</p>) : (<p className="exp-form-static exp-form-static--muted">Не указан</p>)}
-                  </>) : (<>
-                    {expenseProjectsLoading && (<div className="exp-project-picker__loading" role="status">
-                        Загрузка проектов…
-                      </div>)}
-                    {!expenseProjectsLoading &&
-                    !expenseProjectsError &&
-                    expenseClientsProjects.length === 0 && (<p className="exp-form-hint">
-                          Нет клиентов: добавьте их в разделе «Учёт времени» → «Настройки».
+                {(editingRequest?.status === 'rejected' || editingRequest?.status === 'revision_required')
+                    && editingRequest.rejectionReason ? (
+                    <section
+                        className={`exp-rejection-reason${editingRequest.status === 'revision_required' ? ' exp-rejection-reason--revision' : ''}`}
+                        role="note"
+                        aria-label={editingRequest.status === 'revision_required' ? 'Комментарий к доработке' : 'Причина отказа'}
+                    >
+                        <div className="exp-rejection-reason__icon" aria-hidden>!</div>
+                        <div>
+                            <p className="exp-rejection-reason__title">
+                                {editingRequest.status === 'revision_required' ? 'Что исправить' : 'Причина отказа'}
+                            </p>
+                            <p className="exp-rejection-reason__text">{editingRequest.rejectionReason}</p>
+                        </div>
+                    </section>
+                ) : null}
+
+                <div className="exp-form-block">
+                    <p className="exp-form-block__title">Основная информация</p>
+
+                    {editingRequest && (<div className="exp-form-field">
+                        <div className="exp-form-label">Автор заявки</div>
+                        <p className="exp-form-static">{formatExpenseAuthorLabel(editingRequest)}</p>
+                        {editingRequest.createdBy?.position && (<p className="exp-form-static exp-form-static--muted">{editingRequest.createdBy.position}</p>)}
+                        {editingRequest.createdBy?.displayName && editingRequest.createdBy?.email && (<p className="exp-form-static exp-form-static--muted">{editingRequest.createdBy.email}</p>)}
+                    </div>)}
+
+                    {editingRequest?.status === 'paid' && (<div className="exp-form-field">
+                        <div className="exp-form-label">Оплату отметил(а)</div>
+                        <p className="exp-form-static">{formatExpensePaidByLabel(editingRequest)}</p>
+                        {editingRequest.paidBy?.email && (<p className="exp-form-static exp-form-static--muted">{editingRequest.paidBy.email}</p>)}
+                    </div>)}
+
+                    <div className={`exp-form-field${errors.expenseType ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">Тип расхода <span className="exp-form-req">*</span></label>
+                        {isView ? (
+                            <p className="exp-form-static">
+                                {expenseTypeItems.find(t => t.value === values.expenseType)?.label || values.expenseType || '—'}
+                            </p>
+                        ) : (
+                            <ExpenseSearchableSelect
+                                portalDropdown
+                                placeholder="Выберите тип"
+                                emptyListText="Нет типов"
+                                noMatchText="Тип не найден"
+                                value={values.expenseType}
+                                items={expenseTypeItems}
+                                getOptionValue={t => t.value}
+                                getOptionLabel={t => t.label}
+                                getSearchText={t => t.label}
+                                onSelect={t => set('expenseType', t.value)}
+                                aria-invalid={Boolean(errors.expenseType)}
+                                aria-label="Тип расхода"
+                            />
+                        )}
+                        {errors.expenseType && <p className="exp-form-err-msg" data-err>{errors.expenseType}</p>}
+                    </div>
+
+                    {values.expenseType === 'partner_expense' && (<div className={`exp-form-field${errors.expenseSubtype ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">
+                            Категория расхода партнёра <span className="exp-form-req">*</span>
+                        </label>
+                        {isView ? (<p className="exp-form-static">
+                            {values.expenseSubtype
+                                ? getPartnerExpenseSubtypeLabel(values.expenseSubtype) || values.expenseSubtype
+                                : '—'}
+                        </p>) : (
+                            <ExpenseSearchableSelect
+                                portalDropdown
+                                placeholder="Выберите категорию"
+                                emptyListText="Нет категорий"
+                                noMatchText="Категория не найдена"
+                                value={values.expenseSubtype}
+                                items={partnerSubtypeItems}
+                                getOptionValue={c => c.value}
+                                getOptionLabel={c => c.label}
+                                getSearchText={c => c.label}
+                                onSelect={c => set('expenseSubtype', c.value)}
+                                aria-invalid={Boolean(errors.expenseSubtype)}
+                                aria-label="Категория расхода партнёра"
+                            />
+                        )}
+                        {!isView && (<p className="exp-form-hint" style={{ marginTop: '0.35rem' }}>
+                            Расход записывается сразу в статус <strong>«Одобрено»</strong> — согласование не требуется. Можно указать дату задним числом.
                         </p>)}
-                    {!expenseProjectsLoading &&
-                    !expenseProjectsError &&
-                    expenseClientsProjects.length > 0 && (<div className="exp-project-picker">
-                          {selectedExpenseProjectMeta &&
-                        selectedExpenseProjectMeta.client.id !== expenseProjectClientId && (<div className="exp-project-picker__banner" role="status">
-                                <span className="exp-project-picker__banner-text">
-                                  Выбран проект «{selectedExpenseProjectMeta.project.name}» (
-                                  {selectedExpenseProjectMeta.client.name}).
+                        {errors.expenseSubtype && <p className="exp-form-err-msg" data-err>{errors.expenseSubtype}</p>}
+                    </div>)}
+
+                    {values.expenseType === 'partner_expense' && (<div className={`exp-form-field${errors.partnerUserId ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">Партнёр (чей расход)</label>
+                        {isView ? (<p className="exp-form-static">
+                            {editingRequest?.partnerUser?.displayName?.trim()
+                                || editingRequest?.partnerUser?.email?.trim()
+                                || '—'}
+                        </p>) : (
+                            <ExpenseSearchableSelect
+                                portalDropdown
+                                placeholder={partnersLoad === 'loading' ? 'Загрузка…' : 'Не указан'}
+                                emptyListText="Партнёры не найдены"
+                                noMatchText="Партнёр не найден"
+                                value={values.partnerUserId}
+                                items={partnerUserItems}
+                                getOptionValue={p => p.id}
+                                getOptionLabel={p => p.label}
+                                getSearchText={p => p.search}
+                                disabled={partnersLoad === 'loading'}
+                                onSelect={p => set('partnerUserId', p.id)}
+                                aria-invalid={Boolean(errors.partnerUserId)}
+                                aria-label="Партнёр"
+                            />
+                        )}
+                        {!isView && (<p className="exp-form-hint" style={{ marginTop: '0.35rem' }}>
+                            Необязательно: укажите партнёра, за которого фиксируется расход.
+                        </p>)}
+                        {partnersLoad === 'error' && partnersLoadErr ? (<p className="exp-form-err-msg" role="alert">{partnersLoadErr}</p>) : null}
+                        {errors.partnerUserId && <p className="exp-form-err-msg" data-err>{errors.partnerUserId}</p>}
+                    </div>)}
+
+                    <div className={`exp-form-field${errors.description ? ' exp-form-field--err' : ''}`}>
+                        <div className="exp-form-label-row">
+                            <label className="exp-form-label">Описание расхода <span className="exp-form-req">*</span></label>
+                            <button type="button" className="exp-form-copy-btn" onClick={() => void handleCopyDescription()} disabled={!values.description.trim()} title={values.description.trim() ? 'Копировать описание' : 'Нет описания'} aria-label="Копировать описание">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                    <rect x="9" y="9" width="13" height="13" rx="2" />
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                </svg>
+                            </button>
+                        </div>
+                        <textarea className="exp-form-textarea" placeholder="Например: оплата такси, покупка канцтоваров, бронь гостиницы" value={values.description} onChange={e => set('description', e.target.value)} disabled={isView} rows={3} />
+                        {errors.description && <p className="exp-form-err-msg" data-err>{errors.description}</p>}
+                    </div>
+
+                    {values.expenseType === 'other' && values.isReimbursable && (<div className={`exp-form-field${errors.comment ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">
+                            Комментарий к типу «Прочее» <span className="exp-form-req">*</span>
+                        </label>
+                        <p className="exp-form-hint" style={{ margin: '0 0 0.4rem' }}>
+                            Обязателен при возмещаемом расходе. Поле отдельно от блока «Дополнительно» (он только для типа «За клиента»).
+                        </p>
+                        {isView ? (<p className="exp-form-static">
+                            {values.comment.trim() ? values.comment : '—'}
+                        </p>) : (<textarea className="exp-form-textarea" placeholder="Поясните суть расхода" value={values.comment} onChange={e => {
+                            set('comment', e.target.value);
+                            if (errors.comment) {
+                                setErrors(prev => ({ ...prev, comment: undefined }));
+                            }
+                        }} rows={3} aria-invalid={Boolean(errors.comment)} />)}
+                        {errors.comment && <p className="exp-form-err-msg" data-err>{errors.comment}</p>}
+                    </div>)}
+                </div>
+
+                <div className="exp-form-block">
+                    <p className="exp-form-block__title">Финансы</p>
+
+                    {mode === 'create' && !allowPartnerBackdate && (<p className="exp-form-hint">
+                        Дата расхода — сегодняшний день; курс UZS/USD и кросс-курсы подставляются автоматически с cbu.uz на эту дату.
+                    </p>)}
+
+                    {mode === 'create' && allowPartnerBackdate && (<div className={`exp-form-field${errors.expenseDate ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">Дата расхода <span className="exp-form-req">*</span></label>
+                        <input type="date" className="exp-form-input" value={values.expenseDate} max={todayIsoLocal()} onChange={e => set('expenseDate', e.target.value)} disabled={isView || cbuLoading} />
+                        <p className="exp-form-hint">Можно указать прошедшую дату; курс подставится с cbu.uz на выбранный день.</p>
+                        {errors.expenseDate && <p className="exp-form-err-msg" data-err>{errors.expenseDate}</p>}
+                    </div>)}
+
+                    {mode === 'create' && cbuLoading && (<p className="exp-form-hint">Загрузка курса ЦБ РУз…</p>)}
+                    {mode === 'create' && cbuParsed && !cbuLoading && (<p className="exp-form-hint">Курс UZS/USD подставлен с ЦБ РУз ({cbuParsed.rateDateRu}).</p>)}
+                    {mode === 'create' && (cbuError || errors.exchangeRate) && !cbuLoading && (<p className="exp-form-err-msg" role="alert" data-err>{cbuError || errors.exchangeRate}</p>)}
+
+                    {(mode === 'edit' || mode === 'view') && values.expenseDate && (<div className="exp-form-field">
+                        <div className="exp-form-label">Дата расхода</div>
+                        <p className="exp-form-static">{fmtIsoDateRu(values.expenseDate)}</p>
+                    </div>)}
+
+                    <div className={`exp-form-field${errors.amountUzs ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">Сумма <span className="exp-form-req">*</span></label>
+                        <div className="exp-form-input-wrap">
+                            <input type="number" min={0} step="any" className="exp-form-input" placeholder="0" value={values.amountUzs} onChange={e => setAmount(e.target.value)} disabled={isView} />
+                            <ExpenseSearchableSelect
+                                portalDropdown
+                                className="exp-form-currency-searchable"
+                                buttonClassName="exp-form-currency-select"
+                                placeholder="Валюта"
+                                value={values.amountCurrency}
+                                items={currencyItems}
+                                getOptionValue={c => c.value}
+                                getOptionLabel={c => c.label}
+                                getSearchText={c => `${c.label} ${c.value}`}
+                                disabled={isView}
+                                onSelect={c => setCurrency(c.value as ExpenseAmountCurrency)}
+                                aria-label="Валюта суммы"
+                            />
+                        </div>
+                        {errors.amountUzs && <p className="exp-form-err-msg" data-err>{errors.amountUzs}</p>}
+                        {amountUzsSaveHint && <p className="exp-form-hint">{amountUzsSaveHint}</p>}
+                        {approvalRoutingHint && <p className="exp-form-hint">{approvalRoutingHint}</p>}
+                    </div>
+
+                    {showForeignRate && (<div className={`exp-form-field${errors.foreignPerUsd ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">
+                            Единиц валюты за 1 USD <span className="exp-form-req">*</span>
+                        </label>
+                        <div className="exp-form-input-wrap">
+                            <input type="number" min={0} step="any" className="exp-form-input" placeholder="Например: 90" value={values.foreignPerUsd} onChange={e => set('foreignPerUsd', e.target.value)} disabled={isView} readOnly={!isView && foreignLocked} />
+                        </div>
+                        <p className="exp-form-hint">
+                            {foreignLocked
+                                ? 'Рассчитано по курсам ЦБ РУз (через сум к USD и к выбранной валюте)'
+                                : 'Сколько единиц выбранной валюты составляет 1 USD на дату расхода'}
+                        </p>
+                        {errors.foreignPerUsd && <p className="exp-form-err-msg" data-err>{errors.foreignPerUsd}</p>}
+                    </div>)}
+
+                    <div className="exp-form-field">
+                        <label className="exp-form-label">Эквивалентная сумма</label>
+                        <div className="exp-form-input-wrap">
+                            <input type="text" className="exp-form-input exp-form-input--calc" value={equiv || (isView ? viewEquivFromServer : '')} readOnly tabIndex={-1} placeholder="—" />
+                            <span className="exp-form-suffix">USD</span>
+                        </div>
+                        <p className="exp-form-hint">{equivHint}</p>
+                    </div>
+
+                    <div className={`exp-form-field${errors.paymentMethod ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">Способ оплаты <span className="exp-form-req">*</span></label>
+                        {isView ? (
+                            <p className="exp-form-static">
+                                {paymentMethodItems.find(m => m.value === values.paymentMethod)?.label || values.paymentMethod || '—'}
+                            </p>
+                        ) : (
+                            <ExpenseSearchableSelect
+                                portalDropdown
+                                placeholder="Выберите способ оплаты"
+                                emptyListText="Нет вариантов"
+                                noMatchText="Не найдено"
+                                value={values.paymentMethod}
+                                items={paymentMethodItems}
+                                getOptionValue={m => m.value}
+                                getOptionLabel={m => m.label}
+                                getSearchText={m => m.search}
+                                onSelect={m => set('paymentMethod', m.value)}
+                                aria-invalid={Boolean(errors.paymentMethod)}
+                                aria-label="Способ оплаты"
+                            />
+                        )}
+                        {errors.paymentMethod && <p className="exp-form-err-msg" data-err>{errors.paymentMethod}</p>}
+                    </div>
+
+                    {(values.paymentMethod === 'cash' || values.isReimbursable === true) && values.expenseType !== 'partner_expense' && (<div className={`exp-form-field${errors.reimbursementCardNumber ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">
+                            Номер карты для возмещения <span className="exp-form-req">*</span>
+                        </label>
+                        {isView ? (<p className="exp-form-static">
+                            {formatReimbursementCardNumber(values.reimbursementCardNumber) || '—'}
+                        </p>) : (<input
+                            type="text"
+                            className="exp-form-input"
+                            inputMode="numeric"
+                            autoComplete="cc-number"
+                            maxLength={19}
+                            placeholder="0000 0000 0000 0000"
+                            value={values.reimbursementCardNumber}
+                            onChange={event => set('reimbursementCardNumber', formatReimbursementCardNumber(event.target.value))}
+                            aria-invalid={Boolean(errors.reimbursementCardNumber)}
+                        />)}
+                        {!isView && (<p className="exp-form-hint">
+                            Карта, на которую нужно перечислить возмещение.
+                        </p>)}
+                        {errors.reimbursementCardNumber && (<p className="exp-form-err-msg" data-err>
+                            {errors.reimbursementCardNumber}
+                        </p>)}
+                    </div>)}
+
+                    <div className="exp-form-field">
+                        <div className="exp-form-switch-row">
+                            <div className="exp-form-switch-info">
+                                <span className="exp-form-label" style={{ marginBottom: 0 }}>
+                                    Возмещаемый расход
                                 </span>
-                                <button type="button" className="exp-project-picker__banner-action" onClick={() => handleExpenseClientPick(selectedExpenseProjectMeta.client)}>
-                                  Выбрать этого клиента
-                                </button>
-                              </div>)}
+                                <p className="exp-form-hint" style={{ margin: '0.25rem 0 0 0' }}>
+                                    Для возмещения: способ оплаты «Наличные», номер карты и документ для оплаты. После согласования
+                                    возмещение подтверждает назначенный сотрудник.
+                                </p>
+                            </div>
+                            <button type="button" role="switch" aria-checked={values.isReimbursable === true} className={`exp-form-switch${values.isReimbursable === true ? ' exp-form-switch--on' : ''}${isView ? ' exp-form-switch--disabled' : ''}`} onClick={() => {
+                                if (!isView)
+                                    setReimb(values.isReimbursable !== true);
+                            }}>
+                                <span className="exp-form-switch__thumb" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
-                          <div className="exp-project-picker__field">
-                            <label className="exp-form-label">Клиент</label>
-                            <ExpenseSearchableSelect<TimeManagerClientRow> portalDropdown disabled={expenseClientsFlat.length === 0} placeholder="Выберите клиента" emptyListText="Нет клиентов" noMatchText="Клиент не найден" value={expenseProjectClientId} items={expenseClientsFlat} getOptionValue={c => c.id} getOptionLabel={c => c.name} getSearchText={c => c.name} onSelect={handleExpenseClientPick}/>
-                          </div>
-
-                          <p className="exp-form-hint exp-project-picker__combo-hint">
-                            Проект: при пустом поле поиска показаны проекты выбранного клиента; начните ввод — поиск по
-                            всем проектам (название, код, клиент).
-                          </p>
-
-                          <div className="exp-project-picker__field">
-                            <label className="exp-form-label">
-                              Проект
-                              {values.isReimbursable === true && <span className="exp-form-req"> *</span>}
-                            </label>
-                            <ExpenseSearchableSelect<ExpenseProjectPickRow> portalDropdown disabled={expenseProjectRowsFlat.length === 0} placeholder="Выберите проект" emptyListText="Нет проектов" noMatchText="Проект не найден" value={values.projectId} items={expenseProjectRowsFlat} getOptionValue={r => r.project.id} getOptionLabel={r => `${r.project.name} (${r.client.name})`} getSearchText={r => `${r.client.name} ${r.project.name} ${r.project.code ?? ''}`} filterItems={filterExpenseProjectRows} onSelect={handleExpenseProjectPick} aria-invalid={Boolean(errors.projectId)} renderOption={row => (<span className="exp-searchable__opt-rich">
-                                  <ExpenseProjectCardBody project={row.project}/>
-                                  <span className="exp-searchable__opt-client">{row.client.name}</span>
-                                </span>)}/>
-                          </div>
-                        </div>)}
-                  </>)}
-
-                {!isView &&
-                !expenseProjectsLoading &&
-                !expenseProjectsError &&
-                expenseClientsProjects.length > 0 &&
-                expenseClientsProjects.every(g => g.projects.length === 0) && (<p className="exp-form-hint" style={{ margin: '0.35rem 0 0 0' }}>
-                      Нет ни одного проекта: создайте их во вкладке «Проекты» учёта времени.
+                {showAdditionalSection && (<div className="exp-form-block">
+                    <p className="exp-form-block__title">Дополнительно</p>
+                    <p className="exp-form-hint" style={{ margin: '-0.35rem 0 0.75rem 0' }}>
+                        Только для типа <strong>«За клиента»</strong>: привязка к клиенту и проекту из учёта времени, контрагент, комментарий
+                        к заявке.
+                    </p>
+                    {values.isReimbursable === false && (<p className="exp-form-hint" style={{ margin: '0 0 0.75rem 0' }}>
+                        Для <strong>невозмещаемого</strong> расхода проект, контрагент и комментарий не обязательны, если не нужны для учёта.
+                    </p>)}
+                    {values.isReimbursable === true && (<p className="exp-form-hint" style={{ margin: '0 0 0.75rem 0' }}>
+                        <strong>Проект</strong> обязателен (справочник учёта времени). В «Контрагент / Поставщик» подставляется клиент
+                        проекта. При настроенных категориях у проекта — укажите категорию расхода.
                     </p>)}
 
-                {errors.projectId && (<p className="exp-form-err-msg" data-err>
-                    {errors.projectId}
-                  </p>)}
-              </div>
+                    <div className={`exp-form-field exp-form-field--project${errors.projectId ? ' exp-form-field--err' : ''}`}>
+                        {expenseProjectsError && (<p className="exp-form-err-msg" role="alert">
+                            {expenseProjectsError}
+                        </p>)}
 
-              {values.expenseType !== 'partner_expense' && values.projectId.trim() !== '' && (<div className={`exp-form-field${errors.expenseCategoryId ? ' exp-form-field--err' : ''}`}>
-                  <label className="exp-form-label">
-                    Категория расхода
-                    {values.isReimbursable === true && expenseProjectCategories.length > 0 ? (<span className="exp-form-req"> *</span>) : null}
-                  </label>
-                  {isView ? (<p className="exp-form-static">
-                      {values.expenseCategoryId.trim()
-                        ? expenseProjectCategories.find((c) => c.id === values.expenseCategoryId)?.name ??
-                            'Категория сохранена'
-                        : 'Не указана'}
-                    </p>) : expenseCategoriesLoading ? (<p className="exp-form-hint" role="status">
-                      Загрузка категорий…
-                    </p>) : expenseCategoriesError ? (<p className="exp-form-err-msg" role="alert">
-                      {expenseCategoriesError}
-                    </p>) : expenseProjectCategories.length === 0 ? (<p className="exp-form-hint">
-                      Для этого проекта не настроены категории расходов — поле можно оставить пустым.
-                    </p>) : (<ExpenseSearchableSelect
-                      portalDropdown
-                      placeholder="Выберите категорию…"
-                      emptyListText="Нет категорий"
-                      noMatchText="Категория не найдена"
-                      value={values.expenseCategoryId}
-                      items={expenseCategoryItems}
-                      getOptionValue={c => c.id}
-                      getOptionLabel={c => c.name}
-                      getSearchText={c => c.search}
-                      onSelect={(c) => {
-                        setValues((prev) => ({ ...prev, expenseCategoryId: c.id }));
-                        if (errors.expenseCategoryId) {
-                            setErrors((prev) => ({ ...prev, expenseCategoryId: undefined }));
-                        }
-                      }}
-                      aria-invalid={Boolean(errors.expenseCategoryId)}
-                      aria-label="Категория расхода"
-                    />)}
-                  {errors.expenseCategoryId && (<p className="exp-form-err-msg" data-err>
-                      {errors.expenseCategoryId}
-                    </p>)}
+                        {isView ? (<>
+                            {selectedExpenseProjectMeta ? (<div className="exp-project-picker__card exp-project-picker__card--selected exp-project-picker__card--readonly" aria-label="Выбранный проект">
+                                <ExpenseProjectCardBody project={selectedExpenseProjectMeta.project} />
+                                <p className="exp-project-picker__client-line">{selectedExpenseProjectMeta.client.name}</p>
+                            </div>) : values.projectId.trim() ? (<p className="exp-form-static">Проект не найден в справочнике (ID сохранён в заявке).</p>) : (<p className="exp-form-static exp-form-static--muted">Не указан</p>)}
+                        </>) : (<>
+                            {expenseProjectsLoading && (<div className="exp-project-picker__loading" role="status">
+                                Загрузка проектов…
+                            </div>)}
+                            {!expenseProjectsLoading &&
+                                !expenseProjectsError &&
+                                expenseClientsProjects.length === 0 && (<p className="exp-form-hint">
+                                    Нет клиентов: добавьте их в разделе «Учёт времени» → «Настройки».
+                                </p>)}
+                            {!expenseProjectsLoading &&
+                                !expenseProjectsError &&
+                                expenseClientsProjects.length > 0 && (<div className="exp-project-picker">
+                                    {selectedExpenseProjectMeta &&
+                                        selectedExpenseProjectMeta.client.id !== expenseProjectClientId && (<div className="exp-project-picker__banner" role="status">
+                                            <span className="exp-project-picker__banner-text">
+                                                Выбран проект «{selectedExpenseProjectMeta.project.name}» (
+                                                {selectedExpenseProjectMeta.client.name}).
+                                            </span>
+                                            <button type="button" className="exp-project-picker__banner-action" onClick={() => handleExpenseClientPick(selectedExpenseProjectMeta.client)}>
+                                                Выбрать этого клиента
+                                            </button>
+                                        </div>)}
+
+                                    <div className="exp-project-picker__field">
+                                        <label className="exp-form-label">Клиент</label>
+                                        <ExpenseSearchableSelect<TimeManagerClientRow> portalDropdown disabled={expenseClientsFlat.length === 0} placeholder="Выберите клиента" emptyListText="Нет клиентов" noMatchText="Клиент не найден" value={expenseProjectClientId} items={expenseClientsFlat} getOptionValue={c => c.id} getOptionLabel={c => c.name} getSearchText={c => c.name} onSelect={handleExpenseClientPick} />
+                                    </div>
+
+                                    <p className="exp-form-hint exp-project-picker__combo-hint">
+                                        Проект: при пустом поле поиска показаны проекты выбранного клиента; начните ввод — поиск по
+                                        всем проектам (название, код, клиент).
+                                    </p>
+
+                                    <div className="exp-project-picker__field">
+                                        <label className="exp-form-label">
+                                            Проект
+                                            {values.isReimbursable === true && <span className="exp-form-req"> *</span>}
+                                        </label>
+                                        <ExpenseSearchableSelect<ExpenseProjectPickRow> portalDropdown disabled={expenseProjectRowsFlat.length === 0} placeholder="Выберите проект" emptyListText="Нет проектов" noMatchText="Проект не найден" value={values.projectId} items={expenseProjectRowsFlat} getOptionValue={r => r.project.id} getOptionLabel={r => `${r.project.name} (${r.client.name})`} getSearchText={r => `${r.client.name} ${r.project.name} ${r.project.code ?? ''}`} filterItems={filterExpenseProjectRows} onSelect={handleExpenseProjectPick} aria-invalid={Boolean(errors.projectId)} renderOption={row => (<span className="exp-searchable__opt-rich">
+                                            <ExpenseProjectCardBody project={row.project} />
+                                            <span className="exp-searchable__opt-client">{row.client.name}</span>
+                                        </span>)} />
+                                    </div>
+                                </div>)}
+                        </>)}
+
+                        {!isView &&
+                            !expenseProjectsLoading &&
+                            !expenseProjectsError &&
+                            expenseClientsProjects.length > 0 &&
+                            expenseClientsProjects.every(g => g.projects.length === 0) && (<p className="exp-form-hint" style={{ margin: '0.35rem 0 0 0' }}>
+                                Нет ни одного проекта: создайте их во вкладке «Проекты» учёта времени.
+                            </p>)}
+
+                        {errors.projectId && (<p className="exp-form-err-msg" data-err>
+                            {errors.projectId}
+                        </p>)}
+                    </div>
+
+                    {values.expenseType !== 'partner_expense' && values.projectId.trim() !== '' && (<div className={`exp-form-field${errors.expenseCategoryId ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">
+                            Категория расхода
+                            {values.isReimbursable === true && expenseProjectCategories.length > 0 ? (<span className="exp-form-req"> *</span>) : null}
+                        </label>
+                        {isView ? (<p className="exp-form-static">
+                            {values.expenseCategoryId.trim()
+                                ? expenseProjectCategories.find((c) => c.id === values.expenseCategoryId)?.name ??
+                                'Категория сохранена'
+                                : 'Не указана'}
+                        </p>) : expenseCategoriesLoading ? (<p className="exp-form-hint" role="status">
+                            Загрузка категорий…
+                        </p>) : expenseCategoriesError ? (<p className="exp-form-err-msg" role="alert">
+                            {expenseCategoriesError}
+                        </p>) : expenseProjectCategories.length === 0 ? (<p className="exp-form-hint">
+                            Для этого проекта не настроены категории расходов — поле можно оставить пустым.
+                        </p>) : (<ExpenseSearchableSelect
+                            portalDropdown
+                            placeholder="Выберите категорию…"
+                            emptyListText="Нет категорий"
+                            noMatchText="Категория не найдена"
+                            value={values.expenseCategoryId}
+                            items={expenseCategoryItems}
+                            getOptionValue={c => c.id}
+                            getOptionLabel={c => c.name}
+                            getSearchText={c => c.search}
+                            onSelect={(c) => {
+                                setValues((prev) => ({ ...prev, expenseCategoryId: c.id }));
+                                if (errors.expenseCategoryId) {
+                                    setErrors((prev) => ({ ...prev, expenseCategoryId: undefined }));
+                                }
+                            }}
+                            aria-invalid={Boolean(errors.expenseCategoryId)}
+                            aria-label="Категория расхода"
+                        />)}
+                        {errors.expenseCategoryId && (<p className="exp-form-err-msg" data-err>
+                            {errors.expenseCategoryId}
+                        </p>)}
+                    </div>)}
+
+                    <div className="exp-form-field">
+                        <label className="exp-form-label">Контрагент / Поставщик</label>
+                        <input type="text" className="exp-form-input" placeholder="Подставляется из клиента проекта" value={values.vendor} onChange={e => set('vendor', e.target.value)} disabled={isView} />
+                        {!isView && (<p className="exp-form-hint" style={{ margin: '0.35rem 0 0 0' }}>
+                            Автоматически заполняется именем клиента при выборе клиента или проекта; при необходимости замените на
+                            поставщика или контрагента по счёту.
+                        </p>)}
+                    </div>
+
+                    <div className={`exp-form-field${errors.comment ? ' exp-form-field--err' : ''}`}>
+                        <label className="exp-form-label">
+                            Комментарий
+                        </label>
+                        <textarea className="exp-form-textarea" placeholder="Дополнительная информация" value={values.comment} onChange={e => {
+                            set('comment', e.target.value);
+                            if (errors.comment)
+                                setErrors(prev => ({ ...prev, comment: undefined }));
+                        }} disabled={isView} rows={3} />
+                        {errors.comment && <p className="exp-form-err-msg" data-err>{errors.comment}</p>}
+                    </div>
                 </div>)}
 
-              <div className="exp-form-field">
-                <label className="exp-form-label">Контрагент / Поставщик</label>
-                <input type="text" className="exp-form-input" placeholder="Подставляется из клиента проекта" value={values.vendor} onChange={e => set('vendor', e.target.value)} disabled={isView}/>
-                {!isView && (<p className="exp-form-hint" style={{ margin: '0.35rem 0 0 0' }}>
-                    Автоматически заполняется именем клиента при выборе клиента или проекта; при необходимости замените на
-                    поставщика или контрагента по счёту.
-                  </p>)}
-              </div>
+                {(() => {
+                    const allAtt = editingRequest?.attachments ?? [];
+                    const serverPaymentDoc = allAtt.filter(a => a.attachmentKind === 'payment_document');
+                    const serverReceipt = allAtt.filter(a => a.attachmentKind === 'payment_receipt');
+                    const serverLegacy = allAtt.filter(a => !a.attachmentKind);
+                    const showServerDelete = !isView && Boolean(onExpenseSnapshotUpdated);
+                    const showPaymentDocSection = true;
+                    const showReceiptBlock = !isView || serverReceipt.length > 0 || Boolean(allowPaymentReceiptUpload);
+                    const showReceiptUploadZone = !isView || Boolean(allowPaymentReceiptUpload);
+                    const showReceiptServerDelete = Boolean(onExpenseSnapshotUpdated) && (!isView || allowPaymentReceiptUpload);
+                    const fileIcon = (<svg className="exp-form-file-zone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>);
+                    return (<>
+                        <div className="exp-form-block exp-form-block--docs">
+                            <p className="exp-form-block__title">
+                                Документы
+                                {values.isReimbursable === true && !isView && (<span className="exp-form-docs-badge">Нужен документ для оплаты</span>)}
+                            </p>
+                            {!isView && (!editingRequest || editingRequest.status !== 'paid') && (<p className="exp-form-hint" style={{ margin: '-0.5rem 0 0.25rem 0' }}>
+                                {values.isReimbursable === true ? (<>
+                                    <strong>Документ для оплаты</strong> — загрузите сразу (до отправки и до оплаты компанией).
+                                    {' '}
+                                    Подтверждение оплаты (чек) — в блоке ниже; при необходимости можно прикрепить сразу или позже.
+                                </>) : (<>
+                                    При необходимости прикрепите <strong>документ для оплаты</strong> (счёт, накладную и т.п.) — для любой заявки, в том числе невозмещаемой.
+                                    {' '}
+                                    Квитанцию об оплате — в следующем блоке (по желанию сразу или после оплаты).
+                                </>)}
+                            </p>)}
+                            {fileSizeHint && (<p className="exp-form-err-msg" role="status">{fileSizeHint}</p>)}
+                            {attachmentOpenErr && (<p className="exp-form-err-msg" role="alert">{attachmentOpenErr}</p>)}
 
-              <div className={`exp-form-field${errors.comment ? ' exp-form-field--err' : ''}`}>
-                <label className="exp-form-label">
-                  Комментарий
-                </label>
-                <textarea className="exp-form-textarea" placeholder="Дополнительная информация" value={values.comment} onChange={e => {
-                set('comment', e.target.value);
-                if (errors.comment)
-                    setErrors(prev => ({ ...prev, comment: undefined }));
-            }} disabled={isView} rows={3}/>
-                {errors.comment && <p className="exp-form-err-msg" data-err>{errors.comment}</p>}
-              </div>
-            </div>)}
-
-          {(() => {
-            const allAtt = editingRequest?.attachments ?? [];
-            const serverPaymentDoc = allAtt.filter(a => a.attachmentKind === 'payment_document');
-            const serverReceipt = allAtt.filter(a => a.attachmentKind === 'payment_receipt');
-            const serverLegacy = allAtt.filter(a => !a.attachmentKind);
-            const showServerDelete = !isView && Boolean(onExpenseSnapshotUpdated);
-            const showPaymentDocSection = true;
-            const showReceiptBlock = !isView || serverReceipt.length > 0 || Boolean(allowPaymentReceiptUpload);
-            const showReceiptUploadZone = !isView || Boolean(allowPaymentReceiptUpload);
-            const showReceiptServerDelete = Boolean(onExpenseSnapshotUpdated) && (!isView || allowPaymentReceiptUpload);
-            const fileIcon = (<svg className="exp-form-file-zone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="17 8 12 3 7 8"/>
-                <line x1="12" y1="3" x2="12" y2="15"/>
-              </svg>);
-            return (<>
-                  <div className="exp-form-block exp-form-block--docs">
-                    <p className="exp-form-block__title">
-                      Документы
-                      {values.isReimbursable === true && !isView && (<span className="exp-form-docs-badge">Нужен документ для оплаты</span>)}
-                    </p>
-                    {!isView && (!editingRequest || editingRequest.status !== 'paid') && (<p className="exp-form-hint" style={{ margin: '-0.5rem 0 0.25rem 0' }}>
-                        {values.isReimbursable === true ? (<>
-                            <strong>Документ для оплаты</strong> — загрузите сразу (до отправки и до оплаты компанией).
-                            {' '}
-                            Подтверждение оплаты (чек) — в блоке ниже; при необходимости можно прикрепить сразу или позже.
-                          </>) : (<>
-                            При необходимости прикрепите <strong>документ для оплаты</strong> (счёт, накладную и т.п.) — для любой заявки, в том числе невозмещаемой.
-                            {' '}
-                            Квитанцию об оплате — в следующем блоке (по желанию сразу или после оплаты).
-                          </>)}
-                      </p>)}
-                    {fileSizeHint && (<p className="exp-form-err-msg" role="status">{fileSizeHint}</p>)}
-                    {attachmentOpenErr && (<p className="exp-form-err-msg" role="alert">{attachmentOpenErr}</p>)}
-
-                    {showPaymentDocSection && (<div className={`exp-form-field${errors.attachmentsPaymentDoc ? ' exp-form-field--err' : ''}`}>
-                    <label className="exp-form-label">Документ для оплаты</label>
-                    {!isView && (<div className="exp-form-file-zone" role="button" tabIndex={0} onClick={() => { setFileSizeHint(null); fileInputPaymentRef.current?.click(); }} onKeyDown={e => e.key === 'Enter' && fileInputPaymentRef.current?.click()}>
-                        <input ref={fileInputPaymentRef} type="file" multiple style={{ display: 'none' }} onChange={e => {
-                            appendFilesChecked(e.target.files, setFilesPaymentDoc, name => { setFileSizeHint(`Файл «${name}» больше 15 МБ`); });
-                            setErrors(prev => ({ ...prev, attachmentsPaymentDoc: undefined }));
-                            e.target.value = '';
-                        }}/>
-                        {fileIcon}
-                        <p className="exp-form-file-zone__label">Нажмите для загрузки</p>
-                        <p className="exp-form-file-zone__hint">Любой формат · до 15 МБ</p>
-                      </div>)}
-                    {errors.attachmentsPaymentDoc && (<p className="exp-form-err-msg" data-err>{errors.attachmentsPaymentDoc}</p>)}
-                    {filesPaymentDoc.length > 0 && (<ul className="exp-form-file-list">
-                        {filesPaymentDoc.map((f, i) => (<li key={`pd-${f.name}-${i}`} className="exp-form-file-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="exp-form-file-item__icon">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
-                              <polyline points="14 2 14 8 20 8"/>
-                            </svg>
-                            <span className="exp-form-file-item__name">{f.name}</span>
-                            <span className="exp-form-file-item__size">{(f.size / 1024).toFixed(0)} КБ</span>
-                            <button type="button" className="exp-form-file-item__preview" aria-label={`Просмотр «${f.name}»`} onClick={() => void openLocalAttachmentPreview(f)}>
-                              <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                              </svg>
-                            </button>
-                            {!isView && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => setFilesPaymentDoc(prev => prev.filter((_, j) => j !== i))}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                              </button>)}
-                          </li>))}
-                      </ul>)}
-                    {serverPaymentDoc.length > 0 && (<ul className="exp-form-file-list">
-                        {serverPaymentDoc.map(f => (<li key={f.id} className="exp-form-file-item exp-form-file-item--server">
-                            <button type="button" className="exp-form-file-item__open" onClick={() => void openServerAttachmentPreview(f.id, f.fileName)} aria-label={`Превью «${f.fileName}»`}>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="exp-form-file-item__icon">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
-                                <polyline points="14 2 14 8 20 8"/>
-                              </svg>
-                              <span className="exp-form-file-item__name">{f.fileName}</span>
-                              <span className="exp-form-file-item__size">{(f.sizeBytes / 1024).toFixed(0)} КБ</span>
-                            </button>
-                            {showServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => handleDeleteServerAttachment(f.id)}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                              </button>)}
-                          </li>))}
-                      </ul>)}
-                  </div>)}
-                  </div>
-
-                  <div className="exp-form-block exp-form-block--docs exp-form-block--payment-confirm">
-                    <p className="exp-form-block__title">Подтверждение оплаты</p>
-                    {!showReceiptBlock && (<>
-                        {editingRequest?.status === 'paid' ? (<p className="exp-form-static exp-form-static--muted" style={{ margin: 0 }}>
-                            Квитанция об оплате не приложена.
-                          </p>) : (<p className="exp-form-static exp-form-static--muted" style={{ margin: 0 }}>
-                            Прикрепить квитанцию может автор заявки или модератор, если статус и права это допускают.
-                          </p>)}
-                      </>)}
-
-                    {showReceiptBlock && (<div className={`exp-form-field${errors.attachmentsReceipt ? ' exp-form-field--err' : ''}`}>
-                    <label className="exp-form-label">Квитанция об оплате</label>
-                    {showReceiptUploadZone && (<>
-                        <p className="exp-form-static exp-form-static--muted" style={{ margin: '0 0 0.5rem 0' }}>
-                          Чек, скрин или выписка о факте оплаты. Можно прикрепить заранее или после статуса «Возмещено».
-                          {!isView
-                            ? ' Файлы уйдут на сервер вместе с сохранением черновика или отправкой заявки.'
-                            : ' Загрузить может автор заявки или модератор.'}
-                        </p>
-                        <div className="exp-form-file-zone" role="button" tabIndex={0} onClick={() => { setFileSizeHint(null); fileInputReceiptRef.current?.click(); }} onKeyDown={e => e.key === 'Enter' && fileInputReceiptRef.current?.click()}>
-                          <input ref={fileInputReceiptRef} type="file" multiple style={{ display: 'none' }} onChange={e => {
-                            appendFilesChecked(e.target.files, setFilesReceipt, name => { setFileSizeHint(`Файл «${name}» больше 15 МБ`); });
-                            setErrors(prev => ({ ...prev, attachmentsReceipt: undefined }));
-                            e.target.value = '';
-                        }}/>
-                          {fileIcon}
-                          <p className="exp-form-file-zone__label">Нажмите для загрузки</p>
-                          <p className="exp-form-file-zone__hint">Любой формат · до 15 МБ</p>
+                            {showPaymentDocSection && (<div className={`exp-form-field${errors.attachmentsPaymentDoc ? ' exp-form-field--err' : ''}`}>
+                                <label className="exp-form-label">Документ для оплаты</label>
+                                {!isView && (<div className="exp-form-file-zone" role="button" tabIndex={0} onClick={() => { setFileSizeHint(null); fileInputPaymentRef.current?.click(); }} onKeyDown={e => e.key === 'Enter' && fileInputPaymentRef.current?.click()}>
+                                    <input ref={fileInputPaymentRef} type="file" multiple style={{ display: 'none' }} onChange={e => {
+                                        appendFilesChecked(e.target.files, setFilesPaymentDoc, name => { setFileSizeHint(`Файл «${name}» больше 15 МБ`); });
+                                        setErrors(prev => ({ ...prev, attachmentsPaymentDoc: undefined }));
+                                        e.target.value = '';
+                                    }} />
+                                    {fileIcon}
+                                    <p className="exp-form-file-zone__label">Нажмите для загрузки</p>
+                                    <p className="exp-form-file-zone__hint">Любой формат · до 15 МБ</p>
+                                </div>)}
+                                {errors.attachmentsPaymentDoc && (<p className="exp-form-err-msg" data-err>{errors.attachmentsPaymentDoc}</p>)}
+                                {filesPaymentDoc.length > 0 && (<ul className="exp-form-file-list">
+                                    {filesPaymentDoc.map((f, i) => (<li key={`pd-${f.name}-${i}`} className="exp-form-file-item">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="exp-form-file-item__icon">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" />
+                                            <polyline points="14 2 14 8 20 8" />
+                                        </svg>
+                                        <span className="exp-form-file-item__name">{f.name}</span>
+                                        <span className="exp-form-file-item__size">{(f.size / 1024).toFixed(0)} КБ</span>
+                                        <button type="button" className="exp-form-file-item__preview" aria-label={`Просмотр «${f.name}»`} onClick={() => void openLocalAttachmentPreview(f)}>
+                                            <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+                                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                                                <circle cx="12" cy="12" r="3" />
+                                            </svg>
+                                        </button>
+                                        {!isView && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => setFilesPaymentDoc(prev => prev.filter((_, j) => j !== i))}>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        </button>)}
+                                    </li>))}
+                                </ul>)}
+                                {serverPaymentDoc.length > 0 && (<ul className="exp-form-file-list">
+                                    {serverPaymentDoc.map(f => (<li key={f.id} className="exp-form-file-item exp-form-file-item--server">
+                                        <button type="button" className="exp-form-file-item__open" onClick={() => void openServerAttachmentPreview(f.id, f.fileName)} aria-label={`Превью «${f.fileName}»`}>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="exp-form-file-item__icon">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" />
+                                                <polyline points="14 2 14 8 20 8" />
+                                            </svg>
+                                            <span className="exp-form-file-item__name">{f.fileName}</span>
+                                            <span className="exp-form-file-item__size">{(f.sizeBytes / 1024).toFixed(0)} КБ</span>
+                                        </button>
+                                        {showServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => handleDeleteServerAttachment(f.id)}>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        </button>)}
+                                    </li>))}
+                                </ul>)}
+                            </div>)}
                         </div>
-                      </>)}
-                    {errors.attachmentsReceipt && (<p className="exp-form-err-msg" data-err>{errors.attachmentsReceipt}</p>)}
-                    {showReceiptUploadZone && filesReceipt.length > 0 && (<ul className="exp-form-file-list">
-                        {filesReceipt.map((f, i) => (<li key={`pr-${f.name}-${i}`} className="exp-form-file-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="exp-form-file-item__icon">
-                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
-                              <polyline points="14 2 14 8 20 8"/>
-                            </svg>
-                            <span className="exp-form-file-item__name">{f.name}</span>
-                            <span className="exp-form-file-item__size">{(f.size / 1024).toFixed(0)} КБ</span>
-                            <button type="button" className="exp-form-file-item__preview" aria-label={`Просмотр «${f.name}»`} onClick={() => void openLocalAttachmentPreview(f)}>
-                              <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
-                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/>
-                                <circle cx="12" cy="12" r="3"/>
-                              </svg>
-                            </button>
-                            {showReceiptUploadZone && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => setFilesReceipt(prev => prev.filter((_, j) => j !== i))}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                              </button>)}
-                          </li>))}
-                      </ul>)}
-                    {serverReceipt.length > 0 && (<ul className="exp-form-file-list">
-                        {serverReceipt.map(f => (<li key={f.id} className="exp-form-file-item exp-form-file-item--server">
-                            <button type="button" className="exp-form-file-item__open" onClick={() => void openServerAttachmentPreview(f.id, f.fileName)} aria-label={`Превью «${f.fileName}»`}>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="exp-form-file-item__icon">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
-                                <polyline points="14 2 14 8 20 8"/>
-                              </svg>
-                              <span className="exp-form-file-item__name">{f.fileName}</span>
-                              <span className="exp-form-file-item__size">{(f.sizeBytes / 1024).toFixed(0)} КБ</span>
-                            </button>
-                            {showReceiptServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => handleDeleteServerAttachment(f.id)}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                              </button>)}
-                          </li>))}
-                      </ul>)}
-                  </div>)}
-                  </div>
 
-                  {serverLegacy.length > 0 && (<div className="exp-form-field">
-                      <label className="exp-form-label">Ранее загруженные вложения</label>
-                      <ul className="exp-form-file-list">
-                        {serverLegacy.map(f => (<li key={f.id} className="exp-form-file-item exp-form-file-item--server">
-                            <button type="button" className="exp-form-file-item__open" onClick={() => void openServerAttachmentPreview(f.id, f.fileName)} aria-label={`Превью «${f.fileName}»`}>
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="exp-form-file-item__icon">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
-                                <polyline points="14 2 14 8 20 8"/>
-                              </svg>
-                              <span className="exp-form-file-item__name">{f.fileName}</span>
-                              <span className="exp-form-file-item__size">{(f.sizeBytes / 1024).toFixed(0)} КБ</span>
-                            </button>
-                            {showServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => handleDeleteServerAttachment(f.id)}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                                </svg>
-                              </button>)}
-                          </li>))}
-                      </ul>
-                    </div>)}
-                </>);
-        })()}
-        </div>
+                        <div className="exp-form-block exp-form-block--docs exp-form-block--payment-confirm">
+                            <p className="exp-form-block__title">Подтверждение оплаты</p>
+                            {!showReceiptBlock && (<>
+                                {editingRequest?.status === 'paid' ? (<p className="exp-form-static exp-form-static--muted" style={{ margin: 0 }}>
+                                    Квитанция об оплате не приложена.
+                                </p>) : (<p className="exp-form-static exp-form-static--muted" style={{ margin: 0 }}>
+                                    Прикрепить квитанцию может автор заявки или модератор, если статус и права это допускают.
+                                </p>)}
+                            </>)}
 
-          {!isView ? (<div className="exp-panel__ft">
-            <button type="button" className="exp-panel-btn exp-panel-btn--ghost" onClick={onClose} disabled={formAsyncBusy}>
-              Отмена
-            </button>
-            {showDeleteAction && (<button type="button" className="exp-panel-btn exp-panel-btn--outline exp-panel-btn--danger-outline" disabled={formAsyncBusy} onClick={openDeleteConfirm}>
-                Удалить
-              </button>)}
-            {values.expenseType !== 'partner_expense' ? (<button type="button" className="exp-panel-btn exp-panel-btn--outline" onClick={handleSaveDraft} disabled={formAsyncBusy || (mode === 'create' && !cbuReady)} aria-busy={saveDraftPending}>
-              {saveDraftPending ? (<>
-                  <PanelBtnSpinner />
-                  Сохранение…
-                </>) : ('Сохранить черновик')}
-            </button>) : null}
-            <button type="button" className="exp-panel-btn exp-panel-btn--primary" onClick={handleSubmit} disabled={formAsyncBusy || (mode === 'create' && !cbuReady)} aria-busy={submitPending}>
-              {submitPending ? (<>
-                  <PanelBtnSpinner />
-                  {values.expenseType === 'partner_expense' ? 'Запись…' : 'Отправка…'}
-                </>) : (values.expenseType === 'partner_expense' ? 'Записать расход' : 'Отправить')}
-            </button>
-          </div>) : (<div className={`exp-panel__ft${showModerationActions ||
+                            {showReceiptBlock && (<div className={`exp-form-field${errors.attachmentsReceipt ? ' exp-form-field--err' : ''}`}>
+                                <label className="exp-form-label">Квитанция об оплате</label>
+                                {showReceiptUploadZone && (<>
+                                    <p className="exp-form-static exp-form-static--muted" style={{ margin: '0 0 0.5rem 0' }}>
+                                        Чек, скрин или выписка о факте оплаты. Можно прикрепить заранее или после статуса «Возмещено».
+                                        {!isView
+                                            ? ' Файлы уйдут на сервер вместе с сохранением черновика или отправкой заявки.'
+                                            : ' Загрузить может автор заявки или модератор.'}
+                                    </p>
+                                    <div className="exp-form-file-zone" role="button" tabIndex={0} onClick={() => { setFileSizeHint(null); fileInputReceiptRef.current?.click(); }} onKeyDown={e => e.key === 'Enter' && fileInputReceiptRef.current?.click()}>
+                                        <input ref={fileInputReceiptRef} type="file" multiple style={{ display: 'none' }} onChange={e => {
+                                            appendFilesChecked(e.target.files, setFilesReceipt, name => { setFileSizeHint(`Файл «${name}» больше 15 МБ`); });
+                                            setErrors(prev => ({ ...prev, attachmentsReceipt: undefined }));
+                                            e.target.value = '';
+                                        }} />
+                                        {fileIcon}
+                                        <p className="exp-form-file-zone__label">Нажмите для загрузки</p>
+                                        <p className="exp-form-file-zone__hint">Любой формат · до 15 МБ</p>
+                                    </div>
+                                </>)}
+                                {errors.attachmentsReceipt && (<p className="exp-form-err-msg" data-err>{errors.attachmentsReceipt}</p>)}
+                                {showReceiptUploadZone && filesReceipt.length > 0 && (<ul className="exp-form-file-list">
+                                    {filesReceipt.map((f, i) => (<li key={`pr-${f.name}-${i}`} className="exp-form-file-item">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="exp-form-file-item__icon">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" />
+                                            <polyline points="14 2 14 8 20 8" />
+                                        </svg>
+                                        <span className="exp-form-file-item__name">{f.name}</span>
+                                        <span className="exp-form-file-item__size">{(f.size / 1024).toFixed(0)} КБ</span>
+                                        <button type="button" className="exp-form-file-item__preview" aria-label={`Просмотр «${f.name}»`} onClick={() => void openLocalAttachmentPreview(f)}>
+                                            <svg viewBox="0 0 24 24" width={16} height={16} fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+                                                <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z" />
+                                                <circle cx="12" cy="12" r="3" />
+                                            </svg>
+                                        </button>
+                                        {showReceiptUploadZone && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => setFilesReceipt(prev => prev.filter((_, j) => j !== i))}>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        </button>)}
+                                    </li>))}
+                                </ul>)}
+                                {serverReceipt.length > 0 && (<ul className="exp-form-file-list">
+                                    {serverReceipt.map(f => (<li key={f.id} className="exp-form-file-item exp-form-file-item--server">
+                                        <button type="button" className="exp-form-file-item__open" onClick={() => void openServerAttachmentPreview(f.id, f.fileName)} aria-label={`Превью «${f.fileName}»`}>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="exp-form-file-item__icon">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" />
+                                                <polyline points="14 2 14 8 20 8" />
+                                            </svg>
+                                            <span className="exp-form-file-item__name">{f.fileName}</span>
+                                            <span className="exp-form-file-item__size">{(f.sizeBytes / 1024).toFixed(0)} КБ</span>
+                                        </button>
+                                        {showReceiptServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => handleDeleteServerAttachment(f.id)}>
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        </button>)}
+                                    </li>))}
+                                </ul>)}
+                            </div>)}
+                        </div>
+
+                        {serverLegacy.length > 0 && (<div className="exp-form-field">
+                            <label className="exp-form-label">Ранее загруженные вложения</label>
+                            <ul className="exp-form-file-list">
+                                {serverLegacy.map(f => (<li key={f.id} className="exp-form-file-item exp-form-file-item--server">
+                                    <button type="button" className="exp-form-file-item__open" onClick={() => void openServerAttachmentPreview(f.id, f.fileName)} aria-label={`Превью «${f.fileName}»`}>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="exp-form-file-item__icon">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" />
+                                            <polyline points="14 2 14 8 20 8" />
+                                        </svg>
+                                        <span className="exp-form-file-item__name">{f.fileName}</span>
+                                        <span className="exp-form-file-item__size">{(f.sizeBytes / 1024).toFixed(0)} КБ</span>
+                                    </button>
+                                    {showServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => handleDeleteServerAttachment(f.id)}>
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                        </svg>
+                                    </button>)}
+                                </li>))}
+                            </ul>
+                        </div>)}
+                    </>);
+                })()}
+            </div>
+
+            {!isView ? (<div className="exp-panel__ft">
+                <button type="button" className="exp-panel-btn exp-panel-btn--ghost" onClick={onClose} disabled={formAsyncBusy}>
+                    Отмена
+                </button>
+                {showDeleteAction && (<button type="button" className="exp-panel-btn exp-panel-btn--outline exp-panel-btn--danger-outline" disabled={formAsyncBusy} onClick={openDeleteConfirm}>
+                    Удалить
+                </button>)}
+                {values.expenseType !== 'partner_expense' ? (<button type="button" className="exp-panel-btn exp-panel-btn--outline" onClick={handleSaveDraft} disabled={formAsyncBusy || (mode === 'create' && !cbuReady)} aria-busy={saveDraftPending}>
+                    {saveDraftPending ? (<>
+                        <PanelBtnSpinner />
+                        Сохранение…
+                    </>) : ('Сохранить черновик')}
+                </button>) : null}
+                <button type="button" className="exp-panel-btn exp-panel-btn--primary" onClick={handleSubmit} disabled={formAsyncBusy || (mode === 'create' && !cbuReady)} aria-busy={submitPending}>
+                    {submitPending ? (<>
+                        <PanelBtnSpinner />
+                        {values.expenseType === 'partner_expense' ? 'Запись…' : 'Отправка…'}
+                    </>) : (values.expenseType === 'partner_expense' ? 'Записать расход' : 'Отправить')}
+                </button>
+            </div>) : (<div className={`exp-panel__ft${showModerationActions ||
                 showLifecycleRow ||
                 showWithdrawAction ||
                 showDeleteAction ||
                 showOwnModerationBlockedHint
                 ? ' exp-panel__ft--moderate'
                 : ''}`}>
-            {moderationErr && !rejectOpen && !reviseOpen && (<p className="exp-mod-err exp-mod-err--inline" role="alert">{moderationErr}</p>)}
-            {showOwnModerationBlockedHint && (<p className="exp-panel__ft-hint" role="status">
-                Свою заявку согласовать нельзя — обратитесь к другому модератору.
-              </p>)}
-            {showModerationActions && (<div className="exp-panel__ft-moderate">
-                <div className="exp-panel__ft-moderate-btns">
-                  <button type="button" className="exp-panel-btn exp-panel-btn--primary" disabled={moderationBusy || lifecycleBusy} onClick={openApproveConfirm}>
-                    Одобрить
-                  </button>
-                  <button type="button" className="exp-panel-btn exp-panel-btn--outline" disabled={moderationBusy || lifecycleBusy} onClick={() => { setModerationErr(null); setReviseOpen(true); }}>
-                    На доработку
-                  </button>
-                  <button type="button" className="exp-panel-btn exp-panel-btn--outline exp-panel-btn--danger-outline" disabled={moderationBusy || lifecycleBusy} onClick={() => { setModerationErr(null); setRejectOpen(true); }}>
-                    Отклонить
-                  </button>
-                </div>
-              </div>)}
-            {showPayAction && editingRequest?.status === 'approved' && (<p className="exp-panel__ft-hint" role="status">
-                {editingRequest.expenseType === 'partner_expense' ? (<>
-                    Расход партнёра учтён без согласования. Дальнейшие действия по оплате — по внутренним правилам; ожидание
-                    решения модератора не требуется.
-                  </>) : (<>Заявка одобрена и ожидает возмещения. После перевода на карту сотрудника нажмите «Возмещено».</>)}
-              </p>)}
-            {showLifecycleRow && (<div className="exp-panel__ft-moderate">
-                <div className="exp-panel__ft-moderate-btns">
+                {moderationErr && !rejectOpen && !reviseOpen && (<p className="exp-mod-err exp-mod-err--inline" role="alert">{moderationErr}</p>)}
+                {showOwnModerationBlockedHint && (<p className="exp-panel__ft-hint" role="status">
+                    Свою заявку согласовать нельзя — обратитесь к другому модератору.
+                </p>)}
+                {showModerationActions && (<div className="exp-panel__ft-moderate">
+                    <div className="exp-panel__ft-moderate-btns">
+                        <button type="button" className="exp-panel-btn exp-panel-btn--primary" disabled={moderationBusy || lifecycleBusy} onClick={openApproveConfirm}>
+                            Одобрить
+                        </button>
+                        <button type="button" className="exp-panel-btn exp-panel-btn--outline" disabled={moderationBusy || lifecycleBusy} onClick={() => { setModerationErr(null); setReviseOpen(true); }}>
+                            На доработку
+                        </button>
+                        <button type="button" className="exp-panel-btn exp-panel-btn--outline exp-panel-btn--danger-outline" disabled={moderationBusy || lifecycleBusy} onClick={() => { setModerationErr(null); setRejectOpen(true); }}>
+                            Отклонить
+                        </button>
+                    </div>
+                </div>)}
+                {showPayAction && editingRequest?.status === 'approved' && (<p className="exp-panel__ft-hint" role="status">
+                    {editingRequest.expenseType === 'partner_expense' ? (<>
+                        Расход партнёра учтён без согласования. Дальнейшие действия по оплате — по внутренним правилам; ожидание
+                        решения модератора не требуется.
+                    </>) : (<>Заявка одобрена и ожидает возмещения. После перевода на карту сотрудника нажмите «Возмещено».</>)}
+                </p>)}
+                {showLifecycleRow && (<div className="exp-panel__ft-moderate">
+                    <div className="exp-panel__ft-moderate-btns">
                   {showPayAction && editingRequest && (<button type="button" className="exp-panel-btn exp-panel-btn--primary" disabled={moderationBusy || lifecycleBusy} onClick={openPayConfirm}>
                       {expensePayActionLabel(editingRequest)}
                     </button>)}
-                  {closeExpenseUi && (<button type="button" className="exp-panel-btn exp-panel-btn--outline" disabled={moderationBusy || lifecycleBusy} onClick={openCloseLifecycleConfirm}>
-                      {closeExpenseUi.label}
-                    </button>)}
                 </div>
               </div>)}
-            {!showPayAction &&
-                isView &&
-                editingRequest?.status === 'approved' &&
-                editingRequest.isReimbursable &&
-                editingRequest.expenseType !== 'partner_expense' && (<p className="exp-panel__ft-hint" role="status">
-                  Статус «Ожидает возмещения». Подтверждение выплаты выполняет назначенный сотрудник.
-                </p>)}
-            {closeExpenseUi && !showPayAction && editingRequest?.status === 'approved' && !editingRequest.isReimbursable && (<p className="exp-panel__ft-hint" role="status">
-                Заявка одобрена (невозмещаемая). Нажмите «Не оплачено», чтобы завершить без выплаты со стороны компании.
-              </p>)}
-            {showWithdrawAction && (<div className="exp-panel__ft-moderate">
-                <button type="button" className="exp-panel-btn exp-panel-btn--outline exp-panel-btn--danger-outline" disabled={moderationBusy || lifecycleBusy} onClick={openWithdrawConfirm}>
-                  Отозвать заявку
+                {!showPayAction &&
+                    isView &&
+                    editingRequest?.status === 'approved' &&
+                    editingRequest.isReimbursable &&
+                    editingRequest.expenseType !== 'partner_expense' && (<p className="exp-panel__ft-hint" role="status">
+                        Статус «Ожидает возмещения». Подтверждение выплаты выполняет назначенный сотрудник.
+                    </p>)}
+                {showWithdrawAction && (<div className="exp-panel__ft-moderate">
+                    <button type="button" className="exp-panel-btn exp-panel-btn--outline exp-panel-btn--danger-outline" disabled={moderationBusy || lifecycleBusy} onClick={openWithdrawConfirm}>
+                        Отозвать заявку
+                    </button>
+                </div>)}
+                {showDeleteAction && (<div className="exp-panel__ft-moderate">
+                    <button type="button" className="exp-panel-btn exp-panel-btn--outline exp-panel-btn--danger-outline" disabled={moderationBusy || lifecycleBusy} onClick={openDeleteConfirm}>
+                        Удалить заявку
+                    </button>
+                </div>)}
+                {isView &&
+                    editingRequest?.status === 'approved' &&
+                    editingRequest.expenseType === 'partner_expense' &&
+                    !showPayAction && (<p className="exp-panel__ft-hint" role="status">
+                        Расход партнёра сразу в статусе «Одобрено» — этап согласования с модератором не используется.
+                    </p>)}
+                {allowPaymentReceiptUpload && onUploadPaymentReceipts && filesReceipt.length > 0 && (<button type="button" className="exp-panel-btn exp-panel-btn--primary" onClick={() => void handleConfirmReceiptUpload()} disabled={receiptUploadPending || lifecycleBusy} aria-busy={receiptUploadPending}>
+                    {receiptUploadPending ? (<>
+                        <PanelBtnSpinner />
+                        Загрузка…
+                    </>) : ('Прикрепить квитанцию')}
+                </button>)}
+                <button type="button" className="exp-panel-btn exp-panel-btn--outline" onClick={onClose} disabled={formAsyncBusy}>
+                    Закрыть
                 </button>
-              </div>)}
-            {showDeleteAction && (<div className="exp-panel__ft-moderate">
-                <button type="button" className="exp-panel-btn exp-panel-btn--outline exp-panel-btn--danger-outline" disabled={moderationBusy || lifecycleBusy} onClick={openDeleteConfirm}>
-                  Удалить заявку
-                </button>
-              </div>)}
-            {isView &&
-                editingRequest?.status === 'approved' &&
-                editingRequest.expenseType === 'partner_expense' &&
-                !showPayAction && (<p className="exp-panel__ft-hint" role="status">
-                  Расход партнёра сразу в статусе «Одобрено» — этап согласования с модератором не используется.
-                </p>)}
-            {allowPaymentReceiptUpload && onUploadPaymentReceipts && filesReceipt.length > 0 && (<button type="button" className="exp-panel-btn exp-panel-btn--primary" onClick={() => void handleConfirmReceiptUpload()} disabled={receiptUploadPending || lifecycleBusy} aria-busy={receiptUploadPending}>
-                {receiptUploadPending ? (<>
-                    <PanelBtnSpinner />
-                    Загрузка…
-                  </>) : ('Прикрепить квитанцию')}
-              </button>)}
-            <button type="button" className="exp-panel-btn exp-panel-btn--outline" onClick={onClose} disabled={formAsyncBusy}>
-              Закрыть
-            </button>
-          </div>)}
-        {formAsyncBusy && (<div className="exp-panel__async-busy-layer" role="status" aria-live="polite">
-            <PanelBtnSpinner className="exp-panel__async-busy-spinner"/>
-            <span className="exp-panel__async-busy-label">
-              {submitPending
-                ? valuesRef.current.expenseType === 'partner_expense'
-                    ? 'Запись расхода…'
-                    : 'Отправка заявки…'
-                : receiptUploadPending
-                    ? 'Загрузка квитанции…'
-                    : lifecycleBusy
-                        ? 'Смена статуса…'
-                        : 'Сохранение черновика…'}
-            </span>
-          </div>)}
-      </aside>
+            </div>)}
+            {formAsyncBusy && (<div className="exp-panel__async-busy-layer" role="status" aria-live="polite">
+                <PanelBtnSpinner className="exp-panel__async-busy-spinner" />
+                <span className="exp-panel__async-busy-label">
+                    {submitPending
+                        ? valuesRef.current.expenseType === 'partner_expense'
+                            ? 'Запись расхода…'
+                            : 'Отправка заявки…'
+                        : receiptUploadPending
+                            ? 'Загрузка квитанции…'
+                            : lifecycleBusy
+                                ? 'Смена статуса…'
+                                : 'Сохранение черновика…'}
+                </span>
+            </div>)}
+        </aside>
     </>);
     return typeof document !== 'undefined' ? createPortal(portalLayer, document.body) : null;
 }

@@ -43,7 +43,7 @@ export function showOwnPendingModerationBlockedHint(expense: ExpenseRequest, can
 
 /**
  * Reimbursable payout: approved → confirmer marks «Возмещено» (paid).
- * Non-reimbursable expenses use close / «Не оплачено», not pay.
+ * Close / «Не оплачено» lifecycle actions are not offered in the UI.
  */
 export function showPayExpenseAction(
     expense: ExpenseRequest,
@@ -62,22 +62,8 @@ export type CloseExpenseUi = {
     label: string;
     confirmMessage: string;
 };
-export function getCloseExpenseUi(expense: ExpenseRequest, blockedForOwn: boolean): CloseExpenseUi | null {
-    if (blockedForOwn)
-        return null;
-    const { status, isReimbursable } = expense;
-    if (status === 'paid' || status === 'not_reimbursable') {
-        return {
-            label: 'Закрыть',
-            confirmMessage: 'Закрыть заявку? Статус станет «Закрыто».',
-        };
-    }
-    if (status === 'approved' && !isReimbursable) {
-        return {
-            label: 'Не оплачено',
-            confirmMessage: 'Завершить заявку без оплаты со стороны компании? Статус станет «Невозмещаемый».',
-        };
-    }
+/** @deprecated Close-expense actions removed from UI; always null. */
+export function getCloseExpenseUi(_expense: ExpenseRequest, _blockedForOwn: boolean): CloseExpenseUi | null {
     return null;
 }
 const WITHDRAW_FORBIDDEN: ReadonlySet<ExpenseStatus> = new Set([
@@ -113,13 +99,11 @@ export function showDeleteExpenseAction(expense: ExpenseRequest, currentUserId: 
 }
 export function showLifecycleModerationRow(
     expense: ExpenseRequest,
-    canModerate: boolean,
+    _canModerate: boolean,
     blockedForOwn: boolean,
     opts?: ExpensePayActionOpts,
 ): boolean {
     if (blockedForOwn)
         return false;
-    const canPay = showPayExpenseAction(expense, false, opts);
-    const closeUi = canModerate ? getCloseExpenseUi(expense, false) : null;
-    return canPay || closeUi != null;
+    return showPayExpenseAction(expense, false, opts);
 }

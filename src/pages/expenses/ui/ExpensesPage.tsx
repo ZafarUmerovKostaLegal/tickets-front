@@ -3,13 +3,12 @@ import { createPortal } from 'react-dom';
 import { NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { routes, getExpensesOpenUrl } from '@shared/config';
 import { useCurrentUser, useMediaQuery } from '@shared/hooks';
-import { AppBackButton, AppHomeLogo, AppPageSettings, AttentionBanner, DatePicker, Pagination } from '@shared/ui';
-import { useI18n } from '@shared/i18n';
+import { AppBackButton, AppHomeLogo, AppPageSettings, DatePicker, Pagination } from '@shared/ui';
 import type { PanelMode } from './ExpensesFormPanel';
 import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
 import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseStatus, ExpenseType, ExpenseCreatedBy, PartnerExpenseCategory, } from '@entities/expenses/model/types';
 import { EXPENSE_REGISTRY_STATUSES, EXPENSE_REGISTRY_STATUS_SET, STATUS_META, TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
-import { approveExpense, payExpense, closeExpense, deleteExpense, fetchExpenses, fetchExpenseById, createExpense, updateExpense, submitExpense, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
+import { approveExpense, payExpense, deleteExpense, fetchExpenses, fetchExpenseById, createExpense, updateExpense, submitExpense, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
 import { computeAmountUzsForApi, parseExpenseMoney } from '@entities/expenses/model/expenseCurrency';
 import { reimbursementCardDigits } from '@entities/expenses/model/expensePaymentDetails';
 import {
@@ -32,8 +31,7 @@ import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/mod
 import { listPartners, loadPublicUsersByIds, type UserPublic } from '@entities/user';
 import { formatExpenseApprovedByLabel, formatExpenseAuthorLabel, mergeExpenseAuthorFromCache, needsAuthorEnrichment, formatPartnerUserLabel, } from '@entities/expenses/model/expenseAuthor';
 import { canViewExpensesRequestsAndReport } from '@entities/expenses/model/expenseModeration';
-import { useExpenseAttentionBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
-import { getCloseExpenseUi, isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, showOwnPendingModerationBlockedHint, resolveExpensePanelMode, showPayExpenseAction, showPendingApprovalModeration, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
+import { isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, showOwnPendingModerationBlockedHint, resolveExpensePanelMode, showPayExpenseAction, showPendingApprovalModeration, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
 import { expensePayActionLabel, expenseStatusLabel } from '@entities/expenses/model/expenseStatusLabels';
 import { isExpensePaymentConfirmer } from '@entities/expenses/model/expensePaymentConfirmer';
 import { ExpensesPageBoundary } from './ExpensesPageBoundary';
@@ -52,11 +50,6 @@ type TableConfirmState = null | {
 } | {
     kind: 'pay';
     req: ExpenseRequest;
-} | {
-    kind: 'close';
-    req: ExpenseRequest;
-    message: string;
-    confirmLabel: string;
 } | {
     kind: 'delete';
     req: ExpenseRequest;
@@ -84,17 +77,6 @@ function fmtExpenseDateCell(raw: unknown): string {
 }
 function fmtUzs(raw: unknown) {
     return asExpenseNumber(raw).toLocaleString('ru-RU');
-}
-function ruExpenseRequestUnit(n: number): string {
-    const m = n % 10;
-    const m100 = n % 100;
-    if (m100 >= 11 && m100 <= 14)
-        return 'заявок';
-    if (m === 1)
-        return 'заявка';
-    if (m >= 2 && m <= 4)
-        return 'заявки';
-    return 'заявок';
 }
 function formValuesToApiBody(values: ExpenseFormValues) {
     const expenseSubtype = values.expenseType === 'partner_expense'
@@ -141,7 +123,7 @@ function IconDotsVertical() {
         <circle cx="12" cy="19" r="1.85" />
     </svg>);
 }
-function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, currentUserId, currentUserRole, moderationBusyId, onApprove, onRejectClick, onReviseClick, onPay, onCloseLifecycle, onDeleteClick, isActionMenuOpen, onToggleActionMenu, onCloseActionMenu, partnerScope = false, }: {
+function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, currentUserId, currentUserRole, moderationBusyId, onApprove, onRejectClick, onReviseClick, onPay, onDeleteClick, isActionMenuOpen, onToggleActionMenu, onCloseActionMenu, partnerScope = false, }: {
     req: ExpenseRequest;
     onOpen: (r: ExpenseRequest, opts?: { mode?: 'view' | 'edit' }) => void;
     canModerate: boolean;
@@ -153,7 +135,6 @@ function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, current
     onRejectClick: (r: ExpenseRequest) => void;
     onReviseClick: (r: ExpenseRequest) => void;
     onPay: (r: ExpenseRequest) => void;
-    onCloseLifecycle: (r: ExpenseRequest) => void;
     onDeleteClick: (r: ExpenseRequest) => void;
     isActionMenuOpen: boolean;
     onToggleActionMenu: () => void;
@@ -181,7 +162,6 @@ function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, current
     const showMod = showPendingApprovalModeration(req, canModerate, blockedOwn);
     const showOwnModHint = showOwnPendingModerationBlockedHint(req, canModerate, blockedOwn);
     const showPay = showPayExpenseAction(req, blockedOwn, { isPaymentConfirmer });
-    const closeUi = canModerate ? getCloseExpenseUi(req, blockedOwn) : null;
     const showDelete = showDeleteExpenseAction(req, currentUserId, currentUserRole);
     const busy = moderationBusyId === req.id;
     const canEditFromList = resolveExpensePanelMode(req.status) === 'edit';
@@ -335,19 +315,13 @@ function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, current
                     </button>
                     <div className="exp-table__menu-sep" role="separator" />
                 </>)}
-                {(showPay || closeUi) && (<>
-                    {showPay && (<button type="button" className="exp-table__menu-item" role="menuitem" disabled={busy} onClick={() => {
+                {showPay && (<>
+                    <button type="button" className="exp-table__menu-item" role="menuitem" disabled={busy} onClick={() => {
                         onCloseActionMenu();
                         onPay(req);
                     }}>
                         {expensePayActionLabel(req)}
-                    </button>)}
-                    {closeUi && (<button type="button" className="exp-table__menu-item" role="menuitem" disabled={busy} onClick={() => {
-                        onCloseActionMenu();
-                        onCloseLifecycle(req);
-                    }}>
-                        {closeUi.label}
-                    </button>)}
+                    </button>
                     <div className="exp-table__menu-sep" role="separator" />
                 </>)}
                 <button type="button" className="exp-table__menu-item" role="menuitem" onClick={() => {
@@ -490,15 +464,6 @@ function SkeletonCell({ w, h = 14, style }: {
 }) {
     return <span className="exp-skel" style={{ width: w, height: h, ...style }} />;
 }
-function SkeletonStatsTiles() {
-    return (<div className="exp-stats-row exp-stats-row--skel" aria-hidden>
-        {Array.from({ length: 3 }).map((_, i) => (<div key={i} className="exp-stats-tile exp-stats-tile--skel">
-            <SkeletonCell w="55%" h={10} />
-            <SkeletonCell w="75%" h={20} />
-            <SkeletonCell w={32} h={10} />
-        </div>))}
-    </div>);
-}
 function SkeletonTableBody({ rowCount = 10 }: {
     rowCount?: number;
 }) {
@@ -544,7 +509,6 @@ function SkeletonTableBody({ rowCount = 10 }: {
     </div>);
 }
 function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
-    const { t } = useI18n();
     const isMobile = useMediaQuery('(max-width: 768px)');
     const navigate = useNavigate();
     const { expenseId: pathExpenseId } = useParams<{
@@ -553,7 +517,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [searchParams] = useSearchParams();
     const { user, loading: currentUserLoading } = useCurrentUser();
     const canModerate = canViewExpensesRequestsAndReport(user?.role);
-    const { companyPayCount, clientPayCount, moderationCount } = useExpenseAttentionBadge(!currentUserLoading);
     const [isLoading, setIsLoading] = useState(true);
     const [listFetchPending, setListFetchPending] = useState(false);
     const isFirstListFetchRef = useRef(true);
@@ -569,11 +532,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const isClientScope = variant === 'client';
     const scopeMode = isPartnerScope ? 'partner' as const : (isModerationQueue ? undefined : 'company' as const);
     const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email);
-    const payBannerCount = isPartnerScope || isModerationQueue
-        ? 0
-        : isClientScope
-            ? clientPayCount
-            : companyPayCount + clientPayCount;
     const filterStorageUserId = user?.id ?? null;
     const filterOwnerKey = !currentUserLoading && filterStorageUserId != null
         ? `${filterStorageUserId}:${variant}`
@@ -601,7 +559,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         return () => window.clearTimeout(t);
     }, [search]);
     const [listTotal, setListTotal] = useState<number | null>(null);
-    const [listTotals, setListTotals] = useState<{ uzs: number; usd: number } | null>(null);
     const [listPage, setListPage] = useState(1);
     const [hydratedFilterOwnerKey, setHydratedFilterOwnerKey] = useState<string | null>(null);
     useEffect(() => {
@@ -770,15 +727,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 isFirstListFetchRef.current = false;
                 setRequests(Array.isArray(data.items) ? data.items : []);
                 setListTotal(typeof data.total === 'number' ? data.total : null);
-                if (data.totalAmountUzs != null || data.totalEquivalentAmount != null) {
-                    setListTotals({
-                        uzs: asExpenseNumber(data.totalAmountUzs),
-                        usd: asExpenseNumber(data.totalEquivalentAmount),
-                    });
-                }
-                else {
-                    setListTotals(null);
-                }
                 setIsLoading(false);
                 setListFetchPending(false);
             })
@@ -786,7 +734,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 if (cancelled || (err instanceof Error && err.name === 'AbortError'))
                     return;
                 setListTotal(null);
-                setListTotals(null);
                 setLoadError(err instanceof Error ? err.message : 'Ошибка загрузки данных');
                 isFirstListFetchRef.current = false;
                 setIsLoading(false);
@@ -1045,15 +992,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             return;
         setTableConfirm({ kind: 'pay', req });
     }, [tableModerationBusyId]);
-    const handleTableCloseLifecycle = useCallback((req: ExpenseRequest) => {
-        if (tableModerationBusyId)
-            return;
-        const blockedOwn = isModerationBlockedForOwnExpense(canModerate, user?.id ?? null, req);
-        const ui = getCloseExpenseUi(req, blockedOwn);
-        if (!ui)
-            return;
-        setTableConfirm({ kind: 'close', req, message: ui.confirmMessage, confirmLabel: ui.label });
-    }, [tableModerationBusyId, canModerate, user?.id]);
     const handleTableDeleteClick = useCallback((req: ExpenseRequest) => {
         if (tableModerationBusyId)
             return;
@@ -1080,9 +1018,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             else if (tableConfirm.kind === 'pay') {
                 r = await payExpense(req.id);
             }
-            else if (tableConfirm.kind === 'close') {
-                r = await closeExpense(req.id);
-            }
             else {
                 await deleteExpense(req.id);
                 handleExpenseDeleted(req.id);
@@ -1097,9 +1032,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 ? 'Не удалось одобрить заявку'
                 : tableConfirm.kind === 'pay'
                     ? 'Не удалось отметить оплату'
-                    : tableConfirm.kind === 'close'
-                        ? 'Не удалось выполнить закрытие'
-                        : 'Не удалось удалить заявку';
+                    : 'Не удалось удалить заявку';
             setActionError(e instanceof Error ? e.message : fallback);
             setTableConfirm(null);
         }
@@ -1347,14 +1280,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     // status filter dropdown — do not hide draft / pending_approval here
     // (that caused «1 заявка» in stats with an empty table after create).
     const filtered = requestsForUi;
-    const filteredTotals = useMemo(() => {
-        if (listTotals)
-            return listTotals;
-        return filtered.reduce((acc, r) => ({
-            uzs: acc.uzs + asExpenseNumber(r.amountUzs),
-            usd: acc.usd + asExpenseNumber(r.equivalentAmount),
-        }), { uzs: 0, usd: 0 });
-    }, [listTotals, filtered]);
     const hasFilters = isModerationQueue
         ? !!(filterType || filterReimb || filterPeriod !== 'all' || filterSort !== 'createdAt' || search)
         : isPartnerScope
@@ -1446,28 +1371,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                     </div>
                 </div>
             </header>
-
-            {!isModerationQueue && !isPartnerScope && isPaymentConfirmer && payBannerCount > 0 ? (
-                <AttentionBanner
-                    text={t('attentionBanner.expensesPay').replace('{count}', String(payBannerCount))}
-                    actionLabel={t('attentionBanner.expensesPayGo')}
-                    onAction={() => {
-                        setFilterStatus('approved');
-                        setFilterReimb('reimbursable');
-                        setListPage(1);
-                    }}
-                />
-            ) : null}
-            {canModerate && !isModerationQueue && !isPartnerScope && moderationCount > 0 ? (
-                <AttentionBanner
-                    text={t('attentionBanner.expensesModeration').replace('{count}', String(moderationCount))}
-                    actionLabel={t('attentionBanner.expensesModerationGo')}
-                    onAction={() => {
-                        setFilterStatus('pending_approval');
-                        setListPage(1);
-                    }}
-                />
-            ) : null}
 
             <div className="expenses-page__content">
                 {actionError && (<div className="exp-error-banner" role="alert">
@@ -1634,35 +1537,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 </div>
 
 
-                {isLoading ? (<>
-                    <SkeletonStatsTiles />
-                    <SkeletonTableBody rowCount={10} />
-                </>) : loadError ? (<ServiceUnavailable message={loadError} onRetry={() => setLoadKey(k => k + 1)} />) : (<>
-                    <div className="exp-stats-row" role="region" aria-label="Сводка по списку">
-                        <div className="exp-stats-tile">
-                            <span className="exp-stats-tile__label">Заявок по фильтру</span>
-                            <span className="exp-stats-tile__value">{listTotal ?? filtered.length}</span>
-                            {listTotal != null && (listTotal > EXPENSES_LIST_PAGE_SIZE || listPage > 1) && (<span className="exp-stats-tile__sub" role="status">
-                                Стр. {listPage} — на экране {filtered.length}
-                            </span>)}
-                            <span className="exp-stats-tile__unit">{ruExpenseRequestUnit(listTotal ?? filtered.length)}</span>
-                        </div>
-                        <div className="exp-stats-tile" title="Сумма по всем заявкам, соответствующим фильтрам">
-                            <span className="exp-stats-tile__label">Сумма, UZS</span>
-                            <span className="exp-stats-tile__value exp-stats-tile__value--uzs">{fmtUzs(filteredTotals.uzs)}</span>
-                            <span className="exp-stats-tile__unit">UZS</span>
-                        </div>
-                        <div className="exp-stats-tile" title="Эквивалент по всем заявкам, соответствующим фильтрам">
-                            <span className="exp-stats-tile__label">Эквивалент</span>
-                            <span className="exp-stats-tile__value exp-stats-tile__value--usd">
-                                {filteredTotals.usd > 0
-                                    ? filteredTotals.usd.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                                    : '—'}
-                            </span>
-                            {filteredTotals.usd > 0 && <span className="exp-stats-tile__unit">USD</span>}
-                        </div>
-                    </div>
-
+                {isLoading ? (<SkeletonTableBody rowCount={10} />) : loadError ? (<ServiceUnavailable message={loadError} onRetry={() => setLoadKey(k => k + 1)} />) : (<>
                     {filtered.length === 0 ? (<EmptyState hasFilters={hasFilters} onCreate={handleCreate} moderationQueue={isModerationQueue} />) : (<>
                         <div className="exp-table" role="region" aria-label="Список заявок на расход">
                             <div className="exp-table__body">
@@ -1701,7 +1576,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                         <span className="exp-table__sr-only">Действия</span>
                                     </div>
                                 </div>
-                                {filtered.map(r => (<ExpenseTableRow key={r.id} req={r} onOpen={handleOpenReq} canModerate={canModerate} isPaymentConfirmer={isPaymentConfirmer} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} moderationBusyId={tableModerationBusyId} onApprove={handleTableApprove} onRejectClick={openTableReject} onReviseClick={openTableRevise} onPay={handleTablePay} onCloseLifecycle={handleTableCloseLifecycle} onDeleteClick={handleTableDeleteClick} isActionMenuOpen={expenseTableMenuForId === r.id} onToggleActionMenu={() => setExpenseTableMenuForId(prev => prev === r.id ? null : r.id)} onCloseActionMenu={() => setExpenseTableMenuForId(null)} partnerScope={isPartnerScope} />))}
+                                {filtered.map(r => (<ExpenseTableRow key={r.id} req={r} onOpen={handleOpenReq} canModerate={canModerate} isPaymentConfirmer={isPaymentConfirmer} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} moderationBusyId={tableModerationBusyId} onApprove={handleTableApprove} onRejectClick={openTableReject} onReviseClick={openTableRevise} onPay={handleTablePay} onDeleteClick={handleTableDeleteClick} isActionMenuOpen={expenseTableMenuForId === r.id} onToggleActionMenu={() => setExpenseTableMenuForId(prev => prev === r.id ? null : r.id)} onCloseActionMenu={() => setExpenseTableMenuForId(null)} partnerScope={isPartnerScope} />))}
                             </div>
                         </div>
                         {listTotal != null && listTotal > 0 ? (<Pagination className="exp-cards-pager" page={listPage} totalCount={listTotal} pageSize={EXPENSES_LIST_PAGE_SIZE} onPageChange={setListPage} loading={listFetchPending} />) : null}
@@ -1741,24 +1616,20 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                     ? 'Одобрить заявку?'
                     : tableConfirm.kind === 'pay'
                         ? 'Подтвердить возмещение?'
-                        : tableConfirm.kind === 'delete'
-                            ? 'Удалить заявку?'
-                            : 'Подтверждение'} message={tableConfirm.kind === 'approve' ? (<>
+                        : 'Удалить заявку?'} message={tableConfirm.kind === 'approve' ? (<>
                                 <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
                                 {tableConfirm.req.isReimbursable ? (<p className="exp-mod-dialog__sub">
                                     После одобрения заявка уйдёт на возмещение: подтверждение оплаты выполняет назначенный сотрудник, статус станет «Ожидает возмещения».
                                 </p>) : null}
                             </>) : tableConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">
                                 Статус станет «Возмещено». Убедитесь, что перевод на карту сотрудника выполнен.
-                            </p>) : tableConfirm.kind === 'delete' ? (<p className="exp-mod-dialog__sub">
+                            </p>) : (<p className="exp-mod-dialog__sub">
                                 Заявка {tableConfirm.req.id} будет удалена безвозвратно вместе с вложениями.
-                            </p>) : (<p className="exp-mod-dialog__sub">{tableConfirm.message}</p>)} confirmLabel={tableConfirm.kind === 'approve'
+                            </p>)} confirmLabel={tableConfirm.kind === 'approve'
                                 ? 'Одобрить'
                                 : tableConfirm.kind === 'pay'
                                     ? expensePayActionLabel(tableConfirm.req)
-                                    : tableConfirm.kind === 'delete'
-                                        ? 'Удалить'
-                                        : tableConfirm.confirmLabel} confirmVariant={tableConfirm.kind === 'delete' ? 'danger' : 'primary'} busy={tableModBusy} onClose={() => {
+                                    : 'Удалить'} confirmVariant={tableConfirm.kind === 'delete' ? 'danger' : 'primary'} busy={tableModBusy} onClose={() => {
                                             if (!tableModBusy)
                                                 setTableConfirm(null);
                                         }} onConfirm={runTableConfirm} />)}
