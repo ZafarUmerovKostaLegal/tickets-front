@@ -43,6 +43,11 @@ import { isHiddenSystemUser } from '@shared/lib';
 import { formatExpenseApprovedByLabel, formatExpenseAuthorLabel, mergeExpenseAuthorFromCache, needsAuthorEnrichment, formatPartnerUserLabel, } from '@entities/expenses/model/expenseAuthor';
 import { canViewExpensesRequestsAndReport } from '@entities/expenses/model/expenseModeration';
 import { useExpenseAttentionBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
+import {
+    fetchExpenseStatusCounts,
+    formatExpenseStatusCount,
+    type ExpenseStatusCountMap,
+} from '@entities/expenses/model/fetchExpenseStatusCounts';
 import { isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, showOwnPendingModerationBlockedHint, resolveExpensePanelMode, showPayExpenseAction, showPendingApprovalModeration, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
 import { expensePayActionLabel, expenseStatusLabel } from '@entities/expenses/model/expenseStatusLabels';
 import { isExpensePaymentConfirmer } from '@entities/expenses/model/expensePaymentConfirmer';
@@ -716,9 +721,80 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         isPartnerScope,
         scopeMode ?? '',
     ].join('\0'), [debouncedSearch, filterStatus, filterType, filterSubtype, filterPartnerUserId, filterAuthorUserId, filterReimb, filterPeriod, filterDateFrom, filterDateTo, filterSort, isModerationQueue, isPartnerScope, scopeMode]);
+    const statusFacetDepsKey = useMemo(() => [
+        debouncedSearch,
+        filterType,
+        filterSubtype,
+        filterPartnerUserId,
+        filterAuthorUserId,
+        filterReimb,
+        filterPeriod,
+        filterDateFrom,
+        filterDateTo,
+        filterSort,
+        isPartnerScope,
+        isClientScope,
+        scopeMode ?? '',
+    ].join('\0'), [debouncedSearch, filterType, filterSubtype, filterPartnerUserId, filterAuthorUserId, filterReimb, filterPeriod, filterDateFrom, filterDateTo, filterSort, isPartnerScope, isClientScope, scopeMode]);
+    const [statusCounts, setStatusCounts] = useState<ExpenseStatusCountMap>({});
     useEffect(() => {
         setExpenseTableMenuForId(null);
     }, [listPage, filterDepsKey, loadKey]);
+    useEffect(() => {
+        if (isModerationQueue)
+            return;
+        if (!filterOwnerKey || hydratedFilterOwnerKey !== filterOwnerKey)
+            return;
+        let cancelled = false;
+        const controller = new AbortController();
+        void fetchExpenseStatusCounts({
+            search: debouncedSearch,
+            filterType: isClientScope ? '' : filterType,
+            filterSubtype,
+            filterPartnerUserId,
+            filterAuthorUserId: canModerate ? filterAuthorUserId : '',
+            filterReimb,
+            filterPeriod,
+            filterDateFrom,
+            filterDateTo,
+            sortBy: filterSort,
+            scopeMode,
+            forceExpenseType: isClientScope ? 'client_expense' : undefined,
+        }, { signal: controller.signal, getReuseWindowMs: 0 })
+            .then((next) => {
+                if (!cancelled)
+                    setStatusCounts(next);
+            })
+            .catch((err) => {
+                if (cancelled || (err instanceof Error && err.name === 'AbortError'))
+                    return;
+                if (!cancelled)
+                    setStatusCounts({});
+            });
+        return () => {
+            cancelled = true;
+            controller.abort();
+        };
+    }, [
+        statusFacetDepsKey,
+        loadKey,
+        filterOwnerKey,
+        hydratedFilterOwnerKey,
+        isModerationQueue,
+        isClientScope,
+        canModerate,
+        debouncedSearch,
+        filterType,
+        filterSubtype,
+        filterPartnerUserId,
+        filterAuthorUserId,
+        filterReimb,
+        filterPeriod,
+        filterDateFrom,
+        filterDateTo,
+        filterSort,
+        scopeMode,
+    ]);
     useEffect(() => {
         if (!isPartnerScope)
             return;
@@ -1495,21 +1571,34 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             dropTarget: dropTargetFilterId === slotId && draggingFilterId !== slotId,
         };
         switch (slotId) {
-            case 'status':
-                return (<FilterDrop key={slotId} slotId={slotId} label={filterStatus ? STATUS_META[filterStatus].label : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')} badgeCount={!filterStatus && canModerate ? moderationCount : 0} {...drag}>
+            case 'status': {
+                const allCountLabel = formatExpenseStatusCount(statusCounts.all);
+                const statusChipBadge = filterStatus
+                    ? (statusCounts[filterStatus] ?? 0)
+                    : (canModerate ? moderationCount : 0);
+                return (<FilterDrop key={slotId} slotId={slotId} label={filterStatus ? STATUS_META[filterStatus].label : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')} badgeCount={statusChipBadge} {...drag}>
                     <button className={`exp-filter__opt${!filterStatus ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(''); setOpenFilter(null); }}>
-                        Все статусы
-                    </button>
-                    {statuses.map(s => (<button key={s} className={`exp-filter__opt${filterStatus === s ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(s); setOpenFilter(null); }}>
-                        <span className={`exp-filter__dot exp-filter__dot--${s}`} />
-                        <span className="exp-filter__opt-label">{STATUS_META[s].label}</span>
-                        {s === 'pending_approval' && canModerate && moderationCount > 0 ? (
-                            <span className="app-count-badge exp-filter__opt-badge" aria-label={`${moderationCount} на согласовании`}>
-                                {moderationCount > 99 ? '99+' : String(moderationCount)}
+                        <span className="exp-filter__opt-label">Все статусы</span>
+                        {allCountLabel ? (
+                            <span className="app-count-badge exp-filter__opt-badge" aria-label={`Всего ${allCountLabel}`}>
+                                {allCountLabel}
                             </span>
                         ) : null}
-                    </button>))}
+                    </button>
+                    {statuses.map(s => {
+                        const countLabel = formatExpenseStatusCount(statusCounts[s]);
+                        return (<button key={s} className={`exp-filter__opt${filterStatus === s ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(s); setOpenFilter(null); }}>
+                            <span className={`exp-filter__dot exp-filter__dot--${s}`} />
+                            <span className="exp-filter__opt-label">{STATUS_META[s].label}</span>
+                            {countLabel ? (
+                                <span className="app-count-badge exp-filter__opt-badge" aria-label={`${STATUS_META[s].label}: ${countLabel}`}>
+                                    {countLabel}
+                                </span>
+                            ) : null}
+                        </button>);
+                    })}
                 </FilterDrop>);
+            }
             case 'type':
                 return (<FilterDrop key={slotId} slotId={slotId} label={filterType ? TYPE_META[filterType].label : 'Тип расхода'} active={!!filterType} isOpen={openFilter === 'type'} onToggle={() => toggleFilter('type')} {...drag}>
                     <button className={`exp-filter__opt${!filterType ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(''); setOpenFilter(null); }}>
