@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef, type ReactNode, type CSSProperties } from 'react';
+import { lazy, Suspense, useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef, type ReactNode, type CSSProperties, type DragEvent as ReactDragEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { routes, getExpensesOpenUrl } from '@shared/config';
@@ -21,6 +21,14 @@ import {
     loadExpensesSavedFilters,
     saveExpensesSavedFilters,
 } from '@entities/expenses/model/expensesFilterStorage';
+import {
+    availableExpensesFilterSlots,
+    loadExpensesFilterOrder,
+    mergeExpensesFilterOrder,
+    reorderExpensesFilterOrder,
+    saveExpensesFilterOrder,
+    type ExpensesFilterSlotId,
+} from '@entities/expenses/model/expensesFilterOrder';
 import {
     defaultExpensesCustomRange,
     EXPENSES_PERIOD_LABELS,
@@ -58,7 +66,8 @@ type TableConfirmState = null | {
     kind: 'delete';
     req: ExpenseRequest;
 };
-type ActiveFilter = 'status' | 'type' | 'subtype' | 'partner' | 'author' | 'reimbursable' | 'period' | 'sort' | null;
+type ActiveFilter = ExpensesFilterSlotId | null;
+const FILTER_DRAG_MIME = 'application/x-expenses-filter-slot';
 
 function authorFilterLabel(u: Pick<User, 'display_name' | 'email' | 'id'>): string {
     return u.display_name?.trim() || u.email?.trim() || `Пользователь #${u.id}`;
@@ -415,6 +424,7 @@ function EmptyState({ hasFilters, onCreate, moderationQueue, }: {
     </div>);
 }
 type FilterDropProps = {
+    slotId: ExpensesFilterSlotId;
     label: string;
     active: boolean;
     isOpen: boolean;
@@ -422,13 +432,50 @@ type FilterDropProps = {
     children: ReactNode;
     badgeCount?: number;
     wide?: boolean;
+    dragging?: boolean;
+    dropTarget?: boolean;
+    onDragStartSlot?: (e: ReactDragEvent, id: ExpensesFilterSlotId) => void;
+    onDragOverSlot?: (e: ReactDragEvent, id: ExpensesFilterSlotId) => void;
+    onDropSlot?: (e: ReactDragEvent, id: ExpensesFilterSlotId) => void;
+    onDragEndSlot?: () => void;
 };
-function FilterDrop({ label, active, isOpen, onToggle, children, badgeCount = 0, wide = false }: FilterDropProps) {
+function FilterDrop({
+    slotId,
+    label,
+    active,
+    isOpen,
+    onToggle,
+    children,
+    badgeCount = 0,
+    wide = false,
+    dragging = false,
+    dropTarget = false,
+    onDragStartSlot,
+    onDragOverSlot,
+    onDropSlot,
+    onDragEndSlot,
+}: FilterDropProps) {
     return (<div
-        className={`exp-filter${active ? ' exp-filter--active' : ''}${wide ? ' exp-filter--wide' : ''}`}
+        className={`exp-filter${active ? ' exp-filter--active' : ''}${wide ? ' exp-filter--wide' : ''}${dragging ? ' exp-filter--dragging' : ''}${dropTarget ? ' exp-filter--drop-target' : ''}`}
         onMouseDown={(event) => event.stopPropagation()}
+        draggable
+        onDragStart={(e) => onDragStartSlot?.(e, slotId)}
+        onDragOver={(e) => onDragOverSlot?.(e, slotId)}
+        onDrop={(e) => onDropSlot?.(e, slotId)}
+        onDragEnd={onDragEndSlot}
+        title="Перетащите, чтобы изменить порядок"
     >
         <button type="button" className="exp-filter__btn" onClick={onToggle}>
+            <span className="exp-filter__grip" aria-hidden>
+                <svg viewBox="0 0 12 16" width="10" height="14" fill="currentColor">
+                    <circle cx="3" cy="3" r="1.35" />
+                    <circle cx="9" cy="3" r="1.35" />
+                    <circle cx="3" cy="8" r="1.35" />
+                    <circle cx="9" cy="8" r="1.35" />
+                    <circle cx="3" cy="13" r="1.35" />
+                    <circle cx="9" cy="13" r="1.35" />
+                </svg>
+            </span>
             <span className="exp-filter__btn-text">{label}</span>
             {badgeCount > 0 ? (
                 <span className="app-count-badge exp-filter__btn-badge" aria-hidden>
@@ -439,7 +486,7 @@ function FilterDrop({ label, active, isOpen, onToggle, children, badgeCount = 0,
                 <polyline points={isOpen ? '4 10 8 6 12 10' : '4 6 8 10 12 6'} />
             </svg>
         </button>
-        {isOpen && <div className="exp-filter__drop">{children}</div>}
+        {isOpen && <div className="exp-filter__drop" draggable={false} onDragStart={(e) => e.stopPropagation()}>{children}</div>}
     </div>);
 }
 function ServiceUnavailable({ message, onRetry }: {
@@ -568,6 +615,11 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [filterDateTo, setFilterDateTo] = useState('');
     const [filterSort, setFilterSort] = useState<ExpensesUiSortBy>('createdAt');
     const [openFilter, setOpenFilter] = useState<ActiveFilter>(null);
+    const [filterOrder, setFilterOrder] = useState<ExpensesFilterSlotId[]>(() =>
+        availableExpensesFilterSlots({ variant, canModerate }),
+    );
+    const [draggingFilterId, setDraggingFilterId] = useState<ExpensesFilterSlotId | null>(null);
+    const [dropTargetFilterId, setDropTargetFilterId] = useState<ExpensesFilterSlotId | null>(null);
     const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
     useEffect(() => {
         if (!isMobile)
@@ -921,9 +973,61 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, [openFilter]);
+    const availableFilterSlots = useMemo(
+        () => availableExpensesFilterSlots({ variant, canModerate }),
+        [variant, canModerate],
+    );
+    useEffect(() => {
+        if (filterStorageUserId == null) {
+            setFilterOrder(availableFilterSlots);
+            return;
+        }
+        const saved = loadExpensesFilterOrder(filterStorageUserId, variant);
+        setFilterOrder(mergeExpensesFilterOrder(saved, availableFilterSlots));
+    }, [filterStorageUserId, variant, availableFilterSlots]);
+    const persistFilterOrder = useCallback((order: ExpensesFilterSlotId[]) => {
+        if (filterStorageUserId != null)
+            saveExpensesFilterOrder(filterStorageUserId, variant, order);
+    }, [filterStorageUserId, variant]);
+    const handleFilterDragStart = useCallback((e: ReactDragEvent, id: ExpensesFilterSlotId) => {
+        setOpenFilter(null);
+        setDraggingFilterId(id);
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData(FILTER_DRAG_MIME, id);
+        e.dataTransfer.setData('text/plain', id);
+    }, []);
+    const handleFilterDragEnd = useCallback(() => {
+        setDraggingFilterId(null);
+        setDropTargetFilterId(null);
+    }, []);
+    const handleFilterDragOver = useCallback((e: ReactDragEvent, id: ExpensesFilterSlotId) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        setDropTargetFilterId(id);
+    }, []);
+    const handleFilterDrop = useCallback((e: ReactDragEvent, targetId: ExpensesFilterSlotId) => {
+        e.preventDefault();
+        const raw = (e.dataTransfer.getData(FILTER_DRAG_MIME) || e.dataTransfer.getData('text/plain') || draggingFilterId) as ExpensesFilterSlotId | null;
+        if (!raw || raw === targetId) {
+            handleFilterDragEnd();
+            return;
+        }
+        setFilterOrder((prev) => {
+            const next = reorderExpensesFilterOrder(prev, raw, targetId);
+            persistFilterOrder(next);
+            return next;
+        });
+        handleFilterDragEnd();
+    }, [draggingFilterId, handleFilterDragEnd, persistFilterOrder]);
     const toggleFilter = useCallback((f: ActiveFilter) => {
         setOpenFilter(prev => prev === f ? null : f);
     }, []);
+    const filterDragProps = useMemo(() => ({
+        onDragStartSlot: handleFilterDragStart,
+        onDragOverSlot: handleFilterDragOver,
+        onDropSlot: handleFilterDrop,
+        onDragEndSlot: handleFilterDragEnd,
+    }), [handleFilterDragStart, handleFilterDragOver, handleFilterDrop, handleFilterDragEnd]);
     const handleCreate = useCallback(() => {
         setEditingReq(null);
         setPanelMode('create');
@@ -1384,6 +1488,112 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             return hay.includes(q);
         });
     }, [authorFilterOptions, authorFilterQuery]);
+    const renderFilterSlot = (slotId: ExpensesFilterSlotId) => {
+        const drag = {
+            ...filterDragProps,
+            dragging: draggingFilterId === slotId,
+            dropTarget: dropTargetFilterId === slotId && draggingFilterId !== slotId,
+        };
+        switch (slotId) {
+            case 'status':
+                return (<FilterDrop key={slotId} slotId={slotId} label={filterStatus ? STATUS_META[filterStatus].label : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')} badgeCount={!filterStatus && canModerate ? moderationCount : 0} {...drag}>
+                    <button className={`exp-filter__opt${!filterStatus ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(''); setOpenFilter(null); }}>
+                        Все статусы
+                    </button>
+                    {statuses.map(s => (<button key={s} className={`exp-filter__opt${filterStatus === s ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(s); setOpenFilter(null); }}>
+                        <span className={`exp-filter__dot exp-filter__dot--${s}`} />
+                        <span className="exp-filter__opt-label">{STATUS_META[s].label}</span>
+                        {s === 'pending_approval' && canModerate && moderationCount > 0 ? (
+                            <span className="app-count-badge exp-filter__opt-badge" aria-label={`${moderationCount} на согласовании`}>
+                                {moderationCount > 99 ? '99+' : String(moderationCount)}
+                            </span>
+                        ) : null}
+                    </button>))}
+                </FilterDrop>);
+            case 'type':
+                return (<FilterDrop key={slotId} slotId={slotId} label={filterType ? TYPE_META[filterType].label : 'Тип расхода'} active={!!filterType} isOpen={openFilter === 'type'} onToggle={() => toggleFilter('type')} {...drag}>
+                    <button className={`exp-filter__opt${!filterType ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(''); setOpenFilter(null); }}>
+                        Все типы
+                    </button>
+                    {types.map(t => (<button key={t} className={`exp-filter__opt${filterType === t ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(t); setOpenFilter(null); }}>
+                        {TYPE_META[t].label}
+                    </button>))}
+                </FilterDrop>);
+            case 'subtype':
+                return (<FilterDrop key={slotId} slotId={slotId} label={filterSubtype ? getPartnerExpenseSubtypeLabel(filterSubtype) : 'Категория'} active={!!filterSubtype} isOpen={openFilter === 'subtype'} onToggle={() => toggleFilter('subtype')} {...drag}>
+                    <button className={`exp-filter__opt${!filterSubtype ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSubtype(''); setOpenFilter(null); }}>
+                        Все категории
+                    </button>
+                    {PARTNER_EXPENSE_CATEGORIES.map(c => (<button key={c.value} className={`exp-filter__opt${filterSubtype === c.value ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSubtype(c.value); setOpenFilter(null); }}>
+                        {c.label}
+                    </button>))}
+                </FilterDrop>);
+            case 'partner':
+                return (<FilterDrop key={slotId} slotId={slotId} label={partnerFilterLabel} active={!!filterPartnerUserId} isOpen={openFilter === 'partner'} onToggle={() => toggleFilter('partner')} {...drag}>
+                    <button className={`exp-filter__opt${!filterPartnerUserId ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(''); setOpenFilter(null); }}>
+                        Все партнёры
+                    </button>
+                    {partnerFilterOptions.map(p => (<button key={p.id} className={`exp-filter__opt${filterPartnerUserId === p.id ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(p.id); setOpenFilter(null); }}>
+                        {p.display_name?.trim() || p.email || `#${p.id}`}
+                    </button>))}
+                </FilterDrop>);
+            case 'author':
+                return (<FilterDrop key={slotId} slotId={slotId} label={authorFilterChipLabel} active={!!filterAuthorUserId} isOpen={openFilter === 'author'} onToggle={() => toggleFilter('author')} wide {...drag}>
+                    <div className="exp-filter__author-search" onClick={(e) => e.stopPropagation()}>
+                        <input
+                            type="search"
+                            className="exp-filter__author-search-input"
+                            placeholder="Поиск автора…"
+                            value={authorFilterQuery}
+                            onChange={(e) => setAuthorFilterQuery(e.target.value)}
+                            aria-label="Поиск автора"
+                        />
+                    </div>
+                    <div className="exp-filter__author-list">
+                        <button type="button" className={`exp-filter__opt${!filterAuthorUserId ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterAuthorUserId(''); setOpenFilter(null); }}>
+                            Все авторы
+                        </button>
+                        {filteredAuthorOptions.map(u => (<button key={u.id} type="button" className={`exp-filter__opt${filterAuthorUserId === u.id ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterAuthorUserId(u.id); setOpenFilter(null); }}>
+                            <span className="exp-filter__opt-label">{authorFilterLabel(u)}</span>
+                        </button>))}
+                        {filteredAuthorOptions.length === 0 && (<p className="exp-filter__empty" role="status">Никого не найдено</p>)}
+                    </div>
+                </FilterDrop>);
+            case 'reimbursable':
+                return (<FilterDrop key={slotId} slotId={slotId} label={filterReimb ? REIMBURSABLE_META[filterReimb].label : 'Возмещение'} active={!!filterReimb} isOpen={openFilter === 'reimbursable'} onToggle={() => toggleFilter('reimbursable')} {...drag}>
+                    <button className={`exp-filter__opt${!filterReimb ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb(''); setOpenFilter(null); }}>
+                        Любое
+                    </button>
+                    <button className={`exp-filter__opt${filterReimb === 'reimbursable' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb('reimbursable'); setOpenFilter(null); }}>
+                        Возмещаемый
+                    </button>
+                    <button className={`exp-filter__opt${filterReimb === 'non_reimbursable' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb('non_reimbursable'); setOpenFilter(null); }}>
+                        Невозмещаемый
+                    </button>
+                </FilterDrop>);
+            case 'period':
+                return (<FilterDrop key={slotId} slotId={slotId} label={periodFilterLabel} active={filterPeriod !== 'all'} isOpen={openFilter === 'period'} onToggle={() => toggleFilter('period')} {...drag}>
+                    <button className={`exp-filter__opt${filterPeriod === 'all' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod('all'); setOpenFilter(null); }}>
+                        {EXPENSES_PERIOD_LABELS.all}
+                    </button>
+                    {EXPENSES_PERIOD_PRESET_IDS.map(p => (<button key={p} className={`exp-filter__opt${filterPeriod === p ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod(p); setOpenFilter(null); }}>
+                        {EXPENSES_PERIOD_LABELS[p]}
+                    </button>))}
+                    <div className="exp-filter__sep" role="separator" />
+                    <button className={`exp-filter__opt${filterPeriod === 'custom' ? ' exp-filter__opt--on' : ''}`} onClick={selectCustomPeriod}>
+                        {EXPENSES_PERIOD_LABELS.custom}
+                    </button>
+                </FilterDrop>);
+            case 'sort':
+                return (<FilterDrop key={slotId} slotId={slotId} label={SORT_LABELS[filterSort]} active={filterSort !== 'createdAt'} isOpen={openFilter === 'sort'} onToggle={() => toggleFilter('sort')} {...drag}>
+                    {(Object.keys(SORT_LABELS) as ExpensesUiSortBy[]).map(sort => (<button key={sort} className={`exp-filter__opt${filterSort === sort ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSort(sort); setOpenFilter(null); }}>
+                        {SORT_LABELS[sort]}
+                    </button>))}
+                </FilterDrop>);
+            default:
+                return null;
+        }
+    };
     return (<div className="expenses-page">
         <main className="expenses-page__main">
             <header className="expenses-page__header">
@@ -1488,104 +1698,8 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 </div>
 
                 <div className="exp-tt-filters-outer" onMouseDown={e => e.stopPropagation()}>
-                    <div className={`exp-filters${isMobile && !mobileFiltersOpen ? ' exp-filters--mobile-collapsed' : ''}`}>
-                        {!isModerationQueue && (<FilterDrop label={filterStatus ? STATUS_META[filterStatus].label : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')} badgeCount={!filterStatus && canModerate ? moderationCount : 0}>
-                            <button className={`exp-filter__opt${!filterStatus ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(''); setOpenFilter(null); }}>
-                                Все статусы
-                            </button>
-                            {statuses.map(s => (<button key={s} className={`exp-filter__opt${filterStatus === s ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(s); setOpenFilter(null); }}>
-                                <span className={`exp-filter__dot exp-filter__dot--${s}`} />
-                                <span className="exp-filter__opt-label">{STATUS_META[s].label}</span>
-                                {s === 'pending_approval' && canModerate && moderationCount > 0 ? (
-                                    <span className="app-count-badge exp-filter__opt-badge" aria-label={`${moderationCount} на согласовании`}>
-                                        {moderationCount > 99 ? '99+' : String(moderationCount)}
-                                    </span>
-                                ) : null}
-                            </button>))}
-                        </FilterDrop>)}
-
-
-                        {!isPartnerScope && !isClientScope && (<FilterDrop label={filterType ? TYPE_META[filterType].label : 'Тип расхода'} active={!!filterType} isOpen={openFilter === 'type'} onToggle={() => toggleFilter('type')}>
-                            <button className={`exp-filter__opt${!filterType ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(''); setOpenFilter(null); }}>
-                                Все типы
-                            </button>
-                            {types.map(t => (<button key={t} className={`exp-filter__opt${filterType === t ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterType(t); setOpenFilter(null); }}>
-                                {TYPE_META[t].label}
-                            </button>))}
-                        </FilterDrop>)}
-
-                        {isPartnerScope && (<FilterDrop label={filterSubtype ? getPartnerExpenseSubtypeLabel(filterSubtype) : 'Категория'} active={!!filterSubtype} isOpen={openFilter === 'subtype'} onToggle={() => toggleFilter('subtype')}>
-                            <button className={`exp-filter__opt${!filterSubtype ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSubtype(''); setOpenFilter(null); }}>
-                                Все категории
-                            </button>
-                            {PARTNER_EXPENSE_CATEGORIES.map(c => (<button key={c.value} className={`exp-filter__opt${filterSubtype === c.value ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSubtype(c.value); setOpenFilter(null); }}>
-                                {c.label}
-                            </button>))}
-                        </FilterDrop>)}
-
-                        {isPartnerScope && (<FilterDrop label={partnerFilterLabel} active={!!filterPartnerUserId} isOpen={openFilter === 'partner'} onToggle={() => toggleFilter('partner')}>
-                            <button className={`exp-filter__opt${!filterPartnerUserId ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(''); setOpenFilter(null); }}>
-                                Все партнёры
-                            </button>
-                            {partnerFilterOptions.map(p => (<button key={p.id} className={`exp-filter__opt${filterPartnerUserId === p.id ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPartnerUserId(p.id); setOpenFilter(null); }}>
-                                {p.display_name?.trim() || p.email || `#${p.id}`}
-                            </button>))}
-                        </FilterDrop>)}
-                        {canModerate && (<FilterDrop label={authorFilterChipLabel} active={!!filterAuthorUserId} isOpen={openFilter === 'author'} onToggle={() => toggleFilter('author')} wide>
-                            <div className="exp-filter__author-search" onClick={(e) => e.stopPropagation()}>
-                                <input
-                                    type="search"
-                                    className="exp-filter__author-search-input"
-                                    placeholder="Поиск автора…"
-                                    value={authorFilterQuery}
-                                    onChange={(e) => setAuthorFilterQuery(e.target.value)}
-                                    aria-label="Поиск автора"
-                                />
-                            </div>
-                            <div className="exp-filter__author-list">
-                                <button type="button" className={`exp-filter__opt${!filterAuthorUserId ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterAuthorUserId(''); setOpenFilter(null); }}>
-                                    Все авторы
-                                </button>
-                                {filteredAuthorOptions.map(u => (<button key={u.id} type="button" className={`exp-filter__opt${filterAuthorUserId === u.id ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterAuthorUserId(u.id); setOpenFilter(null); }}>
-                                    <span className="exp-filter__opt-label">{authorFilterLabel(u)}</span>
-                                </button>))}
-                                {filteredAuthorOptions.length === 0 && (<p className="exp-filter__empty" role="status">Никого не найдено</p>)}
-                            </div>
-                        </FilterDrop>)}
-
-
-                        <FilterDrop label={filterReimb ? REIMBURSABLE_META[filterReimb].label : 'Возмещение'} active={!!filterReimb} isOpen={openFilter === 'reimbursable'} onToggle={() => toggleFilter('reimbursable')}>
-                            <button className={`exp-filter__opt${!filterReimb ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb(''); setOpenFilter(null); }}>
-                                Любое
-                            </button>
-                            <button className={`exp-filter__opt${filterReimb === 'reimbursable' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb('reimbursable'); setOpenFilter(null); }}>
-                                Возмещаемый
-                            </button>
-                            <button className={`exp-filter__opt${filterReimb === 'non_reimbursable' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb('non_reimbursable'); setOpenFilter(null); }}>
-                                Невозмещаемый
-                            </button>
-                        </FilterDrop>
-
-
-                        <FilterDrop label={periodFilterLabel} active={filterPeriod !== 'all'} isOpen={openFilter === 'period'} onToggle={() => toggleFilter('period')}>
-                            <button className={`exp-filter__opt${filterPeriod === 'all' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod('all'); setOpenFilter(null); }}>
-                                {EXPENSES_PERIOD_LABELS.all}
-                            </button>
-                            {EXPENSES_PERIOD_PRESET_IDS.map(p => (<button key={p} className={`exp-filter__opt${filterPeriod === p ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterPeriod(p); setOpenFilter(null); }}>
-                                {EXPENSES_PERIOD_LABELS[p]}
-                            </button>))}
-                            <div className="exp-filter__sep" role="separator" />
-                            <button className={`exp-filter__opt${filterPeriod === 'custom' ? ' exp-filter__opt--on' : ''}`} onClick={selectCustomPeriod}>
-                                {EXPENSES_PERIOD_LABELS.custom}
-                            </button>
-                        </FilterDrop>
-
-                        <FilterDrop label={SORT_LABELS[filterSort]} active={filterSort !== 'createdAt'} isOpen={openFilter === 'sort'} onToggle={() => toggleFilter('sort')}>
-                            {(Object.keys(SORT_LABELS) as ExpensesUiSortBy[]).map(sort => (<button key={sort} className={`exp-filter__opt${filterSort === sort ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterSort(sort); setOpenFilter(null); }}>
-                                {SORT_LABELS[sort]}
-                            </button>))}
-                        </FilterDrop>
-
+                    <div className={`exp-filters${isMobile && !mobileFiltersOpen ? ' exp-filters--mobile-collapsed' : ''}${draggingFilterId ? ' exp-filters--reordering' : ''}`} aria-label="Фильтры (можно перетаскивать)">
+                        {filterOrder.map((slotId) => renderFilterSlot(slotId))}
                         {hasFilters && (<button type="button" className="exp-filters-reset" onClick={resetFilters}>
                             Сбросить
                         </button>)}

@@ -305,6 +305,33 @@ body[data-theme='dark'] .expenses-page {
   min-width: 0;
 }
 
+.exp-filter__grip {
+  display: inline-flex;
+  align-items: center;
+  color: var(--app-muted, #94a3b8);
+  opacity: 0.7;
+  flex-shrink: 0;
+  margin-right: 0.1rem;
+  cursor: grab;
+}
+
+.exp-filter--dragging {
+  opacity: 0.55;
+}
+
+.exp-filter--dragging .exp-filter__grip {
+  cursor: grabbing;
+}
+
+.exp-filter--drop-target > .exp-filter__btn {
+  outline: 2px solid var(--app-accent, #4f46e5);
+  outline-offset: 1px;
+}
+
+.exp-filters--reordering .exp-filter__drop {
+  display: none;
+}
+
 .exp-filter__btn {
   display: inline-flex;
   align-items: center;
