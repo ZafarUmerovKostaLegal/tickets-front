@@ -5,7 +5,7 @@ import {
     type ExpensesUiFilterPeriod,
 } from './expensesPeriodPresets';
 
-export const EXPENSES_LIST_PAGE_SIZE = 50;
+export const EXPENSES_LIST_PAGE_SIZE = 100;
 
 export type ExpensesUiSortBy = 'createdAt' | 'expenseDate';
 

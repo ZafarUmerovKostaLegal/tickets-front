@@ -689,7 +689,7 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
 .exp-reimb--non_reimbursable { color: #94a3b8; }
 
 .exp-table {
-  padding: 0 2rem 2rem;
+  padding: 0 1.25rem 1.25rem;
   overflow-x: auto;
 }
 
@@ -763,7 +763,7 @@ body[data-theme='dark'] .exp-table__row--pending_approval .exp-status--pending_a
 
 .exp-table__th,
 .exp-table__td {
-  padding: 0.5rem 0.5rem;
+  padding: 0.35rem 0.4rem;
   font-size: 0.8125rem;
   overflow: hidden;
 }
