@@ -3,8 +3,8 @@ import { useEffect } from 'react';
 import type { InventoryItem } from '@entities/inventory';
 import { useInventory } from '../model';
 import { AuthImg } from '@shared/ui';
-import { equipmentClassHint } from '@entities/inventory';
-import { EquipmentClassBadge } from './EquipmentClassBadge';
+import { resolveEquipmentScore } from '@entities/inventory';
+import { EquipmentScoreBadge } from './EquipmentScoreBadge';
 import { formatDateOnly } from '@shared/lib/formatDate';
 type Props = {
     item: InventoryItem;
@@ -14,6 +14,7 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
     const { canEdit, users, categoryById, statusLabel, openEditItem, handleUnassign, handleArchive, setDeleteTarget, setAssignModal, setAssignUserId, setFormError, } = useInventory();
     const cat = categoryById(item.category_id);
     const assigned = users.find((u) => u.id === item.assigned_to_user_id);
+    const itemScore = resolveEquipmentScore(item);
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape')
             onClose(); };
@@ -57,11 +58,16 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
               <span className="inv-drawer__field-value">{cat?.name ?? '—'}</span>
             </div>
             <div className="inv-drawer__field">
-              <span className="inv-drawer__field-label">Класс техники</span>
-              <span className="inv-drawer__field-value inv-drawer__field-value--class">
-                <EquipmentClassBadge code={item.equipment_class} />
-                {equipmentClassHint(item.equipment_class) ? (
-                  <span className="inv-drawer__class-hint">{equipmentClassHint(item.equipment_class)}</span>
+              <span className="inv-drawer__field-label">Оценка техники</span>
+              <span className="inv-drawer__field-value inv-drawer__field-value--score">
+                <EquipmentScoreBadge item={item} />
+                {itemScore ? (
+                  <span className="inv-drawer__score-hint">
+                    {itemScore.tier.summary}
+                    {itemScore.source === 'purchase_date'
+                      ? ' · по дате покупки'
+                      : ' · приблизительно, дата покупки не указана'}
+                  </span>
                 ) : null}
               </span>
             </div>

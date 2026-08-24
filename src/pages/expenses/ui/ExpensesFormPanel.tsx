@@ -20,6 +20,7 @@ import { listPartners, type UserPublic } from '@entities/user';
 import { listProjectsForExpenses, listProjectExpenseCategories, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeTrackingProjectForExpense, type ProjectExpenseCategoryRow, } from '@entities/time-tracking';
 import { useI18n, ttProjectTypeLabel } from '@shared/i18n';
 import { showToast } from '@shared/ui/app-toast';
+import './ExpensesPage.css';
 
 async function copyTextToClipboard(text: string): Promise<boolean> {
     if (!text.trim())
@@ -185,6 +186,8 @@ type Props = {
     currentUserEmail?: string | null;
     /** company — без partner/client; client — только «За клиента»; partner — только расход партнёра */
     formScope?: 'company' | 'partner' | 'client';
+    /** Значения, которыми заполняется пустая форма создания (например, проект из журнала учёта времени). */
+    presetValues?: Partial<ExpenseFormValues> | null;
 };
 function PanelBtnSpinner({ className }: {
     className?: string;
@@ -333,10 +336,13 @@ function formatForeignFp(n: number): string {
     const x = Math.round(n * 1e6) / 1e6;
     return x.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
 }
-export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, currentUserEmail = null, formScope = 'company', }: Props) {
+export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, currentUserEmail = null, formScope = 'company', presetValues = null, }: Props) {
     const [values, setValues] = useState<ExpenseFormValues>(EMPTY);
     const valuesRef = useRef(values);
     valuesRef.current = values;
+    // Read through a ref: a new object identity from the caller must not reset an open form.
+    const presetValuesRef = useRef(presetValues);
+    presetValuesRef.current = presetValues;
     const uzsAmountAnchorRef = useRef<number | null>(null);
     const [errors, setErrors] = useState<ExpenseFormErrors>({});
     const [partnerOptions, setPartnerOptions] = useState<UserPublic[]>([]);
@@ -441,6 +447,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 : formScope === 'client'
                     ? { expenseType: EXPENSE_TYPE_CLIENT }
                     : {}),
+            ...(presetValuesRef.current ?? {}),
         });
         uzsAmountAnchorRef.current = null;
         setFilesPaymentDoc([]);

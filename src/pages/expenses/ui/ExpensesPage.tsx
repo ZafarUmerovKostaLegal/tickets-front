@@ -8,9 +8,8 @@ import type { PanelMode } from './ExpensesFormPanel';
 import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
 import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseStatus, ExpenseType, ExpenseCreatedBy, PartnerExpenseCategory, } from '@entities/expenses/model/types';
 import { EXPENSE_REGISTRY_STATUSES, EXPENSE_REGISTRY_STATUS_SET, STATUS_META, TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
-import { approveExpense, payExpense, deleteExpense, fetchExpenses, fetchExpenseById, createExpense, updateExpense, submitExpense, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
-import { computeAmountUzsForApi, parseExpenseMoney } from '@entities/expenses/model/expenseCurrency';
-import { reimbursementCardDigits } from '@entities/expenses/model/expensePaymentDetails';
+import { approveExpense, payExpense, deleteExpense, fetchExpenses, fetchExpenseById, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
+import { saveExpenseFromForm } from '@entities/expenses/model/saveExpenseFromForm';
 import {
     buildExpensesListParams,
     EXPENSES_LIST_PAGE_SIZE,
@@ -99,38 +98,6 @@ function fmtExpenseDateCell(raw: unknown): string {
 }
 function fmtUzs(raw: unknown) {
     return asExpenseNumber(raw).toLocaleString('ru-RU');
-}
-function formValuesToApiBody(values: ExpenseFormValues) {
-    const expenseSubtype = values.expenseType === 'partner_expense'
-        ? values.expenseSubtype.trim() || null
-        : null;
-    const isPartner = values.expenseType === 'partner_expense';
-    const partnerUserIdRaw = values.partnerUserId.trim();
-    const partnerUserId = isPartner && partnerUserIdRaw ? Number(partnerUserIdRaw) : undefined;
-    const isClient = values.expenseType === 'client_expense';
-    return {
-        description: values.description,
-        expenseDate: values.expenseDate,
-        amountUzs: computeAmountUzsForApi(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd),
-        exchangeRate: parseExpenseMoney(values.exchangeRate) || 0,
-        expenseType: values.expenseType,
-        expenseSubtype,
-        isReimbursable: values.isReimbursable,
-        paymentMethod: values.paymentMethod,
-        reimbursementCardNumber: values.paymentMethod === 'cash'
-            ? reimbursementCardDigits(values.reimbursementCardNumber)
-            : undefined,
-        projectId: isPartner || !isClient ? undefined : values.projectId || undefined,
-        expenseCategoryId: isPartner || !isClient || !values.expenseCategoryId?.trim()
-            ? undefined
-            : values.expenseCategoryId.trim(),
-        vendor: isClient && values.vendor ? values.vendor : undefined,
-        businessPurpose: values.businessPurpose || undefined,
-        comment: values.comment || undefined,
-        ...(partnerUserId != null && Number.isFinite(partnerUserId) && partnerUserId > 0
-            ? { partnerUserId }
-            : {}),
-    };
 }
 function StatusBadge({ status, isReimbursable }: {
     status: ExpenseStatus;
@@ -1341,21 +1308,12 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         setPanelSavePending(true);
         setActionError(null);
         try {
-            const body = formValuesToApiBody(values);
-            let saved: ExpenseRequest;
-            if (editingReq) {
-                saved = await updateExpense(editingReq.id, body);
-            }
-            else {
-                saved = await createExpense(body);
-            }
-            let last: ExpenseRequest = saved;
-            for (const file of filesByKind.payment_document) {
-                last = await uploadAttachment(last.id, file, 'payment_document');
-            }
-            for (const file of filesByKind.payment_receipt) {
-                last = await uploadAttachment(last.id, file, 'payment_receipt');
-            }
+            await saveExpenseFromForm({
+                values,
+                files: filesByKind,
+                expenseId: editingReq?.id ?? null,
+                submit: false,
+            });
             setListPage(1);
             setLoadKey(k => k + 1);
             setIsPanelOpen(false);
@@ -1375,23 +1333,12 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         setPanelSubmitPending(true);
         setActionError(null);
         try {
-            const body = formValuesToApiBody(values);
-            let saved: ExpenseRequest;
-            if (editingReq) {
-                saved = await updateExpense(editingReq.id, body);
-            }
-            else {
-                saved = await createExpense(body);
-            }
-            let last: ExpenseRequest = saved;
-            for (const file of filesByKind.payment_document) {
-                last = await uploadAttachment(last.id, file, 'payment_document');
-            }
-            for (const file of filesByKind.payment_receipt) {
-                last = await uploadAttachment(last.id, file, 'payment_receipt');
-            }
-            if (last.status !== 'approved')
-                await submitExpense(last.id);
+            await saveExpenseFromForm({
+                values,
+                files: filesByKind,
+                expenseId: editingReq?.id ?? null,
+                submit: true,
+            });
             setListPage(1);
             setLoadKey(k => k + 1);
             setIsPanelOpen(false);

@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom';
-import { EQUIPMENT_CLASSES } from '@entities/inventory';
+import { EQUIPMENT_SCORE_RANGES, equipmentAgeYears, equipmentScoreFromAgeYears, equipmentScoreText, equipmentScoreTier } from '@entities/inventory';
 import { useInventory } from '../model';
 
 function IconClose() {
@@ -40,7 +40,9 @@ export function ItemModal() {
     if (!itemModal)
         return null;
 
-    const selectedClass = EQUIPMENT_CLASSES.find((c) => c.value === itemForm.equipment_class);
+    const selectedRange = EQUIPMENT_SCORE_RANGES.find((r) => r.code === itemForm.equipment_class);
+    const formAgeYears = equipmentAgeYears(itemForm.purchase_date);
+    const formScore = formAgeYears == null ? null : equipmentScoreFromAgeYears(formAgeYears);
 
     const content = (
         <div className="inv__overlay" role="dialog" aria-modal="true" aria-labelledby="inv-item-modal-title">
@@ -94,43 +96,37 @@ export function ItemModal() {
                                     ))}
                                 </select>
                             </label>
-                            <label className="inv__form-field">
-                                <span className="inv__form-label">Класс техники</span>
-                                <select
-                                    className="inv__input"
-                                    value={itemForm.equipment_class}
-                                    onChange={(e) => setItemForm((f) => ({ ...f, equipment_class: e.target.value }))}
-                                >
-                                    <option value="">Не указан</option>
-                                    {EQUIPMENT_CLASSES.map((c) => (
-                                        <option key={c.value} value={c.value}>{c.label} — {c.hint}</option>
-                                    ))}
-                                </select>
-                            </label>
                             <div className="inv__form-field inv__form-field--span2">
-                                <span className="inv__form-label">Класс (быстрый выбор)</span>
-                                <div className="inv__class-pick" role="group" aria-label="Класс техники">
-                                    {EQUIPMENT_CLASSES.map((c) => (
+                                <span className="inv__form-label">Оценка по 10-балльной шкале</span>
+                                <div className="inv__score-pick" role="group" aria-label="Оценка техники">
+                                    {EQUIPMENT_SCORE_RANGES.map((r) => (
                                         <button
-                                            key={c.value}
+                                            key={r.code}
                                             type="button"
-                                            className={`inv__class-pick-btn inv__class-pick-btn--${c.value}${itemForm.equipment_class === c.value ? ' inv__class-pick-btn--on' : ''}`}
-                                            title={c.hint}
-                                            aria-pressed={itemForm.equipment_class === c.value}
+                                            className={`inv__score-pick-btn inv__score-pick-btn--${r.code}${itemForm.equipment_class === r.code ? ' inv__score-pick-btn--on' : ''}`}
+                                            title={r.summary}
+                                            aria-pressed={itemForm.equipment_class === r.code}
                                             onClick={() => setItemForm((f) => ({
                                                 ...f,
-                                                equipment_class: f.equipment_class === c.value ? '' : c.value,
+                                                equipment_class: f.equipment_class === r.code ? '' : r.code,
                                             }))}
                                         >
-                                            {c.value}
+                                            {r.range}
                                         </button>
                                     ))}
                                 </div>
-                                {selectedClass ? (
-                                    <p className="inv__class-pick-hint">{selectedClass.hint}</p>
+                                {formScore != null ? (
+                                    <p className="inv__score-pick-hint">
+                                        По дате покупки — {equipmentScoreText(formScore)} ({equipmentScoreTier(formScore).summary}).
+                                        Эта оценка и показывается в списке.
+                                    </p>
+                                ) : selectedRange ? (
+                                    <p className="inv__score-pick-hint">
+                                        {selectedRange.range} из 10 — {selectedRange.summary}. Укажите дату покупки, чтобы балл считался точно.
+                                    </p>
                                 ) : (
-                                    <p className="inv__class-pick-hint inv__class-pick-hint--muted">
-                                        A — самая новая техника, E — к списанию
+                                    <p className="inv__score-pick-hint inv__score-pick-hint--muted">
+                                        10 — новая техника, 1 — к списанию. Точный балл считается по дате покупки.
                                     </p>
                                 )}
                             </div>

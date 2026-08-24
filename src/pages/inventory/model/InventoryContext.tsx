@@ -291,7 +291,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         setFormError(null);
         const classRaw = itemForm.equipment_class.trim().toUpperCase();
         if (classRaw && !isEquipmentClassCode(classRaw)) {
-            setFormError('Класс техники: выберите значение от A до E');
+            setFormError('Оценка техники: выберите один из диапазонов баллов');
             return;
         }
         const equipmentClass = classRaw && isEquipmentClassCode(classRaw) ? classRaw : null;

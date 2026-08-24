@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useInventory } from '../model';
 import { InvSelect } from './InvSelect';
 import { ItemDetailDrawer } from './ItemDetailDrawer';
-import { EquipmentClassBadge } from './EquipmentClassBadge';
+import { EquipmentScoreBadge } from './EquipmentScoreBadge';
 import { LIMIT } from '../model/constants';
 import { AuthImg, Pagination } from '@shared/ui';
-import { EQUIPMENT_CLASSES } from '@entities/inventory';
+import { EQUIPMENT_SCORE_RANGES } from '@entities/inventory';
 import type { InventoryItem } from '@entities/inventory';
 export function InventoryItemsSection() {
     const { canEdit, canCreateItems, categories, statuses, users, items, loadingItems, filterCategoryId, setFilterCategoryId, filterStatus, setFilterStatus, filterEquipmentClass, setFilterEquipmentClass, filterAssignedTo, setFilterAssignedTo, includeArchived, setIncludeArchived, skip, setSkip, itemsTotal, setItemModal, resetItemForm, setFormError, categoryById, statusLabel, } = useInventory();
@@ -49,8 +49,8 @@ export function InventoryItemsSection() {
         }}/>
           </label>
           <label className="inv__field">
-            <span className="inv__field-label">Класс</span>
-            <InvSelect value={filterEquipmentClass} placeholder="Все" options={EQUIPMENT_CLASSES.map((c) => ({ value: c.value, label: c.label }))} onChange={(v) => {
+            <span className="inv__field-label">Оценка</span>
+            <InvSelect value={filterEquipmentClass} placeholder="Все" options={EQUIPMENT_SCORE_RANGES.map((r) => ({ value: r.code, label: `${r.range} — ${r.short}` }))} onChange={(v) => {
             setFilterEquipmentClass(String(v));
             setSkip(0);
         }}/>
@@ -83,7 +83,7 @@ export function InventoryItemsSection() {
               <tr>
                 <th className="inv__col inv__col--name">Название</th>
                 <th className="inv__col inv__col--cat">Категория</th>
-                <th className="inv__col inv__col--class">Класс</th>
+                <th className="inv__col inv__col--score">Оценка</th>
                 <th className="inv__col inv__col--invno">Инв. номер</th>
                 <th className="inv__col inv__col--status">Статус</th>
                 <th className="inv__col inv__col--assigned">Закреплено за</th>
@@ -98,7 +98,7 @@ export function InventoryItemsSection() {
                   <td className="inv__col inv__col--cat" data-label="Категория">
                     <span className="inv__skel"/>
                   </td>
-                  <td className="inv__col inv__col--class" data-label="Класс">
+                  <td className="inv__col inv__col--score" data-label="Оценка">
                     <span className="inv__skel-pill"/>
                   </td>
                   <td className="inv__col inv__col--invno" data-label="Инв. номер">
@@ -130,7 +130,7 @@ export function InventoryItemsSection() {
               <tr>
                 <th className="inv__col inv__col--name">Название</th>
                 <th className="inv__col inv__col--cat">Категория</th>
-                <th className="inv__col inv__col--class">Класс</th>
+                <th className="inv__col inv__col--score">Оценка</th>
                 <th className="inv__col inv__col--invno">Инв. номер</th>
                 <th className="inv__col inv__col--status">Статус</th>
                 <th className="inv__col inv__col--assigned">Закреплено за</th>
@@ -168,8 +168,8 @@ export function InventoryItemsSection() {
                     <td className="inv__col inv__col--cat" data-label="Категория">
                       {cat?.name ?? '—'}
                     </td>
-                    <td className="inv__col inv__col--class" data-label="Класс">
-                      <EquipmentClassBadge code={item.equipment_class} compact />
+                    <td className="inv__col inv__col--score" data-label="Оценка">
+                      <EquipmentScoreBadge item={item} compact />
                     </td>
                     <td className="inv__col inv__col--invno inv__td-mono" data-label="Инв. номер">
                       {item.inventory_number}

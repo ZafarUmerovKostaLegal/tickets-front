@@ -1,15 +1,13 @@
-import { useState, useMemo, useRef, useEffect, useLayoutEffect, useId, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import { useState, useMemo, useRef, useEffect, useLayoutEffect, useId, useCallback, lazy, Suspense } from 'react';
 import { useCurrentUser } from '@shared/hooks';
-import { listProjectExpenseCategories, type ProjectExpenseCategoryRow, } from '@entities/time-tracking';
-import { createExpense, fetchExpenses, submitExpense, uploadAttachment, } from '@entities/expenses/model/expensesApi';
-import type { ExpenseRequest, ListParams } from '@entities/expenses/model/types';
-import type { PaymentMethod } from '@entities/expenses/model/types';
+import { fetchExpenseById, fetchExpenses, uploadAttachment } from '@entities/expenses/model/expensesApi';
+import type { ExpenseFilesByKind, ExpenseFormValues, ExpenseRequest, ListParams } from '@entities/expenses/model/types';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
-import { computeAmountUzsForApi } from '@entities/expenses/model/expenseCurrency';
-import { formatReimbursementCardNumber, isValidReimbursementCardNumber, reimbursementCardDigits } from '@entities/expenses/model/expensePaymentDetails';
-import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
-import { EXPENSE_STATUS_META, EXPENSE_CATEGORY_META } from '@entities/time-tracking/model/constants';
+import { saveExpenseFromForm } from '@entities/expenses/model/saveExpenseFromForm';
+import { canViewExpensesRequestsAndReport } from '@entities/expenses/model/expenseModeration';
+import { expenseStatusLabel } from '@entities/expenses/model/expenseStatusLabels';
+import { isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, resolveExpensePanelMode, } from '@entities/expenses/model/expenseStatusPolicy';
+import { EXPENSE_STATUS_META } from '@entities/time-tracking/model/constants';
 import type { ExpenseCategory, ExpenseStatus, ExpenseRow } from '@entities/time-tracking/model/types';
 import { hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
 import { ExpensesSkeleton } from './ExpensesSkeleton';
@@ -17,6 +15,8 @@ import { loadTimesheetProjectOptions, type ProjectOption } from './timesheetProj
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { useI18n, ttExpenseCategoryLabel, ttExpenseStatusLabel, type TimeTrackingT } from '@shared/i18n';
 import { localeTag } from '@shared/i18n/ticketUi';
+
+const ExpensesFormPanel = lazy(() => import('@pages/expenses/ui/ExpensesFormPanel').then((m) => ({ default: m.ExpensesFormPanel })));
 function expenseJournalProjectLabel(p: Pick<ProjectOption, 'name' | 'client'>): string {
     const c = (p.client || '').trim();
     return c ? `${p.name.trim()} (${c})` : p.name.trim();
@@ -98,10 +98,6 @@ function pickDefaultJournalProjectId(opts: ProjectOption[]): string {
     });
     return sorted[0]?.id ?? '';
 }
-function sortProjectExpenseCategories(a: ProjectExpenseCategoryRow, b: ProjectExpenseCategoryRow): number {
-    return a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' });
-}
-const todayStr = new Date().toISOString().slice(0, 10);
 function getWeekMonday(dateStr: string): string {
     const d = new Date(dateStr + 'T00:00:00');
     const day = d.getDay();
@@ -134,34 +130,6 @@ function fmtAmt(n: number, cur = 'UZS') {
         : { maximumFractionDigits: 2 } as const;
     return `${n.toLocaleString('ru-RU', opts)} ${cur}`;
 }
-function projectBookHintFromUzs(parsed: CbuParsed | null, uzsInput: string, projectCurRaw: string, locale: 'ru' | 'en', t: TimeTrackingT): string | null {
-    if (!parsed || !(parsed.uzsPerUsd > 0))
-        return null;
-    const amt = parseFloat(String(uzsInput).replace(/\s/g, '').replace(',', '.'));
-    if (!Number.isFinite(amt) || amt <= 0)
-        return null;
-    const tag = localeTag(locale);
-    const p = projectCurRaw.trim().toUpperCase() || 'USD';
-    const equivUsd = amt / parsed.uzsPerUsd;
-    if (p === 'UZS') {
-        return t('timeTrackingPage.expenses.form.bookHints.journalUzs')
-            .replace('{amount}', Math.round(amt).toLocaleString(tag));
-    }
-    if (p === 'USD') {
-        return t('timeTrackingPage.expenses.form.bookHints.projectUsd')
-            .replace('{amount}', equivUsd.toLocaleString(tag, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    }
-    const k = foreignUnitsPerUsd(parsed, p);
-    if (k == null || k <= 0) {
-        return t('timeTrackingPage.expenses.form.bookHints.cbuNoRate')
-            .replace('{amount}', equivUsd.toLocaleString(tag, { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
-            .replace('{currency}', p);
-    }
-    const inProj = equivUsd * k;
-    return t('timeTrackingPage.expenses.form.bookHints.projectCurrency')
-        .replace('{amount}', inProj.toLocaleString(tag, { minimumFractionDigits: 2, maximumFractionDigits: 2 }))
-        .replace('{currency}', p);
-}
 function weekStatus(statuses: ExpenseStatus[]): ExpenseStatus {
     if (statuses.some(s => s === 'pending'))
         return 'pending';
@@ -175,15 +143,8 @@ const IcoPlus = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 const IcoChevron = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
     <path d="M6 9l6 6 6-6"/>
   </svg>);
-const IcoCheck = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <polyline points="20 6 9 17 4 12"/>
-  </svg>);
 const IcoPaperclip = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-  </svg>);
-const IcoLock = () => (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-    <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
   </svg>);
 export type ExpensesPanelProps = {
     managedExpenseAuthorId?: number | null;
@@ -192,17 +153,18 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
     const { t, locale } = useI18n();
     const scopeFieldId = useId();
     const journalFieldId = useId();
-    const expenseFormAmountFieldId = useId();
     const journalProjectHintId = `${journalFieldId}-hint`;
     const { user: currentUser, loading: userLoading } = useCurrentUser();
     const [projectOpts, setProjectOpts] = useState<ProjectOption[]>([]);
     const [projectsLoading, setProjectsLoading] = useState(false);
     const [projectsErr, setProjectsErr] = useState<string | null>(null);
     const [listRows, setListRows] = useState<ExpenseRow[]>([]);
+    const [rawById, setRawById] = useState<Map<string, ExpenseRequest>>(new Map());
     const [listErr, setListErr] = useState<string | null>(null);
     const [listLoading, setListLoading] = useState(true);
     const [journalProjectId, setJournalProjectId] = useState('');
     const isTtManager = Boolean(currentUser && hasFullTimeTrackingTabs(currentUser));
+    const canModerateExpenses = canViewExpensesRequestsAndReport(currentUser?.role);
     const projectLineById = useMemo(() => {
         const m = new Map<string, string>();
         for (const p of projectOpts) {
@@ -259,65 +221,19 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         catch {
         }
     }, [journalProjectId]);
-    const [showForm, setShowForm] = useState(false);
-    const [formDate, setFormDate] = useState(todayStr);
-    const [formProject, setFormProject] = useState('');
-    const [formCat, setFormCat] = useState('');
-    const [formNotes, setFormNotes] = useState('');
-    const [formAmount, setFormAmount] = useState('');
-    const [formBillable, setFormBillable] = useState(true);
-    const [formPaymentMethod, setFormPaymentMethod] = useState<PaymentMethod | ''>('');
-    const [formReimbursementCardNumber, setFormReimbursementCardNumber] = useState('');
-    const [formFile, setFormFile] = useState<File | null>(null);
-    const fileRef = useRef<HTMLInputElement>(null);
-    const [expenseCategories, setExpenseCategories] = useState<ProjectExpenseCategoryRow[]>([]);
-    const [categoriesLoading, setCategoriesLoading] = useState(false);
-    const [categoriesErr, setCategoriesErr] = useState<string | null>(null);
-    const [detailExp, setDetailExp] = useState<ExpenseRow | null>(null);
+    const [panelOpen, setPanelOpen] = useState(false);
+    const [panelMode, setPanelMode] = useState<'create' | 'edit' | 'view'>('create');
+    const [panelExpense, setPanelExpense] = useState<ExpenseRequest | null>(null);
+    const [panelSavePending, setPanelSavePending] = useState(false);
+    const [panelSubmitPending, setPanelSubmitPending] = useState(false);
+    const [receiptUploadPending, setReceiptUploadPending] = useState(false);
+    const [actionErr, setActionErr] = useState<string | null>(null);
+    const panelActionRef = useRef<'idle' | 'save' | 'submit'>('idle');
     const [listVersion, setListVersion] = useState(0);
-    const [formBusy, setFormBusy] = useState(false);
-    const [formErr, setFormErr] = useState<string | null>(null);
-    const [formCbu, setFormCbu] = useState<CbuParsed | null>(null);
-    const [formCbuErr, setFormCbuErr] = useState<string | null>(null);
-    const [formCbuLoading, setFormCbuLoading] = useState(false);
-    useEffect(() => {
-        if (!formProject) {
-            setExpenseCategories([]);
-            setCategoriesErr(null);
-            setCategoriesLoading(false);
-            return;
-        }
-        let cancelled = false;
-        setCategoriesLoading(true);
-        setCategoriesErr(null);
-        void listProjectExpenseCategories(formProject)
-            .then((rows) => {
-            if (cancelled)
-                return;
-            setExpenseCategories(rows.filter((c) => !c.isArchived).sort(sortProjectExpenseCategories));
-        })
-            .catch((e) => {
-            if (!cancelled) {
-                setExpenseCategories([]);
-                setCategoriesErr(e instanceof Error ? e.message : t('timeTrackingPage.expenses.errors.loadCategoriesFailed'));
-            }
-        })
-            .finally(() => {
-            if (!cancelled)
-                setCategoriesLoading(false);
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, [formProject, t]);
-    useEffect(() => {
-        if (formCat && !expenseCategories.some((c) => c.id === formCat)) {
-            setFormCat('');
-        }
-    }, [formCat, expenseCategories]);
     useEffect(() => {
         if (userLoading || !currentUser) {
             setListRows([]);
+            setRawById(new Map());
             setListErr(null);
             setListLoading(false);
             return;
@@ -328,6 +244,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         }
         if (!journalProjectId) {
             setListRows([]);
+            setRawById(new Map());
             setListErr(null);
             setListLoading(false);
             return;
@@ -353,16 +270,16 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             if (cancelled)
                 return;
             const pid = journalProjectId;
-            const rows = res.items
-                .filter((r) => r.projectId === pid)
-                .map((r) => expenseRequestToExpenseRow(r, projectLineById.get(r.projectId ?? '') ||
-                (r.projectId ? t('timeTrackingPage.expenses.errors.projectFallback').replace('{id}', String(r.projectId).slice(0, 8)) : '—'), journalCurrencyCode, t));
-            setListRows(rows);
+            const items = res.items.filter((r) => r.projectId === pid);
+            setListRows(items.map((r) => expenseRequestToExpenseRow(r, projectLineById.get(r.projectId ?? '') ||
+                (r.projectId ? t('timeTrackingPage.expenses.errors.projectFallback').replace('{id}', String(r.projectId).slice(0, 8)) : '—'), journalCurrencyCode, t)));
+            setRawById(new Map(items.map((r) => [r.id, r])));
         })
             .catch((e: unknown) => {
             if (cancelled)
                 return;
             setListRows([]);
+            setRawById(new Map());
             const msg = e instanceof Error ? e.message : t('timeTrackingPage.expenses.errors.loadFailed');
             setListErr(/403|forbidden|недостаточно|запрещ/i.test(msg)
                 ? `${msg}${t('timeTrackingPage.expenses.errors.listAccessSuffix')}`
@@ -387,80 +304,108 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         listVersion,
         t,
     ]);
-    const cancelForm = useCallback(() => {
-        if (formBusy)
-            return;
-        setFormErr(null);
-        setShowForm(false);
-    }, [formBusy]);
-    useEffect(() => {
-        if (!showForm)
-            return;
-        const h = (e: KeyboardEvent) => {
-            if (e.key === 'Escape' && !formBusy)
-                cancelForm();
-        };
-        document.addEventListener('keydown', h);
-        document.body.style.overflow = 'hidden';
-        return () => {
-            document.removeEventListener('keydown', h);
-            document.body.style.overflow = '';
-        };
-    }, [showForm, formBusy, cancelForm]);
-    useEffect(() => {
-        if (!detailExp)
-            return;
-        const h = (e: KeyboardEvent) => { if (e.key === 'Escape')
-            setDetailExp(null); };
-        document.addEventListener('keydown', h);
-        document.body.style.overflow = 'hidden';
-        return () => {
-            document.removeEventListener('keydown', h);
-            document.body.style.overflow = '';
-        };
-    }, [detailExp]);
-    useEffect(() => {
-        if (!showForm || !formDate.trim()) {
-            setFormCbu(null);
-            setFormCbuErr(null);
-            setFormCbuLoading(false);
-            return;
+    const refreshList = useCallback(() => {
+        setListVersion((v) => v + 1);
+    }, []);
+    const openForm = useCallback(() => {
+        setActionErr(null);
+        setPanelExpense(null);
+        setPanelMode('create');
+        setPanelOpen(true);
+    }, []);
+    const openExpense = useCallback((expense: ExpenseRequest) => {
+        setActionErr(null);
+        const mode = resolveExpensePanelMode(expense.status);
+        setPanelExpense(expense);
+        setPanelMode(mode);
+        setPanelOpen(true);
+        // The list payload omits the card number; the edit form needs the full record.
+        if (mode === 'edit' && expense.reimbursementCardNumber === undefined) {
+            void fetchExpenseById(expense.id)
+                .then((full) => setPanelExpense(full))
+                .catch(() => undefined);
         }
-        let cancelled = false;
-        setFormCbuLoading(true);
-        setFormCbuErr(null);
-        void fetchCbuParsedForDate(formDate.trim().slice(0, 10))
-            .then((parsed) => {
-                if (!cancelled)
-                    setFormCbu(parsed);
-            })
-            .catch((e: unknown) => {
-                if (!cancelled) {
-                    setFormCbu(null);
-                    setFormCbuErr(e instanceof Error ? e.message : t('timeTrackingPage.expenses.errors.loadCbuFailed'));
-                }
-            })
-            .finally(() => {
-                if (!cancelled)
-                    setFormCbuLoading(false);
+    }, []);
+    const closePanel = useCallback(() => {
+        setPanelOpen(false);
+        setPanelExpense(null);
+    }, []);
+    const persistFromPanel = useCallback(async (values: ExpenseFormValues, files: ExpenseFilesByKind, submit: boolean) => {
+        if (panelActionRef.current !== 'idle')
+            return;
+        panelActionRef.current = submit ? 'submit' : 'save';
+        const setPending = submit ? setPanelSubmitPending : setPanelSavePending;
+        setPending(true);
+        setActionErr(null);
+        try {
+            await saveExpenseFromForm({
+                values,
+                files,
+                expenseId: panelExpense?.id ?? null,
+                submit,
             });
-        return () => {
-            cancelled = true;
-        };
-    }, [showForm, formDate, t]);
-    function openForm() {
-        setFormErr(null);
-        setFormDate(todayStr);
-        setFormProject(journalProjectId);
-        setFormCat('');
-        setFormNotes('');
-        setFormAmount('');
-        setFormBillable(true);
-        setFormPaymentMethod('');
-        setFormReimbursementCardNumber('');
-        setFormFile(null);
-        setShowForm(true);
-    }
+            refreshList();
+            closePanel();
+        }
+        catch (err) {
+            setActionErr(err instanceof Error ? err.message : t('timeTrackingPage.expenses.errors.saveFailed'));
+        }
+        finally {
+            panelActionRef.current = 'idle';
+            setPending(false);
+        }
+    }, [panelExpense, refreshList, closePanel, t]);
+    const handleSaveDraft = useCallback((values: ExpenseFormValues, files: ExpenseFilesByKind) => {
+        void persistFromPanel(values, files, false);
+    }, [persistFromPanel]);
+    const handleSubmitExpense = useCallback((values: ExpenseFormValues, files: ExpenseFilesByKind) => {
+        void persistFromPanel(values, files, true);
+    }, [persistFromPanel]);
+    const applyPanelExpenseSnapshot = useCallback((expense: ExpenseRequest) => {
+        setPanelExpense(expense);
+        refreshList();
+    }, [refreshList]);
+    const handleExpenseDeleted = useCallback(() => {
+        closePanel();
+        refreshList();
+    }, [closePanel, refreshList]);
+    const allowPaymentReceiptUpload = useMemo(() => {
+        if (!panelExpense || !currentUser)
+            return false;
+        if (!isReceiptUploadAllowedForExpenseStatus(panelExpense.status))
+            return false;
+        if (currentUser.id === panelExpense.createdByUserId)
+            return true;
+        if (!canModerateExpenses)
+            return false;
+        return !isModerationBlockedForOwnExpense(canModerateExpenses, currentUser.id, panelExpense);
+    }, [panelExpense, currentUser, canModerateExpenses]);
+    const handleUploadPaymentReceipts = useCallback(async (files: File[]) => {
+        if (!panelExpense || files.length === 0)
+            return;
+        setReceiptUploadPending(true);
+        setActionErr(null);
+        try {
+            let last = panelExpense;
+            for (const file of files) {
+                last = await uploadAttachment(last.id, file, 'payment_receipt');
+            }
+            setPanelExpense(last);
+            refreshList();
+        }
+        catch (err) {
+            setActionErr(err instanceof Error ? err.message : t('timeTrackingPage.expenses.errors.saveFailed'));
+            throw err;
+        }
+        finally {
+            setReceiptUploadPending(false);
+        }
+    }, [panelExpense, refreshList, t]);
+    const panelPresetValues = useMemo(() => ({
+        expenseType: 'client_expense',
+        isReimbursable: true,
+        projectId: journalProjectId,
+    }), [journalProjectId]);
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
     function toggleWeek(key: string) {
         setCollapsed(prev => {
@@ -468,93 +413,6 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             next.has(key) ? next.delete(key) : next.add(key);
             return next;
         });
-    }
-    async function saveForm(e: React.FormEvent) {
-        e.preventDefault();
-        setFormErr(null);
-        if (!currentUser) {
-            setFormErr(t('timeTrackingPage.expenses.errors.noUser'));
-            return;
-        }
-        if (!formProject.trim()) {
-            setFormErr(t('timeTrackingPage.expenses.errors.selectProject'));
-            return;
-        }
-        if (!formDate.trim()) {
-            setFormErr(t('timeTrackingPage.expenses.errors.dateRequired'));
-            return;
-        }
-        const amt = parseFloat(formAmount.replace(',', '.'));
-        if (!formAmount.trim() || Number.isNaN(amt) || amt <= 0) {
-            setFormErr(t('timeTrackingPage.expenses.errors.amountRequired'));
-            return;
-        }
-        if (!formPaymentMethod) {
-            setFormErr(t('timeTrackingPage.expenses.errors.paymentMethodRequired'));
-            return;
-        }
-        if (formPaymentMethod === 'cash' && !isValidReimbursementCardNumber(formReimbursementCardNumber)) {
-            setFormErr(t('timeTrackingPage.expenses.errors.reimbursementCardNumberRequired'));
-            return;
-        }
-        if (formBillable && expenseCategories.length > 0 && !formCat.trim()) {
-            setFormErr(t('timeTrackingPage.expenses.errors.categoryRequired'));
-            return;
-        }
-        if (formBillable && !formFile) {
-            setFormErr(t('timeTrackingPage.expenses.errors.documentRequired'));
-            return;
-        }
-        if (formCbuLoading) {
-            setFormErr(t('timeTrackingPage.expenses.errors.cbuLoading'));
-            return;
-        }
-        if (!formCbu || !(formCbu.uzsPerUsd > 0)) {
-            setFormErr(formCbuErr ?? t('timeTrackingPage.expenses.errors.cbuFailed'));
-            return;
-        }
-        setFormBusy(true);
-        try {
-            const amountNorm = formAmount.replace(/\s/g, '').replace(',', '.').trim();
-            const amountUzsForApi = computeAmountUzsForApi('UZS', amountNorm, String(formCbu.uzsPerUsd), '');
-            if (!amountUzsForApi || amountUzsForApi <= 0) {
-                setFormErr(t('timeTrackingPage.expenses.errors.uzsAmountInvalid'));
-                return;
-            }
-            const description = formNotes.trim() || t('timeTrackingPage.expenses.errors.defaultDescription');
-            const expenseType = formBillable ? 'client_expense' : 'purchase';
-            const body = {
-                description,
-                expenseDate: formDate,
-                amountUzs: amountUzsForApi,
-                exchangeRate: formCbu.uzsPerUsd,
-                expenseType,
-                isReimbursable: formBillable,
-                paymentMethod: formPaymentMethod,
-                reimbursementCardNumber: formPaymentMethod === 'cash'
-                    ? reimbursementCardDigits(formReimbursementCardNumber)
-                    : undefined,
-                projectId: formProject.trim(),
-                expenseCategoryId: formBillable && formCat.trim() ? formCat.trim() : undefined,
-                comment: formNotes.trim() || undefined,
-            };
-            let saved = await createExpense(body);
-            if (formFile) {
-                saved = await uploadAttachment(saved.id, formFile, formBillable ? 'payment_document' : 'payment_receipt');
-            }
-            if (saved.status !== 'approved') {
-                await submitExpense(saved.id);
-            }
-            setListVersion((v) => v + 1);
-            setShowForm(false);
-            setFormFile(null);
-        }
-        catch (err) {
-            setFormErr(err instanceof Error ? err.message : t('timeTrackingPage.expenses.errors.saveFailed'));
-        }
-        finally {
-            setFormBusy(false);
-        }
     }
     const grouped = useMemo(() => {
         const map = new Map<string, ExpenseRow[]>();
@@ -595,8 +453,6 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         const p = projectOpts.find((x) => x.id === journalProjectId);
         return p?.color ?? 'var(--app-accent, #4f46e5)';
     }, [journalProjectId, projectOpts]);
-    const formProjectCurrency = useMemo(() => (projectOpts.find((p) => p.id === formProject)?.currency ?? 'USD').trim().toUpperCase() || 'USD', [projectOpts, formProject]);
-    const formPaymentBookHint = useMemo(() => projectBookHintFromUzs(formCbu, formAmount, formProjectCurrency, locale, t), [formCbu, formAmount, formProjectCurrency, locale, t]);
     const isEmpty = listRows.length === 0;
     const showListSkeleton = userLoading || projectsLoading || (Boolean(journalProjectId) && listLoading);
     const canPickProject = !projectsLoading && projectOpts.length > 0;
@@ -654,6 +510,9 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
             {listErr && (<div className="tt-exp-panel__list-err" role="alert">
                 {listErr}
               </div>)}
+            {actionErr && (<div className="tt-exp-panel__list-err" role="alert">
+                {actionErr}
+              </div>)}
             <div className="tt-exp-panel__section-body">
               {!canPickProject && !projectsLoading ? (<div className="tt-exp-panel__list-empty">
                   <div className="tt-exp-panel__empty-icon" aria-hidden>
@@ -699,17 +558,19 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
                   {ttExpenseStatusLabel(group.status, t)}
                 </span>
               </div>
-              <div className="exp__week-head-right" onClick={e => e.stopPropagation()}>
+              <div className="exp__week-head-right">
                 {isCollapsed && (<span className="exp__week-head-total">{fmtAmt(group.total, group.currency)}</span>)}
-                {group.status === 'approved' && (<button type="button" className="exp__week-withdraw">
-                    {t('timeTrackingPage.expenses.journalWeek.withdrawApproval')}
-                  </button>)}
               </div>
             </div>
 
             {!isCollapsed && group.exps.map(exp => {
                         const { weekday, dayMonth } = fmtRowDate(exp.date, locale);
-                        return (<div key={exp.id} className="exp__item" onClick={() => setDetailExp(exp)} role="button" tabIndex={0} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && setDetailExp(exp)}>
+                        const raw = rawById.get(exp.id);
+                        const openRow = () => {
+                            if (raw)
+                                openExpense(raw);
+                        };
+                        return (<div key={exp.id} className="exp__item" onClick={openRow} role="button" tabIndex={0} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && openRow()}>
                   <span className="exp__item-date">
                     <span className="exp__item-weekday">{weekday},</span>
                     <span className="exp__item-day">{dayMonth}</span>
@@ -723,18 +584,21 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
                     <div className="exp__item-line2">
                       <span className="exp__item-cat">{ttExpenseCategoryLabel(exp.category, t)}</span>
                       {exp.billable && (<span className="exp__item-billable-badge">{t('timeTrackingPage.common.billable')}</span>)}
+                      {raw && (<span className="exp__item-status" style={{
+                            color: EXPENSE_STATUS_META[exp.status].color,
+                            background: EXPENSE_STATUS_META[exp.status].bg,
+                        }}>
+                          {expenseStatusLabel(raw)}
+                        </span>)}
                     </div>
                     {exp.description && (<div className="exp__item-notes">{exp.description}</div>)}
                   </div>
 
-                  <div className="exp__item-right" onClick={e => e.stopPropagation()}>
+                  <div className="exp__item-right">
                     <span className="exp__item-amount">{fmtAmt(exp.amount, exp.currency)}</span>
-                    <button type="button" className="exp__item-icon" title={t('timeTrackingPage.expenses.detail.attachment')} aria-label={t('timeTrackingPage.expenses.detail.attachment')}>
+                    {(raw?.attachmentsCount ?? 0) > 0 && (<span className="exp__item-icon" title={t('timeTrackingPage.expenses.detail.attachment')} aria-label={t('timeTrackingPage.expenses.detail.attachment')}>
                       <IcoPaperclip />
-                    </button>
-                    <button type="button" className="exp__item-icon" title={t('timeTrackingPage.expenses.detail.locked')} aria-label={t('timeTrackingPage.expenses.detail.locked')}>
-                      <IcoLock />
-                    </button>
+                    </span>)}
                   </div>
                 </div>);
                     })}
@@ -751,261 +615,28 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
         </div>
       </div>
 
-      {showForm &&
-            createPortal(<div className="exp__modal-overlay">
-            <form className="exp__form" onSubmit={saveForm} onClick={(e) => e.stopPropagation()}>
-              <div className="exp__form-header">
-                <h2 className="exp__form-title">{t('timeTrackingPage.expenses.form.newExpenseTitle')}</h2>
-                <button type="button" className="exp__form-close" onClick={cancelForm} disabled={formBusy} aria-label={t('timeTrackingPage.common.close')}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M18 6L6 18M6 6l12 12"/>
-                  </svg>
-                </button>
-              </div>
-              <div className="exp__form-top">
-                <div className="exp__form-col exp__form-col--date">
-                  <label className="exp__form-label">{t('timeTrackingPage.expenses.form.date')}</label>
-                  <input type="date" className="exp__form-input" value={formDate} disabled={formBusy} onChange={(e) => setFormDate(e.target.value)}/>
-                  {formCbuLoading && (<p className="exp__form-hint">{t('timeTrackingPage.expenses.form.cbuLoadingHint')}</p>)}
-                  {formCbuErr && !formCbuLoading && (<p className="exp__form-hint exp__form-hint--err" role="status">{formCbuErr}</p>)}
-                  {formCbu != null && !formCbuLoading && !formCbuErr && (<p className="exp__form-hint">{t('timeTrackingPage.expenses.form.cbuUsedHint')}</p>)}
-                </div>
-
-                <div className="exp__form-col exp__form-col--middle">
-                  <label className="exp__form-label">{t('timeTrackingPage.expenses.form.projectCategoryLabel')}</label>
-                  <div className="exp__form-select-wrap">
-                    <SearchableSelect<ProjectOption> className="exp__form-srch" buttonClassName="exp__form-srch-btn" portalDropdown aria-label={t('timeTrackingPage.common.project')} disabled={formBusy || projectsLoading || projectOpts.length === 0} placeholder={projectsLoading
-                    ? t('timeTrackingPage.expenses.journal.loadingProjects')
-                    : projectOpts.length === 0
-                        ? t('timeTrackingPage.expenses.journal.noProjects')
-                        : t('timeTrackingPage.common.selectProject')} emptyListText={projectsLoading ? t('timeTrackingPage.common.loading') : t('timeTrackingPage.expenses.journal.noProjects')} noMatchText={t('timeTrackingPage.common.projectNotFound')} value={formProject} items={projectOpts} getOptionValue={(p) => p.id} getOptionLabel={expenseJournalProjectLabel} getSearchText={(p) => `${p.name} ${p.client}`.replace(/\s+/g, ' ').trim()} onSelect={(p) => {
-                    setFormProject(p.id);
-                    setFormCat('');
-                }}/>
-                  </div>
-                  {projectsErr && (<p className="exp__form-hint exp__form-hint--err" role="alert">
-                      {projectsErr}
-                    </p>)}
-                  {!projectsLoading &&
-                    !projectsErr &&
-                    projectOpts.length === 0 &&
-                    currentUser && (<p className="exp__form-hint">
-                        {t('timeTrackingPage.expenses.form.noProjectAccessHint')}
-                      </p>)}
-                  <div className="exp__form-select-wrap">
-                    <select className="exp__form-select" value={formCat} onChange={(e) => setFormCat(e.target.value)} disabled={formBusy ||
-                    !formProject ||
-                    categoriesLoading ||
-                    Boolean(categoriesErr) ||
-                    expenseCategories.length === 0} aria-busy={categoriesLoading}>
-                      <option value="">
-                        {!formProject
-                    ? t('timeTrackingPage.expenses.form.selectProjectFirst')
-                    : categoriesLoading
-                        ? t('timeTrackingPage.expenses.form.loadingCategories')
-                        : categoriesErr
-                            ? t('timeTrackingPage.expenses.form.categoriesLoadError')
-                            : expenseCategories.length === 0
-                                ? t('timeTrackingPage.expenses.form.noCategories')
-                                : t('timeTrackingPage.expenses.form.selectCategory')}
-                      </option>
-                      {expenseCategories.map((c) => (<option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>))}
-                    </select>
-                    <span className="exp__form-select-icon">
-                      <IcoChevron />
-                    </span>
-                  </div>
-                  {categoriesErr && (<p className="exp__form-hint exp__form-hint--err" role="alert">
-                      {categoriesErr}
-                    </p>)}
-                  {formProject &&
-                    !categoriesLoading &&
-                    !categoriesErr &&
-                    expenseCategories.length === 0 && (<p className="exp__form-hint">
-                        {t('timeTrackingPage.expenses.form.noActiveCategoriesHint')}
-                      </p>)}
-                  <textarea className="exp__form-textarea" placeholder={t('timeTrackingPage.expenses.form.notesPlaceholder')} value={formNotes} disabled={formBusy} onChange={(e) => setFormNotes(e.target.value)} rows={3}/>
-                </div>
-              </div>
-
-              <div className="exp__form-attach">
-                <label className="exp__form-label">{t('timeTrackingPage.expenses.form.attachReceipt')}</label>
-                <div className="exp__form-file-row">
-                  <button type="button" className="exp__form-file-btn" disabled={formBusy} onClick={() => fileRef.current?.click()}>
-                    {t('timeTrackingPage.expenses.form.chooseFile')}
-                  </button>
-                  <span className="exp__form-file-name">{formFile ? formFile.name : t('timeTrackingPage.expenses.form.fileNotSelected')}</span>
-                </div>
-                <input ref={fileRef} type="file" className="exp__form-file-hidden" disabled={formBusy} onChange={(e) => setFormFile(e.target.files?.[0] ?? null)}/>
-              </div>
-
-              <label className="exp__form-billable">
-                <span className={`exp__form-checkbox${formBillable ? ' exp__form-checkbox--on' : ''}`} onClick={() => {
-                    if (!formBusy)
-                        setFormBillable((v) => !v);
-                }} role="checkbox" aria-checked={formBillable} tabIndex={0} onKeyDown={(e) => e.key === ' ' && !formBusy && setFormBillable((v) => !v)}>
-                  {formBillable && <IcoCheck />}
-                </span>
-                <input type="checkbox" checked={formBillable} disabled={formBusy} onChange={(e) => setFormBillable(e.target.checked)} tabIndex={-1}/>
-                {t('timeTrackingPage.expenses.form.billableCheckbox')}
-              </label>
-
-              <div className="exp__form-payment">
-                <label className="exp__form-label">
-                  {t('timeTrackingPage.expenses.form.paymentMethodLabel')} *
-                </label>
-                <div className="exp__form-select-wrap">
-                  <select
-                    className="exp__form-select"
-                    value={formPaymentMethod}
-                    disabled={formBusy}
-                    required
-                    onChange={(event) => {
-                        const method = event.target.value as PaymentMethod | '';
-                        setFormPaymentMethod(method);
-                        if (method !== 'cash')
-                            setFormReimbursementCardNumber('');
-                    }}
-                  >
-                    <option value="">{t('timeTrackingPage.expenses.form.paymentMethodPlaceholder')}</option>
-                    <option value="cash">{t('timeTrackingPage.expenses.form.paymentCash')}</option>
-                    <option value="transfer">{t('timeTrackingPage.expenses.form.paymentTransfer')}</option>
-                    <option value="card">{t('timeTrackingPage.expenses.form.paymentCorporateCard')}</option>
-                  </select>
-                  <span className="exp__form-select-icon"><IcoChevron /></span>
-                </div>
-                {formPaymentMethod === 'cash' && (<>
-                    <label className="exp__form-label">
-                      {t('timeTrackingPage.expenses.form.reimbursementCardNumberLabel')} *
-                    </label>
-                    <input
-                      type="text"
-                      className="exp__form-input"
-                      inputMode="numeric"
-                      autoComplete="cc-number"
-                      maxLength={19}
-                      required
-                      placeholder="0000 0000 0000 0000"
-                      value={formReimbursementCardNumber}
-                      disabled={formBusy}
-                      onChange={(event) => setFormReimbursementCardNumber(formatReimbursementCardNumber(event.target.value))}
-                    />
-                    <p className="exp__form-hint">{t('timeTrackingPage.expenses.form.reimbursementCardNumberHint')}</p>
-                  </>)}
-              </div>
-
-              <div className="exp__form-amount-bottom">
-                <label className="exp__form-label" htmlFor={expenseFormAmountFieldId}>{t('timeTrackingPage.expenses.form.amountUzsLabel')}</label>
-                <div className="exp__form-amount-wrap">
-                  <span className="exp__form-amount-cur">UZS</span>
-                  <input id={expenseFormAmountFieldId} type="number" className="exp__form-amount-input" placeholder={t('timeTrackingPage.expenses.form.amountPlaceholder')} min="0" step="1" value={formAmount} disabled={formBusy} onChange={(e) => setFormAmount(e.target.value)}/>
-                </div>
-                {formPaymentBookHint ? (<p className="exp__form-hint">{formPaymentBookHint}</p>) : (<p className="exp__form-hint">{t('timeTrackingPage.expenses.form.equivalentDefaultHint').replace('{currency}', formProjectCurrency)}</p>)}
-              </div>
-
-              {formErr && (<p className="exp__form-hint exp__form-hint--err" role="alert">
-                  {formErr}
-                </p>)}
-
-              <div className="exp__form-actions">
-                <button type="submit" className="exp__form-save" disabled={formBusy || formCbuLoading || !formCbu}>
-                  {formBusy ? t('timeTrackingPage.expenses.form.submitting') : t('timeTrackingPage.expenses.form.submit')}
-                </button>
-                <button type="button" className="exp__form-cancel" onClick={cancelForm} disabled={formBusy}>
-                  {t('timeTrackingPage.common.cancel')}
-                </button>
-              </div>
-            </form>
-          </div>, document.body)}
-
-      {detailExp &&
-            createPortal(<div className="exp__detail-overlay">
-          <div className="exp__detail" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
-
-            <div className="exp__detail-head">
-              <div className="exp__detail-head-left">
-                <div className="exp__detail-cat-icon" style={{
-                    color: EXPENSE_CATEGORY_META[detailExp.category]?.color ?? '#6b7280',
-                    background: EXPENSE_CATEGORY_META[detailExp.category]?.bg ?? 'rgba(107,114,128,0.08)',
-                }}>
-                  <IcoPaperclip />
-                </div>
-                <div>
-                  <h2 className="exp__detail-title">{detailExp.project ?? t('timeTrackingPage.expenses.detail.noProject')}</h2>
-                  {detailExp.client && <p className="exp__detail-client">{detailExp.client}</p>}
-                </div>
-              </div>
-              <button type="button" className="exp__detail-close" onClick={() => setDetailExp(null)} aria-label={t('timeTrackingPage.common.close')}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M18 6L6 18M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-
-            <div className="exp__detail-amount-hero">
-              <div className="exp__detail-amount-stack">
-                <span className="exp__detail-amount">{fmtAmt(detailExp.amount, detailExp.currency)}</span>
-                {detailExp.paidInUzs != null ? (<span className="exp__detail-amount-caption">{t('timeTrackingPage.expenses.detail.actualPayment').replace('{amount}', detailExp.paidInUzs.toLocaleString(localeTag(locale)))}</span>) : null}
-              </div>
-              <span className="exp__detail-status" style={{
-                    color: EXPENSE_STATUS_META[detailExp.status].color,
-                    background: EXPENSE_STATUS_META[detailExp.status].bg,
-                }}>
-                {ttExpenseStatusLabel(detailExp.status, t)}
-              </span>
-            </div>
-
-            <div className="exp__detail-body">
-              <div className="exp__detail-row">
-                <span className="exp__detail-label">{t('timeTrackingPage.expenses.form.date')}</span>
-                <span className="exp__detail-val">
-                  {new Date(detailExp.date + 'T00:00:00').toLocaleDateString(localeTag(locale), {
-                    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-                })}
-                </span>
-              </div>
-              <div className="exp__detail-row">
-                <span className="exp__detail-label">{t('timeTrackingPage.expenses.form.category')}</span>
-                <span className="exp__detail-val">
-                  <span className="exp__detail-cat-tag" style={{
-                    color: EXPENSE_CATEGORY_META[detailExp.category]?.color,
-                    background: EXPENSE_CATEGORY_META[detailExp.category]?.bg,
-                }}>
-                    {ttExpenseCategoryLabel(detailExp.category, t)}
-                  </span>
-                </span>
-              </div>
-              <div className="exp__detail-row">
-                <span className="exp__detail-label">{t('timeTrackingPage.expenses.detail.employee')}</span>
-                <span className="exp__detail-val">
-                  <span className="exp__detail-employee">
-                    <span className="exp__detail-avatar">{detailExp.initials}</span>
-                    {detailExp.employee}
-                  </span>
-                </span>
-              </div>
-              {detailExp.description && (<div className="exp__detail-row">
-                  <span className="exp__detail-label">{t('timeTrackingPage.expenses.detail.description')}</span>
-                  <span className="exp__detail-val">{detailExp.description}</span>
-                </div>)}
-              <div className="exp__detail-row">
-                <span className="exp__detail-label">{t('timeTrackingPage.expenses.detail.billableToClient')}</span>
-                <span className="exp__detail-val">
-                  <span className={`exp__detail-billable${detailExp.billable ? ' exp__detail-billable--yes' : ''}`}>
-                    {detailExp.billable ? t('timeTrackingPage.expenses.detail.billableYes') : t('timeTrackingPage.expenses.detail.billableNo')}
-                  </span>
-                </span>
-              </div>
-            </div>
-
-            <div className="exp__detail-foot">
-              <button type="button" className="exp__detail-close-btn" onClick={() => setDetailExp(null)}>
-                {t('timeTrackingPage.common.close')}
-              </button>
-            </div>
-          </div>
-        </div>, document.body)}
+      {panelOpen && (<Suspense fallback={null}>
+        <ExpensesFormPanel
+          isOpen
+          mode={panelMode}
+          editingRequest={panelExpense}
+          onClose={closePanel}
+          onSaveDraft={handleSaveDraft}
+          onSubmit={handleSubmitExpense}
+          saveDraftPending={panelSavePending}
+          submitPending={panelSubmitPending}
+          onExpenseSnapshotUpdated={applyPanelExpenseSnapshot}
+          canModerate={canModerateExpenses}
+          onExpenseUpdated={applyPanelExpenseSnapshot}
+          onExpenseDeleted={handleExpenseDeleted}
+          allowPaymentReceiptUpload={allowPaymentReceiptUpload}
+          onUploadPaymentReceipts={handleUploadPaymentReceipts}
+          receiptUploadPending={receiptUploadPending}
+          currentUserId={currentUser?.id ?? null}
+          currentUserRole={currentUser?.role ?? null}
+          currentUserEmail={currentUser?.email ?? null}
+          presetValues={panelPresetValues}
+        />
+      </Suspense>)}
     </div>);
 }
