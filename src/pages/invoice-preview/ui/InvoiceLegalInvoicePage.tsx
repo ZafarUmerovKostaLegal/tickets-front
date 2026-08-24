@@ -15,10 +15,6 @@ import {
 } from '../lib/invoicePreviewPackShared';
 import { getLegalInvoiceLabels } from '../lib/invoiceLegalPageI18n';
 import {
-    formatLegalExchangeRateValue,
-    formatLegalTotalWithFxAlt,
-} from '../lib/invoiceLegalFxDisplay';
-import {
     legalBankingInputValue,
     legalFirmBankingRows,
     isBankingPlaceholderValue,
@@ -133,8 +129,6 @@ export function InvoiceLegalInvoicePage({
     const cur = packCurrencyCode(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
-    const totalWithFx = formatLegalTotalWithFxAlt(model.totalFormatted, legalOverrides);
-    const exchangeRateValue = formatLegalExchangeRateValue(legalOverrides, model.coverLanguage);
     const addr2 = model.recipientAddressLines[1];
     const firmBankingRows = legalFirmBankingRows(cur, legalOverrides, model.coverLanguage);
     const billToBankName = resolveLegalBillToBankName(legalOverrides);
@@ -296,7 +290,7 @@ export function InvoiceLegalInvoicePage({
               <LiField
                 editable={editable}
                 className="tt-inv-li__field--amt"
-                value={editable ? model.totalFormatted : totalWithFx}
+                value={model.totalFormatted}
                 ariaLabel={labels.total(cur)}
                 onChange={(totalFormatted) => onChangeModel?.({ totalFormatted })}
               />
@@ -312,7 +306,7 @@ export function InvoiceLegalInvoicePage({
             <LiField
               editable={editable}
               className="tt-inv-li__field--inline"
-              value={editable ? model.totalFormatted : totalWithFx}
+              value={model.totalFormatted}
               ariaLabel={labels.subtotal}
               onChange={(totalFormatted) => onChangeModel?.({ totalFormatted })}
             />
@@ -342,14 +336,6 @@ export function InvoiceLegalInvoicePage({
             />
           </span>
         </div>
-        {exchangeRateValue ? (
-          <div className="tt-inv-li__total-line tt-inv-li__total-line--fx">
-            <span className="tt-inv-li__total-label">{labels.exchangeRate}</span>
-            <span className="tt-inv-li__total-value tt-inv-li__total-fx">
-              {exchangeRateValue}
-            </span>
-          </div>
-        ) : null}
         <div className="tt-inv-li__total-line tt-inv-li__total-line--due">
           <span className="tt-inv-li__total-due-label">
             {labels.totalDueByPrefix}
@@ -366,7 +352,7 @@ export function InvoiceLegalInvoicePage({
             <LiField
               editable={editable}
               className="tt-inv-li__field--inline tt-inv-li__field--due"
-              value={editable ? model.totalFormatted : totalWithFx}
+              value={model.totalFormatted}
               ariaLabel={labels.totalDueBy(dueBanner)}
               onChange={(totalFormatted) => onChangeModel?.({ totalFormatted })}
             />

@@ -16,8 +16,6 @@ import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../li
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { splitDetailRowsForPagedTimeReport } from '../lib/invoiceTimeReportChunking';
 import { type InvoiceLegalPageOverrides } from '../lib/invoiceLegalPageModel';
-import { enrichLegalFxOverridesFromCbu } from '../lib/enrichLegalFxOverridesFromCbu';
-import { hasLegalFxDisplay } from '../lib/invoiceLegalFxDisplay';
 import {
     applyCoverDocumentOverrides,
     buildInvoiceDocumentOverridesPayload,
@@ -260,7 +258,6 @@ export function InvoicePreviewPage() {
 
             let docFromApi: InvoiceDocumentOverridesV1 | null = null;
             let invoiceCurrency: string | null = null;
-            let invoiceTotalAmount: number | null = null;
             let invoiceIssueDate: string | null = null;
             if (sessionNow?.mode === 'existing') {
                 try {
@@ -269,7 +266,6 @@ export function InvoicePreviewPage() {
                         return;
                     setInvoiceStatus(String(inv.status ?? '').toLowerCase() || null);
                     invoiceCurrency = String(inv.currency ?? '').trim().toUpperCase() || null;
-                    invoiceTotalAmount = Number(inv.totalAmount);
                     invoiceIssueDate = String(inv.issueDate ?? '').trim().slice(0, 10) || null;
                     docFromApi = parseInvoiceDocumentOverrides(inv.documentOverrides);
                     if (!docFromApi?.legal?.invoiceNumber && inv.invoiceNumber?.trim()) {
@@ -304,39 +300,12 @@ export function InvoicePreviewPage() {
             const issueIso = sessionNow?.mode === 'existing'
                 ? (sessionNow.meta.issueDateIso ?? invoiceIssueDate ?? null)
                 : (sessionNow?.mode === 'create' ? sessionNow.form.issueDate : null);
-            let doc = issueIso
+            const doc = issueIso
                 ? scrubStaleBillingPeriodDocumentOverrides(rawDoc, {
                     issueDateIso: issueIso,
                     billingPeriodIso: periodIso,
                 })
                 : rawDoc;
-
-            // Custom-billed packs are invoice-only; backfill FX dual total if missing.
-            const invoiceOnlyPack = Array.isArray(doc?.includedPageKeys)
-                && doc!.includedPageKeys!.length === 1
-                && doc!.includedPageKeys![0] === 'invoice';
-            if (
-                invoiceOnlyPack
-                && invoiceCurrency
-                && invoiceTotalAmount != null
-                && Number.isFinite(invoiceTotalAmount)
-                && issueIso
-                && !hasLegalFxDisplay(doc?.legal)
-            ) {
-                const fxPatch = await enrichLegalFxOverridesFromCbu({
-                    issueDateIso: issueIso,
-                    invoiceCurrency,
-                    totalAmount: invoiceTotalAmount,
-                    legal: doc?.legal,
-                });
-                if (fxPatch && !cancelled) {
-                    doc = {
-                        ...(doc ?? { v: 1 }),
-                        v: 1,
-                        legal: { ...(doc?.legal ?? {}), ...fxPatch },
-                    };
-                }
-            }
 
             if (doc) {
                 applyDocumentOverridesToState(doc, sessionNow?.meta.invoiceNumber);
