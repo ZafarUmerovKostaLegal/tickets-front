@@ -17,7 +17,8 @@ import {
     vacationKindSealUsesDarkInk,
     type VacationAbsenceKind,
 } from '../lib/vacationScheduleModel';
-import { formatRuDate, formatRuRange, leaveKindLabel, ruDaysWord } from '../lib/leaveRequestDisplay';
+import { formatRuDate, formatRuRange, leaveKindLabel, leaveStatusLabel, leaveStatusTone, ruDaysWord } from '../lib/leaveRequestDisplay';
+import { leaveApprovalWaitingFor, type LeaveRequestAvailableActions } from '../lib/leaveApprovalStage';
 import './VacationLeaveYearCalendarModal.css';
 
 const WEEKDAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'] as const;
@@ -47,6 +48,14 @@ type Props = {
     open: boolean;
     request: VacationLeaveRequestApi | null;
     onClose: () => void;
+    actions?: LeaveRequestAvailableActions;
+    closeLocked?: boolean;
+    onOpenPdf?: (request: VacationLeaveRequestApi) => void;
+    onWithdraw?: (request: VacationLeaveRequestApi) => void;
+    onCancelApproved?: (request: VacationLeaveRequestApi) => void;
+    onDelete?: (request: VacationLeaveRequestApi) => void;
+    onApprove?: (request: VacationLeaveRequestApi) => void;
+    onDecline?: (request: VacationLeaveRequestApi) => void;
 };
 
 function yearFromIso(iso: string): number {
@@ -147,7 +156,19 @@ function runEdge(iso: string, marks: Record<string, DayMark>): 'single' | 'start
     return 'mid';
 }
 
-export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props) {
+export function VacationLeaveYearCalendarModal({
+    open,
+    request,
+    onClose,
+    actions,
+    closeLocked = false,
+    onOpenPdf,
+    onWithdraw,
+    onCancelApproved,
+    onDelete,
+    onApprove,
+    onDecline,
+}: Props) {
     const requestYear = request ? yearFromIso(request.date_from) : new Date().getFullYear();
     const requestMonth = request ? Math.max(0, Number(request.date_from.slice(5, 7)) - 1) : 0;
     const [year, setYear] = useState(requestYear);
@@ -173,8 +194,11 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
         if (!open)
             return;
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape')
+            if (e.key === 'Escape') {
+                if (closeLocked)
+                    return;
                 onClose();
+            }
             if (e.key === 'ArrowLeft' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
                 setYear((y) => y - 1);
@@ -190,7 +214,7 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
             document.removeEventListener('keydown', onKey);
             document.body.style.overflow = '';
         };
-    }, [open, onClose]);
+    }, [open, onClose, closeLocked]);
 
     useEffect(() => {
         if (!open || !request)
@@ -334,9 +358,23 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
     const titleName = request.employee_full_name || request.employee_email || `Сотрудник #${request.employee_user_id}`;
     const period = formatRuRange(request.date_from, request.date_to);
     const isRequestYear = year === requestYear;
+    const statusTone = leaveStatusTone(request.status);
+    const statusLabel = leaveStatusLabel(request.status);
+    const waitingFor = leaveApprovalWaitingFor(request);
+    const showActions = Boolean(
+        onOpenPdf
+        || actions?.canDecide
+        || actions?.canWithdraw
+        || actions?.canCancelApproved
+        || actions?.canDelete,
+    );
 
     return createPortal(
-        <div className="vac-yr-cal-ov" role="presentation" onClick={onClose}>
+        <div
+            className="vac-yr-cal-ov"
+            role="presentation"
+            onClick={closeLocked ? undefined : onClose}
+        >
             <div
                 className="vac-yr-cal vac-yr-cal--advanced"
                 role="dialog"
@@ -351,6 +389,9 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
                             {request.employee_position ? (
                                 <span className="vac-yr-cal__badge">{request.employee_position}</span>
                             ) : null}
+                            <span className={`vac-yr-cal__req-status vac-yr-cal__req-status--${statusTone}`}>
+                                {statusLabel}
+                            </span>
                         </div>
                         <p className="vac-yr-cal__request">
                             Заявка #{request.id}: {leaveKindLabel(request.kind)} · {period}
@@ -358,6 +399,9 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
                                 {request.days_count} {ruDaysWord(request.days_count)}
                             </span>
                         </p>
+                        {waitingFor ? (
+                            <p className="vac-yr-cal__waiting">Ждёт решения: {waitingFor}</p>
+                        ) : null}
                     </div>
 
                     <div className="vac-yr-cal__year-nav" role="group" aria-label="Год календаря">
@@ -495,6 +539,70 @@ export function VacationLeaveYearCalendarModal({ open, request, onClose }: Props
                     </div>
 
                     <aside className="vac-yr-cal__side" aria-label="Детали">
+                        {showActions && (
+                            <section className="vac-yr-cal__side-card vac-yr-cal__side-card--actions">
+                                <h3 className="vac-yr-cal__side-title">Действия по заявке</h3>
+                                <div className="vac-yr-cal__actions">
+                                    {onOpenPdf && (
+                                        <button
+                                            type="button"
+                                            className="vac-lr-card__btn vac-lr-card__btn--ghost"
+                                            onClick={() => onOpenPdf(request)}
+                                        >
+                                            PDF
+                                        </button>
+                                    )}
+                                    {actions?.canWithdraw && onWithdraw && (
+                                        <button
+                                            type="button"
+                                            className="vac-lr-card__btn vac-lr-card__btn--danger"
+                                            onClick={() => onWithdraw(request)}
+                                            title="Отозвать заявку, пока она на согласовании"
+                                        >
+                                            Отозвать
+                                        </button>
+                                    )}
+                                    {actions?.canCancelApproved && onCancelApproved && (
+                                        <button
+                                            type="button"
+                                            className="vac-lr-card__btn vac-lr-card__btn--danger"
+                                            onClick={() => onCancelApproved(request)}
+                                            title="Отменить согласованное отсутствие и убрать дни из графика"
+                                        >
+                                            Отменить
+                                        </button>
+                                    )}
+                                    {actions?.canDelete && onDelete && (
+                                        <button
+                                            type="button"
+                                            className="vac-lr-card__btn vac-lr-card__btn--danger"
+                                            onClick={() => onDelete(request)}
+                                            title="Удалить заявку из истории"
+                                        >
+                                            Удалить
+                                        </button>
+                                    )}
+                                    {actions?.canDecide && onDecline && (
+                                        <button
+                                            type="button"
+                                            className="vac-lr-card__btn vac-lr-card__btn--decline"
+                                            onClick={() => onDecline(request)}
+                                        >
+                                            Отклонить
+                                        </button>
+                                    )}
+                                    {actions?.canDecide && onApprove && (
+                                        <button
+                                            type="button"
+                                            className="vac-lr-card__btn vac-lr-card__btn--approve"
+                                            onClick={() => onApprove(request)}
+                                        >
+                                            Утвердить
+                                        </button>
+                                    )}
+                                </div>
+                            </section>
+                        )}
                         <section className="vac-yr-cal__side-card">
                             <h3 className="vac-yr-cal__side-title">Выбранный день</h3>
                             {selectedIso ? (

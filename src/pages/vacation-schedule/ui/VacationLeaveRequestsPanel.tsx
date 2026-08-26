@@ -9,8 +9,8 @@ import {
 } from '@entities/vacation';
 import { useCurrentUser } from '@shared/hooks';
 import {
-    canDecideLeaveRequest,
     leaveApprovalWaitingFor,
+    leaveRequestAvailableActions,
 } from '../lib/leaveApprovalStage';
 import {
     formatRuRange,
@@ -145,6 +145,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
 
     const handleAuthorActionApplied = useCallback((next: VacationLeaveRequestApi) => {
         setItems((prev) => prev.map((it) => (it.id === next.id ? next : it)));
+        setCalendarRequest((prev) => (prev?.id === next.id ? next : prev));
         invalidateVacationLeaveRequests();
         // Дни в графике есть только у одобренной заявки — отзыв pending график не меняет.
         if (authorAction?.action === 'cancel')
@@ -155,11 +156,13 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
 
     const handleRequestDeleted = useCallback((id: number) => {
         setItems((prev) => prev.filter((it) => it.id !== id));
+        setCalendarRequest((prev) => (prev?.id === id ? null : prev));
         invalidateVacationLeaveRequests();
     }, []);
 
     const handleDecisionApplied = useCallback((next: VacationLeaveRequestApi) => {
         setItems((prev) => prev.map((it) => (it.id === next.id ? next : it)));
+        setCalendarRequest((prev) => (prev?.id === next.id ? next : prev));
         if (next.status === 'approved')
             onScheduleMayHaveChanged?.();
         invalidateVacationLeaveRequests();
@@ -168,6 +171,16 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
     }, [onScheduleMayHaveChanged, status]);
 
     const isMine = mode === 'mine';
+    const calendarActions = useMemo(() => {
+        if (!calendarRequest)
+            return undefined;
+        return leaveRequestAvailableActions(calendarRequest, {
+            userId: user?.id,
+            userEmail: user?.email,
+            isAuthor: isMine,
+            canActAsDecider: mode === 'to_decide',
+        });
+    }, [calendarRequest, isMine, mode, user?.email, user?.id]);
 
     return (
         <div className="vac-lr-panel">
@@ -240,14 +253,14 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                             : (req.employee_full_name || req.employee_email || `#${req.employee_user_id}`);
                         const personRole = isMine ? 'Согласующий' : 'Сотрудник';
                         const personPosition = !isMine ? req.employee_position : null;
-                        const canDecide = mode === 'to_decide' && canDecideLeaveRequest(req, {
+                        const waitingFor = leaveApprovalWaitingFor(req);
+                        const cardActions = leaveRequestAvailableActions(req, {
                             userId: user?.id,
                             userEmail: user?.email,
+                            isAuthor: isMine,
+                            canActAsDecider: mode === 'to_decide',
                         });
-                        const waitingFor = leaveApprovalWaitingFor(req);
-                        const canWithdraw = isMine && (req.status === 'pending' || req.status === 'pending_final');
-                        const canCancelApproved = isMine && req.status === 'approved';
-                        const canDelete = isMine && (req.status === 'cancelled' || req.status === 'declined');
+                        const { canDecide, canWithdraw, canCancelApproved, canDelete } = cardActions;
                         return (
                             <li key={req.id} className={`vac-lr-card vac-lr-card--${tone} vac-lr-card--clickable`}>
                                 <button
@@ -384,6 +397,19 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                 </ul>
             )}
 
+            <VacationLeaveYearCalendarModal
+                open={calendarRequest != null}
+                request={calendarRequest}
+                onClose={() => setCalendarRequest(null)}
+                actions={calendarActions}
+                closeLocked={decisionState != null || authorAction != null}
+                onOpenPdf={(req) => setPdfRequest(req)}
+                onWithdraw={(req) => setAuthorAction({ request: req, action: 'withdraw' })}
+                onCancelApproved={(req) => setAuthorAction({ request: req, action: 'cancel' })}
+                onDelete={(req) => setAuthorAction({ request: req, action: 'delete' })}
+                onApprove={(req) => setDecisionState({ request: req, decision: 'approve' })}
+                onDecline={(req) => setDecisionState({ request: req, decision: 'decline' })}
+            />
             <VacationDecisionModal
                 open={decisionState != null}
                 onClose={() => setDecisionState(null)}
@@ -398,11 +424,6 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                 action={authorAction?.action ?? 'withdraw'}
                 onUpdated={handleAuthorActionApplied}
                 onDeleted={handleRequestDeleted}
-            />
-            <VacationLeaveYearCalendarModal
-                open={calendarRequest != null}
-                request={calendarRequest}
-                onClose={() => setCalendarRequest(null)}
             />
             {pdfRequest ? (
                 <VacationLeavePdfPreview

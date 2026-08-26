@@ -34,3 +34,28 @@ export function leaveApprovalWaitingFor(req: VacationLeaveRequestApi): string | 
         return req.managing_partner_full_name || VACATION_MANAGING_PARTNER_NAME;
     return null;
 }
+
+export type LeaveRequestViewer = LeaveDecisionActor & {
+    isAuthor: boolean;
+    canActAsDecider: boolean;
+};
+
+export type LeaveRequestAvailableActions = {
+    canDecide: boolean;
+    canWithdraw: boolean;
+    canCancelApproved: boolean;
+    canDelete: boolean;
+};
+
+/** Какие кнопки показывать автору и согласующему на текущей ступени. */
+export function leaveRequestAvailableActions(
+    req: VacationLeaveRequestApi,
+    viewer: LeaveRequestViewer,
+): LeaveRequestAvailableActions {
+    return {
+        canDecide: viewer.canActAsDecider && canDecideLeaveRequest(req, viewer),
+        canWithdraw: viewer.isAuthor && (req.status === 'pending' || req.status === 'pending_final'),
+        canCancelApproved: viewer.isAuthor && req.status === 'approved',
+        canDelete: viewer.isAuthor && (req.status === 'cancelled' || req.status === 'declined'),
+    };
+}

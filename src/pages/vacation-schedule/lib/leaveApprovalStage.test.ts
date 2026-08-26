@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VacationLeaveRequestApi } from '@entities/vacation';
-import { canDecideLeaveRequest, leaveApprovalWaitingFor } from './leaveApprovalStage';
+import { canDecideLeaveRequest, leaveApprovalWaitingFor, leaveRequestAvailableActions } from './leaveApprovalStage';
 
 const PARTNER_ID = 7;
 const EMPLOYEE_ID = 42;
@@ -64,5 +64,32 @@ describe('leaveApprovalWaitingFor', () => {
         expect(leaveApprovalWaitingFor(makeRequest())).toBe('Nail Hassanov');
         expect(leaveApprovalWaitingFor(makeRequest({ status: 'pending_final' }))).toBe('Azizbek Akhmadjonov');
         expect(leaveApprovalWaitingFor(makeRequest({ status: 'approved' }))).toBeNull();
+    });
+});
+
+describe('leaveRequestAvailableActions', () => {
+    const author = { userId: EMPLOYEE_ID, userEmail: 'zumerov@kostalegal.com', isAuthor: true, canActAsDecider: false };
+    const partner = { userId: PARTNER_ID, userEmail: 'nhassanov@kostalegal.com', isAuthor: false, canActAsDecider: true };
+
+    it('автору даёт отозвать заявку на согласовании и удалить после отказа', () => {
+        expect(leaveRequestAvailableActions(makeRequest(), author)).toMatchObject({
+            canWithdraw: true,
+            canCancelApproved: false,
+            canDelete: false,
+            canDecide: false,
+        });
+        expect(leaveRequestAvailableActions(makeRequest({ status: 'declined' }), author)).toMatchObject({
+            canWithdraw: false,
+            canDelete: true,
+        });
+        expect(leaveRequestAvailableActions(makeRequest({ status: 'approved' }), author)).toMatchObject({
+            canCancelApproved: true,
+            canDelete: false,
+        });
+    });
+
+    it('согласующему даёт утвердить или отклонить на своей ступени', () => {
+        expect(leaveRequestAvailableActions(makeRequest(), partner).canDecide).toBe(true);
+        expect(leaveRequestAvailableActions(makeRequest({ status: 'pending_final' }), partner).canDecide).toBe(false);
     });
 });
