@@ -242,7 +242,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
         }
         const partner = partners.find((p) => p.id === partnerId);
         if (!partner) {
-            setError('Выберите партнёра для согласования.');
+            setError('Выберите курирующего партнёра для согласования.');
             return;
         }
         setSubmitting(true);
@@ -435,7 +435,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                     <fieldset className="vac-req-modal__section">
                         <legend className="vac-req-modal__legend">Согласование</legend>
                         <label className="vac-req-modal__field vac-req-modal__field--full">
-                            <span>Партнёр</span>
+                            <span>Курирующий партнёр</span>
                             {partnersLoading ? (
                                 <span className="vac-req-modal__hint">Загрузка списка партнёров…</span>
                             ) : (
@@ -443,8 +443,8 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                                     portalDropdown
                                     className="vac-req-modal__select"
                                     buttonClassName="vac-req-modal__select-btn"
-                                    aria-label="Партнёр для согласования"
-                                    placeholder={partners.length === 0 ? 'Партнёры не найдены' : 'Выберите партнёра…'}
+                                    aria-label="Курирующий партнёр для согласования"
+                                    placeholder={partners.length === 0 ? 'Партнёры не найдены' : 'Выберите курирующего партнёра…'}
                                     emptyListText="Нет в списке"
                                     noMatchText="Не найдено"
                                     value={partnerId}
@@ -458,7 +458,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                             )}
                         </label>
                         <p className="vac-req-modal__tip">
-                            Партнёр получит PDF с кнопками «Утвердить» / «Отклонить». После approve дни появятся в графике.
+                            Курирующий партнёр получит PDF с кнопками «Утвердить» / «Отклонить». После approve дни появятся в графике.
                         </p>
                     </fieldset>
 

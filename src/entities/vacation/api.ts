@@ -790,7 +790,41 @@ export async function declineVacationLeaveRequest(id: number, decisionReason?: s
     return out;
 }
 
-export async function cancelVacationLeaveRequest(id: number): Promise<void> {
+async function postLeaveRequestCancellation(
+    id: number,
+    action: 'withdraw' | 'cancel',
+    reason?: string | null,
+): Promise<VacationLeaveRequestApi> {
+    const body: Record<string, unknown> = {};
+    if (reason != null && reason.trim().length > 0)
+        body.reason = reason.trim();
+    const res = await vacationApiFetch(`/api/v1/vacations/leave-requests/${id}/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    if (res.status === 401)
+        throw new Error('Не авторизован');
+    if (!res.ok)
+        await throwVacationRequestError(res);
+    const out = coerceVacationLeaveRequestApi(await res.json());
+    if (!out)
+        throw new Error('Не удалось распарсить ответ заявки.');
+    return out;
+}
+
+/** Отзыв своей заявки, пока партнёр не принял решение. */
+export async function withdrawVacationLeaveRequest(id: number, reason?: string | null): Promise<VacationLeaveRequestApi> {
+    return postLeaveRequestCancellation(id, 'withdraw', reason);
+}
+
+/** Отмена уже согласованного отсутствия: дни убираются из графика. */
+export async function cancelVacationLeaveRequest(id: number, reason?: string | null): Promise<VacationLeaveRequestApi> {
+    return postLeaveRequestCancellation(id, 'cancel', reason);
+}
+
+/** Полное удаление отменённой или отклонённой заявки вместе с PDF. */
+export async function deleteVacationLeaveRequest(id: number): Promise<void> {
     const res = await vacationApiFetch(`/api/v1/vacations/leave-requests/${id}`, { method: 'DELETE' });
     if (res.status === 401)
         throw new Error('Не авторизован');

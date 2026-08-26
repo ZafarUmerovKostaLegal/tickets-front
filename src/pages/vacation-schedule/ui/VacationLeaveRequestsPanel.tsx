@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    cancelVacationLeaveRequest,
     getVacationLeaveKinds,
     invalidateVacationLeaveRequests,
     listVacationLeaveRequests,
@@ -8,7 +7,6 @@ import {
     type VacationLeaveRequestApi,
     type VacationLeaveRequestStatus,
 } from '@entities/vacation';
-import { useAppToast } from '@shared/ui';
 import {
     formatRuRange,
     formatTimestampShort,
@@ -17,6 +15,10 @@ import {
     leaveStatusTone,
     ruDaysWord,
 } from '../lib/leaveRequestDisplay';
+import {
+    VacationCancelRequestModal,
+    type VacationRequestAuthorAction,
+} from './VacationCancelRequestModal';
 import { VacationDecisionModal } from './VacationDecisionModal';
 import { VacationLeavePdfPreview } from './VacationLeavePdfPreview';
 import { VacationLeaveYearCalendarModal } from './VacationLeaveYearCalendarModal';
@@ -48,12 +50,7 @@ function defaultStatusForMode(mode: Mode): VacationLeaveRequestStatus | 'any' {
     return mode === 'to_decide' ? 'pending' : 'any';
 }
 
-function toastErrorMessage(e: unknown, fallback: string): string {
-    return e instanceof Error ? e.message : fallback;
-}
-
 export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleMayHaveChanged }: Props) {
-    const { pushToast } = useAppToast();
     const [status, setStatus] = useState<VacationLeaveRequestStatus | 'any'>(() => defaultStatusForMode(mode));
     const [items, setItems] = useState<VacationLeaveRequestApi[]>([]);
     const [kinds, setKinds] = useState<VacationLeaveKindApi[]>([]);
@@ -66,7 +63,10 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
     } | null>(null);
     const [calendarRequest, setCalendarRequest] = useState<VacationLeaveRequestApi | null>(null);
     const [pdfRequest, setPdfRequest] = useState<VacationLeaveRequestApi | null>(null);
-    const [busyId, setBusyId] = useState<number | null>(null);
+    const [authorAction, setAuthorAction] = useState<{
+        request: VacationLeaveRequestApi;
+        action: VacationRequestAuthorAction;
+    } | null>(null);
 
     useEffect(() => {
         setStatus(defaultStatusForMode(mode));
@@ -137,25 +137,20 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         return acc;
     }, [items]);
 
-    const handleCancel = useCallback(async (req: VacationLeaveRequestApi) => {
-        if (req.status !== 'pending')
-            return;
-        if (!window.confirm(`Отменить заявку #${req.id}? Действие нельзя отменить.`))
-            return;
-        setBusyId(req.id);
-        try {
-            await cancelVacationLeaveRequest(req.id);
-            pushToast({ variant: 'info', message: `Заявка #${req.id} отменена.` });
-            invalidateVacationLeaveRequests();
+    const handleAuthorActionApplied = useCallback((next: VacationLeaveRequestApi) => {
+        setItems((prev) => prev.map((it) => (it.id === next.id ? next : it)));
+        invalidateVacationLeaveRequests();
+        // Дни в графике есть только у одобренной заявки — отзыв pending график не меняет.
+        if (authorAction?.action === 'cancel')
+            onScheduleMayHaveChanged?.();
+        if (status !== 'any' && status !== next.status)
             setReloadTick((t) => t + 1);
-        }
-        catch (e) {
-            pushToast({ variant: 'error', message: toastErrorMessage(e, 'Не удалось отменить заявку.') });
-        }
-        finally {
-            setBusyId(null);
-        }
-    }, [pushToast]);
+    }, [authorAction, onScheduleMayHaveChanged, status]);
+
+    const handleRequestDeleted = useCallback((id: number) => {
+        setItems((prev) => prev.filter((it) => it.id !== id));
+        invalidateVacationLeaveRequests();
+    }, []);
 
     const handleDecisionApplied = useCallback((next: VacationLeaveRequestApi) => {
         setItems((prev) => prev.map((it) => (it.id === next.id ? next : it)));
@@ -240,8 +235,9 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                         const personRole = isMine ? 'Согласующий' : 'Сотрудник';
                         const personPosition = !isMine ? req.employee_position : null;
                         const canDecide = mode === 'to_decide' && req.status === 'pending';
-                        const canCancel = isMine && req.status === 'pending';
-                        const busy = busyId === req.id;
+                        const canWithdraw = isMine && req.status === 'pending';
+                        const canCancelApproved = isMine && req.status === 'approved';
+                        const canDelete = isMine && (req.status === 'cancelled' || req.status === 'declined');
                         return (
                             <li key={req.id} className={`vac-lr-card vac-lr-card--${tone} vac-lr-card--clickable`}>
                                 <button
@@ -308,14 +304,34 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                                     >
                                         PDF
                                     </button>
-                                    {canCancel && (
+                                    {canWithdraw && (
                                         <button
                                             type="button"
                                             className="vac-lr-card__btn vac-lr-card__btn--danger"
-                                            onClick={() => void handleCancel(req)}
-                                            disabled={busy}
+                                            onClick={() => setAuthorAction({ request: req, action: 'withdraw' })}
+                                            title="Отозвать заявку до решения партнёра"
+                                        >
+                                            Отозвать
+                                        </button>
+                                    )}
+                                    {canCancelApproved && (
+                                        <button
+                                            type="button"
+                                            className="vac-lr-card__btn vac-lr-card__btn--danger"
+                                            onClick={() => setAuthorAction({ request: req, action: 'cancel' })}
+                                            title="Отменить согласованное отсутствие и убрать дни из графика"
                                         >
                                             Отменить
+                                        </button>
+                                    )}
+                                    {canDelete && (
+                                        <button
+                                            type="button"
+                                            className="vac-lr-card__btn vac-lr-card__btn--danger"
+                                            onClick={() => setAuthorAction({ request: req, action: 'delete' })}
+                                            title="Удалить заявку из истории"
+                                        >
+                                            Удалить
                                         </button>
                                     )}
                                     {canDecide && (
@@ -349,6 +365,14 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                 request={decisionState?.request ?? null}
                 decision={decisionState?.decision ?? 'approve'}
                 onDecided={handleDecisionApplied}
+            />
+            <VacationCancelRequestModal
+                open={authorAction != null}
+                onClose={() => setAuthorAction(null)}
+                request={authorAction?.request ?? null}
+                action={authorAction?.action ?? 'withdraw'}
+                onUpdated={handleAuthorActionApplied}
+                onDeleted={handleRequestDeleted}
             />
             <VacationLeaveYearCalendarModal
                 open={calendarRequest != null}
