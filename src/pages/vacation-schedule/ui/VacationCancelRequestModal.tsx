@@ -39,7 +39,7 @@ const SUBMIT_LABELS: Record<VacationRequestAuthorAction, string> = {
 };
 
 const WARNINGS: Record<VacationRequestAuthorAction, string> = {
-    withdraw: 'Партнёр получит уведомление, что заявка отозвана до решения. Подать новую заявку на этот период можно будет сразу.',
+    withdraw: 'Согласующие получат уведомление, что заявка отозвана до финального решения. Подать новую заявку на этот период можно будет сразу.',
     cancel: 'Дни этого отсутствия будут удалены из графика, а партнёр получит уведомление об отмене.',
     delete: 'Заявка и её PDF будут удалены безвозвратно — восстановить историю согласования не получится.',
 };
@@ -128,7 +128,7 @@ export function VacationCancelRequestModal({ open, onClose, request, action, onU
                         Заявка #{request.id}
                         <span className="vac-dec-modal__muted">
                             {' · '}
-                            согласующий {request.partner_full_name || request.partner_email || `#${request.partner_user_id}`}
+                            курирующий партнёр {request.partner_full_name || request.partner_email || `#${request.partner_user_id}`}
                         </span>
                     </p>
                     <p className="vac-dec-modal__meta">

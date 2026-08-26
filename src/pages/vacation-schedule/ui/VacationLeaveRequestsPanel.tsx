@@ -7,6 +7,11 @@ import {
     type VacationLeaveRequestApi,
     type VacationLeaveRequestStatus,
 } from '@entities/vacation';
+import { useCurrentUser } from '@shared/hooks';
+import {
+    canDecideLeaveRequest,
+    leaveApprovalWaitingFor,
+} from '../lib/leaveApprovalStage';
 import {
     formatRuRange,
     formatTimestampShort,
@@ -40,18 +45,18 @@ type Props = {
 
 const FILTERS: ReadonlyArray<{ value: VacationLeaveRequestStatus | 'any'; label: string }> = [
     { value: 'any', label: 'Все' },
-    { value: 'pending', label: 'На рассмотрении' },
+    { value: 'pending', label: 'У курирующего' },
+    { value: 'pending_final', label: 'У управляющего' },
     { value: 'approved', label: 'Утверждённые' },
     { value: 'declined', label: 'Отклонённые' },
     { value: 'cancelled', label: 'Отменённые' },
 ];
 
-function defaultStatusForMode(mode: Mode): VacationLeaveRequestStatus | 'any' {
-    return mode === 'to_decide' ? 'pending' : 'any';
-}
-
 export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleMayHaveChanged }: Props) {
-    const [status, setStatus] = useState<VacationLeaveRequestStatus | 'any'>(() => defaultStatusForMode(mode));
+    const { user } = useCurrentUser();
+    // В «на согласование» показываем обе ступени сразу: у курирующего и у управляющего
+    // партнёра ждут решения заявки в разных статусах.
+    const [status, setStatus] = useState<VacationLeaveRequestStatus | 'any'>('any');
     const [items, setItems] = useState<VacationLeaveRequestApi[]>([]);
     const [kinds, setKinds] = useState<VacationLeaveKindApi[]>([]);
     const [loading, setLoading] = useState(true);
@@ -69,7 +74,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
     } | null>(null);
 
     useEffect(() => {
-        setStatus(defaultStatusForMode(mode));
+        setStatus('any');
     }, [mode]);
 
     useEffect(() => {
@@ -128,6 +133,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
     const counts = useMemo(() => {
         const acc: Record<VacationLeaveRequestStatus, number> = {
             pending: 0,
+            pending_final: 0,
             approved: 0,
             declined: 0,
             cancelled: 0,
@@ -157,7 +163,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         if (next.status === 'approved')
             onScheduleMayHaveChanged?.();
         invalidateVacationLeaveRequests();
-        if (status === 'pending' && next.status !== 'pending')
+        if (status !== 'any' && next.status !== status)
             setReloadTick((t) => t + 1);
     }, [onScheduleMayHaveChanged, status]);
 
@@ -169,8 +175,8 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                 <h2 className="vac-lr-panel__title">{isMine ? 'Мои заявки' : 'Заявки на согласование'}</h2>
                 <p className="vac-lr-panel__subtitle">
                     {isMine
-                        ? 'Заявки, которые вы отправили партнёрам на согласование.'
-                        : 'Заявки сотрудников, где согласующий — вы. После Approve дни появятся в графике автоматически.'}
+                        ? 'Заявка идёт курирующему партнёру, затем на финальное подтверждение управляющему партнёру.'
+                        : 'Курирующий партнёр согласовывает первым, финальное решение принимает управляющий партнёр — после него дни появляются в графике.'}
                 </p>
             </div>
 
@@ -234,8 +240,12 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                             : (req.employee_full_name || req.employee_email || `#${req.employee_user_id}`);
                         const personRole = isMine ? 'Согласующий' : 'Сотрудник';
                         const personPosition = !isMine ? req.employee_position : null;
-                        const canDecide = mode === 'to_decide' && req.status === 'pending';
-                        const canWithdraw = isMine && req.status === 'pending';
+                        const canDecide = mode === 'to_decide' && canDecideLeaveRequest(req, {
+                            userId: user?.id,
+                            userEmail: user?.email,
+                        });
+                        const waitingFor = leaveApprovalWaitingFor(req);
+                        const canWithdraw = isMine && (req.status === 'pending' || req.status === 'pending_final');
                         const canCancelApproved = isMine && req.status === 'approved';
                         const canDelete = isMine && (req.status === 'cancelled' || req.status === 'declined');
                         return (
@@ -276,8 +286,17 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
 
                                     <div className="vac-lr-card__meta">
                                         <span>Отправлено {formatTimestampShort(req.created_at)}</span>
+                                        {!isMine ? (
+                                            <span>Курирующий: {req.partner_full_name || req.partner_email || `#${req.partner_user_id}`}</span>
+                                        ) : null}
+                                        {waitingFor ? (
+                                            <span>Ждёт решения: {waitingFor}</span>
+                                        ) : null}
                                         {req.decision_at ? (
-                                            <span>Решение {formatTimestampShort(req.decision_at)}</span>
+                                            <span>Курирующий {formatTimestampShort(req.decision_at)}</span>
+                                        ) : null}
+                                        {req.final_decision_at ? (
+                                            <span>Управляющий {formatTimestampShort(req.final_decision_at)}</span>
                                         ) : null}
                                         <span className="vac-lr-card__calendar-hint">Календарь года →</span>
                                     </div>
@@ -290,8 +309,14 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                                     )}
                                     {req.decision_reason && req.status !== 'pending' && (
                                         <p className="vac-lr-card__reason vac-lr-card__reason--decision">
-                                            <span className="vac-lr-card__reason-tag">Резолюция</span>
+                                            <span className="vac-lr-card__reason-tag">Курирующий партнёр</span>
                                             {req.decision_reason}
+                                        </p>
+                                    )}
+                                    {req.final_decision_reason && (
+                                        <p className="vac-lr-card__reason vac-lr-card__reason--decision">
+                                            <span className="vac-lr-card__reason-tag">Управляющий партнёр</span>
+                                            {req.final_decision_reason}
                                         </p>
                                     )}
                                 </button>
@@ -309,7 +334,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                                             type="button"
                                             className="vac-lr-card__btn vac-lr-card__btn--danger"
                                             onClick={() => setAuthorAction({ request: req, action: 'withdraw' })}
-                                            title="Отозвать заявку до решения партнёра"
+                                            title="Отозвать заявку, пока она на согласовании"
                                         >
                                             Отозвать
                                         </button>

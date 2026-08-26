@@ -445,6 +445,8 @@ export type VacationLeaveRequestKind = (typeof VACATION_LEAVE_REQUEST_KINDS)[num
 
 export const VACATION_LEAVE_REQUEST_STATUSES = [
     'pending',
+    // Курирующий партнёр согласовал, ждём финального решения управляющего партнёра.
+    'pending_final',
     'approved',
     'declined',
     'cancelled',
@@ -475,8 +477,14 @@ export type VacationLeaveRequestApi = {
     date_to: string;
     days_count: number;
     reason: string | null;
+    /** Решение курирующего партнёра — первая ступень. */
     decision_at: string | null;
     decision_reason: string | null;
+    /** Решение управляющего партнёра — обязательная вторая ступень. */
+    final_decision_at: string | null;
+    final_decision_reason: string | null;
+    managing_partner_full_name: string | null;
+    managing_partner_email: string | null;
     pdf_url: string;
     created_at: string;
     updated_at: string | null;
@@ -594,6 +602,10 @@ function coerceVacationLeaveRequestApi(raw: unknown): VacationLeaveRequestApi | 
         reason: strOrNull(o.reason),
         decision_at: strOrNull(o.decision_at ?? o.decisionAt),
         decision_reason: strOrNull(o.decision_reason ?? o.decisionReason),
+        final_decision_at: strOrNull(o.final_decision_at ?? o.finalDecisionAt),
+        final_decision_reason: strOrNull(o.final_decision_reason ?? o.finalDecisionReason),
+        managing_partner_full_name: strOrNull(o.managing_partner_full_name ?? o.managingPartnerFullName),
+        managing_partner_email: strOrNull(o.managing_partner_email ?? o.managingPartnerEmail),
         pdf_url: str(o.pdf_url ?? o.pdfUrl) || `/api/v1/vacations/leave-requests/${id}/pdf`,
         created_at: str(o.created_at ?? o.createdAt),
         updated_at: strOrNull(o.updated_at ?? o.updatedAt),

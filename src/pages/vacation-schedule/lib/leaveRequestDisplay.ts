@@ -29,7 +29,8 @@ export function leaveKindLabel(
 }
 
 const STATUS_LABEL: Record<VacationLeaveRequestStatus, string> = {
-    pending: 'На рассмотрении',
+    pending: 'У курирующего партнёра',
+    pending_final: 'У управляющего партнёра',
     approved: 'Утверждено',
     declined: 'Отклонено',
     cancelled: 'Отменено',
@@ -41,6 +42,7 @@ export function leaveStatusLabel(status: VacationLeaveRequestStatus): string {
 
 const STATUS_TONE: Record<VacationLeaveRequestStatus, 'pending' | 'positive' | 'negative' | 'muted'> = {
     pending: 'pending',
+    pending_final: 'pending',
     approved: 'positive',
     declined: 'negative',
     cancelled: 'muted',

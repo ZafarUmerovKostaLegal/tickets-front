@@ -37,6 +37,17 @@
   border-radius: 8px;
 }
 
+.vac-dec-modal__stage {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: #1e3a8a;
+  background: color-mix(in srgb, #2563eb 7%, var(--app-surface, #fff));
+  border: 1px solid color-mix(in srgb, #2563eb 24%, var(--app-border, #e2e8f0));
+  border-radius: 8px;
+}
+
 .vac-dec-modal__field {
   display: flex;
   flex-direction: column;

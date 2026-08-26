@@ -68,6 +68,11 @@ export {
     type VacationLeavePendingBadgeCountsApi,
 } from './api';
 
+export {
+    isVacationManagingPartner,
+    VACATION_MANAGING_PARTNER_EMAIL,
+    VACATION_MANAGING_PARTNER_NAME,
+} from './managingPartner';
 export { useVacationLeavePendingBadge } from './lib/useVacationLeavePendingBadge';
 export {
     formatVacationLeavePendingBadge,

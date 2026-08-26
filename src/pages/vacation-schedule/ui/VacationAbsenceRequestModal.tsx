@@ -256,7 +256,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
             });
             pushToast({
                 variant: 'success',
-                message: `Заявка #${created.id} отправлена партнёру ${partner.label}.`,
+                message: `Заявка #${created.id} отправлена курирующему партнёру ${partner.label}.`,
             });
             invalidateVacationLeaveRequests();
             onSubmitted?.(created);
@@ -458,7 +458,8 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                             )}
                         </label>
                         <p className="vac-req-modal__tip">
-                            Курирующий партнёр получит PDF с кнопками «Утвердить» / «Отклонить». После approve дни появятся в графике.
+                            Курирующий партнёр получит PDF с кнопками «Утвердить» / «Отклонить». Если он отклонит — заявка аннулируется,
+                            если согласует — заявку финально подтверждает управляющий партнёр, и только после этого дни появятся в графике.
                         </p>
                     </fieldset>
 

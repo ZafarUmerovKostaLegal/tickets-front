@@ -24,6 +24,11 @@ const TITLES = {
     decline: 'Отклонить заявку',
 } as const;
 
+const FINAL_TITLES = {
+    approve: 'Финальное утверждение заявки',
+    decline: 'Отклонить заявку окончательно',
+} as const;
+
 const SUBMIT_LABELS = {
     approve: 'Утвердить',
     decline: 'Отклонить',
@@ -73,9 +78,11 @@ export function VacationDecisionModal({ open, onClose, request, decision, onDeci
             pushToast({
                 variant: decision === 'approve' ? 'success' : 'info',
                 message:
-                    decision === 'approve'
-                        ? `Заявка #${request.id} утверждена.`
-                        : `Заявка #${request.id} отклонена.`,
+                    decision !== 'approve'
+                        ? `Заявка #${request.id} отклонена.`
+                        : next.status === 'pending_final'
+                            ? `Заявка #${request.id} согласована и ушла на финальное подтверждение управляющему партнёру.`
+                            : `Заявка #${request.id} утверждена.`,
             });
             onDecided(next);
             onClose();
@@ -92,13 +99,18 @@ export function VacationDecisionModal({ open, onClose, request, decision, onDeci
         return null;
 
     const declineReasonRequired = decision === 'decline';
+    const finalStage = request.status === 'pending_final';
+    const stageHint = finalStage
+        ? `${request.partner_full_name || 'Курирующий партнёр'} уже согласовал заявку. Ваше решение финальное: после утверждения дни появятся в графике.`
+        : 'Это согласование курирующего партнёра. После него заявку подтверждает управляющий партнёр'
+            + `${request.managing_partner_full_name ? ` (${request.managing_partner_full_name})` : ''}.`;
 
     return createPortal(
         <div className="vac-imp-modal vac-dec-modal" role="dialog" aria-modal="true" aria-labelledby={`${uid}-title`}>
             <form className="vac-imp-modal__dialog vac-dec-modal__dialog" onSubmit={handleSubmit}>
                 <div className="vac-imp-modal__head">
                     <h2 id={`${uid}-title`} className="vac-imp-modal__title">
-                        {TITLES[decision]}
+                        {finalStage ? FINAL_TITLES[decision] : TITLES[decision]}
                     </h2>
                     <button type="button" className="vac-imp-modal__x" onClick={onClose} disabled={submitting} aria-label="Закрыть">
                         ×
@@ -117,6 +129,12 @@ export function VacationDecisionModal({ open, onClose, request, decision, onDeci
                             Комментарий сотрудника: «{request.reason}»
                         </p>
                     )}
+                    <p className="vac-dec-modal__stage">{stageHint}</p>
+                    {finalStage && request.decision_reason ? (
+                        <p className="vac-dec-modal__reason-given">
+                            Резолюция курирующего партнёра: «{request.decision_reason}»
+                        </p>
+                    ) : null}
                     <label className="vac-dec-modal__field">
                         <span>
                             Комментарий к решению
