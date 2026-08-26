@@ -140,6 +140,53 @@ function wrapTextBlock(
     return cy;
 }
 
+/** wrapTextBlock but keep explicit line breaks from the invoice / client address. */
+function wrapTextBlockPreservingNewlines(
+    page: PDFPage,
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    size: number,
+    font: PDFFont,
+    color: PdfRgb,
+    lineGap: number,
+): number {
+    const chunks = String(text ?? '').split(/\r?\n/);
+    let cy = y;
+    let drew = false;
+    for (const chunk of chunks) {
+        const t = chunk.trim();
+        if (!t)
+            continue;
+        cy = wrapTextBlock(page, t, x, cy, maxWidth, size, font, color, lineGap);
+        drew = true;
+    }
+    return drew ? cy : y;
+}
+
+function drawPdfLabelAndValue(
+    page: PDFPage,
+    label: string,
+    value: string,
+    x: number,
+    y: number,
+    maxWidth: number,
+    font: PDFFont,
+    fontBold: PDFFont,
+    color: PdfRgb,
+    lineGap: number,
+): number {
+    const labelText = `${label}:`;
+    const gap = 4;
+    const labelW = fontBold.widthOfTextAtSize(labelText, DOC_FS);
+    page.drawText(labelText, { x, y, size: DOC_FS, font: fontBold, color });
+    const valueStart = x + labelW + gap;
+    const valueMax = Math.max(24, maxWidth - (valueStart - x));
+    const shown = (value ?? '').trim() || '—';
+    return wrapTextBlock(page, shown, valueStart, y, valueMax, DOC_FS, font, color, lineGap);
+}
+
 function splitTextLines(text: string, maxWidth: number, size: number, font: PDFFont): string[] {
     const words = text.split(/\s+/).filter(Boolean);
     const lines: string[] = [];
@@ -222,13 +269,33 @@ function drawCoverPage(
     y -= DOC_LH + COVER_DATE_AFTER;
     page.drawText(model.recipientCompany, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
     y -= DOC_LH;
-    page.drawText(model.recipientAddressLines[0], { x: ML, y, size: DOC_FS, font, color: BODY });
+    const coverAddrW = W - ML - MR;
+    y = wrapTextBlockPreservingNewlines(
+        page,
+        model.recipientAddressLines[0],
+        ML,
+        y,
+        coverAddrW,
+        DOC_FS,
+        font,
+        BODY,
+        DOC_LH,
+    );
     if (model.recipientAddressLines[1]) {
-        y -= DOC_LH;
-        page.drawText(model.recipientAddressLines[1], { x: ML, y, size: DOC_FS, font, color: BODY });
+        y = wrapTextBlockPreservingNewlines(
+            page,
+            model.recipientAddressLines[1],
+            ML,
+            y,
+            coverAddrW,
+            DOC_FS,
+            font,
+            BODY,
+            DOC_LH,
+        );
     }
 
-    y -= DOC_LH + COVER_BLOCK_GAP;
+    y -= COVER_BLOCK_GAP;
     const labels = getCoverLetterLabels(model.coverLanguage);
     page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
     y -= DOC_LH;
@@ -1220,11 +1287,10 @@ function drawLegalInvoicePdfPage(
     });
     let yBlurb = y - DOC_LH * 1.15;
 
-    yBlurb = wrapTextBlock(page, firmAddress, ML, yBlurb, blurbW, DOC_FS, font, MUTED_TEXT, DOC_LH * 0.92);
+    yBlurb = wrapTextBlockPreservingNewlines(page, firmAddress, ML, yBlurb, blurbW, DOC_FS, font, MUTED_TEXT, DOC_LH * 0.92);
     const leftBlurb = resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage);
     for (const ln of leftBlurb) {
-        page.drawText(ln, { x: ML, y: yBlurb, size: DOC_FS, font, color: MUTED_TEXT });
-        yBlurb -= DOC_LH * 0.92;
+        yBlurb = wrapTextBlock(page, ln, ML, yBlurb, blurbW, DOC_FS, font, MUTED_TEXT, DOC_LH * 0.92);
     }
 
     y = Math.min(yBlurb, logoBottom) - LEGAL_MASTHEAD_MB;
@@ -1258,6 +1324,8 @@ function drawLegalInvoicePdfPage(
 
     const splitX = ML + contentW * 0.52;
     const rightColW = W - MR - splitX - 8;
+    const leftColW = Math.max(80, splitX - ML - 8);
+    const billLineGap = DOC_LH * 0.92;
     const panelsTop = y;
 
     page.drawText(labels.billTo, { x: ML, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
@@ -1272,24 +1340,52 @@ function drawLegalInvoicePdfPage(
     });
 
     let yLeft = headsRuleY - DOC_LH * 0.95;
-    page.drawText(model.recipientCompany, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: BODY });
-    yLeft -= DOC_LH;
-    page.drawText(`${labels.address}:`, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: MUTED_TEXT });
-    yLeft -= DOC_LH * 0.92;
-    page.drawText(model.recipientAddressLines[0], { x: ML, y: yLeft, size: DOC_FS, font, color: MUTED_TEXT });
-    yLeft -= DOC_LH * 0.92;
-    if (model.recipientAddressLines[1]) {
-        page.drawText(model.recipientAddressLines[1], { x: ML, y: yLeft, size: DOC_FS, font, color: MUTED_TEXT });
-        yLeft -= DOC_LH * 0.92;
+    const companyLines = splitTextLines(model.recipientCompany, leftColW, DOC_FS, fontBold);
+    for (const ln of companyLines) {
+        page.drawText(ln, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: BODY });
+        yLeft -= DOC_LH;
     }
-    page.drawText(`${labels.bankName}:`, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: MUTED_TEXT });
-    yLeft -= DOC_LH * 0.92;
-    page.drawText(resolveLegalBillToBankName(legalOverrides), { x: ML, y: yLeft, size: DOC_FS, font, color: MUTED_TEXT });
-    yLeft -= DOC_LH * 0.92;
-    page.drawText(`${labels.swift}:`, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: MUTED_TEXT });
-    yLeft -= DOC_LH * 0.92;
-    page.drawText(resolveLegalBillToSwift(legalOverrides), { x: ML, y: yLeft, size: DOC_FS, font, color: MUTED_TEXT });
-    yLeft -= DOC_LH * 0.92;
+    page.drawText(`${labels.address}:`, { x: ML, y: yLeft, size: DOC_FS, font: fontBold, color: MUTED_TEXT });
+    yLeft -= billLineGap;
+    const addressBlock = [model.recipientAddressLines[0], model.recipientAddressLines[1]]
+        .map((s) => String(s ?? '').trim())
+        .filter(Boolean)
+        .join('\n');
+    yLeft = wrapTextBlockPreservingNewlines(
+        page,
+        addressBlock,
+        ML,
+        yLeft,
+        leftColW,
+        DOC_FS,
+        font,
+        MUTED_TEXT,
+        billLineGap,
+    );
+    yLeft = drawPdfLabelAndValue(
+        page,
+        labels.bankName,
+        resolveLegalBillToBankName(legalOverrides),
+        ML,
+        yLeft,
+        leftColW,
+        font,
+        fontBold,
+        MUTED_TEXT,
+        billLineGap,
+    );
+    yLeft = drawPdfLabelAndValue(
+        page,
+        labels.swift,
+        resolveLegalBillToSwift(legalOverrides),
+        ML,
+        yLeft,
+        leftColW,
+        font,
+        fontBold,
+        MUTED_TEXT,
+        billLineGap,
+    );
 
     const yRight = wrapTextBlock(page, caseLine, splitX, headsRuleY - DOC_LH * 0.95, rightColW, DOC_FS, font, BODY, DOC_LH);
 

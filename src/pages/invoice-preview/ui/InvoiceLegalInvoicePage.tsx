@@ -234,20 +234,22 @@ export function InvoiceLegalInvoicePage({
               />
             </p>
           ) : null}
-          <p className="tt-inv-li__panel-label">{labels.bankName}:</p>
-          <p className="tt-inv-li__panel-muted">
+          <p className="tt-inv-li__firm-line tt-inv-li__bank-line">
+            <span className="tt-inv-li__panel-label tt-inv-li__bank-label">{labels.bankName}:</span>
             <LiField
               editable={editable}
+              className="tt-inv-li__field--bank"
               value={editable ? legalBankingInputValue(legalOverrides?.billToBankName) : billToBankName}
               placeholder="—"
               ariaLabel={`${labels.billTo} ${labels.bankName}`}
               onChange={(billToBankName) => patchBanking('billToBankName', billToBankName)}
             />
           </p>
-          <p className="tt-inv-li__panel-label">{labels.swift}:</p>
-          <p className="tt-inv-li__panel-muted">
+          <p className="tt-inv-li__firm-line tt-inv-li__bank-line">
+            <span className="tt-inv-li__panel-label tt-inv-li__bank-label">{labels.swift}:</span>
             <LiField
               editable={editable}
+              className="tt-inv-li__field--bank"
               value={editable ? legalBankingInputValue(legalOverrides?.billToSwift) : billToSwift}
               placeholder="—"
               ariaLabel={`${labels.billTo} ${labels.swift}`}

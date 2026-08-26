@@ -76,7 +76,7 @@ function splitAddress(raw: string | null, lang: InvoiceCoverLanguage): [string, 
         return [fallback, ''];
     const lines = raw.split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
     if (lines.length >= 2)
-        return [lines[0]!, lines.slice(1).join(', ')];
+        return [lines[0]!, lines.slice(1).join('\n')];
     const parts = raw.split(',').map((s) => s.trim()).filter(Boolean);
     if (parts.length >= 2)
         return [parts[0]!, parts.slice(1).join(', ')];

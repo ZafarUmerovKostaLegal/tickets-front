@@ -139,9 +139,13 @@ function coverChildren(
         new Paragraph({ children: [new TextRun({ text: model.recipientAddressLines[0], size: DOC_SIZE, font: DOC_FONT })] }),
     ];
 
-    if (model.recipientAddressLines[1]) {
+    const coverAddrExtra = String(model.recipientAddressLines[1] ?? '')
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    for (const line of coverAddrExtra) {
         body.push(new Paragraph({
-            children: [new TextRun({ text: model.recipientAddressLines[1], size: DOC_SIZE, font: DOC_FONT })],
+            children: [new TextRun({ text: line, size: DOC_SIZE, font: DOC_FONT })],
         }));
     }
 
@@ -598,32 +602,30 @@ function legalInvoiceDocxBlocks(
             spacing: { after: 30 },
             children: [new TextRun({ text: `${labels.address}:`, color: '707784', size: DOC_SIZE, font: DOC_FONT })],
         }),
-        new Paragraph({
-            spacing: { after: 30 },
-            children: [new TextRun({ text: model.recipientAddressLines[0], size: DOC_SIZE, font: DOC_FONT })],
-        }),
     ];
-    if (model.recipientAddressLines[1]) {
+    const billAddressLines = [model.recipientAddressLines[0], model.recipientAddressLines[1]]
+        .flatMap((s) => String(s ?? '').split(/\r?\n/))
+        .map((s) => s.trim())
+        .filter(Boolean);
+    billAddressLines.forEach((line, i) => {
         billChildren.push(new Paragraph({
-            spacing: { after: 40 },
-            children: [new TextRun({ text: model.recipientAddressLines[1], size: DOC_SIZE, font: DOC_FONT })],
+            spacing: { after: i === billAddressLines.length - 1 ? 40 : 30 },
+            children: [new TextRun({ text: line, size: DOC_SIZE, font: DOC_FONT })],
         }));
-    }
+    });
     billChildren.push(
         new Paragraph({
             spacing: { after: 30 },
-            children: [new TextRun({ text: `${labels.bankName}:`, color: '707784', size: DOC_SIZE, font: DOC_FONT })],
+            children: [
+                new TextRun({ text: `${labels.bankName}: `, color: '707784', size: DOC_SIZE, font: DOC_FONT }),
+                new TextRun({ text: resolveLegalBillToBankName(legalOverrides), color: '707784', size: DOC_SIZE, font: DOC_FONT }),
+            ],
         }),
         new Paragraph({
-            spacing: { after: 30 },
-            children: [new TextRun({ text: resolveLegalBillToBankName(legalOverrides), color: '707784', size: DOC_SIZE, font: DOC_FONT })],
-        }),
-        new Paragraph({
-            spacing: { after: 30 },
-            children: [new TextRun({ text: `${labels.swift}:`, color: '707784', size: DOC_SIZE, font: DOC_FONT })],
-        }),
-        new Paragraph({
-            children: [new TextRun({ text: resolveLegalBillToSwift(legalOverrides), color: '707784', size: DOC_SIZE, font: DOC_FONT })],
+            children: [
+                new TextRun({ text: `${labels.swift}: `, color: '707784', size: DOC_SIZE, font: DOC_FONT }),
+                new TextRun({ text: resolveLegalBillToSwift(legalOverrides), color: '707784', size: DOC_SIZE, font: DOC_FONT }),
+            ],
         }),
     );
 

@@ -134,10 +134,12 @@
 
 .tt-inv-li__panel--bill {
   grid-area: bill;
+  min-width: 0;
 }
 
 .tt-inv-li__panel--right {
   grid-area: case;
+  min-width: 0;
 }
 
 .tt-inv-li__panel-strong {
@@ -160,10 +162,24 @@
   color: #64748b;
 }
 
+.tt-inv-li__bank-line .tt-inv-li__panel-label {
+  margin: 0;
+}
+
+.tt-inv-li__panel--bill > .tt-inv-li__bank-line {
+  margin-top: 0.45rem;
+}
+
+.tt-inv-li__panel--bill > .tt-inv-li__bank-line + .tt-inv-li__bank-line {
+  margin-top: 0.2rem;
+}
+
 .tt-inv-li__panel-muted {
   margin: 0;
   font-size: inherit;
   color: #64748b;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
 }
 
 .tt-inv-li__muted-dash {
@@ -174,6 +190,7 @@
   margin: 0;
   font-size: inherit;
   color: #0f172a;
+  overflow-wrap: break-word;
 }
 
 @media (max-width: 620px) {
