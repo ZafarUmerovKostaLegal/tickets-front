@@ -34,7 +34,7 @@ function employeeTitleFromReq(req: VacationLeaveRequestApi): string {
     return req.employee_full_name || req.employee_email || `Сотрудник #${req.employee_user_id}`;
 }
 
-type Mode = 'mine' | 'to_decide';
+type Mode = 'mine' | 'to_decide' | 'all';
 
 type Props = {
     mode: Mode;
@@ -44,8 +44,7 @@ type Props = {
     onScheduleMayHaveChanged?: () => void;
 };
 
-const FILTERS: ReadonlyArray<{ value: VacationLeaveRequestStatus | 'any'; label: string }> = [
-    { value: 'any', label: 'Все' },
+const FILTERS: ReadonlyArray<{ value: VacationLeaveRequestStatus; label: string }> = [
     { value: 'pending', label: 'У курирующего' },
     { value: 'pending_final', label: 'У управляющего' },
     { value: 'approved', label: 'Утверждённые' },
@@ -174,27 +173,33 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
     }, [onScheduleMayHaveChanged]);
 
     const isMine = mode === 'mine';
+    const isAll = mode === 'all';
     const isPartner = canDecideVacationLeaveRequests(user);
+    const canActAsDecider = mode === 'to_decide' || mode === 'all';
     const calendarActions = useMemo(() => {
         if (!calendarRequest)
             return undefined;
         return leaveRequestAvailableActions(calendarRequest, {
             userId: user?.id,
             userEmail: user?.email,
-            isAuthor: isMine,
-            canActAsDecider: mode === 'to_decide',
+            isAuthor: calendarRequest.employee_user_id === user?.id,
+            canActAsDecider,
             isPartner,
         });
-    }, [calendarRequest, isMine, isPartner, mode, user?.email, user?.id]);
+    }, [calendarRequest, canActAsDecider, isPartner, user?.email, user?.id]);
 
     return (
         <div className="vac-lr-panel">
             <div className="vac-lr-panel__head">
-                <h2 className="vac-lr-panel__title">{isMine ? 'Мои заявки' : 'Заявки на согласование'}</h2>
+                <h2 className="vac-lr-panel__title">
+                    {isMine ? 'Мои заявки' : isAll ? 'Все заявки' : 'Заявки на согласование'}
+                </h2>
                 <p className="vac-lr-panel__subtitle">
                     {isMine
                         ? 'Заявка идёт курирующему партнёру, затем на финальное подтверждение управляющему партнёру. Если курирующим выбран управляющий партнёр — достаточно одного решения.'
-                        : 'Курирующий партнёр согласовывает первым, финальное решение принимает управляющий партнёр — после него дни появляются в графике. Если курирующим выбран сам управляющий партнёр, промежуточной ступени нет.'}
+                        : isAll
+                            ? 'Все заявки сотрудников. Партнёр может утвердить, отклонить или удалить заявку на своей ступени.'
+                            : 'Курирующий партнёр согласовывает первым, финальное решение принимает управляющий партнёр — после него дни появляются в графике. Если курирующим выбран сам управляющий партнёр, промежуточной ступени нет.'}
                 </p>
             </div>
 
@@ -208,12 +213,10 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                             role="tab"
                             aria-selected={active}
                             className={`vac-lr-panel__chip${active ? ' vac-lr-panel__chip--on' : ''}`}
-                            onClick={() => setStatus(f.value)}
+                            onClick={() => setStatus((prev) => (prev === f.value ? 'any' : f.value))}
                         >
                             <span>{f.label}</span>
-                            {f.value !== 'any' && (
-                                <span className="vac-lr-panel__chip-count" aria-hidden>{counts[f.value]}</span>
-                            )}
+                            <span className="vac-lr-panel__chip-count" aria-hidden>{counts[f.value]}</span>
                         </button>
                     );
                 })}
@@ -244,7 +247,9 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                 <p className="vac-lr-panel__empty">
                     {isMine
                         ? 'У вас пока нет заявок. Нажмите «+» в шапке, чтобы подать новую.'
-                        : 'Заявок, которые ждут вашего решения, нет.'}
+                        : isAll
+                            ? 'Заявок пока нет.'
+                            : 'Заявок, которые ждут вашего решения, нет.'}
                 </p>
             ) : visibleItems.length === 0 ? (
                 <p className="vac-lr-panel__empty">Нет заявок в этом статусе.</p>
@@ -264,8 +269,8 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                         const cardActions = leaveRequestAvailableActions(req, {
                             userId: user?.id,
                             userEmail: user?.email,
-                            isAuthor: isMine,
-                            canActAsDecider: mode === 'to_decide',
+                            isAuthor: req.employee_user_id === user?.id,
+                            canActAsDecider,
                             isPartner,
                         });
                         const { canDecide, canWithdraw, canCancelApproved, canDelete } = cardActions;

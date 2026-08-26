@@ -11,9 +11,9 @@ import { VacationScheduleHeaderMenu } from './VacationScheduleHeaderMenu';
 import { VacationLeaveRequestsPanel } from './VacationLeaveRequestsPanel';
 import './VacationSchedulePage.css';
 
-type Tab = 'schedule' | 'mine' | 'to_decide';
+type Tab = 'schedule' | 'mine' | 'to_decide' | 'all';
 
-const TAB_IDS = new Set<Tab>(['schedule', 'mine', 'to_decide']);
+const TAB_IDS = new Set<Tab>(['schedule', 'mine', 'to_decide', 'all']);
 
 function parseVacationTabParam(raw: string | null): Tab | null {
     if (!raw)
@@ -44,7 +44,7 @@ export function VacationSchedulePage() {
     }, [searchParams]);
 
     useEffect(() => {
-        if (!canDecideRequests && activeTab === 'to_decide')
+        if (!canDecideRequests && (activeTab === 'to_decide' || activeTab === 'all'))
             setActiveTab('schedule');
     }, [canDecideRequests, activeTab]);
 
@@ -84,6 +84,11 @@ export function VacationSchedulePage() {
             badgeAria: counts.toDecideCount > 0
                 ? t('homeHub.vacationToDecideBadgeAria').replace('{count}', String(counts.toDecideCount))
                 : undefined,
+        },
+        {
+            id: 'all',
+            label: 'Все',
+            visible: canDecideRequests,
         },
     ];
 
@@ -207,6 +212,13 @@ export function VacationSchedulePage() {
                         {activeTab === 'to_decide' && canDecideRequests && (
                             <VacationLeaveRequestsPanel
                                 mode="to_decide"
+                                refreshToken={refreshToken}
+                                onScheduleMayHaveChanged={bumpRefresh}
+                            />
+                        )}
+                        {activeTab === 'all' && canDecideRequests && (
+                            <VacationLeaveRequestsPanel
+                                mode="all"
                                 refreshToken={refreshToken}
                                 onScheduleMayHaveChanged={bumpRefresh}
                             />
