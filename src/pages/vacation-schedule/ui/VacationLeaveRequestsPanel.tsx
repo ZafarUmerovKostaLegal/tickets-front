@@ -96,7 +96,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         let cancelled = false;
         setLoading(true);
         setError(null);
-        void listVacationLeaveRequests({ scope: mode, status })
+        void listVacationLeaveRequests({ scope: mode, status: 'any' })
             .then((list) => {
                 if (cancelled)
                     return;
@@ -115,7 +115,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         return () => {
             cancelled = true;
         };
-    }, [mode, status, reloadTick, refreshToken]);
+    }, [mode, reloadTick, refreshToken]);
 
     useEffect(() => {
         const onFocus = () => setReloadTick((t) => t + 1);
@@ -144,6 +144,11 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         return acc;
     }, [items]);
 
+    const visibleItems = useMemo(
+        () => (status === 'any' ? items : items.filter((it) => it.status === status)),
+        [items, status],
+    );
+
     const handleAuthorActionApplied = useCallback((next: VacationLeaveRequestApi) => {
         setItems((prev) => prev.map((it) => (it.id === next.id ? next : it)));
         setCalendarRequest((prev) => (prev?.id === next.id ? next : prev));
@@ -151,9 +156,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         // Дни в графике есть только у одобренной заявки — отзыв pending график не меняет.
         if (authorAction?.action === 'cancel')
             onScheduleMayHaveChanged?.();
-        if (status !== 'any' && status !== next.status)
-            setReloadTick((t) => t + 1);
-    }, [authorAction, onScheduleMayHaveChanged, status]);
+    }, [authorAction, onScheduleMayHaveChanged]);
 
     const handleRequestDeleted = useCallback((id: number) => {
         setItems((prev) => prev.filter((it) => it.id !== id));
@@ -168,9 +171,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         if (next.status === 'approved')
             onScheduleMayHaveChanged?.();
         invalidateVacationLeaveRequests();
-        if (status !== 'any' && next.status !== status)
-            setReloadTick((t) => t + 1);
-    }, [onScheduleMayHaveChanged, status]);
+    }, [onScheduleMayHaveChanged]);
 
     const isMine = mode === 'mine';
     const isPartner = canDecideVacationLeaveRequests(user);
@@ -245,9 +246,11 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                         ? 'У вас пока нет заявок. Нажмите «+» в шапке, чтобы подать новую.'
                         : 'Заявок, которые ждут вашего решения, нет.'}
                 </p>
+            ) : visibleItems.length === 0 ? (
+                <p className="vac-lr-panel__empty">Нет заявок в этом статусе.</p>
             ) : (
                 <ul className="vac-lr-panel__list">
-                    {items.map((req) => {
+                    {visibleItems.map((req) => {
                         const tone = leaveStatusTone(req.status);
                         const statusLabel = leaveStatusLabel(req.status, req);
                         const kindLabel = leaveKindLabel(req.kind, kinds);
