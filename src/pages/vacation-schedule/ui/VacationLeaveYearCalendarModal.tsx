@@ -359,7 +359,7 @@ export function VacationLeaveYearCalendarModal({
     const period = formatRuRange(request.date_from, request.date_to);
     const isRequestYear = year === requestYear;
     const statusTone = leaveStatusTone(request.status);
-    const statusLabel = leaveStatusLabel(request.status);
+    const statusLabel = leaveStatusLabel(request.status, request);
     const waitingFor = leaveApprovalWaitingFor(request);
     const showActions = Boolean(
         onOpenPdf
@@ -577,7 +577,7 @@ export function VacationLeaveYearCalendarModal({
                                             type="button"
                                             className="vac-lr-card__btn vac-lr-card__btn--danger"
                                             onClick={() => onDelete(request)}
-                                            title="Удалить заявку из истории"
+                                            title="Удалить заявку безвозвратно"
                                         >
                                             Удалить
                                         </button>

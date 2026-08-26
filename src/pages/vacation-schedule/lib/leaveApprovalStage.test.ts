@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VacationLeaveRequestApi } from '@entities/vacation';
-import { canDecideLeaveRequest, leaveApprovalWaitingFor, leaveRequestAvailableActions } from './leaveApprovalStage';
+import { canDecideLeaveRequest, isDirectManagingPartnerRequest, leaveApprovalWaitingFor, leaveRequestAvailableActions } from './leaveApprovalStage';
 
 const PARTNER_ID = 7;
 const EMPLOYEE_ID = 42;
@@ -42,6 +42,18 @@ describe('canDecideLeaveRequest', () => {
 
         expect(canDecideLeaveRequest(req, { userId: PARTNER_ID, userEmail: 'nhassanov@kostalegal.com' })).toBe(true);
         expect(canDecideLeaveRequest(req, { userId: 99, userEmail: MANAGING_EMAIL })).toBe(false);
+    });
+
+    it('вторую ступень пропускает, если курирующий — сам управляющий партнёр', () => {
+        const req = makeRequest({
+            partner_user_id: 99,
+            partner_email: MANAGING_EMAIL,
+            partner_full_name: 'Azizbek Akhmadjonov',
+        });
+
+        expect(isDirectManagingPartnerRequest(req)).toBe(true);
+        expect(canDecideLeaveRequest(req, { userId: 99, userEmail: MANAGING_EMAIL })).toBe(true);
+        expect(leaveApprovalWaitingFor(req)).toBe('Azizbek Akhmadjonov');
     });
 
     it('вторую ступень решает только управляющий партнёр', () => {
@@ -86,6 +98,13 @@ describe('leaveRequestAvailableActions', () => {
             canCancelApproved: true,
             canDelete: false,
         });
+    });
+
+    it('партнёру даёт удалить любую заявку', () => {
+        const asPartner = { ...partner, isPartner: true };
+        expect(leaveRequestAvailableActions(makeRequest(), asPartner).canDelete).toBe(true);
+        expect(leaveRequestAvailableActions(makeRequest({ status: 'approved' }), asPartner).canDelete).toBe(true);
+        expect(leaveRequestAvailableActions(makeRequest({ status: 'pending_final' }), asPartner).canDelete).toBe(true);
     });
 
     it('согласующему даёт утвердить или отклонить на своей ступени', () => {

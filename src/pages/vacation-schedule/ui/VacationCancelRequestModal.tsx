@@ -41,7 +41,7 @@ const SUBMIT_LABELS: Record<VacationRequestAuthorAction, string> = {
 const WARNINGS: Record<VacationRequestAuthorAction, string> = {
     withdraw: 'Согласующие получат уведомление, что заявка отозвана до финального решения. Подать новую заявку на этот период можно будет сразу.',
     cancel: 'Дни этого отсутствия будут удалены из графика, а партнёр получит уведомление об отмене.',
-    delete: 'Заявка и её PDF будут удалены безвозвратно — восстановить историю согласования не получится.',
+    delete: 'Заявка и её PDF будут удалены безвозвратно. Если отсутствие уже стоит в графике, эти дни тоже уберутся.',
 };
 
 export function VacationCancelRequestModal({ open, onClose, request, action, onUpdated, onDeleted }: Props) {

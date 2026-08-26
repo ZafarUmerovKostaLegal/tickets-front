@@ -4,6 +4,7 @@ import type {
     VacationLeaveRequestKind,
     VacationLeaveRequestStatus,
 } from '@entities/vacation';
+import { isDirectManagingPartnerRequest } from './leaveApprovalStage';
 
 const KIND_LABEL_FALLBACK: Record<VacationLeaveRequestKind, string> = {
     annual_vacation: 'Ежегодный отпуск',
@@ -36,7 +37,12 @@ const STATUS_LABEL: Record<VacationLeaveRequestStatus, string> = {
     cancelled: 'Отменено',
 };
 
-export function leaveStatusLabel(status: VacationLeaveRequestStatus): string {
+export function leaveStatusLabel(
+    status: VacationLeaveRequestStatus,
+    req?: VacationLeaveRequestApi | null,
+): string {
+    if (status === 'pending' && req && isDirectManagingPartnerRequest(req))
+        return STATUS_LABEL.pending_final;
     return STATUS_LABEL[status] ?? status;
 }
 

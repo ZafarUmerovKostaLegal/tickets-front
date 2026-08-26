@@ -12,6 +12,7 @@ import {
     leaveApprovalWaitingFor,
     leaveRequestAvailableActions,
 } from '../lib/leaveApprovalStage';
+import { canDecideVacationLeaveRequests } from '../model/vacationScheduleAccess';
 import {
     formatRuRange,
     formatTimestampShort,
@@ -158,7 +159,8 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
         setItems((prev) => prev.filter((it) => it.id !== id));
         setCalendarRequest((prev) => (prev?.id === id ? null : prev));
         invalidateVacationLeaveRequests();
-    }, []);
+        onScheduleMayHaveChanged?.();
+    }, [onScheduleMayHaveChanged]);
 
     const handleDecisionApplied = useCallback((next: VacationLeaveRequestApi) => {
         setItems((prev) => prev.map((it) => (it.id === next.id ? next : it)));
@@ -171,6 +173,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
     }, [onScheduleMayHaveChanged, status]);
 
     const isMine = mode === 'mine';
+    const isPartner = canDecideVacationLeaveRequests(user);
     const calendarActions = useMemo(() => {
         if (!calendarRequest)
             return undefined;
@@ -179,8 +182,9 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
             userEmail: user?.email,
             isAuthor: isMine,
             canActAsDecider: mode === 'to_decide',
+            isPartner,
         });
-    }, [calendarRequest, isMine, mode, user?.email, user?.id]);
+    }, [calendarRequest, isMine, isPartner, mode, user?.email, user?.id]);
 
     return (
         <div className="vac-lr-panel">
@@ -188,8 +192,8 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                 <h2 className="vac-lr-panel__title">{isMine ? 'Мои заявки' : 'Заявки на согласование'}</h2>
                 <p className="vac-lr-panel__subtitle">
                     {isMine
-                        ? 'Заявка идёт курирующему партнёру, затем на финальное подтверждение управляющему партнёру.'
-                        : 'Курирующий партнёр согласовывает первым, финальное решение принимает управляющий партнёр — после него дни появляются в графике.'}
+                        ? 'Заявка идёт курирующему партнёру, затем на финальное подтверждение управляющему партнёру. Если курирующим выбран управляющий партнёр — достаточно одного решения.'
+                        : 'Курирующий партнёр согласовывает первым, финальное решение принимает управляющий партнёр — после него дни появляются в графике. Если курирующим выбран сам управляющий партнёр, промежуточной ступени нет.'}
                 </p>
             </div>
 
@@ -245,7 +249,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                 <ul className="vac-lr-panel__list">
                     {items.map((req) => {
                         const tone = leaveStatusTone(req.status);
-                        const statusLabel = leaveStatusLabel(req.status);
+                        const statusLabel = leaveStatusLabel(req.status, req);
                         const kindLabel = leaveKindLabel(req.kind, kinds);
                         const range = formatRuRange(req.date_from, req.date_to);
                         const personLabel = isMine
@@ -259,6 +263,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                             userEmail: user?.email,
                             isAuthor: isMine,
                             canActAsDecider: mode === 'to_decide',
+                            isPartner,
                         });
                         const { canDecide, canWithdraw, canCancelApproved, canDelete } = cardActions;
                         return (
@@ -367,7 +372,7 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
                                             type="button"
                                             className="vac-lr-card__btn vac-lr-card__btn--danger"
                                             onClick={() => setAuthorAction({ request: req, action: 'delete' })}
-                                            title="Удалить заявку из истории"
+                                            title="Удалить заявку безвозвратно"
                                         >
                                             Удалить
                                         </button>

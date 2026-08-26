@@ -12,6 +12,11 @@ export function isManagingPartnerEmail(
     return isVacationManagingPartner(userEmail, req.managing_partner_email);
 }
 
+/** Сотрудник выбрал управляющего партнёра курирующим — второй ступени нет. */
+export function isDirectManagingPartnerRequest(req: VacationLeaveRequestApi): boolean {
+    return isVacationManagingPartner(req.partner_email, req.managing_partner_email);
+}
+
 export type LeaveDecisionActor = {
     userId: number | null | undefined;
     userEmail: string | null | undefined;
@@ -28,8 +33,11 @@ export function canDecideLeaveRequest(req: VacationLeaveRequestApi, actor: Leave
 
 /** Кто ждёт решения по заявке: подпись для карточки. */
 export function leaveApprovalWaitingFor(req: VacationLeaveRequestApi): string | null {
-    if (req.status === 'pending')
+    if (req.status === 'pending') {
+        if (isDirectManagingPartnerRequest(req))
+            return req.managing_partner_full_name || req.partner_full_name || VACATION_MANAGING_PARTNER_NAME;
         return req.partner_full_name || req.partner_email || 'курирующий партнёр';
+    }
     if (req.status === 'pending_final')
         return req.managing_partner_full_name || VACATION_MANAGING_PARTNER_NAME;
     return null;
@@ -38,6 +46,8 @@ export function leaveApprovalWaitingFor(req: VacationLeaveRequestApi): string | 
 export type LeaveRequestViewer = LeaveDecisionActor & {
     isAuthor: boolean;
     canActAsDecider: boolean;
+    /** Партнёр может удалить любую заявку, не только свою отозванную. */
+    isPartner?: boolean;
 };
 
 export type LeaveRequestAvailableActions = {
@@ -52,10 +62,11 @@ export function leaveRequestAvailableActions(
     req: VacationLeaveRequestApi,
     viewer: LeaveRequestViewer,
 ): LeaveRequestAvailableActions {
+    const authorFinal = req.status === 'cancelled' || req.status === 'declined';
     return {
         canDecide: viewer.canActAsDecider && canDecideLeaveRequest(req, viewer),
         canWithdraw: viewer.isAuthor && (req.status === 'pending' || req.status === 'pending_final'),
         canCancelApproved: viewer.isAuthor && req.status === 'approved',
-        canDelete: viewer.isAuthor && (req.status === 'cancelled' || req.status === 'declined'),
+        canDelete: Boolean(viewer.isPartner) || (viewer.isAuthor && authorFinal),
     };
 }

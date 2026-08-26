@@ -6,6 +6,7 @@ import {
     getVacationLeaveKinds,
     getVacationPartners,
     invalidateVacationLeaveRequests,
+    isVacationManagingPartner,
     type VacationLeaveBalanceApi,
     type VacationLeaveKindApi,
     type VacationLeaveRequestApi,
@@ -28,6 +29,7 @@ type PartnerOption = {
     search: string;
     userId: number;
     position: string | null;
+    email: string;
 };
 
 type Props = {
@@ -89,6 +91,11 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
     const [balanceLoading, setBalanceLoading] = useState(false);
 
     const dayCount = useMemo(() => countCalendarDaysInclusive(dateFrom, dateTo), [dateFrom, dateTo]);
+    const selectedPartner = useMemo(
+        () => partners.find((p) => p.id === partnerId) ?? null,
+        [partners, partnerId],
+    );
+    const selectedIsManaging = Boolean(selectedPartner && isVacationManagingPartner(selectedPartner.email));
     const balanceYear = useMemo(() => {
         return yearFromIso(dateFrom) ?? yearFromIso(dateTo) ?? new Date().getFullYear();
     }, [dateFrom, dateTo]);
@@ -164,6 +171,7 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                             userId: u.user_id,
                             label,
                             position,
+                            email: u.email || '',
                             search: `${label} ${position ?? ''} ${u.email}`.toLowerCase(),
                         };
                     })
@@ -458,8 +466,9 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                             )}
                         </label>
                         <p className="vac-req-modal__tip">
-                            Курирующий партнёр получит PDF с кнопками «Утвердить» / «Отклонить». Если он отклонит — заявка аннулируется,
-                            если согласует — заявку финально подтверждает управляющий партнёр, и только после этого дни появятся в графике.
+                            {selectedIsManaging
+                                ? 'Вы выбрали управляющего партнёра. Он одобряет заявку сразу, без промежуточного согласования — после утверждения дни появятся в графике.'
+                                : 'Курирующий партнёр получит PDF с кнопками «Утвердить» / «Отклонить». Если он отклонит — заявка аннулируется, если согласует — заявку финально подтверждает управляющий партнёр, и только после этого дни появятся в графике.'}
                         </p>
                     </fieldset>
 

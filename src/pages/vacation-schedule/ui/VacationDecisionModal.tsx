@@ -5,6 +5,7 @@ import {
     declineVacationLeaveRequest,
     type VacationLeaveRequestApi,
 } from '@entities/vacation';
+import { isDirectManagingPartnerRequest } from '../lib/leaveApprovalStage';
 import { useAppToast } from '@shared/ui';
 import './VacationScheduleImportModal.css';
 import './VacationAbsenceRequestModal.css';
@@ -99,11 +100,14 @@ export function VacationDecisionModal({ open, onClose, request, decision, onDeci
         return null;
 
     const declineReasonRequired = decision === 'decline';
-    const finalStage = request.status === 'pending_final';
-    const stageHint = finalStage
+    const directManaging = isDirectManagingPartnerRequest(request);
+    const finalStage = request.status === 'pending_final' || (request.status === 'pending' && directManaging);
+    const stageHint = request.status === 'pending_final'
         ? `${request.partner_full_name || 'Курирующий партнёр'} уже согласовал заявку. Ваше решение финальное: после утверждения дни появятся в графике.`
-        : 'Это согласование курирующего партнёра. После него заявку подтверждает управляющий партнёр'
-            + `${request.managing_partner_full_name ? ` (${request.managing_partner_full_name})` : ''}.`;
+        : directManaging
+            ? 'Вас выбрали курирующим партнёром. Вы же управляющий партнёр — решение сразу финальное, после утверждения дни появятся в графике.'
+            : 'Это согласование курирующего партнёра. После него заявку подтверждает управляющий партнёр'
+                + `${request.managing_partner_full_name ? ` (${request.managing_partner_full_name})` : ''}.`;
 
     return createPortal(
         <div className="vac-imp-modal vac-dec-modal" role="dialog" aria-modal="true" aria-labelledby={`${uid}-title`}>
