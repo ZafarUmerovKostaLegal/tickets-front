@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { VacationLeaveRequestApi } from '@entities/vacation';
-import { canDecideLeaveRequest, isDirectManagingPartnerRequest, leaveApprovalWaitingFor, leaveRequestAvailableActions } from './leaveApprovalStage';
+import {
+    canDecideLeaveRequest,
+    isDirectManagingPartnerRequest,
+    leaveApprovalWaitingFor,
+    leaveRequestAvailableActions,
+    leaveRequestMatchesInboxFilter,
+} from './leaveApprovalStage';
 
 const PARTNER_ID = 7;
 const EMPLOYEE_ID = 42;
@@ -76,6 +82,26 @@ describe('leaveApprovalWaitingFor', () => {
         expect(leaveApprovalWaitingFor(makeRequest())).toBe('Nail Hassanov');
         expect(leaveApprovalWaitingFor(makeRequest({ status: 'pending_final' }))).toBe('Azizbek Akhmadjonov');
         expect(leaveApprovalWaitingFor(makeRequest({ status: 'approved' }))).toBeNull();
+    });
+});
+
+describe('leaveRequestMatchesInboxFilter', () => {
+    it('на вкладке «На согласовании» без чипа показывает только ожидающие решения', () => {
+        expect(leaveRequestMatchesInboxFilter(makeRequest(), 'any', 'to_decide')).toBe(true);
+        expect(leaveRequestMatchesInboxFilter(makeRequest({ status: 'pending_final' }), 'any', 'to_decide')).toBe(true);
+        expect(leaveRequestMatchesInboxFilter(makeRequest({ status: 'approved' }), 'any', 'to_decide')).toBe(false);
+        expect(leaveRequestMatchesInboxFilter(makeRequest({ status: 'declined' }), 'any', 'to_decide')).toBe(false);
+        expect(leaveRequestMatchesInboxFilter(makeRequest({ status: 'cancelled' }), 'any', 'to_decide')).toBe(false);
+    });
+
+    it('выбранный чип оставляет только этот статус', () => {
+        expect(leaveRequestMatchesInboxFilter(makeRequest({ status: 'declined' }), 'declined', 'to_decide')).toBe(true);
+        expect(leaveRequestMatchesInboxFilter(makeRequest({ status: 'approved' }), 'declined', 'to_decide')).toBe(false);
+    });
+
+    it('в «Мои» и «Все» без чипа показывает все статусы', () => {
+        expect(leaveRequestMatchesInboxFilter(makeRequest({ status: 'approved' }), 'any', 'mine')).toBe(true);
+        expect(leaveRequestMatchesInboxFilter(makeRequest({ status: 'cancelled' }), 'any', 'all')).toBe(true);
     });
 });
 

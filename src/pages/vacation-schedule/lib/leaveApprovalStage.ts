@@ -1,4 +1,26 @@
-import { isVacationManagingPartner, VACATION_MANAGING_PARTNER_NAME, type VacationLeaveRequestApi } from '@entities/vacation';
+import {
+    isVacationManagingPartner,
+    VACATION_MANAGING_PARTNER_NAME,
+    type VacationLeaveRequestApi,
+    type VacationLeaveRequestStatus,
+} from '@entities/vacation';
+
+export type LeaveInboxFilter = VacationLeaveRequestStatus | 'any';
+
+const AWAITING_DECISION: ReadonlySet<VacationLeaveRequestStatus> = new Set(['pending', 'pending_final']);
+
+/** Вкладка «На согласовании» без выбранного чипа — только заявки, которые ещё ждут решения. */
+export function leaveRequestMatchesInboxFilter(
+    req: VacationLeaveRequestApi,
+    filter: LeaveInboxFilter,
+    mode: 'mine' | 'to_decide' | 'all',
+): boolean {
+    if (filter !== 'any')
+        return req.status === filter;
+    if (mode === 'to_decide')
+        return AWAITING_DECISION.has(req.status);
+    return true;
+}
 
 /**
  * Заявка проходит две ступени: сначала выбранный курирующий партнёр, затем

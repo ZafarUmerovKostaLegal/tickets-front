@@ -11,6 +11,7 @@ import { useCurrentUser } from '@shared/hooks';
 import {
     leaveApprovalWaitingFor,
     leaveRequestAvailableActions,
+    leaveRequestMatchesInboxFilter,
 } from '../lib/leaveApprovalStage';
 import { canDecideVacationLeaveRequests } from '../model/vacationScheduleAccess';
 import {
@@ -144,8 +145,8 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
     }, [items]);
 
     const visibleItems = useMemo(
-        () => (status === 'any' ? items : items.filter((it) => it.status === status)),
-        [items, status],
+        () => items.filter((it) => leaveRequestMatchesInboxFilter(it, status, mode)),
+        [items, mode, status],
     );
 
     const handleAuthorActionApplied = useCallback((next: VacationLeaveRequestApi) => {
@@ -243,16 +244,16 @@ export function VacationLeaveRequestsPanel({ mode, refreshToken = 0, onScheduleM
 
             {loading ? (
                 <p className="vac-lr-panel__status">Загрузка заявок…</p>
-            ) : items.length === 0 ? (
-                <p className="vac-lr-panel__empty">
-                    {isMine
-                        ? 'У вас пока нет заявок. Нажмите «+» в шапке, чтобы подать новую.'
-                        : isAll
-                            ? 'Заявок пока нет.'
-                            : 'Заявок, которые ждут вашего решения, нет.'}
-                </p>
             ) : visibleItems.length === 0 ? (
-                <p className="vac-lr-panel__empty">Нет заявок в этом статусе.</p>
+                <p className="vac-lr-panel__empty">
+                    {status !== 'any'
+                        ? 'Нет заявок в этом статусе.'
+                        : isMine
+                            ? 'У вас пока нет заявок. Нажмите «+» в шапке, чтобы подать новую.'
+                            : isAll
+                                ? 'Заявок пока нет.'
+                                : 'Заявок, которые ждут вашего решения, нет.'}
+                </p>
             ) : (
                 <ul className="vac-lr-panel__list">
                     {visibleItems.map((req) => {
