@@ -35,7 +35,7 @@ import {
     expensesPeriodFilterLabel,
 } from '@entities/expenses/model/expensesPeriodPresets';
 import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/model/coerceExpense';
-import { expenseHasReimbursementCard, isEmployeePersonalFundsPayout } from '@entities/expenses/model/expensePaymentDetails';
+import { isEmployeePersonalFundsPayout } from '@entities/expenses/model/expensePaymentDetails';
 import { listPartners, loadPublicUsersByIds, type UserPublic } from '@entities/user';
 import { listColleaguesAsUsers } from '@entities/contacts';
 import type { User } from '@entities/user/model/types';
@@ -104,13 +104,6 @@ function StatusBadge({ req }: {
     req: Pick<ExpenseRequest, 'status' | 'isReimbursable' | 'paymentMethod' | 'expenseType'>;
 }) {
     return <span className={expenseStatusBadgeClass(req)}>{expenseStatusLabel(req)}</span>;
-}
-function ReimbursementCardBadge() {
-    return (
-        <span className="exp-table__card-badge" title="Указан номер карты для возмещения">
-            Карта
-        </span>
-    );
 }
 function IconDotsVertical() {
     return (<svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -221,10 +214,7 @@ function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, current
         : undefined;
     return (<div className={`exp-table__row exp-table__row--${req.status}`} role="row" onClick={() => onOpen(req)}>
         <div className="exp-table__td exp-table__td--num" role="cell">
-            <span className="exp-table__num-line">
-                <span className="exp-table__num">{req.id}</span>
-                {expenseHasReimbursementCard(req) ? <ReimbursementCardBadge /> : null}
-            </span>
+            <span className="exp-table__num">{req.id}</span>
         </div>
         <div className="exp-table__td exp-table__td--desc" role="cell">
             <span className="exp-table__desc">{String(req.description ?? '')}</span>
