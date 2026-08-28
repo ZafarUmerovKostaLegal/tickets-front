@@ -1,30 +1,69 @@
 import { STATUS_META } from './constants';
+import { isAwaitingVendorPayment, isEmployeePersonalFundsPayout } from './expensePaymentDetails';
 import type { ExpenseRequest, ExpenseStatus } from './types';
 
-function paymentMethodOf(expense: Pick<ExpenseRequest, 'paymentMethod'> | { paymentMethod?: string | null }): string {
-    return String(expense.paymentMethod ?? '').trim().toLowerCase();
+export const AWAITING_PAYMENT_STATUS_FILTER = 'awaiting_payment' as const;
+export type ExpensesUiStatusFilter = ExpenseStatus | typeof AWAITING_PAYMENT_STATUS_FILTER;
+
+export const EXPENSE_STATUS_FILTER_OPTIONS: ReadonlyArray<{
+    value: ExpensesUiStatusFilter;
+    label: string;
+}> = [
+    { value: 'draft', label: STATUS_META.draft.label },
+    { value: 'pending_approval', label: STATUS_META.pending_approval.label },
+    { value: 'revision_required', label: STATUS_META.revision_required.label },
+    { value: 'approved', label: STATUS_META.approved.label },
+    { value: AWAITING_PAYMENT_STATUS_FILTER, label: 'Ожидает оплаты' },
+    { value: 'paid', label: STATUS_META.paid.label },
+    { value: 'rejected', label: STATUS_META.rejected.label },
+    { value: 'withdrawn', label: STATUS_META.withdrawn.label },
+];
+
+export function expenseUiStatusFilterLabel(filter: ExpensesUiStatusFilter | ''): string {
+    if (!filter)
+        return 'Статус';
+    if (filter === AWAITING_PAYMENT_STATUS_FILTER)
+        return 'Ожидает оплаты';
+    return STATUS_META[filter]?.label ?? filter;
 }
 
-/** Human-readable status for reimbursable payout flow. */
+export function isExpensesUiStatusFilter(value: string): value is ExpensesUiStatusFilter {
+    return EXPENSE_STATUS_FILTER_OPTIONS.some((item) => item.value === value);
+}
+
+export function expenseStatusBadgeClass(
+    expense: Pick<ExpenseRequest, 'status' | 'isReimbursable' | 'paymentMethod' | 'expenseType'> | {
+        status: ExpenseStatus;
+        isReimbursable?: boolean;
+        paymentMethod?: string | null;
+        expenseType?: string | null;
+    },
+): string {
+    const base = `exp-status exp-status--${expense.status}`;
+    return isAwaitingVendorPayment(expense) ? `${base} exp-status--awaiting_payment` : base;
+}
+
+/** Human-readable status: employee personal-funds payout vs vendor payment. */
 export function expenseStatusLabel(
-    expense: Pick<ExpenseRequest, 'status' | 'isReimbursable' | 'paymentMethod'> | { status: ExpenseStatus; isReimbursable?: boolean; paymentMethod?: string | null },
+    expense: Pick<ExpenseRequest, 'status' | 'isReimbursable' | 'paymentMethod' | 'expenseType'> | { status: ExpenseStatus; isReimbursable?: boolean; paymentMethod?: string | null; expenseType?: string | null },
 ): string {
     const status = expense.status;
     const reimbursable = Boolean(expense.isReimbursable);
-    const method = paymentMethodOf(expense);
-    if (status === 'approved' && reimbursable) {
-        return method === 'cash' ? 'Ожидает возмещения' : 'Ожидает оплаты';
-    }
-    if (status === 'paid' && reimbursable) {
-        return method === 'cash' ? 'Возмещено' : 'Оплачено';
-    }
+    if (status === 'approved' && isEmployeePersonalFundsPayout(expense))
+        return 'Ожидает возмещения';
+    if (status === 'paid' && isEmployeePersonalFundsPayout(expense))
+        return 'Возмещено';
+    if (isAwaitingVendorPayment(expense))
+        return 'Ожидает оплаты';
+    if (status === 'paid' && reimbursable)
+        return 'Оплачено';
     return STATUS_META[status]?.label ?? status;
 }
 
 export function expensePayActionLabel(
-    expense: Pick<ExpenseRequest, 'isReimbursable' | 'paymentMethod'>,
+    expense: Pick<ExpenseRequest, 'isReimbursable' | 'paymentMethod' | 'expenseType'>,
 ): string {
-    if (!expense.isReimbursable)
-        return 'Оплачено';
-    return paymentMethodOf(expense) === 'cash' ? 'Возмещено' : 'Оплачено';
+    if (isEmployeePersonalFundsPayout(expense))
+        return 'Возмещено';
+    return 'Оплачено';
 }

@@ -1,6 +1,7 @@
 import { canAccessAdminOnlyModules } from '@shared/lib/orgRoles';
 import { canModerateExpenseRequests } from './expenseModeration';
-import type { ExpenseRequest, ExpenseStatus, PaymentMethod } from './types';
+import { isEmployeePersonalFundsPayout } from './expensePaymentDetails';
+import type { ExpenseRequest, ExpenseStatus } from './types';
 
 export type ExpensePayActionOpts = {
     /** Designated payment confirmer (cash reimbursements). */
@@ -9,20 +10,15 @@ export type ExpensePayActionOpts = {
     canModerate?: boolean;
 };
 
-function paymentMethodOf(expense: ExpenseRequest): PaymentMethod | string {
-    return String(expense.paymentMethod ?? '').trim().toLowerCase();
-}
-
-/** Who may mark reimbursable expense as paid / undo pay for this payment method. */
+/** Who may mark employee payout / vendor payment as paid. */
 export function canConfirmExpensePayout(
     expense: ExpenseRequest,
     opts?: ExpensePayActionOpts,
 ): boolean {
+    if (isEmployeePersonalFundsPayout(expense))
+        return Boolean(opts?.isPaymentConfirmer);
     if (!expense.isReimbursable)
         return false;
-    const method = paymentMethodOf(expense);
-    if (method === 'cash')
-        return Boolean(opts?.isPaymentConfirmer);
     // transfer, card, or unknown non-cash → registry moderators
     return Boolean(opts?.canModerate);
 }
@@ -62,8 +58,9 @@ export function showOwnPendingModerationBlockedHint(expense: ExpenseRequest, can
 }
 
 /**
- * Reimbursable payout: approved → paid.
- * Cash → confirmer; transfer/card → registry moderator.
+ * Employee personal-funds payout: approved → paid.
+ * Cash / personal card → confirmer (even if the client will not reimburse).
+ * Transfer/card vendor payment → registry moderator, reimbursable only.
  */
 export function showPayExpenseAction(
     expense: ExpenseRequest,

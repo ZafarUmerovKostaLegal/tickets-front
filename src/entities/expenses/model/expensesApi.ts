@@ -54,6 +54,10 @@ export async function fetchExpenses(params: ListParams = {}, init?: RequestInitA
         qs.set('partnerUserId', String(params.partnerUserId));
     if (params.isReimbursable !== undefined)
         qs.set('isReimbursable', String(params.isReimbursable));
+    if (params.paymentMethod)
+        qs.set('paymentMethod', params.paymentMethod);
+    if (params.awaitingPayment)
+        qs.set('awaitingPayment', 'true');
     if (params.dateFrom)
         qs.set('dateFrom', params.dateFrom);
     if (params.dateTo)

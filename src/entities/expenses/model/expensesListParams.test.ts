@@ -127,4 +127,16 @@ describe('buildExpensesListParams', () => {
         expect(p.excludeExpenseType).toBe('client_expense');
         expect(p.expenseType).toBeUndefined();
     });
+
+    it('maps awaiting_payment to approved reimbursable vendor-payment queue', () => {
+        const p = buildExpensesListParams({
+            ...base,
+            filterPeriod: 'all',
+            filterStatus: 'awaiting_payment',
+            filterReimb: 'non_reimbursable',
+        });
+        expect(p.status).toBe('approved');
+        expect(p.isReimbursable).toBe(true);
+        expect(p.awaitingPayment).toBe(true);
+    });
 });

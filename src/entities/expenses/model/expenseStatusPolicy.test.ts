@@ -6,7 +6,7 @@ import {
     showUnapproveExpenseAction,
     showUnpayExpenseAction,
 } from './expenseStatusPolicy';
-import { expensePayActionLabel, expenseStatusLabel } from './expenseStatusLabels';
+import { expensePayActionLabel, expenseStatusBadgeClass, expenseStatusLabel } from './expenseStatusLabels';
 
 function expense(overrides: Partial<ExpenseRequest> = {}): ExpenseRequest {
     return {
@@ -70,8 +70,14 @@ describe('showPayExpenseAction', () => {
         expect(showPayExpenseAction(approved, true, { canModerate: true })).toBe(false);
     });
 
-    it('hides pay for non-reimbursable and non-approved', () => {
-        expect(showPayExpenseAction(expense({ status: 'approved', isReimbursable: false }), false, { isPaymentConfirmer: true })).toBe(false);
+    it('allows payment confirmer for cash even when the client will not reimburse', () => {
+        const approved = expense({ status: 'approved', isReimbursable: false, paymentMethod: 'cash' });
+        expect(showPayExpenseAction(approved, false, { isPaymentConfirmer: true })).toBe(true);
+        expect(showPayExpenseAction(approved, false, { canModerate: true })).toBe(false);
+    });
+
+    it('hides pay for non-reimbursable bank transfer and non-approved', () => {
+        expect(showPayExpenseAction(expense({ status: 'approved', isReimbursable: false, paymentMethod: 'transfer' }), false, { canModerate: true })).toBe(false);
         expect(showPayExpenseAction(expense({ status: 'pending_approval', isReimbursable: true }), false, { isPaymentConfirmer: true })).toBe(false);
     });
 });
@@ -105,9 +111,25 @@ describe('expenseStatusLabels', () => {
         expect(expensePayActionLabel(expense({ isReimbursable: true, paymentMethod: 'cash' }))).toBe('Возмещено');
     });
 
+    it('uses reimbursement wording for cash personal funds even if the client will not reimburse', () => {
+        expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: false, paymentMethod: 'cash' }))).toBe('Ожидает возмещения');
+        expect(expenseStatusLabel(expense({ status: 'paid', isReimbursable: false, paymentMethod: 'cash' }))).toBe('Возмещено');
+        expect(expensePayActionLabel(expense({ isReimbursable: false, paymentMethod: 'cash' }))).toBe('Возмещено');
+    });
+
     it('uses payment wording for transfer reimbursable', () => {
         expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: true, paymentMethod: 'transfer' }))).toBe('Ожидает оплаты');
         expect(expenseStatusLabel(expense({ status: 'paid', isReimbursable: true, paymentMethod: 'transfer' }))).toBe('Оплачено');
         expect(expensePayActionLabel(expense({ isReimbursable: true, paymentMethod: 'transfer' }))).toBe('Оплачено');
+        expect(expenseStatusBadgeClass(expense({
+            status: 'approved',
+            isReimbursable: true,
+            paymentMethod: 'transfer',
+        }))).toContain('exp-status--awaiting_payment');
+        expect(expenseStatusBadgeClass(expense({
+            status: 'approved',
+            isReimbursable: true,
+            paymentMethod: 'cash',
+        }))).not.toContain('exp-status--awaiting_payment');
     });
 });

@@ -3,14 +3,14 @@ import { createPortal } from 'react-dom';
 import { type ExpenseRequest, type ExpenseFormValues, type ExpenseFormErrors, type ExpenseFilesByKind, type AttachmentItem, EXPENSE_ATTACHMENT_MAX_BYTES, } from '@entities/expenses/model/types';
 import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, } from '@entities/expenses/model/constants';
 import { computeAmountUzsForApi, computeUsdEquivalent, formatExchangeRate, needsForeignUsdRate, parseExpenseMoney, roundMoney2 } from '@entities/expenses/model/expenseCurrency';
-import { formatReimbursementCardNumber, isValidReimbursementCardNumber } from '@entities/expenses/model/expensePaymentDetails';
+import { formatReimbursementCardNumber, isEmployeePersonalFundsPayout, isValidReimbursementCardNumber } from '@entities/expenses/model/expensePaymentDetails';
 import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import type { ExpenseAmountCurrency } from '@entities/expenses/model/types';
 import { approveExpense, rejectExpense, reviseExpense, deleteAttachment, deleteExpense, fetchExpenseAttachmentBlob, openExpenseAttachmentInNewTab, payExpense, unpayExpense, unapproveExpense, withdrawExpense, fetchApprovalRoutingMeta, type ApprovalRoutingMeta, } from '@entities/expenses/model/expensesApi';
 import type { AttachmentPreviewModel } from '@entities/expenses/lib/buildAttachmentPreview';
 import { ExpenseAttachmentPreviewModal } from './ExpenseAttachmentPreviewModal';
 import { isModerationBlockedForOwnExpense, showLifecycleModerationRow, showOwnPendingModerationBlockedHint, showPayExpenseAction, showUnpayExpenseAction, showUnapproveExpenseAction, showPendingApprovalModeration, showWithdrawExpenseAction, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
-import { expensePayActionLabel, expenseStatusLabel } from '@entities/expenses/model/expenseStatusLabels';
+import { expensePayActionLabel, expenseStatusBadgeClass, expenseStatusLabel } from '@entities/expenses/model/expenseStatusLabels';
 import { isExpensePaymentConfirmer } from '@entities/expenses/model/expensePaymentConfirmer';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { formatExpenseAuthorLabel, formatExpensePaidByLabel } from '@entities/expenses/model/expenseAuthor';
@@ -1510,8 +1510,10 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     ? 'Удалить заявку?'
                     : 'Отозвать заявку?'} message={panelConfirm.kind === 'approve' ? (<>
                             <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
-                            {editingRequest?.isReimbursable ? (<p className="exp-mod-dialog__sub">
-                                После одобрения заявка уйдёт на оплату/возмещение. При наличных выплату подтверждает назначенный сотрудник; при перечислении — модераторы реестра.
+                            {editingRequest && (editingRequest.isReimbursable || isEmployeePersonalFundsPayout(editingRequest)) ? (<p className="exp-mod-dialog__sub">
+                                {isEmployeePersonalFundsPayout(editingRequest)
+                                    ? 'После одобрения заявку нужно возместить сотруднику на указанную карту. Подтверждение выплаты выполняет назначенный сотрудник, статус станет «Ожидает возмещения».'
+                                    : 'После одобрения заявка уйдёт на оплату. Отметить оплату могут модераторы реестра расходов.'}
                             </p>) : null}
                         </>) : panelConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">
                             {editingRequest && String(editingRequest.paymentMethod ?? '').toLowerCase() === 'cash'
@@ -1561,7 +1563,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
 
             <div className="exp-panel__hd">
                 <div className="exp-panel__hd-left">
-                    {isView && editingRequest && (<span className={`exp-status exp-status--${editingRequest.status}`}>
+                    {isView && editingRequest && (<span className={expenseStatusBadgeClass(editingRequest)}>
                         {expenseStatusLabel(editingRequest)}
                     </span>)}
                     <h2 className="exp-panel__title">{title}</h2>
@@ -1840,7 +1842,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                             aria-invalid={Boolean(errors.reimbursementCardNumber)}
                         />)}
                         {!isView && (<p className="exp-form-hint">
-                            Карта, на которую нужно перечислить возмещение.
+                            Карта сотрудника, на которую фирма вернёт личные средства. Обязательна при оплате с личной карты или наличными — независимо от возмещения клиентом.
                         </p>)}
                         {errors.reimbursementCardNumber && (<p className="exp-form-err-msg" data-err>
                             {errors.reimbursementCardNumber}
@@ -1851,11 +1853,11 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                         <div className="exp-form-switch-row">
                             <div className="exp-form-switch-info">
                                 <span className="exp-form-label" style={{ marginBottom: 0 }}>
-                                    Возмещаемый расход
+                                    Возмещаемый клиентом
                                 </span>
                                 <p className="exp-form-hint" style={{ margin: '0.25rem 0 0 0' }}>
-                                    Для возмещения укажите способ оплаты и документ для оплаты. При «Наличные» нужен номер карты —
-                                    выплату подтверждает назначенный сотрудник; при «Перечисление» оплату отмечают модераторы реестра.
+                                    Включите, если этот расход потом компенсирует клиент. Это отдельно от выплаты сотруднику:
+                                    при «Наличные/Личная карта» карту указывают всегда — даже если клиент не возмещает.
                                 </p>
                             </div>
                             <button type="button" role="switch" aria-checked={values.isReimbursable === true} className={`exp-form-switch${values.isReimbursable === true ? ' exp-form-switch--on' : ''}${isView ? ' exp-form-switch--disabled' : ''}`} onClick={() => {
@@ -1875,10 +1877,10 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                         к заявке.
                     </p>
                     {values.isReimbursable === false && (<p className="exp-form-hint" style={{ margin: '0 0 0.75rem 0' }}>
-                        Для <strong>невозмещаемого</strong> расхода проект, контрагент и комментарий не обязательны, если не нужны для учёта.
+                        Если клиент <strong>не возмещает</strong> расход, проект, контрагент и комментарий не обязательны, если не нужны для учёта.
                     </p>)}
                     {values.isReimbursable === true && (<p className="exp-form-hint" style={{ margin: '0 0 0.75rem 0' }}>
-                        <strong>Проект</strong> обязателен (справочник учёта времени). В «Контрагент / Поставщик» подставляется клиент
+                        <strong>Проект</strong> обязателен (справочник учёта времени), потому что расход возмещает клиент. В «Контрагент / Поставщик» подставляется клиент
                         проекта. При настроенных категориях у проекта — укажите категорию расхода.
                     </p>)}
 
@@ -2270,10 +2272,10 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 {!showPayAction &&
                     isView &&
                     editingRequest?.status === 'approved' &&
-                    editingRequest.isReimbursable &&
-                    editingRequest.expenseType !== 'partner_expense' && (<p className="exp-panel__ft-hint" role="status">
-                        {String(editingRequest.paymentMethod ?? '').toLowerCase() === 'cash'
-                            ? 'Статус «Ожидает возмещения». Подтверждение выплаты выполняет назначенный сотрудник.'
+                    editingRequest?.expenseType !== 'partner_expense' &&
+                    (editingRequest.isReimbursable || isEmployeePersonalFundsPayout(editingRequest)) && (<p className="exp-panel__ft-hint" role="status">
+                        {isEmployeePersonalFundsPayout(editingRequest)
+                            ? 'Статус «Ожидает возмещения». Подтверждение выплаты сотруднику выполняет назначенный сотрудник.'
                             : 'Статус «Ожидает оплаты». Отметить оплату могут модераторы реестра расходов.'}
                     </p>)}
                 {showWithdrawAction && (<div className="exp-panel__ft-moderate">

@@ -1,9 +1,10 @@
-import type { ExpenseStatus, ExpenseType, ExpensesScopeMode, ListParams, PartnerExpenseCategory } from './types';
+import type { ExpenseType, ExpensesScopeMode, ListParams, PartnerExpenseCategory } from './types';
 import {
     defaultExpensesCustomRange,
     expensesPeriodPresetRange,
     type ExpensesUiFilterPeriod,
 } from './expensesPeriodPresets';
+import { AWAITING_PAYMENT_STATUS_FILTER, type ExpensesUiStatusFilter } from './expenseStatusLabels';
 
 export const EXPENSES_LIST_PAGE_SIZE = 100;
 
@@ -11,10 +12,19 @@ export type ExpensesUiSortBy = 'createdAt' | 'expenseDate';
 
 export type { ExpensesUiFilterPeriod };
 
+export function awaitingVendorPaymentQuery(extra: ListParams = {}): ListParams {
+    return {
+        status: 'approved',
+        isReimbursable: true,
+        awaitingPayment: true,
+        ...extra,
+    };
+}
+
 export function buildExpensesListParams(args: {
     isModerationQueue: boolean;
     search: string;
-    filterStatus: ExpenseStatus | '';
+    filterStatus: ExpensesUiStatusFilter | '';
     filterType: ExpenseType | '';
     filterSubtype?: PartnerExpenseCategory | '';
     filterPartnerUserId?: number | '';
@@ -48,7 +58,7 @@ export function buildExpensesListParams(args: {
     if (args.isModerationQueue) {
         p.status = 'pending_approval';
     }
-    else if (args.filterStatus) {
+    else if (args.filterStatus && args.filterStatus !== AWAITING_PAYMENT_STATUS_FILTER) {
         p.status = args.filterStatus;
     }
     if (typeof args.filterAuthorUserId === 'number' && args.filterAuthorUserId > 0)
@@ -73,6 +83,11 @@ export function buildExpensesListParams(args: {
         p.isReimbursable = true;
     if (args.filterReimb === 'non_reimbursable')
         p.isReimbursable = false;
+    if (!args.isModerationQueue && args.filterStatus === AWAITING_PAYMENT_STATUS_FILTER) {
+        p.status = 'approved';
+        p.isReimbursable = true;
+        p.awaitingPayment = true;
+    }
 
     if (args.filterPeriod === 'custom') {
         const from = (args.filterDateFrom ?? '').trim().slice(0, 10);

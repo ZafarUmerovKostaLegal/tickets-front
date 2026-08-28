@@ -1,10 +1,11 @@
 import { EXPENSE_REGISTRY_STATUSES } from './constants';
-import { buildExpensesListParams, type ExpensesUiFilterPeriod, type ExpensesUiSortBy } from './expensesListParams';
+import { AWAITING_PAYMENT_STATUS_FILTER } from './expenseStatusLabels';
+import { awaitingVendorPaymentQuery, buildExpensesListParams, type ExpensesUiFilterPeriod, type ExpensesUiSortBy } from './expensesListParams';
 import { fetchExpenses } from './expensesApi';
 import type { ExpenseStatus, ExpenseType, ExpensesScopeMode, PartnerExpenseCategory } from './types';
 import type { RequestInitAuth } from '@shared/api';
 
-export type ExpenseStatusCountMap = Partial<Record<ExpenseStatus | 'all', number>>;
+export type ExpenseStatusCountMap = Partial<Record<ExpenseStatus | 'all' | typeof AWAITING_PAYMENT_STATUS_FILTER, number>>;
 
 export function formatExpenseStatusCount(n: number | undefined): string | null {
     if (n == null || !Number.isFinite(n) || n < 0)
@@ -51,7 +52,7 @@ export async function fetchExpenseStatusCounts(
         excludeExpenseType: args.excludeExpenseType,
     });
 
-    const jobs: Array<Promise<readonly [ExpenseStatus | 'all', number]>> = [
+    const jobs: Array<Promise<readonly [ExpenseStatus | 'all' | typeof AWAITING_PAYMENT_STATUS_FILTER, number]>> = [
         fetchExpenses({ ...base, skip: 0, limit: 1 }, init).then((res) => [
             'all',
             typeof res.total === 'number' ? Math.max(0, res.total) : 0,
@@ -65,6 +66,20 @@ export async function fetchExpenseStatusCounts(
             ] as const),
         );
     }
+    jobs.push(
+        fetchExpenses(
+            awaitingVendorPaymentQuery({
+                ...base,
+                skip: 0,
+                limit: 1,
+                ...(args.filterReimb === 'non_reimbursable' ? { isReimbursable: false } : {}),
+            }),
+            init,
+        ).then((res) => [
+            AWAITING_PAYMENT_STATUS_FILTER,
+            typeof res.total === 'number' ? Math.max(0, res.total) : 0,
+        ] as const),
+    );
 
     const entries = await Promise.all(jobs);
     const out: ExpenseStatusCountMap = {};

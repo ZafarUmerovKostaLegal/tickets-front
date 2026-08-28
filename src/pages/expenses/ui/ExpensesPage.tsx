@@ -6,8 +6,8 @@ import { useCurrentUser, useMediaQuery } from '@shared/hooks';
 import { AppBackButton, AppHomeLogo, AppPageSettings, DatePicker, Pagination } from '@shared/ui';
 import type { PanelMode } from './ExpensesFormPanel';
 import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
-import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseStatus, ExpenseType, ExpenseCreatedBy, PartnerExpenseCategory, } from '@entities/expenses/model/types';
-import { EXPENSE_REGISTRY_STATUSES, EXPENSE_REGISTRY_STATUS_SET, STATUS_META, TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
+import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseType, ExpenseCreatedBy, PartnerExpenseCategory, } from '@entities/expenses/model/types';
+import { TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
 import { approveExpense, payExpense, deleteExpense, fetchExpenses, fetchExpenseById, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
 import { saveExpenseFromForm } from '@entities/expenses/model/saveExpenseFromForm';
 import {
@@ -35,6 +35,7 @@ import {
     expensesPeriodFilterLabel,
 } from '@entities/expenses/model/expensesPeriodPresets';
 import { asExpenseNumber, normalizeExpenseRequest } from '@entities/expenses/model/coerceExpense';
+import { expenseHasReimbursementCard, isEmployeePersonalFundsPayout } from '@entities/expenses/model/expensePaymentDetails';
 import { listPartners, loadPublicUsersByIds, type UserPublic } from '@entities/user';
 import { listColleaguesAsUsers } from '@entities/contacts';
 import type { User } from '@entities/user/model/types';
@@ -48,7 +49,7 @@ import {
     type ExpenseStatusCountMap,
 } from '@entities/expenses/model/fetchExpenseStatusCounts';
 import { isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, showOwnPendingModerationBlockedHint, resolveExpensePanelMode, showPayExpenseAction, showPendingApprovalModeration, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
-import { expensePayActionLabel, expenseStatusLabel } from '@entities/expenses/model/expenseStatusLabels';
+import { expensePayActionLabel, expenseStatusBadgeClass, expenseStatusLabel, expenseUiStatusFilterLabel, EXPENSE_STATUS_FILTER_OPTIONS, AWAITING_PAYMENT_STATUS_FILTER, isExpensesUiStatusFilter, type ExpensesUiStatusFilter } from '@entities/expenses/model/expenseStatusLabels';
 import { isExpensePaymentConfirmer } from '@entities/expenses/model/expensePaymentConfirmer';
 import { ExpensesPageBoundary } from './ExpensesPageBoundary';
 import '@pages/time-tracking/ui/TimeTrackingForms.css';
@@ -99,11 +100,17 @@ function fmtExpenseDateCell(raw: unknown): string {
 function fmtUzs(raw: unknown) {
     return asExpenseNumber(raw).toLocaleString('ru-RU');
 }
-function StatusBadge({ status, isReimbursable }: {
-    status: ExpenseStatus;
-    isReimbursable?: boolean;
+function StatusBadge({ req }: {
+    req: Pick<ExpenseRequest, 'status' | 'isReimbursable' | 'paymentMethod' | 'expenseType'>;
 }) {
-    return <span className={`exp-status exp-status--${status}`}>{expenseStatusLabel({ status, isReimbursable })}</span>;
+    return <span className={expenseStatusBadgeClass(req)}>{expenseStatusLabel(req)}</span>;
+}
+function ReimbursementCardBadge() {
+    return (
+        <span className="exp-table__card-badge" title="Указан номер карты для возмещения">
+            Карта
+        </span>
+    );
 }
 function IconDotsVertical() {
     return (<svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -214,7 +221,10 @@ function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, current
         : undefined;
     return (<div className={`exp-table__row exp-table__row--${req.status}`} role="row" onClick={() => onOpen(req)}>
         <div className="exp-table__td exp-table__td--num" role="cell">
-            <span className="exp-table__num">{req.id}</span>
+            <span className="exp-table__num-line">
+                <span className="exp-table__num">{req.id}</span>
+                {expenseHasReimbursementCard(req) ? <ReimbursementCardBadge /> : null}
+            </span>
         </div>
         <div className="exp-table__td exp-table__td--desc" role="cell">
             <span className="exp-table__desc">{String(req.description ?? '')}</span>
@@ -237,7 +247,7 @@ function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, current
         </div>
         <div className="exp-table__td exp-table__td--status" role="cell">
             <div className="exp-table__status-tags">
-                <StatusBadge status={req.status} isReimbursable={req.isReimbursable} />
+                <StatusBadge req={req} />
                 {(req.status === 'rejected' || req.status === 'revision_required') && req.rejectionReason ? (
                     <span
                         className={`exp-table__status-reason${req.status === 'revision_required' ? ' exp-table__status-reason--revision' : ''}`}
@@ -553,7 +563,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [searchParams] = useSearchParams();
     const { user, loading: currentUserLoading } = useCurrentUser();
     const canModerate = canViewExpensesRequestsAndReport(user?.role);
-    const { moderationCount } = useExpenseAttentionBadge(!currentUserLoading && canModerate);
+    const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email);
+    const { moderationCount, payCount } = useExpenseAttentionBadge(
+        !currentUserLoading && (canModerate || isPaymentConfirmer),
+    );
     const [isLoading, setIsLoading] = useState(true);
     const [listFetchPending, setListFetchPending] = useState(false);
     const isFirstListFetchRef = useRef(true);
@@ -568,14 +581,13 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const isPartnerScope = variant === 'partner';
     const isClientScope = variant === 'client';
     const scopeMode = isPartnerScope ? 'partner' as const : (isModerationQueue ? undefined : 'company' as const);
-    const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email);
     const filterStorageUserId = user?.id ?? null;
     const filterOwnerKey = !currentUserLoading && filterStorageUserId != null
         ? `${filterStorageUserId}:${variant}`
         : null;
     const [search, setSearch] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [filterStatus, setFilterStatus] = useState<ExpenseStatus | ''>('');
+    const [filterStatus, setFilterStatus] = useState<ExpensesUiStatusFilter | ''>('');
     const [filterType, setFilterType] = useState<ExpenseType | ''>('');
     const [filterSubtype, setFilterSubtype] = useState<PartnerExpenseCategory | ''>('');
     const [filterPartnerUserId, setFilterPartnerUserId] = useState<number | ''>('');
@@ -639,8 +651,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             return;
         const focus = searchParams.get('focus');
         if (focus === 'pay') {
-            setFilterStatus('approved');
-            setFilterReimb('reimbursable');
+            setFilterStatus(AWAITING_PAYMENT_STATUS_FILTER);
             setListPage(1);
         }
     }, [filterOwnerKey, hydratedFilterOwnerKey, isModerationQueue, searchParams]);
@@ -879,7 +890,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             setFilterStatus('');
     }, [isModerationQueue]);
     useEffect(() => {
-        if (!isModerationQueue && filterStatus && !EXPENSE_REGISTRY_STATUS_SET.has(filterStatus)) {
+        if (!isModerationQueue && filterStatus && !isExpensesUiStatusFilter(filterStatus)) {
             setFilterStatus('');
         }
     }, [isModerationQueue, filterStatus]);
@@ -1096,7 +1107,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                     return;
                 openedExpensePathRef.current = pathExpenseId;
                 const intentMatchesStatus = intentParsed === 'pay'
-                    ? req.status === 'approved' && req.isReimbursable
+                    ? req.status === 'approved'
                     : req.status === 'pending_approval';
                 if (intentParsed && intentMatchesStatus) {
                     const blockedOwn = isModerationBlockedForOwnExpense(canModerate, user?.id, req);
@@ -1459,7 +1470,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         () => expensesPeriodFilterLabel(filterPeriod, filterDateFrom, filterDateTo),
         [filterPeriod, filterDateFrom, filterDateTo],
     );
-    const statuses: ExpenseStatus[] = EXPENSE_REGISTRY_STATUSES;
+    const statuses = EXPENSE_STATUS_FILTER_OPTIONS;
     const types: ExpenseType[] = [...COMPANY_EXPENSE_TYPE_CODES];
     const partnerFilterLabel = useMemo(() => {
         if (!filterPartnerUserId)
@@ -1492,11 +1503,13 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         };
         switch (slotId) {
             case 'status': {
-                const allCountLabel = formatExpenseStatusCount(statusCounts.all);
+                const allCountLabel = isPaymentConfirmer
+                    ? formatExpenseStatusCount(statusCounts[AWAITING_PAYMENT_STATUS_FILTER] ?? payCount)
+                    : formatExpenseStatusCount(statusCounts.all);
                 const statusChipBadge = filterStatus
                     ? (statusCounts[filterStatus] ?? 0)
-                    : (canModerate ? moderationCount : 0);
-                return (<FilterDrop key={slotId} slotId={slotId} label={filterStatus ? STATUS_META[filterStatus].label : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')} badgeCount={statusChipBadge} {...drag}>
+                    : (isPaymentConfirmer ? payCount : (canModerate ? moderationCount : 0));
+                return (<FilterDrop key={slotId} slotId={slotId} label={filterStatus ? expenseUiStatusFilterLabel(filterStatus) : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')} badgeCount={statusChipBadge} {...drag}>
                     <button className={`exp-filter__opt${!filterStatus ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(''); setOpenFilter(null); }}>
                         <span className="exp-filter__opt-label">Все статусы</span>
                         {allCountLabel ? (
@@ -1506,12 +1519,15 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                         ) : null}
                     </button>
                     {statuses.map(s => {
-                        const countLabel = formatExpenseStatusCount(statusCounts[s]);
-                        return (<button key={s} className={`exp-filter__opt${filterStatus === s ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(s); setOpenFilter(null); }}>
-                            <span className={`exp-filter__dot exp-filter__dot--${s}`} />
-                            <span className="exp-filter__opt-label">{STATUS_META[s].label}</span>
+                        const countForOption = isPaymentConfirmer && s.value !== AWAITING_PAYMENT_STATUS_FILTER
+                            ? undefined
+                            : statusCounts[s.value];
+                        const countLabel = formatExpenseStatusCount(countForOption);
+                        return (<button key={s.value} className={`exp-filter__opt${filterStatus === s.value ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(s.value); setOpenFilter(null); }}>
+                            <span className={`exp-filter__dot exp-filter__dot--${s.value}`} />
+                            <span className="exp-filter__opt-label">{s.label}</span>
                             {countLabel ? (
-                                <span className="app-count-badge exp-filter__opt-badge" aria-label={`${STATUS_META[s].label}: ${countLabel}`}>
+                                <span className="app-count-badge exp-filter__opt-badge" aria-label={`${s.label}: ${countLabel}`}>
                                     {countLabel}
                                 </span>
                             ) : null}
@@ -1574,10 +1590,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                         Любое
                     </button>
                     <button className={`exp-filter__opt${filterReimb === 'reimbursable' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb('reimbursable'); setOpenFilter(null); }}>
-                        Возмещаемый
+                        {REIMBURSABLE_META.reimbursable.label}
                     </button>
                     <button className={`exp-filter__opt${filterReimb === 'non_reimbursable' ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterReimb('non_reimbursable'); setOpenFilter(null); }}>
-                        Невозмещаемый
+                        {REIMBURSABLE_META.non_reimbursable.label}
                     </button>
                 </FilterDrop>);
             case 'period':
@@ -1831,8 +1847,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                         ? 'Подтвердить возмещение?'
                         : 'Удалить заявку?'} message={tableConfirm.kind === 'approve' ? (<>
                                 <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
-                                {tableConfirm.req.isReimbursable ? (<p className="exp-mod-dialog__sub">
-                                    После одобрения заявка уйдёт на возмещение: подтверждение оплаты выполняет назначенный сотрудник, статус станет «Ожидает возмещения».
+                                {tableConfirm.req.isReimbursable || isEmployeePersonalFundsPayout(tableConfirm.req) ? (<p className="exp-mod-dialog__sub">
+                                    {isEmployeePersonalFundsPayout(tableConfirm.req)
+                                        ? 'После одобрения заявку нужно возместить сотруднику на указанную карту. Подтверждение выплаты выполняет назначенный сотрудник, статус станет «Ожидает возмещения».'
+                                        : 'После одобрения заявка уйдёт на оплату. Отметить оплату могут модераторы реестра расходов.'}
                                 </p>) : null}
                             </>) : tableConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">
                                 Статус станет «Возмещено». Убедитесь, что перевод на карту сотрудника выполнен.

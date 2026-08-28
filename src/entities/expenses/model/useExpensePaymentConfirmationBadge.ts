@@ -3,6 +3,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { fetchExpenses } from './expensesApi';
 import { canModerateExpenseRequests } from './expenseModeration';
 import { isExpensePaymentConfirmer } from './expensePaymentConfirmer';
+import { awaitingVendorPaymentQuery } from './expensesListParams';
 
 function formatBadge(count: number): string {
     if (count <= 0)
@@ -37,47 +38,34 @@ export function useExpenseAttentionBadge(enabled = true): {
             const jobs: Promise<void>[] = [];
             if (isPaymentConfirmer) {
                 jobs.push(
-                    fetchExpenses({
-                        status: 'approved',
+                    fetchExpenses(awaitingVendorPaymentQuery({
                         scopeMode: 'company',
-                        isReimbursable: true,
-                        excludeExpenseType: 'client_expense',
                         skip: 0,
                         limit: 1,
-                    }).then((response) => {
+                    })).then((response) => {
                         setCompanyPayCount(Math.max(0, response.total));
                     }),
                 );
-                jobs.push(
-                    fetchExpenses({
-                        status: 'approved',
-                        scopeMode: 'company',
-                        isReimbursable: true,
-                        expenseType: 'client_expense',
-                        skip: 0,
-                        limit: 1,
-                    }).then((response) => {
-                        setClientPayCount(Math.max(0, response.total));
-                    }),
-                );
+                setClientPayCount(0);
+                setModerationCount(0);
             }
             else {
                 setCompanyPayCount(0);
                 setClientPayCount(0);
-            }
-            if (isModerator) {
-                jobs.push(
-                    fetchExpenses({
-                        status: 'pending_approval',
-                        skip: 0,
-                        limit: 1,
-                    }).then((response) => {
-                        setModerationCount(Math.max(0, response.total));
-                    }),
-                );
-            }
-            else {
-                setModerationCount(0);
+                if (isModerator) {
+                    jobs.push(
+                        fetchExpenses({
+                            status: 'pending_approval',
+                            skip: 0,
+                            limit: 1,
+                        }).then((response) => {
+                            setModerationCount(Math.max(0, response.total));
+                        }),
+                    );
+                }
+                else {
+                    setModerationCount(0);
+                }
             }
             await Promise.all(jobs);
         }
@@ -101,7 +89,7 @@ export function useExpenseAttentionBadge(enabled = true): {
     }, [refresh, shouldTrack]);
 
     const payCount = companyPayCount + clientPayCount;
-    const count = payCount + moderationCount;
+    const count = isPaymentConfirmer ? payCount : (payCount + moderationCount);
     return {
         payCount,
         companyPayCount,

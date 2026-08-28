@@ -68,6 +68,13 @@ export function normalizeExpenseRequest(r: ExpenseRequest): ExpenseRequest {
     const reimbursementCardNumber = reimbursementCardNumberRaw == null || reimbursementCardNumberRaw === ''
         ? null
         : String(reimbursementCardNumberRaw);
+    const hasCardFlagKey = 'hasReimbursementCard' in x || 'has_reimbursement_card' in x;
+    const hasCardFlagRaw = x.hasReimbursementCard ?? x.has_reimbursement_card;
+    const hasCardFromNumber = reimbursementCardNumber != null
+        && reimbursementCardNumber.replace(/\D/g, '').length > 0;
+    const hasReimbursementCard = hasCardFlagRaw === true
+        || hasCardFlagRaw === 'true'
+        || hasCardFromNumber;
     return {
         ...r,
         createdByUserId: Number.isFinite(createdByUserId) ? createdByUserId : r.createdByUserId,
@@ -79,6 +86,7 @@ export function normalizeExpenseRequest(r: ExpenseRequest): ExpenseRequest {
         ...(approvedBy ? { approvedBy } : {}),
         rejectionReason,
         ...(hasReimbursementCardNumber ? { reimbursementCardNumber } : {}),
+        ...(hasCardFlagKey || hasCardFromNumber ? { hasReimbursementCard } : {}),
         partnerUserId,
         ...(partnerUser ? { partnerUser } : {}),
         amountUzs: asExpenseNumber(pickNumericField(x, 'amountUzs', 'amount_uzs')),

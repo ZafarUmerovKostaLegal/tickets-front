@@ -515,6 +515,7 @@ body[data-theme='dark'] .expenses-page {
 .exp-filter__dot--pending_approval { background: #d97706; }
 .exp-filter__dot--revision_required{ background: #7c3aed; }
 .exp-filter__dot--approved         { background: var(--app-accent, #4f46e5); }
+.exp-filter__dot--awaiting_payment { background: #e11d48; box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.16); }
 .exp-filter__dot--rejected         { background: #dc2626; }
 .exp-filter__dot--paid             { background: #0891b2; }
 .exp-filter__dot--closed           { background: #cbd5e1; }
@@ -737,6 +738,12 @@ body[data-theme='dark'] .expenses-page {
 .exp-status--pending_approval { background: rgba(217, 119, 6, 0.12);   color: #d97706; }
 .exp-status--revision_required{ background: rgba(124, 58, 237, 0.12);  color: #7c3aed; }
 .exp-status--approved         { background: var(--app-accent-light-bg, #eef2ff);   color: var(--app-accent, #4f46e5); }
+.exp-status--awaiting_payment {
+  background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%);
+  color: #be123c;
+  box-shadow: inset 0 0 0 1px rgba(190, 18, 60, 0.22);
+  font-weight: 600;
+}
 .exp-status--rejected         { background: rgba(220, 38, 38, 0.12);   color: #dc2626; }
 .exp-status--paid             { background: rgba(8, 145, 178, 0.12);   color: #0891b2; }
 .exp-status--closed           { background: rgba(203, 213, 225, 0.25); color: #94a3b8; }
@@ -751,6 +758,11 @@ body[data-theme='dark'] .expenses-page {
   background: rgba(47, 128, 237, 0.1);
   color: #1d4ed8;
 }
+.expenses-page .exp-card .exp-status--awaiting_payment {
+  background: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%);
+  color: #be123c;
+  box-shadow: inset 0 0 0 1px rgba(190, 18, 60, 0.22);
+}
 
 body[data-theme='dark'] .expenses-page .exp-card .exp-status--pending_approval {
   background: rgba(251, 146, 60, 0.14);
@@ -759,6 +771,12 @@ body[data-theme='dark'] .expenses-page .exp-card .exp-status--pending_approval {
 body[data-theme='dark'] .expenses-page .exp-card .exp-status--approved {
   background: rgba(96, 165, 250, 0.12);
   color: #93c5fd;
+}
+body[data-theme='dark'] .expenses-page .exp-card .exp-status--awaiting_payment,
+body[data-theme='dark'] .exp-status--awaiting_payment {
+  background: rgba(244, 63, 94, 0.18);
+  color: #fb7185;
+  box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.32);
 }
 
 .exp-reimb {
@@ -899,6 +917,32 @@ body[data-theme='dark'] .exp-table__row--pending_approval .exp-status--pending_a
 .exp-table__td--num .exp-table__num {
   display: inline-block;
   max-width: 100%;
+}
+
+.exp-table__num-line {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.exp-table__card-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  padding: 0.18rem 0.38rem;
+  border-radius: 999px;
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+  white-space: nowrap;
+}
+
+body[data-theme='dark'] .exp-table__card-badge {
+  background: rgba(248, 113, 113, 0.18);
+  color: #fca5a5;
 }
 
 .exp-table__th--desc, .exp-table__td--desc { min-width: 0; }

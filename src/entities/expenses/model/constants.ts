@@ -59,8 +59,8 @@ export const PAYMENT_META: Record<PaymentMethod, {
 export const REIMBURSABLE_META: Record<string, {
     label: string;
 }> = {
-    reimbursable: { label: 'Возмещаемый' },
-    non_reimbursable: { label: 'Невозмещаемый' },
+    reimbursable: { label: 'Возмещаемый клиентом' },
+    non_reimbursable: { label: 'Невозмещаемый клиентом' },
 };
 export const EXPENSE_CURRENCIES: {
     value: ExpenseAmountCurrency;

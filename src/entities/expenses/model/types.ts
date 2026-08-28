@@ -36,6 +36,7 @@ export interface ExpenseRequest {
     isReimbursable: boolean;
     paymentMethod: string | null;
     reimbursementCardNumber?: string | null;
+    hasReimbursementCard?: boolean;
     departmentId: string | null;
     projectId: string | null;
     expenseCategoryId?: string | null;
@@ -120,6 +121,9 @@ export interface ListParams {
     scopeMode?: ExpensesScopeMode;
     partnerUserId?: number;
     isReimbursable?: boolean;
+    paymentMethod?: string;
+    /** Exclude employee personal-card payouts from the vendor-payment queue. */
+    awaitingPayment?: boolean;
     dateFrom?: string;
     dateTo?: string;
     q?: string;
