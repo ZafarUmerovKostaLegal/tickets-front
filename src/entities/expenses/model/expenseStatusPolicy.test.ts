@@ -55,12 +55,13 @@ describe('showDeleteExpenseAction', () => {
 });
 
 describe('showPayExpenseAction', () => {
-    it('allows only payment confirmer for cash reimbursable', () => {
+    it('allows payment confirmer or moderator for cash reimbursable', () => {
         const approved = expense({ status: 'approved', isReimbursable: true, paymentMethod: 'cash' });
         expect(showPayExpenseAction(approved, false)).toBe(false);
         expect(showPayExpenseAction(approved, false, { isPaymentConfirmer: true })).toBe(true);
-        expect(showPayExpenseAction(approved, false, { canModerate: true })).toBe(false);
+        expect(showPayExpenseAction(approved, false, { canModerate: true })).toBe(true);
         expect(showPayExpenseAction(approved, true, { isPaymentConfirmer: true })).toBe(false);
+        expect(showPayExpenseAction(approved, true, { canModerate: true })).toBe(false);
     });
 
     it('allows moderators for transfer reimbursable', () => {
@@ -70,10 +71,10 @@ describe('showPayExpenseAction', () => {
         expect(showPayExpenseAction(approved, true, { canModerate: true })).toBe(false);
     });
 
-    it('allows payment confirmer for cash even when the client will not reimburse', () => {
+    it('allows confirmer or moderator for cash even when the client will not reimburse', () => {
         const approved = expense({ status: 'approved', isReimbursable: false, paymentMethod: 'cash' });
         expect(showPayExpenseAction(approved, false, { isPaymentConfirmer: true })).toBe(true);
-        expect(showPayExpenseAction(approved, false, { canModerate: true })).toBe(false);
+        expect(showPayExpenseAction(approved, false, { canModerate: true })).toBe(true);
     });
 
     it('hides pay for non-reimbursable bank transfer and non-approved', () => {
@@ -86,7 +87,7 @@ describe('showUnpayExpenseAction', () => {
     it('mirrors pay rights for paid cash/transfer', () => {
         const paidCash = expense({ status: 'paid', isReimbursable: true, paymentMethod: 'cash' });
         expect(showUnpayExpenseAction(paidCash, false, { isPaymentConfirmer: true })).toBe(true);
-        expect(showUnpayExpenseAction(paidCash, false, { canModerate: true })).toBe(false);
+        expect(showUnpayExpenseAction(paidCash, false, { canModerate: true })).toBe(true);
 
         const paidTransfer = expense({ status: 'paid', isReimbursable: true, paymentMethod: 'transfer' });
         expect(showUnpayExpenseAction(paidTransfer, false, { canModerate: true })).toBe(true);

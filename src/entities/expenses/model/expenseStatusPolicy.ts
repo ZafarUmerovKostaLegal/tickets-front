@@ -6,7 +6,7 @@ import type { ExpenseRequest, ExpenseStatus } from './types';
 export type ExpensePayActionOpts = {
     /** Designated payment confirmer (cash reimbursements). */
     isPaymentConfirmer?: boolean;
-    /** Registry moderator (admin / partner) — may pay transfer/card reimbursements. */
+    /** Registry moderator (admin / partner) — vendor payment and employee reimbursement. */
     canModerate?: boolean;
 };
 
@@ -16,7 +16,7 @@ export function canConfirmExpensePayout(
     opts?: ExpensePayActionOpts,
 ): boolean {
     if (isEmployeePersonalFundsPayout(expense))
-        return Boolean(opts?.isPaymentConfirmer);
+        return Boolean(opts?.isPaymentConfirmer || opts?.canModerate);
     if (!expense.isReimbursable)
         return false;
     // transfer, card, or unknown non-cash → registry moderators
@@ -59,7 +59,7 @@ export function showOwnPendingModerationBlockedHint(expense: ExpenseRequest, can
 
 /**
  * Employee personal-funds payout: approved → paid.
- * Cash / personal card → confirmer (even if the client will not reimburse).
+ * Cash / personal card → confirmer or registry moderator.
  * Transfer/card vendor payment → registry moderator, reimbursable only.
  */
 export function showPayExpenseAction(
