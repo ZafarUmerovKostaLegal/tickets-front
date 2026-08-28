@@ -139,4 +139,17 @@ describe('buildExpensesListParams', () => {
         expect(p.isReimbursable).toBe(true);
         expect(p.awaitingPayment).toBe(true);
     });
+
+    it('maps awaiting_reimbursement to approved personal-card payout queue', () => {
+        const p = buildExpensesListParams({
+            ...base,
+            filterPeriod: 'all',
+            filterStatus: 'awaiting_reimbursement',
+        });
+        expect(p.status).toBe('approved');
+        expect(p.paymentMethod).toBe('cash');
+        expect(p.awaitingReimbursement).toBe(true);
+        expect(p.isReimbursable).toBeUndefined();
+        expect(p.awaitingPayment).toBeUndefined();
+    });
 });

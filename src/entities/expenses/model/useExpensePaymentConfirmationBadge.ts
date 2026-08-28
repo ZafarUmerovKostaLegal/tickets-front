@@ -3,7 +3,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { fetchExpenses } from './expensesApi';
 import { canModerateExpenseRequests } from './expenseModeration';
 import { isExpensePaymentConfirmer } from './expensePaymentConfirmer';
-import { awaitingVendorPaymentQuery } from './expensesListParams';
+import { awaitingEmployeeReimbursementQuery } from './expensesListParams';
 
 function formatBadge(count: number): string {
     if (count <= 0)
@@ -23,7 +23,7 @@ export function useExpenseAttentionBadge(enabled = true): {
     const [companyPayCount, setCompanyPayCount] = useState(0);
     const [clientPayCount, setClientPayCount] = useState(0);
     const [moderationCount, setModerationCount] = useState(0);
-    const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email);
+    const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email, { displayName: user?.display_name });
     const isModerator = canModerateExpenseRequests(user?.role);
     const shouldTrack = enabled && user != null && (isPaymentConfirmer || isModerator);
 
@@ -38,7 +38,7 @@ export function useExpenseAttentionBadge(enabled = true): {
             const jobs: Promise<void>[] = [];
             if (isPaymentConfirmer) {
                 jobs.push(
-                    fetchExpenses(awaitingVendorPaymentQuery({
+                    fetchExpenses(awaitingEmployeeReimbursementQuery({
                         scopeMode: 'company',
                         skip: 0,
                         limit: 1,

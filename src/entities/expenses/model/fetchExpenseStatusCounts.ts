@@ -1,11 +1,26 @@
 import { EXPENSE_REGISTRY_STATUSES } from './constants';
-import { AWAITING_PAYMENT_STATUS_FILTER } from './expenseStatusLabels';
-import { awaitingVendorPaymentQuery, buildExpensesListParams, type ExpensesUiFilterPeriod, type ExpensesUiSortBy } from './expensesListParams';
+import {
+    AWAITING_PAYMENT_STATUS_FILTER,
+    AWAITING_REIMBURSEMENT_STATUS_FILTER,
+} from './expenseStatusLabels';
+import {
+    awaitingEmployeeReimbursementQuery,
+    awaitingVendorPaymentQuery,
+    buildExpensesListParams,
+    type ExpensesUiFilterPeriod,
+    type ExpensesUiSortBy,
+} from './expensesListParams';
 import { fetchExpenses } from './expensesApi';
 import type { ExpenseStatus, ExpenseType, ExpensesScopeMode, PartnerExpenseCategory } from './types';
 import type { RequestInitAuth } from '@shared/api';
 
-export type ExpenseStatusCountMap = Partial<Record<ExpenseStatus | 'all' | typeof AWAITING_PAYMENT_STATUS_FILTER, number>>;
+export type ExpenseStatusCountKey =
+    | ExpenseStatus
+    | 'all'
+    | typeof AWAITING_PAYMENT_STATUS_FILTER
+    | typeof AWAITING_REIMBURSEMENT_STATUS_FILTER;
+
+export type ExpenseStatusCountMap = Partial<Record<ExpenseStatusCountKey, number>>;
 
 export function formatExpenseStatusCount(n: number | undefined): string | null {
     if (n == null || !Number.isFinite(n) || n < 0)
@@ -52,7 +67,7 @@ export async function fetchExpenseStatusCounts(
         excludeExpenseType: args.excludeExpenseType,
     });
 
-    const jobs: Array<Promise<readonly [ExpenseStatus | 'all' | typeof AWAITING_PAYMENT_STATUS_FILTER, number]>> = [
+    const jobs: Array<Promise<readonly [ExpenseStatusCountKey, number]>> = [
         fetchExpenses({ ...base, skip: 0, limit: 1 }, init).then((res) => [
             'all',
             typeof res.total === 'number' ? Math.max(0, res.total) : 0,
@@ -77,6 +92,17 @@ export async function fetchExpenseStatusCounts(
             init,
         ).then((res) => [
             AWAITING_PAYMENT_STATUS_FILTER,
+            typeof res.total === 'number' ? Math.max(0, res.total) : 0,
+        ] as const),
+        fetchExpenses(
+            awaitingEmployeeReimbursementQuery({
+                ...base,
+                skip: 0,
+                limit: 1,
+            }),
+            init,
+        ).then((res) => [
+            AWAITING_REIMBURSEMENT_STATUS_FILTER,
             typeof res.total === 'number' ? Math.max(0, res.total) : 0,
         ] as const),
     );

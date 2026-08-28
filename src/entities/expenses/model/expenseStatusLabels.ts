@@ -1,9 +1,17 @@
 import { STATUS_META } from './constants';
-import { isAwaitingVendorPayment, isEmployeePersonalFundsPayout } from './expensePaymentDetails';
+import {
+    isAwaitingEmployeeReimbursement,
+    isAwaitingVendorPayment,
+    isEmployeePersonalFundsPayout,
+} from './expensePaymentDetails';
 import type { ExpenseRequest, ExpenseStatus } from './types';
 
 export const AWAITING_PAYMENT_STATUS_FILTER = 'awaiting_payment' as const;
-export type ExpensesUiStatusFilter = ExpenseStatus | typeof AWAITING_PAYMENT_STATUS_FILTER;
+export const AWAITING_REIMBURSEMENT_STATUS_FILTER = 'awaiting_reimbursement' as const;
+export type ExpensesUiStatusFilter =
+    | ExpenseStatus
+    | typeof AWAITING_PAYMENT_STATUS_FILTER
+    | typeof AWAITING_REIMBURSEMENT_STATUS_FILTER;
 
 export const EXPENSE_STATUS_FILTER_OPTIONS: ReadonlyArray<{
     value: ExpensesUiStatusFilter;
@@ -13,15 +21,27 @@ export const EXPENSE_STATUS_FILTER_OPTIONS: ReadonlyArray<{
     { value: 'pending_approval', label: STATUS_META.pending_approval.label },
     { value: 'revision_required', label: STATUS_META.revision_required.label },
     { value: 'approved', label: STATUS_META.approved.label },
+    { value: AWAITING_REIMBURSEMENT_STATUS_FILTER, label: 'Ожидает возмещения' },
     { value: AWAITING_PAYMENT_STATUS_FILTER, label: 'Ожидает оплаты' },
     { value: 'paid', label: STATUS_META.paid.label },
     { value: 'rejected', label: STATUS_META.rejected.label },
     { value: 'withdrawn', label: STATUS_META.withdrawn.label },
 ];
 
+const SYNTHETIC_STATUS_FILTERS = new Set<string>([
+    AWAITING_PAYMENT_STATUS_FILTER,
+    AWAITING_REIMBURSEMENT_STATUS_FILTER,
+]);
+
+export function isSyntheticExpenseStatusFilter(value: string): boolean {
+    return SYNTHETIC_STATUS_FILTERS.has(value);
+}
+
 export function expenseUiStatusFilterLabel(filter: ExpensesUiStatusFilter | ''): string {
     if (!filter)
         return 'Статус';
+    if (filter === AWAITING_REIMBURSEMENT_STATUS_FILTER)
+        return 'Ожидает возмещения';
     if (filter === AWAITING_PAYMENT_STATUS_FILTER)
         return 'Ожидает оплаты';
     return STATUS_META[filter]?.label ?? filter;
@@ -40,7 +60,11 @@ export function expenseStatusBadgeClass(
     },
 ): string {
     const base = `exp-status exp-status--${expense.status}`;
-    return isAwaitingVendorPayment(expense) ? `${base} exp-status--awaiting_payment` : base;
+    if (isAwaitingEmployeeReimbursement(expense))
+        return `${base} exp-status--awaiting_reimbursement`;
+    if (isAwaitingVendorPayment(expense))
+        return `${base} exp-status--awaiting_payment`;
+    return base;
 }
 
 /** Human-readable status: employee personal-funds payout vs vendor payment. */
@@ -49,7 +73,7 @@ export function expenseStatusLabel(
 ): string {
     const status = expense.status;
     const reimbursable = Boolean(expense.isReimbursable);
-    if (status === 'approved' && isEmployeePersonalFundsPayout(expense))
+    if (isAwaitingEmployeeReimbursement(expense))
         return 'Ожидает возмещения';
     if (status === 'paid' && isEmployeePersonalFundsPayout(expense))
         return 'Возмещено';

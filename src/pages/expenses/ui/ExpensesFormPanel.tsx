@@ -184,6 +184,7 @@ type Props = {
     currentUserId?: number | null;
     currentUserRole?: string | null;
     currentUserEmail?: string | null;
+    currentUserDisplayName?: string | null;
     /** company — без partner/client; client — только «За клиента»; partner — только расход партнёра */
     formScope?: 'company' | 'partner' | 'client';
     /** Значения, которыми заполняется пустая форма создания (например, проект из журнала учёта времени). */
@@ -336,7 +337,7 @@ function formatForeignFp(n: number): string {
     const x = Math.round(n * 1e6) / 1e6;
     return x.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
 }
-export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, currentUserEmail = null, formScope = 'company', presetValues = null, }: Props) {
+export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, currentUserEmail = null, currentUserDisplayName = null, formScope = 'company', presetValues = null, }: Props) {
     const [values, setValues] = useState<ExpenseFormValues>(EMPTY);
     const valuesRef = useRef(values);
     valuesRef.current = values;
@@ -1169,7 +1170,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
     }, [onUploadPaymentReceipts, filesReceipt]);
     const blockedModerationOwn = Boolean(editingRequest &&
         isModerationBlockedForOwnExpense(Boolean(canModerate), currentUserId, editingRequest));
-    const isPaymentConfirmer = isExpensePaymentConfirmer(currentUserEmail);
+    const isPaymentConfirmer = isExpensePaymentConfirmer(currentUserEmail, { displayName: currentUserDisplayName });
     const showOwnModerationBlockedHint = Boolean(isView &&
         editingRequest &&
         showOwnPendingModerationBlockedHint(editingRequest, Boolean(canModerate), blockedModerationOwn));
@@ -1430,7 +1431,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         const blockedOwn = isModerationBlockedForOwnExpense(Boolean(canModerate), currentUserId, editingRequest);
         if (emailModerationIntent === 'pay') {
             const canConfirmPayment = showPayExpenseAction(editingRequest, blockedOwn, {
-                isPaymentConfirmer: isExpensePaymentConfirmer(currentUserEmail),
+                isPaymentConfirmer: isExpensePaymentConfirmer(currentUserEmail, { displayName: currentUserDisplayName }),
                 canModerate: Boolean(canModerate),
             });
             emailIntentHandledRef.current = key;
@@ -1461,6 +1462,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         editingRequest,
         currentUserId,
         currentUserEmail,
+        currentUserDisplayName,
         canModerate,
         onEmailModerationIntentConsumed,
     ]);

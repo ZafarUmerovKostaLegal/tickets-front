@@ -6,6 +6,7 @@ import {
     expenseHasReimbursementCard,
     isEmployeePersonalFundsPayout,
     isAwaitingVendorPayment,
+    isAwaitingEmployeeReimbursement,
 } from './expensePaymentDetails';
 
 describe('expense payment details', () => {
@@ -85,6 +86,31 @@ describe('isAwaitingVendorPayment', () => {
             status: 'paid',
             isReimbursable: true,
             paymentMethod: 'transfer',
+        })).toBe(false);
+    });
+});
+
+describe('isAwaitingEmployeeReimbursement', () => {
+    it('is approved personal-card payout, including non-client-reimbursable cash', () => {
+        expect(isAwaitingEmployeeReimbursement({
+            status: 'approved',
+            paymentMethod: 'cash',
+            expenseType: 'services',
+        })).toBe(true);
+        expect(isAwaitingEmployeeReimbursement({
+            status: 'approved',
+            paymentMethod: 'transfer',
+            expenseType: 'services',
+        })).toBe(false);
+        expect(isAwaitingEmployeeReimbursement({
+            status: 'approved',
+            paymentMethod: 'cash',
+            expenseType: 'partner_expense',
+        })).toBe(false);
+        expect(isAwaitingEmployeeReimbursement({
+            status: 'paid',
+            paymentMethod: 'cash',
+            expenseType: 'services',
         })).toBe(false);
     });
 });

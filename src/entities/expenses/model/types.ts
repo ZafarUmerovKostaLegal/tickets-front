@@ -124,6 +124,8 @@ export interface ListParams {
     paymentMethod?: string;
     /** Exclude employee personal-card payouts from the vendor-payment queue. */
     awaitingPayment?: boolean;
+    /** Employee personal-card payout queue (cash, except partner_expense). */
+    awaitingReimbursement?: boolean;
     dateFrom?: string;
     dateTo?: string;
     q?: string;

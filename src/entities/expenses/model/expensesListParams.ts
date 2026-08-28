@@ -4,7 +4,7 @@ import {
     expensesPeriodPresetRange,
     type ExpensesUiFilterPeriod,
 } from './expensesPeriodPresets';
-import { AWAITING_PAYMENT_STATUS_FILTER, type ExpensesUiStatusFilter } from './expenseStatusLabels';
+import { AWAITING_PAYMENT_STATUS_FILTER, AWAITING_REIMBURSEMENT_STATUS_FILTER, isSyntheticExpenseStatusFilter, type ExpensesUiStatusFilter } from './expenseStatusLabels';
 
 export const EXPENSES_LIST_PAGE_SIZE = 100;
 
@@ -17,6 +17,15 @@ export function awaitingVendorPaymentQuery(extra: ListParams = {}): ListParams {
         status: 'approved',
         isReimbursable: true,
         awaitingPayment: true,
+        ...extra,
+    };
+}
+
+export function awaitingEmployeeReimbursementQuery(extra: ListParams = {}): ListParams {
+    return {
+        status: 'approved',
+        paymentMethod: 'cash',
+        awaitingReimbursement: true,
         ...extra,
     };
 }
@@ -58,7 +67,7 @@ export function buildExpensesListParams(args: {
     if (args.isModerationQueue) {
         p.status = 'pending_approval';
     }
-    else if (args.filterStatus && args.filterStatus !== AWAITING_PAYMENT_STATUS_FILTER) {
+    else if (args.filterStatus && !isSyntheticExpenseStatusFilter(args.filterStatus)) {
         p.status = args.filterStatus;
     }
     if (typeof args.filterAuthorUserId === 'number' && args.filterAuthorUserId > 0)
@@ -87,6 +96,11 @@ export function buildExpensesListParams(args: {
         p.status = 'approved';
         p.isReimbursable = true;
         p.awaitingPayment = true;
+    }
+    if (!args.isModerationQueue && args.filterStatus === AWAITING_REIMBURSEMENT_STATUS_FILTER) {
+        p.status = 'approved';
+        p.paymentMethod = 'cash';
+        p.awaitingReimbursement = true;
     }
 
     if (args.filterPeriod === 'custom') {

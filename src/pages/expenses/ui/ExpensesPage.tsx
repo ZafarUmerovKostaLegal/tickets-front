@@ -49,7 +49,7 @@ import {
     type ExpenseStatusCountMap,
 } from '@entities/expenses/model/fetchExpenseStatusCounts';
 import { isModerationBlockedForOwnExpense, isReceiptUploadAllowedForExpenseStatus, showOwnPendingModerationBlockedHint, resolveExpensePanelMode, showPayExpenseAction, showPendingApprovalModeration, showDeleteExpenseAction, } from '@entities/expenses/model/expenseStatusPolicy';
-import { expensePayActionLabel, expenseStatusBadgeClass, expenseStatusLabel, expenseUiStatusFilterLabel, EXPENSE_STATUS_FILTER_OPTIONS, AWAITING_PAYMENT_STATUS_FILTER, isExpensesUiStatusFilter, type ExpensesUiStatusFilter } from '@entities/expenses/model/expenseStatusLabels';
+import { expensePayActionLabel, expenseStatusBadgeClass, expenseStatusLabel, expenseUiStatusFilterLabel, EXPENSE_STATUS_FILTER_OPTIONS, AWAITING_REIMBURSEMENT_STATUS_FILTER, isExpensesUiStatusFilter, type ExpensesUiStatusFilter } from '@entities/expenses/model/expenseStatusLabels';
 import { isExpensePaymentConfirmer } from '@entities/expenses/model/expensePaymentConfirmer';
 import { ExpensesPageBoundary } from './ExpensesPageBoundary';
 import '@pages/time-tracking/ui/TimeTrackingForms.css';
@@ -553,7 +553,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [searchParams] = useSearchParams();
     const { user, loading: currentUserLoading } = useCurrentUser();
     const canModerate = canViewExpensesRequestsAndReport(user?.role);
-    const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email);
+    const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email, { displayName: user?.display_name });
     const { moderationCount, payCount } = useExpenseAttentionBadge(
         !currentUserLoading && (canModerate || isPaymentConfirmer),
     );
@@ -641,7 +641,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             return;
         const focus = searchParams.get('focus');
         if (focus === 'pay') {
-            setFilterStatus(AWAITING_PAYMENT_STATUS_FILTER);
+            setFilterStatus(AWAITING_REIMBURSEMENT_STATUS_FILTER);
             setListPage(1);
         }
     }, [filterOwnerKey, hydratedFilterOwnerKey, isModerationQueue, searchParams]);
@@ -1494,7 +1494,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         switch (slotId) {
             case 'status': {
                 const allCountLabel = isPaymentConfirmer
-                    ? formatExpenseStatusCount(statusCounts[AWAITING_PAYMENT_STATUS_FILTER] ?? payCount)
+                    ? formatExpenseStatusCount(statusCounts[AWAITING_REIMBURSEMENT_STATUS_FILTER] ?? payCount)
                     : formatExpenseStatusCount(statusCounts.all);
                 const statusChipBadge = filterStatus
                     ? (statusCounts[filterStatus] ?? 0)
@@ -1509,7 +1509,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                         ) : null}
                     </button>
                     {statuses.map(s => {
-                        const countForOption = isPaymentConfirmer && s.value !== AWAITING_PAYMENT_STATUS_FILTER
+                        const countForOption = isPaymentConfirmer && s.value !== AWAITING_REIMBURSEMENT_STATUS_FILTER
                             ? undefined
                             : statusCounts[s.value];
                         const countLabel = formatExpenseStatusCount(countForOption);
@@ -1859,7 +1859,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         {isPanelOpen && (<Suspense fallback={null}><ExpensesFormPanel isOpen mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
             setEditingReq(r);
             setRequests(prev => prev.map(x => (x.id === r.id ? r : x)));
-        }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} currentUserEmail={user?.email ?? null} formScope={isPartnerScope ? 'partner' : isClientScope ? 'client' : 'company'} /></Suspense>)}
+        }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} currentUserEmail={user?.email ?? null} currentUserDisplayName={user?.display_name ?? null} formScope={isPartnerScope ? 'partner' : isClientScope ? 'client' : 'company'} /></Suspense>)}
 
         {canModerate && isReportOpen && !isPartnerScope && !isClientScope && (<Suspense fallback={null}><ExpensesReportModal isOpen requests={requestsForUi} onClose={() => setIsReportOpen(false)} /></Suspense>)}
     </div>);

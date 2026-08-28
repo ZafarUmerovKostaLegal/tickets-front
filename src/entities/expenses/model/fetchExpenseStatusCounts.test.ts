@@ -24,7 +24,11 @@ describe('fetchExpenseStatusCounts', () => {
     it('loads all + per-status totals with status cleared from base filters', async () => {
         vi.mocked(fetchExpenses).mockImplementation(async (params) => ({
             items: [],
-            total: params.awaitingPayment ? 3 : params.status === 'approved' ? 7 : params.status ? 1 : 20,
+            total: params.awaitingReimbursement
+                ? 5
+                : params.awaitingPayment
+                    ? 3
+                    : params.status === 'approved' ? 7 : params.status ? 1 : 20,
             skip: 0,
             limit: 1,
         }));
@@ -40,9 +44,11 @@ describe('fetchExpenseStatusCounts', () => {
         expect(counts.all).toBe(20);
         expect(counts.approved).toBe(7);
         expect(counts.awaiting_payment).toBe(3);
+        expect(counts.awaiting_reimbursement).toBe(5);
         expect(counts.draft).toBe(1);
         expect(vi.mocked(fetchExpenses).mock.calls.some(([p]) => p.status === undefined || p.status === '')).toBe(true);
         expect(vi.mocked(fetchExpenses).mock.calls.some(([p]) => p.expenseType === 'transport')).toBe(true);
         expect(vi.mocked(fetchExpenses).mock.calls.some(([p]) => p.awaitingPayment === true)).toBe(true);
+        expect(vi.mocked(fetchExpenses).mock.calls.some(([p]) => p.awaitingReimbursement === true)).toBe(true);
     });
 });

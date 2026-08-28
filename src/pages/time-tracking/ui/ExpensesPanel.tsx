@@ -635,6 +635,7 @@ export function ExpensesPanel({ managedExpenseAuthorId = null }: ExpensesPanelPr
           currentUserId={currentUser?.id ?? null}
           currentUserRole={currentUser?.role ?? null}
           currentUserEmail={currentUser?.email ?? null}
+          currentUserDisplayName={currentUser?.display_name ?? null}
           presetValues={panelPresetValues}
         />
       </Suspense>)}

@@ -130,6 +130,11 @@ describe('expenseStatusLabels', () => {
             status: 'approved',
             isReimbursable: true,
             paymentMethod: 'cash',
+        }))).toContain('exp-status--awaiting_reimbursement');
+        expect(expenseStatusBadgeClass(expense({
+            status: 'approved',
+            isReimbursable: true,
+            paymentMethod: 'cash',
         }))).not.toContain('exp-status--awaiting_payment');
     });
 });

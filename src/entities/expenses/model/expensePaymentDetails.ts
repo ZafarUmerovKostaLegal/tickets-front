@@ -37,6 +37,15 @@ export function isEmployeePersonalFundsPayout(req: {
     return String(req.paymentMethod ?? '').trim().toLowerCase() === 'cash';
 }
 
+/** Approved spend paid from the employee's personal cash/card — firm must reimburse them. */
+export function isAwaitingEmployeeReimbursement(req: {
+    status?: string | null;
+    paymentMethod?: string | null;
+    expenseType?: string | null;
+}): boolean {
+    return req.status === 'approved' && isEmployeePersonalFundsPayout(req);
+}
+
 /** Approved reimbursable spend that is not a personal-card payout — vendor/bank payment. */
 export function isAwaitingVendorPayment(req: {
     status?: string | null;

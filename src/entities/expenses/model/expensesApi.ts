@@ -58,6 +58,8 @@ export async function fetchExpenses(params: ListParams = {}, init?: RequestInitA
         qs.set('paymentMethod', params.paymentMethod);
     if (params.awaitingPayment)
         qs.set('awaitingPayment', 'true');
+    if (params.awaitingReimbursement)
+        qs.set('awaitingReimbursement', 'true');
     if (params.dateFrom)
         qs.set('dateFrom', params.dateFrom);
     if (params.dateTo)
