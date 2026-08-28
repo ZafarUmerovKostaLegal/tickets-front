@@ -1839,7 +1839,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                 <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
                                 {tableConfirm.req.isReimbursable || isEmployeePersonalFundsPayout(tableConfirm.req) ? (<p className="exp-mod-dialog__sub">
                                     {isEmployeePersonalFundsPayout(tableConfirm.req)
-                                        ? 'После одобрения заявку нужно возместить сотруднику на указанную карту. Подтверждение выплаты выполняет назначенный сотрудник, статус станет «Ожидает возмещения».'
+                                        ? 'После одобрения заявку нужно компенсировать сотруднику на указанную карту. Подтверждение выплаты выполняет назначенный сотрудник, статус станет «Ожидает компенсацию».'
                                         : 'После одобрения заявка уйдёт на оплату. Отметить оплату могут модераторы реестра расходов.'}
                                 </p>) : null}
                             </>) : tableConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">

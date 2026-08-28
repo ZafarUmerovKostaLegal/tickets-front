@@ -151,8 +151,9 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         badge: expenseAttentionBadge,
         payCount: expensePayCount,
         moderationCount: expenseModerationCount,
+        isPaymentConfirmer: isExpensePaymentConfirmerUser,
     } = useExpenseAttentionBadge(!loading && showExpensesTile);
-    const expenseBadgeAria = expensePayCount > 0
+    const expenseBadgeAria = isExpensePaymentConfirmerUser && expensePayCount > 0
         ? t('homeHub.expensesPayBadgeAria').replace('{count}', String(expensePayCount))
         : expenseModerationCount > 0
             ? t('homeHub.expensesModerationBadgeAria').replace('{count}', String(expenseModerationCount))
@@ -198,7 +199,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         timeTracking: forReviewCount > 0
             ? `${routes.timeTracking}?tab=reports&reportsSection=for-review`
             : routes.timeTracking,
-        expenses: expensePayCount > 0
+        expenses: isExpensePaymentConfirmerUser && expensePayCount > 0
             ? `${routes.expenses}?focus=pay`
             : routes.expenses,
         correspondence: correspondenceOutgoingPending > 0
@@ -217,6 +218,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         vacationCounts.minePendingCount,
         forReviewCount,
         expensePayCount,
+        isExpensePaymentConfirmerUser,
         correspondenceOutgoingPending,
         correspondenceIncomingNew,
         todoInvitesCount,

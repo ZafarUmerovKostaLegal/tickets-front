@@ -21,7 +21,7 @@ export const EXPENSE_STATUS_FILTER_OPTIONS: ReadonlyArray<{
     { value: 'pending_approval', label: STATUS_META.pending_approval.label },
     { value: 'revision_required', label: STATUS_META.revision_required.label },
     { value: 'approved', label: STATUS_META.approved.label },
-    { value: AWAITING_REIMBURSEMENT_STATUS_FILTER, label: 'Ожидает возмещения' },
+    { value: AWAITING_REIMBURSEMENT_STATUS_FILTER, label: 'Ожидает компенсацию' },
     { value: AWAITING_PAYMENT_STATUS_FILTER, label: 'Ожидает оплаты' },
     { value: 'paid', label: STATUS_META.paid.label },
     { value: 'rejected', label: STATUS_META.rejected.label },
@@ -41,7 +41,7 @@ export function expenseUiStatusFilterLabel(filter: ExpensesUiStatusFilter | ''):
     if (!filter)
         return 'Статус';
     if (filter === AWAITING_REIMBURSEMENT_STATUS_FILTER)
-        return 'Ожидает возмещения';
+        return 'Ожидает компенсацию';
     if (filter === AWAITING_PAYMENT_STATUS_FILTER)
         return 'Ожидает оплаты';
     return STATUS_META[filter]?.label ?? filter;
@@ -74,7 +74,7 @@ export function expenseStatusLabel(
     const status = expense.status;
     const reimbursable = Boolean(expense.isReimbursable);
     if (isAwaitingEmployeeReimbursement(expense))
-        return 'Ожидает возмещения';
+        return 'Ожидает компенсацию';
     if (status === 'paid' && isEmployeePersonalFundsPayout(expense))
         return 'Возмещено';
     if (isAwaitingVendorPayment(expense))

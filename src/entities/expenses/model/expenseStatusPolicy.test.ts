@@ -107,13 +107,13 @@ describe('showUnapproveExpenseAction', () => {
 
 describe('expenseStatusLabels', () => {
     it('uses reimbursement wording for cash reimbursable approved/paid', () => {
-        expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: true, paymentMethod: 'cash' }))).toBe('Ожидает возмещения');
+        expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: true, paymentMethod: 'cash' }))).toBe('Ожидает компенсацию');
         expect(expenseStatusLabel(expense({ status: 'paid', isReimbursable: true, paymentMethod: 'cash' }))).toBe('Возмещено');
         expect(expensePayActionLabel(expense({ isReimbursable: true, paymentMethod: 'cash' }))).toBe('Возмещено');
     });
 
     it('uses reimbursement wording for cash personal funds even if the client will not reimburse', () => {
-        expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: false, paymentMethod: 'cash' }))).toBe('Ожидает возмещения');
+        expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: false, paymentMethod: 'cash' }))).toBe('Ожидает компенсацию');
         expect(expenseStatusLabel(expense({ status: 'paid', isReimbursable: false, paymentMethod: 'cash' }))).toBe('Возмещено');
         expect(expensePayActionLabel(expense({ isReimbursable: false, paymentMethod: 'cash' }))).toBe('Возмещено');
     });

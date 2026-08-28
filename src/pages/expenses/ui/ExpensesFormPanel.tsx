@@ -1514,7 +1514,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                             <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
                             {editingRequest && (editingRequest.isReimbursable || isEmployeePersonalFundsPayout(editingRequest)) ? (<p className="exp-mod-dialog__sub">
                                 {isEmployeePersonalFundsPayout(editingRequest)
-                                    ? 'После одобрения заявку нужно возместить сотруднику на указанную карту. Подтверждение выплаты выполняет назначенный сотрудник, статус станет «Ожидает возмещения».'
+                                    ? 'После одобрения заявку нужно компенсировать сотруднику на указанную карту. Подтверждение выплаты выполняет назначенный сотрудник, статус станет «Ожидает компенсацию».'
                                     : 'После одобрения заявка уйдёт на оплату. Отметить оплату могут модераторы реестра расходов.'}
                             </p>) : null}
                         </>) : panelConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">
@@ -2250,7 +2250,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                         Расход партнёра учтён без согласования. Дальнейшие действия по оплате — по внутренним правилам; ожидание
                         решения модератора не требуется.
                     </>) : String(editingRequest.paymentMethod ?? '').toLowerCase() === 'cash' ? (<>
-                        Заявка одобрена и ожидает возмещения. После перевода на карту сотрудника нажмите «Возмещено».
+                        Заявка одобрена и ожидает компенсацию. После перевода на карту сотрудника нажмите «Возмещено».
                     </>) : (<>
                         Заявка одобрена и ожидает оплаты. После банковского перечисления нажмите «Оплачено».
                     </>)}
@@ -2277,7 +2277,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     editingRequest?.expenseType !== 'partner_expense' &&
                     (editingRequest.isReimbursable || isEmployeePersonalFundsPayout(editingRequest)) && (<p className="exp-panel__ft-hint" role="status">
                         {isEmployeePersonalFundsPayout(editingRequest)
-                            ? 'Статус «Ожидает возмещения». Подтверждение выплаты сотруднику выполняет назначенный сотрудник.'
+                            ? 'Статус «Ожидает компенсацию». Подтверждение выплаты сотруднику выполняет назначенный сотрудник.'
                             : 'Статус «Ожидает оплаты». Отметить оплату могут модераторы реестра расходов.'}
                     </p>)}
                 {showWithdrawAction && (<div className="exp-panel__ft-moderate">
