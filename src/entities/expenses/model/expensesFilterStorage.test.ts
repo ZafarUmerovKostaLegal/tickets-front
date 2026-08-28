@@ -1,5 +1,11 @@
-import { describe, expect, it } from 'vitest';
-import { normalizeExpensesSavedFilters } from './expensesFilterStorage';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+    clearExpensesSavedFilters,
+    defaultExpensesSavedFilters,
+    loadExpensesSavedFilters,
+    normalizeExpensesSavedFilters,
+    saveExpensesSavedFilters,
+} from './expensesFilterStorage';
 
 describe('normalizeExpensesSavedFilters', () => {
     it('restores valid company filters', () => {
@@ -76,5 +82,35 @@ describe('normalizeExpensesSavedFilters', () => {
             dateTo: '',
             sortBy: 'createdAt',
         });
+    });
+});
+
+describe('clearExpensesSavedFilters', () => {
+    afterEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it('removes stored filters so the next load is empty', () => {
+        const store = new Map<string, string>();
+        vi.stubGlobal('window', {
+            localStorage: {
+                getItem: (key: string) => store.get(key) ?? null,
+                setItem: (key: string, value: string) => {
+                    store.set(key, value);
+                },
+                removeItem: (key: string) => {
+                    store.delete(key);
+                },
+            },
+        });
+
+        saveExpensesSavedFilters(7, 'default', {
+            ...defaultExpensesSavedFilters(),
+            status: 'approved',
+        });
+        expect(loadExpensesSavedFilters(7, 'default').status).toBe('approved');
+
+        clearExpensesSavedFilters(7, 'default');
+        expect(loadExpensesSavedFilters(7, 'default')).toEqual(defaultExpensesSavedFilters());
     });
 });

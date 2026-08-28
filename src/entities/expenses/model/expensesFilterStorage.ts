@@ -132,6 +132,17 @@ export function loadExpensesSavedFilters(
     }
 }
 
+export function clearExpensesSavedFilters(userId: number, variant: ExpensesFiltersVariant): void {
+    if (typeof window === 'undefined')
+        return;
+    try {
+        window.localStorage.removeItem(expensesFiltersStorageKey(userId, variant));
+    }
+    catch {
+        // Filtering must remain usable even when browser storage is unavailable.
+    }
+}
+
 export function saveExpensesSavedFilters(
     userId: number,
     variant: ExpensesFiltersVariant,

@@ -17,8 +17,8 @@ import {
     type ExpensesUiSortBy,
 } from '@entities/expenses/model/expensesListParams';
 import {
-    loadExpensesSavedFilters,
-    saveExpensesSavedFilters,
+    defaultExpensesSavedFilters,
+    clearExpensesSavedFilters,
 } from '@entities/expenses/model/expensesFilterStorage';
 import {
     availableExpensesFilterSlots,
@@ -613,22 +613,25 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     useEffect(() => {
         if (!filterOwnerKey || filterStorageUserId == null)
             return;
-        const restored = loadExpensesSavedFilters(filterStorageUserId, variant);
-        setSearch(restored.search);
-        setDebouncedSearch(restored.search.trim());
-        setFilterStatus(restored.status);
-        setFilterType(restored.type);
-        setFilterSubtype(restored.subtype);
-        setFilterPartnerUserId(restored.partnerUserId);
-        setFilterAuthorUserId(restored.authorUserId);
-        setFilterReimb(restored.reimbursable);
-        setFilterPeriod(restored.period);
-        setFilterDateFrom(restored.dateFrom);
-        setFilterDateTo(restored.dateTo);
-        setFilterSort(restored.sortBy);
+        if (hydratedFilterOwnerKey === filterOwnerKey)
+            return;
+        const defaults = defaultExpensesSavedFilters();
+        setSearch(defaults.search);
+        setDebouncedSearch(defaults.search.trim());
+        setFilterStatus(defaults.status);
+        setFilterType(defaults.type);
+        setFilterSubtype(defaults.subtype);
+        setFilterPartnerUserId(defaults.partnerUserId);
+        setFilterAuthorUserId(defaults.authorUserId);
+        setFilterReimb(defaults.reimbursable);
+        setFilterPeriod(defaults.period);
+        setFilterDateFrom(defaults.dateFrom);
+        setFilterDateTo(defaults.dateTo);
+        setFilterSort(defaults.sortBy);
         setListPage(1);
+        clearExpensesSavedFilters(filterStorageUserId, variant);
         setHydratedFilterOwnerKey(filterOwnerKey);
-    }, [filterOwnerKey, filterStorageUserId, variant]);
+    }, [filterOwnerKey, filterStorageUserId, variant, hydratedFilterOwnerKey]);
     useEffect(() => {
         if (!filterOwnerKey || hydratedFilterOwnerKey !== filterOwnerKey)
             return;
@@ -641,39 +644,6 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             setListPage(1);
         }
     }, [filterOwnerKey, hydratedFilterOwnerKey, isModerationQueue, searchParams]);
-    useEffect(() => {
-        if (!filterOwnerKey || hydratedFilterOwnerKey !== filterOwnerKey || filterStorageUserId == null)
-            return;
-        saveExpensesSavedFilters(filterStorageUserId, variant, {
-            search,
-            status: filterStatus,
-            type: filterType,
-            subtype: filterSubtype,
-            partnerUserId: filterPartnerUserId,
-            authorUserId: filterAuthorUserId,
-            reimbursable: filterReimb,
-            period: filterPeriod,
-            dateFrom: filterDateFrom,
-            dateTo: filterDateTo,
-            sortBy: filterSort,
-        });
-    }, [
-        filterOwnerKey,
-        hydratedFilterOwnerKey,
-        filterStorageUserId,
-        variant,
-        search,
-        filterStatus,
-        filterType,
-        filterSubtype,
-        filterPartnerUserId,
-        filterAuthorUserId,
-        filterReimb,
-        filterPeriod,
-        filterDateFrom,
-        filterDateTo,
-        filterSort,
-    ]);
     const filterDepsKey = useMemo(() => [
         debouncedSearch,
         filterStatus,
