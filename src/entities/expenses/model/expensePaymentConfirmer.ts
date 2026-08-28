@@ -2,7 +2,7 @@
 export const EXPENSE_PAYMENT_CONFIRMER_EMAIL = 'aakhmadjonov@kostalegal.com';
 export const EXPENSE_PAYMENT_CONFIRMER_EMAILS = [
     EXPENSE_PAYMENT_CONFIRMER_EMAIL,
-    'testeracc@kostalegal.com',
+    'tester@kostalegal.com',
 ] as const;
 
 const CONFIRMER_EMAILS = new Set(EXPENSE_PAYMENT_CONFIRMER_EMAILS.map((email) => email.toLowerCase()));
@@ -19,7 +19,7 @@ function identityLooksLikeConfirmer(value: string | null | undefined): boolean {
     const local = raw.includes('@') ? (raw.split('@')[0] ?? raw) : raw;
     if (CONFIRMER_LOCAL_PARTS.has(local))
         return true;
-    return raw.includes('aakhmadjonov') || raw.includes('akhmadjonov') || raw.includes('testeracc');
+    return raw.includes('aakhmadjonov') || raw.includes('akhmadjonov');
 }
 
 export function isExpensePaymentConfirmer(
