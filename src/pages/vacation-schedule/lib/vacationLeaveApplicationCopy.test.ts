@@ -38,16 +38,39 @@ describe('buildVacationLeaveApplicationCopy', () => {
         expect(copy.addressee).toBe(LEAVE_APPLICATION_ADDRESSEE);
         expect(copy.title).toBe('Заявление');
         expect(copy.subtitle).toBe('о предоставлении ежегодного оплачиваемого отпуска');
-        expect(copy.bodyBeforeDays).toContain('очередной ежегодный оплачиваемый отпуск');
-        expect(copy.daysCount).toBe('14');
+        expect(copy.bodyParts.some((p) => p.type === 'text' && p.text.includes('очередной ежегодный оплачиваемый отпуск'))).toBe(true);
+        expect(copy.bodyParts.some((p) => p.type === 'field' && p.text === '14')).toBe(true);
         expect(copy.fromLine).toBe('Zafar Umerov, Юрист');
         expect(copy.signerLine).toBe('Zafar Umerov, Юрист');
-        expect(copy.bodyAfterTo).toBe('включительно.');
+        expect(copy.bodyParts.at(-1)?.text).toBe(' включительно.');
     });
 
     it('uses unpaid-leave wording for day_off', () => {
         const copy = buildVacationLeaveApplicationCopy(req({ kind: 'day_off', kind_code: 3 }));
-        expect(copy.subtitle).toBe('о предоставлении отпуска без сохранения заработной платы');
-        expect(copy.bodyBeforeDays).toContain('без сохранения заработной платы');
+        expect(copy.title).toBe('Заявление о предоставлении отпуска без сохранения заработной платы');
+        expect(copy.subtitle).toBe('');
+        expect(copy.bodyParts.some((p) => p.type === 'text' && p.text.includes('без сохранения заработной платы'))).toBe(true);
+    });
+
+    it('uses remote-work wording with a date range', () => {
+        const copy = buildVacationLeaveApplicationCopy(req({ kind: 'remote_work', kind_code: 5 }));
+        expect(copy.title).toBe('Заявление');
+        expect(copy.subtitle).toBe('о выходе на удаленный режим работы');
+        expect(copy.bodyParts[0]?.type).toBe('text');
+        expect(copy.bodyParts[0]?.text).toContain('осуществлять трудовую деятельность в удалённом режиме');
+        expect(copy.bodyParts.some((p) => p.type === 'text' && p.text.includes('включительно'))).toBe(true);
+    });
+
+    it('uses a single date for one-day remote work', () => {
+        const copy = buildVacationLeaveApplicationCopy(req({
+            kind: 'remote_work',
+            kind_code: 5,
+            date_from: '2026-06-22',
+            date_to: '2026-06-22',
+            days_count: 1,
+        }));
+        const fields = copy.bodyParts.filter((p) => p.type === 'field').map((p) => p.text);
+        expect(fields).toHaveLength(1);
+        expect(copy.bodyParts.at(-1)?.text).toBe('.');
     });
 });

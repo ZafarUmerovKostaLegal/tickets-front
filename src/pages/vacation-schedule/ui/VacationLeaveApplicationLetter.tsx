@@ -5,7 +5,7 @@ import './VacationLeaveApplicationLetter.css';
 export function VacationLeaveApplicationLetter({ request }: { request: VacationLeaveRequestApi }) {
     const copy = buildVacationLeaveApplicationCopy(request);
     return (
-        <article className="vac-leave-letter" aria-label="Заявление на отпуск">
+        <article className="vac-leave-letter" aria-label="Заявление">
             <div className="vac-leave-letter__addr">
                 <p className="vac-leave-letter__addr-row">
                     <span className="vac-leave-letter__k">КОМУ:</span>
@@ -22,18 +22,16 @@ export function VacationLeaveApplicationLetter({ request }: { request: VacationL
             </p>
 
             <header className="vac-leave-letter__head">
-                <h1 className="vac-leave-letter__title">{copy.title}</h1>
-                <p className="vac-leave-letter__subtitle">{copy.subtitle}</p>
+                <h1 className={`vac-leave-letter__title${copy.subtitle ? '' : ' vac-leave-letter__title--long'}`}>{copy.title}</h1>
+                {copy.subtitle ? <p className="vac-leave-letter__subtitle">{copy.subtitle}</p> : null}
             </header>
 
             <p className="vac-leave-letter__body">
-                {copy.bodyBeforeDays}{' '}
-                <span className="vac-leave-letter__field">{copy.daysCount}</span>
-                {' '}{copy.bodyBetweenDaysAndFrom}{' '}
-                <span className="vac-leave-letter__field">{copy.dateFrom}</span>
-                {' '}{copy.bodyBetweenDates}{' '}
-                <span className="vac-leave-letter__field">{copy.dateTo}</span>
-                {' '}{copy.bodyAfterTo}
+                {copy.bodyParts.map((part, i) => (
+                    part.type === 'field'
+                        ? <span key={i} className="vac-leave-letter__field">{part.text}</span>
+                        : <span key={i}>{part.text}</span>
+                ))}
             </p>
 
             <footer className="vac-leave-letter__sign">

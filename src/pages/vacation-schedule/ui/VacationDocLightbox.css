@@ -141,7 +141,7 @@
 }
 
 .vac-doc-lb__frame--letter {
-  background: #111;
+  background: var(--app-surface, #fff);
 }
 
 .vac-doc-lb__body--letter {
@@ -149,11 +149,6 @@
   justify-content: center;
   padding: 1.25rem 1.1rem 1.5rem;
   overflow: auto;
-  background: #111;
-}
-
-body:not([data-theme='dark']) .vac-doc-lb__frame--letter,
-body:not([data-theme='dark']) .vac-doc-lb__body--letter {
   background: var(--app-surface-soft, #f4f7f9);
 }
 
