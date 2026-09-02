@@ -140,6 +140,63 @@
   height: 100%;
 }
 
+.vac-doc-lb__frame--letter {
+  background: #111;
+}
+
+.vac-doc-lb__body--letter {
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.25rem 1.1rem 1.5rem;
+  overflow: auto;
+  background: #111;
+}
+
+body:not([data-theme='dark']) .vac-doc-lb__frame--letter,
+body:not([data-theme='dark']) .vac-doc-lb__body--letter {
+  background: var(--app-surface-soft, #f4f7f9);
+}
+
+@media print {
+  body > *:not(.vac-doc-lb) {
+    display: none !important;
+  }
+
+  .vac-doc-lb {
+    position: static;
+    inset: auto;
+    background: #fff;
+    padding: 0;
+    display: block;
+  }
+
+  .vac-doc-lb__head,
+  .vac-doc-lb__close,
+  .vac-doc-lb__actions {
+    display: none !important;
+  }
+
+  .vac-doc-lb__frame,
+  .vac-doc-lb__frame--pdf,
+  .vac-doc-lb__frame--letter {
+    max-width: none;
+    max-height: none;
+    height: auto;
+    border-radius: 0;
+    box-shadow: none;
+    overflow: visible;
+    background: #fff;
+  }
+
+  .vac-doc-lb__body,
+  .vac-doc-lb__body--letter {
+    display: block;
+    overflow: visible;
+    background: #fff;
+    padding: 0;
+  }
+}
+
 .vac-doc-lb__msg {
   padding: 2rem 1.5rem;
   text-align: center;

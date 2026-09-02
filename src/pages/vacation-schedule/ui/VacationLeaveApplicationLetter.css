@@ -1,0 +1,184 @@
+.vac-leave-letter {
+  box-sizing: border-box;
+  width: min(100%, 52rem);
+  min-height: 36rem;
+  margin: 0 auto;
+  padding: 2.75rem 3.25rem 3rem;
+  display: flex;
+  flex-direction: column;
+  font-family: Inter, "Segoe UI", system-ui, sans-serif;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: #e8e8e8;
+  background: #1a1a1a;
+  border-radius: 2px;
+}
+
+.vac-leave-letter__addr {
+  align-self: flex-end;
+  width: min(100%, 22.5rem);
+  text-align: left;
+}
+
+.vac-leave-letter__addr-row {
+  margin: 0 0 0.85rem;
+}
+
+.vac-leave-letter__k {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #d4d4d4;
+}
+
+.vac-leave-letter__v {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 500;
+  color: #f3f3f3;
+  line-height: 1.4;
+}
+
+.vac-leave-letter__field {
+  color: #b8b05a;
+  font-weight: 500;
+}
+
+.vac-leave-letter__date {
+  margin: 2.4rem 0 0;
+  font-size: 1rem;
+}
+
+.vac-leave-letter__head {
+  margin: 3.25rem 0 2.5rem;
+  text-align: center;
+}
+
+.vac-leave-letter__title {
+  margin: 0 0 0.45rem;
+  font-size: 1.7rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #f5f5f5;
+}
+
+.vac-leave-letter__subtitle {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 400;
+  color: #ececec;
+}
+
+.vac-leave-letter__body {
+  margin: 0;
+  max-width: 42rem;
+  text-align: left;
+  text-indent: 1.5rem;
+  color: #ececec;
+}
+
+.vac-leave-letter__sign {
+  margin-top: auto;
+  padding-top: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.vac-leave-letter__sign-line {
+  display: block;
+  width: 11.5rem;
+  height: 1px;
+  background: #f0f0f0;
+}
+
+html[data-theme='light'] .vac-leave-letter,
+body:not([data-theme='dark']) .vac-leave-letter {
+  color: #1a1f2e;
+  background: #fff;
+  border: 1px solid #e4eaf0;
+}
+
+html[data-theme='light'] .vac-leave-letter__k,
+body:not([data-theme='dark']) .vac-leave-letter__k {
+  color: #5b6472;
+}
+
+html[data-theme='light'] .vac-leave-letter__v,
+body:not([data-theme='dark']) .vac-leave-letter__v,
+html[data-theme='light'] .vac-leave-letter__title,
+body:not([data-theme='dark']) .vac-leave-letter__title,
+html[data-theme='light'] .vac-leave-letter__subtitle,
+body:not([data-theme='dark']) .vac-leave-letter__subtitle,
+html[data-theme='light'] .vac-leave-letter__body,
+body:not([data-theme='dark']) .vac-leave-letter__body {
+  color: #1a1f2e;
+}
+
+html[data-theme='light'] .vac-leave-letter__field,
+body:not([data-theme='dark']) .vac-leave-letter__field {
+  color: #8a7a32;
+}
+
+html[data-theme='light'] .vac-leave-letter__sign-line,
+body:not([data-theme='dark']) .vac-leave-letter__sign-line {
+  background: #1a1f2e;
+}
+
+@media (max-width: 720px) {
+  .vac-leave-letter {
+    min-height: 0;
+    padding: 1.5rem 1.25rem 2rem;
+    font-size: 0.95rem;
+  }
+
+  .vac-leave-letter__addr {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  .vac-leave-letter__head {
+    margin: 2rem 0 1.5rem;
+  }
+
+  .vac-leave-letter__title {
+    font-size: 1.4rem;
+  }
+
+  .vac-leave-letter__sign {
+    padding-top: 2.5rem;
+  }
+}
+
+@media print {
+  .vac-leave-letter {
+    width: 100%;
+    min-height: auto;
+    padding: 18mm 16mm 20mm 24mm;
+    color: #111 !important;
+    background: #fff !important;
+    border: none !important;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .vac-leave-letter__k,
+  .vac-leave-letter__v,
+  .vac-leave-letter__title,
+  .vac-leave-letter__subtitle,
+  .vac-leave-letter__body {
+    color: #111 !important;
+  }
+
+  .vac-leave-letter__field {
+    color: #6b5e1f !important;
+  }
+
+  .vac-leave-letter__sign-line {
+    background: #111 !important;
+  }
+}
