@@ -71,11 +71,15 @@ function HubTileContent({
     icon: Icon,
     badge,
     badgeAriaLabel,
+    infoBadge,
+    infoBadgeAriaLabel,
 }: {
     id: HubTileId;
     icon: ComponentType;
     badge?: string;
     badgeAriaLabel?: string;
+    infoBadge?: string;
+    infoBadgeAriaLabel?: string;
 }) {
     const { t } = useI18n();
     return (
@@ -83,9 +87,18 @@ function HubTileContent({
             <span className="home-nav-tiles__icon" aria-hidden>
                 <Icon />
             </span>
-            {badge ? (
-                <span className="home-nav-tiles__badge" aria-label={badgeAriaLabel}>
-                    {badge}
+            {(badge || infoBadge) ? (
+                <span className="home-nav-tiles__badges">
+                    {infoBadge ? (
+                        <span className="home-nav-tiles__badge home-nav-tiles__badge--info" aria-label={infoBadgeAriaLabel}>
+                            {infoBadge}
+                        </span>
+                    ) : null}
+                    {badge ? (
+                        <span className="home-nav-tiles__badge" aria-label={badgeAriaLabel}>
+                            {badge}
+                        </span>
+                    ) : null}
                 </span>
             ) : null}
             <span className="home-nav-tiles__body">
@@ -151,13 +164,23 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         badge: expenseAttentionBadge,
         payCount: expensePayCount,
         moderationCount: expenseModerationCount,
+        moderationBadge: expenseModerationBadge,
         isPaymentConfirmer: isExpensePaymentConfirmerUser,
     } = useExpenseAttentionBadge(!loading && showExpensesTile);
+    const expensePayBadge = isExpensePaymentConfirmerUser
+        ? (expensePayCount > 0 ? expenseAttentionBadge : undefined)
+        : expenseAttentionBadge || undefined;
+    const expenseInfoBadge = isExpensePaymentConfirmerUser && expenseModerationCount > 0
+        ? expenseModerationBadge || undefined
+        : undefined;
     const expenseBadgeAria = isExpensePaymentConfirmerUser && expensePayCount > 0
         ? t('homeHub.expensesPayBadgeAria').replace('{count}', String(expensePayCount))
-        : expenseModerationCount > 0
+        : !isExpensePaymentConfirmerUser && expenseModerationCount > 0
             ? t('homeHub.expensesModerationBadgeAria').replace('{count}', String(expenseModerationCount))
             : undefined;
+    const expenseInfoBadgeAria = expenseInfoBadge
+        ? t('homeHub.expensesModerationBadgeAria').replace('{count}', String(expenseModerationCount))
+        : undefined;
     const showCorrespondenceTile = defaultTiles.some((tile) => tile.id === 'correspondence');
     const {
         badge: correspondenceBadge,
@@ -402,7 +425,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                                     : tile.id === 'timeTracking'
                                                         ? forReviewBadge || undefined
                                                         : tile.id === 'expenses'
-                                                            ? expenseAttentionBadge || undefined
+                                                            ? expensePayBadge
                                                             : tile.id === 'correspondence'
                                                                 ? correspondenceBadge || undefined
                                                                 : tile.id === 'vacationSchedule'
@@ -426,6 +449,8 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                                                         ? todoInvitesBadgeAria
                                                                         : undefined
                                             }
+                                            infoBadge={tile.id === 'expenses' ? expenseInfoBadge : undefined}
+                                            infoBadgeAriaLabel={tile.id === 'expenses' ? expenseInfoBadgeAria : undefined}
                                         />
                                     </NavLink>
                                 </li>

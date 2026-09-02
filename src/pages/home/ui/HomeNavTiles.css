@@ -213,11 +213,19 @@ body[data-theme='dark'] .home-nav-tiles--hub .home-nav-tiles__icon {
   flex-shrink: 0;
 }
 
-.home-nav-tiles--hub .home-nav-tiles__badge {
+.home-nav-tiles--hub .home-nav-tiles__badges {
   position: absolute;
   top: 0.65rem;
   right: 0.65rem;
   z-index: 4;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 0.22rem;
+  pointer-events: none;
+}
+
+.home-nav-tiles--hub .home-nav-tiles__badge {
   box-sizing: border-box;
   min-width: 1.25rem;
   height: 1.25rem;
@@ -233,7 +241,11 @@ body[data-theme='dark'] .home-nav-tiles--hub .home-nav-tiles__icon {
   border: 2px solid var(--hub-tile-bg, #fff);
   border-radius: 999px;
   box-shadow: 0 1px 4px rgba(230, 40, 44, 0.28);
-  pointer-events: none;
+}
+
+.home-nav-tiles--hub .home-nav-tiles__badge--info {
+  background: #2563eb;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.32);
 }
 
 .home-nav-tiles--hub .home-nav-tiles__body {

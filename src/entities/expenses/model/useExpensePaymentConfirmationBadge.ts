@@ -18,6 +18,7 @@ export function useExpenseAttentionBadge(enabled = true): {
     moderationCount: number;
     count: number;
     badge: string;
+    moderationBadge: string;
     isPaymentConfirmer: boolean;
 } {
     const { user } = useCurrentUser();
@@ -34,29 +35,42 @@ export function useExpenseAttentionBadge(enabled = true): {
             return;
         }
         try {
+            const jobs: Array<Promise<void>> = [];
             if (isPaymentConfirmer) {
-                const response = await fetchExpenses(awaitingEmployeeReimbursementQuery({
-                    scopeMode: 'company',
-                    skip: 0,
-                    limit: 1,
-                }));
-                setReimbursementCount(Math.max(0, response.total));
-                setModerationCount(0);
-                return;
+                jobs.push(
+                    fetchExpenses(awaitingEmployeeReimbursementQuery({
+                        scopeMode: 'company',
+                        skip: 0,
+                        limit: 1,
+                    })).then((response) => {
+                        setReimbursementCount(Math.max(0, response.total));
+                    }),
+                );
             }
-            setReimbursementCount(0);
-            const response = await fetchExpenses({
-                status: 'pending_approval',
-                skip: 0,
-                limit: 1,
-            });
-            setModerationCount(Math.max(0, response.total));
+            else {
+                setReimbursementCount(0);
+            }
+            if (isPaymentConfirmer || isModerator) {
+                jobs.push(
+                    fetchExpenses({
+                        status: 'pending_approval',
+                        skip: 0,
+                        limit: 1,
+                    }).then((response) => {
+                        setModerationCount(Math.max(0, response.total));
+                    }),
+                );
+            }
+            else {
+                setModerationCount(0);
+            }
+            await Promise.allSettled(jobs);
         }
         catch {
             setReimbursementCount(0);
             setModerationCount(0);
         }
-    }, [shouldTrack, isPaymentConfirmer]);
+    }, [shouldTrack, isPaymentConfirmer, isModerator]);
 
     useEffect(() => {
         void refresh();
@@ -79,6 +93,7 @@ export function useExpenseAttentionBadge(enabled = true): {
         count,
         isPaymentConfirmer,
         badge: useMemo(() => formatBadge(count), [count]),
+        moderationBadge: useMemo(() => formatBadge(moderationCount), [moderationCount]),
     };
 }
 
