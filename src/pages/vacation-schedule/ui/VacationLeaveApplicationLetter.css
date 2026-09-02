@@ -17,12 +17,12 @@
 
 .vac-leave-letter__addr {
   align-self: flex-end;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  column-gap: 0.55em;
+  row-gap: 0.85em;
   width: min(100%, 22.5rem);
-  text-align: left;
-}
-
-.vac-leave-letter__addr-row {
-  margin: 0 0 0.85rem;
+  align-items: start;
 }
 
 .vac-leave-letter__k,
@@ -42,14 +42,14 @@
 }
 
 .vac-leave-letter__k {
-  display: block;
-  margin-bottom: 0.2rem;
+  text-align: right;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .vac-leave-letter__v {
-  display: block;
-  line-height: 1.4;
+  min-width: 0;
+  line-height: 1.45;
 }
 
 .vac-leave-letter__date {

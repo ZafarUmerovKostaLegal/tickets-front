@@ -1,15 +1,18 @@
 import type { VacationLeaveRequestApi, VacationLeaveRequestKind } from '@entities/vacation';
 import { formatRuDateLong } from './leaveRequestDisplay';
 
+export const LEAVE_APPLICATION_ADDRESSEE_ORG = 'Управляющему партнеру АФ Kosta Legal';
+export const LEAVE_APPLICATION_ADDRESSEE_NAME = 'Ахмаджонову А.А.';
 export const LEAVE_APPLICATION_ADDRESSEE =
-    'Управляющему партнеру АФ Kosta Legal Ахмаджонову А.А.';
+    `${LEAVE_APPLICATION_ADDRESSEE_ORG} ${LEAVE_APPLICATION_ADDRESSEE_NAME}`;
 
 export type VacationLeaveApplicationBodyPart =
     | { type: 'text'; text: string }
     | { type: 'field'; text: string };
 
 export type VacationLeaveApplicationCopy = {
-    addressee: string;
+    addresseeOrg: string;
+    addresseeName: string;
     fromLine: string;
     dateLine: string;
     title: string;
@@ -119,7 +122,8 @@ export function buildVacationLeaveApplicationCopy(req: VacationLeaveRequestApi):
         );
     }
     return {
-        addressee: LEAVE_APPLICATION_ADDRESSEE,
+        addresseeOrg: LEAVE_APPLICATION_ADDRESSEE_ORG,
+        addresseeName: LEAVE_APPLICATION_ADDRESSEE_NAME,
         fromLine: fromLine || '[ФИО, должность]',
         dateLine: formatRuDateLong(req.created_at) || '[ДАТА]',
         title: heading.title,

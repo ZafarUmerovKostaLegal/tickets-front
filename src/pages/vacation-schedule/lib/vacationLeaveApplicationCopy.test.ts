@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { VacationLeaveRequestApi } from '@entities/vacation';
-import { buildVacationLeaveApplicationCopy, LEAVE_APPLICATION_ADDRESSEE } from './vacationLeaveApplicationCopy';
+import { buildVacationLeaveApplicationCopy } from './vacationLeaveApplicationCopy';
 
 function req(overrides: Partial<VacationLeaveRequestApi> = {}): VacationLeaveRequestApi {
     return {
@@ -35,7 +35,8 @@ function req(overrides: Partial<VacationLeaveRequestApi> = {}): VacationLeaveReq
 describe('buildVacationLeaveApplicationCopy', () => {
     it('matches the official annual leave wording', () => {
         const copy = buildVacationLeaveApplicationCopy(req());
-        expect(copy.addressee).toBe(LEAVE_APPLICATION_ADDRESSEE);
+        expect(copy.addresseeOrg).toBe('Управляющему партнеру АФ Kosta Legal');
+        expect(copy.addresseeName).toBe('Ахмаджонову А.А.');
         expect(copy.title).toBe('Заявление');
         expect(copy.subtitle).toBe('о предоставлении ежегодного оплачиваемого отпуска');
         expect(copy.bodyParts.some((p) => p.type === 'text' && p.text.includes('очередной ежегодный оплачиваемый отпуск'))).toBe(true);

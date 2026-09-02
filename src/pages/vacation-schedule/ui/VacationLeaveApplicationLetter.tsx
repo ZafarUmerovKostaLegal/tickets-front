@@ -7,14 +7,14 @@ export function VacationLeaveApplicationLetter({ request }: { request: VacationL
     return (
         <article className="vac-leave-letter" aria-label="Заявление">
             <div className="vac-leave-letter__addr">
-                <p className="vac-leave-letter__addr-row">
-                    <span className="vac-leave-letter__k">КОМУ:</span>
-                    <span className="vac-leave-letter__v">{copy.addressee}</span>
-                </p>
-                <p className="vac-leave-letter__addr-row">
-                    <span className="vac-leave-letter__k">ОТ:</span>
-                    <span className="vac-leave-letter__field">{copy.fromLine}</span>
-                </p>
+                <span className="vac-leave-letter__k">КОМУ:</span>
+                <span className="vac-leave-letter__v">
+                    {copy.addresseeOrg}
+                    <br />
+                    {copy.addresseeName}
+                </span>
+                <span className="vac-leave-letter__k">ОТ:</span>
+                <span className="vac-leave-letter__v">{copy.fromLine}</span>
             </div>
 
             <p className="vac-leave-letter__date">
