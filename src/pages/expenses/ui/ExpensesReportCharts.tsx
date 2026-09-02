@@ -13,8 +13,27 @@ import {
     ComposedChart,
 } from 'recharts';
 
-const CHART_COLORS = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#94a3b8'];
+const CHART_NAVY = '#2c4a6e';
+const CHART_GOLD = '#9a8548';
+const CHART_GRID = 'var(--app-border, #e4eaf0)';
+const CHART_TICK = 'var(--app-muted, #64748b)';
 const CHART_GRADIENT_ID = 'expRepAreaGrad';
+
+const TYPE_PALETTE = ['#2c4a6e', '#9a8548', '#4d6b5c', '#6b5e52', '#3d5a80', '#8a6a4a', '#5c6b7a', '#7a5348', '#4a5568'];
+
+const STATUS_CHART_COLORS: Record<string, string> = {
+    'Черновик': '#8a8175',
+    'На согласовании': '#c2782a',
+    'На доработку': '#6b5b95',
+    'Одобрено': '#2f5f8f',
+    'Оплачено': '#3d6b5c',
+    'Отказано': '#a15c4a',
+    'Отозвана': '#7a756c',
+    'Закрыто': '#5c6b7a',
+    'Невозмещаемый': '#6b5e52',
+};
+
+const PAYMENT_PALETTE = ['#2c4a6e', '#9a8548', '#4d6b5c', '#6b5e52', '#5c6b7a'];
 
 type ChartRow = {
     name: string;
@@ -47,6 +66,10 @@ function formatUzsCompact(n: number): string {
     return n.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
 }
 
+function statusFill(name: string, index: number): string {
+    return STATUS_CHART_COLORS[name] ?? TYPE_PALETTE[index % TYPE_PALETTE.length];
+}
+
 function ReportChartTooltip({ active, label, payload }: {
     active?: boolean;
     label?: string;
@@ -72,6 +95,25 @@ function ReportChartTooltip({ active, label, payload }: {
     );
 }
 
+function ChartLegend({ rows, total }: { rows: ChartRow[]; total: number }) {
+    if (rows.length === 0)
+        return null;
+    return (
+        <ul className="exp-report-chart-legend">
+            {rows.map((row) => {
+                const pct = total > 0 ? Math.round((100 * row.value) / total) : 0;
+                return (
+                    <li key={row.name} className="exp-report-chart-legend__item">
+                        <span className="exp-report-chart-legend__swatch" style={{ background: row.fill }} />
+                        <span className="exp-report-chart-legend__name">{row.name}</span>
+                        <span className="exp-report-chart-legend__pct">{pct}%</span>
+                    </li>
+                );
+            })}
+        </ul>
+    );
+}
+
 export type ExpensesReportChartsProps = {
     pieStyled: ChartRow[];
     byTypeRanked: ChartRow[];
@@ -87,104 +129,108 @@ export function ExpensesReportCharts({
     byStatusSorted,
     byPayment,
 }: ExpensesReportChartsProps) {
+    const pieTotal = pieStyled.reduce((sum, row) => sum + row.value, 0);
+    const axisTick = { fontSize: 11, fill: CHART_TICK };
+
     return (
         <div className="exp-report-analytics__grid">
-            <div className="exp-report-chart-card exp-report-chart-card--glass">
+            <div className="exp-report-chart-card">
                 <h3 className="exp-report-chart-card__title">Структура по типам</h3>
                 <p className="exp-report-chart-card__subtitle">Доля суммы, UZS</p>
                 <div className="exp-report-chart-card__plot exp-report-chart-card__plot--pie">
-                    <ResponsiveContainer width="100%" height={300}>
-                        <PieChart>
-                            <Pie
-                                data={pieStyled}
-                                dataKey="value"
-                                nameKey="name"
-                                cx="50%"
-                                cy="48%"
-                                innerRadius={58}
-                                outerRadius={92}
-                                paddingAngle={2}
-                                label={({ name, percent }) => percent != null && percent >= 0.05 ? `${name} · ${Math.round(percent * 100)}%` : ''}
-                                labelLine={{ stroke: 'var(--app-border, #cbd5e1)' }}
-                            >
-                                {pieStyled.map(entry => (<Cell key={entry.name} fill={entry.fill} />))}
-                            </Pie>
-                            <Tooltip content={<ReportChartTooltip />} />
-                        </PieChart>
-                    </ResponsiveContainer>
+                    <div className="exp-report-chart-card__pie-wrap">
+                        <ResponsiveContainer width="100%" height={240}>
+                            <PieChart>
+                                <Pie
+                                    data={pieStyled}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={62}
+                                    outerRadius={88}
+                                    paddingAngle={1.5}
+                                    stroke="var(--app-surface, #fff)"
+                                    strokeWidth={2}
+                                >
+                                    {pieStyled.map(entry => (<Cell key={entry.name} fill={entry.fill} />))}
+                                </Pie>
+                                <Tooltip content={<ReportChartTooltip />} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <ChartLegend rows={pieStyled} total={pieTotal} />
                 </div>
             </div>
 
-            <div className="exp-report-chart-card exp-report-chart-card--glass">
+            <div className="exp-report-chart-card">
                 <h3 className="exp-report-chart-card__title">Топ категорий</h3>
                 <p className="exp-report-chart-card__subtitle">Сумма UZS по типу</p>
                 <div className="exp-report-chart-card__plot">
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart layout="vertical" data={byTypeRanked} margin={{ top: 8, right: 16, left: 4, bottom: 8 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border, #e2e8f0)" horizontal />
-                            <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => (typeof v === 'number' ? formatUzsCompact(v) : '')} />
-                            <YAxis type="category" dataKey="name" width={118} tick={{ fontSize: 11 }} />
+                    <ResponsiveContainer width="100%" height={280}>
+                        <BarChart layout="vertical" data={byTypeRanked} margin={{ top: 4, right: 16, left: 4, bottom: 4 }}>
+                            <CartesianGrid strokeDasharray="0" stroke={CHART_GRID} horizontal vertical={false} />
+                            <XAxis type="number" tick={axisTick} axisLine={{ stroke: CHART_GRID }} tickLine={false} tickFormatter={v => (typeof v === 'number' ? formatUzsCompact(v) : '')} />
+                            <YAxis type="category" dataKey="name" width={118} tick={axisTick} axisLine={false} tickLine={false} />
                             <Tooltip content={<ReportChartTooltip />} />
-                            <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                                {byTypeRanked.map((_, i) => (<Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />))}
-                            </Bar>
+                            <Bar dataKey="value" name="Сумма" fill={CHART_NAVY} radius={[0, 3, 3, 0]} maxBarSize={18} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
-            <div className="exp-report-chart-card exp-report-chart-card--glass exp-report-chart-card--span2">
+            <div className="exp-report-chart-card exp-report-chart-card--span2">
                 <h3 className="exp-report-chart-card__title">Динамика по месяцам</h3>
-                <p className="exp-report-chart-card__subtitle">Нарастающий объём по дате расхода</p>
+                <p className="exp-report-chart-card__subtitle">Объём по дате расхода</p>
                 <div className="exp-report-chart-card__plot exp-report-chart-card__plot--trend">
-                    <ResponsiveContainer width="100%" height={320}>
-                        <ComposedChart data={byMonthLabeled} margin={{ top: 16, right: 20, left: 4, bottom: 8 }}>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <ComposedChart data={byMonthLabeled} margin={{ top: 12, right: 16, left: 4, bottom: 4 }}>
                             <defs>
                                 <linearGradient id={CHART_GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="0%" stopColor="#6366f1" stopOpacity={0.45} />
-                                    <stop offset="100%" stopColor="#6366f1" stopOpacity={0.04} />
+                                    <stop offset="0%" stopColor={CHART_GOLD} stopOpacity={0.28} />
+                                    <stop offset="100%" stopColor={CHART_GOLD} stopOpacity={0.02} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border, #e2e8f0)" />
-                            <XAxis dataKey="label" tick={{ fontSize: 11 }} interval="preserveStartEnd" />
-                            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => (typeof v === 'number' ? formatUzsCompact(v) : '')} />
+                            <CartesianGrid strokeDasharray="0" stroke={CHART_GRID} vertical={false} />
+                            <XAxis dataKey="label" tick={axisTick} axisLine={{ stroke: CHART_GRID }} tickLine={false} interval="preserveStartEnd" />
+                            <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={v => (typeof v === 'number' ? formatUzsCompact(v) : '')} />
                             <Tooltip content={<ReportChartTooltip />} />
-                            <Area type="monotone" dataKey="uzs" stroke="#4f46e5" strokeWidth={2.5} fill={`url(#${CHART_GRADIENT_ID})`} dot={{ r: 3, fill: '#4f46e5', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                            <Area type="monotone" dataKey="uzs" name="Сумма" stroke={CHART_NAVY} strokeWidth={2} fill={`url(#${CHART_GRADIENT_ID})`} dot={{ r: 2.5, fill: CHART_NAVY, strokeWidth: 0 }} activeDot={{ r: 5, fill: CHART_NAVY }} />
                         </ComposedChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
-            <div className="exp-report-chart-card exp-report-chart-card--glass">
+            <div className="exp-report-chart-card">
                 <h3 className="exp-report-chart-card__title">По статусам</h3>
-                <p className="exp-report-chart-card__subtitle">UZS</p>
+                <p className="exp-report-chart-card__subtitle">Сумма UZS</p>
                 <div className="exp-report-chart-card__plot">
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart layout="vertical" data={byStatusSorted} margin={{ top: 8, right: 16, left: 4, bottom: 8 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border, #e2e8f0)" horizontal />
-                            <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={v => (typeof v === 'number' ? formatUzsCompact(v) : '')} />
-                            <YAxis type="category" dataKey="name" width={108} tick={{ fontSize: 10 }} />
+                    <ResponsiveContainer width="100%" height={280}>
+                        <BarChart layout="vertical" data={byStatusSorted} margin={{ top: 4, right: 16, left: 4, bottom: 4 }}>
+                            <CartesianGrid strokeDasharray="0" stroke={CHART_GRID} horizontal vertical={false} />
+                            <XAxis type="number" tick={axisTick} axisLine={{ stroke: CHART_GRID }} tickLine={false} tickFormatter={v => (typeof v === 'number' ? formatUzsCompact(v) : '')} />
+                            <YAxis type="category" dataKey="name" width={108} tick={{ ...axisTick, fontSize: 10 }} axisLine={false} tickLine={false} />
                             <Tooltip content={<ReportChartTooltip />} />
-                            <Bar dataKey="value" radius={[0, 8, 8, 0]}>
-                                {byStatusSorted.map((_, i) => (<Cell key={i} fill={CHART_COLORS[(i + 2) % CHART_COLORS.length]} />))}
+                            <Bar dataKey="value" name="Сумма" radius={[0, 3, 3, 0]} maxBarSize={18}>
+                                {byStatusSorted.map((row, i) => (<Cell key={row.name} fill={statusFill(row.name, i)} />))}
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
             </div>
 
-            <div className="exp-report-chart-card exp-report-chart-card--glass">
+            <div className="exp-report-chart-card">
                 <h3 className="exp-report-chart-card__title">Способ оплаты</h3>
-                <p className="exp-report-chart-card__subtitle">UZS</p>
+                <p className="exp-report-chart-card__subtitle">Сумма UZS</p>
                 <div className="exp-report-chart-card__plot">
-                    <ResponsiveContainer width="100%" height={300}>
-                        <BarChart data={byPayment} margin={{ top: 8, right: 12, left: 4, bottom: 64 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="var(--app-border, #e2e8f0)" />
-                            <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-20} textAnchor="end" height={58} />
-                            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => (typeof v === 'number' ? formatUzsCompact(v) : '')} />
+                    <ResponsiveContainer width="100%" height={280}>
+                        <BarChart data={byPayment} margin={{ top: 8, right: 12, left: 4, bottom: 56 }}>
+                            <CartesianGrid strokeDasharray="0" stroke={CHART_GRID} vertical={false} />
+                            <XAxis dataKey="name" tick={{ ...axisTick, fontSize: 10 }} axisLine={{ stroke: CHART_GRID }} tickLine={false} interval={0} angle={-18} textAnchor="end" height={52} />
+                            <YAxis tick={axisTick} axisLine={false} tickLine={false} tickFormatter={v => (typeof v === 'number' ? formatUzsCompact(v) : '')} />
                             <Tooltip content={<ReportChartTooltip />} />
-                            <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                                {byPayment.map((_, i) => (<Cell key={i} fill={CHART_COLORS[(i + 4) % CHART_COLORS.length]} />))}
+                            <Bar dataKey="value" name="Сумма" radius={[3, 3, 0, 0]} maxBarSize={36}>
+                                {byPayment.map((row, i) => (<Cell key={row.name} fill={PAYMENT_PALETTE[i % PAYMENT_PALETTE.length]} />))}
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>

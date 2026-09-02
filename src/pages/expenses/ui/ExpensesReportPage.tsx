@@ -50,7 +50,7 @@ function formatUzsCompact(n: number): string {
         return `${Math.round(n / 1000)} тыс`;
     return n.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
 }
-const PIE_COLORS = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#06b6d4', '#10b981', '#f59e0b', '#94a3b8'];
+const PIE_COLORS = ['#2c4a6e', '#9a8548', '#4d6b5c', '#6b5e52', '#3d5a80', '#8a6a4a', '#5c6b7a', '#7a5348', '#4a5568'];
 const STATUS_OPTIONS = EXPENSE_REGISTRY_STATUSES.map(s => ({
     value: s,
     label: STATUS_META[s].label,
@@ -389,21 +389,12 @@ export function ExpensesReportPage({ variant = 'company' }: { variant?: 'company
     const resetColumns = () => setVisibleIds(getDefaultVisibleColumnIds(isPartner ? 'partner' : 'company'));
     return (<ExpensesShell title={isPartner ? 'Отчёт по расходам партнёров' : 'Отчёты и аналитика'}>
       <div className="exp-report-page">
-        <header className="exp-report-hero exp-report-hero--visual">
-          <div className="exp-report-hero__grid">
-            <div className="exp-report-hero__copy">
-              <p className="exp-report-hero__eyebrow">Расходы компании</p>
-              <h2 className="exp-report-hero__title">Аналитика и визуализация</h2>
-              <p className="exp-report-hero__text">
-                Живая панель графиков по выбранным заявкам: структура расходов, статусы, способы оплаты и динамика по
-                месяцам. Ниже — фильтры, Excel <strong>.xlsx</strong> и таблица-превью.
-              </p>
-            </div>
-            <div className="exp-report-hero__accent" aria-hidden>
-              <div className="exp-report-hero__orb exp-report-hero__orb--a"/>
-              <div className="exp-report-hero__orb exp-report-hero__orb--b"/>
-            </div>
-          </div>
+        <header className="exp-report-hero">
+          <p className="exp-report-hero__eyebrow">{isPartner ? 'Расходы партнёров' : 'Расходы компании'}</p>
+          <h2 className="exp-report-hero__title">Сводка за период</h2>
+          <p className="exp-report-hero__text">
+            Показатели и графики по загруженным заявкам. Ниже — фильтры, выгрузка Excel и таблица.
+          </p>
         </header>
 
         <div className="exp-report-nav">
@@ -509,7 +500,7 @@ export function ExpensesReportPage({ variant = 'company' }: { variant?: 'company
                 {loading ? '' : `из ${items.length.toLocaleString('ru-RU')} загруженных`}
               </span>
             </div>
-            <div className="exp-report-stat-card exp-report-stat-card--kpi exp-report-stat-card--accent">
+            <div className="exp-report-stat-card exp-report-stat-card--kpi exp-report-stat-card--emphasis">
               <span className="exp-report-stat-card__label">Сумма, UZS</span>
               <span className="exp-report-stat-card__value">
                 {loading ? '…' : formatUzsCompact(totals.uzs)}
@@ -532,14 +523,14 @@ export function ExpensesReportPage({ variant = 'company' }: { variant?: 'company
         <section className="exp-report-analytics" aria-labelledby="exp-report-analytics-title">
           <div className="exp-report-analytics__head">
             <h2 id="exp-report-analytics-title" className="exp-report-analytics__title">
-              Панель графиков
+              Графики
             </h2>
             <p className="exp-report-analytics__lead">
               {loading
-            ? 'Загружаем данные…'
+            ? 'Загрузка данных…'
             : filteredItems.length === 0
-                ? 'Нет строк под фильтры — ослабьте условия или обновите период загрузки.'
-                : `Визуализация по ${filteredItems.length.toLocaleString('ru-RU')} заявкам (UZS). Наведите на элементы для точных сумм.`}
+                ? 'Нет строк под текущие фильтры. Измените условия или период загрузки.'
+                : `${filteredItems.length.toLocaleString('ru-RU')} заявок, суммы в UZS. Наведите на элемент, чтобы увидеть точное значение.`}
             </p>
           </div>
 
