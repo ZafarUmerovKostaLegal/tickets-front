@@ -95,8 +95,13 @@
 .vac-leave-letter__sign-line {
   display: block;
   width: 11.5rem;
-  height: 1px;
-  background: currentColor;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid #000;
+  background: none;
+  color: #000;
 }
 
 @media (max-width: 720px) {
@@ -120,10 +125,24 @@
 }
 
 @media print {
+  @page {
+    margin: 0;
+    size: A4;
+  }
+
   .vac-leave-letter {
     width: 100%;
     min-height: auto;
     padding: 18mm 16mm 20mm 24mm;
     border: none;
+    color: #000;
+  }
+
+  .vac-leave-letter__sign-line {
+    border-bottom: 1px solid #000;
+    background: none;
+    color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

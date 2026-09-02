@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { VacationLeaveRequestApi } from '@entities/vacation';
+import { printVacationLeaveLetter } from '../lib/printVacationLeaveLetter';
 import { VacationLeaveApplicationLetter } from './VacationLeaveApplicationLetter';
 import './VacationDocLightbox.css';
 
@@ -11,6 +12,7 @@ type Props = {
 
 export function VacationLeavePdfPreview({ request, onClose }: Props) {
     const title = `Заявление · #${request.id}`;
+    const letterWrapRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
@@ -45,7 +47,11 @@ export function VacationLeavePdfPreview({ request, onClose }: Props) {
                         <button
                             type="button"
                             className="vac-doc-lb__btn"
-                            onClick={() => window.print()}
+                            onClick={() => {
+                                const letter = letterWrapRef.current?.querySelector('.vac-leave-letter');
+                                if (letter instanceof HTMLElement)
+                                    printVacationLeaveLetter(letter);
+                            }}
                             title="Печать или сохранить как PDF"
                         >
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -60,7 +66,7 @@ export function VacationLeavePdfPreview({ request, onClose }: Props) {
                         </button>
                     </div>
                 </div>
-                <div className="vac-doc-lb__body vac-doc-lb__body--letter">
+                <div className="vac-doc-lb__body vac-doc-lb__body--letter" ref={letterWrapRef}>
                     <VacationLeaveApplicationLetter request={request} />
                 </div>
             </div>

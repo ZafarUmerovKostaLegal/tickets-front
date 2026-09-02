@@ -153,6 +153,11 @@
 }
 
 @media print {
+  @page {
+    margin: 0;
+    size: A4;
+  }
+
   body > *:not(.vac-doc-lb) {
     display: none !important;
   }
