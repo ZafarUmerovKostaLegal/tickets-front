@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { type ExpenseRequest, type ExpenseFormValues, type ExpenseFormErrors, type ExpenseFilesByKind, type AttachmentItem, EXPENSE_ATTACHMENT_MAX_BYTES, } from '@entities/expenses/model/types';
 import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, } from '@entities/expenses/model/constants';
 import { computeAmountUzsForApi, computeUsdEquivalent, formatExchangeRate, needsForeignUsdRate, parseExpenseMoney, roundMoney2 } from '@entities/expenses/model/expenseCurrency';
-import { formatReimbursementCardNumber, isEmployeePersonalFundsPayout, isValidReimbursementCardNumber } from '@entities/expenses/model/expensePaymentDetails';
+import { formatReimbursementCardNumber, isEmployeePersonalFundsPayout, isValidReimbursementCardNumber, reimbursementCardDigits } from '@entities/expenses/model/expensePaymentDetails';
 import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import type { ExpenseAmountCurrency } from '@entities/expenses/model/types';
 import { approveExpense, rejectExpense, reviseExpense, deleteAttachment, deleteExpense, fetchExpenseAttachmentBlob, openExpenseAttachmentInNewTab, payExpense, unpayExpense, unapproveExpense, withdrawExpense, fetchApprovalRoutingMeta, type ApprovalRoutingMeta, } from '@entities/expenses/model/expensesApi';
@@ -751,6 +751,18 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
             variant: ok ? 'success' : 'error',
         });
     }, [values.description]);
+    const handleCopyCardNumber = useCallback(async () => {
+        const digits = reimbursementCardDigits(values.reimbursementCardNumber);
+        if (!digits) {
+            showToast({ message: 'Нет номера карты для копирования', variant: 'warning' });
+            return;
+        }
+        const ok = await copyTextToClipboard(digits);
+        showToast({
+            message: ok ? 'Номер карты скопирован' : 'Не удалось скопировать',
+            variant: ok ? 'success' : 'error',
+        });
+    }, [values.reimbursementCardNumber]);
     const handleExpenseClientPick = useCallback((client: TimeManagerClientRow) => {
         setExpenseProjectClientId(client.id);
         setValues(prev => {
@@ -1827,9 +1839,24 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     </div>
 
                     {(values.paymentMethod === 'cash') && values.expenseType !== 'partner_expense' && (<div className={`exp-form-field${errors.reimbursementCardNumber ? ' exp-form-field--err' : ''}`}>
-                        <label className="exp-form-label">
-                            Номер карты для возмещения <span className="exp-form-req">*</span>
-                        </label>
+                        <div className="exp-form-label-row">
+                            <label className="exp-form-label">
+                                Номер карты для возмещения <span className="exp-form-req">*</span>
+                            </label>
+                            <button
+                                type="button"
+                                className="exp-form-copy-btn"
+                                onClick={() => void handleCopyCardNumber()}
+                                disabled={!reimbursementCardDigits(values.reimbursementCardNumber)}
+                                title={reimbursementCardDigits(values.reimbursementCardNumber) ? 'Копировать номер карты' : 'Нет номера карты'}
+                                aria-label="Копировать номер карты"
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                    <rect x="9" y="9" width="13" height="13" rx="2" />
+                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                </svg>
+                            </button>
+                        </div>
                         {isView ? (<p className="exp-form-static">
                             {formatReimbursementCardNumber(values.reimbursementCardNumber) || '—'}
                         </p>) : (<input
