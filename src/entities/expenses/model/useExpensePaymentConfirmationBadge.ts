@@ -54,6 +54,7 @@ export function useExpenseAttentionBadge(enabled = true): {
                 jobs.push(
                     fetchExpenses({
                         status: 'pending_approval',
+                        scopeMode: 'company',
                         skip: 0,
                         limit: 1,
                     }).then((response) => {

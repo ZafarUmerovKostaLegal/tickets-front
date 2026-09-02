@@ -1496,9 +1496,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                 const allCountLabel = isPaymentConfirmer
                     ? formatExpenseStatusCount(statusCounts[AWAITING_REIMBURSEMENT_STATUS_FILTER] ?? payCount)
                     : formatExpenseStatusCount(statusCounts.all);
+                const pendingCount = statusCounts.pending_approval ?? moderationCount;
                 const statusChipBadge = filterStatus
                     ? (statusCounts[filterStatus] ?? 0)
-                    : (isPaymentConfirmer ? payCount : (canModerate ? moderationCount : 0));
+                    : (isPaymentConfirmer ? payCount : (canModerate ? pendingCount : 0));
                 return (<FilterDrop key={slotId} slotId={slotId} label={filterStatus ? expenseUiStatusFilterLabel(filterStatus) : 'Статус'} active={!!filterStatus} isOpen={openFilter === 'status'} onToggle={() => toggleFilter('status')} badgeCount={statusChipBadge} {...drag}>
                     <button className={`exp-filter__opt${!filterStatus ? ' exp-filter__opt--on' : ''}`} onClick={() => { setFilterStatus(''); setOpenFilter(null); }}>
                         <span className="exp-filter__opt-label">Все статусы</span>
