@@ -215,8 +215,8 @@ body[data-theme='dark'] .home-nav-tiles--hub .home-nav-tiles__icon {
 
 .home-nav-tiles--hub .home-nav-tiles__badges {
   position: absolute;
-  top: 0.65rem;
-  right: 0.65rem;
+  top: 0.55rem;
+  right: 2.25rem;
   z-index: 4;
   display: flex;
   flex-direction: row-reverse;
@@ -311,6 +311,11 @@ body[data-theme='dark'] .home-nav-tiles--hub .home-nav-tiles__icon {
     opacity: 0.9;
     top: 0.35rem;
     right: 0.35rem;
+  }
+
+  .home-nav-tiles--hub .home-nav-tiles__badges {
+    top: 0.45rem;
+    right: 2.1rem;
   }
 }
 
