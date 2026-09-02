@@ -16,12 +16,13 @@
 }
 
 .vac-leave-letter__addr {
-  align-self: flex-end;
+  align-self: flex-start;
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   column-gap: 0.55em;
   row-gap: 0.85em;
-  width: min(100%, 22.5rem);
+  width: fit-content;
+  max-width: 100%;
   align-items: start;
 }
 
@@ -111,7 +112,6 @@
   }
 
   .vac-leave-letter__addr {
-    align-self: stretch;
     width: 100%;
   }
 
