@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import type { InventoryItem } from '@entities/inventory';
 import { useInventory } from '../model';
 import { AuthImg } from '@shared/ui';
-import { resolveEquipmentScore } from '@entities/inventory';
+import { resolveEquipmentScore, laptopRamUpgrade } from '@entities/inventory';
 import { EquipmentScoreBadge } from './EquipmentScoreBadge';
 import { formatDateOnly } from '@shared/lib/formatDate';
 type Props = {
@@ -15,6 +15,7 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
     const cat = categoryById(item.category_id);
     const assigned = users.find((u) => u.id === item.assigned_to_user_id);
     const itemScore = resolveEquipmentScore(item);
+    const ramUpgrade = laptopRamUpgrade({ ...item, categoryName: cat?.name });
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape')
             onClose(); };
@@ -54,6 +55,9 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
             <span className={`inv__status inv__status--${item.status}`}>
               {statusLabel(item.status)}
             </span>
+            {ramUpgrade?.canAddRam ? (
+              <span className="inv__ram-badge" title={ramUpgrade.hint}>Можно добавить ОЗУ</span>
+            ) : null}
           </div>
 
           

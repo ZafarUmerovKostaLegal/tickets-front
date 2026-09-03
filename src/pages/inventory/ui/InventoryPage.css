@@ -643,6 +643,21 @@ body[data-theme='dark'] .inv__tab--active {
   transition: color 0.12s;
 }
 
+.inv__ram-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.2rem;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #2c4a6e;
+  background: #e8eef5;
+  border: 1px solid #c5d0de;
+  white-space: nowrap;
+}
+
 .inv__name-hint {
   display: inline-flex;
   align-items: center;

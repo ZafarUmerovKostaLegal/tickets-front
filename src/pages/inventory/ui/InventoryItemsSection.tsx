@@ -5,7 +5,7 @@ import { ItemDetailDrawer } from './ItemDetailDrawer';
 import { EquipmentScoreBadge } from './EquipmentScoreBadge';
 import { LIMIT } from '../model/constants';
 import { AuthImg, Pagination } from '@shared/ui';
-import { EQUIPMENT_SCORE_RANGES } from '@entities/inventory';
+import { EQUIPMENT_SCORE_RANGES, laptopRamUpgrade } from '@entities/inventory';
 import type { InventoryItem } from '@entities/inventory';
 export function InventoryItemsSection() {
     const { canEdit, canCreateItems, categories, statuses, users, items, loadingItems, filterCategoryId, setFilterCategoryId, filterStatus, setFilterStatus, filterEquipmentClass, setFilterEquipmentClass, filterAssignedTo, setFilterAssignedTo, includeArchived, setIncludeArchived, skip, setSkip, itemsTotal, setItemModal, resetItemForm, setFormError, categoryById, statusLabel, } = useInventory();
@@ -141,6 +141,7 @@ export function InventoryItemsSection() {
               {items.map((item) => {
                 const cat = categoryById(item.category_id);
                 const assigned = users.find((u) => u.id === item.assigned_to_user_id);
+                const ramUpgrade = laptopRamUpgrade({ ...item, categoryName: cat?.name });
                 return (<tr key={item.uuid} className={`inv__row--clickable${item.is_archived ? ' inv__row--dim' : ''}`} onClick={() => setViewItem(item)}>
                     <td className="inv__col inv__col--name" data-label="Название">
                       <div className="inv__name-cell">
@@ -154,6 +155,9 @@ export function InventoryItemsSection() {
                           </span>)}
                         <div className="inv__name-body">
                           <div className="inv__name-title">{item.name}</div>
+                          {ramUpgrade?.canAddRam ? (
+                            <span className="inv__ram-badge" title={ramUpgrade.hint}>Можно добавить ОЗУ</span>
+                          ) : null}
                           {item.description && (<div className="inv__name-hint">
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <circle cx="12" cy="12" r="10"/>

@@ -1,4 +1,5 @@
 export type { InventoryStatusItem, InventoryCategory, InventoryItem, InventoryItemsPage, CreateCategoryBody, UpdateCategoryBody, UpdateItemBody, ItemsParams, } from './model/types';
 export { EQUIPMENT_TIERS, equipmentTierByCode, isEquipmentClassCode, type EquipmentClassCode, type EquipmentTier, } from './model/equipmentClasses';
 export { EQUIPMENT_SCORE_MAX, EQUIPMENT_SCORE_RANGES, equipmentAgeYears, equipmentScoreFromAgeYears, equipmentScoreText, equipmentScoreTier, equipmentScoreTitle, equipmentScoreToClassCode, resolveEquipmentScore, type EquipmentScoreInput, type EquipmentScoreRangeOption, type EquipmentScoreResult, type EquipmentScoreSource, } from './model/equipmentScore';
+export { laptopRamUpgrade, parseRamGbFromNotes, type LaptopRamUpgradeInput, type LaptopRamUpgradeResult, } from './model/laptopRamUpgrade';
 export { getStatuses, getCategories, getCategory, createCategory, updateCategory, deleteCategory, getItems, getItem, createItem, updateItem, uploadItemPhoto, assignItem, unassignItem, archiveItem, deleteItem, getItemPhotoUrl, } from './api';
