@@ -8,6 +8,7 @@ import {
     type ExpenseCreateBody,
 } from './expensesApi';
 import type { ExpenseFilesByKind, ExpenseFormValues, ExpenseRequest } from './types';
+import { EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG, EXPENSE_ATTACHMENT_MAX_COUNT } from './types';
 
 export function expenseFormValuesToApiBody(values: ExpenseFormValues): ExpenseCreateBody {
     const isPartner = values.expenseType === 'partner_expense';
@@ -59,6 +60,10 @@ export async function saveExpenseFromForm({
     let saved = expenseId
         ? await updateExpense(expenseId, body)
         : await createExpense(body);
+    const pending = files.payment_document.length + files.payment_receipt.length;
+    const existing = saved.attachments?.length ?? saved.attachmentsCount ?? 0;
+    if (existing + pending > EXPENSE_ATTACHMENT_MAX_COUNT)
+        throw new Error(EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG);
     for (const file of files.payment_document) {
         saved = await uploadAttachment(saved.id, file, 'payment_document');
     }

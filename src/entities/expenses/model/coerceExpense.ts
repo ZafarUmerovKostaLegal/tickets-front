@@ -1,4 +1,4 @@
-import type { ExpenseRequest } from './types';
+import type { AttachmentItem, ExpenseRequest } from './types';
 import { normalizeCreatedBy } from './expenseAuthor';
 function pickNumericField(x: Record<string, unknown>, camel: string, snake: string): unknown {
     if (camel in x && x[camel] !== undefined && x[camel] !== null)
@@ -34,6 +34,34 @@ export function asExpenseNumber(v: unknown, fallback = 0, depth = 0): number {
             return maybe;
     }
     return fallback;
+}
+function pickStr(x: Record<string, unknown>, camel: string, snake: string): string {
+    const v = x[camel] ?? x[snake];
+    if (v == null)
+        return '';
+    return String(v);
+}
+export function normalizeExpenseAttachment(raw: unknown): AttachmentItem | null {
+    if (raw == null || typeof raw !== 'object')
+        return null;
+    const x = raw as Record<string, unknown>;
+    const id = pickStr(x, 'id', 'id').trim();
+    if (!id)
+        return null;
+    const kindRaw = x.attachmentKind ?? x.attachment_kind;
+    const kind = kindRaw == null || String(kindRaw).trim() === '' ? null : String(kindRaw).trim();
+    const mimeRaw = x.mimeType ?? x.mime_type;
+    return {
+        id,
+        expenseRequestId: pickStr(x, 'expenseRequestId', 'expense_request_id'),
+        fileName: pickStr(x, 'fileName', 'file_name'),
+        storageKey: pickStr(x, 'storageKey', 'storage_key'),
+        mimeType: mimeRaw == null || String(mimeRaw).trim() === '' ? null : String(mimeRaw),
+        sizeBytes: asExpenseNumber(pickNumericField(x, 'sizeBytes', 'size_bytes')),
+        attachmentKind: kind,
+        uploadedByUserId: Math.trunc(asExpenseNumber(pickNumericField(x, 'uploadedByUserId', 'uploaded_by_user_id'))),
+        uploadedAt: pickStr(x, 'uploadedAt', 'uploaded_at'),
+    };
 }
 export function normalizeExpenseRequest(r: ExpenseRequest): ExpenseRequest {
     const x = r as unknown as Record<string, unknown>;
@@ -75,8 +103,13 @@ export function normalizeExpenseRequest(r: ExpenseRequest): ExpenseRequest {
     const hasReimbursementCard = hasCardFlagRaw === true
         || hasCardFlagRaw === 'true'
         || hasCardFromNumber;
+    const attRaw = x.attachments;
+    const attachments = Array.isArray(attRaw)
+        ? attRaw.map(normalizeExpenseAttachment).filter((a): a is AttachmentItem => a != null)
+        : r.attachments;
     return {
         ...r,
+        ...(attachments ? { attachments } : {}),
         createdByUserId: Number.isFinite(createdByUserId) ? createdByUserId : r.createdByUserId,
         createdBy,
         isReimbursable,

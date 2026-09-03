@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { createPortal } from 'react-dom';
-import { type ExpenseRequest, type ExpenseFormValues, type ExpenseFormErrors, type ExpenseFilesByKind, type AttachmentItem, EXPENSE_ATTACHMENT_MAX_BYTES, } from '@entities/expenses/model/types';
+import { type ExpenseRequest, type ExpenseFormValues, type ExpenseFormErrors, type ExpenseFilesByKind, type AttachmentItem, EXPENSE_ATTACHMENT_MAX_BYTES, EXPENSE_ATTACHMENT_MAX_COUNT, EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG, } from '@entities/expenses/model/types';
 import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, } from '@entities/expenses/model/constants';
 import { computeAmountUzsForApi, computeUsdEquivalent, formatExchangeRate, needsForeignUsdRate, parseExpenseMoney, roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import { formatReimbursementCardNumber, isEmployeePersonalFundsPayout, isValidReimbursementCardNumber, reimbursementCardDigits } from '@entities/expenses/model/expensePaymentDetails';
@@ -304,6 +304,11 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
             e.attachmentsPaymentDoc = 'Для возмещаемого расхода приложите документ для оплаты';
         }
     }
+    if (opts) {
+        const totalAtt = (opts.serverAttachments?.length ?? 0) + opts.filesPaymentDoc.length + opts.filesReceipt.length;
+        if (totalAtt > EXPENSE_ATTACHMENT_MAX_COUNT)
+            e.attachmentsPaymentDoc = EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG;
+    }
     if (opts?.forSubmit && v.isReimbursable === true && v.expenseType === 'client_expense') {
         if (!v.projectId?.trim()) {
             e.projectId = 'Выберите проект';
@@ -318,7 +323,7 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
     }
     return e;
 }
-function appendFilesChecked(incoming: FileList | null, setList: Dispatch<SetStateAction<File[]>>, onOversize: (fileName: string) => void) {
+function appendFilesChecked(incoming: FileList | null, setList: Dispatch<SetStateAction<File[]>>, onOversize: (fileName: string) => void, occupiedOthers: number, onTooMany: () => void) {
     if (!incoming?.length)
         return;
     const added: File[] = [];
@@ -331,7 +336,16 @@ function appendFilesChecked(incoming: FileList | null, setList: Dispatch<SetStat
     }
     if (!added.length)
         return;
-    setList(prev => [...prev, ...added]);
+    setList(prev => {
+        const room = EXPENSE_ATTACHMENT_MAX_COUNT - occupiedOthers - prev.length;
+        if (room <= 0) {
+            onTooMany();
+            return prev;
+        }
+        if (added.length > room)
+            onTooMany();
+        return [...prev, ...added.slice(0, Math.max(0, room))];
+    });
 }
 function formatForeignFp(n: number): string {
     const x = Math.round(n * 1e6) / 1e6;
@@ -353,6 +367,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
     const [filesReceipt, setFilesReceipt] = useState<File[]>([]);
     const [fileSizeHint, setFileSizeHint] = useState<string | null>(null);
     const [attachmentOpenErr, setAttachmentOpenErr] = useState<string | null>(null);
+    const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
     type AttachPreviewState = {
         fileName: string;
         loading: boolean;
@@ -1049,18 +1064,21 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
     const handleDeleteServerAttachment = useCallback(async (attId: string) => {
         if (!editingRequest || !onExpenseSnapshotUpdated)
             return;
-        if (isView) {
-            if (!allowPaymentReceiptUpload)
-                return;
-            const att = editingRequest.attachments?.find(a => a.id === attId);
-            if (att?.attachmentKind !== 'payment_receipt')
-                return;
+        if (isView && !allowPaymentReceiptUpload) {
+            setAttachmentOpenErr('Удалить файл в этом статусе нельзя. Отмените оплату или откройте заявку на редактирование.');
+            return;
         }
+        setAttachmentOpenErr(null);
+        setDeletingAttachmentId(attId);
         try {
             const r = await deleteAttachment(editingRequest.id, attId);
             onExpenseSnapshotUpdated(r);
         }
-        catch {
+        catch (e) {
+            setAttachmentOpenErr(e instanceof Error ? e.message : 'Не удалось удалить файл');
+        }
+        finally {
+            setDeletingAttachmentId(null);
         }
     }, [editingRequest, isView, allowPaymentReceiptUpload, onExpenseSnapshotUpdated]);
     const openServerAttachmentPreview = useCallback(async (attId: string, fileName: string) => {
@@ -1172,6 +1190,11 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
     const handleConfirmReceiptUpload = useCallback(async () => {
         if (!onUploadPaymentReceipts || filesReceipt.length === 0)
             return;
+        const existing = editingRequest?.attachments?.length ?? 0;
+        if (existing + filesReceipt.length > EXPENSE_ATTACHMENT_MAX_COUNT) {
+            setFileSizeHint(EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG);
+            return;
+        }
         try {
             await onUploadPaymentReceipts(filesReceipt);
             setFilesReceipt([]);
@@ -1179,7 +1202,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         }
         catch {
         }
-    }, [onUploadPaymentReceipts, filesReceipt]);
+    }, [onUploadPaymentReceipts, filesReceipt, editingRequest?.attachments?.length]);
     const blockedModerationOwn = Boolean(editingRequest &&
         isModerationBlockedForOwnExpense(Boolean(canModerate), currentUserId, editingRequest));
     const isPaymentConfirmer = isExpensePaymentConfirmer(currentUserEmail, { displayName: currentUserDisplayName });
@@ -2049,11 +2072,15 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     const serverPaymentDoc = allAtt.filter(a => a.attachmentKind === 'payment_document');
                     const serverReceipt = allAtt.filter(a => a.attachmentKind === 'payment_receipt');
                     const serverLegacy = allAtt.filter(a => !a.attachmentKind);
-                    const showServerDelete = !isView && Boolean(onExpenseSnapshotUpdated);
+                    const showServerDelete = Boolean(onExpenseSnapshotUpdated) && (!isView || allowPaymentReceiptUpload);
+                    const serverAttCount = allAtt.length;
+                    const attachmentsAtLimit = serverAttCount + filesPaymentDoc.length + filesReceipt.length >= EXPENSE_ATTACHMENT_MAX_COUNT;
+                    const pickOversize = (name: string) => { setFileSizeHint(`Файл «${name}» больше 15 МБ`); };
+                    const pickTooMany = () => { setFileSizeHint(EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG); };
                     const showPaymentDocSection = true;
                     const showReceiptBlock = !isView || serverReceipt.length > 0 || Boolean(allowPaymentReceiptUpload);
                     const showReceiptUploadZone = !isView || Boolean(allowPaymentReceiptUpload);
-                    const showReceiptServerDelete = Boolean(onExpenseSnapshotUpdated) && (!isView || allowPaymentReceiptUpload);
+                    const showReceiptServerDelete = showServerDelete;
                     const fileIcon = (<svg className="exp-form-file-zone__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                         <polyline points="17 8 12 3 7 8" />
@@ -2081,15 +2108,22 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
 
                             {showPaymentDocSection && (<div className={`exp-form-field${errors.attachmentsPaymentDoc ? ' exp-form-field--err' : ''}`}>
                                 <label className="exp-form-label">Документ для оплаты</label>
-                                {!isView && (<div className="exp-form-file-zone" role="button" tabIndex={0} onClick={() => { setFileSizeHint(null); fileInputPaymentRef.current?.click(); }} onKeyDown={e => e.key === 'Enter' && fileInputPaymentRef.current?.click()}>
-                                    <input ref={fileInputPaymentRef} type="file" multiple style={{ display: 'none' }} onChange={e => {
-                                        appendFilesChecked(e.target.files, setFilesPaymentDoc, name => { setFileSizeHint(`Файл «${name}» больше 15 МБ`); });
+                                {!isView && (<div className="exp-form-file-zone" role="button" tabIndex={attachmentsAtLimit ? -1 : 0} aria-disabled={attachmentsAtLimit} onClick={() => {
+                                    if (attachmentsAtLimit) {
+                                        setFileSizeHint(EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG);
+                                        return;
+                                    }
+                                    setFileSizeHint(null);
+                                    fileInputPaymentRef.current?.click();
+                                }} onKeyDown={e => !attachmentsAtLimit && e.key === 'Enter' && fileInputPaymentRef.current?.click()}>
+                                    <input ref={fileInputPaymentRef} type="file" multiple disabled={attachmentsAtLimit} style={{ display: 'none' }} onChange={e => {
+                                        appendFilesChecked(e.target.files, setFilesPaymentDoc, pickOversize, serverAttCount + filesReceipt.length, pickTooMany);
                                         setErrors(prev => ({ ...prev, attachmentsPaymentDoc: undefined }));
                                         e.target.value = '';
                                     }} />
                                     {fileIcon}
-                                    <p className="exp-form-file-zone__label">Нажмите для загрузки</p>
-                                    <p className="exp-form-file-zone__hint">Любой формат · до 15 МБ</p>
+                                    <p className="exp-form-file-zone__label">{attachmentsAtLimit ? 'Достигнут лимит 10 файлов' : 'Нажмите для загрузки'}</p>
+                                    <p className="exp-form-file-zone__hint">Любой формат · до 15 МБ · до 10 файлов на заявку</p>
                                 </div>)}
                                 {errors.attachmentsPaymentDoc && (<p className="exp-form-err-msg" data-err>{errors.attachmentsPaymentDoc}</p>)}
                                 {filesPaymentDoc.length > 0 && (<ul className="exp-form-file-list">
@@ -2123,7 +2157,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                                             <span className="exp-form-file-item__name">{f.fileName}</span>
                                             <span className="exp-form-file-item__size">{(f.sizeBytes / 1024).toFixed(0)} КБ</span>
                                         </button>
-                                        {showServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => handleDeleteServerAttachment(f.id)}>
+                                        {showServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" disabled={deletingAttachmentId === f.id} onClick={e => { e.preventDefault(); e.stopPropagation(); void handleDeleteServerAttachment(f.id); }}>
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                                             </svg>
@@ -2152,15 +2186,22 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                                             ? ' Файлы уйдут на сервер вместе с сохранением черновика или отправкой заявки.'
                                             : ' Загрузить может автор заявки или модератор.'}
                                     </p>
-                                    <div className="exp-form-file-zone" role="button" tabIndex={0} onClick={() => { setFileSizeHint(null); fileInputReceiptRef.current?.click(); }} onKeyDown={e => e.key === 'Enter' && fileInputReceiptRef.current?.click()}>
-                                        <input ref={fileInputReceiptRef} type="file" multiple style={{ display: 'none' }} onChange={e => {
-                                            appendFilesChecked(e.target.files, setFilesReceipt, name => { setFileSizeHint(`Файл «${name}» больше 15 МБ`); });
+                                    <div className="exp-form-file-zone" role="button" tabIndex={attachmentsAtLimit ? -1 : 0} aria-disabled={attachmentsAtLimit} onClick={() => {
+                                        if (attachmentsAtLimit) {
+                                            setFileSizeHint(EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG);
+                                            return;
+                                        }
+                                        setFileSizeHint(null);
+                                        fileInputReceiptRef.current?.click();
+                                    }} onKeyDown={e => !attachmentsAtLimit && e.key === 'Enter' && fileInputReceiptRef.current?.click()}>
+                                        <input ref={fileInputReceiptRef} type="file" multiple disabled={attachmentsAtLimit} style={{ display: 'none' }} onChange={e => {
+                                            appendFilesChecked(e.target.files, setFilesReceipt, pickOversize, serverAttCount + filesPaymentDoc.length, pickTooMany);
                                             setErrors(prev => ({ ...prev, attachmentsReceipt: undefined }));
                                             e.target.value = '';
                                         }} />
                                         {fileIcon}
-                                        <p className="exp-form-file-zone__label">Нажмите для загрузки</p>
-                                        <p className="exp-form-file-zone__hint">Любой формат · до 15 МБ</p>
+                                        <p className="exp-form-file-zone__label">{attachmentsAtLimit ? 'Достигнут лимит 10 файлов' : 'Нажмите для загрузки'}</p>
+                                        <p className="exp-form-file-zone__hint">Любой формат · до 15 МБ · до 10 файлов на заявку</p>
                                     </div>
                                 </>)}
                                 {errors.attachmentsReceipt && (<p className="exp-form-err-msg" data-err>{errors.attachmentsReceipt}</p>)}
@@ -2195,7 +2236,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                                             <span className="exp-form-file-item__name">{f.fileName}</span>
                                             <span className="exp-form-file-item__size">{(f.sizeBytes / 1024).toFixed(0)} КБ</span>
                                         </button>
-                                        {showReceiptServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => handleDeleteServerAttachment(f.id)}>
+                                        {showReceiptServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" disabled={deletingAttachmentId === f.id} onClick={e => { e.preventDefault(); e.stopPropagation(); void handleDeleteServerAttachment(f.id); }}>
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                                             </svg>
@@ -2217,7 +2258,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                                         <span className="exp-form-file-item__name">{f.fileName}</span>
                                         <span className="exp-form-file-item__size">{(f.sizeBytes / 1024).toFixed(0)} КБ</span>
                                     </button>
-                                    {showServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" onClick={() => handleDeleteServerAttachment(f.id)}>
+                                    {showServerDelete && (<button type="button" aria-label="Удалить" className="exp-form-file-item__del" disabled={deletingAttachmentId === f.id} onClick={e => { e.preventDefault(); e.stopPropagation(); void handleDeleteServerAttachment(f.id); }}>
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                             <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                                         </svg>

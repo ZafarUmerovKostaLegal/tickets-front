@@ -226,7 +226,11 @@ export async function uploadAttachment(id: string, file: File, attachmentKind?: 
     return normalizeExpenseRequest(await res.json() as ExpenseRequest);
 }
 export async function deleteAttachment(id: string, attId: string): Promise<ExpenseRequest> {
-    const res = await apiFetch(`/api/v1/expenses/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attId)}`, { method: 'DELETE' });
+    const base = `/api/v1/expenses/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attId)}`;
+    let res = await apiFetch(base, { method: 'DELETE' });
+    if (res.status === 404 || res.status === 405) {
+        res = await apiFetch(`${base}/delete`, { method: 'POST' });
+    }
     await throwIfNotOk(res);
     return normalizeExpenseRequest(await res.json() as ExpenseRequest);
 }

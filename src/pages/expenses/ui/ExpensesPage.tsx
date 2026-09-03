@@ -7,6 +7,7 @@ import { AppBackButton, AppHomeLogo, AppPageSettings, DatePicker, Pagination } f
 import type { PanelMode } from './ExpensesFormPanel';
 import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
 import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseType, ExpenseCreatedBy, PartnerExpenseCategory, } from '@entities/expenses/model/types';
+import { EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG, EXPENSE_ATTACHMENT_MAX_COUNT } from '@entities/expenses/model/types';
 import { TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
 import { approveExpense, payExpense, deleteExpense, fetchExpenses, fetchExpenseById, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
 import { saveExpenseFromForm } from '@entities/expenses/model/saveExpenseFromForm';
@@ -1404,6 +1405,11 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const handleUploadPaymentReceipts = useCallback(async (files: File[]) => {
         if (!editingReq || files.length === 0)
             return;
+        const existing = editingReq.attachments?.length ?? editingReq.attachmentsCount ?? 0;
+        if (existing + files.length > EXPENSE_ATTACHMENT_MAX_COUNT) {
+            setActionError(EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG);
+            throw new Error(EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG);
+        }
         setReceiptUploadPending(true);
         setActionError(null);
         try {

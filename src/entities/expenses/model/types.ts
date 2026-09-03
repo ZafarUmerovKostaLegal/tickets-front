@@ -6,6 +6,8 @@ export type ExpenseAmountCurrency = 'UZS' | 'USD' | 'RUB' | 'GBP' | 'EUR';
 export type ExpenseAttachmentKind = 'payment_document' | 'payment_receipt';
 export type ExpenseFilesByKind = Record<ExpenseAttachmentKind, File[]>;
 export const EXPENSE_ATTACHMENT_MAX_BYTES = 15 * 1024 * 1024;
+export const EXPENSE_ATTACHMENT_MAX_COUNT = 10;
+export const EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG = 'К расходу можно прикрепить не больше 10 файлов';
 export interface ExpenseCreatedBy {
     id: number;
     displayName: string | null;
