@@ -155,28 +155,35 @@ export function InventoryItemsSection() {
                           </span>)}
                         <div className="inv__name-body">
                           <div className="inv__name-title">{item.name}</div>
-                          {ramUpgrade?.canAddRam ? (
-                            <span className="inv__ram-badge" title={ramUpgrade.hint}>Можно добавить ОЗУ</span>
+                          {(ramUpgrade?.canAddRam || item.description) ? (
+                            <div className="inv__name-meta">
+                              {ramUpgrade?.canAddRam ? (
+                                <span className="inv__ram-badge" title={ramUpgrade.hint}>Слот ОЗУ</span>
+                              ) : null}
+                              {item.description ? (
+                                <span className="inv__name-hint" title={item.description}>
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <line x1="16" y1="13" x2="8" y2="13"/>
+                                    <line x1="16" y1="17" x2="8" y2="17"/>
+                                  </svg>
+                                  Заметки
+                                </span>
+                              ) : null}
+                            </div>
                           ) : null}
-                          {item.description && (<div className="inv__name-hint">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="10"/>
-                                <line x1="12" y1="8" x2="12" y2="12"/>
-                                <line x1="12" y1="16" x2="12.01" y2="16"/>
-                              </svg>
-                              Есть заметки
-                            </div>)}
                         </div>
                       </div>
                     </td>
                     <td className="inv__col inv__col--cat" data-label="Категория">
-                      {cat?.name ?? '—'}
+                      <span className="inv__cat-tag">{cat?.name ?? '—'}</span>
                     </td>
                     <td className="inv__col inv__col--score" data-label="Оценка">
                       <EquipmentScoreBadge item={item} compact />
                     </td>
-                    <td className="inv__col inv__col--invno inv__td-mono" data-label="Инв. номер">
-                      {item.inventory_number}
+                    <td className="inv__col inv__col--invno" data-label="Инв. номер">
+                      <span className="inv__invno" title={item.inventory_number}>{item.inventory_number}</span>
                     </td>
                     <td className="inv__col inv__col--status" data-label="Статус">
                       <span className={`inv__status inv__status--${item.status}`}>
@@ -184,7 +191,14 @@ export function InventoryItemsSection() {
                       </span>
                     </td>
                     <td className="inv__col inv__col--assigned" data-label="Закреплено за">
-                      {assigned ? (assigned.display_name || assigned.email) : '—'}
+                      {assigned ? (
+                        <span className="inv__assignee" title={assigned.display_name || assigned.email}>
+                          <span className="inv__assignee-av" aria-hidden>
+                            {(assigned.display_name || assigned.email || '?').trim().charAt(0).toUpperCase()}
+                          </span>
+                          <span className="inv__assignee-name">{assigned.display_name || assigned.email}</span>
+                        </span>
+                      ) : <span className="inv__assignee inv__assignee--empty">Не закреплено</span>}
                     </td>
                     <td className="inv__col inv__col--open" data-label="" onClick={(e) => e.stopPropagation()}>
                       <button type="button" className="inv__open-btn" onClick={() => setViewItem(item)} aria-label="Подробнее" title="Подробнее">
