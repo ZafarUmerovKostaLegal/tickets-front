@@ -231,14 +231,29 @@ export async function deleteAttachment(id: string, attId: string): Promise<Expen
     if (res.status === 404 || res.status === 405) {
         res = await apiFetch(base, { method: 'DELETE' });
     }
-    await throwIfNotOk(res);
-    const body = normalizeExpenseRequest(await res.json() as ExpenseRequest);
-    const attachments = (body.attachments ?? []).filter(a => a.id !== attId);
-    return {
-        ...body,
-        attachments,
-        attachmentsCount: attachments.length,
+    const withoutAtt = (r: ExpenseRequest): ExpenseRequest => {
+        const attachments = (r.attachments ?? []).filter(a => a.id !== attId);
+        return { ...r, attachments, attachmentsCount: attachments.length };
     };
+    if (res.ok) {
+        try {
+            return withoutAtt(normalizeExpenseRequest(await res.json() as ExpenseRequest));
+        }
+        catch {
+            /* тело ответа битое — сверка через GET */
+        }
+    }
+    try {
+        const fresh = await fetchExpenseById(id);
+        const stillThere = (fresh.attachments ?? []).some(a => a.id === attId);
+        if (!stillThere)
+            return withoutAtt(fresh);
+    }
+    catch {
+        /* исходную ошибку удаления покажем ниже */
+    }
+    await throwIfNotOk(res);
+    throw new Error('Не удалось удалить файл');
 }
 export async function fetchExpenseAttachmentBlob(expenseId: string, attachmentId: string): Promise<{
     blob: Blob;
