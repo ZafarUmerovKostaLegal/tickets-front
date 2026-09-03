@@ -882,17 +882,17 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
             const label = (r.employeeName || r.userName || '').trim() || '—';
             const pos = (r.employeePosition ?? '').trim();
             const text = pos ? `${label} (${pos})` : label;
-            return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--readonly">
+            return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--readonly tt-rp-mtable__td--employee">
               <span className="tt-rp-mtable__readonly">{text}</span>
             </td>);
         }
         if (r.rowKind === 'aggregate') {
             if (employeePartnerPick != null && !employeePartnerPick.loading) {
-                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--readonly">
+                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--readonly tt-rp-mtable__td--employee">
                   <span className="tt-rp-mtable__td--muted" title="Для строки-агрегата выбор сотрудника недоступен">{r.employeeName || r.userName}</span>
                 </td>);
             }
-            return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
+            return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick tt-rp-mtable__td--employee">
                 <input className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="text" value={r.employeeName} onChange={(e) => {
                     const v = e.target.value;
                     onPatch(r.rowKey, { employeeName: v, userName: v });
@@ -901,14 +901,14 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
         }
         if (employeePartnerPick != null) {
             if (employeePartnerPick.loading) {
-                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
+                return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick tt-rp-mtable__td--employee">
                   <span className="tt-rp-mtable__td--muted" role="status">Загрузка участников…</span>
                 </td>);
             }
             const items = employeePartnerSelectItems ?? [];
             const selId = String(r.authUserId);
             const value = items.some((x) => x.id === selId) ? selId : '';
-            return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
+            return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick tt-rp-mtable__td--employee">
               <div className="tt-rp-mtable__emp-cell">
                 {r.isSessionCopy ? <SessionCopyMark row={r} /> : null}
                 <SearchableSelect<PartnerEmployeeSelectItem> portalDropdown portalZIndex={TT_RP_SELECT_PORTAL_Z} portalDropdownClassName="tsp-srch__dropdown--tall" className="tt-rp-mtable__srch" buttonClassName="tt-rp-mtable__srch-btn" aria-label={`Сотрудник, строка ${i + 1}`} placeholder={items.length === 0 ? 'Нет участников с доступом к проекту' : 'Выберите сотрудника…'} emptyListText="Нет в списке" noMatchText="Не найдено" value={value} items={items} getOptionValue={(o) => o.id} getOptionLabel={(o) => (o.position ? `${o.label} (${o.position})` : o.label)} getSearchText={(o) => o.search} disabled={wk} onSelect={(o) => {
@@ -925,7 +925,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               </div>
             </td>);
         }
-        return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick">
+        return (<td key={colId} className="tt-rp-mtable__td tt-rp-mtable__td--pick tt-rp-mtable__td--employee">
           <div className="tt-rp-mtable__emp-cell">
             {r.isSessionCopy ? <SessionCopyMark row={r} /> : null}
             <input className="tt-rp-mtable__input tt-rp-mtable__input--emp" type="text" value={r.employeeName} onChange={(e) => {

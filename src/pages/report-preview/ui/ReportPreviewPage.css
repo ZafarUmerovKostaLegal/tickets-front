@@ -2782,6 +2782,38 @@ body[data-theme='dark'] .tt-rp-mtable-scroll::-webkit-scrollbar-thumb:hover {
   min-width: 0;
 }
 
+.tt-rp-mtable--time-brief .tt-rp-mtable__th--employee-head,
+.tt-rp-mtable--time-brief .tt-rp-mtable__td--employee {
+  width: 11.5rem;
+  min-width: 11.5rem;
+  max-width: 11.5rem;
+  box-sizing: border-box;
+}
+
+.tt-rp-mtable--time-brief .tt-rp-mtable__td--employee.tt-rp-mtable__td--pick {
+  min-width: 11.5rem;
+}
+
+.tt-rp-mtable--time-brief .tt-rp-mtable__emp-cell,
+.tt-rp-mtable--time-brief .tt-rp-mtable__emp-cell .tt-rp-mtable__srch,
+.tt-rp-mtable--time-brief .tt-rp-mtable__emp-cell .tt-rp-mtable__srch-btn.tsp-srch__btn,
+.tt-rp-mtable--time-brief .tt-rp-mtable__td--employee .tt-rp-mtable__input--emp {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.tt-rp-mtable--time-brief .tt-rp-mtable__emp-cell .tt-rp-mtable__srch-btn .tsp-srch__btn-text,
+.tt-rp-mtable--time-brief .tt-rp-mtable__td--employee .tt-rp-mtable__readonly {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+}
+
 .tt-rp-mtable__copy-badge {
   flex-shrink: 0;
   display: inline-flex;
