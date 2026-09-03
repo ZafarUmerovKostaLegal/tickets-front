@@ -892,6 +892,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [panelSubmitPending, setPanelSubmitPending] = useState(false);
     const [receiptUploadPending, setReceiptUploadPending] = useState(false);
     const panelFormActionRef = useRef<'idle' | 'save' | 'submit'>('idle');
+    const panelDataGenRef = useRef(0);
     const [emailModerationIntent, setEmailModerationIntent] = useState<'approve' | 'reject' | 'pay' | null>(null);
     const openedExpensePathRef = useRef<string | null>(null);
     useEffect(() => {
@@ -1054,14 +1055,19 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         setExpenseTableMenuForId(null);
         const auto = resolveExpensePanelMode(req.status) === 'edit' ? 'edit' : 'view';
         const mode = opts?.mode ?? auto;
+        const gen = ++panelDataGenRef.current;
         if (mode === 'edit' && req.reimbursementCardNumber === undefined) {
             fetchExpenseById(req.id)
                 .then(full => {
+                    if (panelDataGenRef.current !== gen)
+                        return;
                     setEditingReq(full);
                     setPanelMode(mode);
                     setIsPanelOpen(true);
                 })
                 .catch(() => {
+                    if (panelDataGenRef.current !== gen)
+                        return;
                     setEditingReq(req);
                     setPanelMode(mode);
                     setIsPanelOpen(true);
@@ -1073,7 +1079,11 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         setIsPanelOpen(true);
         if (mode === 'view') {
             fetchExpenseById(req.id)
-                .then(full => { setEditingReq(prev => (prev?.id === full.id ? full : prev)); })
+                .then(full => {
+                    if (panelDataGenRef.current !== gen)
+                        return;
+                    setEditingReq(prev => (prev?.id === full.id ? full : prev));
+                })
                 .catch(() => { });
         }
     }, []);
@@ -1864,6 +1874,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
             </>, document.body)}
 
         {isPanelOpen && (<Suspense fallback={null}><ExpensesFormPanel isOpen mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
+            panelDataGenRef.current += 1;
             setEditingReq(r);
             setRequests(prev => prev.map(x => (x.id === r.id ? r : x)));
         }} canModerate={canModerate} onExpenseUpdated={handleExpenseUpdated} onExpenseDeleted={handleExpenseDeleted} emailModerationIntent={emailModerationIntent} onEmailModerationIntentConsumed={() => setEmailModerationIntent(null)} allowPaymentReceiptUpload={allowPaymentReceiptUpload} onUploadPaymentReceipts={handleUploadPaymentReceipts} receiptUploadPending={receiptUploadPending} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} currentUserEmail={user?.email ?? null} currentUserDisplayName={user?.display_name ?? null} formScope={isPartnerScope ? 'partner' : isClientScope ? 'client' : 'company'} /></Suspense>)}

@@ -3294,6 +3294,8 @@ body[data-theme='dark'] .exp-table__status-reason--revision .exp-table__status-r
 }
 
 .exp-form-file-item--server .exp-form-file-item__del {
+  position: relative;
+  z-index: 2;
   margin-right: 0.35rem;
 }
 

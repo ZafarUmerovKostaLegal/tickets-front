@@ -172,7 +172,7 @@ export async function reviseExpense(id: string, comment: string): Promise<Expens
     return normalizeExpenseRequest(await res.json() as ExpenseRequest);
 }
 export async function fetchExpenseById(id: string): Promise<ExpenseRequest> {
-    const res = await apiFetch(`/api/v1/expenses/${encodeURIComponent(id)}`, { getReuseWindowMs: 5_000 });
+    const res = await apiFetch(`/api/v1/expenses/${encodeURIComponent(id)}`, { getReuseWindowMs: 0 });
     await throwIfNotOk(res);
     return normalizeExpenseRequest(await res.json() as ExpenseRequest);
 }
@@ -227,12 +227,18 @@ export async function uploadAttachment(id: string, file: File, attachmentKind?: 
 }
 export async function deleteAttachment(id: string, attId: string): Promise<ExpenseRequest> {
     const base = `/api/v1/expenses/${encodeURIComponent(id)}/attachments/${encodeURIComponent(attId)}`;
-    let res = await apiFetch(base, { method: 'DELETE' });
+    let res = await apiFetch(`${base}/delete`, { method: 'POST' });
     if (res.status === 404 || res.status === 405) {
-        res = await apiFetch(`${base}/delete`, { method: 'POST' });
+        res = await apiFetch(base, { method: 'DELETE' });
     }
     await throwIfNotOk(res);
-    return normalizeExpenseRequest(await res.json() as ExpenseRequest);
+    const body = normalizeExpenseRequest(await res.json() as ExpenseRequest);
+    const attachments = (body.attachments ?? []).filter(a => a.id !== attId);
+    return {
+        ...body,
+        attachments,
+        attachmentsCount: attachments.length,
+    };
 }
 export async function fetchExpenseAttachmentBlob(expenseId: string, attachmentId: string): Promise<{
     blob: Blob;

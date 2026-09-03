@@ -1064,23 +1064,34 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
     const handleDeleteServerAttachment = useCallback(async (attId: string) => {
         if (!editingRequest || !onExpenseSnapshotUpdated)
             return;
-        if (isView && !allowPaymentReceiptUpload) {
-            setAttachmentOpenErr('Удалить файл в этом статусе нельзя. Отмените оплату или откройте заявку на редактирование.');
+        const att = editingRequest.attachments?.find(a => a.id === attId);
+        const isUploader = currentUserId != null && att != null && att.uploadedByUserId === currentUserId;
+        const isAuthor = currentUserId != null && currentUserId === editingRequest.createdByUserId;
+        if (isView && !allowPaymentReceiptUpload && !isUploader && !isAuthor) {
+            setAttachmentOpenErr('Удалить файл в этом статусе нельзя.');
             return;
         }
+        const snapshot = editingRequest;
+        const optimisticAtt = (snapshot.attachments ?? []).filter(a => a.id !== attId);
         setAttachmentOpenErr(null);
         setDeletingAttachmentId(attId);
+        onExpenseSnapshotUpdated({
+            ...snapshot,
+            attachments: optimisticAtt,
+            attachmentsCount: optimisticAtt.length,
+        });
         try {
-            const r = await deleteAttachment(editingRequest.id, attId);
+            const r = await deleteAttachment(snapshot.id, attId);
             onExpenseSnapshotUpdated(r);
         }
         catch (e) {
+            onExpenseSnapshotUpdated(snapshot);
             setAttachmentOpenErr(e instanceof Error ? e.message : 'Не удалось удалить файл');
         }
         finally {
             setDeletingAttachmentId(null);
         }
-    }, [editingRequest, isView, allowPaymentReceiptUpload, onExpenseSnapshotUpdated]);
+    }, [editingRequest, isView, allowPaymentReceiptUpload, onExpenseSnapshotUpdated, currentUserId]);
     const openServerAttachmentPreview = useCallback(async (attId: string, fileName: string) => {
         if (!editingRequest)
             return;
@@ -2072,7 +2083,8 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     const serverPaymentDoc = allAtt.filter(a => a.attachmentKind === 'payment_document');
                     const serverReceipt = allAtt.filter(a => a.attachmentKind === 'payment_receipt');
                     const serverLegacy = allAtt.filter(a => !a.attachmentKind);
-                    const showServerDelete = Boolean(onExpenseSnapshotUpdated) && (!isView || allowPaymentReceiptUpload);
+                    const showServerDelete = Boolean(onExpenseSnapshotUpdated) && (!isView || allowPaymentReceiptUpload
+                        || (currentUserId != null && (editingRequest?.createdByUserId === currentUserId)));
                     const serverAttCount = allAtt.length;
                     const attachmentsAtLimit = serverAttCount + filesPaymentDoc.length + filesReceipt.length >= EXPENSE_ATTACHMENT_MAX_COUNT;
                     const pickOversize = (name: string) => { setFileSizeHint(`Файл «${name}» больше 15 МБ`); };
