@@ -324,6 +324,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
                 await updateItem(itemModal.uuid, {
                     name: itemForm.name.trim(),
                     category_id: itemForm.category_id || undefined,
+                    inventory_number: itemForm.inventory_number.trim() || undefined,
                     description: itemForm.description.trim() || undefined,
                     serial_number: itemForm.serial_number.trim() || undefined,
                     equipment_class: equipmentClass,
@@ -408,6 +409,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         }
     }, [loadItems]);
     const openEditItem = useCallback((item: InventoryItem) => {
+        setFormError(null);
         setItemForm({
             name: item.name,
             category_id: item.category_id,

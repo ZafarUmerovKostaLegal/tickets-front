@@ -41,7 +41,12 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
         <div className="inv-drawer__body">
           
           {item.photo_path && (<div className="inv-drawer__photo-wrap">
-              <AuthImg mediaPath={item.photo_path} alt={item.name} className="inv-drawer__photo"/>
+              <AuthImg
+                mediaPath={item.photo_path}
+                alt={item.name}
+                className="inv-drawer__photo"
+                fallback={<span className="inv-drawer__photo-loading">Загрузка фото…</span>}
+              />
             </div>)}
 
           

@@ -46,6 +46,7 @@ export type UpdateItemBody = {
     description?: string;
     category_id?: number;
     serial_number?: string;
+    inventory_number?: string;
     equipment_class?: EquipmentClassCode | null;
     status?: string;
     purchase_date?: string;
