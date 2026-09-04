@@ -258,6 +258,20 @@ export async function fetchCorrespondenceAttachmentBlob(
     };
 }
 
+export async function fetchCorrespondenceAttachmentPreviewBlob(
+    documentId: string,
+    attachmentId: string,
+): Promise<{ blob: Blob; contentType: string | null }> {
+    const res = await apiFetch(
+        `${PREFIX}/${encodeURIComponent(documentId)}/attachments/${encodeURIComponent(attachmentId)}/preview`,
+    );
+    await throwIfNotOk(res);
+    return {
+        blob: await res.blob(),
+        contentType: res.headers.get('Content-Type'),
+    };
+}
+
 export async function listCorrespondenceComments(
     documentId: string,
     signal?: AbortSignal,

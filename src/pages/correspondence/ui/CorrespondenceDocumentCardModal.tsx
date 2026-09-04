@@ -5,7 +5,7 @@ import {
     correspondenceErrorMessage,
     createCorrespondenceComment,
     downloadCorrespondenceAttachment,
-    fetchCorrespondenceAttachmentBlob,
+    fetchCorrespondenceAttachmentPreviewBlob,
     fetchCorrespondenceDocument,
     formatCorrRegisteredAt,
     invalidateCorrespondencePartnerAttention,
@@ -47,7 +47,15 @@ function userLabel(name: string | null | undefined, email: string | null | undef
     return name?.trim() || email?.trim() || `User #${id}`;
 }
 
+function isPdfAttachment(file: CorrespondenceAttachment): boolean {
+    const ct = (file.contentType || '').toLowerCase();
+    return ct.includes('pdf') || file.fileName.toLowerCase().endsWith('.pdf');
+}
+
 function pickPrimaryAttachment(attachments: CorrespondenceAttachment[]): CorrespondenceAttachment | null {
+    const pdf = attachments.find((a) => isPdfAttachment(a));
+    if (pdf)
+        return pdf;
     return attachments.find((a) => a.attachmentKind === 'scan')
         ?? attachments.find((a) => a.attachmentKind === 'attachment')
         ?? attachments[0]
@@ -269,16 +277,18 @@ export function CorrespondenceDocumentCardModal({
         });
         setPreviewKind(null);
 
-        void fetchCorrespondenceAttachmentBlob(documentId, file.id)
+        void fetchCorrespondenceAttachmentPreviewBlob(documentId, file.id)
             .then(({ blob, contentType }) => {
                 if (cancelled)
                     return;
                 const kind = resolvePreviewKind(file, contentType);
-                const typedBlob = kind === 'pdf' && blob.type !== 'application/pdf'
+                const previewAsPdf = kind === 'pdf' || (contentType || '').toLowerCase().includes('pdf');
+                const resolvedKind = previewAsPdf ? 'pdf' : kind;
+                const typedBlob = resolvedKind === 'pdf'
                     ? new Blob([blob], { type: 'application/pdf' })
                     : blob;
                 objectUrl = URL.createObjectURL(typedBlob);
-                setPreviewKind(kind);
+                setPreviewKind(resolvedKind);
                 setPreviewUrl(objectUrl);
             })
             .catch((err) => {

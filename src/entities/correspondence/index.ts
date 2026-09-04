@@ -40,6 +40,7 @@ export {
     createCorrespondenceComment,
     createOutgoingDraft,
     fetchCorrespondenceAttachmentBlob,
+    fetchCorrespondenceAttachmentPreviewBlob,
     fetchCorrespondenceDocument,
     fetchCorrespondenceStats,
     isCorrespondenceHttpError,
