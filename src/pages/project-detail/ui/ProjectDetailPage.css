@@ -843,6 +843,38 @@
   color: var(--app-muted, #94a3b8);
 }
 
+.pdp__stat-card--notes {
+  min-width: 0;
+}
+
+@media (min-width: 1101px) {
+  .pdp__stat-card--notes {
+    grid-column: span 3;
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 581px) {
+  .pdp__stat-card--notes {
+    grid-column: 1 / -1;
+  }
+}
+
+.pdp__notes-text {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--app-text, #111827);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 10.5rem;
+  overflow: auto;
+}
+
+.pdp__stat-card--notes .pdp__invoice-btn {
+  margin-top: auto;
+  align-self: flex-start;
+}
+
 .pdp__detail-block {
   background: var(--app-surface, #fff);
   border: 1px solid var(--app-border, #e5e7eb);

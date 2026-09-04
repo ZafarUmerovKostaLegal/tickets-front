@@ -644,9 +644,11 @@ function initialMailboxScreen(searchParams: URLSearchParams): Screen {
         : { kind: 'incoming' };
 }
 
-function initialCorrTableTab(searchParams: URLSearchParams): 'all' | 'attention' | 'new' | 'work' | 'done' | undefined {
+function initialCorrTableTab(searchParams: URLSearchParams): 'all' | 'attention' | 'work' | 'done' | undefined {
     const view = searchParams.get('view');
-    if (view === 'attention' || view === 'new' || view === 'work' || view === 'done' || view === 'all')
+    if (view === 'new')
+        return 'all';
+    if (view === 'attention' || view === 'work' || view === 'done' || view === 'all')
         return view;
     return undefined;
 }

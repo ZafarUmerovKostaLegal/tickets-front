@@ -35,9 +35,10 @@ export function useCorrespondencePartnerAttentionBadge(enabled = true): {
         }
         try {
             const stats = await fetchCorrespondenceStats();
-            setCount(Math.max(0, stats.partnerAttentionTotal ?? 0));
-            setOutgoingPending(Math.max(0, stats.partnerOutgoingPending ?? 0));
-            setIncomingNew(Math.max(0, stats.partnerIncomingNew ?? 0));
+            const pending = Math.max(0, stats.partnerOutgoingPending ?? 0);
+            setCount(pending);
+            setOutgoingPending(pending);
+            setIncomingNew(0);
         }
         catch {
             setCount(0);

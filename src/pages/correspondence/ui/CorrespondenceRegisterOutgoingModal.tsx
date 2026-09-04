@@ -91,7 +91,7 @@ export function CorrespondenceRegisterOutgoingModal({
 
     return createPortal(<div className="corr-modal" role="presentation" onClick={onClose}>
       <div
-        className="corr-modal__panel corr-modal__panel--drive"
+        className="corr-modal__panel corr-modal__panel--drive corr-modal__panel--fit"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -112,7 +112,7 @@ export function CorrespondenceRegisterOutgoingModal({
         </div>
 
         <div className="corr-modal__form corr-modal__form--drive">
-          <div className="corr-modal__form-fields">
+          <div className="corr-modal__form-fields corr-modal__form-fields--compact">
             <div className={`corr-modal__field${errors.counterparty ? ' corr-modal__field--err' : ''}`}>
               <label className="corr-modal__label" htmlFor="corr-out-recipient">
                 Получатель <span className="corr-modal__req" aria-hidden>*</span>

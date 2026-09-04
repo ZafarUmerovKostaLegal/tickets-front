@@ -27,5 +27,13 @@ export async function loadProjectDetailRow(projectId: string, clientIdHint: stri
     if (!project)
         return null;
     const client = clients.find((row) => row.id === project.client_id);
-    return client ? mapClientProjectToProjectRow(project, client) : null;
+    if (!client)
+        return null;
+    try {
+        const full = await getClientProject(client.id, projectId);
+        return mapClientProjectToProjectRow(full, client);
+    }
+    catch {
+        return mapClientProjectToProjectRow(project, client);
+    }
 }

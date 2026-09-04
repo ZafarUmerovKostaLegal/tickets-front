@@ -17,7 +17,6 @@ export const CORR_SHELL_NAV_TABS: { key: CorrDirection; label: string }[] = [
 export const CORR_TABLE_TABS = [
     { key: 'all', label: 'Все' },
     { key: 'attention', label: 'Нужно посмотреть' },
-    { key: 'new', label: 'Новые' },
     { key: 'work', label: 'В работе' },
     { key: 'done', label: 'Завершено' },
 ] as const;
@@ -40,7 +39,7 @@ export const CORR_STATUS_BADGE: Record<CorrDocStatus, { label: string; className
     draft: { label: 'Черновик', className: 'corr__badge corr__badge--status-progress' },
     pending_review: { label: 'На проверке', className: 'corr__badge corr__badge--status-approval' },
     rejected: { label: 'Отклонено', className: 'corr__badge corr__badge--status-done' },
-    new: { label: 'Новое', className: 'corr__badge corr__badge--status-new' },
+    new: { label: 'В работе', className: 'corr__badge corr__badge--status-progress' },
     progress: { label: 'В работе', className: 'corr__badge corr__badge--status-progress' },
     approval: { label: 'На согласовании', className: 'corr__badge corr__badge--status-approval' },
     done: { label: 'Завершено', className: 'corr__badge corr__badge--status-done' },

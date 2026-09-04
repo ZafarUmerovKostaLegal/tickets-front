@@ -71,7 +71,8 @@ export type CorrespondenceStats = {
     outgoingTotal: number;
     approvalTotal: number;
     incomingNewTotal: number;
-    /** For partner: pending outgoing reviews + new incoming assigned to them. */
+    pendingReviewTotal: number;
+    /** For partner: outgoing letters awaiting review. */
     partnerAttentionTotal: number;
     partnerOutgoingPending: number;
     partnerIncomingNew: number;

@@ -21,6 +21,7 @@ export type ProjectRow = {
     hasBudgetConfigured?: boolean;
     budgetIncludesExpenses?: boolean;
     deletable?: boolean;
+    notes?: string | null;
 };
 export type ExpenseCategory = 'Транспорт' | 'Питание' | 'Командировка' | 'Офис' | 'ПО и сервисы' | 'Представительские' | 'Прочее';
 export type ExpenseStatus = 'approved' | 'pending' | 'rejected';

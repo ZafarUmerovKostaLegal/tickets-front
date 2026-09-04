@@ -118,5 +118,6 @@ export function mapClientProjectToProjectRow(p: TimeManagerClientProjectRow, cli
         deletable: Boolean(p.deletable),
         partnerAuthUserIds: readProjectAuthUserIds(p, 'partnerAuthUserIds', 'partner_auth_user_ids'),
         participantAuthUserIds: readProjectAuthUserIds(p, 'participantAuthUserIds', 'participant_auth_user_ids'),
+        notes: (p.notes ?? '').trim() || null,
     };
 }

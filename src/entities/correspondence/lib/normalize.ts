@@ -122,8 +122,9 @@ export function normalizeCorrespondenceDocument(raw: unknown): CorrespondenceDoc
         return null;
     const docTypeRaw = pickStr(o, 'docType', 'doc_type').toLowerCase() || 'letter';
     const docType = DOC_TYPES.has(docTypeRaw as CorrDocType) ? docTypeRaw as CorrDocType : 'letter';
-    const statusRaw = pickStr(o, 'status').toLowerCase() || 'new';
-    const status = STATUSES.has(statusRaw as CorrDocStatus) ? statusRaw as CorrDocStatus : 'new';
+    const statusRaw = pickStr(o, 'status').toLowerCase() || 'progress';
+    const statusMapped = statusRaw === 'new' ? 'progress' : statusRaw;
+    const status = STATUSES.has(statusMapped as CorrDocStatus) ? statusMapped as CorrDocStatus : 'progress';
     const responsibleUserId = num(o.responsibleUserId ?? o.responsible_user_id) ?? 0;
     const partnerUserId = num(o.partnerUserId ?? o.partner_user_id);
     const attachmentsRaw = o.attachments;
@@ -161,6 +162,7 @@ export function normalizeCorrespondenceStats(raw: unknown): CorrespondenceStats 
         outgoingTotal: num(o.outgoingTotal ?? o.outgoing_total) ?? 0,
         approvalTotal: num(o.approvalTotal ?? o.approval_total) ?? 0,
         incomingNewTotal: num(o.incomingNewTotal ?? o.incoming_new_total) ?? 0,
+        pendingReviewTotal: num(o.pendingReviewTotal ?? o.pending_review_total) ?? 0,
         partnerAttentionTotal: num(o.partnerAttentionTotal ?? o.partner_attention_total) ?? 0,
         partnerOutgoingPending: num(o.partnerOutgoingPending ?? o.partner_outgoing_pending) ?? 0,
         partnerIncomingNew: num(o.partnerIncomingNew ?? o.partner_incoming_new) ?? 0,

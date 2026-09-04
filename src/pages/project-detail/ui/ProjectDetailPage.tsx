@@ -1934,6 +1934,24 @@ function ProjectDetailBody({ project, dashboard, dashboardError, detailPeriod, o
                     <p className="pdp__stat-value">{fmtAmt(unbilled, displayCurrency)}</p>
                     <button type="button" className="pdp__invoice-btn">Создать счёт</button>
                 </div>)}
+                <div className="pdp__stat-card pdp__stat-card--notes">
+                    <p className="pdp__stat-label">Заметки проекта</p>
+                    {project.notes ? (
+                        <p className="pdp__notes-text">{project.notes}</p>
+                    ) : (
+                        <p className="pdp__stat-hint">Заметок пока нет. Их можно указать при редактировании проекта.</p>
+                    )}
+                    {canManageProjects ? (
+                        <button
+                            type="button"
+                            className="pdp__invoice-btn"
+                            disabled={actionBusy}
+                            onClick={() => void openProjectEdit()}
+                        >
+                            {project.notes ? 'Изменить' : 'Добавить заметку'}
+                        </button>
+                    ) : null}
+                </div>
 
             </div>
             <div className="pdp__detail-block">

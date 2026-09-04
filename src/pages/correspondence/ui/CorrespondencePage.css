@@ -1123,6 +1123,86 @@ body[data-theme='dark'] .corr-modal__panel {
   max-width: 720px;
 }
 
+.corr-modal__panel--fit {
+  display: flex;
+  flex-direction: column;
+  max-height: min(92vh, 640px);
+  overflow: hidden;
+  padding: 0.9rem 1.1rem 0.8rem;
+}
+
+.corr-modal__panel--fit .corr-modal__head {
+  margin-bottom: 0.6rem;
+}
+
+.corr-modal__panel--fit .corr-modal__lead {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.corr-modal__panel--fit .corr-modal__form--drive {
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 0.7rem;
+}
+
+.corr-modal__panel--fit .corr-modal__form-fields {
+  gap: 0.55rem;
+}
+
+.corr-modal__panel--fit .corr-modal__textarea {
+  min-height: 2.5rem;
+  height: 2.5rem;
+  resize: none;
+}
+
+.corr-modal__panel--fit .corr-modal__actions {
+  flex-shrink: 0;
+  margin-top: 0.45rem;
+  padding-top: 0.65rem;
+}
+
+.corr-modal__panel--fit .corr-drive__empty {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.85rem;
+  min-height: 0;
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+}
+
+.corr-modal__panel--fit .corr-drive__empty-icon {
+  width: 40px;
+  height: 40px;
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.corr-modal__panel--fit .corr-drive__empty-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.corr-modal__panel--fit .corr-drive__empty-title {
+  font-size: 0.875rem;
+}
+
+.corr-modal__panel--fit .corr-drive__grid {
+  max-height: 7.5rem;
+  overflow: auto;
+  padding: 0.65rem;
+}
+
+.corr-modal__panel--fit .corr-drive__tile {
+  min-height: 0;
+}
+
+.corr-modal__panel--fit .corr-drive__tile-preview {
+  height: 48px;
+}
+
 .corr-modal--enter {
   animation: corr-modal-backdrop-in 0.2s ease both;
 }
@@ -1773,6 +1853,11 @@ body[data-theme='dark'] .corr-card-modal__note-text--reject {
   .corr-modal__form-fields .corr-modal__field:nth-child(3),
   .corr-modal__form-fields .corr-modal__field:nth-child(5) {
     grid-column: 1 / -1;
+  }
+
+  .corr-modal__form-fields--compact .corr-modal__field:nth-child(3),
+  .corr-modal__form-fields--compact .corr-modal__field:nth-child(5) {
+    grid-column: auto;
   }
 }
 
