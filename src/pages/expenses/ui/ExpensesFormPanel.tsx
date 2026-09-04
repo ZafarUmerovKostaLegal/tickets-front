@@ -1558,10 +1558,10 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     ? 'Удалить заявку?'
                     : 'Отозвать заявку?'} message={panelConfirm.kind === 'approve' ? (<>
                             <p className="exp-mod-dialog__sub">Статус станет «Одобрено».</p>
-                            {editingRequest && (editingRequest.isReimbursable || isEmployeePersonalFundsPayout(editingRequest)) ? (<p className="exp-mod-dialog__sub">
+                            {editingRequest && editingRequest.expenseType !== 'partner_expense' ? (<p className="exp-mod-dialog__sub">
                                 {isEmployeePersonalFundsPayout(editingRequest)
                                     ? 'После одобрения заявку нужно компенсировать сотруднику на указанную карту. Подтверждение выплаты выполняет назначенный сотрудник, статус станет «Ожидает компенсацию».'
-                                    : 'После одобрения заявка уйдёт на оплату. Отметить оплату могут модераторы реестра расходов.'}
+                                    : 'После одобрения заявка уйдёт на оплату (в том числе перечислением). Отметить оплату могут модераторы реестра расходов.'}
                             </p>) : null}
                         </>) : panelConfirm.kind === 'pay' ? (<p className="exp-mod-dialog__sub">
                             {editingRequest && String(editingRequest.paymentMethod ?? '').toLowerCase() === 'cash'
@@ -2354,8 +2354,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 {!showPayAction &&
                     isView &&
                     editingRequest?.status === 'approved' &&
-                    editingRequest?.expenseType !== 'partner_expense' &&
-                    (editingRequest.isReimbursable || isEmployeePersonalFundsPayout(editingRequest)) && (<p className="exp-panel__ft-hint" role="status">
+                    editingRequest?.expenseType !== 'partner_expense' && (<p className="exp-panel__ft-hint" role="status">
                         {isEmployeePersonalFundsPayout(editingRequest)
                             ? 'Статус «Ожидает компенсацию». Подтверждение выплаты сотруднику выполняет назначенный сотрудник.'
                             : 'Статус «Ожидает оплаты». Отметить оплату могут модераторы реестра расходов.'}

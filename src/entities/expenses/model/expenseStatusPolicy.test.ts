@@ -77,8 +77,13 @@ describe('showPayExpenseAction', () => {
         expect(showPayExpenseAction(approved, false, { canModerate: true })).toBe(true);
     });
 
-    it('hides pay for non-reimbursable bank transfer and non-approved', () => {
-        expect(showPayExpenseAction(expense({ status: 'approved', isReimbursable: false, paymentMethod: 'transfer' }), false, { canModerate: true })).toBe(false);
+    it('allows moderators for bank transfer even when the client will not reimburse', () => {
+        const approved = expense({ status: 'approved', isReimbursable: false, paymentMethod: 'transfer' });
+        expect(showPayExpenseAction(approved, false, { isPaymentConfirmer: true })).toBe(false);
+        expect(showPayExpenseAction(approved, false, { canModerate: true })).toBe(true);
+    });
+
+    it('hides pay for non-approved', () => {
         expect(showPayExpenseAction(expense({ status: 'pending_approval', isReimbursable: true }), false, { isPaymentConfirmer: true })).toBe(false);
     });
 });
@@ -122,6 +127,8 @@ describe('expenseStatusLabels', () => {
         expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: true, paymentMethod: 'transfer' }))).toBe('Ожидает оплаты');
         expect(expenseStatusLabel(expense({ status: 'paid', isReimbursable: true, paymentMethod: 'transfer' }))).toBe('Оплачено');
         expect(expensePayActionLabel(expense({ isReimbursable: true, paymentMethod: 'transfer' }))).toBe('Оплачено');
+        expect(expenseStatusLabel(expense({ status: 'approved', isReimbursable: false, paymentMethod: 'transfer' }))).toBe('Ожидает оплаты');
+        expect(expenseStatusLabel(expense({ status: 'paid', isReimbursable: false, paymentMethod: 'transfer' }))).toBe('Оплачено');
         expect(expenseStatusBadgeClass(expense({
             status: 'approved',
             isReimbursable: true,

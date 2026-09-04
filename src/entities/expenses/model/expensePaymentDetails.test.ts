@@ -60,7 +60,7 @@ describe('isEmployeePersonalFundsPayout', () => {
 });
 
 describe('isAwaitingVendorPayment', () => {
-    it('is approved reimbursable that is not a personal-card payout', () => {
+    it('is approved spend that is not a personal-card payout', () => {
         expect(isAwaitingVendorPayment({
             status: 'approved',
             isReimbursable: true,
@@ -81,6 +81,12 @@ describe('isAwaitingVendorPayment', () => {
             status: 'approved',
             isReimbursable: false,
             paymentMethod: 'transfer',
+        })).toBe(true);
+        expect(isAwaitingVendorPayment({
+            status: 'approved',
+            isReimbursable: true,
+            paymentMethod: 'transfer',
+            expenseType: 'partner_expense',
         })).toBe(false);
         expect(isAwaitingVendorPayment({
             status: 'paid',

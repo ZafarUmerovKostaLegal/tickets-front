@@ -17,9 +17,7 @@ export function canConfirmExpensePayout(
 ): boolean {
     if (isEmployeePersonalFundsPayout(expense))
         return Boolean(opts?.isPaymentConfirmer || opts?.canModerate);
-    if (!expense.isReimbursable)
-        return false;
-    // transfer, card, or unknown non-cash → registry moderators
+    // Bank transfer / company card: mark vendor payment even if the client does not reimburse.
     return Boolean(opts?.canModerate);
 }
 
@@ -60,7 +58,7 @@ export function showOwnPendingModerationBlockedHint(expense: ExpenseRequest, can
 /**
  * Employee personal-funds payout: approved → paid.
  * Cash / personal card → confirmer or registry moderator.
- * Transfer/card vendor payment → registry moderator, reimbursable only.
+ * Transfer/card vendor payment → registry moderator (reimbursable or not).
  */
 export function showPayExpenseAction(
     expense: ExpenseRequest,

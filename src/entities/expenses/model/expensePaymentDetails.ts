@@ -46,14 +46,15 @@ export function isAwaitingEmployeeReimbursement(req: {
     return req.status === 'approved' && isEmployeePersonalFundsPayout(req);
 }
 
-/** Approved reimbursable spend that is not a personal-card payout — vendor/bank payment. */
+/** Approved company spend paid by transfer/company card — vendor/bank payment. */
 export function isAwaitingVendorPayment(req: {
     status?: string | null;
     isReimbursable?: boolean | null;
     paymentMethod?: string | null;
     expenseType?: string | null;
 }): boolean {
+    if ((req.expenseType || '').trim() === 'partner_expense')
+        return false;
     return req.status === 'approved'
-        && Boolean(req.isReimbursable)
         && !isEmployeePersonalFundsPayout(req);
 }
