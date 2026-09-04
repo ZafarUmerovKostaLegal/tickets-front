@@ -127,6 +127,9 @@ body[data-theme='dark'] .corr-shell {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  width: 100%;
+  max-width: none;
+  padding: 1.25rem clamp(1.25rem, 3vw, 2.25rem) 2rem;
 }
 
 .corr-shell--full .corr-registry {

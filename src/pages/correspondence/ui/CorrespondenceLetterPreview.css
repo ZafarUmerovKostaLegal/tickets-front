@@ -503,12 +503,13 @@
 
 .corr-word {
   box-sizing: border-box;
-  max-width: 42rem;
-  margin: 0 auto;
-  padding: 1.5rem 1.25rem 2.5rem;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 1.25rem 0 2.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.15rem;
+  gap: 1.25rem;
 }
 
 .corr-word__hero {
@@ -558,21 +559,57 @@
   color: var(--corr-muted, #6b5e5e);
 }
 
+.corr-word__field .corr-modal__input {
+  width: 100%;
+  min-height: 2.6rem;
+  box-sizing: border-box;
+}
+
 .corr-word__drop {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   gap: 0.55rem;
-  padding: 1rem 1.1rem;
-  border-radius: 14px;
-  border: 1px dashed var(--corr-line, #e4d8d4);
+  width: 100%;
+  min-height: 13.5rem;
+  padding: 1.5rem 1.25rem;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 1.5px dashed var(--corr-line, #e4d8d4);
   background: var(--corr-paper-alt, #faf6f4);
+  text-align: center;
 }
 
 .corr-word__drop--ready {
   border-style: solid;
   border-color: color-mix(in srgb, var(--corr-oxblood, #8b2332) 35%, var(--corr-line, #e4d8d4));
   background: #fff;
+}
+
+.corr-word__drop--drag {
+  border-style: dashed;
+  border-color: var(--corr-oxblood, #8b2332);
+  background: color-mix(in srgb, var(--corr-oxblood, #8b2332) 8%, #fff);
+}
+
+.corr-word__drop--disabled {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.corr-word__drop-icon {
+  display: flex;
+  width: 2.75rem;
+  height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  color: var(--corr-oxblood, #8b2332);
+}
+
+.corr-word__drop-icon svg {
+  width: 1.85rem;
+  height: 1.85rem;
 }
 
 .corr-word__drop-label,

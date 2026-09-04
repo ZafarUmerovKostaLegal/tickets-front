@@ -60,6 +60,7 @@ export function OutgoingLetterCreatePage() {
     const [wordBusy, setWordBusy] = useState(false);
     const [hydrated, setHydrated] = useState(false);
     const [reviewOpen, setReviewOpen] = useState(false);
+    const [wordDragging, setWordDragging] = useState(false);
 
     useEffect(() => {
         const draft = readOutgoingLetterDraft();
@@ -110,6 +111,17 @@ export function OutgoingLetterCreatePage() {
 
     const letterFile = pickOutgoingWordFile(files);
     const extraFiles = letterFile ? files.filter((f) => f !== letterFile) : files;
+
+    const filesFromDrag = (dt: DataTransfer | null): File[] => {
+        if (!dt)
+            return [];
+        if (dt.files?.length)
+            return Array.from(dt.files);
+        return Array.from(dt.items ?? [])
+            .filter((item) => item.kind === 'file')
+            .map((item) => item.getAsFile())
+            .filter((f): f is File => Boolean(f));
+    };
 
     const mergeFiles = (picked: File[], replaceWord: boolean) => {
         const wordPicked = picked.filter(isWordLetterFile);
@@ -272,7 +284,42 @@ export function OutgoingLetterCreatePage() {
                     </label>
                 </div>
 
-                <section className={`corr-word__drop${letterFile ? ' corr-word__drop--ready' : ''}`}>
+                <section
+                    className={`corr-word__drop${letterFile ? ' corr-word__drop--ready' : ''}${wordDragging ? ' corr-word__drop--drag' : ''}${busy ? ' corr-word__drop--disabled' : ''}`}
+                    onDragEnter={(e) => {
+                        if (busy)
+                            return;
+                        e.preventDefault();
+                        setWordDragging(true);
+                    }}
+                    onDragOver={(e) => {
+                        if (busy)
+                            return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'copy';
+                        setWordDragging(true);
+                    }}
+                    onDragLeave={(e) => {
+                        if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+                            setWordDragging(false);
+                    }}
+                    onDrop={(e) => {
+                        e.preventDefault();
+                        setWordDragging(false);
+                        if (busy)
+                            return;
+                        const picked = filesFromDrag(e.dataTransfer);
+                        const word = picked.filter(isWordLetterFile);
+                        if (!word.length) {
+                            void showAlert({
+                                title: 'Нужен файл Word',
+                                message: 'Перетащите сохранённый документ .doc или .docx.',
+                            });
+                            return;
+                        }
+                        mergeFiles(word, true);
+                    }}
+                >
                     <input
                         ref={wordFileRef}
                         type="file"
@@ -285,6 +332,13 @@ export function OutgoingLetterCreatePage() {
                                 mergeFiles(picked, true);
                         }}
                     />
+                    <span className="corr-word__drop-icon" aria-hidden>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                    </span>
                     <p className="corr-word__drop-label">Письмо из Word</p>
                     {letterFile ? (
                         <p className="corr-word__file">
@@ -293,10 +347,14 @@ export function OutgoingLetterCreatePage() {
                             {formatAttachmentSizeLabel(letterFile.size)}
                         </p>
                     ) : (
-                        <p className="corr-word__drop-hint">Прикрепите сохранённый .docx — это и есть письмо для реестра.</p>
+                        <p className="corr-word__drop-hint">
+                            {wordDragging
+                                ? 'Отпустите файл, чтобы прикрепить'
+                                : 'Перетащите сохранённый .docx сюда или выберите на компьютере'}
+                        </p>
                     )}
                     <button type="button" className="corr__btn corr__btn--outline" onClick={() => wordFileRef.current?.click()} disabled={busy}>
-                        {letterFile ? 'Заменить файл' : 'Прикрепить .docx'}
+                        {letterFile ? 'Заменить файл' : 'Выбрать .docx'}
                     </button>
                 </section>
 
