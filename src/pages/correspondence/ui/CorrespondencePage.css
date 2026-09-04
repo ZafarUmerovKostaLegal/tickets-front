@@ -820,6 +820,42 @@ button.corr__stat--clickable:hover:not(:disabled) {
   box-sizing: border-box;
 }
 
+.corr__popover--filters {
+  max-width: min(380px, calc(100vw - 1.5rem));
+  max-height: min(80vh, 640px);
+  overflow: auto;
+  padding-top: 0.5rem;
+}
+
+.corr__popover-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  padding: 0.15rem 0.85rem 0.7rem;
+}
+
+.corr__popover-field--tight {
+  padding: 0;
+}
+
+.corr__popover-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--app-text-dim, var(--app-muted));
+}
+
+.corr__popover-dates {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0 0.85rem 0.5rem;
+}
+
+.corr__btn--filter-on {
+  border-color: var(--app-accent);
+  color: var(--app-accent);
+}
+
 body[data-theme='dark'] .corr__popover {
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45);
 }

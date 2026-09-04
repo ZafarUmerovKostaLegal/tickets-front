@@ -16,10 +16,12 @@ import {
   type CorrespondenceStats,
 } from '@entities/correspondence';
 import { routes } from '@shared/config';
-import { AttentionBanner, formatCountBadge, showAlert } from '@shared/ui';
+import { AttentionBanner, formatCountBadge, showAlert, DatePicker, SearchableSelect } from '@shared/ui';
 import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
+import { getUsers, listPartners, type User, type UserPublic } from '@entities/user';
+import { compareRuLabels, userPickerSortLabel } from '@shared/lib/sortByRuLabel';
 import {
   CORR_COUNTERPARTY_COLUMN,
   CORR_PAGE_SIZE,
@@ -100,29 +102,60 @@ function buildPageNumbers(page: number, totalPages: number): (number | 'ellipsis
   return out;
 }
 
+function userFilterLabel(u: Pick<UserPublic, 'display_name' | 'email' | 'id'> | Pick<User, 'display_name' | 'email' | 'id'>): string {
+    return u.display_name?.trim() || u.email || `User #${u.id}`;
+}
+
+type RegistryExtraFilters = {
+    partnerUserId: number | null;
+    responsibleUserId: number | null;
+    dateFrom: string;
+    dateTo: string;
+    q: string;
+};
+
+const EMPTY_EXTRA_FILTERS: RegistryExtraFilters = {
+    partnerUserId: null,
+    responsibleUserId: null,
+    dateFrom: '',
+    dateTo: '',
+    q: '',
+};
+
 function listParamsForTab(
-  direction: CorrDirection,
-  tableTab: CorrTableTabKey,
-  page: number,
-  docTypes: CorrDocType[],
-  partnerUserId?: number | null,
+    direction: CorrDirection,
+    tableTab: CorrTableTabKey,
+    page: number,
+    docTypes: CorrDocType[],
+    extra: RegistryExtraFilters,
+    attentionPartnerUserId?: number | null,
 ) {
-  const params: Parameters<typeof listCorrespondence>[0] = {
-    direction,
-    skip: (page - 1) * CORR_PAGE_SIZE,
-    limit: CORR_PAGE_SIZE,
-  };
-  if (tableTab === 'attention' && partnerUserId != null && partnerUserId > 0) {
-    params.partnerUserId = partnerUserId;
-    params.status = 'pending_review';
-  }
-  else if (tableTab === 'work')
-    params.statusGroup = 'work';
-  else if (tableTab === 'done')
-    params.status = 'done';
-  if (docTypes.length > 0 && docTypes.length < 3)
-    params.docType = docTypes;
-  return params;
+    const params: Parameters<typeof listCorrespondence>[0] = {
+        direction,
+        skip: (page - 1) * CORR_PAGE_SIZE,
+        limit: CORR_PAGE_SIZE,
+    };
+    if (tableTab === 'attention' && attentionPartnerUserId != null && attentionPartnerUserId > 0) {
+        params.partnerUserId = attentionPartnerUserId;
+        params.status = 'pending_review';
+    }
+    else if (tableTab === 'work')
+        params.statusGroup = 'work';
+    else if (tableTab === 'done')
+        params.status = 'done';
+    if (tableTab !== 'attention' && extra.partnerUserId != null && extra.partnerUserId > 0)
+        params.partnerUserId = extra.partnerUserId;
+    if (extra.responsibleUserId != null && extra.responsibleUserId > 0)
+        params.responsibleUserId = extra.responsibleUserId;
+    if (extra.dateFrom)
+        params.dateFrom = extra.dateFrom;
+    if (extra.dateTo)
+        params.dateTo = extra.dateTo;
+    if (extra.q.trim())
+        params.q = extra.q.trim();
+    if (docTypes.length > 0 && docTypes.length < 3)
+        params.docType = docTypes;
+    return params;
 }
 
 function usePopoverBelowAnchor(
@@ -202,6 +235,11 @@ export function CorrespondenceRegistryView({
 
   const [filterDraft, setFilterDraft] = useState({ letter: true, contract: true, note: true });
   const [appliedDocTypes, setAppliedDocTypes] = useState<CorrDocType[]>(['letter', 'contract', 'note']);
+  const [extraFilters, setExtraFilters] = useState<RegistryExtraFilters>(EMPTY_EXTRA_FILTERS);
+  const [extraDraft, setExtraDraft] = useState<RegistryExtraFilters>(EMPTY_EXTRA_FILTERS);
+  const [partnerOptions, setPartnerOptions] = useState<UserPublic[]>([]);
+  const [userOptions, setUserOptions] = useState<User[]>([]);
+  const [usersFilterAvailable, setUsersFilterAvailable] = useState(true);
 
   useEffect(() => {
     if (tableTab === 'attention' && (!isPartner || direction !== 'outgoing'))
@@ -290,7 +328,7 @@ export function CorrespondenceRegistryView({
     const controller = new AbortController();
     setListLoading(true);
     setListError(null);
-    const params = listParamsForTab(direction, tableTab, effectivePage, appliedDocTypes, user?.id);
+    const params = listParamsForTab(direction, tableTab, effectivePage, appliedDocTypes, extraFilters, user?.id);
     void listCorrespondence(params, controller.signal)
       .then((res) => {
         if (cancelled)
@@ -313,7 +351,7 @@ export function CorrespondenceRegistryView({
       cancelled = true;
       controller.abort();
     };
-  }, [direction, tableTab, effectivePage, appliedDocTypes, reloadToken, user?.id]);
+  }, [direction, tableTab, effectivePage, appliedDocTypes, extraFilters, reloadToken, user?.id]);
 
   const filtersBtnRef = useRef<HTMLButtonElement>(null);
   const settingsBtnRef = useRef<HTMLButtonElement>(null);
@@ -327,7 +365,7 @@ export function CorrespondenceRegistryView({
   const [registerPending, setRegisterPending] = useState(false);
   const [cardDocId, setCardDocId] = useState<string | null>(null);
 
-  const filterPopoverBox = usePopoverBelowAnchor(filtersOpen, filtersBtnRef, { align: 'start', gap: 6, minWidth: 220 });
+  const filterPopoverBox = usePopoverBelowAnchor(filtersOpen, filtersBtnRef, { align: 'start', gap: 6, minWidth: 360 });
   const settingsPopoverBox = usePopoverBelowAnchor(settingsOpen, settingsBtnRef, { align: 'end', gap: 6, minWidth: 200 });
   const rowMenuPopoverBox = usePopoverBelowAnchor(rowMenuOpenId !== null, rowMenuBtnRef, { align: 'end', gap: 6, minWidth: 200 });
 
@@ -336,6 +374,37 @@ export function CorrespondenceRegistryView({
     setSettingsOpen(false);
     setRowMenuOpenId(null);
   }, []);
+
+  useEffect(() => {
+    if (!filtersOpen)
+      return;
+    let cancelled = false;
+    void listPartners()
+      .then((rows) => {
+        if (!cancelled)
+          setPartnerOptions(rows);
+      })
+      .catch(() => {
+        if (!cancelled)
+          setPartnerOptions([]);
+      });
+    void getUsers(false)
+      .then((rows) => {
+        if (cancelled)
+          return;
+        setUsersFilterAvailable(true);
+        setUserOptions([...rows].sort((a, b) => compareRuLabels(userPickerSortLabel(a), userPickerSortLabel(b))));
+      })
+      .catch(() => {
+        if (cancelled)
+          return;
+        setUsersFilterAvailable(false);
+        setUserOptions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [filtersOpen]);
 
   const handleStatCardClick = useCallback((key: 'in' | 'out' | 'approval' | 'overdue') => {
     closeOverlays();
@@ -383,10 +452,52 @@ export function CorrespondenceRegistryView({
       void showAlert({ title: 'Фильтры', message: 'Выберите хотя бы один тип документа.' });
       return;
     }
+    if (extraDraft.dateFrom && extraDraft.dateTo && extraDraft.dateFrom > extraDraft.dateTo) {
+      void showAlert({ title: 'Фильтры', message: 'Дата «с» не может быть позже даты «по».' });
+      return;
+    }
     setAppliedDocTypes([...selected]);
+    setExtraFilters({
+      ...extraDraft,
+      q: extraDraft.q.trim(),
+    });
     setPage(1);
     setFiltersOpen(false);
-  }, [filterDraft]);
+  }, [extraDraft, filterDraft]);
+
+  const resetFilters = useCallback(() => {
+    setFilterDraft({ letter: true, contract: true, note: true });
+    setExtraDraft(EMPTY_EXTRA_FILTERS);
+    setAppliedDocTypes(['letter', 'contract', 'note']);
+    setExtraFilters(EMPTY_EXTRA_FILTERS);
+    setPage(1);
+    setFiltersOpen(false);
+  }, []);
+
+  const extraFilterCount = useMemo(() => {
+    let n = 0;
+    if (appliedDocTypes.length < 3)
+      n += 1;
+    if (extraFilters.partnerUserId != null)
+      n += 1;
+    if (extraFilters.responsibleUserId != null)
+      n += 1;
+    if (extraFilters.dateFrom || extraFilters.dateTo)
+      n += 1;
+    if (extraFilters.q.trim())
+      n += 1;
+    return n;
+  }, [appliedDocTypes, extraFilters]);
+
+  const partnerSelectItems = useMemo(() => [
+    { id: 0, label: 'Все партнёры' },
+    ...partnerOptions.map((p) => ({ id: p.id, label: userFilterLabel(p) })),
+  ], [partnerOptions]);
+
+  const userSelectItems = useMemo(() => [
+    { id: 0, label: 'Все пользователи' },
+    ...userOptions.map((u) => ({ id: u.id, label: userFilterLabel(u) })),
+  ], [userOptions]);
 
   const openComposeLetter = () => {
     closeOverlays();
@@ -660,21 +771,25 @@ export function CorrespondenceRegistryView({
                     <button
                       ref={filtersBtnRef}
                       type="button"
-                      className={`corr__btn corr__btn--outline${filtersOpen ? ' corr__btn--pressed' : ''}`}
+                      className={`corr__btn corr__btn--outline${filtersOpen ? ' corr__btn--pressed' : ''}${extraFilterCount > 0 ? ' corr__btn--filter-on' : ''}`}
                       aria-expanded={filtersOpen}
-                      aria-haspopup="menu"
+                      aria-haspopup="dialog"
                       onClick={() => {
                         setFilterDraft({
                           letter: appliedDocTypes.includes('letter'),
                           contract: appliedDocTypes.includes('contract'),
                           note: appliedDocTypes.includes('note'),
                         });
+                        setExtraDraft(extraFilters);
                         setFiltersOpen((v) => !v);
                         setSettingsOpen(false);
                         setRowMenuOpenId(null);
                       }}
                     >
                       Фильтры
+                      {extraFilterCount > 0 ? (
+                        <span className="app-count-badge" aria-hidden>{extraFilterCount}</span>
+                      ) : null}
                       <svg className="corr__btn-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                         <polyline points="6 9 12 15 18 9" />
                       </svg>
@@ -720,7 +835,7 @@ export function CorrespondenceRegistryView({
                       <tr>
                         <th scope="col">№</th>
                         <th scope="col">{counterpartyColumn}</th>
-                        {direction === 'incoming' ? <th scope="col">Партнёр</th> : null}
+                        <th scope="col">Партнёр</th>
                         <th scope="col">Тема</th>
                         <th scope="col">Тип</th>
                         {direction === 'incoming' ? <th scope="col">Скан</th> : null}
@@ -733,7 +848,7 @@ export function CorrespondenceRegistryView({
                     <tbody>
                       {!listLoading && rows.length === 0 ? (
                         <tr>
-                          <td colSpan={direction === 'incoming' ? 10 : 8} className="corr__table-empty">
+                          <td colSpan={direction === 'incoming' ? 10 : 9} className="corr__table-empty">
                             <div className="corr-registry__empty">
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -764,13 +879,11 @@ export function CorrespondenceRegistryView({
                       >
                         <td className="corr__mono">{row.registryNumber}</td>
                         <td className="corr-registry__cell-clip">{row.counterparty}</td>
-                        {direction === 'incoming' ? (
-                          <td>
-                            {row.partnerName
-                              ? <span className="corr__partner-pill" title={row.partnerUserId ? `Партнёр #${row.partnerUserId}` : undefined}>{row.partnerName}</span>
-                              : '—'}
-                          </td>
-                        ) : null}
+                        <td>
+                          {row.partnerName
+                            ? <span className="corr__partner-pill" title={row.partnerUserId ? `Партнёр #${row.partnerUserId}` : undefined}>{row.partnerName}</span>
+                            : '—'}
+                        </td>
                         <td className="corr-registry__cell-subject" title={row.subject}>{row.subject}</td>
                         <td><span className={CORR_TYPE_BADGE[row.type].className}>{CORR_TYPE_BADGE[row.type].label}</span></td>
                         {direction === 'incoming' ? (
@@ -835,15 +948,99 @@ export function CorrespondenceRegistryView({
 
     {filtersOpen && filterPopoverBox ? createPortal(<>
       <div className="corr__popover-backdrop corr__popover-backdrop--enter" onClick={closeOverlays} aria-hidden />
-      <div className="corr__popover corr__popover--enter" role="menu" style={{ top: filterPopoverBox.top, left: filterPopoverBox.left, minWidth: filterPopoverBox.minWidth }}>
+      <div className="corr__popover corr__popover--filters corr__popover--enter" role="dialog" aria-label="Фильтры реестра" style={{ top: filterPopoverBox.top, left: filterPopoverBox.left, minWidth: filterPopoverBox.minWidth }}>
+        <div className="corr__popover-field">
+          <label className="corr__popover-label" htmlFor="corr-filter-q">Поиск</label>
+          <input
+            id="corr-filter-q"
+            className="corr-modal__input"
+            value={extraDraft.q}
+            onChange={(e) => setExtraDraft((f) => ({ ...f, q: e.target.value }))}
+            placeholder="Номер, тема, контрагент…"
+          />
+        </div>
         <p className="corr__popover-title">Тип документа</p>
         {(['letter', 'contract', 'note'] as const).map((key) => (<label key={key} className="corr__filter-check">
           <input type="checkbox" checked={filterDraft[key]} onChange={() => setFilterDraft((ft) => ({ ...ft, [key]: !ft[key] }))} />
           {CORR_TYPE_BADGE[key].label}
         </label>))}
+        {tableTab !== 'attention' ? (
+          <div className="corr__popover-field">
+            <span className="corr__popover-label" id="corr-filter-partner-label">Партнёр</span>
+            <SearchableSelect<{ id: number; label: string }>
+              portalDropdown
+              portalZIndex={10120}
+              className="corr-modal__srch"
+              buttonClassName="corr-modal__srch-btn"
+              aria-labelledby="corr-filter-partner-label"
+              placeholder="Все партнёры"
+              value={String(extraDraft.partnerUserId ?? 0)}
+              items={partnerSelectItems}
+              getOptionValue={(o) => String(o.id)}
+              getOptionLabel={(o) => o.label}
+              getSearchText={(o) => o.label}
+              onSelect={(o) => setExtraDraft((f) => ({ ...f, partnerUserId: o.id > 0 ? o.id : null }))}
+            />
+          </div>
+        ) : null}
+        {usersFilterAvailable ? (
+          <div className="corr__popover-field">
+            <span className="corr__popover-label" id="corr-filter-user-label">Ответственный</span>
+            <SearchableSelect<{ id: number; label: string }>
+              portalDropdown
+              portalZIndex={10120}
+              className="corr-modal__srch"
+              buttonClassName="corr-modal__srch-btn"
+              aria-labelledby="corr-filter-user-label"
+              placeholder="Все пользователи"
+              value={String(extraDraft.responsibleUserId ?? 0)}
+              items={userSelectItems}
+              getOptionValue={(o) => String(o.id)}
+              getOptionLabel={(o) => o.label}
+              getSearchText={(o) => o.label}
+              onSelect={(o) => setExtraDraft((f) => ({ ...f, responsibleUserId: o.id > 0 ? o.id : null }))}
+            />
+          </div>
+        ) : null}
+        <p className="corr__popover-title">Период</p>
+        <div className="corr__popover-dates">
+          <div className="corr__popover-field corr__popover-field--tight">
+            <span className="corr__popover-label">С</span>
+            <DatePicker
+              value={extraDraft.dateFrom}
+              max={extraDraft.dateTo || undefined}
+              onChange={(iso) => setExtraDraft((f) => ({ ...f, dateFrom: iso }))}
+              portal
+              portalZIndex={10120}
+              emptyLabel="—"
+              title="Дата с"
+            />
+          </div>
+          <div className="corr__popover-field corr__popover-field--tight">
+            <span className="corr__popover-label">По</span>
+            <DatePicker
+              value={extraDraft.dateTo}
+              min={extraDraft.dateFrom || undefined}
+              onChange={(iso) => setExtraDraft((f) => ({ ...f, dateTo: iso }))}
+              portal
+              portalZIndex={10120}
+              emptyLabel="—"
+              title="Дата по"
+            />
+          </div>
+        </div>
+        {(extraDraft.dateFrom || extraDraft.dateTo) ? (
+          <button
+            type="button"
+            className="corr__popover-item"
+            onClick={() => setExtraDraft((f) => ({ ...f, dateFrom: '', dateTo: '' }))}
+          >
+            Сбросить даты
+          </button>
+        ) : null}
         <div className="corr__popover-divider" />
         <div className="corr__popover-footer">
-          <button type="button" className="corr__popover-btn" onClick={closeOverlays}>Отмена</button>
+          <button type="button" className="corr__popover-btn" onClick={resetFilters}>Сбросить</button>
           <button type="button" className="corr__popover-btn corr__popover-btn--primary" onClick={applyTypeFilters}>Применить</button>
         </div>
       </div>

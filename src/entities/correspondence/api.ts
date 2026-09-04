@@ -94,6 +94,12 @@ function buildListQuery(params: ListCorrespondenceParams = {}): string {
         qs.set('registeredOnly', 'true');
     if (params.partnerUserId != null && params.partnerUserId > 0)
         qs.set('partnerUserId', String(params.partnerUserId));
+    if (params.responsibleUserId != null && params.responsibleUserId > 0)
+        qs.set('responsibleUserId', String(params.responsibleUserId));
+    if (params.dateFrom?.trim())
+        qs.set('dateFrom', params.dateFrom.trim().slice(0, 10));
+    if (params.dateTo?.trim())
+        qs.set('dateTo', params.dateTo.trim().slice(0, 10));
     const s = qs.toString();
     return s ? `?${s}` : '';
 }

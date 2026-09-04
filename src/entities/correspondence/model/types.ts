@@ -89,6 +89,9 @@ export type ListCorrespondenceParams = {
     includeArchived?: boolean;
     registeredOnly?: boolean;
     partnerUserId?: number;
+    responsibleUserId?: number;
+    dateFrom?: string;
+    dateTo?: string;
 };
 
 export type RegisterIncomingBody = {
