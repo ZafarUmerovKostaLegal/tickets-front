@@ -293,7 +293,7 @@ export function CorrespondenceDocumentCardModal({
             })
             .catch((err) => {
                 if (!cancelled)
-                    setPreviewError(err instanceof Error ? err.message : 'Не удалось загрузить файл');
+                    setPreviewError(correspondenceErrorMessage(err, 'Не удалось загрузить предпросмотр'));
             })
             .finally(() => {
                 if (!cancelled)
@@ -539,7 +539,20 @@ export function CorrespondenceDocumentCardModal({
                             ) : null}
                             {!previewLoading && previewError ? (
                                 <div className="corr-card-modal__preview-msg corr-card-modal__preview-msg--err" role="alert">
-                                    {previewError}
+                                    <p>Не удалось показать предпросмотр.</p>
+                                    <p>{previewError === 'Internal Server Error'
+                                        ? 'Сервер не смог открыть файл. Скачайте документ и откройте его на компьютере.'
+                                        : previewError}</p>
+                                    {activeFile ? (
+                                        <button
+                                            type="button"
+                                            className="corr-modal__btn corr-modal__btn--primary"
+                                            disabled={downloadingId === activeFile.id}
+                                            onClick={() => void handleDownload(activeFile)}
+                                        >
+                                            Скачать {activeFile.fileName}
+                                        </button>
+                                    ) : null}
                                 </div>
                             ) : null}
                             {!previewLoading && !previewError && !activeFile ? (
