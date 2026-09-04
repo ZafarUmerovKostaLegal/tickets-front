@@ -475,6 +475,17 @@ body[data-theme='dark'] .corr-shell {
   border-top: 1px solid var(--corr-line);
 }
 
+.corr-registry__cta-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.corr-registry__cta--secondary:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 @media (max-width: 1023px) {
   .corr-registry__sidebar {
     border-right: none;
@@ -491,6 +502,10 @@ body[data-theme='dark'] .corr-shell {
 
   .corr-registry__sidebar-label {
     width: 100%;
+  }
+
+  .corr-registry__cta-stack {
+    flex: 1 1 100%;
   }
 
   .corr-registry__sidebar-note {

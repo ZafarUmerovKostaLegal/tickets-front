@@ -11,6 +11,7 @@ import {
     mapDocumentToCorrRow,
     downloadCorrespondenceAttachment,
     registerIncomingCorrespondence,
+    registerOutgoingCorrespondence,
     type CorrDocType,
     type CorrespondenceStats,
 } from '@entities/correspondence';
@@ -28,9 +29,10 @@ import {
     CORR_TYPE_BADGE,
     type CorrTableTabKey,
 } from '../model/constants';
-import type { CorrDirection, CorrRow, IncomingRegisterPayload } from '../model/types';
+import type { CorrDirection, CorrRow, IncomingRegisterPayload, OutgoingRegisterPayload } from '../model/types';
 import { CorrespondenceDocumentCardModal } from './CorrespondenceDocumentCardModal';
 import { CorrespondenceRegisterIncomingModal } from './CorrespondenceRegisterIncomingModal';
+import { CorrespondenceRegisterOutgoingModal } from './CorrespondenceRegisterOutgoingModal';
 import { CorrespondenceRegistrySkeleton } from './CorrespondenceSkeleton';
 import { CorrespondenceShell } from './CorrespondenceShell';
 import './CorrespondencePage.css';
@@ -311,6 +313,7 @@ export function CorrespondenceRegistryView({
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [rowMenuOpenId, setRowMenuOpenId] = useState<string | null>(null);
     const [incomingModalOpen, setIncomingModalOpen] = useState(false);
+    const [outgoingModalOpen, setOutgoingModalOpen] = useState(false);
     const [registerPending, setRegisterPending] = useState(false);
     const [cardDocId, setCardDocId] = useState<string | null>(null);
 
@@ -375,12 +378,17 @@ export function CorrespondenceRegistryView({
         setFiltersOpen(false);
     }, [filterDraft]);
 
+    const openComposeLetter = () => {
+        closeOverlays();
+        navigate(routes.correspondenceOutgoingCreate);
+    };
+
     const openRegisterModal = () => {
         closeOverlays();
         if (direction === 'incoming')
             setIncomingModalOpen(true);
         else
-            navigate(routes.correspondenceOutgoingCreate);
+            setOutgoingModalOpen(true);
     };
 
     const handleIncomingSubmit = async (payload: IncomingRegisterPayload) => {
@@ -400,6 +408,35 @@ export function CorrespondenceRegistryView({
             void showAlert({
                 title: 'Входящее сохранено',
                 message: `Письмо зарегистрировано для партнёра «${payload.partnerName}».`,
+            });
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось сохранить',
+                message: correspondenceErrorMessage(err, 'Ошибка регистрации'),
+            });
+        }
+        finally {
+            setRegisterPending(false);
+        }
+    };
+
+    const handleOutgoingSubmit = async (payload: OutgoingRegisterPayload) => {
+        setRegisterPending(true);
+        try {
+            await registerOutgoingCorrespondence({
+                counterparty: payload.counterparty,
+                subject: payload.subject,
+                docType: payload.type,
+                comment: payload.comment,
+                attachmentFiles: payload.attachmentFiles,
+            });
+            setOutgoingModalOpen(false);
+            invalidateCorrespondencePartnerAttention();
+            reloadAll();
+            void showAlert({
+                title: 'Исходящее сохранено',
+                message: `Документ для «${payload.counterparty}» зарегистрирован в реестре.`,
             });
         }
         catch (err) {
@@ -526,18 +563,38 @@ export function CorrespondenceRegistryView({
           <aside className="corr-registry__sidebar" aria-label="Боковая панель">
             <div className="corr-registry__sidebar-inner">
               <p className="corr-registry__sidebar-label">Быстрые действия</p>
-              <button type="button" className="corr__btn corr__btn--primary corr__btn--block corr-registry__cta" onClick={openRegisterModal}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                  {direction === 'incoming'
-                      ? (<><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></>)
-                      : (<><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></>)}
-                </svg>
-                {direction === 'incoming' ? 'Зарегистрировать входящее' : 'Зарегистрировать исходящее'}
-              </button>
+              {direction === 'outgoing' ? (
+                <div className="corr-registry__cta-stack">
+                  <button type="button" className="corr__btn corr__btn--primary corr__btn--block corr-registry__cta" onClick={openComposeLetter}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                      <polyline points="22,6 12,13 2,6"/>
+                    </svg>
+                    Написать письмо
+                  </button>
+                  <button type="button" className="corr__btn corr__btn--outline corr__btn--block corr-registry__cta corr-registry__cta--secondary" onClick={openRegisterModal}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                    Зарегистрировать исходящее
+                  </button>
+                </div>
+              ) : (
+                <button type="button" className="corr__btn corr__btn--primary corr__btn--block corr-registry__cta" onClick={openRegisterModal}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="12" y1="18" x2="12" y2="12"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                  </svg>
+                  Зарегистрировать входящее
+                </button>
+              )}
               <p className="corr-registry__sidebar-note">
                 {direction === 'incoming'
                     ? 'Для входящих обязательны партнёр и файл скана или фото документа.'
-                    : 'Пока используется пустой лист; укажите получателя и тему, затем зарегистрируйте.'}
+                    : '«Написать письмо» открывает бланк. «Зарегистрировать исходящее» — для уже готового документа.'}
               </p>
             </div>
           </aside>
@@ -837,6 +894,12 @@ export function CorrespondenceRegistryView({
         open={incomingModalOpen}
         onClose={() => setIncomingModalOpen(false)}
         onSubmit={handleIncomingSubmit}
+        submitPending={registerPending}
+      />
+      <CorrespondenceRegisterOutgoingModal
+        open={outgoingModalOpen}
+        onClose={() => setOutgoingModalOpen(false)}
+        onSubmit={handleOutgoingSubmit}
         submitPending={registerPending}
       />
     </CorrespondenceShell>);
