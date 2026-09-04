@@ -123,13 +123,10 @@ body[data-theme='dark'] .corr-shell {
   flex-direction: column;
 }
 
-.corr-shell--full .corr-shell__content.corr-shell__content--registry {
+.corr-shell--full .corr-shell__content.corr-shell__content--word-compose {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  padding: 0;
+  overflow: auto;
 }
 
 .corr-shell--full .corr-registry {

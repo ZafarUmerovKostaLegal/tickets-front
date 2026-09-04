@@ -500,3 +500,112 @@
     display: none;
   }
 }
+
+.corr-word {
+  box-sizing: border-box;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.corr-word__hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.corr-word__title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--corr-ink, #1a1414);
+}
+
+.corr-word__lead {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--corr-muted, #6b5e5e);
+}
+
+.corr-word__open {
+  align-self: flex-start;
+  min-height: 2.6rem;
+  gap: 0.5rem;
+}
+
+.corr-word__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 720px) {
+  .corr-word__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.corr-word__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--corr-muted, #6b5e5e);
+}
+
+.corr-word__drop {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 1rem 1.1rem;
+  border-radius: 14px;
+  border: 1px dashed var(--corr-line, #e4d8d4);
+  background: var(--corr-paper-alt, #faf6f4);
+}
+
+.corr-word__drop--ready {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--corr-oxblood, #8b2332) 35%, var(--corr-line, #e4d8d4));
+  background: #fff;
+}
+
+.corr-word__drop-label,
+.corr-word__drop-hint,
+.corr-word__file {
+  margin: 0;
+}
+
+.corr-word__drop-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--corr-muted, #6b5e5e);
+}
+
+.corr-word__drop-hint,
+.corr-word__file {
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--corr-ink, #1a1414);
+}
+
+.corr-word__extras {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.corr-word__extra-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.8125rem;
+  color: var(--corr-muted, #6b5e5e);
+}

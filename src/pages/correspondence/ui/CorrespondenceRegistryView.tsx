@@ -35,6 +35,7 @@ import { CorrespondenceRegisterIncomingModal } from './CorrespondenceRegisterInc
 import { CorrespondenceRegisterOutgoingModal } from './CorrespondenceRegisterOutgoingModal';
 import { CorrespondenceRegistrySkeleton } from './CorrespondenceSkeleton';
 import { CorrespondenceShell } from './CorrespondenceShell';
+import { openOutgoingLetterInWordOnline } from '../lib/openOutgoingLetterInWord';
 import './CorrespondencePage.css';
 import './CorrespondenceShell.css';
 
@@ -380,7 +381,18 @@ export function CorrespondenceRegistryView({
 
     const openComposeLetter = () => {
         closeOverlays();
-        navigate(routes.correspondenceOutgoingCreate);
+        void (async () => {
+            try {
+                await openOutgoingLetterInWordOnline();
+            }
+            catch (err) {
+                void showAlert({
+                    title: 'Не удалось открыть Word',
+                    message: err instanceof Error ? err.message : 'Не получилось собрать шаблон письма.',
+                });
+            }
+            navigate(routes.correspondenceOutgoingCreate);
+        })();
     };
 
     const openRegisterModal = () => {
@@ -594,7 +606,7 @@ export function CorrespondenceRegistryView({
               <p className="corr-registry__sidebar-note">
                 {direction === 'incoming'
                     ? 'Для входящих обязательны партнёр и файл скана или фото документа.'
-                    : '«Написать письмо» открывает бланк. «Зарегистрировать исходящее» — для уже готового документа.'}
+                    : '«Написать письмо» открывает бланк в Word Online. Готовый документ можно вернуть сюда и сохранить.'}
               </p>
             </div>
           </aside>

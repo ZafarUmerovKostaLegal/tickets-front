@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCorrespondenceOutgoingUrl, routes } from '@shared/config';
 import { useAppDialog } from '@shared/ui';
 import type { InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
-import { mockLetterToCoverModel, coverModelToMockLetter } from '../lib/correspondenceCoverLetterModel';
+import { defaultOutgoingLetterCoverModel, isWordLetterFile, openOutgoingLetterInWordOnline, pickOutgoingWordFile } from '../lib/openOutgoingLetterInWord';
 import {
     formatAttachmentSizeLabel,
     isOutgoingLetterDraftValid,
@@ -12,12 +12,14 @@ import {
     getOutgoingLetterDraftFiles,
     type OutgoingLetterAttachmentMeta,
 } from '../lib/outgoingLetterSession';
+import { CORR_SHELL_NAV_TABS } from '../model/constants';
 import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
-import { CorrespondenceLetterWorkspace } from './CorrespondenceLetterWorkspace';
+import { CorrespondenceShell } from './CorrespondenceShell';
 import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
-import { IcoEye, IcoPaperclip, type MockAttachment, type MockLetter } from './CorrespondencePage';
+import { IcoPaperclip } from './CorrespondencePage';
 import './CorrespondenceLetterPreview.css';
 import './CorrespondencePage.css';
+import './CorrespondenceShell.css';
 
 function todayIso(): string {
     return new Date().toISOString().slice(0, 10);
@@ -33,23 +35,29 @@ function IcoSave() {
     );
 }
 
+function IcoWord() {
+    return (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <path d="M8 13h8M8 17h5" />
+        </svg>
+    );
+}
+
 export function OutgoingLetterCreatePage() {
     const navigate = useNavigate();
     const { showAlert } = useAppDialog();
-    const fileRef = useRef<HTMLInputElement>(null);
+    const wordFileRef = useRef<HTMLInputElement>(null);
+    const extraFileRef = useRef<HTMLInputElement>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [subject, setSubject] = useState('');
     const [letterDateIso, setLetterDateIso] = useState(todayIso);
-    const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel>(() =>
-        mockLetterToCoverModel({
-            body: '',
-            counterparty: '',
-            date: todayIso(),
-        }),
-    );
+    const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel>(defaultOutgoingLetterCoverModel);
     const [files, setFiles] = useState<File[]>([]);
     const [attachmentMeta, setAttachmentMeta] = useState<OutgoingLetterAttachmentMeta[]>([]);
     const [busy, setBusy] = useState(false);
+    const [wordBusy, setWordBusy] = useState(false);
     const [hydrated, setHydrated] = useState(false);
     const [reviewOpen, setReviewOpen] = useState(false);
 
@@ -66,27 +74,6 @@ export function OutgoingLetterCreatePage() {
         setHydrated(true);
     }, []);
 
-    const patchCoverModel = useCallback((patch: Partial<InvoiceCoverLetterModel>) => {
-        setCoverModel((prev) => ({ ...prev, ...patch }));
-    }, []);
-
-    const draftLetter: MockLetter = useMemo(() => {
-        const attachments: MockAttachment[] = attachmentMeta.map((a) => ({
-            id: a.id,
-            name: a.name,
-            size: a.sizeLabel,
-        }));
-        return coverModelToMockLetter(coverModel, {
-            id: sessionId ?? 'draft',
-            docType: 'letter',
-            subject: subject.trim() || '(без темы)',
-            date: letterDateIso,
-            status: 'draft',
-            registryNumber: 'ИСХ-черновик',
-            attachments,
-        }) as MockLetter;
-    }, [attachmentMeta, coverModel, letterDateIso, sessionId, subject]);
-
     const persistDraft = useCallback((nextFiles: File[], nextMeta: OutgoingLetterAttachmentMeta[]) => {
         const id = writeOutgoingLetterDraft({
             sessionId: sessionId ?? undefined,
@@ -100,7 +87,6 @@ export function OutgoingLetterCreatePage() {
         return id;
     }, [coverModel, letterDateIso, sessionId, subject]);
 
-    // Autosave draft while composing (body / recipient / subject).
     useEffect(() => {
         if (!hydrated)
             return;
@@ -122,39 +108,60 @@ export function OutgoingLetterCreatePage() {
         navigate(getCorrespondenceOutgoingUrl());
     }, [navigate]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const picked = Array.from(e.target.files ?? []);
-        e.target.value = '';
-        if (!picked.length)
-            return;
-        const nextFiles = [...files, ...picked];
-        const nextMeta = [
-            ...attachmentMeta,
-            ...picked.map((f, i) => ({
-                id: `att_${Date.now()}_${i}_${f.name}`,
-                name: f.name,
-                sizeLabel: formatAttachmentSizeLabel(f.size),
-            })),
-        ];
-        setFiles(nextFiles);
+    const letterFile = pickOutgoingWordFile(files);
+    const extraFiles = letterFile ? files.filter((f) => f !== letterFile) : files;
+
+    const mergeFiles = (picked: File[], replaceWord: boolean) => {
+        const wordPicked = picked.filter(isWordLetterFile);
+        const otherPicked = picked.filter((f) => !isWordLetterFile(f));
+        let next = [...files];
+        if (replaceWord && wordPicked[0]) {
+            next = next.filter((f) => !isWordLetterFile(f));
+            next = [wordPicked[0], ...next, ...wordPicked.slice(1), ...otherPicked];
+        }
+        else
+            next = [...next, ...picked];
+        const nextMeta = next.map((f, i) => ({
+            id: `att_${i}_${f.name}`,
+            name: f.name,
+            sizeLabel: formatAttachmentSizeLabel(f.size),
+        }));
+        setFiles(next);
         setAttachmentMeta(nextMeta);
-        persistDraft(nextFiles, nextMeta);
+        persistDraft(next, nextMeta);
     };
 
-    const handlePreview = () => {
-        const check = isOutgoingLetterDraftValid(subject, coverModel);
-        if (!check.ok) {
-            void showAlert({ title: 'Проверьте поля', message: check.message ?? 'Заполните обязательные поля.' });
-            return;
+    const handleOpenWord = async () => {
+        setWordBusy(true);
+        try {
+            await openOutgoingLetterInWordOnline(coverModel, { subject });
+            void showAlert({
+                title: 'Шаблон открыт',
+                message: 'Скачан бланк .docx и открыт Word в браузере. В Word: Файл → Открыть → Загрузить — выберите скачанный шаблон. После текста: Файл → Скачать копию, затем прикрепите файл ниже.',
+            });
         }
-        persistDraft(files, attachmentMeta);
-        navigate(routes.correspondenceOutgoingPreview);
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось открыть Word',
+                message: err instanceof Error ? err.message : 'Не получилось собрать шаблон письма.',
+            });
+        }
+        finally {
+            setWordBusy(false);
+        }
     };
 
     const openReviewModal = () => {
-        const check = isOutgoingLetterDraftValid(subject, coverModel);
-        if (!check.ok) {
-            void showAlert({ title: 'Проверьте поля', message: check.message ?? 'Заполните обязательные поля.' });
+        const fields = isOutgoingLetterDraftValid(subject, coverModel);
+        if (!fields.ok) {
+            void showAlert({ title: 'Проверьте поля', message: fields.message ?? 'Заполните обязательные поля.' });
+            return;
+        }
+        if (!letterFile) {
+            void showAlert({
+                title: 'Нет файла письма',
+                message: 'Откройте шаблон в Word Online, напишите письмо и прикрепите сохранённый .docx.',
+            });
             return;
         }
         persistDraft(files, attachmentMeta);
@@ -194,76 +201,134 @@ export function OutgoingLetterCreatePage() {
     if (!hydrated)
         return null;
 
+    const recipientValue = coverModel.recipientCompany === 'Company Name' ? '' : coverModel.recipientCompany;
+
     return (
         <>
-        <CorrespondenceLetterWorkspace
-            letter={draftLetter}
-            coverModel={coverModel}
-            editable
-            onCoverModelChange={patchCoverModel}
-            navbarTab="compose"
+        <CorrespondenceShell
+            activeTab="Написать письмо"
             onBack={goBack}
-            toolbarSubject={(
-                <div className="corr-doc-preview__toolbar-fields">
-                    <label className="corr-doc-preview__subject-field">
-                        <span className="corr-doc-preview__subject-label">Получатель</span>
+            fullHeight
+            contentClassName="corr-shell__content--word-compose"
+            tabs={CORR_SHELL_NAV_TABS.map((tab) => ({
+                id: tab.key,
+                label: tab.label,
+                active: tab.key === 'outgoing',
+                onClick: () => navigate(tab.key === 'outgoing' ? getCorrespondenceOutgoingUrl() : `${routes.correspondence}?tab=incoming`),
+            }))}
+            actions={(
+                <>
+                    <button type="button" className="corr__btn corr__btn--outline" onClick={goBack} disabled={busy || wordBusy}>
+                        Отмена
+                    </button>
+                    <button type="button" className="corr__btn corr__btn--primary" onClick={openReviewModal} disabled={busy || wordBusy}>
+                        <IcoSave />
+                        {' '}
+                        {busy ? 'Отправка…' : 'Сохранить на проверку'}
+                    </button>
+                </>
+            )}
+        >
+            <div className="corr-word">
+                <section className="corr-word__hero">
+                    <h2 className="corr-word__title">Написать письмо в Word</h2>
+                    <p className="corr-word__lead">
+                        Откроется Word в браузере и скачается бланк Kosta Legal. Напишите текст в Word, сохраните копию
+                        и прикрепите файл сюда — письмо уйдёт в исходящие.
+                    </p>
+                    <button
+                        type="button"
+                        className="corr__btn corr__btn--primary corr-word__open"
+                        onClick={() => void handleOpenWord()}
+                        disabled={busy || wordBusy}
+                    >
+                        <IcoWord />
+                        {wordBusy ? 'Готовим шаблон…' : 'Открыть шаблон в Word Online'}
+                    </button>
+                </section>
+
+                <div className="corr-word__grid">
+                    <label className="corr-word__field">
+                        <span>Получатель</span>
                         <input
                             type="text"
-                            className="corr-doc-preview__subject-input"
+                            className="corr-modal__input"
                             placeholder="Компания / адресат"
-                            value={coverModel.recipientCompany === 'Company Name' ? '' : coverModel.recipientCompany}
-                            onChange={(e) => patchCoverModel({ recipientCompany: e.target.value })}
-                            required
+                            value={recipientValue}
+                            onChange={(e) => setCoverModel((prev) => ({ ...prev, recipientCompany: e.target.value }))}
                             disabled={busy}
                         />
                     </label>
-                    <label className="corr-doc-preview__subject-field">
-                        <span className="corr-doc-preview__subject-label">Тема</span>
+                    <label className="corr-word__field">
+                        <span>Тема</span>
                         <input
                             type="text"
-                            className="corr-doc-preview__subject-input"
+                            className="corr-modal__input"
                             placeholder="Краткое описание письма"
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
-                            required
                             disabled={busy}
                         />
                     </label>
                 </div>
-            )}
-            navbarActions={(
-                <>
-                    <input ref={fileRef} type="file" multiple style={{ display: 'none' }} onChange={handleFileChange} />
-                    <button
-                        type="button"
-                        className="corr-n__btn-secondary"
-                        onClick={() => fileRef.current?.click()}
-                        title="Прикрепить файл"
-                        disabled={busy}
-                    >
+
+                <section className={`corr-word__drop${letterFile ? ' corr-word__drop--ready' : ''}`}>
+                    <input
+                        ref={wordFileRef}
+                        type="file"
+                        accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        hidden
+                        onChange={(e) => {
+                            const picked = Array.from(e.target.files ?? []);
+                            e.target.value = '';
+                            if (picked.length)
+                                mergeFiles(picked, true);
+                        }}
+                    />
+                    <p className="corr-word__drop-label">Письмо из Word</p>
+                    {letterFile ? (
+                        <p className="corr-word__file">
+                            {letterFile.name}
+                            {' · '}
+                            {formatAttachmentSizeLabel(letterFile.size)}
+                        </p>
+                    ) : (
+                        <p className="corr-word__drop-hint">Прикрепите сохранённый .docx — это и есть письмо для реестра.</p>
+                    )}
+                    <button type="button" className="corr__btn corr__btn--outline" onClick={() => wordFileRef.current?.click()} disabled={busy}>
+                        {letterFile ? 'Заменить файл' : 'Прикрепить .docx'}
+                    </button>
+                </section>
+
+                <section className="corr-word__extras">
+                    <input
+                        ref={extraFileRef}
+                        type="file"
+                        multiple
+                        hidden
+                        onChange={(e) => {
+                            const picked = Array.from(e.target.files ?? []);
+                            e.target.value = '';
+                            if (picked.length)
+                                mergeFiles(picked, false);
+                        }}
+                    />
+                    <button type="button" className="corr__btn corr__btn--outline" onClick={() => extraFileRef.current?.click()} disabled={busy}>
                         <IcoPaperclip />
                         {' '}
-                        <span>
-                            Вложения
-                            {attachmentMeta.length > 0 ? ` (${attachmentMeta.length})` : ''}
-                        </span>
+                        Доп. вложения
+                        {extraFiles.length > 0 ? ` (${extraFiles.length})` : ''}
                     </button>
-                    <button type="button" className="corr-n__btn-secondary" onClick={goBack} disabled={busy}>
-                        Отмена
-                    </button>
-                    <button type="button" className="corr-n__btn-secondary" onClick={handlePreview} disabled={busy}>
-                        <IcoEye />
-                        {' '}
-                        Предпросмотр
-                    </button>
-                    <button type="button" className="corr-n__btn-primary" onClick={openReviewModal} disabled={busy}>
-                        <IcoSave />
-                        {' '}
-                        {busy ? 'Отправка…' : 'На проверку'}
-                    </button>
-                </>
-            )}
-        />
+                    {extraFiles.length > 0 ? (
+                        <ul className="corr-word__extra-list">
+                            {extraFiles.map((f) => (
+                                <li key={`${f.name}-${f.size}`}>{f.name}</li>
+                            ))}
+                        </ul>
+                    ) : null}
+                </section>
+            </div>
+        </CorrespondenceShell>
         <OutgoingSubmitReviewModal
             open={reviewOpen}
             onClose={() => { if (!busy) setReviewOpen(false); }}
