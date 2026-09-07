@@ -179,6 +179,10 @@ export const todoPageMessages = {
         markDone: 'Отметить выполнено',
         unmarkDone: 'Снять отметку выполнено',
         outlook: 'Outlook',
+        cardOpen: 'Открыть',
+        cardCopyTitle: 'Копировать название',
+        cardMove: 'Переместить',
+        cardArchive: 'Архивировать',
     },
     cardModal: {
         attachmentsAria: 'Вложения',

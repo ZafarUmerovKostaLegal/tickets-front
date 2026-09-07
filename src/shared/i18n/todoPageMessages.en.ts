@@ -182,6 +182,10 @@ export const todoPageMessagesEn: TodoPageMessages = {
         markDone: 'Mark complete',
         unmarkDone: 'Mark incomplete',
         outlook: 'Outlook',
+        cardOpen: 'Open',
+        cardCopyTitle: 'Copy title',
+        cardMove: 'Move',
+        cardArchive: 'Archive',
     },
     cardModal: {
         attachmentsAria: 'Attachments',

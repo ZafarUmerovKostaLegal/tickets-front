@@ -56,6 +56,11 @@ export const ruMessages: Messages = {
         lawArea: 'Сфера права',
         sources: 'Источники',
         send: 'Отправить запрос',
+        pending: 'Готовлю ответ…',
+        you: 'Вы',
+        assistant: 'Kosta Legal AI',
+        errorGeneric: 'Не удалось получить ответ. Попробуйте ещё раз.',
+        disclaimer: 'Ответ сформирован ИИ для внутренней работы юристов. Проверьте нормы и факты перед использованием у клиента.',
         commandsTitle: 'Готовые команды',
         commandsSubtitle: 'Сокращают путь от запроса до результата — всё нужное уже настроено.',
         commandsAll: 'Все',
@@ -729,6 +734,11 @@ export type Messages = {
         lawArea: string;
         sources: string;
         send: string;
+        pending: string;
+        you: string;
+        assistant: string;
+        errorGeneric: string;
+        disclaimer: string;
         commandsTitle: string;
         commandsSubtitle: string;
         commandsAll: string;

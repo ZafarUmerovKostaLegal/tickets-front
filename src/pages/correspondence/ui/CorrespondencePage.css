@@ -1855,6 +1855,10 @@ body[data-theme='dark'] .corr-card-modal__note-text--reject {
   .corr-modal__form-fields--compact .corr-modal__field:nth-child(5) {
     grid-column: auto;
   }
+
+  .corr-modal__form-fields--incoming .corr-modal__field:nth-child(5) {
+    grid-column: auto;
+  }
 }
 
 .corr-drive {

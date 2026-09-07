@@ -1,6 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentType, type KeyboardEvent } from 'react';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
+import {
+    chatKostaLegalAi,
+    type KostaLegalAiChatTurn,
+    type KostaLegalAiCommandId,
+    type KostaLegalAiLawArea,
+} from '../api/kostaLegalAiChat';
 import { KostaLegalAiSidebar, type KlAiSidebarNavId } from './KostaLegalAiSidebar';
 import { KostaLegalAiSkeleton } from './KostaLegalAiSkeleton';
 import {
@@ -17,15 +23,7 @@ import {
 } from './kostaLegalAiIcons';
 import './KostaLegalAiPage.css';
 
-type CommandId =
-    | 'spellCheck'
-    | 'caseLaw'
-    | 'adCheck'
-    | 'ocr'
-    | 'claimResponse'
-    | 'contractAnalysis'
-    | 'styleChange'
-    | 'legalDesign';
+type CommandId = KostaLegalAiCommandId;
 
 type CommandMeta = {
     id: CommandId;
@@ -106,9 +104,13 @@ export function KostaLegalAiPage() {
     const mainRef = useRef<HTMLElement>(null);
 
     const [query, setQuery] = useState('');
-    const [lawArea, setLawArea] = useState<typeof LAW_AREAS[number]>('civil');
+    const [lawArea, setLawArea] = useState<KostaLegalAiLawArea>('civil');
     const [sourceCount, setSourceCount] = useState<number>(5);
     const [webSearch, setWebSearch] = useState(false);
+    const [activeCommand, setActiveCommand] = useState<CommandId | null>(null);
+    const [messages, setMessages] = useState<KostaLegalAiChatTurn[]>([]);
+    const [pending, setPending] = useState(false);
+    const [error, setError] = useState('');
     const [activeNav, setActiveNav] = useState<KlAiSidebarNavId>('home');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -120,6 +122,7 @@ export function KostaLegalAiPage() {
     }, []);
 
     const handleCommandClick = useCallback((id: CommandId) => {
+        setActiveCommand(id);
         setQuery(t(commandKey(id, 'title')));
         setActiveNav(SIDEBAR_COMMAND_IDS.has(id as KlAiSidebarNavId) ? id as KlAiSidebarNavId : 'commands');
         heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -129,8 +132,12 @@ export function KostaLegalAiPage() {
         setActiveNav(id);
         setMobileSidebarOpen(false);
 
-        if (id === 'home') {
+        if (id === 'home' || id === 'createChat') {
             setQuery('');
+            setActiveCommand(null);
+            setMessages([]);
+            setError('');
+            setActiveNav('home');
             heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             return;
         }
@@ -141,15 +148,49 @@ export function KostaLegalAiPage() {
         }
 
         if (SIDEBAR_COMMAND_IDS.has(id)) {
+            setActiveCommand(id as CommandId);
             setQuery(t(commandKey(id as CommandId, 'title')));
             heroRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     }, [t]);
 
-    const handleSubmit = useCallback(() => {
-        if (!query.trim())
+    const handleSubmit = useCallback(async () => {
+        const text = query.trim();
+        if (!text || pending)
             return;
-    }, [query]);
+        setError('');
+        setPending(true);
+        setQuery('');
+        const history = messages;
+        setMessages((prev) => [...prev, { role: 'user', content: text }]);
+        try {
+            const result = await chatKostaLegalAi({
+                query: text,
+                lawArea,
+                sourceCount,
+                webSearch,
+                commandId: activeCommand,
+                messages: history,
+            });
+            setMessages((prev) => [...prev, { role: 'assistant', content: result.answer }]);
+        }
+        catch (e) {
+            const msg = e instanceof Error && e.message.trim() ? e.message : t('kostaLegalAi.errorGeneric');
+            setMessages(history);
+            setQuery(text);
+            setError(msg);
+        }
+        finally {
+            setPending(false);
+        }
+    }, [query, pending, messages, lawArea, sourceCount, webSearch, activeCommand, t]);
+
+    const handleComposerKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            void handleSubmit();
+        }
+    }, [handleSubmit]);
 
     if (loading) {
         return (
@@ -214,6 +255,8 @@ export function KostaLegalAiPage() {
                                             placeholder={t('kostaLegalAi.queryPlaceholder')}
                                             value={query}
                                             onChange={(e) => setQuery(e.target.value)}
+                                            onKeyDown={handleComposerKeyDown}
+                                            disabled={pending}
                                         />
                                         <div className="kl-ai__composer-toolbar">
                                             <div className="kl-ai__composer-tools">
@@ -285,14 +328,45 @@ export function KostaLegalAiPage() {
                                                 type="button"
                                                 className="kl-ai__send-btn"
                                                 aria-label={t('kostaLegalAi.send')}
-                                                disabled={!query.trim()}
-                                                onClick={handleSubmit}
+                                                disabled={!query.trim() || pending}
+                                                onClick={() => void handleSubmit()}
                                             >
                                                 <IconSend />
                                             </button>
                                         </div>
                                     </div>
                                 </div>
+
+                                {messages.length || pending || error ? (
+                                    <div className="kl-ai__thread" aria-live="polite">
+                                        {messages.map((msg, index) => (
+                                            <article
+                                                key={`${msg.role}-${index}`}
+                                                className={`kl-ai__msg${msg.role === 'user' ? ' kl-ai__msg--user' : ''}`}
+                                            >
+                                                <span className="kl-ai__msg-role">
+                                                    {msg.role === 'user' ? t('kostaLegalAi.you') : t('kostaLegalAi.assistant')}
+                                                </span>
+                                                <p className="kl-ai__msg-body">{msg.content}</p>
+                                            </article>
+                                        ))}
+                                        {pending ? (
+                                            <article className="kl-ai__msg">
+                                                <span className="kl-ai__msg-role">{t('kostaLegalAi.assistant')}</span>
+                                                <p className="kl-ai__msg-body">{t('kostaLegalAi.pending')}</p>
+                                            </article>
+                                        ) : null}
+                                        {error ? (
+                                            <article className="kl-ai__msg kl-ai__msg--error" role="alert">
+                                                <span className="kl-ai__msg-role">{t('kostaLegalAi.assistant')}</span>
+                                                <p className="kl-ai__msg-body">{error}</p>
+                                            </article>
+                                        ) : null}
+                                    </div>
+                                ) : null}
+                                {messages.some((msg) => msg.role === 'assistant') ? (
+                                    <p className="kl-ai__disclaimer">{t('kostaLegalAi.disclaimer')}</p>
+                                ) : null}
                             </section>
 
                             <section ref={commandsRef} className="kl-ai__commands" aria-labelledby="kl-ai-commands-title">

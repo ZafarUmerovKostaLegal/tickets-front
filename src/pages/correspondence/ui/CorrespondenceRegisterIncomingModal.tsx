@@ -150,7 +150,7 @@ export function CorrespondenceRegisterIncomingModal({
 
     return createPortal(<div className="corr-modal" role="presentation" onClick={onClose}>
       <div
-        className="corr-modal__panel corr-modal__panel--drive"
+        className="corr-modal__panel corr-modal__panel--drive corr-modal__panel--fit"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -171,7 +171,7 @@ export function CorrespondenceRegisterIncomingModal({
         </div>
 
         <div className="corr-modal__form corr-modal__form--drive">
-          <div className="corr-modal__form-fields">
+          <div className="corr-modal__form-fields corr-modal__form-fields--incoming">
           <div className={`corr-modal__field${errors.partnerUserId ? ' corr-modal__field--err' : ''}`}>
             <label className="corr-modal__label" id="corr-in-partner-label">
               Партнёр <span className="corr-modal__req" aria-hidden>*</span>
@@ -286,6 +286,7 @@ export function CorrespondenceRegisterIncomingModal({
             onHint={setFileHint}
             label="Скан или фото документа"
             required
+            compact
           />
         </div>
 

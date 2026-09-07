@@ -327,6 +327,60 @@ body[data-theme='dark'] .kl-ai {
   color: var(--kl-ai-ink);
 }
 
+.kl-ai__thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0 0 36px;
+}
+
+.kl-ai__msg {
+  border: 1px solid var(--kl-ai-line);
+  border-radius: 14px;
+  padding: 14px 16px 16px;
+  background: var(--kl-ai-card);
+  box-shadow: var(--kl-ai-shadow);
+}
+
+.kl-ai__msg--user {
+  background: color-mix(in srgb, var(--kl-ai-slate-soft) 70%, var(--kl-ai-card));
+}
+
+.kl-ai__msg--error {
+  border-color: color-mix(in srgb, var(--kl-ai-oxblood) 45%, var(--kl-ai-line));
+  color: var(--kl-ai-oxblood);
+}
+
+.kl-ai__msg-role {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--kl-ai-muted);
+}
+
+.kl-ai__msg-body {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--kl-ai-ink);
+}
+
+.kl-ai__disclaimer {
+  margin: -24px 0 36px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--kl-ai-muted);
+}
+
+.kl-ai__send-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .kl-ai__composer-label {
   position: absolute;
   width: 1px;
@@ -345,7 +399,7 @@ body[data-theme='dark'] .kl-ai {
   border-radius: 14px;
   box-shadow: var(--kl-ai-shadow);
   padding: 20px 22px 14px;
-  margin-bottom: 44px;
+  margin-bottom: 20px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 

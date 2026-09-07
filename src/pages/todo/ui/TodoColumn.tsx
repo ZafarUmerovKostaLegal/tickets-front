@@ -36,6 +36,9 @@ type TodoColumnProps = {
     onArchiveAllCards: (columnId: string) => void;
     onArchiveColumn: (columnId: string) => void;
     onDeleteColumn: (columnId: string) => void;
+    onArchiveCard: (columnId: string, cardId: string) => void;
+    onMoveCard: (fromColumnId: string, cardId: string, toColumnId: string) => void;
+    moveColumns: { id: string; title: string }[];
     onCardDragStart?: (e: React.PointerEvent, columnId: string, cardId: string, cardRect: DOMRect, fromDragHandle?: boolean) => void;
     isCardDropTarget?: boolean;
     draggingCard?: {
@@ -51,7 +54,7 @@ type TodoColumnProps = {
     cardsReadOnly?: boolean;
 };
 type MenuType = 'stack' | 'more' | null;
-export const TodoColumn = memo(function TodoColumn({ config, todoBoardUsers, isCollapsed, cards, columnProgressDone, columnProgressTotal, listSortMode, hideCompletedFilter, isDragging, isDropTarget, onColumnMouseDown, onColumnKeyDown, onToggleCollapse, onExpand, onAddCardClick, onCardClick, onCardToggleComplete, onSortCards, onToggleHideCompleted, onRenameColumn, onArchiveAllCards, onArchiveColumn, onDeleteColumn, onCardDragStart, isCardDropTarget, draggingCard, touchPressCard, columnRef, structureReadOnly = false, cardsReadOnly = false, }: TodoColumnProps) {
+export const TodoColumn = memo(function TodoColumn({ config, todoBoardUsers, isCollapsed, cards, columnProgressDone, columnProgressTotal, listSortMode, hideCompletedFilter, isDragging, isDropTarget, onColumnMouseDown, onColumnKeyDown, onToggleCollapse, onExpand, onAddCardClick, onCardClick, onCardToggleComplete, onSortCards, onToggleHideCompleted, onRenameColumn, onArchiveAllCards, onArchiveColumn, onDeleteColumn, onArchiveCard, onMoveCard, moveColumns, onCardDragStart, isCardDropTarget, draggingCard, touchPressCard, columnRef, structureReadOnly = false, cardsReadOnly = false, }: TodoColumnProps) {
     const { t } = useI18n();
     const { id, dotColor } = config;
     const sortItemClass = (mode: TodoColumnListSortMode) => ['todo-col-menu__item', listSortMode === mode && 'todo-col-menu__item--active'].filter(Boolean).join(' ');
@@ -200,7 +203,7 @@ export const TodoColumn = memo(function TodoColumn({ config, todoBoardUsers, isC
         </div>)}
 
       <div className="todo-column__cards">
-        {cards.map((card) => (<CardItem key={card.id} card={card} columnId={id} participantUserById={todoBoardUsers.byId} cardsReadOnly={cardsReadOnly} onCardClick={onCardClick} onCardToggleComplete={onCardToggleComplete} onCardDragStart={onCardDragStart} isDragging={draggingCard?.columnId === id && draggingCard?.cardId === card.id} isTouchPressPending={touchPressCard?.columnId === id && touchPressCard?.cardId === card.id}/>))}
+        {cards.map((card) => (<CardItem key={card.id} card={card} columnId={id} participantUserById={todoBoardUsers.byId} cardsReadOnly={cardsReadOnly} onCardClick={onCardClick} onCardToggleComplete={onCardToggleComplete} onArchiveCard={onArchiveCard} onMoveCard={onMoveCard} moveColumns={moveColumns} onCardDragStart={onCardDragStart} isDragging={draggingCard?.columnId === id && draggingCard?.cardId === card.id} isTouchPressPending={touchPressCard?.columnId === id && touchPressCard?.cardId === card.id}/>))}
       </div>
 
       {!structureReadOnly && (<button type="button" className="todo-column__add" onClick={(e) => { e.stopPropagation(); onAddCardClick(id); }}>
@@ -214,13 +217,16 @@ export const TodoColumn = memo(function TodoColumn({ config, todoBoardUsers, isC
       </div>
     </div>);
 });
-const CardItem = memo(function CardItem({ card, columnId, participantUserById, cardsReadOnly = false, onCardClick, onCardToggleComplete, onCardDragStart, isDragging, isTouchPressPending, }: {
+const CardItem = memo(function CardItem({ card, columnId, participantUserById, cardsReadOnly = false, onCardClick, onCardToggleComplete, onArchiveCard, onMoveCard, moveColumns, onCardDragStart, isDragging, isTouchPressPending, }: {
     card: TodoCard;
     columnId: string;
     participantUserById: ReadonlyMap<number, User>;
     cardsReadOnly?: boolean;
     onCardClick: (columnId: string, cardId: string) => void;
     onCardToggleComplete: (columnId: string, cardId: string) => void;
+    onArchiveCard: (columnId: string, cardId: string) => void;
+    onMoveCard: (fromColumnId: string, cardId: string, toColumnId: string) => void;
+    moveColumns: { id: string; title: string }[];
     onCardDragStart?: (e: React.PointerEvent, columnId: string, cardId: string, cardRect: DOMRect, fromDragHandle?: boolean) => void;
     isDragging?: boolean;
     isTouchPressPending?: boolean;
@@ -237,6 +243,10 @@ const CardItem = memo(function CardItem({ card, columnId, participantUserById, c
     const checkDone = hasChecklist ? card.checklist!.filter((i) => i.done).length : 0;
     const checkTotal = hasChecklist ? card.checklist!.length : 0;
     const isCalendar = !!card.fromCalendar;
+    const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+    const ctxMenuRef = useRef<HTMLDivElement>(null);
+    const [ctxMenuStyle, setCtxMenuStyle] = useState<React.CSSProperties>({});
+    const otherColumns = moveColumns.filter((c) => c.id !== columnId);
     const handleCardPointerDown = useCallback((e: React.PointerEvent) => {
         if (cardsReadOnly)
             return;
@@ -263,13 +273,65 @@ const CardItem = memo(function CardItem({ card, columnId, participantUserById, c
         const rect = cardEl.getBoundingClientRect();
         onCardDragStart?.(e, columnId, card.id, rect, true);
     }, [cardsReadOnly, columnId, card.id, onCardDragStart]);
+    const handleContextMenu = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const page = (e.currentTarget as HTMLElement).closest('.todo-page') as HTMLElement | null;
+        const vars: Record<string, string> = {};
+        if (page) {
+            const cs = getComputedStyle(page);
+            ['--todo-accent', '--todo-text', '--todo-muted', '--todo-surface', '--todo-panel-bg', '--todo-border'].forEach((n) => {
+                vars[n] = cs.getPropertyValue(n).trim();
+            });
+        }
+        setCtxMenuStyle({ ...vars } as React.CSSProperties);
+        setCtxMenu({ x: e.clientX, y: e.clientY });
+    }, []);
+    useLayoutEffect(() => {
+        if (!ctxMenu || !ctxMenuRef.current)
+            return;
+        const el = ctxMenuRef.current;
+        const rect = el.getBoundingClientRect();
+        const pad = 8;
+        let left = ctxMenu.x;
+        let top = ctxMenu.y;
+        if (left + rect.width > window.innerWidth - pad)
+            left = Math.max(pad, window.innerWidth - rect.width - pad);
+        if (top + rect.height > window.innerHeight - pad)
+            top = Math.max(pad, window.innerHeight - rect.height - pad);
+        el.style.left = `${left}px`;
+        el.style.top = `${top}px`;
+    }, [ctxMenu]);
+    useEffect(() => {
+        if (!ctxMenu)
+            return;
+        const close = () => setCtxMenu(null);
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape')
+                close();
+        };
+        const onDoc = (e: MouseEvent) => {
+            if (ctxMenuRef.current && !ctxMenuRef.current.contains(e.target as Node))
+                close();
+        };
+        document.addEventListener('mousedown', onDoc);
+        document.addEventListener('keydown', onKey);
+        document.addEventListener('scroll', close, true);
+        return () => {
+            document.removeEventListener('mousedown', onDoc);
+            document.removeEventListener('keydown', onKey);
+            document.removeEventListener('scroll', close, true);
+        };
+    }, [ctxMenu]);
+    const closeCtx = () => setCtxMenu(null);
     return (<div role="button" tabIndex={0} data-todo-card-id={card.id} className={[
             'todo-card',
             card.completed && 'todo-card--completed',
             isCalendar && 'todo-card--calendar',
             isDragging && 'todo-card--dragging',
             isTouchPressPending && 'todo-card--touch-press',
-        ].filter(Boolean).join(' ')} onClick={() => onCardClick(columnId, card.id)} onKeyDown={(e) => e.key === 'Enter' && onCardClick(columnId, card.id)} onPointerDown={handleCardPointerDown}>
+            ctxMenu && 'todo-card--ctx-open',
+        ].filter(Boolean).join(' ')} onClick={() => onCardClick(columnId, card.id)} onKeyDown={(e) => e.key === 'Enter' && onCardClick(columnId, card.id)} onPointerDown={handleCardPointerDown} onContextMenu={handleContextMenu}>
       {isCalendar && (<div className="todo-card__cal-badge">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           <span>{t('todoPage.column.outlook')}</span>
@@ -324,5 +386,67 @@ const CardItem = memo(function CardItem({ card, columnId, participantUserById, c
             })}
           {participantIds.length > 4 && (<span className="todo-card__avatar todo-card__avatar--more">+{participantIds.length - 4}</span>)}
         </div>)}
+
+      {ctxMenu && createPortal(
+        <div
+          ref={ctxMenuRef}
+          className="todo-col-menu todo-card-ctx"
+          role="menu"
+          style={{ left: ctxMenu.x, top: ctxMenu.y, ...ctxMenuStyle }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button type="button" className="todo-col-menu__item" role="menuitem" onClick={() => { closeCtx(); onCardClick(columnId, card.id); }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+            {t('todoPage.column.cardOpen')}
+          </button>
+          {!isCalendar && !cardsReadOnly && (
+            <button type="button" className="todo-col-menu__item" role="menuitem" onClick={() => { closeCtx(); onCardToggleComplete(columnId, card.id); }}>
+              <IconCheck />
+              {card.completed ? t('todoPage.column.unmarkDone') : t('todoPage.column.markDone')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="todo-col-menu__item"
+            role="menuitem"
+            onClick={() => {
+              closeCtx();
+              void navigator.clipboard?.writeText(card.title);
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            {t('todoPage.column.cardCopyTitle')}
+          </button>
+          {!isCalendar && !cardsReadOnly && otherColumns.length > 0 && (
+            <>
+              <div className="todo-col-menu__sep"/>
+              <div className="todo-col-menu__title">{t('todoPage.column.cardMove')}</div>
+              {otherColumns.map((col) => (
+                <button
+                  key={col.id}
+                  type="button"
+                  className="todo-col-menu__item"
+                  role="menuitem"
+                  onClick={() => { closeCtx(); onMoveCard(columnId, card.id, col.id); }}
+                >
+                  <span className="todo-card-ctx__dot" style={{ background: 'var(--todo-accent)' }}/>
+                  {col.title}
+                </button>
+              ))}
+            </>
+          )}
+          {!isCalendar && !cardsReadOnly && (
+            <>
+              <div className="todo-col-menu__sep"/>
+              <button type="button" className="todo-col-menu__item todo-col-menu__item--danger" role="menuitem" onClick={() => { closeCtx(); onArchiveCard(columnId, card.id); }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+                {t('todoPage.column.cardArchive')}
+              </button>
+            </>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>);
 });

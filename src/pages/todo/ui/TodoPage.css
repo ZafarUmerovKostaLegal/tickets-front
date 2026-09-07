@@ -3310,6 +3310,21 @@
 
 .todo-col-menu__rename-btn--save:hover { background: color-mix(in srgb, var(--todo-accent) 85%, black); }
 
+.todo-card-ctx {
+  min-width: 220px;
+}
+
+.todo-card-ctx__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.todo-card--ctx-open {
+  outline: 1px solid color-mix(in srgb, var(--todo-accent) 55%, transparent);
+}
+
 .todo-page__header-badge {
   display: inline-flex;
   align-items: center;
