@@ -191,6 +191,7 @@ export function CorrespondenceRegisterOutgoingModal({
             hint={fileHint}
             onHint={setFileHint}
             label="Файл документа"
+            compact
           />
         </div>
 

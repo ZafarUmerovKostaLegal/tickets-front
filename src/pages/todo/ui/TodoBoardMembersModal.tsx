@@ -10,9 +10,8 @@ import {
     type TodoBoardMembersList,
 } from '@entities/todo';
 import type { User } from '@entities/user';
-import { listColleaguesAsUsers } from '@entities/contacts';
+import { loadTodoDirectoryUsers } from '@entities/todo/lib/todoDirectoryUsers';
 import { useUserPublic } from '@shared/hooks';
-import { isHiddenSystemUser } from '@shared/lib';
 import { sortByRuLabel, userPickerSortLabel } from '@shared/lib/sortByRuLabel';
 import { useI18n } from '@shared/i18n';
 
@@ -53,10 +52,10 @@ export function TodoBoardMembersModal({ boardId, boardTitle, onClose, onMembersC
     useEffect(() => {
         void reload();
         let cancelled = false;
-        void listColleaguesAsUsers()
+        void loadTodoDirectoryUsers()
             .then((list) => {
                 if (!cancelled)
-                    setUsers(list.filter((u) => !u.is_archived && !u.is_blocked && !isHiddenSystemUser(u)));
+                    setUsers(list);
             })
             .catch(() => {
                 if (!cancelled)

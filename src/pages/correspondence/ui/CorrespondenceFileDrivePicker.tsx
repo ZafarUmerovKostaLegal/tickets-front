@@ -109,6 +109,7 @@ export type CorrespondenceFileDrivePickerProps = {
     maxBytes?: number;
     label?: string;
     required?: boolean;
+    compact?: boolean;
 };
 
 export function CorrespondenceFileDrivePicker({
@@ -122,6 +123,7 @@ export function CorrespondenceFileDrivePicker({
     maxBytes = CORR_SCAN_MAX_BYTES,
     label = 'Файлы',
     required = false,
+    compact = false,
 }: CorrespondenceFileDrivePickerProps) {
     const inputId = useId();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -178,7 +180,7 @@ export function CorrespondenceFileDrivePicker({
     };
 
     return (
-        <div className={`corr-drive${error ? ' corr-drive--err' : ''}`}>
+        <div className={`corr-drive${error ? ' corr-drive--err' : ''}${compact ? ' corr-drive--compact' : ''}`}>
             <div className="corr-drive__head">
                 <span className="corr-drive__label">
                     {label}
@@ -221,9 +223,11 @@ export function CorrespondenceFileDrivePicker({
                                 <line x1="12" y1="3" x2="12" y2="15" />
                             </svg>
                         </span>
-                        <span className="corr-drive__empty-title">Перетащите файлы сюда</span>
-                        <span className="corr-drive__empty-sub">
-                            или <span className="corr-drive__empty-link">выберите на компьютере</span>
+                        <span className="corr-drive__empty-copy">
+                            <span className="corr-drive__empty-title">Перетащите файлы сюда</span>
+                            <span className="corr-drive__empty-sub">
+                                или <span className="corr-drive__empty-link">выберите на компьютере</span>
+                            </span>
                         </span>
                         <span className="corr-drive__empty-hint">Любой формат, до {formatBytes(maxBytes)} на файл</span>
                     </label>

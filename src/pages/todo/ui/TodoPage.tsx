@@ -10,11 +10,11 @@ import { fetchMediaBlob } from '@shared/api';
 import { downloadBlob } from '@shared/lib/downloadBlob';
 import { resolveCalendarColumnId, unpackBoard } from '@entities/todo/lib/boardMapper';
 import { cardDueDateTimeToIso } from '@entities/todo/lib/todoDueAt';
-import { buildMonthGrid, type TodoCard, type ArchivedCard, type ColumnId, type TodoColumnListSortMode, } from '@entities/todo/lib/todoUtils';
+import { buildMonthGrid, type TodoCard, type ArchivedCard, type ArchivedColumn, type ColumnId, type TodoColumnListSortMode, } from '@entities/todo/lib/todoUtils';
 import { createDefaultTodoThemeVars, deriveThemeFromImage } from '@entities/todo/lib/todoTheme';
 import { getCalendarStatus, getCalendarEvents, connectOutlookCalendar, createCalendarEvent, CALENDAR_NOT_CONNECTED_MSG, type CalendarEvent, } from '@entities/todo/lib/calendarApi';
 import type { User } from '@entities/user';
-import { listColleaguesAsUsers } from '@entities/contacts';
+import { loadTodoBoardDisplayUsers } from '@entities/todo/lib/todoDirectoryUsers';
 import { useUserPublic } from '@shared/hooks';
 import { isHiddenSystemUser } from '@shared/lib';
 import { buildTodoUserByIdMap, publicUserAsUser, type TodoBoardUsers } from '@entities/todo/lib/todoUserDisplay';
@@ -31,7 +31,6 @@ import {
 } from '@entities/notification/wsClient';
 import {
     canEditKanbanStructure,
-    canManageBoardMembers,
     isParticipantBoardRole,
     isViewerBoardRole,
 } from '@entities/todo/lib/boardRoles';
@@ -221,8 +220,10 @@ export function TodoPage() {
         cardId: string;
     } | null>(null);
     const [archivedCards, setArchivedCards] = useState<ArchivedCard[]>([]);
+    const [archivedColumns, setArchivedColumns] = useState<ArchivedColumn[]>([]);
     const [archiveOpen, setArchiveOpen] = useState(false);
     const [archiveSearch, setArchiveSearch] = useState('');
+    const [archiveTab, setArchiveTab] = useState<'cards' | 'lists'>('cards');
     const [calendarConnected, setCalendarConnected] = useState(false);
     const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
     const [calendarLoading, setCalendarLoading] = useState(false);
@@ -259,7 +260,7 @@ export function TodoPage() {
     const [todoUsersError, setTodoUsersError] = useState<string | null>(null);
     useEffect(() => {
         let cancelled = false;
-        listColleaguesAsUsers()
+        loadTodoBoardDisplayUsers()
             .then((list) => {
                 if (!cancelled) {
                     setTodoUsersList(list.filter((u) => !isHiddenSystemUser(u)));
@@ -450,13 +451,19 @@ export function TodoPage() {
     }, [setBoardError, t]);
     const applyBoardFromApi = useCallback((board: TodoBoard, summaries?: TodoBoardSummary[]) => {
         const boardList = summaries ?? boardSummariesRef.current;
-        const { columnOrder: ord, columnTitles: titles, columnColors: colors, collapsedColumns: collapsed, cards: nextCards, boardLabels: labels, } = unpackBoard(board);
+        const { columnOrder: ord, columnTitles: titles, columnColors: colors, collapsedColumns: collapsed, cards: nextCards, boardLabels: labels, archivedCards: nextArchived, archivedColumns: nextArchivedCols, } = unpackBoard(board);
         setColumnOrder(ord);
         setColumnTitles(titles);
         setColumnColors(colors);
         setCards(nextCards);
         setCollapsedColumns(collapsed);
         setBoardLabels(labels);
+        setArchivedColumns(nextArchivedCols);
+        setArchivedCards((prev) => {
+            const calendarKept = prev.filter((c) => c.fromCalendar);
+            const calIds = new Set(calendarKept.map((c) => c.id));
+            return [...nextArchived.filter((c) => !calIds.has(c.id)), ...calendarKept];
+        });
         const fromBoard = typeof board.my_role === 'string' && board.my_role.trim() ? board.my_role.trim() : null;
         const fromSummaryRaw = boardList.find((s) => s.id === board.id)?.my_role;
         const fromSummary = typeof fromSummaryRaw === 'string' && fromSummaryRaw.trim() ? fromSummaryRaw.trim() : null;
@@ -1229,14 +1236,14 @@ export function TodoPage() {
             return;
         void commitBoard(patchTodoColumn(activeBoardId, Number(colId), { title }));
     }, [activeBoardId, commitBoard]);
-    const handleClearColumn = useCallback(async (colId: string) => {
+    const handleArchiveAllCardsInColumn = useCallback(async (colId: string) => {
         if (activeBoardId == null)
             return;
         const list = cards[colId] || [];
         let lastBoard: TodoBoard | null = null;
         for (const c of list) {
             try {
-                lastBoard = await deleteTodoCard(activeBoardId, Number(c.id));
+                lastBoard = await patchTodoCard(activeBoardId, Number(c.id), { isArchived: true });
             }
             catch {
                 break;
@@ -1247,6 +1254,21 @@ export function TodoPage() {
             setActiveBoardId(lastBoard.id);
         }
     }, [activeBoardId, cards, applyBoardFromApi]);
+    const handleArchiveColumn = useCallback((colId: string) => {
+        if (activeBoardId == null)
+            return;
+        void commitBoard(patchTodoColumn(activeBoardId, Number(colId), { isArchived: true }));
+    }, [activeBoardId, commitBoard]);
+    const handleRestoreColumn = useCallback((colId: string) => {
+        if (activeBoardId == null)
+            return;
+        void commitBoard(patchTodoColumn(activeBoardId, Number(colId), { isArchived: false }));
+    }, [activeBoardId, commitBoard]);
+    const handleDeleteArchivedColumn = useCallback((colId: string) => {
+        if (activeBoardId == null)
+            return;
+        void commitBoard(deleteTodoColumn(activeBoardId, Number(colId)));
+    }, [activeBoardId, commitBoard]);
     const handleDeleteColumn = useCallback((colId: string) => {
         if (activeBoardId == null)
             return;
@@ -1403,74 +1425,60 @@ export function TodoPage() {
             setSelectedCard(null);
             return;
         }
-        const snapshotLabelIds = card.labels
-            ?.map((l) => Number(l.id))
-            .filter((n) => !Number.isNaN(n));
-        const snapshotParticipantUserIds = card.participantUserIds && card.participantUserIds.length > 0
-            ? [...card.participantUserIds]
-            : undefined;
-        const snapshotDueAt = card.dueAtIso ?? cardDueDateTimeToIso(card.dueDate, card.dueTime) ?? null;
         if (activeBoardId == null)
             return;
         const board = await commitBoard(patchTodoCard(activeBoardId, Number(cardId), { isArchived: true }));
-        if (board) {
-            setArchivedCards((a) => [
-                {
-                    ...card,
-                    archivedAt: new Date().toISOString(),
-                    fromColumn: columnId,
-                    snapshotLabelIds: snapshotLabelIds?.length ? snapshotLabelIds : undefined,
-                    snapshotParticipantUserIds,
-                    snapshotDueAt,
-                },
-                ...a,
-            ]);
-        }
+        if (!board)
+            return;
         setSelectedCard(null);
     }, [mergedCards, activeBoardId, commitBoard]);
     const handleRestoreCard = useCallback((archivedCard: ArchivedCard) => {
+        if (activeBoardId == null)
+            return;
+        if (archivedCard.fromCalendar) {
+            setArchivedCards((prev) => prev.filter((c) => c.id !== archivedCard.id));
+            return;
+        }
         const targetCol = columnOrder.includes(archivedCard.fromColumn)
             ? archivedCard.fromColumn
             : columnOrder[0];
-        if (!targetCol || activeBoardId == null)
-            return;
-        const bid = activeBoardId;
-        void (async () => {
-            let board = await commitBoard(createTodoCard(bid, Number(targetCol), {
-                title: archivedCard.title,
-                body: archivedCard.description ?? undefined,
-                dueAt: archivedCard.snapshotDueAt ?? undefined,
-            }));
-            if (!board)
-                return;
-            const col = board.columns.find((c) => String(c.id) === targetCol);
-            const list = col?.cards ?? [];
-            const newCard = list.length > 0 ? list.reduce((best, c) => (c.id > best.id ? c : best), list[0]!) : null;
-            if (!newCard) {
-                setArchivedCards((prev) => prev.filter((c) => c.id !== archivedCard.id));
-                return;
-            }
-            if (archivedCard.snapshotLabelIds?.length) {
-                const b2 = await commitBoard(patchTodoCard(bid, newCard.id, { labelIds: archivedCard.snapshotLabelIds }));
-                if (b2)
-                    board = b2;
-            }
-            if (archivedCard.snapshotParticipantUserIds?.length) {
-                const b3 = await commitBoard(patchTodoCard(bid, newCard.id, {
-                    participantUserIds: archivedCard.snapshotParticipantUserIds,
-                }));
-                if (b3)
-                    board = b3;
-            }
-            setArchivedCards((prev) => prev.filter((c) => c.id !== archivedCard.id));
-        })();
+        const payload: PatchTodoCardPayload = { isArchived: false };
+        if (targetCol && targetCol !== archivedCard.fromColumn)
+            payload.columnId = Number(targetCol);
+        void commitBoard(patchTodoCard(activeBoardId, Number(archivedCard.id), payload));
     }, [columnOrder, activeBoardId, commitBoard]);
     const handleDeleteArchivedCard = useCallback((cardId: string) => {
-        setArchivedCards((prev) => prev.filter((c) => c.id !== cardId));
-    }, []);
+        const row = archivedCards.find((c) => c.id === cardId);
+        if (!row || row.fromCalendar) {
+            setArchivedCards((prev) => prev.filter((c) => c.id !== cardId));
+            return;
+        }
+        if (activeBoardId == null)
+            return;
+        void commitBoard(deleteTodoCard(activeBoardId, Number(cardId)));
+    }, [archivedCards, activeBoardId, commitBoard]);
     const handleClearArchive = useCallback(() => {
-        setArchivedCards([]);
-    }, []);
+        if (activeBoardId == null)
+            return;
+        const bid = activeBoardId;
+        const toDelete = archivedCards.filter((c) => !c.fromCalendar);
+        void (async () => {
+            let lastBoard: TodoBoard | null = null;
+            for (const c of toDelete) {
+                try {
+                    lastBoard = await deleteTodoCard(bid, Number(c.id));
+                }
+                catch {
+                    break;
+                }
+            }
+            if (lastBoard) {
+                applyBoardFromApi(lastBoard);
+                setActiveBoardId(lastBoard.id);
+            }
+            setArchivedCards((prev) => prev.filter((c) => c.fromCalendar));
+        })();
+    }, [activeBoardId, archivedCards, applyBoardFromApi]);
     const handleColumnRef = useCallback((id: string) => (node: HTMLDivElement | null) => {
         columnRefs.current[id] = node;
     }, []);
@@ -1567,8 +1575,7 @@ export function TodoPage() {
     const structureReadOnly = !canEditKanbanStructure(effectiveBoardMyRole);
     const cardsReadOnly = isViewerOnlyBoard;
     const activeBoardSummary = boardSummaries.find((b) => b.id === activeBoardId);
-    const showMembersSettings = canManageBoardMembers(effectiveBoardMyRole)
-        && (activeBoardSummary?.visibility?.toLowerCase() === 'shared' || false);
+    const showMembersSettings = canEditKanbanStructure(effectiveBoardMyRole);
     const handleInviteAccepted = useCallback(async (board: TodoBoard) => {
         applyBoardFromApi(board);
         setActiveBoardId(board.id);
@@ -1662,7 +1669,7 @@ export function TodoPage() {
                         <button type="button" className={`todo-page__header-btn${archiveOpen ? ' todo-page__header-btn--active' : ''}`} onClick={() => { setArchiveOpen((v) => !v); setMobilePlannerOpen(false); }}>
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.6 5H8.4a2 2 0 0 0-1.9 1.3L5 10 3 8" /><path d="M3.5 13H6a2 2 0 0 1 2 2v0a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v0a2 2 0 0 1 2-2h2.5" /><rect x="2" y="8" width="20" height="13" rx="2" /></svg>
                             <span>{t('todoPage.page.archive')}</span>
-                            {archivedCards.length > 0 && <span className="todo-page__header-badge">{archivedCards.length}</span>}
+                            {archivedCards.length + archivedColumns.length > 0 && <span className="todo-page__header-badge">{archivedCards.length + archivedColumns.length}</span>}
                         </button>
                         <div className="todo-page__menu-wrap" ref={menuRef}>
                             <button type="button" className="todo-page__header-btn todo-page__header-btn--icon" aria-label={t('todoPage.page.more')} onClick={() => setMenuOpen((v) => !v)}>
@@ -1759,7 +1766,7 @@ export function TodoPage() {
                             const fullCol = mergedCards[id] || [];
                             const progressDone = fullCol.filter((c) => c.completed).length;
                             const progressTotal = fullCol.length;
-                            return (<TodoColumn key={id} config={config} todoBoardUsers={todoBoardUsers} isCollapsed={!!isCollapsed} cards={displayCardsByColumn[id] || []} columnProgressDone={progressDone} columnProgressTotal={progressTotal} listSortMode={columnListSort[id] ?? 'server'} hideCompletedFilter={!!columnHideCompleted[id]} isDragging={draggingColumn === id} isDropTarget={dropTarget === id} structureReadOnly={structureReadOnly} cardsReadOnly={cardsReadOnly} onColumnMouseDown={handleColumnMouseDown} onColumnKeyDown={handleColumnKeyDown} onToggleCollapse={handleToggleCollapse} onExpand={handleExpand} onAddCardClick={handleAddCardClick} onCardClick={handleCardClick} onCardToggleComplete={handleCardToggleComplete} onSortCards={handleSortCards} onToggleHideCompleted={handleToggleHideCompleted} onRenameColumn={handleRenameColumn} onClearColumn={handleClearColumn} onDeleteColumn={handleDeleteColumn} onCardDragStart={handleCardDragStart} isCardDropTarget={dropTargetCardColumn === id} draggingCard={draggingCard} touchPressCard={touchPressCard} columnRef={handleColumnRef(id)} />);
+                            return (<TodoColumn key={id} config={config} todoBoardUsers={todoBoardUsers} isCollapsed={!!isCollapsed} cards={displayCardsByColumn[id] || []} columnProgressDone={progressDone} columnProgressTotal={progressTotal} listSortMode={columnListSort[id] ?? 'server'} hideCompletedFilter={!!columnHideCompleted[id]} isDragging={draggingColumn === id} isDropTarget={dropTarget === id} structureReadOnly={structureReadOnly} cardsReadOnly={cardsReadOnly} onColumnMouseDown={handleColumnMouseDown} onColumnKeyDown={handleColumnKeyDown} onToggleCollapse={handleToggleCollapse} onExpand={handleExpand} onAddCardClick={handleAddCardClick} onCardClick={handleCardClick} onCardToggleComplete={handleCardToggleComplete} onSortCards={handleSortCards} onToggleHideCompleted={handleToggleHideCompleted} onRenameColumn={handleRenameColumn} onArchiveAllCards={handleArchiveAllCardsInColumn} onArchiveColumn={handleArchiveColumn} onDeleteColumn={handleDeleteColumn} onCardDragStart={handleCardDragStart} isCardDropTarget={dropTargetCardColumn === id} draggingCard={draggingCard} touchPressCard={touchPressCard} columnRef={handleColumnRef(id)} />);
                         })}
                         {!structureReadOnly && (<button type="button" className="todo-columns__add" onClick={() => { setAddColumnOpen(true); setAddColumnTitle(''); }} aria-label={t('todoPage.page.addColumnAria')}>
                             <IconPlus />
@@ -1789,11 +1796,49 @@ export function TodoPage() {
                         </button>
                     </div>
 
+                    <div className="todo-archive__tabs">
+                        <button type="button" className={`todo-archive__tab${archiveTab === 'cards' ? ' todo-archive__tab--on' : ''}`} onClick={() => setArchiveTab('cards')}>
+                            {t('todoPage.archive.tabCards')}{archivedCards.length > 0 ? ` ${archivedCards.length}` : ''}
+                        </button>
+                        <button type="button" className={`todo-archive__tab${archiveTab === 'lists' ? ' todo-archive__tab--on' : ''}`} onClick={() => setArchiveTab('lists')}>
+                            {t('todoPage.archive.tabLists')}{archivedColumns.length > 0 ? ` ${archivedColumns.length}` : ''}
+                        </button>
+                    </div>
+
                     <div className="todo-archive__search-wrap">
                         <svg className="todo-archive__search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
                         <input className="todo-archive__search" type="search" placeholder={t('todoPage.archive.search')} value={archiveSearch} onChange={(e) => setArchiveSearch(e.target.value)} />
                     </div>
 
+                    {archiveTab === 'lists' ? (
+                    <div className="todo-archive__list">
+                        {archivedColumns
+                            .filter((col) => !archiveSearch || col.title.toLowerCase().includes(archiveSearch.toLowerCase()))
+                            .map((col) => (
+                            <div key={col.id} className="todo-archive__card">
+                                <div className="todo-archive__card-header">
+                                    <span className="todo-archive__card-title">{col.title}</span>
+                                    <p className="todo-archive__card-desc">{t('todoPage.archive.listCardsCount').replace('{count}', String(col.cardCount))}</p>
+                                </div>
+                                <div className="todo-archive__card-actions">
+                                    <button type="button" className="todo-archive__btn todo-archive__btn--restore" onClick={() => handleRestoreColumn(col.id)}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
+                                        {t('todoPage.archive.restore')}
+                                    </button>
+                                    <button type="button" className="todo-archive__btn todo-archive__btn--delete" onClick={() => handleDeleteArchivedColumn(col.id)}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
+                                        {t('todoPage.archive.delete')}
+                                    </button>
+                                </div>
+                            </div>
+                            ))}
+                        {archivedColumns.length === 0 && (<div className="todo-archive__empty">
+                            <p>{t('todoPage.archive.emptyLists')}</p>
+                            <span>{t('todoPage.archive.emptyListsHint')}</span>
+                        </div>)}
+                    </div>
+                    ) : (
+                    <>
                     <div className="todo-archive__list">
                         {archivedCards
                             .filter((c) => !archiveSearch || c.title.toLowerCase().includes(archiveSearch.toLowerCase()))
@@ -1806,7 +1851,7 @@ export function TodoPage() {
                                     {ac.description && (<p className="todo-archive__card-desc">{ac.description.slice(0, 80)}{ac.description.length > 80 ? '...' : ''}</p>)}
                                 </div>
                                 <div className="todo-archive__card-meta">
-                                    <span className="todo-archive__card-from">{formatTodoFromColumn(columnTitles[ac.fromColumn] ?? ac.fromColumn, t)}</span>
+                                    <span className="todo-archive__card-from">{formatTodoFromColumn(columnTitles[ac.fromColumn] ?? archivedColumns.find((c) => c.id === ac.fromColumn)?.title ?? ac.fromColumn, t)}</span>
                                     <span className="todo-archive__card-date">
                                         {new Date(ac.archivedAt).toLocaleDateString(dateLocale, { day: '2-digit', month: '2-digit', year: 'numeric' })}
                                     </span>
@@ -1832,12 +1877,14 @@ export function TodoPage() {
                         </div>)}
                     </div>
 
-                    {archivedCards.length > 0 && (<div className="todo-archive__footer">
+                    {archivedCards.filter((c) => !c.fromCalendar).length > 0 && (<div className="todo-archive__footer">
                         <button type="button" className="todo-archive__clear" onClick={handleClearArchive}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /></svg>
-                            {formatTodoArchiveClear(archivedCards.length, t)}
+                            {formatTodoArchiveClear(archivedCards.filter((c) => !c.fromCalendar).length, t)}
                         </button>
                     </div>)}
+                    </>
+                    )}
                 </div>
             </main>
         </div>

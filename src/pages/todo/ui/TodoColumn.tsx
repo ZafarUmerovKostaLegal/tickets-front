@@ -33,7 +33,8 @@ type TodoColumnProps = {
     onSortCards: (columnId: string, mode: TodoColumnListSortMode) => void;
     onToggleHideCompleted: (columnId: string) => void;
     onRenameColumn: (columnId: string, title: string) => void;
-    onClearColumn: (columnId: string) => void;
+    onArchiveAllCards: (columnId: string) => void;
+    onArchiveColumn: (columnId: string) => void;
     onDeleteColumn: (columnId: string) => void;
     onCardDragStart?: (e: React.PointerEvent, columnId: string, cardId: string, cardRect: DOMRect, fromDragHandle?: boolean) => void;
     isCardDropTarget?: boolean;
@@ -50,7 +51,7 @@ type TodoColumnProps = {
     cardsReadOnly?: boolean;
 };
 type MenuType = 'stack' | 'more' | null;
-export const TodoColumn = memo(function TodoColumn({ config, todoBoardUsers, isCollapsed, cards, columnProgressDone, columnProgressTotal, listSortMode, hideCompletedFilter, isDragging, isDropTarget, onColumnMouseDown, onColumnKeyDown, onToggleCollapse, onExpand, onAddCardClick, onCardClick, onCardToggleComplete, onSortCards, onToggleHideCompleted, onRenameColumn, onClearColumn, onDeleteColumn, onCardDragStart, isCardDropTarget, draggingCard, touchPressCard, columnRef, structureReadOnly = false, cardsReadOnly = false, }: TodoColumnProps) {
+export const TodoColumn = memo(function TodoColumn({ config, todoBoardUsers, isCollapsed, cards, columnProgressDone, columnProgressTotal, listSortMode, hideCompletedFilter, isDragging, isDropTarget, onColumnMouseDown, onColumnKeyDown, onToggleCollapse, onExpand, onAddCardClick, onCardClick, onCardToggleComplete, onSortCards, onToggleHideCompleted, onRenameColumn, onArchiveAllCards, onArchiveColumn, onDeleteColumn, onCardDragStart, isCardDropTarget, draggingCard, touchPressCard, columnRef, structureReadOnly = false, cardsReadOnly = false, }: TodoColumnProps) {
     const { t } = useI18n();
     const { id, dotColor } = config;
     const sortItemClass = (mode: TodoColumnListSortMode) => ['todo-col-menu__item', listSortMode === mode && 'todo-col-menu__item--active'].filter(Boolean).join(' ');
@@ -168,9 +169,13 @@ export const TodoColumn = memo(function TodoColumn({ config, todoBoardUsers, isC
                   {t('todoPage.column.addCard')}
                 </button>
                 <div className="todo-col-menu__sep"/>
-                <button type="button" className="todo-col-menu__item" onClick={() => { onClearColumn(id); setOpenMenu(null); }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
-                  {t('todoPage.column.clear')}
+                <button type="button" className="todo-col-menu__item" onClick={() => { onArchiveAllCards(id); setOpenMenu(null); }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+                  {t('todoPage.column.archiveCards')}
+                </button>
+                <button type="button" className="todo-col-menu__item" onClick={() => { onArchiveColumn(id); setOpenMenu(null); }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg>
+                  {t('todoPage.column.archiveList')}
                 </button>
                 <button type="button" className="todo-col-menu__item todo-col-menu__item--danger" onClick={() => { onDeleteColumn(id); setOpenMenu(null); }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

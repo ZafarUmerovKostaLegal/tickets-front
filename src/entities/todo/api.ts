@@ -69,6 +69,7 @@ export interface TodoBoardColumn {
     color: string;
     task_count: number;
     is_collapsed?: boolean;
+    is_archived?: boolean;
     cards: TodoBoardCard[];
 }
 export interface TodoBoard {
@@ -617,6 +618,7 @@ export async function patchTodoColumn(boardId: number, columnId: number, body: {
     title?: string;
     color?: string;
     isCollapsed?: boolean;
+    isArchived?: boolean;
 }): Promise<TodoBoard> {
     const res = await apiFetch(`${todoBoardPath(boardId)}/columns/${columnId}`, {
         method: 'PATCH',

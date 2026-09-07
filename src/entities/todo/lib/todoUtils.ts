@@ -67,5 +67,11 @@ export type ArchivedCard = TodoCard & {
     snapshotParticipantUserIds?: number[];
     snapshotDueAt?: string | null;
 };
+export type ArchivedColumn = {
+    id: string;
+    title: string;
+    color: string;
+    cardCount: number;
+};
 export type ColumnId = string;
 export type TodoColumnListSortMode = 'server' | 'az' | 'za' | 'newest' | 'oldest' | 'done';

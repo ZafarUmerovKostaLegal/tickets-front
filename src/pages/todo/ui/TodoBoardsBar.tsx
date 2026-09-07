@@ -1,10 +1,9 @@
 import type { User } from '@entities/user';
-import { listColleaguesAsUsers } from '@entities/contacts';
+import { loadTodoDirectoryUsers } from '@entities/todo/lib/todoDirectoryUsers';
 import type { CreateTodoBoardBody, TodoBoardSummary } from '@entities/todo';
 import { resolveBoardBackgroundDisplayUrl } from '@entities/todo/lib/boardBackgroundUrl';
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { isHiddenSystemUser } from '@shared/lib';
 import { formatTodoBoardFallback, useI18n } from '@shared/i18n';
 
 function boardPickerCoverGradient(accent: string): string {
@@ -115,10 +114,10 @@ export function TodoBoardsBar({
     let cancelled = false;
     setEmployeesLoading(true);
     setEmployeesError(null);
-    void listColleaguesAsUsers()
+    void loadTodoDirectoryUsers()
       .then((rows) => {
         if (!cancelled)
-          setEmployees(rows.filter((u) => !u.is_archived && !u.is_blocked && !isHiddenSystemUser(u)));
+          setEmployees(rows);
       })
       .catch((e: unknown) => {
         if (!cancelled) {

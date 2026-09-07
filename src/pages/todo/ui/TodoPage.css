@@ -3378,6 +3378,30 @@
   color: var(--todo-accent);
 }
 
+.todo-archive__tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 1.25rem 0.25rem;
+  flex-shrink: 0;
+}
+
+.todo-archive__tab {
+  flex: 1;
+  border: 1px solid var(--todo-border);
+  background: transparent;
+  color: var(--todo-muted);
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.todo-archive__tab--on {
+  color: var(--todo-text);
+  background: color-mix(in srgb, var(--todo-accent) 14%, transparent);
+  border-color: color-mix(in srgb, var(--todo-accent) 40%, var(--todo-border));
+}
+
 .todo-archive__close {
   display: inline-flex;
   align-items: center;

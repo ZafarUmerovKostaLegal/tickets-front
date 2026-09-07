@@ -1,7 +1,7 @@
 import type { TodoBoard, TodoBoardCard, TodoBoardLabel } from '@entities/todo';
 import { splitCardBody } from '@entities/todo/lib/todoCardBodyCodec';
 import { isoDueToParts } from '@entities/todo/lib/todoDueAt';
-import type { TodoCard, TodoCardAttachment, TodoCardComment } from '@entities/todo/lib/todoUtils';
+import type { ArchivedCard, ArchivedColumn, TodoCard, TodoCardAttachment, TodoCardComment } from '@entities/todo/lib/todoUtils';
 function mapApiAttachmentsList(raw: unknown): TodoCardAttachment[] {
     if (!Array.isArray(raw))
         return [];
@@ -86,6 +86,29 @@ function columnIsCollapsed(col: TodoBoard['columns'][number]): boolean {
         return o.isCollapsed;
     return false;
 }
+function columnIsArchived(col: TodoBoard['columns'][number]): boolean {
+    const o = col as {
+        is_archived?: boolean;
+        isArchived?: boolean;
+    };
+    return o.is_archived === true || o.isArchived === true;
+}
+function cardIsArchived(c: TodoBoardCard): boolean {
+    return c.is_archived === true;
+}
+function toArchivedCard(c: TodoBoardCard, columnId: string): ArchivedCard {
+    const todo = apiCardToTodoCard(c);
+    const snapshotLabelIds = c.labels?.map((l) => l.id).filter((n) => Number.isFinite(n));
+    const snapshotParticipantUserIds = c.participant_user_ids?.length ? [...c.participant_user_ids] : undefined;
+    return {
+        ...todo,
+        archivedAt: c.created_at ?? new Date().toISOString(),
+        fromColumn: columnId,
+        snapshotLabelIds: snapshotLabelIds?.length ? snapshotLabelIds : undefined,
+        snapshotParticipantUserIds,
+        snapshotDueAt: c.due_at ?? undefined,
+    };
+}
 export function unpackBoard(board: TodoBoard): {
     columnOrder: string[];
     columnTitles: Record<string, string>;
@@ -93,22 +116,41 @@ export function unpackBoard(board: TodoBoard): {
     collapsedColumns: Record<string, boolean>;
     cards: Record<string, TodoCard[]>;
     boardLabels: TodoBoardLabel[];
+    archivedCards: ArchivedCard[];
+    archivedColumns: ArchivedColumn[];
 } {
     const sortedCols = [...board.columns].sort((a, b) => a.position - b.position);
-    const columnOrder = sortedCols.map((c) => String(c.id));
+    const columnOrder: string[] = [];
     const columnTitles: Record<string, string> = {};
     const columnColors: Record<string, string> = {};
     const collapsedColumns: Record<string, boolean> = {};
     const cards: Record<string, TodoCard[]> = {};
+    const archivedCards: ArchivedCard[] = [];
+    const archivedColumns: ArchivedColumn[] = [];
     const boardLabels = [...(board.board_labels ?? [])].sort((a, b) => a.position - b.position);
     for (const col of sortedCols) {
         const id = String(col.id);
         columnTitles[id] = col.title;
         columnColors[id] = col.color;
         collapsedColumns[id] = columnIsCollapsed(col);
-        cards[id] = [...col.cards].sort((a, b) => a.position - b.position).map(apiCardToTodoCard);
+        const sortedCards = [...col.cards].sort((a, b) => a.position - b.position);
+        for (const c of sortedCards) {
+            if (cardIsArchived(c))
+                archivedCards.push(toArchivedCard(c, id));
+        }
+        if (columnIsArchived(col)) {
+            archivedColumns.push({
+                id,
+                title: col.title,
+                color: col.color,
+                cardCount: sortedCards.filter((c) => !cardIsArchived(c)).length,
+            });
+            continue;
+        }
+        columnOrder.push(id);
+        cards[id] = sortedCards.filter((c) => !cardIsArchived(c)).map(apiCardToTodoCard);
     }
-    return { columnOrder, columnTitles, columnColors, collapsedColumns, cards, boardLabels };
+    return { columnOrder, columnTitles, columnColors, collapsedColumns, cards, boardLabels, archivedCards, archivedColumns };
 }
 export function resolveCalendarColumnId(slot: 'today' | 'week' | 'later', columnOrder: string[], columnTitles: Record<string, string>): string | undefined {
     const titleNeedle: Record<typeof slot, string> = {
