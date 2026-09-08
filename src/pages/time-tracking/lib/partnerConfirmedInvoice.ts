@@ -132,6 +132,8 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
             taxPercent: 0,
             tax2Percent: 0,
             discountPercent: 0,
+            timeEntryIds: preview.timeEntryIds,
+            expenseIds: preview.expenseIds,
             partnerBillingPeriodFrom: dateFrom,
             partnerBillingPeriodTo: dateTo,
             partnerConfirmationRequestId: String(row.id ?? '').trim() || undefined,
