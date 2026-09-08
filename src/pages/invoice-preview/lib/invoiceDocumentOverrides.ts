@@ -162,8 +162,15 @@ export function applyCoverDocumentOverrides(
         next.quotedCompanyName = cover.quotedCompanyName;
     if (typeof cover.servicesMonthYear === 'string')
         next.servicesMonthYear = cover.servicesMonthYear;
-    if (typeof cover.totalFormatted === 'string')
-        next.totalFormatted = cover.totalFormatted;
+    if (typeof cover.totalFormatted === 'string') {
+        const override = cover.totalFormatted.trim();
+        const current = String(model.totalFormatted ?? '').trim();
+        const overrideZero = /(?:^|\s)0(?:[.,]00)?$/.test(override.replace(/^[A-Z]{3}\s+/i, '').trim())
+            || /(?:^|\s)0[.,]00$/.test(override);
+        const currentHasMoney = current.length > 0 && !/(?:^|\s)0[.,]00$/.test(current);
+        if (!(overrideZero && currentHasMoney))
+            next.totalFormatted = cover.totalFormatted;
+    }
     if (typeof cover.signatoryName === 'string')
         next.signatoryName = cover.signatoryName;
     if (typeof cover.signatoryInitials === 'string')

@@ -69,5 +69,19 @@ describe('buildInvoiceDocumentOverridesPayload', () => {
         expect(payload.legal?.invoiceNumber).toBe('INV-2024-00083');
         const applied = applyCoverDocumentOverrides(cover, payload.cover);
         expect(applied.recipientCompany).toBe(cover.recipientCompany);
+        expect(applied.totalFormatted).toBe(cover.totalFormatted);
+    });
+
+    it('does not replace a real total with a stored zero placeholder', () => {
+        const cover = buildInvoiceCoverLetterModel({
+            issueDateIso: '2026-09-08',
+            clientName: 'GBI',
+            clientAddress: null,
+            contactName: null,
+            totalAmount: 395,
+            currency: 'USD',
+        });
+        const applied = applyCoverDocumentOverrides(cover, { totalFormatted: 'EUR 0.00' });
+        expect(applied.totalFormatted).toBe(cover.totalFormatted);
     });
 });
