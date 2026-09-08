@@ -22,13 +22,21 @@ function sliceIsoDate(iso: string): string {
     return String(iso ?? '').trim().slice(0, 10);
 }
 
+export function partnerInvoiceHasMoney(inv: Pick<InvoiceDto, 'totalAmount' | 'subtotal'>): boolean {
+    const total = Number(inv.totalAmount ?? 0);
+    const sub = Number(inv.subtotal ?? 0);
+    const n = Number.isFinite(total) ? total : 0;
+    const s = Number.isFinite(sub) ? sub : 0;
+    return Math.abs(n) > 0.01 || Math.abs(s) > 0.01;
+}
+
 export function findInvoiceForPartnerConfirmedRow(
     r: PartnerReportConfirmationRequest,
     invoices: readonly InvoiceDto[],
 ): InvoiceDto | null {
     const active = invoices.filter((inv) => {
         const st = String(inv.status ?? '').trim().toLowerCase();
-        return st !== 'canceled' && st !== 'cancelled';
+        return st !== 'canceled' && st !== 'cancelled' && partnerInvoiceHasMoney(inv);
     });
     const reqId = String(r.id ?? '').trim();
     if (reqId) {
@@ -104,6 +112,7 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
         clientId: clientId.trim(),
         currency: args.currency?.trim() || undefined,
         issueDate,
+        partnerConfirmationRequestId: String(row.id ?? '').trim() || undefined,
     });
 
     const hasTime = preview.timeEntryIds.length > 0 || (preview.lines ?? []).some((l) => l.lineKind === 'time');

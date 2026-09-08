@@ -70,4 +70,11 @@ describe('findInvoiceForPartnerConfirmedRow', () => {
         ]);
         expect(found).toBeNull();
     });
+
+    it('ignores zero-total invoices so generate can rebuild', () => {
+        const found = findInvoiceForPartnerConfirmedRow(baseRow(), [
+            baseInv({ totalAmount: 0, subtotal: 0, balanceDue: 0 }),
+        ]);
+        expect(found).toBeNull();
+    });
 });

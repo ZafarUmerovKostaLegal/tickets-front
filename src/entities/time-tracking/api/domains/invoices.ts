@@ -496,6 +496,7 @@ export async function fetchPartnerInvoicePreview(params: {
     currency?: string;
     issueDate?: string;
     clientId?: string;
+    partnerConfirmationRequestId?: string;
 }): Promise<PartnerInvoicePreviewDto> {
     const qs = new URLSearchParams({
         projectId: params.projectId,
@@ -508,6 +509,8 @@ export async function fetchPartnerInvoicePreview(params: {
         qs.set('issueDate', params.issueDate.trim().slice(0, 10));
     if (params.clientId?.trim())
         qs.set('clientId', params.clientId.trim());
+    if (params.partnerConfirmationRequestId?.trim())
+        qs.set('partnerConfirmationRequestId', params.partnerConfirmationRequestId.trim());
     const res = await apiFetch(
         `/api/v1/time-tracking/invoices/from-partner-period/preview?${qs}`,
         invoiceApiFetchInit,
