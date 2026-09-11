@@ -33,6 +33,7 @@ export const todoPageMessages = {
         importing: 'Импорт…',
         addColumn: 'Добавьте еще одну колонку',
         addColumnAria: 'Добавить колонку',
+        renameBoard: 'Переименовать доску',
     },
     errors: {
         loadUsers: 'Не удалось загрузить пользователей',
@@ -113,6 +114,8 @@ export const todoPageMessages = {
         boardModesAria: 'Режимы доски',
         boardTab: 'Доска',
         pickBoard: 'Выбрать другую доску',
+        rename: 'Переименовать',
+        renameAria: 'Переименовать доску',
     },
     invites: {
         nav: 'Приглашения',

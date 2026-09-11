@@ -936,6 +936,52 @@
   letter-spacing: -0.01em;
 }
 
+.todo-page__nav-title-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0.15rem 0.35rem;
+  margin: 0;
+  cursor: pointer;
+  border-radius: 8px;
+  text-align: left;
+  font: inherit;
+  font-weight: 700;
+}
+
+.todo-page__nav-title-btn:hover:not(:disabled),
+.todo-page__nav-title-btn:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--todo-text) 8%, transparent);
+}
+
+.todo-page__nav-title-btn:disabled {
+  cursor: default;
+}
+
+.todo-page__nav-title-input {
+  display: inline-flex;
+  width: min(220px, 28vw);
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0.2rem 0.45rem;
+  border-radius: 8px;
+  border: 1px solid var(--todo-accent);
+  background: var(--todo-surface);
+  color: var(--todo-text);
+  font: inherit;
+  font-weight: 700;
+  outline: none;
+}
+
+@media (min-width: 900px) {
+  .todo-page__nav-title {
+    display: inline-flex;
+    align-items: center;
+    max-width: 220px;
+    flex: 0 1 auto;
+  }
+}
+
 .todo-page__search-wrap {
   position: relative;
   width: 100%;
@@ -1356,6 +1402,67 @@
   overflow: hidden;
 }
 
+.todo-board-picker__card-select {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+}
+
+.todo-board-picker__card-foot {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.2rem;
+  background: color-mix(in srgb, var(--todo-panel-bg) 55%, var(--todo-surface));
+}
+
+.todo-board-picker__card-title {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0.5rem 0.35rem 0.6rem 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: transparent;
+  color: var(--todo-text);
+}
+
+.todo-board-picker__rename-btn {
+  flex: 0 0 auto;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--todo-muted);
+  cursor: pointer;
+  padding: 0.45rem 0.45rem 0.5rem 0.15rem;
+  border-radius: 8px;
+  transition: color 0.12s, background 0.12s;
+}
+
+.todo-board-picker__rename-btn:hover,
+.todo-board-picker__rename-btn:focus-visible {
+  color: var(--todo-text);
+  background: color-mix(in srgb, var(--todo-text) 8%, transparent);
+}
+
+.todo-board-picker__card-title-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.45rem 0.5rem 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 0;
+  border-top: 1px solid var(--todo-accent);
+  background: var(--todo-surface);
+  color: var(--todo-text);
+  outline: none;
+}
+
 .todo-board-picker__card-cover-img {
   display: block;
   width: 100%;
@@ -1364,15 +1471,6 @@
   object-position: center;
   pointer-events: none;
   user-select: none;
-}
-
-.todo-board-picker__card-title {
-  display: block;
-  padding: 0.5rem 0.55rem 0.6rem;
-  font-size: 0.8rem;
-  font-weight: 600;
-  background: color-mix(in srgb, var(--todo-panel-bg) 55%, var(--todo-surface));
-  color: var(--todo-text);
 }
 
 .todo-boards-bar__search-wrap {

@@ -35,6 +35,7 @@ export const todoPageMessagesEn: TodoPageMessages = {
         importing: 'Importing…',
         addColumn: 'Add another column',
         addColumnAria: 'Add column',
+        renameBoard: 'Rename board',
     },
     errors: {
         loadUsers: 'Failed to load users',
@@ -116,6 +117,8 @@ export const todoPageMessagesEn: TodoPageMessages = {
         boardModesAria: 'Board modes',
         boardTab: 'Board',
         pickBoard: 'Choose another board',
+        rename: 'Rename',
+        renameAria: 'Rename board',
     },
     invites: {
         nav: 'Invites',

@@ -2,7 +2,8 @@ import type { User } from '@entities/user';
 import { loadTodoDirectoryUsers } from '@entities/todo/lib/todoDirectoryUsers';
 import type { CreateTodoBoardBody, TodoBoardSummary } from '@entities/todo';
 import { resolveBoardBackgroundDisplayUrl } from '@entities/todo/lib/boardBackgroundUrl';
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { canEditKanbanStructure, normalizeBoardRole } from '@entities/todo/lib/boardRoles';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { formatTodoBoardFallback, useI18n } from '@shared/i18n';
 
@@ -42,6 +43,13 @@ function BoardPickerCardCover({ board }: { board: TodoBoardSummary }) {
   );
 }
 
+function canRenameTodoBoard(role: string | null | undefined): boolean {
+  const r = normalizeBoardRole(role);
+  if (r == null)
+    return true;
+  return canEditKanbanStructure(r);
+}
+
 type BoardVisibilityUi = 'personal' | 'shared';
 
 type TodoBoardsBarProps = {
@@ -51,6 +59,7 @@ type TodoBoardsBarProps = {
   listError?: string | null;
   onSelectBoard: (id: number) => void | Promise<void>;
   onCreateBoard: (body: CreateTodoBoardBody) => Promise<void>;
+  onRenameBoard: (id: number, title: string) => Promise<void>;
 };
 
 export function TodoBoardsBar({
@@ -60,6 +69,7 @@ export function TodoBoardsBar({
   listError,
   onSelectBoard,
   onCreateBoard,
+  onRenameBoard,
 }: TodoBoardsBarProps) {
   const { t } = useI18n();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -75,6 +85,11 @@ export function TodoBoardsBar({
   const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
   const [createSubmitting, setCreateSubmitting] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [renamingBoardId, setRenamingBoardId] = useState<number | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+  const [renameBusy, setRenameBusy] = useState(false);
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const skipRenameBlurRef = useRef(false);
 
   const filteredBoards = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -180,6 +195,56 @@ export function TodoBoardsBar({
     }
   };
 
+  const startRenameBoard = (board: TodoBoardSummary) => {
+    if (!canRenameTodoBoard(board.my_role) || renameBusy)
+      return;
+    setRenameError(null);
+    setRenamingBoardId(board.id);
+    setRenameDraft(board.title || '');
+  };
+
+  const cancelRenameBoard = () => {
+    if (renameBusy)
+      return;
+    skipRenameBlurRef.current = true;
+    setRenamingBoardId(null);
+    setRenameDraft('');
+    setRenameError(null);
+  };
+
+  const submitRenameBoard = async (board: TodoBoardSummary) => {
+    if (skipRenameBlurRef.current) {
+      skipRenameBlurRef.current = false;
+      return;
+    }
+    const name = renameDraft.trim();
+    if (!name || name === (board.title || '').trim()) {
+      cancelRenameBoard();
+      return;
+    }
+    setRenameBusy(true);
+    setRenameError(null);
+    try {
+      await onRenameBoard(board.id, name);
+      setRenamingBoardId(null);
+      setRenameDraft('');
+    }
+    catch (err: unknown) {
+      setRenameError(err instanceof Error ? err.message : t('todoPage.errors.updateBoard'));
+    }
+    finally {
+      setRenameBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (pickerOpen)
+      return;
+    setRenamingBoardId(null);
+    setRenameDraft('');
+    setRenameError(null);
+  }, [pickerOpen]);
+
   const overlaysOpen = pickerOpen || addBoardOpen;
 
   useEffect(() => {
@@ -223,9 +288,9 @@ export function TodoBoardsBar({
                 </button>
               </div>
 
-              {listError && (
+              {(listError || renameError) && (
                 <div className="todo-boards-bar__emp-status todo-boards-bar__emp-status--error" role="alert">
-                  {listError}
+                  {renameError || listError}
                 </div>
               )}
 
@@ -237,19 +302,82 @@ export function TodoBoardsBar({
               <div className="todo-board-picker__grid">
                 {filteredBoards.map((board) => {
                   const isCurrent = currentBoardId != null && board.id === currentBoardId;
+                  const canRename = canRenameTodoBoard(board.my_role);
+                  const isRenaming = renamingBoardId === board.id;
+                  const displayTitle = board.title || formatTodoBoardFallback(board.id, t);
                   return (
-                    <button
+                    <div
                       key={board.id}
-                      type="button"
-                      className={`todo-board-picker__card${isCurrent ? ' todo-board-picker__card--current' : ''}`}
-                      onClick={() => {
-                        void onSelectBoard(board.id);
-                        setPickerOpen(false);
-                      }}
+                      className={`todo-board-picker__card${isCurrent ? ' todo-board-picker__card--current' : ''}${isRenaming ? ' todo-board-picker__card--renaming' : ''}`}
                     >
-                      <BoardPickerCardCover board={board} />
-                      <span className="todo-board-picker__card-title">{board.title || formatTodoBoardFallback(board.id, t)}</span>
-                    </button>
+                      <button
+                        type="button"
+                        className="todo-board-picker__card-select"
+                        onClick={() => {
+                          if (isRenaming)
+                            return;
+                          void onSelectBoard(board.id);
+                          setPickerOpen(false);
+                        }}
+                      >
+                        <BoardPickerCardCover board={board} />
+                      </button>
+                      {isRenaming ? (
+                        <input
+                          className="todo-board-picker__card-title-input"
+                          value={renameDraft}
+                          maxLength={200}
+                          autoFocus
+                          disabled={renameBusy}
+                          aria-label={t('todoPage.boards.renameAria')}
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => setRenameDraft(e.target.value)}
+                          onBlur={() => {
+                            void submitRenameBoard(board);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              (e.target as HTMLInputElement).blur();
+                            }
+                            if (e.key === 'Escape') {
+                              e.preventDefault();
+                              cancelRenameBoard();
+                            }
+                          }}
+                        />
+                      ) : (
+                        <span className="todo-board-picker__card-foot">
+                          <span
+                            className="todo-board-picker__card-title"
+                            onDoubleClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              startRenameBoard(board);
+                            }}
+                          >
+                            {displayTitle}
+                          </span>
+                          {canRename && (
+                            <button
+                              type="button"
+                              className="todo-board-picker__rename-btn"
+                              title={t('todoPage.boards.rename')}
+                              aria-label={t('todoPage.boards.renameAria')}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                startRenameBoard(board);
+                              }}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                              </svg>
+                            </button>
+                          )}
+                        </span>
+                      )}
+                    </div>
                   );
                 })}
                 {filteredBoards.length === 0 && (

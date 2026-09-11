@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { AppBackButton, AppHomeLogo, AttentionBanner } from '@shared/ui';
 import { routes } from '@shared/config';
 import { stripHtmlToText } from '@shared/lib/sanitizeHtml';
-import { createTodoBoard, createTodoCard, createTodoColumn, deleteTodoBoardBackground, deleteTodoCard, deleteTodoColumn, exportTodoBoard, fetchTodoBoardById, fetchTodoBoardCurrent, fetchTodoBoardsList, findNewestCardInColumn, importTodoBoard, invalidateTodoInvites, patchTodoCard, patchTodoColumn, pickPreferredTodoBoardId, putTodoBoardCurrent, reorderTodoCardsInColumn, reorderTodoColumns, uploadTodoBoardBackground, useTodoInvitesBadge, type CreateTodoBoardBody, type PatchTodoCardPayload, type TodoBoard, type TodoBoardLabel, type TodoBoardSummary, } from '@entities/todo';
+import { createTodoBoard, createTodoCard, createTodoColumn, deleteTodoBoardBackground, deleteTodoCard, deleteTodoColumn, exportTodoBoard, fetchTodoBoardById, fetchTodoBoardCurrent, fetchTodoBoardsList, findNewestCardInColumn, importTodoBoard, invalidateTodoInvites, patchTodoBoard, patchTodoCard, patchTodoColumn, pickPreferredTodoBoardId, putTodoBoardCurrent, reorderTodoCardsInColumn, reorderTodoColumns, uploadTodoBoardBackground, useTodoInvitesBadge, type CreateTodoBoardBody, type PatchTodoCardPayload, type TodoBoard, type TodoBoardLabel, type TodoBoardSummary, } from '@entities/todo';
 import { boardBackgroundStorageKey, pickBoardBackgroundApiPath, resolveBoardBackgroundDisplayUrl, } from '@entities/todo/lib/boardBackgroundUrl';
 import { fetchMediaBlob } from '@shared/api';
 import { downloadBlob } from '@shared/lib/downloadBlob';
@@ -121,6 +121,8 @@ export function TodoPage() {
     const [bgTransitioning, setBgTransitioning] = useState(false);
     const [bgUploading, setBgUploading] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [navTitleEditing, setNavTitleEditing] = useState(false);
+    const [navTitleDraft, setNavTitleDraft] = useState('');
     const [columnOrder, setColumnOrder] = useState<ColumnId[]>([]);
     const [columnTitles, setColumnTitles] = useState<Record<string, string>>({});
     const [columnColors, setColumnColors] = useState<Record<string, string>>({});
@@ -554,6 +556,16 @@ export function TodoPage() {
         void putTodoBoardCurrent(b.id).catch(() => { });
         await reloadBoardSummaries();
     }, [commitBoard, reloadBoardSummaries, t]);
+    const handleRenameTodoBoard = useCallback(async (boardId: number, title: string) => {
+        const name = title.trim();
+        if (!name)
+            throw new Error(t('todoPage.errors.updateBoard'));
+        const b = await patchTodoBoard(boardId, { title: name });
+        setBoardSummaries((prev) => prev.map((s) => (s.id === boardId ? { ...s, title: b.title ?? name } : s)));
+        if (b.id === activeBoardId)
+            applyBoardFromApi(b);
+        setBoardError(null);
+    }, [activeBoardId, applyBoardFromApi, t]);
     const handlePickBackground = () => {
         fileInputRef.current?.click();
         setMenuOpen(false);
@@ -1643,11 +1655,48 @@ export function TodoPage() {
                     <AppBackButton to={routes.home} label={t('todoPage.back')} ariaLabel={t('todoPage.backAria')} hideLabelOnMobile />
                     <AppHomeLogo withSeparator />
                     <div className="todo-page__nav-center">
-                        {activeBoardSummary && (
-                            <span className="todo-page__nav-title" aria-hidden="true">
+                        {activeBoardSummary && !structureReadOnly && navTitleEditing ? (
+                            <input
+                                className="todo-page__nav-title todo-page__nav-title-input"
+                                value={navTitleDraft}
+                                maxLength={200}
+                                autoFocus
+                                aria-label={t('todoPage.page.renameBoard')}
+                                onChange={(e) => setNavTitleDraft(e.target.value)}
+                                onBlur={() => {
+                                    const next = navTitleDraft.trim();
+                                    setNavTitleEditing(false);
+                                    if (!next || next === activeBoardSummary.title || activeBoardId == null)
+                                        return;
+                                    void handleRenameTodoBoard(activeBoardId, next).catch((e: unknown) => {
+                                        setBoardError(e instanceof Error ? e.message : t('todoPage.errors.updateBoard'));
+                                    });
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter')
+                                        (e.target as HTMLInputElement).blur();
+                                    if (e.key === 'Escape') {
+                                        setNavTitleEditing(false);
+                                        setNavTitleDraft(activeBoardSummary.title);
+                                    }
+                                }}
+                            />
+                        ) : activeBoardSummary ? (
+                            <button
+                                type="button"
+                                className="todo-page__nav-title todo-page__nav-title-btn"
+                                disabled={structureReadOnly}
+                                title={structureReadOnly ? undefined : t('todoPage.page.renameBoard')}
+                                onClick={() => {
+                                    if (structureReadOnly)
+                                        return;
+                                    setNavTitleDraft(activeBoardSummary.title);
+                                    setNavTitleEditing(true);
+                                }}
+                            >
                                 {activeBoardSummary.title}
-                            </span>
-                        )}
+                            </button>
+                        ) : null}
                         <div className="todo-page__search-wrap">
                             <svg className="todo-page__search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
                             <input className="todo-page__search" placeholder={t('todoPage.page.searchTasks')} type="search" />
@@ -1678,6 +1727,18 @@ export function TodoPage() {
                             </button>
                             {menuOpen && (<div className="todo-page__menu-dropdown">
                                 {!structureReadOnly && (<>
+                                    <button type="button" className="todo-page__menu-item" onClick={() => {
+                                        setMenuOpen(false);
+                                        if (!activeBoardSummary)
+                                            return;
+                                        setNavTitleDraft(activeBoardSummary.title);
+                                        setNavTitleEditing(true);
+                                    }}>
+                                        <span className="todo-page__menu-icon">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                        </span>
+                                        <span className="todo-page__menu-text">{t('todoPage.page.renameBoard')}</span>
+                                    </button>
                                     <button type="button" className="todo-page__menu-item" onClick={handlePickBackground} disabled={bgUploading}>
                                         <span className="todo-page__menu-icon"><IconImage /></span>
                                         <span className="todo-page__menu-text">{bgUploading ? t('todoPage.loading') : t('todoPage.page.bgWorkspace')}</span>
@@ -1784,7 +1845,7 @@ export function TodoPage() {
                     {membersModalOpen && activeBoardId != null && (<TodoBoardMembersModal boardId={activeBoardId} boardTitle={activeBoardSummary?.title ?? ''} themeVarsStyle={todoThemeVarsStyle} onClose={() => setMembersModalOpen(false)} onMembersChanged={() => void reloadBoardSummaries()} />)}
                 </Suspense>
 
-                <TodoBoardsBar themeVarsStyle={todoThemeVarsStyle} boards={boardSummaries} currentBoardId={activeBoardId} listError={boardListError} onSelectBoard={handleSelectTodoBoard} onCreateBoard={handleCreateTodoBoard} />
+                <TodoBoardsBar themeVarsStyle={todoThemeVarsStyle} boards={boardSummaries} currentBoardId={activeBoardId} listError={boardListError} onSelectBoard={handleSelectTodoBoard} onCreateBoard={handleCreateTodoBoard} onRenameBoard={handleRenameTodoBoard} />
 
                 <div className={`todo-archive${archiveOpen ? ' todo-archive--open' : ''}`}>
                     <div className="todo-archive__header">
