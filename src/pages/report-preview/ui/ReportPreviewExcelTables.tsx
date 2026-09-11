@@ -481,6 +481,8 @@ type TimeReportPersistenceProps = {
     onScopeColorValueChange?: (color: string) => void;
     onApplyScopeColorToSelection?: (rowKeys: ReadonlySet<string>, color: string) => void | Promise<void>;
     onClearScopeColorFromSelection?: (rowKeys: ReadonlySet<string>) => void | Promise<void>;
+    onUnlockEdit?: () => void | Promise<void>;
+    confirmedEditUnlocked?: boolean;
 };
 function PreviewServerReloadBtn({ onRequestServerReload, serverReloadBusy, }: PreviewServerReloadProps) {
     if (!onRequestServerReload)
@@ -697,7 +699,7 @@ function TimeDuplicateEntryDialog({ open, row, workDateMin, workDateMax, canOver
       </div>
     </div>, document.body);
 }
-export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, scopeDefinitionsSlot = null, scopeColorBusy, onScopeColorValueChange, onApplyScopeColorToSelection, onClearScopeColorFromSelection, }: {
+export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, onPatch, selectedRowKeys = null, onSelectedRowKeysChange, employeeColumnFilterSlot, onRequestServerReload, serverReloadBusy, timeSave, canOverrideClosedWeek = false, briefEmployeeQuery, moveProjectOptions = [], onDeleteTimeEntry, onMoveTimeEntryToProject, onDuplicateTimeEntry, onGrantEditUnlock, canGrantEditUnlockForTarget, editUnlockPendingCompoundKey = null, onAddTimeEntry, timeEntryWorkDateBounds = null, timeEntryActionPendingRowKey = null, employeePartnerPick = null, readOnly = false, onUnlockEdit, confirmedEditUnlocked = false, onDownloadExcel, downloadExcelBusy, footerExtras = null, flashRowKey = null, hotkeyDuplicateRowKey = null, onHotkeyDuplicateConsumed, onActiveTimeRowKey, canUndo = false, onUndo, onSaveNow, scopeDefinitionsSlot = null, scopeColorBusy, onScopeColorValueChange, onApplyScopeColorToSelection, onClearScopeColorFromSelection, }: {
     projectTitle: string;
 
     viewMode?: 'brief' | 'full';
@@ -1549,7 +1551,7 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               {(() => {
                   const saveUi = readOnlyUi ? 'ro' : (timeSave?.ui ?? 'idle');
                   const title = readOnlyUi
-                      ? 'Редактирование недоступно'
+                      ? (onUnlockEdit ? 'Нажмите «Редактировать», чтобы править строки' : 'Редактирование недоступно')
                       : saveUi === 'saving'
                           ? 'Сохранение на сервер…'
                           : saveUi === 'saved'
@@ -1590,6 +1592,17 @@ export function TimeExcelPreviewTable({ projectTitle, viewMode = 'brief', rows, 
               По цветам
             </button>) : null}
             <div className="tt-rp-mtable-toolbar__trail">
+              {onUnlockEdit ? (
+                <button
+                  type="button"
+                  className={`tt-reports__btn tt-rp-mtable-toolbar__btn ${confirmedEditUnlocked ? 'tt-reports__btn--outline' : 'tt-reports__btn--accent'}`}
+                  onClick={() => void onUnlockEdit()}
+                  title={confirmedEditUnlocked ? 'Вернуться к просмотру' : 'Редактировать строки подтверждённого отчёта'}
+                  aria-pressed={confirmedEditUnlocked}
+                >
+                  {confirmedEditUnlocked ? 'Готово' : 'Редактировать'}
+                </button>
+              ) : null}
               {!readOnlyUi ? (<div className="tt-rp-mtable-more" ref={moreMenuRef}>
                 <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-rp-mtable-toolbar__btn tt-rp-mtable-more__btn" onClick={() => setMoreMenuOpen((v) => !v)} aria-expanded={moreMenuOpen} aria-haspopup="menu" title="Дополнительные действия">
                   Ещё

@@ -225,6 +225,7 @@ export function ReportPreviewPage() {
     const [timeEntrySaveMessage, setTimeEntrySaveMessage] = useState<string | null>(null);
     const [timeEntryActionPendingRowKey, setTimeEntryActionPendingRowKey] = useState<string | null>(null);
     const [timeExcelDownloadBusy, setTimeExcelDownloadBusy] = useState(false);
+    const [partnerConfirmedEditing, setPartnerConfirmedEditing] = useState(false);
 
     useLayoutEffect(() => {
         timeExcelRowsRef.current = timeExcelRows;
@@ -926,6 +927,9 @@ export function ReportPreviewPage() {
             cancelled = true;
         };
     }, [xferSnapshot?.partnerConfirmationSnapshotId, timeExcelRows]);
+    useEffect(() => {
+        setPartnerConfirmedEditing(false);
+    }, [xferSnapshot?.partnerConfirmationSnapshotId]);
     const isProjectPartnerForPreview = useMemo(() => {
         if (!user?.id)
             return false;
@@ -959,6 +963,36 @@ export function ReportPreviewPage() {
                 registerTimeEntryServerOwner(timeEntryServerOwnerByEntryIdRef.current, savedRow.timeEntryId, serverAuthUserId);
             }
             setTimeExcelRows((prev) => prev.map((r) => (r.rowKey === rowKey ? savedRow : r)));
+            const snapshotId = xferSnapshot?.partnerConfirmationSnapshotId?.trim() ?? '';
+            const snapRowId = snapshotRowIdByPreviewKey[rowKey];
+            if (snapshotId && snapRowId) {
+                try {
+                    await patchReportSnapshotRow(snapshotId, snapRowId, {
+                        workDate: savedRow.workDate,
+                        recordedAt: savedRow.recordedAt,
+                        clientName: savedRow.clientName,
+                        projectName: savedRow.projectName,
+                        taskName: savedRow.taskName,
+                        note: savedRow.note,
+                        description: savedRow.description,
+                        hours: savedRow.hours,
+                        isBillable: savedRow.isBillable,
+                        taskBillableByDefault: savedRow.taskBillableByDefault,
+                        employeeName: savedRow.employeeName,
+                        employeeInitials: savedRow.employeeInitials,
+                        employeePosition: savedRow.employeePosition,
+                        billableRate: savedRow.billableRate,
+                        amountToPay: savedRow.amountToPay,
+                        costRate: savedRow.costRate,
+                        costAmount: savedRow.costAmount,
+                        currency: savedRow.currency,
+                        externalReferenceUrl: savedRow.externalReferenceUrl,
+                    });
+                }
+                catch {
+                    /* live entry already saved — snapshot stub may lack this row */
+                }
+            }
             setTimeEntrySaveUI('saved');
             setTimeEntrySaveMessage(serverAuthUserId !== serverOwner ? 'Запись перенесена другому сотруднику' : 'Запись сохранена');
             setTimeout(() => {
@@ -981,7 +1015,7 @@ export function ReportPreviewPage() {
             setTimeEntrySaveUI('err');
             setTimeEntrySaveMessage(msg);
         }
-    }, []);
+    }, [snapshotRowIdByPreviewKey, xferSnapshot?.partnerConfirmationSnapshotId]);
     const schedulePersistTimeEntry = useCallback((rowKey: string) => {
         clearPendingSaveTimer(rowKey);
         timeEntrySaveTimers.current.set(rowKey, setTimeout(() => {
@@ -1807,11 +1841,25 @@ export function ReportPreviewPage() {
             setTimeExcelDownloadBusy(false);
         }
     }, [timePreviewTableTitle, timeExcelDownloadBusy, showAlert, authUserExportProfilesById, selectedProjectId, projectMembersForEmployeePick, projectItemsForSelect, rangeFrom, rangeTo, xferSnapshot]);
+    const requestTogglePartnerConfirmedEdit = useCallback(async () => {
+        if (partnerConfirmedEditing) {
+            await flushAllPendingTimeEntrySaves();
+            setPartnerConfirmedEditing(false);
+            return;
+        }
+        const ok = await showConfirm({
+            title: 'Редактировать подтверждённый отчёт?',
+            message: 'Отчёт уже подписан партнёрами. Правки сохранятся в записях времени и в снимке этого отчёта.',
+            confirmLabel: 'Редактировать',
+        });
+        if (ok)
+            setPartnerConfirmedEditing(true);
+    }, [flushAllPendingTimeEntrySaves, partnerConfirmedEditing, showConfirm]);
     const liveTitle = xferSnapshot ? previewLiveTitle(xferSnapshot) : '';
-    /** Opened from «Подтверждённые» — только просмотр (без редактирования строк). */
-    const partnerConfirmedReadOnly = Boolean(xferSnapshot?.partnerConfirmationSnapshotId?.trim());
+    const partnerConfirmedLocked = Boolean(xferSnapshot?.partnerConfirmationSnapshotId?.trim());
+    const partnerConfirmedReadOnly = partnerConfirmedLocked && !partnerConfirmedEditing;
     const forReviewPreviewLocked = Boolean(xferSnapshot?.forReviewPreview) || Boolean(xferSnapshot?.returnTo?.includes('reportsSection=for-review'));
-    const hidePeriodControls = partnerConfirmedReadOnly || forReviewPreviewLocked;
+    const hidePeriodControls = partnerConfirmedLocked || forReviewPreviewLocked;
     const confirmationProjectId = useMemo(() => {
         if (!xferSnapshot || !rangeFrom || !rangeTo)
             return '';
@@ -1825,13 +1873,13 @@ export function ReportPreviewPage() {
             return undefined;
         return projectPartnersWithAccess;
     }, [xferSnapshot, confirmationProjectId, selectedProjectId, projectPartnersWithAccess]);
-    const partnerConfirmNavbarSlot = confirmationProjectId && !partnerConfirmedReadOnly
+    const partnerConfirmNavbarSlot = confirmationProjectId && !partnerConfirmedLocked
         ? (<ReportPreviewPartnerBar projectId={confirmationProjectId} dateFrom={rangeFrom} dateTo={rangeTo} userId={user?.id ?? null} sharedPartners={partnerBarSharedPartners} sharedPartnersLoading={partnerBarSharedPartners != null ? projectMembersPickLoading : undefined} returnTo={xferSnapshot?.returnTo} />)
         : null;
     const userCanSignPartnerReport = Boolean(
         user
         && confirmationProjectId
-        && !partnerConfirmedReadOnly
+        && !partnerConfirmedLocked
         && (
             viewerIsPartner
             || projectPartnersWithAccess.some((p) => p.authUserId === user.id)
@@ -1840,11 +1888,25 @@ export function ReportPreviewPage() {
     const partnerSignFooterExtras = userCanSignPartnerReport
         ? (<ReportPreviewPartnerSignFooter projectId={confirmationProjectId} dateFrom={rangeFrom} dateTo={rangeTo} userId={user?.id ?? null} returnTo={xferSnapshot?.returnTo} />)
         : null;
-    const managerSubmitNavbarSlot = confirmationProjectId && !partnerConfirmedReadOnly && hasFullTimeTrackingTabs(user)
+    const managerSubmitNavbarSlot = confirmationProjectId && !partnerConfirmedLocked && hasFullTimeTrackingTabs(user)
         ? (<ReportPreviewManagerSubmitBar projectId={confirmationProjectId} dateFrom={rangeFrom} dateTo={rangeTo} />)
         : null;
-    const navbarExtrasSlot = managerSubmitNavbarSlot || partnerConfirmNavbarSlot
+    const partnerConfirmedEditSlot = partnerConfirmedLocked
+        ? (
+            <button
+                type="button"
+                className={`tt-reports__btn ${partnerConfirmedEditing ? 'tt-reports__btn--outline' : 'tt-reports__btn--accent'}`}
+                onClick={() => void requestTogglePartnerConfirmedEdit()}
+                title={partnerConfirmedEditing ? 'Вернуться к просмотру без редактирования ячеек' : 'Разрешить правку строк подтверждённого отчёта'}
+                aria-pressed={partnerConfirmedEditing}
+            >
+                {partnerConfirmedEditing ? 'Готово' : 'Редактировать'}
+            </button>
+        )
+        : null;
+    const navbarExtrasSlot = managerSubmitNavbarSlot || partnerConfirmNavbarSlot || partnerConfirmedEditSlot
         ? (<div className="tt-rp-preview__navbar-actions">
+            {partnerConfirmedEditSlot}
             {managerSubmitNavbarSlot}
             {partnerConfirmNavbarSlot}
         </div>)
@@ -1905,8 +1967,8 @@ export function ReportPreviewPage() {
                 ? (<span className="tt-rp-preview__navbar-hint" title="Не удалось загрузить список проектов для переключения">
                     {projectsError}
                 </span>)
-                : (<div className="tt-rp-preview__navbar-project" title={partnerConfirmedReadOnly ? 'Проект зафиксирован для этого просмотра' : 'Выбор проекта (фильтр сохраняется для возврата в отчёты).'}>
-                    <SearchableSelect<ProjectOption> portalDropdown className="tt-rp-preview__navbar-project-select" buttonClassName="tt-rp-preview__navbar-project-btn" aria-label="Проект" disabled={partnerConfirmedReadOnly || projectsLoading || projectItemsForSelect.length === 0} placeholder={projectsLoading ? 'Загрузка проектов…' : projectItemsForSelect.length === 0 ? 'Нет проектов' : 'Найдите или выберите проект…'} emptyListText={projectsLoading ? 'Загрузка…' : 'Нет доступных проектов'} noMatchText="Проект не найден" value={selectedProjectId} items={projectItemsForSelect} getOptionValue={(p) => p.id} getOptionLabel={previewProjectOptionLabel} getSearchText={(p) => `${p.name} ${p.client}`.replace(/\s+/g, ' ').trim()} onSelect={(p) => onProjectPick(p.id)} />
+                : (<div className="tt-rp-preview__navbar-project" title={partnerConfirmedLocked ? 'Проект зафиксирован для этого просмотра' : 'Выбор проекта (фильтр сохраняется для возврата в отчёты).'}>
+                    <SearchableSelect<ProjectOption> portalDropdown className="tt-rp-preview__navbar-project-select" buttonClassName="tt-rp-preview__navbar-project-btn" aria-label="Проект" disabled={partnerConfirmedLocked || projectsLoading || projectItemsForSelect.length === 0} placeholder={projectsLoading ? 'Загрузка проектов…' : projectItemsForSelect.length === 0 ? 'Нет проектов' : 'Найдите или выберите проект…'} emptyListText={projectsLoading ? 'Загрузка…' : 'Нет доступных проектов'} noMatchText="Проект не найден" value={selectedProjectId} items={projectItemsForSelect} getOptionValue={(p) => p.id} getOptionLabel={previewProjectOptionLabel} getSearchText={(p) => `${p.name} ${p.client}`.replace(/\s+/g, ' ').trim()} onSelect={(p) => onProjectPick(p.id)} />
                 </div>))
             : undefined;
     const scopeDefinitionsSlot = selectedProjectId.trim()
@@ -1928,7 +1990,7 @@ export function ReportPreviewPage() {
             const showTimeLiveTitle = xferSnapshot.groupBy !== 'projects';
             return (<>
                 {showTimeLiveTitle ? (<p className="tt-rp-preview__live-title tt-rp-preview__live-title--inline">{liveTitle}</p>) : null}
-                <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={partnerConfirmedReadOnly ? undefined : setSelectedRowKeys} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick} onDownloadExcel={handleDownloadTimeExcel} downloadExcelBusy={timeExcelDownloadBusy} footerExtras={partnerSignFooterExtras} flashRowKey={partnerConfirmedReadOnly ? null : flashRestoredRowKey} hotkeyDuplicateRowKey={partnerConfirmedReadOnly ? null : hotkeyDuplicateRowKey} onHotkeyDuplicateConsumed={partnerConfirmedReadOnly ? undefined : clearHotkeyDuplicateRowKey} onActiveTimeRowKey={partnerConfirmedReadOnly ? undefined : setActiveTimeRowKey} canUndo={!partnerConfirmedReadOnly && canUndoTimeEdit} onUndo={partnerConfirmedReadOnly ? undefined : undoLastTimeEdit} onSaveNow={partnerConfirmedReadOnly ? undefined : flushAllPendingTimeEntrySaves} scopeDefinitionsSlot={scopeDefinitionsSlot} scopeColorValue={scopeColorValue} scopeColorBusy={scopeColorBusy || scopeDefinitionsLoading || scopeDescriptionSaving} onScopeColorValueChange={setScopeColorValue} onApplyScopeColorToSelection={requestApplyScopeColorToSelection} onClearScopeColorFromSelection={clearScopeColorFromSelection} />
+                <TimeExcelPreviewTable projectTitle={timePreviewTableTitle} viewMode={timeReportViewMode} readOnly={partnerConfirmedReadOnly} onUnlockEdit={partnerConfirmedLocked ? requestTogglePartnerConfirmedEdit : undefined} confirmedEditUnlocked={partnerConfirmedEditing} rows={timeDisplayRows} onPatch={patchTimeExcel} selectedRowKeys={selectedRowKeys} onSelectedRowKeysChange={partnerConfirmedReadOnly ? undefined : setSelectedRowKeys} employeeColumnFilterSlot={partnerConfirmedReadOnly ? null : timeExcelFilterSlot} briefEmployeeQuery={timeBriefEmployeeSearch} onRequestServerReload={partnerConfirmedReadOnly ? undefined : requestServerDataReload} serverReloadBusy={reportLoading} timeSave={partnerConfirmedReadOnly ? undefined : { ui: timeEntrySaveUI, message: timeEntrySaveMessage }} canOverrideClosedWeek={canOverrideWeeklyLock} moveProjectOptions={partnerConfirmedReadOnly || !user ? undefined : projectItemsForSelect} onDeleteTimeEntry={user ? handleDeleteTimeEntry : undefined} onMoveTimeEntryToProject={partnerConfirmedReadOnly || !user ? undefined : handleMoveTimeEntryToProject} onDuplicateTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleDuplicateTimeEntry} onAddTimeEntry={partnerConfirmedReadOnly || !user ? undefined : handleAddTimeEntry} timeEntryWorkDateBounds={{ min: rangeFrom.slice(0, 10), max: rangeTo.slice(0, 10) }} timeEntryActionPendingRowKey={timeEntryActionPendingRowKey} employeePartnerPick={partnerConfirmedReadOnly ? null : timeEmployeePartnerPick} onDownloadExcel={handleDownloadTimeExcel} downloadExcelBusy={timeExcelDownloadBusy} footerExtras={partnerSignFooterExtras} flashRowKey={partnerConfirmedReadOnly ? null : flashRestoredRowKey} hotkeyDuplicateRowKey={partnerConfirmedReadOnly ? null : hotkeyDuplicateRowKey} onHotkeyDuplicateConsumed={partnerConfirmedReadOnly ? undefined : clearHotkeyDuplicateRowKey} onActiveTimeRowKey={partnerConfirmedReadOnly ? undefined : setActiveTimeRowKey} canUndo={!partnerConfirmedReadOnly && canUndoTimeEdit} onUndo={partnerConfirmedReadOnly ? undefined : undoLastTimeEdit} onSaveNow={partnerConfirmedReadOnly ? undefined : flushAllPendingTimeEntrySaves} scopeDefinitionsSlot={scopeDefinitionsSlot} scopeColorValue={scopeColorValue} scopeColorBusy={scopeColorBusy || scopeDefinitionsLoading || scopeDescriptionSaving} onScopeColorValueChange={setScopeColorValue} onApplyScopeColorToSelection={requestApplyScopeColorToSelection} onClearScopeColorFromSelection={clearScopeColorFromSelection} />
             </>);
         }
         if (xferSnapshot.reportType === 'expenses') {
