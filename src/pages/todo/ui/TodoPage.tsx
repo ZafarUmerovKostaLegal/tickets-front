@@ -1655,48 +1655,6 @@ export function TodoPage() {
                     <AppBackButton to={routes.home} label={t('todoPage.back')} ariaLabel={t('todoPage.backAria')} hideLabelOnMobile />
                     <AppHomeLogo withSeparator />
                     <div className="todo-page__nav-center">
-                        {activeBoardSummary && !structureReadOnly && navTitleEditing ? (
-                            <input
-                                className="todo-page__nav-title todo-page__nav-title-input"
-                                value={navTitleDraft}
-                                maxLength={200}
-                                autoFocus
-                                aria-label={t('todoPage.page.renameBoard')}
-                                onChange={(e) => setNavTitleDraft(e.target.value)}
-                                onBlur={() => {
-                                    const next = navTitleDraft.trim();
-                                    setNavTitleEditing(false);
-                                    if (!next || next === activeBoardSummary.title || activeBoardId == null)
-                                        return;
-                                    void handleRenameTodoBoard(activeBoardId, next).catch((e: unknown) => {
-                                        setBoardError(e instanceof Error ? e.message : t('todoPage.errors.updateBoard'));
-                                    });
-                                }}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter')
-                                        (e.target as HTMLInputElement).blur();
-                                    if (e.key === 'Escape') {
-                                        setNavTitleEditing(false);
-                                        setNavTitleDraft(activeBoardSummary.title);
-                                    }
-                                }}
-                            />
-                        ) : activeBoardSummary ? (
-                            <button
-                                type="button"
-                                className="todo-page__nav-title todo-page__nav-title-btn"
-                                disabled={structureReadOnly}
-                                title={structureReadOnly ? undefined : t('todoPage.page.renameBoard')}
-                                onClick={() => {
-                                    if (structureReadOnly)
-                                        return;
-                                    setNavTitleDraft(activeBoardSummary.title);
-                                    setNavTitleEditing(true);
-                                }}
-                            >
-                                {activeBoardSummary.title}
-                            </button>
-                        ) : null}
                         <div className="todo-page__search-wrap">
                             <svg className="todo-page__search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
                             <input className="todo-page__search" placeholder={t('todoPage.page.searchTasks')} type="search" />
@@ -1803,6 +1761,57 @@ export function TodoPage() {
                 {prevBackground && bgTransitioning && (<div className="todo-page__bg-layer todo-page__bg-layer--old" style={{ backgroundImage: `url(${prevBackground})` }} />)}
                 {backgroundImage && (<div className={`todo-page__bg-layer todo-page__bg-layer--new${bgTransitioning ? ' todo-page__bg-layer--entering' : ''}`} style={{ backgroundImage: `url(${backgroundImage})` }} />)}
                 {backgroundImage && <div className="todo-page__bg-overlay" />}
+                {activeBoardSummary && (
+                    <div className="todo-page__board-head">
+                        {navTitleEditing && !structureReadOnly ? (
+                            <input
+                                className="todo-page__board-title-input"
+                                value={navTitleDraft}
+                                maxLength={200}
+                                autoFocus
+                                aria-label={t('todoPage.page.renameBoard')}
+                                onChange={(e) => setNavTitleDraft(e.target.value)}
+                                onBlur={() => {
+                                    const next = navTitleDraft.trim();
+                                    setNavTitleEditing(false);
+                                    if (!next || next === activeBoardSummary.title || activeBoardId == null)
+                                        return;
+                                    void handleRenameTodoBoard(activeBoardId, next).catch((e: unknown) => {
+                                        setBoardError(e instanceof Error ? e.message : t('todoPage.errors.updateBoard'));
+                                    });
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter')
+                                        (e.target as HTMLInputElement).blur();
+                                    if (e.key === 'Escape') {
+                                        setNavTitleEditing(false);
+                                        setNavTitleDraft(activeBoardSummary.title);
+                                    }
+                                }}
+                            />
+                        ) : (
+                            <button
+                                type="button"
+                                className="todo-page__board-title"
+                                disabled={structureReadOnly}
+                                title={structureReadOnly ? undefined : t('todoPage.page.renameBoard')}
+                                onClick={() => {
+                                    if (structureReadOnly)
+                                        return;
+                                    setNavTitleDraft(activeBoardSummary.title);
+                                    setNavTitleEditing(true);
+                                }}
+                            >
+                                <span className="todo-page__board-title-text">{activeBoardSummary.title}</span>
+                                {!structureReadOnly && (
+                                    <svg className="todo-page__board-title-edit" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                                    </svg>
+                                )}
+                            </button>
+                        )}
+                    </div>
+                )}
                 <div ref={columnsScrollRef} className={`todo-columns ${isPanning ? 'todo-columns--panning' : ''}`} onPointerDown={handleColumnsAreaMouseDown}>
                     {initialLoading ? (<>
                         {['today', 'week', 'later'].map((id) => (<div key={id} className="todo-column todo-column--skeleton">
