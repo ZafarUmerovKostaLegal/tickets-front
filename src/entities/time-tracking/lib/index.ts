@@ -26,3 +26,4 @@ export * from './partnerForReviewReports';
 export * from './forReviewPriority';
 export * from './usePartnerForReviewBadge';
 export * from './pickEffectiveBillableRate';
+export * from './userDisplayLabel';

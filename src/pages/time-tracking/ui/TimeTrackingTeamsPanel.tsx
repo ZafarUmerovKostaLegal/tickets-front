@@ -7,6 +7,8 @@ import {
     listTimeTrackingTeams,
     listTimeTrackingUsers,
     patchTimeTrackingTeam,
+    firstNonStubUserText,
+    pickUserDisplayLabel,
     type TimeTrackingTeamRow,
     type TimeTrackingUserRow,
 } from '@entities/time-tracking';
@@ -33,12 +35,7 @@ const IcoTrash = () => (
 );
 
 function userLabel(u: TimeTrackingUserRow): string {
-    return (u.display_name?.trim() || u.email || `#${u.id}`).trim();
-}
-
-function isStubAuthUserEmail(email: string | null | undefined): boolean {
-    const v = String(email ?? '').trim().toLowerCase();
-    return /^auth-user-\d+@tt\.local$/.test(v);
+    return pickUserDisplayLabel(u.display_name, u.email, u.id);
 }
 
 function resolveTeamMemberName(
@@ -47,18 +44,11 @@ function resolveTeamMemberName(
     usersById: Map<number, TimeTrackingUserRow>,
 ): string {
     const fromCatalog = usersById.get(id);
-    const catalogName = fromCatalog?.display_name?.trim();
-    if (catalogName)
-        return catalogName;
-    const rowName = fromRow?.display_name?.trim();
-    if (rowName)
-        return rowName;
-    if (fromCatalog)
-        return userLabel(fromCatalog);
-    const email = fromRow?.email?.trim();
-    if (email && !isStubAuthUserEmail(email))
-        return email;
-    return `#${id}`;
+    return pickUserDisplayLabel(
+        firstNonStubUserText(fromCatalog?.display_name, fromRow?.display_name),
+        firstNonStubUserText(fromCatalog?.email, fromRow?.email),
+        id,
+    );
 }
 
 function userSearchText(u: TimeTrackingUserRow): string {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TimeManagerClientProjectRow } from '../api';
 import {
+    collectActivePartnerProjectIds,
     collectMyParticipatingProjectIds,
     filterReportRowsByPartnerProjects,
     partnerProjectClientIds,
@@ -31,6 +32,14 @@ describe('partner report project scope', () => {
         expect(collectMyParticipatingProjectIds([p1, p2], 7, ['p3', ' ']))
             .toEqual(new Set(['p1', 'p2', 'p3']));
         expect(partnerProjectClientIds([p1, p2], new Set(['p2']))).toEqual(new Set(['c2']));
+    });
+
+    it('collects only active projects for a partner', () => {
+        const p1 = project({ id: 'p1', partnerAuthUserIds: [7] });
+        const p2 = project({ id: 'p2', participantAuthUserIds: [7], status: 'archived' });
+        const p3 = project({ id: 'p3', partnerAuthUserIds: [9] });
+        const p4 = project({ id: 'p4', participantAuthUserIds: [7], is_paused: true });
+        expect(collectActivePartnerProjectIds([p1, p2, p3, p4], 7)).toEqual(['p1']);
     });
 
     it('does not restrict administrators and recognizes partner roles', () => {

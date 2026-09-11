@@ -1,7 +1,7 @@
 import { useState, useEffect, useId, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getUser, setUserInitials, type User, } from '@entities/user';
+import { getUser, setUserInitials, listPartners, type User, type UserPublic, } from '@entities/user';
 import { upsertTimeTrackingUser, getTimeTrackingUser, patchTimeTrackingUserWeeklyCapacity, patchTimeTrackingUserTransferWithoutProjectAccess, listHourlyRates, createHourlyRate, patchHourlyRate, deleteHourlyRate, changeHourlyRateFrom, getUserProjectAccess, putUserProjectAccess, listAllClientProjectsMerged, listAllTimeManagerClientsMerged, isForbiddenError, userFacingProjectAccessError, TIME_TRACKING_PROJECT_CURRENCIES, fetchAllTimeReportProjectRows, type HourlyRateRow, type TimeManagerClientProjectRow, } from '@entities/time-tracking';
 import { formatPeriodLabel, isoDateLocal, periodToDates } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { fmtH } from '@entities/time-tracking/lib/reportsFormatUtils';
@@ -11,7 +11,9 @@ import { canAccessAdminPanel } from '@shared/lib/orgRoles';
 import { isManualTtAuthUserId, isWithoutAuthRegistration, timeTrackingRowToUser } from '@entities/time-tracking/model/manualUsers';
 import { useCurrentUser } from '@shared/hooks';
 import { getUserEditUrl, routes } from '@shared/config';
-import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
+import { AppBackButton, AppHomeLogo, AppPageSettings, SearchableSelect } from '@shared/ui';
+import { showConfirm } from '@shared/ui/app-dialog/appDialogGate';
+import { collectActivePartnerProjectIds } from '@entities/time-tracking/lib/partnerReportProjectScope';
 import { canManageUserProjectAccess } from '@entities/time-tracking/model/timeManagerClientsAccess';
 import { canManageHourlyRates } from '@entities/time-tracking/model/timeTrackingAccess';
 import { isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
@@ -576,6 +578,7 @@ export function UserEditPage() {
     const [ratesError, setRatesError] = useState<string | null>(null);
     const [costRatesForbidden, setCostRatesForbidden] = useState(false);
     const [projectCatalog, setProjectCatalog] = useState<ProjectListItem[]>([]);
+    const [catalogProjectRows, setCatalogProjectRows] = useState<TimeManagerClientProjectRow[]>([]);
     const [assignedProjectIds, setAssignedProjectIds] = useState<string[]>([]);
     const [projectsTabLoading, setProjectsTabLoading] = useState(false);
     const [projectsTabError, setProjectsTabError] = useState<string | null>(null);
@@ -584,6 +587,10 @@ export function UserEditPage() {
     const [transferFlagSaving, setTransferFlagSaving] = useState(false);
     const [projectSearch, setProjectSearch] = useState('');
     const [searchOpen, setSearchOpen] = useState(false);
+    const [partnerAssignId, setPartnerAssignId] = useState('');
+    const [partnerOptions, setPartnerOptions] = useState<{ id: string; label: string }[]>([]);
+    const [partnerBulkNotice, setPartnerBulkNotice] = useState<string | null>(null);
+    const partnerAssignSelectId = useId();
     const [assignedProjectsStatus, setAssignedProjectsStatus] = useState<'active' | 'archived' | 'all'>('active');
     const [projPeriodDate, setProjPeriodDate] = useState(() => new Date());
     const [projPeriodGranularity, setProjPeriodGranularity] = useState<PeriodGranularity>('month');
@@ -621,6 +628,9 @@ export function UserEditPage() {
             setCostRatesForbidden(false);
             setAssignedProjectIds([]);
             setProjectCatalog([]);
+            setCatalogProjectRows([]);
+            setPartnerAssignId('');
+            setPartnerBulkNotice(null);
             setProjectsTabError(null);
             setTransferWithoutProjectAccess(false);
             const capSt = capacityStateFromUser(u);
@@ -761,6 +771,7 @@ export function UserEditPage() {
                 if (cancelled)
                     return;
                 const nameById = new Map(clients.map((c) => [c.id, c.name]));
+                setCatalogProjectRows(catalogRows);
                 setProjectCatalog(buildProjectCatalog(catalogRows, nameById));
                 setAssignedProjectIds(access.projectIds);
                 setTransferWithoutProjectAccess(ttUser?.can_transfer_time_without_project_access === true);
@@ -769,6 +780,7 @@ export function UserEditPage() {
                 if (!cancelled) {
                     setProjectsTabError(e instanceof Error ? e.message : 'Не удалось загрузить проекты и доступ');
                     setProjectCatalog([]);
+                    setCatalogProjectRows([]);
                     setAssignedProjectIds([]);
                 }
             }
@@ -781,6 +793,32 @@ export function UserEditPage() {
             cancelled = true;
         };
     }, [user, activeTab, isManualUser]);
+
+    useEffect(() => {
+        if (activeTab !== 'projects' || !canEditTTProjectAccess)
+            return;
+        let cancelled = false;
+        void listPartners()
+            .then((items: UserPublic[]) => {
+                if (cancelled)
+                    return;
+                setPartnerOptions(
+                    items
+                        .map((p) => ({
+                            id: String(p.id),
+                            label: (p.display_name?.trim() || p.email?.trim() || `ID ${p.id}`).trim(),
+                        }))
+                        .sort((a, b) => a.label.localeCompare(b.label, 'ru', { sensitivity: 'base' })),
+                );
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setPartnerOptions([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [activeTab, canEditTTProjectAccess]);
 
     const projPeriodRange = useMemo(
         () => periodToDates(projPeriodDate, projPeriodGranularity),
@@ -890,14 +928,15 @@ export function UserEditPage() {
             setTransferFlagSaving(false);
         }
     }
-    async function persistProjectAccess(nextIds: string[]) {
+    async function persistProjectAccess(nextIds: string[]): Promise<boolean> {
         if (!user || !canEditTTProjectAccess)
-            return;
+            return false;
         setProjectsTabSaving(true);
         setProjectsTabError(null);
         try {
             await putUserProjectAccess(user.id, nextIds);
             setAssignedProjectIds(nextIds);
+            return true;
         }
         catch (e) {
             const raw = e instanceof Error ? e.message : 'Не удалось сохранить доступ';
@@ -908,6 +947,7 @@ export function UserEditPage() {
             }
             catch {
             }
+            return false;
         }
         finally {
             setProjectsTabSaving(false);
@@ -1023,6 +1063,39 @@ export function UserEditPage() {
         if (!user || !canEditTTProjectAccess)
             return;
         void persistProjectAccess([]);
+    };
+    const assignAllActiveProjectsOfPartner = async () => {
+        if (!user || !canEditTTProjectAccess || !partnerAssignId)
+            return;
+        const partnerId = Number(partnerAssignId);
+        if (!Number.isFinite(partnerId) || partnerId <= 0)
+            return;
+        const partnerLabel = partnerOptions.find((p) => p.id === partnerAssignId)?.label ?? partnerAssignId;
+        const activeIds = collectActivePartnerProjectIds(catalogProjectRows, partnerId);
+        if (activeIds.length === 0) {
+            setPartnerBulkNotice(`У партнёра «${partnerLabel}» нет активных проектов`);
+            return;
+        }
+        const assigned = new Set(assignedProjectIds);
+        const newIds = activeIds.filter((id) => !assigned.has(id));
+        if (newIds.length === 0) {
+            setPartnerBulkNotice(`Все активные проекты партнёра «${partnerLabel}» уже назначены (${activeIds.length})`);
+            return;
+        }
+        const ok = await showConfirm({
+            title: 'Назначить проекты партнёра',
+            message: `Подключить ${user.display_name?.trim() || user.email} ко всем активным проектам партнёра «${partnerLabel}»? Будет добавлено ${newIds.length} из ${activeIds.length}.`,
+            confirmLabel: 'Подключить',
+            cancelLabel: 'Отмена',
+        });
+        if (!ok)
+            return;
+        const next = [...assignedProjectIds];
+        for (const id of newIds)
+            next.push(id);
+        const saved = await persistProjectAccess(next);
+        if (saved)
+            setPartnerBulkNotice(`Добавлен доступ к ${newIds.length} активным проектам партнёра «${partnerLabel}»`);
     };
     const projectById = useMemo(() => new Map(projectCatalog.map((p) => [p.id, p])), [projectCatalog]);
     const rateProjectLabel = useCallback((r: Rate): string => {
@@ -1540,6 +1613,50 @@ export function UserEditPage() {
                         <p className="uep__proj-subheading uep__proj-transfer-flag-hint" role="note">
                             Для пользователей с этим правом в переносе записей доступны все активные проекты, даже если у владельца записи нет доступа к целевому проекту.
                         </p>
+                    </div>
+                ) : null}
+                {canEditTTProjectAccess && !projectsTabLoading ? (
+                    <div className="uep__proj-partner-bulk">
+                        <div className="uep__proj-partner-bulk-field">
+                            <span className="uep__proj-partner-bulk-label" id={`${partnerAssignSelectId}-lbl`}>Партнёр</span>
+                            <SearchableSelect
+                                className="tsp-srch"
+                                buttonClassName="tsp-srch__btn"
+                                buttonId={partnerAssignSelectId}
+                                value={partnerAssignId}
+                                items={partnerOptions}
+                                getOptionValue={(p) => p.id}
+                                getOptionLabel={(p) => p.label}
+                                getSearchText={(p) => p.label.toLowerCase()}
+                                onSelect={(p) => {
+                                    setPartnerAssignId(p.id);
+                                    setPartnerBulkNotice(null);
+                                }}
+                                placeholder={partnerOptions.length === 0 ? 'Список партнёров пуст' : 'Выберите партнёра'}
+                                emptyListText="Партнёры не найдены"
+                                noMatchText="Никого не найдено"
+                                disabled={pickDisabled || partnerOptions.length === 0}
+                                portalDropdown
+                                portalZIndex={11020}
+                                portalMinWidth={280}
+                                portalDropdownClassName="tsp-srch__dropdown--tall"
+                                aria-labelledby={`${partnerAssignSelectId}-lbl`}
+                            />
+                        </div>
+                        <button
+                            type="button"
+                            className="uep__btn uep__btn--primary uep__proj-partner-bulk-btn"
+                            disabled={pickDisabled || !partnerAssignId}
+                            onClick={() => void assignAllActiveProjectsOfPartner()}
+                        >
+                            Подключить ко всем активным проектам
+                        </button>
+                        <p className="uep__proj-partner-bulk-hint">
+                            Добавит сотруднику доступ ко всем незакрытым проектам выбранного партнёра. Уже назначенные проекты не дублируются.
+                        </p>
+                        {partnerBulkNotice ? (
+                            <p className="uep__proj-partner-bulk-status" role="status">{partnerBulkNotice}</p>
+                        ) : null}
                     </div>
                 ) : null}
                 <div className="uep__proj-search-wrap" ref={searchBoxRef}>

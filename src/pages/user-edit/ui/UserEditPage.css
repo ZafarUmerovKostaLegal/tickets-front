@@ -2535,6 +2535,53 @@
   max-width: 52rem;
 }
 
+.uep__proj-partner-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.65rem 0.75rem;
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  background: var(--app-surface-soft, #f8fafc);
+  border: 1px solid var(--app-border, #e2e8f0);
+}
+
+.uep__proj-partner-bulk-field {
+  flex: 1 1 240px;
+  min-width: 200px;
+  max-width: 360px;
+}
+
+.uep__proj-partner-bulk-label {
+  display: block;
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--app-muted, #6b7280);
+}
+
+.uep__proj-partner-bulk-btn {
+  height: 2.5rem;
+  padding: 0 1rem;
+}
+
+.uep__proj-partner-bulk-hint {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--app-muted, #6b7280);
+}
+
+.uep__proj-partner-bulk-status {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--app-text, #111827);
+}
+
 .uep__proj-cb-label {
   display: inline-flex;
   align-items: center;

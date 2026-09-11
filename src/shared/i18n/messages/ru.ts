@@ -325,7 +325,26 @@ export const ruMessages: Messages = {
         empty: 'Сотрудники не найдены',
         emptyDirectory: 'Список внутренних номеров пока не заполнен',
         emptyHint: 'Попробуйте изменить поисковый запрос',
+        emptyManageHint: 'Добавьте первый контакт кнопкой «Добавить»',
         count: 'Сотрудников: {count}',
+        addContact: 'Добавить',
+        editContact: 'Изменить контакт',
+        edit: 'Изменить',
+        delete: 'Удалить',
+        save: 'Сохранить',
+        saving: 'Сохранение…',
+        loading: 'Загрузка справочника…',
+        retry: 'Повторить',
+        loadError: 'Не удалось загрузить справочник',
+        saveError: 'Не удалось сохранить контакт',
+        deleteError: 'Не удалось удалить контакт',
+        deleteTitle: 'Удалить контакт?',
+        deleteConfirm: 'Удалить «{name}» из внутренней связи?',
+        created: 'Контакт добавлен',
+        updated: 'Контакт сохранён',
+        deleted: 'Контакт удалён',
+        copied: 'Номер скопирован',
+        copyExtension: 'Скопировать внутренний номер',
     },
     attendancePage: {
         title: 'Посещаемость',
@@ -900,7 +919,26 @@ export type Messages = {
         empty: string;
         emptyDirectory: string;
         emptyHint: string;
+        emptyManageHint: string;
         count: string;
+        addContact: string;
+        editContact: string;
+        edit: string;
+        delete: string;
+        save: string;
+        saving: string;
+        loading: string;
+        retry: string;
+        loadError: string;
+        saveError: string;
+        deleteError: string;
+        deleteTitle: string;
+        deleteConfirm: string;
+        created: string;
+        updated: string;
+        deleted: string;
+        copied: string;
+        copyExtension: string;
     };
     attendancePage: {
         title: string;

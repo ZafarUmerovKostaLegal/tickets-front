@@ -3,7 +3,8 @@ import './TimeUsersShared.css';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listColleaguesAsUsers } from '@entities/contacts';
-import { getTeamWorkload, isTimeTrackingHttpError, listTimeTrackingUsers, type TeamWorkloadMember, type TimeTrackingUserRow, } from '@entities/time-tracking';
+import { getTeamWorkload, isTimeTrackingHttpError, listTimeTrackingUsers, resolveTimeUserDisplayName, type TeamWorkloadMember, type TimeTrackingUserRow, } from '@entities/time-tracking';
+import type { User } from '@entities/user/model/types';
 import { canManageTimeTrackingOrgUsers } from '@entities/time-tracking/model/timeTrackingAccess';
 import { isWithoutAuthRegistration } from '@entities/time-tracking/model/manualUsers';
 import { getUserEditUrl } from '@shared/config';
@@ -65,16 +66,21 @@ function zeroWorkloadMember(u: TimeTrackingUserRow): TeamWorkloadMember {
         workload_percent: 0,
     };
 }
-function memberToTimeUserRow(m: TeamWorkloadMember, positionById: Map<number, string>, periodDays: number, weeklyFromProfileById: Map<number, number>, catalogPosition: string | null | undefined, catalogRow: TimeTrackingUserRow | undefined, userFallback: string,): TimeUserRow {
-    const name = (m.display_name?.trim() || m.email || userFallback.replace('{id}', String(m.auth_user_id))).trim();
+function memberToTimeUserRow(m: TeamWorkloadMember, positionById: Map<number, string>, periodDays: number, weeklyFromProfileById: Map<number, number>, catalogPosition: string | null | undefined, catalogRow: TimeTrackingUserRow | undefined, colleague: User | undefined, userFallback: string,): TimeUserRow {
+    const name = resolveTimeUserDisplayName(
+        { catalog: catalogRow, colleague, member: m },
+        m.auth_user_id,
+        userFallback,
+    );
     const fromTt = catalogPosition != null && String(catalogPosition).trim() ? String(catalogPosition).trim() : '';
-    const pos = fromTt || positionById.get(m.auth_user_id);
+    const pos = fromTt || colleague?.position?.trim() || positionById.get(m.auth_user_id);
     const profileWeekly = weeklyFromProfileById.get(m.auth_user_id);
+    const picture = (catalogRow?.picture || colleague?.picture || m.picture)?.trim();
     return {
         id: String(m.auth_user_id),
         name,
         initials: getInitials(name),
-        avatarUrl: m.picture?.trim() || undefined,
+        avatarUrl: picture || undefined,
         isOnline: false,
         isManual: catalogRow ? isWithoutAuthRegistration(catalogRow) : undefined,
         isArchived: catalogRow?.is_archived,
@@ -96,6 +102,7 @@ function matchesUserSearch(user: TimeUserRow, query: string): boolean {
         user.name,
         user.position ?? '',
         user.initials,
+        user.id,
         user.isManual ? 'без входа without sign-in' : '',
         user.isArchived ? 'архив archive' : '',
     ].join(' ').toLowerCase();
@@ -141,7 +148,9 @@ export function TimeUsersPanel() {
                 if (cancelled)
                     return;
                 const positionById = new Map<number, string>();
+                const colleagueById = new Map<number, User>();
                 for (const u of allUsers) {
+                    colleagueById.set(u.id, u);
                     if (u.position)
                         positionById.set(u.id, u.position);
                 }
@@ -167,7 +176,7 @@ export function TimeUsersPanel() {
                 const userFallback = t('timeTrackingPage.users.panel.fallbackUser');
                 const rows = activeTt.map((u) => {
                     const m = memberById.get(u.id) ?? zeroWorkloadMember(u);
-                    return memberToTimeUserRow(m, positionById, periodDays, weeklyFromProfileById, u.position, u, userFallback);
+                    return memberToTimeUserRow(m, positionById, periodDays, weeklyFromProfileById, u.position, u, colleagueById.get(u.id), userFallback);
                 });
                 setUsers(rows);
                 if (workload) {

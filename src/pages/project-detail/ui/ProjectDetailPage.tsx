@@ -9,7 +9,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, DatePicker, SearchableSelect } from '@shared/ui';
 import { periodToDates, reportsAllTimeDateFrom, reportsAllTimeDateTo } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { canAccessTimeTracking, canManageTimeTrackingClients, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
-import { INVOICE_STATUS_LABELS, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPendingItems, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, readTimeManagerProjectBillableRateAmount, readProjectRecordsLanguage, notifyPartnerConfirmedReportsListInvalidate, exportReportV2, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, type ReportFiltersV2, } from '@entities/time-tracking';
+import { INVOICE_STATUS_LABELS, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPendingItems, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, readTimeManagerProjectBillableRateAmount, readProjectRecordsLanguage, notifyPartnerConfirmedReportsListInvalidate, exportReportV2, isStubAuthUserEmail, pickUserDisplayLabel, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, type ReportFiltersV2, } from '@entities/time-tracking';
 import { writeReportPreviewTransfer, type ReportPreviewTransferV2 } from '@entities/time-tracking/model/reportPreviewTransfer';
 import { ClientProjectModal } from '@pages/time-tracking/ui/TimeTrackingClientProjectModal';
 import { loadProjectDetailRow } from '../model/loadProjectDetailRow';
@@ -118,20 +118,6 @@ function formatDetailPeriodLabel(period: {
     const right = b.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
     return `${left} — ${right}`;
 }
-function isStubAuthUserEmail(email: string | null | undefined): boolean {
-    return /^auth-user-\d+@tt\.local$/i.test(String(email ?? '').trim());
-}
-
-function pickUserDisplayLabel(displayName: string | null | undefined, email: string | null | undefined, fallbackId: number): string {
-    const name = displayName?.trim();
-    if (name && !isStubAuthUserEmail(name))
-        return name;
-    const mail = email?.trim();
-    if (mail && !isStubAuthUserEmail(mail))
-        return mail;
-    return `Пользователь ${fallbackId}`;
-}
-
 function teamWorkloadMemberToTimeUserRow(
     m: TeamWorkloadMember,
     periodDays: number,

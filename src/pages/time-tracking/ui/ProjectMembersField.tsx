@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useId, useState, useCallback } from 'react';
-import { listTimeTrackingUsers, upsertTimeTrackingUser, type TimeTrackingUserRow, TIME_TRACKING_PROJECT_CURRENCIES } from '@entities/time-tracking';
+import { listTimeTrackingUsers, firstNonStubUserText, pickUserDisplayLabel, upsertTimeTrackingUser, type TimeTrackingUserRow, TIME_TRACKING_PROJECT_CURRENCIES } from '@entities/time-tracking';
 import { listColleaguesAsUsers } from '@entities/contacts';
 import type { User } from '@entities/user/model/types';
 import { SearchableSelect } from '@shared/ui';
@@ -9,10 +9,7 @@ import type { TranslationKey } from '@shared/i18n/translate';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 
 function userLabel(u: TimeTrackingUserRow, fallbackKey: string, t: (key: TranslationKey) => string): string {
-    const n = u.display_name?.trim();
-    if (n)
-        return n;
-    return u.email?.trim() || t(fallbackKey as TranslationKey).replace('{id}', String(u.id));
+    return pickUserDisplayLabel(u.display_name, u.email, u.id, t(fallbackKey as TranslationKey));
 }
 
 function userOptionA11yLabel(u: TimeTrackingUserRow, t: (key: TranslationKey) => string): string {
@@ -259,6 +256,17 @@ export function ProjectMembersField({
                         continue;
                     if (!byId.has(au.id))
                         byId.set(au.id, authUserToPickerRow(au));
+                    else {
+                        const existing = byId.get(au.id);
+                        if (existing) {
+                            byId.set(au.id, {
+                                ...existing,
+                                display_name: firstNonStubUserText(existing.display_name, au.display_name) ?? existing.display_name,
+                                email: firstNonStubUserText(existing.email, au.email) ?? existing.email,
+                                picture: existing.picture || au.picture,
+                            });
+                        }
+                    }
                 }
                 const merged = [...byId.values()].sort((a, b) => compareRuLabels(userLabel(a, userFallbackKey, t), userLabel(b, userFallbackKey, t)));
                 setUsers(merged);

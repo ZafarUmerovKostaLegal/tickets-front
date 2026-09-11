@@ -1,4 +1,5 @@
 import { isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
+import { isActiveTimeManagerProjectRow } from './projectTimeEntry';
 import type {
     TimeManagerClientProjectRow,
     TimeRowClients,
@@ -71,6 +72,27 @@ export function collectMyParticipatingProjectIds(
 
 export function collectPartnerProjectIds(projects: TimeManagerClientProjectRow[], authUserId: number): Set<string> {
     return collectMyParticipatingProjectIds(projects, authUserId);
+}
+
+export function collectActivePartnerProjectIds(
+    projects: TimeManagerClientProjectRow[],
+    partnerAuthUserId: number,
+    asOfYmd?: string,
+): string[] {
+    const ids: string[] = [];
+    const seen = new Set<string>();
+    for (const p of projects) {
+        const pid = String(p.id ?? '').trim();
+        if (!pid || seen.has(pid))
+            continue;
+        if (!readProjectTeamAuthUserIds(p).includes(partnerAuthUserId))
+            continue;
+        if (!isActiveTimeManagerProjectRow(p, asOfYmd))
+            continue;
+        seen.add(pid);
+        ids.push(pid);
+    }
+    return ids;
 }
 
 export function partnerProjectClientIds(projects: TimeManagerClientProjectRow[], allowedProjectIds: Set<string>): Set<string> {
