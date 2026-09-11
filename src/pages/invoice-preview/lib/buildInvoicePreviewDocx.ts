@@ -35,7 +35,7 @@ import {
     packUppercaseRibbonPeriodMonth,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
-import { trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { ensureMehnatSeparatedPack, timeReportPackHasContent, trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
@@ -385,6 +385,45 @@ function timeReportDocxSectionChildren(
     ];
 
     if (opts.isLastChunk) {
+        const mehnatRows = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []);
+        if (mehnatRows.length > 0) {
+            const mehnatBodyRows: TableRow[] = mehnatRows.map((r) => new TableRow({
+                children: [
+                    trBodyTextCell(r.date, DW[0]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.initials, DW[1]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.task, DW[2]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.description, DW[3]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.hours, DW[4]!, AlignmentType.RIGHT),
+                    trBodyTextCell(r.hourlyRate, DW[5]!, AlignmentType.RIGHT),
+                    trBodyTextCell(r.amount, DW[6]!, AlignmentType.RIGHT),
+                ],
+            }));
+            mehnatBodyRows.push(new TableRow({
+                children: [
+                    new TableCell({
+                        borders: cellBorderGrid,
+                        columnSpan: 4,
+                        children: [new Paragraph({
+                            children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                        })],
+                    }),
+                    trFootValueCell(pack.mehnatTotalHoursDisplay, DW[4]!, AlignmentType.RIGHT),
+                    trFootValueCell('—', DW[5]!, AlignmentType.RIGHT),
+                    trFootValueCell(pack.mehnatTotalAmountDisplay, DW[6]!, AlignmentType.RIGHT),
+                ],
+            }));
+            out.push(
+                new Paragraph({
+                    spacing: { before: 260, after: 120 },
+                    children: [new TextRun({ text: labels.mehnatTitle, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                }),
+                new Table({
+                    ...tableOpts,
+                    rows: [detailHeader, ...mehnatBodyRows],
+                }),
+            );
+        }
+
         const summaryHeader = new TableRow({
             children: [
                 trHeadCell(labels.initials, SW[0] ?? 9),
@@ -876,12 +915,13 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
         }
     }
 
-    const timeReportPack = (
+    const timeReportPackRaw = (
         timeReportOverride
-        && trimTrailingEmptyDetailSlots(timeReportOverride.detailSlots).length > 0
+        && timeReportPackHasContent(timeReportOverride)
     )
         ? timeReportOverride
         : await resolveInvoiceTimeReportPack(session, model);
+    const timeReportPack = ensureMehnatSeparatedPack(timeReportPackRaw);
     const trChunks = splitDetailRowsForPagedTimeReport(timeReportPack.detailSlots);
     const pageCount = invoicePreviewPageCount(trChunks.length);
     const selected = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;

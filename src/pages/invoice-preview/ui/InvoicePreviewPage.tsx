@@ -11,7 +11,7 @@ import { firmBankingToLegalOverrides, applyFirmBankingProfileToLegalOverrides, p
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { applyCoverLetterLanguage, type InvoiceCoverLanguage } from '../lib/invoiceCoverLetterI18n';
-import { emptyInvoiceTimeReportPack, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
+import { emptyInvoiceTimeReportPack, ensureMehnatSeparatedPack, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { splitDetailRowsForPagedTimeReport } from '../lib/invoiceTimeReportChunking';
@@ -234,7 +234,7 @@ export function InvoicePreviewPage() {
             setCoverModel((prev) => (prev ? applyCoverDocumentOverrides(prev, doc.cover) : prev));
         }
         if (doc.timeReport && timeReportPackHasContent(doc.timeReport)) {
-            setTimeReportPack(doc.timeReport);
+            setTimeReportPack(ensureMehnatSeparatedPack(doc.timeReport));
         }
     }, []);
 
@@ -462,7 +462,7 @@ export function InvoicePreviewPage() {
         () => emptyInvoiceTimeReportPack(packCurrencyCode(displayModel)),
         [displayModel],
     );
-    const resolvedTimeReportPack = timeReportPack ?? timeReportFallback;
+    const resolvedTimeReportPack = ensureMehnatSeparatedPack(timeReportPack ?? timeReportFallback);
 
     const timeReportChunks = useMemo(
         () => splitDetailRowsForPagedTimeReport(resolvedTimeReportPack.detailSlots),
@@ -631,7 +631,7 @@ export function InvoicePreviewPage() {
             return;
         const savedPack = pendingDocOverridesRef.current?.timeReport;
         if (savedPack && timeReportPackHasContent(savedPack)) {
-            setTimeReportPack(savedPack);
+            setTimeReportPack(ensureMehnatSeparatedPack(savedPack));
             return;
         }
         let cancel = false;
@@ -642,7 +642,7 @@ export function InvoicePreviewPage() {
             },
         }).then((p) => {
             if (!cancel)
-                setTimeReportPack(p);
+                setTimeReportPack(ensureMehnatSeparatedPack(p));
         }).catch((err) => {
             console.error(err);
             if (!cancel)
@@ -688,7 +688,18 @@ export function InvoicePreviewPage() {
         });
     }, [resolvedTimeReportPack]);
 
-    const patchTimeReportPack = useCallback((patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay'>>) => {
+    const patchMehnatRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        setTimeReportPack((prev) => {
+            const base = prev ?? resolvedTimeReportPack;
+            const nextSlots = [...(base.mehnatSlots ?? [])];
+            while (nextSlots.length <= rowIndex)
+                nextSlots.push({ date: '', initials: '', task: '', description: '', hours: '', hourlyRate: '', amount: '' });
+            nextSlots[rowIndex] = { ...nextSlots[rowIndex]!, [field]: value };
+            return { ...base, mehnatSlots: nextSlots };
+        });
+    }, [resolvedTimeReportPack]);
+
+    const patchTimeReportPack = useCallback((patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay'>>) => {
         setTimeReportPack((prev) => ({ ...(prev ?? resolvedTimeReportPack), ...patch }));
     }, [resolvedTimeReportPack]);
 
@@ -976,6 +987,7 @@ export function InvoicePreviewPage() {
                                       continuation={slot.chunkIndex > 0}
                                       showDetailTotalRow={slot.chunkIndex === lastTr}
                                       showExpenseSection={slot.chunkIndex === lastTr}
+                                      showMehnatSection={slot.chunkIndex === lastTr}
                                       showSummarySection={slot.chunkIndex === lastTr}
                                     />
                                   </div>
@@ -1232,10 +1244,12 @@ export function InvoicePreviewPage() {
                                 continuation={slot.chunkIndex > 0}
                                 showDetailTotalRow={slot.chunkIndex === lastTr}
                                 showExpenseSection={slot.chunkIndex === lastTr}
+                                showMehnatSection={slot.chunkIndex === lastTr}
                                 showSummarySection={slot.chunkIndex === lastTr}
                                 editable={editingPage === pageNum}
                                 onPatchDetailRow={(rowIndex, field, value) => patchDetailRowInChunk(slot.chunkIndex, rowIndex, field, value)}
                                 onPatchExpenseRow={patchExpenseRow}
+                                onPatchMehnatRow={patchMehnatRow}
                                 onPatchSummaryRow={patchSummaryRow}
                                 onPatchPack={patchTimeReportPack}
                               />

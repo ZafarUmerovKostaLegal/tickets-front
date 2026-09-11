@@ -17,13 +17,15 @@ export type InvoiceTimeReportPageProps = {
     showDetailTotalRow?: boolean;
 
     showExpenseSection?: boolean;
+    showMehnatSection?: boolean;
 
     showSummarySection?: boolean;
     editable?: boolean;
     onPatchDetailRow?: (rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => void;
     onPatchExpenseRow?: (rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => void;
+    onPatchMehnatRow?: (rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => void;
     onPatchSummaryRow?: (rowIndex: number, field: keyof InvoiceTimeReportSummaryRow, value: string) => void;
-    onPatchPack?: (patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay'>>) => void;
+    onPatchPack?: (patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay'>>) => void;
 };
 
 function TrCell({
@@ -63,10 +65,12 @@ export function InvoiceTimeReportPage({
     continuation = false,
     showDetailTotalRow = true,
     showExpenseSection = true,
+    showMehnatSection = true,
     showSummarySection = true,
     editable = false,
     onPatchDetailRow,
     onPatchExpenseRow,
+    onPatchMehnatRow,
     onPatchSummaryRow,
     onPatchPack,
 }: InvoiceTimeReportPageProps) {
@@ -78,6 +82,13 @@ export function InvoiceTimeReportPage({
     const expenses = (pack.expenseSlots ?? []).filter((r) =>
         [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0),
     );
+    const mehnat = (pack.mehnatSlots ?? []).filter((r) =>
+        [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0),
+    );
+    const detailHasContent = detail.some((r) =>
+        [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0),
+    );
+    const showMainTimeTable = detailHasContent || mehnat.length === 0;
     const title = continuation
         ? labels.titleContinued(model.servicesMonthYear)
         : labels.title(model.servicesMonthYear);
@@ -89,6 +100,7 @@ export function InvoiceTimeReportPage({
       <div className="tt-inv-tr__rule" aria-hidden />
       <h2 className="tt-inv-tr__title">{title}</h2>
 
+      {showMainTimeTable ? (
       <div className="tt-inv-tr__table-wrap">
         <table className="tt-inv-tr__table" role="grid" aria-label="Детальный отчёт по времени">
           <thead className="tt-inv-tr__thead">
@@ -157,6 +169,79 @@ export function InvoiceTimeReportPage({
             ) : null}
         </table>
       </div>
+      ) : null}
+
+      {showMehnatSection && mehnat.length > 0 ? (
+          <>
+            <h3 className="tt-inv-tr__subtitle">{labels.mehnatTitle}</h3>
+            <div className="tt-inv-tr__table-wrap">
+              <table className="tt-inv-tr__table" role="grid" aria-label={labels.mehnatTitle}>
+                <thead className="tt-inv-tr__thead">
+                  <tr>
+                    <th scope="col" style={{ width: '15%' }}>{labels.date}</th>
+                    <th scope="col" style={{ width: '9%' }}>{labels.initials}</th>
+                    <th scope="col" style={{ width: '13%' }}>{labels.task}</th>
+                    <th scope="col" style={{ width: '18%' }}>{labels.description}</th>
+                    <th scope="col" style={{ width: '8%' }}>{labels.hours}</th>
+                    <th scope="col" style={{ width: '18%' }}>{labels.rate}</th>
+                    <th scope="col" style={{ width: '19%' }}>{amountHeader}</th>
+                  </tr>
+                </thead>
+                <tbody className="tt-inv-tr__tbody">
+                  {mehnat.map((r, i) => {
+                      const empty = !([r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0));
+                      const cellClass = empty ? 'tt-inv-tr__cell--empty' : undefined;
+                      const numClass = `tt-inv-tr__cell--num${empty ? ' tt-inv-tr__cell--empty' : ''}`;
+                      const moneyClass = `${numClass} tt-inv-tr__cell--amount`;
+                      return (
+                          <tr key={i}>
+                            <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'date', v)} />
+                            <TrCell editable={editable} className={cellClass} value={r.initials} ariaLabel={`${labels.initials}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'initials', v)} />
+                            <TrCell editable={editable} className={cellClass} value={r.task} ariaLabel={`${labels.task}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'task', v)} />
+                            <TrCell editable={editable} className={cellClass} value={r.description} ariaLabel={`${labels.description}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'description', v)} />
+                            <TrCell editable={editable} className={numClass} value={r.hours} ariaLabel={`${labels.hours}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'hours', v)} />
+                            <TrCell editable={editable} className={moneyClass} value={r.hourlyRate} ariaLabel={`${labels.rate}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'hourlyRate', v)} />
+                            <TrCell editable={editable} className={moneyClass} value={r.amount} ariaLabel={`${labels.amount(cur)}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'amount', v)} />
+                          </tr>
+                      );
+                  })}
+                </tbody>
+                <tfoot className="tt-inv-tr__tfoot">
+                  <tr>
+                    <td colSpan={4}>{labels.total}</td>
+                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">
+                      {editable
+                        ? (
+                            <input
+                              type="text"
+                              className="tt-inv-tr__cell-input tt-inv-tr__cell-input--foot"
+                              value={pack.mehnatTotalHoursDisplay}
+                              aria-label={`${labels.mehnatTitle} ${labels.total} ${labels.hours}`}
+                              onChange={(e) => onPatchPack?.({ mehnatTotalHoursDisplay: e.target.value })}
+                            />
+                          )
+                        : (pack.mehnatTotalHoursDisplay || '\u00a0')}
+                    </td>
+                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">—</td>
+                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num tt-inv-tr__cell--amount">
+                      {editable
+                        ? (
+                            <input
+                              type="text"
+                              className="tt-inv-tr__cell-input tt-inv-tr__cell-input--foot"
+                              value={pack.mehnatTotalAmountDisplay}
+                              aria-label={`${labels.mehnatTitle} ${labels.total} ${labels.amount(cur)}`}
+                              onChange={(e) => onPatchPack?.({ mehnatTotalAmountDisplay: e.target.value })}
+                            />
+                          )
+                        : (pack.mehnatTotalAmountDisplay || '\u00a0')}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </>
+        ) : null}
 
       {showSummarySection ? (
           <>

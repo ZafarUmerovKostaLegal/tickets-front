@@ -20,6 +20,7 @@ export type TimeReportLabels = {
     total: string;
     summaryTitle: string;
     expensesTitle: string;
+    mehnatTitle: string;
     name: string;
     titleCol: string;
     hourlyRate: string;
@@ -41,6 +42,7 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
         total: 'Total',
         summaryTitle: 'Summary of services',
         expensesTitle: 'Expenses',
+        mehnatTitle: 'My Mehnat',
         name: 'Name',
         titleCol: 'Title',
         hourlyRate: 'Hourly rate',
@@ -60,6 +62,7 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
         total: 'Итого',
         summaryTitle: 'Сводка по услугам',
         expensesTitle: 'Расходы',
+        mehnatTitle: 'My Mehnat',
         name: 'ФИО',
         titleCol: 'Должность',
         hourlyRate: 'Ставка',

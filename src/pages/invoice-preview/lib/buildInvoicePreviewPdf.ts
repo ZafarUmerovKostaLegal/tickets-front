@@ -14,7 +14,7 @@ import {
     packUppercaseRibbonPeriodMonth,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
-import { trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { ensureMehnatSeparatedPack, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import {
     resolveLegalBillToBankName,
@@ -595,6 +595,8 @@ function paginateDetailRowsForPdf(
         .map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
     const expenseBody = trimTrailingEmptyDetailSlots(pack.expenseSlots)
         .map((r) => [r.date, r.description, r.amount] as const);
+    const mehnatBody = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? [])
+        .map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount] as const);
     const expenseReserve = expenseBody.length
         ? TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
             + estimateGridTableHeight(
@@ -608,7 +610,21 @@ function paginateDetailRowsForPdf(
                 true,
             )
         : 0;
-    const summaryReserve = expenseReserve + TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
+    const mehnatReserve = mehnatBody.length
+        ? TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
+            + estimateGridTableHeight(
+                tableW,
+                TIME_REPORT_PDF_DETAIL_WEIGHTS,
+                detailHeaders,
+                mehnatBody,
+                TR_DETAIL_WRAP_COLS,
+                font,
+                fontBold,
+                true,
+                TR_DETAIL_FIXED_FS_COLS,
+            )
+        : 0;
+    const summaryReserve = mehnatReserve + expenseReserve + TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
         + estimateGridTableHeight(
             tableW,
             TIME_REPORT_PDF_SUMMARY_WEIGHTS,
@@ -1086,6 +1102,8 @@ function drawSingleTimeReportPdfPage(
     if (opts.showSummarySection) {
         const expenseBodyForReserve = trimTrailingEmptyDetailSlots(pack.expenseSlots)
             .map((r) => [r.date, r.description, r.amount] as const);
+        const mehnatBodyForReserve = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? [])
+            .map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount] as const);
         const expenseReserve = expenseBodyForReserve.length
             ? TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
                 + estimateGridTableHeight(
@@ -1099,6 +1117,20 @@ function drawSingleTimeReportPdfPage(
                     true,
                 )
             : 0;
+        const mehnatReserve = mehnatBodyForReserve.length
+            ? TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
+                + estimateGridTableHeight(
+                    tableW,
+                    TIME_REPORT_PDF_DETAIL_WEIGHTS,
+                    detailHeaders,
+                    mehnatBodyForReserve,
+                    TR_DETAIL_WRAP_COLS,
+                    font,
+                    fontBold,
+                    true,
+                    TR_DETAIL_FIXED_FS_COLS,
+                )
+            : 0;
         detailSlice = trimDetailSliceToFitSummary(
             slice,
             yGridTop,
@@ -1109,7 +1141,7 @@ function drawSingleTimeReportPdfPage(
             opts.showDetailTotals,
             font,
             fontBold,
-            expenseReserve,
+            mehnatReserve + expenseReserve,
         );
     }
     else {
@@ -1152,6 +1184,44 @@ function drawSingleTimeReportPdfPage(
     }
 
     let yMid = yAfterDetail - TR_SECTION_GAP;
+
+    const mehnatRows = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []);
+    if (mehnatRows.length > 0) {
+        page.drawText(labels.mehnatTitle, {
+            x: ML,
+            y: yMid,
+            size: DOC_FS,
+            font: fontBold,
+            color: TR_RED,
+        });
+        yMid -= TR_SUMMARY_TITLE_GAP;
+        const mehnatBody = mehnatRows.map((r) => [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount] as const);
+        yMid = drawTimeReportGridTable(page, {
+            tableLeft: ML,
+            tableW,
+            yTopPdf: yMid,
+            colWeights: TIME_REPORT_PDF_DETAIL_WEIGHTS,
+            headers: detailHeaders,
+            bodyRows: Math.max(mehnatBody.length, 1),
+            footerKind: 'detail',
+            summaryCurrency: null,
+            font,
+            fontBold,
+            bodyTexts: mehnatBody.length ? mehnatBody : [['', '', '', '', '', '', '']],
+            rightAlignedBodyCols: new Set([4, 5, 6]),
+            wrapBodyCols: TR_DETAIL_WRAP_COLS,
+            fixedFsBodyCols: TR_DETAIL_FIXED_FS_COLS,
+            showInnerTotal: true,
+            totalLabel: labels.total,
+            footerTotals: {
+                detail: {
+                    hours: pack.mehnatTotalHoursDisplay,
+                    amount: pack.mehnatTotalAmountDisplay,
+                },
+            },
+        });
+        yMid -= TR_SECTION_GAP;
+    }
 
     page.drawText(labels.summaryTitle, {
         x: ML,
@@ -1596,12 +1666,13 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
         }
     }
 
-    const timeReport = (
+    const timeReportRaw = (
         timeReportOverride
-        && trimTrailingEmptyDetailSlots(timeReportOverride.detailSlots).length > 0
+        && timeReportPackHasContent(timeReportOverride)
     )
         ? timeReportOverride
         : await resolveInvoiceTimeReportPack(session, model);
+    const timeReport = ensureMehnatSeparatedPack(timeReportRaw);
     const detailPlans = paginateDetailRowsForPdf(timeReport.detailSlots, model, timeReport, font, fontBold);
     const pdfPageCount = 2 + detailPlans.length;
     /** Preview/DOCX page numbers (fixed chunking) — selection UI uses these. */

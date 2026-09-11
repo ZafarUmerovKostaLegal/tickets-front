@@ -35,6 +35,7 @@ import {
     finalizeDetailSlots,
     formatTimeReportAmount,
     formatTimeReportHours,
+    isMyMehnatTimeReportRow,
     padSummaryRows,
     type InvoiceTimeReportDetailRow,
     type InvoiceTimeReportPack,
@@ -293,18 +294,28 @@ function packFromDetails(
     users: TimeTrackingUserRow[],
     currency: string,
     initialsByAuthId: ReadonlyMap<number, string>,
-    empty: InvoiceTimeReportPack,
 ): InvoiceTimeReportPack {
-    const timeRows = details.filter((d) => d.rowKind !== 'expense');
+    const allTime = details.filter((d) => d.rowKind !== 'expense');
+    const mehnatRows = allTime.filter((d) => isMyMehnatTimeReportRow(d));
+    const timeRows = allTime.filter((d) => !isMyMehnatTimeReportRow(d));
     const expenseRows = details.filter((d) => d.rowKind === 'expense');
     const expenseTotal = expenseRows.reduce((s, d) => s + d.amtNum, 0);
+    const mehnatHours = mehnatRows.reduce((s, d) => s + d.hoursNum, 0);
+    const mehnatTotal = mehnatRows.reduce((s, d) => s + d.amtNum, 0);
     const tail = buildSummaryAndTotals(details, users, currency, initialsByAuthId);
+    const timeHours = timeRows.reduce((s, d) => s + d.hoursNum, 0);
+    const timeTotal = timeRows.reduce((s, d) => s + d.amtNum, 0);
     return {
         currency,
-        detailSlots: timeRows.length ? finalizeDetailSlots(timeRows.map(toPublicRow)) : empty.detailSlots,
+        detailSlots: timeRows.length ? finalizeDetailSlots(timeRows.map(toPublicRow)) : [],
         expenseSlots: expenseRows.length ? finalizeDetailSlots(expenseRows.map(toPublicRow)) : [],
+        mehnatSlots: mehnatRows.length ? finalizeDetailSlots(mehnatRows.map(toPublicRow)) : [],
         expenseTotalAmountDisplay: expenseRows.length ? formatTimeReportAmount(expenseTotal, currency) : '',
+        mehnatTotalHoursDisplay: mehnatRows.length ? formatTimeReportHours(mehnatHours) : '',
+        mehnatTotalAmountDisplay: mehnatRows.length ? formatTimeReportAmount(mehnatTotal, currency) : '',
         ...tail,
+        detailTotalHoursDisplay: formatTimeReportHours(timeHours),
+        detailTotalAmountDisplay: formatTimeReportAmount(timeTotal, currency),
     };
 }
 
@@ -437,7 +448,7 @@ export async function resolveInvoiceTimeReportPack(
                 });
             }
 
-            return packFromDetails(details, users, currency, initialsByAuthId, empty);
+            return packFromDetails(details, users, currency, initialsByAuthId);
         }
 
         const inv = await getInvoice(session.invoiceId, true);
@@ -575,7 +586,7 @@ export async function resolveInvoiceTimeReportPack(
             }
         }
 
-        return packFromDetails(details, users, currency, initialsByAuthId, empty);
+        return packFromDetails(details, users, currency, initialsByAuthId);
     }
     catch (err) {
         console.error('resolveInvoiceTimeReportPack failed', err);

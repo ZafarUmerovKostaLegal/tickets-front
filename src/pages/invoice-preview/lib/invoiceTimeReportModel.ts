@@ -24,10 +24,14 @@ export type InvoiceTimeReportPack = {
     detailSlots: InvoiceTimeReportDetailRow[];
     /** Expense lines shown in a separate table (not mixed into time details). */
     expenseSlots: InvoiceTimeReportDetailRow[];
+    /** My Mehnat time lines — own table, not mixed into the main time grid. */
+    mehnatSlots: InvoiceTimeReportDetailRow[];
     summarySlots: InvoiceTimeReportSummaryRow[];
     detailTotalHoursDisplay: string;
     detailTotalAmountDisplay: string;
     expenseTotalAmountDisplay: string;
+    mehnatTotalHoursDisplay: string;
+    mehnatTotalAmountDisplay: string;
     summaryGrandHoursDisplay: string;
     summaryGrandAmountDisplay: string;
 };
@@ -45,10 +49,13 @@ export function emptyInvoiceTimeReportPack(currency: string): InvoiceTimeReportP
         currency,
         detailSlots: Array.from({ length: TIME_REPORT_DETAIL_ROWS }, emptyDetailRow),
         expenseSlots: [],
+        mehnatSlots: [],
         summarySlots: Array.from({ length: TIME_REPORT_SUMMARY_ROWS }, emptySummaryRow),
         detailTotalHoursDisplay: '',
         detailTotalAmountDisplay: '',
         expenseTotalAmountDisplay: '',
+        mehnatTotalHoursDisplay: '',
+        mehnatTotalAmountDisplay: '',
         summaryGrandHoursDisplay: '',
         summaryGrandAmountDisplay: '',
     };
@@ -81,7 +88,82 @@ export function timeReportPackHasContent(pack: InvoiceTimeReportPack | null | un
     if (!pack)
         return false;
     return trimTrailingEmptyDetailSlots(pack.detailSlots).length > 0
-        || trimTrailingEmptyDetailSlots(pack.expenseSlots ?? []).length > 0;
+        || trimTrailingEmptyDetailSlots(pack.expenseSlots ?? []).length > 0
+        || trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []).length > 0;
+}
+
+/** Task names like «My mehnat registration» / «Регистрация My mehnat». Description-only mentions do not count. */
+export function isMyMehnatTimeReportRow(row: Pick<InvoiceTimeReportDetailRow, 'task'>): boolean {
+    return (row.task ?? '').toLowerCase().includes('mehnat');
+}
+
+export function parseTimeReportHoursDisplay(raw: string): number {
+    const t = String(raw ?? '').trim().replace(/\s/g, '').replace(',', '.');
+    const n = Number(t);
+    return Number.isFinite(n) ? n : 0;
+}
+
+export function parseTimeReportAmountDisplay(raw: string): number {
+    let t = String(raw ?? '').trim().replace(/[−–]/g, '-');
+    const neg = t.startsWith('-');
+    t = t.replace(/^-/, '').replace(/[A-Za-z\s]/g, '');
+    if (t.includes('.') && t.includes(','))
+        t = t.replace(/,/g, '');
+    else if (t.includes(',') && !t.includes('.'))
+        t = t.replace(',', '.');
+    const n = Number(t);
+    if (!Number.isFinite(n))
+        return 0;
+    return neg ? -n : n;
+}
+
+function sumDetailHours(rows: readonly InvoiceTimeReportDetailRow[]): number {
+    return rows.reduce((s, r) => s + parseTimeReportHoursDisplay(r.hours), 0);
+}
+
+function sumDetailAmounts(rows: readonly InvoiceTimeReportDetailRow[]): number {
+    return rows.reduce((s, r) => s + parseTimeReportAmountDisplay(r.amount), 0);
+}
+
+/** Pull My Mehnat rows out of the main time grid (also heals older saved packs). */
+export function ensureMehnatSeparatedPack(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
+    const details = trimTrailingEmptyDetailSlots(pack.detailSlots);
+    const already = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []);
+    const fromDetails = details.filter(isMyMehnatTimeReportRow);
+    const regular = details.filter((r) => !isMyMehnatTimeReportRow(r));
+    const cur = (pack.currency || 'EUR').trim().toUpperCase() || 'EUR';
+
+    if (fromDetails.length === 0) {
+        if (already.length === 0) {
+            if (pack.mehnatSlots != null)
+                return pack;
+            return {
+                ...pack,
+                mehnatSlots: [],
+                mehnatTotalHoursDisplay: pack.mehnatTotalHoursDisplay ?? '',
+                mehnatTotalAmountDisplay: pack.mehnatTotalAmountDisplay ?? '',
+            };
+        }
+        if ((pack.mehnatTotalHoursDisplay ?? '').trim() && (pack.mehnatTotalAmountDisplay ?? '').trim())
+            return pack;
+        return {
+            ...pack,
+            mehnatSlots: already,
+            mehnatTotalHoursDisplay: formatTimeReportHours(sumDetailHours(already)),
+            mehnatTotalAmountDisplay: formatTimeReportAmount(sumDetailAmounts(already), cur),
+        };
+    }
+
+    const mehnat = [...already, ...fromDetails];
+    return {
+        ...pack,
+        detailSlots: regular.length ? finalizeDetailSlots(regular) : [],
+        detailTotalHoursDisplay: formatTimeReportHours(sumDetailHours(regular)),
+        detailTotalAmountDisplay: formatTimeReportAmount(sumDetailAmounts(regular), cur),
+        mehnatSlots: finalizeDetailSlots(mehnat),
+        mehnatTotalHoursDisplay: formatTimeReportHours(sumDetailHours(mehnat)),
+        mehnatTotalAmountDisplay: formatTimeReportAmount(sumDetailAmounts(mehnat), cur),
+    };
 }
 
 export function finalizeDetailSlots(rows: InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {
