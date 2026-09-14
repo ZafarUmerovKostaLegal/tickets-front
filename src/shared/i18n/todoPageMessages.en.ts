@@ -36,6 +36,10 @@ export const todoPageMessagesEn: TodoPageMessages = {
         addColumn: 'Add another column',
         addColumnAria: 'Add column',
         renameBoard: 'Rename board',
+        deleteBoard: 'Delete board',
+        deleteBoardTitle: 'Delete board?',
+        deleteBoardConfirm: 'Board “{name}” will be deleted along with its columns and cards. This cannot be undone.',
+        boardDeleted: 'Board deleted',
     },
     errors: {
         loadUsers: 'Failed to load users',
@@ -62,6 +66,7 @@ export const todoPageMessagesEn: TodoPageMessages = {
         exportBoard: 'Failed to export board',
         importBoard: 'Failed to import board',
         importJsonOnly: 'Choose a JSON file (Kosta or Trello export)',
+        deleteBoard: 'Failed to delete board',
     },
     archive: {
         title: 'Archive',

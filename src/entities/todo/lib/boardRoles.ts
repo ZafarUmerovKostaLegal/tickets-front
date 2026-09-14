@@ -22,3 +22,8 @@ export function canEditKanbanStructure(role: string | null | undefined): boolean
 export function canManageBoardMembers(role: string | null | undefined): boolean {
     return normalizeBoardRole(role) === 'owner';
 }
+
+/** Hard-delete/archive of a board is owner-only (matches the todos API). */
+export function canDeleteTodoBoard(role: string | null | undefined): boolean {
+    return normalizeBoardRole(role) === 'owner';
+}

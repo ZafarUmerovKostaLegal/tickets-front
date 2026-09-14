@@ -34,6 +34,10 @@ export const todoPageMessages = {
         addColumn: 'Добавьте еще одну колонку',
         addColumnAria: 'Добавить колонку',
         renameBoard: 'Переименовать доску',
+        deleteBoard: 'Удалить доску',
+        deleteBoardTitle: 'Удалить доску?',
+        deleteBoardConfirm: 'Доска «{name}» будет удалена вместе с колонками и карточками. Это нельзя отменить.',
+        boardDeleted: 'Доска удалена',
     },
     errors: {
         loadUsers: 'Не удалось загрузить пользователей',
@@ -59,6 +63,7 @@ export const todoPageMessages = {
         exportBoard: 'Не удалось экспортировать доску',
         importBoard: 'Не удалось импортировать доску',
         importJsonOnly: 'Выберите JSON-файл (экспорт Kosta или Trello)',
+        deleteBoard: 'Не удалось удалить доску',
     },
     archive: {
         title: 'Архив',

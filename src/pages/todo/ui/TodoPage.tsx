@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { AppBackButton, AppHomeLogo, AttentionBanner } from '@shared/ui';
 import { routes } from '@shared/config';
 import { stripHtmlToText } from '@shared/lib/sanitizeHtml';
-import { createTodoBoard, createTodoCard, createTodoColumn, deleteTodoBoardBackground, deleteTodoCard, deleteTodoColumn, exportTodoBoard, fetchTodoBoardById, fetchTodoBoardCurrent, fetchTodoBoardsList, findNewestCardInColumn, importTodoBoard, invalidateTodoInvites, patchTodoBoard, patchTodoCard, patchTodoColumn, pickPreferredTodoBoardId, putTodoBoardCurrent, reorderTodoCardsInColumn, reorderTodoColumns, uploadTodoBoardBackground, useTodoInvitesBadge, type CreateTodoBoardBody, type PatchTodoCardPayload, type TodoBoard, type TodoBoardLabel, type TodoBoardSummary, } from '@entities/todo';
+import { createTodoBoard, createTodoCard, createTodoColumn, deleteTodoBoard, deleteTodoBoardBackground, deleteTodoCard, deleteTodoColumn, exportTodoBoard, fetchTodoBoardById, fetchTodoBoardCurrent, fetchTodoBoardsList, findNewestCardInColumn, importTodoBoard, invalidateTodoInvites, patchTodoBoard, patchTodoCard, patchTodoColumn, pickPreferredTodoBoardId, putTodoBoardCurrent, reorderTodoCardsInColumn, reorderTodoColumns, uploadTodoBoardBackground, useTodoInvitesBadge, type CreateTodoBoardBody, type PatchTodoCardPayload, type TodoBoard, type TodoBoardLabel, type TodoBoardSummary, } from '@entities/todo';
 import { boardBackgroundStorageKey, pickBoardBackgroundApiPath, resolveBoardBackgroundDisplayUrl, } from '@entities/todo/lib/boardBackgroundUrl';
 import { fetchMediaBlob } from '@shared/api';
 import { downloadBlob } from '@shared/lib/downloadBlob';
@@ -30,10 +30,13 @@ import {
     TODO_NOTIFICATION_TYPES,
 } from '@entities/notification/wsClient';
 import {
+    canDeleteTodoBoard,
     canEditKanbanStructure,
     isParticipantBoardRole,
     isViewerBoardRole,
 } from '@entities/todo/lib/boardRoles';
+import { pickBoardIdAfterDelete } from '@entities/todo/lib/pickBoardAfterDelete';
+import { showConfirm } from '@shared/ui/app-dialog';
 import { showToast } from '@shared/ui/app-toast/appToastGate';
 import { TodoInvitesPanel } from './TodoInvitesPanel';
 import './TodoPage.css';
@@ -121,6 +124,7 @@ export function TodoPage() {
     const [bgTransitioning, setBgTransitioning] = useState(false);
     const [bgUploading, setBgUploading] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [deletingBoard, setDeletingBoard] = useState(false);
     const [navTitleEditing, setNavTitleEditing] = useState(false);
     const [navTitleDraft, setNavTitleDraft] = useState('');
     const [columnOrder, setColumnOrder] = useState<ColumnId[]>([]);
@@ -556,6 +560,53 @@ export function TodoPage() {
         void putTodoBoardCurrent(b.id).catch(() => { });
         await reloadBoardSummaries();
     }, [commitBoard, reloadBoardSummaries, t]);
+    const handleDeleteTodoBoard = useCallback(async () => {
+        setMenuOpen(false);
+        if (activeBoardId == null || deletingBoard)
+            return;
+        const name = boardSummaries.find((board) => board.id === activeBoardId)?.title.trim() || t('todoPage.page.deleteBoard');
+        const ok = await showConfirm({
+            title: t('todoPage.page.deleteBoardTitle'),
+            message: t('todoPage.page.deleteBoardConfirm').replace('{name}', name),
+            confirmLabel: t('todoPage.page.deleteBoard'),
+            cancelLabel: t('todoPage.cancel'),
+            variant: 'danger',
+        });
+        if (!ok)
+            return;
+        setDeletingBoard(true);
+        setNavTitleEditing(false);
+        try {
+            await deleteTodoBoard(activeBoardId);
+            const list = await fetchTodoBoardsList();
+            const nextId = pickBoardIdAfterDelete(list, activeBoardId);
+            if (nextId != null) {
+                const next = await fetchTodoBoardById(nextId);
+                const remaining = list.items.filter((board) => board.id !== activeBoardId);
+                setBoardSummaries(remaining);
+                setBoardListError(null);
+                setActiveBoardId(next.id);
+                applyBoardFromApi(next, remaining);
+                void putTodoBoardCurrent(next.id).catch(() => { });
+            }
+            else {
+                const created = await fetchTodoBoardCurrent();
+                const refreshed = await fetchTodoBoardsList();
+                setBoardSummaries(refreshed.items);
+                setBoardListError(null);
+                setActiveBoardId(created.id);
+                applyBoardFromApi(created, refreshed.items);
+            }
+            setBoardError(null);
+            showToast({ message: t('todoPage.page.boardDeleted'), variant: 'success' });
+        }
+        catch (e: unknown) {
+            setBoardError(e instanceof Error ? e.message : t('todoPage.errors.deleteBoard'));
+        }
+        finally {
+            setDeletingBoard(false);
+        }
+    }, [activeBoardId, applyBoardFromApi, boardSummaries, deletingBoard, t]);
     const handleRenameTodoBoard = useCallback(async (boardId: number, title: string) => {
         const name = title.trim();
         if (!name)
@@ -1589,6 +1640,7 @@ export function TodoPage() {
     const cardsReadOnly = isViewerOnlyBoard;
     const activeBoardSummary = boardSummaries.find((b) => b.id === activeBoardId);
     const showMembersSettings = canEditKanbanStructure(effectiveBoardMyRole);
+    const canDeleteBoard = canDeleteTodoBoard(effectiveBoardMyRole) && activeBoardId != null;
     const handleInviteAccepted = useCallback(async (board: TodoBoard) => {
         applyBoardFromApi(board);
         setActiveBoardId(board.id);
@@ -1718,6 +1770,10 @@ export function TodoPage() {
                                     <span className="todo-page__menu-icon"><IconUpload /></span>
                                     <span className="todo-page__menu-text">{boardIoBusy === 'import' ? t('todoPage.page.importing') : t('todoPage.page.importData')}</span>
                                 </button>
+                                {canDeleteBoard && (<button type="button" className="todo-page__menu-item todo-page__menu-item--danger" onClick={() => void handleDeleteTodoBoard()} disabled={deletingBoard}>
+                                    <span className="todo-page__menu-icon"><IconTrash /></span>
+                                    <span className="todo-page__menu-text">{deletingBoard ? t('todoPage.loading') : t('todoPage.page.deleteBoard')}</span>
+                                </button>)}
                             </div>)}
                         </div>
                     </div>
