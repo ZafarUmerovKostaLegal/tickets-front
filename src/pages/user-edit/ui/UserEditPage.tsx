@@ -1587,16 +1587,18 @@ export function UserEditPage() {
                       Убрать из всех
                     </button>)}
                 </div>
-                {projectsTabError && (<p className="uep__field-error" role="alert" style={{ marginBottom: '0.75rem' }}>
+                {projectsTabError && (<p className="uep__field-error uep__proj-status-line" role="alert">
                     {projectsTabError}
                   </p>)}
-                {projectsTabLoading && (<p className="uep__proj-subheading" role="status" style={{ marginBottom: '0.75rem' }}>
+                {projectsTabLoading && (<p className="uep__proj-subheading uep__proj-status-line" role="status">
                     Загрузка списка проектов…
                   </p>)}
-                {projectsTabSaving && (<p className="uep__proj-subheading" role="status" style={{ marginBottom: '0.75rem' }}>
+                {projectsTabSaving && (<p className="uep__proj-subheading uep__proj-status-line" role="status">
                     Сохранение…
                   </p>)}
+                <div className="uep__proj-body">
                 {canEditTTProjectAccess && !projectsTabLoading ? (
+                    <div className="uep__proj-tools">
                     <div className="uep__proj-transfer-flag-wrap">
                         <label className="uep__proj-cb-label uep__proj-transfer-flag">
                             <input
@@ -1614,8 +1616,6 @@ export function UserEditPage() {
                             Для пользователей с этим правом в переносе записей доступны все активные проекты, даже если у владельца записи нет доступа к целевому проекту.
                         </p>
                     </div>
-                ) : null}
-                {canEditTTProjectAccess && !projectsTabLoading ? (
                     <div className="uep__proj-partner-bulk">
                         <div className="uep__proj-partner-bulk-field">
                             <span className="uep__proj-partner-bulk-label" id={`${partnerAssignSelectId}-lbl`}>Партнёр</span>
@@ -1657,6 +1657,7 @@ export function UserEditPage() {
                         {partnerBulkNotice ? (
                             <p className="uep__proj-partner-bulk-status" role="status">{partnerBulkNotice}</p>
                         ) : null}
+                    </div>
                     </div>
                 ) : null}
                 <div className="uep__proj-search-wrap" ref={searchBoxRef}>
@@ -1724,6 +1725,7 @@ export function UserEditPage() {
                     })(), document.body)}
                 </div>
 
+                <div className="uep__proj-results">
                 <div className="uep__proj-status-block">
                   <p className="uep__proj-status-title" id="uep-proj-status-heading">Статус проектов</p>
                   <nav className="uep__proj-status-nav" role="tablist" aria-labelledby="uep-proj-status-heading">
@@ -1820,12 +1822,12 @@ export function UserEditPage() {
                   </div>
                 </div>
                 {projectActivityLoading && (
-                  <p className="uep__proj-subheading" role="status" style={{ marginBottom: '0.75rem' }}>
+                  <p className="uep__proj-subheading uep__proj-status-line" role="status">
                     Загрузка активности за период…
                   </p>
                 )}
                 {projectActivityError && (
-                  <p className="uep__field-error" role="alert" style={{ marginBottom: '0.75rem' }}>
+                  <p className="uep__field-error uep__proj-status-line" role="alert">
                     {projectActivityError}
                   </p>
                 )}
@@ -1895,6 +1897,8 @@ export function UserEditPage() {
                       );
                     })}
                   </div>)}
+                </div>
+              </div>
               </div>
               </div>);
         })()}
