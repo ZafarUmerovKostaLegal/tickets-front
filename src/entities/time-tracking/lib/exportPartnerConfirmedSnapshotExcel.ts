@@ -108,6 +108,61 @@ function normalizePositionRateTableLabel(title: string): string {
     return title.trim().replace(/\s+as of\s+.+/i, '').trim();
 }
 
+function positionRateForTitle(
+    title: string,
+    positionRates: readonly PartnerConfirmedExcelPositionRateRow[],
+): number | null {
+    const titleKey = normalizePositionRateTableLabel(title).toLowerCase();
+    if (!titleKey)
+        return null;
+    const hit = positionRates.find((row) => {
+        return normalizePositionRateTableLabel(row.position).toLowerCase() === titleKey && row.rate > 0;
+    });
+    return hit ? excelNum2(hit.rate) : null;
+}
+
+function dominantHourlyRate(hoursByRate: ReadonlyMap<number, number>): number {
+    let bestRate = 0;
+    let bestHours = -1;
+    for (const [rate, hours] of hoursByRate) {
+        const rateKey = excelNum2(rate);
+        if (rateKey <= 0 || hours <= 1e-9)
+            continue;
+        if (hours > bestHours + 1e-9 || (Math.abs(hours - bestHours) <= 1e-9 && rateKey > bestRate)) {
+            bestRate = rateKey;
+            bestHours = hours;
+        }
+    }
+    return bestRate;
+}
+
+function addHoursAtRate(hoursByRate: Map<number, number>, rate: number, hours: number): void {
+    const rateKey = excelNum2(rate);
+    if (rateKey <= 0 || hours <= 1e-9)
+        return;
+    hoursByRate.set(rateKey, (hoursByRate.get(rateKey) ?? 0) + hours);
+}
+
+/**
+ * Summary Rate is the contractual hourly rate (position table, else the rate on the person's hours),
+ * never billed amount / hours. Package-covered hours shrink the amount and would otherwise show a fake blend.
+ */
+export function pickExcelSummaryHourlyRate(opts: {
+    title: string;
+    hours: number;
+    amount: number;
+    hoursByRate: ReadonlyMap<number, number>;
+    positionRates: readonly PartnerConfirmedExcelPositionRateRow[];
+}): number {
+    const fromPosition = positionRateForTitle(opts.title, opts.positionRates);
+    if (fromPosition != null && fromPosition > 0)
+        return fromPosition;
+    const fromLines = dominantHourlyRate(opts.hoursByRate);
+    if (fromLines > 0)
+        return fromLines;
+    return opts.hours > 1e-9 ? excelNum2(opts.amount / opts.hours) : 0;
+}
+
 function buildPositionRateRowsFromDetails(details: DetailLine[]): PartnerConfirmedExcelPositionRateRow[] {
     const map = new Map<string, number>();
     for (const line of details) {
@@ -735,22 +790,27 @@ export async function buildPartnerConfirmedSnapshotExcel(snapshot: ReportSnapsho
         title: string;
         hours: number;
         amount: number;
+        hoursByRate: Map<number, number>;
     }>();
 
     for (const line of details) {
         const cur = byPerson.get(line.personKey);
         if (!cur) {
+            const hoursByRate = new Map<number, number>();
+            addHoursAtRate(hoursByRate, line.rate, line.hours);
             byPerson.set(line.personKey, {
                 initials: line.initials,
                 name: line.fullName,
                 title: line.title,
                 hours: line.hours,
                 amount: line.amount,
+                hoursByRate,
             });
         }
         else {
             cur.hours += line.hours;
             cur.amount += line.amount;
+            addHoursAtRate(cur.hoursByRate, line.rate, line.hours);
             if (line.title && (!cur.title || positionHierarchyRank(line.title) < positionHierarchyRank(cur.title)))
                 cur.title = line.title;
             if (!cur.name && line.fullName)
@@ -758,10 +818,21 @@ export async function buildPartnerConfirmedSnapshotExcel(snapshot: ReportSnapsho
         }
     }
 
+    const positionRateRows = (opts?.positionRateRows?.length
+        ? opts.positionRateRows
+        : buildPositionRateRowsFromDetails(details))
+        .filter((row) => row.position.trim() && row.rate > 0);
+
     const summary: SummaryLine[] = [...byPerson.values()].map((p) => {
         const hours = excelNum2(p.hours);
         const amount = excelNum2(p.amount);
-        const rateLabel = hours > 1e-9 ? excelNum2(amount / hours) : 0;
+        const rateLabel = pickExcelSummaryHourlyRate({
+            title: p.title,
+            hours,
+            amount,
+            hoursByRate: p.hoursByRate,
+            positionRates: positionRateRows,
+        });
         return {
             initials: p.initials,
             name: p.name,
@@ -803,7 +874,15 @@ export async function buildPartnerConfirmedSnapshotExcel(snapshot: ReportSnapsho
         row.getCell(4).border = thinBlackBorder();
         applyExcelNum2Cell(row.getCell(5), s.rateLabel);
         row.getCell(5).border = thinBlackBorder();
-        applyExcelProductFormula(row.getCell(6), 'D', 'E', r, { border: thinBlackBorder() });
+        const billedAmount = excelNum2(s.amount);
+        const hoursTimesRate = excelNum2(s.hours * s.rateLabel);
+        if (Math.abs(billedAmount - hoursTimesRate) <= 0.02) {
+            applyExcelProductFormula(row.getCell(6), 'D', 'E', r, { border: thinBlackBorder() });
+        }
+        else {
+            applyExcelNum2Cell(row.getCell(6), billedAmount);
+            row.getCell(6).border = thinBlackBorder();
+        }
     }
     const t2DataLastRow = r;
 
@@ -826,10 +905,6 @@ export async function buildPartnerConfirmedSnapshotExcel(snapshot: ReportSnapsho
 
     const summaryTotalAmount = summary.reduce((acc, row) => acc + row.amount, 0);
     const totalForInvoice = excelNum2(opts?.totalForInvoiceAmount ?? summaryTotalAmount);
-    const positionRateRows = (opts?.positionRateRows?.length
-        ? opts.positionRateRows
-        : buildPositionRateRowsFromDetails(details))
-        .filter((row) => row.position.trim() && row.rate > 0);
     const exportCurrency = (opts?.currency ?? 'USD').trim() || 'USD';
     const positionRateHeaderRow = t2TotalRowIdx + 2;
     writePositionRateTable(ws, positionRateHeaderRow, positionRateRows, exportCurrency);

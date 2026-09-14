@@ -896,6 +896,16 @@ body[data-theme='dark'] .corr__popover {
   background: rgba(79, 70, 229, 0.12);
 }
 
+.corr__popover-item--danger {
+  color: #b91c1c;
+}
+
+.corr__popover-item--danger:hover,
+.corr__popover-item--danger:focus-visible {
+  background: rgba(185, 28, 28, 0.08);
+  color: #991b1b;
+}
+
 .corr__popover-divider {
   height: 1px;
   margin: 0.25rem 0;
@@ -4709,6 +4719,12 @@ body[data-theme='dark'] .corr-preview__attachments { border-color: var(--app-bor
 .corr-shell .corr__popover-item:hover,
 .corr-shell .corr__popover-item:focus-visible {
   background: var(--corr-paper-alt);
+}
+
+.corr-shell .corr__popover-item--danger:hover,
+.corr-shell .corr__popover-item--danger:focus-visible {
+  background: rgba(185, 28, 28, 0.08);
+  color: #991b1b;
 }
 
 .corr-shell .corr-n__badge--pending {

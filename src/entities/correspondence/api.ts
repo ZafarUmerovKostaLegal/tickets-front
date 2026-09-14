@@ -250,6 +250,11 @@ export async function archiveCorrespondence(id: string): Promise<CorrespondenceD
     return doc;
 }
 
+export async function deleteCorrespondence(id: string): Promise<void> {
+    const res = await apiFetch(`${PREFIX}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await throwIfNotOk(res);
+}
+
 export async function fetchCorrespondenceAttachmentBlob(
     documentId: string,
     attachmentId: string,

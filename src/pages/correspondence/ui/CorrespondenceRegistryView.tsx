@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   archiveCorrespondence,
   correspondenceErrorMessage,
+  deleteCorrespondence,
   fetchCorrespondenceDocument,
   fetchCorrespondenceStats,
   invalidateCorrespondencePartnerAttention,
@@ -16,10 +17,11 @@ import {
   type CorrespondenceStats,
 } from '@entities/correspondence';
 import { routes } from '@shared/config';
-import { AttentionBanner, formatCountBadge, showAlert, DatePicker, SearchableSelect } from '@shared/ui';
+import { AttentionBanner, formatCountBadge, showAlert, showConfirm, showToast, DatePicker, SearchableSelect } from '@shared/ui';
 import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
+import { canDeleteCorrespondence } from '../model/permissions';
 import { getUsers, listPartners, type User, type UserPublic } from '@entities/user';
 import { compareRuLabels, userPickerSortLabel } from '@shared/lib/sortByRuLabel';
 import {
@@ -217,6 +219,7 @@ export function CorrespondenceRegistryView({
   const { t } = useI18n();
   const { user } = useCurrentUser();
   const isPartner = isPartnerOrgRole(user?.role, user?.position);
+  const canDelete = canDeleteCorrespondence(user?.role, user?.position);
   const navigate = useNavigate();
   const [tableTab, setTableTab] = useState<CorrTableTabKey>(() => {
     const initial = initialTableTab ?? 'all';
@@ -618,6 +621,34 @@ export function CorrespondenceRegistryView({
       void showAlert({
         title: 'Не удалось архивировать',
         message: err instanceof Error ? err.message : 'Ошибка',
+      });
+    }
+  };
+
+  const deleteRow = async (row: CorrRow) => {
+    setRowMenuOpenId(null);
+    const label = row.registryNumber.trim() || row.subject.trim() || 'документ';
+    const ok = await showConfirm({
+      title: 'Удалить документ?',
+      message: `«${label}» будет удалён вместе с файлами. Это нельзя отменить.`,
+      confirmLabel: 'Удалить',
+      cancelLabel: 'Отмена',
+      variant: 'danger',
+    });
+    if (!ok)
+      return;
+    try {
+      await deleteCorrespondence(row.id);
+      if (cardDocId === row.id)
+        setCardDocId(null);
+      invalidateCorrespondencePartnerAttention();
+      reloadAll();
+      showToast({ message: 'Документ удалён', variant: 'success' });
+    }
+    catch (err) {
+      void showAlert({
+        title: 'Не удалось удалить',
+        message: correspondenceErrorMessage(err, 'Ошибка удаления'),
       });
     }
   };
@@ -1079,6 +1110,11 @@ export function CorrespondenceRegistryView({
         <button type="button" className="corr__popover-item" role="menuitem" onClick={() => void archiveRow(rowMenuRow)}>
           В архив
         </button>
+        {canDelete ? (
+          <button type="button" className="corr__popover-item corr__popover-item--danger" role="menuitem" onClick={() => void deleteRow(rowMenuRow)}>
+            Удалить
+          </button>
+        ) : null}
       </div>
     </>, document.body) : null}
 
