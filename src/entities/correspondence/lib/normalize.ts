@@ -166,6 +166,7 @@ export function normalizeCorrespondenceDocument(raw: unknown): CorrespondenceDoc
         partnerUserId,
         partnerUser: normalizeUserSnippet(o.partnerUser ?? o.partner_user),
         attachmentsCount: num(o.attachmentsCount ?? o.attachments_count) ?? attachments?.length ?? 0,
+        commentsCount: num(o.commentsCount ?? o.comments_count) ?? 0,
         hasScan: Boolean(o.hasScan ?? o.has_scan),
         comment: pickStr(o, 'comment') || null,
         rejectionComment: pickStr(o, 'rejectionComment', 'rejection_comment') || null,
@@ -208,6 +209,7 @@ export function mapDocumentToCorrRow(doc: CorrespondenceDocument): CorrRow {
         partnerUserId: doc.partnerUserId ?? undefined,
         partnerName: doc.partnerUser ? userLabel(doc.partnerUser) : undefined,
         hasScan: doc.hasScan,
+        commentsCount: doc.commentsCount ?? 0,
     };
 }
 

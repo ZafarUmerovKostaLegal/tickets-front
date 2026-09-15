@@ -542,6 +542,7 @@ export function CorrespondenceDocumentCardModal({
             const created = await createCorrespondenceComment(documentId, text);
             setComments((prev) => [...prev, created]);
             setCommentDraft('');
+            onChanged?.();
         }
         catch (err) {
             setCommentsError(correspondenceErrorMessage(err, 'Не удалось отправить комментарий'));
@@ -560,8 +561,9 @@ export function CorrespondenceDocumentCardModal({
             className="corr-modal corr-modal--enter corr-card-modal"
             role="presentation"
             onMouseDown={(e) => {
-                if (e.target === e.currentTarget && !acting)
-                    onClose();
+                // Full-screen card — only close via explicit buttons, not backdrop click.
+                if (e.target === e.currentTarget)
+                    e.preventDefault();
             }}
         >
             <div

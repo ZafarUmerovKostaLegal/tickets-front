@@ -1247,20 +1247,46 @@ body[data-theme='dark'] .corr-modal__panel {
   animation: corr-modal-panel-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.corr-card-modal {
+  padding: 0;
+  align-items: stretch;
+  justify-content: stretch;
+  background: var(--app-surface, #fff);
+  backdrop-filter: none;
+}
+
 .corr-card-modal .corr-card-modal__panel {
   display: flex;
   flex-direction: column;
-  max-width: min(1440px, 100%);
   width: 100%;
-  max-height: min(96vh, 980px);
-  height: min(96vh, 980px);
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  min-height: 100dvh;
   overflow: hidden;
-  padding: 1rem 1.1rem 0.95rem;
+  padding: 0.85rem 1rem 0.75rem;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  box-sizing: border-box;
+}
+
+body[data-theme='dark'] .corr-card-modal .corr-card-modal__panel {
+  box-shadow: none;
 }
 
 .corr-card-modal__head {
   flex-shrink: 0;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.corr-card-modal.corr-modal--enter .corr-card-modal__panel {
+  animation: corr-card-modal-fs-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes corr-card-modal-fs-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .corr-card-modal__head-text {
@@ -4398,7 +4424,43 @@ body[data-theme='dark'] .corr-preview__attachments { border-color: var(--app-bor
 }
 
 .corr-registry__cell-subject {
-  max-width: 220px;
+  max-width: 260px;
+}
+
+.corr-registry__subject-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.corr-registry__subject-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.corr-registry__comments-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  line-height: 1.2;
+  color: var(--corr-oxblood, #8b2635);
+  background: color-mix(in srgb, var(--corr-oxblood, #8b2635) 10%, #fff);
+  border: 1px solid color-mix(in srgb, var(--corr-oxblood, #8b2635) 22%, transparent);
+}
+
+body[data-theme='dark'] .corr-registry__comments-badge {
+  color: #f0b4bc;
+  background: rgba(139, 38, 53, 0.28);
+  border-color: rgba(139, 38, 53, 0.4);
 }
 
 .corr__scan-icon {

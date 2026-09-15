@@ -94,6 +94,7 @@ export type CorrespondenceDocument = {
     partnerUserId: number | null;
     partnerUser: CorrespondenceUserSnippet | null;
     attachmentsCount: number;
+    commentsCount: number;
     hasScan: boolean;
     comment: string | null;
     rejectionComment: string | null;
@@ -179,4 +180,5 @@ export type CorrRow = {
     partnerUserId?: number;
     partnerName?: string;
     hasScan?: boolean;
+    commentsCount?: number;
 };

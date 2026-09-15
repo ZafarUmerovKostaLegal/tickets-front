@@ -938,7 +938,23 @@ export function CorrespondenceRegistryView({
                             ? <span className="corr__partner-pill" title={row.partnerUserId ? `Партнёр #${row.partnerUserId}` : undefined}>{row.partnerName}</span>
                             : '—'}
                         </td>
-                        <td className="corr-registry__cell-subject" title={row.subject}>{row.subject}</td>
+                        <td className="corr-registry__cell-subject" title={row.subject}>
+                          <span className="corr-registry__subject-wrap">
+                            <span className="corr-registry__subject-text">{row.subject}</span>
+                            {(row.commentsCount ?? 0) > 0 ? (
+                              <span
+                                className="corr-registry__comments-badge"
+                                title={`Комментарии: ${row.commentsCount}`}
+                                aria-label={`Комментарии: ${row.commentsCount}`}
+                              >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                </svg>
+                                {row.commentsCount}
+                              </span>
+                            ) : null}
+                          </span>
+                        </td>
                         <td><span className={CORR_TYPE_BADGE[row.type].className}>{CORR_TYPE_BADGE[row.type].label}</span></td>
                         {direction === 'incoming' ? (
                           <td>
