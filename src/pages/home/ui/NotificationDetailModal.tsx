@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { TODO_NOTIFICATION_TYPES, type NotificationItem } from '@entities/notification/wsClient';
 import { getCorrespondenceOutgoingUrl, getExpensesOpenUrl, routes } from '@shared/config';
-import { AuthImg } from '@shared/ui';
+import { AuthImg, navigateWithTransition } from '@shared/ui';
 
 type NotificationDetailModalProps = {
     notification: NotificationItem;
@@ -59,7 +59,7 @@ export const NotificationDetailModal = memo(function NotificationDetailModal({ n
         if (!go)
             return;
         onClose();
-        navigate(go.to);
+        navigateWithTransition(navigate, go.to);
     };
 
     const modal = (<div className="tm" role="dialog" aria-modal="true">
@@ -72,8 +72,11 @@ export const NotificationDetailModal = memo(function NotificationDetailModal({ n
             </span>
             <h2 className="tm__title">Уведомление</h2>
           </div>
-          <button type="button" className="tm__close" onClick={onClose}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          <button type="button" className="tm__close" onClick={onClose} aria-label="Закрыть">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
           </button>
         </div>
         <div className="tm__body">
@@ -93,6 +96,10 @@ export const NotificationDetailModal = memo(function NotificationDetailModal({ n
           <button type="button" className="tm__btn tm__btn--ghost" onClick={onClose}>Закрыть</button>
           {go ? (
             <button type="button" className="tm__btn tm__btn--primary" onClick={openTarget}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M5 12h14"/>
+                <path d="m12 5 7 7-7 7"/>
+              </svg>
               {go.label}
             </button>
           ) : null}
