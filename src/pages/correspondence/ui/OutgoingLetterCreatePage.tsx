@@ -13,6 +13,7 @@ import {
     type OutgoingLetterAttachmentMeta,
 } from '../lib/outgoingLetterSession';
 import { CORR_SHELL_NAV_TABS } from '../model/constants';
+import { invalidateCorrespondencePartnerAttention } from '@entities/correspondence';
 import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
 import { CorrespondenceShell } from './CorrespondenceShell';
 import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
@@ -193,6 +194,7 @@ export function OutgoingLetterCreatePage() {
             const { clearOutgoingLetterDraft } = await import('../lib/outgoingLetterSession');
             clearOutgoingLetterDraft();
             setReviewOpen(false);
+            invalidateCorrespondencePartnerAttention();
             void showAlert({
                 title: 'Отправлено на согласование',
                 message: `Письмо отправлено партнёру «${partnerName}». После одобрения распечатайте, подпишите и загрузите скан.`,
