@@ -19,7 +19,8 @@ export default defineConfig(({ mode }) => {
     const viteBuildTarget =
         tauriPlatform === 'windows' || tauriPlatform === 'android'
             ? 'chrome105'
-            : 'safari13';
+            // Docx editor (HarfBuzz) uses top-level await + WASM — Safari 13 fails the build/runtime.
+            : ['es2022', 'chrome89', 'firefox89', 'safari15'];
     return {
 
         base: '/',
@@ -44,7 +45,10 @@ export default defineConfig(({ mode }) => {
                             return 'recharts';
                         if (id.includes('node_modules/pdf-lib') || id.includes('node_modules/@pdf-lib/'))
                             return 'pdf-lib';
-                        if (id.includes('node_modules/docx'))
+                        // Exact `docx` package only — do NOT match `@docx-editor.dev/*`
+                        // (and do not force @docx-editor into a shared chunk: that traps
+                        // Vite's preload helper and pulls ~2.5MB into the entry graph).
+                        if (/\/node_modules\/docx\//.test(norm) || /\/node_modules\/docx["']?$/.test(norm))
                             return 'docx';
                         if (
                             norm.includes('/node_modules/buffer/')
@@ -76,7 +80,14 @@ export default defineConfig(({ mode }) => {
             global: 'globalThis',
         },
         optimizeDeps: {
-            include: ['buffer', 'core-js', 'regenerator-runtime', 'events', 'readable-stream', 'process'],
+            include: [
+                'buffer',
+                'core-js',
+                'regenerator-runtime',
+                'events',
+                'readable-stream',
+                'process',
+            ],
 
             exclude: ['exceljs', 'jszip'],
 
@@ -105,7 +116,7 @@ export default defineConfig(({ mode }) => {
         preview: {
             headers: {
                 'Content-Security-Policy':
-                    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https: http://127.0.0.1:1234 http://localhost:1234; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: ws:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'",
+                    "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https: http://127.0.0.1:1234 http://localhost:1234; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: ws:; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; form-action 'self'",
             },
         },
         server: {

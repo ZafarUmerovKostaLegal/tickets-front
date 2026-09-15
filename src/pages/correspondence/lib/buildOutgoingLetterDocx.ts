@@ -164,6 +164,34 @@ export async function buildOutgoingLetterDocxBlob(
     return Packer.toBlob(doc);
 }
 
+/** Same letterhead as Blob, for in-browser DocxEditor (`Uint8Array`). */
+export async function buildOutgoingLetterDocxBytes(
+    model: InvoiceCoverLetterModel,
+    opts?: { registryNumber?: string | null },
+): Promise<Uint8Array> {
+    const blob = await buildOutgoingLetterDocxBlob(model, opts);
+    return new Uint8Array(await blob.arrayBuffer());
+}
+
+export const OUTGOING_LETTER_DOCX_MIME =
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+export function outgoingLetterDocxFileFromBytes(
+    bytes: ArrayBuffer | Uint8Array,
+    subject: string,
+    dateIso: string,
+): File {
+    const src = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
+    const copy = new Uint8Array(src.byteLength);
+    copy.set(src);
+    const blob = new Blob([copy], { type: OUTGOING_LETTER_DOCX_MIME });
+    return new File(
+        [blob],
+        outgoingLetterDocxFileName(subject, dateIso),
+        { type: OUTGOING_LETTER_DOCX_MIME },
+    );
+}
+
 export function outgoingLetterDocxFileName(subject: string, dateIso: string): string {
     const safe = (subject || 'письмо')
         .trim()

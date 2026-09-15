@@ -22,6 +22,8 @@ const optionalChunkLimits = [
     { prefix: 'exceljs-', rawKb: 560, gzipKb: 175 },
     { prefix: 'recharts-', rawKb: 410, gzipKb: 125 },
     { prefix: 'docx-', rawKb: 380, gzipKb: 115 },
+    // In-app letter editor (HarfBuzz WASM + fonts); lazy-only via compose page.
+    { prefix: 'OutgoingLetterDocxEditor-', rawKb: 2800, gzipKb: 850 },
 ];
 
 if (!fs.existsSync(assetsDir) || !fs.existsSync(htmlPath)) {
@@ -64,6 +66,15 @@ function checkTotal(label, measured, rawLimit, gzipLimit) {
         pass(detail);
 }
 
+function matchesOptionalPrefix(file, prefix) {
+    if (!file.startsWith(prefix) || !file.endsWith('.js'))
+        return false;
+    // `docx-` must not also match `docx-editor-*.js`
+    if (prefix === 'docx-' && file.startsWith('docx-editor-'))
+        return false;
+    return true;
+}
+
 const initialMeasured = uniqueInitialAssets
     .filter((file) => fs.existsSync(path.join(assetsDir, file)))
     .map(measure);
@@ -74,13 +85,13 @@ checkTotal('initial JS', initialJs, limits.initialJsKb, limits.initialJsGzipKb);
 checkTotal('initial CSS', initialCss, limits.initialCssKb, limits.initialCssGzipKb);
 
 for (const { prefix } of optionalChunkLimits) {
-    const eagerlyLoaded = initialJs.find((item) => item.file.startsWith(prefix));
+    const eagerlyLoaded = initialJs.find((item) => matchesOptionalPrefix(item.file, prefix));
     if (eagerlyLoaded)
         fail(`${eagerlyLoaded.file} is an optional heavy chunk but is preloaded by index.html`);
 }
 
 for (const limit of optionalChunkLimits) {
-    const matches = files.filter((file) => file.startsWith(limit.prefix) && file.endsWith('.js'));
+    const matches = files.filter((file) => matchesOptionalPrefix(file, limit.prefix));
     if (matches.length === 0) {
         console.warn(`[bundle-budget] optional chunk not emitted: ${limit.prefix}*.js`);
         continue;
@@ -96,7 +107,7 @@ for (const limit of optionalChunkLimits) {
 
 const optionalPrefixes = optionalChunkLimits.map((limit) => limit.prefix);
 for (const file of files.filter((name) => name.endsWith('.js'))) {
-    if (optionalPrefixes.some((prefix) => file.startsWith(prefix)))
+    if (optionalPrefixes.some((prefix) => matchesOptionalPrefix(file, prefix)))
         continue;
     const item = measure(file);
     if (item.rawKb > limits.ordinaryJsChunkKb)

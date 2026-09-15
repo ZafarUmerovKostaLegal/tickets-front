@@ -1,9 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCorrespondenceOutgoingUrl, routes } from '@shared/config';
-import { useAppDialog } from '@shared/ui';
+import { showToast, useAppDialog } from '@shared/ui';
 import type { InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
-import { defaultOutgoingLetterCoverModel, isWordLetterFile, openOutgoingLetterInWordOnline, pickOutgoingWordFile } from '../lib/openOutgoingLetterInWord';
+import {
+    buildOutgoingLetterDocxBytes,
+    outgoingLetterDocxFileFromBytes,
+} from '../lib/buildOutgoingLetterDocx';
+import {
+    canRunInBrowserDocxEditor,
+    DOCX_EDITOR_BROWSER_HINT,
+} from '../lib/docxEditorSupport';
+import {
+    defaultOutgoingLetterCoverModel,
+    isWordLetterFile,
+    openOutgoingLetterInWordOnline,
+    pickOutgoingWordFile,
+} from '../lib/openOutgoingLetterInWord';
 import {
     formatAttachmentSizeLabel,
     isOutgoingLetterDraftValid,
@@ -16,11 +29,18 @@ import { CORR_SHELL_NAV_TABS } from '../model/constants';
 import { invalidateCorrespondencePartnerAttention } from '@entities/correspondence';
 import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
 import { CorrespondenceShell } from './CorrespondenceShell';
+import { OutgoingLetterDocxErrorBoundary } from './OutgoingLetterDocxErrorBoundary';
 import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
+import type { OutgoingLetterDocxEditorHandle } from './outgoingLetterDocxEditorHandle';
 import { IcoPaperclip } from './CorrespondencePage';
 import './CorrespondenceLetterPreview.css';
 import './CorrespondencePage.css';
 import './CorrespondenceShell.css';
+
+const OutgoingLetterDocxEditor = lazy(async () => {
+    const m = await import('./OutgoingLetterDocxEditor');
+    return { default: m.OutgoingLetterDocxEditor };
+});
 
 function todayIso(): string {
     return new Date().toISOString().slice(0, 10);
@@ -36,21 +56,16 @@ function IcoSave() {
     );
 }
 
-function IcoWord() {
-    return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <path d="M8 13h8M8 17h5" />
-        </svg>
-    );
+function fileToUint8Array(file: File): Promise<Uint8Array> {
+    return file.arrayBuffer().then((buf) => new Uint8Array(buf));
 }
 
 export function OutgoingLetterCreatePage() {
     const navigate = useNavigate();
-    const { showAlert } = useAppDialog();
-    const wordFileRef = useRef<HTMLInputElement>(null);
+    const { showAlert, showConfirm } = useAppDialog();
     const extraFileRef = useRef<HTMLInputElement>(null);
+    const importFileRef = useRef<HTMLInputElement>(null);
+    const editorRef = useRef<OutgoingLetterDocxEditorHandle>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [subject, setSubject] = useState('');
     const [letterDateIso, setLetterDateIso] = useState(todayIso);
@@ -58,10 +73,16 @@ export function OutgoingLetterCreatePage() {
     const [files, setFiles] = useState<File[]>([]);
     const [attachmentMeta, setAttachmentMeta] = useState<OutgoingLetterAttachmentMeta[]>([]);
     const [busy, setBusy] = useState(false);
-    const [wordBusy, setWordBusy] = useState(false);
+    const [templateBusy, setTemplateBusy] = useState(false);
     const [hydrated, setHydrated] = useState(false);
     const [reviewOpen, setReviewOpen] = useState(false);
-    const [wordDragging, setWordDragging] = useState(false);
+    const [documentBytes, setDocumentBytes] = useState<Uint8Array | null>(null);
+    const [templateKey, setTemplateKey] = useState(() => `tpl_${Date.now()}`);
+    const [editorReady, setEditorReady] = useState(false);
+    const [dirty, setDirty] = useState(false);
+    const [editorCrashed, setEditorCrashed] = useState(false);
+    const browserSupportsEditor = useMemo(() => canRunInBrowserDocxEditor(), []);
+    const useInBrowserEditor = browserSupportsEditor && !editorCrashed;
 
     useEffect(() => {
         const draft = readOutgoingLetterDraft();
@@ -106,6 +127,59 @@ export function OutgoingLetterCreatePage() {
         return () => window.clearTimeout(t);
     }, [hydrated, subject, letterDateIso, coverModel, files, attachmentMeta, sessionId]);
 
+    const applyDocumentBytes = useCallback((bytes: Uint8Array, remount: boolean) => {
+        setDocumentBytes(bytes);
+        setDirty(false);
+        setEditorReady(false);
+        if (remount)
+            setTemplateKey(`tpl_${Date.now()}`);
+    }, []);
+
+    const loadBlankTemplate = useCallback(async (model: InvoiceCoverLetterModel, remount: boolean) => {
+        setTemplateBusy(true);
+        try {
+            const bytes = await buildOutgoingLetterDocxBytes(model, {});
+            applyDocumentBytes(bytes, remount);
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось собрать бланк',
+                message: err instanceof Error ? err.message : 'Ошибка подготовки шаблона письма.',
+            });
+        }
+        finally {
+            setTemplateBusy(false);
+        }
+    }, [applyDocumentBytes, showAlert]);
+
+    useEffect(() => {
+        if (!hydrated)
+            return;
+        let cancelled = false;
+        void (async () => {
+            const draftFiles = sessionId ? getOutgoingLetterDraftFiles(sessionId) : files;
+            const existingWord = pickOutgoingWordFile(draftFiles.length ? draftFiles : files);
+            if (existingWord) {
+                try {
+                    const bytes = await fileToUint8Array(existingWord);
+                    if (!cancelled)
+                        applyDocumentBytes(bytes, true);
+                    return;
+                }
+                catch {
+                    /* fall through to blank */
+                }
+            }
+            if (!cancelled)
+                await loadBlankTemplate(coverModel, true);
+        })();
+        return () => {
+            cancelled = true;
+        };
+        // Initial open only — later rebuilds go through explicit actions.
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- mount hydrate
+    }, [hydrated]);
+
     const goBack = useCallback(() => {
         navigate(getCorrespondenceOutgoingUrl());
     }, [navigate]);
@@ -113,27 +187,44 @@ export function OutgoingLetterCreatePage() {
     const letterFile = pickOutgoingWordFile(files);
     const extraFiles = letterFile ? files.filter((f) => f !== letterFile) : files;
 
-    const filesFromDrag = (dt: DataTransfer | null): File[] => {
-        if (!dt)
-            return [];
-        if (dt.files?.length)
-            return Array.from(dt.files);
-        return Array.from(dt.items ?? [])
-            .filter((item) => item.kind === 'file')
-            .map((item) => item.getAsFile())
-            .filter((f): f is File => Boolean(f));
+    const mergeExtraFiles = (picked: File[]) => {
+        const otherPicked = picked.filter((f) => !isWordLetterFile(f));
+        if (!otherPicked.length)
+            return;
+        const next = [...files.filter((f) => !isWordLetterFile(f) || f === letterFile), ...otherPicked];
+        // Keep current letter file if present
+        const word = pickOutgoingWordFile(files);
+        const withWord = word && !next.includes(word) ? [word, ...next] : next;
+        const nextMeta = withWord.map((f, i) => ({
+            id: `att_${i}_${f.name}`,
+            name: f.name,
+            sizeLabel: formatAttachmentSizeLabel(f.size),
+        }));
+        setFiles(withWord);
+        setAttachmentMeta(nextMeta);
+        persistDraft(withWord, nextMeta);
     };
 
-    const mergeFiles = (picked: File[], replaceWord: boolean) => {
-        const wordPicked = picked.filter(isWordLetterFile);
-        const otherPicked = picked.filter((f) => !isWordLetterFile(f));
-        let next = [...files];
-        if (replaceWord && wordPicked[0]) {
-            next = next.filter((f) => !isWordLetterFile(f));
-            next = [wordPicked[0], ...next, ...wordPicked.slice(1), ...otherPicked];
+    const captureEditorFile = async (): Promise<File> => {
+        const buf = await editorRef.current?.save();
+        if (!buf || buf.byteLength < 64)
+            throw new Error('Не удалось сохранить документ из редактора. Дождитесь загрузки бланка.');
+        return outgoingLetterDocxFileFromBytes(buf, subject, letterDateIso);
+    };
+
+    const syncEditorIntoDraftFiles = async (): Promise<File[]> => {
+        if (!useInBrowserEditor) {
+            const word = pickOutgoingWordFile(files);
+            if (!word) {
+                throw new Error(
+                    'Загрузите готовый .docx (после Word Online) или откройте страницу в поддерживаемом браузере.',
+                );
+            }
+            return files;
         }
-        else
-            next = [...next, ...picked];
+        const word = await captureEditorFile();
+        const extras = files.filter((f) => !isWordLetterFile(f));
+        const next = [word, ...extras];
         const nextMeta = next.map((f, i) => ({
             id: `att_${i}_${f.name}`,
             name: f.name,
@@ -142,15 +233,58 @@ export function OutgoingLetterCreatePage() {
         setFiles(next);
         setAttachmentMeta(nextMeta);
         persistDraft(next, nextMeta);
+        setDirty(false);
+        return next;
     };
 
-    const handleOpenWord = async () => {
-        setWordBusy(true);
+    const handleRebuildTemplate = async () => {
+        if (dirty) {
+            const ok = await showConfirm({
+                title: 'Пересобрать бланк?',
+                message: 'Текст в редакторе будет заменён новым бланком Kosta Legal с текущими полями «Получатель» и датой.',
+            });
+            if (!ok)
+                return;
+        }
+        await loadBlankTemplate(coverModel, true);
+        showToast({ message: 'Бланк обновлён', variant: 'success' });
+    };
+
+    const handleImportDocx = async (file: File) => {
+        if (!isWordLetterFile(file)) {
+            void showAlert({ title: 'Нужен файл Word', message: 'Выберите документ .docx.' });
+            return;
+        }
+        try {
+            const bytes = await fileToUint8Array(file);
+            applyDocumentBytes(bytes, true);
+            const extras = files.filter((f) => !isWordLetterFile(f));
+            const next = [file, ...extras];
+            const nextMeta = next.map((f, i) => ({
+                id: `att_${i}_${f.name}`,
+                name: f.name,
+                sizeLabel: formatAttachmentSizeLabel(f.size),
+            }));
+            setFiles(next);
+            setAttachmentMeta(nextMeta);
+            persistDraft(next, nextMeta);
+            showToast({ message: 'Документ загружен в редактор', variant: 'success' });
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось открыть файл',
+                message: err instanceof Error ? err.message : 'Ошибка чтения .docx',
+            });
+        }
+    };
+
+    const handleOpenWordOnline = async () => {
+        setTemplateBusy(true);
         try {
             await openOutgoingLetterInWordOnline(coverModel, { subject });
             void showAlert({
-                title: 'Шаблон открыт',
-                message: 'Скачан бланк .docx и открыт Word в браузере. В Word: Файл → Открыть → Загрузить — выберите скачанный шаблон. После текста: Файл → Скачать копию, затем прикрепите файл ниже.',
+                title: 'Word Online',
+                message: 'Скачан бланк и открыт Word в браузере. После правок скачайте копию и нажмите «Загрузить .docx» на этой странице.',
             });
         }
         catch (err) {
@@ -160,36 +294,56 @@ export function OutgoingLetterCreatePage() {
             });
         }
         finally {
-            setWordBusy(false);
+            setTemplateBusy(false);
         }
     };
 
-    const openReviewModal = () => {
+    const openReviewModal = async () => {
         const fields = isOutgoingLetterDraftValid(subject, coverModel);
         if (!fields.ok) {
             void showAlert({ title: 'Проверьте поля', message: fields.message ?? 'Заполните обязательные поля.' });
             return;
         }
-        if (!letterFile) {
+        if (useInBrowserEditor && (!documentBytes || !editorReady)) {
             void showAlert({
-                title: 'Нет файла письма',
-                message: 'Откройте шаблон в Word Online, напишите письмо и прикрепите сохранённый .docx.',
+                title: 'Редактор ещё загружается',
+                message: 'Дождитесь появления бланка письма, затем отправьте на согласование.',
             });
             return;
         }
-        persistDraft(files, attachmentMeta);
-        setReviewOpen(true);
+        if (!useInBrowserEditor && !pickOutgoingWordFile(files)) {
+            void showAlert({
+                title: 'Нужен файл письма',
+                message: `${DOCX_EDITOR_BROWSER_HINT} Откройте Word Online, сохраните копию и нажмите «Загрузить .docx».`,
+            });
+            return;
+        }
+        setBusy(true);
+        try {
+            await syncEditorIntoDraftFiles();
+            setReviewOpen(true);
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось сохранить письмо',
+                message: err instanceof Error ? err.message : 'Ошибка экспорта .docx из редактора.',
+            });
+        }
+        finally {
+            setBusy(false);
+        }
     };
 
     const handleSubmitReview = async (partnerUserId: number, partnerName: string) => {
         setBusy(true);
         try {
+            const nextFiles = await syncEditorIntoDraftFiles();
             await submitOutgoingLetterForReview({
                 subject,
                 coverModel,
                 letterDateIso,
                 partnerUserId,
-                extraFiles: files,
+                extraFiles: nextFiles,
             });
             const { clearOutgoingLetterDraft } = await import('../lib/outgoingLetterSession');
             clearOutgoingLetterDraft();
@@ -216,6 +370,7 @@ export function OutgoingLetterCreatePage() {
         return null;
 
     const recipientValue = coverModel.recipientCompany === 'Company Name' ? '' : coverModel.recipientCompany;
+    const editorTitle = subject.trim() || 'Исходящее письмо';
 
     return (
         <>
@@ -223,7 +378,7 @@ export function OutgoingLetterCreatePage() {
             activeTab="Написать письмо"
             onBack={goBack}
             fullHeight
-            contentClassName="corr-shell__content--word-compose"
+            contentClassName="corr-shell__content--docx-compose"
             tabs={CORR_SHELL_NAV_TABS.map((tab) => ({
                 id: tab.key,
                 label: tab.label,
@@ -232,33 +387,73 @@ export function OutgoingLetterCreatePage() {
             }))}
             actions={(
                 <>
-                    <button type="button" className="corr__btn corr__btn--outline" onClick={goBack} disabled={busy || wordBusy}>
+                    <button type="button" className="corr__btn corr__btn--outline" onClick={goBack} disabled={busy || templateBusy}>
                         Отмена
                     </button>
-                    <button type="button" className="corr__btn corr__btn--primary" onClick={openReviewModal} disabled={busy || wordBusy}>
+                    <button
+                        type="button"
+                        className="corr__btn corr__btn--primary"
+                        onClick={() => { void openReviewModal(); }}
+                        disabled={busy || templateBusy || !documentBytes}
+                    >
                         <IcoSave />
                         {' '}
-                        {busy ? 'Отправка…' : 'Сохранить на согласование'}
+                        {busy ? 'Подготовка…' : 'Сохранить на согласование'}
                     </button>
                 </>
             )}
         >
-            <div className="corr-word">
+            <div className="corr-word corr-word--docx">
                 <section className="corr-word__hero">
-                    <h2 className="corr-word__title">Написать письмо в Word</h2>
-                    <p className="corr-word__lead">
-                        Откроется Word в браузере и скачается бланк Kosta Legal. Напишите текст в Word, сохраните копию
-                        и прикрепите файл сюда — письмо уйдёт в исходящие.
-                    </p>
-                    <button
-                        type="button"
-                        className="corr__btn corr__btn--primary corr-word__open"
-                        onClick={() => void handleOpenWord()}
-                        disabled={busy || wordBusy}
-                    >
-                        <IcoWord />
-                        {wordBusy ? 'Готовим шаблон…' : 'Открыть шаблон в Word Online'}
-                    </button>
+                    <div className="corr-word__hero-text">
+                        <h2 className="corr-word__title">
+                            Написать письмо
+                            {dirty ? <span className="corr-word__dirty" title="Есть несохранённые правки"> ●</span> : null}
+                        </h2>
+                        <p className="corr-word__lead">
+                            {useInBrowserEditor
+                                ? 'Редактируйте бланк Kosta Legal прямо здесь. После текста нажмите «Сохранить на согласование» и выберите партнёра.'
+                                : `${DOCX_EDITOR_BROWSER_HINT} Откройте бланк в Word Online, затем загрузите готовый .docx сюда.`}
+                        </p>
+                    </div>
+                    <div className="corr-word__hero-actions">
+                        <button
+                            type="button"
+                            className="corr__btn corr__btn--outline"
+                            disabled={busy || templateBusy}
+                            onClick={() => { void handleRebuildTemplate(); }}
+                        >
+                            {templateBusy ? 'Сборка…' : 'Пересобрать бланк'}
+                        </button>
+                        <button
+                            type="button"
+                            className="corr__btn corr__btn--outline"
+                            disabled={busy || templateBusy}
+                            onClick={() => importFileRef.current?.click()}
+                        >
+                            Загрузить .docx
+                        </button>
+                        <button
+                            type="button"
+                            className="corr__btn corr__btn--ghost"
+                            disabled={busy || templateBusy}
+                            onClick={() => { void handleOpenWordOnline(); }}
+                        >
+                            Word Online
+                        </button>
+                        <input
+                            ref={importFileRef}
+                            type="file"
+                            accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            hidden
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                e.target.value = '';
+                                if (file)
+                                    void handleImportDocx(file);
+                            }}
+                        />
+                    </div>
                 </section>
 
                 <div className="corr-word__grid">
@@ -286,78 +481,70 @@ export function OutgoingLetterCreatePage() {
                     </label>
                 </div>
 
-                <section
-                    className={`corr-word__drop${letterFile ? ' corr-word__drop--ready' : ''}${wordDragging ? ' corr-word__drop--drag' : ''}${busy ? ' corr-word__drop--disabled' : ''}`}
-                    onDragEnter={(e) => {
-                        if (busy)
-                            return;
-                        e.preventDefault();
-                        setWordDragging(true);
-                    }}
-                    onDragOver={(e) => {
-                        if (busy)
-                            return;
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'copy';
-                        setWordDragging(true);
-                    }}
-                    onDragLeave={(e) => {
-                        if (!e.currentTarget.contains(e.relatedTarget as Node | null))
-                            setWordDragging(false);
-                    }}
-                    onDrop={(e) => {
-                        e.preventDefault();
-                        setWordDragging(false);
-                        if (busy)
-                            return;
-                        const picked = filesFromDrag(e.dataTransfer);
-                        const word = picked.filter(isWordLetterFile);
-                        if (!word.length) {
-                            void showAlert({
-                                title: 'Нужен файл Word',
-                                message: 'Перетащите сохранённый документ .doc или .docx.',
-                            });
-                            return;
-                        }
-                        mergeFiles(word, true);
-                    }}
-                >
-                    <input
-                        ref={wordFileRef}
-                        type="file"
-                        accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                        hidden
-                        onChange={(e) => {
-                            const picked = Array.from(e.target.files ?? []);
-                            e.target.value = '';
-                            if (picked.length)
-                                mergeFiles(picked, true);
-                        }}
-                    />
-                    <span className="corr-word__drop-icon" aria-hidden>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" />
-                        </svg>
-                    </span>
-                    <p className="corr-word__drop-label">Письмо из Word</p>
-                    {letterFile ? (
-                        <p className="corr-word__file">
-                            {letterFile.name}
-                            {' · '}
-                            {formatAttachmentSizeLabel(letterFile.size)}
-                        </p>
+                <section className="corr-word__editor-wrap" aria-label="Редактор письма">
+                    {!useInBrowserEditor ? (
+                        <div className="corr-word__editor-fallback" role="status">
+                            <p>{DOCX_EDITOR_BROWSER_HINT}</p>
+                            <p>
+                                {letterFile
+                                    ? `Готов файл: ${letterFile.name}. Можно отправлять на согласование.`
+                                    : 'Пока нет загруженного .docx — используйте «Word Online», затем «Загрузить .docx».'}
+                            </p>
+                            <div className="corr-word__hero-actions">
+                                <button
+                                    type="button"
+                                    className="corr__btn corr__btn--outline"
+                                    disabled={busy || templateBusy}
+                                    onClick={() => { void handleOpenWordOnline(); }}
+                                >
+                                    Word Online
+                                </button>
+                                <button
+                                    type="button"
+                                    className="corr__btn corr__btn--outline"
+                                    disabled={busy || templateBusy}
+                                    onClick={() => importFileRef.current?.click()}
+                                >
+                                    Загрузить .docx
+                                </button>
+                            </div>
+                        </div>
+                    ) : !documentBytes || templateBusy ? (
+                        <div className="corr-word__editor-loading" role="status">
+                            Готовим бланк письма…
+                        </div>
                     ) : (
-                        <p className="corr-word__drop-hint">
-                            {wordDragging
-                                ? 'Отпустите файл, чтобы прикрепить'
-                                : 'Перетащите сохранённый .docx сюда или выберите на компьютере'}
-                        </p>
+                        <OutgoingLetterDocxErrorBoundary
+                            fallback={(
+                                <div className="corr-word__editor-fallback" role="alert">
+                                    <p>Встроенный редактор не смог загрузиться в этом браузере.</p>
+                                    <p>{DOCX_EDITOR_BROWSER_HINT}</p>
+                                    <button
+                                        type="button"
+                                        className="corr__btn corr__btn--outline"
+                                        disabled={busy || templateBusy}
+                                        onClick={() => { void handleOpenWordOnline(); }}
+                                    >
+                                        Открыть в Word Online
+                                    </button>
+                                </div>
+                            )}
+                            onError={() => setEditorCrashed(true)}
+                        >
+                            <Suspense fallback={<div className="corr-word__editor-loading" role="status">Загрузка редактора…</div>}>
+                                <OutgoingLetterDocxEditor
+                                    ref={editorRef}
+                                    documentBytes={documentBytes}
+                                    title={editorTitle}
+                                    templateKey={templateKey}
+                                    disabled={busy}
+                                    onReady={() => setEditorReady(true)}
+                                    onChange={() => setDirty(true)}
+                                    onSaveRequest={() => { void openReviewModal(); }}
+                                />
+                            </Suspense>
+                        </OutgoingLetterDocxErrorBoundary>
                     )}
-                    <button type="button" className="corr__btn corr__btn--outline" onClick={() => wordFileRef.current?.click()} disabled={busy}>
-                        {letterFile ? 'Заменить файл' : 'Выбрать .docx'}
-                    </button>
                 </section>
 
                 <section className="corr-word__extras">
@@ -370,7 +557,7 @@ export function OutgoingLetterCreatePage() {
                             const picked = Array.from(e.target.files ?? []);
                             e.target.value = '';
                             if (picked.length)
-                                mergeFiles(picked, false);
+                                mergeExtraFiles(picked);
                         }}
                     />
                     <button type="button" className="corr__btn corr__btn--outline" onClick={() => extraFileRef.current?.click()} disabled={busy}>
