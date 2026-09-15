@@ -99,9 +99,9 @@ export function CorrespondenceShell({
             <main className="corr-shell__main">
                 <div className={[
                     'corr-shell__content',
-                    children ? '' : ' corr-shell__content--empty',
-                    contentClassName,
-                ].filter(Boolean).join('')}>
+                    children ? null : 'corr-shell__content--empty',
+                    contentClassName?.trim() || null,
+                ].filter(Boolean).join(' ')}>
                     {children}
                 </div>
             </main>

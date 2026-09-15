@@ -504,12 +504,19 @@
 .corr-word {
   box-sizing: border-box;
   width: 100%;
-  max-width: none;
-  margin: 0;
-  padding: 0.5rem 0.25rem 2rem;
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 0.35rem 0 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 1.75rem;
+}
+
+@media (max-width: 720px) {
+  .corr-word {
+    max-width: none;
+    padding-bottom: 2rem;
+  }
 }
 
 .corr-word__hero {
