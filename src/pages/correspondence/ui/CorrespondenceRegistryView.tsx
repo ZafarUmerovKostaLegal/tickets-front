@@ -142,7 +142,7 @@ function listParamsForTab(
     };
     if (tableTab === 'attention' && attentionPartnerUserId != null && attentionPartnerUserId > 0) {
         params.partnerUserId = attentionPartnerUserId;
-        params.status = 'pending_review';
+        params.status = direction === 'outgoing' ? 'pending_review' : 'new,progress,approval';
     }
     else if (tableTab === 'work')
         params.statusGroup = 'work';
@@ -250,7 +250,7 @@ export function CorrespondenceRegistryView({
   const [usersFilterAvailable, setUsersFilterAvailable] = useState(true);
 
   useEffect(() => {
-    if (tableTab === 'attention' && (!isPartner || direction !== 'outgoing'))
+    if (tableTab === 'attention' && (!isPartner || (direction !== 'outgoing' && direction !== 'incoming')))
       setTableTab('all');
   }, [tableTab, isPartner, direction]);
 
@@ -659,22 +659,39 @@ export function CorrespondenceRegistryView({
   };
 
   const outgoingBadge = formatCountBadge(stats.partnerOutgoingPending);
-  const attentionCountForDirection = direction === 'outgoing' ? stats.partnerOutgoingPending : 0;
+  const incomingBadge = formatCountBadge(stats.partnerIncomingNew);
+  const attentionCountForDirection = direction === 'outgoing'
+    ? stats.partnerOutgoingPending
+    : stats.partnerIncomingNew;
   const attentionBadge = formatCountBadge(attentionCountForDirection);
 
   const shellTabs = useMemo(() => CORR_SHELL_NAV_TABS.map((tab) => ({
     id: tab.key,
     label: tab.label,
     active: direction === tab.key,
-    badge: tab.key === 'outgoing' ? outgoingBadge || undefined : undefined,
+    badge: tab.key === 'outgoing'
+      ? outgoingBadge || undefined
+      : tab.key === 'incoming'
+        ? incomingBadge || undefined
+        : undefined,
     onClick: () => {
       closeOverlays();
       onDirectionChange(tab.key);
-      const nextCount = tab.key === 'outgoing' ? stats.partnerOutgoingPending : 0;
+      const nextCount = tab.key === 'outgoing'
+        ? stats.partnerOutgoingPending
+        : stats.partnerIncomingNew;
       setTableTab(nextCount > 0 ? 'attention' : 'all');
       setPage(1);
     },
-  })), [closeOverlays, direction, onDirectionChange, outgoingBadge, stats.partnerOutgoingPending]);
+  })), [
+    closeOverlays,
+    direction,
+    onDirectionChange,
+    outgoingBadge,
+    incomingBadge,
+    stats.partnerOutgoingPending,
+    stats.partnerIncomingNew,
+  ]);
 
   const activeShellTab = CORR_SHELL_NAV_TABS.find((tab) => tab.key === direction)?.label ?? 'Входящие';
 
@@ -690,7 +707,9 @@ export function CorrespondenceRegistryView({
     {isPartner && attentionCountForDirection > 0 && tableTab !== 'attention' ? (
       <AttentionBanner
         className="corr-registry__attention"
-        text={t('attentionBanner.correspondenceOutgoing').replace('{count}', String(attentionCountForDirection))}
+        text={(direction === 'outgoing'
+          ? t('attentionBanner.correspondenceOutgoing')
+          : t('attentionBanner.correspondenceIncoming')).replace('{count}', String(attentionCountForDirection))}
         actionLabel={t('attentionBanner.correspondenceGo')}
         onAction={() => {
           setTableTab('attention');
@@ -704,6 +723,17 @@ export function CorrespondenceRegistryView({
         actionLabel={t('attentionBanner.correspondenceGo')}
         onAction={() => {
           onDirectionChange('outgoing');
+          setTableTab('attention');
+          setPage(1);
+        }}
+      />
+    ) : isPartner && direction === 'outgoing' && stats.partnerIncomingNew > 0 ? (
+      <AttentionBanner
+        className="corr-registry__attention"
+        text={t('attentionBanner.correspondenceIncoming').replace('{count}', String(stats.partnerIncomingNew))}
+        actionLabel={t('attentionBanner.correspondenceGo')}
+        onAction={() => {
+          onDirectionChange('incoming');
           setTableTab('attention');
           setPage(1);
         }}
@@ -781,7 +811,7 @@ export function CorrespondenceRegistryView({
             <section className="corr__table-card corr-registry__table-card" aria-label="Реестр документов">
               <div className="corr__table-toolbar">
                 <div className="corr__table-tabs" role="tablist" aria-label="Фильтр по статусу">
-                  {CORR_TABLE_TABS.filter((tab) => tab.key !== 'attention' || (isPartner && direction === 'outgoing')).map((tabItem) => (<button
+                  {CORR_TABLE_TABS.filter((tab) => tab.key !== 'attention' || (isPartner && (direction === 'outgoing' || direction === 'incoming'))).map((tabItem) => (<button
                     key={tabItem.key}
                     type="button"
                     role="tab"

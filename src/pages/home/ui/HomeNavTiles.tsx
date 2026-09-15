@@ -186,6 +186,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         badge: correspondenceBadge,
         count: correspondenceCount,
         outgoingPending: correspondenceOutgoingPending,
+        incomingNew: correspondenceIncomingNew,
     } = useCorrespondencePartnerAttentionBadge(!loading && showCorrespondenceTile);
     const correspondenceBadgeAria = correspondenceCount > 0
         ? t('homeHub.correspondencePendingBadgeAria').replace('{count}', String(correspondenceCount))
@@ -226,7 +227,9 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
             : routes.expenses,
         correspondence: correspondenceOutgoingPending > 0
             ? `${routes.correspondence}?tab=outgoing&view=attention`
-            : routes.correspondence,
+            : correspondenceIncomingNew > 0
+                ? `${routes.correspondence}?tab=incoming&view=attention`
+                : routes.correspondence,
         todo: todoInvitesCount > 0
             ? `${routes.todo}?invites=1`
             : routes.todo,
@@ -240,6 +243,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
         expensePayCount,
         isExpensePaymentConfirmerUser,
         correspondenceOutgoingPending,
+        correspondenceIncomingNew,
         todoInvitesCount,
         firstUnreadRoomId,
     ]);

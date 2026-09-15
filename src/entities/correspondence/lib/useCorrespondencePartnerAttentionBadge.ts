@@ -43,26 +43,36 @@ export function useCorrespondencePartnerAttentionBadge(enabled = true): {
             return;
         }
         try {
-            // Same filters as the «Attention» tab — source of truth for the hub badge.
-            const listed = await listCorrespondence({
-                direction: 'outgoing',
-                status: 'pending_review',
-                partnerUserId,
-                skip: 0,
-                limit: 1,
-            });
-            const pending = Math.max(0, listed.total);
-            setCount(pending);
-            setOutgoingPending(pending);
-            setIncomingNew(0);
+            const [outgoingList, incomingList] = await Promise.all([
+                listCorrespondence({
+                    direction: 'outgoing',
+                    status: 'pending_review',
+                    partnerUserId,
+                    skip: 0,
+                    limit: 1,
+                }),
+                listCorrespondence({
+                    direction: 'incoming',
+                    status: 'new,progress,approval',
+                    partnerUserId,
+                    skip: 0,
+                    limit: 1,
+                }),
+            ]);
+            const outgoing = Math.max(0, outgoingList.total);
+            const incoming = Math.max(0, incomingList.total);
+            setOutgoingPending(outgoing);
+            setIncomingNew(incoming);
+            setCount(outgoing + incoming);
         }
         catch {
             try {
                 const stats = await fetchCorrespondenceStats();
-                const pending = Math.max(0, stats.partnerOutgoingPending ?? 0);
-                setCount(pending);
-                setOutgoingPending(pending);
-                setIncomingNew(0);
+                const outgoing = Math.max(0, stats.partnerOutgoingPending ?? 0);
+                const incoming = Math.max(0, stats.partnerIncomingNew ?? 0);
+                setOutgoingPending(outgoing);
+                setIncomingNew(incoming);
+                setCount(outgoing + incoming);
             }
             catch {
                 setCount(0);
