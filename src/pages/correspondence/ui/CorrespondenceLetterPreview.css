@@ -717,6 +717,12 @@
   white-space: nowrap;
 }
 
+/* Keep document caret when clicking chrome actions (not text fields). */
+.corr-word__toolbar-actions .corr__btn {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
 .corr-word__extra-list--toolbar {
   grid-column: 1 / -1;
   margin: 0;

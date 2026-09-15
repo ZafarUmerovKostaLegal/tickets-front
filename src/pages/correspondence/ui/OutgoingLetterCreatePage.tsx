@@ -409,7 +409,14 @@ export function OutgoingLetterCreatePage() {
                             disabled={busy}
                         />
                     </label>
-                    <div className="corr-word__toolbar-actions">
+                    <div
+                        className="corr-word__toolbar-actions"
+                        onMouseDown={(e) => {
+                            const el = e.target as HTMLElement | null;
+                            if (el?.closest('button'))
+                                e.preventDefault();
+                        }}
+                    >
                         <button
                             type="button"
                             className="corr__btn corr__btn--outline"
