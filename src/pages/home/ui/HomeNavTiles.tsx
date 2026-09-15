@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ComponentType } from 'react';
-import { NavLink } from 'react-router-dom';
 import { useI18n } from '@shared/i18n';
 import { useCurrentUser } from '@shared/hooks';
 import { routes } from '@shared/config';
+import { AnimatedNavLink } from '@shared/ui';
 import { formatChatUnreadBadge, useChatUnreadTotal } from '@entities/chat';
 import {
     getNavTranslationKey,
@@ -410,7 +410,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                             <IconGrip />
                                         </button>
                                     ) : null}
-                                    <NavLink
+                                    <AnimatedNavLink
                                         to={tileDestinations[tile.id] ?? tile.to}
                                         className={({ isActive }) => `home-nav-tiles__link${isActive ? ' active' : ''}`}
                                         end={tile.id !== 'vacationSchedule' && tile.id !== 'expenses'}
@@ -452,7 +452,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
                                             infoBadge={tile.id === 'expenses' ? expenseInfoBadge : undefined}
                                             infoBadgeAriaLabel={tile.id === 'expenses' ? expenseInfoBadgeAria : undefined}
                                         />
-                                    </NavLink>
+                                    </AnimatedNavLink>
                                 </li>
                             );
                         })}

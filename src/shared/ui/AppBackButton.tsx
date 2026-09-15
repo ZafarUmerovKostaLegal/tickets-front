@@ -1,6 +1,8 @@
+import { addTransitionType, startTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useI18n } from '@shared/i18n';
+import { NAV_TRANSITION_TYPE, navigateWithTransition } from './AnimatedLink';
 
 export type AppBackButtonProps = {
 
@@ -39,12 +41,15 @@ export function AppBackButton({
     const handleClick = () => {
         onClick?.();
         if (historyBack) {
-            navigate(-1);
+            startTransition(() => {
+                addTransitionType(NAV_TRANSITION_TYPE);
+                navigate(-1);
+            });
             return;
         }
         const dest = to ?? (onClick ? undefined : routes.home);
         if (dest != null)
-            navigate(dest);
+            navigateWithTransition(navigate, dest);
     };
 
     return (

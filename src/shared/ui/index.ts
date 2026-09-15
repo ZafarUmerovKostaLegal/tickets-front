@@ -1,6 +1,11 @@
 export { OutlookCalendarSelect, type OutlookCalendarSelectProps } from './OutlookCalendarSelect';
 export { TwemojiText, TwemojiEmoji } from './TwemojiText';
-export { AnimatedLink, AnimatedNavLink } from './AnimatedLink';
+export {
+    AnimatedLink,
+    AnimatedNavLink,
+    navigateWithTransition,
+    NAV_TRANSITION_TYPE,
+} from './AnimatedLink';
 export { AuthImg } from './AuthImg';
 export { DatePicker, type DatePickerProps } from './DatePicker';
 export { SearchableSelect, type SearchableSelectRef } from './SearchableSelect';

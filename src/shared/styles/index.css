@@ -440,7 +440,13 @@ body[data-theme='dark'] .inv__mini-btn:hover {
 
 .page-transition {
   min-height: 100%;
-  animation: page-fade-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Fallback when View Transition API is unavailable */
+@supports not (view-transition-name: none) {
+  .page-transition {
+    animation: page-fade-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
 }
 
 @keyframes page-fade-slide-in {
@@ -454,12 +460,29 @@ body[data-theme='dark'] .inv__mini-btn:hover {
   }
 }
 
+/* React <ViewTransition> classes (page-enter / page-exit / page-share) */
 @supports (view-transition-name: none) {
-  ::view-transition-old(root) {
+  ::view-transition-old(.page-exit),
+  ::view-transition-old(.page-share) {
     animation: vt-fade-out 0.2s ease both;
   }
-  ::view-transition-new(root) {
-    animation: vt-fade-slide-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  ::view-transition-new(.page-enter),
+  ::view-transition-new(.page-share) {
+    animation: vt-fade-slide-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  ::view-transition-group(.page-share) {
+    animation-duration: 0.32s;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*),
+    ::view-transition-old(*),
+    ::view-transition-new(*) {
+      animation: none !important;
+    }
   }
 }
 

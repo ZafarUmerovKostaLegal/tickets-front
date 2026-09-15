@@ -6,7 +6,7 @@ import { useI18n, ttProjectTypeLabel } from '@shared/i18n';
 import { formatDecimalHoursAsHm } from '@shared/lib/formatTrackingHours';
 import { waitForAppFonts } from '@shared/lib/waitForAppFonts';
 import { useCurrentUser } from '@shared/hooks';
-import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, DatePicker, SearchableSelect } from '@shared/ui';
+import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, DatePicker, SearchableSelect, navigateWithTransition } from '@shared/ui';
 import { periodToDates, reportsAllTimeDateFrom, reportsAllTimeDateTo } from '@entities/time-tracking/lib/reportsPeriodRange';
 import { canAccessTimeTracking, canManageTimeTrackingClients, hasFullTimeTrackingTabs } from '@entities/time-tracking/model/timeTrackingAccess';
 import { INVOICE_STATUS_LABELS, getClientProject, getClientProjectDashboard, getProjectTeamWorkload, listTimeTrackingUsers, listUsersWithProjectAccessToProject, listPartnerUsersWithProjectAccessToProject, listPartnerReportConfirmationsPendingItems, listPartnerReportConfirmationsConfirmed, confirmPartnerReportConfirmation, submitPartnerReportConfirmationFromPreview, parsePartnerReportConfirmationRequest, createClientProject, patchClientProject, deleteClientProject, getTimeManagerClient, readTimeManagerProjectBillableRateAmount, readProjectRecordsLanguage, notifyPartnerConfirmedReportsListInvalidate, exportReportV2, isStubAuthUserEmail, pickUserDisplayLabel, type ProjectPartnerAccessRow, type PartnerReportConfirmationRequest, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectRow, type TimeManagerClientRow, type TimeManagerProjectDashboard, type TimeManagerProjectDashboardBudget, type TeamWorkloadMember, type TeamWorkloadResponse, type ReportFiltersV2, } from '@entities/time-tracking';
@@ -25,22 +25,7 @@ import { ProjectDuplicatesPanel } from './ProjectDuplicatesPanel';
 
 const ProjectDetailCharts = lazy(() => import('./ProjectDetailCharts').then((m) => ({ default: m.ProjectDetailCharts })));
 function navigateBackToProjects(navigate: NavigateFunction) {
-    const run = () => {
-        navigate({ pathname: routes.timeTracking, search: '?tab=projects' });
-    };
-    if (typeof document === 'undefined') {
-        run();
-        return;
-    }
-    const doc = document as Document & {
-        startViewTransition?: (cb: () => void) => void;
-    };
-    if (typeof doc.startViewTransition === 'function') {
-        doc.startViewTransition(run);
-    }
-    else {
-        run();
-    }
+    navigateWithTransition(navigate, { pathname: routes.timeTracking, search: '?tab=projects' });
 }
 function fmtAmt(n: number, cur = 'UZS') {
     return `${n.toLocaleString('ru-RU', { useGrouping: true, minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}`;

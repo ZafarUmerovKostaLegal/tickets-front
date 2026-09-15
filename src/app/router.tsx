@@ -73,18 +73,18 @@ function LazyFallback() {
     </div>);
 }
 function withGuest(children: ReactNode) {
-    return (<GuestOnlyRoute>
-      <PageTransition>
+    return (<PageTransition>
+      <GuestOnlyRoute>
         <Suspense fallback={<LazyFallback />}>{children}</Suspense>
-      </PageTransition>
-    </GuestOnlyRoute>);
+      </GuestOnlyRoute>
+    </PageTransition>);
 }
 function withProtected(children: ReactNode, adminOnly = false) {
-    return (<ProtectedRoute adminOnly={adminOnly}>
-      <PageTransition>
+    return (<PageTransition>
+      <ProtectedRoute adminOnly={adminOnly}>
         <Suspense fallback={<LazyFallback />}>{children}</Suspense>
-      </PageTransition>
-    </ProtectedRoute>);
+      </ProtectedRoute>
+    </PageTransition>);
 }
 function AppShellOutlet() {
     return (<>
