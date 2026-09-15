@@ -811,11 +811,11 @@ export function CorrespondenceRegistryView({
                       aria-expanded={filtersOpen}
                       aria-haspopup="dialog"
                       onClick={() => {
-                        setFilterDraft({
-                          letter: appliedDocTypes.includes('letter'),
-                          contract: appliedDocTypes.includes('contract'),
-                          note: appliedDocTypes.includes('note'),
-                        });
+                        setFilterDraft(
+                          Object.fromEntries(
+                            CORR_DOC_TYPE_KEYS.map((key) => [key, appliedDocTypes.includes(key)]),
+                          ) as ReturnType<typeof defaultCorrDocTypeFilterState>,
+                        );
                         setExtraDraft(extraFilters);
                         setFiltersOpen((v) => !v);
                         setSettingsOpen(false);
