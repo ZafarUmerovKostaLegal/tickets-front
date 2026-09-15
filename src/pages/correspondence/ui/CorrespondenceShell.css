@@ -238,23 +238,6 @@ body[data-theme='dark'] .corr-shell {
   flex-shrink: 0;
 }
 
-.corr-shell__seal {
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--corr-ink);
-  color: var(--corr-paper);
-}
-
-.corr-shell__seal svg {
-  width: 15px;
-  height: 15px;
-}
-
 .corr-shell__title {
   margin: 0;
   flex-shrink: 0;

@@ -21,15 +21,6 @@ type CorrespondenceShellProps = {
     fullHeight?: boolean;
 };
 
-function IconSeal() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-            <path d="M12 2L4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-4z" />
-            <path d="M9 12l2 2 4-4" />
-        </svg>
-    );
-}
-
 export function CorrespondenceShell({
     activeTab,
     tabs,
@@ -46,9 +37,6 @@ export function CorrespondenceShell({
             <header className="corr-shell__header">
                 <div className="corr-shell__header-inner">
                     <AppBackButton className="corr-shell__back" onClick={onBack} hideLabelOnMobile />
-                    <span className="corr-shell__seal" aria-hidden>
-                        <IconSeal />
-                    </span>
                     <h1 className="corr-shell__title">Корреспонденция</h1>
                     <nav className="corr-shell__tabs" role="tablist" aria-label="Раздел корреспонденции">
                         {navTabs.map((tab) => {
