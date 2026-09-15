@@ -140,7 +140,7 @@ body[data-theme='dark'] .corr-shell {
   width: 100%;
   max-width: none;
   box-sizing: border-box;
-  padding: 1rem clamp(1rem, 3vw, 2rem) 1.25rem;
+  padding: 0.5rem 0.65rem 0.65rem;
   display: flex;
   flex-direction: column;
 }

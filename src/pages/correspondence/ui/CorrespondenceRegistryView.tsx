@@ -42,7 +42,6 @@ import { CorrespondenceRegisterIncomingModal } from './CorrespondenceRegisterInc
 import { CorrespondenceRegisterOutgoingModal } from './CorrespondenceRegisterOutgoingModal';
 import { CorrespondenceRegistrySkeleton } from './CorrespondenceSkeleton';
 import { CorrespondenceShell } from './CorrespondenceShell';
-import { openOutgoingLetterInWordOnline } from '../lib/openOutgoingLetterInWord';
 import './CorrespondencePage.css';
 import './CorrespondenceShell.css';
 
@@ -509,18 +508,7 @@ export function CorrespondenceRegistryView({
 
   const openComposeLetter = () => {
     closeOverlays();
-    void (async () => {
-      try {
-        await openOutgoingLetterInWordOnline();
-      }
-      catch (err) {
-        void showAlert({
-          title: 'Не удалось открыть Word',
-          message: err instanceof Error ? err.message : 'Не получилось собрать шаблон письма.',
-        });
-      }
-      navigate(routes.correspondenceOutgoingCreate);
-    })();
+    navigate(routes.correspondenceOutgoingCreate);
   };
 
   const openRegisterModal = () => {
