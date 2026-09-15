@@ -14,7 +14,6 @@ import {
 import {
     defaultOutgoingLetterCoverModel,
     isWordLetterFile,
-    openOutgoingLetterInWordOnline,
     pickOutgoingWordFile,
 } from '../lib/openOutgoingLetterInWord';
 import {
@@ -217,7 +216,7 @@ export function OutgoingLetterCreatePage() {
             const word = pickOutgoingWordFile(files);
             if (!word) {
                 throw new Error(
-                    'Загрузите готовый .docx (после Word Online) или откройте страницу в поддерживаемом браузере.',
+                    'Загрузите готовый .docx или откройте страницу в поддерживаемом браузере.',
                 );
             }
             return files;
@@ -278,26 +277,6 @@ export function OutgoingLetterCreatePage() {
         }
     };
 
-    const handleOpenWordOnline = async () => {
-        setTemplateBusy(true);
-        try {
-            await openOutgoingLetterInWordOnline(coverModel, { subject });
-            void showAlert({
-                title: 'Word Online',
-                message: 'Скачан бланк и открыт Word в браузере. После правок скачайте копию и нажмите «Загрузить .docx» на этой странице.',
-            });
-        }
-        catch (err) {
-            void showAlert({
-                title: 'Не удалось открыть Word',
-                message: err instanceof Error ? err.message : 'Не получилось собрать шаблон письма.',
-            });
-        }
-        finally {
-            setTemplateBusy(false);
-        }
-    };
-
     const openReviewModal = async () => {
         const fields = isOutgoingLetterDraftValid(subject, coverModel);
         if (!fields.ok) {
@@ -314,7 +293,7 @@ export function OutgoingLetterCreatePage() {
         if (!useInBrowserEditor && !pickOutgoingWordFile(files)) {
             void showAlert({
                 title: 'Нужен файл письма',
-                message: `${DOCX_EDITOR_BROWSER_HINT} Откройте Word Online, сохраните копию и нажмите «Загрузить .docx».`,
+                message: `${DOCX_EDITOR_BROWSER_HINT} Нажмите «Загрузить .docx».`,
             });
             return;
         }
@@ -404,19 +383,33 @@ export function OutgoingLetterCreatePage() {
             )}
         >
             <div className="corr-word corr-word--docx">
-                <section className="corr-word__hero">
-                    <div className="corr-word__hero-text">
-                        <h2 className="corr-word__title">
-                            Написать письмо
+                <div className="corr-word__toolbar" aria-label="Параметры письма">
+                    <label className="corr-word__field corr-word__field--inline">
+                        <span>Получатель</span>
+                        <input
+                            type="text"
+                            className="corr-modal__input"
+                            placeholder="Компания / адресат"
+                            value={recipientValue}
+                            onChange={(e) => setCoverModel((prev) => ({ ...prev, recipientCompany: e.target.value }))}
+                            disabled={busy}
+                        />
+                    </label>
+                    <label className="corr-word__field corr-word__field--inline">
+                        <span>
+                            Тема
                             {dirty ? <span className="corr-word__dirty" title="Есть несохранённые правки"> ●</span> : null}
-                        </h2>
-                        <p className="corr-word__lead">
-                            {useInBrowserEditor
-                                ? 'Редактируйте бланк Kosta Legal прямо здесь. После текста нажмите «Сохранить на согласование» и выберите партнёра.'
-                                : `${DOCX_EDITOR_BROWSER_HINT} Откройте бланк в Word Online, затем загрузите готовый .docx сюда.`}
-                        </p>
-                    </div>
-                    <div className="corr-word__hero-actions">
+                        </span>
+                        <input
+                            type="text"
+                            className="corr-modal__input"
+                            placeholder="Краткое описание письма"
+                            value={subject}
+                            onChange={(e) => setSubject(e.target.value)}
+                            disabled={busy}
+                        />
+                    </label>
+                    <div className="corr-word__toolbar-actions">
                         <button
                             type="button"
                             className="corr__btn corr__btn--outline"
@@ -435,11 +428,14 @@ export function OutgoingLetterCreatePage() {
                         </button>
                         <button
                             type="button"
-                            className="corr__btn corr__btn--ghost"
-                            disabled={busy || templateBusy}
-                            onClick={() => { void handleOpenWordOnline(); }}
+                            className="corr__btn corr__btn--outline"
+                            onClick={() => extraFileRef.current?.click()}
+                            disabled={busy}
                         >
-                            Word Online
+                            <IcoPaperclip />
+                            {' '}
+                            Вложения
+                            {extraFiles.length > 0 ? ` (${extraFiles.length})` : ''}
                         </button>
                         <input
                             ref={importFileRef}
@@ -453,32 +449,26 @@ export function OutgoingLetterCreatePage() {
                                     void handleImportDocx(file);
                             }}
                         />
+                        <input
+                            ref={extraFileRef}
+                            type="file"
+                            multiple
+                            hidden
+                            onChange={(e) => {
+                                const picked = Array.from(e.target.files ?? []);
+                                e.target.value = '';
+                                if (picked.length)
+                                    mergeExtraFiles(picked);
+                            }}
+                        />
                     </div>
-                </section>
-
-                <div className="corr-word__grid">
-                    <label className="corr-word__field">
-                        <span>Получатель</span>
-                        <input
-                            type="text"
-                            className="corr-modal__input"
-                            placeholder="Компания / адресат"
-                            value={recipientValue}
-                            onChange={(e) => setCoverModel((prev) => ({ ...prev, recipientCompany: e.target.value }))}
-                            disabled={busy}
-                        />
-                    </label>
-                    <label className="corr-word__field">
-                        <span>Тема</span>
-                        <input
-                            type="text"
-                            className="corr-modal__input"
-                            placeholder="Краткое описание письма"
-                            value={subject}
-                            onChange={(e) => setSubject(e.target.value)}
-                            disabled={busy}
-                        />
-                    </label>
+                    {extraFiles.length > 0 ? (
+                        <ul className="corr-word__extra-list corr-word__extra-list--toolbar">
+                            {extraFiles.map((f) => (
+                                <li key={`${f.name}-${f.size}`}>{f.name}</li>
+                            ))}
+                        </ul>
+                    ) : null}
                 </div>
 
                 <section className="corr-word__editor-wrap" aria-label="Редактор письма">
@@ -488,26 +478,16 @@ export function OutgoingLetterCreatePage() {
                             <p>
                                 {letterFile
                                     ? `Готов файл: ${letterFile.name}. Можно отправлять на согласование.`
-                                    : 'Пока нет загруженного .docx — используйте «Word Online», затем «Загрузить .docx».'}
+                                    : 'Пока нет загруженного .docx — нажмите «Загрузить .docx».'}
                             </p>
-                            <div className="corr-word__hero-actions">
-                                <button
-                                    type="button"
-                                    className="corr__btn corr__btn--outline"
-                                    disabled={busy || templateBusy}
-                                    onClick={() => { void handleOpenWordOnline(); }}
-                                >
-                                    Word Online
-                                </button>
-                                <button
-                                    type="button"
-                                    className="corr__btn corr__btn--outline"
-                                    disabled={busy || templateBusy}
-                                    onClick={() => importFileRef.current?.click()}
-                                >
-                                    Загрузить .docx
-                                </button>
-                            </div>
+                            <button
+                                type="button"
+                                className="corr__btn corr__btn--outline"
+                                disabled={busy || templateBusy}
+                                onClick={() => importFileRef.current?.click()}
+                            >
+                                Загрузить .docx
+                            </button>
                         </div>
                     ) : !documentBytes || templateBusy ? (
                         <div className="corr-word__editor-loading" role="status">
@@ -523,9 +503,9 @@ export function OutgoingLetterCreatePage() {
                                         type="button"
                                         className="corr__btn corr__btn--outline"
                                         disabled={busy || templateBusy}
-                                        onClick={() => { void handleOpenWordOnline(); }}
+                                        onClick={() => importFileRef.current?.click()}
                                     >
-                                        Открыть в Word Online
+                                        Загрузить .docx
                                     </button>
                                 </div>
                             )}
@@ -545,34 +525,6 @@ export function OutgoingLetterCreatePage() {
                             </Suspense>
                         </OutgoingLetterDocxErrorBoundary>
                     )}
-                </section>
-
-                <section className="corr-word__extras">
-                    <input
-                        ref={extraFileRef}
-                        type="file"
-                        multiple
-                        hidden
-                        onChange={(e) => {
-                            const picked = Array.from(e.target.files ?? []);
-                            e.target.value = '';
-                            if (picked.length)
-                                mergeExtraFiles(picked);
-                        }}
-                    />
-                    <button type="button" className="corr__btn corr__btn--outline" onClick={() => extraFileRef.current?.click()} disabled={busy}>
-                        <IcoPaperclip />
-                        {' '}
-                        Доп. вложения
-                        {extraFiles.length > 0 ? ` (${extraFiles.length})` : ''}
-                    </button>
-                    {extraFiles.length > 0 ? (
-                        <ul className="corr-word__extra-list">
-                            {extraFiles.map((f) => (
-                                <li key={`${f.name}-${f.size}`}>{f.name}</li>
-                            ))}
-                        </ul>
-                    ) : null}
                 </section>
             </div>
         </CorrespondenceShell>

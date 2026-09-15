@@ -10,7 +10,7 @@ type State = {
     hasError: boolean;
 };
 
-/** Isolates DocxEditor crashes so the compose page can fall back to Word Online. */
+/** Isolates DocxEditor crashes so the compose page can fall back to .docx upload. */
 export class OutgoingLetterDocxErrorBoundary extends Component<Props, State> {
     state: State = { hasError: false };
 

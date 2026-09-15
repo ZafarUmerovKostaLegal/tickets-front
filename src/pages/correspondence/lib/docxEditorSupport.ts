@@ -12,4 +12,4 @@ export function canRunInBrowserDocxEditor(): boolean {
 
 export const DOCX_EDITOR_BROWSER_HINT =
     'Встроенный редактор работает в Chrome / Edge 89+, Firefox 89+ и Safari 15+. '
-    + 'На старых браузерах используйте «Word Online» или загрузите готовый .docx.';
+    + 'На старых браузерах загрузите готовый файл .docx.';
