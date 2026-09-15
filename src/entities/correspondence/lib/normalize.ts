@@ -35,6 +35,7 @@ const STATUSES = new Set<CorrDocStatus>([
     'pending_review',
     'rejected',
     'new',
+    'received',
     'progress',
     'approval',
     'awaiting_signature',
@@ -142,8 +143,7 @@ export function normalizeCorrespondenceDocument(raw: unknown): CorrespondenceDoc
     const docTypeRaw = pickStr(o, 'docType', 'doc_type').toLowerCase() || 'letter';
     const docType = DOC_TYPES.has(docTypeRaw as CorrDocType) ? docTypeRaw as CorrDocType : 'letter';
     const statusRaw = pickStr(o, 'status').toLowerCase() || 'progress';
-    const statusMapped = statusRaw === 'new' ? 'progress' : statusRaw;
-    const status = STATUSES.has(statusMapped as CorrDocStatus) ? statusMapped as CorrDocStatus : 'progress';
+    const status = STATUSES.has(statusRaw as CorrDocStatus) ? statusRaw as CorrDocStatus : 'progress';
     const responsibleUserId = num(o.responsibleUserId ?? o.responsible_user_id) ?? 0;
     const partnerUserId = num(o.partnerUserId ?? o.partner_user_id);
     const attachmentsRaw = o.attachments;

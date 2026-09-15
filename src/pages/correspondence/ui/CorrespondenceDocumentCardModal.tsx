@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
+    acknowledgeIncomingCorrespondence,
     approveOutgoingCorrespondence,
     correspondenceErrorMessage,
     createCorrespondenceComment,
@@ -350,6 +351,14 @@ export function CorrespondenceDocumentCardModal({
         && doc.partnerUserId === uid
         && isPartnerOrgRole(user?.role, user?.position),
     );
+    const canAcknowledgeIncoming = Boolean(
+        doc
+        && doc.direction === 'incoming'
+        && (doc.status === 'new' || doc.status === 'progress')
+        && uid != null
+        && doc.partnerUserId === uid
+        && isPartnerOrgRole(user?.role, user?.position),
+    );
     const canAuthorResubmit = Boolean(
         doc
         && doc.direction === 'outgoing'
@@ -393,6 +402,33 @@ export function CorrespondenceDocumentCardModal({
             void showAlert({
                 title: 'Не удалось подтвердить',
                 message: correspondenceErrorMessage(err, 'Ошибка подтверждения'),
+            });
+        }
+        finally {
+            setActing(false);
+        }
+    };
+
+    const handleAcknowledgeIncoming = async () => {
+        if (!doc)
+            return;
+        const ok = await showConfirm({
+            title: 'Отметить полученным?',
+            message: 'Статус сменится на «Получено», документ исчезнет из очереди «Нужно посмотреть».',
+        });
+        if (!ok)
+            return;
+        setActing(true);
+        try {
+            const next = await acknowledgeIncomingCorrespondence(doc.id);
+            await refresh(next);
+            invalidateCorrespondencePartnerAttention();
+            showToast({ message: 'Отмечено как полученное', variant: 'success' });
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось отметить',
+                message: correspondenceErrorMessage(err, 'Ошибка обновления статуса'),
             });
         }
         finally {
@@ -842,6 +878,16 @@ export function CorrespondenceDocumentCardModal({
                 ) : null}
 
                 <div className="corr-modal__actions">
+                    {canAcknowledgeIncoming ? (
+                        <button
+                            type="button"
+                            className="corr-modal__btn corr-modal__btn--primary"
+                            disabled={acting}
+                            onClick={() => void handleAcknowledgeIncoming()}
+                        >
+                            {acting ? '…' : 'Отметить полученным'}
+                        </button>
+                    ) : null}
                     {canPartnerAct ? (
                         <>
                             <button

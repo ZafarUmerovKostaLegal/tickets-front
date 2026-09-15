@@ -47,6 +47,7 @@ export type CorrDocStatus =
     | 'pending_review'
     | 'rejected'
     | 'new'
+    | 'received'
     | 'progress'
     | 'approval'
     | 'awaiting_signature'

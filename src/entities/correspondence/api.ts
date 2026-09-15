@@ -215,6 +215,15 @@ export async function approveOutgoingCorrespondence(id: string): Promise<Corresp
     return doc;
 }
 
+export async function acknowledgeIncomingCorrespondence(id: string): Promise<CorrespondenceDocument> {
+    const res = await apiFetch(`${PREFIX}/${encodeURIComponent(id)}/acknowledge`, { method: 'POST' });
+    await throwIfNotOk(res);
+    const doc = normalizeCorrespondenceDocument(await res.json());
+    if (!doc)
+        throw new CorrespondenceHttpError(500, 'Некорректный ответ сервера');
+    return doc;
+}
+
 export async function rejectOutgoingCorrespondence(id: string, comment: string): Promise<CorrespondenceDocument> {
     const res = await apiFetch(`${PREFIX}/${encodeURIComponent(id)}/reject`, {
         method: 'POST',

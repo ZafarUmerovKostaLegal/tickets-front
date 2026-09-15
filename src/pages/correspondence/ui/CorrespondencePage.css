@@ -764,6 +764,11 @@ button.corr__stat--clickable:hover:not(:disabled) {
   color: #1d4ed8;
 }
 
+.corr__badge--status-received {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
 .corr__badge--status-progress {
   background: rgba(245, 158, 11, 0.15);
   color: #b45309;
@@ -4694,6 +4699,11 @@ body[data-theme='dark'] .corr-preview__attachments { border-color: var(--app-bor
 .corr-shell .corr__badge--status-new {
   background: var(--corr-oxblood-soft);
   color: var(--corr-oxblood);
+}
+
+.corr-shell .corr__badge--status-received {
+  background: var(--corr-green-soft);
+  color: var(--corr-green);
 }
 
 .corr-shell .corr__badge--status-progress {

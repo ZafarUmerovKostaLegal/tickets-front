@@ -37,6 +37,7 @@ export { useCorrespondencePartnerAttentionBadge } from './lib/useCorrespondenceP
 
 export {
     approveOutgoingCorrespondence,
+    acknowledgeIncomingCorrespondence,
     archiveCorrespondence,
     deleteCorrespondence,
     correspondenceErrorMessage,
