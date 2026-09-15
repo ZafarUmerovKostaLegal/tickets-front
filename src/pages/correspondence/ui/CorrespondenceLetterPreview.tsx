@@ -78,8 +78,8 @@ export function CorrespondenceLetterPreview({
     const statusNote = useMemo(() => {
         if (letter.status === 'pending_review') {
             return partnerObj
-                ? `На проверке у ${partnerObj.name}`
-                : 'Ожидает проверки партнёра';
+                ? `На согласовании у ${partnerObj.name}`
+                : 'Ожидает согласования партнёра';
         }
         if (letter.status === 'rejected' && letter.rejectionReason) {
             return `Отклонено: ${letter.rejectionReason}`;
@@ -121,7 +121,7 @@ export function CorrespondenceLetterPreview({
                     {canSendToReview && onSendToReview && (
                         <button type="button" className="corr-n__btn-primary" onClick={onSendToReview}>
                             <IcoSend />
-                            <span>{letter.status === 'rejected' ? 'Отправить повторно' : 'На проверку'}</span>
+                            <span>{letter.status === 'rejected' ? 'Отправить повторно' : 'На согласование'}</span>
                         </button>
                     )}
                     {canPartnerAct && onReject && (

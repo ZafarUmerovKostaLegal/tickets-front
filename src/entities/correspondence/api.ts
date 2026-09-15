@@ -323,6 +323,25 @@ export async function openCorrespondenceAttachmentInNewTab(documentId: string, a
     window.setTimeout(() => URL.revokeObjectURL(url), 120000);
 }
 
+export async function uploadCorrespondenceAttachment(
+    documentId: string,
+    file: File,
+    attachmentKind: 'scan' | 'attachment' | 'signed' = 'attachment',
+): Promise<CorrespondenceDocument> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('attachmentKind', attachmentKind);
+    const res = await apiFetch(`${PREFIX}/${encodeURIComponent(documentId)}/attachments`, {
+        method: 'POST',
+        body: form,
+    });
+    await throwIfNotOk(res);
+    const doc = normalizeCorrespondenceDocument(await res.json());
+    if (!doc)
+        throw new CorrespondenceHttpError(500, 'Некорректный ответ сервера');
+    return doc;
+}
+
 export async function downloadCorrespondenceAttachment(
     documentId: string,
     attachmentId: string,

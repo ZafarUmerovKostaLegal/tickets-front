@@ -13,6 +13,7 @@ import {
   downloadCorrespondenceAttachment,
   registerIncomingCorrespondence,
   registerOutgoingCorrespondence,
+  CORR_DOC_TYPE_KEYS,
   type CorrDocType,
   type CorrespondenceStats,
 } from '@entities/correspondence';
@@ -31,6 +32,8 @@ import {
   CORR_STATUS_BADGE,
   CORR_TABLE_TABS,
   CORR_TYPE_BADGE,
+  allCorrDocTypesSelected,
+  defaultCorrDocTypeFilterState,
   type CorrTableTabKey,
 } from '../model/constants';
 import type { CorrDirection, CorrRow, IncomingRegisterPayload, OutgoingRegisterPayload } from '../model/types';
@@ -143,6 +146,8 @@ function listParamsForTab(
     }
     else if (tableTab === 'work')
         params.statusGroup = 'work';
+    else if (tableTab === 'awaiting_signature')
+        params.status = 'awaiting_signature';
     else if (tableTab === 'done')
         params.status = 'done';
     if (tableTab !== 'attention' && extra.partnerUserId != null && extra.partnerUserId > 0)
@@ -155,7 +160,7 @@ function listParamsForTab(
         params.dateTo = extra.dateTo;
     if (extra.q.trim())
         params.q = extra.q.trim();
-    if (docTypes.length > 0 && docTypes.length < 3)
+    if (docTypes.length > 0 && !allCorrDocTypesSelected(docTypes))
         params.docType = docTypes;
     return params;
 }
@@ -236,8 +241,8 @@ export function CorrespondenceRegistryView({
   const [stats, setStats] = useState<CorrespondenceStats>(EMPTY_STATS);
   const [reloadToken, setReloadToken] = useState(0);
 
-  const [filterDraft, setFilterDraft] = useState({ letter: true, contract: true, note: true });
-  const [appliedDocTypes, setAppliedDocTypes] = useState<CorrDocType[]>(['letter', 'contract', 'note']);
+  const [filterDraft, setFilterDraft] = useState(defaultCorrDocTypeFilterState);
+  const [appliedDocTypes, setAppliedDocTypes] = useState<CorrDocType[]>([...CORR_DOC_TYPE_KEYS]);
   const [extraFilters, setExtraFilters] = useState<RegistryExtraFilters>(EMPTY_EXTRA_FILTERS);
   const [extraDraft, setExtraDraft] = useState<RegistryExtraFilters>(EMPTY_EXTRA_FILTERS);
   const [partnerOptions, setPartnerOptions] = useState<UserPublic[]>([]);
@@ -289,13 +294,13 @@ export function CorrespondenceRegistryView({
     },
     {
       key: 'overdue' as const,
-      label: 'На проверке',
+      label: 'На согласовании',
       value: String(stats.pendingReviewTotal),
       delta: 'ожидают партнёра',
       deltaVariant: 'red' as const,
       icon: 'clock' as const,
       active: direction === 'outgoing' && tableTab === 'attention',
-      actionLabel: 'Показать письма на проверке',
+      actionLabel: 'Показать письма на согласовании',
     },
   ]), [stats, direction, tableTab]);
 
@@ -450,7 +455,7 @@ export function CorrespondenceRegistryView({
   );
 
   const applyTypeFilters = useCallback(() => {
-    const selected = (['letter', 'contract', 'note'] as const).filter((k) => filterDraft[k]);
+    const selected = CORR_DOC_TYPE_KEYS.filter((k) => filterDraft[k]);
     if (selected.length === 0) {
       void showAlert({ title: 'Фильтры', message: 'Выберите хотя бы один тип документа.' });
       return;
@@ -469,9 +474,9 @@ export function CorrespondenceRegistryView({
   }, [extraDraft, filterDraft]);
 
   const resetFilters = useCallback(() => {
-    setFilterDraft({ letter: true, contract: true, note: true });
+    setFilterDraft(defaultCorrDocTypeFilterState());
     setExtraDraft(EMPTY_EXTRA_FILTERS);
-    setAppliedDocTypes(['letter', 'contract', 'note']);
+    setAppliedDocTypes([...CORR_DOC_TYPE_KEYS]);
     setExtraFilters(EMPTY_EXTRA_FILTERS);
     setPage(1);
     setFiltersOpen(false);
@@ -991,10 +996,14 @@ export function CorrespondenceRegistryView({
           />
         </div>
         <p className="corr__popover-title">Тип документа</p>
-        {(['letter', 'contract', 'note'] as const).map((key) => (<label key={key} className="corr__filter-check">
-          <input type="checkbox" checked={filterDraft[key]} onChange={() => setFilterDraft((ft) => ({ ...ft, [key]: !ft[key] }))} />
-          {CORR_TYPE_BADGE[key].label}
-        </label>))}
+        <div className="corr__filter-type-list">
+          {CORR_DOC_TYPE_KEYS.map((key) => (
+            <label key={key} className="corr__filter-check">
+              <input type="checkbox" checked={filterDraft[key]} onChange={() => setFilterDraft((ft) => ({ ...ft, [key]: !ft[key] }))} />
+              {CORR_TYPE_BADGE[key].label}
+            </label>
+          ))}
+        </div>
         {tableTab !== 'attention' ? (
           <div className="corr__popover-field">
             <span className="corr__popover-label" id="corr-filter-partner-label">Партнёр</span>

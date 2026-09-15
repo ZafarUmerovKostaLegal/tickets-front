@@ -109,9 +109,9 @@ export function OutgoingSubmitReviewModal({
             >
                 <header className="corr-modal__head">
                     <div>
-                        <h2 id={titleId} className="corr-modal__title">Отправить на проверку</h2>
+                        <h2 id={titleId} className="corr-modal__title">Отправить на согласование</h2>
                         <p className="corr-modal__lead">
-                            Партнёр проверит письмо. После подтверждения документ зарегистрируется автоматически.
+                            Партнёр согласует письмо. После одобрения нужно будет загрузить подписанный скан.
                         </p>
                     </div>
                     <button
@@ -173,7 +173,7 @@ export function OutgoingSubmitReviewModal({
                         onClick={handleSubmit}
                         disabled={submitPending || partnersLoad !== 'ok'}
                     >
-                        {submitPending ? 'Отправка…' : 'На проверку'}
+                        {submitPending ? 'Отправка…' : 'На согласование'}
                     </button>
                 </div>
             </div>

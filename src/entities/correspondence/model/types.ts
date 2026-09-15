@@ -1,6 +1,46 @@
 export type CorrDirection = 'incoming' | 'outgoing';
 
-export type CorrDocType = 'letter' | 'contract' | 'note';
+/** Active selectable types + legacy `note` for existing rows. */
+export type CorrDocType =
+    | 'letter'
+    | 'request'
+    | 'claim'
+    | 'demand'
+    | 'notification'
+    | 'application'
+    | 'complaint'
+    | 'lawsuit'
+    | 'court'
+    | 'enforcement'
+    | 'contract'
+    | 'addendum'
+    | 'act'
+    | 'financial'
+    | 'proposal'
+    | 'other'
+    | 'note';
+
+/** Types offered when registering / filtering (excludes legacy `note`). */
+export const CORR_DOC_TYPE_KEYS = [
+    'letter',
+    'request',
+    'claim',
+    'demand',
+    'notification',
+    'application',
+    'complaint',
+    'lawsuit',
+    'court',
+    'enforcement',
+    'contract',
+    'addendum',
+    'act',
+    'financial',
+    'proposal',
+    'other',
+] as const satisfies readonly CorrDocType[];
+
+export type CorrSelectableDocType = (typeof CORR_DOC_TYPE_KEYS)[number];
 
 export type CorrDocStatus =
     | 'draft'
@@ -9,9 +49,10 @@ export type CorrDocStatus =
     | 'new'
     | 'progress'
     | 'approval'
+    | 'awaiting_signature'
     | 'done';
 
-export type CorrAttachmentKind = 'scan' | 'attachment';
+export type CorrAttachmentKind = 'scan' | 'attachment' | 'signed';
 
 export type CorrespondenceUserSnippet = {
     id: number;

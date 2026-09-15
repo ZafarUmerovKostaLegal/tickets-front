@@ -194,15 +194,15 @@ export function OutgoingLetterCreatePage() {
             clearOutgoingLetterDraft();
             setReviewOpen(false);
             void showAlert({
-                title: 'Отправлено на проверку',
-                message: `Письмо отправлено партнёру «${partnerName}». После подтверждения оно будет зарегистрировано автоматически.`,
+                title: 'Отправлено на согласование',
+                message: `Письмо отправлено партнёру «${partnerName}». После одобрения распечатайте, подпишите и загрузите скан.`,
             });
             navigate(getCorrespondenceOutgoingUrl());
         }
         catch (err) {
             const message = err instanceof Error && err.message
                 ? err.message
-                : 'Не удалось отправить письмо на проверку.';
+                : 'Не удалось отправить письмо на согласование.';
             void showAlert({ title: 'Не удалось сохранить', message });
         }
         finally {
@@ -236,7 +236,7 @@ export function OutgoingLetterCreatePage() {
                     <button type="button" className="corr__btn corr__btn--primary" onClick={openReviewModal} disabled={busy || wordBusy}>
                         <IcoSave />
                         {' '}
-                        {busy ? 'Отправка…' : 'Сохранить на проверку'}
+                        {busy ? 'Отправка…' : 'Сохранить на согласование'}
                     </button>
                 </>
             )}

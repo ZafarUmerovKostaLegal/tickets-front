@@ -11,7 +11,25 @@ import type {
     CorrespondenceUserSnippet,
 } from '../model/types';
 
-const DOC_TYPES = new Set<CorrDocType>(['letter', 'contract', 'note']);
+const DOC_TYPES = new Set<CorrDocType>([
+    'letter',
+    'request',
+    'claim',
+    'demand',
+    'notification',
+    'application',
+    'complaint',
+    'lawsuit',
+    'court',
+    'enforcement',
+    'contract',
+    'addendum',
+    'act',
+    'financial',
+    'proposal',
+    'other',
+    'note',
+]);
 const STATUSES = new Set<CorrDocStatus>([
     'draft',
     'pending_review',
@@ -19,10 +37,11 @@ const STATUSES = new Set<CorrDocStatus>([
     'new',
     'progress',
     'approval',
+    'awaiting_signature',
     'done',
 ]);
 const DIRECTIONS = new Set<CorrDirection>(['incoming', 'outgoing']);
-const ATT_KINDS = new Set<CorrAttachmentKind>(['scan', 'attachment']);
+const ATT_KINDS = new Set<CorrAttachmentKind>(['scan', 'attachment', 'signed']);
 
 function num(v: unknown): number | null {
     const n = typeof v === 'number' ? v : Number(v);

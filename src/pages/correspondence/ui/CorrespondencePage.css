@@ -749,6 +749,16 @@ button.corr__stat--clickable:hover:not(:disabled) {
   color: #0f766e;
 }
 
+.corr__badge--type-legal {
+  background: rgba(185, 28, 28, 0.1);
+  color: #b91c1c;
+}
+
+.corr__badge--type-finance {
+  background: rgba(180, 83, 9, 0.12);
+  color: #b45309;
+}
+
 .corr__badge--status-new {
   background: rgba(59, 130, 246, 0.12);
   color: #1d4ed8;
@@ -762,6 +772,11 @@ button.corr__stat--clickable:hover:not(:disabled) {
 .corr__badge--status-approval {
   background: rgba(251, 191, 36, 0.2);
   color: #a16207;
+}
+
+.corr__badge--status-signature {
+  background: rgba(14, 165, 233, 0.14);
+  color: #0369a1;
 }
 
 .corr__badge--status-done {
@@ -825,6 +840,16 @@ button.corr__stat--clickable:hover:not(:disabled) {
   max-height: min(80vh, 640px);
   overflow: auto;
   padding-top: 0.5rem;
+}
+
+.corr__filter-type-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  max-height: 14rem;
+  overflow: auto;
+  margin: 0 0 0.15rem;
+  padding-bottom: 0.35rem;
 }
 
 .corr__popover-field {
@@ -1505,6 +1530,30 @@ body[data-theme='dark'] .corr-card-modal__note-text--reject {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--app-muted);
+}
+
+.corr-card-modal__sign {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--corr-oxblood, #8b2635) 28%, var(--app-border-soft));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--corr-oxblood, #8b2635) 6%, var(--app-surface));
+}
+
+.corr-card-modal__sign-steps {
+  margin: 0;
+  padding-left: 1.15rem;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--app-text-dim, var(--app-muted));
+}
+
+.corr-card-modal__sign-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .corr-card-modal__files-list {
@@ -4632,6 +4681,16 @@ body[data-theme='dark'] .corr-preview__attachments { border-color: var(--app-bor
   color: var(--corr-brass);
 }
 
+.corr-shell .corr__badge--type-legal {
+  background: var(--corr-oxblood-soft);
+  color: var(--corr-oxblood);
+}
+
+.corr-shell .corr__badge--type-finance {
+  background: var(--corr-brass-soft);
+  color: var(--corr-brass);
+}
+
 .corr-shell .corr__badge--status-new {
   background: var(--corr-oxblood-soft);
   color: var(--corr-oxblood);
@@ -4645,6 +4704,11 @@ body[data-theme='dark'] .corr-preview__attachments { border-color: var(--app-bor
 .corr-shell .corr__badge--status-approval {
   background: var(--corr-brass-soft);
   color: var(--corr-brass);
+}
+
+.corr-shell .corr__badge--status-signature {
+  background: var(--corr-slate-soft);
+  color: var(--corr-slate);
 }
 
 .corr-shell .corr__badge--status-done {

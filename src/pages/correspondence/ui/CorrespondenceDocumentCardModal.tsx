@@ -12,18 +12,21 @@ import {
     listCorrespondenceComments,
     rejectOutgoingCorrespondence,
     submitOutgoingForReview,
+    uploadCorrespondenceAttachment,
     type CorrespondenceAttachment,
     type CorrespondenceDocument,
     type CorrespondenceDocumentComment,
 } from '@entities/correspondence';
 import { useCurrentUser } from '@shared/hooks';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
-import { useAppDialog } from '@shared/ui';
+import { showToast, useAppDialog } from '@shared/ui';
 import {
     CORR_COUNTERPARTY_COLUMN,
+    CORR_SCAN_MAX_BYTES,
     CORR_STATUS_BADGE,
     CORR_TYPE_BADGE,
 } from '../model/constants';
+import { canDeleteCorrespondence } from '../model/permissions';
 import { CorrespondenceRejectModal } from './CorrespondenceRejectModal';
 import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
 
@@ -53,6 +56,9 @@ function isPdfAttachment(file: CorrespondenceAttachment): boolean {
 }
 
 function pickPrimaryAttachment(attachments: CorrespondenceAttachment[]): CorrespondenceAttachment | null {
+    const signed = attachments.find((a) => a.attachmentKind === 'signed');
+    if (signed)
+        return signed;
     const pdf = attachments.find((a) => isPdfAttachment(a));
     if (pdf)
         return pdf;
@@ -170,7 +176,9 @@ export function CorrespondenceDocumentCardModal({
     const [commentsError, setCommentsError] = useState<string | null>(null);
     const [commentDraft, setCommentDraft] = useState('');
     const [commentSending, setCommentSending] = useState(false);
+    const [uploadingSigned, setUploadingSigned] = useState(false);
     const commentsFeedRef = useRef<HTMLDivElement | null>(null);
+    const signedFileRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => {
         if (!open || !documentId) {
@@ -349,6 +357,13 @@ export function CorrespondenceDocumentCardModal({
         && uid != null
         && doc.responsibleUserId === uid,
     );
+    const canUploadSigned = Boolean(
+        doc
+        && doc.direction === 'outgoing'
+        && doc.status === 'awaiting_signature'
+        && uid != null
+        && (doc.responsibleUserId === uid || canDeleteCorrespondence(user?.role, user?.position)),
+    );
 
     const refresh = async (next: CorrespondenceDocument) => {
         setDoc(next);
@@ -370,8 +385,8 @@ export function CorrespondenceDocumentCardModal({
             await refresh(next);
             invalidateCorrespondencePartnerAttention();
             void showAlert({
-                title: 'Зарегистрировано',
-                message: `Письмо зарегистрировано как ${next.registryNumber}.`,
+                title: 'Одобрено',
+                message: `Письмо зарегистрировано как ${next.registryNumber}. Распечатайте, подпишите и загрузите скан в карточку.`,
             });
         }
         catch (err) {
@@ -416,7 +431,7 @@ export function CorrespondenceDocumentCardModal({
             await refresh(next);
             invalidateCorrespondencePartnerAttention();
             setResubmitOpen(false);
-            void showAlert({ title: 'Отправлено', message: 'Письмо снова отправлено на проверку партнёру.' });
+            void showAlert({ title: 'Отправлено', message: 'Письмо снова отправлено на согласование партнёру.' });
         }
         catch (err) {
             void showAlert({
@@ -442,6 +457,40 @@ export function CorrespondenceDocumentCardModal({
         }
         finally {
             setDownloadingId(null);
+        }
+    };
+
+    const handleUploadSigned = async (file: File) => {
+        if (!doc)
+            return;
+        if (file.size > CORR_SCAN_MAX_BYTES) {
+            void showAlert({
+                title: 'Файл слишком большой',
+                message: `Максимум ${(CORR_SCAN_MAX_BYTES / (1024 * 1024)).toFixed(0)} МБ на файл.`,
+            });
+            return;
+        }
+        setUploadingSigned(true);
+        setFileError(null);
+        try {
+            const next = await uploadCorrespondenceAttachment(doc.id, file, 'signed');
+            await refresh(next);
+            const signed = (next.attachments ?? []).find((a) => a.attachmentKind === 'signed');
+            if (signed)
+                setActiveFileId(signed.id);
+            showToast({
+                message: 'Подписанный скан загружен. Документ завершён.',
+                variant: 'success',
+            });
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось загрузить',
+                message: correspondenceErrorMessage(err, 'Ошибка загрузки подписанного скана'),
+            });
+        }
+        finally {
+            setUploadingSigned(false);
         }
     };
 
@@ -640,6 +689,49 @@ export function CorrespondenceDocumentCardModal({
                                     ) : null}
                                 </dl>
                             </section>
+
+                            {canUploadSigned ? (
+                                <section className="corr-card-modal__sign" aria-label="Подпись и загрузка скана">
+                                    <h3 className="corr-card-modal__files-title">Подписать и загрузить</h3>
+                                    <ol className="corr-card-modal__sign-steps">
+                                        <li>Скачайте файл письма</li>
+                                        <li>Распечатайте и поставьте подпись</li>
+                                        <li>Загрузите скан или фото подписанного документа</li>
+                                    </ol>
+                                    <div className="corr-card-modal__sign-actions">
+                                        {activeFile ? (
+                                            <button
+                                                type="button"
+                                                className="corr-modal__btn corr-modal__btn--ghost"
+                                                disabled={acting || uploadingSigned || downloadingId === activeFile.id}
+                                                onClick={() => void handleDownload(activeFile)}
+                                            >
+                                                Скачать для печати
+                                            </button>
+                                        ) : null}
+                                        <input
+                                            ref={signedFileRef}
+                                            type="file"
+                                            accept="application/pdf,image/*,.pdf,.png,.jpg,.jpeg,.webp"
+                                            hidden
+                                            onChange={(e) => {
+                                                const picked = e.target.files?.[0];
+                                                e.target.value = '';
+                                                if (picked)
+                                                    void handleUploadSigned(picked);
+                                            }}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="corr-modal__btn corr-modal__btn--primary"
+                                            disabled={acting || uploadingSigned}
+                                            onClick={() => signedFileRef.current?.click()}
+                                        >
+                                            {uploadingSigned ? 'Загрузка…' : 'Загрузить подписанный скан'}
+                                        </button>
+                                    </div>
+                                </section>
+                            ) : null}
 
                             {attachments.length > 0 ? (
                                 <section className="corr-card-modal__files" aria-label="Вложения">

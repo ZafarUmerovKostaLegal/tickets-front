@@ -3,6 +3,7 @@ export type {
     CorrDirection,
     CorrDocStatus,
     CorrDocType,
+    CorrSelectableDocType,
     CorrRow,
     CorrespondenceAttachment,
     CorrespondenceDocument,
@@ -16,6 +17,8 @@ export type {
     RegisterIncomingBody,
     RegisterOutgoingBody,
 } from './model/types';
+
+export { CORR_DOC_TYPE_KEYS } from './model/types';
 
 export {
     formatCorrRegisteredAt,
@@ -49,6 +52,7 @@ export {
     listCorrespondenceComments,
     openCorrespondenceAttachmentInNewTab,
     downloadCorrespondenceAttachment,
+    uploadCorrespondenceAttachment,
     patchCorrespondence,
     registerIncomingCorrespondence,
     registerOutgoingCorrespondence,

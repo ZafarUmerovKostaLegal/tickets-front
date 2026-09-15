@@ -157,7 +157,7 @@ export const DOC_TYPE_META: Record<DocType, { label: string; plural: string; wri
 
 export const STATUS_META: Record<LetterStatus, { label: string; cls: string }> = {
     draft: { label: 'Черновик', cls: 'corr-n__badge--draft' },
-    pending_review: { label: 'На проверке', cls: 'corr-n__badge--pending' },
+    pending_review: { label: 'На согласовании', cls: 'corr-n__badge--pending' },
     rejected: { label: 'Отклонено', cls: 'corr-n__badge--rejected' },
     approved: { label: 'Подтверждено', cls: 'corr-n__badge--approved' },
 };
@@ -261,15 +261,15 @@ function SendToPartnerModal({ onClose, onSend }: {
     const [comment, setComment] = useState('');
     return (
         <div className="corr-n__modal-backdrop" onClick={onClose}>
-            <div className="corr-n__modal-panel" role="dialog" aria-modal aria-label="Отправить на проверку" onClick={e => e.stopPropagation()}>
+            <div className="corr-n__modal-panel" role="dialog" aria-modal aria-label="Отправить на согласование" onClick={e => e.stopPropagation()}>
                 <div className="corr-n__modal-header">
-                    <h3 className="corr-n__modal-title">Отправить на проверку</h3>
+                    <h3 className="corr-n__modal-title">Отправить на согласование</h3>
                     <button type="button" className="corr-n__modal-close" onClick={onClose} aria-label="Закрыть">
                         <IcoCross />
                     </button>
                 </div>
                 <div className="corr-n__modal-body">
-                    <p className="corr-n__modal-hint">Выберите партнёра, который будет проверять документ:</p>
+                    <p className="corr-n__modal-hint">Выберите партнёра для согласования документа:</p>
                     <div className="corr-n__partner-list">
                         {MOCK_PARTNERS.map(p => (
                             <button key={p.id} type="button"
@@ -297,7 +297,7 @@ function SendToPartnerModal({ onClose, onSend }: {
                     <button type="button" className="corr-n__btn-secondary" onClick={onClose}>Отмена</button>
                     <button type="button" className="corr-n__btn-primary" disabled={!selected}
                         onClick={() => selected && onSend(selected)}>
-                        <IcoSend /> Отправить на проверку
+                        <IcoSend /> Отправить на согласование
                     </button>
                 </div>
             </div>
