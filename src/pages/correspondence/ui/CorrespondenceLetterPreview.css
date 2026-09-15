@@ -715,12 +715,61 @@
 
 .corr-word__toolbar-actions .corr__btn {
   white-space: nowrap;
-}
-
-/* Keep document caret when clicking chrome actions (not text fields). */
-.corr-word__toolbar-actions .corr__btn {
   -webkit-user-select: none;
   user-select: none;
+}
+
+.corr-word__fs-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid rgba(26, 20, 20, 0.14);
+  background: #fff;
+  color: var(--corr-muted, #6b5e5e);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.corr-word__fs-btn:hover {
+  background: #f6f4ef;
+  color: var(--corr-ink, #14213d);
+}
+
+.corr-word__fs-btn[aria-pressed='true'] {
+  color: var(--corr-oxblood, #8b2635);
+  border-color: color-mix(in srgb, var(--corr-oxblood, #8b2635) 35%, rgba(26, 20, 20, 0.14));
+  background: color-mix(in srgb, var(--corr-oxblood, #8b2635) 8%, #fff);
+}
+
+html.corr-docx-fs,
+html.corr-docx-fs body {
+  overflow: hidden;
+}
+
+html.corr-docx-fs .corr-shell__header {
+  display: none !important;
+}
+
+.corr-word--docx.corr-word--docx-fs {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  width: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.corr-word--docx.corr-word--docx-fs .corr-word__editor-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .corr-word__extra-list--toolbar {

@@ -55,6 +55,27 @@ function IcoSave() {
     );
 }
 
+function IcoEditorFullscreen({ exit }: { exit: boolean }) {
+    if (exit) {
+        return (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <polyline points="4 14 10 14 10 20" />
+                <polyline points="20 10 14 10 14 4" />
+                <line x1="14" y1="10" x2="21" y2="3" />
+                <line x1="3" y1="21" x2="10" y2="14" />
+            </svg>
+        );
+    }
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <polyline points="15 3 21 3 21 9" />
+            <polyline points="9 21 3 21 3 15" />
+            <line x1="21" y1="3" x2="14" y2="10" />
+            <line x1="3" y1="21" x2="10" y2="14" />
+        </svg>
+    );
+}
+
 function fileToUint8Array(file: File): Promise<Uint8Array> {
     return file.arrayBuffer().then((buf) => new Uint8Array(buf));
 }
@@ -80,6 +101,7 @@ export function OutgoingLetterCreatePage() {
     const [editorReady, setEditorReady] = useState(false);
     const [dirty, setDirty] = useState(false);
     const [editorCrashed, setEditorCrashed] = useState(false);
+    const [editorFullscreen, setEditorFullscreen] = useState(false);
     const browserSupportsEditor = useMemo(() => canRunInBrowserDocxEditor(), []);
     const useInBrowserEditor = browserSupportsEditor && !editorCrashed;
 
@@ -95,6 +117,28 @@ export function OutgoingLetterCreatePage() {
         }
         setHydrated(true);
     }, []);
+
+    useEffect(() => {
+        document.documentElement.classList.toggle('corr-docx-fs', editorFullscreen);
+        return () => document.documentElement.classList.remove('corr-docx-fs');
+    }, [editorFullscreen]);
+
+    useEffect(() => {
+        if (!editorFullscreen)
+            return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key !== 'Escape')
+                return;
+            // Don't close immersive mode while a modal/dialog has focus.
+            const active = document.activeElement;
+            if (active instanceof Element && active.closest('[role="dialog"], .corr-modal, .app-dialog'))
+                return;
+            e.preventDefault();
+            setEditorFullscreen(false);
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [editorFullscreen]);
 
     const persistDraft = useCallback((nextFiles: File[], nextMeta: OutgoingLetterAttachmentMeta[]) => {
         const id = writeOutgoingLetterDraft({
@@ -382,7 +426,7 @@ export function OutgoingLetterCreatePage() {
                 </>
             )}
         >
-            <div className="corr-word corr-word--docx">
+            <div className={`corr-word corr-word--docx${editorFullscreen ? ' corr-word--docx-fs' : ''}`}>
                 <div className="corr-word__toolbar" aria-label="Параметры письма">
                     <label className="corr-word__field corr-word__field--inline">
                         <span>Получатель</span>
@@ -443,6 +487,28 @@ export function OutgoingLetterCreatePage() {
                             {' '}
                             Вложения
                             {extraFiles.length > 0 ? ` (${extraFiles.length})` : ''}
+                        </button>
+                        {editorFullscreen ? (
+                            <button
+                                type="button"
+                                className="corr__btn corr__btn--primary"
+                                onClick={() => { void openReviewModal(); }}
+                                disabled={busy || templateBusy || !documentBytes}
+                            >
+                                <IcoSave />
+                                {' '}
+                                {busy ? 'Подготовка…' : 'На согласование'}
+                            </button>
+                        ) : null}
+                        <button
+                            type="button"
+                            className="corr-word__fs-btn"
+                            onClick={() => setEditorFullscreen((v) => !v)}
+                            title={editorFullscreen ? 'Свернуть редактор (Esc)' : 'Расширить на весь экран'}
+                            aria-label={editorFullscreen ? 'Свернуть редактор' : 'Расширить на весь экран'}
+                            aria-pressed={editorFullscreen}
+                        >
+                            <IcoEditorFullscreen exit={editorFullscreen} />
                         </button>
                         <input
                             ref={importFileRef}
