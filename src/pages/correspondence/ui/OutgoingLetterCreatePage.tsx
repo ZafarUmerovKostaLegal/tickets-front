@@ -89,6 +89,16 @@ function IcoComments() {
     );
 }
 
+function IcoMore() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <circle cx="5" cy="12" r="1.75" />
+            <circle cx="12" cy="12" r="1.75" />
+            <circle cx="19" cy="12" r="1.75" />
+        </svg>
+    );
+}
+
 function fileToUint8Array(file: File): Promise<Uint8Array> {
     return file.arrayBuffer().then((buf) => new Uint8Array(buf));
 }
@@ -116,6 +126,7 @@ export function OutgoingLetterCreatePage() {
     const extraFileRef = useRef<HTMLInputElement>(null);
     const importFileRef = useRef<HTMLInputElement>(null);
     const editorRef = useRef<OutgoingLetterDocxEditorHandle>(null);
+    const moreMenuRef = useRef<HTMLDivElement>(null);
     const allowLeaveRef = useRef(false);
     const leavePromptOpenRef = useRef(false);
     const pendingComposeRef = useRef<{ quote: string; selectionJson: string | null } | null>(null);
@@ -130,6 +141,7 @@ export function OutgoingLetterCreatePage() {
     const [commentsComposing, setCommentsComposing] = useState(false);
     const [composeQuote, setComposeQuote] = useState('');
     const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
+    const [moreMenuOpen, setMoreMenuOpen] = useState(false);
     const [busy, setBusy] = useState(false);
     const [templateBusy, setTemplateBusy] = useState(false);
     const [hydrated, setHydrated] = useState(false);
@@ -172,6 +184,26 @@ export function OutgoingLetterCreatePage() {
         document.documentElement.classList.toggle('corr-docx-fs', editorFullscreen);
         return () => document.documentElement.classList.remove('corr-docx-fs');
     }, [editorFullscreen]);
+
+    useEffect(() => {
+        if (!moreMenuOpen)
+            return;
+        const onPointerDown = (e: PointerEvent) => {
+            const root = moreMenuRef.current;
+            if (root && !root.contains(e.target as Node))
+                setMoreMenuOpen(false);
+        };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape')
+                setMoreMenuOpen(false);
+        };
+        document.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('pointerdown', onPointerDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [moreMenuOpen]);
 
     useEffect(() => {
         if (!editorFullscreen)
@@ -643,9 +675,6 @@ export function OutgoingLetterCreatePage() {
             }))}
             actions={(
                 <>
-                    <button type="button" className="corr__btn corr__btn--outline" onClick={goBack} disabled={actionsDisabled}>
-                        Отмена
-                    </button>
                     <button
                         type="button"
                         className="corr__btn corr__btn--outline"
@@ -654,7 +683,7 @@ export function OutgoingLetterCreatePage() {
                     >
                         <IcoSave />
                         {' '}
-                        Сохранить черновик
+                        Черновик
                     </button>
                     <button
                         type="button"
@@ -662,35 +691,33 @@ export function OutgoingLetterCreatePage() {
                         onClick={() => { void openReviewModal(); }}
                         disabled={actionsDisabled || !documentBytes}
                     >
-                        <IcoSave />
-                        {' '}
-                        {busy ? 'Подготовка…' : 'Сохранить на согласование'}
+                        {busy ? 'Подготовка…' : 'На согласование'}
                     </button>
                 </>
             )}
         >
             <div className={`corr-word corr-word--docx${editorFullscreen ? ' corr-word--docx-fs' : ''}`}>
-                <div className="corr-word__toolbar" aria-label="Параметры письма">
+                <div className="corr-word__toolbar corr-word__toolbar--slim" aria-label="Параметры письма">
                     <label className="corr-word__field corr-word__field--inline">
-                        <span>Получатель</span>
+                        <span className="corr-word__field-label">Кому</span>
                         <input
                             type="text"
                             className="corr-modal__input"
-                            placeholder="Компания / адресат"
+                            placeholder="Получатель"
                             value={recipientValue}
                             onChange={(e) => setCoverModel((prev) => ({ ...prev, recipientCompany: e.target.value }))}
                             disabled={busy}
                         />
                     </label>
-                    <label className="corr-word__field corr-word__field--inline">
-                        <span>
+                    <label className="corr-word__field corr-word__field--inline corr-word__field--subject">
+                        <span className="corr-word__field-label">
                             Тема
                             {dirty ? <span className="corr-word__dirty" title="Есть несохранённые правки"> ●</span> : null}
                         </span>
                         <input
                             type="text"
                             className="corr-modal__input"
-                            placeholder="Краткое описание письма"
+                            placeholder="Тема письма"
                             value={subject}
                             onChange={(e) => setSubject(e.target.value)}
                             disabled={busy}
@@ -706,62 +733,81 @@ export function OutgoingLetterCreatePage() {
                     >
                         <button
                             type="button"
-                            className="corr__btn corr__btn--outline"
-                            disabled={actionsDisabled}
-                            onClick={() => { void handleRebuildTemplate(); }}
-                        >
-                            {templateBusy ? 'Сборка…' : 'Пересобрать бланк'}
-                        </button>
-                        <button
-                            type="button"
-                            className="corr__btn corr__btn--outline"
-                            disabled={actionsDisabled}
-                            onClick={() => importFileRef.current?.click()}
-                        >
-                            Загрузить .docx
-                        </button>
-                        <button
-                            type="button"
-                            className="corr__btn corr__btn--outline"
+                            className="corr-word__icon-btn"
                             onClick={() => extraFileRef.current?.click()}
                             disabled={busy}
+                            title={extraFiles.length ? `Вложения (${extraFiles.length})` : 'Вложения'}
+                            aria-label={extraFiles.length ? `Вложения, файлов: ${extraFiles.length}` : 'Вложения'}
                         >
                             <IcoPaperclip />
-                            {' '}
-                            Вложения
-                            {extraFiles.length > 0 ? ` (${extraFiles.length})` : ''}
-                        </button>
-                        <button
-                            type="button"
-                            className="corr__btn corr__btn--outline"
-                            onClick={() => { void handleSaveDraft(); }}
-                            disabled={actionsDisabled || (useInBrowserEditor && !documentBytes)}
-                        >
-                            <IcoSave />
-                            {' '}
-                            Черновик
+                            {extraFiles.length > 0 ? (
+                                <span className="corr-word__icon-badge">{extraFiles.length}</span>
+                            ) : null}
                         </button>
                         {useInBrowserEditor ? (
                             <button
                                 type="button"
-                                className="corr__btn corr__btn--outline corr-word__comments-toggle"
+                                className="corr-word__icon-btn"
                                 onClick={() => setCommentsOpen((v) => !v)}
                                 disabled={actionsDisabled || !documentBytes}
                                 aria-pressed={commentsOpen}
-                                title="Панель комментариев"
+                                title="Комментарии"
+                                aria-label={openCommentsCount > 0 ? `Комментарии, открытых: ${openCommentsCount}` : 'Комментарии'}
                             >
                                 <IcoComments />
-                                {' '}
-                                Комментарии
-                                {openCommentsCount > 0 ? ` (${openCommentsCount})` : ''}
+                                {openCommentsCount > 0 ? (
+                                    <span className="corr-word__icon-badge">{openCommentsCount}</span>
+                                ) : null}
                             </button>
                         ) : null}
+                        <div className="corr-word__more" ref={moreMenuRef}>
+                            <button
+                                type="button"
+                                className="corr-word__icon-btn"
+                                onClick={() => setMoreMenuOpen((v) => !v)}
+                                disabled={actionsDisabled}
+                                aria-expanded={moreMenuOpen}
+                                aria-haspopup="menu"
+                                title="Ещё"
+                                aria-label="Дополнительные действия"
+                            >
+                                <IcoMore />
+                            </button>
+                            {moreMenuOpen ? (
+                                <div className="corr-word__more-menu" role="menu">
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="corr-word__more-item"
+                                        disabled={actionsDisabled}
+                                        onClick={() => {
+                                            setMoreMenuOpen(false);
+                                            void handleRebuildTemplate();
+                                        }}
+                                    >
+                                        {templateBusy ? 'Сборка бланка…' : 'Пересобрать бланк'}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        role="menuitem"
+                                        className="corr-word__more-item"
+                                        disabled={actionsDisabled}
+                                        onClick={() => {
+                                            setMoreMenuOpen(false);
+                                            importFileRef.current?.click();
+                                        }}
+                                    >
+                                        Загрузить .docx
+                                    </button>
+                                </div>
+                            ) : null}
+                        </div>
                         <button
                             type="button"
-                            className="corr-word__fs-btn"
+                            className="corr-word__icon-btn"
                             onClick={() => setEditorFullscreen((v) => !v)}
-                            title={editorFullscreen ? 'Свернуть редактор (Esc)' : 'Расширить на весь экран'}
-                            aria-label={editorFullscreen ? 'Свернуть редактор' : 'Расширить на весь экран'}
+                            title={editorFullscreen ? 'Свернуть редактор (Esc)' : 'На весь экран'}
+                            aria-label={editorFullscreen ? 'Свернуть редактор' : 'На весь экран'}
                             aria-pressed={editorFullscreen}
                         >
                             <IcoEditorFullscreen exit={editorFullscreen} />

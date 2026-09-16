@@ -674,41 +674,52 @@
 .corr-word__toolbar {
   flex-shrink: 0;
   display: grid;
-  grid-template-columns: minmax(10rem, 1fr) minmax(10rem, 1fr) auto;
-  gap: 0.45rem 0.65rem;
+  grid-template-columns: minmax(8rem, 0.9fr) minmax(10rem, 1.2fr) auto;
+  gap: 0.4rem 0.75rem;
   align-items: end;
-  padding: 0.55rem 0.75rem;
+  padding: 0.4rem 0.75rem;
   border-bottom: 1px solid rgba(26, 20, 20, 0.1);
   background: #fff;
 }
 
+.corr-word__toolbar--slim {
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.35rem 0.75rem;
+}
+
 .corr-word__field--inline {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
   min-width: 0;
   margin: 0;
 }
 
+.corr-word__field-label,
 .corr-word__field--inline > span {
-  font-size: 0.7rem;
+  flex-shrink: 0;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  text-transform: none;
   color: var(--corr-muted, #6b5e5e);
+  white-space: nowrap;
 }
 
 .corr-word__field--inline .corr-modal__input {
   width: 100%;
-  min-height: 2.15rem;
-  padding: 0.4rem 0.65rem;
-  font-size: 0.9rem;
+  min-height: 2rem;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.875rem;
+  border-radius: 6px;
 }
 
 .corr-word__toolbar-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
+  flex-wrap: nowrap;
+  gap: 0.2rem;
   align-items: center;
   justify-content: flex-end;
 }
@@ -719,31 +730,99 @@
   user-select: none;
 }
 
+.corr-word__icon-btn,
 .corr-word__fs-btn {
+  position: relative;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.15rem;
-  height: 2.15rem;
+  width: 2rem;
+  height: 2rem;
   padding: 0;
-  border-radius: 8px;
-  border: 1px solid rgba(26, 20, 20, 0.14);
-  background: #fff;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--corr-muted, #6b5e5e);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
+.corr-word__icon-btn:hover:not(:disabled),
 .corr-word__fs-btn:hover {
-  background: #f6f4ef;
+  background: #f3f2f1;
   color: var(--corr-ink, #14213d);
+  border-color: rgba(26, 20, 20, 0.08);
 }
 
-.corr-word__fs-btn[aria-pressed='true'] {
-  color: var(--corr-oxblood, #8b2635);
-  border-color: color-mix(in srgb, var(--corr-oxblood, #8b2635) 35%, rgba(26, 20, 20, 0.14));
-  background: color-mix(in srgb, var(--corr-oxblood, #8b2635) 8%, #fff);
+.corr-word__icon-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.corr-word__icon-btn[aria-pressed='true'],
+.corr-word__fs-btn[aria-pressed='true'],
+.corr-word__comments-toggle[aria-pressed='true'] {
+  color: #185abd;
+  border-color: color-mix(in srgb, #185abd 35%, transparent);
+  background: #deecf9;
+}
+
+.corr-word__icon-badge {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  min-width: 0.9rem;
+  height: 0.9rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 0.9rem;
+  text-align: center;
+  color: #fff;
+  background: #185abd;
+  pointer-events: none;
+}
+
+.corr-word__more {
+  position: relative;
+}
+
+.corr-word__more-menu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  right: 0;
+  z-index: 40;
+  min-width: 11.5rem;
+  padding: 0.25rem;
+  border: 1px solid #edebe9;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.corr-word__more-item {
+  display: block;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #323130;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.corr-word__more-item:hover:not(:disabled) {
+  background: #f3f2f1;
+}
+
+.corr-word__more-item:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 
 html.corr-docx-fs,
@@ -814,12 +893,6 @@ html.corr-docx-fs .corr-shell__header {
 
 .corr-word__editor-wrap--comments .corr-word__editor-main {
   flex: 1 1 auto;
-}
-
-.corr-word__comments-toggle[aria-pressed='true'] {
-  color: #185abd;
-  border-color: color-mix(in srgb, #185abd 40%, rgba(26, 20, 20, 0.14));
-  background: #deecf9;
 }
 
 /* Word-like review comments pane (custom — free docx-editor has no comments) */
@@ -1488,12 +1561,14 @@ html.corr-docx-fs .corr-shell__header {
 }
 
 @media (max-width: 900px) {
-  .corr-word__toolbar {
+  .corr-word__toolbar,
+  .corr-word__toolbar--slim {
     grid-template-columns: 1fr;
+    align-items: stretch;
   }
 
   .corr-word__toolbar-actions {
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 }
 
