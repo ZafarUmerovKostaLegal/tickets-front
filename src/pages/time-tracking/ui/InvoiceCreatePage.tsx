@@ -738,12 +738,14 @@ export function InvoiceCreatePage() {
         .map((x) => String(x.expenseDate ?? '').trim().slice(0, 10))
         .filter(Boolean);
       const prevMonthEnd = customBilledEnabled ? lastDayOfPreviousMonthIso(issueDate) : null;
-      if (closingReportLines || customBilledEnabled) {
+      // Seed FX for expense dates so backend can convert at the expense CBU rate
+      // (not only the invoice issue date — that was understating USD vs the registry).
+      if (closingReportLines || customBilledEnabled || expenseDates.length > 0) {
         await ensureInvoiceFxRatesForBilling({
           dateFrom: closingReportLines ? unbilledFrom : undefined,
           dateTo: closingReportLines ? unbilledTo : undefined,
           issueDate,
-          expenseDates: closingReportLines ? expenseDates : undefined,
+          expenseDates,
           extraDates: prevMonthEnd ? [prevMonthEnd] : undefined,
           currency,
         });

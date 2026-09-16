@@ -55,6 +55,11 @@ import {
   parseOptionalPercentField,
   summarizeBilledOverrideLines,
 } from '../lib/invoicePageShared';
+import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
+import {
+  invoiceExpenseLineDisplayAmounts,
+  loadInvoiceExpenseRegistryUsd,
+} from '../lib/invoiceExpenseLineDisplay';
 import './TimeTrackingPage.css';
 import './TimesheetPanel.css';
 import './InvoicePage.css';
@@ -91,6 +96,7 @@ export function InvoiceDetailPage() {
   const [draftTaxPct, setDraftTaxPct] = useState('');
   const [draftTax2Pct, setDraftTax2Pct] = useState('');
   const [draftDiscAmt, setDraftDiscAmt] = useState('');
+  const [expenseRegistryUsd, setExpenseRegistryUsd] = useState<Map<string, number>>(() => new Map());
 
   const clientNameById = useMemo(() => {
     const m = new Map<string, string>();
@@ -102,6 +108,27 @@ export function InvoiceDetailPage() {
     () => summarizeBilledOverrideLines(detail?.lines, detail?.currency),
     [detail?.lines, detail?.currency],
   );
+
+  /** KPI / send labels: bump total by registry USD delta on expense lines. */
+  const displayTotalAmount = useMemo(() => {
+    if (!detail)
+      return 0;
+    const base = Number(detail.totalAmount);
+    if (!Number.isFinite(base))
+      return 0;
+    if ((detail.currency || '').trim().toUpperCase() !== 'USD' || expenseRegistryUsd.size === 0)
+      return base;
+    let delta = 0;
+    for (const ln of detail.lines ?? []) {
+      if (invoiceLineKindSlug(ln) !== 'expense')
+        continue;
+      const stored = Number(ln.lineTotal);
+      const shown = invoiceExpenseLineDisplayAmounts(ln, detail.currency, expenseRegistryUsd).lineTotal;
+      if (Number.isFinite(stored) && Number.isFinite(shown))
+        delta += shown - stored;
+    }
+    return roundMoney2(base + delta);
+  }, [detail, expenseRegistryUsd]);
 
   const listHref = getInvoicesListUrl(accountingVariant ? { variant: 'accounting' } : undefined);
   const toInvoices = () => {
@@ -136,15 +163,21 @@ export function InvoiceDetailPage() {
     if (!invoiceId) {
       setDetail(null);
       setDetailLoading(false);
+      setExpenseRegistryUsd(new Map());
       return;
     }
     let cancelled = false;
     setDetailLoading(true);
     setDetail(null);
+    setExpenseRegistryUsd(new Map());
     void getInvoice(invoiceId, true)
-      .then((inv) => {
+      .then(async (inv) => {
+        if (cancelled)
+          return;
+        setDetail(inv);
+        const registry = await loadInvoiceExpenseRegistryUsd(inv.lines);
         if (!cancelled)
-          setDetail(inv);
+          setExpenseRegistryUsd(registry);
       })
       .catch(() => {
         if (!cancelled)
@@ -178,6 +211,8 @@ export function InvoiceDetailPage() {
   const refreshDetail = useCallback(async (id: string) => {
     const inv = await getInvoice(id, true);
     setDetail(inv);
+    const registry = await loadInvoiceExpenseRegistryUsd(inv.lines);
+    setExpenseRegistryUsd(registry);
     notifyReportsInvalidated();
   }, []);
 
@@ -743,7 +778,7 @@ export function InvoiceDetailPage() {
                   </div>
                   <div className="tt-reports__summary-card tt-inv__summary-card--accent">
                     <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.amount')}</span>
-                    <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtMoney(detail.totalAmount, detail.currency, locale)}</span>
+                    <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtMoney(displayTotalAmount, detail.currency, locale)}</span>
                   </div>
                   {billedLinesSummary.isBilledOverride && billedLinesSummary.workedAmount > 1e-9 ? (
                     <div className="tt-reports__summary-card">
@@ -1020,7 +1055,13 @@ export function InvoiceDetailPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {billedLinesSummary.visibleLines.map((ln) => (
+                        {billedLinesSummary.visibleLines.map((ln) => {
+                          const amounts = invoiceExpenseLineDisplayAmounts(
+                            ln,
+                            detail.currency,
+                            expenseRegistryUsd,
+                          );
+                          return (
                           <tr key={ln.id}>
                             <td>
                               <span className={`tt-inv-line-kind tt-inv-line-kind--${invoiceLineKindSlug(ln)}`}>
@@ -1029,15 +1070,16 @@ export function InvoiceDetailPage() {
                             </td>
                             <td>{ln.description ? invoiceClientDescription(ln.description) || '—' : '—'}</td>
                             <td>{Number.isFinite(Number(ln.quantity)) ? Number(ln.quantity).toFixed(2) : ln.quantity}</td>
-                            <td>{fmtMoney(ln.unitAmount, detail.currency, locale)}</td>
+                            <td>{fmtMoney(amounts.unitAmount, detail.currency, locale)}</td>
                             <td>
-                              {fmtMoney(ln.lineTotal, detail.currency, locale)}
+                              {fmtMoney(amounts.lineTotal, detail.currency, locale)}
                               {ln.sourceCurrency && ln.sourceCurrency !== detail.currency && ln.sourceAmount != null
                                 ? ` (${fmtMoney(ln.sourceAmount, ln.sourceCurrency, locale)})`
                                 : ''}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1096,7 +1138,7 @@ export function InvoiceDetailPage() {
               const blob = await buildInvoicePreviewPdfBlob({ model, session: previewSession });
               const pdfBase64 = await blobToBase64(blob);
               const invoiceLabel = detail.invoiceNumber || detail.id;
-              const amountLabel = fmtMoney(detail.totalAmount, detail.currency, locale);
+              const amountLabel = fmtMoney(displayTotalAmount, detail.currency, locale);
               const nameSuffix = contact.name
                 ? t('timeTrackingPage.invoices.sendDialog.nameSuffix').replace('{name}', contact.name)
                 : '';
