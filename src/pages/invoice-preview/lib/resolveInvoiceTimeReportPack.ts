@@ -17,7 +17,9 @@ import {
 import { getUsers, type User } from '@entities/user';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { fetchExpenseById } from '@entities/expenses/model/expensesApi';
+import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
+import { lockedExpenseUsdAmount } from './lockedExpenseUsdAmount';
 import { parseTimeEntryDescriptionLines } from './parseTimeEntryDescriptionLines';
 import {
     buildProjectTaskNameByIdMap,
@@ -162,6 +164,17 @@ function numHoursFromLine(ln: InvoiceLineDto): number {
 function lineAmount(ln: InvoiceLineDto): number {
     const t = Number(ln.lineTotal);
     return Number.isFinite(t) ? t : 0;
+}
+
+function preferExpenseUsdForInvoice(currency: string, ln: InvoiceLineDto, lockedUsd: number | null): number {
+    const cur = (currency || '').trim().toUpperCase();
+    if (cur !== 'USD' || lockedUsd == null || !(lockedUsd > 0))
+        return lineAmount(ln);
+    const src = (ln.sourceCurrency ?? '').trim().toUpperCase();
+    // Re-FX typically hits UZS (and other non-USD) sources; keep non-UZS foreign FX as stored.
+    if (src && src !== 'USD' && src !== 'UZS')
+        return lineAmount(ln);
+    return lockedUsd;
 }
 
 type BuildingDetail = InvoiceTimeReportDetailRow & {
@@ -430,8 +443,8 @@ export async function resolveInvoiceTimeReportPack(
             }
 
             for (const e of expRows.filter((x) => selE.has(x.id))) {
-                const amt = Number(e.equivalentAmount);
-                const a = Number.isFinite(amt) ? amt : 0;
+                const raw = Number(e.equivalentAmount);
+                const a = Number.isFinite(raw) && raw > 0 ? roundMoney2(raw) : 0;
                 details.push({
                     date: dateDisplayFromIso(e.expenseDate, lang),
                     initials: '—',
@@ -475,26 +488,43 @@ export async function resolveInvoiceTimeReportPack(
             return found;
         }
 
-        const expenseIsoByRequestId = new Map<string, string | null>();
-        async function resolveExpenseLineDateIso(ln: InvoiceLineDto): Promise<string | null> {
+        type ExpenseLineSnap = {
+            dateIso: string | null;
+            lockedUsd: number | null;
+        };
+        const expenseSnapByRequestId = new Map<string, ExpenseLineSnap>();
+        async function resolveExpenseLineSnap(ln: InvoiceLineDto): Promise<ExpenseLineSnap> {
             const embedded = ln.expenseDate?.trim().slice(0, 10);
-            if (embedded && /^\d{4}-\d{2}-\d{2}$/.test(embedded))
-                return embedded;
+            const embeddedOk = embedded && /^\d{4}-\d{2}-\d{2}$/.test(embedded) ? embedded : null;
             const rid = ln.expenseRequestId?.trim();
-            if (!rid)
-                return null;
-            if (expenseIsoByRequestId.has(rid))
-                return expenseIsoByRequestId.get(rid) ?? null;
+            if (!rid) {
+                return { dateIso: embeddedOk, lockedUsd: null };
+            }
+            const cached = expenseSnapByRequestId.get(rid);
+            if (cached) {
+                return {
+                    dateIso: embeddedOk ?? cached.dateIso,
+                    lockedUsd: cached.lockedUsd,
+                };
+            }
             try {
                 const req = await fetchExpenseById(rid);
                 const iso = req.expenseDate?.trim().slice(0, 10) ?? '';
                 const ok = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
-                expenseIsoByRequestId.set(rid, ok);
-                return ok;
+                const snap: ExpenseLineSnap = {
+                    dateIso: ok,
+                    lockedUsd: lockedExpenseUsdAmount(req),
+                };
+                expenseSnapByRequestId.set(rid, snap);
+                return {
+                    dateIso: embeddedOk ?? snap.dateIso,
+                    lockedUsd: snap.lockedUsd,
+                };
             }
             catch {
-                expenseIsoByRequestId.set(rid, null);
-                return null;
+                const snap: ExpenseLineSnap = { dateIso: null, lockedUsd: null };
+                expenseSnapByRequestId.set(rid, snap);
+                return { dateIso: embeddedOk, lockedUsd: null };
             }
         }
 
@@ -551,18 +581,19 @@ export async function resolveInvoiceTimeReportPack(
                 });
             }
             else if (kind === 'expense') {
-                const workIso = await resolveExpenseLineDateIso(ln);
+                const snap = await resolveExpenseLineSnap(ln);
+                const expenseAmt = preferExpenseUsdForInvoice(currency, ln, snap.lockedUsd);
                 details.push({
-                    date: workIso ? dateDisplayFromIso(workIso, lang) : '—',
+                    date: snap.dateIso ? dateDisplayFromIso(snap.dateIso, lang) : '—',
                     initials: '—',
                     task: expenseTask,
                     description: desc,
                     hours: '',
                     hourlyRate: '',
-                    amount: formatTimeReportAmount(amt, currency),
+                    amount: formatTimeReportAmount(expenseAmt, currency),
                     authId: null,
                     hoursNum: 0,
-                    amtNum: amt,
+                    amtNum: expenseAmt,
                     rateNum: 0,
                     rowKind: 'expense',
                 });
