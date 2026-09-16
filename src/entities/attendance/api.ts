@@ -1,6 +1,6 @@
 import { apiFetch } from '@shared/api';
 import type { AttendanceQuery, AttendanceRecord } from './model/types';
-import type { DailyAttendanceResponse } from './model/dailyReportTypes';
+import type { DailyAttendanceResponse, PeriodAttendanceResponse } from './model/dailyReportTypes';
 import type { WorkdaySettingsDto } from './model/workdaySettingsTypes';
 import type {
     HikvisionDeviceUsersResponse,
@@ -13,6 +13,7 @@ import { flattenAttendanceByCamera } from './lib/transform';
 import { parseAttendanceJson } from './lib/parseResponse';
 import { createQueryCache } from '@shared/lib/queryCache';
 const FETCH_TIMEOUT_MS = 30000;
+const PERIOD_FETCH_TIMEOUT_MS = 90_000;
 const workdaySettingsCache = createQueryCache<WorkdaySettingsDto>({ ttlMs: 5 * 60_000 });
 const WORKDAY_SETTINGS_CACHE_KEY = 'attendance-workday-settings';
 function attendanceFetch(path: string, init?: Parameters<typeof apiFetch>[1]): Promise<Response> {
@@ -334,6 +335,38 @@ export type AttendanceRangeReportResponse = {
         refresh_interval_sec?: number;
     };
 };
+
+export async function fetchPeriodAttendanceReport(
+    dateFrom: string,
+    dateTo: string,
+    options?: { appUserId?: number | null; signal?: AbortSignal },
+): Promise<PeriodAttendanceResponse> {
+    const q = new URLSearchParams({ date_from: dateFrom, date_to: dateTo });
+    if (options?.appUserId != null)
+        q.set('app_user_id', String(options.appUserId));
+    const path = `/api/v1/attendance/report/period?${q}`;
+    const sig = options?.signal ?? AbortSignal.timeout(PERIOD_FETCH_TIMEOUT_MS);
+    let res: Response;
+    try {
+        res = await attendanceFetch(path, { signal: sig });
+    }
+    catch (e) {
+        if (isAbortError(e)) {
+            if (options?.signal?.aborted)
+                throw e;
+            throw new Error('Превышено время ожидания отчёта посещаемости за период.');
+        }
+        throw new Error('Сервис посещаемости недоступен.');
+    }
+    if (res.status === 403) {
+        throw new Error('Нет доступа к данным посещаемости. Обратитесь к администратору.');
+    }
+    if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(text || `Ошибка отчёта за период (${res.status})`);
+    }
+    return res.json() as Promise<PeriodAttendanceResponse>;
+}
 
 export async function fetchAttendanceRangeReport(
     dateFrom: string,

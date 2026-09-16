@@ -126,6 +126,48 @@
   color: #fff;
 }
 
+.att-overview__controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.att-overview__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 9.5rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--app-muted);
+}
+
+.att-overview__field--grow {
+  flex: 1 1 14rem;
+  min-width: 12rem;
+}
+
+.att-overview__field input,
+.att-overview__field select {
+  height: 2.35rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.55rem;
+  background: var(--app-surface, #fff);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.att-overview__field input:focus,
+.att-overview__field select:focus {
+  outline: 2px solid color-mix(in srgb, var(--app-accent, #2563eb) 35%, transparent);
+  outline-offset: 1px;
+}
+
 .att-overview__week {
   display: flex;
   align-items: center;
@@ -323,6 +365,35 @@
   font-variant-numeric: tabular-nums;
 }
 
+.att-overview__list--period th:nth-child(3),
+.att-overview__list--period th:nth-child(4),
+.att-overview__list--period th:nth-child(5),
+.att-overview__list--period td:nth-child(3),
+.att-overview__list--period td:nth-child(4),
+.att-overview__list--period td:nth-child(5) {
+  text-align: right;
+  width: 4.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.att-overview__list--period th:nth-child(1),
+.att-overview__list--period td:nth-child(1) {
+  width: 5.5rem;
+  text-align: left;
+}
+
+.att-overview__list--period th:nth-child(2),
+.att-overview__list--period td:nth-child(2) {
+  text-align: left;
+  width: auto;
+}
+
+.att-overview__date-cell {
+  color: var(--app-muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
 .att-overview__list th:first-child,
 .att-overview__list td:first-child {
   width: auto;
@@ -369,6 +440,10 @@
 }
 
 .att-overview__list-row--late td:nth-child(2) {
+  color: var(--app-warning);
+}
+
+.att-overview__list--period .att-overview__list-row--late td:nth-child(3) {
   color: var(--app-warning);
 }
 

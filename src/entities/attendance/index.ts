@@ -1,5 +1,11 @@
 export type { AttendanceRecord, AttendanceQuery } from './model/types';
-export type { AttendanceStatus, DailyAttendanceItem, DailyAttendanceResponse, } from './model/dailyReportTypes';
+export type {
+    AttendanceStatus,
+    DailyAttendanceItem,
+    DailyAttendanceResponse,
+    PeriodAttendanceItem,
+    PeriodAttendanceResponse,
+} from './model/dailyReportTypes';
 export type {
     HikvisionDeviceUsersResponse,
     HikvisionCameraUser,
@@ -15,6 +21,7 @@ export type { UploadAttendanceExplanationParams, AttendanceRangeMarker, Attendan
 export {
     fetchAttendance,
     fetchDailyAttendanceReport,
+    fetchPeriodAttendanceReport,
     fetchAttendanceRangeReport,
     fetchWorkdaySettings,
     patchWorkdaySettings,

@@ -36,3 +36,22 @@ export type DailyAttendanceResponse = {
     items: DailyAttendanceItem[];
     unmapped_events: Array<Record<string, unknown>>;
 };
+
+/** One person-day row from GET /report/period */
+export type PeriodAttendanceItem = DailyAttendanceItem & {
+    date: string;
+};
+
+export type PeriodAttendanceResponse = {
+    date_from: string;
+    date_to: string;
+    app_user_id: number | null;
+    events_source?: string;
+    workday?: {
+        workday_start?: string | null;
+        workday_end?: string | null;
+        late_threshold_minutes?: number | null;
+        daily_hours_norm?: number | null;
+    };
+    items: PeriodAttendanceItem[];
+};

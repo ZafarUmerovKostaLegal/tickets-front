@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     fetchDailyAttendanceReport,
+    fetchPeriodAttendanceReport,
     type AttendanceStatus,
     type DailyAttendanceItem,
+    type PeriodAttendanceItem,
 } from '@entities/attendance';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { useI18n } from '@shared/i18n';
@@ -10,6 +12,13 @@ import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { formatTime } from '@shared/lib/formatDate';
 
 export type AttendanceStatusFilter = 'all' | AttendanceStatus;
+
+type ListItem = DailyAttendanceItem & { date: string };
+
+type EmployeeOption = {
+    id: number;
+    name: string;
+};
 
 function toYmd(date: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -69,6 +78,24 @@ function formatDayHeading(ymd: string, locale: string): string {
         year: 'numeric',
     }).format(date);
     return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function formatPeriodHeading(from: string, to: string, locale: string): string {
+    const tag = locale === 'en' ? 'en-US' : 'ru-RU';
+    const fmt = new Intl.DateTimeFormat(tag, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+    });
+    return `${fmt.format(parseYmd(from))} — ${fmt.format(parseYmd(to))}`;
+}
+
+function formatShortDate(ymd: string, locale: string): string {
+    const tag = locale === 'en' ? 'en-US' : 'ru-RU';
+    return new Intl.DateTimeFormat(tag, {
+        day: 'numeric',
+        month: 'short',
+    }).format(parseYmd(ymd));
 }
 
 function weekdayShort(ymd: string, locale: string): string {
@@ -180,28 +207,80 @@ function segmentTone(status: AttendanceStatus): SegmentTone {
     return 'onTime';
 }
 
+function mergeEmployeeOptions(
+    prev: EmployeeOption[],
+    source: DailyAttendanceItem[],
+): EmployeeOption[] {
+    const byId = new Map(prev.map((o) => [o.id, o]));
+    for (const item of source) {
+        if (item.app_user_id == null)
+            continue;
+        const name = item.display_name || item.camera_name || `#${item.app_user_id}`;
+        const existing = byId.get(item.app_user_id);
+        if (!existing || (name && name !== existing.name))
+            byId.set(item.app_user_id, { id: item.app_user_id, name });
+    }
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+}
+
 export function AttendanceOverviewCard() {
     const { t, locale } = useI18n();
-    const [selectedDate, setSelectedDate] = useState(() => toYmd(new Date()));
+    const today = useMemo(() => toYmd(new Date()), []);
+    const [selectedDate, setSelectedDate] = useState(today);
+    const [periodFrom, setPeriodFrom] = useState(today);
+    const [periodTo, setPeriodTo] = useState(today);
+    const [selectedUserId, setSelectedUserId] = useState<number | 'all'>('all');
     const [filter, setFilter] = useState<AttendanceStatusFilter>('all');
-    const [items, setItems] = useState<DailyAttendanceItem[]>([]);
+    const [items, setItems] = useState<ListItem[]>([]);
+    const [employeeOptions, setEmployeeOptions] = useState<EmployeeOption[]>([]);
     const [workdayStart, setWorkdayStart] = useState<string | null>(null);
     const [workdayEnd, setWorkdayEnd] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const isPeriodMode = periodFrom !== periodTo;
     const days = useMemo(() => weekDays(selectedDate), [selectedDate]);
 
-    const load = useCallback(async (day: string, signal?: AbortSignal) => {
+    const load = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
         setError(null);
         try {
-            const report = await fetchDailyAttendanceReport(day, signal);
-            if (signal?.aborted)
-                return;
-            setItems(report.items.filter(isEmployeeItem));
-            setWorkdayStart(report.workday?.workday_start ?? null);
-            setWorkdayEnd(report.workday?.workday_end ?? null);
+            let nextItems: ListItem[] = [];
+            let nextWorkdayStart: string | null = null;
+            let nextWorkdayEnd: string | null = null;
+
+            if (periodFrom === periodTo) {
+                const report = await fetchDailyAttendanceReport(periodFrom, signal);
+                if (signal?.aborted)
+                    return;
+                const dayItems = report.items.filter(isEmployeeItem);
+                nextItems = dayItems.map((item) => ({ ...item, date: periodFrom }));
+                nextWorkdayStart = report.workday?.workday_start ?? null;
+                nextWorkdayEnd = report.workday?.workday_end ?? null;
+                setEmployeeOptions((prev) => mergeEmployeeOptions(prev, dayItems));
+            }
+            else {
+                const appUserId = selectedUserId === 'all' ? null : selectedUserId;
+                const report = await fetchPeriodAttendanceReport(periodFrom, periodTo, {
+                    appUserId,
+                    signal,
+                });
+                if (signal?.aborted)
+                    return;
+                const periodItems = (report.items as PeriodAttendanceItem[]).filter(isEmployeeItem);
+                nextItems = periodItems.map((item) => ({
+                    ...item,
+                    date: item.date || periodFrom,
+                }));
+                nextWorkdayStart = report.workday?.workday_start ?? null;
+                nextWorkdayEnd = report.workday?.workday_end ?? null;
+                if (selectedUserId === 'all')
+                    setEmployeeOptions((prev) => mergeEmployeeOptions(prev, periodItems));
+            }
+
+            setItems(nextItems);
+            setWorkdayStart(nextWorkdayStart);
+            setWorkdayEnd(nextWorkdayEnd);
         }
         catch (e) {
             if (signal?.aborted)
@@ -215,22 +294,25 @@ export function AttendanceOverviewCard() {
             if (!signal?.aborted)
                 setLoading(false);
         }
-    }, [t]);
+    }, [periodFrom, periodTo, selectedUserId, t]);
 
     useEffect(() => {
         const controller = new AbortController();
-        void load(selectedDate, controller.signal);
+        void load(controller.signal);
         return () => controller.abort();
-    }, [load, selectedDate]);
+    }, [load]);
 
-    const visibleItems = useMemo(
-        () => items.filter((item) => matchesFilter(item, filter)),
-        [filter, items],
-    );
+    const visibleItems = useMemo(() => {
+        let rows = items.filter((item) => matchesFilter(item, filter));
+        if (!isPeriodMode && selectedUserId !== 'all')
+            rows = rows.filter((item) => item.app_user_id === selectedUserId);
+        return rows;
+    }, [filter, items, isPeriodMode, selectedUserId]);
 
     const segments = useMemo(() => {
+        if (isPeriodMode)
+            return [];
         const ordered = [...visibleItems].sort((a, b) => {
-            // Late first, then absent, then on-time.
             const rank = (s: AttendanceStatus) => (s === 'late' ? 0 : s === 'absent' ? 1 : 2);
             return rank(a.status) - rank(b.status);
         });
@@ -247,10 +329,15 @@ export function AttendanceOverviewCard() {
                 initials,
             };
         });
-    }, [visibleItems]);
+    }, [visibleItems, isPeriodMode]);
 
     const listRows = useMemo(() => {
         const ranked = [...visibleItems].sort((a, b) => {
+            if (isPeriodMode) {
+                const byDate = a.date.localeCompare(b.date);
+                if (byDate !== 0)
+                    return byDate;
+            }
             const rank = (s: AttendanceStatus) => (s === 'late' ? 0 : s === 'absent' ? 1 : 2);
             const byStatus = rank(a.status) - rank(b.status);
             if (byStatus !== 0)
@@ -267,30 +354,60 @@ export function AttendanceOverviewCard() {
             const arrival = item.first_event_time ? formatHm(item.first_event_time) : '—';
             const departure = item.last_event_time ? formatHm(item.last_event_time) : '—';
             return {
-                key: `${item.app_user_id ?? item.camera_employee_no}-${item.status}`,
+                key: `${item.date}-${item.app_user_id ?? item.camera_employee_no}-${item.status}`,
+                date: item.date,
                 name,
                 dept,
                 arrival,
                 departure,
-                hours: workedHoursLabel(item, selectedDate, workdayEnd),
+                hours: workedHoursLabel(item, item.date, workdayEnd),
                 status: item.status,
             };
         });
-    }, [visibleItems, selectedDate, workdayEnd, locale]);
+    }, [visibleItems, workdayEnd, locale, isPeriodMode]);
 
     const dayStartLabel = useMemo(() => {
-        const fromEvents = earliestArrival(items.filter((i) => i.status !== 'absent'));
+        const fromEvents = earliestArrival(visibleItems.filter((i) => i.status !== 'absent'));
         if (fromEvents)
             return formatHm(fromEvents);
         if (workdayStart)
             return formatHm(workdayStart);
         return null;
-    }, [items, workdayStart]);
+    }, [visibleItems, workdayStart]);
+
+    const selectDay = (ymd: string) => {
+        setSelectedDate(ymd);
+        setPeriodFrom(ymd);
+        setPeriodTo(ymd);
+    };
 
     const shiftWeek = (delta: number) => {
         const d = parseYmd(selectedDate);
         d.setDate(d.getDate() + delta * 7);
-        setSelectedDate(toYmd(d));
+        const next = toYmd(d);
+        setSelectedDate(next);
+        if (!isPeriodMode) {
+            setPeriodFrom(next);
+            setPeriodTo(next);
+        }
+    };
+
+    const onPeriodFromChange = (value: string) => {
+        if (!value)
+            return;
+        setPeriodFrom(value);
+        setSelectedDate(value);
+        if (value > periodTo)
+            setPeriodTo(value);
+    };
+
+    const onPeriodToChange = (value: string) => {
+        if (!value)
+            return;
+        setPeriodTo(value);
+        if (value < periodFrom)
+            setPeriodFrom(value);
+        setSelectedDate(value);
     };
 
     const filters: { id: AttendanceStatusFilter; label: string }[] = [
@@ -300,12 +417,22 @@ export function AttendanceOverviewCard() {
         { id: 'absent', label: t('attendancePage.filter.absent') },
     ];
 
+    const heading = isPeriodMode
+        ? formatPeriodHeading(periodFrom, periodTo, locale)
+        : formatDayHeading(periodFrom, locale);
+
+    const metaCountLabel = isPeriodMode
+        ? (locale === 'en'
+            ? `${visibleItems.length} records`
+            : `${visibleItems.length} записей`)
+        : `${visibleItems.length} ${peopleWord(visibleItems.length, locale)}`;
+
     return (
         <section className="att-overview" aria-label={t('attendancePage.title')}>
             <header className="att-overview__head">
                 <div className="att-overview__titles">
                     <h2 className="att-overview__title">{t('attendancePage.title')}</h2>
-                    <p className="att-overview__date">{formatDayHeading(selectedDate, locale)}</p>
+                    <p className="att-overview__date">{heading}</p>
                 </div>
                 <div className="att-overview__filters" role="tablist" aria-label={t('attendancePage.type')}>
                     {filters.map((f) => (
@@ -323,6 +450,42 @@ export function AttendanceOverviewCard() {
                 </div>
             </header>
 
+            <div className="att-overview__controls">
+                <label className="att-overview__field">
+                    <span>{t('attendancePage.periodFrom')}</span>
+                    <input
+                        type="date"
+                        value={periodFrom}
+                        max={periodTo}
+                        onChange={(e) => onPeriodFromChange(e.target.value)}
+                    />
+                </label>
+                <label className="att-overview__field">
+                    <span>{t('attendancePage.periodTo')}</span>
+                    <input
+                        type="date"
+                        value={periodTo}
+                        min={periodFrom}
+                        onChange={(e) => onPeriodToChange(e.target.value)}
+                    />
+                </label>
+                <label className="att-overview__field att-overview__field--grow">
+                    <span>{t('attendancePage.table.employee')}</span>
+                    <select
+                        value={selectedUserId === 'all' ? 'all' : String(selectedUserId)}
+                        onChange={(e) => {
+                            const v = e.target.value;
+                            setSelectedUserId(v === 'all' ? 'all' : Number(v));
+                        }}
+                    >
+                        <option value="all">{t('attendancePage.filterAll')}</option>
+                        {employeeOptions.map((opt) => (
+                            <option key={opt.id} value={opt.id}>{opt.name}</option>
+                        ))}
+                    </select>
+                </label>
+            </div>
+
             <div className="att-overview__week" aria-label={locale === 'en' ? 'Week' : 'Неделя'}>
                 <button
                     type="button"
@@ -334,14 +497,14 @@ export function AttendanceOverviewCard() {
                 </button>
                 <div className="att-overview__days">
                     {days.map((ymd) => {
-                        const active = ymd === selectedDate;
+                        const active = !isPeriodMode && ymd === periodFrom;
                         return (
                             <button
                                 key={ymd}
                                 type="button"
                                 className={`att-overview__day${active ? ' att-overview__day--active' : ''}`}
                                 aria-pressed={active}
-                                onClick={() => setSelectedDate(ymd)}
+                                onClick={() => selectDay(ymd)}
                             >
                                 <span className="att-overview__dow">{weekdayShort(ymd, locale)}</span>
                                 <span className="att-overview__dom">{dayNumber(ymd)}</span>
@@ -362,62 +525,67 @@ export function AttendanceOverviewCard() {
             {error ? (
                 <div className="att-overview__error" role="alert">
                     <span>{error}</span>
-                    <button type="button" onClick={() => void load(selectedDate)}>
+                    <button type="button" onClick={() => void load()}>
                         {t('attendancePage.retry')}
                     </button>
                 </div>
             ) : (
                 <>
-                    <div
-                        className={`att-overview__bar${loading ? ' att-overview__bar--loading' : ''}`}
-                        role="img"
-                        aria-label={
-                            loading
-                                ? (locale === 'en' ? 'Loading attendance' : 'Загрузка посещаемости')
-                                : `${visibleItems.length} ${peopleWord(visibleItems.length, locale)}`
-                        }
-                    >
-                        {loading
-                            ? Array.from({ length: 24 }, (_, i) => (
-                                <span key={i} className="att-overview__seg att-overview__seg--skel" />
-                            ))
-                            : segments.length > 0
-                                ? segments.map((seg) => (
-                                    <span
-                                        key={seg.key}
-                                        className={`att-overview__seg att-overview__seg--${seg.tone}`}
-                                        title={seg.title}
-                                        aria-label={seg.title}
-                                    >
-                                        <span className="att-overview__seg-ini" aria-hidden>
-                                            {seg.initials}
-                                        </span>
-                                    </span>
+                    {!isPeriodMode ? (
+                        <div
+                            className={`att-overview__bar${loading ? ' att-overview__bar--loading' : ''}`}
+                            role="img"
+                            aria-label={
+                                loading
+                                    ? (locale === 'en' ? 'Loading attendance' : 'Загрузка посещаемости')
+                                    : `${visibleItems.length} ${peopleWord(visibleItems.length, locale)}`
+                            }
+                        >
+                            {loading
+                                ? Array.from({ length: 24 }, (_, i) => (
+                                    <span key={i} className="att-overview__seg att-overview__seg--skel" />
                                 ))
-                                : (
-                                    <span className="att-overview__bar-empty">
-                                        {locale === 'en' ? 'No employees for this day' : 'Нет сотрудников за этот день'}
-                                    </span>
-                                )}
-                    </div>
+                                : segments.length > 0
+                                    ? segments.map((seg) => (
+                                        <span
+                                            key={seg.key}
+                                            className={`att-overview__seg att-overview__seg--${seg.tone}`}
+                                            title={seg.title}
+                                            aria-label={seg.title}
+                                        >
+                                            <span className="att-overview__seg-ini" aria-hidden>
+                                                {seg.initials}
+                                            </span>
+                                        </span>
+                                    ))
+                                    : (
+                                        <span className="att-overview__bar-empty">
+                                            {locale === 'en' ? 'No employees for this day' : 'Нет сотрудников за этот день'}
+                                        </span>
+                                    )}
+                        </div>
+                    ) : null}
 
                     <div className="att-overview__meta">
                         <span>
-                            {loading
-                                ? '…'
-                                : `${visibleItems.length} ${peopleWord(visibleItems.length, locale)}`}
+                            {loading ? '…' : metaCountLabel}
                         </span>
-                        <span>
-                            {locale === 'en' ? 'Day start — ' : 'Начало дня — '}
-                            {loading ? '…' : (dayStartLabel ?? '—')}
-                        </span>
+                        {!isPeriodMode ? (
+                            <span>
+                                {locale === 'en' ? 'Day start — ' : 'Начало дня — '}
+                                {loading ? '…' : (dayStartLabel ?? '—')}
+                            </span>
+                        ) : null}
                     </div>
 
                     {!loading && listRows.length > 0 ? (
                         <div className="att-overview__list-wrap">
-                            <table className="att-overview__list">
+                            <table className={`att-overview__list${isPeriodMode ? ' att-overview__list--period' : ''}`}>
                                 <thead>
                                     <tr>
+                                        {isPeriodMode ? (
+                                            <th scope="col">{t('attendancePage.table.date')}</th>
+                                        ) : null}
                                         <th scope="col">{t('attendancePage.table.employee')}</th>
                                         <th scope="col">{t('attendancePage.table.arrival')}</th>
                                         <th scope="col">{t('attendancePage.table.departure')}</th>
@@ -436,6 +604,11 @@ export function AttendanceOverviewCard() {
                                                         : 'onTime'
                                             }`}
                                         >
+                                            {isPeriodMode ? (
+                                                <td className="att-overview__date-cell">
+                                                    {formatShortDate(row.date, locale)}
+                                                </td>
+                                            ) : null}
                                             <td>
                                                 <div className="att-overview__person">
                                                     <span className="att-overview__person-name">{row.name}</span>
