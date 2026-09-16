@@ -491,9 +491,14 @@ export function AttendanceOverviewCard() {
                 departure,
                 hours: workedHoursLabel(item, item.date, workdayEnd),
                 status: item.status,
+                statusLabel: item.status === 'late'
+                    ? t('attendancePage.arrival.late')
+                    : item.status === 'absent'
+                        ? t('attendancePage.arrival.absent')
+                        : null,
             };
         });
-    }, [visibleItems, workdayEnd, locale, isPeriodMode]);
+    }, [visibleItems, workdayEnd, locale, isPeriodMode, t]);
 
     const dayStartLabel = useMemo(() => {
         const fromEvents = earliestArrival(visibleItems.filter((i) => i.status !== 'absent'));
@@ -761,9 +766,20 @@ export function AttendanceOverviewCard() {
                                                     {row.dept ? (
                                                         <span className="att-overview__person-dept">{row.dept}</span>
                                                     ) : null}
+                                                    {row.statusLabel ? (
+                                                        <span
+                                                            className={`att-overview__status-tag att-overview__status-tag--${
+                                                                row.status === 'late' ? 'late' : 'absent'
+                                                            }`}
+                                                        >
+                                                            {row.statusLabel}
+                                                        </span>
+                                                    ) : null}
                                                 </div>
                                             </td>
-                                            <td>{row.arrival}</td>
+                                            <td className={row.status === 'late' ? 'att-overview__arrival' : undefined}>
+                                                {row.arrival}
+                                            </td>
                                             <td>{row.departure}</td>
                                             <td>{row.hours}</td>
                                         </tr>
