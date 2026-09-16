@@ -4,6 +4,7 @@ import {
     type AttendanceStatus,
     type DailyAttendanceItem,
 } from '@entities/attendance';
+import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { useI18n } from '@shared/i18n';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { formatTime } from '@shared/lib/formatDate';
@@ -172,11 +173,19 @@ export function AttendanceOverviewCard() {
             const rank = (s: AttendanceStatus) => (s === 'present_on_time' ? 0 : s === 'late' ? 1 : 2);
             return rank(a.status) - rank(b.status);
         });
-        return ordered.map((item) => ({
-            key: `${item.app_user_id ?? item.camera_employee_no}-${item.status}`,
-            tone: segmentTone(item.status),
-            title: item.display_name || item.camera_name || '—',
-        }));
+        return ordered.map((item) => {
+            const title = item.display_name || item.camera_name || '—';
+            const initials = resolveReportEmployeeInitials({
+                displayName: item.display_name || item.camera_name,
+                email: item.email,
+            }) || '?';
+            return {
+                key: `${item.app_user_id ?? item.camera_employee_no}-${item.status}`,
+                tone: segmentTone(item.status),
+                title,
+                initials,
+            };
+        });
     }, [visibleItems]);
 
     const dayStartLabel = useMemo(() => {
@@ -288,7 +297,12 @@ export function AttendanceOverviewCard() {
                                         key={seg.key}
                                         className={`att-overview__seg att-overview__seg--${seg.tone}`}
                                         title={seg.title}
-                                    />
+                                        aria-label={seg.title}
+                                    >
+                                        <span className="att-overview__seg-ini" aria-hidden>
+                                            {seg.initials}
+                                        </span>
+                                    </span>
                                 ))
                                 : (
                                     <span className="att-overview__bar-empty">
