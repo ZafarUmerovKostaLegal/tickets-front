@@ -906,7 +906,7 @@ html.corr-docx-fs .corr-shell__header {
   min-height: 0;
   border-left: 1px solid #edebe9;
   background: #faf9f8;
-  font-family: "Segoe UI", "Segoe UI Variable Text", system-ui, sans-serif;
+  font-family: var(--app-font-family);
   color: #323130;
   z-index: 2;
 }
@@ -1178,7 +1178,7 @@ html.corr-docx-fs .corr-shell__header {
   border: 1px solid #edebe9;
   background: #fff;
   color: #323130;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--app-font-family);
   font-size: 0.78rem;
   font-weight: 600;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
@@ -1260,7 +1260,8 @@ html.corr-docx-fs .corr-shell__header {
   --corr-word-ribbon-accent: #185abd;
   --corr-word-ribbon-text: #323130;
   --corr-word-ribbon-muted: #605e5c;
-  --corr-word-ribbon-font: "Segoe UI", "Segoe UI Variable Text", "Segoe UI Variable", system-ui, sans-serif;
+  /* Chrome only — same as CorrespondenceShell / :root (--app-font-family) */
+  --corr-word-ribbon-font: var(--app-font-family);
 
   /* Override DocxEditor theme tokens inside this surface */
   --doc-surface: var(--corr-word-ribbon-surface);
@@ -1295,9 +1296,47 @@ html.corr-docx-fs .corr-shell__header {
   max-height: 100%;
   min-height: 100%;
   width: 100% !important;
-  font-family: var(--corr-word-ribbon-font) !important;
   color: var(--corr-word-ribbon-text);
   background: var(--doc-bg);
+}
+
+/* UI chrome — app typography; do not force font on document pages */
+.corr-docx-editor .docx-editor-shell__title-bar,
+.corr-docx-editor .docx-editor-shell__toolbar,
+.corr-docx-editor .docx-menubar,
+.corr-docx-editor .docx-toolbar,
+.corr-docx-editor .docx-ruler-frame,
+.corr-docx-editor .docx-horizontal-ruler,
+.corr-docx-editor .docx-vertical-ruler,
+.corr-docx-editor [data-testid="docx-editor-ruler-row"],
+.corr-docx-editor .docx-font-notice,
+.corr-docx-editor .docx-dialog,
+.corr-docx-editor .docx-contextmenu,
+.corr-docx-editor .docx-color-picker-dropdown,
+.corr-docx-editor .docx-hyperlink-popup,
+.corr-docx-editor .docx-image-properties-dialog,
+.corr-docx-editor .docx-notes-properties-dialog,
+.corr-docx-editor .docx-equation-popup,
+.corr-docx-editor .docx-content-control-inspector,
+.corr-docx-editor .docx-menubar__menu,
+.corr-docx-editor .docx-menubar__submenu-panel,
+.corr-docx-editor .docx-menubar__item {
+  font-family: var(--app-font-family) !important;
+}
+
+/* File/Format menus may mount in a portal outside .corr-docx-editor */
+.docx-menubar__menu,
+.docx-menubar__submenu-panel,
+.docx-menubar__item-label,
+.docx-menubar__item-shortcut,
+.docx-toolbar__menu,
+.docx-toolbar__font-family-content,
+.docx-toolbar__style-content,
+.docx-toolbar__font-size-menu,
+.docx-toolbar__line-spacing-menu,
+.docx-toolbar__image-wrap-menu,
+.docx-toolbar__alignment-popup {
+  font-family: var(--app-font-family);
 }
 
 /* Hide packaged document title row — keep only ribbon tabs */
@@ -1535,12 +1574,12 @@ html.corr-docx-fs .corr-shell__header {
     inset 1px 0 0 #edebe9;
 }
 
-/* Tick labels → Segoe like Word */
+/* Ruler tick labels — app UI font (not document body) */
 .corr-docx-editor .docx-horizontal-ruler [style*="font-size: 9px"],
 .corr-docx-editor .docx-horizontal-ruler [style*="font-size:9px"],
 .corr-docx-editor .docx-vertical-ruler [style*="font-size: 9px"],
 .corr-docx-editor .docx-vertical-ruler [style*="font-size:9px"] {
-  font-family: var(--corr-word-ribbon-font) !important;
+  font-family: var(--app-font-family) !important;
   font-size: 10px !important;
   font-weight: 400 !important;
   color: #605e5c !important;
