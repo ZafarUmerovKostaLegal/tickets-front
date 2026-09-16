@@ -11,6 +11,8 @@ export type DailyAttendanceItem = {
     department?: string | null;
     status: AttendanceStatus;
     first_event_time: string | null;
+    /** Last camera punch that day; omitted/null when only one event (still at office). */
+    last_event_time?: string | null;
     explanation_text?: string | null;
     explanation_file_url?: string | null;
     explanation_updated_at?: string | null;

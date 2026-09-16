@@ -377,6 +377,7 @@ export const enMessages = {
             employee: 'Employee',
             arrival: 'Arrival',
             departure: 'Departure',
+            hours: 'Hours',
             checkpoint: 'Access point',
             explanation: 'Explanation',
             unmapped: 'unlinked',

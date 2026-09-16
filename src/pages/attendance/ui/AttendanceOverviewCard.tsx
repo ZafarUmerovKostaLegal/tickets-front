@@ -113,6 +113,63 @@ function formatHm(isoOrTime: string): string {
     }
 }
 
+function parseEventMs(isoOrTime: string | null | undefined): number | null {
+    if (!isoOrTime)
+        return null;
+    if (/^\d{1,2}:\d{2}/.test(isoOrTime)) {
+        const [h, m] = isoOrTime.split(':').map(Number);
+        if (!Number.isFinite(h) || !Number.isFinite(m))
+            return null;
+        const d = new Date();
+        d.setHours(h, m, 0, 0);
+        return d.getTime();
+    }
+    const t = new Date(isoOrTime).getTime();
+    return Number.isNaN(t) ? null : t;
+}
+
+function combineDayAndHm(dayYmd: string, hm: string | null): number | null {
+    if (!hm)
+        return null;
+    const m = hm.match(/^(\d{1,2}):(\d{2})/);
+    if (!m)
+        return parseEventMs(hm);
+    const d = parseYmd(dayYmd);
+    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    return d.getTime();
+}
+
+function formatDuration(ms: number): string {
+    if (!Number.isFinite(ms) || ms < 0)
+        return '—';
+    const totalMin = Math.floor(ms / 60_000);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}:${String(m).padStart(2, '0')}`;
+}
+
+function workedHoursLabel(
+    item: DailyAttendanceItem,
+    dayYmd: string,
+    workdayEndHm: string | null,
+): string {
+    const arrivalMs = parseEventMs(item.first_event_time);
+    if (arrivalMs == null)
+        return '—';
+    const lastMs = parseEventMs(item.last_event_time ?? null);
+    let endMs = lastMs != null && lastMs > arrivalMs ? lastMs : null;
+    if (endMs == null) {
+        const today = toYmd(new Date());
+        if (dayYmd === today)
+            endMs = Date.now();
+        else
+            endMs = combineDayAndHm(dayYmd, workdayEndHm ? formatHm(workdayEndHm) : '18:00');
+    }
+    if (endMs == null || endMs < arrivalMs)
+        return '—';
+    return formatDuration(endMs - arrivalMs);
+}
+
 type SegmentTone = 'onTime' | 'late' | 'absent';
 
 function segmentTone(status: AttendanceStatus): SegmentTone {
@@ -129,6 +186,7 @@ export function AttendanceOverviewCard() {
     const [filter, setFilter] = useState<AttendanceStatusFilter>('all');
     const [items, setItems] = useState<DailyAttendanceItem[]>([]);
     const [workdayStart, setWorkdayStart] = useState<string | null>(null);
+    const [workdayEnd, setWorkdayEnd] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -143,12 +201,14 @@ export function AttendanceOverviewCard() {
                 return;
             setItems(report.items.filter(isEmployeeItem));
             setWorkdayStart(report.workday?.workday_start ?? null);
+            setWorkdayEnd(report.workday?.workday_end ?? null);
         }
         catch (e) {
             if (signal?.aborted)
                 return;
             setItems([]);
             setWorkdayStart(null);
+            setWorkdayEnd(null);
             setError(e instanceof Error ? e.message : t('attendancePage.errors.loadFailed'));
         }
         finally {
@@ -170,7 +230,8 @@ export function AttendanceOverviewCard() {
 
     const segments = useMemo(() => {
         const ordered = [...visibleItems].sort((a, b) => {
-            const rank = (s: AttendanceStatus) => (s === 'present_on_time' ? 0 : s === 'late' ? 1 : 2);
+            // Late first, then absent, then on-time.
+            const rank = (s: AttendanceStatus) => (s === 'late' ? 0 : s === 'absent' ? 1 : 2);
             return rank(a.status) - rank(b.status);
         });
         return ordered.map((item) => {
@@ -187,6 +248,35 @@ export function AttendanceOverviewCard() {
             };
         });
     }, [visibleItems]);
+
+    const listRows = useMemo(() => {
+        const ranked = [...visibleItems].sort((a, b) => {
+            const rank = (s: AttendanceStatus) => (s === 'late' ? 0 : s === 'absent' ? 1 : 2);
+            const byStatus = rank(a.status) - rank(b.status);
+            if (byStatus !== 0)
+                return byStatus;
+            const ta = parseEventMs(a.first_event_time) ?? Number.POSITIVE_INFINITY;
+            const tb = parseEventMs(b.first_event_time) ?? Number.POSITIVE_INFINITY;
+            if (ta !== tb)
+                return ta - tb;
+            return (a.display_name || '').localeCompare(b.display_name || '', locale === 'en' ? 'en' : 'ru');
+        });
+        return ranked.map((item) => {
+            const name = item.display_name || item.camera_name || '—';
+            const dept = (item.department || '').trim() || '—';
+            const arrival = item.first_event_time ? formatHm(item.first_event_time) : '—';
+            const departure = item.last_event_time ? formatHm(item.last_event_time) : '—';
+            return {
+                key: `${item.app_user_id ?? item.camera_employee_no}-${item.status}`,
+                name,
+                dept,
+                arrival,
+                departure,
+                hours: workedHoursLabel(item, selectedDate, workdayEnd),
+                status: item.status,
+            };
+        });
+    }, [visibleItems, selectedDate, workdayEnd, locale]);
 
     const dayStartLabel = useMemo(() => {
         const fromEvents = earliestArrival(items.filter((i) => i.status !== 'absent'));
@@ -322,6 +412,45 @@ export function AttendanceOverviewCard() {
                             {loading ? '…' : (dayStartLabel ?? '—')}
                         </span>
                     </div>
+
+                    {!loading && listRows.length > 0 ? (
+                        <div className="att-overview__list-wrap">
+                            <table className="att-overview__list">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">{t('attendancePage.table.employee')}</th>
+                                        <th scope="col">{t('attendancePage.table.arrival')}</th>
+                                        <th scope="col">{t('attendancePage.table.departure')}</th>
+                                        <th scope="col">{t('attendancePage.table.hours')}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {listRows.map((row) => (
+                                        <tr
+                                            key={row.key}
+                                            className={`att-overview__list-row att-overview__list-row--${
+                                                row.status === 'late'
+                                                    ? 'late'
+                                                    : row.status === 'absent'
+                                                        ? 'absent'
+                                                        : 'onTime'
+                                            }`}
+                                        >
+                                            <td>
+                                                <div className="att-overview__person">
+                                                    <span className="att-overview__person-name">{row.name}</span>
+                                                    <span className="att-overview__person-dept">{row.dept}</span>
+                                                </div>
+                                            </td>
+                                            <td>{row.arrival}</td>
+                                            <td>{row.departure}</td>
+                                            <td>{row.hours}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : null}
                 </>
             )}
         </section>

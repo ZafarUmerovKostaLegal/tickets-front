@@ -377,6 +377,7 @@ export const ruMessages: Messages = {
             employee: 'Сотрудник',
             arrival: 'Приход',
             departure: 'Уход',
+            hours: 'Часы',
             checkpoint: 'Точка прохода',
             explanation: 'Объяснение',
             unmapped: 'не привязан',
@@ -962,7 +963,7 @@ export type Messages = {
             'allRecords' | 'lateOnly' | 'overtimeOnly' | 'onTime' | 'late' | 'absent',
             string
         >;
-        table: Record<'date' | 'employee' | 'arrival' | 'departure' | 'checkpoint' | 'explanation' | 'unmapped' | 'unmappedHint', string>;
+        table: Record<'date' | 'employee' | 'arrival' | 'departure' | 'hours' | 'checkpoint' | 'explanation' | 'unmapped' | 'unmappedHint', string>;
         arrival: Record<'absent' | 'late' | 'onTime', string>;
         explain: Record<
             | 'opening'
