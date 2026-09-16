@@ -762,18 +762,20 @@ export function AttendanceOverviewCard() {
                                             ) : null}
                                             <td>
                                                 <div className="att-overview__person">
-                                                    <span className="att-overview__person-name">{row.name}</span>
+                                                    <div className="att-overview__person-top">
+                                                        <span className="att-overview__person-name">{row.name}</span>
+                                                        {row.statusLabel ? (
+                                                            <span
+                                                                className={`att-overview__status-tag att-overview__status-tag--${
+                                                                    row.status === 'late' ? 'late' : 'absent'
+                                                                }`}
+                                                            >
+                                                                {row.statusLabel}
+                                                            </span>
+                                                        ) : null}
+                                                    </div>
                                                     {row.dept ? (
                                                         <span className="att-overview__person-dept">{row.dept}</span>
-                                                    ) : null}
-                                                    {row.statusLabel ? (
-                                                        <span
-                                                            className={`att-overview__status-tag att-overview__status-tag--${
-                                                                row.status === 'late' ? 'late' : 'absent'
-                                                            }`}
-                                                        >
-                                                            {row.statusLabel}
-                                                        </span>
                                                     ) : null}
                                                 </div>
                                             </td>
