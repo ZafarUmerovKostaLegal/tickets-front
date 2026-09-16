@@ -4,6 +4,7 @@ export type DailyAttendanceItem = {
     display_name: string;
     email: string | null;
     role: string | null;
+    position?: string | null;
     is_mapped?: boolean;
     camera_employee_no: string;
     camera_name: string | null;

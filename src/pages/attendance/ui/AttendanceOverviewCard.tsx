@@ -107,7 +107,7 @@ function weekDays(anchorYmd: string): string[] {
 }
 
 function isEmployeeItem(item: DailyAttendanceItem): boolean {
-    return !isPartnerOrgRole(item.role, item.department);
+    return !isPartnerOrgRole(item.role, item.position ?? item.department);
 }
 
 function matchesFilter(item: DailyAttendanceItem, filter: AttendanceStatusFilter): boolean {
@@ -474,14 +474,19 @@ export function AttendanceOverviewCard() {
         });
         return ranked.map((item) => {
             const name = item.display_name || item.camera_name || '—';
-            const dept = (item.department || '').trim() || '—';
+            const subtitle = (
+                item.position
+                || item.department
+                || item.role
+                || ''
+            ).trim();
             const arrival = item.first_event_time ? formatHm(item.first_event_time) : '—';
             const departure = item.last_event_time ? formatHm(item.last_event_time) : '—';
             return {
                 key: `${item.date}-${item.app_user_id ?? item.camera_employee_no}-${item.status}`,
                 date: item.date,
                 name,
-                dept,
+                dept: subtitle,
                 arrival,
                 departure,
                 hours: workedHoursLabel(item, item.date, workdayEnd),
@@ -753,7 +758,9 @@ export function AttendanceOverviewCard() {
                                             <td>
                                                 <div className="att-overview__person">
                                                     <span className="att-overview__person-name">{row.name}</span>
-                                                    <span className="att-overview__person-dept">{row.dept}</span>
+                                                    {row.dept ? (
+                                                        <span className="att-overview__person-dept">{row.dept}</span>
+                                                    ) : null}
                                                 </div>
                                             </td>
                                             <td>{row.arrival}</td>
