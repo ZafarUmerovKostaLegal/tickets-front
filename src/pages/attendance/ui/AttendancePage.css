@@ -168,6 +168,35 @@
   outline-offset: 1px;
 }
 
+.att-overview__datepicker {
+  width: 100%;
+  min-width: 9.5rem;
+}
+
+.att-overview__datepicker-btn {
+  min-height: 2.35rem !important;
+  height: 2.35rem;
+  padding: 0 0.65rem !important;
+  border-radius: 0.55rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 500;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.att-overview__employee-select {
+  width: 100%;
+}
+
+.att-overview__employee-btn {
+  min-height: 2.35rem !important;
+  height: 2.35rem;
+  padding: 0 0.65rem !important;
+  border-radius: 0.55rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 500;
+}
+
 .att-overview__week {
   display: flex;
   align-items: center;

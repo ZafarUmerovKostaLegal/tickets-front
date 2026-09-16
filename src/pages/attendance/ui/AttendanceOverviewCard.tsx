@@ -10,15 +10,75 @@ import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/repor
 import { useI18n } from '@shared/i18n';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { formatTime } from '@shared/lib/formatDate';
+import { DatePicker } from '@shared/ui/DatePicker';
+import { SearchableSelect } from '@shared/ui/SearchableSelect';
 
 export type AttendanceStatusFilter = 'all' | AttendanceStatus;
 
 type ListItem = DailyAttendanceItem & { date: string };
 
 type EmployeeOption = {
-    id: number;
+    key: string;
     name: string;
+    appUserId: number | null;
+    cameraEmployeeNo: string;
 };
+
+const ALL_EMPLOYEE_KEY = 'all';
+
+function employeeOptionKey(item: DailyAttendanceItem): string {
+    const cameraNo = (item.camera_employee_no || '').trim();
+    // Prefer camera id — works even when app_user mappings are empty.
+    if (cameraNo)
+        return `c:${cameraNo}`;
+    if (item.app_user_id != null)
+        return `u:${item.app_user_id}`;
+    return '';
+}
+
+function matchesEmployeeSelection(
+    item: DailyAttendanceItem,
+    selectedKey: string,
+    selected?: EmployeeOption | null,
+): boolean {
+    if (selectedKey === ALL_EMPLOYEE_KEY)
+        return true;
+    if (selectedKey.startsWith('u:')) {
+        if (item.app_user_id === Number(selectedKey.slice(2)))
+            return true;
+    }
+    if (selectedKey.startsWith('c:')) {
+        if ((item.camera_employee_no || '').trim() === selectedKey.slice(2))
+            return true;
+    }
+    if (selected?.cameraEmployeeNo) {
+        if ((item.camera_employee_no || '').trim() === selected.cameraEmployeeNo)
+            return true;
+    }
+    if (selected?.appUserId != null && item.app_user_id === selected.appUserId)
+        return true;
+    if (selected?.name) {
+        const n = selected.name.trim().toLowerCase();
+        if ((item.display_name || '').trim().toLowerCase() === n)
+            return true;
+        if ((item.camera_name || '').trim().toLowerCase() === n)
+            return true;
+    }
+    return false;
+}
+
+function iterYmdInclusive(from: string, to: string): string[] {
+    const out: string[] = [];
+    const cur = parseYmd(from);
+    const end = parseYmd(to);
+    if (cur > end)
+        return out;
+    while (cur <= end) {
+        out.push(toYmd(cur));
+        cur.setDate(cur.getDate() + 1);
+    }
+    return out;
+}
 
 function toYmd(date: Date): string {
     const pad = (n: number) => String(n).padStart(2, '0');
@@ -127,16 +187,20 @@ function earliestArrival(items: DailyAttendanceItem[]): string | null {
 }
 
 function formatHm(isoOrTime: string): string {
-    if (/^\d{1,2}:\d{2}/.test(isoOrTime))
-        return isoOrTime.slice(0, 5);
-    try {
-        return new Date(isoOrTime).toLocaleTimeString('ru-RU', {
+    const parsed = new Date(isoOrTime);
+    if (!Number.isNaN(parsed.getTime())) {
+        return parsed.toLocaleTimeString('ru-RU', {
             hour: '2-digit',
             minute: '2-digit',
         });
     }
-    catch {
+    if (/^\d{1,2}:\d{2}/.test(isoOrTime))
+        return isoOrTime.slice(0, 5);
+    try {
         return formatTime(isoOrTime).slice(0, 5);
+    }
+    catch {
+        return '—';
     }
 }
 
@@ -211,16 +275,28 @@ function mergeEmployeeOptions(
     prev: EmployeeOption[],
     source: DailyAttendanceItem[],
 ): EmployeeOption[] {
-    const byId = new Map(prev.map((o) => [o.id, o]));
+    const byKey = new Map(prev.map((o) => [o.key, o]));
     for (const item of source) {
-        if (item.app_user_id == null)
+        const cameraNo = (item.camera_employee_no || '').trim();
+        if (item.app_user_id == null && !cameraNo)
             continue;
-        const name = item.display_name || item.camera_name || `#${item.app_user_id}`;
-        const existing = byId.get(item.app_user_id);
-        if (!existing || (name && name !== existing.name))
-            byId.set(item.app_user_id, { id: item.app_user_id, name });
+        const key = employeeOptionKey(item);
+        if (!key || key === 'c:')
+            continue;
+        const name = item.display_name || item.camera_name || (item.app_user_id != null
+            ? `#${item.app_user_id}`
+            : `Hikvision #${cameraNo}`);
+        const existing = byKey.get(key);
+        if (!existing || (name && name !== existing.name)) {
+            byKey.set(key, {
+                key,
+                name,
+                appUserId: item.app_user_id,
+                cameraEmployeeNo: cameraNo,
+            });
+        }
     }
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    return [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 }
 
 export function AttendanceOverviewCard() {
@@ -229,7 +305,7 @@ export function AttendanceOverviewCard() {
     const [selectedDate, setSelectedDate] = useState(today);
     const [periodFrom, setPeriodFrom] = useState(today);
     const [periodTo, setPeriodTo] = useState(today);
-    const [selectedUserId, setSelectedUserId] = useState<number | 'all'>('all');
+    const [selectedEmployeeKey, setSelectedEmployeeKey] = useState(ALL_EMPLOYEE_KEY);
     const [filter, setFilter] = useState<AttendanceStatusFilter>('all');
     const [items, setItems] = useState<ListItem[]>([]);
     const [employeeOptions, setEmployeeOptions] = useState<EmployeeOption[]>([]);
@@ -260,22 +336,55 @@ export function AttendanceOverviewCard() {
                 setEmployeeOptions((prev) => mergeEmployeeOptions(prev, dayItems));
             }
             else {
-                const appUserId = selectedUserId === 'all' ? null : selectedUserId;
+                const selected = employeeOptions.find((o) => o.key === selectedEmployeeKey) ?? null;
+                // Do not pass app_user_id while mappings may be empty — it returns an empty roster.
+                // Always load the period from DB, then filter on the client by camera / name.
                 const report = await fetchPeriodAttendanceReport(periodFrom, periodTo, {
-                    appUserId,
+                    appUserId: null,
                     signal,
                 });
                 if (signal?.aborted)
                     return;
-                const periodItems = (report.items as PeriodAttendanceItem[]).filter(isEmployeeItem);
+                let periodItems = (report.items as PeriodAttendanceItem[]).filter(isEmployeeItem);
+                if (selectedEmployeeKey !== ALL_EMPLOYEE_KEY) {
+                    periodItems = periodItems.filter((item) => (
+                        matchesEmployeeSelection(item, selectedEmployeeKey, selected)
+                    ));
+                }
+
+                // If period rows exist but have no punch times, rebuild from daily reports.
+                const missingTimes = periodItems.length > 0
+                    && !periodItems.some((item) => Boolean(item.first_event_time));
+                if (missingTimes || (selectedEmployeeKey !== ALL_EMPLOYEE_KEY && periodItems.length === 0)) {
+                    const daysInRange = iterYmdInclusive(periodFrom, periodTo);
+                    const dailyReports = await Promise.all(
+                        daysInRange.map((day) => fetchDailyAttendanceReport(day, signal)),
+                    );
+                    if (signal?.aborted)
+                        return;
+                    periodItems = dailyReports.flatMap((daily) => {
+                        const day = daily.date || periodFrom;
+                        return daily.items
+                            .filter(isEmployeeItem)
+                            .filter((item) => matchesEmployeeSelection(item, selectedEmployeeKey, selected))
+                            .map((item) => ({ ...item, date: day }));
+                    });
+                    const wd = dailyReports.find((d) => d.workday)?.workday;
+                    if (wd) {
+                        nextWorkdayStart = wd.workday_start ?? null;
+                        nextWorkdayEnd = wd.workday_end ?? null;
+                    }
+                }
+
                 nextItems = periodItems.map((item) => ({
                     ...item,
                     date: item.date || periodFrom,
                 }));
-                nextWorkdayStart = report.workday?.workday_start ?? null;
-                nextWorkdayEnd = report.workday?.workday_end ?? null;
-                if (selectedUserId === 'all')
-                    setEmployeeOptions((prev) => mergeEmployeeOptions(prev, periodItems));
+                if (!nextWorkdayStart)
+                    nextWorkdayStart = report.workday?.workday_start ?? null;
+                if (!nextWorkdayEnd)
+                    nextWorkdayEnd = report.workday?.workday_end ?? null;
+                setEmployeeOptions((prev) => mergeEmployeeOptions(prev, periodItems));
             }
 
             setItems(nextItems);
@@ -294,7 +403,7 @@ export function AttendanceOverviewCard() {
             if (!signal?.aborted)
                 setLoading(false);
         }
-    }, [periodFrom, periodTo, selectedUserId, t]);
+    }, [periodFrom, periodTo, selectedEmployeeKey, t]);
 
     useEffect(() => {
         const controller = new AbortController();
@@ -304,10 +413,25 @@ export function AttendanceOverviewCard() {
 
     const visibleItems = useMemo(() => {
         let rows = items.filter((item) => matchesFilter(item, filter));
-        if (!isPeriodMode && selectedUserId !== 'all')
-            rows = rows.filter((item) => item.app_user_id === selectedUserId);
+        if (selectedEmployeeKey !== ALL_EMPLOYEE_KEY) {
+            const selected = employeeOptions.find((o) => o.key === selectedEmployeeKey) ?? null;
+            rows = rows.filter((item) => matchesEmployeeSelection(item, selectedEmployeeKey, selected));
+        }
         return rows;
-    }, [filter, items, isPeriodMode, selectedUserId]);
+    }, [filter, items, selectedEmployeeKey, employeeOptions]);
+
+    const employeeSelectItems = useMemo<EmployeeOption[]>(() => {
+        const allLabel = t('attendancePage.filterAll');
+        return [
+            {
+                key: ALL_EMPLOYEE_KEY,
+                name: allLabel,
+                appUserId: null,
+                cameraEmployeeNo: '',
+            },
+            ...employeeOptions,
+        ];
+    }, [employeeOptions, t]);
 
     const segments = useMemo(() => {
         if (isPeriodMode)
@@ -451,39 +575,56 @@ export function AttendanceOverviewCard() {
             </header>
 
             <div className="att-overview__controls">
-                <label className="att-overview__field">
-                    <span>{t('attendancePage.periodFrom')}</span>
-                    <input
-                        type="date"
+                <div className="att-overview__field">
+                    <span id="att-overview-from-lbl">{t('attendancePage.periodFrom')}</span>
+                    <DatePicker
+                        id="att-overview-from"
+                        className="att-overview__datepicker"
+                        buttonClassName="att-overview__datepicker-btn"
                         value={periodFrom}
                         max={periodTo}
-                        onChange={(e) => onPeriodFromChange(e.target.value)}
+                        onChange={onPeriodFromChange}
+                        portal
+                        portalZIndex={12000}
+                        showChevron
+                        aria-labelledby="att-overview-from-lbl"
                     />
-                </label>
-                <label className="att-overview__field">
-                    <span>{t('attendancePage.periodTo')}</span>
-                    <input
-                        type="date"
+                </div>
+                <div className="att-overview__field">
+                    <span id="att-overview-to-lbl">{t('attendancePage.periodTo')}</span>
+                    <DatePicker
+                        id="att-overview-to"
+                        className="att-overview__datepicker"
+                        buttonClassName="att-overview__datepicker-btn"
                         value={periodTo}
                         min={periodFrom}
-                        onChange={(e) => onPeriodToChange(e.target.value)}
+                        onChange={onPeriodToChange}
+                        portal
+                        portalZIndex={12000}
+                        showChevron
+                        aria-labelledby="att-overview-to-lbl"
                     />
-                </label>
-                <label className="att-overview__field att-overview__field--grow">
-                    <span>{t('attendancePage.table.employee')}</span>
-                    <select
-                        value={selectedUserId === 'all' ? 'all' : String(selectedUserId)}
-                        onChange={(e) => {
-                            const v = e.target.value;
-                            setSelectedUserId(v === 'all' ? 'all' : Number(v));
-                        }}
-                    >
-                        <option value="all">{t('attendancePage.filterAll')}</option>
-                        {employeeOptions.map((opt) => (
-                            <option key={opt.id} value={opt.id}>{opt.name}</option>
-                        ))}
-                    </select>
-                </label>
+                </div>
+                <div className="att-overview__field att-overview__field--grow">
+                    <span id="att-overview-employee-lbl">{t('attendancePage.table.employee')}</span>
+                    <SearchableSelect<EmployeeOption>
+                        className="att-overview__employee-select"
+                        buttonClassName="att-overview__employee-btn"
+                        portalDropdown
+                        portalZIndex={12000}
+                        portalMinWidth={280}
+                        aria-labelledby="att-overview-employee-lbl"
+                        placeholder={t('attendancePage.selectPlaceholder')}
+                        emptyListText={locale === 'en' ? 'No employees' : 'Нет сотрудников'}
+                        noMatchText={locale === 'en' ? 'Nothing found' : 'Ничего не найдено'}
+                        value={selectedEmployeeKey}
+                        items={employeeSelectItems}
+                        getOptionValue={(o) => o.key}
+                        getOptionLabel={(o) => o.name}
+                        getSearchText={(o) => o.name}
+                        onSelect={(o) => setSelectedEmployeeKey(o.key)}
+                    />
+                </div>
             </div>
 
             <div className="att-overview__week" aria-label={locale === 'en' ? 'Week' : 'Неделя'}>
