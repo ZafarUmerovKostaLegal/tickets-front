@@ -1,12 +1,41 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { fetchAttendance, fetchDailyAttendanceReport, type AttendanceRecord, type DailyAttendanceItem, type DailyAttendanceResponse, } from '@entities/attendance';
 import type { WorkdaySettings } from '@shared/lib/attendanceSettings';
+import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { parseDateInput } from '../constants';
 import { useI18n } from '@shared/i18n';
 import { useDebouncedValue } from '@shared/hooks';
 import { timeToMinutes } from '../lib/timeToMinutes';
 import { groupRecords } from '../lib/groupRecords';
 import type { AttendanceSummary, GroupedRow } from '../types';
+
+function isPartnerDailyItem(item: DailyAttendanceItem): boolean {
+    return isPartnerOrgRole(item.role, item.department);
+}
+
+function isPartnerLegacyRecord(record: AttendanceRecord): boolean {
+    return isPartnerOrgRole(record.department, record.label);
+}
+
+function summarizeDailyItems(items: DailyAttendanceItem[]): {
+    present_on_time: number;
+    late: number;
+    absent: number;
+    total: number;
+} {
+    let present_on_time = 0;
+    let late = 0;
+    let absent = 0;
+    for (const item of items) {
+        if (item.status === 'late')
+            late += 1;
+        else if (item.status === 'absent')
+            absent += 1;
+        else if (item.status === 'present_on_time')
+            present_on_time += 1;
+    }
+    return { present_on_time, late, absent, total: items.length };
+}
 function mapDailyItemToRow(item: DailyAttendanceItem, day: string): GroupedRow {
     const isMapped = item.is_mapped ?? item.app_user_id != null;
     const cameraLabel = (item.camera_ips?.length ? item.camera_ips.join(', ') : null)
@@ -119,9 +148,11 @@ export function useAttendanceData(dateFrom: string, dateTo: string, search: stri
     }, [load]);
     const groupedRecords = useMemo((): GroupedRow[] => {
         if (singleDay && dailyReport) {
-            return dailyReport.items.map((item) => mapDailyItemToRow(item, singleDay));
+            return dailyReport.items
+                .filter((item) => !isPartnerDailyItem(item))
+                .map((item) => mapDailyItemToRow(item, singleDay));
         }
-        return groupRecords(records);
+        return groupRecords(records.filter((record) => !isPartnerLegacyRecord(record)));
     }, [singleDay, dailyReport, records]);
     const searchFiltered = useMemo(() => {
         if (!singleDay || !dailyReport) {
@@ -172,17 +203,18 @@ export function useAttendanceData(dateFrom: string, dateTo: string, search: stri
     }, [sortedForDisplay, page]);
     const summary = useMemo((): AttendanceSummary => {
         if (singleDay && dailyReport) {
-            const s = dailyReport.summary;
+            const employeeItems = dailyReport.items.filter((item) => !isPartnerDailyItem(item));
+            const counts = summarizeDailyItems(employeeItems);
             return {
-                entries: s.total_tracked_users,
-                lateness: s.late,
+                entries: counts.total,
+                lateness: counts.late,
                 overtime: 0,
                 total_hours: 0,
                 avg_hours_per_entry: 0,
                 dailyMode: true,
-                present_on_time: s.present_on_time,
-                absent: s.absent,
-                unmapped_events: s.unmapped_events,
+                present_on_time: counts.present_on_time,
+                absent: counts.absent,
+                unmapped_events: dailyReport.summary.unmapped_events,
             };
         }
         let lateness = 0;

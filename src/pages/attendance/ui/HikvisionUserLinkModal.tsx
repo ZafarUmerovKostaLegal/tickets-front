@@ -10,6 +10,7 @@ import {
     type HikvisionUserRow,
 } from '@entities/attendance';
 import { getUsers, type User } from '@entities/user';
+import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { useI18n } from '@shared/i18n';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { fillAttendanceTemplate } from '../model/attendanceI18n';
@@ -75,7 +76,9 @@ export function HikvisionUserLinkModal({ onClose, onMappingsChanged }: Hikvision
             setCameraCount(deduped.cameraCount);
             setDeviceErrors(deduped.errors);
             setMappings(byNo);
-            setAppUsers(systemUsers.filter((u) => !u.is_archived && !u.is_blocked));
+            setAppUsers(systemUsers.filter((u) => !u.is_archived
+                && !u.is_blocked
+                && !isPartnerOrgRole(u.role, u.position)));
             const nextDrafts: Record<string, RowDraft> = {};
             for (const row of deduped.users) {
                 const no = row.employeeNo === '-' ? '' : row.employeeNo;
