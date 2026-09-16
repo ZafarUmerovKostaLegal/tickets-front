@@ -8,6 +8,19 @@ export type OutgoingLetterAttachmentMeta = {
     sizeLabel: string;
 };
 
+/** App-side review comments (docx-editor pro is not used). Anchored by quote + optional selection JSON. */
+export type OutgoingLetterDraftComment = {
+    id: string;
+    quote: string;
+    body: string;
+    authorName: string;
+    authorUserId: number | null;
+    createdAt: string;
+    resolved: boolean;
+    /** Serialized editor DocRange for best-effort restore on click. */
+    selectionJson?: string | null;
+};
+
 export type OutgoingLetterDraftV1 = {
     v: 1;
     sessionId: string;
@@ -15,7 +28,42 @@ export type OutgoingLetterDraftV1 = {
     letterDateIso: string;
     coverModel: InvoiceCoverLetterModel;
     attachmentMeta: OutgoingLetterAttachmentMeta[];
+    comments?: OutgoingLetterDraftComment[];
 };
+
+function isDraftComment(raw: unknown): raw is OutgoingLetterDraftComment {
+    if (!raw || typeof raw !== 'object')
+        return false;
+    const c = raw as Record<string, unknown>;
+    return typeof c.id === 'string'
+        && typeof c.quote === 'string'
+        && typeof c.body === 'string'
+        && typeof c.authorName === 'string'
+        && typeof c.createdAt === 'string'
+        && typeof c.resolved === 'boolean'
+        && (c.authorUserId === null || typeof c.authorUserId === 'number');
+}
+
+function parseDraftComments(raw: unknown): OutgoingLetterDraftComment[] {
+    if (!Array.isArray(raw))
+        return [];
+    return raw.filter(isDraftComment).map((c) => ({
+        id: c.id,
+        quote: c.quote,
+        body: c.body,
+        authorName: c.authorName,
+        authorUserId: c.authorUserId ?? null,
+        createdAt: c.createdAt,
+        resolved: Boolean(c.resolved),
+        selectionJson: typeof c.selectionJson === 'string' ? c.selectionJson : null,
+    }));
+}
+
+export function newOutgoingLetterCommentId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        return `cmt_${crypto.randomUUID()}`;
+    return `cmt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
 
 const filesBySessionId = new Map<string, File[]>();
 
@@ -49,6 +97,7 @@ export type WriteOutgoingLetterDraftInput = {
     coverModel: InvoiceCoverLetterModel;
     files: File[];
     attachmentMeta?: OutgoingLetterAttachmentMeta[];
+    comments?: OutgoingLetterDraftComment[];
 };
 
 export function writeOutgoingLetterDraft(input: WriteOutgoingLetterDraftInput): string {
@@ -66,6 +115,7 @@ export function writeOutgoingLetterDraft(input: WriteOutgoingLetterDraftInput): 
         letterDateIso: input.letterDateIso.slice(0, 10),
         coverModel: input.coverModel,
         attachmentMeta,
+        comments: input.comments ?? [],
     };
     filesBySessionId.set(sessionId, [...input.files]);
     try {
@@ -104,6 +154,7 @@ export function readOutgoingLetterDraft(): OutgoingLetterDraftV1 | null {
             letterDateIso,
             coverModel: rec.coverModel,
             attachmentMeta,
+            comments: parseDraftComments(rec.comments),
         };
     }
     catch {

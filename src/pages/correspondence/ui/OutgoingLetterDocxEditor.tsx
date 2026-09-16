@@ -23,6 +23,8 @@ type Props = {
     onReady?: () => void;
     onChange?: () => void;
     onSaveRequest?: () => void;
+    /** Word-like New Comment (Ctrl+Alt+M). */
+    onNewCommentRequest?: () => void;
 };
 
 function isFormFieldTarget(target: EventTarget | null): boolean {
@@ -39,8 +41,26 @@ function bindLayoutSafeEditorHotkeys(
     root: HTMLElement,
     getEditor: () => Editor | null,
     onSaveRequest?: () => void,
+    onNewCommentRequest?: () => void,
 ): () => void {
     const onKeyDown = (event: KeyboardEvent) => {
+        // Word: Ctrl+Alt+M — new comment (works even when Alt is held).
+        if ((event.ctrlKey || event.metaKey) && event.altKey && !event.shiftKey && event.code === 'KeyM') {
+            if (event.defaultPrevented)
+                return;
+            const active = document.activeElement;
+            const target = event.target;
+            const inEditorRoot = root.contains(target as Node) || (active instanceof Node && root.contains(active));
+            if (!inEditorRoot || !onNewCommentRequest)
+                return;
+            if (isFormFieldTarget(target) || isFormFieldTarget(active))
+                return;
+            event.preventDefault();
+            event.stopPropagation();
+            onNewCommentRequest();
+            return;
+        }
+
         if (!(event.ctrlKey || event.metaKey) || event.altKey)
             return;
         if (event.defaultPrevented)
@@ -129,7 +149,7 @@ function bindLayoutSafeEditorHotkeys(
  */
 export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandle, Props>(
     function OutgoingLetterDocxEditor(
-        { documentBytes, title, templateKey, disabled, onReady, onChange, onSaveRequest },
+        { documentBytes, title, templateKey, disabled, onReady, onChange, onSaveRequest, onNewCommentRequest },
         ref,
     ) {
         const rootRef = useRef<HTMLDivElement>(null);
@@ -137,6 +157,8 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
         const fonts = useFonts(outgoingLetterEditorFonts);
         const onSaveRequestRef = useRef(onSaveRequest);
         onSaveRequestRef.current = onSaveRequest;
+        const onNewCommentRequestRef = useRef(onNewCommentRequest);
+        onNewCommentRequestRef.current = onNewCommentRequest;
 
         useImperativeHandle(ref, () => ({
             save: async () => {
@@ -148,6 +170,59 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
             },
             focus: () => {
                 innerRef.current?.focus();
+            },
+            getSelectionSnapshot: () => {
+                const editor = innerRef.current?.getEditor();
+                if (!editor) {
+                    return { text: '', collapsed: true, selectionJson: null };
+                }
+                const snap = editor.snapshot();
+                let text = '';
+                try {
+                    text = String(editor.query({ type: 'selectedText' }) ?? '')
+                        .replace(/\u00a0/g, ' ')
+                        .trim();
+                }
+                catch {
+                    text = '';
+                }
+                let selectionJson: string | null = null;
+                if (snap.selection && !snap.selectionCollapsed) {
+                    try {
+                        selectionJson = JSON.stringify(snap.selection);
+                    }
+                    catch {
+                        selectionJson = null;
+                    }
+                }
+                return {
+                    text,
+                    collapsed: Boolean(snap.selectionCollapsed) || !text,
+                    selectionJson,
+                };
+            },
+            restoreSelection: (selectionJson) => {
+                const editor = innerRef.current?.getEditor();
+                if (!editor || !selectionJson.trim())
+                    return false;
+                try {
+                    const range = JSON.parse(selectionJson) as { from: unknown; to: unknown };
+                    if (!range?.from || !range?.to)
+                        return false;
+                    // DocRange JSON from snapshot(); may be stale after edits.
+                    const result = editor.exec({
+                        type: 'setSelection',
+                        range,
+                    } as Parameters<Editor['exec']>[0]);
+                    if (result.ok) {
+                        innerRef.current?.focus();
+                        return true;
+                    }
+                }
+                catch {
+                    /* selection may be stale after edits */
+                }
+                return false;
             },
         }), []);
 
@@ -161,6 +236,7 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
                 root,
                 () => innerRef.current?.getEditor() ?? null,
                 () => { onSaveRequestRef.current?.(); },
+                () => { onNewCommentRequestRef.current?.(); },
             );
         }, [disabled, templateKey]);
 

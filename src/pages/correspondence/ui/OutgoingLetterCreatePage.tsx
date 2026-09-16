@@ -20,15 +20,19 @@ import {
     clearOutgoingLetterDraft,
     formatAttachmentSizeLabel,
     isOutgoingLetterDraftValid,
+    newOutgoingLetterCommentId,
     readOutgoingLetterDraft,
     writeOutgoingLetterDraft,
     getOutgoingLetterDraftFiles,
     type OutgoingLetterAttachmentMeta,
+    type OutgoingLetterDraftComment,
 } from '../lib/outgoingLetterSession';
 import { CORR_SHELL_NAV_TABS } from '../model/constants';
 import { invalidateCorrespondencePartnerAttention } from '@entities/correspondence';
 import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
+import { useCurrentUser } from '@shared/hooks';
 import { CorrespondenceShell } from './CorrespondenceShell';
+import { OutgoingLetterCommentsPane } from './OutgoingLetterCommentsPane';
 import { OutgoingLetterDocxErrorBoundary } from './OutgoingLetterDocxErrorBoundary';
 import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
 import type { OutgoingLetterDocxEditorHandle } from './outgoingLetterDocxEditorHandle';
@@ -77,6 +81,14 @@ function IcoEditorFullscreen({ exit }: { exit: boolean }) {
     );
 }
 
+function IcoComments() {
+    return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+    );
+}
+
 function fileToUint8Array(file: File): Promise<Uint8Array> {
     return file.arrayBuffer().then((buf) => new Uint8Array(buf));
 }
@@ -100,17 +112,24 @@ function hasComposeContent(
 export function OutgoingLetterCreatePage() {
     const navigate = useNavigate();
     const { showAlert, showConfirm } = useAppDialog();
+    const { user } = useCurrentUser();
     const extraFileRef = useRef<HTMLInputElement>(null);
     const importFileRef = useRef<HTMLInputElement>(null);
     const editorRef = useRef<OutgoingLetterDocxEditorHandle>(null);
     const allowLeaveRef = useRef(false);
     const leavePromptOpenRef = useRef(false);
+    const pendingComposeRef = useRef<{ quote: string; selectionJson: string | null } | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [subject, setSubject] = useState('');
     const [letterDateIso, setLetterDateIso] = useState(todayIso);
     const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel>(defaultOutgoingLetterCoverModel);
     const [files, setFiles] = useState<File[]>([]);
     const [attachmentMeta, setAttachmentMeta] = useState<OutgoingLetterAttachmentMeta[]>([]);
+    const [comments, setComments] = useState<OutgoingLetterDraftComment[]>([]);
+    const [commentsOpen, setCommentsOpen] = useState(false);
+    const [commentsComposing, setCommentsComposing] = useState(false);
+    const [composeQuote, setComposeQuote] = useState('');
+    const [activeCommentId, setActiveCommentId] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [templateBusy, setTemplateBusy] = useState(false);
     const [hydrated, setHydrated] = useState(false);
@@ -123,6 +142,8 @@ export function OutgoingLetterCreatePage() {
     const [editorFullscreen, setEditorFullscreen] = useState(false);
     const browserSupportsEditor = useMemo(() => canRunInBrowserDocxEditor(), []);
     const useInBrowserEditor = browserSupportsEditor && !editorCrashed;
+    const commentAuthorName = (user?.display_name || user?.email || 'Пользователь').trim();
+    const openCommentsCount = comments.filter((c) => !c.resolved).length;
 
     const needsLeaveConfirm = hydrated && hasComposeContent(
         subject,
@@ -140,6 +161,9 @@ export function OutgoingLetterCreatePage() {
             setCoverModel(draft.coverModel);
             setAttachmentMeta(draft.attachmentMeta);
             setFiles(getOutgoingLetterDraftFiles(draft.sessionId));
+            setComments(draft.comments ?? []);
+            if ((draft.comments ?? []).length > 0)
+                setCommentsOpen(true);
         }
         setHydrated(true);
     }, []);
@@ -209,7 +233,11 @@ export function OutgoingLetterCreatePage() {
         })();
     }, [blocker, dirty, showConfirm]);
 
-    const persistDraft = useCallback((nextFiles: File[], nextMeta: OutgoingLetterAttachmentMeta[]) => {
+    const persistDraft = useCallback((
+        nextFiles: File[],
+        nextMeta: OutgoingLetterAttachmentMeta[],
+        nextComments: OutgoingLetterDraftComment[] = comments,
+    ) => {
         const id = writeOutgoingLetterDraft({
             sessionId: sessionId ?? undefined,
             subject,
@@ -217,10 +245,11 @@ export function OutgoingLetterCreatePage() {
             coverModel,
             files: nextFiles,
             attachmentMeta: nextMeta,
+            comments: nextComments,
         });
         setSessionId(id);
         return id;
-    }, [coverModel, letterDateIso, sessionId, subject]);
+    }, [comments, coverModel, letterDateIso, sessionId, subject]);
 
     useEffect(() => {
         if (!hydrated)
@@ -233,11 +262,103 @@ export function OutgoingLetterCreatePage() {
                 coverModel,
                 files,
                 attachmentMeta,
+                comments,
             });
             setSessionId((prev) => prev ?? id);
         }, 600);
         return () => window.clearTimeout(t);
-    }, [hydrated, subject, letterDateIso, coverModel, files, attachmentMeta, sessionId]);
+    }, [hydrated, subject, letterDateIso, coverModel, files, attachmentMeta, comments, sessionId]);
+
+    const beginNewComment = useCallback(() => {
+        if (!useInBrowserEditor || busy || templateBusy)
+            return;
+        const snap = editorRef.current?.getSelectionSnapshot();
+        const quote = (snap?.text ?? '').trim();
+        if (!quote) {
+            void showAlert({
+                title: 'Выделите текст',
+                message: 'Как в Word: сначала выделите фрагмент письма, затем добавьте комментарий (Ctrl+Alt+M).',
+            });
+            setCommentsOpen(true);
+            return;
+        }
+        pendingComposeRef.current = {
+            quote,
+            selectionJson: snap?.selectionJson ?? null,
+        };
+        setComposeQuote(quote);
+        setCommentsComposing(true);
+        setCommentsOpen(true);
+        setActiveCommentId(null);
+    }, [busy, showAlert, templateBusy, useInBrowserEditor]);
+
+    const commitNewComment = useCallback((body: string) => {
+        const pending = pendingComposeRef.current;
+        const quote = (pending?.quote || composeQuote).trim();
+        if (!body.trim())
+            return;
+        const next: OutgoingLetterDraftComment = {
+            id: newOutgoingLetterCommentId(),
+            quote,
+            body: body.trim(),
+            authorName: commentAuthorName,
+            authorUserId: user?.id ?? null,
+            createdAt: new Date().toISOString(),
+            resolved: false,
+            selectionJson: pending?.selectionJson ?? null,
+        };
+        setComments((prev) => {
+            const list = [next, ...prev];
+            persistDraft(files, attachmentMeta, list);
+            return list;
+        });
+        pendingComposeRef.current = null;
+        setCommentsComposing(false);
+        setComposeQuote('');
+        setActiveCommentId(next.id);
+        setDirty(true);
+    }, [attachmentMeta, commentAuthorName, composeQuote, files, persistDraft, user?.id]);
+
+    const cancelNewComment = useCallback(() => {
+        pendingComposeRef.current = null;
+        setCommentsComposing(false);
+        setComposeQuote('');
+    }, []);
+
+    const selectComment = useCallback((id: string) => {
+        setActiveCommentId(id);
+        const target = comments.find((c) => c.id === id);
+        if (target?.selectionJson)
+            editorRef.current?.restoreSelection(target.selectionJson);
+    }, [comments]);
+
+    const changeCommentBody = useCallback((id: string, body: string) => {
+        setComments((prev) => {
+            const list = prev.map((c) => (c.id === id ? { ...c, body } : c));
+            persistDraft(files, attachmentMeta, list);
+            return list;
+        });
+        setDirty(true);
+    }, [attachmentMeta, files, persistDraft]);
+
+    const toggleCommentResolved = useCallback((id: string) => {
+        setComments((prev) => {
+            const list = prev.map((c) => (c.id === id ? { ...c, resolved: !c.resolved } : c));
+            persistDraft(files, attachmentMeta, list);
+            return list;
+        });
+        setDirty(true);
+    }, [attachmentMeta, files, persistDraft]);
+
+    const deleteComment = useCallback((id: string) => {
+        setComments((prev) => {
+            const list = prev.filter((c) => c.id !== id);
+            persistDraft(files, attachmentMeta, list);
+            return list;
+        });
+        setActiveCommentId((prev) => (prev === id ? null : prev));
+        setDirty(true);
+    }, [attachmentMeta, files, persistDraft]);
 
     const applyDocumentBytes = useCallback((bytes: Uint8Array, remount: boolean) => {
         setDocumentBytes(bytes);
@@ -620,6 +741,21 @@ export function OutgoingLetterCreatePage() {
                             {' '}
                             Черновик
                         </button>
+                        {useInBrowserEditor ? (
+                            <button
+                                type="button"
+                                className="corr__btn corr__btn--outline corr-word__comments-toggle"
+                                onClick={() => setCommentsOpen((v) => !v)}
+                                disabled={actionsDisabled || !documentBytes}
+                                aria-pressed={commentsOpen}
+                                title="Панель комментариев"
+                            >
+                                <IcoComments />
+                                {' '}
+                                Комментарии
+                                {openCommentsCount > 0 ? ` (${openCommentsCount})` : ''}
+                            </button>
+                        ) : null}
                         <button
                             type="button"
                             className="corr-word__fs-btn"
@@ -664,7 +800,24 @@ export function OutgoingLetterCreatePage() {
                     ) : null}
                 </div>
 
-                <section className="corr-word__editor-wrap" aria-label="Редактор письма">
+                <section
+                    className={`corr-word__editor-wrap${commentsOpen && useInBrowserEditor ? ' corr-word__editor-wrap--comments' : ''}`}
+                    aria-label="Редактор письма"
+                >
+                    {useInBrowserEditor && documentBytes && !templateBusy ? (
+                        <button
+                            type="button"
+                            className="corr-word__fs-comments-btn"
+                            onClick={() => setCommentsOpen((v) => !v)}
+                            disabled={actionsDisabled}
+                            aria-pressed={commentsOpen}
+                            title="Комментарии (Ctrl+Alt+M — новый)"
+                        >
+                            <IcoComments />
+                            Комментарии
+                            {openCommentsCount > 0 ? ` (${openCommentsCount})` : ''}
+                        </button>
+                    ) : null}
                     {!useInBrowserEditor ? (
                         <div className="corr-word__editor-fallback" role="status">
                             <p>{DOCX_EDITOR_BROWSER_HINT}</p>
@@ -687,36 +840,60 @@ export function OutgoingLetterCreatePage() {
                             Готовим бланк письма…
                         </div>
                     ) : (
-                        <OutgoingLetterDocxErrorBoundary
-                            fallback={(
-                                <div className="corr-word__editor-fallback" role="alert">
-                                    <p>Встроенный редактор не смог загрузиться в этом браузере.</p>
-                                    <p>{DOCX_EDITOR_BROWSER_HINT}</p>
-                                    <button
-                                        type="button"
-                                        className="corr__btn corr__btn--outline"
-                                        disabled={actionsDisabled}
-                                        onClick={() => importFileRef.current?.click()}
-                                    >
-                                        Загрузить .docx
-                                    </button>
-                                </div>
-                            )}
-                            onError={() => setEditorCrashed(true)}
-                        >
-                            <Suspense fallback={<div className="corr-word__editor-loading" role="status">Загрузка редактора…</div>}>
-                                <OutgoingLetterDocxEditor
-                                    ref={editorRef}
-                                    documentBytes={documentBytes}
-                                    title={editorTitle}
-                                    templateKey={templateKey}
-                                    disabled={busy}
-                                    onReady={() => setEditorReady(true)}
-                                    onChange={() => setDirty(true)}
-                                    onSaveRequest={() => { void handleSaveDraft(); }}
-                                />
-                            </Suspense>
-                        </OutgoingLetterDocxErrorBoundary>
+                        <>
+                            <div className="corr-word__editor-main">
+                                <OutgoingLetterDocxErrorBoundary
+                                    fallback={(
+                                        <div className="corr-word__editor-fallback" role="alert">
+                                            <p>Встроенный редактор не смог загрузиться в этом браузере.</p>
+                                            <p>{DOCX_EDITOR_BROWSER_HINT}</p>
+                                            <button
+                                                type="button"
+                                                className="corr__btn corr__btn--outline"
+                                                disabled={actionsDisabled}
+                                                onClick={() => importFileRef.current?.click()}
+                                            >
+                                                Загрузить .docx
+                                            </button>
+                                        </div>
+                                    )}
+                                    onError={() => setEditorCrashed(true)}
+                                >
+                                    <Suspense fallback={<div className="corr-word__editor-loading" role="status">Загрузка редактора…</div>}>
+                                        <OutgoingLetterDocxEditor
+                                            ref={editorRef}
+                                            documentBytes={documentBytes}
+                                            title={editorTitle}
+                                            templateKey={templateKey}
+                                            disabled={busy}
+                                            onReady={() => setEditorReady(true)}
+                                            onChange={() => setDirty(true)}
+                                            onSaveRequest={() => { void handleSaveDraft(); }}
+                                            onNewCommentRequest={beginNewComment}
+                                        />
+                                    </Suspense>
+                                </OutgoingLetterDocxErrorBoundary>
+                            </div>
+                            <OutgoingLetterCommentsPane
+                                open={commentsOpen}
+                                comments={comments}
+                                disabled={busy}
+                                activeId={activeCommentId}
+                                draftQuote={composeQuote}
+                                composing={commentsComposing}
+                                onClose={() => {
+                                    cancelNewComment();
+                                    setCommentsOpen(false);
+                                }}
+                                onNewComment={beginNewComment}
+                                onSelect={selectComment}
+                                onChangeBody={changeCommentBody}
+                                onToggleResolved={toggleCommentResolved}
+                                onDelete={deleteComment}
+                                onCommitNew={commitNewComment}
+                                onCancelNew={cancelNewComment}
+                            />
+                        </>
                     )}
                 </section>
             </div>
