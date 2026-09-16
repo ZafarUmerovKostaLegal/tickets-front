@@ -1,5 +1,6 @@
 import { useI18n } from '@shared/i18n';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
+import { AttendanceOverviewCard } from './AttendanceOverviewCard';
 import './AttendancePage.css';
 
 export function AttendancePageView() {
@@ -22,6 +23,10 @@ export function AttendancePageView() {
                         </div>
                     </div>
                 </header>
+
+                <div className="att__content">
+                    <AttendanceOverviewCard />
+                </div>
             </main>
         </div>
     );
