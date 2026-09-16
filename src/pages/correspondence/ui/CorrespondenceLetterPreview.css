@@ -835,6 +835,17 @@ html.corr-docx-fs .corr-shell__header {
   height: 100%;
   width: 100%;
   min-height: 0;
+  /* Word-like chrome tokens for the in-app DocxEditor */
+  --corr-word-ribbon-bg: #f3f3f3;
+  --corr-word-ribbon-surface: #ffffff;
+  --corr-word-ribbon-border: #e1e1e1;
+  --corr-word-ribbon-hover: #e5e5e5;
+  --corr-word-ribbon-active: #cce4f7;
+  --corr-word-ribbon-active-border: #92c0e0;
+  --corr-word-ribbon-accent: #185abd;
+  --corr-word-ribbon-text: #242424;
+  --corr-word-ribbon-muted: #605e5c;
+  --corr-word-ribbon-font: "Segoe UI", "Segoe UI Variable", system-ui, sans-serif;
 }
 
 .corr-docx-editor--disabled {
@@ -847,6 +858,144 @@ html.corr-docx-fs .corr-shell__header {
   max-height: 100%;
   min-height: 100%;
   width: 100% !important;
+  font-family: var(--corr-word-ribbon-font);
+}
+
+/* ── Menu bar → Word ribbon tabs ── */
+.corr-docx-editor .docx-menubar {
+  gap: 0;
+  padding: 0 0.5rem;
+  background: var(--corr-word-ribbon-surface);
+  border-bottom: 1px solid var(--corr-word-ribbon-border);
+  font: 400 13px/1.2 var(--corr-word-ribbon-font) !important;
+  color: var(--corr-word-ribbon-text) !important;
+}
+
+.corr-docx-editor .docx-menubar__trigger {
+  position: relative;
+  border-radius: 0 !important;
+  padding: 0.55rem 0.85rem !important;
+  font: 400 13px/1.2 var(--corr-word-ribbon-font) !important;
+  color: var(--corr-word-ribbon-text) !important;
+  background: transparent !important;
+}
+
+.corr-docx-editor .docx-menubar__trigger:hover,
+.corr-docx-editor .docx-menubar__trigger[data-open] {
+  background: var(--corr-word-ribbon-hover) !important;
+  color: var(--corr-word-ribbon-text) !important;
+}
+
+.corr-docx-editor .docx-menubar__trigger[data-open]::after {
+  content: "";
+  position: absolute;
+  left: 0.55rem;
+  right: 0.55rem;
+  bottom: 0;
+  height: 3px;
+  background: var(--corr-word-ribbon-accent);
+}
+
+/* ── Formatting toolbar → Word ribbon strip ── */
+.corr-docx-editor .docx-toolbar {
+  align-items: center;
+  gap: 0.15rem !important;
+  margin: 0 !important;
+  padding: 0.35rem 0.65rem !important;
+  min-height: 2.75rem !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  border-bottom: 1px solid var(--corr-word-ribbon-border) !important;
+  background: var(--corr-word-ribbon-bg) !important;
+  color: var(--corr-word-ribbon-text) !important;
+  font: 400 12px/1.2 var(--corr-word-ribbon-font) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.corr-docx-editor .docx-toolbar__group {
+  gap: 0.1rem !important;
+  align-items: center;
+}
+
+.corr-docx-editor .docx-toolbar__separator {
+  width: 1px !important;
+  height: 1.65rem !important;
+  margin: 0 0.4rem !important;
+  background: #c8c6c4 !important;
+}
+
+.corr-docx-editor .docx-toolbar__button {
+  width: 1.75rem !important;
+  height: 1.75rem !important;
+  border-radius: 2px !important;
+  color: var(--corr-word-ribbon-text) !important;
+}
+
+.corr-docx-editor .docx-toolbar__button:hover:not(:disabled) {
+  background: var(--corr-word-ribbon-hover) !important;
+  color: var(--corr-word-ribbon-text) !important;
+}
+
+.corr-docx-editor .docx-toolbar__button[data-active],
+.corr-docx-editor .docx-toolbar__button[data-active]:hover {
+  background: var(--corr-word-ribbon-active) !important;
+  color: var(--corr-word-ribbon-text) !important;
+  box-shadow: inset 0 0 0 1px var(--corr-word-ribbon-active-border);
+}
+
+.corr-docx-editor .docx-toolbar__picker {
+  height: 1.75rem !important;
+  padding: 0 0.4rem !important;
+  border-radius: 2px !important;
+  border: 1px solid transparent;
+  color: var(--corr-word-ribbon-text) !important;
+  background: var(--corr-word-ribbon-surface) !important;
+  box-shadow: inset 0 0 0 1px #8a8886;
+}
+
+.corr-docx-editor .docx-toolbar__picker:hover:not(:disabled) {
+  background: var(--corr-word-ribbon-surface) !important;
+  box-shadow: inset 0 0 0 1px #605e5c;
+}
+
+.corr-docx-editor .docx-toolbar__picker[data-open],
+.corr-docx-editor .docx-toolbar__picker[aria-expanded='true'] {
+  box-shadow: inset 0 0 0 1px var(--corr-word-ribbon-accent);
+}
+
+.corr-docx-editor .docx-toolbar__picker-value {
+  font: 400 12px/1.2 var(--corr-word-ribbon-font) !important;
+  color: var(--corr-word-ribbon-text) !important;
+}
+
+.corr-docx-editor .docx-toolbar__picker-caret {
+  color: var(--corr-word-ribbon-muted) !important;
+}
+
+.corr-docx-editor .docx-toolbar__font-size,
+.corr-docx-editor .docx-toolbar__zoom,
+.corr-docx-editor .docx-toolbar__line-spacing {
+  border-radius: 2px !important;
+}
+
+.corr-docx-editor .docx-toolbar__stepper-button {
+  border-radius: 2px !important;
+}
+
+.corr-docx-editor .docx-toolbar__stepper-button:hover:not(:disabled) {
+  background: var(--corr-word-ribbon-hover) !important;
+}
+
+.corr-docx-editor .docx-toolbar__colorsplit-bar,
+.corr-docx-editor .docx-toolbar__colorsplit-caret {
+  border-radius: 2px !important;
+}
+
+/* Editing-mode control on the right — flat Word-like chip */
+.corr-docx-editor .docx-toolbar__mode-menu,
+.corr-docx-editor [data-slot='editing.mode'],
+.corr-docx-editor .docx-toolbar button[aria-haspopup='menu'] {
+  border-radius: 2px !important;
 }
 
 @media (max-width: 900px) {
