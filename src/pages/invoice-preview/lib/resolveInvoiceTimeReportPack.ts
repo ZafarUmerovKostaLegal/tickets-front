@@ -171,23 +171,23 @@ function lineAmount(ln: InvoiceLineDto): number {
 function preferExpenseUsdForInvoice(currency: string, ln: InvoiceLineDto, lockedUsd: number | null): number {
     const cur = (currency || '').trim().toUpperCase();
     const line = lineAmount(ln);
-    const candidates: number[] = [];
-    if (lockedUsd != null && lockedUsd > 0)
-        candidates.push(lockedUsd);
-    if (line > 0)
-        candidates.push(line);
+    // Registry USD wins when present and sane; never Math.max with UZS principals.
+    if (lockedUsd != null && lockedUsd > 0 && lockedUsd < 1_000_000)
+        return lockedUsd;
+    if (cur !== 'USD')
+        return line;
 
     const srcCur = (ln.sourceCurrency ?? '').trim().toUpperCase();
     const srcAmt = Number(ln.sourceAmount);
     const fx = Number(ln.fxRate);
-    if (srcCur === 'USD' && Number.isFinite(srcAmt) && srcAmt > 0)
-        candidates.push(roundMoney2(srcAmt));
-    else if (srcCur === 'UZS' && Number.isFinite(srcAmt) && srcAmt > 0 && Number.isFinite(fx) && fx > 0)
-        candidates.push(roundMoney2(srcAmt / fx));
-    else if (cur === 'USD' && (!srcCur || srcCur === cur) && Number.isFinite(srcAmt) && srcAmt > 0)
-        candidates.push(roundMoney2(srcAmt));
-
-    return candidates.length ? Math.max(...candidates) : 0;
+    if (srcCur === 'USD' && Number.isFinite(srcAmt) && srcAmt > 0 && srcAmt < 1_000_000)
+        return roundMoney2(srcAmt);
+    if (srcCur === 'UZS' && Number.isFinite(srcAmt) && srcAmt > 0 && fx >= 100 && fx <= 200_000) {
+        const converted = roundMoney2(srcAmt / fx);
+        if (converted > 0 && converted < 1_000_000)
+            return converted;
+    }
+    return line;
 }
 
 type BuildingDetail = InvoiceTimeReportDetailRow & {
@@ -384,13 +384,20 @@ export async function overlayExpenseAmountsFromRegistry(
         if (!match)
             return slot;
         const locked = lockedExpenseUsdAmount(match);
-        if (locked == null || locked <= 0)
+        // Only replace when registry USD is sane and clearly a FX correction (not UZS-as-USD).
+        if (locked == null || locked <= 0 || locked >= 1_000_000)
             return slot;
         const current = roundMoney2(parseTimeReportAmountDisplay(slot.amount));
-        if (current >= locked)
-            return slot;
-        changed = true;
-        return { ...slot, amount: formatTimeReportAmount(locked, cur) };
+        if (current > 0 && locked >= current && locked <= current * 2 + 0.05) {
+            // Small upward FX correction (e.g. 10.01 → 10.06)
+            changed = true;
+            return { ...slot, amount: formatTimeReportAmount(locked, cur) };
+        }
+        if (current <= 0 || current >= 1_000_000) {
+            changed = true;
+            return { ...slot, amount: formatTimeReportAmount(locked, cur) };
+        }
+        return slot;
     });
     if (!changed)
         return pack;
@@ -515,12 +522,14 @@ export async function resolveInvoiceTimeReportPack(
             for (const e of expRows.filter((x) => selE.has(x.id))) {
                 let a = 0;
                 const unbilledEq = Number(e.equivalentAmount);
-                const unbilledRounded = Number.isFinite(unbilledEq) && unbilledEq > 0 ? roundMoney2(unbilledEq) : 0;
+                const unbilledRounded = Number.isFinite(unbilledEq) && unbilledEq > 0 && unbilledEq < 1_000_000
+                    ? roundMoney2(unbilledEq)
+                    : 0;
                 try {
                     const req = await fetchExpenseById(e.id);
                     const locked = lockedExpenseUsdAmount(req);
                     if (locked != null && locked > 0)
-                        a = Math.max(locked, unbilledRounded);
+                        a = locked;
                 }
                 catch {
                     a = unbilledRounded;
