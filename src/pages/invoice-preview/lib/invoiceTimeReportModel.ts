@@ -92,6 +92,31 @@ export function timeReportPackHasContent(pack: InvoiceTimeReportPack | null | un
         || trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []).length > 0;
 }
 
+/**
+ * Keep saved user edits for time/mehnat/summary, but always take expense amounts
+ * from a freshly resolved pack (registry UZS÷CBU), so invoice FX drift cannot stick.
+ */
+export function mergeTimeReportPackPreferLiveExpenses(
+    saved: InvoiceTimeReportPack,
+    live: InvoiceTimeReportPack,
+): InvoiceTimeReportPack {
+    const liveExpenses = live.expenseSlots ?? [];
+    const hasLiveExpenses = trimTrailingEmptyDetailSlots(liveExpenses).length > 0;
+    if (!hasLiveExpenses)
+        return saved;
+    const cur = (live.currency || saved.currency || 'USD').trim().toUpperCase() || 'USD';
+    const totalFromLive = (live.expenseTotalAmountDisplay ?? '').trim();
+    // Prefer live total; if missing, sum displayed line amounts so Total matches rows.
+    const expenseTotalAmountDisplay = totalFromLive
+        || formatTimeReportAmount(sumDetailAmounts(trimTrailingEmptyDetailSlots(liveExpenses)), cur);
+    return {
+        ...saved,
+        currency: live.currency || saved.currency,
+        expenseSlots: liveExpenses,
+        expenseTotalAmountDisplay,
+    };
+}
+
 /** Task names like «My mehnat registration» / «Регистрация My mehnat». Description-only mentions do not count. */
 export function isMyMehnatTimeReportRow(row: Pick<InvoiceTimeReportDetailRow, 'task'>): boolean {
     return (row.task ?? '').toLowerCase().includes('mehnat');

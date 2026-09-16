@@ -11,7 +11,7 @@ import { firmBankingToLegalOverrides, applyFirmBankingProfileToLegalOverrides, p
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { applyCoverLetterLanguage, type InvoiceCoverLanguage } from '../lib/invoiceCoverLetterI18n';
-import { emptyInvoiceTimeReportPack, ensureMehnatSeparatedPack, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
+import { emptyInvoiceTimeReportPack, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { splitDetailRowsForPagedTimeReport } from '../lib/invoiceTimeReportChunking';
@@ -31,7 +31,7 @@ import {
     type InvoicePreviewPageKey,
 } from '../lib/invoicePreviewPageSlots';
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
-import { resolveInvoiceTimeReportPack } from '../lib/resolveInvoiceTimeReportPack';
+import { resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from '../lib/resolveInvoiceTimeReportPack';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import { InvoiceTimeReportPage } from './InvoiceTimeReportPage';
 import { InvoiceLegalInvoicePage } from './InvoiceLegalInvoicePage';
@@ -233,9 +233,8 @@ export function InvoicePreviewPage() {
         if (doc.cover) {
             setCoverModel((prev) => (prev ? applyCoverDocumentOverrides(prev, doc.cover) : prev));
         }
-        if (doc.timeReport && timeReportPackHasContent(doc.timeReport)) {
-            setTimeReportPack(ensureMehnatSeparatedPack(doc.timeReport));
-        }
+        // timeReport is applied after live resolve (mergeTimeReportPackPreferLiveExpenses)
+        // so expense USD stays locked to the registry, not a stale invoice FX snapshot.
     }, []);
 
     useEffect(() => {
@@ -630,24 +629,56 @@ export function InvoicePreviewPage() {
         if (!session || coverModel == null)
             return;
         const savedPack = pendingDocOverridesRef.current?.timeReport;
-        if (savedPack && timeReportPackHasContent(savedPack)) {
-            setTimeReportPack(ensureMehnatSeparatedPack(savedPack));
-            return;
-        }
         let cancel = false;
-        void resolveInvoiceTimeReportPack(session, coverModel, {
-            onPartnerConfirmationBlocked(message) {
-                if (!cancel)
-                    pushToast({ message, variant: 'warning' });
-            },
-        }).then((p) => {
-            if (!cancel)
-                setTimeReportPack(ensureMehnatSeparatedPack(p));
-        }).catch((err) => {
-            console.error(err);
-            if (!cancel)
-                pushToast({ message: 'Не удалось загрузить time report для счёта', variant: 'error' });
-        });
+        void (async () => {
+            let projectId: string | null = session.mode === 'create'
+                ? (session.form.createProjectId?.trim() || null)
+                : null;
+            if (!projectId && session.mode === 'existing') {
+                try {
+                    const inv = await getInvoice(session.invoiceId, false);
+                    projectId = inv.projectId?.trim() || null;
+                }
+                catch {
+                    projectId = null;
+                }
+            }
+            if (cancel)
+                return;
+            try {
+                const live = await resolveInvoiceTimeReportPack(session, coverModel, {
+                    onPartnerConfirmationBlocked(message) {
+                        if (!cancel)
+                            pushToast({ message, variant: 'warning' });
+                    },
+                });
+                if (cancel)
+                    return;
+                const merged = savedPack && timeReportPackHasContent(savedPack)
+                    ? mergeTimeReportPackPreferLiveExpenses(savedPack, live)
+                    : live;
+                const healed = projectId
+                    ? await overlayExpenseAmountsFromRegistry(merged, projectId)
+                    : merged;
+                if (cancel)
+                    return;
+                setTimeReportPack(ensureMehnatSeparatedPack(healed));
+            }
+            catch (err) {
+                console.error(err);
+                if (cancel)
+                    return;
+                if (savedPack && timeReportPackHasContent(savedPack)) {
+                    const healed = projectId
+                        ? await overlayExpenseAmountsFromRegistry(savedPack, projectId)
+                        : savedPack;
+                    if (!cancel)
+                        setTimeReportPack(ensureMehnatSeparatedPack(healed));
+                }
+                else
+                    pushToast({ message: 'Не удалось загрузить time report для счёта', variant: 'error' });
+            }
+        })();
         return () => {
             cancel = true;
         };

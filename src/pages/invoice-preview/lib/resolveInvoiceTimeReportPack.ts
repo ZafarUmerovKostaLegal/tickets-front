@@ -16,7 +16,7 @@ import {
 } from '@entities/time-tracking';
 import { getUsers, type User } from '@entities/user';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
-import { fetchExpenseById } from '@entities/expenses/model/expensesApi';
+import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expensesApi';
 import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { lockedExpenseUsdAmount } from './lockedExpenseUsdAmount';
@@ -39,6 +39,8 @@ import {
     formatTimeReportHours,
     isMyMehnatTimeReportRow,
     padSummaryRows,
+    parseTimeReportAmountDisplay,
+    trimTrailingEmptyDetailSlots,
     type InvoiceTimeReportDetailRow,
     type InvoiceTimeReportPack,
     type InvoiceTimeReportSummaryRow,
@@ -168,13 +170,24 @@ function lineAmount(ln: InvoiceLineDto): number {
 
 function preferExpenseUsdForInvoice(currency: string, ln: InvoiceLineDto, lockedUsd: number | null): number {
     const cur = (currency || '').trim().toUpperCase();
-    if (cur !== 'USD' || lockedUsd == null || !(lockedUsd > 0))
-        return lineAmount(ln);
-    const src = (ln.sourceCurrency ?? '').trim().toUpperCase();
-    // Re-FX typically hits UZS (and other non-USD) sources; keep non-UZS foreign FX as stored.
-    if (src && src !== 'USD' && src !== 'UZS')
-        return lineAmount(ln);
-    return lockedUsd;
+    const line = lineAmount(ln);
+    const candidates: number[] = [];
+    if (lockedUsd != null && lockedUsd > 0)
+        candidates.push(lockedUsd);
+    if (line > 0)
+        candidates.push(line);
+
+    const srcCur = (ln.sourceCurrency ?? '').trim().toUpperCase();
+    const srcAmt = Number(ln.sourceAmount);
+    const fx = Number(ln.fxRate);
+    if (srcCur === 'USD' && Number.isFinite(srcAmt) && srcAmt > 0)
+        candidates.push(roundMoney2(srcAmt));
+    else if (srcCur === 'UZS' && Number.isFinite(srcAmt) && srcAmt > 0 && Number.isFinite(fx) && fx > 0)
+        candidates.push(roundMoney2(srcAmt / fx));
+    else if (cur === 'USD' && (!srcCur || srcCur === cur) && Number.isFinite(srcAmt) && srcAmt > 0)
+        candidates.push(roundMoney2(srcAmt));
+
+    return candidates.length ? Math.max(...candidates) : 0;
 }
 
 type BuildingDetail = InvoiceTimeReportDetailRow & {
@@ -312,7 +325,7 @@ function packFromDetails(
     const mehnatRows = allTime.filter((d) => isMyMehnatTimeReportRow(d));
     const timeRows = allTime.filter((d) => !isMyMehnatTimeReportRow(d));
     const expenseRows = details.filter((d) => d.rowKind === 'expense');
-    const expenseTotal = expenseRows.reduce((s, d) => s + d.amtNum, 0);
+    const expenseTotal = expenseRows.reduce((s, d) => s + roundMoney2(d.amtNum), 0);
     const mehnatHours = mehnatRows.reduce((s, d) => s + d.hoursNum, 0);
     const mehnatTotal = mehnatRows.reduce((s, d) => s + d.amtNum, 0);
     const tail = buildSummaryAndTotals(details, users, currency, initialsByAuthId);
@@ -329,6 +342,63 @@ function packFromDetails(
         ...tail,
         detailTotalHoursDisplay: formatTimeReportHours(timeHours),
         detailTotalAmountDisplay: formatTimeReportAmount(timeTotal, currency),
+    };
+}
+
+function normalizeExpenseDesc(raw: string): string {
+    return (raw ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/**
+ * Final pass: bump expense row amounts up to the expenses-registry USD when a
+ * description match is found. Covers missing expenseRequestId and stale overrides.
+ */
+export async function overlayExpenseAmountsFromRegistry(
+    pack: InvoiceTimeReportPack,
+    projectId: string | null | undefined,
+): Promise<InvoiceTimeReportPack> {
+    const pid = (projectId ?? '').trim();
+    const slots = trimTrailingEmptyDetailSlots(pack.expenseSlots ?? []);
+    if (!pid || slots.length === 0)
+        return pack;
+    let items: Awaited<ReturnType<typeof fetchExpenses>>['items'];
+    try {
+        items = (await fetchExpenses({ projectId: pid, limit: 500 })).items;
+    }
+    catch {
+        return pack;
+    }
+    if (!items.length)
+        return pack;
+
+    const cur = (pack.currency || 'USD').trim().toUpperCase() || 'USD';
+    let changed = false;
+    const next = slots.map((slot) => {
+        const desc = normalizeExpenseDesc(slot.description);
+        if (!desc)
+            return slot;
+        const match = items.find((r) => {
+            const rd = normalizeExpenseDesc(r.description || r.businessPurpose || '');
+            return Boolean(rd) && (rd === desc || desc.includes(rd) || rd.includes(desc));
+        });
+        if (!match)
+            return slot;
+        const locked = lockedExpenseUsdAmount(match);
+        if (locked == null || locked <= 0)
+            return slot;
+        const current = roundMoney2(parseTimeReportAmountDisplay(slot.amount));
+        if (current >= locked)
+            return slot;
+        changed = true;
+        return { ...slot, amount: formatTimeReportAmount(locked, cur) };
+    });
+    if (!changed)
+        return pack;
+    const total = next.reduce((s, r) => s + roundMoney2(parseTimeReportAmountDisplay(r.amount)), 0);
+    return {
+        ...pack,
+        expenseSlots: finalizeDetailSlots(next),
+        expenseTotalAmountDisplay: formatTimeReportAmount(total, cur),
     };
 }
 
@@ -443,8 +513,20 @@ export async function resolveInvoiceTimeReportPack(
             }
 
             for (const e of expRows.filter((x) => selE.has(x.id))) {
-                const raw = Number(e.equivalentAmount);
-                const a = Number.isFinite(raw) && raw > 0 ? roundMoney2(raw) : 0;
+                let a = 0;
+                const unbilledEq = Number(e.equivalentAmount);
+                const unbilledRounded = Number.isFinite(unbilledEq) && unbilledEq > 0 ? roundMoney2(unbilledEq) : 0;
+                try {
+                    const req = await fetchExpenseById(e.id);
+                    const locked = lockedExpenseUsdAmount(req);
+                    if (locked != null && locked > 0)
+                        a = Math.max(locked, unbilledRounded);
+                }
+                catch {
+                    a = unbilledRounded;
+                }
+                if (!(a > 0))
+                    a = unbilledRounded;
                 details.push({
                     date: dateDisplayFromIso(e.expenseDate, lang),
                     initials: '—',
@@ -461,7 +543,10 @@ export async function resolveInvoiceTimeReportPack(
                 });
             }
 
-            return packFromDetails(details, users, currency, initialsByAuthId);
+            return overlayExpenseAmountsFromRegistry(
+                packFromDetails(details, users, currency, initialsByAuthId),
+                pid,
+            );
         }
 
         const inv = await getInvoice(session.invoiceId, true);
@@ -493,11 +578,56 @@ export async function resolveInvoiceTimeReportPack(
             lockedUsd: number | null;
         };
         const expenseSnapByRequestId = new Map<string, ExpenseLineSnap>();
+        let projectExpenseById: Map<string, Awaited<ReturnType<typeof fetchExpenseById>>> | null = null;
+        async function loadProjectExpenses(): Promise<Map<string, Awaited<ReturnType<typeof fetchExpenseById>>>> {
+            if (projectExpenseById)
+                return projectExpenseById;
+            const map = new Map<string, Awaited<ReturnType<typeof fetchExpenseById>>>();
+            const pid = (inv.projectId ?? '').trim();
+            if (!pid) {
+                projectExpenseById = map;
+                return map;
+            }
+            try {
+                const listed = await fetchExpenses({ projectId: pid, limit: 500 });
+                for (const item of listed.items)
+                    map.set(item.id, item);
+            }
+            catch {
+                // ignore — fall back to per-id fetch only
+            }
+            projectExpenseById = map;
+            return map;
+        }
         async function resolveExpenseLineSnap(ln: InvoiceLineDto): Promise<ExpenseLineSnap> {
             const embedded = ln.expenseDate?.trim().slice(0, 10);
             const embeddedOk = embedded && /^\d{4}-\d{2}-\d{2}$/.test(embedded) ? embedded : null;
             const rid = ln.expenseRequestId?.trim();
             if (!rid) {
+                // Invoice line may omit expenseRequestId — match registry by description/date.
+                const byProject = await loadProjectExpenses();
+                const desc = (ln.description ?? '').trim().toLowerCase();
+                const wantDate = embeddedOk;
+                let matched: Awaited<ReturnType<typeof fetchExpenseById>> | null = null;
+                for (const req of byProject.values()) {
+                    const rd = (req.description ?? req.businessPurpose ?? '').trim().toLowerCase();
+                    const iso = req.expenseDate?.trim().slice(0, 10) ?? '';
+                    const dateOk = !wantDate || iso === wantDate;
+                    if (!dateOk || !rd || !desc)
+                        continue;
+                    if (rd === desc || desc.includes(rd) || rd.includes(desc)) {
+                        matched = req;
+                        break;
+                    }
+                }
+                if (matched) {
+                    const iso = matched.expenseDate?.trim().slice(0, 10) ?? '';
+                    const ok = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+                    return {
+                        dateIso: embeddedOk ?? ok,
+                        lockedUsd: lockedExpenseUsdAmount(matched),
+                    };
+                }
                 return { dateIso: embeddedOk, lockedUsd: null };
             }
             const cached = expenseSnapByRequestId.get(rid);
@@ -507,25 +637,30 @@ export async function resolveInvoiceTimeReportPack(
                     lockedUsd: cached.lockedUsd,
                 };
             }
+            let req: Awaited<ReturnType<typeof fetchExpenseById>> | null = null;
             try {
-                const req = await fetchExpenseById(rid);
-                const iso = req.expenseDate?.trim().slice(0, 10) ?? '';
-                const ok = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
-                const snap: ExpenseLineSnap = {
-                    dateIso: ok,
-                    lockedUsd: lockedExpenseUsdAmount(req),
-                };
-                expenseSnapByRequestId.set(rid, snap);
-                return {
-                    dateIso: embeddedOk ?? snap.dateIso,
-                    lockedUsd: snap.lockedUsd,
-                };
+                req = await fetchExpenseById(rid);
             }
             catch {
+                const byProject = await loadProjectExpenses();
+                req = byProject.get(rid) ?? null;
+            }
+            if (!req) {
                 const snap: ExpenseLineSnap = { dateIso: null, lockedUsd: null };
                 expenseSnapByRequestId.set(rid, snap);
                 return { dateIso: embeddedOk, lockedUsd: null };
             }
+            const iso = req.expenseDate?.trim().slice(0, 10) ?? '';
+            const ok = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+            const snap: ExpenseLineSnap = {
+                dateIso: ok,
+                lockedUsd: lockedExpenseUsdAmount(req),
+            };
+            expenseSnapByRequestId.set(rid, snap);
+            return {
+                dateIso: embeddedOk ?? snap.dateIso,
+                lockedUsd: snap.lockedUsd,
+            };
         }
 
         for (const ln of lines) {
@@ -617,7 +752,10 @@ export async function resolveInvoiceTimeReportPack(
             }
         }
 
-        return packFromDetails(details, users, currency, initialsByAuthId);
+        return overlayExpenseAmountsFromRegistry(
+            packFromDetails(details, users, currency, initialsByAuthId),
+            inv.projectId,
+        );
     }
     catch (err) {
         console.error('resolveInvoiceTimeReportPack failed', err);

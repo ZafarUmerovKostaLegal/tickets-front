@@ -1,5 +1,6 @@
 import fontkit from '@pdf-lib/fontkit';
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
+import { getInvoice } from '@entities/time-tracking';
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import dejavuSansBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
 import dejavuSansRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
@@ -14,8 +15,8 @@ import {
     packUppercaseRibbonPeriodMonth,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
-import { ensureMehnatSeparatedPack, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
-import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
+import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import {
     resolveLegalBillToBankName,
     resolveLegalBillToSwift,
@@ -1666,13 +1667,28 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
         }
     }
 
+    const liveTimeReport = await resolveInvoiceTimeReportPack(session, model);
     const timeReportRaw = (
         timeReportOverride
         && timeReportPackHasContent(timeReportOverride)
     )
-        ? timeReportOverride
-        : await resolveInvoiceTimeReportPack(session, model);
-    const timeReport = ensureMehnatSeparatedPack(timeReportRaw);
+        ? mergeTimeReportPackPreferLiveExpenses(timeReportOverride, liveTimeReport)
+        : liveTimeReport;
+    let projectId: string | null = session?.mode === 'create'
+        ? (session.form.createProjectId?.trim() || null)
+        : null;
+    if (!projectId && session?.mode === 'existing') {
+        try {
+            const inv = await getInvoice(session.invoiceId, false);
+            projectId = inv.projectId?.trim() || null;
+        }
+        catch {
+            projectId = null;
+        }
+    }
+    const timeReport = ensureMehnatSeparatedPack(
+        await overlayExpenseAmountsFromRegistry(timeReportRaw, projectId),
+    );
     const detailPlans = paginateDetailRowsForPdf(timeReport.detailSlots, model, timeReport, font, fontBold);
     const pdfPageCount = 2 + detailPlans.length;
     /** Preview/DOCX page numbers (fixed chunking) — selection UI uses these. */

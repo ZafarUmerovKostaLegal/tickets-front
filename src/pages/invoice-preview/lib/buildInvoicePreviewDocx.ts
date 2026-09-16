@@ -35,11 +35,12 @@ import {
     packUppercaseRibbonPeriodMonth,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
-import { ensureMehnatSeparatedPack, timeReportPackHasContent, trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { getInvoice } from '@entities/time-tracking';
+import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
-import { resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
+import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
 import {
@@ -915,13 +916,28 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
         }
     }
 
+    const liveTimeReport = await resolveInvoiceTimeReportPack(session, model);
     const timeReportPackRaw = (
         timeReportOverride
         && timeReportPackHasContent(timeReportOverride)
     )
-        ? timeReportOverride
-        : await resolveInvoiceTimeReportPack(session, model);
-    const timeReportPack = ensureMehnatSeparatedPack(timeReportPackRaw);
+        ? mergeTimeReportPackPreferLiveExpenses(timeReportOverride, liveTimeReport)
+        : liveTimeReport;
+    let projectId: string | null = session?.mode === 'create'
+        ? (session.form.createProjectId?.trim() || null)
+        : null;
+    if (!projectId && session?.mode === 'existing') {
+        try {
+            const inv = await getInvoice(session.invoiceId, false);
+            projectId = inv.projectId?.trim() || null;
+        }
+        catch {
+            projectId = null;
+        }
+    }
+    const timeReportPack = ensureMehnatSeparatedPack(
+        await overlayExpenseAmountsFromRegistry(timeReportPackRaw, projectId),
+    );
     const trChunks = splitDetailRowsForPagedTimeReport(timeReportPack.detailSlots);
     const pageCount = invoicePreviewPageCount(trChunks.length);
     const selected = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;
