@@ -767,6 +767,41 @@ html.corr-docx-fs .corr-shell__header {
   flex-direction: column;
 }
 
+/* Hide recipient/subject action strip in immersive mode */
+.corr-word--docx.corr-word--docx-fs .corr-word__toolbar {
+  display: none;
+}
+
+.corr-word__fs-chrome {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  border-bottom: 1px solid rgba(26, 20, 20, 0.1);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+}
+
+.corr-word__fs-chrome-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--corr-ink, #14213d);
+}
+
+.corr-word__fs-chrome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .corr-word--docx.corr-word--docx-fs .corr-word__editor-wrap {
   flex: 1 1 auto;
   min-height: 0;

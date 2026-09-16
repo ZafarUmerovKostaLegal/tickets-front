@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useBlocker, useNavigate } from 'react-router-dom';
 import { getCorrespondenceOutgoingUrl, routes } from '@shared/config';
 import { showToast, useAppDialog } from '@shared/ui';
 import type { InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
@@ -17,6 +17,7 @@ import {
     pickOutgoingWordFile,
 } from '../lib/openOutgoingLetterInWord';
 import {
+    clearOutgoingLetterDraft,
     formatAttachmentSizeLabel,
     isOutgoingLetterDraftValid,
     readOutgoingLetterDraft,
@@ -80,12 +81,30 @@ function fileToUint8Array(file: File): Promise<Uint8Array> {
     return file.arrayBuffer().then((buf) => new Uint8Array(buf));
 }
 
+function hasComposeContent(
+    subject: string,
+    recipientCompany: string,
+    files: File[],
+    dirty: boolean,
+): boolean {
+    if (dirty)
+        return true;
+    if (subject.trim())
+        return true;
+    const recipient = recipientCompany.trim();
+    if (recipient && recipient !== 'Company Name')
+        return true;
+    return files.length > 0;
+}
+
 export function OutgoingLetterCreatePage() {
     const navigate = useNavigate();
     const { showAlert, showConfirm } = useAppDialog();
     const extraFileRef = useRef<HTMLInputElement>(null);
     const importFileRef = useRef<HTMLInputElement>(null);
     const editorRef = useRef<OutgoingLetterDocxEditorHandle>(null);
+    const allowLeaveRef = useRef(false);
+    const leavePromptOpenRef = useRef(false);
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [subject, setSubject] = useState('');
     const [letterDateIso, setLetterDateIso] = useState(todayIso);
@@ -104,6 +123,13 @@ export function OutgoingLetterCreatePage() {
     const [editorFullscreen, setEditorFullscreen] = useState(false);
     const browserSupportsEditor = useMemo(() => canRunInBrowserDocxEditor(), []);
     const useInBrowserEditor = browserSupportsEditor && !editorCrashed;
+
+    const needsLeaveConfirm = hydrated && hasComposeContent(
+        subject,
+        coverModel.recipientCompany,
+        files,
+        dirty,
+    );
 
     useEffect(() => {
         const draft = readOutgoingLetterDraft();
@@ -129,7 +155,6 @@ export function OutgoingLetterCreatePage() {
         const onKey = (e: KeyboardEvent) => {
             if (e.key !== 'Escape')
                 return;
-            // Don't close immersive mode while a modal/dialog has focus.
             const active = document.activeElement;
             if (active instanceof Element && active.closest('[role="dialog"], .corr-modal, .app-dialog'))
                 return;
@@ -139,6 +164,50 @@ export function OutgoingLetterCreatePage() {
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, [editorFullscreen]);
+
+    useEffect(() => {
+        if (!needsLeaveConfirm)
+            return;
+        const onBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (allowLeaveRef.current)
+                return;
+            e.preventDefault();
+            e.returnValue = '';
+        };
+        window.addEventListener('beforeunload', onBeforeUnload);
+        return () => window.removeEventListener('beforeunload', onBeforeUnload);
+    }, [needsLeaveConfirm]);
+
+    const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+        if (allowLeaveRef.current || !needsLeaveConfirm)
+            return false;
+        return currentLocation.pathname !== nextLocation.pathname
+            || currentLocation.search !== nextLocation.search;
+    });
+
+    useEffect(() => {
+        if (blocker.state !== 'blocked' || leavePromptOpenRef.current)
+            return;
+        leavePromptOpenRef.current = true;
+        void (async () => {
+            const leave = await showConfirm({
+                title: 'Покинуть страницу?',
+                message: dirty
+                    ? 'В письме есть несохранённые правки. Сохраните черновик или подтвердите выход без сохранения.'
+                    : 'Вы уверены, что хотите уйти со страницы написания письма?',
+                confirmLabel: 'Уйти',
+                cancelLabel: 'Остаться',
+            });
+            leavePromptOpenRef.current = false;
+            if (leave) {
+                allowLeaveRef.current = true;
+                blocker.proceed();
+            }
+            else {
+                blocker.reset();
+            }
+        })();
+    }, [blocker, dirty, showConfirm]);
 
     const persistDraft = useCallback((nextFiles: File[], nextMeta: OutgoingLetterAttachmentMeta[]) => {
         const id = writeOutgoingLetterDraft({
@@ -219,13 +288,31 @@ export function OutgoingLetterCreatePage() {
         return () => {
             cancelled = true;
         };
-        // Initial open only — later rebuilds go through explicit actions.
         // eslint-disable-next-line react-hooks/exhaustive-deps -- mount hydrate
     }, [hydrated]);
 
+    const confirmLeavePage = useCallback(async (): Promise<boolean> => {
+        if (allowLeaveRef.current || !needsLeaveConfirm)
+            return true;
+        return showConfirm({
+            title: 'Покинуть страницу?',
+            message: dirty
+                ? 'В письме есть несохранённые правки. Сохраните черновик или подтвердите выход без сохранения.'
+                : 'Вы уверены, что хотите уйти со страницы написания письма?',
+            confirmLabel: 'Уйти',
+            cancelLabel: 'Остаться',
+        });
+    }, [dirty, needsLeaveConfirm, showConfirm]);
+
     const goBack = useCallback(() => {
-        navigate(getCorrespondenceOutgoingUrl());
-    }, [navigate]);
+        void (async () => {
+            const ok = await confirmLeavePage();
+            if (!ok)
+                return;
+            allowLeaveRef.current = true;
+            navigate(getCorrespondenceOutgoingUrl());
+        })();
+    }, [confirmLeavePage, navigate]);
 
     const letterFile = pickOutgoingWordFile(files);
     const extraFiles = letterFile ? files.filter((f) => f !== letterFile) : files;
@@ -235,7 +322,6 @@ export function OutgoingLetterCreatePage() {
         if (!otherPicked.length)
             return;
         const next = [...files.filter((f) => !isWordLetterFile(f) || f === letterFile), ...otherPicked];
-        // Keep current letter file if present
         const word = pickOutgoingWordFile(files);
         const withWord = word && !next.includes(word) ? [word, ...next] : next;
         const nextMeta = withWord.map((f, i) => ({
@@ -278,6 +364,30 @@ export function OutgoingLetterCreatePage() {
         persistDraft(next, nextMeta);
         setDirty(false);
         return next;
+    };
+
+    const handleSaveDraft = async () => {
+        if (useInBrowserEditor && (!documentBytes || !editorReady)) {
+            void showAlert({
+                title: 'Редактор ещё загружается',
+                message: 'Дождитесь появления бланка письма, затем сохраните черновик.',
+            });
+            return;
+        }
+        setBusy(true);
+        try {
+            await syncEditorIntoDraftFiles();
+            showToast({ message: 'Черновик сохранён', variant: 'success' });
+        }
+        catch (err) {
+            void showAlert({
+                title: 'Не удалось сохранить черновик',
+                message: err instanceof Error ? err.message : 'Ошибка сохранения .docx.',
+            });
+        }
+        finally {
+            setBusy(false);
+        }
     };
 
     const handleRebuildTemplate = async () => {
@@ -368,10 +478,11 @@ export function OutgoingLetterCreatePage() {
                 partnerUserId,
                 extraFiles: nextFiles,
             });
-            const { clearOutgoingLetterDraft } = await import('../lib/outgoingLetterSession');
             clearOutgoingLetterDraft();
+            setDirty(false);
             setReviewOpen(false);
             invalidateCorrespondencePartnerAttention();
+            allowLeaveRef.current = true;
             void showAlert({
                 title: 'Отправлено на согласование',
                 message: `Письмо отправлено партнёру «${partnerName}». После одобрения распечатайте, подпишите и загрузите скан.`,
@@ -394,6 +505,7 @@ export function OutgoingLetterCreatePage() {
 
     const recipientValue = coverModel.recipientCompany === 'Company Name' ? '' : coverModel.recipientCompany;
     const editorTitle = subject.trim() || 'Исходящее письмо';
+    const actionsDisabled = busy || templateBusy;
 
     return (
         <>
@@ -410,14 +522,24 @@ export function OutgoingLetterCreatePage() {
             }))}
             actions={(
                 <>
-                    <button type="button" className="corr__btn corr__btn--outline" onClick={goBack} disabled={busy || templateBusy}>
+                    <button type="button" className="corr__btn corr__btn--outline" onClick={goBack} disabled={actionsDisabled}>
                         Отмена
+                    </button>
+                    <button
+                        type="button"
+                        className="corr__btn corr__btn--outline"
+                        onClick={() => { void handleSaveDraft(); }}
+                        disabled={actionsDisabled || (useInBrowserEditor && !documentBytes)}
+                    >
+                        <IcoSave />
+                        {' '}
+                        Сохранить черновик
                     </button>
                     <button
                         type="button"
                         className="corr__btn corr__btn--primary"
                         onClick={() => { void openReviewModal(); }}
-                        disabled={busy || templateBusy || !documentBytes}
+                        disabled={actionsDisabled || !documentBytes}
                     >
                         <IcoSave />
                         {' '}
@@ -464,7 +586,7 @@ export function OutgoingLetterCreatePage() {
                         <button
                             type="button"
                             className="corr__btn corr__btn--outline"
-                            disabled={busy || templateBusy}
+                            disabled={actionsDisabled}
                             onClick={() => { void handleRebuildTemplate(); }}
                         >
                             {templateBusy ? 'Сборка…' : 'Пересобрать бланк'}
@@ -472,7 +594,7 @@ export function OutgoingLetterCreatePage() {
                         <button
                             type="button"
                             className="corr__btn corr__btn--outline"
-                            disabled={busy || templateBusy}
+                            disabled={actionsDisabled}
                             onClick={() => importFileRef.current?.click()}
                         >
                             Загрузить .docx
@@ -488,18 +610,16 @@ export function OutgoingLetterCreatePage() {
                             Вложения
                             {extraFiles.length > 0 ? ` (${extraFiles.length})` : ''}
                         </button>
-                        {editorFullscreen ? (
-                            <button
-                                type="button"
-                                className="corr__btn corr__btn--primary"
-                                onClick={() => { void openReviewModal(); }}
-                                disabled={busy || templateBusy || !documentBytes}
-                            >
-                                <IcoSave />
-                                {' '}
-                                {busy ? 'Подготовка…' : 'На согласование'}
-                            </button>
-                        ) : null}
+                        <button
+                            type="button"
+                            className="corr__btn corr__btn--outline"
+                            onClick={() => { void handleSaveDraft(); }}
+                            disabled={actionsDisabled || (useInBrowserEditor && !documentBytes)}
+                        >
+                            <IcoSave />
+                            {' '}
+                            Черновик
+                        </button>
                         <button
                             type="button"
                             className="corr-word__fs-btn"
@@ -544,6 +664,45 @@ export function OutgoingLetterCreatePage() {
                     ) : null}
                 </div>
 
+                {editorFullscreen ? (
+                    <div className="corr-word__fs-chrome" role="toolbar" aria-label="Полноэкранный режим">
+                        <span className="corr-word__fs-chrome-title">
+                            {editorTitle}
+                            {dirty ? <span className="corr-word__dirty" title="Есть несохранённые правки"> ●</span> : null}
+                        </span>
+                        <div className="corr-word__fs-chrome-actions">
+                            <button
+                                type="button"
+                                className="corr__btn corr__btn--outline"
+                                onClick={() => { void handleSaveDraft(); }}
+                                disabled={actionsDisabled || (useInBrowserEditor && !documentBytes)}
+                            >
+                                <IcoSave />
+                                {' '}
+                                Черновик
+                            </button>
+                            <button
+                                type="button"
+                                className="corr__btn corr__btn--primary"
+                                onClick={() => { void openReviewModal(); }}
+                                disabled={actionsDisabled || !documentBytes}
+                            >
+                                {busy ? 'Подготовка…' : 'На согласование'}
+                            </button>
+                            <button
+                                type="button"
+                                className="corr-word__fs-btn"
+                                onClick={() => setEditorFullscreen(false)}
+                                title="Свернуть редактор (Esc)"
+                                aria-label="Свернуть редактор"
+                                aria-pressed
+                            >
+                                <IcoEditorFullscreen exit />
+                            </button>
+                        </div>
+                    </div>
+                ) : null}
+
                 <section className="corr-word__editor-wrap" aria-label="Редактор письма">
                     {!useInBrowserEditor ? (
                         <div className="corr-word__editor-fallback" role="status">
@@ -556,7 +715,7 @@ export function OutgoingLetterCreatePage() {
                             <button
                                 type="button"
                                 className="corr__btn corr__btn--outline"
-                                disabled={busy || templateBusy}
+                                disabled={actionsDisabled}
                                 onClick={() => importFileRef.current?.click()}
                             >
                                 Загрузить .docx
@@ -575,7 +734,7 @@ export function OutgoingLetterCreatePage() {
                                     <button
                                         type="button"
                                         className="corr__btn corr__btn--outline"
-                                        disabled={busy || templateBusy}
+                                        disabled={actionsDisabled}
                                         onClick={() => importFileRef.current?.click()}
                                     >
                                         Загрузить .docx
@@ -593,7 +752,7 @@ export function OutgoingLetterCreatePage() {
                                     disabled={busy}
                                     onReady={() => setEditorReady(true)}
                                     onChange={() => setDirty(true)}
-                                    onSaveRequest={() => { void openReviewModal(); }}
+                                    onSaveRequest={() => { void handleSaveDraft(); }}
                                 />
                             </Suspense>
                         </OutgoingLetterDocxErrorBoundary>
