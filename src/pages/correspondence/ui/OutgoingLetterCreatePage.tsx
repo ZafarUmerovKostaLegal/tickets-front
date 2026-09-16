@@ -664,45 +664,6 @@ export function OutgoingLetterCreatePage() {
                     ) : null}
                 </div>
 
-                {editorFullscreen ? (
-                    <div className="corr-word__fs-chrome" role="toolbar" aria-label="Полноэкранный режим">
-                        <span className="corr-word__fs-chrome-title">
-                            {editorTitle}
-                            {dirty ? <span className="corr-word__dirty" title="Есть несохранённые правки"> ●</span> : null}
-                        </span>
-                        <div className="corr-word__fs-chrome-actions">
-                            <button
-                                type="button"
-                                className="corr__btn corr__btn--outline"
-                                onClick={() => { void handleSaveDraft(); }}
-                                disabled={actionsDisabled || (useInBrowserEditor && !documentBytes)}
-                            >
-                                <IcoSave />
-                                {' '}
-                                Черновик
-                            </button>
-                            <button
-                                type="button"
-                                className="corr__btn corr__btn--primary"
-                                onClick={() => { void openReviewModal(); }}
-                                disabled={actionsDisabled || !documentBytes}
-                            >
-                                {busy ? 'Подготовка…' : 'На согласование'}
-                            </button>
-                            <button
-                                type="button"
-                                className="corr-word__fs-btn"
-                                onClick={() => setEditorFullscreen(false)}
-                                title="Свернуть редактор (Esc)"
-                                aria-label="Свернуть редактор"
-                                aria-pressed
-                            >
-                                <IcoEditorFullscreen exit />
-                            </button>
-                        </div>
-                    </div>
-                ) : null}
-
                 <section className="corr-word__editor-wrap" aria-label="Редактор письма">
                     {!useInBrowserEditor ? (
                         <div className="corr-word__editor-fallback" role="status">
