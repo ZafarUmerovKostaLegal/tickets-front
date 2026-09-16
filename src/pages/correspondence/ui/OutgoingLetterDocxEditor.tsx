@@ -6,10 +6,11 @@ import {
     type DocxEditorRef,
     type Editor,
 } from '@docx-editor.dev/react';
-import { packagedFonts } from '@docx-editor.dev/fonts';
 import '@docx-editor.dev/core/styles/editor.css';
 import '@docx-editor.dev/react/styles.css';
 import type { OutgoingLetterDocxEditorHandle } from './outgoingLetterDocxEditorHandle';
+import { outgoingLetterEditorFonts } from '../lib/outgoingLetterEditorFonts';
+import { docxEditorRu } from '../lib/docxEditorRu';
 
 export type { OutgoingLetterDocxEditorHandle } from './outgoingLetterDocxEditorHandle';
 
@@ -133,7 +134,7 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
     ) {
         const rootRef = useRef<HTMLDivElement>(null);
         const innerRef = useRef<DocxEditorRef>(null);
-        const fonts = useFonts(packagedFonts());
+        const fonts = useFonts(outgoingLetterEditorFonts);
         const onSaveRequestRef = useRef(onSaveRequest);
         onSaveRequestRef.current = onSaveRequest;
 
@@ -175,6 +176,7 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
                     fonts={fonts}
                     mode={disabled ? 'view' : 'edit'}
                     locale="ru-RU"
+                    i18n={docxEditorRu}
                     title={title || 'Исходящее письмо'}
                     chrome
                     colorMode="light"

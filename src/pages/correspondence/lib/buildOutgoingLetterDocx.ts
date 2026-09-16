@@ -22,8 +22,9 @@ import {
     formatOutgoingLetterheadDate,
     formatOutgoingRefLine,
 } from './correspondenceLetterhead';
+import { OUTGOING_LETTER_DOC_FONT } from './outgoingLetterEditorFonts';
 
-const DOC_FONT = 'Calibri';
+const DOC_FONT = OUTGOING_LETTER_DOC_FONT;
 const DOC_SIZE = 22; // 11 pt
 const MUTED = '64748B';
 
