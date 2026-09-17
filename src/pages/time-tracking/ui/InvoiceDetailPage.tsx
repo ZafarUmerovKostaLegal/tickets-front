@@ -1129,13 +1129,7 @@ export function InvoiceDetailPage() {
               invalidateCalendarApiCache();
               const outlookSt = await getCalendarStatus();
               if (!outlookSt.connected || outlookSt.mailReady === false) {
-                const reconnect = await showConfirm({
-                  message: t('timeTrackingPage.invoices.errors.outlookReconnectNeeded'),
-                  confirmLabel: t('timeTrackingPage.invoices.sendDialog.outlookReconnect'),
-                  cancelLabel: t('timeTrackingPage.cancel'),
-                });
-                if (reconnect)
-                  await reconnectOutlookCalendar();
+                // Modal stays open with Connect Outlook — do not open another dialog under it.
                 return;
               }
 
@@ -1237,6 +1231,7 @@ export function InvoiceDetailPage() {
                 || lower.includes('mail.readwrite');
               if (outlookAuthIssue) {
                 invalidateCalendarApiCache();
+                setSendContactOpen(false);
                 const reconnect = await showConfirm({
                   message: msg || t('timeTrackingPage.invoices.errors.outlookReconnectNeeded'),
                   confirmLabel: t('timeTrackingPage.invoices.sendDialog.outlookReconnect'),

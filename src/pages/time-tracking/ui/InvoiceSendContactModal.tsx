@@ -5,7 +5,7 @@ import {
     type TimeManagerClientContactRow,
 } from '@entities/time-tracking';
 import { listContactsClientContacts } from '@entities/contacts';
-import { getCalendarStatus, invalidateCalendarApiCache, reconnectOutlookCalendar } from '@entities/todo/lib/calendarApi';
+import { connectOutlookCalendar, getCalendarStatus, invalidateCalendarApiCache, reconnectOutlookCalendar } from '@entities/todo/lib/calendarApi';
 import { useI18n } from '@shared/i18n';
 import {
     AddClientContactForClientModal,
@@ -217,23 +217,47 @@ export function InvoiceSendContactModal({
     };
 
     const selected = options.find((o) => o.key === selectedKey);
-    const canConfirm = Boolean(selected && optionHasEmail(selected) && !loading && !sending);
+    const outlookReady = outlookConnected === true && outlookMailReady !== false;
+    const canConfirm = Boolean(
+        selected && optionHasEmail(selected) && !loading && !sending && outlookReady,
+    );
 
-    const handleReconnectOutlook = async () => {
+    const handleConnectOutlook = async () => {
         setOutlookError(null);
         setOutlookBusy(true);
         try {
-            await reconnectOutlookCalendar();
+            // Soft connect when disconnected: avoids Microsoft "Need admin approval"
+            // from prompt=consent. Force re-consent only when mail scope is missing.
+            if (outlookConnected && outlookMailReady === false)
+                await reconnectOutlookCalendar();
+            else if (!outlookConnected)
+                await connectOutlookCalendar();
+            else
+                await reconnectOutlookCalendar();
         }
         catch (e) {
-            setOutlookError(e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.outlookNotConnected'));
+            const msg = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.outlookNotConnected');
+            setOutlookError(
+                /admin|админ|consent|соглас/i.test(msg)
+                    ? t('timeTrackingPage.invoices.sendDialog.outlookAdminConsentHint')
+                    : msg,
+            );
             setOutlookBusy(false);
         }
     };
 
     const handleConfirm = async () => {
-        if (!canConfirm || !selected?.email)
+        if (!selected?.email || loading || sending)
             return;
+        if (outlookConnected === null) {
+            setOutlookError(t('timeTrackingPage.invoices.sendDialog.outlookChecking'));
+            return;
+        }
+        if (!outlookReady) {
+            setOutlookError(t('timeTrackingPage.invoices.sendDialog.connectBeforeSend'));
+            return;
+        }
+        setOutlookError(null);
         setSending(true);
         try {
             await onConfirm({
@@ -259,7 +283,7 @@ export function InvoiceSendContactModal({
             <h2 id={`${uid}-send-title`} className="tt-tm-modal__title">
               {t('timeTrackingPage.invoices.sendDialog.title')}
             </h2>
-            <button type="button" className="tt-tm-modal__close" onClick={onClose} aria-label={t('timeTrackingPage.close')} disabled={sending}>
+            <button type="button" className="tt-tm-modal__close" onClick={onClose} aria-label={t('timeTrackingPage.close')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M18 6L6 18M6 6l12 12"/>
               </svg>
@@ -271,7 +295,7 @@ export function InvoiceSendContactModal({
             </p>
             <p className="tt-tm-hint">{t('timeTrackingPage.invoices.sendDialog.hint')}</p>
 
-            <div className={`tt-inv-send-contact__outlook${outlookConnected && outlookMailReady === false ? ' tt-inv-send-contact__outlook--warn' : ''}`} role="group" aria-label={t('timeTrackingPage.invoices.sendDialog.outlookAria')}>
+            <div className={`tt-inv-send-contact__outlook${!outlookReady && outlookConnected !== null ? ' tt-inv-send-contact__outlook--warn' : ''}`} role="group" aria-label={t('timeTrackingPage.invoices.sendDialog.outlookAria')}>
               <p className="tt-tm-hint">
                 {outlookConnected === null
                     ? t('timeTrackingPage.invoices.sendDialog.outlookChecking')
@@ -283,11 +307,16 @@ export function InvoiceSendContactModal({
                                 ? t('timeTrackingPage.invoices.sendDialog.outlookConnected')
                                 : t('timeTrackingPage.invoices.sendDialog.outlookConnectedUnknownMail')}
               </p>
+              {!outlookReady && outlookConnected !== null && (
+                <p className="tt-tm-hint tt-inv-send-contact__outlook-admin-hint">
+                  {t('timeTrackingPage.invoices.sendDialog.outlookAdminConsentHint')}
+                </p>
+              )}
               <button
                 type="button"
                 className="tt-settings__btn tt-settings__btn--ghost"
-                disabled={outlookBusy || sending}
-                onClick={() => void handleReconnectOutlook()}
+                disabled={outlookBusy}
+                onClick={() => void handleConnectOutlook()}
               >
                 {outlookBusy
                     ? t('timeTrackingPage.invoices.sendDialog.outlookConnecting')
@@ -365,13 +394,16 @@ export function InvoiceSendContactModal({
               {t('timeTrackingPage.invoices.sendDialog.addContact')}
             </button>
             <div className="tt-inv-send-contact__foot-actions">
-              <button type="button" className="tt-settings__btn tt-settings__btn--ghost" disabled={sending} onClick={onClose}>
+              <button type="button" className="tt-settings__btn tt-settings__btn--ghost" onClick={onClose}>
                 {t('timeTrackingPage.invoices.sendDialog.cancel')}
               </button>
               <button
                 type="button"
                 className="tt-settings__btn tt-settings__btn--primary"
                 disabled={!canConfirm}
+                title={!outlookReady && outlookConnected !== null
+                    ? t('timeTrackingPage.invoices.sendDialog.connectBeforeSend')
+                    : undefined}
                 onClick={() => void handleConfirm()}
               >
                 {sending

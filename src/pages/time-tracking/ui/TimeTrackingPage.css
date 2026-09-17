@@ -5058,6 +5058,11 @@ a.pp__proj-name--link:hover {
   margin: 0;
 }
 
+.tt-inv-send-contact__outlook-admin-hint {
+  font-size: 0.8rem;
+  color: var(--app-text-muted, #64748b);
+}
+
 .tt-inv-send-contact__item {
   padding: 0;
 }

@@ -1384,6 +1384,8 @@ export const timeTrackingPageExtraMessages = {
             outlookConnect: 'Подключить Outlook',
             outlookReconnect: 'Переподключить Outlook',
             outlookConnecting: 'Переход к Microsoft…',
+            connectBeforeSend: 'Сначала подключите Outlook (кнопка выше), затем откройте черновик.',
+            outlookAdminConsentHint: 'Обычный пользователь Microsoft может подключить свой Outlook сам. Если Microsoft пишет «нужен администратор» — один раз попросите IT выдать Admin consent для приложения Kosta Legal (Mail.ReadWrite) в Azure AD; после этого вход работает без прав админа.',
             mailSubject: 'Kosta Legal — счёт {invoice}',
             mailBodyHtml:
                 '<div style="margin:0;padding:0;background:#ffffff;color:#1e293b;font-family:\'Segoe UI\',Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;">'
