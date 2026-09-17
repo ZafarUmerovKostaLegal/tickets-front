@@ -226,11 +226,9 @@ export function InvoiceSendContactModal({
         setOutlookError(null);
         setOutlookBusy(true);
         try {
-            // Soft connect when disconnected: avoids Microsoft "Need admin approval"
-            // from prompt=consent. Force re-consent only when mail scope is missing.
-            if (outlookConnected && outlookMailReady === false)
-                await reconnectOutlookCalendar();
-            else if (!outlookConnected)
+            // Never use prompt=consent here: non-admins get «Требуется утверждение администратора»
+            // even when org admin consent is already granted.
+            if (!outlookConnected)
                 await connectOutlookCalendar();
             else
                 await reconnectOutlookCalendar();
@@ -238,7 +236,7 @@ export function InvoiceSendContactModal({
         catch (e) {
             const msg = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.outlookNotConnected');
             setOutlookError(
-                /admin|админ|consent|соглас/i.test(msg)
+                /admin|админ|consent|соглас|утвержден/i.test(msg)
                     ? t('timeTrackingPage.invoices.sendDialog.outlookAdminConsentHint')
                     : msg,
             );

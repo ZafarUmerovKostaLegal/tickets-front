@@ -1387,7 +1387,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             outlookReconnect: 'Reconnect Outlook',
             outlookConnecting: 'Redirecting to Microsoft…',
             connectBeforeSend: 'Connect Outlook first (button above), then open the draft.',
-            outlookAdminConsentHint: 'A regular Microsoft user can connect their own Outlook. If Microsoft says an admin is required, ask IT once to grant Admin consent for the Kosta Legal app (Mail.ReadWrite) in Azure AD; after that, sign-in works without admin rights.',
+            outlookAdminConsentHint: 'Azure permissions may already be granted, but Microsoft still shows “admin required” if the user is asked to re-consent or app assignment is required. Check: Enterprise applications → “Тикет Система Kosta Legal” → Properties → Assignment required = No (or add the user under Users and groups). Then the employee clicks “Connect Outlook” with their own account — do not sign in as admin from that screen.',
             mailSubject: 'Kosta Legal — Invoice {invoice}',
             mailBodyHtml:
                 '<div style="margin:0;padding:0;background:#ffffff;color:#1e293b;font-family:\'Segoe UI\',Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;">'

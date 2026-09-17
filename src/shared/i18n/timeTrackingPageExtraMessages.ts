@@ -1385,7 +1385,7 @@ export const timeTrackingPageExtraMessages = {
             outlookReconnect: 'Переподключить Outlook',
             outlookConnecting: 'Переход к Microsoft…',
             connectBeforeSend: 'Сначала подключите Outlook (кнопка выше), затем откройте черновик.',
-            outlookAdminConsentHint: 'Обычный пользователь Microsoft может подключить свой Outlook сам. Если Microsoft пишет «нужен администратор» — один раз попросите IT выдать Admin consent для приложения Kosta Legal (Mail.ReadWrite) в Azure AD; после этого вход работает без прав админа.',
+            outlookAdminConsentHint: 'Доступы в Azure уже могут быть выданы, но Microsoft всё равно показывает «нужен администратор», если требуется повторное согласие пользователя или включено назначение приложения. Проверьте: Enterprise applications → «Тикет Система Kosta Legal» → Properties → Assignment required = No (или добавьте сотрудника в Users and groups). Затем сотрудник снова нажимает «Подключить Outlook» своим аккаунтом — не входите под админом с этого экрана.',
             mailSubject: 'Kosta Legal — счёт {invoice}',
             mailBodyHtml:
                 '<div style="margin:0;padding:0;background:#ffffff;color:#1e293b;font-family:\'Segoe UI\',Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;">'

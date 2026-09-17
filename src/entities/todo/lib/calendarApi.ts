@@ -94,21 +94,22 @@ export async function connectOutlookCalendar(options?: { forceConsent?: boolean 
     throw new Error(detail ?? 'Не удалось начать подключение календаря');
 }
 
-/** Disconnect then start OAuth with prompt=consent (required after Mail.ReadWrite scope expansion). */
-export async function reconnectOutlookCalendar(): Promise<void> {
+/** Disconnect then start OAuth again. Soft connect by default — org admin consent
+ * already covers Mail.ReadWrite; prompt=consent forces a user consent screen that
+ * non-admins cannot complete («Требуется утверждение администратора»). */
+export async function reconnectOutlookCalendar(options?: { forceConsent?: boolean }): Promise<void> {
     const disc = await apiFetch('/api/v1/todos/calendar/disconnect', { method: 'DELETE' });
     invalidateCalendarApiCache();
-    // 404/405 = old gateway without disconnect route — still force consent on connect.
+    // 404/405 = old gateway without disconnect route — still continue to connect.
     if (!disc.ok && disc.status !== 404 && disc.status !== 405 && disc.status !== 409) {
         const body = await parseBody(disc);
         const detail = typeof body?.detail === 'string' ? body.detail : null;
         if (disc.status === 401)
             throw new Error('Требуется авторизация');
-        // Non-fatal for other errors: continue to consent flow.
         if (detail)
             console.warn('[Outlook] disconnect:', detail);
     }
-    await connectOutlookCalendar({ forceConsent: true });
+    await connectOutlookCalendar({ forceConsent: options?.forceConsent === true });
 }
 
 export async function disconnectOutlookCalendar(): Promise<void> {
