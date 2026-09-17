@@ -1002,6 +1002,18 @@ export async function sendInvoice(id: string): Promise<InvoiceDto> {
     return normalizeInvoiceDto(await res.json());
 }
 
+/** Clear «sent to client» mark and return invoice to draft (no payments). */
+export async function unsendInvoice(id: string): Promise<InvoiceDto> {
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/unsend`, {
+        ...invoiceApiFetchInit,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
+    });
+    await throwIfNotOk(res);
+    return normalizeInvoiceDto(await res.json());
+}
+
 export type InvoiceAccountingLastPageNotifyInput = {
     pdfBase64: string;
     pdfFileName?: string | null;

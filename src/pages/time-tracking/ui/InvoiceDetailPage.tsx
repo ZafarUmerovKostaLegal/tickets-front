@@ -13,6 +13,7 @@ import {
   getInvoice,
   patchInvoice,
   sendInvoice,
+  unsendInvoice,
   createInvoiceOutlookDraft,
   getInvoiceOutlookDraftStatus,
   markInvoiceViewed,
@@ -27,6 +28,7 @@ import {
   invoiceCanMarkViewed,
   invoiceCanRegisterPayment,
   invoiceCanCancel,
+  invoiceCanUnsend,
   invoiceCanDeleteDraft,
   invoiceCanPatchDraft,
   writeInvoicePreviewSession,
@@ -825,6 +827,33 @@ export function InvoiceDetailPage() {
                             {outlookSendWait && outlookSendWait.invoiceId === detail.id
                               ? t('timeTrackingPage.invoices.sendDialog.outlookWaitingShort')
                               : ttInvoiceSendActionLabel(detail.status as InvoiceUiStatus, t)}
+                          </button>
+                        )}
+                        {invoiceCanUnsend(detail.status as InvoiceUiStatus) && (
+                          <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {
+                            if (!await showConfirm({
+                              title: t('timeTrackingPage.invoices.confirm.unsendTitle'),
+                              message: t('timeTrackingPage.invoices.confirm.unsendMessage'),
+                              confirmLabel: t('timeTrackingPage.invoices.confirm.unsendConfirm'),
+                            }))
+                              return;
+                            setActionBusy(true);
+                            try {
+                              await unsendInvoice(detail.id);
+                              await refreshDetail(detail.id);
+                              pushToast({
+                                message: t('timeTrackingPage.invoices.detail.unsendDone'),
+                                variant: 'info',
+                              });
+                            }
+                            catch (e) {
+                              await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
+                            }
+                            finally {
+                              setActionBusy(false);
+                            }
+                          }}>
+                            {t('timeTrackingPage.invoices.detail.unsend')}
                           </button>
                         )}
                         {invoiceCanMarkViewed(detail.status as InvoiceUiStatus) && (
