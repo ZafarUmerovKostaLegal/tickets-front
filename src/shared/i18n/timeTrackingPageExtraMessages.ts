@@ -1652,6 +1652,7 @@ export const timeTrackingPageExtraMessages = {
             wordFailed: 'Не удалось сформировать Word',
             outlookDraftFailed: 'Не удалось создать черновик в Outlook',
             outlookNotConnected: 'Outlook не подключён. Подключите календарь Outlook и повторите попытку (нужно право Mail.ReadWrite).',
+            outlookReconnectNeeded: 'Сессия Outlook недоступна или устарела. Переподключите Outlook с доступом к почте (Mail.ReadWrite) и повторите отправку.',
             outlookOpenFailed: 'Черновик создан, но не удалось открыть окно Outlook. Разрешите всплывающие окна для сайта или откройте черновики вручную.',
             selectClient: 'Выберите клиента',
             selectLines: 'Отметьте хотя бы одну запись времени или расход',

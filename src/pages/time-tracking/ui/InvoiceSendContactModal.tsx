@@ -5,7 +5,7 @@ import {
     type TimeManagerClientContactRow,
 } from '@entities/time-tracking';
 import { listContactsClientContacts } from '@entities/contacts';
-import { getCalendarStatus, reconnectOutlookCalendar } from '@entities/todo/lib/calendarApi';
+import { getCalendarStatus, invalidateCalendarApiCache, reconnectOutlookCalendar } from '@entities/todo/lib/calendarApi';
 import { useI18n } from '@shared/i18n';
 import {
     AddClientContactForClientModal,
@@ -132,6 +132,7 @@ export function InvoiceSendContactModal({
     const [outlookError, setOutlookError] = useState<string | null>(null);
 
     const refreshOutlookStatus = useCallback(async () => {
+        invalidateCalendarApiCache();
         try {
             const st = await getCalendarStatus();
             setOutlookConnected(st.connected);

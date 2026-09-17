@@ -1654,6 +1654,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             wordFailed: 'Could not generate Word',
             outlookDraftFailed: 'Could not create Outlook draft',
             outlookNotConnected: 'Outlook is not connected. Connect Outlook calendar and try again (Mail.ReadWrite permission required).',
+            outlookReconnectNeeded: 'Outlook session is missing or expired. Reconnect Outlook with mail access (Mail.ReadWrite) and try sending again.',
             outlookOpenFailed: 'Draft created, but the Outlook popup could not be opened. Allow pop-ups for this site or open Drafts manually.',
             selectClient: 'Select a client',
             selectLines: 'Select at least one time entry or expense',

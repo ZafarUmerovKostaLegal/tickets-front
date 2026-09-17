@@ -31,12 +31,18 @@ import {
   invoiceCanPatchDraft,
   writeInvoicePreviewSession,
   mergeInvoiceDtoAfterPayment,
+  isTimeTrackingHttpError,
   type InvoiceDto,
   type InvoicePatchInput,
   type InvoiceUiStatus,
   type TimeManagerClientRow,
 } from '@entities/time-tracking';
 import { isActiveTimeManagerClientRow } from '@entities/time-tracking/lib/projectTimeEntry';
+import {
+  getCalendarStatus,
+  invalidateCalendarApiCache,
+  reconnectOutlookCalendar,
+} from '@entities/todo/lib/calendarApi';
 import { InvoiceSendContactModal } from './InvoiceSendContactModal';
 import { invoiceClientDescription } from '../lib/invoiceClientDescription';
 import {
@@ -1120,6 +1126,19 @@ export function InvoiceDetailPage() {
           onConfirm={async (contact) => {
             setActionBusy(true);
             try {
+              invalidateCalendarApiCache();
+              const outlookSt = await getCalendarStatus();
+              if (!outlookSt.connected || outlookSt.mailReady === false) {
+                const reconnect = await showConfirm({
+                  message: t('timeTrackingPage.invoices.errors.outlookReconnectNeeded'),
+                  confirmLabel: t('timeTrackingPage.invoices.sendDialog.outlookReconnect'),
+                  cancelLabel: t('timeTrackingPage.cancel'),
+                });
+                if (reconnect)
+                  await reconnectOutlookCalendar();
+                return;
+              }
+
               const client = await getTimeManagerClient(detail.clientId);
               const clientLabel = (clientNameById.get(detail.clientId) ?? detail.clientId).trim();
               const meta = await invoicePreviewMetaForExisting(detail, clientLabel);
@@ -1210,11 +1229,24 @@ export function InvoiceDetailPage() {
             catch (e) {
               const msg = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic');
               const lower = msg.toLowerCase();
-              if (lower.includes('не подключ') || lower.includes('not connected') || lower.includes('mail.readwrite'))
-                await showAlert({ message: t('timeTrackingPage.invoices.errors.outlookNotConnected') });
-              else
-                await showAlert({ message: msg || t('timeTrackingPage.invoices.errors.outlookDraftFailed') });
-              throw e;
+              const outlookAuthIssue =
+                isTimeTrackingHttpError(e, 409)
+                || isTimeTrackingHttpError(e, 403)
+                || lower.includes('не подключ')
+                || lower.includes('not connected')
+                || lower.includes('mail.readwrite');
+              if (outlookAuthIssue) {
+                invalidateCalendarApiCache();
+                const reconnect = await showConfirm({
+                  message: msg || t('timeTrackingPage.invoices.errors.outlookReconnectNeeded'),
+                  confirmLabel: t('timeTrackingPage.invoices.sendDialog.outlookReconnect'),
+                  cancelLabel: t('timeTrackingPage.cancel'),
+                });
+                if (reconnect)
+                  await reconnectOutlookCalendar();
+                return;
+              }
+              await showAlert({ message: msg || t('timeTrackingPage.invoices.errors.outlookDraftFailed') });
             }
             finally {
               setActionBusy(false);
