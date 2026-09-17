@@ -756,11 +756,14 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
         },
         addContactModal: {
             title: 'Add contact for client',
+            editTitle: 'Edit contact',
             insufficientRights: 'Insufficient permissions to add contacts.',
             clientArchivedHint: 'This client is archived. Restore the client in the edit card, then add a contact.',
             contactName: 'Contact name',
             contactNamePlaceholder: 'Full name or title',
             hint: 'The contact is saved in the client’s additional contacts list. Main contact and organization details are configured in “Edit client”.',
+            editHint: 'Changes are saved to the client’s additional contacts list.',
+            editPrimaryHint: 'Changes are saved to the client’s primary contact.',
         },
     },
     expenses: {
@@ -1361,6 +1364,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             noEmail: 'No email — cannot select',
             empty: 'This client has no contacts. Add a contact with an email.',
             addContact: 'Add contact',
+            editContact: 'Edit',
             confirm: 'Open in Outlook',
             cancel: 'Cancel',
             loadFailed: 'Could not load client contacts',

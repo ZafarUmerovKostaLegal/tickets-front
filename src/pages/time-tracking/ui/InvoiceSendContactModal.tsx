@@ -7,7 +7,10 @@ import {
 import { listContactsClientContacts } from '@entities/contacts';
 import { getCalendarStatus, reconnectOutlookCalendar } from '@entities/todo/lib/calendarApi';
 import { useI18n } from '@shared/i18n';
-import { AddClientContactForClientModal } from './AddClientContactForClientModal';
+import {
+    AddClientContactForClientModal,
+    type AddClientContactEditTarget,
+} from './AddClientContactForClientModal';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 
 const PRIMARY_KEY = 'primary';
@@ -121,6 +124,7 @@ export function InvoiceSendContactModal({
     const [selectedKey, setSelectedKey] = useState('');
     const [clientArchived, setClientArchived] = useState(false);
     const [addOpen, setAddOpen] = useState(false);
+    const [editContact, setEditContact] = useState<AddClientContactEditTarget | null>(null);
     const [sending, setSending] = useState(false);
     const [outlookConnected, setOutlookConnected] = useState<boolean | null>(null);
     const [outlookMailReady, setOutlookMailReady] = useState<boolean | null>(null);
@@ -191,7 +195,7 @@ export function InvoiceSendContactModal({
     }, [refreshOutlookStatus]);
 
     useEffect(() => {
-        if (addOpen)
+        if (addOpen || editContact)
             return;
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape')
@@ -199,7 +203,17 @@ export function InvoiceSendContactModal({
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [addOpen, onClose]);
+    }, [addOpen, editContact, onClose]);
+
+    const openEdit = (opt: ContactOption) => {
+        setEditContact({
+            kind: opt.isPrimary ? 'primary' : 'extra',
+            id: opt.isPrimary ? undefined : opt.key,
+            name: opt.name === '—' ? '' : opt.name,
+            phone: opt.phone,
+            email: opt.email,
+        });
+    };
 
     const selected = options.find((o) => o.key === selectedKey);
     const canConfirm = Boolean(selected && optionHasEmail(selected) && !loading && !sending);
@@ -296,33 +310,43 @@ export function InvoiceSendContactModal({
                     const inputId = `${uid}-opt-${opt.key}`;
                     return (
                       <li key={opt.key} className={`tt-tm-contact-list__item tt-inv-send-contact__item${enabled ? '' : ' tt-inv-send-contact__item--disabled'}`}>
-                        <label className="tt-inv-send-contact__label" htmlFor={inputId}>
-                          <input
-                            id={inputId}
-                            type="radio"
-                            name={`${uid}-send-contact`}
-                            value={opt.key}
-                            checked={selectedKey === opt.key}
-                            disabled={!enabled || sending}
-                            onChange={() => setSelectedKey(opt.key)}
-                          />
-                          <span className="tt-tm-contact-list__main">
-                            <span className="tt-tm-contact-list__name">
-                              {opt.name}
-                              {opt.isPrimary ? (
-                                <span className="tt-inv-send-contact__badge">
-                                  {t('timeTrackingPage.invoices.sendDialog.primaryBadge')}
-                                </span>
-                              ) : null}
+                        <div className="tt-inv-send-contact__row">
+                          <label className="tt-inv-send-contact__label" htmlFor={inputId}>
+                            <input
+                              id={inputId}
+                              type="radio"
+                              name={`${uid}-send-contact`}
+                              value={opt.key}
+                              checked={selectedKey === opt.key}
+                              disabled={!enabled || sending}
+                              onChange={() => setSelectedKey(opt.key)}
+                            />
+                            <span className="tt-tm-contact-list__main">
+                              <span className="tt-tm-contact-list__name">
+                                {opt.name}
+                                {opt.isPrimary ? (
+                                  <span className="tt-inv-send-contact__badge">
+                                    {t('timeTrackingPage.invoices.sendDialog.primaryBadge')}
+                                  </span>
+                                ) : null}
+                              </span>
+                              <span className="tt-tm-contact-list__meta">
+                                {enabled
+                                    ? opt.email
+                                    : t('timeTrackingPage.invoices.sendDialog.noEmail')}
+                                {opt.phone ? ` · ${opt.phone}` : ''}
+                              </span>
                             </span>
-                            <span className="tt-tm-contact-list__meta">
-                              {enabled
-                                  ? opt.email
-                                  : t('timeTrackingPage.invoices.sendDialog.noEmail')}
-                              {opt.phone ? ` · ${opt.phone}` : ''}
-                            </span>
-                          </span>
-                        </label>
+                          </label>
+                          <button
+                            type="button"
+                            className="tt-settings__btn tt-settings__btn--ghost tt-inv-send-contact__edit"
+                            disabled={sending || loading}
+                            onClick={() => openEdit(opt)}
+                          >
+                            {t('timeTrackingPage.invoices.sendDialog.editContact')}
+                          </button>
+                        </div>
                       </li>
                     );
                 })}
@@ -367,6 +391,21 @@ export function InvoiceSendContactModal({
           onClose={() => setAddOpen(false)}
           onCreated={(row) => {
               const prefer = row.email?.trim() ? row.id : undefined;
+              void reload(prefer);
+          }}
+        />
+      )}
+
+      {editContact && (
+        <AddClientContactForClientModal
+          clientId={clientId}
+          clientName={clientName}
+          clientArchived={clientArchived}
+          canManage
+          editContact={editContact}
+          onClose={() => setEditContact(null)}
+          onSaved={({ key, email }) => {
+              const prefer = email?.trim() ? key : undefined;
               void reload(prefer);
           }}
         />
