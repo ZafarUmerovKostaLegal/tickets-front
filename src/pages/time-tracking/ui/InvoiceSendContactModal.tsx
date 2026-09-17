@@ -128,6 +128,7 @@ export function InvoiceSendContactModal({
     const [sending, setSending] = useState(false);
     const [outlookConnected, setOutlookConnected] = useState<boolean | null>(null);
     const [outlookMailReady, setOutlookMailReady] = useState<boolean | null>(null);
+    const [outlookMailReason, setOutlookMailReason] = useState<string | null>(null);
     const [outlookBusy, setOutlookBusy] = useState(false);
     const [outlookError, setOutlookError] = useState<string | null>(null);
 
@@ -137,10 +138,12 @@ export function InvoiceSendContactModal({
             const st = await getCalendarStatus();
             setOutlookConnected(st.connected);
             setOutlookMailReady(typeof st.mailReady === 'boolean' ? st.mailReady : null);
+            setOutlookMailReason(st.mailReadyReason?.trim() || null);
         }
         catch {
             setOutlookConnected(false);
             setOutlookMailReady(false);
+            setOutlookMailReason(null);
         }
     }, []);
 
@@ -300,14 +303,23 @@ export function InvoiceSendContactModal({
                     : !outlookConnected
                         ? t('timeTrackingPage.invoices.sendDialog.outlookDisconnected')
                         : outlookMailReady === false
-                            ? t('timeTrackingPage.invoices.sendDialog.outlookMailNotReady')
+                            ? outlookMailReason === 'no_exchange_mailbox'
+                                ? t('timeTrackingPage.invoices.sendDialog.outlookNoMailboxLicense')
+                                : outlookMailReason === 'missing_scope'
+                                    ? t('timeTrackingPage.invoices.sendDialog.outlookMailScopeMissing')
+                                    : t('timeTrackingPage.invoices.sendDialog.outlookMailNotReady')
                             : outlookMailReady === true
                                 ? t('timeTrackingPage.invoices.sendDialog.outlookConnected')
                                 : t('timeTrackingPage.invoices.sendDialog.outlookConnectedUnknownMail')}
               </p>
-              {!outlookReady && outlookConnected !== null && (
+              {!outlookReady && outlookConnected !== null && outlookMailReason !== 'no_exchange_mailbox' && (
                 <p className="tt-tm-hint tt-inv-send-contact__outlook-admin-hint">
                   {t('timeTrackingPage.invoices.sendDialog.outlookAdminConsentHint')}
+                </p>
+              )}
+              {outlookConnected && outlookMailReady === false && outlookMailReason === 'no_exchange_mailbox' && (
+                <p className="tt-tm-hint tt-inv-send-contact__outlook-admin-hint">
+                  {t('timeTrackingPage.invoices.sendDialog.outlookLicenseHint')}
                 </p>
               )}
               <button

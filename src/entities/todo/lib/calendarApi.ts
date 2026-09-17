@@ -127,6 +127,8 @@ export type CalendarStatusResult = {
     connected: boolean;
     /** False when calendar token exists but Mail.ReadWrite is missing. */
     mailReady?: boolean;
+    /** missing_scope | no_exchange_mailbox | mail_api_error */
+    mailReadyReason?: string;
     detail?: string;
 };
 export async function getCalendarStatus(signal?: AbortSignal): Promise<CalendarStatusResult> {
@@ -146,12 +148,15 @@ export async function getCalendarStatus(signal?: AbortSignal): Promise<CalendarS
         const data = (await res.json()) as {
             connected?: boolean;
             mailReady?: boolean;
+            mailReadyReason?: unknown;
             detail?: unknown;
         };
         const connected = !!data?.connected;
+        const reason = typeof data.mailReadyReason === 'string' ? data.mailReadyReason.trim() : '';
         return {
             connected,
             mailReady: typeof data?.mailReady === 'boolean' ? data.mailReady : undefined,
+            mailReadyReason: reason || undefined,
             detail: typeof data?.detail === 'string' ? data.detail : undefined,
         };
     }, { signal });
