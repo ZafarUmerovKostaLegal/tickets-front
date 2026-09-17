@@ -100,8 +100,6 @@ function parsePartnerPendingBadgeList(raw: unknown): PartnerPendingBadgeRow[] {
 
 
 
-/** Лёгкий badge-счётчик (без полного списка и entryCounts). */
-
 export async function fetchPartnerForReviewBadgeCount(options?: {
 
     scope?: PartnerPendingListScope;
@@ -168,7 +166,6 @@ export async function fetchPartnerForReviewBadgeCount(options?: {
 
 
 
-/** @deprecated Prefer fetchPartnerForReviewBadgeCount — kept for callers expecting rows. */
 
 export async function listPartnerReportConfirmationsPendingForBadge(options?: {
 

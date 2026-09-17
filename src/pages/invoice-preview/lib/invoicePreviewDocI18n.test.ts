@@ -22,9 +22,10 @@ describe('invoiceTimeReportI18n', () => {
         expect(labels.amount('EUR')).toBe('Сумма (EUR)');
     });
 
-    it('formats dates and task labels by language', () => {
-        expect(formatTimeReportDateDisplay('2026-06-08', 'ENG')).toMatch(/Jun/i);
-        expect(formatTimeReportDateDisplay('2026-06-08', 'RU')).toMatch(/июн/i);
+    it('formats dates as DD.MM.YYYY and task labels by language', () => {
+        expect(formatTimeReportDateDisplay('2026-06-08', 'ENG')).toBe('08.06.2026');
+        expect(formatTimeReportDateDisplay('2026-07-02', 'RU')).toBe('02.07.2026');
+        expect(formatTimeReportDateDisplay('bad', 'ENG')).toBe('—');
         expect(localizeTimeReportTaskLabel('Document Review', 'RU')).toBe('Просмотр документов');
         expect(localizeTimeReportTaskLabel('Telephone calls', 'ENG')).toBe('Telephone calls');
     });

@@ -1,4 +1,3 @@
-/** Thin barrel — implementations live under ./domains. */
 export * from './domains/httpShared';
 export * from './domains/usersAndRates';
 export * from './domains/timeEntries';

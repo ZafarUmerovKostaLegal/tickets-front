@@ -110,14 +110,12 @@ export function formatTimeReportDateDisplay(
     iso: string | undefined | null,
     lang?: InvoiceCoverLanguage | null,
 ): string {
+    void lang;
     const s = (iso ?? '').trim().slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(s))
         return '—';
-    const d = new Date(`${s}T12:00:00`);
-    if (Number.isNaN(d.getTime()))
-        return '—';
-    const locale = normalizeCoverLanguage(lang) === 'RU' ? 'ru-RU' : 'en-GB';
-    return d.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+    const [y, m, d] = s.split('-');
+    return `${d}.${m}.${y}`;
 }
 
 export function localizeTimeReportTaskLabel(
