@@ -99,7 +99,8 @@ const COVER_SIG_BEFORE = CSS_REM_PT * 2;
 const LEGAL_LOGO_H_PT = 52;
 const LEGAL_LOGO_W_PT = LEGAL_LOGO_H_PT * LEGAL_VERT_LOGO_ASPECT;
 const LEGAL_MASTHEAD_MB = CSS_REM_PT * 0.85;
-const LEGAL_RIBBON_MB = CSS_REM_PT * 0.75;
+/** Match InvoiceLegalInvoicePage.css: ribbon margin-bottom + panels padding-top. */
+const LEGAL_RIBBON_MB = CSS_REM_PT * (0.75 + 0.55);
 const LEGAL_PANELS_PT = CSS_REM_PT * 0.65;
 
 type PdfRgb = ReturnType<typeof rgb>;
@@ -1382,7 +1383,8 @@ function drawLegalInvoicePdfPage(
     const rightColW = W - MR - splitX - 8;
     const leftColW = Math.max(80, splitX - ML - 8);
     const billLineGap = DOC_LH * 0.92;
-    const panelsTop = y;
+    // Baseline below the reserved gap so glyph ascent does not eat into ribbon spacing.
+    const panelsTop = y - textAscent(fontBold, DOC_FS);
 
     page.drawText(labels.billTo, { x: ML, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
     page.drawText(labels.caseDetails, { x: splitX, y: panelsTop, size: DOC_FS, font: fontBold, color: FIRM_NAME });
