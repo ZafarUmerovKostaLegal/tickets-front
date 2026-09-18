@@ -468,6 +468,8 @@ export const enMessages = {
         errors: {
             loadFailed: 'Load failed',
             settingsLoadFailed: 'Failed to load settings',
+            exportFailed: 'Could not build Excel file',
+            exportSelectEmployee: 'Select one employee to download the period report',
         },
         datePicker: {
             placeholder: 'Select date',
@@ -480,6 +482,9 @@ export const enMessages = {
             statusOnTime: 'On time',
             statusLate: 'Late',
             statusAbsent: 'Absent',
+            excelEmployeePeriod: 'Employee Excel',
+            excelBusy: 'Building Excel…',
+            excelHint: 'Select an employee and period — downloads an attendance table report',
         },
     },
     ticketsPage: {

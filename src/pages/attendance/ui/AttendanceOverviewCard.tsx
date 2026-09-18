@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+    exportAttendanceEmployeePeriodExcel,
+    fetchAttendance,
     fetchDailyAttendanceReport,
     fetchPeriodAttendanceReport,
     type AttendanceStatus,
@@ -12,6 +14,7 @@ import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { formatTime } from '@shared/lib/formatDate';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
+import { useAppToast } from '@shared/ui';
 
 export type AttendanceStatusFilter = 'all' | AttendanceStatus;
 
@@ -301,6 +304,7 @@ function mergeEmployeeOptions(
 
 export function AttendanceOverviewCard() {
     const { t, locale } = useI18n();
+    const { pushToast } = useAppToast();
     const today = useMemo(() => toYmd(new Date()), []);
     const [selectedDate, setSelectedDate] = useState(today);
     const [periodFrom, setPeriodFrom] = useState(today);
@@ -313,9 +317,15 @@ export function AttendanceOverviewCard() {
     const [workdayEnd, setWorkdayEnd] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [exportBusy, setExportBusy] = useState(false);
 
     const isPeriodMode = periodFrom !== periodTo;
     const days = useMemo(() => weekDays(selectedDate), [selectedDate]);
+    const selectedEmployee = useMemo(
+        () => employeeOptions.find((o) => o.key === selectedEmployeeKey) ?? null,
+        [employeeOptions, selectedEmployeeKey],
+    );
+    const canExportEmployeePeriod = selectedEmployeeKey !== ALL_EMPLOYEE_KEY && Boolean(selectedEmployee);
 
     const load = useCallback(async (signal?: AbortSignal) => {
         setLoading(true);
@@ -544,6 +554,53 @@ export function AttendanceOverviewCard() {
         setSelectedDate(value);
     };
 
+    const handleExportEmployeeExcel = async () => {
+        if (!canExportEmployeePeriod || !selectedEmployee) {
+            pushToast({
+                message: t('attendancePage.errors.exportSelectEmployee'),
+                variant: 'warning',
+            });
+            return;
+        }
+        setExportBusy(true);
+        try {
+            const exportRows = items.filter((item) => (
+                matchesEmployeeSelection(item, selectedEmployeeKey, selectedEmployee)
+            ));
+            let rawMarks: Awaited<ReturnType<typeof fetchAttendance>> = [];
+            const personId = selectedEmployee.cameraEmployeeNo.trim();
+            if (personId) {
+                try {
+                    rawMarks = await fetchAttendance({
+                        dateFrom: periodFrom,
+                        dateTo: periodTo,
+                        personId,
+                        maxRecordsPerDevice: 5000,
+                    });
+                }
+                catch {
+                    rawMarks = [];
+                }
+            }
+            await exportAttendanceEmployeePeriodExcel({
+                employeeName: selectedEmployee.name,
+                dateFrom: periodFrom,
+                dateTo: periodTo,
+                items: exportRows,
+                rawMarks,
+            });
+        }
+        catch (e) {
+            pushToast({
+                message: e instanceof Error ? e.message : t('attendancePage.errors.exportFailed'),
+                variant: 'error',
+            });
+        }
+        finally {
+            setExportBusy(false);
+        }
+    };
+
     const filters: { id: AttendanceStatusFilter; label: string }[] = [
         { id: 'all', label: t('attendancePage.filterAll') },
         { id: 'present_on_time', label: t('attendancePage.filter.onTime') },
@@ -634,6 +691,22 @@ export function AttendanceOverviewCard() {
                         getSearchText={(o) => o.name}
                         onSelect={(o) => setSelectedEmployeeKey(o.key)}
                     />
+                </div>
+                <div className="att-overview__field att-overview__field--action">
+                    <span className="att-overview__field-spacer" aria-hidden>&nbsp;</span>
+                    <button
+                        type="button"
+                        className="att-overview__excel-btn"
+                        disabled={loading || exportBusy || !canExportEmployeePeriod}
+                        title={canExportEmployeePeriod
+                            ? t('attendancePage.export.excelHint')
+                            : t('attendancePage.errors.exportSelectEmployee')}
+                        onClick={() => void handleExportEmployeeExcel()}
+                    >
+                        {exportBusy
+                            ? t('attendancePage.export.excelBusy')
+                            : t('attendancePage.export.excelEmployeePeriod')}
+                    </button>
                 </div>
             </div>
 

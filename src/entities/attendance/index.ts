@@ -16,6 +16,7 @@ export type {
 export type { WorkdaySettingsDto } from './model/workdaySettingsTypes';
 export { workdayDtoToSettings, settingsToWorkdayDto } from './lib/workdaySettingsMap';
 export { dedupeHikvisionUsers } from './lib/dedupeHikvisionUsers';
+export { exportAttendanceEmployeePeriodExcel } from './lib/exportAttendanceEmployeePeriodExcel';
 export { getAttendanceApiUrl, getAttendanceResolvedBaseUrl } from './lib/config';
 export type { UploadAttendanceExplanationParams, AttendanceRangeMarker, AttendanceRangeReportResponse } from './api';
 export {

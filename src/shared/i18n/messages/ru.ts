@@ -468,6 +468,8 @@ export const ruMessages: Messages = {
         errors: {
             loadFailed: 'Ошибка загрузки',
             settingsLoadFailed: 'Не удалось загрузить настройки',
+            exportFailed: 'Не удалось сформировать Excel',
+            exportSelectEmployee: 'Выберите одного сотрудника, чтобы скачать отчёт за период',
         },
         datePicker: {
             placeholder: 'Выберите дату',
@@ -480,6 +482,9 @@ export const ruMessages: Messages = {
             statusOnTime: 'Вовремя',
             statusLate: 'Опоздание',
             statusAbsent: 'Отсутствует',
+            excelEmployeePeriod: 'Excel по сотруднику',
+            excelBusy: 'Формируем Excel…',
+            excelHint: 'Выберите сотрудника и период — скачается таблица как в отчёте посещаемости',
         },
     },
     ticketsPage: {
@@ -1043,14 +1048,23 @@ export type Messages = {
             | 'resetting',
             string
         >;
-        errors: Record<'loadFailed' | 'settingsLoadFailed', string>;
+        errors: Record<'loadFailed' | 'settingsLoadFailed' | 'exportFailed' | 'exportSelectEmployee', string>;
         datePicker: {
             placeholder: string;
             prevMonth: string;
             nextMonth: string;
             weekdays: readonly string[];
         };
-        export: Record<'statusColumn' | 'statusOnTime' | 'statusLate' | 'statusAbsent', string>;
+        export: Record<
+            | 'statusColumn'
+            | 'statusOnTime'
+            | 'statusLate'
+            | 'statusAbsent'
+            | 'excelEmployeePeriod'
+            | 'excelBusy'
+            | 'excelHint',
+            string
+        >;
     };
     ticketsPage: {
         back: string;

@@ -149,6 +149,42 @@
   min-width: 12rem;
 }
 
+.att-overview__field--action {
+  flex: 0 0 auto;
+}
+
+.att-overview__field-spacer {
+  display: block;
+  height: 1.05em;
+  line-height: 1.05;
+  visibility: hidden;
+}
+
+.att-overview__excel-btn {
+  appearance: none;
+  height: 2.35rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.55rem;
+  background: var(--app-surface, #fff);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.att-overview__excel-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--app-accent, #6366f1) 70%, var(--app-border));
+  color: var(--app-accent, #4338ca);
+}
+
+.att-overview__excel-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .att-overview__field input,
 .att-overview__field select {
   height: 2.35rem;
