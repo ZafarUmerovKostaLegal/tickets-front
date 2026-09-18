@@ -4,10 +4,11 @@ import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog } from '@shar
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { apiFetch } from '@shared/api';
-import { getTicket, getComments, addComment, addCommentWs, subscribeTicketsWsPush, connectTicketsWsWhenReady, getStatuses, getPriorities, updateTicket, getAttachmentUrl, type Ticket, type Comment, type StatusItem, type PriorityItem, type UpdateTicketData, } from '@entities/ticket';
+import { getTicket, getComments, addComment, addCommentWs, subscribeTicketsWsPush, connectTicketsWsWhenReady, getStatuses, getPriorities, updateTicket, getAttachmentUrl, submitTicketForApproval, approveTicket, rejectTicket, isTicketOnApprovalStatus, TICKET_STATUS_ON_APPROVAL, type Ticket, type Comment, type StatusItem, type PriorityItem, type UpdateTicketData, } from '@entities/ticket';
 import { ticketAttachmentFileName } from '@entities/ticket/lib/attachmentFileName';
 import type { AttachmentPreviewModel } from '@entities/expenses/lib/buildAttachmentPreview';
 import { TicketAttachmentPreviewModal } from './TicketAttachmentPreviewModal';
+import { TicketSubmitApprovalModal } from './TicketSubmitApprovalModal';
 import { getUser, type User } from '@entities/user';
 import {
     useI18n,
@@ -70,10 +71,14 @@ const IconEye = memo(function IconEye() {
 });
 function getStatusColor(status: string): string {
     const s = status?.toLowerCase() || '';
-    if (s === 'closed')
+    if (s === 'closed' || s.includes('закрыт'))
         return 'closed';
-    if (s === 'in_progress')
+    if (s === 'in_progress' || s.includes('работе'))
         return 'progress';
+    if (isTicketOnApprovalStatus(status))
+        return 'approval';
+    if (s.includes('невозмож'))
+        return 'impossible';
     return 'open';
 }
 function getPriorityColor(priority: string): string {
@@ -140,6 +145,12 @@ export function TicketDetailPage() {
     const [savePending, setSavePending] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [statusError, setStatusError] = useState<string | null>(null);
+    const [approvalModalOpen, setApprovalModalOpen] = useState(false);
+    const [approvalSubmitting, setApprovalSubmitting] = useState(false);
+    const [decisionPending, setDecisionPending] = useState(false);
+    const [rejectOpen, setRejectOpen] = useState(false);
+    const [rejectComment, setRejectComment] = useState('');
+    const [decisionError, setDecisionError] = useState<string | null>(null);
     const statusDropdownRef = useRef<HTMLDivElement>(null);
     const editAttachmentInputRef = useRef<HTMLInputElement>(null);
     const previewObjectUrlRef = useRef<string | null>(null);
@@ -221,6 +232,12 @@ export function TicketDetailPage() {
     const handleStatusChange = useCallback(async (newStatus: string) => {
         if (!uuid || !ticket || statusUpdating)
             return;
+        if (isTicketOnApprovalStatus(newStatus) || newStatus === TICKET_STATUS_ON_APPROVAL) {
+            setStatusDropdownOpen(false);
+            setStatusError(null);
+            setApprovalModalOpen(true);
+            return;
+        }
         setStatusUpdating(true);
         setStatusDropdownOpen(false);
         setStatusError(null);
@@ -235,6 +252,67 @@ export function TicketDetailPage() {
             setStatusUpdating(false);
         }
     }, [uuid, ticket, statusUpdating, t]);
+
+    const handleSubmitApproval = useCallback(async (partnerUserId: number) => {
+        if (!uuid || approvalSubmitting)
+            return;
+        setApprovalSubmitting(true);
+        setStatusError(null);
+        try {
+            const updated = await submitTicketForApproval(uuid, partnerUserId);
+            setTicket(updated);
+            setApprovalModalOpen(false);
+        }
+        catch (err) {
+            setStatusError(ticketErrorMessage(err, 'ticketDetailPage.errApprovalSubmit', 'ticketDetailPage.errStatusForbidden', t));
+        }
+        finally {
+            setApprovalSubmitting(false);
+        }
+    }, [uuid, approvalSubmitting, t]);
+
+    const handleApproveTicket = useCallback(async () => {
+        if (!uuid || decisionPending)
+            return;
+        setDecisionPending(true);
+        setDecisionError(null);
+        try {
+            const updated = await approveTicket(uuid);
+            setTicket(updated);
+            setRejectOpen(false);
+            setRejectComment('');
+        }
+        catch (err) {
+            setDecisionError(ticketErrorMessage(err, 'ticketDetailPage.errApprovalDecide', 'ticketDetailPage.errStatusForbidden', t));
+        }
+        finally {
+            setDecisionPending(false);
+        }
+    }, [uuid, decisionPending, t]);
+
+    const handleRejectTicket = useCallback(async () => {
+        if (!uuid || decisionPending)
+            return;
+        const comment = rejectComment.trim();
+        if (!comment) {
+            setDecisionError(t('ticketDetailPage.approvalRejectCommentRequired'));
+            return;
+        }
+        setDecisionPending(true);
+        setDecisionError(null);
+        try {
+            const updated = await rejectTicket(uuid, comment);
+            setTicket(updated);
+            setRejectOpen(false);
+            setRejectComment('');
+        }
+        catch (err) {
+            setDecisionError(ticketErrorMessage(err, 'ticketDetailPage.errApprovalDecide', 'ticketDetailPage.errStatusForbidden', t));
+        }
+        finally {
+            setDecisionPending(false);
+        }
+    }, [uuid, decisionPending, rejectComment, t]);
     const openTicketEditor = useCallback(() => {
         if (!ticket)
             return;
@@ -314,6 +392,13 @@ export function TicketDetailPage() {
         Number(ticket.created_by_user_id) === Number(currentUser.id);
     const canManageTicket = hasFullTicketAccessRole(currentUser?.role) || isTicketAuthor;
     const canChangeStatus = canManageTicket;
+    const canDecideApproval = Boolean(
+        ticket
+        && isTicketOnApprovalStatus(ticket.status)
+        && currentUser?.id != null
+        && ticket.partner_user_id != null
+        && Number(ticket.partner_user_id) === Number(currentUser.id),
+    );
     const categorySelectOptions = useMemo((): string[] => {
         const base: string[] = [...TICKET_CATEGORIES];
         const c = ticket?.category?.trim();
@@ -532,6 +617,15 @@ export function TicketDetailPage() {
         onClose={closeAttachmentPreview}
         onOpenExternal={openAttachmentPreviewExternal}
       />
+      <TicketSubmitApprovalModal
+        open={approvalModalOpen}
+        onClose={() => {
+            if (!approvalSubmitting)
+                setApprovalModalOpen(false);
+        }}
+        onSubmit={handleSubmitApproval}
+        submitPending={approvalSubmitting}
+      />
       <main className="td-page__main">
         <TicketDetailPageNav />
 
@@ -730,6 +824,68 @@ export function TicketDetailPage() {
                     </span>)}
                   {statusError && <p className="td__edit-error td__edit-error--inline" role="alert">{statusError}</p>}
                 </div>
+
+                {isTicketOnApprovalStatus(ticket.status) && (
+                  <div className="td__info-block td__info-block--approval">
+                    <span className="td__info-label">{t('ticketDetailPage.approvalWaitingLabel')}</span>
+                    <p className="td__approval-hint">
+                      {canDecideApproval
+                          ? t('ticketDetailPage.approvalWaitingForYou')
+                          : t('ticketDetailPage.approvalWaitingForPartner')}
+                    </p>
+                    {canDecideApproval && (
+                      <div className="td__approval-actions">
+                        <button
+                          type="button"
+                          className="td__approval-btn td__approval-btn--approve"
+                          onClick={() => void handleApproveTicket()}
+                          disabled={decisionPending}
+                        >
+                          {decisionPending ? t('ticketDetailPage.approvalDeciding') : t('ticketDetailPage.approvalApprove')}
+                        </button>
+                        <button
+                          type="button"
+                          className="td__approval-btn td__approval-btn--reject"
+                          onClick={() => {
+                              setRejectOpen((v) => !v);
+                              setDecisionError(null);
+                          }}
+                          disabled={decisionPending}
+                        >
+                          {t('ticketDetailPage.approvalReject')}
+                        </button>
+                      </div>
+                    )}
+                    {canDecideApproval && rejectOpen && (
+                      <div className="td__approval-reject">
+                        <textarea
+                          className="td__approval-reject-input"
+                          value={rejectComment}
+                          onChange={(e) => setRejectComment(e.target.value)}
+                          rows={3}
+                          disabled={decisionPending}
+                          placeholder={t('ticketDetailPage.approvalRejectPlaceholder')}
+                        />
+                        <button
+                          type="button"
+                          className="td__approval-btn td__approval-btn--reject-confirm"
+                          onClick={() => void handleRejectTicket()}
+                          disabled={decisionPending}
+                        >
+                          {t('ticketDetailPage.approvalRejectConfirm')}
+                        </button>
+                      </div>
+                    )}
+                    {decisionError && <p className="td__edit-error td__edit-error--inline" role="alert">{decisionError}</p>}
+                  </div>
+                )}
+
+                {ticket.rejection_comment?.trim() && !isTicketOnApprovalStatus(ticket.status) && (
+                  <div className="td__info-block">
+                    <span className="td__info-label">{t('ticketDetailPage.approvalRejectionLabel')}</span>
+                    <p className="td__approval-rejection">{ticket.rejection_comment}</p>
+                  </div>
+                )}
 
                 <div className="td__info-block">
                   <span className="td__info-label"><IconFlag /> {t('ticketDetailPage.labelPriority')}</span>

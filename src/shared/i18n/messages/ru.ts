@@ -600,6 +600,30 @@ export const ruMessages: Messages = {
         priorityAria: 'Приоритет',
         categoryAria: 'Категория',
         loading: 'Загрузка…',
+        approvalModalTitle: 'Отправить на согласование',
+        approvalModalLead: 'Выберите партнёра, который должен согласовать заявку. Ему придёт уведомление.',
+        approvalPartnerLabel: 'Партнёр',
+        approvalPartnerPlaceholder: 'Выберите партнёра',
+        approvalPartnerRequired: 'Выберите партнёра',
+        approvalPartnersLoading: 'Загрузка партнёров…',
+        approvalPartnersEmpty: 'Нет партнёров',
+        approvalPartnersNoMatch: 'Не найдено',
+        approvalPartnersLoadErr: 'Не удалось загрузить партнёров',
+        approvalCancel: 'Отмена',
+        approvalSubmit: 'На согласование',
+        approvalSubmitting: 'Отправка…',
+        approvalWaitingLabel: 'Согласование',
+        approvalWaitingForYou: 'Заявка ожидает вашего решения.',
+        approvalWaitingForPartner: 'Заявка ожидает решения назначенного партнёра.',
+        approvalApprove: 'Согласовать',
+        approvalReject: 'Отклонить',
+        approvalRejectConfirm: 'Подтвердить отклонение',
+        approvalRejectPlaceholder: 'Комментарий при отклонении…',
+        approvalRejectCommentRequired: 'Укажите комментарий при отклонении',
+        approvalDeciding: 'Сохранение…',
+        approvalRejectionLabel: 'Причина отклонения',
+        errApprovalSubmit: 'Не удалось отправить на согласование',
+        errApprovalDecide: 'Не удалось сохранить решение',
     },
     todoPage: todoPageStub,
     timeTrackingPage: timeTrackingPageStub,
@@ -1164,6 +1188,30 @@ export type Messages = {
         priorityAria: string;
         categoryAria: string;
         loading: string;
+        approvalModalTitle: string;
+        approvalModalLead: string;
+        approvalPartnerLabel: string;
+        approvalPartnerPlaceholder: string;
+        approvalPartnerRequired: string;
+        approvalPartnersLoading: string;
+        approvalPartnersEmpty: string;
+        approvalPartnersNoMatch: string;
+        approvalPartnersLoadErr: string;
+        approvalCancel: string;
+        approvalSubmit: string;
+        approvalSubmitting: string;
+        approvalWaitingLabel: string;
+        approvalWaitingForYou: string;
+        approvalWaitingForPartner: string;
+        approvalApprove: string;
+        approvalReject: string;
+        approvalRejectConfirm: string;
+        approvalRejectPlaceholder: string;
+        approvalRejectCommentRequired: string;
+        approvalDeciding: string;
+        approvalRejectionLabel: string;
+        errApprovalSubmit: string;
+        errApprovalDecide: string;
     };
     todoPage: TodoPageMessages;
     timeTrackingPage: TimeTrackingPageMessages;

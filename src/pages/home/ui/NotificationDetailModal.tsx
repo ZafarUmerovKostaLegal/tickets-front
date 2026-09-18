@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { TODO_NOTIFICATION_TYPES, type NotificationItem } from '@entities/notification/wsClient';
-import { getCorrespondenceOutgoingUrl, getExpensesOpenUrl, routes } from '@shared/config';
+import { getCorrespondenceOutgoingUrl, getExpensesOpenUrl, getTicketDetailUrl, routes } from '@shared/config';
 import { AuthImg, navigateWithTransition } from '@shared/ui';
 
 type NotificationDetailModalProps = {
@@ -14,6 +14,12 @@ type NotificationGoTarget = {
     to: string;
     label: string;
 };
+
+function ticketUuidFromNotification(notification: NotificationItem): string | null {
+    const blob = `${notification.title} ${notification.description}`;
+    const match = /ticket:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i.exec(blob);
+    return match?.[1] ?? null;
+}
 
 function correspondenceOpenUrl(notificationType: string): string | null {
     if (notificationType === 'correspondence_review')
@@ -40,6 +46,12 @@ function notificationGoTarget(notification: NotificationItem): NotificationGoTar
     const correspondenceUrl = correspondenceOpenUrl(kind);
     if (correspondenceUrl)
         return { to: correspondenceUrl, label: 'Открыть корреспонденцию' };
+    if (kind === 'ticket_approval' || kind === 'ticket_approved' || kind === 'ticket_rejected' || kind.startsWith('ticket_')) {
+        const uuid = ticketUuidFromNotification(notification);
+        if (uuid)
+            return { to: getTicketDetailUrl(uuid), label: 'Открыть заявку' };
+        return { to: routes.tickets, label: 'К IT-заявкам' };
+    }
     if (kind === TODO_NOTIFICATION_TYPES.boardInvited)
         return { to: `${routes.todo}?invites=1`, label: 'Открыть приглашения' };
     if (kind === TODO_NOTIFICATION_TYPES.boardAdded || kind === TODO_NOTIFICATION_TYPES.cardAssigned)

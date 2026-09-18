@@ -10,6 +10,9 @@ export type Ticket = {
     category: string;
     priority: string;
     is_archived: boolean;
+    /** Partner assigned to approve when status is «На согласовании». */
+    partner_user_id?: number | null;
+    rejection_comment?: string | null;
 };
 export type Comment = {
     id: number;

@@ -116,6 +116,35 @@ export async function updateTicket(uuid: string, data: UpdateTicketData): Promis
         throw new Error(await parseApiError(res, 'Failed to update ticket'));
     return res.json();
 }
+
+export async function submitTicketForApproval(uuid: string, partnerUserId: number): Promise<Ticket> {
+    const res = await apiFetch(`${BASE}/${uuid}/submit-approval`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partnerUserId }),
+    });
+    if (!res.ok)
+        throw new Error(await parseApiError(res, 'Failed to submit ticket for approval'));
+    return res.json();
+}
+
+export async function approveTicket(uuid: string): Promise<Ticket> {
+    const res = await apiFetch(`${BASE}/${uuid}/approve`, { method: 'POST' });
+    if (!res.ok)
+        throw new Error(await parseApiError(res, 'Failed to approve ticket'));
+    return res.json();
+}
+
+export async function rejectTicket(uuid: string, comment: string): Promise<Ticket> {
+    const res = await apiFetch(`${BASE}/${uuid}/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comment }),
+    });
+    if (!res.ok)
+        throw new Error(await parseApiError(res, 'Failed to reject ticket'));
+    return res.json();
+}
 export async function archiveTicket(uuid: string, isArchived = true): Promise<Ticket> {
     const res = await apiFetch(`${BASE}/${uuid}/archive?is_archived=${isArchived}`, { method: 'PATCH' });
     if (!res.ok)

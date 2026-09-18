@@ -1620,3 +1620,170 @@
     font-size: 1rem;
   }
 }
+
+/* Partner approval modal + decision panel */
+.td-approval-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.td-approval-modal__panel {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.22);
+  padding: 1.25rem 1.35rem 1.15rem;
+}
+
+.td-approval-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.td-approval-modal__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.td-approval-modal__lead {
+  margin: 0.35rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.td-approval-modal__close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0 0.15rem;
+}
+
+.td-approval-modal__field {
+  margin-bottom: 1.1rem;
+}
+
+.td-approval-modal__label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.td-approval-modal__err {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: #dc2626;
+}
+
+.td-approval-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+}
+
+.td-approval-modal__btn {
+  border-radius: 8px;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.td-approval-modal__btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.td-approval-modal__btn--ghost {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+
+.td-approval-modal__btn--primary {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.td__approval-hint {
+  margin: 0.15rem 0 0.55rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #64748b;
+}
+
+.td__approval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.td__approval-btn {
+  border-radius: 8px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.td__approval-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.td__approval-btn--approve {
+  background: #16a34a;
+  color: #fff;
+}
+
+.td__approval-btn--reject,
+.td__approval-btn--reject-confirm {
+  background: #fff;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.td__approval-reject {
+  margin-top: 0.55rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.td__approval-reject-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+  font-size: 0.85rem;
+  resize: vertical;
+  min-height: 72px;
+}
+
+.td__approval-rejection {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: #b91c1c;
+  white-space: pre-wrap;
+}
