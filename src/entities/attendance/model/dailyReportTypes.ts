@@ -13,9 +13,7 @@ export type DailyAttendanceItem = {
     status: AttendanceStatus;
     first_event_time: string | null;
     last_event_time?: string | null;
-    /** Total camera punches that day (from DB ingest). */
     event_count?: number | null;
-    /** Unique punches by local minute. */
     unique_event_count?: number | null;
     explanation_text?: string | null;
     explanation_file_url?: string | null;

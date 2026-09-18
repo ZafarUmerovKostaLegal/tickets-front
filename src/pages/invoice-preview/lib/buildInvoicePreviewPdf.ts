@@ -16,6 +16,7 @@ import {
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
 import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { wrapPdfCellLines } from './invoicePdfCellWrap';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import {
     resolveLegalBillToBankName,
@@ -413,27 +414,9 @@ function fitPdfCellText(txt: string, maxW: number, font: PDFFont, preferSize: nu
     return { text: clipPdfCellText(t, maxW, font, minSize), size: minSize };
 }
 
-/** Wrap only at spaces — never split a word mid-letter. */
+/** Wrap at spaces; if a single token is wider than the cell, split mid-word so PDF text cannot overflow. */
 function wrapCellLines(text: string, maxW: number, font: PDFFont, size: number): string[] {
-    const words = text.trim().split(/\s+/).filter(Boolean);
-    if (!words.length)
-        return [];
-    const lines: string[] = [];
-    let line = '';
-    for (const w of words) {
-        const trial = line ? `${line} ${w}` : w;
-        if (font.widthOfTextAtSize(trial, size) <= maxW) {
-            line = trial;
-        }
-        else {
-            if (line)
-                lines.push(line);
-            line = w;
-        }
-    }
-    if (line)
-        lines.push(line);
-    return lines;
+    return wrapPdfCellLines(text, maxW, (s) => font.widthOfTextAtSize(s, size));
 }
 
 function textAscent(font: PDFFont, size: number): number {
@@ -511,7 +494,9 @@ function paintTimeReportBody(
             let yLine = cellTop - CELL_PAD_Y - textAscent(font, DOC_FS);
             for (const ln of lines) {
                 const fitted = wrapCols.has(c) || fixedFsCols.has(c)
-                    ? { text: ln, size: DOC_FS }
+                    ? (font.widthOfTextAtSize(ln, DOC_FS) <= maxW + 0.75
+                        ? { text: ln, size: DOC_FS }
+                        : fitPdfCellText(ln, maxW, font, DOC_FS, DOC_FS * 0.72))
                     : fitPdfCellText(ln, maxW, font, DOC_FS, DOC_FS * 0.72);
                 if (!fitted.text)
                     continue;
@@ -996,7 +981,7 @@ function drawTimeReportGridTable(
 const TIME_REPORT_PDF_DETAIL_WEIGHTS = [15, 9, 13, 18, 8, 18, 19] as const;
 const TIME_REPORT_PDF_EXPENSE_WEIGHTS = [18, 52, 30] as const;
 const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 20, 18, 12, 18, 23] as const;
-/** Task, Description, Rate, Amount — wrap at spaces; keep full font (no mid-word splits). */
+/** Task, Description, Rate, Amount — wrap at spaces; long tokens may split mid-word to fit the column. */
 const TR_DETAIL_WRAP_COLS = new Set([2, 3, 5, 6]);
 const TR_SUMMARY_WRAP_COLS = new Set([1, 2, 4, 5]);
 /** Date / Initials / Hours — always DOC_FS (never shrink to fit). */
