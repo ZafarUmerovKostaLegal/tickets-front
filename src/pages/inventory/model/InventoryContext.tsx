@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode, } from 'react';
-import { getStatuses, getCategories, getItems, createCategory, updateCategory, deleteCategory, createItem, updateItem, uploadItemPhoto, assignItem, unassignItem, archiveItem, deleteItem, getItemPhotoUrl, isEquipmentClassCode, itemMatchesEquipmentScore, type InventoryCategory, type InventoryItem, type InventoryStatusItem, } from '@entities/inventory';
+import { getStatuses, getCategories, getItems, createCategory, updateCategory, deleteCategory, createItem, updateItem, uploadItemPhoto, assignItem, unassignItem, archiveItem, deleteItem, getItemPhotoUrl, isEquipmentClassCode, itemMatchesEquipmentScore, compareItemsByEquipmentScore, type InventoryCategory, type InventoryItem, type InventoryStatusItem, } from '@entities/inventory';
 import { getUsers, type User } from '@entities/user';
 import { useCurrentUser } from '@shared/hooks';
 import { isHiddenSystemUser } from '@shared/lib';
@@ -39,6 +39,9 @@ type InventoryContextValue = {
     /** Точный балл 1–10; пусто = без фильтра по оценке. */
     filterScore: number | '';
     setFilterScore: (v: number | '') => void;
+    /** Сортировка по баллам: '' | 'asc' | 'desc'. */
+    scoreSort: '' | 'asc' | 'desc';
+    setScoreSort: (v: '' | 'asc' | 'desc') => void;
     filterAssignedTo: number | '';
     setFilterAssignedTo: (v: number | '') => void;
     includeArchived: boolean;
@@ -146,6 +149,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
     const [filterStatus, setFilterStatus] = useState('');
     const [filterEquipmentClass, setFilterEquipmentClass] = useState('');
     const [filterScore, setFilterScore] = useState<number | ''>('');
+    const [scoreSort, setScoreSort] = useState<'' | 'asc' | 'desc'>('');
     const [filterAssignedTo, setFilterAssignedTo] = useState<number | ''>('');
     const [includeArchived, setIncludeArchived] = useState(false);
     const [skip, setSkip] = useState(0);
@@ -203,20 +207,26 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
             const scoreFilter = typeof filterScore === 'number' && filterScore >= 1 && filterScore <= 10
                 ? filterScore
                 : null;
-            // Exact score is computed from purchase_date / class on the client — fetch a wide page then filter.
+            const sortOrder = scoreSort === 'asc' || scoreSort === 'desc' ? scoreSort : null;
+            // Score filter/sort are computed client-side from purchase_date / class — fetch a wide page.
+            const clientScoreMode = scoreFilter != null || sortOrder != null;
             const page = await getItems({
-                skip: scoreFilter != null ? 0 : skip,
-                limit: scoreFilter != null ? 200 : LIMIT,
+                skip: clientScoreMode ? 0 : skip,
+                limit: clientScoreMode ? 200 : LIMIT,
                 category_id: filterCategoryId || undefined,
                 status: filterStatus || undefined,
-                equipment_class: (!scoreFilter && filterEquipmentClass && isEquipmentClassCode(filterEquipmentClass)
+                equipment_class: (!clientScoreMode && filterEquipmentClass && isEquipmentClassCode(filterEquipmentClass)
                     ? filterEquipmentClass
                     : undefined),
                 assigned_to_user_id: filterAssignedTo || undefined,
                 include_archived: includeArchived,
             }, signal);
-            if (scoreFilter != null) {
-                const matched = page.items.filter((item) => itemMatchesEquipmentScore(item, scoreFilter));
+            if (clientScoreMode) {
+                let matched = scoreFilter != null
+                    ? page.items.filter((item) => itemMatchesEquipmentScore(item, scoreFilter))
+                    : [...page.items];
+                if (sortOrder != null)
+                    matched = matched.sort((a, b) => compareItemsByEquipmentScore(a, b, sortOrder));
                 setItems(matched.slice(skip, skip + LIMIT));
                 setItemsTotal(matched.length);
             }
@@ -242,7 +252,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
             if (!signal?.aborted)
                 setLoadingItems(false);
         }
-    }, [skip, filterCategoryId, filterStatus, filterEquipmentClass, filterScore, filterAssignedTo, includeArchived]);
+    }, [skip, filterCategoryId, filterStatus, filterEquipmentClass, filterScore, scoreSort, filterAssignedTo, includeArchived]);
     useEffect(() => {
         loadCategories();
     }, [loadCategories]);
@@ -474,6 +484,8 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         setFilterEquipmentClass,
         filterScore,
         setFilterScore,
+        scoreSort,
+        setScoreSort,
         filterAssignedTo,
         setFilterAssignedTo,
         includeArchived,
@@ -537,6 +549,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         filterStatus,
         filterEquipmentClass,
         filterScore,
+        scoreSort,
         filterAssignedTo,
         includeArchived,
         skip,

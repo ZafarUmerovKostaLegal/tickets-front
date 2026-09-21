@@ -8,7 +8,7 @@ import { AuthImg, Pagination } from '@shared/ui';
 import { EQUIPMENT_SCORE_MAX, EQUIPMENT_SCORE_POINTS, laptopRamUpgrade } from '@entities/inventory';
 import type { InventoryItem } from '@entities/inventory';
 export function InventoryItemsSection() {
-    const { canEdit, canCreateItems, categories, statuses, users, items, loadingItems, filterCategoryId, setFilterCategoryId, filterStatus, setFilterStatus, filterScore, setFilterScore, filterAssignedTo, setFilterAssignedTo, includeArchived, setIncludeArchived, skip, setSkip, itemsTotal, setItemModal, resetItemForm, setFormError, categoryById, statusLabel, } = useInventory();
+    const { canEdit, canCreateItems, categories, statuses, users, items, loadingItems, filterCategoryId, setFilterCategoryId, filterStatus, setFilterStatus, filterScore, setFilterScore, scoreSort, setScoreSort, filterAssignedTo, setFilterAssignedTo, includeArchived, setIncludeArchived, skip, setSkip, itemsTotal, setItemModal, resetItemForm, setFormError, categoryById, statusLabel, } = useInventory();
     const [viewItem, setViewItem] = useState<InventoryItem | null>(null);
     const page = Math.floor(skip / LIMIT) + 1;
     return (<section className="inv__card">
@@ -59,6 +59,22 @@ export function InventoryItemsSection() {
               }))}
               onChange={(v) => {
                   setFilterScore(v === '' ? '' : Number(v));
+                  setSkip(0);
+              }}
+            />
+          </label>
+          <label className="inv__field">
+            <span className="inv__field-label">Сортировка</span>
+            <InvSelect
+              value={scoreSort}
+              placeholder="По умолчанию"
+              options={[
+                  { value: 'desc', label: 'Баллы ↓ по убыванию' },
+                  { value: 'asc', label: 'Баллы ↑ по возрастанию' },
+              ]}
+              onChange={(v) => {
+                  const next = v === 'asc' || v === 'desc' ? v : '';
+                  setScoreSort(next);
                   setSkip(0);
               }}
             />

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    compareItemsByEquipmentScore,
     equipmentAgeYears,
     equipmentScoreFromAgeYears,
     equipmentScoreToClassCode,
@@ -86,5 +87,21 @@ describe('itemMatchesEquipmentScore', () => {
     it('matches class fallback score when no purchase date', () => {
         expect(itemMatchesEquipmentScore({ purchase_date: null, equipment_class: 'C' }, 6, NOW)).toBe(true);
         expect(itemMatchesEquipmentScore({ purchase_date: null, equipment_class: 'C' }, 5, NOW)).toBe(false);
+    });
+});
+
+describe('compareItemsByEquipmentScore', () => {
+    it('sorts ascending and descending by score', () => {
+        const low = { purchase_date: null, equipment_class: 'E' as const }; // 2
+        const high = { purchase_date: null, equipment_class: 'A' as const }; // 10
+        expect(compareItemsByEquipmentScore(low, high, 'asc', NOW)).toBeLessThan(0);
+        expect(compareItemsByEquipmentScore(low, high, 'desc', NOW)).toBeGreaterThan(0);
+    });
+
+    it('puts items without score last', () => {
+        const scored = { purchase_date: null, equipment_class: 'C' as const };
+        const empty = { purchase_date: null, equipment_class: null };
+        expect(compareItemsByEquipmentScore(empty, scored, 'asc', NOW)).toBeGreaterThan(0);
+        expect(compareItemsByEquipmentScore(empty, scored, 'desc', NOW)).toBeGreaterThan(0);
     });
 });

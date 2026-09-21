@@ -115,3 +115,23 @@ export function itemMatchesEquipmentScore(
     const resolved = resolveEquipmentScore(item, now);
     return resolved != null && resolved.score === score;
 }
+
+export type EquipmentScoreSort = 'asc' | 'desc';
+
+/** Sort by resolved score; items without a score go last. */
+export function compareItemsByEquipmentScore(
+    a: EquipmentScoreInput,
+    b: EquipmentScoreInput,
+    order: EquipmentScoreSort,
+    now?: Date,
+): number {
+    const sa = resolveEquipmentScore(a, now)?.score ?? null;
+    const sb = resolveEquipmentScore(b, now)?.score ?? null;
+    if (sa == null && sb == null)
+        return 0;
+    if (sa == null)
+        return 1;
+    if (sb == null)
+        return -1;
+    return order === 'asc' ? sa - sb : sb - sa;
+}
