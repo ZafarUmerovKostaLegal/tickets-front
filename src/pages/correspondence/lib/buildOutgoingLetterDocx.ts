@@ -23,6 +23,7 @@ import {
     formatOutgoingRefLine,
 } from './correspondenceLetterhead';
 import { OUTGOING_LETTER_DOC_FONT } from './outgoingLetterEditorFonts';
+import { buildCorrespondenceQrPngBytes } from '../ui/CorrespondenceLetterQr';
 
 const DOC_FONT = OUTGOING_LETTER_DOC_FONT;
 const DOC_SIZE = 22; // 11 pt
@@ -57,10 +58,16 @@ function bodyPara(text: string, opts?: { bold?: boolean; before?: number; after?
     });
 }
 
+export type BuildOutgoingLetterDocxOpts = {
+    registryNumber?: string | null;
+    /** Signed public download URL — embedded as QR at the foot of the letter. */
+    downloadQrUrl?: string | null;
+};
+
 /** Official outgoing letterhead as .docx for Word / Word Online. */
 export async function buildOutgoingLetterDocxBlob(
     model: InvoiceCoverLetterModel,
-    opts?: { registryNumber?: string | null },
+    opts?: BuildOutgoingLetterDocxOpts,
 ): Promise<Blob> {
     const logoRuns: ParagraphChild[] = [];
     if (typeof window !== 'undefined') {
@@ -152,6 +159,61 @@ export async function buildOutgoingLetterDocxBlob(
         bodyPara(model.signatoryTitle || '', { after: 0 }),
     );
 
+    const qrUrl = (opts?.downloadQrUrl ?? '').trim();
+    if (qrUrl && typeof window !== 'undefined') {
+        const qrPng = await buildCorrespondenceQrPngBytes(qrUrl, 160);
+        if (qrPng?.length) {
+            const qrSize = 72;
+            children.push(new Paragraph({ spacing: { before: 360, after: 40 }, children: [] }));
+            children.push(new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                borders: {
+                    top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                    insideVertical: { style: BorderStyle.NONE, size: 0, color: 'auto' },
+                },
+                rows: [
+                    new TableRow({
+                        children: [
+                            new TableCell({
+                                borders: cellBorderNil,
+                                width: { size: 70, type: WidthType.PERCENTAGE },
+                                children: [new Paragraph({ children: [] })],
+                            }),
+                            new TableCell({
+                                borders: cellBorderNil,
+                                width: { size: 30, type: WidthType.PERCENTAGE },
+                                children: [
+                                    new Paragraph({
+                                        alignment: AlignmentType.RIGHT,
+                                        spacing: { after: 40 },
+                                        children: [new ImageRun({
+                                            type: 'png',
+                                            data: qrPng,
+                                            transformation: { width: qrSize, height: qrSize },
+                                        })],
+                                    }),
+                                    new Paragraph({
+                                        alignment: AlignmentType.RIGHT,
+                                        children: [new TextRun({
+                                            text: 'Скачать документ',
+                                            font: DOC_FONT,
+                                            size: 14,
+                                            color: MUTED,
+                                        })],
+                                    }),
+                                ],
+                            }),
+                        ],
+                    }),
+                ],
+            }));
+        }
+    }
+
     const doc = new Document({
         sections: [{
             properties: {
@@ -168,7 +230,7 @@ export async function buildOutgoingLetterDocxBlob(
 /** Same letterhead as Blob, for in-browser DocxEditor (`Uint8Array`). */
 export async function buildOutgoingLetterDocxBytes(
     model: InvoiceCoverLetterModel,
-    opts?: { registryNumber?: string | null },
+    opts?: BuildOutgoingLetterDocxOpts,
 ): Promise<Uint8Array> {
     const blob = await buildOutgoingLetterDocxBlob(model, opts);
     return new Uint8Array(await blob.arrayBuffer());

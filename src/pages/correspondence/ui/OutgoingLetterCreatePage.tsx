@@ -22,13 +22,20 @@ import {
     isOutgoingLetterDraftValid,
     newOutgoingLetterCommentId,
     readOutgoingLetterDraft,
+    resolveOutgoingCounterparty,
     writeOutgoingLetterDraft,
     getOutgoingLetterDraftFiles,
     type OutgoingLetterAttachmentMeta,
     type OutgoingLetterDraftComment,
 } from '../lib/outgoingLetterSession';
 import { CORR_SHELL_NAV_TABS } from '../model/constants';
-import { invalidateCorrespondencePartnerAttention } from '@entities/correspondence';
+import {
+    correspondenceErrorMessage,
+    createOutgoingDraft,
+    invalidateCorrespondencePartnerAttention,
+    mintCorrespondenceDownloadQr,
+    uploadCorrespondenceAttachment,
+} from '@entities/correspondence';
 import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
 import { useCurrentUser } from '@shared/hooks';
 import { CorrespondenceShell } from './CorrespondenceShell';
@@ -131,6 +138,8 @@ export function OutgoingLetterCreatePage() {
     const leavePromptOpenRef = useRef(false);
     const pendingComposeRef = useRef<{ quote: string; selectionJson: string | null } | null>(null);
     const [sessionId, setSessionId] = useState<string | null>(null);
+    const [serverDocumentId, setServerDocumentId] = useState<string | null>(null);
+    const [downloadQrUrl, setDownloadQrUrl] = useState<string | null>(null);
     const [subject, setSubject] = useState('');
     const [letterDateIso, setLetterDateIso] = useState(todayIso);
     const [coverModel, setCoverModel] = useState<InvoiceCoverLetterModel>(defaultOutgoingLetterCoverModel);
@@ -168,6 +177,7 @@ export function OutgoingLetterCreatePage() {
         const draft = readOutgoingLetterDraft();
         if (draft) {
             setSessionId(draft.sessionId);
+            setServerDocumentId(draft.serverDocumentId ?? null);
             setSubject(draft.subject);
             setLetterDateIso(draft.letterDateIso);
             setCoverModel(draft.coverModel);
@@ -269,6 +279,7 @@ export function OutgoingLetterCreatePage() {
         nextFiles: File[],
         nextMeta: OutgoingLetterAttachmentMeta[],
         nextComments: OutgoingLetterDraftComment[] = comments,
+        nextServerDocumentId: string | null = serverDocumentId,
     ) => {
         const id = writeOutgoingLetterDraft({
             sessionId: sessionId ?? undefined,
@@ -278,10 +289,11 @@ export function OutgoingLetterCreatePage() {
             files: nextFiles,
             attachmentMeta: nextMeta,
             comments: nextComments,
+            serverDocumentId: nextServerDocumentId,
         });
         setSessionId(id);
         return id;
-    }, [comments, coverModel, letterDateIso, sessionId, subject]);
+    }, [comments, coverModel, letterDateIso, serverDocumentId, sessionId, subject]);
 
     useEffect(() => {
         if (!hydrated)
@@ -295,11 +307,32 @@ export function OutgoingLetterCreatePage() {
                 files,
                 attachmentMeta,
                 comments,
+                serverDocumentId,
             });
             setSessionId((prev) => prev ?? id);
         }, 600);
         return () => window.clearTimeout(t);
-    }, [hydrated, subject, letterDateIso, coverModel, files, attachmentMeta, comments, sessionId]);
+    }, [hydrated, subject, letterDateIso, coverModel, files, attachmentMeta, comments, sessionId, serverDocumentId]);
+
+    const ensureServerDraftAndQr = useCallback(async (): Promise<{ url: string | null; documentId: string | null }> => {
+        let docId = (serverDocumentId ?? '').trim();
+        if (!docId) {
+            const counterparty = resolveOutgoingCounterparty(coverModel);
+            const draft = await createOutgoingDraft({
+                counterparty: counterparty && counterparty !== 'Company Name' ? counterparty : 'Черновик',
+                subject: subject.trim() || 'Черновик исходящего письма',
+                docType: 'letter',
+            });
+            docId = draft.id;
+            setServerDocumentId(docId);
+            persistDraft(files, attachmentMeta, comments, docId);
+        }
+        if (downloadQrUrl)
+            return { url: downloadQrUrl, documentId: docId };
+        const minted = await mintCorrespondenceDownloadQr(docId);
+        setDownloadQrUrl(minted.url);
+        return { url: minted.url, documentId: docId };
+    }, [attachmentMeta, comments, coverModel, downloadQrUrl, files, persistDraft, serverDocumentId, subject]);
 
     const beginNewComment = useCallback(() => {
         if (!useInBrowserEditor || busy || templateBusy)
@@ -403,8 +436,33 @@ export function OutgoingLetterCreatePage() {
     const loadBlankTemplate = useCallback(async (model: InvoiceCoverLetterModel, remount: boolean) => {
         setTemplateBusy(true);
         try {
-            const bytes = await buildOutgoingLetterDocxBytes(model, {});
+            let qrUrl = downloadQrUrl;
+            let docId = (serverDocumentId ?? '').trim();
+            try {
+                const minted = await ensureServerDraftAndQr();
+                qrUrl = minted.url;
+                docId = (minted.documentId ?? docId).trim();
+            }
+            catch (qrErr) {
+                console.warn(correspondenceErrorMessage(qrErr, 'QR недоступен'));
+            }
+            const bytes = await buildOutgoingLetterDocxBytes(model, {
+                downloadQrUrl: qrUrl,
+            });
             applyDocumentBytes(bytes, remount);
+            if (docId && /^[0-9a-f-]{36}$/i.test(docId) && qrUrl) {
+                try {
+                    const seed = outgoingLetterDocxFileFromBytes(
+                        bytes,
+                        subject.trim() || 'Черновик исходящего письма',
+                        letterDateIso,
+                    );
+                    await uploadCorrespondenceAttachment(docId, seed, 'attachment');
+                }
+                catch {
+                    /* download will work after submit */
+                }
+            }
         }
         catch (err) {
             void showAlert({
@@ -415,7 +473,15 @@ export function OutgoingLetterCreatePage() {
         finally {
             setTemplateBusy(false);
         }
-    }, [applyDocumentBytes, showAlert]);
+    }, [
+        applyDocumentBytes,
+        downloadQrUrl,
+        ensureServerDraftAndQr,
+        letterDateIso,
+        serverDocumentId,
+        showAlert,
+        subject,
+    ]);
 
     useEffect(() => {
         if (!hydrated)
@@ -630,6 +696,7 @@ export function OutgoingLetterCreatePage() {
                 letterDateIso,
                 partnerUserId,
                 extraFiles: nextFiles,
+                existingDocumentId: serverDocumentId,
             });
             clearOutgoingLetterDraft();
             setDirty(false);

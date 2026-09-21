@@ -1,6 +1,8 @@
 import {
     createOutgoingDraft,
+    patchCorrespondence,
     submitOutgoingForReview,
+    uploadCorrespondenceAttachment,
     type CorrespondenceDocument,
 } from '@entities/correspondence';
 import type { InvoiceCoverLetterModel } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
@@ -16,6 +18,8 @@ export async function submitOutgoingLetterForReview(input: {
     partnerUserId: number;
     extraFiles?: File[];
     comment?: string;
+    /** Reuse early server draft that already has a minted download QR. */
+    existingDocumentId?: string | null;
 }): Promise<CorrespondenceDocument> {
     const subject = input.subject.trim();
     const counterparty = resolveOutgoingCounterparty(input.coverModel);
@@ -34,6 +38,18 @@ export async function submitOutgoingLetterForReview(input: {
         );
     }
     const attachmentFiles = [primary, ...otherFiles];
+    const existingId = (input.existingDocumentId ?? '').trim();
+    if (existingId && /^[0-9a-f-]{36}$/i.test(existingId)) {
+        await patchCorrespondence(existingId, {
+            subject,
+            counterparty,
+            partnerUserId: input.partnerUserId,
+            comment: input.comment,
+        });
+        for (const file of attachmentFiles)
+            await uploadCorrespondenceAttachment(existingId, file, 'attachment');
+        return submitOutgoingForReview(existingId, input.partnerUserId);
+    }
     const draft = await createOutgoingDraft({
         counterparty,
         subject,

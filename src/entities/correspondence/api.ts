@@ -270,7 +270,7 @@ export async function mintCorrespondenceDownloadQr(
 ): Promise<{
     url: string;
     expiresAt: number;
-    attachmentId: string;
+    attachmentId: string | null;
     documentId: string;
 }> {
     const res = await apiFetch(`${PREFIX}/${encodeURIComponent(documentId)}/download-qr`, {
@@ -282,9 +282,10 @@ export async function mintCorrespondenceDownloadQr(
     const raw = await res.json() as Record<string, unknown>;
     const url = String(raw.url ?? '').trim();
     const expiresAt = Number(raw.expiresAt ?? raw.expires_at ?? 0);
-    const aid = String(raw.attachmentId ?? raw.attachment_id ?? '').trim();
+    const aidRaw = raw.attachmentId ?? raw.attachment_id;
+    const aid = typeof aidRaw === 'string' && aidRaw.trim() ? aidRaw.trim() : null;
     const did = String(raw.documentId ?? raw.document_id ?? documentId).trim();
-    if (!url || !aid)
+    if (!url)
         throw new CorrespondenceHttpError(500, 'Некорректный ответ сервера (QR)');
     return { url, expiresAt, attachmentId: aid, documentId: did };
 }

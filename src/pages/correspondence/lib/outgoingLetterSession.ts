@@ -29,6 +29,8 @@ export type OutgoingLetterDraftV1 = {
     coverModel: InvoiceCoverLetterModel;
     attachmentMeta: OutgoingLetterAttachmentMeta[];
     comments?: OutgoingLetterDraftComment[];
+    /** Server correspondence draft UUID (for QR mint / submit reuse). */
+    serverDocumentId?: string | null;
 };
 
 function isDraftComment(raw: unknown): raw is OutgoingLetterDraftComment {
@@ -98,6 +100,7 @@ export type WriteOutgoingLetterDraftInput = {
     files: File[];
     attachmentMeta?: OutgoingLetterAttachmentMeta[];
     comments?: OutgoingLetterDraftComment[];
+    serverDocumentId?: string | null;
 };
 
 export function writeOutgoingLetterDraft(input: WriteOutgoingLetterDraftInput): string {
@@ -116,6 +119,7 @@ export function writeOutgoingLetterDraft(input: WriteOutgoingLetterDraftInput): 
         coverModel: input.coverModel,
         attachmentMeta,
         comments: input.comments ?? [],
+        serverDocumentId: input.serverDocumentId?.trim() || null,
     };
     filesBySessionId.set(sessionId, [...input.files]);
     try {
@@ -147,6 +151,9 @@ export function readOutgoingLetterDraft(): OutgoingLetterDraftV1 | null {
                 (a) => a && typeof a.id === 'string' && typeof a.name === 'string',
             )
             : [];
+        const serverDocumentId = typeof rec.serverDocumentId === 'string' && /^[0-9a-f-]{36}$/i.test(rec.serverDocumentId.trim())
+            ? rec.serverDocumentId.trim()
+            : null;
         return {
             v: 1,
             sessionId,
@@ -155,6 +162,7 @@ export function readOutgoingLetterDraft(): OutgoingLetterDraftV1 | null {
             coverModel: rec.coverModel,
             attachmentMeta,
             comments: parseDraftComments(rec.comments),
+            serverDocumentId,
         };
     }
     catch {
