@@ -53,6 +53,7 @@ export {
     listCorrespondenceComments,
     openCorrespondenceAttachmentInNewTab,
     downloadCorrespondenceAttachment,
+    mintCorrespondenceDownloadQr,
     uploadCorrespondenceAttachment,
     patchCorrespondence,
     registerIncomingCorrespondence,

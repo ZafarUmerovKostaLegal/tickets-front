@@ -7,6 +7,7 @@ import {
 import { mockLetterToCoverModel } from '../lib/correspondenceCoverLetterModel';
 import { downloadOutgoingLetterPdf } from '../lib/buildOutgoingLetterPdf';
 import { CorrespondenceLetterWorkspace } from './CorrespondenceLetterWorkspace';
+import { useCorrespondenceDownloadQr } from '../lib/useCorrespondenceDownloadQr';
 import './CorrespondenceLetterPreview.css';
 
 function IcoPrint() {
@@ -49,6 +50,8 @@ export function CorrespondenceLetterPreview({
     const sm = STATUS_META[letter.status];
     const coverModel = useMemo(() => mockLetterToCoverModel(letter), [letter]);
     const [pdfBusy, setPdfBusy] = useState(false);
+    const downloadDocumentId = /^[0-9a-f-]{36}$/i.test(letter.id) ? letter.id : null;
+    const { url: downloadQrUrl } = useCorrespondenceDownloadQr(downloadDocumentId, Boolean(downloadDocumentId));
 
     const canSendToReview = mode === 'employee' && (letter.status === 'draft' || letter.status === 'rejected');
     const canEdit = mode === 'employee' && (letter.status === 'draft' || letter.status === 'rejected');
@@ -61,6 +64,7 @@ export function CorrespondenceLetterPreview({
                 registryNumber: letter.registryNumber,
                 subject: letter.subject,
                 dateIso: letter.date,
+                downloadQrUrl,
             });
         }
         catch {
@@ -69,7 +73,7 @@ export function CorrespondenceLetterPreview({
         finally {
             setPdfBusy(false);
         }
-    }, [coverModel, letter.date, letter.registryNumber, letter.subject]);
+    }, [coverModel, downloadQrUrl, letter.date, letter.registryNumber, letter.subject]);
 
     const partnerObj: MockPartner | undefined = letter.partnerId
         ? MOCK_PARTNERS.find(p => p.id === letter.partnerId)
@@ -107,6 +111,7 @@ export function CorrespondenceLetterPreview({
             loading={loading}
             navbarTab="preview"
             onBack={onBack}
+            downloadDocumentId={downloadDocumentId}
             statusNote={statusNote}
             statusTone={statusTone}
             statusIcon={letter.status === 'rejected' ? <IcoAlert /> : undefined}

@@ -9,6 +9,7 @@ import {
     CorrespondenceLetterEditorToolbar,
 } from './CorrespondenceLetterBodyEditor';
 import { CorrespondenceLetterSheet } from './CorrespondenceLetterSheet';
+import { useCorrespondenceDownloadQr } from '../lib/useCorrespondenceDownloadQr';
 import './CorrespondenceLetterPreview.css';
 
 const PAGE_COUNT = 1;
@@ -30,6 +31,8 @@ export type CorrespondenceLetterWorkspaceProps = {
     statusTone?: 'pending' | 'rejected' | 'approved' | null;
     statusIcon?: ReactNode;
     onBack: () => void;
+    /** When set, mint signed QR download link for this document. */
+    downloadDocumentId?: string | null;
 };
 
 export function CorrespondenceLetterWorkspace({
@@ -45,12 +48,14 @@ export function CorrespondenceLetterWorkspace({
     statusTone,
     statusIcon,
     onBack,
+    downloadDocumentId,
 }: CorrespondenceLetterWorkspaceProps) {
     const typeMeta = DOC_TYPE_META[letter.docType];
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRef = useRef<HTMLDivElement>(null);
     const [activePage, setActivePage] = useState(1);
     const [sheetZoomPct, setSheetZoomPct] = useState(100);
+    const { url: downloadQrUrl } = useCorrespondenceDownloadQr(downloadDocumentId, Boolean(downloadDocumentId));
 
     const pagesZoomStyle = useMemo(() => {
         // CSS `zoom` breaks contentEditable (Enter / caret) in Chromium — lock 100% while editing.
@@ -100,6 +105,7 @@ export function CorrespondenceLetterWorkspace({
         registryNumber: letter.registryNumber,
         editable,
         onCoverModelChange,
+        downloadQrUrl,
     } as const;
 
     const bodyHtml = coverModel.introParagraphOverride ?? '';

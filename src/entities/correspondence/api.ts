@@ -264,6 +264,31 @@ export async function deleteCorrespondence(id: string): Promise<void> {
     await throwIfNotOk(res);
 }
 
+export async function mintCorrespondenceDownloadQr(
+    documentId: string,
+    attachmentId?: string | null,
+): Promise<{
+    url: string;
+    expiresAt: number;
+    attachmentId: string;
+    documentId: string;
+}> {
+    const res = await apiFetch(`${PREFIX}/${encodeURIComponent(documentId)}/download-qr`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(attachmentId ? { attachmentId } : {}),
+    });
+    await throwIfNotOk(res);
+    const raw = await res.json() as Record<string, unknown>;
+    const url = String(raw.url ?? '').trim();
+    const expiresAt = Number(raw.expiresAt ?? raw.expires_at ?? 0);
+    const aid = String(raw.attachmentId ?? raw.attachment_id ?? '').trim();
+    const did = String(raw.documentId ?? raw.document_id ?? documentId).trim();
+    if (!url || !aid)
+        throw new CorrespondenceHttpError(500, 'Некорректный ответ сервера (QR)');
+    return { url, expiresAt, attachmentId: aid, documentId: did };
+}
+
 export async function fetchCorrespondenceAttachmentBlob(
     documentId: string,
     attachmentId: string,

@@ -177,6 +177,37 @@
   flex-direction: column;
 }
 
+.corr-letter__footer {
+  margin-top: auto;
+  padding-top: 1.25rem;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+}
+
+.corr-letter__qr {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.corr-letter__qr-img {
+  display: block;
+  width: 88px;
+  height: 88px;
+  image-rendering: pixelated;
+}
+
+.corr-letter__qr-caption {
+  font-size: 8px;
+  line-height: 1.2;
+  color: #64748b;
+  text-align: center;
+  max-width: 6.5rem;
+}
+
 .corr-letter--editable .corr-letter__field {
   box-sizing: border-box;
   width: auto;

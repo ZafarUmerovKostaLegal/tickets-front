@@ -14,6 +14,7 @@ import {
     formatOutgoingLetterheadDate,
     formatOutgoingRefLine,
 } from './correspondenceLetterhead';
+import { buildCorrespondenceQrPngBytes } from '../ui/CorrespondenceLetterQr';
 import { triggerPdfDownload } from './correspondencePdfEditorModel';
 
 const PAGE_W = 595.28;
@@ -53,15 +54,16 @@ function wrapText(text: string, font: { widthOfTextAtSize: (t: string, s: number
 /** Outgoing letter PDF with letterhead + free-form body text (Unicode / Cyrillic via DejaVu). */
 export async function buildOutgoingLetterPdfBlob(
     model: InvoiceCoverLetterModel,
-    opts?: { registryNumber?: string | null },
+    opts?: { registryNumber?: string | null; downloadQrUrl?: string | null },
 ): Promise<Blob> {
     const doc = await PDFDocument.create();
     doc.registerFontkit(fontkit);
-    const [regularBytes, boldBytes, obliqueBytes, logoRaster] = await Promise.all([
+    const [regularBytes, boldBytes, obliqueBytes, logoRaster, qrPng] = await Promise.all([
         fetchFontBytes(dejavuSansRegularUrl),
         fetchFontBytes(dejavuSansBoldUrl),
         fetchFontBytes(dejavuSansObliqueUrl),
         rasterizeInvoiceLogoSvg(Math.round(LOGO_W_PT * 3), 'cover'),
+        opts?.downloadQrUrl ? buildCorrespondenceQrPngBytes(opts.downloadQrUrl, 160) : Promise.resolve(null),
     ]);
     const page = doc.addPage([PAGE_W, PAGE_H]);
     const font = await doc.embedFont(regularBytes, { subset: true });
@@ -74,6 +76,15 @@ export async function buildOutgoingLetterPdfBlob(
         }
         catch {
             logoImage = null;
+        }
+    }
+    let qrImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null = null;
+    if (qrPng) {
+        try {
+            qrImage = await doc.embedPng(qrPng);
+        }
+        catch {
+            qrImage = null;
         }
     }
     const ink = rgb(0.2, 0.2, 0.2);
@@ -154,6 +165,27 @@ export async function buildOutgoingLetterPdfBlob(
             break;
     }
 
+    if (qrImage) {
+        const qrSize = 64;
+        const qrX = PAGE_W - MR - qrSize;
+        const qrY = 36;
+        page.drawImage(qrImage, {
+            x: qrX,
+            y: qrY,
+            width: qrSize,
+            height: qrSize,
+        });
+        const cap = 'Скачать документ';
+        const cw = font.widthOfTextAtSize(cap, 7);
+        page.drawText(cap, {
+            x: qrX + (qrSize - cw) / 2,
+            y: qrY - 10,
+            size: 7,
+            font,
+            color: muted,
+        });
+    }
+
     const bytes = await doc.save();
     const copy = new Uint8Array(bytes.byteLength);
     copy.set(bytes);
@@ -173,9 +205,17 @@ export function outgoingLetterPdfFileName(subject: string, dateIso: string): str
 /** Build and trigger browser download of the outgoing letter PDF. */
 export async function downloadOutgoingLetterPdf(
     model: InvoiceCoverLetterModel,
-    opts?: { registryNumber?: string | null; subject?: string; dateIso?: string },
+    opts?: {
+        registryNumber?: string | null;
+        subject?: string;
+        dateIso?: string;
+        downloadQrUrl?: string | null;
+    },
 ): Promise<void> {
-    const blob = await buildOutgoingLetterPdfBlob(model, { registryNumber: opts?.registryNumber });
+    const blob = await buildOutgoingLetterPdfBlob(model, {
+        registryNumber: opts?.registryNumber,
+        downloadQrUrl: opts?.downloadQrUrl,
+    });
     const name = outgoingLetterPdfFileName(opts?.subject ?? '', opts?.dateIso ?? '');
     triggerPdfDownload(blob, name);
 }

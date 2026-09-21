@@ -10,6 +10,7 @@ import {
     CorrespondenceLetterBodyReadonly,
     CorrespondenceLetterEditorSurface,
 } from './CorrespondenceLetterBodyEditor';
+import { CorrespondenceLetterQr } from './CorrespondenceLetterQr';
 
 export {
     CORRESPONDENCE_LETTERHEAD_CONTACT,
@@ -45,6 +46,8 @@ export type CorrespondenceLetterSheetProps = {
     registryNumber?: string | null;
     editable?: boolean;
     onCoverModelChange?: (patch: Partial<InvoiceCoverLetterModel>) => void;
+    /** Signed public download URL for QR (HMAC + TTL). */
+    downloadQrUrl?: string | null;
 };
 
 export function CorrespondenceLetterSheet({
@@ -52,6 +55,7 @@ export function CorrespondenceLetterSheet({
     registryNumber,
     editable = false,
     onCoverModelChange,
+    downloadQrUrl,
 }: CorrespondenceLetterSheetProps) {
     const refLine = formatOutgoingRefLine(registryNumber);
     const dateValue = formatOutgoingLetterheadDate(coverModel);
@@ -103,6 +107,12 @@ export function CorrespondenceLetterSheet({
                     <CorrespondenceLetterBodyReadonly value={bodyHtml} />
                 )}
             </div>
+
+            {downloadQrUrl ? (
+                <footer className="corr-letter__footer">
+                    <CorrespondenceLetterQr url={downloadQrUrl} />
+                </footer>
+            ) : null}
         </div>
     );
 }
