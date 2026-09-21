@@ -39,6 +39,7 @@ import {
 import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
 import { useCurrentUser } from '@shared/hooks';
 import { CorrespondenceShell } from './CorrespondenceShell';
+import { CorrespondenceLetterQr } from './CorrespondenceLetterQr';
 import { OutgoingLetterCommentsPane } from './OutgoingLetterCommentsPane';
 import { OutgoingLetterDocxErrorBoundary } from './OutgoingLetterDocxErrorBoundary';
 import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
@@ -438,13 +439,23 @@ export function OutgoingLetterCreatePage() {
         try {
             let qrUrl = downloadQrUrl;
             let docId = (serverDocumentId ?? '').trim();
+            let mintError: string | null = null;
             try {
                 const minted = await ensureServerDraftAndQr();
                 qrUrl = minted.url;
                 docId = (minted.documentId ?? docId).trim();
             }
             catch (qrErr) {
-                console.warn(correspondenceErrorMessage(qrErr, 'QR недоступен'));
+                mintError = correspondenceErrorMessage(qrErr, 'QR недоступен');
+                console.warn(mintError);
+            }
+            if (!qrUrl) {
+                showToast({
+                    message: mintError
+                        ? `QR не добавлен: ${mintError.split('\n')[0]}`
+                        : 'QR не добавлен: нет ссылки скачивания. Проверьте correspondence (секрет и GATEWAY_BASE_URL).',
+                    variant: 'error',
+                });
             }
             const bytes = await buildOutgoingLetterDocxBytes(model, {
                 downloadQrUrl: qrUrl,
@@ -495,6 +506,15 @@ export function OutgoingLetterCreatePage() {
                     const bytes = await fileToUint8Array(existingWord);
                     if (!cancelled)
                         applyDocumentBytes(bytes, true);
+                    // Still mint QR for overlay / later rebuild even if imported file has none.
+                    if (!cancelled) {
+                        try {
+                            await ensureServerDraftAndQr();
+                        }
+                        catch {
+                            /* toast on blank rebuild */
+                        }
+                    }
                     return;
                 }
                 catch {
@@ -697,6 +717,7 @@ export function OutgoingLetterCreatePage() {
                 partnerUserId,
                 extraFiles: nextFiles,
                 existingDocumentId: serverDocumentId,
+                downloadQrUrl,
             });
             clearOutgoingLetterDraft();
             setDirty(false);
@@ -917,6 +938,11 @@ export function OutgoingLetterCreatePage() {
                     className={`corr-word__editor-wrap${commentsOpen && useInBrowserEditor ? ' corr-word__editor-wrap--comments' : ''}`}
                     aria-label="Редактор письма"
                 >
+                    {downloadQrUrl ? (
+                        <div className="corr-word__download-qr" title="QR для скачивания письма">
+                            <CorrespondenceLetterQr url={downloadQrUrl} sizePx={96} />
+                        </div>
+                    ) : null}
                     {useInBrowserEditor && documentBytes && !templateBusy ? (
                         <button
                             type="button"

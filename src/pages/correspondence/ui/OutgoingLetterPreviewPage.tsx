@@ -13,6 +13,7 @@ import {
 } from '../lib/outgoingLetterSession';
 import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
 import { downloadOutgoingLetterPdf } from '../lib/buildOutgoingLetterPdf';
+import { useCorrespondenceDownloadQr } from '../lib/useCorrespondenceDownloadQr';
 import { CorrespondenceLetterWorkspace } from './CorrespondenceLetterWorkspace';
 import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
 import { IcoEdit, type MockAttachment, type MockLetter } from './CorrespondencePage';
@@ -49,6 +50,11 @@ export function OutgoingLetterPreviewPage() {
     useEffect(() => {
         setDraft(readOutgoingLetterDraft());
     }, []);
+
+    const downloadDocumentId = draft?.serverDocumentId && /^[0-9a-f-]{36}$/i.test(draft.serverDocumentId)
+        ? draft.serverDocumentId
+        : null;
+    const { url: downloadQrUrl } = useCorrespondenceDownloadQr(downloadDocumentId, Boolean(downloadDocumentId));
 
     const files = useMemo(
         () => (draft ? getOutgoingLetterDraftFiles(draft.sessionId) : []),
@@ -101,6 +107,7 @@ export function OutgoingLetterPreviewPage() {
             await downloadOutgoingLetterPdf(draft.coverModel, {
                 subject: draft.subject,
                 dateIso: draft.letterDateIso,
+                downloadQrUrl,
             });
         }
         catch (err) {
@@ -125,6 +132,8 @@ export function OutgoingLetterPreviewPage() {
                 letterDateIso: draft.letterDateIso,
                 partnerUserId,
                 extraFiles: files,
+                existingDocumentId: draft.serverDocumentId,
+                downloadQrUrl,
             });
             clearOutgoingLetterDraft();
             setReviewOpen(false);
@@ -159,6 +168,7 @@ export function OutgoingLetterPreviewPage() {
                 editable={false}
                 navbarTab="preview"
                 onBack={goBackToEdit}
+                downloadDocumentId={downloadDocumentId}
                 toolbarSubject={(
                     <span className="tt-inv-preview__pdf-toolbar-export" title={draft.subject}>
                         {draft.subject}

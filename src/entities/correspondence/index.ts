@@ -54,6 +54,7 @@ export {
     openCorrespondenceAttachmentInNewTab,
     downloadCorrespondenceAttachment,
     mintCorrespondenceDownloadQr,
+    resolveCorrespondenceDownloadQrUrl,
     uploadCorrespondenceAttachment,
     patchCorrespondence,
     registerIncomingCorrespondence,

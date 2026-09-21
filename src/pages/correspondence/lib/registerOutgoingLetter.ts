@@ -20,6 +20,7 @@ export async function submitOutgoingLetterForReview(input: {
     comment?: string;
     /** Reuse early server draft that already has a minted download QR. */
     existingDocumentId?: string | null;
+    downloadQrUrl?: string | null;
 }): Promise<CorrespondenceDocument> {
     const subject = input.subject.trim();
     const counterparty = resolveOutgoingCounterparty(input.coverModel);
@@ -30,7 +31,9 @@ export async function submitOutgoingLetterForReview(input: {
     if (wordFile)
         primary = wordFile;
     else {
-        const pdfBlob = await buildOutgoingLetterPdfBlob(input.coverModel);
+        const pdfBlob = await buildOutgoingLetterPdfBlob(input.coverModel, {
+            downloadQrUrl: input.downloadQrUrl,
+        });
         primary = new File(
             [pdfBlob],
             outgoingLetterPdfFileName(subject, input.letterDateIso),

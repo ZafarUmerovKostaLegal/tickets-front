@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api';
+import { getApiBaseUrl, upgradeUrlToPageSecurity } from '@shared/config';
 import {
     normalizeCorrespondenceComment,
     normalizeCorrespondenceDocument,
@@ -17,6 +18,20 @@ import type {
 } from './model/types';
 
 const PREFIX = '/api/v1/correspondence';
+
+/** Turn mint response url (absolute or relative) into a phone-scannable absolute URL. */
+export function resolveCorrespondenceDownloadQrUrl(urlFromApi: string): string {
+    const raw = (urlFromApi || '').trim();
+    if (!raw)
+        return '';
+    if (/^https?:\/\//i.test(raw))
+        return upgradeUrlToPageSecurity(raw);
+    const base = (getApiBaseUrl() || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/+$/, '');
+    if (!base)
+        return raw.startsWith('/') ? raw : `/${raw}`;
+    const path = raw.startsWith('/') ? raw : `/${raw}`;
+    return upgradeUrlToPageSecurity(`${base}${path}`);
+}
 
 export class CorrespondenceHttpError extends Error {
     readonly status: number;
@@ -287,7 +302,12 @@ export async function mintCorrespondenceDownloadQr(
     const did = String(raw.documentId ?? raw.document_id ?? documentId).trim();
     if (!url)
         throw new CorrespondenceHttpError(500, 'Некорректный ответ сервера (QR)');
-    return { url, expiresAt, attachmentId: aid, documentId: did };
+    return {
+        url: resolveCorrespondenceDownloadQrUrl(url),
+        expiresAt,
+        attachmentId: aid,
+        documentId: did,
+    };
 }
 
 export async function fetchCorrespondenceAttachmentBlob(

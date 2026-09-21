@@ -194,6 +194,11 @@ export async function buildOutgoingLetterDocxBlob(
                                             type: 'png',
                                             data: qrPng,
                                             transformation: { width: qrSize, height: qrSize },
+                                            altText: {
+                                                title: 'QR',
+                                                description: 'Скачать документ',
+                                                name: 'download-qr',
+                                            },
                                         })],
                                     }),
                                     new Paragraph({

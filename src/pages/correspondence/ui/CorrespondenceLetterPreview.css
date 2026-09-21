@@ -914,6 +914,28 @@ html.corr-docx-fs .corr-shell__header {
   align-items: stretch;
 }
 
+.corr-word__download-qr {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 6;
+  padding: 0.5rem 0.55rem 0.4rem;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid color-mix(in srgb, #94a3b8 45%, transparent);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  pointer-events: none;
+}
+
+.corr-word__download-qr .corr-letter__qr {
+  margin: 0;
+}
+
+.corr-word__download-qr .corr-letter__qr-img {
+  width: 96px;
+  height: 96px;
+}
+
 .corr-word__editor-main {
   flex: 1 1 auto;
   min-width: 0;
