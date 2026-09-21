@@ -5,10 +5,10 @@ import { ItemDetailDrawer } from './ItemDetailDrawer';
 import { EquipmentScoreBadge } from './EquipmentScoreBadge';
 import { LIMIT } from '../model/constants';
 import { AuthImg, Pagination } from '@shared/ui';
-import { EQUIPMENT_SCORE_RANGES, laptopRamUpgrade } from '@entities/inventory';
+import { EQUIPMENT_SCORE_MAX, EQUIPMENT_SCORE_POINTS, laptopRamUpgrade } from '@entities/inventory';
 import type { InventoryItem } from '@entities/inventory';
 export function InventoryItemsSection() {
-    const { canEdit, canCreateItems, categories, statuses, users, items, loadingItems, filterCategoryId, setFilterCategoryId, filterStatus, setFilterStatus, filterEquipmentClass, setFilterEquipmentClass, filterAssignedTo, setFilterAssignedTo, includeArchived, setIncludeArchived, skip, setSkip, itemsTotal, setItemModal, resetItemForm, setFormError, categoryById, statusLabel, } = useInventory();
+    const { canEdit, canCreateItems, categories, statuses, users, items, loadingItems, filterCategoryId, setFilterCategoryId, filterStatus, setFilterStatus, filterScore, setFilterScore, filterAssignedTo, setFilterAssignedTo, includeArchived, setIncludeArchived, skip, setSkip, itemsTotal, setItemModal, resetItemForm, setFormError, categoryById, statusLabel, } = useInventory();
     const [viewItem, setViewItem] = useState<InventoryItem | null>(null);
     const page = Math.floor(skip / LIMIT) + 1;
     return (<section className="inv__card">
@@ -49,11 +49,19 @@ export function InventoryItemsSection() {
         }}/>
           </label>
           <label className="inv__field">
-            <span className="inv__field-label">Оценка</span>
-            <InvSelect value={filterEquipmentClass} placeholder="Все" options={EQUIPMENT_SCORE_RANGES.map((r) => ({ value: r.code, label: `${r.range} — ${r.short}` }))} onChange={(v) => {
-            setFilterEquipmentClass(String(v));
-            setSkip(0);
-        }}/>
+            <span className="inv__field-label">Оценка (баллы)</span>
+            <InvSelect
+              value={filterScore === '' ? '' : filterScore}
+              placeholder="Все"
+              options={EQUIPMENT_SCORE_POINTS.map((score) => ({
+                  value: score,
+                  label: `${score}/${EQUIPMENT_SCORE_MAX}`,
+              }))}
+              onChange={(v) => {
+                  setFilterScore(v === '' ? '' : Number(v));
+                  setSkip(0);
+              }}
+            />
           </label>
           {canEdit && users.length > 0 && (<label className="inv__field">
               <span className="inv__field-label">Закреплено за</span>

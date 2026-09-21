@@ -93,10 +93,25 @@ export type EquipmentScoreRangeOption = {
     summary: string;
 };
 
-/** Варианты для ручного выбора и фильтра: пользователь видит баллы, уходит буква. */
+/** Варианты для ручного выбора и фильтра по диапазону: пользователь видит баллы, уходит буква. */
 export const EQUIPMENT_SCORE_RANGES: EquipmentScoreRangeOption[] = EQUIPMENT_TIERS.map((tier) => ({
     code: tier.code,
     range: `${tier.minScore}–${tier.maxScore}`,
     short: tier.short,
     summary: tier.summary,
 }));
+
+/** Точные баллы 10…1 для фильтра списка (как в колонке «Оценка»). */
+export const EQUIPMENT_SCORE_POINTS: number[] = Array.from(
+    { length: EQUIPMENT_SCORE_MAX },
+    (_, i) => EQUIPMENT_SCORE_MAX - i,
+);
+
+export function itemMatchesEquipmentScore(
+    item: EquipmentScoreInput,
+    score: number,
+    now?: Date,
+): boolean {
+    const resolved = resolveEquipmentScore(item, now);
+    return resolved != null && resolved.score === score;
+}

@@ -3,6 +3,7 @@ import {
     equipmentAgeYears,
     equipmentScoreFromAgeYears,
     equipmentScoreToClassCode,
+    itemMatchesEquipmentScore,
     resolveEquipmentScore,
 } from './equipmentScore';
 
@@ -65,5 +66,25 @@ describe('resolveEquipmentScore', () => {
     it('возвращает null, если нет ни даты, ни валидной буквы', () => {
         expect(resolveEquipmentScore({ purchase_date: null, equipment_class: null }, NOW)).toBeNull();
         expect(resolveEquipmentScore({ equipment_class: 'Z' }, NOW)).toBeNull();
+    });
+});
+
+describe('itemMatchesEquipmentScore', () => {
+    it('matches exact score from purchase date', () => {
+        expect(itemMatchesEquipmentScore(
+            { purchase_date: '2026-01-15T00:00:00.000Z', equipment_class: 'E' },
+            9,
+            NOW,
+        )).toBe(true);
+        expect(itemMatchesEquipmentScore(
+            { purchase_date: '2026-01-15T00:00:00.000Z' },
+            4,
+            NOW,
+        )).toBe(false);
+    });
+
+    it('matches class fallback score when no purchase date', () => {
+        expect(itemMatchesEquipmentScore({ purchase_date: null, equipment_class: 'C' }, 6, NOW)).toBe(true);
+        expect(itemMatchesEquipmentScore({ purchase_date: null, equipment_class: 'C' }, 5, NOW)).toBe(false);
     });
 });
