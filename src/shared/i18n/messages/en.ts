@@ -322,6 +322,7 @@ export const enMessages = {
         searchPlaceholder: 'Search by name or extension…',
         colName: 'Employee name',
         colExtension: 'Internal extension',
+        colActions: 'Actions',
         empty: 'No employees found',
         emptyDirectory: 'The internal directory is not filled in yet',
         emptyHint: 'Try a different search query',

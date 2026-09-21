@@ -236,51 +236,79 @@ export function InternalCommunicationPage() {
                                 ) : null}
                             </div>
                         ) : (
-                            <ul className="icom-page__grid">
-                                {filtered.map((row, index) => (
-                                    <li
-                                        key={row.id}
-                                        className="icom-card"
-                                        style={{ animationDelay: `${Math.min(index, 18) * 18}ms` }}
-                                    >
-                                        <span className="icom-card__avatar" style={{ background: avatarColor(row.fullName) }} aria-hidden>
-                                            {internalExtensionInitials(row.fullName)}
-                                        </span>
-                                        <div className="icom-card__body">
-                                            <p className="icom-card__name">{row.fullName}</p>
-                                            <button
-                                                type="button"
-                                                className="icom-card__ext"
-                                                title={t('internalCommunicationPage.copyExtension')}
-                                                onClick={() => void copyExtension(row.extension)}
+                            <div className="icom-page__table-wrap">
+                                <table className="icom-page__table">
+                                    <thead>
+                                        <tr>
+                                            <th className="icom-page__col--name" scope="col">
+                                                {t('internalCommunicationPage.colName')}
+                                            </th>
+                                            <th className="icom-page__col--ext" scope="col">
+                                                {t('internalCommunicationPage.colExtension')}
+                                            </th>
+                                            {canManage ? (
+                                                <th className="icom-page__col--actions" scope="col">
+                                                    {t('internalCommunicationPage.colActions')}
+                                                </th>
+                                            ) : null}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filtered.map((row, index) => (
+                                            <tr
+                                                key={row.id}
+                                                style={{ animationDelay: `${Math.min(index, 24) * 16}ms` }}
                                             >
-                                                {row.extension}
-                                            </button>
-                                        </div>
-                                        {canManage ? (
-                                            <div className="icom-card__actions">
-                                                <button
-                                                    type="button"
-                                                    className="icom-card__action"
-                                                    onClick={() => {
-                                                        setSaveError(null);
-                                                        setModal(row);
-                                                    }}
-                                                >
-                                                    {t('internalCommunicationPage.edit')}
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="icom-card__action icom-card__action--danger"
-                                                    onClick={() => void handleDelete(row)}
-                                                >
-                                                    {t('internalCommunicationPage.delete')}
-                                                </button>
-                                            </div>
-                                        ) : null}
-                                    </li>
-                                ))}
-                            </ul>
+                                                <td className="icom-page__col--name">
+                                                    <div className="icom-page__person">
+                                                        <span
+                                                            className="icom-page__avatar"
+                                                            style={{ background: avatarColor(row.fullName) }}
+                                                            aria-hidden
+                                                        >
+                                                            {internalExtensionInitials(row.fullName)}
+                                                        </span>
+                                                        <span className="icom-page__name">{row.fullName}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="icom-page__col--ext">
+                                                    <button
+                                                        type="button"
+                                                        className="icom-page__ext"
+                                                        title={t('internalCommunicationPage.copyExtension')}
+                                                        onClick={() => void copyExtension(row.extension)}
+                                                    >
+                                                        {row.extension}
+                                                    </button>
+                                                </td>
+                                                {canManage ? (
+                                                    <td className="icom-page__col--actions">
+                                                        <div className="icom-page__row-actions">
+                                                            <button
+                                                                type="button"
+                                                                className="icom-page__row-action"
+                                                                onClick={() => {
+                                                                    setSaveError(null);
+                                                                    setModal(row);
+                                                                }}
+                                                            >
+                                                                {t('internalCommunicationPage.edit')}
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="icom-page__row-action icom-page__row-action--danger"
+                                                                onClick={() => void handleDelete(row)}
+                                                            >
+                                                                {t('internalCommunicationPage.delete')}
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                ) : null}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         )}
                     </section>
                 </div>

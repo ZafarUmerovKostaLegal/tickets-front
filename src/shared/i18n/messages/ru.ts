@@ -322,6 +322,7 @@ export const ruMessages: Messages = {
         searchPlaceholder: 'Поиск по ФИО или номеру…',
         colName: 'ФИО сотрудника',
         colExtension: 'Внутренний номер',
+        colActions: 'Действия',
         empty: 'Сотрудники не найдены',
         emptyDirectory: 'Список внутренних номеров пока не заполнен',
         emptyHint: 'Попробуйте изменить поисковый запрос',
@@ -946,6 +947,7 @@ export type Messages = {
         searchPlaceholder: string;
         colName: string;
         colExtension: string;
+        colActions: string;
         empty: string;
         emptyDirectory: string;
         emptyHint: string;
