@@ -161,9 +161,9 @@ export async function buildOutgoingLetterDocxBlob(
 
     const qrUrl = (opts?.downloadQrUrl ?? '').trim();
     if (qrUrl && typeof window !== 'undefined') {
-        const qrPng = await buildCorrespondenceQrPngBytes(qrUrl, 160);
+        const qrPng = await buildCorrespondenceQrPngBytes(qrUrl, 280);
         if (qrPng?.length) {
-            const qrSize = 72;
+            const qrSize = 120;
             children.push(new Paragraph({ spacing: { before: 360, after: 40 }, children: [] }));
             children.push(new Table({
                 width: { size: 100, type: WidthType.PERCENTAGE },
@@ -180,12 +180,12 @@ export async function buildOutgoingLetterDocxBlob(
                         children: [
                             new TableCell({
                                 borders: cellBorderNil,
-                                width: { size: 70, type: WidthType.PERCENTAGE },
+                                width: { size: 62, type: WidthType.PERCENTAGE },
                                 children: [new Paragraph({ children: [] })],
                             }),
                             new TableCell({
                                 borders: cellBorderNil,
-                                width: { size: 30, type: WidthType.PERCENTAGE },
+                                width: { size: 38, type: WidthType.PERCENTAGE },
                                 children: [
                                     new Paragraph({
                                         alignment: AlignmentType.RIGHT,

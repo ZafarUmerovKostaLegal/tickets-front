@@ -7,10 +7,17 @@ export type CorrespondenceLetterQrProps = {
     label?: string;
 };
 
-/** Compact QR for letterhead corner — encodes a signed public download URL. */
+const QR_OPTS = {
+    errorCorrectionLevel: 'M' as const,
+    /** Quiet zone must be ≥ 4 modules for phone cameras. */
+    margin: 4,
+    color: { dark: '#1e293b', light: '#ffffff' },
+};
+
+/** Letter QR — encodes a signed public download URL (sized for phone cameras). */
 export function CorrespondenceLetterQr({
     url,
-    sizePx = 88,
+    sizePx = 128,
     label = 'Скачать документ',
 }: CorrespondenceLetterQrProps) {
     const [dataUrl, setDataUrl] = useState<string | null>(null);
@@ -23,10 +30,8 @@ export function CorrespondenceLetterQr({
         }
         let cancelled = false;
         void QRCode.toDataURL(target, {
-            errorCorrectionLevel: 'M',
-            margin: 1,
-            width: sizePx * 2,
-            color: { dark: '#1e293b', light: '#ffffff' },
+            ...QR_OPTS,
+            width: Math.max(256, sizePx * 2),
         })
             .then((out) => {
                 if (!cancelled)
@@ -57,17 +62,15 @@ export function CorrespondenceLetterQr({
     );
 }
 
-/** Build PNG bytes for embedding into PDF (same URL the on-screen QR uses). */
-export async function buildCorrespondenceQrPngBytes(url: string, sizePx = 160): Promise<Uint8Array | null> {
+/** Build PNG bytes for embedding into PDF / DOCX (same URL the on-screen QR uses). */
+export async function buildCorrespondenceQrPngBytes(url: string, sizePx = 280): Promise<Uint8Array | null> {
     const target = url.trim();
     if (!target)
         return null;
     try {
         const dataUrl = await QRCode.toDataURL(target, {
-            errorCorrectionLevel: 'M',
-            margin: 1,
-            width: sizePx,
-            color: { dark: '#1e293b', light: '#ffffff' },
+            ...QR_OPTS,
+            width: Math.max(280, sizePx),
         });
         const comma = dataUrl.indexOf(',');
         if (comma < 0)

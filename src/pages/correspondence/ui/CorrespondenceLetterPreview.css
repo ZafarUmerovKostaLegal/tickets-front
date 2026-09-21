@@ -195,8 +195,8 @@
 
 .corr-letter__qr-img {
   display: block;
-  width: 88px;
-  height: 88px;
+  width: 128px;
+  height: 128px;
   image-rendering: pixelated;
 }
 
@@ -932,8 +932,8 @@ html.corr-docx-fs .corr-shell__header {
 }
 
 .corr-word__download-qr .corr-letter__qr-img {
-  width: 96px;
-  height: 96px;
+  width: 128px;
+  height: 128px;
 }
 
 .corr-word__editor-main {

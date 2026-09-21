@@ -940,7 +940,7 @@ export function OutgoingLetterCreatePage() {
                 >
                     {downloadQrUrl ? (
                         <div className="corr-word__download-qr" title="QR для скачивания письма">
-                            <CorrespondenceLetterQr url={downloadQrUrl} sizePx={96} />
+                            <CorrespondenceLetterQr url={downloadQrUrl} sizePx={128} />
                         </div>
                     ) : null}
                     {useInBrowserEditor && documentBytes && !templateBusy ? (

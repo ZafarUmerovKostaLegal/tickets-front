@@ -63,7 +63,7 @@ export async function buildOutgoingLetterPdfBlob(
         fetchFontBytes(dejavuSansBoldUrl),
         fetchFontBytes(dejavuSansObliqueUrl),
         rasterizeInvoiceLogoSvg(Math.round(LOGO_W_PT * 3), 'cover'),
-        opts?.downloadQrUrl ? buildCorrespondenceQrPngBytes(opts.downloadQrUrl, 160) : Promise.resolve(null),
+        opts?.downloadQrUrl ? buildCorrespondenceQrPngBytes(opts.downloadQrUrl, 280) : Promise.resolve(null),
     ]);
     const page = doc.addPage([PAGE_W, PAGE_H]);
     const font = await doc.embedFont(regularBytes, { subset: true });
@@ -166,9 +166,9 @@ export async function buildOutgoingLetterPdfBlob(
     }
 
     if (qrImage) {
-        const qrSize = 64;
+        const qrSize = 110;
         const qrX = PAGE_W - MR - qrSize;
-        const qrY = 36;
+        const qrY = 40;
         page.drawImage(qrImage, {
             x: qrX,
             y: qrY,
