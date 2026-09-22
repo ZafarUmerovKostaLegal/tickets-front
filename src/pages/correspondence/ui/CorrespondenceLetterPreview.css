@@ -9,7 +9,7 @@
   flex-direction: column;
 }
 
-.corr-doc-preview > .tt-inv-preview {
+.corr-doc-preview>.tt-inv-preview {
   flex: 1;
   min-height: 0;
 }
@@ -166,7 +166,7 @@
   flex-shrink: 0;
 }
 
-.corr-letter__contact > span {
+.corr-letter__contact>span {
   display: block;
 }
 
@@ -524,6 +524,7 @@
 }
 
 @media (max-width: 720px) {
+
   .corr-doc-preview__actions .corr-n__btn-primary span,
   .corr-doc-preview__actions .corr-n__btn-secondary span,
   .corr-doc-preview__actions .corr-n__btn-danger span,
@@ -729,7 +730,7 @@
 }
 
 .corr-word__field-label,
-.corr-word__field--inline > span {
+.corr-word__field--inline>span {
   flex-shrink: 0;
   font-size: 0.72rem;
   font-weight: 600;
@@ -1653,6 +1654,7 @@ html.corr-docx-fs .corr-shell__header {
 }
 
 @media (max-width: 900px) {
+
   .corr-word__toolbar,
   .corr-word__toolbar--slim {
     grid-template-columns: 1fr;
@@ -1664,3 +1666,213 @@ html.corr-docx-fs .corr-shell__header {
   }
 }
 
+/* Dark theme: editor chrome follows the shell; the letter page uses the editor dark mode. */
+body[data-theme='dark'] .corr-letter,
+body[data-theme='dark'] .corr-blank-sheet {
+  background: #1c2233;
+  color: #f2f0e9;
+}
+
+body[data-theme='dark'] .corr-letter__meta-line,
+body[data-theme='dark'] .corr-letter__contact,
+body[data-theme='dark'] .corr-letter__qr-caption {
+  color: #b7b3aa;
+}
+
+body[data-theme='dark'] .corr-letter__logo {
+  filter: invert(1);
+}
+
+/* Editor dark mode re-inverts images so photos stay natural; letterhead is black ink, so leave it inverted with the page. */
+body[data-theme='dark'] .corr-docx-editor .docx-page-content img,
+body[data-theme='dark'] .corr-docx-editor .docx-page-content svg {
+  filter: none;
+}
+body[data-theme='dark'] .corr-word__toolbar {
+  background: var(--corr-card, #1a2033);
+  border-bottom-color: var(--corr-line, #2a3049);
+}
+
+body[data-theme='dark'] .corr-word__icon-btn:hover:not(:disabled),
+body[data-theme='dark'] .corr-word__fs-btn:hover {
+  background: var(--corr-paper-alt, #161b29);
+  color: var(--corr-ink, #f2f0e9);
+  border-color: var(--corr-line, #2a3049);
+}
+
+body[data-theme='dark'] .corr-word__icon-btn[aria-pressed='true'],
+body[data-theme='dark'] .corr-word__fs-btn[aria-pressed='true'],
+body[data-theme='dark'] .corr-word__comments-toggle[aria-pressed='true'] {
+  color: #9ec5ff;
+  border-color: color-mix(in srgb, #9ec5ff 40%, transparent);
+  background: #1c2a44;
+}
+
+body[data-theme='dark'] .corr-word__more-menu {
+  background: var(--corr-card, #1a2033);
+  border-color: var(--corr-line, #2a3049);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+body[data-theme='dark'] .corr-word__more-item {
+  color: var(--corr-ink, #f2f0e9);
+}
+
+body[data-theme='dark'] .corr-word__more-item:hover:not(:disabled) {
+  background: var(--corr-paper-alt, #161b29);
+}
+
+body[data-theme='dark'] .corr-word--docx.corr-word--docx-fs,
+body[data-theme='dark'] .corr-word__editor-wrap,
+body[data-theme='dark'] .corr-word__editor-fallback,
+body[data-theme='dark'] .corr-word__editor-loading {
+  background: var(--corr-paper, #10141f);
+  color: var(--corr-ink, #f2f0e9);
+}
+
+body[data-theme='dark'] .corr-word__download-qr {
+  background: var(--corr-card, #1a2033);
+  border-color: var(--corr-line, #2a3049);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+body[data-theme='dark'] .corr-word__download-qr .corr-letter__qr-caption {
+  color: var(--corr-muted, #8d8a84);
+}
+
+body[data-theme='dark'] .corr-word-comments {
+  background: var(--corr-paper-alt, #161b29);
+  border-left-color: var(--corr-line, #2a3049);
+  color: var(--corr-ink, #f2f0e9);
+}
+
+body[data-theme='dark'] .corr-word-comments__header,
+body[data-theme='dark'] .corr-word-comments__card,
+body[data-theme='dark'] .corr-word-comments__input {
+  background: var(--corr-card, #1a2033);
+  border-color: var(--corr-line, #2a3049);
+  color: var(--corr-ink, #f2f0e9);
+}
+
+body[data-theme='dark'] .corr-word-comments__title,
+body[data-theme='dark'] .corr-word-comments__author,
+body[data-theme='dark'] .corr-word-comments__quote {
+  color: var(--corr-ink, #f2f0e9);
+}
+
+body[data-theme='dark'] .corr-word-comments__when,
+body[data-theme='dark'] .corr-word-comments__hint,
+body[data-theme='dark'] .corr-word-comments__icon-btn {
+  color: var(--corr-muted, #8d8a84);
+}
+
+body[data-theme='dark'] .corr-word-comments__icon-btn:hover:not(:disabled) {
+  background: #243049;
+  color: var(--corr-ink, #f2f0e9);
+}
+
+body[data-theme='dark'] .corr-word-comments__badge {
+  background: #1c3358;
+  color: #9ec5ff;
+}
+
+body[data-theme='dark'] .corr-docx-editor {
+  --corr-word-ribbon-bg: #161b29;
+  --corr-word-ribbon-surface: #1a2033;
+  --corr-word-ribbon-border: #2a3049;
+  --corr-word-ribbon-hover: #243049;
+  --corr-word-ribbon-press: #1c3358;
+  --corr-word-ribbon-active: #1c3358;
+  --corr-word-ribbon-active-border: #6ea8ff;
+  --corr-word-ribbon-accent: #8eb7ff;
+  --corr-word-ribbon-text: #f2f0e9;
+  --corr-word-ribbon-muted: #a8a49c;
+  --doc-surface: var(--corr-word-ribbon-surface);
+  --doc-bg: #0c1018;
+  --doc-bg-subtle: var(--corr-word-ribbon-bg);
+  --doc-bg-hover: var(--corr-word-ribbon-hover);
+  --doc-text: var(--corr-word-ribbon-text);
+  --doc-text-muted: var(--corr-word-ribbon-muted);
+  --doc-border: var(--corr-word-ribbon-border);
+  --doc-border-light: #2a3049;
+  --doc-primary: var(--corr-word-ribbon-accent);
+  --doc-primary-hover: #c5daff;
+  --doc-primary-light: #1c2a44;
+  --doc-accent: var(--corr-word-ribbon-accent);
+  --doc-accent-bg: #1c2a44;
+  --doc-toggle-active-bg: var(--corr-word-ribbon-active);
+  --doc-toggle-active-fg: var(--corr-word-ribbon-text);
+  --doc-text-subtle: #8d8a84;
+  --doc-shadow-subtle: #2a3049;
+}
+
+body[data-theme='dark'] .corr-docx-editor .docx-editor,
+body[data-theme='dark'] .corr-docx-editor .docx-editor-shell {
+  color: var(--corr-word-ribbon-text);
+  background: var(--doc-bg);
+}
+
+body[data-theme='dark'] .corr-docx-editor .docx-editor-shell__toolbar {
+  border-bottom-color: var(--corr-word-ribbon-border) !important;
+}
+
+body[data-theme='dark'] .corr-docx-editor .docx-toolbar__separator {
+  background: var(--corr-word-ribbon-border) !important;
+}
+
+body[data-theme='dark'] .corr-docx-editor .docx-toolbar__picker {
+  box-shadow: inset 0 0 0 1px #5c6178;
+}
+
+body[data-theme='dark'] .corr-docx-editor .docx-toolbar__picker:hover:not(:disabled) {
+  box-shadow: inset 0 0 0 1px #8d8a84;
+}
+
+body[data-theme='dark'] .corr-docx-editor [data-testid="docx-editor-ruler-row"] {
+  background: #161b29 !important;
+  border-bottom-color: #2a3049;
+  box-shadow: inset 0 -1px 0 #2a3049;
+}
+
+body[data-theme='dark'] .corr-docx-editor [data-testid="docx-editor-ruler-row"]::before {
+  background:
+    linear-gradient(#2a3049, #2a3049) right / 1px 100% no-repeat,
+    linear-gradient(#2a3049, #2a3049) bottom / 100% 1px no-repeat,
+    #161b29;
+}
+
+body[data-theme='dark'] .corr-docx-editor .docx-ruler-frame {
+  background: #161b29 !important;
+}
+
+body[data-theme='dark'] .corr-docx-editor .docx-editor-shell__ruler-h,
+body[data-theme='dark'] .corr-docx-editor .docx-horizontal-ruler,
+body[data-theme='dark'] .corr-docx-editor .docx-vertical-ruler {
+  background: #1a2033 !important;
+  box-shadow: inset 0 -1px 0 #2a3049;
+}
+
+body[data-theme='dark'] .corr-docx-editor .docx-horizontal-ruler [style*="font-size: 9px"],
+body[data-theme='dark'] .corr-docx-editor .docx-horizontal-ruler [style*="font-size:9px"],
+body[data-theme='dark'] .corr-docx-editor .docx-vertical-ruler [style*="font-size: 9px"],
+body[data-theme='dark'] .corr-docx-editor .docx-vertical-ruler [style*="font-size:9px"] {
+  color: #a8a49c !important;
+}
+
+/* Ribbon menus are portaled to body, outside .corr-docx-editor. */
+body[data-theme='dark'] .docx-menubar__menu,
+body[data-theme='dark'] .docx-menubar__submenu-panel,
+body[data-theme='dark'] .docx-toolbar__menu,
+body[data-theme='dark'] .docx-toolbar__font-family-content,
+body[data-theme='dark'] .docx-toolbar__style-content,
+body[data-theme='dark'] .docx-toolbar__font-size-menu,
+body[data-theme='dark'] .docx-toolbar__line-spacing-menu,
+body[data-theme='dark'] .docx-toolbar__image-wrap-menu,
+body[data-theme='dark'] .docx-toolbar__alignment-popup,
+body[data-theme='dark'] .docx-contextmenu,
+body[data-theme='dark'] .docx-color-picker-dropdown,
+body[data-theme='dark'] .docx-dialog {
+  background: #1a2033;
+  color: #f2f0e9;
+  border-color: #2a3049;
+}

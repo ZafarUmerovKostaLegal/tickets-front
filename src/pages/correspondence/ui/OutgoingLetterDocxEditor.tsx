@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import {
     DocxEditor,
     runToolbarCommand,
@@ -17,15 +17,33 @@ export type { OutgoingLetterDocxEditorHandle } from './outgoingLetterDocxEditorH
 type Props = {
     documentBytes: Uint8Array;
     title: string;
-    /** Remount key when the blank template is rebuilt. */
     templateKey: string;
     disabled?: boolean;
     onReady?: () => void;
     onChange?: () => void;
     onSaveRequest?: () => void;
-    /** Word-like New Comment (Ctrl+Alt+M). */
     onNewCommentRequest?: () => void;
 };
+
+function useAppColorMode(): 'light' | 'dark' {
+    const [mode, setMode] = useState<'light' | 'dark'>(() => (
+        typeof document !== 'undefined' && document.body.getAttribute('data-theme') === 'dark'
+            ? 'dark'
+            : 'light'
+    ));
+
+    useEffect(() => {
+        const sync = () => {
+            setMode(document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light');
+        };
+        sync();
+        const observer = new MutationObserver(sync);
+        observer.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+        return () => observer.disconnect();
+    }, []);
+
+    return mode;
+}
 
 function isFormFieldTarget(target: EventTarget | null): boolean {
     if (!(target instanceof Element))
@@ -33,10 +51,7 @@ function isFormFieldTarget(target: EventTarget | null): boolean {
     return Boolean(target.closest('input, textarea, select'));
 }
 
-/**
- * Packaged chrome binds Ctrl/Cmd shortcuts via `event.key` ("b"/"i"/…), which breaks on
- * non-Latin keyboard layouts (RU/etc.). Bridge the same chords via physical `event.code`.
- */
+
 function bindLayoutSafeEditorHotkeys(
     root: HTMLElement,
     getEditor: () => Editor | null,
@@ -155,6 +170,7 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
         const rootRef = useRef<HTMLDivElement>(null);
         const innerRef = useRef<DocxEditorRef>(null);
         const fonts = useFonts(outgoingLetterEditorFonts);
+        const colorMode = useAppColorMode();
         const onSaveRequestRef = useRef(onSaveRequest);
         onSaveRequestRef.current = onSaveRequest;
         const onNewCommentRequestRef = useRef(onNewCommentRequest);
@@ -255,7 +271,7 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
                     i18n={docxEditorRu}
                     title={title || 'Исходящее письмо'}
                     chrome
-                    colorMode="light"
+                    colorMode={colorMode}
                     menu
                     navigation={false}
                     rulers
