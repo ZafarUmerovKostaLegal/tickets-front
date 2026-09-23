@@ -4657,6 +4657,35 @@ body[data-theme='dark'] .corr-registry__comments-badge {
   padding: 1rem 1.125rem;
 }
 
+.corr-registry__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 16rem;
+  min-width: min(100%, 14rem);
+  max-width: 28rem;
+}
+
+.corr-registry__search-icon {
+  position: absolute;
+  left: 0.65rem;
+  color: var(--corr-muted, var(--app-muted));
+  pointer-events: none;
+}
+
+.corr-registry__search-input {
+  width: 100%;
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem 0.35rem 2.05rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+}
+
+.corr-shell .corr__table-actions {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
 .corr-shell .corr__table-tabs {
   gap: 0.375rem;
 }

@@ -244,6 +244,7 @@ export function CorrespondenceRegistryView({
   const [appliedDocTypes, setAppliedDocTypes] = useState<CorrDocType[]>([...CORR_DOC_TYPE_KEYS]);
   const [extraFilters, setExtraFilters] = useState<RegistryExtraFilters>(EMPTY_EXTRA_FILTERS);
   const [extraDraft, setExtraDraft] = useState<RegistryExtraFilters>(EMPTY_EXTRA_FILTERS);
+  const [searchText, setSearchText] = useState('');
   const [partnerOptions, setPartnerOptions] = useState<UserPublic[]>([]);
   const [userOptions, setUserOptions] = useState<User[]>([]);
   const [usersFilterAvailable, setUsersFilterAvailable] = useState(true);
@@ -466,20 +467,39 @@ export function CorrespondenceRegistryView({
     setAppliedDocTypes([...selected]);
     setExtraFilters({
       ...extraDraft,
-      q: extraDraft.q.trim(),
+      q: searchText.trim(),
     });
     setPage(1);
     setFiltersOpen(false);
-  }, [extraDraft, filterDraft]);
+  }, [extraDraft, filterDraft, searchText]);
 
   const resetFilters = useCallback(() => {
     setFilterDraft(defaultCorrDocTypeFilterState());
     setExtraDraft(EMPTY_EXTRA_FILTERS);
+    setSearchText('');
     setAppliedDocTypes([...CORR_DOC_TYPE_KEYS]);
     setExtraFilters(EMPTY_EXTRA_FILTERS);
     setPage(1);
     setFiltersOpen(false);
   }, []);
+
+  useEffect(() => {
+    const next = searchText.trim();
+    const handle = window.setTimeout(() => {
+      setExtraFilters((prev) => (prev.q === next ? prev : { ...prev, q: next }));
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [searchText]);
+
+  const appliedSearch = extraFilters.q;
+  const skipSearchPageReset = useRef(true);
+  useEffect(() => {
+    if (skipSearchPageReset.current) {
+      skipSearchPageReset.current = false;
+      return;
+    }
+    setPage(1);
+  }, [appliedSearch]);
 
   const extraFilterCount = useMemo(() => {
     let n = 0;
@@ -490,8 +510,6 @@ export function CorrespondenceRegistryView({
     if (extraFilters.responsibleUserId != null)
       n += 1;
     if (extraFilters.dateFrom || extraFilters.dateTo)
-      n += 1;
-    if (extraFilters.q.trim())
       n += 1;
     return n;
   }, [appliedDocTypes, extraFilters]);
@@ -821,6 +839,21 @@ export function CorrespondenceRegistryView({
                   </button>))}
                 </div>
                 <div className="corr__table-actions">
+                  <label className="corr-registry__search">
+                    <svg className="corr-registry__search-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      <circle cx="11" cy="11" r="7" />
+                      <line x1="16.5" y1="16.5" x2="21" y2="21" />
+                    </svg>
+                    <input
+                      type="search"
+                      className="corr-modal__input corr-registry__search-input"
+                      value={searchText}
+                      onChange={(e) => setSearchText(e.target.value)}
+                      placeholder="Отправитель, получатель, тема, комментарий…"
+                      aria-label="Поиск по реестру"
+                      disabled={listLoading && rows.length === 0}
+                    />
+                  </label>
                   <div className="corr__anchor-wrap">
                     <button
                       ref={filtersBtnRef}
@@ -1019,16 +1052,6 @@ export function CorrespondenceRegistryView({
     {filtersOpen && filterPopoverBox ? createPortal(<>
       <div className="corr__popover-backdrop corr__popover-backdrop--enter" onClick={closeOverlays} aria-hidden />
       <div className="corr__popover corr__popover--filters corr__popover--enter" role="dialog" aria-label="Фильтры реестра" style={{ top: filterPopoverBox.top, left: filterPopoverBox.left, minWidth: filterPopoverBox.minWidth }}>
-        <div className="corr__popover-field">
-          <label className="corr__popover-label" htmlFor="corr-filter-q">Поиск</label>
-          <input
-            id="corr-filter-q"
-            className="corr-modal__input"
-            value={extraDraft.q}
-            onChange={(e) => setExtraDraft((f) => ({ ...f, q: e.target.value }))}
-            placeholder="Номер, тема, контрагент…"
-          />
-        </div>
         <p className="corr__popover-title">Тип документа</p>
         <div className="corr__filter-type-list">
           {CORR_DOC_TYPE_KEYS.map((key) => (
