@@ -368,6 +368,49 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
 
 .exp-cash__event-after { margin-top: 0.25rem; }
 
+.exp-cash__event-side {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.exp-cash__event-tools {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.exp-cash__event-tool {
+  width: 1.85rem;
+  height: 1.85rem;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.exp-cash__event-tool svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.exp-cash__event-tool:hover {
+  background: var(--app-surface-soft);
+  color: var(--app-text);
+}
+
+.exp-cash__event-tool--danger:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+body[data-theme='dark'] .exp-cash__event-tool--danger:hover {
+  color: #f87171;
+}
+
 .exp-cash__event-sum {
   font-weight: 750;
   font-variant-numeric: tabular-nums;
@@ -420,8 +463,9 @@ body[data-theme='dark'] .exp-cash__event-sum--topup { color: #4ade80; }
     grid-template-columns: auto minmax(0, 1fr);
   }
 
-  .exp-cash__event-sum {
+  .exp-cash__event-side {
     grid-column: 2;
+    justify-content: flex-end;
   }
 }
 

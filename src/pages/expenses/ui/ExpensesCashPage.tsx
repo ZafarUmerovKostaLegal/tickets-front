@@ -4,7 +4,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
-import { fetchCashState, postCashAction, type CashMovement, type CashState } from '@entities/expenses/model/cashApi';
+import { deleteCashMovement, fetchCashState, isManualCashMovement, postCashAction, updateCashMovement, type CashMovement, type CashState } from '@entities/expenses/model/cashApi';
 import { showToast } from '@shared/ui/app-toast';
 import { ExpensesShell } from './ExpensesShell';
 import './ExpensesPage.css';
@@ -108,6 +108,25 @@ function IconPlus() {
     );
 }
 
+function IconPencil() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" strokeLinejoin="round" />
+            <path d="M13.5 6.5l3 3" strokeLinecap="round" />
+        </svg>
+    );
+}
+
+function IconTrash() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+            <path d="M5 7h14" strokeLinecap="round" />
+            <path d="M9 7V5h6v2" strokeLinejoin="round" />
+            <path d="M8 7l.8 12h6.4L16 7" strokeLinejoin="round" />
+        </svg>
+    );
+}
+
 export function ExpensesCashPage() {
     const { user, loading } = useCurrentUser();
     const allowed = isPartnerOrgRole(user?.role, user?.position);
@@ -115,6 +134,8 @@ export function ExpensesCashPage() {
     const [loadError, setLoadError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [form, setForm] = useState<FormKind | null>(null);
+    const [editing, setEditing] = useState<CashMovement | null>(null);
+    const [deleting, setDeleting] = useState<CashMovement | null>(null);
     const [filter, setFilter] = useState<HistoryFilter>('all');
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
@@ -144,16 +165,20 @@ export function ExpensesCashPage() {
         };
     }, [allowed]);
 
+    const dialogOpen = form !== null || editing !== null || deleting !== null;
     useEffect(() => {
-        if (!form)
+        if (!dialogOpen)
             return;
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && !busy)
-                setForm(null);
+            if (event.key !== 'Escape' || busy)
+                return;
+            setForm(null);
+            setEditing(null);
+            setDeleting(null);
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [form, busy]);
+    }, [dialogOpen, busy]);
 
     const stats = useMemo(() => {
         const rows = state?.history ?? [];
@@ -197,11 +222,31 @@ export function ExpensesCashPage() {
     if (!allowed)
         return <Navigate to={routes.expenses} replace />;
 
+    const closeDialogs = () => {
+        if (busy)
+            return;
+        setForm(null);
+        setEditing(null);
+        setDeleting(null);
+        setFormError(null);
+    };
+
     const openForm = (kind: FormKind) => {
+        setEditing(null);
+        setDeleting(null);
         setForm((current) => (current === kind ? null : kind));
         setFormError(null);
         setAmount('');
         setNote('');
+    };
+
+    const openEdit = (row: CashMovement) => {
+        setForm(null);
+        setDeleting(null);
+        setEditing(row);
+        setFormError(null);
+        setAmount(formatCash(row.amount, false));
+        setNote(row.note);
     };
 
     const submit = async () => {
@@ -219,6 +264,53 @@ export function ExpensesCashPage() {
         }
         catch (err: unknown) {
             setFormError(err instanceof Error ? err.message : 'Не удалось сохранить операцию');
+        }
+        finally {
+            setBusy(false);
+        }
+    };
+
+    const submitEdit = async () => {
+        if (!editing)
+            return;
+        setBusy(true);
+        setFormError(null);
+        try {
+            const result = await updateCashMovement(editing.id, amount.trim(), note.trim());
+            showToast({ message: movementNotice(result.movement), variant: 'success', durationMs: 8000 });
+            setEditing(null);
+            await reload();
+        }
+        catch (err: unknown) {
+            setFormError(err instanceof Error ? err.message : 'Не удалось сохранить запись');
+        }
+        finally {
+            setBusy(false);
+        }
+    };
+
+    const submitDelete = async () => {
+        if (!deleting)
+            return;
+        setBusy(true);
+        setFormError(null);
+        try {
+            const result = await deleteCashMovement(deleting.id);
+            const label = deleting.kind === 'expense' ? 'Потрачено' : 'Пополнение';
+            const detail = deleting.note.trim();
+            const middle = detail
+                ? `${label}: ${formatCash(deleting.amount)} (${detail})`
+                : `${label}: ${formatCash(deleting.amount)}`;
+            showToast({
+                message: `Запись удалена\n${middle}\n\nОстаток на текущий момент: ${formatCash(result.balance)}`,
+                variant: 'success',
+                durationMs: 8000,
+            });
+            setDeleting(null);
+            await reload();
+        }
+        catch (err: unknown) {
+            setFormError(err instanceof Error ? err.message : 'Не удалось удалить запись');
         }
         finally {
             setBusy(false);
@@ -334,6 +426,82 @@ export function ExpensesCashPage() {
                     document.body,
                 )}
 
+                {editing && createPortal(
+                    <div className="exp-mod-backdrop" role="presentation" onClick={closeDialogs}>
+                        <form
+                            className="exp-mod-dialog"
+                            role="dialog"
+                            aria-modal
+                            aria-labelledby="exp-cash-edit-title"
+                            onClick={(e) => e.stopPropagation()}
+                            onSubmit={(e) => { e.preventDefault(); void submitEdit(); }}
+                        >
+                            <h3 id="exp-cash-edit-title" className="exp-mod-dialog__title">
+                                {editing.kind === 'expense' ? 'Изменить расход' : 'Изменить пополнение'}
+                            </h3>
+                            <label className="exp-cash__field">
+                                <span>Сумма, UZS</span>
+                                <input
+                                    inputMode="decimal"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    required
+                                    autoFocus
+                                    disabled={busy}
+                                />
+                            </label>
+                            <label className="exp-cash__field">
+                                <span>{editing.kind === 'expense' ? 'На что потрачено' : 'Комментарий'}</span>
+                                <input
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                    disabled={busy}
+                                />
+                            </label>
+                            {formError && <p className="exp-mod-err" role="alert">{formError}</p>}
+                            <div className="exp-mod-dialog__ft">
+                                <button type="button" className="exp-panel-btn exp-panel-btn--ghost" onClick={closeDialogs} disabled={busy}>
+                                    Отмена
+                                </button>
+                                <button type="submit" className="exp-panel-btn exp-panel-btn--primary" disabled={busy}>
+                                    {busy ? 'Сохранение…' : 'Сохранить'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>,
+                    document.body,
+                )}
+
+                {deleting && createPortal(
+                    <div className="exp-mod-backdrop" role="presentation" onClick={closeDialogs}>
+                        <div
+                            className="exp-mod-dialog"
+                            role="dialog"
+                            aria-modal
+                            aria-labelledby="exp-cash-delete-title"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <h3 id="exp-cash-delete-title" className="exp-mod-dialog__title">Удалить запись</h3>
+                            <p className="exp-mod-dialog__sub">
+                                {KIND_LABEL[deleting.kind]}
+                                {deleting.note.trim() ? ` — ${deleting.note.trim()}` : ''}
+                                {', '}
+                                {formatCash(deleting.amount)}
+                            </p>
+                            {formError && <p className="exp-mod-err" role="alert">{formError}</p>}
+                            <div className="exp-mod-dialog__ft">
+                                <button type="button" className="exp-panel-btn exp-panel-btn--ghost" onClick={closeDialogs} disabled={busy}>
+                                    Отмена
+                                </button>
+                                <button type="button" className="exp-panel-btn exp-panel-btn--primary exp-panel-btn--danger" onClick={() => void submitDelete()} disabled={busy}>
+                                    {busy ? 'Удаление…' : 'Удалить'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body,
+                )}
+
                 <section className="exp-cash__ledger">
                     <div className="exp-cash__ledger-head">
                         <h2>История</h2>
@@ -378,10 +546,22 @@ export function ExpensesCashPage() {
                                             ) : null}
                                             <p className="exp-cash__event-after">Остаток на текущий момент: {formatCash(row.balanceAfter)}</p>
                                         </div>
-                                        <span className={`exp-cash__event-sum exp-cash__event-sum--${row.kind}`}>
-                                            {row.kind === 'expense' ? '−' : row.kind === 'topup' ? '+' : ''}
-                                            {formatCash(row.amount, false)}
-                                        </span>
+                                        <div className="exp-cash__event-side">
+                                            {isManualCashMovement(row) ? (
+                                                <div className="exp-cash__event-tools">
+                                                    <button type="button" className="exp-cash__event-tool" aria-label="Изменить" onClick={() => openEdit(row)}>
+                                                        <IconPencil />
+                                                    </button>
+                                                    <button type="button" className="exp-cash__event-tool exp-cash__event-tool--danger" aria-label="Удалить" onClick={() => { setForm(null); setEditing(null); setFormError(null); setDeleting(row); }}>
+                                                        <IconTrash />
+                                                    </button>
+                                                </div>
+                                            ) : null}
+                                            <span className={`exp-cash__event-sum exp-cash__event-sum--${row.kind}`}>
+                                                {row.kind === 'expense' ? '−' : row.kind === 'topup' ? '+' : ''}
+                                                {formatCash(row.amount, false)}
+                                            </span>
+                                        </div>
                                     </li>
                                 ))}
                             </ol>

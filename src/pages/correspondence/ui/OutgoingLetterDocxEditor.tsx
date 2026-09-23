@@ -224,7 +224,6 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
                     const range = JSON.parse(selectionJson) as { from: unknown; to: unknown };
                     if (!range?.from || !range?.to)
                         return false;
-                    // DocRange JSON from snapshot(); may be stale after edits.
                     const result = editor.exec({
                         type: 'setSelection',
                         range,

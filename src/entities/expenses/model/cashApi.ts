@@ -39,6 +39,30 @@ export async function fetchCashState(): Promise<CashState> {
     return res.json() as Promise<CashState>;
 }
 
+export function isManualCashMovement(row: CashMovement): boolean {
+    return !row.expenseId && (row.kind === 'expense' || row.kind === 'topup');
+}
+
+export async function updateCashMovement(
+    id: number,
+    amount: string,
+    note: string,
+): Promise<{ balance: string; message: string; movement: CashMovement }> {
+    const res = await throwIfNotOk(await apiFetch(`/api/v1/expenses/cash/movements/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, note }),
+    }));
+    return res.json() as Promise<{ balance: string; message: string; movement: CashMovement }>;
+}
+
+export async function deleteCashMovement(id: number): Promise<{ balance: string }> {
+    const res = await throwIfNotOk(await apiFetch(`/api/v1/expenses/cash/movements/${id}`, {
+        method: 'DELETE',
+    }));
+    return res.json() as Promise<{ balance: string }>;
+}
+
 export async function postCashAction(
     kind: 'balance' | 'expense' | 'topup',
     amount: string,
