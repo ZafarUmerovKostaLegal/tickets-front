@@ -14,6 +14,10 @@ body[data-theme='dark'] .home-hub-topbar {
     --hub-divider: var(--app-border);
 }
 
+body[data-theme='dark'] .home-hub-topbar__brand-logo {
+    filter: invert(1) hue-rotate(180deg);
+}
+
 .home-hub-topbar__inner {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
