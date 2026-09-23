@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Navigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
@@ -143,6 +144,17 @@ export function ExpensesCashPage() {
         };
     }, [allowed]);
 
+    useEffect(() => {
+        if (!form)
+            return;
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && !busy)
+                setForm(null);
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [form, busy]);
+
     const stats = useMemo(() => {
         const rows = state?.history ?? [];
         let spent = 0;
@@ -269,38 +281,57 @@ export function ExpensesCashPage() {
                     </button>
                 </div>
 
-                {form && (
-                    <form className="exp-cash__form" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-                        <h2 className="exp-cash__form-title">{formCopy.title}</h2>
-                        <label className="exp-cash__field">
-                            <span>Сумма, UZS</span>
-                            <input
-                                inputMode="decimal"
-                                value={amount}
-                                onChange={(e) => setAmount(e.target.value)}
-                                required
-                                autoFocus
-                            />
-                        </label>
-                        {form !== 'balance' && (
+                {form && createPortal(
+                    <div
+                        className="exp-mod-backdrop"
+                        role="presentation"
+                        onClick={() => {
+                            if (!busy)
+                                setForm(null);
+                        }}
+                    >
+                        <form
+                            className="exp-mod-dialog"
+                            role="dialog"
+                            aria-modal
+                            aria-labelledby="exp-cash-form-title"
+                            onClick={(e) => e.stopPropagation()}
+                            onSubmit={(e) => { e.preventDefault(); void submit(); }}
+                        >
+                            <h3 id="exp-cash-form-title" className="exp-mod-dialog__title">{formCopy.title}</h3>
                             <label className="exp-cash__field">
-                                <span>{form === 'expense' ? 'На что потрачено' : 'Комментарий'}</span>
+                                <span>Сумма, UZS</span>
                                 <input
-                                    value={note}
-                                    onChange={(e) => setNote(e.target.value)}
+                                    inputMode="decimal"
+                                    value={amount}
+                                    onChange={(e) => setAmount(e.target.value)}
+                                    required
+                                    autoFocus
+                                    disabled={busy}
                                 />
                             </label>
-                        )}
-                        {formError && <p className="exp-cash__banner exp-cash__banner--error" role="alert">{formError}</p>}
-                        <div className="exp-cash__form-row">
-                            <button type="submit" className="tt-settings__btn tt-settings__btn--primary" disabled={busy}>
-                                {busy ? 'Сохранение…' : formCopy.submit}
-                            </button>
-                            <button type="button" className="tt-settings__btn tt-settings__btn--outline" onClick={() => setForm(null)} disabled={busy}>
-                                Отмена
-                            </button>
-                        </div>
-                    </form>
+                            {form !== 'balance' && (
+                                <label className="exp-cash__field">
+                                    <span>{form === 'expense' ? 'На что потрачено' : 'Комментарий'}</span>
+                                    <input
+                                        value={note}
+                                        onChange={(e) => setNote(e.target.value)}
+                                        disabled={busy}
+                                    />
+                                </label>
+                            )}
+                            {formError && <p className="exp-mod-err" role="alert">{formError}</p>}
+                            <div className="exp-mod-dialog__ft">
+                                <button type="button" className="exp-panel-btn exp-panel-btn--ghost" onClick={() => setForm(null)} disabled={busy}>
+                                    Отмена
+                                </button>
+                                <button type="submit" className="exp-panel-btn exp-panel-btn--primary" disabled={busy}>
+                                    {busy ? 'Сохранение…' : formCopy.submit}
+                                </button>
+                            </div>
+                        </form>
+                    </div>,
+                    document.body,
                 )}
 
                 {flash && <p className="exp-cash__banner">{flash}</p>}

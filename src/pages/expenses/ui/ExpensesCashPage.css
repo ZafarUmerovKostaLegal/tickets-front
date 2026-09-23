@@ -181,6 +181,10 @@ body[data-theme='dark'] .exp-cash__action-icon--in { color: #4ade80; }
   font-size: 0.875rem;
 }
 
+.exp-mod-dialog .exp-cash__field {
+  margin-bottom: 0.75rem;
+}
+
 .exp-cash__field {
   display: grid;
   gap: 0.35rem;
@@ -197,7 +201,14 @@ body[data-theme='dark'] .exp-cash__action-icon--in { color: #4ade80; }
   background: var(--field-bg, var(--app-bg));
   color: var(--app-text);
   font: inherit;
+  font-size: 0.875rem;
   font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .exp-mod-dialog .exp-cash__field input {
+    font-size: 16px;
+  }
 }
 
 .exp-cash__field input:focus {
