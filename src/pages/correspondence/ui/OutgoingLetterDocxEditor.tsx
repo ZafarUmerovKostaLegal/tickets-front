@@ -275,7 +275,6 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
                     navigation={false}
                     rulers
                     onReady={() => {
-                        // Ensure caret/hotkeys land in the document, not page chrome.
                         requestAnimationFrame(() => {
                             innerRef.current?.focus();
                         });

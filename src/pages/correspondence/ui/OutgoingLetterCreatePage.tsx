@@ -33,6 +33,7 @@ import {
     correspondenceErrorMessage,
     createOutgoingDraft,
     invalidateCorrespondencePartnerAttention,
+    isCorrespondenceHttpError,
     mintCorrespondenceDownloadQr,
     uploadCorrespondenceAttachment,
 } from '@entities/correspondence';
@@ -316,23 +317,37 @@ export function OutgoingLetterCreatePage() {
     }, [hydrated, subject, letterDateIso, coverModel, files, attachmentMeta, comments, sessionId, serverDocumentId]);
 
     const ensureServerDraftAndQr = useCallback(async (): Promise<{ url: string | null; documentId: string | null }> => {
-        let docId = (serverDocumentId ?? '').trim();
-        if (!docId) {
+        const openDraft = async (): Promise<string> => {
             const counterparty = resolveOutgoingCounterparty(coverModel);
             const draft = await createOutgoingDraft({
                 counterparty: counterparty && counterparty !== 'Company Name' ? counterparty : 'Черновик',
                 subject: subject.trim() || 'Черновик исходящего письма',
                 docType: 'letter',
             });
-            docId = draft.id;
-            setServerDocumentId(docId);
-            persistDraft(files, attachmentMeta, comments, docId);
-        }
+            setServerDocumentId(draft.id);
+            persistDraft(files, attachmentMeta, comments, draft.id);
+            return draft.id;
+        };
+        let docId = (serverDocumentId ?? '').trim();
+        const reusedStoredId = Boolean(docId);
+        if (!docId)
+            docId = await openDraft();
         if (downloadQrUrl)
             return { url: downloadQrUrl, documentId: docId };
-        const minted = await mintCorrespondenceDownloadQr(docId);
-        setDownloadQrUrl(minted.url);
-        return { url: minted.url, documentId: docId };
+        try {
+            const minted = await mintCorrespondenceDownloadQr(docId);
+            setDownloadQrUrl(minted.url);
+            return { url: minted.url, documentId: docId };
+        }
+        catch (err) {
+            // Session can keep a draft id after the letter was deleted. Open a new one and mint again.
+            if (!reusedStoredId || !isCorrespondenceHttpError(err, 404))
+                throw err;
+            docId = await openDraft();
+            const minted = await mintCorrespondenceDownloadQr(docId);
+            setDownloadQrUrl(minted.url);
+            return { url: minted.url, documentId: docId };
+        }
     }, [attachmentMeta, comments, coverModel, downloadQrUrl, files, persistDraft, serverDocumentId, subject]);
 
     const beginNewComment = useCallback(() => {

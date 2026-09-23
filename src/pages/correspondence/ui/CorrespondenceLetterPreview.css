@@ -1688,9 +1688,16 @@ body[data-theme='dark'] .corr-docx-editor .docx-page-content img,
 body[data-theme='dark'] .corr-docx-editor .docx-page-content svg {
   filter: none;
 }
+body[data-theme='dark'] .corr-shell:has(.corr-word--docx) > .corr-shell__header {
+  --corr-paper-alt: #3a3a3a;
+  --corr-line: #3c3c3c;
+  background: #2a2a2a;
+  border-bottom-color: #3c3c3c;
+}
+
 body[data-theme='dark'] .corr-word__toolbar {
-  background: var(--corr-card, #1a2033);
-  border-bottom-color: var(--corr-line, #2a3049);
+  background: #2a2a2a;
+  border-bottom-color: #3c3c3c;
 }
 
 body[data-theme='dark'] .corr-word__icon-btn:hover:not(:disabled),
