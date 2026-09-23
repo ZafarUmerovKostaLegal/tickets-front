@@ -2714,21 +2714,21 @@ body[data-theme='dark'] .home-page__main--hub {
 }
 
 body[data-theme='dark'] .home-page--tickets {
-  --hp-tk-paper: #10141f;
-  --hp-tk-paper-alt: #161b29;
-  --hp-tk-card: #1a2033;
+  --hp-tk-paper: #262626;
+  --hp-tk-paper-alt: #2a2a2a;
+  --hp-tk-card: #333333;
   --hp-tk-ink: #f2f0e9;
   --hp-tk-ink-soft: #d6d2c6;
-  --hp-tk-muted: #8d8a84;
-  --hp-tk-line: #2a3049;
-  --hp-tk-oxblood: #d77e88;
-  --hp-tk-oxblood-soft: #2e1b21;
-  --hp-tk-brass: #d6bb6e;
-  --hp-tk-brass-soft: #2a2618;
-  --hp-tk-green: #7fb6a4;
-  --hp-tk-green-soft: #182722;
-  --hp-tk-slate: #8fa9c9;
-  --hp-tk-slate-soft: #1c2436;
+  --hp-tk-muted: #b0b0b0;
+  --hp-tk-line: #3c3c3c;
+  --hp-tk-oxblood: #f2f0e9;
+  --hp-tk-oxblood-soft: #3a3a3a;
+  --hp-tk-brass: #d6d2c6;
+  --hp-tk-brass-soft: #3a3a3a;
+  --hp-tk-green: #d6d2c6;
+  --hp-tk-green-soft: #3a3a3a;
+  --hp-tk-slate: #d0d0d0;
+  --hp-tk-slate-soft: #3a3a3a;
   --hp-tk-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 20px -12px rgba(0, 0, 0, 0.4);
 }
 

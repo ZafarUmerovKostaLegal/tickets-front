@@ -371,12 +371,12 @@
 .tt-inv-reg-status__dot.tt-inv-reg-status--empty { background: #cbd5e1; }
 
 body[data-theme='dark'] .tt-inv-reg-status__menu {
-  background: #0f172a;
-  border-color: #334155;
+  background: #333333;
+  border-color: #3c3c3c;
 }
 
 body[data-theme='dark'] .tt-inv-reg-status__btn {
-  background: #0f172a;
+  background: #333333;
 }
 
 .tt-inv-reg__del {
@@ -411,8 +411,8 @@ body[data-theme='dark'] .tt-inv-reg-status__btn {
 
 body[data-theme='dark'] .tt-inv-reg__th,
 body[data-theme='dark'] .tt-inv-reg__th--actions {
-  background: #1e293b;
-  color: #e2e8f0;
+  background: #2a2a2a;
+  color: #f2f0e9;
 }
 
 body[data-theme='dark'] .tt-inv-reg__td,
@@ -423,6 +423,6 @@ body[data-theme='dark'] .tt-inv-reg__table-wrap {
 
 body[data-theme='dark'] .tt-inv-reg__input,
 body[data-theme='dark'] .tt-inv-reg__input--area {
-  background: #0f172a;
-  color: #e2e8f0;
+  background: #333333;
+  color: #f2f0e9;
 }

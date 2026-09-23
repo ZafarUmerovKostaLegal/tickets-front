@@ -12,9 +12,9 @@
 }
 
 body[data-theme='dark'] .icom-page {
-  --icom-accent: #7eab9a;
-  --icom-accent-soft: color-mix(in srgb, var(--icom-accent) 12%, var(--app-surface));
-  --icom-accent-border: color-mix(in srgb, var(--icom-accent) 28%, var(--app-border));
+  --icom-accent: #e8e8e8;
+  --icom-accent-soft: #3a3a3a;
+  --icom-accent-border: #5a5a5a;
   --icom-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 10px 28px rgba(0, 0, 0, 0.18);
 }
 
