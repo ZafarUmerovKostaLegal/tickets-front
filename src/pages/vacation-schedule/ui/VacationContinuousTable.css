@@ -485,7 +485,7 @@
   position: sticky;
   left: 0;
   top: var(--vac-h1);
-  z-index: 34;
+  z-index: 35;
   width: var(--vac-num-w);
   min-width: var(--vac-num-w);
   text-align: center;
@@ -505,7 +505,7 @@
   position: sticky;
   left: calc(var(--vac-num-w) - var(--vac-sticky-overlap));
   top: var(--vac-h1);
-  z-index: 35;
+  z-index: 34;
   width: var(--vac-name-w);
   min-width: var(--vac-name-w);
   text-align: left;
@@ -616,7 +616,7 @@
 }
 
 .vac-cont tbody .vac-cont__sticky-num {
-  z-index: 16;
+  z-index: 20;
   height: var(--vac-row-h, 1.875rem);
   line-height: var(--vac-row-h, 1.875rem);
   padding: 0;
@@ -1151,6 +1151,15 @@ body[data-theme='dark'] .vac-cont tbody .vac-cont__sticky-name {
     -14px 0 0 0 var(--vac-shadow-bleed),
     8px 0 0 0 var(--vac-shadow-bleed),
     4px 0 14px -6px rgba(0, 0, 0, 0.25);
+}
+
+body[data-theme='dark'] .vac-cont__sticky-num,
+body[data-theme='dark'] .vac-cont tbody .vac-cont__sticky-num {
+  color: var(--app-text, #e2e8f0);
+}
+
+body[data-theme='dark'] .vac-cont tbody .vac-cont__sticky-num {
+  z-index: 20;
 }
 
 body[data-theme='dark'] .vac-cont tbody .vac-cont__sticky-name {
