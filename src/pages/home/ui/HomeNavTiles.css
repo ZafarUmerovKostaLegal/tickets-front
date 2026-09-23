@@ -391,7 +391,13 @@ body[data-theme='dark'] .home-page--hub .home-nav-tiles--hub .home-nav-tiles__la
   color: var(--hub-tile-label, var(--app-text-strong, #f1f5f9));
 }
 
+body[data-theme='dark'] .home-page--hub .home-nav-tiles__section-block {
+  --hub-section-accent: #b0b0b0 !important;
+  --hub-section-soft: #3a3a3a !important;
+  --hub-section-border: #3c3c3c !important;
+}
+
 body[data-theme='dark'] .home-page--hub .home-nav-tiles--hub .home-nav-tiles__section-title,
 body[data-theme='dark'] .home-page--hub .home-nav-tiles--hub .home-nav-tiles__section-count {
-  color: color-mix(in srgb, var(--hub-section-accent, #c4b5a8) 88%, #fff);
+  color: #b0b0b0;
 }
