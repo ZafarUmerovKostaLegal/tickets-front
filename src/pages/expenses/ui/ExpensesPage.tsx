@@ -43,6 +43,7 @@ import type { User } from '@entities/user/model/types';
 import { isHiddenSystemUser } from '@shared/lib';
 import { formatExpenseApprovedByLabel, formatExpenseAuthorLabel, mergeExpenseAuthorFromCache, needsAuthorEnrichment, formatPartnerUserLabel, } from '@entities/expenses/model/expenseAuthor';
 import { canViewExpensesRequestsAndReport } from '@entities/expenses/model/expenseModeration';
+import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { useExpenseAttentionBadge } from '@entities/expenses/model/useExpensePaymentConfirmationBadge';
 import {
     fetchExpenseStatusCounts,
@@ -554,6 +555,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const [searchParams] = useSearchParams();
     const { user, loading: currentUserLoading } = useCurrentUser();
     const canModerate = canViewExpensesRequestsAndReport(user?.role);
+    const canSeeCash = isPartnerOrgRole(user?.role, user?.position);
     const isPaymentConfirmer = isExpensePaymentConfirmer(user?.email, { displayName: user?.display_name });
     const { moderationCount, payCount } = useExpenseAttentionBadge(
         !currentUserLoading && (canModerate || isPaymentConfirmer),
@@ -1653,6 +1655,11 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                     <NavLink to={routes.expensesPartners} className="exp-queue-nav">
                                         Расходы партнёров
                                     </NavLink>
+                                    {canSeeCash && (
+                                    <NavLink to={routes.expensesCash} className="exp-queue-nav">
+                                        Касса
+                                    </NavLink>
+                                    )}
                                 </>)}
                                 {isPartnerScope && (<>
                                     <NavLink to={routes.expenses} className="exp-queue-nav">
@@ -1666,6 +1673,11 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                     {canModerate && (
                                     <NavLink to={routes.expensesPartnersReport} className="exp-queue-nav">
                                         Отчёт
+                                    </NavLink>
+                                    )}
+                                    {canSeeCash && (
+                                    <NavLink to={routes.expensesCash} className="exp-queue-nav">
+                                        Касса
                                     </NavLink>
                                     )}
                                 </>)}
