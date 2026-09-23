@@ -1703,9 +1703,9 @@ body[data-theme='dark'] .corr-word__fs-btn:hover {
 body[data-theme='dark'] .corr-word__icon-btn[aria-pressed='true'],
 body[data-theme='dark'] .corr-word__fs-btn[aria-pressed='true'],
 body[data-theme='dark'] .corr-word__comments-toggle[aria-pressed='true'] {
-  color: #9ec5ff;
-  border-color: color-mix(in srgb, #9ec5ff 40%, transparent);
-  background: #1c2a44;
+  color: #f2f0e9;
+  border-color: #5a5a5a;
+  background: #3a3a3a;
 }
 
 body[data-theme='dark'] .corr-word__more-menu {
@@ -1767,43 +1767,49 @@ body[data-theme='dark'] .corr-word-comments__icon-btn {
 }
 
 body[data-theme='dark'] .corr-word-comments__icon-btn:hover:not(:disabled) {
-  background: #243049;
+  background: #3a3a3a;
   color: var(--corr-ink, #f2f0e9);
 }
 
 body[data-theme='dark'] .corr-word-comments__badge {
-  background: #1c3358;
-  color: #9ec5ff;
+  background: #3a3a3a;
+  color: #f2f0e9;
 }
 
-body[data-theme='dark'] .corr-docx-editor {
-  --corr-word-ribbon-bg: #161b29;
-  --corr-word-ribbon-surface: #1a2033;
-  --corr-word-ribbon-border: #2a3049;
-  --corr-word-ribbon-hover: #243049;
-  --corr-word-ribbon-press: #1c3358;
-  --corr-word-ribbon-active: #1c3358;
-  --corr-word-ribbon-active-border: #6ea8ff;
-  --corr-word-ribbon-accent: #8eb7ff;
+body[data-theme='dark'] .corr-docx-editor,
+body[data-theme='dark'] .corr-docx-editor .docx-editor.dark,
+body[data-theme='dark'] .corr-docx-editor .docx-editor.dark .docx-editor {
+  --corr-sheet: #333333;
+  --corr-sheet-canvas: #262626;
+  --corr-word-ribbon-bg: #2a2a2a;
+  --corr-word-ribbon-surface: #333333;
+  --corr-word-ribbon-border: #3c3c3c;
+  --corr-word-ribbon-hover: #3a3a3a;
+  --corr-word-ribbon-press: #454545;
+  --corr-word-ribbon-active: #454545;
+  --corr-word-ribbon-active-border: #6a6a6a;
+  --corr-word-ribbon-accent: #e8e8e8;
   --corr-word-ribbon-text: #f2f0e9;
-  --corr-word-ribbon-muted: #a8a49c;
-  --doc-surface: var(--corr-word-ribbon-surface);
-  --doc-bg: #0c1018;
+  --corr-word-ribbon-muted: #b0b0b0;
+  --doc-surface: var(--corr-sheet);
+  --doc-bg: var(--corr-sheet-canvas);
   --doc-bg-subtle: var(--corr-word-ribbon-bg);
   --doc-bg-hover: var(--corr-word-ribbon-hover);
   --doc-text: var(--corr-word-ribbon-text);
   --doc-text-muted: var(--corr-word-ribbon-muted);
   --doc-border: var(--corr-word-ribbon-border);
-  --doc-border-light: #2a3049;
-  --doc-primary: var(--corr-word-ribbon-accent);
-  --doc-primary-hover: #c5daff;
-  --doc-primary-light: #1c2a44;
-  --doc-accent: var(--corr-word-ribbon-accent);
-  --doc-accent-bg: #1c2a44;
+  --doc-border-light: #3c3c3c;
+  --doc-primary: #d8d8d8;
+  --doc-primary-hover: #f2f0e9;
+  --doc-primary-light: #3a3a3a;
+  --doc-accent: #d8d8d8;
+  --doc-accent-bg: #3a3a3a;
   --doc-toggle-active-bg: var(--corr-word-ribbon-active);
   --doc-toggle-active-fg: var(--corr-word-ribbon-text);
-  --doc-text-subtle: #8d8a84;
-  --doc-shadow-subtle: #2a3049;
+  --doc-text-subtle: #9a9a9a;
+  --doc-shadow-subtle: #2a2a2a;
+  --doc-page-bg: #333333;
+  --doc-page-bg-rendered: #333333;
 }
 
 body[data-theme='dark'] .corr-docx-editor .docx-editor,
@@ -1821,7 +1827,7 @@ body[data-theme='dark'] .corr-docx-editor .docx-toolbar__separator {
 }
 
 body[data-theme='dark'] .corr-docx-editor .docx-toolbar__picker {
-  box-shadow: inset 0 0 0 1px #5c6178;
+  box-shadow: inset 0 0 0 1px #5a5a5a;
 }
 
 body[data-theme='dark'] .corr-docx-editor .docx-toolbar__picker:hover:not(:disabled) {
@@ -1829,27 +1835,31 @@ body[data-theme='dark'] .corr-docx-editor .docx-toolbar__picker:hover:not(:disab
 }
 
 body[data-theme='dark'] .corr-docx-editor [data-testid="docx-editor-ruler-row"] {
-  background: #161b29 !important;
-  border-bottom-color: #2a3049;
-  box-shadow: inset 0 -1px 0 #2a3049;
+  background: #262626 !important;
+  border-bottom-color: #3c3c3c;
+  box-shadow: inset 0 -1px 0 #3c3c3c;
 }
 
 body[data-theme='dark'] .corr-docx-editor [data-testid="docx-editor-ruler-row"]::before {
   background:
-    linear-gradient(#2a3049, #2a3049) right / 1px 100% no-repeat,
-    linear-gradient(#2a3049, #2a3049) bottom / 100% 1px no-repeat,
-    #161b29;
+    linear-gradient(#3c3c3c, #3c3c3c) right / 1px 100% no-repeat,
+    linear-gradient(#3c3c3c, #3c3c3c) bottom / 100% 1px no-repeat,
+    #262626;
 }
 
-body[data-theme='dark'] .corr-docx-editor .docx-ruler-frame {
-  background: #161b29 !important;
+body[data-theme='dark'] .corr-docx-editor .docx-ruler-frame,
+body[data-theme='dark'] .corr-docx-editor .docx-editor-shell__ruler-h {
+  background: #262626 !important;
 }
 
-body[data-theme='dark'] .corr-docx-editor .docx-editor-shell__ruler-h,
+body[data-theme='dark'] .corr-docx-editor .docx-editor-ruler,
 body[data-theme='dark'] .corr-docx-editor .docx-horizontal-ruler,
-body[data-theme='dark'] .corr-docx-editor .docx-vertical-ruler {
-  background: #1a2033 !important;
-  box-shadow: inset 0 -1px 0 #2a3049;
+body[data-theme='dark'] .corr-docx-editor .docx-vertical-ruler,
+body[data-theme='dark'] .corr-docx-editor .docx-editor-ruler--horizontal,
+body[data-theme='dark'] .corr-docx-editor .docx-editor-ruler--vertical {
+  background: #333333 !important;
+  border-color: #3c3c3c !important;
+  box-shadow: none;
 }
 
 body[data-theme='dark'] .corr-docx-editor .docx-horizontal-ruler [style*="font-size: 9px"],
@@ -1872,7 +1882,7 @@ body[data-theme='dark'] .docx-toolbar__alignment-popup,
 body[data-theme='dark'] .docx-contextmenu,
 body[data-theme='dark'] .docx-color-picker-dropdown,
 body[data-theme='dark'] .docx-dialog {
-  background: #1a2033;
+  background: #333333;
   color: #f2f0e9;
-  border-color: #2a3049;
+  border-color: #3c3c3c;
 }

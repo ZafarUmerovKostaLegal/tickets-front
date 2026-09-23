@@ -153,7 +153,6 @@ function bindLayoutSafeEditorHotkeys(
         }
     };
 
-    // Capture phase: win over layout-sensitive `event.key` handlers and keep focus path stable.
     document.addEventListener('keydown', onKeyDown, true);
     return () => document.removeEventListener('keydown', onKeyDown, true);
 }
