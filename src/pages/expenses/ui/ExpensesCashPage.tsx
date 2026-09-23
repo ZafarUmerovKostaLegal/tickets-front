@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { NavLink, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
@@ -12,8 +12,8 @@ type FormKind = 'balance' | 'expense' | 'topup';
 type HistoryFilter = 'all' | 'topup' | 'expense' | 'set';
 
 const KIND_LABEL: Record<CashMovement['kind'], string> = {
-    set: 'Остаток задан',
-    expense: 'Расход',
+    set: 'Остаток установлен',
+    expense: 'Потрачено',
     topup: 'Пополнение',
 };
 
@@ -47,6 +47,29 @@ function formatClock(iso: string): string {
     if (Number.isNaN(d.getTime()))
         return '';
     return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+function movementNotice(row: CashMovement): string {
+    const amount = formatCash(row.amount);
+    const after = formatCash(row.balanceAfter);
+    const before = row.balanceBefore ? formatCash(row.balanceBefore) : null;
+    const note = row.note.trim();
+    if (row.kind === 'set') {
+        return [
+            before ? `Остаток в кассе: ${before}` : null,
+            `Остаток установлен: ${amount}`,
+            '',
+            `Остаток на текущий момент: ${after}`,
+        ].filter((line): line is string => line !== null).join('\n');
+    }
+    const label = row.kind === 'expense' ? 'Потрачено' : 'Пополнение';
+    const middle = note ? `${label}: ${amount} (${note})` : `${label}: ${amount}`;
+    return [
+        `Остаток в кассе: ${before ?? '—'}`,
+        middle,
+        '',
+        `Остаток на текущий момент: ${after}`,
+    ].join('\n');
 }
 
 function friendlyLoadError(message: string): string {
@@ -176,7 +199,7 @@ export function ExpensesCashPage() {
         setFormError(null);
         try {
             const result = await postCashAction(form, amount.trim(), note.trim());
-            setFlash(result.message);
+            setFlash(movementNotice(result.movement));
             setAmount('');
             setNote('');
             setForm(null);
@@ -191,10 +214,10 @@ export function ExpensesCashPage() {
     };
 
     const formCopy = form === 'balance'
-        ? { title: 'Задать остаток', hint: 'Эта сумма станет текущим остатком кассы.', submit: 'Установить' }
+        ? { title: 'Задать остаток', submit: 'Установить' }
         : form === 'expense'
-            ? { title: 'Списать расход', hint: 'Сумма вычтется из остатка. Напишите, на что потратили.', submit: 'Списать' }
-            : { title: 'Пополнить кассу', hint: 'Сумма прибавится к остатку. Комментарий необязателен.', submit: 'Пополнить' };
+            ? { title: 'Списать расход', submit: 'Списать' }
+            : { title: 'Пополнить кассу', submit: 'Пополнить' };
 
     const filters: { id: HistoryFilter; label: string }[] = [
         { id: 'all', label: 'Все' },
@@ -206,22 +229,12 @@ export function ExpensesCashPage() {
     return (
         <ExpensesShell title="Касса">
             <div className="exp-cash">
-                <div className="exp-header-queue-wrap">
-                    <NavLink to={routes.expenses} className="exp-queue-nav">Расходы компании</NavLink>
-                    <NavLink to={routes.expensesPartners} className="exp-queue-nav">Расходы партнёров</NavLink>
-                </div>
-
                 {loadError && <p className="exp-cash__banner exp-cash__banner--error" role="alert">{loadError}</p>}
 
                 <section className="exp-cash__hero">
                     <div>
                         <p className="exp-cash__eyebrow">Остаток в кассе</p>
                         <p className="exp-cash__balance">{state ? formatCash(state.balance) : '…'}</p>
-                        <p className="exp-cash__hint">
-                            {state && !state.balanceSet
-                                ? 'Остаток ещё не задан. Укажите, сколько сейчас в кассе.'
-                                : 'Общая касса компании. Её видят только партнёры.'}
-                        </p>
                     </div>
                     <div className="exp-cash__hero-mark" aria-hidden><IconWallet /></div>
                 </section>
@@ -258,17 +271,13 @@ export function ExpensesCashPage() {
 
                 {form && (
                     <form className="exp-cash__form" onSubmit={(e) => { e.preventDefault(); void submit(); }}>
-                        <div>
-                            <h2 className="exp-cash__form-title">{formCopy.title}</h2>
-                            <p className="exp-cash__form-hint">{formCopy.hint}</p>
-                        </div>
+                        <h2 className="exp-cash__form-title">{formCopy.title}</h2>
                         <label className="exp-cash__field">
                             <span>Сумма, UZS</span>
                             <input
                                 inputMode="decimal"
                                 value={amount}
                                 onChange={(e) => setAmount(e.target.value)}
-                                placeholder={form === 'balance' ? '298 000' : '50 000'}
                                 required
                                 autoFocus
                             />
@@ -279,7 +288,6 @@ export function ExpensesCashPage() {
                                 <input
                                     value={note}
                                     onChange={(e) => setNote(e.target.value)}
-                                    placeholder={form === 'expense' ? 'Канцелярия' : 'Необязательно'}
                                 />
                             </label>
                         )}
@@ -316,9 +324,7 @@ export function ExpensesCashPage() {
                         </div>
                     </div>
                     {groups.length === 0 ? (
-                        <p className="exp-cash__empty">
-                            {filter === 'all' ? 'Операций пока нет. Задайте остаток, чтобы начать.' : 'В этом разделе пока пусто.'}
-                        </p>
+                        <p className="exp-cash__empty">Операций нет</p>
                     ) : groups.map(([day, rows]) => (
                         <div key={day} className="exp-cash__day">
                             <h3>{day}</h3>
@@ -332,7 +338,7 @@ export function ExpensesCashPage() {
                                                 <time dateTime={row.createdAt}>{formatClock(row.createdAt)}</time>
                                             </div>
                                             {row.note ? <p className="exp-cash__event-note">{row.note}</p> : null}
-                                            <p className="exp-cash__event-after">После операции: {formatCash(row.balanceAfter)}</p>
+                                            <p className="exp-cash__event-after">Остаток на текущий момент: {formatCash(row.balanceAfter)}</p>
                                         </div>
                                         <span className={`exp-cash__event-sum exp-cash__event-sum--${row.kind}`}>
                                             {row.kind === 'expense' ? '−' : row.kind === 'topup' ? '+' : ''}
