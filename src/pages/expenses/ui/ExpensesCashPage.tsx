@@ -183,7 +183,7 @@ export function ExpensesCashPage() {
 
     if (loading)
         return (
-            <ExpensesShell title="Касса">
+            <ExpensesShell title="Касса" backTo={routes.expenses}>
                 <div className="exp-cash exp-cash--loading" aria-busy="true">
                     <div className="exp-cash__hero exp-cash__skel" />
                     <div className="exp-cash__stats">
@@ -239,7 +239,7 @@ export function ExpensesCashPage() {
     ];
 
     return (
-        <ExpensesShell title="Касса">
+        <ExpensesShell title="Касса" backTo={routes.expenses}>
             <div className="exp-cash">
                 {loadError && <p className="exp-cash__banner exp-cash__banner--error" role="alert">{loadError}</p>}
 
