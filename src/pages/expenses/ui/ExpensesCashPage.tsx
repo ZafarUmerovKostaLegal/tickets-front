@@ -5,6 +5,7 @@ import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { fetchCashState, postCashAction, type CashMovement, type CashState } from '@entities/expenses/model/cashApi';
+import { showToast } from '@shared/ui/app-toast';
 import { ExpensesShell } from './ExpensesShell';
 import './ExpensesPage.css';
 import './ExpensesCashPage.css';
@@ -118,7 +119,6 @@ export function ExpensesCashPage() {
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
     const [formError, setFormError] = useState<string | null>(null);
-    const [flash, setFlash] = useState<string | null>(null);
 
     const reload = useCallback(async () => {
         const next = await fetchCashState();
@@ -211,7 +211,7 @@ export function ExpensesCashPage() {
         setFormError(null);
         try {
             const result = await postCashAction(form, amount.trim(), note.trim());
-            setFlash(movementNotice(result.movement));
+            showToast({ message: movementNotice(result.movement), variant: 'success', durationMs: 8000 });
             setAmount('');
             setNote('');
             setForm(null);
@@ -333,8 +333,6 @@ export function ExpensesCashPage() {
                     </div>,
                     document.body,
                 )}
-
-                {flash && <p className="exp-cash__banner">{flash}</p>}
 
                 <section className="exp-cash__ledger">
                     <div className="exp-cash__ledger-head">
