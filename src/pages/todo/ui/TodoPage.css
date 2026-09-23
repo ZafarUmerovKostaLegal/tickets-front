@@ -20,20 +20,6 @@
   animation: todoPageEntrance 0.7s cubic-bezier(.22,1,.36,1) forwards;
 }
 
-body[data-theme='dark'] .todo-page {
-  --todo-accent: #e8e8e8;
-  --todo-text: #f2f0e9;
-  --todo-muted: #b0b0b0;
-  --todo-surface: #333333;
-  --todo-surface2: #2a2a2a;
-  --todo-border: #3c3c3c;
-  --todo-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
-  --todo-header-bg: #2a2a2a;
-  --todo-panel-bg: #333333;
-  background: #262626;
-  color: #f2f0e9;
-}
-
 .todo-page__board-error {
   flex-shrink: 0;
   display: flex;

@@ -29,21 +29,21 @@
 }
 
 body[data-theme='dark'] .kl-ai {
-  --kl-ai-paper: #262626;
-  --kl-ai-paper-alt: #2a2a2a;
-  --kl-ai-card: #333333;
+  --kl-ai-paper: #10141f;
+  --kl-ai-paper-alt: #161b29;
+  --kl-ai-card: #1a2033;
   --kl-ai-ink: #f2f0e9;
   --kl-ai-ink-soft: #d6d2c6;
-  --kl-ai-muted: #b0b0b0;
-  --kl-ai-line: #3c3c3c;
-  --kl-ai-oxblood: #e8e8e8;
-  --kl-ai-oxblood-soft: #3a3a3a;
-  --kl-ai-brass: #d6d2c6;
-  --kl-ai-brass-soft: #3a3a3a;
-  --kl-ai-green: #d6d2c6;
-  --kl-ai-green-soft: #3a3a3a;
-  --kl-ai-slate: #d0d0d0;
-  --kl-ai-slate-soft: #3a3a3a;
+  --kl-ai-muted: #8d8a84;
+  --kl-ai-line: #2a3049;
+  --kl-ai-oxblood: #d77e88;
+  --kl-ai-oxblood-soft: #2e1b21;
+  --kl-ai-brass: #d6bb6e;
+  --kl-ai-brass-soft: #2a2618;
+  --kl-ai-green: #7fb6a4;
+  --kl-ai-green-soft: #182722;
+  --kl-ai-slate: #8fa9c9;
+  --kl-ai-slate-soft: #1c2436;
   --kl-ai-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 20px -12px rgba(0, 0, 0, 0.4);
   --kl-ai-shadow-hover: 0 2px 6px rgba(0, 0, 0, 0.25), 0 18px 34px -14px rgba(0, 0, 0, 0.5);
 }

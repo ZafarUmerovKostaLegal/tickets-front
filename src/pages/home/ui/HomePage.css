@@ -2608,37 +2608,11 @@
 }
 
 body[data-theme='dark'] .home-page--hub {
-  background: #262626;
-  --app-bg: #262626;
-  --app-bg-soft: #2a2a2a;
-  --app-surface: #333333;
-  --app-surface-soft: #3a3a3a;
-  --app-surface-blur: rgba(42, 42, 42, 0.94);
-  --app-border: #3c3c3c;
-  --app-border-hover: #5a5a5a;
-  --app-border-soft: #3c3c3c;
-  --app-text: #f2f0e9;
-  --app-text-strong: #f2f0e9;
-  --app-text-dim: #d6d2c6;
-  --app-text-light: #b0b0b0;
-  --app-muted: #b0b0b0;
-  --app-meta: #9a9a9a;
-  --app-accent: #e8e8e8;
-  --app-accent-hover: #f5f5f5;
-  --app-accent-focus: rgba(255, 255, 255, 0.08);
-  --app-accent-light-bg: #3a3a3a;
-  --app-accent-border: #5a5a5a;
-  --field-bg: #333333;
-  --field-border: #5a5a5a;
-  --field-placeholder: #8a8a8a;
-  --hub-divider: #3c3c3c;
-  --hub-heading: #f2f0e9;
-  --hub-muted: #b0b0b0;
-  color: #f2f0e9;
-}
-
-body[data-theme='dark']:has(.home-page--hub) {
-  background: #262626;
+  background: var(--app-bg);
+  --hub-divider: var(--app-border);
+  --hub-heading: var(--app-text-strong, #f1f5f9);
+  --hub-muted: var(--app-muted);
+  color: var(--app-text);
 }
 
 .home-page__main--hub {
@@ -2714,21 +2688,21 @@ body[data-theme='dark'] .home-page__main--hub {
 }
 
 body[data-theme='dark'] .home-page--tickets {
-  --hp-tk-paper: #262626;
-  --hp-tk-paper-alt: #2a2a2a;
-  --hp-tk-card: #333333;
+  --hp-tk-paper: #10141f;
+  --hp-tk-paper-alt: #161b29;
+  --hp-tk-card: #1a2033;
   --hp-tk-ink: #f2f0e9;
   --hp-tk-ink-soft: #d6d2c6;
-  --hp-tk-muted: #b0b0b0;
-  --hp-tk-line: #3c3c3c;
-  --hp-tk-oxblood: #f2f0e9;
-  --hp-tk-oxblood-soft: #3a3a3a;
-  --hp-tk-brass: #d6d2c6;
-  --hp-tk-brass-soft: #3a3a3a;
-  --hp-tk-green: #d6d2c6;
-  --hp-tk-green-soft: #3a3a3a;
-  --hp-tk-slate: #d0d0d0;
-  --hp-tk-slate-soft: #3a3a3a;
+  --hp-tk-muted: #8d8a84;
+  --hp-tk-line: #2a3049;
+  --hp-tk-oxblood: #d77e88;
+  --hp-tk-oxblood-soft: #2e1b21;
+  --hp-tk-brass: #d6bb6e;
+  --hp-tk-brass-soft: #2a2618;
+  --hp-tk-green: #7fb6a4;
+  --hp-tk-green-soft: #182722;
+  --hp-tk-slate: #8fa9c9;
+  --hp-tk-slate-soft: #1c2436;
   --hp-tk-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 8px 20px -12px rgba(0, 0, 0, 0.4);
 }
 
