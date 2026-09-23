@@ -40,7 +40,6 @@ import {
 import { submitOutgoingLetterForReview } from '../lib/registerOutgoingLetter';
 import { useCurrentUser } from '@shared/hooks';
 import { CorrespondenceShell } from './CorrespondenceShell';
-import { CorrespondenceLetterQr } from './CorrespondenceLetterQr';
 import { OutgoingLetterCommentsPane } from './OutgoingLetterCommentsPane';
 import { OutgoingLetterDocxErrorBoundary } from './OutgoingLetterDocxErrorBoundary';
 import { OutgoingSubmitReviewModal } from './OutgoingSubmitReviewModal';
@@ -953,11 +952,6 @@ export function OutgoingLetterCreatePage() {
                     className={`corr-word__editor-wrap${commentsOpen && useInBrowserEditor ? ' corr-word__editor-wrap--comments' : ''}`}
                     aria-label="Редактор письма"
                 >
-                    {downloadQrUrl ? (
-                        <div className="corr-word__download-qr" title="QR для скачивания письма">
-                            <CorrespondenceLetterQr url={downloadQrUrl} sizePx={128} />
-                        </div>
-                    ) : null}
                     {useInBrowserEditor && documentBytes && !templateBusy ? (
                         <button
                             type="button"

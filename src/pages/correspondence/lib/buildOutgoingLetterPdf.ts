@@ -167,7 +167,7 @@ export async function buildOutgoingLetterPdfBlob(
 
     if (qrImage) {
         const qrSize = 110;
-        const qrX = PAGE_W - MR - qrSize;
+        const qrX = (PAGE_W - qrSize) / 2;
         const qrY = 40;
         page.drawImage(qrImage, {
             x: qrX,

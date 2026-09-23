@@ -181,7 +181,7 @@
   margin-top: auto;
   padding-top: 1.25rem;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: flex-end;
 }
 
@@ -913,28 +913,6 @@ html.corr-docx-fs .corr-shell__header {
   display: flex;
   flex-direction: row;
   align-items: stretch;
-}
-
-.corr-word__download-qr {
-  position: absolute;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 6;
-  padding: 0.5rem 0.55rem 0.4rem;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid color-mix(in srgb, #94a3b8 45%, transparent);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
-  pointer-events: none;
-}
-
-.corr-word__download-qr .corr-letter__qr {
-  margin: 0;
-}
-
-.corr-word__download-qr .corr-letter__qr-img {
-  width: 128px;
-  height: 128px;
 }
 
 .corr-word__editor-main {
@@ -1885,16 +1863,6 @@ body[data-theme='dark'] .corr-word__editor-fallback,
 body[data-theme='dark'] .corr-word__editor-loading {
   background: var(--corr-paper, #10141f);
   color: var(--corr-ink, #f2f0e9);
-}
-
-body[data-theme='dark'] .corr-word__download-qr {
-  background: var(--corr-card, #1a2033);
-  border-color: var(--corr-line, #2a3049);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-}
-
-body[data-theme='dark'] .corr-word__download-qr .corr-letter__qr-caption {
-  color: var(--corr-muted, #8d8a84);
 }
 
 body[data-theme='dark'] .corr-word-comments {

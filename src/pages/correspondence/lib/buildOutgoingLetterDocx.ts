@@ -164,58 +164,31 @@ export async function buildOutgoingLetterDocxBlob(
         const qrPng = await buildCorrespondenceQrPngBytes(qrUrl, 280);
         if (qrPng?.length) {
             const qrSize = 120;
-            children.push(new Paragraph({ spacing: { before: 360, after: 40 }, children: [] }));
-            children.push(new Table({
-                width: { size: 100, type: WidthType.PERCENTAGE },
-                borders: {
-                    top: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    bottom: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    left: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    right: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    insideHorizontal: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                    insideVertical: { style: BorderStyle.NONE, size: 0, color: 'auto' },
-                },
-                rows: [
-                    new TableRow({
-                        children: [
-                            new TableCell({
-                                borders: cellBorderNil,
-                                width: { size: 62, type: WidthType.PERCENTAGE },
-                                children: [new Paragraph({ children: [] })],
-                            }),
-                            new TableCell({
-                                borders: cellBorderNil,
-                                width: { size: 38, type: WidthType.PERCENTAGE },
-                                children: [
-                                    new Paragraph({
-                                        alignment: AlignmentType.RIGHT,
-                                        spacing: { after: 40 },
-                                        children: [new ImageRun({
-                                            type: 'png',
-                                            data: qrPng,
-                                            transformation: { width: qrSize, height: qrSize },
-                                            altText: {
-                                                title: 'QR',
-                                                description: 'Скачать документ',
-                                                name: 'download-qr',
-                                            },
-                                        })],
-                                    }),
-                                    new Paragraph({
-                                        alignment: AlignmentType.RIGHT,
-                                        children: [new TextRun({
-                                            text: 'Скачать документ',
-                                            font: DOC_FONT,
-                                            size: 14,
-                                            color: MUTED,
-                                        })],
-                                    }),
-                                ],
-                            }),
-                        ],
-                    }),
-                ],
-            }));
+            children.push(
+                new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { before: 360, after: 40 },
+                    children: [new ImageRun({
+                        type: 'png',
+                        data: qrPng,
+                        transformation: { width: qrSize, height: qrSize },
+                        altText: {
+                            title: 'QR',
+                            description: 'Скачать документ',
+                            name: 'download-qr',
+                        },
+                    })],
+                }),
+                new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    children: [new TextRun({
+                        text: 'Скачать документ',
+                        font: DOC_FONT,
+                        size: 14,
+                        color: MUTED,
+                    })],
+                }),
+            );
         }
     }
 
