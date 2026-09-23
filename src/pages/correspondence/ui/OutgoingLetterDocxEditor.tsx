@@ -235,7 +235,6 @@ export const OutgoingLetterDocxEditor = forwardRef<OutgoingLetterDocxEditorHandl
                     }
                 }
                 catch {
-                    /* selection may be stale after edits */
                 }
                 return false;
             },

@@ -11,6 +11,7 @@ export type CashMovement = {
     balanceAfter: string;
     createdByUserId: number;
     createdAt: string;
+    expenseId?: string | null;
     text: string;
 };
 

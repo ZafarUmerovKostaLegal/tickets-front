@@ -347,8 +347,23 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
 }
 
 .exp-cash__event-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.45rem;
   margin-top: 0.2rem;
   color: var(--app-text);
+}
+
+.exp-cash__event-id {
+  font-weight: 700;
+  color: var(--app-accent, #4f46e5);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.exp-cash__event-id:hover {
+  text-decoration: underline;
 }
 
 .exp-cash__event-after { margin-top: 0.25rem; }

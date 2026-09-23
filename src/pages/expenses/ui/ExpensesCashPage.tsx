@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
@@ -368,7 +368,16 @@ export function ExpensesCashPage() {
                                                 <strong>{KIND_LABEL[row.kind]}</strong>
                                                 <time dateTime={row.createdAt}>{formatClock(row.createdAt)}</time>
                                             </div>
-                                            {row.note ? <p className="exp-cash__event-note">{row.note}</p> : null}
+                                            {(row.expenseId || row.note) ? (
+                                                <p className="exp-cash__event-note">
+                                                    {row.expenseId ? (
+                                                        <Link to={`${routes.expenses}/${encodeURIComponent(row.expenseId)}`} className="exp-cash__event-id">
+                                                            {row.expenseId}
+                                                        </Link>
+                                                    ) : null}
+                                                    {row.note ? <span>{row.note}</span> : null}
+                                                </p>
+                                            ) : null}
                                             <p className="exp-cash__event-after">Остаток на текущий момент: {formatCash(row.balanceAfter)}</p>
                                         </div>
                                         <span className={`exp-cash__event-sum exp-cash__event-sum--${row.kind}`}>
