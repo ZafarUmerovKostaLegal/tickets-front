@@ -92,6 +92,6 @@ export type InvoicePreviewPackInput = {
     legalOverrides?: InvoiceLegalPageOverrides;
 
     selectedPageNumbers?: number[];
-    /** Split the name after "/" in Description into its own time-report column. */
+    /** Split the name after "/", "*" or "=" in Description into its own time-report column. */
     showServiceInitiatorName?: boolean;
 };

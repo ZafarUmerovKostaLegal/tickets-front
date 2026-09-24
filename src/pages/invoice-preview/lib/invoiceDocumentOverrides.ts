@@ -111,7 +111,7 @@ export type InvoiceDocumentOverridesV1 = {
     legal?: InvoiceLegalPageOverrides | null;
     cover?: InvoiceCoverDocumentOverrides | null;
     timeReport?: InvoiceTimeReportPack | null;
-    /** Show the service-initiator name (text after "/" in Description) as its own column. */
+    /** Show the service-initiator name (text after "/", "*" or "=" in Description) as its own column. */
     showServiceInitiatorName?: boolean;
     /** Pages kept in the invoice pack; omitted/null = all pages. */
     includedPageKeys?: InvoicePreviewPageKey[] | null;

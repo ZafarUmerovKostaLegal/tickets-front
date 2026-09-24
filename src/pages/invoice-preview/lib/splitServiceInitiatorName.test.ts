@@ -6,6 +6,7 @@ describe('splitServiceInitiatorName', () => {
         expect(splitServiceInitiatorName('Review of the claim / Acme LLC')).toEqual({
             note: 'Review of the claim',
             name: 'Acme LLC',
+            mark: '/',
         });
     });
 
@@ -13,6 +14,28 @@ describe('splitServiceInitiatorName', () => {
         expect(splitServiceInitiatorName('A/B transfer / John Smith')).toEqual({
             note: 'A/B transfer',
             name: 'John Smith',
+            mark: '/',
+        });
+    });
+
+    it('also splits on * and =', () => {
+        expect(splitServiceInitiatorName('Review of the claim * Acme LLC')).toEqual({
+            note: 'Review of the claim',
+            name: 'Acme LLC',
+            mark: '*',
+        });
+        expect(splitServiceInitiatorName('Review of the claim = Acme LLC')).toEqual({
+            note: 'Review of the claim',
+            name: 'Acme LLC',
+            mark: '=',
+        });
+    });
+
+    it('uses the rightmost mark when the note already contains / * or =', () => {
+        expect(splitServiceInitiatorName('A/B transfer * John Smith')).toEqual({
+            note: 'A/B transfer',
+            name: 'John Smith',
+            mark: '*',
         });
     });
 
@@ -20,17 +43,21 @@ describe('splitServiceInitiatorName', () => {
         expect(splitServiceInitiatorName('Increased Costs Claim')).toEqual({
             note: 'Increased Costs Claim',
             name: '',
+            mark: '/',
         });
         expect(splitServiceInitiatorName('Note /')).toEqual({
             note: 'Note /',
             name: '',
+            mark: '/',
         });
     });
 });
 
 describe('joinServiceInitiatorName', () => {
-    it('writes the name back after a slash', () => {
+    it('writes the name back after the same mark', () => {
         expect(joinServiceInitiatorName('Review of the claim', 'Acme LLC')).toBe('Review of the claim / Acme LLC');
+        expect(joinServiceInitiatorName('Review of the claim', 'Acme LLC', '*')).toBe('Review of the claim * Acme LLC');
+        expect(joinServiceInitiatorName('Review of the claim', 'Acme LLC', '=')).toBe('Review of the claim = Acme LLC');
     });
 
     it('drops the slash when the name is cleared', () => {

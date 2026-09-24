@@ -1185,7 +1185,7 @@ export function InvoicePreviewPage() {
                 >
                   {editMode ? 'Готово' : 'Редактировать'}
                 </button>
-                <label className="tt-inv-preview__show-name" title="Имя инициатора услуг стоит в заметке после символа /. Галочка вырезает его в отдельный столбец.">
+                <label className="tt-inv-preview__show-name" title="Имя инициатора услуг стоит в заметке после символа /, * или =. Галочка вырезает его в отдельный столбец.">
                   <input
                     type="checkbox"
                     checked={showInitiatorName}
