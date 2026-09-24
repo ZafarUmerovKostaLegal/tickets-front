@@ -28,11 +28,9 @@ import {
     type InvoicePreviewPackInput,
     packCurrencyCode,
     packInvoiceNumberDisplay,
-    packResolveBillingPeriodIso,
     packResolveDueIso,
     packResolveIssueIso,
     packUppercaseRibbonDate,
-    packUppercaseRibbonPeriodMonth,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
 import { getInvoice } from '@entities/time-tracking';
@@ -575,11 +573,10 @@ function legalInvoiceDocxBlocks(
     const labels = getLegalInvoiceLabels(model.coverLanguage);
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
-    const periodIso = packResolveBillingPeriodIso(session, model);
     const zeroFallback = packZeroCommaAmount(model);
     const ribbonIssue = resolveLegalOverrideText(
         legalOverrides?.issueDateDisplay,
-        packUppercaseRibbonPeriodMonth(periodIso, model.coverLanguage),
+        packUppercaseRibbonDate(issueIso, model.coverLanguage),
     );
     const dueBanner = resolveLegalOverrideText(
         legalOverrides?.dueDateDisplay,

@@ -4,6 +4,7 @@ import {
     applyCoverLetterLanguage,
     formatCoverLetterDate,
     formatCoverServicesPeriod,
+    formatCoverServicesPeriodRange,
     resolveLocalizedCoverIntroParagraph,
     resolveLocalizedCoverInvoiceParagraph,
 } from './invoiceCoverLetterI18n';
@@ -60,6 +61,19 @@ describe('invoiceCoverLetterI18n', () => {
         expect(ru.coverLanguage).toBe('RU');
         expect(formatCoverLetterDate('2026-07-20', 'RU')).toContain('июл');
         expect(formatCoverServicesPeriod('2026-07-20', 'ENG')).toBe('July 2026');
+        expect(formatCoverServicesPeriodRange('2026-07-01', '2026-08-31', 'ENG')).toBe('July and August 2026');
+        expect(formatCoverServicesPeriodRange('2026-07-01', '2026-08-31', 'RU')).toBe('июле и августе 2026 года');
+        expect(buildInvoiceCoverLetterModel({
+            issueDateIso: '2026-09-04',
+            billingPeriodFromIso: '2026-07-01',
+            billingPeriodIso: '2026-08-31',
+            clientName: 'GOR',
+            clientAddress: null,
+            contactName: null,
+            totalAmount: 1,
+            currency: 'UZS',
+            coverLanguage: 'ENG',
+        }).servicesMonthYear).toBe('July and August 2026');
         expect(resolveLocalizedCoverIntroParagraph(ru)).toMatch(/юридическую помощь/i);
     });
 });

@@ -38,6 +38,14 @@ describe('scrubStaleBillingPeriodDocumentOverrides', () => {
         expect(scrubbed?.legal?.serviceDescriptionLine).toBeNull();
         expect(scrubbed?.cover?.servicesMonthYear).toBeUndefined();
     });
+
+    it('drops a month-only ribbon so the invoice shows the issue date', () => {
+        const scrubbed = scrubStaleBillingPeriodDocumentOverrides({
+            v: 1,
+            legal: { issueDateDisplay: 'AUGUST' },
+        }, { issueDateIso: '2026-09-04', billingPeriodIso: '2026-08-31' });
+        expect(scrubbed?.legal?.issueDateDisplay).toBeNull();
+    });
 });
 
 describe('buildInvoiceDocumentOverridesPayload', () => {

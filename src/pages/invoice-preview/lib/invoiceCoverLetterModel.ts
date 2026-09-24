@@ -19,15 +19,19 @@ export type InvoiceCoverLetterInput = {
     totalAmount: number | null;
     currency: string;
     coverLanguage?: InvoiceCoverLanguage;
-    /** Billing period date for «services rendered in …»; defaults to issueDateIso. */
+    /** Billing period end for «services rendered in …»; defaults to issueDateIso. */
     billingPeriodIso?: string | null;
+    /** Billing period start. When it falls in another month, the report title lists both. */
+    billingPeriodFromIso?: string | null;
 };
 
 export type InvoiceCoverLetterModel = {
     coverLanguage: InvoiceCoverLanguage;
     issueDateIso: string;
-    /** ISO date used for services month / ribbon period (billing period). */
+    /** ISO date used for services month (billing period end). */
     billingPeriodIso: string;
+    /** Billing period start. Equals billingPeriodIso when the invoice covers one month. */
+    billingPeriodFromIso: string;
     letterDateDisplay: string;
     recipientCompany: string;
     recipientAddressLines: [string, string];
@@ -57,7 +61,7 @@ export {
 
 import {
     formatCoverLetterDate,
-    formatCoverServicesPeriod,
+    formatCoverServicesPeriodRange,
     getCoverLetterLabels,
     normalizeCoverLanguage,
 } from './invoiceCoverLetterI18n';
@@ -89,6 +93,8 @@ export function buildInvoiceCoverLetterModel(input: InvoiceCoverLetterInput): In
     const iso = input.issueDateIso.slice(0, 10);
     const periodRaw = (input.billingPeriodIso ?? iso).slice(0, 10);
     const periodIso = /^\d{4}-\d{2}-\d{2}$/.test(periodRaw) ? periodRaw : iso;
+    const fromRaw = (input.billingPeriodFromIso ?? periodIso).slice(0, 10);
+    const periodFromIso = /^\d{4}-\d{2}-\d{2}$/.test(fromRaw) ? fromRaw : periodIso;
     const [a1, a2] = splitAddress(input.clientAddress, lang);
     const company = input.clientName.trim() || 'Company Name';
     const contact = (input.contactName ?? '').trim();
@@ -96,6 +102,7 @@ export function buildInvoiceCoverLetterModel(input: InvoiceCoverLetterInput): In
         coverLanguage: lang,
         issueDateIso: iso,
         billingPeriodIso: periodIso,
+        billingPeriodFromIso: periodFromIso,
         letterDateDisplay: formatCoverLetterDate(iso, lang),
         recipientCompany: company,
         recipientAddressLines: [
@@ -105,7 +112,7 @@ export function buildInvoiceCoverLetterModel(input: InvoiceCoverLetterInput): In
         attentionName: contact || labels.defaultAttentionName,
         attentionTitle: labels.defaultAttentionTitle,
         quotedCompanyName: company,
-        servicesMonthYear: formatCoverServicesPeriod(periodIso, lang),
+        servicesMonthYear: formatCoverServicesPeriodRange(periodFromIso, periodIso, lang),
         totalFormatted: formatCoverLetterTotal(input.totalAmount, input.currency),
         signatoryName: KOSTA_LEGAL_FIRM.defaultSignatoryName,
         signatoryInitials: findCoverSignatoryPartnerByName(KOSTA_LEGAL_FIRM.defaultSignatoryName)?.initials

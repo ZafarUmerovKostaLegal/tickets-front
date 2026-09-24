@@ -8,11 +8,9 @@ import {
     type InvoicePreviewPackInput,
     packCurrencyCode,
     packInvoiceNumberDisplay,
-    packResolveBillingPeriodIso,
     packResolveDueIso,
     packResolveIssueIso,
     packUppercaseRibbonDate,
-    packUppercaseRibbonPeriodMonth,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
 import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
@@ -1333,12 +1331,11 @@ function drawLegalInvoicePdfPage(
 ): void {
     const issueIso = packResolveIssueIso(session);
     const dueIso = packResolveDueIso(session, issueIso);
-    const periodIso = packResolveBillingPeriodIso(session, model);
     const labels = getLegalInvoiceLabels(model.coverLanguage);
     const zeroFallback = packZeroCommaAmount(model);
     const ribbonIssue = resolveLegalOverrideText(
         legalOverrides?.issueDateDisplay,
-        packUppercaseRibbonPeriodMonth(periodIso, model.coverLanguage),
+        packUppercaseRibbonDate(issueIso, model.coverLanguage),
     );
     const dueBanner = resolveLegalOverrideText(
         legalOverrides?.dueDateDisplay,

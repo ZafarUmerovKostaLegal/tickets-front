@@ -73,6 +73,39 @@ export function formatCoverLetterDate(isoYmd: string, lang: InvoiceCoverLanguage
     return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+const EN_MONTHS = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+] as const;
+
+function parseIsoMonth(isoYmd: string): { year: number; month: number } | null {
+    const s = isoYmd.trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s))
+        return null;
+    const d = new Date(`${s}T12:00:00`);
+    if (Number.isNaN(d.getTime()))
+        return null;
+    return { year: d.getFullYear(), month: d.getMonth() };
+}
+
+function joinWithAnd(items: string[], andWord: string): string {
+    if (items.length <= 1)
+        return items[0] ?? '';
+    if (items.length === 2)
+        return `${items[0]} ${andWord} ${items[1]}`;
+    return `${items.slice(0, -1).join(', ')} ${andWord} ${items[items.length - 1]}`;
+}
+
 export function formatCoverServicesPeriod(isoYmd: string, lang: InvoiceCoverLanguage): string {
     if (!isoYmd || !/^\d{4}-\d{2}-\d{2}/.test(isoYmd))
         return lang === 'RU' ? 'месяц 2026 года' : 'Month 2026';
@@ -83,7 +116,54 @@ export function formatCoverServicesPeriod(isoYmd: string, lang: InvoiceCoverLang
         const month = RU_MONTH_GENITIVE[d.getMonth()] ?? 'месяце';
         return `${month} ${d.getFullYear()} года`;
     }
-    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    return `${EN_MONTHS[d.getMonth()] ?? 'Month'} ${d.getFullYear()}`;
+}
+
+/** «July 2026» or «July and August 2026» when the billing period crosses months. */
+export function formatCoverServicesPeriodRange(
+    fromIso: string | null | undefined,
+    toIso: string | null | undefined,
+    lang: InvoiceCoverLanguage,
+): string {
+    const from = parseIsoMonth(fromIso ?? '');
+    const to = parseIsoMonth(toIso ?? '');
+    if (!from && !to)
+        return formatCoverServicesPeriod('', lang);
+    if (!from || !to || (from.year === to.year && from.month === to.month))
+        return formatCoverServicesPeriod((toIso || fromIso || '').slice(0, 10), lang);
+
+    let start = from;
+    let end = to;
+    if (start.year > end.year || (start.year === end.year && start.month > end.month)) {
+        start = to;
+        end = from;
+    }
+
+    const points: { year: number; month: number }[] = [];
+    let year = start.year;
+    let month = start.month;
+    while (year < end.year || (year === end.year && month <= end.month)) {
+        points.push({ year, month });
+        month += 1;
+        if (month > 11) {
+            month = 0;
+            year += 1;
+        }
+        if (points.length > 24)
+            break;
+    }
+
+    const sameYear = start.year === end.year;
+    if (lang === 'RU') {
+        const names = points.map((p) => RU_MONTH_GENITIVE[p.month] ?? 'месяце');
+        if (sameYear)
+            return `${joinWithAnd(names, 'и')} ${end.year} года`;
+        return joinWithAnd(points.map((p) => `${RU_MONTH_GENITIVE[p.month] ?? 'месяце'} ${p.year} года`), 'и');
+    }
+    const names = points.map((p) => EN_MONTHS[p.month] ?? 'Month');
+    if (sameYear)
+        return `${joinWithAnd(names, 'and')} ${end.year}`;
+    return joinWithAnd(points.map((p) => `${EN_MONTHS[p.month] ?? 'Month'} ${p.year}`), 'and');
 }
 
 export function resolveLocalizedCoverIntroParagraph(model: InvoiceCoverLetterModel): string {
@@ -124,8 +204,9 @@ export function applyCoverLetterLanguage(
         coverLanguage: nextLang,
         issueDateIso: iso,
         letterDateDisplay: formatCoverLetterDate(iso, nextLang),
-        servicesMonthYear: formatCoverServicesPeriod(
-            (model.billingPeriodIso || iso).slice(0, 10),
+        servicesMonthYear: formatCoverServicesPeriodRange(
+            model.billingPeriodFromIso || model.billingPeriodIso || iso,
+            model.billingPeriodIso || iso,
             nextLang,
         ),
         introParagraphOverride: null,

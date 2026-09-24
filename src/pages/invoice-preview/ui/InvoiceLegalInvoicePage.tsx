@@ -8,9 +8,7 @@ import {
   packInvoiceNumberDisplay,
   packResolveDueIso,
   packResolveIssueIso,
-  packResolveBillingPeriodIso,
   packUppercaseRibbonDate,
-  packUppercaseRibbonPeriodMonth,
   packZeroCommaAmount,
 } from '../lib/invoicePreviewPackShared';
 import { getLegalInvoiceLabels } from '../lib/invoiceLegalPageI18n';
@@ -112,8 +110,7 @@ export function InvoiceLegalInvoicePage({
   const labels = getLegalInvoiceLabels(model.coverLanguage);
   const issueIso = packResolveIssueIso(session);
   const dueIso = packResolveDueIso(session, issueIso);
-  const periodIso = packResolveBillingPeriodIso(session, model);
-  const defaultRibbonIssue = packUppercaseRibbonPeriodMonth(periodIso, model.coverLanguage);
+  const defaultRibbonIssue = packUppercaseRibbonDate(issueIso, model.coverLanguage);
   const defaultDueBanner = packUppercaseRibbonDate(dueIso, model.coverLanguage);
   const defaultInvNo = packInvoiceNumberDisplay(session);
   const defaultZero = packZeroCommaAmount(model);

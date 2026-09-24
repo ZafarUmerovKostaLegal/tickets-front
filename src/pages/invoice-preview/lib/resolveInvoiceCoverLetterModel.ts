@@ -120,12 +120,15 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
             const inv = await getInvoice(session.invoiceId, true);
             const client = await getTimeManagerClient(inv.clientId);
             const issueIso = inv.issueDate.slice(0, 10);
-            const storedPeriod = (
+            const periodTo = (
                 session.meta.billingPeriodTo
                 || inv.partnerBillingPeriodTo
-                || session.meta.billingPeriodFrom
+            )?.toString().slice(0, 10) || '';
+            const periodFrom = (
+                session.meta.billingPeriodFrom
                 || inv.partnerBillingPeriodFrom
             )?.toString().slice(0, 10) || '';
+            const storedPeriod = periodTo || periodFrom;
             const lineDates = (inv.lines ?? []).flatMap((ln) => {
                 const out: string[] = [];
                 if (ln.timeEntryWorkDate)
@@ -135,8 +138,11 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
                 return out;
             });
             const inferred = inferBillingPeriodIsoFromDates(lineDates);
+            const fromOk = /^\d{4}-\d{2}-\d{2}$/.test(periodFrom);
+            const toOk = /^\d{4}-\d{2}-\d{2}$/.test(periodTo);
+            const spansMonths = fromOk && toOk && periodFrom.slice(0, 7) !== periodTo.slice(0, 7);
             let billingPeriodIso = storedPeriod;
-            if (inferred && (
+            if (!spansMonths && inferred && (
                 !/^\d{4}-\d{2}-\d{2}$/.test(storedPeriod)
                 || storedPeriod.slice(0, 7) !== inferred.slice(0, 7)
             )) {
@@ -147,6 +153,7 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
             const model = buildInvoiceCoverLetterModel({
                 issueDateIso: issueIso,
                 billingPeriodIso,
+                billingPeriodFromIso: /^\d{4}-\d{2}-\d{2}$/.test(periodFrom) ? periodFrom : billingPeriodIso,
                 clientName: client.name,
                 clientAddress: client.address,
                 contactName: client.contact_name ?? null,
@@ -159,10 +166,12 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
         const f = session.form;
         const iso = f.issueDate.slice(0, 10);
         const billingPeriodIso = (f.unbilledTo || f.unbilledFrom || iso).slice(0, 10);
+        const billingPeriodFromIso = (f.unbilledFrom || billingPeriodIso).slice(0, 10);
         if (!f.createClientId.trim()) {
             const model = buildInvoiceCoverLetterModel({
                 issueDateIso: iso,
                 billingPeriodIso,
+                billingPeriodFromIso,
                 clientName: session.meta.clientLabel ?? 'Company Name',
                 clientAddress: null,
                 contactName: null,
@@ -179,6 +188,7 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
             clientName: client.name,
             clientAddress: client.address,
             contactName: client.contact_name ?? null,
+            billingPeriodFromIso,
             totalAmount: null,
             currency: client.currency || 'EUR',
             coverLanguage,

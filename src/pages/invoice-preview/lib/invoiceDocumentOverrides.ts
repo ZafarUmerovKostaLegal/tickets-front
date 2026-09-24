@@ -34,6 +34,29 @@ function textMentionsPeriodMonth(text: string, isoYmd: string): boolean {
     );
 }
 
+const MONTH_ONLY_RIBBON = new Set([
+    'january', 'february', 'march', 'april', 'may', 'june',
+    'july', 'august', 'september', 'october', 'november', 'december',
+    'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
+    'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь',
+]);
+
+function isMonthOnlyRibbon(text: string): boolean {
+    return MONTH_ONLY_RIBBON.has(text.trim().toLowerCase());
+}
+
+function isStaleSingleMonthServicesLabel(stored: string, model: InvoiceCoverLetterModel): boolean {
+    const live = model.servicesMonthYear.trim();
+    const value = stored.trim();
+    if (!value || value === live)
+        return false;
+    const endpoints = [model.billingPeriodFromIso, model.billingPeriodIso].filter(Boolean);
+    return endpoints.some((iso) => (
+        value === formatCoverServicesPeriod(iso, 'ENG')
+        || value === formatCoverServicesPeriod(iso, 'RU')
+    ));
+}
+
 function looksLikeAutoServiceDescription(text: string): boolean {
     return /^(Legal services rendered in |Юридические услуги, оказанные в )/i.test(text.trim());
 }
@@ -50,9 +73,17 @@ export function scrubStaleBillingPeriodDocumentOverrides(
         return null;
     const issue = String(opts.issueDateIso ?? '').trim().slice(0, 10);
     const period = String(opts.billingPeriodIso ?? '').trim().slice(0, 10);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(issue) || !/^\d{4}-\d{2}-\d{2}$/.test(period))
-        return doc;
-    if (isoMonthKey(period) === isoMonthKey(issue))
+    const monthOnlyRibbon = doc.legal?.issueDateDisplay?.trim()
+        && isMonthOnlyRibbon(doc.legal.issueDateDisplay);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(issue) || !/^\d{4}-\d{2}-\d{2}$/.test(period)) {
+        if (!monthOnlyRibbon)
+            return doc;
+        return {
+            ...doc,
+            legal: { ...doc.legal, issueDateDisplay: null },
+        };
+    }
+    if (isoMonthKey(period) === isoMonthKey(issue) && !monthOnlyRibbon)
         return doc;
 
     const next: InvoiceDocumentOverridesV1 = { ...doc };
@@ -60,7 +91,8 @@ export function scrubStaleBillingPeriodDocumentOverrides(
         const legal: InvoiceLegalPageOverrides = { ...doc.legal };
         const ribbon = legal.issueDateDisplay?.trim();
         if (ribbon && (
-            textMentionsPeriodMonth(ribbon, issue)
+            isMonthOnlyRibbon(ribbon)
+            || textMentionsPeriodMonth(ribbon, issue)
             || ribbon === formatLegalRibbonPeriodMonth(issue, 'ENG')
             || ribbon === formatLegalRibbonPeriodMonth(issue, 'RU')
         )) {
@@ -162,7 +194,7 @@ export function applyCoverDocumentOverrides(
         next.attentionTitle = cover.attentionTitle;
     if (typeof cover.quotedCompanyName === 'string')
         next.quotedCompanyName = cover.quotedCompanyName;
-    if (typeof cover.servicesMonthYear === 'string')
+    if (typeof cover.servicesMonthYear === 'string' && !isStaleSingleMonthServicesLabel(cover.servicesMonthYear, model))
         next.servicesMonthYear = cover.servicesMonthYear;
     if (typeof cover.totalFormatted === 'string') {
         const override = cover.totalFormatted.trim();
