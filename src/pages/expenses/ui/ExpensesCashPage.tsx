@@ -13,6 +13,90 @@ import './ExpensesCashPage.css';
 type FormKind = 'balance' | 'expense' | 'topup';
 type HistoryFilter = 'all' | 'topup' | 'expense' | 'set';
 
+const FILE_ACCEPT = 'image/*,application/pdf,video/*,audio/*';
+
+function CashFileDrop({
+    files,
+    disabled,
+    onFiles,
+}: {
+    files: File[];
+    disabled?: boolean;
+    onFiles: (files: File[]) => void;
+}) {
+    const [over, setOver] = useState(false);
+    return (
+        <label
+            className={`exp-cash__drop${over ? ' exp-cash__drop--over' : ''}`}
+            onDragEnter={(e) => { e.preventDefault(); setOver(true); }}
+            onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+            onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+                    setOver(false);
+            }}
+            onDrop={(e) => {
+                e.preventDefault();
+                setOver(false);
+                if (!disabled)
+                    onFiles([...(e.dataTransfer.files ?? [])]);
+            }}
+        >
+            <input
+                type="file"
+                multiple
+                accept={FILE_ACCEPT}
+                disabled={disabled}
+                onChange={(e) => {
+                    onFiles([...(e.target.files ?? [])]);
+                    e.target.value = '';
+                }}
+            />
+            <strong>{over ? 'Отпустите, чтобы вложить' : 'Перетащите файлы сюда'}</strong>
+            <span>или нажмите и выберите скрин, скан, фото, видео или аудио</span>
+            {files.length > 0 ? (
+                <ul>
+                    {files.map((file) => <li key={`${file.name}-${file.size}`}>{file.name}</li>)}
+                </ul>
+            ) : null}
+        </label>
+    );
+}
+
+function RowFileDrop({ onFiles }: { onFiles: (files: File[]) => void }) {
+    const [over, setOver] = useState(false);
+    return (
+        <label
+            className={`exp-cash__file-add${over ? ' exp-cash__file-add--over' : ''}`}
+            onDragEnter={(e) => { e.preventDefault(); setOver(true); }}
+            onDragOver={(e) => { e.preventDefault(); setOver(true); }}
+            onDragLeave={(e) => {
+                if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+                    setOver(false);
+            }}
+            onDrop={(e) => {
+                e.preventDefault();
+                setOver(false);
+                const picked = [...(e.dataTransfer.files ?? [])];
+                if (picked.length > 0)
+                    onFiles(picked);
+            }}
+        >
+            {over ? 'Отпустите файлы' : 'Вложить файл или перетащите сюда'}
+            <input
+                type="file"
+                multiple
+                accept={FILE_ACCEPT}
+                onChange={(e) => {
+                    const picked = [...(e.target.files ?? [])];
+                    e.target.value = '';
+                    if (picked.length > 0)
+                        onFiles(picked);
+                }}
+            />
+        </label>
+    );
+}
+
 const KIND_LABEL: Record<CashMovement['kind'], string> = {
     set: 'Остаток установлен',
     expense: 'Потрачено',
@@ -461,17 +545,7 @@ export function ExpensesCashPage() {
                                     />
                                 </label>
                             )}
-                            <label className="exp-cash__field">
-                                <span>Файлы: скрин, скан, фото, видео или аудио</span>
-                                <input
-                                    type="file"
-                                    multiple
-                                    accept="image/*,application/pdf,video/*,audio/*"
-                                    disabled={busy}
-                                    onChange={(e) => setFiles([...(e.target.files ?? [])])}
-                                />
-                                {files.length > 0 ? <small>{files.map((file) => file.name).join(', ')}</small> : null}
-                            </label>
+                            <CashFileDrop files={files} disabled={busy} onFiles={setFiles} />
                             {formError && <p className="exp-mod-err" role="alert">{formError}</p>}
                             <div className="exp-mod-dialog__ft">
                                 <button type="button" className="exp-panel-btn exp-panel-btn--ghost" onClick={() => setForm(null)} disabled={busy}>
@@ -565,14 +639,19 @@ export function ExpensesCashPage() {
                 <section className="exp-cash__ledger">
                     <div className="exp-cash__ledger-head">
                         <h2>История</h2>
-                        <input
-                            type="search"
-                            className="exp-cash__search"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Поиск по слову по всем расходам"
-                            aria-label="Поиск по слову по всем расходам"
-                        />
+                        <label className="exp-cash__search">
+                            <svg viewBox="0 0 24 24" aria-hidden>
+                                <circle cx="11" cy="11" r="6.5" />
+                                <path d="M16 16l4 4" />
+                            </svg>
+                            <input
+                                type="search"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="Поиск по слову"
+                                aria-label="Поиск по слову по всем расходам"
+                            />
+                        </label>
                         <div className="exp-cash__filters" role="tablist" aria-label="Фильтр истории">
                             {filters.map((item) => (
                                 <button
@@ -626,30 +705,20 @@ export function ExpensesCashPage() {
                                                     ))}
                                                 </ul>
                                             ) : null}
-                                            <label className="exp-cash__file-add">
-                                                Вложить файл
-                                                <input
-                                                    type="file"
-                                                    multiple
-                                                    accept="image/*,application/pdf,video/*,audio/*"
-                                                    onChange={(e) => {
-                                                        const picked = [...(e.target.files ?? [])];
-                                                        e.target.value = '';
-                                                        if (picked.length === 0)
-                                                            return;
-                                                        void (async () => {
-                                                            try {
-                                                                for (const file of picked)
-                                                                    await uploadCashAttachment(row.id, file);
-                                                                await reload();
-                                                            }
-                                                            catch (err: unknown) {
-                                                                showToast({ message: err instanceof Error ? err.message : 'Не удалось вложить файл', variant: 'error' });
-                                                            }
-                                                        })();
-                                                    }}
-                                                />
-                                            </label>
+                                            <RowFileDrop
+                                                onFiles={(picked) => {
+                                                    void (async () => {
+                                                        try {
+                                                            for (const file of picked)
+                                                                await uploadCashAttachment(row.id, file);
+                                                            await reload();
+                                                        }
+                                                        catch (err: unknown) {
+                                                            showToast({ message: err instanceof Error ? err.message : 'Не удалось вложить файл', variant: 'error' });
+                                                        }
+                                                    })();
+                                                }}
+                                            />
                                             <p className="exp-cash__event-after">Остаток на текущий момент: {formatCash(row.balanceAfter)}</p>
                                         </div>
                                         <div className="exp-cash__event-side">
