@@ -4,7 +4,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
-import { deleteCashMovement, fetchCashState, isManualCashMovement, postCashAction, updateCashMovement, type CashMovement, type CashState } from '@entities/expenses/model/cashApi';
+import { deleteCashAttachment, deleteCashMovement, fetchCashState, isManualCashMovement, openCashAttachment, postCashAction, updateCashMovement, uploadCashAttachment, type CashMovement, type CashState } from '@entities/expenses/model/cashApi';
 import { showToast } from '@shared/ui/app-toast';
 import { ExpensesShell } from './ExpensesShell';
 import './ExpensesPage.css';
@@ -138,15 +138,23 @@ export function ExpensesCashPage() {
     const [editing, setEditing] = useState<CashMovement | null>(null);
     const [deleting, setDeleting] = useState<CashMovement | null>(null);
     const [filter, setFilter] = useState<HistoryFilter>('all');
+    const [query, setQuery] = useState('');
+    const [debouncedQuery, setDebouncedQuery] = useState('');
+    const [searchHits, setSearchHits] = useState<CashMovement[] | null>(null);
     const [amount, setAmount] = useState('');
     const [note, setNote] = useState('');
+    const [files, setFiles] = useState<File[]>([]);
     const [formError, setFormError] = useState<string | null>(null);
 
     const reload = useCallback(async () => {
         const next = await fetchCashState();
         setState(next);
         setLoadError(null);
-    }, []);
+        if (debouncedQuery) {
+            const found = await fetchCashState(debouncedQuery);
+            setSearchHits(found.history);
+        }
+    }, [debouncedQuery]);
 
     useEffect(() => {
         if (!allowed)
@@ -165,6 +173,33 @@ export function ExpensesCashPage() {
             cancelled = true;
         };
     }, [allowed]);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => setDebouncedQuery(query.trim()), 300);
+        return () => window.clearTimeout(timer);
+    }, [query]);
+
+    useEffect(() => {
+        if (!allowed)
+            return;
+        if (!debouncedQuery) {
+            setSearchHits(null);
+            return;
+        }
+        let cancelled = false;
+        void fetchCashState(debouncedQuery)
+            .then((next) => {
+                if (!cancelled)
+                    setSearchHits(next.history);
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setSearchHits([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [allowed, debouncedQuery]);
 
     const dialogOpen = form !== null || editing !== null || deleting !== null;
     useEffect(() => {
@@ -196,7 +231,16 @@ export function ExpensesCashPage() {
     }, [state]);
 
     const groups = useMemo(() => {
-        const rows = (state?.history ?? []).filter((row) => filter === 'all' || row.kind === filter);
+        const source = debouncedQuery ? (searchHits ?? []) : (state?.history ?? []);
+        const needle = debouncedQuery.toLowerCase();
+        const rows = source.filter((row) => {
+            if (filter !== 'all' && row.kind !== filter)
+                return false;
+            if (!needle)
+                return true;
+            const hay = `${row.note} ${row.expenseId ?? ''} ${KIND_LABEL[row.kind]}`.toLowerCase();
+            return hay.includes(needle);
+        });
         const map = new Map<string, CashMovement[]>();
         for (const row of rows) {
             const key = dayKey(row.createdAt);
@@ -205,7 +249,7 @@ export function ExpensesCashPage() {
             map.set(key, list);
         }
         return [...map.entries()];
-    }, [state, filter]);
+    }, [state, filter, debouncedQuery, searchHits]);
 
     if (loading)
         return (
@@ -239,6 +283,7 @@ export function ExpensesCashPage() {
         setFormError(null);
         setAmount('');
         setNote('');
+        setFiles([]);
     };
 
     const openEdit = (row: CashMovement) => {
@@ -257,9 +302,12 @@ export function ExpensesCashPage() {
         setFormError(null);
         try {
             const result = await postCashAction(form, amount.trim(), note.trim());
+            for (const file of files)
+                await uploadCashAttachment(result.movement.id, file);
             showToast({ message: movementNotice(result.movement), variant: 'success', durationMs: 8000 });
             setAmount('');
             setNote('');
+            setFiles([]);
             setForm(null);
             await reload();
         }
@@ -413,6 +461,17 @@ export function ExpensesCashPage() {
                                     />
                                 </label>
                             )}
+                            <label className="exp-cash__field">
+                                <span>Файлы: скрин, скан, фото, видео или аудио</span>
+                                <input
+                                    type="file"
+                                    multiple
+                                    accept="image/*,application/pdf,video/*,audio/*"
+                                    disabled={busy}
+                                    onChange={(e) => setFiles([...(e.target.files ?? [])])}
+                                />
+                                {files.length > 0 ? <small>{files.map((file) => file.name).join(', ')}</small> : null}
+                            </label>
                             {formError && <p className="exp-mod-err" role="alert">{formError}</p>}
                             <div className="exp-mod-dialog__ft">
                                 <button type="button" className="exp-panel-btn exp-panel-btn--ghost" onClick={() => setForm(null)} disabled={busy}>
@@ -506,6 +565,14 @@ export function ExpensesCashPage() {
                 <section className="exp-cash__ledger">
                     <div className="exp-cash__ledger-head">
                         <h2>История</h2>
+                        <input
+                            type="search"
+                            className="exp-cash__search"
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            placeholder="Поиск по слову по всем расходам"
+                            aria-label="Поиск по слову по всем расходам"
+                        />
                         <div className="exp-cash__filters" role="tablist" aria-label="Фильтр истории">
                             {filters.map((item) => (
                                 <button
@@ -522,7 +589,7 @@ export function ExpensesCashPage() {
                         </div>
                     </div>
                     {groups.length === 0 ? (
-                        <p className="exp-cash__empty">Операций нет</p>
+                        <p className="exp-cash__empty">{debouncedQuery ? 'Ничего не найдено' : 'Операций нет'}</p>
                     ) : groups.map(([day, rows]) => (
                         <div key={day} className="exp-cash__day">
                             <h3>{day}</h3>
@@ -545,6 +612,44 @@ export function ExpensesCashPage() {
                                                     {row.note ? <span>{row.note}</span> : null}
                                                 </p>
                                             ) : null}
+                                            {(row.attachments ?? []).length > 0 ? (
+                                                <ul className="exp-cash__files">
+                                                    {(row.attachments ?? []).map((file) => (
+                                                        <li key={file.id}>
+                                                            <button type="button" onClick={() => void openCashAttachment(row.id, file.id).catch((err: unknown) => showToast({ message: err instanceof Error ? err.message : 'Не удалось открыть файл', variant: 'error' }))}>
+                                                                {file.fileName}
+                                                            </button>
+                                                            <button type="button" aria-label={`Убрать ${file.fileName}`} onClick={() => void deleteCashAttachment(row.id, file.id).then(() => reload()).catch((err: unknown) => showToast({ message: err instanceof Error ? err.message : 'Не удалось убрать файл', variant: 'error' }))}>
+                                                                ×
+                                                            </button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            ) : null}
+                                            <label className="exp-cash__file-add">
+                                                Вложить файл
+                                                <input
+                                                    type="file"
+                                                    multiple
+                                                    accept="image/*,application/pdf,video/*,audio/*"
+                                                    onChange={(e) => {
+                                                        const picked = [...(e.target.files ?? [])];
+                                                        e.target.value = '';
+                                                        if (picked.length === 0)
+                                                            return;
+                                                        void (async () => {
+                                                            try {
+                                                                for (const file of picked)
+                                                                    await uploadCashAttachment(row.id, file);
+                                                                await reload();
+                                                            }
+                                                            catch (err: unknown) {
+                                                                showToast({ message: err instanceof Error ? err.message : 'Не удалось вложить файл', variant: 'error' });
+                                                            }
+                                                        })();
+                                                    }}
+                                                />
+                                            </label>
                                             <p className="exp-cash__event-after">Остаток на текущий момент: {formatCash(row.balanceAfter)}</p>
                                         </div>
                                         <div className="exp-cash__event-side">

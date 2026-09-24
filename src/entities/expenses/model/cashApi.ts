@@ -2,6 +2,12 @@ import { apiFetch } from '@shared/api';
 
 export type CashKind = 'set' | 'expense' | 'topup';
 
+export type CashAttachment = {
+    id: string;
+    fileName: string;
+    mimeType: string;
+};
+
 export type CashMovement = {
     id: number;
     kind: CashKind;
@@ -13,6 +19,7 @@ export type CashMovement = {
     createdAt: string;
     expenseId?: string | null;
     text: string;
+    attachments?: CashAttachment[];
 };
 
 export type CashState = {
@@ -34,8 +41,12 @@ async function throwIfNotOk(res: Response): Promise<Response> {
     throw new Error(msg);
 }
 
-export async function fetchCashState(): Promise<CashState> {
-    const res = await throwIfNotOk(await apiFetch('/api/v1/expenses/cash'));
+export async function fetchCashState(q?: string): Promise<CashState> {
+    const term = (q ?? '').trim();
+    const path = term
+        ? `/api/v1/expenses/cash?q=${encodeURIComponent(term)}`
+        : '/api/v1/expenses/cash';
+    const res = await throwIfNotOk(await apiFetch(path));
     return res.json() as Promise<CashState>;
 }
 
@@ -61,6 +72,38 @@ export async function deleteCashMovement(id: number): Promise<{ balance: string 
         method: 'DELETE',
     }));
     return res.json() as Promise<{ balance: string }>;
+}
+
+export async function uploadCashAttachment(movementId: number, file: File): Promise<CashMovement> {
+    const body = new FormData();
+    body.append('file', file);
+    const res = await throwIfNotOk(await apiFetch(`/api/v1/expenses/cash/movements/${movementId}/attachments`, {
+        method: 'POST',
+        body,
+    }));
+    return res.json() as Promise<CashMovement>;
+}
+
+export async function deleteCashAttachment(movementId: number, attachmentId: string): Promise<CashMovement> {
+    const res = await throwIfNotOk(await apiFetch(
+        `/api/v1/expenses/cash/movements/${movementId}/attachments/${encodeURIComponent(attachmentId)}`,
+        { method: 'DELETE' },
+    ));
+    return res.json() as Promise<CashMovement>;
+}
+
+export async function openCashAttachment(movementId: number, attachmentId: string): Promise<void> {
+    const res = await throwIfNotOk(await apiFetch(
+        `/api/v1/expenses/cash/movements/${movementId}/attachments/${encodeURIComponent(attachmentId)}/file`,
+    ));
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const opened = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+        URL.revokeObjectURL(url);
+        throw new Error('Браузер заблокировал новую вкладку. Разрешите всплывающие окна для этого сайта.');
+    }
+    window.setTimeout(() => URL.revokeObjectURL(url), 120000);
 }
 
 export async function postCashAction(
