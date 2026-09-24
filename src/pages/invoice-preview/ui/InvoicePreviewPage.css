@@ -484,6 +484,36 @@
   cursor: not-allowed;
 }
 
+.tt-inv-preview__show-name {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 1.875rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--tt-inv-shell-divider);
+  border-radius: 6px;
+  background: var(--tt-inv-paper);
+  color: var(--tt-inv-shell-doc-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tt-inv-preview__show-name input {
+  margin: 0;
+  accent-color: var(--app-accent, #4f46e5);
+  cursor: pointer;
+}
+
+.tt-inv-preview__show-name:has(input:disabled) {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .tt-inv-preview__pdf-toolbar-edit-btn--active {
   border-color: var(--app-accent, #4f46e5);
   background: color-mix(in srgb, var(--app-accent, #4f46e5) 12%, var(--tt-inv-paper));

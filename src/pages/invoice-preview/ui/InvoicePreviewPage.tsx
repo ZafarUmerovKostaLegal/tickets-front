@@ -156,6 +156,7 @@ export function InvoicePreviewPage() {
     const [invoiceStatus, setInvoiceStatus] = useState<string | null>(null);
     const [includedPageKeys, setIncludedPageKeys] = useState<Set<InvoicePreviewPageKey> | null>(null);
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
+    const [showInitiatorName, setShowInitiatorName] = useState(false);
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activePage, setActivePage] = useState(1);
@@ -233,6 +234,7 @@ export function InvoicePreviewPage() {
         if (doc.cover) {
             setCoverModel((prev) => (prev ? applyCoverDocumentOverrides(prev, doc.cover) : prev));
         }
+        setShowInitiatorName(doc.showServiceInitiatorName === true);
         // timeReport is applied after live resolve (mergeTimeReportPackPreferLiveExpenses)
         // so expense USD stays locked to the registry, not a stale invoice FX snapshot.
     }, []);
@@ -247,6 +249,7 @@ export function InvoicePreviewPage() {
         setInvoiceStatus(null);
         setIncludedPageKeys(null);
         setTimeReportPack(null);
+        setShowInitiatorName(false);
         setLegalOverrides(firmBankingToLegalOverrides());
         const sessionNow = readInvoicePreviewSession();
         (async () => {
@@ -356,6 +359,7 @@ export function InvoicePreviewPage() {
             legal: legalOverrides,
             cover: coverModel,
             timeReport: pack,
+            showServiceInitiatorName: showInitiatorName,
             includedPageKeys: included,
             persistIncludedPages: true,
         });
@@ -431,7 +435,7 @@ export function InvoicePreviewPage() {
         finally {
             setSaveBusy(false);
         }
-    }, [session, coverModel, timeReportPack, legalOverrides, includedPageKeys, invoiceStatus, pushToast]);
+    }, [session, coverModel, timeReportPack, showInitiatorName, legalOverrides, includedPageKeys, invoiceStatus, pushToast]);
 
     const togglePageEdit = useCallback(() => {
         if (editMode) {
@@ -813,7 +817,8 @@ export function InvoicePreviewPage() {
         timeReportPack: resolvedTimeReportPack,
         legalOverrides,
         selectedPageNumbers: exportPageNumbers,
-    }), [coverModel, session, resolvedTimeReportPack, legalOverrides, exportPageNumbers]);
+        showServiceInitiatorName: showInitiatorName,
+    }), [coverModel, session, resolvedTimeReportPack, legalOverrides, exportPageNumbers, showInitiatorName]);
 
     const handleDownloadWord = useCallback(async () => {
         if (exportPageNumbers.length === 0) {
@@ -1020,6 +1025,7 @@ export function InvoicePreviewPage() {
                                       showExpenseSection={slot.chunkIndex === lastTr}
                                       showMehnatSection={slot.chunkIndex === lastTr}
                                       showSummarySection={slot.chunkIndex === lastTr}
+                                      showInitiatorName={showInitiatorName}
                                     />
                                   </div>
                                 )
@@ -1179,6 +1185,15 @@ export function InvoicePreviewPage() {
                 >
                   {editMode ? 'Готово' : 'Редактировать'}
                 </button>
+                <label className="tt-inv-preview__show-name" title="Имя инициатора услуг стоит в заметке после символа /. Галочка вырезает его в отдельный столбец.">
+                  <input
+                    type="checkbox"
+                    checked={showInitiatorName}
+                    disabled={!coverModel}
+                    onChange={(e) => setShowInitiatorName(e.target.checked)}
+                  />
+                  Показать имя
+                </label>
               </div>
               <div className="tt-inv-preview__pdf-toolbar-zoom" role="group" aria-label="Масштаб страницы документа">
                 <button
@@ -1277,6 +1292,7 @@ export function InvoicePreviewPage() {
                                 showExpenseSection={slot.chunkIndex === lastTr}
                                 showMehnatSection={slot.chunkIndex === lastTr}
                                 showSummarySection={slot.chunkIndex === lastTr}
+                                showInitiatorName={showInitiatorName}
                                 editable={editingPage === pageNum}
                                 onPatchDetailRow={(rowIndex, field, value) => patchDetailRowInChunk(slot.chunkIndex, rowIndex, field, value)}
                                 onPatchExpenseRow={patchExpenseRow}

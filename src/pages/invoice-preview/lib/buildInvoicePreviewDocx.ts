@@ -42,6 +42,7 @@ import { rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
+import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
 import {
     invoicePreviewPageCount,
@@ -263,6 +264,7 @@ type TimeReportDocxChunkOpts = {
     continuation: boolean;
     pageNumStr: string;
     isLastChunk: boolean;
+    showInitiatorName?: boolean;
 };
 
 function timeReportDocxSectionChildren(
@@ -274,7 +276,25 @@ function timeReportDocxSectionChildren(
     const cur = packCurrencyCode(model);
     const labels = getTimeReportLabels(model.coverLanguage);
     const amountHdr = labels.amount(cur);
-    const DW = pctWidths([15, 9, 13, 18, 8, 18, 19]);
+    const showName = opts.showInitiatorName === true;
+    const DW = pctWidths(showName ? [13, 8, 11, 16, 12, 7, 16, 17] : [15, 9, 13, 18, 8, 18, 19]);
+    const hoursI = showName ? 5 : 4;
+    const rateI = showName ? 6 : 5;
+    const amountI = showName ? 7 : 6;
+    const totalSpan = showName ? 5 : 4;
+    const detailCells = (r: InvoiceTimeReportDetailRow) => {
+        const split = showName ? splitServiceInitiatorName(r.description) : null;
+        return [
+            trBodyTextCell(r.date, DW[0]!, AlignmentType.LEFT),
+            trBodyTextCell(r.initials, DW[1]!, AlignmentType.LEFT),
+            trBodyTextCell(r.task, DW[2]!, AlignmentType.LEFT),
+            trBodyTextCell(split ? split.note : r.description, DW[3]!, AlignmentType.LEFT),
+            ...(showName ? [trBodyTextCell(split?.name ?? '', DW[4]!, AlignmentType.LEFT)] : []),
+            trBodyTextCell(r.hours, DW[hoursI]!, AlignmentType.RIGHT),
+            trBodyTextCell(r.hourlyRate, DW[rateI]!, AlignmentType.RIGHT),
+            trBodyTextCell(r.amount, DW[amountI]!, AlignmentType.RIGHT),
+        ];
+    };
     const SW = pctWidths([9, 20, 18, 12, 18, 23]);
 
     const detailHeader = new TableRow({
@@ -283,21 +303,14 @@ function timeReportDocxSectionChildren(
             trHeadCell(labels.initials, DW[1] ?? 10),
             trHeadCell(labels.task, DW[2] ?? 11),
             trHeadCell(labels.description, DW[3] ?? 22),
-            trHeadCell(labels.hours, DW[4] ?? 9),
-            trHeadCell(labels.rate, DW[5] ?? 14),
-            trHeadCell(amountHdr, DW[6] ?? 22),
+            ...(showName ? [trHeadCell(labels.initiatorName, DW[4] ?? 12)] : []),
+            trHeadCell(labels.hours, DW[hoursI] ?? 9),
+            trHeadCell(labels.rate, DW[rateI] ?? 14),
+            trHeadCell(amountHdr, DW[amountI] ?? 22),
         ],
     });
     const detailBodyRows: TableRow[] = detailChunk.map((r) => new TableRow({
-        children: [
-            trBodyTextCell(r.date, DW[0]!, AlignmentType.LEFT),
-            trBodyTextCell(r.initials, DW[1]!, AlignmentType.LEFT),
-            trBodyTextCell(r.task, DW[2]!, AlignmentType.LEFT),
-            trBodyTextCell(r.description, DW[3]!, AlignmentType.LEFT),
-            trBodyTextCell(r.hours, DW[4]!, AlignmentType.RIGHT),
-            trBodyTextCell(r.hourlyRate, DW[5]!, AlignmentType.RIGHT),
-            trBodyTextCell(r.amount, DW[6]!, AlignmentType.RIGHT),
-        ],
+        children: detailCells(r),
     }));
 
     if (opts.isLastChunk) {
@@ -305,14 +318,14 @@ function timeReportDocxSectionChildren(
             children: [
                 new TableCell({
                     borders: cellBorderGrid,
-                    columnSpan: 4,
+                    columnSpan: totalSpan,
                     children: [new Paragraph({
                         children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
                     })],
                 }),
-                trFootValueCell(pack.detailTotalHoursDisplay, DW[4]!, AlignmentType.RIGHT),
-                trFootValueCell('—', DW[5]!, AlignmentType.RIGHT),
-                trFootValueCell(pack.detailTotalAmountDisplay, DW[6]!, AlignmentType.RIGHT),
+                trFootValueCell(pack.detailTotalHoursDisplay, DW[hoursI]!, AlignmentType.RIGHT),
+                trFootValueCell('—', DW[rateI]!, AlignmentType.RIGHT),
+                trFootValueCell(pack.detailTotalAmountDisplay, DW[amountI]!, AlignmentType.RIGHT),
             ],
         }));
     }
@@ -389,28 +402,20 @@ function timeReportDocxSectionChildren(
         const mehnatRows = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []);
         if (mehnatRows.length > 0) {
             const mehnatBodyRows: TableRow[] = mehnatRows.map((r) => new TableRow({
-                children: [
-                    trBodyTextCell(r.date, DW[0]!, AlignmentType.LEFT),
-                    trBodyTextCell(r.initials, DW[1]!, AlignmentType.LEFT),
-                    trBodyTextCell(r.task, DW[2]!, AlignmentType.LEFT),
-                    trBodyTextCell(r.description, DW[3]!, AlignmentType.LEFT),
-                    trBodyTextCell(r.hours, DW[4]!, AlignmentType.RIGHT),
-                    trBodyTextCell(r.hourlyRate, DW[5]!, AlignmentType.RIGHT),
-                    trBodyTextCell(r.amount, DW[6]!, AlignmentType.RIGHT),
-                ],
+                children: detailCells(r),
             }));
             mehnatBodyRows.push(new TableRow({
                 children: [
                     new TableCell({
                         borders: cellBorderGrid,
-                        columnSpan: 4,
+                        columnSpan: totalSpan,
                         children: [new Paragraph({
                             children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
                         })],
                     }),
-                    trFootValueCell(pack.mehnatTotalHoursDisplay, DW[4]!, AlignmentType.RIGHT),
-                    trFootValueCell('—', DW[5]!, AlignmentType.RIGHT),
-                    trFootValueCell(pack.mehnatTotalAmountDisplay, DW[6]!, AlignmentType.RIGHT),
+                    trFootValueCell(pack.mehnatTotalHoursDisplay, DW[hoursI]!, AlignmentType.RIGHT),
+                    trFootValueCell('—', DW[rateI]!, AlignmentType.RIGHT),
+                    trFootValueCell(pack.mehnatTotalAmountDisplay, DW[amountI]!, AlignmentType.RIGHT),
                 ],
             }));
             out.push(
@@ -970,6 +975,7 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
                 continuation: i > 0,
                 pageNumStr: String(pageNum),
                 isLastChunk: i === trChunks.length - 1,
+                showInitiatorName: input.showServiceInitiatorName === true,
             }),
         });
     });

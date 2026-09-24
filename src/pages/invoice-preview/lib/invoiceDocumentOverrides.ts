@@ -111,6 +111,8 @@ export type InvoiceDocumentOverridesV1 = {
     legal?: InvoiceLegalPageOverrides | null;
     cover?: InvoiceCoverDocumentOverrides | null;
     timeReport?: InvoiceTimeReportPack | null;
+    /** Show the service-initiator name (text after "/" in Description) as its own column. */
+    showServiceInitiatorName?: boolean;
     /** Pages kept in the invoice pack; omitted/null = all pages. */
     includedPageKeys?: InvoicePreviewPageKey[] | null;
 };
@@ -206,6 +208,8 @@ export function parseInvoiceDocumentOverrides(raw: unknown): InvoiceDocumentOver
         out.cover = o.cover as InvoiceCoverDocumentOverrides;
     if (isTimeReportPack(o.timeReport))
         out.timeReport = o.timeReport;
+    if (o.showServiceInitiatorName === true)
+        out.showServiceInitiatorName = true;
     const included = parseIncludedPageKeys(o.includedPageKeys ?? o.included_page_keys);
     if (included)
         out.includedPageKeys = included;
@@ -216,6 +220,7 @@ export function buildInvoiceDocumentOverridesPayload(input: {
     legal: InvoiceLegalPageOverrides;
     cover: InvoiceCoverLetterModel;
     timeReport: InvoiceTimeReportPack;
+    showServiceInitiatorName?: boolean;
     includedPageKeys?: Iterable<InvoicePreviewPageKey> | null;
     /** When true, always write includedPageKeys (even if it equals “all”). */
     persistIncludedPages?: boolean;
@@ -229,6 +234,7 @@ export function buildInvoiceDocumentOverridesPayload(input: {
         legal: input.legal,
         cover: pickCoverDocumentOverrides(input.cover),
         timeReport: input.timeReport,
+        ...(input.showServiceInitiatorName ? { showServiceInitiatorName: true } : {}),
         ...(shouldPersistPages && included ? { includedPageKeys: included } : {}),
     };
 }
