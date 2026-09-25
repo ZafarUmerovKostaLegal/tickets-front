@@ -327,22 +327,12 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
   color: var(--app-muted);
 }
 
-.exp-cash__file-add {
-  display: inline-flex;
-  align-items: center;
-  margin-top: 0.45rem;
-  padding: 0.35rem 0.7rem;
-  border: 1px dashed color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
-  border-radius: 10px;
-  color: var(--app-accent);
-  font-size: 0.78rem;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.exp-cash__file-add--over {
-  background: color-mix(in srgb, var(--app-accent) 12%, var(--app-surface));
-  border-style: solid;
+.exp-cash__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
 
 .exp-cash__file-add input {
@@ -478,10 +468,14 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
 }
 
 .exp-cash__day h3 {
-  margin: 0.85rem 0 0.45rem;
-  font-size: 0.78rem;
+  display: inline-flex;
+  margin: 1.15rem 0 0.55rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-text) 5%, transparent);
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--app-muted);
 }
@@ -495,26 +489,60 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
 }
 
 .exp-cash__event {
+  --exp-cash-accent: var(--app-accent);
+  position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 0.85rem;
   align-items: center;
-  padding: 0.85rem 0.95rem;
-  border-radius: 14px;
-  border: 1px solid var(--app-border);
+  padding: 0.95rem 1rem 0.95rem 1.05rem;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--app-border) 80%, transparent);
   background: var(--app-surface);
+  box-shadow: inset 3px 0 0 var(--exp-cash-accent);
   animation: exp-cash-rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
 }
 
-.exp-cash__dot {
-  width: 0.7rem;
-  height: 0.7rem;
+.exp-cash__event:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 3px 0 0 var(--exp-cash-accent),
+    0 10px 28px color-mix(in srgb, var(--app-text) 7%, transparent);
+}
+
+.exp-cash__event--expense { --exp-cash-accent: #e11d48; }
+.exp-cash__event--topup { --exp-cash-accent: #16a34a; }
+.exp-cash__event--set { --exp-cash-accent: #6366f1; }
+
+.exp-cash__event--drop {
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface));
+}
+
+.exp-cash__event-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--app-surface) 84%, transparent);
+  color: var(--app-accent);
+  font-size: 0.92rem;
+  font-weight: 750;
+  pointer-events: none;
+}
+
+.exp-cash__kind {
+  display: inline-flex;
+  align-items: center;
+  height: 1.4rem;
+  padding: 0 0.55rem;
   border-radius: 999px;
-  background: var(--app-accent);
+  background: color-mix(in srgb, var(--exp-cash-accent) 12%, transparent);
+  color: var(--exp-cash-accent);
+  font-size: 0.72rem;
+  font-weight: 750;
 }
-
-.exp-cash__event--expense .exp-cash__dot { background: #dc2626; }
-.exp-cash__event--topup .exp-cash__dot { background: #16a34a; }
 
 .exp-cash__event-top {
   display: flex;
@@ -522,8 +550,8 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
   gap: 0.55rem;
 }
 
-.exp-cash__event-top strong {
-  color: var(--app-text);
+.exp-cash__event-top time {
+  font-variant-numeric: tabular-nums;
 }
 
 .exp-cash__event-top time,
@@ -573,6 +601,7 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
 }
 
 .exp-cash__event-tool {
+  position: relative;
   width: 2rem;
   height: 2rem;
   display: grid;
@@ -584,6 +613,14 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
   color: var(--app-muted);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.exp-cash__event-tool input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
 
 .exp-cash__event-tool svg {
@@ -667,12 +704,11 @@ body[data-theme='dark'] .exp-cash__event-sum--topup { color: #4ade80; }
   }
 
   .exp-cash__event {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .exp-cash__event-side {
-    grid-column: 2;
-    justify-content: flex-end;
+    justify-content: space-between;
   }
 }
 

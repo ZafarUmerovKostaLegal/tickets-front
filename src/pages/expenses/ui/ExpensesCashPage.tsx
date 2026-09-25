@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, Navigate } from 'react-router-dom';
 import { routes } from '@shared/config';
@@ -62,11 +62,27 @@ function CashFileDrop({
     );
 }
 
-function RowFileDrop({ onFiles }: { onFiles: (files: File[]) => void }) {
+function IconClip() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M8 12.5l6.2-6.2a3 3 0 0 1 4.2 4.2l-7.8 7.8a4.2 4.2 0 0 1-6-6L12 5" />
+        </svg>
+    );
+}
+
+function CashHistoryItem({
+    row,
+    onFiles,
+    children,
+}: {
+    row: CashMovement;
+    onFiles: (files: File[]) => void;
+    children: ReactNode;
+}) {
     const [over, setOver] = useState(false);
     return (
-        <label
-            className={`exp-cash__file-add${over ? ' exp-cash__file-add--over' : ''}`}
+        <li
+            className={`exp-cash__event exp-cash__event--${row.kind}${over ? ' exp-cash__event--drop' : ''}`}
             onDragEnter={(e) => { e.preventDefault(); setOver(true); }}
             onDragOver={(e) => { e.preventDefault(); setOver(true); }}
             onDragLeave={(e) => {
@@ -81,19 +97,9 @@ function RowFileDrop({ onFiles }: { onFiles: (files: File[]) => void }) {
                     onFiles(picked);
             }}
         >
-            {over ? 'Отпустите файлы' : 'Вложить файл или перетащите сюда'}
-            <input
-                type="file"
-                multiple
-                accept={FILE_ACCEPT}
-                onChange={(e) => {
-                    const picked = [...(e.target.files ?? [])];
-                    e.target.value = '';
-                    if (picked.length > 0)
-                        onFiles(picked);
-                }}
-            />
-        </label>
+            {children}
+            {over ? <span className="exp-cash__event-overlay">Отпустите, чтобы вложить</span> : null}
+        </li>
     );
 }
 
@@ -687,11 +693,25 @@ export function ExpensesCashPage() {
                             <h3>{day}</h3>
                             <ol className="exp-cash__timeline">
                                 {rows.map((row) => (
-                                    <li key={row.id} className={`exp-cash__event exp-cash__event--${row.kind}`}>
-                                        <span className="exp-cash__dot" aria-hidden />
+                                    <CashHistoryItem
+                                        key={row.id}
+                                        row={row}
+                                        onFiles={(picked) => {
+                                            void (async () => {
+                                                try {
+                                                    for (const file of picked)
+                                                        await uploadCashAttachment(row.id, file);
+                                                    await reload();
+                                                }
+                                                catch (err: unknown) {
+                                                    showToast({ message: err instanceof Error ? err.message : 'Не удалось вложить файл', variant: 'error' });
+                                                }
+                                            })();
+                                        }}
+                                    >
                                         <div className="exp-cash__event-body">
                                             <div className="exp-cash__event-top">
-                                                <strong>{KIND_LABEL[row.kind]}</strong>
+                                                <span className="exp-cash__kind">{KIND_LABEL[row.kind]}</span>
                                                 <time dateTime={row.createdAt}>{formatClock(row.createdAt)}</time>
                                             </div>
                                             {(row.expenseId || row.note) ? (
@@ -718,39 +738,52 @@ export function ExpensesCashPage() {
                                                     ))}
                                                 </ul>
                                             ) : null}
-                                            <RowFileDrop
-                                                onFiles={(picked) => {
-                                                    void (async () => {
-                                                        try {
-                                                            for (const file of picked)
-                                                                await uploadCashAttachment(row.id, file);
-                                                            await reload();
-                                                        }
-                                                        catch (err: unknown) {
-                                                            showToast({ message: err instanceof Error ? err.message : 'Не удалось вложить файл', variant: 'error' });
-                                                        }
-                                                    })();
-                                                }}
-                                            />
-                                            <p className="exp-cash__event-after">Остаток на текущий момент: {formatCash(row.balanceAfter)}</p>
+                                            <p className="exp-cash__event-after">Остаток {formatCash(row.balanceAfter)}</p>
                                         </div>
                                         <div className="exp-cash__event-side">
-                                            {isManualCashMovement(row) ? (
-                                                <div className="exp-cash__event-tools">
-                                                    <button type="button" className="exp-cash__event-tool" aria-label="Изменить" onClick={() => openEdit(row)}>
-                                                        <IconPencil />
-                                                    </button>
-                                                    <button type="button" className="exp-cash__event-tool exp-cash__event-tool--danger" aria-label="Удалить" onClick={() => { setForm(null); setEditing(null); setFormError(null); setDeleting(row); }}>
-                                                        <IconTrash />
-                                                    </button>
-                                                </div>
-                                            ) : null}
+                                            <div className="exp-cash__event-tools">
+                                                <label className="exp-cash__event-tool" title="Вложить файл">
+                                                    <IconClip />
+                                                    <span className="exp-cash__sr">Вложить файл</span>
+                                                    <input
+                                                        type="file"
+                                                        multiple
+                                                        accept={FILE_ACCEPT}
+                                                        onChange={(e) => {
+                                                            const picked = [...(e.target.files ?? [])];
+                                                            e.target.value = '';
+                                                            if (picked.length === 0)
+                                                                return;
+                                                            void (async () => {
+                                                                try {
+                                                                    for (const file of picked)
+                                                                        await uploadCashAttachment(row.id, file);
+                                                                    await reload();
+                                                                }
+                                                                catch (err: unknown) {
+                                                                    showToast({ message: err instanceof Error ? err.message : 'Не удалось вложить файл', variant: 'error' });
+                                                                }
+                                                            })();
+                                                        }}
+                                                    />
+                                                </label>
+                                                {isManualCashMovement(row) ? (
+                                                    <>
+                                                        <button type="button" className="exp-cash__event-tool" aria-label="Изменить" onClick={() => openEdit(row)}>
+                                                            <IconPencil />
+                                                        </button>
+                                                        <button type="button" className="exp-cash__event-tool exp-cash__event-tool--danger" aria-label="Удалить" onClick={() => { setForm(null); setEditing(null); setFormError(null); setDeleting(row); }}>
+                                                            <IconTrash />
+                                                        </button>
+                                                    </>
+                                                ) : null}
+                                            </div>
                                             <span className={`exp-cash__event-sum exp-cash__event-sum--${row.kind}`}>
                                                 {row.kind === 'expense' ? '−' : row.kind === 'topup' ? '+' : ''}
                                                 {formatCash(row.amount, false)}
                                             </span>
                                         </div>
-                                    </li>
+                                    </CashHistoryItem>
                                 ))}
                             </ol>
                         </div>
