@@ -2525,6 +2525,33 @@ body[data-theme='dark'] .exp-table__status-reason--revision .exp-table__status-r
   background: rgba(5, 150, 105, 0.045);
 }
 
+.exp-form-id {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 11%, var(--app-surface, #fff));
+  border: 1px solid color-mix(in srgb, var(--app-accent, #4f46e5) 32%, transparent);
+}
+
+.exp-form-id__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-muted, #64748b);
+}
+
+.exp-form-id__value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  line-height: 1.1;
+  color: var(--app-accent, #4f46e5);
+  font-variant-numeric: tabular-nums;
+}
+
 .exp-form-block__title {
   margin: 0;
   font-size: 0.75rem;

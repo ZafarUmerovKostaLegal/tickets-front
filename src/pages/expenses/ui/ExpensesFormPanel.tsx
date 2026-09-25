@@ -1648,6 +1648,13 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                 <div className="exp-form-block">
                     <p className="exp-form-block__title">Основная информация</p>
 
+                    {editingRequest?.id ? (
+                        <div className="exp-form-id">
+                            <span className="exp-form-id__label">Номер заявки</span>
+                            <span className="exp-form-id__value">{editingRequest.id}</span>
+                        </div>
+                    ) : null}
+
                     {editingRequest && (<div className="exp-form-field">
                         <div className="exp-form-label">Автор заявки</div>
                         <p className="exp-form-static">{formatExpenseAuthorLabel(editingRequest)}</p>
