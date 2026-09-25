@@ -39,6 +39,8 @@ export function ExpenseAttachmentPreviewModal({ isOpen, fileName, loading, error
               <img src={model.objectUrl} alt="" className="exp-attach-preview__img"/>
             </div>)}
           {!loading && !error && model?.type === 'pdf' && (<iframe title={fileName} src={model.objectUrl} className="exp-attach-preview__iframe"/>)}
+          {!loading && !error && model?.type === 'video' && (<video className="exp-attach-preview__media" src={model.objectUrl} controls autoPlay />)}
+          {!loading && !error && model?.type === 'audio' && (<audio className="exp-attach-preview__audio" src={model.objectUrl} controls autoPlay />)}
           {!loading && !error && model?.type === 'text' && (<pre className="exp-attach-preview__pre">{model.text}</pre>)}
           {!loading && !error && model?.type === 'sheets' && (<div className="exp-attach-preview__sheets">
               {model.truncatedNote && <p className="exp-attach-preview__note">{model.truncatedNote}</p>}

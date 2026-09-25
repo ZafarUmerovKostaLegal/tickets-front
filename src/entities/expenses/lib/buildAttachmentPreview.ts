@@ -84,6 +84,12 @@ export type AttachmentPreviewModel = {
     type: 'pdf';
     objectUrl: string;
 } | {
+    type: 'video';
+    objectUrl: string;
+} | {
+    type: 'audio';
+    objectUrl: string;
+} | {
     type: 'text';
     text: string;
 } | {
@@ -112,6 +118,14 @@ export async function buildAttachmentPreview(blob: Blob, fileName: string, conte
     if (mime === 'application/pdf' || ext === 'pdf') {
         const objectUrl = URL.createObjectURL(blob);
         return { model: { type: 'pdf', objectUrl }, objectUrl };
+    }
+    if (mime.startsWith('video/') || ['mp4', 'webm', 'mov', 'm4v'].includes(ext)) {
+        const objectUrl = URL.createObjectURL(blob);
+        return { model: { type: 'video', objectUrl }, objectUrl };
+    }
+    if (mime.startsWith('audio/') || ['mp3', 'm4a', 'wav', 'ogg'].includes(ext)) {
+        const objectUrl = URL.createObjectURL(blob);
+        return { model: { type: 'audio', objectUrl }, objectUrl };
     }
     if (mime.startsWith('text/') ||
         ['txt', 'csv', 'log', 'md', 'json', 'xml', 'html', 'htm'].includes(ext)) {

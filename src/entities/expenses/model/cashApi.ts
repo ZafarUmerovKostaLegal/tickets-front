@@ -92,6 +92,16 @@ export async function deleteCashAttachment(movementId: number, attachmentId: str
     return res.json() as Promise<CashMovement>;
 }
 
+export async function fetchCashAttachmentBlob(movementId: number, attachmentId: string): Promise<{
+    blob: Blob;
+    contentType: string | null;
+}> {
+    const res = await throwIfNotOk(await apiFetch(
+        `/api/v1/expenses/cash/movements/${movementId}/attachments/${encodeURIComponent(attachmentId)}/file`,
+    ));
+    return { blob: await res.blob(), contentType: res.headers.get('Content-Type') };
+}
+
 export async function openCashAttachment(movementId: number, attachmentId: string): Promise<void> {
     const res = await throwIfNotOk(await apiFetch(
         `/api/v1/expenses/cash/movements/${movementId}/attachments/${encodeURIComponent(attachmentId)}/file`,

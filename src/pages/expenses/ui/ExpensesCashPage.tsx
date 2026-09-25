@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, Navigate } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { isPartnerOrgRole } from '@shared/lib/orgRoles';
-import { deleteCashAttachment, deleteCashMovement, fetchCashState, isManualCashMovement, openCashAttachment, postCashAction, updateCashMovement, uploadCashAttachment, type CashMovement, type CashState } from '@entities/expenses/model/cashApi';
+import type { AttachmentPreviewModel } from '@entities/expenses/lib/buildAttachmentPreview';
+import { deleteCashAttachment, deleteCashMovement, fetchCashAttachmentBlob, fetchCashState, isManualCashMovement, openCashAttachment, postCashAction, updateCashMovement, uploadCashAttachment, type CashMovement, type CashState } from '@entities/expenses/model/cashApi';
+import { ExpenseAttachmentPreviewModal } from './ExpenseAttachmentPreviewModal';
 import { showToast } from '@shared/ui/app-toast';
 import { ExpensesShell } from './ExpensesShell';
 import './ExpensesPage.css';
@@ -235,6 +237,56 @@ export function ExpensesCashPage() {
     const [note, setNote] = useState('');
     const [files, setFiles] = useState<File[]>([]);
     const [formError, setFormError] = useState<string | null>(null);
+    const [filePreview, setFilePreview] = useState<{
+        fileName: string;
+        loading: boolean;
+        error: string | null;
+        model: AttachmentPreviewModel | null;
+        movementId: number;
+        attachmentId: string;
+    } | null>(null);
+    const previewUrlRef = useRef<string | null>(null);
+
+    const closeFilePreview = useCallback(() => {
+        if (previewUrlRef.current) {
+            URL.revokeObjectURL(previewUrlRef.current);
+            previewUrlRef.current = null;
+        }
+        setFilePreview(null);
+    }, []);
+
+    const openFilePreview = useCallback(async (movementId: number, attachmentId: string, fileName: string) => {
+        if (previewUrlRef.current) {
+            URL.revokeObjectURL(previewUrlRef.current);
+            previewUrlRef.current = null;
+        }
+        setFilePreview({
+            fileName,
+            loading: true,
+            error: null,
+            model: null,
+            movementId,
+            attachmentId,
+        });
+        try {
+            const { blob, contentType } = await fetchCashAttachmentBlob(movementId, attachmentId);
+            const { buildAttachmentPreview } = await import('@entities/expenses/lib/buildAttachmentPreview');
+            const { model, objectUrl } = await buildAttachmentPreview(blob, fileName, contentType);
+            previewUrlRef.current = objectUrl;
+            setFilePreview((prev) => (
+                prev?.attachmentId === attachmentId && prev.movementId === movementId
+                    ? { ...prev, loading: false, model, error: null }
+                    : prev
+            ));
+        }
+        catch (err: unknown) {
+            setFilePreview((prev) => (
+                prev?.attachmentId === attachmentId && prev.movementId === movementId
+                    ? { ...prev, loading: false, model: null, error: err instanceof Error ? err.message : 'Не удалось открыть файл' }
+                    : prev
+            ));
+        }
+    }, []);
 
     const reload = useCallback(async () => {
         const next = await fetchCashState();
@@ -290,6 +342,17 @@ export function ExpensesCashPage() {
             cancelled = true;
         };
     }, [allowed, debouncedQuery]);
+
+    useEffect(() => {
+        if (!filePreview)
+            return;
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape')
+                closeFilePreview();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [filePreview, closeFilePreview]);
 
     const dialogOpen = form !== null || editing !== null || deleting !== null;
     useEffect(() => {
@@ -728,7 +791,7 @@ export function ExpensesCashPage() {
                                                 <ul className="exp-cash__files">
                                                     {(row.attachments ?? []).map((file) => (
                                                         <li key={file.id}>
-                                                            <button type="button" onClick={() => void openCashAttachment(row.id, file.id).catch((err: unknown) => showToast({ message: err instanceof Error ? err.message : 'Не удалось открыть файл', variant: 'error' }))}>
+                                                            <button type="button" onClick={() => void openFilePreview(row.id, file.id, file.fileName)}>
                                                                 {file.fileName}
                                                             </button>
                                                             <button type="button" aria-label={`Убрать ${file.fileName}`} onClick={() => void deleteCashAttachment(row.id, file.id).then(() => reload()).catch((err: unknown) => showToast({ message: err instanceof Error ? err.message : 'Не удалось убрать файл', variant: 'error' }))}>
@@ -790,6 +853,22 @@ export function ExpensesCashPage() {
                     ))}
                 </section>
             </div>
+            <ExpenseAttachmentPreviewModal
+                isOpen={filePreview != null}
+                fileName={filePreview?.fileName ?? ''}
+                loading={filePreview?.loading ?? false}
+                error={filePreview?.error ?? null}
+                model={filePreview?.model ?? null}
+                canOpenExternal={filePreview != null && !filePreview.loading && !filePreview.error}
+                onClose={closeFilePreview}
+                onOpenExternal={() => {
+                    if (!filePreview)
+                        return;
+                    void openCashAttachment(filePreview.movementId, filePreview.attachmentId).catch((err: unknown) => {
+                        showToast({ message: err instanceof Error ? err.message : 'Не удалось открыть файл', variant: 'error' });
+                    });
+                }}
+            />
         </ExpensesShell>
     );
 }

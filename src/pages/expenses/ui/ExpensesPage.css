@@ -3464,6 +3464,19 @@ body[data-theme='dark'] .exp-table__status-reason--revision .exp-table__status-r
   border: 1px solid var(--app-border);
 }
 
+.exp-attach-preview__media {
+  display: block;
+  width: 100%;
+  max-height: min(70dvh, 560px);
+  border-radius: 8px;
+  background: #0f172a;
+}
+
+.exp-attach-preview__audio {
+  width: min(100%, 28rem);
+  margin: 1.5rem auto;
+}
+
 .exp-attach-preview__iframe {
   width: 100%;
   min-height: min(70dvh, 560px);
