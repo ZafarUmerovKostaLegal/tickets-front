@@ -1614,10 +1614,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
                     {isView && editingRequest && (<span className={expenseStatusBadgeClass(editingRequest)}>
                         {expenseStatusLabel(editingRequest)}
                     </span>)}
-                    <h2 className="exp-panel__title">
-                        {title}
-                        {editingRequest?.id ? <span className="exp-panel__num">{editingRequest.id}</span> : null}
-                    </h2>
+                    <h2 className="exp-panel__title">{title}</h2>
                 </div>
                 <button type="button" className="exp-panel__close" onClick={onClose} aria-label="Закрыть" disabled={formAsyncBusy}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
