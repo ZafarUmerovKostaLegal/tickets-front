@@ -857,6 +857,18 @@ body[data-theme='dark'] .exp-status--awaiting_payment {
   background: color-mix(in srgb, #f59e0b 13%, var(--app-surface, #fff));
 }
 
+.exp-table__row--current:not(.exp-table__row--head),
+.exp-table__row--current.exp-table__row--pending_approval:not(.exp-table__row--head) {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 14%, var(--app-surface, #fff));
+  box-shadow: inset 3px 0 0 0 var(--app-accent, #4f46e5);
+  border-left-color: color-mix(in srgb, var(--app-accent, #4f46e5) 45%, var(--app-border, #e2e8f0));
+}
+
+.exp-table__row--current:not(.exp-table__row--head):hover,
+.exp-table__row--current.exp-table__row--pending_approval:not(.exp-table__row--head):hover {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 18%, var(--app-surface, #fff));
+}
+
 .exp-table__row--pending_approval .exp-status--pending_approval {
   background: rgba(245, 158, 11, 0.2);
   color: #b45309;
@@ -871,6 +883,17 @@ body[data-theme='dark'] .exp-table__row--pending_approval:not(.exp-table__row--h
 
 body[data-theme='dark'] .exp-table__row--pending_approval:not(.exp-table__row--head):hover {
   background: color-mix(in srgb, #f59e0b 18%, var(--app-surface, #1e293b));
+}
+
+body[data-theme='dark'] .exp-table__row--current:not(.exp-table__row--head),
+body[data-theme='dark'] .exp-table__row--current.exp-table__row--pending_approval:not(.exp-table__row--head) {
+  background: color-mix(in srgb, var(--app-accent, #818cf8) 22%, var(--app-surface, #1e293b));
+  box-shadow: inset 3px 0 0 0 var(--app-accent, #818cf8);
+}
+
+body[data-theme='dark'] .exp-table__row--current:not(.exp-table__row--head):hover,
+body[data-theme='dark'] .exp-table__row--current.exp-table__row--pending_approval:not(.exp-table__row--head):hover {
+  background: color-mix(in srgb, var(--app-accent, #818cf8) 28%, var(--app-surface, #1e293b));
 }
 
 body[data-theme='dark'] .exp-table__row--pending_approval .exp-status--pending_approval {

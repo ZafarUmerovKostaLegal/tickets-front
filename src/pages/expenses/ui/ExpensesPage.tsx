@@ -114,7 +114,7 @@ function IconDotsVertical() {
         <circle cx="12" cy="19" r="1.85" />
     </svg>);
 }
-function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, currentUserId, currentUserRole, moderationBusyId, onApprove, onRejectClick, onReviseClick, onPay, onDeleteClick, isActionMenuOpen, onToggleActionMenu, onCloseActionMenu, partnerScope = false, }: {
+function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, currentUserId, currentUserRole, moderationBusyId, onApprove, onRejectClick, onReviseClick, onPay, onDeleteClick, isActionMenuOpen, onToggleActionMenu, onCloseActionMenu, partnerScope = false, isCurrent = false, }: {
     req: ExpenseRequest;
     onOpen: (r: ExpenseRequest, opts?: { mode?: 'view' | 'edit' }) => void;
     canModerate: boolean;
@@ -131,6 +131,7 @@ function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, current
     onToggleActionMenu: () => void;
     onCloseActionMenu: () => void;
     partnerScope?: boolean;
+    isCurrent?: boolean;
 }) {
     const typeLabel = TYPE_META[req.expenseType as ExpenseType]?.label ?? req.expenseType;
     const subtypeLabel = req.expenseType === 'partner_expense'
@@ -214,7 +215,7 @@ function ExpenseTableRow({ req, onOpen, canModerate, isPaymentConfirmer, current
     const usdTitle = equivUsd > 0 && rate > 0
         ? `Курс: ${rate.toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 4 })} UZS за 1 USD`
         : undefined;
-    return (<div className={`exp-table__row exp-table__row--${req.status}`} role="row" onClick={() => onOpen(req)}>
+    return (<div className={`exp-table__row exp-table__row--${req.status}${isCurrent ? ' exp-table__row--current' : ''}`} role="row" aria-current={isCurrent ? 'true' : undefined} onClick={() => onOpen(req)}>
         <div className="exp-table__td exp-table__td--num" role="cell">
             <span className="exp-table__num">{req.id}</span>
         </div>
@@ -888,6 +889,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         }
     }, [isModerationQueue, filterStatus]);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
     const [panelMode, setPanelMode] = useState<PanelMode>('create');
     const [editingReq, setEditingReq] = useState<ExpenseRequest | null>(null);
     const [panelSavePending, setPanelSavePending] = useState(false);
@@ -1055,6 +1057,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     }, []);
     const handleOpenReq = useCallback((req: ExpenseRequest, opts?: { mode?: 'view' | 'edit' }) => {
         setExpenseTableMenuForId(null);
+        setHighlightedRequestId(req.id);
         const auto = resolveExpensePanelMode(req.status) === 'edit' ? 'edit' : 'view';
         const mode = opts?.mode ?? auto;
         const gen = ++panelDataGenRef.current;
@@ -1178,6 +1181,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const handleExpenseDeleted = useCallback((id: string) => {
         setRequests(prev => prev.filter(x => x.id !== id));
         setEditingReq(prev => (prev?.id === id ? null : prev));
+        setHighlightedRequestId(prev => (prev === id ? null : prev));
         setIsPanelOpen(false);
         setExpenseTableMenuForId(null);
         setLoadKey(k => k + 1);
@@ -1824,7 +1828,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                         <span className="exp-table__sr-only">Действия</span>
                                     </div>
                                 </div>
-                                {filtered.map(r => (<ExpenseTableRow key={r.id} req={r} onOpen={handleOpenReq} canModerate={canModerate} isPaymentConfirmer={isPaymentConfirmer} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} moderationBusyId={tableModerationBusyId} onApprove={handleTableApprove} onRejectClick={openTableReject} onReviseClick={openTableRevise} onPay={handleTablePay} onDeleteClick={handleTableDeleteClick} isActionMenuOpen={expenseTableMenuForId === r.id} onToggleActionMenu={() => setExpenseTableMenuForId(prev => prev === r.id ? null : r.id)} onCloseActionMenu={() => setExpenseTableMenuForId(null)} partnerScope={isPartnerScope} />))}
+                                {filtered.map(r => (<ExpenseTableRow key={r.id} req={r} onOpen={handleOpenReq} canModerate={canModerate} isPaymentConfirmer={isPaymentConfirmer} currentUserId={user?.id ?? null} currentUserRole={user?.role ?? null} moderationBusyId={tableModerationBusyId} onApprove={handleTableApprove} onRejectClick={openTableReject} onReviseClick={openTableRevise} onPay={handleTablePay} onDeleteClick={handleTableDeleteClick} isActionMenuOpen={expenseTableMenuForId === r.id} onToggleActionMenu={() => setExpenseTableMenuForId(prev => prev === r.id ? null : r.id)} onCloseActionMenu={() => setExpenseTableMenuForId(null)} partnerScope={isPartnerScope} isCurrent={highlightedRequestId === r.id} />))}
                             </div>
                         </div>
                         {listTotal != null && listTotal > 0 ? (<Pagination className="exp-cards-pager" page={listPage} totalCount={listTotal} pageSize={EXPENSES_LIST_PAGE_SIZE} onPageChange={setListPage} loading={listFetchPending} />) : null}
