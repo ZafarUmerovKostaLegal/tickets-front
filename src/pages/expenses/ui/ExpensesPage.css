@@ -2146,7 +2146,11 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 }
 
 .exp-panel__title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
   margin: 0;
+  min-width: 0;
   font-size: 1rem;
   font-weight: 700;
   color: var(--app-text);
@@ -2154,6 +2158,15 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.exp-panel__num {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  color: var(--app-accent, #4f46e5);
+  font-variant-numeric: tabular-nums;
 }
 
 .exp-panel__close {

@@ -1607,14 +1607,17 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         <ExpenseAttachmentPreviewModal isOpen={attachPreview != null} fileName={attachPreview?.fileName ?? ''} loading={attachPreview?.loading ?? false} error={attachPreview?.error ?? null} model={attachPreview?.model ?? null} canOpenExternal={Boolean(attachPreview &&
             (attachPreview.server || attachPreview.localFile || attachPreview.previewObjectUrl))} onClose={closeAttachPreview} onOpenExternal={openAttachmentExternal} />
         <div className={`exp-panel-overlay${isOpen ? ' exp-panel-overlay--open' : ''}`} aria-hidden />
-        <aside className={`exp-panel${isOpen ? ' exp-panel--open' : ''}${formAsyncBusy ? ' exp-panel--async-busy' : ''}`} aria-modal aria-busy={formAsyncBusy} aria-label={title}>
+        <aside className={`exp-panel${isOpen ? ' exp-panel--open' : ''}${formAsyncBusy ? ' exp-panel--async-busy' : ''}`} aria-modal aria-busy={formAsyncBusy} aria-label={editingRequest?.id ? `${title}, ${editingRequest.id}` : title}>
 
             <div className="exp-panel__hd">
                 <div className="exp-panel__hd-left">
                     {isView && editingRequest && (<span className={expenseStatusBadgeClass(editingRequest)}>
                         {expenseStatusLabel(editingRequest)}
                     </span>)}
-                    <h2 className="exp-panel__title">{title}</h2>
+                    <h2 className="exp-panel__title">
+                        {title}
+                        {editingRequest?.id ? <span className="exp-panel__num">{editingRequest.id}</span> : null}
+                    </h2>
                 </div>
                 <button type="button" className="exp-panel__close" onClick={onClose} aria-label="Закрыть" disabled={formAsyncBusy}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
