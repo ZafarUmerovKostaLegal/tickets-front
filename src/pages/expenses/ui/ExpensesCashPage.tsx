@@ -473,7 +473,18 @@ export function ExpensesCashPage() {
                         <p className="exp-cash__eyebrow">Остаток в кассе</p>
                         <p className="exp-cash__balance">{state ? formatCash(state.balance) : '…'}</p>
                     </div>
-                    <div className="exp-cash__hero-mark" aria-hidden><IconWallet /></div>
+                    <div className="exp-cash__hero-side">
+                        {state?.balanceSet ? (
+                            <button
+                                type="button"
+                                className={`exp-cash__rare${form === 'balance' ? ' exp-cash__rare--on' : ''}`}
+                                onClick={() => openForm('balance')}
+                            >
+                                Задать остаток заново
+                            </button>
+                        ) : null}
+                        <div className="exp-cash__hero-mark" aria-hidden><IconWallet /></div>
+                    </div>
                 </section>
 
                 <div className="exp-cash__stats">
@@ -492,18 +503,20 @@ export function ExpensesCashPage() {
                 </div>
 
                 <div className="exp-cash__actions" role="tablist" aria-label="Операции кассы">
-                    <button type="button" className={`exp-cash__action${form === 'balance' ? ' exp-cash__action--on' : ''}`} onClick={() => openForm('balance')}>
-                        <span className="exp-cash__action-icon"><IconWallet /></span>
-                        <span>Обновить остаток</span>
+                    <button type="button" className={`exp-cash__action${form === 'topup' ? ' exp-cash__action--on' : ''}`} onClick={() => openForm('topup')} disabled={!state?.balanceSet}>
+                        <span className="exp-cash__action-icon exp-cash__action-icon--in"><IconPlus /></span>
+                        <span>Пополнить</span>
                     </button>
                     <button type="button" className={`exp-cash__action${form === 'expense' ? ' exp-cash__action--on' : ''}`} onClick={() => openForm('expense')} disabled={!state?.balanceSet}>
                         <span className="exp-cash__action-icon exp-cash__action-icon--out"><IconMinus /></span>
                         <span>Внести расход</span>
                     </button>
-                    <button type="button" className={`exp-cash__action${form === 'topup' ? ' exp-cash__action--on' : ''}`} onClick={() => openForm('topup')} disabled={!state?.balanceSet}>
-                        <span className="exp-cash__action-icon exp-cash__action-icon--in"><IconPlus /></span>
-                        <span>Пополнить</span>
-                    </button>
+                    {!state?.balanceSet ? (
+                        <button type="button" className={`exp-cash__action${form === 'balance' ? ' exp-cash__action--on' : ''}`} onClick={() => openForm('balance')}>
+                            <span className="exp-cash__action-icon"><IconWallet /></span>
+                            <span>Задать остаток</span>
+                        </button>
+                    ) : null}
                 </div>
 
                 {form && createPortal(

@@ -49,6 +49,33 @@
   font-size: 0.9rem;
 }
 
+.exp-cash__hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.55rem;
+  flex-shrink: 0;
+}
+
+.exp-cash__rare {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-muted);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.exp-cash__rare:hover,
+.exp-cash__rare--on {
+  color: var(--app-text);
+}
+
 .exp-cash__hero-mark {
   flex-shrink: 0;
   width: 3.25rem;
@@ -106,7 +133,7 @@ body[data-theme='dark'] .exp-cash__stat-value--out { color: #f87171; }
 
 .exp-cash__actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
