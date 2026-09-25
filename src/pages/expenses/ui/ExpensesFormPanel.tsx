@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo, type Dispatch, type SetStateAction } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, type Dispatch, type SetStateAction, type TransitionEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { type ExpenseRequest, type ExpenseFormValues, type ExpenseFormErrors, type ExpenseFilesByKind, type AttachmentItem, EXPENSE_ATTACHMENT_MAX_BYTES, EXPENSE_ATTACHMENT_MAX_COUNT, EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG, } from '@entities/expenses/model/types';
 import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, } from '@entities/expenses/model/constants';
@@ -168,6 +168,7 @@ type Props = {
     mode: PanelMode;
     editingRequest?: ExpenseRequest | null;
     onClose: () => void;
+    onExited?: () => void;
     onSaveDraft: (values: ExpenseFormValues, files: ExpenseFilesByKind) => void;
     onSubmit: (values: ExpenseFormValues, files: ExpenseFilesByKind) => void;
     saveDraftPending?: boolean;
@@ -351,7 +352,7 @@ function formatForeignFp(n: number): string {
     const x = Math.round(n * 1e6) / 1e6;
     return x.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
 }
-export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, currentUserEmail = null, currentUserDisplayName = null, formScope = 'company', presetValues = null, }: Props) {
+export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExited, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, currentUserEmail = null, currentUserDisplayName = null, formScope = 'company', presetValues = null, }: Props) {
     const [values, setValues] = useState<ExpenseFormValues>(EMPTY);
     const valuesRef = useRef(values);
     valuesRef.current = values;
@@ -710,6 +711,34 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         setValues(prev => (prev.foreignPerUsd === s ? prev : { ...prev, foreignPerUsd: s }));
     }, [isOpen, mode, cbuParsed, values.amountCurrency]);
     const formAsyncBusy = saveDraftPending || submitPending || receiptUploadPending || lifecycleBusy;
+    const [motionOpen, setMotionOpen] = useState(false);
+    const onExitedRef = useRef(onExited);
+    onExitedRef.current = onExited;
+    useEffect(() => {
+        if (!isOpen) {
+            setMotionOpen(false);
+            return;
+        }
+        let inner = 0;
+        const outer = requestAnimationFrame(() => {
+            inner = requestAnimationFrame(() => setMotionOpen(true));
+        });
+        return () => {
+            cancelAnimationFrame(outer);
+            cancelAnimationFrame(inner);
+        };
+    }, [isOpen]);
+    useEffect(() => {
+        if (isOpen || motionOpen)
+            return;
+        const timer = window.setTimeout(() => onExitedRef.current?.(), 340);
+        return () => window.clearTimeout(timer);
+    }, [isOpen, motionOpen]);
+    const handlePanelTransitionEnd = useCallback((e: TransitionEvent<HTMLElement>) => {
+        if (e.target !== e.currentTarget || e.propertyName !== 'transform' || isOpen)
+            return;
+        onExitedRef.current?.();
+    }, [isOpen]);
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape' && isOpen && !formAsyncBusy)
@@ -719,9 +748,9 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         return () => document.removeEventListener('keydown', onKey);
     }, [isOpen, onClose, formAsyncBusy]);
     useEffect(() => {
-        document.body.style.overflow = isOpen ? 'hidden' : '';
+        document.body.style.overflow = isOpen || motionOpen ? 'hidden' : '';
         return () => { document.body.style.overflow = ''; };
-    }, [isOpen]);
+    }, [isOpen, motionOpen]);
     const set = useCallback((field: keyof Omit<ExpenseFormValues, 'isReimbursable'>, val: string) => {
         if (field === 'expenseType' && val !== EXPENSE_TYPE_CLIENT) {
             setExpenseProjectClientId('');
@@ -1607,15 +1636,15 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onSav
         <ExpenseAttachmentPreviewModal isOpen={attachPreview != null} fileName={attachPreview?.fileName ?? ''} loading={attachPreview?.loading ?? false} error={attachPreview?.error ?? null} model={attachPreview?.model ?? null} canOpenExternal={Boolean(attachPreview &&
             (attachPreview.server || attachPreview.localFile || attachPreview.previewObjectUrl))} onClose={closeAttachPreview} onOpenExternal={openAttachmentExternal} />
         <div
-            className={`exp-panel-overlay${isOpen ? ' exp-panel-overlay--open' : ''}`}
-            aria-hidden={!isOpen}
+            className={`exp-panel-overlay${motionOpen ? ' exp-panel-overlay--open' : ''}`}
+            aria-hidden={!motionOpen}
             onMouseDown={() => {
-                if (!isOpen || formAsyncBusy)
+                if (!isOpen || !motionOpen || formAsyncBusy)
                     return;
                 onClose();
             }}
         />
-        <aside className={`exp-panel${isOpen ? ' exp-panel--open' : ''}${formAsyncBusy ? ' exp-panel--async-busy' : ''}`} aria-modal aria-busy={formAsyncBusy} aria-label={editingRequest?.id ? `${title}, ${editingRequest.id}` : title}>
+        <aside className={`exp-panel${motionOpen ? ' exp-panel--open' : ''}${formAsyncBusy ? ' exp-panel--async-busy' : ''}`} aria-modal aria-busy={formAsyncBusy} aria-label={editingRequest?.id ? `${title}, ${editingRequest.id}` : title} onTransitionEnd={handlePanelTransitionEnd}>
 
             <div className="exp-panel__hd">
                 <div className="exp-panel__hd-left">

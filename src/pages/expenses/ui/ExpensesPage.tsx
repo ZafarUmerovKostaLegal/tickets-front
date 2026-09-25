@@ -889,6 +889,9 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         }
     }, [isModerationQueue, filterStatus]);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [panelMounted, setPanelMounted] = useState(false);
+    const isPanelOpenRef = useRef(false);
+    isPanelOpenRef.current = isPanelOpen;
     const [highlightedRequestId, setHighlightedRequestId] = useState<string | null>(null);
     const [panelMode, setPanelMode] = useState<PanelMode>('create');
     const [editingReq, setEditingReq] = useState<ExpenseRequest | null>(null);
@@ -899,6 +902,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
     const panelDataGenRef = useRef(0);
     const [emailModerationIntent, setEmailModerationIntent] = useState<'approve' | 'reject' | 'pay' | null>(null);
     const openedExpensePathRef = useRef<string | null>(null);
+    useEffect(() => {
+        if (isPanelOpen)
+            setPanelMounted(true);
+    }, [isPanelOpen]);
     useEffect(() => {
         if (!isPanelOpen) {
             panelFormActionRef.current = 'idle';
@@ -1889,7 +1896,10 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
                                         }} onConfirm={runTableConfirm} />)}
             </>, document.body)}
 
-        {isPanelOpen && (<Suspense fallback={null}><ExpensesFormPanel isOpen mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
+        {panelMounted && (<Suspense fallback={null}><ExpensesFormPanel isOpen={isPanelOpen} onExited={() => {
+            if (!isPanelOpenRef.current)
+                setPanelMounted(false);
+        }} mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
             panelDataGenRef.current += 1;
             setEditingReq(r);
             setRequests(prev => prev.map(x => (x.id === r.id ? r : x)));
