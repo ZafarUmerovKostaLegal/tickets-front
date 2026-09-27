@@ -24,7 +24,7 @@ export const VACATION_ABSENCE_LEGEND: ReadonlyArray<{
         { kind: 'sick', color: '#FF1493', label: 'Отсутствие по болезни' },
         { kind: 'dayoff', color: '#2196F3', label: 'Неоплачиваемый отпуск' },
         { kind: 'business', color: '#00E676', label: 'Командировка' },
-        { kind: 'remote', color: '#FFEB3B', label: 'Дистанционный режим' },
+        { kind: 'remote', color: '#C89200', label: 'Дистанционный режим' },
         { kind: 'red_pass', color: '#FF1744', label: 'Пропуск красного цвета' },
     ];
 export const VACATION_KIND_COLORS: Record<VacationAbsenceKind, string> = Object.fromEntries(VACATION_ABSENCE_LEGEND.map((x) => [x.kind, x.color])) as Record<VacationAbsenceKind, string>;

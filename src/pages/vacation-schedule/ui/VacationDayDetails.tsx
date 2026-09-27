@@ -50,26 +50,31 @@ export function VacationDayDetails({ year, monthIndex, day, rows, onClose, onOpe
             {rows.length === 0 ? (
                 <p className="vac-day__empty">В этот день отсутствий нет.</p>
             ) : (
-                <ul className="vac-day__list">
-                    {rows.map((row) => (
-                        <li key={`${row.employeeId}-${row.kindLabel}`} className="vac-day__item">
-                            <span className="vac-day__dot" style={{ background: row.color }} aria-hidden />
-                            <div className="vac-day__copy">
-                                <strong>{row.label}</strong>
-                                <span>{row.teamName} · {row.rangeLabel}</span>
-                                <span className="vac-day__kind" style={{ color: row.color }}>{row.kindLabel}</span>
-                            </div>
-                            <div className="vac-day__actions">
-                                {row.canOpenCard ? (
-                                    <button type="button" onClick={() => onOpenCard(row.employeeId)}>Карточка</button>
-                                ) : null}
-                                {row.canOpenCard && showDocs ? (
-                                    <button type="button" onClick={() => onOpenDocs(row.employeeId, row.label)}>Документы</button>
-                                ) : null}
-                            </div>
-                        </li>
-                    ))}
-                </ul>
+                <>
+                    <h3 className="vac-day__events">События</h3>
+                    <ul className="vac-day__list">
+                        {rows.map((row) => (
+                            <li key={`${row.employeeId}-${row.kindLabel}`} className="vac-day__item">
+                                <span className="vac-day__dot" style={{ background: row.color }} aria-hidden />
+                                <div className="vac-day__copy">
+                                    <strong>{row.label}</strong>
+                                    <span>{row.rangeLabel}</span>
+                                    {row.canOpenCard ? (
+                                        <span className="vac-day__links">
+                                            <button type="button" onClick={() => onOpenCard(row.employeeId)}>Карточка</button>
+                                            {showDocs ? (
+                                                <button type="button" onClick={() => onOpenDocs(row.employeeId, row.label)}>Документы</button>
+                                            ) : null}
+                                        </span>
+                                    ) : null}
+                                </div>
+                                <span className="vac-day__badge" style={{ color: row.color, background: `color-mix(in srgb, ${row.color} 14%, #fff)` }}>
+                                    {row.kindLabel}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </>
             )}
         </section>
     );
