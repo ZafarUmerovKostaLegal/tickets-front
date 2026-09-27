@@ -56,11 +56,18 @@ export function VacationYearCalendar({ year = new Date().getFullYear() }: Props)
                     {WEEKDAYS.map((label, weekday) => (
                         <div key={label} className={`vac-cal__wd vac-cal__wd--lg${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
                     ))}
-                    {cells.map((day, index) => (
-                        <div key={`${monthIndex}-${index}`} className="vac-cal__cell vac-cal__cell--lg">
-                            <DayNum year={year} monthIndex={monthIndex} day={day} />
-                        </div>
-                    ))}
+                    {cells.map((day, index) => {
+                        const weekend = day != null && vacationDayIsWeekendRu(year, monthIndex, day);
+                        const today = day != null && isToday(year, monthIndex, day);
+                        return (
+                            <div
+                                key={`${monthIndex}-${index}`}
+                                className={`vac-cal__cell vac-cal__cell--lg${day == null ? ' vac-cal__cell--empty' : ''}${weekend ? ' vac-cal__cell--weekend' : ''}${today ? ' vac-cal__cell--today' : ''}`}
+                            >
+                                <DayNum year={year} monthIndex={monthIndex} day={day} />
+                            </div>
+                        );
+                    })}
                 </div>
             </section>
         );

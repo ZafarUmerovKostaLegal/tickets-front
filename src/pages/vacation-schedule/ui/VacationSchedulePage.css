@@ -168,24 +168,29 @@
 }
 
 .vac-cal__month-bar {
+  position: relative;
   flex-shrink: 0;
-  height: 40px;
+  height: 56px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0 0.75rem;
-  border-bottom: 1px solid var(--app-border, #e2e8f0);
+  justify-content: center;
+  padding: 0 1rem;
+  background: var(--app-surface, #fff);
+  border-bottom: 1px solid var(--app-border, #e8edf3);
 }
 
 .vac-cal__month-title {
   padding: 0;
-  font-size: 1rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
 }
 
 .vac-cal__back {
-  padding: 0.25rem 0.6rem;
+  position: absolute;
+  left: 0.85rem;
+  padding: 0.35rem 0.7rem;
   border: 1px solid var(--app-border, #e2e8f0);
-  border-radius: 8px;
+  border-radius: 999px;
   background: var(--app-surface, #fff);
   font: inherit;
   font-size: 0.75rem;
@@ -194,22 +199,64 @@
   cursor: pointer;
 }
 
-.vac-cal__cell--lg .vac-cal__num {
-  width: 2.35rem;
-  height: 2.35rem;
-  font-size: 1rem;
+.vac-cal__back:hover {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface, #fff));
+}
+
+.vac-cal__sheet {
+  padding: 0.35rem 0.55rem 0.55rem;
+  gap: 6px;
+  grid-template-rows: auto repeat(6, minmax(0, 1fr));
+  background: var(--app-bg, #f4f6fb);
 }
 
 .vac-cal__wd--lg {
   font-size: 0.72rem;
+  letter-spacing: 0.08em;
 }
 
 .vac-cal__cell--lg {
-  border-top: 1px solid color-mix(in srgb, var(--app-border, #e2e8f0) 70%, transparent);
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--app-surface, #fff);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.vac-cal__cell--lg:hover .vac-cal__num:not(.vac-cal__num--today):not(.vac-cal__num--empty) {
-  background: color-mix(in srgb, var(--app-accent, #4f46e5) 10%, transparent);
+.vac-cal__cell--lg .vac-cal__num {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.vac-cal__cell--empty {
+  background: transparent;
+  box-shadow: none;
+}
+
+.vac-cal__cell--weekend {
+  background: #fff7f8;
+}
+
+.vac-cal__cell--today {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 10%, var(--app-surface, #fff));
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 35%, transparent);
+}
+
+.vac-cal__cell--today .vac-cal__num--today {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  font-size: 1rem;
+}
+
+.vac-cal__cell--lg:not(.vac-cal__cell--empty):hover {
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 28%, transparent);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 1100px) {
