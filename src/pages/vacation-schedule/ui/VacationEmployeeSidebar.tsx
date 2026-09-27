@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { listColleaguesAsUsers } from '@entities/contacts';
 import { listTimeTrackingTeams, type TimeTrackingTeamRow } from '@entities/time-tracking';
 import type { User } from '@entities/user';
@@ -79,12 +79,29 @@ function groupEmployeesByTeam(rows: VacationScheduleEmployeeRow[], teams: TimeTr
 
 type Props = {
     selectedIds: ReadonlySet<number>;
-    teamFilterId: string | null;
-    onTeamFilter: (teamId: string | null, employees: VacationScheduleEmployeeRow[]) => void;
+    onSelectEmployees: (employees: VacationScheduleEmployeeRow[]) => void;
     onToggleEmployee: (employee: VacationScheduleEmployeeRow) => void;
 };
 
-export function VacationEmployeeSidebar({ selectedIds, teamFilterId, onTeamFilter, onToggleEmployee }: Props) {
+function teamFilterLabel(ids: ReadonlySet<string>, groups: TeamGroup[]): string {
+    if (ids.size === 0)
+        return 'Все команды';
+    if (ids.size === 1) {
+        const id = [...ids][0];
+        return groups.find((group) => group.id === id)?.name ?? '1 команда';
+    }
+    const n = ids.size;
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    const word = mod10 === 1 && mod100 !== 11
+        ? 'команда'
+        : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+            ? 'команды'
+            : 'команд';
+    return `${n} ${word}`;
+}
+
+export function VacationEmployeeSidebar({ selectedIds, onSelectEmployees, onToggleEmployee }: Props) {
     const { user, loading: userLoading } = useCurrentUser();
     const [groups, setGroups] = useState<TeamGroup[]>([]);
     const [hiddenUsers, setHiddenUsers] = useState<Set<number>>(() => new Set());
@@ -93,7 +110,12 @@ export function VacationEmployeeSidebar({ selectedIds, teamFilterId, onTeamFilte
     const [error, setError] = useState<string | null>(null);
     const [hideError, setHideError] = useState<string | null>(null);
     const [hidingKey, setHidingKey] = useState<string | null>(null);
+    const [hiddenOpen, setHiddenOpen] = useState(false);
     const [query, setQuery] = useState('');
+    const [teamFilterIds, setTeamFilterIds] = useState<Set<string>>(() => new Set());
+    const [teamMenuOpen, setTeamMenuOpen] = useState(false);
+    const [teamQuery, setTeamQuery] = useState('');
+    const teamMenuRef = useRef<HTMLDivElement>(null);
     const canManage = !userLoading && canEditVacationSchedule(user);
 
     useEffect(() => {
@@ -154,11 +176,48 @@ export function VacationEmployeeSidebar({ selectedIds, teamFilterId, onTeamFilte
         };
     }, [user, userLoading]);
 
+    useEffect(() => {
+        if (!teamMenuOpen)
+            return;
+        const onPointer = (event: MouseEvent) => {
+            if (!teamMenuRef.current?.contains(event.target as Node))
+                setTeamMenuOpen(false);
+        };
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape')
+                setTeamMenuOpen(false);
+        };
+        document.addEventListener('mousedown', onPointer);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onPointer);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [teamMenuOpen]);
+
     const filteredByTeam = useMemo(() => {
-        if (!teamFilterId)
+        if (teamFilterIds.size === 0)
             return groups;
-        return groups.filter((group) => group.id === teamFilterId);
-    }, [groups, teamFilterId]);
+        return groups.filter((group) => teamFilterIds.has(group.id));
+    }, [groups, teamFilterIds]);
+
+    const teamOptions = useMemo(() => {
+        const q = teamQuery.trim().toLocaleLowerCase('ru');
+        if (!q)
+            return groups;
+        return groups.filter((group) => group.name.toLocaleLowerCase('ru').includes(q));
+    }, [groups, teamQuery]);
+
+    const toggleTeamFilter = (id: string) => {
+        setTeamFilterIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id))
+                next.delete(id);
+            else
+                next.add(id);
+            return next;
+        });
+    };
 
     const { shownGroups, hiddenRows } = useMemo(() => {
         const q = query.trim().toLocaleLowerCase('ru');
@@ -231,29 +290,60 @@ export function VacationEmployeeSidebar({ selectedIds, teamFilterId, onTeamFilte
                     />
                 </label>
                 {groups.length > 0 ? (
-                    <div className="vac-staff__teams" role="group" aria-label="Фильтр по командам">
+                    <div className="vac-staff__picker" ref={teamMenuRef}>
                         <button
                             type="button"
-                            className={`vac-staff__chip${teamFilterId == null ? ' vac-staff__chip--on' : ''}`}
-                            aria-pressed={teamFilterId == null}
-                            onClick={() => onTeamFilter(null, [])}
+                            className={`vac-staff__picker-btn${teamMenuOpen ? ' vac-staff__picker-btn--open' : ''}`}
+                            aria-expanded={teamMenuOpen}
+                            aria-haspopup="listbox"
+                            onClick={() => setTeamMenuOpen((open) => !open)}
                         >
-                            Все
+                            <span className="vac-staff__picker-label">{teamFilterLabel(teamFilterIds, groups)}</span>
+                            <svg className="vac-staff__picker-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
                         </button>
-                        {groups.map((group) => {
-                            const on = teamFilterId === group.id;
-                            return (
+                        {teamMenuOpen ? (
+                            <div className="vac-staff__picker-menu" role="listbox" aria-label="Фильтр по командам" aria-multiselectable="true">
+                                <label className="vac-staff__picker-search">
+                                    <input
+                                        type="search"
+                                        value={teamQuery}
+                                        placeholder="Найти команду"
+                                        aria-label="Поиск команды"
+                                        onChange={(event) => setTeamQuery(event.target.value)}
+                                    />
+                                </label>
                                 <button
-                                    key={group.id}
                                     type="button"
-                                    className={`vac-staff__chip${on ? ' vac-staff__chip--on' : ''}`}
-                                    aria-pressed={on}
-                                    onClick={() => onTeamFilter(group.id, group.employees.filter((row) => !rowIsHidden(row, hiddenUsers, hiddenEmployees)))}
+                                    className="vac-staff__picker-opt"
+                                    onClick={() => setTeamFilterIds(new Set())}
                                 >
-                                    {group.name}
+                                    <span className={`vac-staff__mark${teamFilterIds.size === 0 ? ' vac-staff__mark--on' : ''}`} aria-hidden />
+                                    Все команды
                                 </button>
-                            );
-                        })}
+                                {teamOptions.length === 0 ? (
+                                    <p className="vac-staff__note">Команда не найдена</p>
+                                ) : teamOptions.map((group) => {
+                                    const on = teamFilterIds.has(group.id);
+                                    const visibleCount = group.employees.filter((row) => !rowIsHidden(row, hiddenUsers, hiddenEmployees)).length;
+                                    return (
+                                        <button
+                                            key={group.id}
+                                            type="button"
+                                            role="option"
+                                            aria-selected={on}
+                                            className={`vac-staff__picker-opt${on ? ' vac-staff__picker-opt--on' : ''}`}
+                                            onClick={() => toggleTeamFilter(group.id)}
+                                        >
+                                            <span className={`vac-staff__mark${on ? ' vac-staff__mark--on' : ''}`} aria-hidden />
+                                            <span className="vac-staff__picker-name">{group.name}</span>
+                                            <span className="vac-staff__team-count">{visibleCount}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        ) : null}
                     </div>
                 ) : null}
             </div>
@@ -274,7 +364,7 @@ export function VacationEmployeeSidebar({ selectedIds, teamFilterId, onTeamFilte
                             <button
                                 type="button"
                                 className="vac-staff__team-all"
-                                onClick={() => onTeamFilter(group.id, group.employees)}
+                                onClick={() => onSelectEmployees(group.employees)}
                             >
                                 Вся команда
                             </button>
@@ -305,13 +395,19 @@ export function VacationEmployeeSidebar({ selectedIds, teamFilterId, onTeamFilte
                                         {canManage && hideBody ? (
                                             <button
                                                 type="button"
-                                                className="vac-staff__hide"
-                                                aria-label={`Скрыть ${employee.label}`}
+                                                className="vac-staff__eye"
+                                                aria-label={`Скрыть ${employee.label} для всех`}
                                                 title="Скрыть для всех"
                                                 disabled={hidingKey != null}
                                                 onClick={() => void changeVisibility(employee, true)}
                                             >
-                                                {hidingKey === hideKey ? '…' : 'Скрыть'}
+                                                {hidingKey === hideKey ? '…' : (
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                                        <path d="M3 3l18 18" />
+                                                        <path d="M10.6 10.6a2 2 0 002.8 2.8" />
+                                                        <path d="M9.9 5.2A10.8 10.8 0 0121 12c-.6 1-1.5 2.1-2.6 3.1M6.1 6.1C4.2 7.4 2.8 9.2 2 12c1.5 3.5 5.2 7 10 7 1.5 0 2.9-.3 4.2-.9" />
+                                                    </svg>
+                                                )}
                                             </button>
                                         ) : null}
                                     </li>
@@ -322,40 +418,50 @@ export function VacationEmployeeSidebar({ selectedIds, teamFilterId, onTeamFilte
                 ))}
                 {canManage && hiddenRows.length > 0 ? (
                     <section className="vac-staff__team vac-staff__team--hidden">
-                        <div className="vac-staff__team-hd">
-                            <h2 className="vac-staff__team-name">
-                                Скрытые
-                                <span className="vac-staff__team-count">{hiddenRows.length}</span>
-                            </h2>
-                        </div>
-                        <ul className="vac-staff__people">
-                            {hiddenRows.map((employee) => {
-                                const hideBody = rosterHideBody(employee);
-                                const hideKey = hideBody && ('authUserId' in hideBody ? `u:${hideBody.authUserId}` : `e:${hideBody.employeeId}`);
-                                return (
-                                    <li key={`hidden-${employee.id}`} className="vac-staff__row">
-                                        <div className="vac-staff__person vac-staff__person--muted">
-                                            <span className="vac-staff__avatar vac-staff__avatar--muted" aria-hidden>
-                                                {personInitials(employee.label)}
-                                            </span>
-                                            <span className="vac-staff__name">{employee.label}</span>
-                                        </div>
-                                        {hideBody ? (
-                                            <button
-                                                type="button"
-                                                className="vac-staff__hide vac-staff__hide--show"
-                                                aria-label={`Показать ${employee.label}`}
-                                                title="Показать для всех"
-                                                disabled={hidingKey != null}
-                                                onClick={() => void changeVisibility(employee, false)}
-                                            >
-                                                {hidingKey === hideKey ? '…' : 'Показать'}
-                                            </button>
-                                        ) : null}
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                        <button
+                            type="button"
+                            className="vac-staff__hidden-toggle"
+                            aria-expanded={hiddenOpen}
+                            onClick={() => setHiddenOpen((open) => !open)}
+                        >
+                            Скрытые
+                            <span className="vac-staff__team-count">{hiddenRows.length}</span>
+                        </button>
+                        {hiddenOpen ? (
+                            <ul className="vac-staff__people">
+                                {hiddenRows.map((employee) => {
+                                    const hideBody = rosterHideBody(employee);
+                                    const hideKey = hideBody && ('authUserId' in hideBody ? `u:${hideBody.authUserId}` : `e:${hideBody.employeeId}`);
+                                    return (
+                                        <li key={`hidden-${employee.id}`} className="vac-staff__row vac-staff__row--reveal">
+                                            <div className="vac-staff__person vac-staff__person--muted">
+                                                <span className="vac-staff__avatar vac-staff__avatar--muted" aria-hidden>
+                                                    {personInitials(employee.label)}
+                                                </span>
+                                                <span className="vac-staff__name">{employee.label}</span>
+                                            </div>
+                                            {hideBody ? (
+                                                <button
+                                                    type="button"
+                                                    className="vac-staff__eye vac-staff__eye--show"
+                                                    aria-label={`Показать ${employee.label}`}
+                                                    title="Показать для всех"
+                                                    disabled={hidingKey != null}
+                                                    onClick={() => void changeVisibility(employee, false)}
+                                                >
+                                                    {hidingKey === hideKey ? '…' : (
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                                            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+                                                            <circle cx="12" cy="12" r="3" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                            ) : null}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        ) : null}
                     </section>
                 ) : null}
             </div>

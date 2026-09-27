@@ -48,13 +48,12 @@
 }
 
 .vac-staff {
-  width: 340px;
+  width: 320px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--app-accent, #4f46e5) 5%, var(--app-surface, #fff)), var(--app-surface, #fff) 7rem);
+  background: var(--app-surface, #fff);
   border-right: 1px solid var(--app-border, #e2e8f0);
 }
 
@@ -137,46 +136,120 @@
   outline: none;
 }
 
-.vac-staff__teams {
+.vac-staff__picker {
+  position: relative;
+}
+
+.vac-staff__picker-btn {
+  width: 100%;
+  height: 40px;
+  padding: 0 0.75rem;
   display: flex;
-  gap: 0.4rem;
-  overflow-x: auto;
-  padding-bottom: 0.15rem;
-  scrollbar-width: none;
-}
-
-.vac-staff__teams::-webkit-scrollbar {
-  display: none;
-}
-
-.vac-staff__chip {
-  flex-shrink: 0;
-  max-width: 11rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding: 0.35rem 0.7rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  box-sizing: border-box;
   border: 1px solid var(--app-border, #e2e8f0);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--app-surface, #fff);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   font: inherit;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
-  line-height: 1.2;
-  color: var(--app-text, #334155);
+  color: var(--app-text, #0f172a);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
 
-.vac-staff__chip:hover {
+.vac-staff__picker-btn--open,
+.vac-staff__picker-btn:hover {
   border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 45%, var(--app-border, #e2e8f0));
 }
 
-.vac-staff__chip--on {
-  border-color: transparent;
-  background: var(--app-accent, #4f46e5);
-  color: #fff;
-  box-shadow: 0 4px 10px color-mix(in srgb, var(--app-accent, #4f46e5) 28%, transparent);
+.vac-staff__picker-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vac-staff__picker-chev {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--app-muted, #64748b);
+  transition: transform 0.15s ease;
+}
+
+.vac-staff__picker-btn--open .vac-staff__picker-chev {
+  transform: rotate(180deg);
+}
+
+.vac-staff__picker-menu {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow: auto;
+  padding: 0.4rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 14px;
+  background: var(--app-surface, #fff);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+}
+
+.vac-staff__picker-search {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.vac-staff__picker-search input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 10px;
+  background: var(--app-bg, #f8fafc);
+  font: inherit;
+  font-size: 0.8125rem;
+  color: var(--app-text, #0f172a);
+}
+
+.vac-staff__picker-search input:focus {
+  outline: none;
+  border-color: var(--app-accent, #4f46e5);
+}
+
+.vac-staff__picker-opt {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.45rem 0.45rem;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: left;
+  color: var(--app-text, #0f172a);
+  cursor: pointer;
+}
+
+.vac-staff__picker-opt:hover,
+.vac-staff__picker-opt--on {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface, #fff));
+}
+
+.vac-staff__picker-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .vac-staff__list {
@@ -197,12 +270,8 @@
 }
 
 .vac-staff__team {
-  margin-top: 0.85rem;
-  padding: 0.45rem;
-  border: 1px solid color-mix(in srgb, var(--app-border, #e2e8f0) 80%, transparent);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--app-surface, #fff) 88%, var(--app-bg, #f8fafc));
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  margin-top: 0.35rem;
+  padding: 0.15rem 0 0.35rem;
 }
 
 .vac-staff__team-hd {
@@ -267,9 +336,9 @@
 }
 
 .vac-staff__row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
 }
 
 .vac-staff__row .vac-staff__person {
@@ -277,35 +346,76 @@
   min-width: 0;
 }
 
-.vac-staff__hide {
-  flex-shrink: 0;
-  padding: 0.28rem 0.45rem;
+.vac-staff__eye {
+  position: absolute;
+  right: 2.15rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: var(--app-muted, #64748b);
+  cursor: pointer;
+  opacity: 0;
+  box-shadow: 0 0 0 1px var(--app-border, #e2e8f0);
+}
+
+.vac-staff__eye svg {
+  width: 15px;
+  height: 15px;
+}
+
+.vac-staff__row:hover .vac-staff__eye,
+.vac-staff__eye:focus-visible,
+.vac-staff__row--reveal .vac-staff__eye {
+  opacity: 1;
+}
+
+.vac-staff__eye:hover:not(:disabled) {
+  color: #b45309;
+  background: #fff7ed;
+}
+
+.vac-staff__eye--show:hover:not(:disabled) {
+  color: var(--app-accent, #4f46e5);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, #fff);
+}
+
+.vac-staff__eye:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.vac-staff__hidden-toggle {
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.45rem 0.55rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: none;
+  border-radius: 10px;
   background: transparent;
   font: inherit;
-  font-size: 0.68rem;
+  font-size: 0.78rem;
   font-weight: 700;
   color: var(--app-muted, #64748b);
   cursor: pointer;
 }
 
-.vac-staff__hide:hover:not(:disabled) {
-  color: #b45309;
-  background: rgba(245, 158, 11, 0.12);
-}
-
-.vac-staff__hide--show {
-  color: var(--app-accent, #4f46e5);
-}
-
-.vac-staff__hide:disabled {
-  opacity: 0.5;
-  cursor: default;
+.vac-staff__hidden-toggle:hover {
+  background: var(--app-bg, #f8fafc);
+  color: var(--app-text, #0f172a);
 }
 
 .vac-staff__team--hidden {
-  background: color-mix(in srgb, var(--app-muted, #94a3b8) 8%, var(--app-surface, #fff));
+  margin-top: 0.25rem;
 }
 
 .vac-staff__person--muted {

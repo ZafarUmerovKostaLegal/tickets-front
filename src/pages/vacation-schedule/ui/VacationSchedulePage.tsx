@@ -6,13 +6,10 @@ import './VacationSchedulePage.css';
 
 export function VacationSchedulePage() {
     const [selectedEmployees, setSelectedEmployees] = useState<VacationScheduleEmployeeRow[]>([]);
-    const [teamFilterId, setTeamFilterId] = useState<string | null>(null);
     const selectedIds = new Set(selectedEmployees.map((row) => row.id));
 
-    const onTeamFilter = useCallback((teamId: string | null, employees: VacationScheduleEmployeeRow[]) => {
-        setTeamFilterId(teamId);
-        if (teamId != null)
-            setSelectedEmployees(employees);
+    const onSelectEmployees = useCallback((employees: VacationScheduleEmployeeRow[]) => {
+        setSelectedEmployees(employees);
     }, []);
 
     const onToggleEmployee = useCallback((employee: VacationScheduleEmployeeRow) => {
@@ -36,8 +33,7 @@ export function VacationSchedulePage() {
                 <div className="vacation-schedule-page__body">
                     <VacationEmployeeSidebar
                         selectedIds={selectedIds}
-                        teamFilterId={teamFilterId}
-                        onTeamFilter={onTeamFilter}
+                        onSelectEmployees={onSelectEmployees}
                         onToggleEmployee={onToggleEmployee}
                     />
                 </div>
