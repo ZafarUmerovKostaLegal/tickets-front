@@ -138,6 +138,7 @@ function MonthSheet({
     marksByDay,
     selectedDay,
     onSelectDay,
+    onStep,
     onBack,
 }: {
     year: number;
@@ -145,6 +146,7 @@ function MonthSheet({
     marksByDay: ReadonlyMap<string, VacationCalendarPaint[]>;
     selectedDay: { monthIndex: number; day: number } | null;
     onSelectDay: (monthIndex: number, day: number) => void;
+    onStep: (delta: number) => void;
     onBack: () => void;
 }) {
     const cells = monthCells(year, monthIndex);
@@ -155,6 +157,10 @@ function MonthSheet({
                     К году
                 </button>
                 <h2 className="vac-cal__month-title">{VACATION_MONTH_NAMES[monthIndex]} {year}</h2>
+                <div className="vac-cal__month-nav">
+                    <button type="button" className="vac-cal__step" aria-label="Предыдущий месяц" onClick={() => onStep(-1)}>‹</button>
+                    <button type="button" className="vac-cal__step" aria-label="Следующий месяц" onClick={() => onStep(1)}>›</button>
+                </div>
             </header>
             <div className="vac-cal__sheet">
                 {WEEKDAYS.map((label, weekday) => (
@@ -267,6 +273,14 @@ export function VacationYearCalendar({
         }, 700);
         return () => window.clearTimeout(timer);
     }, [motion]);
+
+    const stepMonth = (delta: number) => {
+        if (monthIndex == null)
+            return;
+        const next = (monthIndex + delta + 12) % 12;
+        onMonthChangeRef.current?.(next);
+        setMonthIndex(next);
+    };
 
     const openMonth = (index: number) => {
         onMonthChangeRef.current?.(index);
@@ -403,6 +417,7 @@ export function VacationYearCalendar({
                         marksByDay={marksByDay}
                         selectedDay={selectedDay}
                         onSelectDay={(month, day) => onSelectDay?.(month, day)}
+                        onStep={stepMonth}
                         onBack={closeMonth}
                     />
                 </section>

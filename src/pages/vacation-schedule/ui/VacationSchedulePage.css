@@ -895,6 +895,32 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
   letter-spacing: -0.03em;
 }
 
+.vac-cal__month-nav {
+  position: absolute;
+  right: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.vac-cal__step {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 999px;
+  background: var(--app-surface, #fff);
+  font: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--app-text, #0f172a);
+  cursor: pointer;
+}
+
+.vac-cal__step:hover {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface, #fff));
+  color: var(--app-accent, #4f46e5);
+}
+
 .vac-cal__back {
   position: absolute;
   left: 0.85rem;
