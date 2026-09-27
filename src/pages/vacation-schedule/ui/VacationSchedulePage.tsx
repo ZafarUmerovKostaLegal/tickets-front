@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react';
 import { AppBackButton, AppHomeLogo } from '@shared/ui';
 import type { VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
+import { VacationAbsenceRequestModal } from './VacationAbsenceRequestModal';
 import { VacationEmployeeSidebar } from './VacationEmployeeSidebar';
 import './VacationSchedulePage.css';
 
 export function VacationSchedulePage() {
     const [selectedEmployees, setSelectedEmployees] = useState<VacationScheduleEmployeeRow[]>([]);
+    const [requestModalOpen, setRequestModalOpen] = useState(false);
     const selectedIds = new Set(selectedEmployees.map((row) => row.id));
 
     const onSelectEmployees = useCallback((employees: VacationScheduleEmployeeRow[]) => {
@@ -29,6 +31,17 @@ export function VacationSchedulePage() {
                         <AppHomeLogo withSeparator />
                         <h1 className="vacation-schedule-page__title">График отпусков</h1>
                     </div>
+                    <div className="app-page-header-end">
+                        <button
+                            type="button"
+                            className="vac-page-add-btn"
+                            onClick={() => setRequestModalOpen(true)}
+                            aria-label="Новая заявка на отсутствие"
+                            title="Новая заявка"
+                        >
+                            +
+                        </button>
+                    </div>
                 </header>
                 <div className="vacation-schedule-page__body">
                     <VacationEmployeeSidebar
@@ -38,6 +51,10 @@ export function VacationSchedulePage() {
                     />
                 </div>
             </main>
+            <VacationAbsenceRequestModal
+                open={requestModalOpen}
+                onClose={() => setRequestModalOpen(false)}
+            />
         </div>
     );
 }

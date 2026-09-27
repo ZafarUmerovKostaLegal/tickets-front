@@ -219,30 +219,38 @@ export function VacationEmployeeSidebar({ selectedIds, onSelectEmployees, onTogg
         });
     };
 
-    const { shownGroups, hiddenRows } = useMemo(() => {
+    const shownGroups = useMemo(() => {
         const q = query.trim().toLocaleLowerCase('ru');
         const shown: TeamGroup[] = [];
-        const hidden: VacationScheduleEmployeeRow[] = [];
-        const seenHidden = new Set<number>();
         for (const group of filteredByTeam) {
             const employees = group.employees.filter((row) => {
-                const matches = !q || row.label.toLocaleLowerCase('ru').includes(q);
-                if (!matches)
+                if (rowIsHidden(row, hiddenUsers, hiddenEmployees))
                     return false;
-                if (!rowIsHidden(row, hiddenUsers, hiddenEmployees))
-                    return true;
-                if (!seenHidden.has(row.id)) {
-                    seenHidden.add(row.id);
-                    hidden.push(row);
-                }
-                return false;
+                return !q || row.label.toLocaleLowerCase('ru').includes(q);
             });
             if (employees.length > 0)
                 shown.push({ ...group, employees });
         }
-        hidden.sort((a, b) => a.label.localeCompare(b.label, 'ru', { sensitivity: 'base' }));
-        return { shownGroups: shown, hiddenRows: hidden };
+        return shown;
     }, [filteredByTeam, hiddenEmployees, hiddenUsers, query]);
+
+    const allHiddenRows = useMemo(() => {
+        const q = query.trim().toLocaleLowerCase('ru');
+        const hidden: VacationScheduleEmployeeRow[] = [];
+        const seen = new Set<number>();
+        for (const group of groups) {
+            for (const row of group.employees) {
+                if (!rowIsHidden(row, hiddenUsers, hiddenEmployees) || seen.has(row.id))
+                    continue;
+                if (q && !row.label.toLocaleLowerCase('ru').includes(q))
+                    continue;
+                seen.add(row.id);
+                hidden.push(row);
+            }
+        }
+        hidden.sort((a, b) => a.label.localeCompare(b.label, 'ru', { sensitivity: 'base' }));
+        return hidden;
+    }, [groups, hiddenEmployees, hiddenUsers, query]);
 
     const changeVisibility = async (employee: VacationScheduleEmployeeRow, hidden: boolean) => {
         const body = rosterHideBody(employee);
@@ -271,9 +279,22 @@ export function VacationEmployeeSidebar({ selectedIds, onSelectEmployees, onTogg
             <div className="vac-staff__head">
                 <div className="vac-staff__title-row">
                     <p className="vac-staff__title">Сотрудники</p>
-                    {selectedIds.size > 0 ? (
-                        <span className="vac-staff__count">{selectedIds.size}</span>
-                    ) : null}
+                    <span className="vac-staff__title-actions">
+                        {canManage ? (
+                            <button
+                                type="button"
+                                className={`vac-staff__hidden-btn${hiddenOpen ? ' vac-staff__hidden-btn--on' : ''}`}
+                                aria-pressed={hiddenOpen}
+                                onClick={() => setHiddenOpen((open) => !open)}
+                            >
+                                Скрытые
+                                {allHiddenRows.length > 0 ? <span className="vac-staff__team-count">{allHiddenRows.length}</span> : null}
+                            </button>
+                        ) : null}
+                        {selectedIds.size > 0 ? (
+                            <span className="vac-staff__count">{selectedIds.size}</span>
+                        ) : null}
+                    </span>
                 </div>
                 <label className="vac-staff__search-wrap">
                     <svg className="vac-staff__search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -351,10 +372,52 @@ export function VacationEmployeeSidebar({ selectedIds, onSelectEmployees, onTogg
                 {loading ? <p className="vac-staff__note">Загрузка…</p> : null}
                 {error ? <p className="vac-staff__note vac-staff__note--err">{error}</p> : null}
                 {hideError ? <p className="vac-staff__note vac-staff__note--err">{hideError}</p> : null}
-                {!loading && !error && shownGroups.length === 0 && hiddenRows.length === 0 ? (
+                {!loading && !error && !hiddenOpen && shownGroups.length === 0 ? (
                     <p className="vac-staff__note">{query.trim() ? 'Никого не найдено' : 'Нет сотрудников'}</p>
                 ) : null}
-                {shownGroups.map((group) => (
+                {hiddenOpen ? (
+                    <section className="vac-staff__team vac-staff__team--hidden">
+                        <h2 className="vac-staff__team-name">Скрытые для всех</h2>
+                        {allHiddenRows.length === 0 ? (
+                            <p className="vac-staff__note">Скрытых сотрудников нет</p>
+                        ) : (
+                            <ul className="vac-staff__people">
+                                {allHiddenRows.map((employee) => {
+                                    const hideBody = rosterHideBody(employee);
+                                    const hideKey = hideBody && ('authUserId' in hideBody ? `u:${hideBody.authUserId}` : `e:${hideBody.employeeId}`);
+                                    return (
+                                        <li key={`hidden-${employee.id}`} className="vac-staff__row vac-staff__row--reveal">
+                                            <div className="vac-staff__person vac-staff__person--muted">
+                                                <span className="vac-staff__avatar vac-staff__avatar--muted" aria-hidden>
+                                                    {personInitials(employee.label)}
+                                                </span>
+                                                <span className="vac-staff__name">{employee.label}</span>
+                                            </div>
+                                            {hideBody ? (
+                                                <button
+                                                    type="button"
+                                                    className="vac-staff__eye vac-staff__eye--show"
+                                                    aria-label={`Показать ${employee.label}`}
+                                                    title="Показать для всех"
+                                                    disabled={hidingKey != null}
+                                                    onClick={() => void changeVisibility(employee, false)}
+                                                >
+                                                    {hidingKey === hideKey ? '…' : (
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                                            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
+                                                            <circle cx="12" cy="12" r="3" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                            ) : null}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </section>
+                ) : null}
+                {!hiddenOpen && shownGroups.map((group) => (
                     <section key={group.id} className="vac-staff__team">
                         <div className="vac-staff__team-hd">
                             <h2 className="vac-staff__team-name">
@@ -416,54 +479,6 @@ export function VacationEmployeeSidebar({ selectedIds, onSelectEmployees, onTogg
                         </ul>
                     </section>
                 ))}
-                {canManage && hiddenRows.length > 0 ? (
-                    <section className="vac-staff__team vac-staff__team--hidden">
-                        <button
-                            type="button"
-                            className="vac-staff__hidden-toggle"
-                            aria-expanded={hiddenOpen}
-                            onClick={() => setHiddenOpen((open) => !open)}
-                        >
-                            Скрытые
-                            <span className="vac-staff__team-count">{hiddenRows.length}</span>
-                        </button>
-                        {hiddenOpen ? (
-                            <ul className="vac-staff__people">
-                                {hiddenRows.map((employee) => {
-                                    const hideBody = rosterHideBody(employee);
-                                    const hideKey = hideBody && ('authUserId' in hideBody ? `u:${hideBody.authUserId}` : `e:${hideBody.employeeId}`);
-                                    return (
-                                        <li key={`hidden-${employee.id}`} className="vac-staff__row vac-staff__row--reveal">
-                                            <div className="vac-staff__person vac-staff__person--muted">
-                                                <span className="vac-staff__avatar vac-staff__avatar--muted" aria-hidden>
-                                                    {personInitials(employee.label)}
-                                                </span>
-                                                <span className="vac-staff__name">{employee.label}</span>
-                                            </div>
-                                            {hideBody ? (
-                                                <button
-                                                    type="button"
-                                                    className="vac-staff__eye vac-staff__eye--show"
-                                                    aria-label={`Показать ${employee.label}`}
-                                                    title="Показать для всех"
-                                                    disabled={hidingKey != null}
-                                                    onClick={() => void changeVisibility(employee, false)}
-                                                >
-                                                    {hidingKey === hideKey ? '…' : (
-                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                                                            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
-                                                            <circle cx="12" cy="12" r="3" />
-                                                        </svg>
-                                                    )}
-                                                </button>
-                                            ) : null}
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        ) : null}
-                    </section>
-                ) : null}
             </div>
         </aside>
     );

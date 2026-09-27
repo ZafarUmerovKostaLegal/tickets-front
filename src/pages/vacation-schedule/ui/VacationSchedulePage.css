@@ -72,6 +72,35 @@
   gap: 0.5rem;
 }
 
+.vac-staff__title-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.vac-staff__hidden-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 28px;
+  padding: 0 0.55rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 999px;
+  background: var(--app-surface, #fff);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--app-text, #334155);
+  cursor: pointer;
+}
+
+.vac-staff__hidden-btn:hover,
+.vac-staff__hidden-btn--on {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 12%, var(--app-surface, #fff));
+  color: var(--app-accent, #4f46e5);
+}
+
 .vac-staff__title {
   margin: 0;
   font-size: 0.72rem;
