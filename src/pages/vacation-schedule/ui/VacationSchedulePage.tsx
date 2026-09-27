@@ -243,6 +243,25 @@ export function VacationSchedulePage() {
                         <h1 className="vacation-schedule-page__title">График отпусков</h1>
                     </div>
                     <div className="app-page-header-end">
+                        <nav className="vac-switch" aria-label="Разделы графика отпусков">
+                            <button
+                                type="button"
+                                className={`vac-switch__item${!requestsOpen ? ' vac-switch__item--on' : ''}`}
+                                aria-current={!requestsOpen ? 'page' : undefined}
+                                onClick={() => setView('calendar')}
+                            >
+                                Календарь
+                            </button>
+                            <button
+                                type="button"
+                                className={`vac-switch__item${requestsOpen ? ' vac-switch__item--on' : ''}`}
+                                aria-current={requestsOpen ? 'page' : undefined}
+                                onClick={openRequests}
+                            >
+                                Заявки
+                                {requestsBadge ? <span className="vac-switch__badge" aria-hidden>{requestsBadge}</span> : null}
+                            </button>
+                        </nav>
                         <button
                             type="button"
                             className="vac-page-add-btn"
@@ -274,35 +293,6 @@ export function VacationSchedulePage() {
                     </div>
                 ) : null}
                 <div className="vacation-schedule-page__body">
-                    <nav className="vac-rail" aria-label="Разделы графика отпусков">
-                        <button
-                            type="button"
-                            className={`vac-rail__item${!requestsOpen ? ' vac-rail__item--on' : ''}`}
-                            aria-current={!requestsOpen ? 'page' : undefined}
-                            onClick={() => setView('calendar')}
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                <rect x="3" y="4" width="18" height="18" rx="2"/>
-                                <path d="M16 2v4M8 2v4M3 10h18"/>
-                            </svg>
-                            Календарь
-                        </button>
-                        <button
-                            type="button"
-                            className={`vac-rail__item${requestsOpen ? ' vac-rail__item--on' : ''}`}
-                            aria-current={requestsOpen ? 'page' : undefined}
-                            onClick={openRequests}
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                <path d="M9 11l3 3L22 4"/>
-                                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-                            </svg>
-                            Заявки
-                            {requestsBadge ? (
-                                <span className="vac-rail__badge" aria-hidden>{requestsBadge}</span>
-                            ) : null}
-                        </button>
-                    </nav>
                     {requestsOpen ? (
                         <div className="vac-requests">
                             {canDecideRequests ? (
@@ -341,6 +331,7 @@ export function VacationSchedulePage() {
                         </div>
                     ) : (
                         <>
+                        <div className="vac-board">
                             <VacationEmployeeSidebar
                                 year={scheduleYear}
                                 selectedIds={selectedIds}
@@ -356,6 +347,7 @@ export function VacationSchedulePage() {
                                 onShownEmployees={rememberShown}
                                 onDirectory={rememberDirectory}
                             />
+                            <div className="vac-board__main">
                             <VacationCalendarFilters
                                 year={scheduleYear}
                                 onYearChange={(next) => setScheduleYear(Math.min(2100, Math.max(2000, next)))}
@@ -394,6 +386,7 @@ export function VacationSchedulePage() {
                                 selectedDay={selectedDay}
                                 onSelectDay={(monthIndex, day) => setSelectedDay({ monthIndex, day })}
                             />
+                            </div>
                             {selectedDay ? (
                                 <VacationDayDetails
                                     year={scheduleYear}
@@ -412,6 +405,7 @@ export function VacationSchedulePage() {
                                     }}
                                 />
                             ) : null}
+                        </div>
                         </>
                     )}
                 </div>

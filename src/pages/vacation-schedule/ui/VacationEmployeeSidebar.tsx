@@ -459,7 +459,7 @@ export function VacationEmployeeSidebar({ year, selectedIds, allowedIds, onSelec
                     <section key={group.id} className="vac-staff__team">
                         <div className="vac-staff__team-hd">
                             <h2 className="vac-staff__team-name">
-                                {group.name}
+                                <span className="vac-staff__team-label">{group.name}</span>
                                 <span className="vac-staff__team-count">{group.employees.length}</span>
                             </h2>
                             <button
