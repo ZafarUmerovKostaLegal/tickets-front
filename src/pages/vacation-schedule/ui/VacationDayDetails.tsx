@@ -3,6 +3,10 @@ import { VACATION_MONTH_NAMES } from '../lib/vacationScheduleModel';
 
 const WEEKDAYS = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье'] as const;
 
+function weekdayLabel(year: number, monthIndex: number, day: number): string {
+    return WEEKDAYS[(new Date(year, monthIndex, day).getDay() + 6) % 7];
+}
+
 export type VacationDayDetailRow = {
     employeeId: number;
     label: string;
@@ -17,6 +21,8 @@ type Props = {
     year: number;
     monthIndex: number;
     day: number;
+    endMonthIndex?: number;
+    endDay?: number;
     rows: ReadonlyArray<VacationDayDetailRow>;
     onClose: () => void;
     onOpenCard: (employeeId: number) => void;
@@ -24,7 +30,7 @@ type Props = {
     showDocs: boolean;
 };
 
-export function VacationDayDetails({ year, monthIndex, day, rows, onClose, onOpenCard, onOpenDocs, showDocs }: Props) {
+export function VacationDayDetails({ year, monthIndex, day, endMonthIndex = monthIndex, endDay = day, rows, onClose, onOpenCard, onOpenDocs, showDocs }: Props) {
     useEffect(() => {
         const onKey = (event: KeyboardEvent) => {
             if (event.key === 'Escape')
@@ -34,14 +40,26 @@ export function VacationDayDetails({ year, monthIndex, day, rows, onClose, onOpe
         return () => document.removeEventListener('keydown', onKey);
     }, [onClose]);
 
-    const weekday = WEEKDAYS[(new Date(year, monthIndex, day).getDay() + 6) % 7];
+    const startSerial = monthIndex * 40 + day;
+    const endSerial = endMonthIndex * 40 + endDay;
+    const fromMonth = startSerial <= endSerial ? monthIndex : endMonthIndex;
+    const fromDay = startSerial <= endSerial ? day : endDay;
+    const toMonth = startSerial <= endSerial ? endMonthIndex : monthIndex;
+    const toDay = startSerial <= endSerial ? endDay : day;
+    const sameDay = fromMonth === toMonth && fromDay === toDay;
+    const title = sameDay
+        ? `${day} ${VACATION_MONTH_NAMES[monthIndex]} ${year}`
+        : fromMonth === toMonth
+            ? `${fromDay}–${toDay} ${VACATION_MONTH_NAMES[fromMonth]} ${year}`
+            : `${fromDay} ${VACATION_MONTH_NAMES[fromMonth]} – ${toDay} ${VACATION_MONTH_NAMES[toMonth]} ${year}`;
 
     return (
         <section className="vac-day" aria-label="Детали дня">
             <header className="vac-day__head">
                 <div>
-                    <p className="vac-day__kicker">{weekday}</p>
-                    <h2 className="vac-day__title">{day} {VACATION_MONTH_NAMES[monthIndex]} {year}</h2>
+                    <p className="vac-day__kicker">{sameDay ? weekdayLabel(year, fromMonth, fromDay) : 'Период'}</p>
+                    <h2 className="vac-day__title">{title}</h2>
+                    {sameDay ? <p className="vac-day__hint">Нажмите второй день, чтобы выбрать период</p> : null}
                 </div>
                 <button type="button" className="vac-day__close" onClick={onClose} aria-label="Закрыть">
                     ×

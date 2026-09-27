@@ -27,8 +27,15 @@ type Props = {
     openToken?: number;
     requestedMonth?: number | null;
     onMonthChange?: (month: number | null) => void;
-    selectedDay?: { monthIndex: number; day: number } | null;
+    selectedPeriod?: VacationCalendarPeriod | null;
     onSelectDay?: (monthIndex: number, day: number) => void;
+};
+
+export type VacationCalendarDay = { monthIndex: number; day: number };
+
+export type VacationCalendarPeriod = {
+    start: VacationCalendarDay;
+    end: VacationCalendarDay;
 };
 
 export type VacationCalendarPaint = {
@@ -38,10 +45,27 @@ export type VacationCalendarPaint = {
     kindLabel: string;
 };
 
+function daySerial(monthIndex: number, day: number): number {
+    return monthIndex * 40 + day;
+}
+
+function periodEdge(monthIndex: number, day: number, period: VacationCalendarPeriod | null): 'end' | 'mid' | null {
+    if (!period)
+        return null;
+    const value = daySerial(monthIndex, day);
+    const start = daySerial(period.start.monthIndex, period.start.day);
+    const end = daySerial(period.end.monthIndex, period.end.day);
+    const low = Math.min(start, end);
+    const high = Math.max(start, end);
+    if (value < low || value > high)
+        return null;
+    return value === low || value === high ? 'end' : 'mid';
+}
 function DayCell({
     className,
     day,
     picked,
+    ranged,
     label,
     onSelect,
     children,
@@ -49,6 +73,7 @@ function DayCell({
     className: string;
     day: number | null;
     picked: boolean;
+    ranged: boolean;
     label: string;
     onSelect: () => void;
     children: ReactNode;
@@ -58,7 +83,7 @@ function DayCell({
     return (
         <button
             type="button"
-            className={`${className}${picked ? ' is-picked' : ''}`}
+            className={`${className}${picked ? ' is-picked' : ''}${ranged ? ' is-range' : ''}`}
             aria-pressed={picked}
             aria-label={label}
             onClick={(event) => {
@@ -136,7 +161,7 @@ function MonthSheet({
     year,
     monthIndex,
     marksByDay,
-    selectedDay,
+    selectedPeriod,
     onSelectDay,
     onStep,
     onBack,
@@ -144,7 +169,7 @@ function MonthSheet({
     year: number;
     monthIndex: number;
     marksByDay: ReadonlyMap<string, VacationCalendarPaint[]>;
-    selectedDay: { monthIndex: number; day: number } | null;
+    selectedPeriod: VacationCalendarPeriod | null;
     onSelectDay: (monthIndex: number, day: number) => void;
     onStep: (delta: number) => void;
     onBack: () => void;
@@ -174,7 +199,8 @@ function MonthSheet({
                             key={`${monthIndex}-${index}`}
                             className={`vac-cal__cell vac-cal__cell--lg${day == null ? ' vac-cal__cell--empty' : ''}${weekend ? ' vac-cal__cell--weekend' : ''}${today ? ' vac-cal__cell--today' : ''}`}
                             day={day}
-                            picked={day != null && selectedDay?.monthIndex === monthIndex && selectedDay.day === day}
+                            picked={day != null && periodEdge(monthIndex, day, selectedPeriod) === 'end'}
+                            ranged={day != null && periodEdge(monthIndex, day, selectedPeriod) === 'mid'}
                             label={day == null ? '' : `${day} ${VACATION_MONTH_NAMES[monthIndex]} ${year}`}
                             onSelect={() => {
                                 if (day != null)
@@ -197,7 +223,7 @@ export function VacationYearCalendar({
     openToken = 0,
     requestedMonth = null,
     onMonthChange,
-    selectedDay = null,
+    selectedPeriod = null,
     onSelectDay,
 }: Props) {
     const stageRef = useRef<HTMLDivElement>(null);
@@ -388,7 +414,8 @@ export function VacationYearCalendar({
                                         key={`${index}-${cellIndex}`}
                                         className="vac-cal__cell"
                                         day={day}
-                                        picked={day != null && selectedDay?.monthIndex === index && selectedDay.day === day}
+                                        picked={day != null && periodEdge(index, day, selectedPeriod) === 'end'}
+                                        ranged={day != null && periodEdge(index, day, selectedPeriod) === 'mid'}
                                         label={day == null ? '' : `${day} ${name} ${year}`}
                                         onSelect={() => {
                                             if (day != null)
@@ -415,7 +442,7 @@ export function VacationYearCalendar({
                         year={year}
                         monthIndex={monthIndex}
                         marksByDay={marksByDay}
-                        selectedDay={selectedDay}
+                        selectedPeriod={selectedPeriod}
                         onSelectDay={(month, day) => onSelectDay?.(month, day)}
                         onStep={stepMonth}
                         onBack={closeMonth}

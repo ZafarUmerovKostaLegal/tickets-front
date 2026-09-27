@@ -572,9 +572,14 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
   padding: 0;
 }
 
-.vac-cal__cell.is-picked:not(.vac-cal__cell--lg) {
+.vac-cal__cell.is-picked:not(.vac-cal__cell--lg),
+.vac-cal__cell.is-range:not(.vac-cal__cell--lg) {
   background: color-mix(in srgb, var(--app-accent, #4f46e5) 16%, transparent);
   border-radius: 8px;
+}
+
+.vac-cal__cell--lg.is-range {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface, #fff));
 }
 
 .vac-cal__cell--lg.is-picked {
@@ -625,6 +630,13 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
   margin: 0.1rem 0 0;
   font-size: 1.15rem;
   letter-spacing: -0.03em;
+}
+
+.vac-day__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
 }
 
 .vac-day__close {

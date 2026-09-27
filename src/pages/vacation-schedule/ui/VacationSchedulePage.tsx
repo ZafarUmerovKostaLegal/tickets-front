@@ -13,7 +13,7 @@ import { VacationEmployeeDetailModal } from './VacationEmployeeDetailModal';
 import { VacationEmployeeSidebar } from './VacationEmployeeSidebar';
 import { VacationLeaveRequestsPanel } from './VacationLeaveRequestsPanel';
 import { VacationPeriodDocsModal } from './VacationPeriodDocsModal';
-import { VacationYearCalendar, type VacationCalendarPaint } from './VacationYearCalendar';
+import { VacationYearCalendar, type VacationCalendarPaint, type VacationCalendarPeriod } from './VacationYearCalendar';
 import {
     absenceRunAround,
     employeeMatchesStatus,
@@ -31,6 +31,10 @@ import './VacationSchedulePage.css';
 type View = 'calendar' | 'mine' | 'to_decide' | 'all';
 
 const VIEW_IDS = new Set<View>(['calendar', 'mine', 'to_decide', 'all']);
+
+function padIso(year: number, part: { monthIndex: number; day: number }): string {
+    return `${year}-${String(part.monthIndex + 1).padStart(2, '0')}-${String(part.day).padStart(2, '0')}`;
+}
 
 function parseView(raw: string | null): View | null {
     if (!raw || raw === 'schedule')
@@ -59,7 +63,7 @@ export function VacationSchedulePage() {
     const [refreshToken, setRefreshToken] = useState(0);
     const [scheduleYear, setScheduleYear] = useState(() => new Date().getFullYear());
     const [scheduleReload, setScheduleReload] = useState(0);
-    const [selectedDay, setSelectedDay] = useState<{ monthIndex: number; day: number } | null>(null);
+    const [selectedPeriod, setSelectedPeriod] = useState<VacationCalendarPeriod | null>(null);
     const [detailEmployeeId, setDetailEmployeeId] = useState<number | null>(null);
     const [docsTarget, setDocsTarget] = useState<{ employeeId: number; label: string; dateIso: string } | null>(null);
     const [statusFilter, setStatusFilter] = useState<VacationCalendarStatus>('all');
@@ -191,16 +195,23 @@ export function VacationSchedulePage() {
     const canEditSchedule = !loading && canEditVacationSchedule(user);
     const canViewDocs = !loading && canViewVacationManualEntryDocs(user);
     const dayRows = useMemo(() => {
-        if (!selectedDay)
+        if (!selectedPeriod)
             return [];
-        const iso = `${scheduleYear}-${String(selectedDay.monthIndex + 1).padStart(2, '0')}-${String(selectedDay.day).padStart(2, '0')}`;
+        const startIso = padIso(scheduleYear, selectedPeriod.start);
+        const endIso = padIso(scheduleYear, selectedPeriod.end);
+        const fromIso = startIso <= endIso ? startIso : endIso;
+        const toIso = startIso <= endIso ? endIso : startIso;
         const legendByKind = new Map(facts.legend.map((item) => [item.kind, item]));
         const rows: VacationDayDetailRow[] = [];
         for (const person of focusPeople) {
             const days = daysByEmployee.get(person.id) ?? [];
-            const kinds = [...new Set(days.filter((day) => day.iso === iso && !hiddenKinds.has(day.kind)).map((day) => day.kind))];
+            const inside = days.filter((day) => day.iso >= fromIso && day.iso <= toIso && !hiddenKinds.has(day.kind));
+            const kinds = [...new Set(inside.map((day) => day.kind))];
             for (const kind of kinds) {
-                const run = absenceRunAround(days, iso, kind);
+                const sample = inside.find((day) => day.kind === kind);
+                if (!sample)
+                    continue;
+                const run = absenceRunAround(days, sample.iso, kind);
                 if (!run)
                     continue;
                 const legendItem = legendByKind.get(kind);
@@ -217,7 +228,7 @@ export function VacationSchedulePage() {
         }
         rows.sort((a, b) => a.label.localeCompare(b.label, 'ru'));
         return rows;
-    }, [daysByEmployee, facts.legend, focusPeople, hiddenKinds, scheduleYear, selectedDay]);
+    }, [daysByEmployee, facts.legend, focusPeople, hiddenKinds, scheduleYear, selectedPeriod]);
     const openCalendarMonth = (month: number | null) => {
         setViewMonth(month);
         setOpenToken((value) => value + 1);
@@ -383,25 +394,31 @@ export function VacationSchedulePage() {
                                 openToken={openToken}
                                 requestedMonth={viewMonth}
                                 onMonthChange={setViewMonth}
-                                selectedDay={selectedDay}
-                                onSelectDay={(monthIndex, day) => setSelectedDay({ monthIndex, day })}
+                                selectedPeriod={selectedPeriod}
+                                onSelectDay={(monthIndex, day) => {
+                                    setSelectedPeriod((prev) => {
+                                        if (!prev || prev.start.monthIndex !== prev.end.monthIndex || prev.start.day !== prev.end.day)
+                                            return { start: { monthIndex, day }, end: { monthIndex, day } };
+                                        return { start: prev.start, end: { monthIndex, day } };
+                                    });
+                                }}
                             />
                             </div>
-                            {selectedDay ? (
+                            {selectedPeriod ? (
                                 <VacationDayDetails
                                     year={scheduleYear}
-                                    monthIndex={selectedDay.monthIndex}
-                                    day={selectedDay.day}
+                                    monthIndex={selectedPeriod.start.monthIndex}
+                                    day={selectedPeriod.start.day}
+                                    endMonthIndex={selectedPeriod.end.monthIndex}
+                                    endDay={selectedPeriod.end.day}
                                     rows={dayRows}
                                     showDocs={canViewDocs}
-                                    onClose={() => setSelectedDay(null)}
+                                    onClose={() => setSelectedPeriod(null)}
                                     onOpenCard={setDetailEmployeeId}
                                     onOpenDocs={(employeeId, label) => {
-                                        if (!selectedDay)
-                                            return;
-                                        const month = String(selectedDay.monthIndex + 1).padStart(2, '0');
-                                        const day = String(selectedDay.day).padStart(2, '0');
-                                        setDocsTarget({ employeeId, label, dateIso: `${scheduleYear}-${month}-${day}` });
+                                        const start = padIso(scheduleYear, selectedPeriod.start);
+                                        const end = padIso(scheduleYear, selectedPeriod.end);
+                                        setDocsTarget({ employeeId, label, dateIso: start <= end ? start : end });
                                     }}
                                 />
                             ) : null}
