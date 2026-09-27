@@ -11,7 +11,7 @@ function monthCells(year: number, monthIndex: number): Array<number | null> {
         cells.push(null);
     for (let day = 1; day <= days; day += 1)
         cells.push(day);
-    while (cells.length % 7 !== 0)
+    while (cells.length < 42)
         cells.push(null);
     return cells;
 }
@@ -25,8 +25,22 @@ type Props = {
     year?: number;
 };
 
+function DayNum({ year, monthIndex, day }: { year: number; monthIndex: number; day: number | null }) {
+    if (day == null)
+        return <span className="vac-cal__num vac-cal__num--empty" />;
+    const weekend = vacationDayIsWeekendRu(year, monthIndex, day);
+    const today = isToday(year, monthIndex, day);
+    return (
+        <span className={`vac-cal__num${weekend ? ' vac-cal__num--weekend' : ''}${today ? ' vac-cal__num--today' : ''}`}>
+            {day}
+        </span>
+    );
+}
+
 export function VacationYearCalendar({ year = new Date().getFullYear() }: Props) {
     const [monthIndex, setMonthIndex] = useState<number | null>(null);
+    const now = new Date();
+    const currentMonth = now.getFullYear() === year ? now.getMonth() : -1;
 
     if (monthIndex != null) {
         const cells = monthCells(year, monthIndex);
@@ -39,21 +53,14 @@ export function VacationYearCalendar({ year = new Date().getFullYear() }: Props)
                     <h2 className="vac-cal__month-title">{VACATION_MONTH_NAMES[monthIndex]} {year}</h2>
                 </header>
                 <div className="vac-cal__sheet">
-                    {WEEKDAYS.map((label) => (
-                        <div key={label} className="vac-cal__wd vac-cal__wd--lg">{label}</div>
+                    {WEEKDAYS.map((label, weekday) => (
+                        <div key={label} className={`vac-cal__wd vac-cal__wd--lg${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
                     ))}
-                    {cells.map((day, index) => {
-                        const weekend = day != null && vacationDayIsWeekendRu(year, monthIndex, day);
-                        const today = day != null && isToday(year, monthIndex, day);
-                        return (
-                            <div
-                                key={`${monthIndex}-${index}`}
-                                className={`vac-cal__cell vac-cal__cell--lg${weekend ? ' vac-cal__cell--weekend' : ''}${today ? ' vac-cal__cell--today' : ''}`}
-                            >
-                                {day ?? ''}
-                            </div>
-                        );
-                    })}
+                    {cells.map((day, index) => (
+                        <div key={`${monthIndex}-${index}`} className="vac-cal__cell vac-cal__cell--lg">
+                            <DayNum year={year} monthIndex={monthIndex} day={day} />
+                        </div>
+                    ))}
                 </div>
             </section>
         );
@@ -66,26 +73,19 @@ export function VacationYearCalendar({ year = new Date().getFullYear() }: Props)
                 return (
                     <article
                         key={name}
-                        className="vac-cal__month"
+                        className={`vac-cal__month${index === currentMonth ? ' vac-cal__month--now' : ''}`}
                         onDoubleClick={() => setMonthIndex(index)}
                     >
                         <h2 className="vac-cal__name">{name}</h2>
                         <div className="vac-cal__mini">
-                            {WEEKDAYS.map((label) => (
-                                <div key={label} className="vac-cal__wd">{label}</div>
+                            {WEEKDAYS.map((label, weekday) => (
+                                <div key={label} className={`vac-cal__wd${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
                             ))}
-                            {cells.map((day, cellIndex) => {
-                                const weekend = day != null && vacationDayIsWeekendRu(year, index, day);
-                                const today = day != null && isToday(year, index, day);
-                                return (
-                                    <div
-                                        key={`${index}-${cellIndex}`}
-                                        className={`vac-cal__cell${weekend ? ' vac-cal__cell--weekend' : ''}${today ? ' vac-cal__cell--today' : ''}`}
-                                    >
-                                        {day ?? ''}
-                                    </div>
-                                );
-                            })}
+                            {cells.map((day, cellIndex) => (
+                                <div key={`${index}-${cellIndex}`} className="vac-cal__cell">
+                                    <DayNum year={year} monthIndex={index} day={day} />
+                                </div>
+                            ))}
                         </div>
                     </article>
                 );
