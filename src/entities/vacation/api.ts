@@ -213,6 +213,47 @@ export async function syncVacationScheduleEmployees(year: number): Promise<Vacat
         await throwVacationRequestError(res);
     return res.json() as Promise<VacationScheduleEmployeesSyncResultApi>;
 }
+export type VacationRosterHidden = {
+    authUserIds: number[];
+    employeeIds: number[];
+};
+
+function coerceRosterHidden(raw: unknown): VacationRosterHidden {
+    const o = raw != null && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+    const users = o.authUserIds ?? o.auth_user_ids;
+    const employees = o.employeeIds ?? o.employee_ids;
+    const nums = (value: unknown) => Array.isArray(value)
+        ? value.map((item) => Number(item)).filter((n) => Number.isFinite(n) && n > 0)
+        : [];
+    return { authUserIds: nums(users), employeeIds: nums(employees) };
+}
+
+export async function getVacationRosterHidden(): Promise<VacationRosterHidden> {
+    const res = await vacationApiFetch('/api/v1/vacations/schedule/roster-hidden');
+    if (res.status === 401)
+        throw new Error('Не авторизован');
+    if (!res.ok)
+        await throwVacationRequestError(res);
+    return coerceRosterHidden(await res.json());
+}
+
+export async function patchVacationRosterHidden(body: {
+    authUserId?: number;
+    employeeId?: number;
+    hidden: boolean;
+}): Promise<VacationRosterHidden> {
+    const res = await vacationApiFetch('/api/v1/vacations/schedule/roster-hidden', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+    if (res.status === 401)
+        throw new Error('Не авторизован');
+    if (!res.ok)
+        await throwVacationRequestError(res);
+    return coerceRosterHidden(await res.json());
+}
+
 export async function listVacationScheduleEmployees(year: number, options?: ListVacationScheduleEmployeesOptions): Promise<VacationScheduleEmployeeApi[]> {
     const q = new URLSearchParams({ year: String(year) });
     if (options?.onlyRegistered === false)

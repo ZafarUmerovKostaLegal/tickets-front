@@ -1,11 +1,27 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { AppBackButton, AppHomeLogo } from '@shared/ui';
 import type { VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
 import { VacationEmployeeSidebar } from './VacationEmployeeSidebar';
 import './VacationSchedulePage.css';
 
 export function VacationSchedulePage() {
-    const [selectedEmployee, setSelectedEmployee] = useState<VacationScheduleEmployeeRow | null>(null);
+    const [selectedEmployees, setSelectedEmployees] = useState<VacationScheduleEmployeeRow[]>([]);
+    const [teamFilterId, setTeamFilterId] = useState<string | null>(null);
+    const selectedIds = new Set(selectedEmployees.map((row) => row.id));
+
+    const onTeamFilter = useCallback((teamId: string | null, employees: VacationScheduleEmployeeRow[]) => {
+        setTeamFilterId(teamId);
+        if (teamId != null)
+            setSelectedEmployees(employees);
+    }, []);
+
+    const onToggleEmployee = useCallback((employee: VacationScheduleEmployeeRow) => {
+        setSelectedEmployees((prev) => (
+            prev.some((row) => row.id === employee.id)
+                ? prev.filter((row) => row.id !== employee.id)
+                : [...prev, employee]
+        ));
+    }, []);
 
     return (
         <div className="vacation-schedule-page">
@@ -19,8 +35,10 @@ export function VacationSchedulePage() {
                 </header>
                 <div className="vacation-schedule-page__body">
                     <VacationEmployeeSidebar
-                        selectedId={selectedEmployee?.id ?? null}
-                        onSelect={setSelectedEmployee}
+                        selectedIds={selectedIds}
+                        teamFilterId={teamFilterId}
+                        onTeamFilter={onTeamFilter}
+                        onToggleEmployee={onToggleEmployee}
                     />
                 </div>
             </main>

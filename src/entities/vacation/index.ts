@@ -2,6 +2,8 @@ export {
     getVacationKindCodes,
     getVacationKindLegend,
     listVacationScheduleEmployees,
+    getVacationRosterHidden,
+    patchVacationRosterHidden,
     syncVacationScheduleEmployees,
     listVacationAbsenceDays,
     listVacationAttendanceMarkers,
