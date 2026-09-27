@@ -40,6 +40,123 @@
 }
 
 
+.vacation-schedule-page__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.vac-staff {
+  width: 300px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--app-surface, #fff);
+  border-right: 1px solid var(--app-border, #e2e8f0);
+}
+
+.vac-staff__head {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1rem 0.9rem 0.75rem;
+  border-bottom: 1px solid var(--app-border, #e2e8f0);
+}
+
+.vac-staff__title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-staff__search {
+  width: 100%;
+  box-sizing: border-box;
+  height: 36px;
+  padding: 0 0.75rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--app-text, #0f172a);
+  background: var(--app-bg, #f8fafc);
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 10px;
+}
+
+.vac-staff__search:focus {
+  outline: none;
+  border-color: var(--app-accent, #4f46e5);
+}
+
+.vac-staff__list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.35rem 0.5rem 1rem;
+}
+
+.vac-staff__note {
+  margin: 0.75rem 0.4rem;
+  font-size: 0.8125rem;
+  color: var(--app-muted, #64748b);
+}
+
+.vac-staff__note--err {
+  color: #dc2626;
+}
+
+.vac-staff__team {
+  margin-top: 0.85rem;
+}
+
+.vac-staff__team-name {
+  margin: 0;
+  padding: 0.35rem 0.55rem 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--app-text, #0f172a);
+}
+
+.vac-staff__people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.vac-staff__person {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+  padding: 0.45rem 0.65rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  font-size: 0.875rem;
+  color: var(--app-text, #0f172a);
+  cursor: pointer;
+}
+
+.vac-staff__person:hover {
+  background: var(--app-bg, #f8fafc);
+}
+
+.vac-staff__person--on {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 12%, var(--app-surface, #fff));
+  color: var(--app-accent, #4f46e5);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 0 var(--app-accent, #4f46e5);
+}
+
 .vacation-schedule-page__header {
   padding-inline: 0.75rem;
   width: 100%;
@@ -449,6 +566,17 @@
 }
 
 @media (max-width: 768px) {
+  .vacation-schedule-page__body {
+    flex-direction: column;
+  }
+
+  .vac-staff {
+    width: 100%;
+    max-height: 46dvh;
+    border-right: none;
+    border-bottom: 1px solid var(--app-border, #e2e8f0);
+  }
+
   .vacation-schedule-page__main {
     max-height: none;
     min-height: 100dvh;
