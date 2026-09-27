@@ -91,8 +91,9 @@ export function VacationCalendarFilters({
                     </button>
                 </div>
             </div>
+            {legend.some((item) => (kindCounts.get(item.kind) ?? 0) > 0) ? (
             <div className="vac-toolbar__legend" role="group" aria-label="Легенда">
-                {legend.map((item) => {
+                {legend.filter((item) => (kindCounts.get(item.kind) ?? 0) > 0).map((item) => {
                     const hidden = hiddenKinds.has(item.kind);
                     return (
                         <button
@@ -100,6 +101,7 @@ export function VacationCalendarFilters({
                             type="button"
                             className={`vac-filters__legend-row${hidden ? ' vac-filters__legend-row--off' : ''}`}
                             aria-pressed={!hidden}
+                            title={hidden ? `Показать: ${item.label}` : `Скрыть: ${item.label}`}
                             onClick={() => onToggleKind(item.kind)}
                         >
                             <i style={{ background: item.color }} aria-hidden />
@@ -109,11 +111,10 @@ export function VacationCalendarFilters({
                     );
                 })}
             </div>
-            <div className="vac-toolbar__today">
-                <span className="vac-toolbar__today-label">Сегодня, {todayLabel}</span>
-                {todayRows.length === 0 ? (
-                    <span className="vac-filters__empty">отсутствий нет</span>
-                ) : (
+            ) : null}
+            {todayRows.length > 0 ? (
+                <div className="vac-toolbar__today">
+                    <span className="vac-toolbar__today-label" title={todayLabel}>Сегодня</span>
                     <ul className="vac-toolbar__today-list">
                         {todayRows.map((row) => (
                             <li key={`${row.employeeId}-${row.kindLabel}`}>
@@ -123,13 +124,12 @@ export function VacationCalendarFilters({
                                         <strong>{row.label}</strong>
                                         <span>{row.rangeLabel}</span>
                                     </span>
-                                    <span className="vac-filters__kind" style={{ color: row.color }}>{row.kindLabel}</span>
                                 </button>
                             </li>
                         ))}
                     </ul>
-                )}
-            </div>
+                </div>
+            ) : null}
         </div>
     );
 }
