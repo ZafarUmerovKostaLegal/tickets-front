@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode, type TransitionEvent } from 'react';
 import { VACATION_MONTH_NAMES, vacationDayIsWeekendRu } from '../lib/vacationScheduleModel';
 
 const WEEKDAYS = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс'] as const;
@@ -23,7 +23,53 @@ function isToday(year: number, monthIndex: number, day: number): boolean {
 
 type Props = {
     year?: number;
+    marksByDay?: ReadonlyMap<string, VacationCalendarPaint[]>;
+    openToken?: number;
+    requestedMonth?: number | null;
+    onMonthChange?: (month: number | null) => void;
+    selectedDay?: { monthIndex: number; day: number } | null;
+    onSelectDay?: (monthIndex: number, day: number) => void;
 };
+
+export type VacationCalendarPaint = {
+    employeeId: number;
+    label: string;
+    color: string;
+    kindLabel: string;
+};
+
+function DayCell({
+    className,
+    day,
+    picked,
+    label,
+    onSelect,
+    children,
+}: {
+    className: string;
+    day: number | null;
+    picked: boolean;
+    label: string;
+    onSelect: () => void;
+    children: ReactNode;
+}) {
+    if (day == null)
+        return <div className={className}>{children}</div>;
+    return (
+        <button
+            type="button"
+            className={`${className}${picked ? ' is-picked' : ''}`}
+            aria-pressed={picked}
+            aria-label={label}
+            onClick={(event) => {
+                event.stopPropagation();
+                onSelect();
+            }}
+        >
+            {children}
+        </button>
+    );
+}
 
 function DayNum({ year, monthIndex, day }: { year: number; monthIndex: number; day: number | null }) {
     if (day == null)
@@ -37,66 +83,330 @@ function DayNum({ year, monthIndex, day }: { year: number; monthIndex: number; d
     );
 }
 
-export function VacationYearCalendar({ year = new Date().getFullYear() }: Props) {
-    const [monthIndex, setMonthIndex] = useState<number | null>(null);
-    const now = new Date();
-    const currentMonth = now.getFullYear() === year ? now.getMonth() : -1;
-
-    if (monthIndex != null) {
-        const cells = monthCells(year, monthIndex);
+function DayMarks({ items, compact }: { items: VacationCalendarPaint[] | undefined; compact: boolean }) {
+    if (!items || items.length === 0)
+        return null;
+    if (compact) {
+        const colors = [...new Set(items.map((item) => item.color))].slice(0, 4);
         return (
-            <section className="vac-cal vac-cal--month" aria-label={`${VACATION_MONTH_NAMES[monthIndex]} ${year}`}>
-                <header className="vac-cal__month-bar">
-                    <button type="button" className="vac-cal__back" onClick={() => setMonthIndex(null)}>
-                        К году
-                    </button>
-                    <h2 className="vac-cal__month-title">{VACATION_MONTH_NAMES[monthIndex]} {year}</h2>
-                </header>
-                <div className="vac-cal__sheet">
-                    {WEEKDAYS.map((label, weekday) => (
-                        <div key={label} className={`vac-cal__wd vac-cal__wd--lg${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
-                    ))}
-                    {cells.map((day, index) => {
-                        const weekend = day != null && vacationDayIsWeekendRu(year, monthIndex, day);
-                        const today = day != null && isToday(year, monthIndex, day);
-                        return (
-                            <div
-                                key={`${monthIndex}-${index}`}
-                                className={`vac-cal__cell vac-cal__cell--lg${day == null ? ' vac-cal__cell--empty' : ''}${weekend ? ' vac-cal__cell--weekend' : ''}${today ? ' vac-cal__cell--today' : ''}`}
-                            >
-                                <DayNum year={year} monthIndex={monthIndex} day={day} />
-                            </div>
-                        );
-                    })}
-                </div>
-            </section>
+            <span className="vac-cal__dots" aria-hidden>
+                {colors.map((color) => <i key={color} style={{ background: color }} />)}
+            </span>
         );
     }
+    const shown = items.slice(0, 3);
+    const rest = items.length - shown.length;
+    return (
+        <span className="vac-cal__marks">
+            {shown.map((item) => (
+                <span key={`${item.employeeId}-${item.kindLabel}`} className="vac-cal__mark" title={item.kindLabel}>
+                    <i style={{ background: item.color }} aria-hidden />
+                    <span>{item.label}</span>
+                </span>
+            ))}
+            {rest > 0 ? <span className="vac-cal__mark-more">+{rest}</span> : null}
+        </span>
+    );
+}
+
+type FlyBox = { left: number; top: number; width: number; height: number };
+type FlyMotion = 'enter' | 'opening' | 'open' | 'exit';
+
+function prefersReducedMotion(): boolean {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function measureCard(stage: HTMLElement, card: HTMLElement): FlyBox {
+    const stageRect = stage.getBoundingClientRect();
+    const cardRect = card.getBoundingClientRect();
+    return {
+        left: cardRect.left - stageRect.left,
+        top: cardRect.top - stageRect.top,
+        width: cardRect.width,
+        height: cardRect.height,
+    };
+}
+
+function measureStage(stage: HTMLElement): FlyBox {
+    const stageRect = stage.getBoundingClientRect();
+    return { left: 0, top: 0, width: stageRect.width, height: stageRect.height };
+}
+
+function MonthSheet({
+    year,
+    monthIndex,
+    marksByDay,
+    selectedDay,
+    onSelectDay,
+    onBack,
+}: {
+    year: number;
+    monthIndex: number;
+    marksByDay: ReadonlyMap<string, VacationCalendarPaint[]>;
+    selectedDay: { monthIndex: number; day: number } | null;
+    onSelectDay: (monthIndex: number, day: number) => void;
+    onBack: () => void;
+}) {
+    const cells = monthCells(year, monthIndex);
+    return (
+        <>
+            <header className="vac-cal__month-bar">
+                <button type="button" className="vac-cal__back" onClick={onBack}>
+                    К году
+                </button>
+                <h2 className="vac-cal__month-title">{VACATION_MONTH_NAMES[monthIndex]} {year}</h2>
+            </header>
+            <div className="vac-cal__sheet">
+                {WEEKDAYS.map((label, weekday) => (
+                    <div key={label} className={`vac-cal__wd vac-cal__wd--lg${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
+                ))}
+                {cells.map((day, index) => {
+                    const weekend = day != null && vacationDayIsWeekendRu(year, monthIndex, day);
+                    const today = day != null && isToday(year, monthIndex, day);
+                    return (
+                        <DayCell
+                            key={`${monthIndex}-${index}`}
+                            className={`vac-cal__cell vac-cal__cell--lg${day == null ? ' vac-cal__cell--empty' : ''}${weekend ? ' vac-cal__cell--weekend' : ''}${today ? ' vac-cal__cell--today' : ''}`}
+                            day={day}
+                            picked={day != null && selectedDay?.monthIndex === monthIndex && selectedDay.day === day}
+                            label={day == null ? '' : `${day} ${VACATION_MONTH_NAMES[monthIndex]} ${year}`}
+                            onSelect={() => {
+                                if (day != null)
+                                    onSelectDay(monthIndex, day);
+                            }}
+                        >
+                            <DayNum year={year} monthIndex={monthIndex} day={day} />
+                            {day != null ? <DayMarks items={marksByDay.get(`${monthIndex}-${day}`)} compact={false} /> : null}
+                        </DayCell>
+                    );
+                })}
+            </div>
+        </>
+    );
+}
+
+export function VacationYearCalendar({
+    year = new Date().getFullYear(),
+    marksByDay = new Map(),
+    openToken = 0,
+    requestedMonth = null,
+    onMonthChange,
+    selectedDay = null,
+    onSelectDay,
+}: Props) {
+    const stageRef = useRef<HTMLDivElement>(null);
+    const cardRefs = useRef<Array<HTMLElement | null>>([]);
+    const frameRef = useRef(0);
+    const [monthIndex, setMonthIndex] = useState<number | null>(null);
+    const [motion, setMotion] = useState<FlyMotion | null>(null);
+    const [box, setBox] = useState<FlyBox | null>(null);
+    const [anim, setAnim] = useState(false);
+    const motionRef = useRef<FlyMotion | null>(null);
+    motionRef.current = motion;
+    const onMonthChangeRef = useRef(onMonthChange);
+    onMonthChangeRef.current = onMonthChange;
+    const requestedMonthRef = useRef(requestedMonth);
+    requestedMonthRef.current = requestedMonth;
+    const openTokenSeen = useRef(openToken);
+    const now = new Date();
+    const currentMonth = now.getFullYear() === year ? now.getMonth() : -1;
+    const yearRecede = motion === 'enter' || motion === 'opening' || motion === 'open';
+
+    const reset = () => {
+        setMonthIndex(null);
+        setMotion(null);
+        setBox(null);
+        setAnim(false);
+    };
+
+    useEffect(() => () => cancelAnimationFrame(frameRef.current), []);
+
+    useEffect(() => {
+        if (motion !== 'enter')
+            return;
+        let inner = 0;
+        const outer = requestAnimationFrame(() => {
+            inner = requestAnimationFrame(() => {
+                const stage = stageRef.current;
+                if (!stage)
+                    return;
+                setBox(measureStage(stage));
+                setAnim(true);
+                setMotion('opening');
+            });
+        });
+        return () => {
+            cancelAnimationFrame(outer);
+            cancelAnimationFrame(inner);
+        };
+    }, [motion]);
+
+    useEffect(() => {
+        if (motion !== 'open')
+            return;
+        const stage = stageRef.current;
+        if (!stage)
+            return;
+        const apply = () => setBox(measureStage(stage));
+        const observer = new ResizeObserver(apply);
+        observer.observe(stage);
+        return () => observer.disconnect();
+    }, [motion]);
+
+    useEffect(() => {
+        if (motion !== 'opening' && motion !== 'exit')
+            return;
+        const timer = window.setTimeout(() => {
+            if (motionRef.current === 'opening') {
+                setAnim(false);
+                setMotion('open');
+                return;
+            }
+            if (motionRef.current === 'exit')
+                reset();
+        }, 700);
+        return () => window.clearTimeout(timer);
+    }, [motion]);
+
+    const openMonth = (index: number) => {
+        onMonthChangeRef.current?.(index);
+        if (motion)
+            return;
+        const stage = stageRef.current;
+        const card = cardRefs.current[index];
+        if (!stage || !card) {
+            setMonthIndex(index);
+            setMotion('open');
+            return;
+        }
+        if (prefersReducedMotion()) {
+            setBox(measureStage(stage));
+            setMonthIndex(index);
+            setMotion('open');
+            return;
+        }
+        setBox(measureCard(stage, card));
+        setAnim(false);
+        setMonthIndex(index);
+        setMotion('enter');
+    };
+
+    const closeMonth = () => {
+        onMonthChangeRef.current?.(null);
+        if (monthIndex == null || motion === 'exit' || motion === 'enter' || motion == null)
+            return;
+        const stage = stageRef.current;
+        const card = cardRefs.current[monthIndex];
+        if (!stage || !card || prefersReducedMotion()) {
+            reset();
+            return;
+        }
+        const target = measureCard(stage, card);
+        if (motion === 'opening') {
+            setBox(target);
+            setMotion('exit');
+            return;
+        }
+        setAnim(true);
+        cancelAnimationFrame(frameRef.current);
+        frameRef.current = requestAnimationFrame(() => {
+            setBox(target);
+            setMotion('exit');
+        });
+    };
+
+    useEffect(() => {
+        if (openToken === openTokenSeen.current)
+            return;
+        openTokenSeen.current = openToken;
+        const month = requestedMonthRef.current;
+        if (month == null)
+            closeMonth();
+        else
+            openMonth(month);
+    }, [openToken]);
+
+    const onFlyEnd = (event: TransitionEvent<HTMLElement>) => {
+        if (event.target !== event.currentTarget || event.propertyName !== 'width')
+            return;
+        if (motionRef.current === 'opening') {
+            setAnim(false);
+            setMotion('open');
+            return;
+        }
+        if (motionRef.current === 'exit')
+            reset();
+    };
+
+    const flyClass = [
+        'vac-cal',
+        'vac-cal--month',
+        'vac-cal--fly',
+        anim ? 'is-anim' : '',
+        motion === 'opening' || motion === 'open' ? 'is-full' : '',
+        motion === 'exit' ? 'is-exit' : '',
+    ].filter(Boolean).join(' ');
 
     return (
-        <section className="vac-cal" aria-label={`Календарь ${year}`}>
-            {VACATION_MONTH_NAMES.map((name, index) => {
-                const cells = monthCells(year, index);
-                return (
-                    <article
-                        key={name}
-                        className={`vac-cal__month${index === currentMonth ? ' vac-cal__month--now' : ''}`}
-                        onDoubleClick={() => setMonthIndex(index)}
-                    >
-                        <h2 className="vac-cal__name">{name}</h2>
-                        <div className="vac-cal__mini">
-                            {WEEKDAYS.map((label, weekday) => (
-                                <div key={label} className={`vac-cal__wd${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
-                            ))}
-                            {cells.map((day, cellIndex) => (
-                                <div key={`${index}-${cellIndex}`} className="vac-cal__cell">
-                                    <DayNum year={year} monthIndex={index} day={day} />
-                                </div>
-                            ))}
-                        </div>
-                    </article>
-                );
-            })}
-        </section>
+        <div className="vac-cal-stage" ref={stageRef}>
+            <section
+                className={`vac-cal${yearRecede ? ' vac-cal--recede' : ''}`}
+                aria-label={`Календарь ${year}`}
+                aria-hidden={yearRecede}
+            >
+                {VACATION_MONTH_NAMES.map((name, index) => {
+                    const cells = monthCells(year, index);
+                    const source = monthIndex === index;
+                    return (
+                        <article
+                            key={name}
+                            ref={(node) => { cardRefs.current[index] = node; }}
+                            className={`vac-cal__month${index === currentMonth ? ' vac-cal__month--now' : ''}${source ? ' is-source' : ''}`}
+                            onDoubleClick={() => openMonth(index)}
+                        >
+                            <h2 className="vac-cal__name">{name}</h2>
+                            <div className="vac-cal__mini">
+                                {WEEKDAYS.map((label, weekday) => (
+                                    <div key={label} className={`vac-cal__wd${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
+                                ))}
+                                {cells.map((day, cellIndex) => (
+                                    <DayCell
+                                        key={`${index}-${cellIndex}`}
+                                        className="vac-cal__cell"
+                                        day={day}
+                                        picked={day != null && selectedDay?.monthIndex === index && selectedDay.day === day}
+                                        label={day == null ? '' : `${day} ${name} ${year}`}
+                                        onSelect={() => {
+                                            if (day != null)
+                                                onSelectDay?.(index, day);
+                                        }}
+                                    >
+                                        <DayNum year={year} monthIndex={index} day={day} />
+                                        {day != null ? <DayMarks items={marksByDay.get(`${index}-${day}`)} compact /> : null}
+                                    </DayCell>
+                                ))}
+                            </div>
+                        </article>
+                    );
+                })}
+            </section>
+            {monthIndex != null && box ? (
+                <section
+                    className={flyClass}
+                    style={{ left: box.left, top: box.top, width: box.width, height: box.height }}
+                    aria-label={`${VACATION_MONTH_NAMES[monthIndex]} ${year}`}
+                    onTransitionEnd={onFlyEnd}
+                >
+                    <MonthSheet
+                        year={year}
+                        monthIndex={monthIndex}
+                        marksByDay={marksByDay}
+                        selectedDay={selectedDay}
+                        onSelectDay={(month, day) => onSelectDay?.(month, day)}
+                        onBack={closeMonth}
+                    />
+                </section>
+            ) : null}
+        </div>
     );
 }

@@ -78,9 +78,13 @@ function groupEmployeesByTeam(rows: VacationScheduleEmployeeRow[], teams: TimeTr
 }
 
 type Props = {
+    year: number;
     selectedIds: ReadonlySet<number>;
+    allowedIds: ReadonlySet<number> | null;
     onSelectEmployees: (employees: VacationScheduleEmployeeRow[]) => void;
     onToggleEmployee: (employee: VacationScheduleEmployeeRow) => void;
+    onShownEmployees: (rows: Array<VacationScheduleEmployeeRow & { teamName: string }>) => void;
+    onDirectory: (rows: Array<VacationScheduleEmployeeRow & { teamName: string }>) => void;
 };
 
 function teamFilterLabel(ids: ReadonlySet<string>, groups: TeamGroup[]): string {
@@ -101,7 +105,7 @@ function teamFilterLabel(ids: ReadonlySet<string>, groups: TeamGroup[]): string 
     return `${n} ${word}`;
 }
 
-export function VacationEmployeeSidebar({ selectedIds, onSelectEmployees, onToggleEmployee }: Props) {
+export function VacationEmployeeSidebar({ year, selectedIds, allowedIds, onSelectEmployees, onToggleEmployee, onShownEmployees, onDirectory }: Props) {
     const { user, loading: userLoading } = useCurrentUser();
     const [groups, setGroups] = useState<TeamGroup[]>([]);
     const [hiddenUsers, setHiddenUsers] = useState<Set<number>>(() => new Set());
@@ -122,7 +126,6 @@ export function VacationEmployeeSidebar({ selectedIds, onSelectEmployees, onTogg
         if (userLoading)
             return;
         let cancelled = false;
-        const year = new Date().getFullYear();
         const canEdit = canEditVacationSchedule(user);
         setLoading(true);
         setError(null);
@@ -174,7 +177,7 @@ export function VacationEmployeeSidebar({ selectedIds, onSelectEmployees, onTogg
         return () => {
             cancelled = true;
         };
-    }, [user, userLoading]);
+    }, [user, userLoading, year]);
 
     useEffect(() => {
         if (!teamMenuOpen)
@@ -226,13 +229,48 @@ export function VacationEmployeeSidebar({ selectedIds, onSelectEmployees, onTogg
             const employees = group.employees.filter((row) => {
                 if (rowIsHidden(row, hiddenUsers, hiddenEmployees))
                     return false;
+                if (allowedIds && !allowedIds.has(row.id))
+                    return false;
                 return !q || row.label.toLocaleLowerCase('ru').includes(q);
             });
             if (employees.length > 0)
                 shown.push({ ...group, employees });
         }
         return shown;
-    }, [filteredByTeam, hiddenEmployees, hiddenUsers, query]);
+    }, [allowedIds, filteredByTeam, hiddenEmployees, hiddenUsers, query]);
+
+    const onShownEmployeesRef = useRef(onShownEmployees);
+    onShownEmployeesRef.current = onShownEmployees;
+    const onDirectoryRef = useRef(onDirectory);
+    onDirectoryRef.current = onDirectory;
+
+    useEffect(() => {
+        const seen = new Set<number>();
+        const people: Array<VacationScheduleEmployeeRow & { teamName: string }> = [];
+        for (const group of groups) {
+            for (const row of group.employees) {
+                if (rowIsHidden(row, hiddenUsers, hiddenEmployees) || seen.has(row.id))
+                    continue;
+                seen.add(row.id);
+                people.push({ ...row, teamName: group.name });
+            }
+        }
+        onDirectoryRef.current(people);
+    }, [groups, hiddenEmployees, hiddenUsers]);
+
+    useEffect(() => {
+        const seen = new Set<number>();
+        const people: Array<VacationScheduleEmployeeRow & { teamName: string }> = [];
+        for (const group of shownGroups) {
+            for (const row of group.employees) {
+                if (seen.has(row.id))
+                    continue;
+                seen.add(row.id);
+                people.push({ ...row, teamName: group.name });
+            }
+        }
+        onShownEmployeesRef.current(people);
+    }, [shownGroups]);
 
     const allHiddenRows = useMemo(() => {
         const q = query.trim().toLocaleLowerCase('ru');
