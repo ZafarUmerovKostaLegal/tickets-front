@@ -3,6 +3,7 @@ import { AppBackButton, AppHomeLogo } from '@shared/ui';
 import type { VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
 import { VacationAbsenceRequestModal } from './VacationAbsenceRequestModal';
 import { VacationEmployeeSidebar } from './VacationEmployeeSidebar';
+import { VacationYearCalendar } from './VacationYearCalendar';
 import './VacationSchedulePage.css';
 
 export function VacationSchedulePage() {
@@ -49,6 +50,7 @@ export function VacationSchedulePage() {
                         onSelectEmployees={onSelectEmployees}
                         onToggleEmployee={onToggleEmployee}
                     />
+                    <VacationYearCalendar />
                 </div>
             </main>
             <VacationAbsenceRequestModal
