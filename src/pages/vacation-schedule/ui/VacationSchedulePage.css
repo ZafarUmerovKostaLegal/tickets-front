@@ -390,7 +390,12 @@
 .vac-gantt__cell,
 .vac-gantt__sum {
   min-height: 42px;
+  border: none;
   border-right: 1px solid #f1f5f9;
+  background: transparent;
+  font: inherit;
+  padding: 0;
+  cursor: pointer;
 }
 
 .vac-gantt__head-day {
@@ -407,8 +412,20 @@
   background: color-mix(in srgb, #7c3aed 8%, transparent);
 }
 
+.vac-gantt__head-day.is-picked,
+.vac-gantt__cell.is-picked,
+.vac-gantt__sum.is-picked:not(.is-hot) {
+  background: color-mix(in srgb, #7c3aed 18%, #fff);
+}
+
+.vac-gantt__head-day.is-picked b {
+  color: #6d28d9;
+}
+
 .vac-gantt__bar {
   position: absolute;
+  z-index: 1;
+  cursor: pointer;
   top: 8px;
   height: 26px;
   display: flex;
@@ -421,6 +438,10 @@
   font-weight: 700;
   white-space: nowrap;
   box-sizing: border-box;
+}
+
+.vac-gantt__bar.is-picked {
+  box-shadow: 0 0 0 2px #6d28d9;
 }
 
 .vac-gantt__bar.is-pending,

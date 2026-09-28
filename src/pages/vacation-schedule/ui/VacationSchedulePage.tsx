@@ -709,6 +709,15 @@ export function VacationSchedulePage() {
                                 selectedIds={selectedIds}
                                 bars={timeline.bars}
                                 outCounts={timeline.outCounts}
+                                pickedStart={selectedPeriod && viewMonth != null && selectedPeriod.start.monthIndex === viewMonth ? Math.min(selectedPeriod.start.day, selectedPeriod.end.day) : null}
+                                pickedEnd={selectedPeriod && viewMonth != null && selectedPeriod.end.monthIndex === viewMonth ? Math.max(selectedPeriod.start.day, selectedPeriod.end.day) : null}
+                                onPickRange={(startDay, endDay) => {
+                                    const month = viewMonth ?? 0;
+                                    setSelectedPeriod({
+                                        start: { monthIndex: month, day: startDay },
+                                        end: { monthIndex: month, day: endDay },
+                                    });
+                                }}
                                 onToggle={(person) => {
                                     setSelectedEmployees((prev) => (
                                         prev.some((row) => row.id === person.id)

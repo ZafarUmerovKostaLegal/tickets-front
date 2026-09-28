@@ -24,10 +24,13 @@ type Props = {
     selectedIds: ReadonlySet<number>;
     bars: VacationTimelineBar[];
     outCounts: number[];
+    pickedStart: number | null;
+    pickedEnd: number | null;
+    onPickRange: (startDay: number, endDay: number) => void;
     onToggle: (person: Person) => void;
 };
 
-export function VacationMonthTimeline({ year, monthIndex, daysInMonth, todayDay, people, selectedIds, bars, outCounts, onToggle }: Props) {
+export function VacationMonthTimeline({ year, monthIndex, daysInMonth, todayDay, people, selectedIds, bars, outCounts, pickedStart, pickedEnd, onPickRange, onToggle }: Props) {
     const groups: { name: string; people: Person[] }[] = [];
     for (const person of people) {
         const last = groups[groups.length - 1];
@@ -38,6 +41,7 @@ export function VacationMonthTimeline({ year, monthIndex, daysInMonth, todayDay,
     }
     const days = Array.from({ length: daysInMonth }, (_, index) => index + 1);
     const selected = selectedIds.size > 0;
+    const picked = (day: number) => pickedStart != null && pickedEnd != null && day >= pickedStart && day <= pickedEnd;
 
     return (
         <div className="vac-gantt">
@@ -47,10 +51,10 @@ export function VacationMonthTimeline({ year, monthIndex, daysInMonth, todayDay,
                         <div className="vac-gantt__name vac-gantt__name--head">Сотрудники</div>
                         <div className="vac-gantt__track">
                             {days.map((day) => (
-                                <div key={day} className={`vac-gantt__head-day${todayDay === day ? ' is-today' : ''}`}>
+                                <button type="button" key={day} className={`vac-gantt__head-day${todayDay === day ? ' is-today' : ''}${picked(day) ? ' is-picked' : ''}`} onClick={() => onPickRange(day, day)}>
                                     <b>{day}</b>
                                     <span>{WEEK[(new Date(year, monthIndex, day).getDay() + 6) % 7]}</span>
-                                </div>
+                                </button>
                             ))}
                             {todayDay != null ? (
                                 <i className="vac-gantt__today" style={{ left: `${((todayDay - 0.5) / daysInMonth) * 100}%` }} />
@@ -71,12 +75,15 @@ export function VacationMonthTimeline({ year, monthIndex, daysInMonth, todayDay,
                                         </button>
                                         <div className="vac-gantt__track">
                                             {days.map((day) => (
-                                                <div key={day} className={`vac-gantt__cell${todayDay === day ? ' is-today' : ''}`} />
+                                                <button type="button" key={day} className={`vac-gantt__cell${todayDay === day ? ' is-today' : ''}${picked(day) ? ' is-picked' : ''}`} aria-label={`${day}`} onClick={() => onPickRange(day, day)} />
                                             ))}
                                             {personBars.map((bar) => (
                                                 <span
                                                     key={`${bar.employeeId}-${bar.startDay}-${bar.label}-${bar.pending}`}
-                                                    className={`vac-gantt__bar${bar.pending ? ' is-pending' : ''}${bar.remote ? ' is-remote' : ''}${bar.unpaid ? ' is-unpaid' : ''}`}
+                                                    className={`vac-gantt__bar${bar.pending ? ' is-pending' : ''}${bar.remote ? ' is-remote' : ''}${bar.unpaid ? ' is-unpaid' : ''}${picked(bar.startDay) && picked(bar.endDay) ? ' is-picked' : ''}`}
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={() => onPickRange(bar.startDay, bar.endDay)}
                                                     style={{
                                                         left: `${((bar.startDay - 1) / daysInMonth) * 100}%`,
                                                         width: `${((bar.endDay - bar.startDay + 1) / daysInMonth) * 100}%`,
