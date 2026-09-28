@@ -76,7 +76,10 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
         };
     }, []);
 
-    const clientName = useMemo(() => new Map(clients.map((client) => [client.id, client.name])), [clients]);
+    const templateChoices = useMemo(
+        () => [{ id: '', name: 'Без шаблона' }, ...templates.map((item) => ({ id: item.id, name: item.name }))],
+        [templates],
+    );
     const userName = useMemo(() => {
         const map = new Map<number, string>();
         for (const user of users)
@@ -295,7 +298,7 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
         <section className="tt-inv-page__section tt-inv-combined">
             <div className="tt-inv-page__section-head">
                 <h2 className="tt-inv-page__section-title">Сводный счёт</h2>
-                <p className="tt-inv-page__section-desc">Один счёт плательщику за несколько проектов, в том числе чужих. По умолчанию доля считается по часам табеля; можно разделить сумму поровну.</p>
+                <p className="tt-inv-page__section-desc">Один счёт плательщику за несколько проектов, в том числе чужих. Доля считается по часам табеля или делится поровну.</p>
             </div>
             <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
                 <div className="tt-inv-dialog__field">
@@ -320,65 +323,87 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                         aria-labelledby="tt-inv-combined-payer-lbl"
                     />
                 </div>
-                <label className="tt-inv-dialog__field">
-                    <span className="tt-inv-dialog__label">Шаблон</span>
-                    <select className="tt-inv-dialog__control" value={templateId} onChange={(event) => applyTemplate(event.target.value)}>
-                        <option value="">Без шаблона</option>
-                        {templates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}
-                    </select>
-                    {templateId ? (
-                        <button type="button" className="tt-inv-combined__link" onClick={removeTemplate}>Удалить шаблон</button>
-                    ) : null}
-                </label>
+                <div className="tt-inv-dialog__field">
+                    <div className="tt-inv-combined__label-row">
+                        <label id="tt-inv-combined-template-lbl" className="tt-inv-dialog__label" htmlFor="tt-inv-combined-template-btn">Шаблон</label>
+                        {templateId ? (
+                            <button type="button" className="tt-inv-combined__link" onClick={removeTemplate}>Удалить</button>
+                        ) : null}
+                    </div>
+                    <SearchableSelect<{ id: string; name: string }>
+                        className="tsp-srch tt-inv-dialog-searchable"
+                        buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn"
+                        buttonId="tt-inv-combined-template-btn"
+                        portalDropdown
+                        portalZIndex={12050}
+                        portalMinWidth={320}
+                        placeholder="Без шаблона"
+                        emptyListText="Нет шаблонов"
+                        noMatchText="Шаблон не найден"
+                        value={templateId}
+                        items={templateChoices}
+                        getOptionValue={(item) => item.id}
+                        getOptionLabel={(item) => item.name}
+                        getSearchText={(item) => item.name}
+                        onSelect={(item) => applyTemplate(item.id)}
+                        aria-labelledby="tt-inv-combined-template-lbl"
+                    />
+                </div>
             </div>
-            <label className="tt-inv-dialog__field" style={{ marginTop: '0.75rem' }}>
+            <label className="tt-inv-dialog__field tt-inv-combined__block">
                 <span className="tt-inv-dialog__label">Заголовок услуг</span>
-                <textarea className="tt-inv-dialog__control" rows={3} value={feeTitle} onChange={(event) => setFeeTitle(event.target.value)} placeholder="Fees for services in the period… under the engagement agreement with…" />
+                <textarea className="tt-inv-dialog__control tt-inv-combined__textarea" rows={3} value={feeTitle} onChange={(event) => setFeeTitle(event.target.value)} placeholder="Fees for services in the period… under the engagement agreement with…" />
             </label>
             <div className="tt-inv-combined__alloc" role="group" aria-label="Как распределить сумму">
                 <button type="button" className={allocation === 'hours' ? 'is-on' : ''} onClick={() => setAllocation('hours')}>По наработанным часам</button>
                 <button type="button" className={allocation === 'equal' ? 'is-on' : ''} onClick={() => setAllocation('equal')}>Поровну по проектам</button>
             </div>
-            <label className="tt-inv-dialog__field">
-                <span className="tt-inv-dialog__label">Проекты, в том числе чужие</span>
-                <input className="tt-inv-dialog__control" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти проект или клиента" />
-            </label>
-            <div className="tt-inv-combined__actions" style={{ marginTop: '0.35rem' }}>
-                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setProjectIds(visibleProjects.map((project) => project.id))} disabled={visibleProjects.length === 0}>Выбрать найденные</button>
-                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setProjectIds([])} disabled={projectIds.length === 0}>Снять все</button>
+            <div className="tt-inv-combined__projects-head">
+                <label className="tt-inv-dialog__field">
+                    <span className="tt-inv-dialog__label">Проекты, в том числе чужие</span>
+                    <input className="tt-inv-dialog__control" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Найти проект или клиента" />
+                </label>
+                <div className="tt-inv-combined__projects-tools">
+                    <span className="tt-inv-combined__count">{projectIds.length} выбрано</span>
+                    <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setProjectIds(visibleProjects.map((project) => project.id))} disabled={visibleProjects.length === 0}>Выбрать найденные</button>
+                    <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setProjectIds([])} disabled={projectIds.length === 0}>Снять все</button>
+                </div>
             </div>
             <ul className="tt-inv-combined__projects">
                 {visibleProjects.length === 0 ? (
                     <li className="tt-inv-combined__empty">{projects.length === 0 ? 'Проекты загружаются…' : 'Ничего не найдено'}</li>
-                ) : visibleProjects.map((project) => (
-                    <li key={project.id}>
-                        <label>
-                            <input type="checkbox" checked={projectIds.includes(project.id)} onChange={() => toggleProject(project.id)} />
-                            <span>{project.code ? `${project.name} (${project.code})` : project.name}</span>
-                            <em>{clientName.get(project.client_id) ?? 'Без клиента'}</em>
-                        </label>
-                    </li>
-                ))}
+                ) : visibleProjects.map((project) => {
+                    const checked = projectIds.includes(project.id);
+                    return (
+                        <li key={project.id} className={checked ? 'is-on' : ''}>
+                            <label>
+                                <input className="tt-inv-combined__check" type="checkbox" checked={checked} onChange={() => toggleProject(project.id)} />
+                                <span>{project.code ? `${project.name} (${project.code})` : project.name}</span>
+                                <em>{clientName.get(project.client_id) ?? 'Без клиента'}</em>
+                            </label>
+                        </li>
+                    );
+                })}
             </ul>
-            <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
+            <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2 tt-inv-combined__block">
                 <div className="tt-inv-dialog__field">
                     <span className="tt-inv-dialog__label">С</span>
-                    <DatePicker value={from} max={to || undefined} onChange={setFrom} portal portalZIndex={12100} showChevron />
+                    <DatePicker className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={from} max={to || undefined} onChange={setFrom} portal portalZIndex={12100} showChevron />
                 </div>
                 <div className="tt-inv-dialog__field">
                     <span className="tt-inv-dialog__label">По</span>
-                    <DatePicker value={to} min={from || undefined} onChange={setTo} portal portalZIndex={12100} showChevron />
+                    <DatePicker className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={to} min={from || undefined} onChange={setTo} portal portalZIndex={12100} showChevron />
                 </div>
                 <div className="tt-inv-dialog__field">
                     <span className="tt-inv-dialog__label">Дата счёта</span>
-                    <DatePicker value={issueDate} max={dueDate || undefined} onChange={setIssueDate} portal portalZIndex={12100} showChevron />
+                    <DatePicker className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={issueDate} max={dueDate || undefined} onChange={setIssueDate} portal portalZIndex={12100} showChevron />
                 </div>
                 <div className="tt-inv-dialog__field">
                     <span className="tt-inv-dialog__label">Срок оплаты</span>
-                    <DatePicker value={dueDate} min={issueDate || undefined} onChange={setDueDate} portal portalZIndex={12100} showChevron />
+                    <DatePicker className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={dueDate} min={issueDate || undefined} onChange={setDueDate} portal portalZIndex={12100} showChevron />
                 </div>
             </div>
-            <label className="tt-inv-dialog__field">
+            <label className="tt-inv-dialog__field tt-inv-combined__block">
                 <span className="tt-inv-dialog__label">Номер</span>
                 <input className="tt-inv-dialog__control" value={number} onChange={(event) => setNumber(event.target.value)} placeholder="Пусто — номер назначит система" />
             </label>
@@ -424,8 +449,11 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                 <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={() => void createDraft()} disabled={busy || !payerId || time.length + expenses.length === 0}>{busy ? 'Создание…' : 'Создать черновик'}</button>
             </div>
             <div className="tt-inv-combined__template">
-                <input className="tt-inv-dialog__control" value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Имя шаблона для следующих клиентов" />
-                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={persistTemplate}>Сохранить шаблон</button>
+                <label className="tt-inv-dialog__field">
+                    <span className="tt-inv-dialog__label">Сохранить как шаблон</span>
+                    <input className="tt-inv-dialog__control" value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Имя для следующих счетов" />
+                </label>
+                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={persistTemplate}>Сохранить</button>
             </div>
             {preview ? (
                 <div className="tt-inv-combined__preview" role="dialog" aria-modal="true">
