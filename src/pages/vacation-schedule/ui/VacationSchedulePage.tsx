@@ -496,6 +496,27 @@ export function VacationSchedulePage() {
         setViewMonth(month);
         setOpenToken((value) => value + 1);
     };
+    const stepCalendarMonth = (delta: number) => {
+        const current = viewMonth ?? today.getMonth();
+        let month = current + delta;
+        let year = scheduleYear;
+        if (month < 0) {
+            month = 11;
+            year -= 1;
+        }
+        else if (month > 11) {
+            month = 0;
+            year += 1;
+        }
+        year = Math.min(2100, Math.max(2000, year));
+        setScheduleYear(year);
+        setViewMonth(month);
+    };
+    const showToday = () => {
+        const now = new Date();
+        setScheduleYear(now.getFullYear());
+        setViewMonth(now.getMonth());
+    };
     const requestsOpen = view !== 'calendar';
     const showToDecideAttention = view === 'calendar' && canDecideRequests && counts.toDecideCount > 0;
     const showMinePendingAttention = view === 'calendar' && counts.minePendingCount > 0;
@@ -603,7 +624,7 @@ export function VacationSchedulePage() {
                         </div>
                     ) : (
                         <>
-                        <div className="vac-board vac-board--plan">
+                        <div className={`vac-board vac-board--plan${viewMonth != null ? ' vac-board--month' : ''}`}>
                             <VacationEmployeeSidebar
                                 year={scheduleYear}
                                 selectedIds={selectedIds}
@@ -630,6 +651,9 @@ export function VacationSchedulePage() {
                                 status={statusFilter}
                                 onStatusChange={setStatusFilter}
                                 monthOpen={viewMonth != null}
+                                monthIndex={viewMonth}
+                                onMonthStep={stepCalendarMonth}
+                                onToday={showToday}
                                 onShowYear={() => openCalendarMonth(null)}
                                 onShowMonth={() => openCalendarMonth(scheduleYear === today.getFullYear() ? today.getMonth() : (viewMonth ?? 0))}
                                 legend={facts.legend}

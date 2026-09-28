@@ -267,7 +267,7 @@
   display: flex;
 }
 
-.vac-board--plan > .vac-staff {
+.vac-board--month > .vac-staff {
   display: none;
 }
 
@@ -499,8 +499,22 @@
 }
 
 .vac-toolbar .vac-filters__year {
-  width: 132px;
+  width: auto;
+  min-width: 148px;
   flex-shrink: 0;
+}
+
+.vac-filters__today {
+  height: 36px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--app-surface, #fff);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--app-text, #334155);
+  cursor: pointer;
 }
 
 .vac-toolbar .vac-filters__chips {
