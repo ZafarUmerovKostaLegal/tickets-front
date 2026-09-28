@@ -1,6 +1,7 @@
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { resolveLegalFirmBankingLines, type InvoiceLegalPageOverrides } from './invoiceLegalPageModel';
+import type { CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import type { InvoiceTimeReportPack } from './invoiceTimeReportModel';
 
 export const TIME_REPORT_DETAIL_ROWS = 14;
@@ -94,4 +95,6 @@ export type InvoicePreviewPackInput = {
     selectedPageNumbers?: number[];
     /** Split the name after "/", "*" or "=" in Description into its own time-report column. */
     showServiceInitiatorName?: boolean;
+    /** Present only for a combined invoice. Ordinary invoices leave this unset. */
+    combinedReport?: CombinedReportSnapshot | null;
 };

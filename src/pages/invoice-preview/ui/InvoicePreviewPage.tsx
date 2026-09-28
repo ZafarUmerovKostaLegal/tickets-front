@@ -32,7 +32,9 @@ import {
 } from '../lib/invoicePreviewPageSlots';
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
 import { resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from '../lib/resolveInvoiceTimeReportPack';
+import type { CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
+import { CombinedReportPage } from './CombinedReportPage';
 import { InvoiceTimeReportPage } from './InvoiceTimeReportPage';
 import { InvoiceLegalInvoicePage } from './InvoiceLegalInvoicePage';
 import '@fontsource/carlito/400.css';
@@ -157,6 +159,7 @@ export function InvoicePreviewPage() {
     const [includedPageKeys, setIncludedPageKeys] = useState<Set<InvoicePreviewPageKey> | null>(null);
     const [timeReportPack, setTimeReportPack] = useState<InvoiceTimeReportPack | null>(null);
     const [showInitiatorName, setShowInitiatorName] = useState(false);
+    const [combinedReport, setCombinedReport] = useState<CombinedReportSnapshot | null>(null);
     const sheetStackRef = useRef<HTMLDivElement>(null);
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activePage, setActivePage] = useState(1);
@@ -235,6 +238,7 @@ export function InvoicePreviewPage() {
             setCoverModel((prev) => (prev ? applyCoverDocumentOverrides(prev, doc.cover) : prev));
         }
         setShowInitiatorName(doc.showServiceInitiatorName === true);
+        setCombinedReport(doc.combinedReport ?? null);
         // timeReport is applied after live resolve (mergeTimeReportPackPreferLiveExpenses)
         // so expense USD stays locked to the registry, not a stale invoice FX snapshot.
     }, []);
@@ -250,6 +254,7 @@ export function InvoicePreviewPage() {
         setIncludedPageKeys(null);
         setTimeReportPack(null);
         setShowInitiatorName(false);
+        setCombinedReport(null);
         setLegalOverrides(firmBankingToLegalOverrides());
         const sessionNow = readInvoicePreviewSession();
         (async () => {
@@ -360,6 +365,7 @@ export function InvoicePreviewPage() {
             cover: coverModel,
             timeReport: pack,
             showServiceInitiatorName: showInitiatorName,
+            combinedReport,
             includedPageKeys: included,
             persistIncludedPages: true,
         });
@@ -435,7 +441,7 @@ export function InvoicePreviewPage() {
         finally {
             setSaveBusy(false);
         }
-    }, [session, coverModel, timeReportPack, showInitiatorName, legalOverrides, includedPageKeys, invoiceStatus, pushToast]);
+    }, [session, coverModel, timeReportPack, showInitiatorName, combinedReport, legalOverrides, includedPageKeys, invoiceStatus, pushToast]);
 
     const togglePageEdit = useCallback(() => {
         if (editMode) {
@@ -468,8 +474,10 @@ export function InvoicePreviewPage() {
     const resolvedTimeReportPack = ensureMehnatSeparatedPack(timeReportPack ?? timeReportFallback);
 
     const timeReportChunks = useMemo(
-        () => splitDetailRowsForPagedTimeReport(resolvedTimeReportPack.detailSlots),
-        [resolvedTimeReportPack.detailSlots],
+        () => combinedReport
+            ? [resolvedTimeReportPack.detailSlots]
+            : splitDetailRowsForPagedTimeReport(resolvedTimeReportPack.detailSlots),
+        [combinedReport, resolvedTimeReportPack.detailSlots],
     );
 
     const allPageSlots = useMemo(
@@ -818,7 +826,8 @@ export function InvoicePreviewPage() {
         legalOverrides,
         selectedPageNumbers: exportPageNumbers,
         showServiceInitiatorName: showInitiatorName,
-    }), [coverModel, session, resolvedTimeReportPack, legalOverrides, exportPageNumbers, showInitiatorName]);
+        combinedReport,
+    }), [coverModel, session, resolvedTimeReportPack, legalOverrides, exportPageNumbers, showInitiatorName, combinedReport]);
 
     const handleDownloadWord = useCallback(async () => {
         if (exportPageNumbers.length === 0) {
@@ -1015,6 +1024,9 @@ export function InvoicePreviewPage() {
                             : slot.kind === 'timeReport' && timeReportChunks[slot.chunkIndex]
                               ? (
                                   <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--timerpt">
+                                    {combinedReport
+                                      ? <CombinedReportPage report={combinedReport} pageNumber={2 + slot.chunkIndex} />
+                                      : (
                                     <InvoiceTimeReportPage
                                       model={displayModel}
                                       pack={resolvedTimeReportPack}
@@ -1027,6 +1039,7 @@ export function InvoicePreviewPage() {
                                       showSummarySection={slot.chunkIndex === lastTr}
                                       showInitiatorName={showInitiatorName}
                                     />
+                                      )}
                                   </div>
                                 )
                               : slot.kind === 'invoice'
@@ -1282,6 +1295,9 @@ export function InvoicePreviewPage() {
                               className={`tt-inv-a4-page tt-inv-a4-page--timerpt${editingPage === pageNum ? ' tt-inv-a4-page--editing' : ''}`}
                               aria-label={`Страница ${pageNum} из ${pageCount} — time report${slot.chunkIndex > 0 ? ', продолжение' : ''}`}
                             >
+                              {combinedReport
+                                ? <CombinedReportPage report={combinedReport} pageNumber={pageNum} />
+                                : (
                               <InvoiceTimeReportPage
                                 model={displayModel}
                                 pack={resolvedTimeReportPack}
@@ -1300,6 +1316,7 @@ export function InvoicePreviewPage() {
                                 onPatchSummaryRow={patchSummaryRow}
                                 onPatchPack={patchTimeReportPack}
                               />
+                                )}
                             </div>
                           );
                       }

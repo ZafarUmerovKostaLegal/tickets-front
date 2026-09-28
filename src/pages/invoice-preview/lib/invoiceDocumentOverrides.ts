@@ -2,6 +2,8 @@ import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { formatCoverServicesPeriod } from './invoiceCoverLetterI18n';
 import { formatLegalRibbonPeriodMonth } from './invoiceLegalPageI18n';
 import type { InvoiceLegalPageOverrides } from './invoiceLegalPageModel';
+import type { CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { isCombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import type { InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import {
     isInvoicePreviewPageKey,
@@ -145,6 +147,9 @@ export type InvoiceDocumentOverridesV1 = {
     timeReport?: InvoiceTimeReportPack | null;
     /** Show the service-initiator name (text after "/", "*" or "=" in Description) as its own column. */
     showServiceInitiatorName?: boolean;
+    /** Combined invoice keeps the letterhead fees report. Ordinary invoices omit this. */
+    reportLayout?: 'combined';
+    combinedReport?: CombinedReportSnapshot;
     /** Pages kept in the invoice pack; omitted/null = all pages. */
     includedPageKeys?: InvoicePreviewPageKey[] | null;
 };
@@ -242,6 +247,10 @@ export function parseInvoiceDocumentOverrides(raw: unknown): InvoiceDocumentOver
         out.timeReport = o.timeReport;
     if (o.showServiceInitiatorName === true)
         out.showServiceInitiatorName = true;
+    if (o.reportLayout === 'combined' && isCombinedReportSnapshot(o.combinedReport)) {
+        out.reportLayout = 'combined';
+        out.combinedReport = o.combinedReport;
+    }
     const included = parseIncludedPageKeys(o.includedPageKeys ?? o.included_page_keys);
     if (included)
         out.includedPageKeys = included;
@@ -253,6 +262,7 @@ export function buildInvoiceDocumentOverridesPayload(input: {
     cover: InvoiceCoverLetterModel;
     timeReport: InvoiceTimeReportPack;
     showServiceInitiatorName?: boolean;
+    combinedReport?: CombinedReportSnapshot | null;
     includedPageKeys?: Iterable<InvoicePreviewPageKey> | null;
     /** When true, always write includedPageKeys (even if it equals “all”). */
     persistIncludedPages?: boolean;
@@ -267,6 +277,7 @@ export function buildInvoiceDocumentOverridesPayload(input: {
         cover: pickCoverDocumentOverrides(input.cover),
         timeReport: input.timeReport,
         ...(input.showServiceInitiatorName ? { showServiceInitiatorName: true } : {}),
+        ...(input.combinedReport ? { reportLayout: 'combined' as const, combinedReport: input.combinedReport } : {}),
         ...(shouldPersistPages && included ? { includedPageKeys: included } : {}),
     };
 }

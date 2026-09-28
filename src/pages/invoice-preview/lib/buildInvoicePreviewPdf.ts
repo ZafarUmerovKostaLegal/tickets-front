@@ -30,6 +30,7 @@ import {
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { COVER_LETTERHEAD_LOGO_ASPECT, LEGAL_VERT_LOGO_ASPECT, rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
+import { countCombinedReportPages, drawCombinedReportPages } from './drawCombinedFeesReportPdf';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
@@ -1685,6 +1686,29 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
                 coverSignatureImage = null;
             }
         }
+    }
+
+    if (input.combinedReport) {
+        const reportPages = Math.max(1, countCombinedReportPages(input.combinedReport));
+        const pdfPageCount = 2 + reportPages;
+        const previewPageCount = 3;
+        const selectedPreview = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;
+        const selectedPdf = remapPreviewPageSelectionToPdf(selectedPreview, previewPageCount, pdfPageCount);
+        const includePage = (n: number) => !selectedPdf || selectedPdf.has(n);
+        if (includePage(1)) {
+            const p1 = doc.addPage([W, H]);
+            drawCoverPage(p1, model, font, fontBold, coverLogoImage, coverSignatureImage);
+        }
+        if (Array.from({ length: reportPages }, (_, i) => 2 + i).some((n) => includePage(n)))
+            drawCombinedReportPages(doc, font, fontBold, coverLogoImage, input.combinedReport);
+        if (includePage(pdfPageCount)) {
+            const pInv = doc.addPage([W, H]);
+            drawLegalInvoicePdfPage(pInv, model, session, font, fontBold, legalLogoImage, legalOverrides);
+        }
+        const bytes = await doc.save();
+        const copy = new Uint8Array(bytes.byteLength);
+        copy.set(bytes);
+        return new Blob([copy], { type: 'application/pdf' });
     }
 
     const liveTimeReport = await resolveInvoiceTimeReportPack(session, model);

@@ -1,4 +1,5 @@
 import type { TimeManagerClientProjectRow, UnbilledExpenseEntryDto, UnbilledTimeEntryDto } from '@entities/time-tracking';
+import { invoiceClientDescription } from './invoiceClientDescription';
 
 export type CombinedAllocation = 'hours' | 'equal';
 
@@ -81,6 +82,121 @@ export function buildCombinedShares(
             total: shareFees + shareExp,
         };
     });
+}
+
+export type CombinedReportLine = {
+    date: string;
+    user: string;
+    description: string;
+    hours: number;
+    amount: number;
+};
+
+export type CombinedReportSnapshot = {
+    feeTitle: string;
+    currency: string;
+    projects: Array<{ name: string; lines: CombinedReportLine[] }>;
+    people: Array<{
+        initials: string;
+        name: string;
+        title: string;
+        hours: number;
+        rate: number;
+        amount: number;
+    }>;
+    expenses: Array<{ description: string; date: string; amount: number }>;
+    shares: Array<{ name: string; percent: number; total: number }>;
+    totalHours: number;
+    totalFees: number;
+    totalExpenses: number;
+};
+
+function initialsOf(name: string, stored: string | null | undefined): string {
+    const saved = stored?.trim();
+    if (saved)
+        return saved;
+    const letters = name.split(/\s+/).filter(Boolean).map((part) => part[0] ?? '').join('');
+    return letters.toUpperCase().slice(0, 4) || '—';
+}
+
+export function buildCombinedReportSnapshot(input: {
+    feeTitle: string;
+    currency: string;
+    projects: TimeManagerClientProjectRow[];
+    time: CombinedTimeLine[];
+    expenses: CombinedExpenseLine[];
+    shares: CombinedShare[];
+    users: Array<{ id: number; display_name?: string | null; email?: string | null; position?: string | null; initials?: string | null }>;
+    totalHours: number;
+    totalFees: number;
+    totalExpenses: number;
+}): CombinedReportSnapshot {
+    const userById = new Map(input.users.map((user) => [user.id, user]));
+    const personTotals = new Map<number, { hours: number; amount: number }>();
+    for (const line of input.time) {
+        const prev = personTotals.get(line.authUserId) ?? { hours: 0, amount: 0 };
+        prev.hours += line.billableHours ?? line.hours;
+        prev.amount += line.billableAmount;
+        personTotals.set(line.authUserId, prev);
+    }
+    return {
+        feeTitle: input.feeTitle.trim() || 'Fees for services',
+        currency: input.currency || 'USD',
+        projects: input.projects.flatMap((project) => {
+            const lines = input.time.filter((line) => line.projectId === project.id);
+            if (lines.length === 0)
+                return [];
+            return [{
+                name: project.name,
+                lines: lines.map((line) => {
+                    const user = userById.get(line.authUserId);
+                    return {
+                        date: line.workDate.slice(0, 10),
+                        user: user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId),
+                        description: invoiceClientDescription(line.description) || '—',
+                        hours: line.billableHours ?? line.hours,
+                        amount: line.billableAmount,
+                    };
+                }),
+            }];
+        }),
+        people: [...personTotals.entries()].map(([id, totals]) => {
+            const user = userById.get(id);
+            const name = user?.display_name?.trim() || user?.email?.trim() || String(id);
+            return {
+                initials: initialsOf(name, user?.initials),
+                name,
+                title: user?.position?.trim() || '—',
+                hours: totals.hours,
+                rate: totals.hours > 0 ? totals.amount / totals.hours : 0,
+                amount: totals.amount,
+            };
+        }),
+        expenses: input.expenses.map((line) => ({
+            description: line.description?.trim() || '—',
+            date: line.expenseDate.slice(0, 10),
+            amount: line.equivalentAmount,
+        })),
+        shares: input.shares.map((share) => ({
+            name: share.projectName,
+            percent: share.percent,
+            total: share.total,
+        })),
+        totalHours: input.totalHours,
+        totalFees: input.totalFees,
+        totalExpenses: input.totalExpenses,
+    };
+}
+
+export function isCombinedReportSnapshot(raw: unknown): raw is CombinedReportSnapshot {
+    if (!raw || typeof raw !== 'object')
+        return false;
+    const o = raw as Record<string, unknown>;
+    return typeof o.feeTitle === 'string'
+        && typeof o.currency === 'string'
+        && Array.isArray(o.projects)
+        && Array.isArray(o.people)
+        && Array.isArray(o.shares);
 }
 
 export function formatCombinedShareNote(shares: CombinedShare[]): string {

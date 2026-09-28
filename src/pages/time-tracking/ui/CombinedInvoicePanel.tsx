@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
     createInvoice,
+    patchInvoice,
     ensureInvoiceFxRatesForBilling,
     fetchUnbilledExpenses,
     fetchUnbilledTimeEntries,
@@ -14,6 +15,7 @@ import { DatePicker } from '@shared/ui/DatePicker';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { CombinedInvoiceDocument } from './CombinedInvoiceDocument';
 import {
+    buildCombinedReportSnapshot,
     buildCombinedShares,
     formatCombinedShareNote,
     loadCombinedInvoiceTemplates,
@@ -259,6 +261,18 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                 expenseDates,
                 currency,
             });
+            const snapshot = buildCombinedReportSnapshot({
+                feeTitle,
+                currency,
+                projects: selectedProjects,
+                time,
+                expenses,
+                shares,
+                users,
+                totalHours,
+                totalFees,
+                totalExpenses: totalExp,
+            });
             const created = await createInvoice({
                 clientId: payerId,
                 issueDate,
@@ -278,6 +292,13 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                 taxPercent: 0,
                 tax2Percent: 0,
                 discountPercent: 0,
+            });
+            await patchInvoice(created.id, {
+                documentOverrides: {
+                    v: 1,
+                    reportLayout: 'combined',
+                    combinedReport: snapshot,
+                },
             });
             onCreated(created.id);
         }

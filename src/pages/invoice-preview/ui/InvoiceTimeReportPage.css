@@ -1,5 +1,102 @@
 
 
+.tt-inv-creport__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tt-inv-creport__logo {
+  display: block;
+  width: 148px;
+  height: auto;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.tt-inv-creport__head address {
+  margin: 0;
+  max-width: 16rem;
+  font-style: normal;
+  font-size: 8px;
+  line-height: 1.35;
+  text-align: right;
+  color: #4b5563;
+}
+
+.tt-inv-creport__head address span {
+  display: block;
+}
+
+.tt-inv-creport__lead {
+  margin: 0 0 0.8rem;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  color: #18181b;
+}
+
+.tt-inv-creport__block {
+  margin: 0 0 0.8rem;
+}
+
+.tt-inv-creport__block h2 {
+  margin: 0 0 0.3rem;
+  font-size: 12px;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.tt-inv-creport table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+}
+
+.tt-inv-creport th,
+.tt-inv-creport td {
+  padding: 0.28rem 0.35rem;
+  border-bottom: 1px solid #d4d4d8;
+  text-align: left;
+  vertical-align: top;
+  color: #1a1a1a;
+  background: transparent;
+}
+
+.tt-inv-creport th {
+  font-weight: 700;
+  border-bottom: 1.5px solid #18181b;
+}
+
+.tt-inv-creport td.num,
+.tt-inv-creport th.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.tt-inv-creport tfoot td {
+  font-weight: 700;
+  border-top: 1.5px solid #18181b;
+  border-bottom: 0;
+}
+
+.tt-inv-creport__share {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tt-inv-creport__cur {
+  margin: 0 0 0.15rem;
+  text-align: right;
+  font-size: 10px;
+  font-weight: 700;
+}
+
 .tt-inv-tr {
   box-sizing: border-box;
   position: relative;

@@ -394,14 +394,17 @@ export function InvoiceDetailPage() {
       const { buildInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewPdf');
       const { splitDetailRowsForPagedTimeReport } = await import('@pages/invoice-preview/lib/invoiceTimeReportChunking');
       const { pageNumbersForIncludedKeys } = await import('@pages/invoice-preview/lib/invoicePreviewPageSlots');
-      const trChunks = doc?.timeReport
-        ? splitDetailRowsForPagedTimeReport(doc.timeReport.detailSlots).length
-        : 1;
+      const trChunks = doc?.combinedReport
+        ? 1
+        : (doc?.timeReport
+          ? splitDetailRowsForPagedTimeReport(doc.timeReport.detailSlots).length
+          : 1);
       const blob = await buildInvoicePreviewPdfBlob({
         model,
         session: previewSession,
         timeReportPack: doc?.timeReport ?? undefined,
         legalOverrides: doc?.legal ?? undefined,
+        combinedReport: doc?.combinedReport,
         selectedPageNumbers: pageNumbersForIncludedKeys(doc?.includedPageKeys, trChunks),
       });
       const base = buildInvoicePreviewExportBasename({
@@ -457,14 +460,17 @@ export function InvoiceDetailPage() {
       const { buildInvoicePreviewDocxBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewDocx');
       const { splitDetailRowsForPagedTimeReport } = await import('@pages/invoice-preview/lib/invoiceTimeReportChunking');
       const { pageNumbersForIncludedKeys } = await import('@pages/invoice-preview/lib/invoicePreviewPageSlots');
-      const trChunks = doc?.timeReport
-        ? splitDetailRowsForPagedTimeReport(doc.timeReport.detailSlots).length
-        : 1;
+      const trChunks = doc?.combinedReport
+        ? 1
+        : (doc?.timeReport
+          ? splitDetailRowsForPagedTimeReport(doc.timeReport.detailSlots).length
+          : 1);
       const blob = await buildInvoicePreviewDocxBlob({
         model,
         session: previewSession,
         timeReportPack: doc?.timeReport ?? undefined,
         legalOverrides: doc?.legal ?? undefined,
+        combinedReport: doc?.combinedReport,
         selectedPageNumbers: pageNumbersForIncludedKeys(doc?.includedPageKeys, trChunks),
       });
       const base = buildInvoicePreviewExportBasename({

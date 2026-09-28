@@ -39,6 +39,7 @@ import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
+import { combinedReportDocxChildren } from './combinedReportDocx';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
@@ -941,7 +942,7 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
         await overlayExpenseAmountsFromRegistry(timeReportPackRaw, projectId),
     );
     const trChunks = splitDetailRowsForPagedTimeReport(timeReportPack.detailSlots);
-    const pageCount = invoicePreviewPageCount(trChunks.length);
+    const pageCount = input.combinedReport ? 3 : invoicePreviewPageCount(trChunks.length);
     const selected = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;
     const includePage = (n: number) => !selected || selected.has(n);
 
@@ -962,7 +963,15 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
         });
     }
 
-    trChunks.forEach((chunk, i) => {
+    if (input.combinedReport) {
+        if (includePage(2)) {
+            sections.push({
+                ...sectionPage,
+                children: combinedReportDocxChildren(input.combinedReport),
+            });
+        }
+    }
+    else trChunks.forEach((chunk, i) => {
         const pageNum = 2 + i;
         if (!includePage(pageNum))
             return;
