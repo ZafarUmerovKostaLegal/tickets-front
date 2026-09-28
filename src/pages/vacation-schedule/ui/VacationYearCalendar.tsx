@@ -51,6 +51,16 @@ function daySerial(monthIndex: number, day: number): number {
     return monthIndex * 40 + day;
 }
 
+function monthHot(occupancy: ReadonlyMap<string, number> | undefined, monthIndex: number): boolean {
+    if (!occupancy)
+        return false;
+    for (const [key, count] of occupancy) {
+        if (key.startsWith(`${monthIndex}-`) && count >= 4)
+            return true;
+    }
+    return false;
+}
+
 function monthLoad(occupancy: ReadonlyMap<string, number> | undefined, monthIndex: number): number {
     if (!occupancy)
         return 0;
@@ -431,17 +441,24 @@ export function VacationYearCalendar({
                             onDoubleClick={() => (onOpenMonth ? onOpenMonth(index) : openMonth(index))}
                         >
                             <h2 className="vac-cal__name">
-                                {name}
-                                <span className="vac-cal__load">{monthLoad(occupancy, index)} чел.-дн.</span>
+                                <span>{name}</span>
+                                {monthLoad(occupancy, index) > 0 ? (
+                                    <span className={`vac-cal__load${monthHot(occupancy, index) ? ' is-warn' : ''}`}>
+                                        {monthHot(occupancy, index) ? '⚠ ' : ''}{monthLoad(occupancy, index)} дн.
+                                    </span>
+                                ) : null}
                             </h2>
                             <div className="vac-cal__mini">
                                 {WEEKDAYS.map((label, weekday) => (
                                     <div key={label} className={`vac-cal__wd${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
                                 ))}
-                                {cells.map((day, cellIndex) => (
+                                {cells.map((day, cellIndex) => {
+                                    const count = day == null ? 0 : (occupancy?.get(`${index}-${day}`) ?? 0);
+                                    const today = day != null && isToday(year, index, day);
+                                    return (
                                     <DayCell
                                         key={`${index}-${cellIndex}`}
-                                        className={`vac-cal__cell${day != null && (occupancy?.get(`${index}-${day}`) ?? 0) > 0 ? ' is-busy' : ''}`}
+                                        className={`vac-cal__cell${count >= 4 ? ' is-hot' : count > 0 ? ' is-busy' : ''}${today ? ' is-today' : ''}`}
                                         day={day}
                                         picked={day != null && periodEdge(index, day, selectedPeriod) === 'end'}
                                         ranged={day != null && periodEdge(index, day, selectedPeriod) === 'mid'}
@@ -452,9 +469,9 @@ export function VacationYearCalendar({
                                         }}
                                     >
                                         <DayNum year={year} monthIndex={index} day={day} />
-                                        {day != null ? <DayMarks items={marksByDay.get(`${index}-${day}`)} compact /> : null}
                                     </DayCell>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </article>
                     );

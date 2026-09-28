@@ -282,14 +282,33 @@
   font-size: 0.68rem;
   font-weight: 700;
   color: #64748b;
+  white-space: nowrap;
 }
 
-.vac-cal__cell.is-busy .vac-cal__num {
-  min-width: 1.35rem;
-  width: auto;
-  padding: 0 0.28rem;
+.vac-cal__load.is-warn {
+  color: #dc2626;
+}
+
+.vac-cal:not(.vac-cal--month) .vac-cal__cell.is-busy .vac-cal__num,
+.vac-cal:not(.vac-cal--month) .vac-cal__cell.is-hot .vac-cal__num {
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 7px;
   background: #7c3aed;
   color: #fff;
+}
+
+.vac-cal:not(.vac-cal--month) .vac-cal__cell.is-hot .vac-cal__num {
+  background: #dc2626;
+}
+
+.vac-cal:not(.vac-cal--month) .vac-cal__cell.is-today .vac-cal__num {
+  box-shadow: 0 0 0 2px var(--app-surface, #fff), 0 0 0 3px #7c3aed;
+}
+
+.vac-cal:not(.vac-cal--month) .vac-cal__cell.is-picked .vac-cal__num,
+.vac-cal:not(.vac-cal--month) .vac-cal__cell.is-range .vac-cal__num {
+  box-shadow: 0 0 0 2px var(--app-surface, #fff), 0 0 0 3px #6d28d9;
 }
 
 .vac-gantt {
