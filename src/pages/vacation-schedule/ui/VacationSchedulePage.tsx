@@ -4,12 +4,13 @@ import { useVacationLeavePendingBadge } from '@entities/vacation';
 import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import { AppBackButton, AppHomeLogo } from '@shared/ui';
-import { isVacationSystemRowId, vacationAttendanceMarksFromApi, type VacationAbsenceKind, type VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
+import { absenceKindToUi, isVacationSystemRowId, vacationAttendanceMarksFromApi, type VacationAbsenceKind, type VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
 import { canDecideVacationLeaveRequests, canEditVacationSchedule, canViewVacationManualEntryDocs } from '../model/vacationScheduleAccess';
 import { VacationAbsenceRequestModal } from './VacationAbsenceRequestModal';
 import { VacationCalendarFilters } from './VacationCalendarFilters';
 import { VacationDayDetails, type VacationDayDetailRow } from './VacationDayDetails';
 import { VacationMonthPanel } from './VacationMonthPanel';
+import { VacationMonthTimeline, type VacationTimelineBar } from './VacationMonthTimeline';
 import { VacationEmployeeDetailModal } from './VacationEmployeeDetailModal';
 import { VacationEmployeeSidebar } from './VacationEmployeeSidebar';
 import { VacationLeaveRequestsPanel } from './VacationLeaveRequestsPanel';
@@ -76,20 +77,32 @@ function appendLateRows(
     if (hidden)
         return;
     const byId = new Map(people.map((person) => [person.id, person]));
+    const grouped = new Map<number, { iso: string; arrival: string | null }[]>();
     for (const late of lates) {
-        if (late.iso < fromIso || late.iso > toIso)
+        if (late.iso < fromIso || late.iso > toIso || !byId.has(late.employeeId))
             continue;
-        const person = byId.get(late.employeeId);
+        const list = grouped.get(late.employeeId) ?? [];
+        list.push({ iso: late.iso, arrival: late.arrival });
+        grouped.set(late.employeeId, list);
+    }
+    for (const [employeeId, items] of grouped) {
+        const person = byId.get(employeeId);
         if (!person)
             continue;
-        const dateLabel = formatAbsenceRange(late.iso, late.iso);
+        const first = items[0];
+        const last = items[items.length - 1];
+        const span = formatAbsenceRange(first.iso, last.iso);
+        const word = ruCountWord(items.length, 'опоздание', 'опоздания', 'опозданий');
+        const rangeLabel = items.length === 1
+            ? (first.arrival ? `${span} · ${first.arrival}` : span)
+            : `${items.length} ${word} · ${span}`;
         rows.push({
             employeeId: person.id,
             label: person.label,
             teamName: person.teamName,
             color: VACATION_LATE_COLOR,
             kindLabel: 'Опоздание',
-            rangeLabel: late.arrival ? `${dateLabel} · ${late.arrival}` : dateLabel,
+            rangeLabel,
             canOpenCard: !isVacationSystemRowId(person.id),
             allowDocs: false,
         });
@@ -255,6 +268,15 @@ export function VacationSchedulePage() {
         }
         return map;
     }, [daysByEmployee, facts.legend, focusPeople, hiddenKinds, hideLates, lateMarks]);
+    const occupancy = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const [key, marks] of marksByDay) {
+            const people = new Set(marks.filter((mark) => !mark.kindLabel.startsWith('Опоздание')).map((mark) => mark.employeeId));
+            if (people.size > 0)
+                map.set(key, people.size);
+        }
+        return map;
+    }, [marksByDay]);
     const detailMonth = viewMonth ?? (scheduleYear === today.getFullYear() ? today.getMonth() : 0);
     const monthRows = useMemo(() => {
         const fromIso = padIso(scheduleYear, { monthIndex: detailMonth, day: 1 });
@@ -288,6 +310,99 @@ export function VacationSchedulePage() {
         rows.sort((a, b) => a.rangeLabel.localeCompare(b.rangeLabel, 'ru') || a.label.localeCompare(b.label, 'ru'));
         return rows;
     }, [daysByEmployee, detailMonth, facts.legend, focusPeople, hiddenKinds, hideLates, lateMarks, scheduleYear]);
+    const timeline = useMemo(() => {
+        const month = viewMonth ?? -1;
+        const days = month < 0 ? 0 : new Date(scheduleYear, month + 1, 0).getDate();
+        const bars: VacationTimelineBar[] = [];
+        const outCounts = Array.from({ length: days + 1 }, () => 0);
+        if (month < 0)
+            return { bars, outCounts, days, todayDay: null as number | null, people: directory };
+        const visible = directory
+            .slice()
+            .sort((a, b) => a.teamName.localeCompare(b.teamName, 'ru') || a.label.localeCompare(b.label, 'ru'));
+        const monthStart = padIso(scheduleYear, { monthIndex: month, day: 1 });
+        const monthEnd = padIso(scheduleYear, { monthIndex: month, day: days });
+        const showMarks = statusFilter === 'all' || statusFilter === 'away';
+        const showPending = statusFilter === 'all' || statusFilter === 'planned';
+        const labelOf = (kind: VacationAbsenceKind) => ({
+            annual: 'Отпуск',
+            dayoff: 'Без оплаты',
+            remote: 'Удалёнка',
+            sick: 'Больничный',
+            business: 'Командировка',
+            red_pass: 'Пропуск',
+        }[kind]);
+        if (showMarks) {
+            for (const person of visible) {
+                const inMonth = (daysByEmployee.get(person.id) ?? [])
+                    .filter((day) => day.monthIndex === month && !hiddenKinds.has(day.kind))
+                    .slice()
+                    .sort((a, b) => a.day - b.day);
+                let run = inMonth.slice(0, 0);
+                const flush = () => {
+                    const first = run[0];
+                    const last = run[run.length - 1];
+                    if (!first || !last)
+                        return;
+                    bars.push({
+                        employeeId: person.id,
+                        label: labelOf(first.kind),
+                        color: facts.legend.find((item) => item.kind === first.kind)?.color ?? '#9C27FF',
+                        startDay: first.day,
+                        endDay: last.day,
+                        pending: false,
+                        remote: first.kind === 'remote',
+                        unpaid: first.kind === 'dayoff',
+                    });
+                    run = [];
+                };
+                for (const day of inMonth) {
+                    const prev = run[run.length - 1];
+                    if (prev && (prev.kind !== day.kind || day.day !== prev.day + 1))
+                        flush();
+                    run.push(day);
+                }
+                flush();
+            }
+        }
+        const byUser = new Map(visible.filter((person) => person.systemUserId != null).map((person) => [person.systemUserId as number, person]));
+        for (const request of facts.requests) {
+            const pending = request.status === 'pending' || request.status === 'pending_final';
+            const declined = request.status === 'declined';
+            if (pending && !showPending)
+                continue;
+            if (declined && statusFilter !== 'declined')
+                continue;
+            if (!pending && !declined)
+                continue;
+            if (request.date_to < monthStart || request.date_from > monthEnd)
+                continue;
+            const person = byUser.get(request.employee_user_id);
+            const kind = absenceKindToUi(request.kind, request.kind_code);
+            if (!person || !kind || hiddenKinds.has(kind))
+                continue;
+            const startDay = request.date_from < monthStart ? 1 : Number(request.date_from.slice(8, 10));
+            const endDay = request.date_to > monthEnd ? days : Number(request.date_to.slice(8, 10));
+            bars.push({
+                employeeId: person.id,
+                label: labelOf(kind),
+                color: facts.legend.find((item) => item.kind === kind)?.color ?? '#9C27FF',
+                startDay,
+                endDay,
+                pending: pending || declined,
+                remote: kind === 'remote',
+                unpaid: kind === 'dayoff',
+            });
+        }
+        for (const bar of bars) {
+            if (bar.pending || bar.remote)
+                continue;
+            for (let day = bar.startDay; day <= bar.endDay; day += 1)
+                outCounts[day] = (outCounts[day] ?? 0) + 1;
+        }
+        const todayDay = scheduleYear === today.getFullYear() && month === today.getMonth() ? today.getDate() : null;
+        return { bars, outCounts, days, todayDay, people: visible };
+    }, [daysByEmployee, directory, facts.legend, facts.requests, hiddenKinds, scheduleYear, statusFilter, today, viewMonth]);
     const rememberDirectory = useCallback((rows: VacationRosterPerson[]) => {
         setDirectory(rows);
     }, []);
@@ -488,7 +603,7 @@ export function VacationSchedulePage() {
                         </div>
                     ) : (
                         <>
-                        <div className="vac-board">
+                        <div className="vac-board vac-board--plan">
                             <VacationEmployeeSidebar
                                 year={scheduleYear}
                                 selectedIds={selectedIds}
@@ -542,13 +657,15 @@ export function VacationSchedulePage() {
                                         <div key={index} className="vac-cal-skel__month" />
                                     ))}
                                 </div>
-                            ) : (
+                            ) : viewMonth == null ? (
                             <VacationYearCalendar
                                 year={scheduleYear}
                                 marksByDay={marksByDay}
                                 openToken={openToken}
-                                requestedMonth={viewMonth}
+                                requestedMonth={null}
                                 onMonthChange={setViewMonth}
+                                occupancy={occupancy}
+                                onOpenMonth={(monthIndex) => openCalendarMonth(monthIndex)}
                                 selectedPeriod={selectedPeriod}
                                 onSelectDay={(monthIndex, day) => {
                                     setSelectedPeriod((prev) => {
@@ -558,10 +675,28 @@ export function VacationSchedulePage() {
                                     });
                                 }}
                             />
+                            ) : (
+                            <VacationMonthTimeline
+                                year={scheduleYear}
+                                monthIndex={viewMonth ?? 0}
+                                daysInMonth={timeline.days}
+                                todayDay={timeline.todayDay}
+                                people={timeline.people}
+                                selectedIds={selectedIds}
+                                bars={timeline.bars}
+                                outCounts={timeline.outCounts}
+                                onToggle={(person) => {
+                                    setSelectedEmployees((prev) => (
+                                        prev.some((row) => row.id === person.id)
+                                            ? prev.filter((row) => row.id !== person.id)
+                                            : [...prev, person]
+                                    ));
+                                }}
+                            />
                             )}
                             </div>
+                            {viewMonth == null && !selectedPeriod ? (
                             <VacationMonthPanel
-                                visible={viewMonth == null}
                                 year={scheduleYear}
                                 monthIndex={detailMonth}
                                 open={monthPanelOpen}
@@ -578,6 +713,7 @@ export function VacationSchedulePage() {
                                     });
                                 }}
                             />
+                            ) : null}
                             {selectedPeriod ? (
                                 <VacationDayDetails
                                     year={scheduleYear}

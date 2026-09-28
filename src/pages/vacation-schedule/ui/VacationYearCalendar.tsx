@@ -29,6 +29,8 @@ type Props = {
     onMonthChange?: (month: number | null) => void;
     selectedPeriod?: VacationCalendarPeriod | null;
     onSelectDay?: (monthIndex: number, day: number) => void;
+    occupancy?: ReadonlyMap<string, number>;
+    onOpenMonth?: (monthIndex: number) => void;
 };
 
 export type VacationCalendarDay = { monthIndex: number; day: number };
@@ -47,6 +49,17 @@ export type VacationCalendarPaint = {
 
 function daySerial(monthIndex: number, day: number): number {
     return monthIndex * 40 + day;
+}
+
+function monthLoad(occupancy: ReadonlyMap<string, number> | undefined, monthIndex: number): number {
+    if (!occupancy)
+        return 0;
+    let sum = 0;
+    for (const [key, count] of occupancy) {
+        if (key.startsWith(`${monthIndex}-`))
+            sum += count;
+    }
+    return sum;
 }
 
 function periodEdge(monthIndex: number, day: number, period: VacationCalendarPeriod | null): 'end' | 'mid' | null {
@@ -225,6 +238,8 @@ export function VacationYearCalendar({
     onMonthChange,
     selectedPeriod = null,
     onSelectDay,
+    occupancy,
+    onOpenMonth,
 }: Props) {
     const stageRef = useRef<HTMLDivElement>(null);
     const cardRefs = useRef<Array<HTMLElement | null>>([]);
@@ -413,9 +428,12 @@ export function VacationYearCalendar({
                             key={name}
                             ref={(node) => { cardRefs.current[index] = node; }}
                             className={`vac-cal__month${index === currentMonth ? ' vac-cal__month--now' : ''}${source ? ' is-source' : ''}`}
-                            onDoubleClick={() => openMonth(index)}
+                            onDoubleClick={() => (onOpenMonth ? onOpenMonth(index) : openMonth(index))}
                         >
-                            <h2 className="vac-cal__name">{name}</h2>
+                            <h2 className="vac-cal__name">
+                                {name}
+                                <span className="vac-cal__load">{monthLoad(occupancy, index)} чел.-дн.</span>
+                            </h2>
                             <div className="vac-cal__mini">
                                 {WEEKDAYS.map((label, weekday) => (
                                     <div key={label} className={`vac-cal__wd${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
@@ -423,7 +441,7 @@ export function VacationYearCalendar({
                                 {cells.map((day, cellIndex) => (
                                     <DayCell
                                         key={`${index}-${cellIndex}`}
-                                        className="vac-cal__cell"
+                                        className={`vac-cal__cell${day != null && (occupancy?.get(`${index}-${day}`) ?? 0) > 0 ? ' is-busy' : ''}`}
                                         day={day}
                                         picked={day != null && periodEdge(index, day, selectedPeriod) === 'end'}
                                         ranged={day != null && periodEdge(index, day, selectedPeriod) === 'mid'}

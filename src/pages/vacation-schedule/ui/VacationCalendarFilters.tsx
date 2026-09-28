@@ -3,9 +3,9 @@ import type { VacationCalendarStatus } from '../lib/vacationCalendarFacts';
 
 const STATUSES: ReadonlyArray<{ id: VacationCalendarStatus; label: string }> = [
     { id: 'all', label: 'Все' },
-    { id: 'away', label: 'В отпуске' },
-    { id: 'planned', label: 'Запланирован' },
-    { id: 'declined', label: 'Отклонён' },
+    { id: 'away', label: 'Согласованы' },
+    { id: 'planned', label: 'Ожидают' },
+    { id: 'declined', label: 'Отклонены' },
 ];
 
 type Props = {
@@ -65,7 +65,7 @@ export function VacationCalendarFilters({
                         aria-pressed={!monthOpen}
                         onClick={onShowYear}
                     >
-                        Годовой
+                        Год
                     </button>
                     <button
                         type="button"
@@ -73,7 +73,7 @@ export function VacationCalendarFilters({
                         aria-pressed={monthOpen}
                         onClick={onShowMonth}
                     >
-                        Месячный
+                        Месяц
                     </button>
                 </div>
             </div>
