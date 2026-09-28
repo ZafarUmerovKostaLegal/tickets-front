@@ -35,6 +35,7 @@ import {
 import {
     findInvoiceForPartnerConfirmedRow,
     generateInvoiceFromPartnerConfirmedReport,
+    invoiceCreatedBeforeAllSignatures,
     pendingPartnerDisplayNames,
     PartnerConfirmedInvoiceMismatchError,
     PartnerConfirmedInvoiceNoLinesError,
@@ -1017,6 +1018,14 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                                     label={t('timeTrackingPage.reports.partnerConfirmed.emptyReportBadge')}
                                     title={t('timeTrackingPage.reports.partnerConfirmed.emptyReportTitle')}
                                 />
+                            ) : null}
+                            {linkedInvoice && invoiceCreatedBeforeAllSignatures(linkedInvoice.internalNote) ? (
+                                <span
+                                    className="tt-partner-confirmed__unsigned-invoice"
+                                    title={t('timeTrackingPage.reports.forReview.unsignedInvoiceTitle').replace('{date}', fmtIsoDateShort(linkedInvoice.createdAt, locale))}
+                                >
+                                    {t('timeTrackingPage.reports.forReview.unsignedInvoiceBadge').replace('{date}', fmtIsoDateShort(linkedInvoice.createdAt, locale))}
+                                </span>
                             ) : null}
                         </span>
                     </td>

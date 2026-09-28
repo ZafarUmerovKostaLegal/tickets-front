@@ -201,6 +201,8 @@ export type InvoiceCreateInput = {
     partnerConfirmationRequestId?: string;
     /** One-off: bill this period without requiring every partner signature. */
     skipPartnerInvoiceConfirmation?: boolean;
+    /** Same gate, explicit name: issue now, partner still signs later. */
+    deferPartnerConfirmation?: boolean;
     /** Client-facing total; closes selected time/expenses but bills this amount. */
     billedAmount?: number | null;
     /** Service line on the legal invoice page (with billedAmount). */

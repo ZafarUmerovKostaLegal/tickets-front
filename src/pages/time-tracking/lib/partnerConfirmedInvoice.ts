@@ -82,6 +82,10 @@ export class PartnerConfirmedInvoiceMismatchError extends Error {
     }
 }
 
+export function invoiceCreatedBeforeAllSignatures(note: string | null | undefined): boolean {
+    return /счёт сформирован до подписей|generated before all required partner signatures/i.test(String(note ?? ''));
+}
+
 export function pendingPartnerDisplayNames(
     row: PartnerReportConfirmationRequest,
     nameById: ReadonlyMap<number, string>,

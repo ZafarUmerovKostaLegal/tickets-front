@@ -7,6 +7,7 @@ import { DatePicker } from '@shared/ui/DatePicker';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, useAppToast } from '@shared/ui';
 import { useI18n, ttInvoiceSendActionLabel, ttInvoiceStatusLabel } from '@shared/i18n';
 import { localeTag } from '@shared/i18n/ticketUi';
+import { invoiceCreatedBeforeAllSignatures } from '@pages/time-tracking/lib/partnerConfirmedInvoice';
 import { useCurrentUser } from '@shared/hooks';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
 import {
@@ -758,6 +759,17 @@ export function InvoiceDetailPage() {
                     )}
                   </div>
                   {clientSubtitle && <p className="tt-inv-page__sub">{clientSubtitle}</p>}
+                  {invoiceCreatedBeforeAllSignatures(detail.internalNote) ? (
+                    <p className="tt-inv-unsigned-banner" role="status">
+                      {t('timeTrackingPage.invoices.unsignedInvoiceBanner').replace('{date}', (() => {
+                        const raw = String(detail.createdAt ?? '').trim();
+                        const d = new Date(raw);
+                        return Number.isNaN(d.getTime())
+                          ? raw
+                          : d.toLocaleString(localeTag(locale), { dateStyle: 'short', timeStyle: 'short' });
+                      })())}
+                    </p>
+                  ) : null}
                   {detail.storedStatus !== detail.status && (
                     <p className="tt-inv-page__sub">
                       {t('timeTrackingPage.invoices.detail.inDb')}: <code>{detail.storedStatus}</code>

@@ -50,6 +50,18 @@
   line-height: 1.4;
 }
 
+.tt-inv-unsigned-banner {
+  margin: 0.65rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: #9a3412;
+  background: #ffedd5;
+  border: 1px solid #fdba74;
+}
+
 .tt-inv-page__header-actions {
   display: flex;
   flex-wrap: wrap;

@@ -1231,6 +1231,8 @@ export const timeTrackingPageExtraMessages = {
             partnerSignedTitle: '{initials} — подписал {when}',
             partnerPendingTitle: '{initials} — ожидает подписи',
             partnersLegend: 'Зелёный — подписал, красный — не подписал. Список: сначала срочные, затем не срочные, затем «можно подождать». Счёт можно сформировать без всех подписей — это исключение.',
+            unsignedInvoiceBadge: 'Счёт без подписи · {date} · проверить',
+            unsignedInvoiceTitle: 'Счёт создан {date} до подписей всех партнёров. После подписи его нужно проверить.',
             previewTitle: 'Открыть предпросмотр по периоду и проекту этой строки',
             previewAria: 'Предпросмотр отчёта',
             confirmTitle: 'Подписать отчёт',
@@ -1347,6 +1349,7 @@ export const timeTrackingPageExtraMessages = {
         introFull: 'Выписка счетов по клиентам и проектам: черновики, отправка, оплаты и остатки — в одном списке. Выберите строку, чтобы открыть карточку.',
         newInvoice: 'Новый счёт',
         readonlyBadge: 'Только просмотр',
+        unsignedInvoiceBanner: 'Счёт создан без всех подписей {date}. Нужно проверить.',
         status: {
             draft: 'Черновик',
             sent: 'Отправлен',

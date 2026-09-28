@@ -1233,6 +1233,8 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             partnerSignedTitle: '{initials} — signed {when}',
             partnerPendingTitle: '{initials} — awaiting signature',
             partnersLegend: 'Green — signed, red — not signed. List order: urgent, then not urgent, then can wait. You can generate an invoice without all signatures as an exception.',
+            unsignedInvoiceBadge: 'Invoice without signature · {date} · review',
+            unsignedInvoiceTitle: 'Invoice created {date} before all partners signed. Review it after the remaining signature.',
             previewTitle: 'Open preview for this row’s period and project',
             previewAria: 'Report preview',
             confirmTitle: 'Sign report',
@@ -1349,6 +1351,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
         introFull: 'Issue invoices by client and project: drafts, sending, payments, and balances in one list. Select a row to open the card.',
         newInvoice: 'New invoice',
         readonlyBadge: 'View only',
+        unsignedInvoiceBanner: 'Invoice created without all signatures on {date}. Needs review.',
         status: {
             draft: 'Draft',
             sent: 'Sent',
