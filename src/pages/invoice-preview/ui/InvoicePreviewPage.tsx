@@ -1018,7 +1018,6 @@ export function InvoicePreviewPage() {
                                     <InvoiceTimeReportPage
                                       model={displayModel}
                                       pack={resolvedTimeReportPack}
-                                      projectName={session?.meta.projectLabel}
                                       pageNumber={2 + slot.chunkIndex}
                                       detailRows={timeReportChunks[slot.chunkIndex]}
                                       continuation={slot.chunkIndex > 0}
@@ -1286,7 +1285,6 @@ export function InvoicePreviewPage() {
                               <InvoiceTimeReportPage
                                 model={displayModel}
                                 pack={resolvedTimeReportPack}
-                                projectName={session?.meta.projectLabel}
                                 pageNumber={pageNum}
                                 detailRows={chunk}
                                 continuation={slot.chunkIndex > 0}

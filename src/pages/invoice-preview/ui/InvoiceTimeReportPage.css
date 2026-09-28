@@ -18,66 +18,6 @@
   flex-direction: column;
 }
 
-.tt-inv-tr__letterhead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.1rem;
-}
-
-.tt-inv-tr__logo {
-  display: block;
-  width: 148px;
-  height: auto;
-  object-fit: contain;
-  object-position: left center;
-}
-
-.tt-inv-tr__letterhead address {
-  margin: 0;
-  max-width: 16rem;
-  font-style: normal;
-  font-size: 8px;
-  line-height: 1.35;
-  text-align: right;
-  color: #4b5563;
-}
-
-.tt-inv-tr__letterhead address span {
-  display: block;
-}
-
-.tt-inv-tr__lead {
-  margin: 0 0 0.75rem;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-  line-height: 1.35;
-  color: #18181b;
-}
-
-.tt-inv-tr__sub {
-  margin: 0 0 0.45rem;
-  font-size: 12px;
-  font-weight: 700;
-  color: #18181b;
-}
-
-.tt-inv-tr__share {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.tt-inv-tr__cur {
-  margin: 0.85rem 0 0.15rem;
-  text-align: right;
-  font-size: 10px;
-  font-weight: 700;
-}
-
 .tt-inv-tr__top {
   display: flex;
   justify-content: flex-end;
@@ -125,8 +65,8 @@
 }
 
 .tt-inv-tr__thead {
-  background: transparent;
-  color: #18181b;
+  background: var(--tt-inv-tr-red);
+  color: #ffffff;
 }
 
 .tt-inv-tr__thead th {
@@ -136,8 +76,7 @@
   text-transform: none;
   text-align: left;
   vertical-align: middle;
-  border: 0;
-  border-bottom: 1.5px solid #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -185,19 +124,19 @@
   padding: 0.45rem 0.35rem 0;
   font-size: inherit;
   font-weight: 700;
-  color: #18181b;
+  color: var(--tt-inv-tr-red);
   border-bottom: none;
 }
 
 .tt-inv-tr__tfoot td.tt-inv-tr__tfoot-num {
-  color: #18181b;
+  color: var(--tt-inv-tr-red);
 }
 
 .tt-inv-tr__subtitle {
-  margin: 0.9rem 0 0.4rem;
-  font-size: 12px;
+  margin: 0 0 0.5rem;
+  font-size: inherit;
   font-weight: 700;
-  color: #18181b;
+  color: var(--tt-inv-tr-red);
 }
 
 .tt-inv-tr__bottom {
@@ -209,7 +148,7 @@
 
 .tt-inv-tr__bottom-line {
   height: 1px;
-  background: #18181b;
+  background: var(--tt-inv-tr-red);
   margin: 0 0 0.42rem;
   border: none;
 }
@@ -228,9 +167,9 @@
   padding: 0 0.2rem;
   font-size: inherit;
   font-weight: 800;
-  color: #18181b;
-  border: 1px solid #18181b;
-  background: #fff;
+  color: var(--tt-inv-tr-red-dark);
+  border: 1px solid var(--tt-inv-tr-red);
+  background: rgba(232, 51, 55, 0.06);
 }
 
 .tt-inv-tr__cell--amount,
@@ -247,7 +186,7 @@
   word-break: break-word;
   hyphens: auto;
   font-weight: 700;
-  color: #18181b;
+  color: var(--tt-inv-tr-red);
 }
 
 .tt-inv-tr--editable .tt-inv-tr__cell-input {
