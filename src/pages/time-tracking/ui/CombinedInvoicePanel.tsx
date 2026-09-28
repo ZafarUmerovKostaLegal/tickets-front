@@ -6,14 +6,13 @@ import {
     fetchUnbilledTimeEntries,
     isForbiddenError,
     listTimeTrackingUsers,
-    pickUserDisplayLabel,
     type TimeManagerClientProjectRow,
     type TimeManagerClientRow,
     type TimeTrackingUserRow,
 } from '@entities/time-tracking';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
-import { invoiceClientDescription } from '../lib/invoiceClientDescription';
+import { CombinedInvoiceDocument } from './CombinedInvoiceDocument';
 import {
     buildCombinedShares,
     formatCombinedShareNote,
@@ -80,12 +79,12 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
         () => [{ id: '', name: 'Без шаблона' }, ...templates.map((item) => ({ id: item.id, name: item.name }))],
         [templates],
     );
-    const userName = useMemo(() => {
-        const map = new Map<number, string>();
-        for (const user of users)
-            map.set(user.id, pickUserDisplayLabel(user.display_name, user.email, user.id));
+    const clientName = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const client of clients)
+            map.set(client.id, client.name);
         return map;
-    }, [users]);
+    }, [clients]);
     const selectedProjects = useMemo(
         () => projectIds
             .map((id) => projects.find((project) => project.id === id))
@@ -456,72 +455,22 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                 <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={persistTemplate}>Сохранить</button>
             </div>
             {preview ? (
-                <div className="tt-inv-combined__preview" role="dialog" aria-modal="true">
-                    <article>
-                        <header>
-                            <h2>KOSTA LEGAL</h2>
-                            <button type="button" onClick={() => setPreview(false)}>Закрыть</button>
-                        </header>
-                        <p>{feeTitle || 'Fees for services'}</p>
-                        <p>Payer: {clientName.get(payerId) ?? '—'}. Period: {from} — {to}</p>
-                        {selectedProjects.map((project) => {
-                            const rows = time.filter((line) => line.projectId === project.id);
-                            if (rows.length === 0)
-                                return null;
-                            return (
-                                <div key={project.id} className="tt-inv-combined__sub">
-                                    <h3>Sub-project: {project.name}</h3>
-                                    <table>
-                                        <thead><tr><th>Date</th><th>User</th><th>Description</th><th>Hours</th><th>Amount</th></tr></thead>
-                                        <tbody>
-                                            {rows.map((line) => (
-                                                <tr key={line.id}>
-                                                    <td>{line.workDate.slice(0, 10)}</td>
-                                                    <td>{userName.get(line.authUserId) ?? line.authUserId}</td>
-                                                    <td>{invoiceClientDescription(line.description) || '—'}</td>
-                                                    <td>{(line.billableHours ?? line.hours).toFixed(2)}</td>
-                                                    <td>{line.billableAmount.toFixed(2)}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            );
-                        })}
-                        <h3>Summary of Services</h3>
-                        <p>{totalHours.toFixed(2)} h · {totalFees.toFixed(2)} {currency}</p>
-                        <h3>Reimbursable Expenses</h3>
-                        {expenses.length === 0 ? <p>None</p> : (
-                            <table>
-                                <thead><tr><th>Date</th><th>Description</th><th>Amount</th></tr></thead>
-                                <tbody>
-                                    {expenses.map((line) => (
-                                        <tr key={line.id}>
-                                            <td>{line.expenseDate.slice(0, 10)}</td>
-                                            <td>{line.description || '—'}</td>
-                                            <td>{line.equivalentAmount.toFixed(2)}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        )}
-                        <h3>Shared amounts</h3>
-                        <table>
-                            <thead><tr><th></th><th>%</th><th>Services</th><th>Expenses</th><th>To be invoiced</th></tr></thead>
-                            <tbody>
-                                {shares.map((share) => (
-                                    <tr key={share.projectId}>
-                                        <td>{share.projectName}</td>
-                                        <td>{share.percent.toFixed(2)}%</td>
-                                        <td>{share.fees.toFixed(2)}</td>
-                                        <td>{share.expenses.toFixed(2)}</td>
-                                        <td>{share.total.toFixed(2)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </article>
-                </div>
+                <CombinedInvoiceDocument
+                    feeTitle={feeTitle}
+                    payerName={clientName.get(payerId) ?? '—'}
+                    from={from}
+                    to={to}
+                    currency={currency}
+                    projects={selectedProjects}
+                    time={time}
+                    expenses={expenses}
+                    shares={shares}
+                    users={users}
+                    totalHours={totalHours}
+                    totalFees={totalFees}
+                    totalExp={totalExp}
+                    onClose={() => setPreview(false)}
+                />
             ) : null}
         </section>
     );
