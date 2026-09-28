@@ -551,6 +551,7 @@ export function VacationSchedulePage() {
                                 }}
                             />
                             </div>
+                            {viewMonth == null ? (
                             <VacationMonthPanel
                                 year={scheduleYear}
                                 monthIndex={detailMonth}
@@ -568,6 +569,7 @@ export function VacationSchedulePage() {
                                     });
                                 }}
                             />
+                            ) : null}
                             {selectedPeriod ? (
                                 <VacationDayDetails
                                     year={scheduleYear}
