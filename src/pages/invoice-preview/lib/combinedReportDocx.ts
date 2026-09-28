@@ -20,6 +20,12 @@ function money(n: number): string {
     return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}.${frac}`;
 }
 
+function shareExpenseText(n: number | undefined): string {
+    if (n == null || Math.abs(n) < 0.005)
+        return '-';
+    return money(n);
+}
+
 function dateRu(iso: string): string {
     const day = iso.slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day))
@@ -141,8 +147,8 @@ export function combinedReportDocxChildren(snapshot: CombinedReportSnapshot): (P
     out.push(table(
         ['Shared amounts', 'Reimbursable expenses', 'TO BE INVOICED'],
         [
-            ...snapshot.shares.map((share) => [`${share.name}  ${share.percent.toFixed(2)}%`, money(share.total), money(share.total)]),
-            ['100%', money(invoiced), money(invoiced)],
+            ...snapshot.shares.map((share) => [`${share.name}   ${share.percent.toFixed(2)}%`, shareExpenseText(share.expenses), money(share.total)]),
+            [`Total   100%`, `${cur} ${money(invoiced)}`, money(invoiced)],
         ],
         [44, 28, 28],
         1,

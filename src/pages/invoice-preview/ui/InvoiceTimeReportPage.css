@@ -110,10 +110,28 @@
   border-bottom: 0;
 }
 
+.tt-inv-creport__shares {
+  table-layout: fixed;
+}
+
+.tt-inv-creport__shares col.name {
+  width: 48%;
+}
+
+.tt-inv-creport__shares col.num {
+  width: 26%;
+}
+
 .tt-inv-creport__share {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem;
+}
+
+.tt-inv-creport__share-pct {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .tt-inv-creport__cur {

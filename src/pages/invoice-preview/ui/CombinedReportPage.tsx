@@ -20,6 +20,12 @@ function hours(n: number): string {
     return n.toFixed(2);
 }
 
+function shareExpenseText(n: number | undefined): string {
+    if (n == null || Math.abs(n) < 0.005)
+        return '-';
+    return money(n);
+}
+
 function dateRu(iso: string): string {
     const day = iso.slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day))
@@ -389,7 +395,12 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
             </section>
             <section className="tt-inv-creport__block">
                 <p className="tt-inv-creport__cur">{cur}</p>
-                <table>
+                <table className="tt-inv-creport__shares">
+                    <colgroup>
+                        <col className="name" />
+                        <col className="num" />
+                        <col className="num" />
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Shared amounts</th>
@@ -428,21 +439,25 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                                         : (
                                             <>
                                                 <span>{share.name}</span>
-                                                <span>{share.percent.toFixed(2)}%</span>
+                                                <span className="tt-inv-creport__share-pct">{share.percent.toFixed(2)}%</span>
                                             </>
                                         )}
                                 </td>
-                                <NumCell
-                                    editable={editable}
-                                    className="num"
-                                    ariaLabel="Reimbursable expenses"
-                                    value={share.total}
-                                    format={money}
-                                    onChange={(v) => emit({
-                                        ...report,
-                                        shares: report.shares.map((row, i) => i === index ? { ...row, total: v } : row),
-                                    })}
-                                />
+                                {editable
+                                    ? (
+                                        <NumCell
+                                            editable
+                                            className="num"
+                                            ariaLabel="Reimbursable expenses"
+                                            value={share.expenses ?? 0}
+                                            format={money}
+                                            onChange={(v) => emit({
+                                                ...report,
+                                                shares: report.shares.map((row, i) => i === index ? { ...row, expenses: v } : row),
+                                            })}
+                                        />
+                                    )
+                                    : <td className="num">{shareExpenseText(share.expenses)}</td>}
                                 <NumCell
                                     editable={editable}
                                     className="num"
@@ -459,8 +474,8 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                     </tbody>
                     <tfoot>
                         <tr>
-                            <td className="tt-inv-creport__share"><span /><span>100%</span></td>
-                            <td className="num">{money(invoiced)}</td>
+                            <td className="tt-inv-creport__share"><span>Total</span><span className="tt-inv-creport__share-pct">100%</span></td>
+                            <td className="num">{cur} {money(invoiced)}</td>
                             <td className="num">{money(invoiced)}</td>
                         </tr>
                     </tfoot>

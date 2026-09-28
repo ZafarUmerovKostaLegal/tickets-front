@@ -24,6 +24,12 @@ function money(n: number): string {
     return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}.${frac}`;
 }
 
+function shareExpenseText(n: number | undefined): string {
+    if (n == null || Math.abs(n) < 0.005)
+        return '-';
+    return money(n);
+}
+
 function dateRu(iso: string): string {
     const day = iso.slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day))
@@ -121,9 +127,9 @@ function blocks(snapshot: CombinedReportSnapshot): Array<{ title?: string; heade
         right: new Set([1, 2]),
         rows: [
             ...snapshot.shares.map((share) => ({
-                cells: [`${share.name}  ${share.percent.toFixed(2)}%`, money(share.total), money(share.total)],
+                cells: [`${share.name}   ${share.percent.toFixed(2)}%`, shareExpenseText(share.expenses), money(share.total)],
             })),
-            { bold: true, cells: ['100%', money(invoiced), money(invoiced)] },
+            { bold: true, cells: [`Total   100%`, `${cur} ${money(invoiced)}`, money(invoiced)] },
         ],
     });
     return out;

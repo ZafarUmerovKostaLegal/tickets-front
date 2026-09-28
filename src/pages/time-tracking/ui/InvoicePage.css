@@ -436,6 +436,18 @@
   font-weight: 700;
 }
 
+.tt-inv-cdoc__shares {
+  table-layout: fixed;
+}
+
+.tt-inv-cdoc__shares col.name {
+  width: 48%;
+}
+
+.tt-inv-cdoc__shares col.num {
+  width: 26%;
+}
+
 .tt-inv-cdoc__share {
   display: flex;
   align-items: baseline;

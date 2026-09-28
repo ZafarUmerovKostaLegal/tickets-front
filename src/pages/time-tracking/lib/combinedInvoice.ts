@@ -132,7 +132,7 @@ export type CombinedReportSnapshot = {
         amount: number;
     }>;
     expenses: Array<{ description: string; date: string; amount: number }>;
-    shares: Array<{ name: string; percent: number; total: number }>;
+    shares: Array<{ name: string; percent: number; expenses?: number; total: number }>;
     totalHours: number;
     totalFees: number;
     totalExpenses: number;
@@ -211,6 +211,7 @@ export function buildCombinedReportSnapshot(input: {
         shares: input.shares.map((share) => ({
             name: share.projectName,
             percent: share.percent,
+            expenses: share.expenses,
             total: share.total,
         })),
         totalHours: input.totalHours,
