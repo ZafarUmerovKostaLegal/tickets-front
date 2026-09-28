@@ -383,23 +383,6 @@ export function VacationSchedulePage() {
                                 onShownEmployees={rememberShown}
                                 onDirectory={rememberDirectory}
                             />
-                            <VacationMonthPanel
-                                year={scheduleYear}
-                                monthIndex={detailMonth}
-                                open={monthPanelOpen}
-                                rows={monthRows}
-                                showDocs={canViewDocs}
-                                onToggle={() => setMonthPanelOpen((open) => !open)}
-                                onOpenCard={setDetailEmployeeId}
-                                onOpenDocs={(employeeId, label) => {
-                                    const hit = (daysByEmployee.get(employeeId) ?? []).find((day) => day.monthIndex === detailMonth);
-                                    setDocsTarget({
-                                        employeeId,
-                                        label,
-                                        dateIso: hit?.iso ?? padIso(scheduleYear, { monthIndex: detailMonth, day: 1 }),
-                                    });
-                                }}
-                            />
                             <div className="vac-board__main">
                             <VacationCalendarFilters
                                 year={scheduleYear}
@@ -439,6 +422,23 @@ export function VacationSchedulePage() {
                                 }}
                             />
                             </div>
+                            <VacationMonthPanel
+                                year={scheduleYear}
+                                monthIndex={detailMonth}
+                                open={monthPanelOpen}
+                                rows={monthRows}
+                                showDocs={canViewDocs}
+                                onToggle={() => setMonthPanelOpen((open) => !open)}
+                                onOpenCard={setDetailEmployeeId}
+                                onOpenDocs={(employeeId, label) => {
+                                    const hit = (daysByEmployee.get(employeeId) ?? []).find((day) => day.monthIndex === detailMonth);
+                                    setDocsTarget({
+                                        employeeId,
+                                        label,
+                                        dateIso: hit?.iso ?? padIso(scheduleYear, { monthIndex: detailMonth, day: 1 }),
+                                    });
+                                }}
+                            />
                             {selectedPeriod ? (
                                 <VacationDayDetails
                                     year={scheduleYear}

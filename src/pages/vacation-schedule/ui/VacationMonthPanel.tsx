@@ -17,7 +17,6 @@ export function VacationMonthPanel({ year, monthIndex, open, rows, onToggle, onO
     return (
         <aside className={`vac-month${open ? '' : ' vac-month--closed'}`} aria-label={`Отсутствия за ${title}`}>
             <div className="vac-month__bar">
-                {open ? <h2 className="vac-month__title">{title}</h2> : null}
                 <button
                     type="button"
                     className="vac-month__toggle"
@@ -26,8 +25,9 @@ export function VacationMonthPanel({ year, monthIndex, open, rows, onToggle, onO
                     title={open ? 'Свернуть' : title}
                     onClick={onToggle}
                 >
-                    {open ? '‹' : '›'}
+                    {open ? '›' : '‹'}
                 </button>
+                {open ? <h2 className="vac-month__title">{title}</h2> : null}
             </div>
             {open ? (
                 rows.length === 0 ? (
