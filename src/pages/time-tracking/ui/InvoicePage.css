@@ -382,6 +382,7 @@
   letter-spacing: 0.01em;
   text-transform: uppercase;
   line-height: 1.35;
+  color: #e83337;
 }
 
 .tt-inv-cdoc__block {
@@ -408,10 +409,12 @@
   vertical-align: top;
 }
 
-.tt-inv-cdoc th {
+.tt-inv-cdoc thead th {
   font-size: 10px;
   font-weight: 700;
-  border-bottom: 1.5px solid #18181b;
+  color: #fff;
+  background: #e83337;
+  border: 0;
 }
 
 .tt-inv-cdoc td.num,

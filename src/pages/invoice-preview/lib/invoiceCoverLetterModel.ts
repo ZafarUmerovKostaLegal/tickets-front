@@ -9,6 +9,15 @@ export const KOSTA_LEGAL_FIRM = {
     defaultSignatoryTitle: 'Partner',
 } as const;
 
+/** Right-hand letterhead on the combined fees sheet. */
+export const KOSTA_LEGAL_LETTERHEAD_LINES = [
+    '18 Anhor Buyi Street',
+    '100011, Tashkent, Uzbekistan',
+    KOSTA_LEGAL_FIRM.phone,
+    KOSTA_LEGAL_FIRM.email,
+    KOSTA_LEGAL_FIRM.web,
+] as const;
+
 export type InvoiceCoverLanguage = 'ENG' | 'RU';
 
 export type InvoiceCoverLetterInput = {

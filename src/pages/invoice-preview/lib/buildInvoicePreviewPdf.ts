@@ -1689,7 +1689,7 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     }
 
     if (input.combinedReport) {
-        const reportPages = Math.max(1, countCombinedReportPages(input.combinedReport));
+        const reportPages = Math.max(1, countCombinedReportPages(input.combinedReport, font, fontBold));
         const pdfPageCount = 2 + reportPages;
         const previewPageCount = 3;
         const selectedPreview = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;

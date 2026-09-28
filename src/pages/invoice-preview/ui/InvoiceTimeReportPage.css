@@ -31,13 +31,13 @@
 }
 
 .tt-inv-creport__lead {
-  margin: 0 0 0.8rem;
+  margin: 0 0 0.85rem;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.01em;
   text-transform: uppercase;
   line-height: 1.35;
-  color: #18181b;
+  color: #e83337;
 }
 
 .tt-inv-creport__block {
@@ -54,7 +54,7 @@
 .tt-inv-creport table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .tt-inv-creport th,
@@ -67,9 +67,12 @@
   background: transparent;
 }
 
-.tt-inv-creport th {
+.tt-inv-creport thead th {
   font-weight: 700;
-  border-bottom: 1.5px solid #18181b;
+  color: #fff;
+  background: #e83337;
+  border: 0;
+  border-bottom: 0;
 }
 
 .tt-inv-creport td.num,

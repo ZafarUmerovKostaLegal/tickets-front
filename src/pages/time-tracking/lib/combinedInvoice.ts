@@ -1,5 +1,6 @@
 import type { TimeManagerClientProjectRow, UnbilledExpenseEntryDto, UnbilledTimeEntryDto } from '@entities/time-tracking';
-import { invoiceClientDescription } from './invoiceClientDescription';
+import { invoiceClientDescription, INVOICE_DESCRIPTION_TASK_PREFIXES } from './invoiceClientDescription';
+import { parseTimeEntryDescription } from '@entities/time-tracking/lib/timesheetTimerPersist';
 
 export type CombinedAllocation = 'hours' | 'equal';
 
@@ -87,10 +88,36 @@ export function buildCombinedShares(
 export type CombinedReportLine = {
     date: string;
     user: string;
+    initials?: string;
+    task?: string;
     description: string;
     hours: number;
     amount: number;
 };
+
+const TASK_PREFIXES = [...INVOICE_DESCRIPTION_TASK_PREFIXES].sort((a, b) => b.length - a.length);
+
+export function combinedTimeTaskAndNotes(raw: string | null | undefined): { task: string; description: string } {
+    const { taskLine, notes } = parseTimeEntryDescription(raw);
+    if (notes.trim())
+        return { task: taskLine || '—', description: notes.trim() };
+    const text = (raw ?? '').trim();
+    for (const prefix of TASK_PREFIXES) {
+        if (text.length < prefix.length || !text.toLowerCase().startsWith(prefix.toLowerCase()))
+            continue;
+        const after = text.slice(prefix.length);
+        const ch = after[0];
+        const boundary = !ch
+            || /[\s:\n.\u2014\u2013-]/.test(ch)
+            || ch.charCodeAt(0) > 127
+            || (ch === ch.toUpperCase() && ch !== ch.toLowerCase());
+        if (!boundary)
+            continue;
+        const rest = after.replace(/^[\s:.\u2014\u2013-]+/u, '').trim();
+        return { task: prefix, description: rest || '—' };
+    }
+    return { task: taskLine || '—', description: invoiceClientDescription(raw) || taskLine || '—' };
+}
 
 export type CombinedReportSnapshot = {
     feeTitle: string;
@@ -150,10 +177,14 @@ export function buildCombinedReportSnapshot(input: {
                 name: project.name,
                 lines: lines.map((line) => {
                     const user = userById.get(line.authUserId);
+                    const name = user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId);
+                    const split = combinedTimeTaskAndNotes(line.description);
                     return {
                         date: line.workDate.slice(0, 10),
-                        user: user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId),
-                        description: invoiceClientDescription(line.description) || '—',
+                        user: name,
+                        initials: initialsOf(name, user?.initials),
+                        task: split.task,
+                        description: split.description,
                         hours: line.billableHours ?? line.hours,
                         amount: line.billableAmount,
                     };
@@ -186,6 +217,13 @@ export function buildCombinedReportSnapshot(input: {
         totalFees: input.totalFees,
         totalExpenses: input.totalExpenses,
     };
+}
+
+export function combinedReportDetailLines(snapshot: CombinedReportSnapshot): CombinedReportLine[] {
+    return snapshot.projects
+        .flatMap((project) => project.lines)
+        .slice()
+        .sort((a, b) => a.date.localeCompare(b.date) || (a.initials || a.user).localeCompare(b.initials || b.user));
 }
 
 export function isCombinedReportSnapshot(raw: unknown): raw is CombinedReportSnapshot {

@@ -1,6 +1,6 @@
-import { KOSTA_LEGAL_FIRM } from '../lib/invoiceCoverLetterModel';
+import { KOSTA_LEGAL_LETTERHEAD_LINES } from '../lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
-import type { CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { combinedReportDetailLines, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import './InvoiceTimeReportPage.css';
 
 type Props = {
@@ -33,51 +33,43 @@ export function CombinedReportPage({ report, pageNumber }: Props) {
             <header className="tt-inv-creport__head">
                 <img className="tt-inv-creport__logo" src={coverLetterheadLogoUrl()} alt="KOSTA LEGAL" />
                 <address>
-                    <span>{KOSTA_LEGAL_FIRM.addressLine}</span>
-                    <span>{KOSTA_LEGAL_FIRM.phone}</span>
-                    <span>{KOSTA_LEGAL_FIRM.email}</span>
-                    <span>{KOSTA_LEGAL_FIRM.web}</span>
+                    {KOSTA_LEGAL_LETTERHEAD_LINES.map((line) => <span key={line}>{line}</span>)}
                 </address>
             </header>
             <p className="tt-inv-creport__lead">{report.feeTitle}</p>
-            {report.projects.map((project) => {
-                const projectHours = project.lines.reduce((sum, line) => sum + line.hours, 0);
-                const projectAmount = project.lines.reduce((sum, line) => sum + line.amount, 0);
-                return (
-                    <section key={project.name} className="tt-inv-creport__block">
-                        <h2>Sub-project name: {project.name}</h2>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>User</th>
-                                    <th>Description</th>
-                                    <th className="num">Hours</th>
-                                    <th className="num">Amount ({cur})</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {project.lines.map((line, index) => (
-                                    <tr key={`${project.name}-${index}`}>
-                                        <td>{dateRu(line.date)}</td>
-                                        <td>{line.user}</td>
-                                        <td>{line.description}</td>
-                                        <td className="num">{hours(line.hours)}</td>
-                                        <td className="num">{money(line.amount)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colSpan={3}>Total</td>
-                                    <td className="num">{hours(projectHours)}</td>
-                                    <td className="num">{money(projectAmount)}</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </section>
-                );
-            })}
+            <section className="tt-inv-creport__block">
+                <table className="tt-inv-creport__time">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Initials</th>
+                            <th>Task</th>
+                            <th>Description</th>
+                            <th className="num">Hours</th>
+                            <th className="num">Amount ({cur})</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {combinedReportDetailLines(report).map((line, index) => (
+                            <tr key={`${line.date}-${index}`}>
+                                <td>{dateRu(line.date)}</td>
+                                <td>{line.initials || line.user}</td>
+                                <td>{line.task || '—'}</td>
+                                <td>{line.description}</td>
+                                <td className="num">{hours(line.hours)}</td>
+                                <td className="num">{money(line.amount)}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colSpan={4}>Total</td>
+                            <td className="num">{hours(report.totalHours)}</td>
+                            <td className="num">{money(report.totalFees)}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </section>
             <section className="tt-inv-creport__block">
                 <h2>Summary of Services</h2>
                 <table>

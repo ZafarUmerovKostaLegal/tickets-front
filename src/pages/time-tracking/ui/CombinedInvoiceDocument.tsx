@@ -1,8 +1,7 @@
-import { KOSTA_LEGAL_FIRM } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
+import { KOSTA_LEGAL_LETTERHEAD_LINES } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '@pages/invoice-preview/lib/invoiceCoverLogoRaster';
 import type { TimeManagerClientProjectRow, TimeTrackingUserRow } from '@entities/time-tracking';
-import { invoiceClientDescription } from '../lib/invoiceClientDescription';
-import type { CombinedExpenseLine, CombinedShare, CombinedTimeLine } from '../lib/combinedInvoice';
+import { combinedTimeTaskAndNotes, type CombinedExpenseLine, type CombinedShare, type CombinedTimeLine } from '../lib/combinedInvoice';
 
 type Props = {
     feeTitle: string;
@@ -52,7 +51,6 @@ export function CombinedInvoiceDocument({
     from,
     to,
     currency,
-    projects,
     time,
     expenses,
     shares,
@@ -96,57 +94,48 @@ export function CombinedInvoiceDocument({
                 <header className="tt-inv-cdoc__head">
                     <img className="tt-inv-cdoc__logo" src={coverLetterheadLogoUrl()} alt="KOSTA LEGAL" />
                     <address>
-                        <span>{KOSTA_LEGAL_FIRM.addressLine}</span>
-                        <span>{KOSTA_LEGAL_FIRM.phone}</span>
-                        <span>{KOSTA_LEGAL_FIRM.email}</span>
-                        <span>{KOSTA_LEGAL_FIRM.web}</span>
+                        {KOSTA_LEGAL_LETTERHEAD_LINES.map((line) => <span key={line}>{line}</span>)}
                     </address>
                 </header>
                 <p className="tt-inv-cdoc__lead">{lead}</p>
-                {projects.map((project) => {
-                    const rows = time.filter((line) => line.projectId === project.id);
-                    if (rows.length === 0)
-                        return null;
-                    const hours = rows.reduce((sum, line) => sum + (line.billableHours ?? line.hours), 0);
-                    const amount = rows.reduce((sum, line) => sum + line.billableAmount, 0);
-                    return (
-                        <section key={project.id} className="tt-inv-cdoc__block">
-                            <h2>Sub-project name: {project.name}</h2>
-                            <table>
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>User</th>
-                                        <th>Description</th>
-                                        <th className="num">Hours</th>
-                                        <th className="num">Amount ({currency})</th>
+                <section className="tt-inv-cdoc__block">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Initials</th>
+                                <th>Task</th>
+                                <th>Description</th>
+                                <th className="num">Hours</th>
+                                <th className="num">Amount ({currency})</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {[...time].sort((a, b) => a.workDate.localeCompare(b.workDate)).map((line) => {
+                                const user = userById.get(line.authUserId);
+                                const name = user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId);
+                                const split = combinedTimeTaskAndNotes(line.description);
+                                return (
+                                    <tr key={line.id}>
+                                        <td>{dateRu(line.workDate)}</td>
+                                        <td>{initialsOf(name, user?.initials)}</td>
+                                        <td>{split.task}</td>
+                                        <td>{split.description}</td>
+                                        <td className="num">{fmtHours(line.billableHours ?? line.hours)}</td>
+                                        <td className="num">{money(line.billableAmount)}</td>
                                     </tr>
-                                </thead>
-                                <tbody>
-                                    {rows.map((line) => {
-                                        const user = userById.get(line.authUserId);
-                                        return (
-                                            <tr key={line.id}>
-                                                <td>{dateRu(line.workDate)}</td>
-                                                <td>{user?.display_name?.trim() || user?.email?.trim() || line.authUserId}</td>
-                                                <td>{invoiceClientDescription(line.description) || '—'}</td>
-                                                <td className="num">{fmtHours(line.billableHours ?? line.hours)}</td>
-                                                <td className="num">{money(line.billableAmount)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colSpan={3}>Total</td>
-                                        <td className="num">{fmtHours(hours)}</td>
-                                        <td className="num">{money(amount)}</td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </section>
-                    );
-                })}
+                                );
+                            })}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colSpan={4}>Total</td>
+                                <td className="num">{fmtHours(totalHours)}</td>
+                                <td className="num">{money(totalFees)}</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </section>
                 <section className="tt-inv-cdoc__block">
                     <h2>Summary of Services</h2>
                     <table>
