@@ -82,10 +82,26 @@ export class PartnerConfirmedInvoiceMismatchError extends Error {
     }
 }
 
+export function pendingPartnerDisplayNames(
+    row: PartnerReportConfirmationRequest,
+    nameById: ReadonlyMap<number, string>,
+): string {
+    return row.pendingPartnerAuthUserIds
+        .map((id) => nameById.get(id)?.trim() || `#${id}`)
+        .filter(Boolean)
+        .join(', ');
+}
+
+function isPartnerSignatureGateError(message: string): boolean {
+    return /fully.?confirm|partner.?confirm|подпис|подтвержд/i.test(message);
+}
+
 export async function generateInvoiceFromPartnerConfirmedReport(args: {
     row: PartnerReportConfirmationRequest;
     clientId: string;
     currency?: string | null;
+    /** Create the invoice even if some required partners have not signed. */
+    allowUnsignedPartners?: boolean;
 }): Promise<InvoiceDto> {
     const { row, clientId } = args;
     const projectId = String(row.projectId ?? '').trim();
@@ -121,23 +137,34 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
     if (!hasTime && !hasExpense && !hasPackage)
         throw new PartnerConfirmedInvoiceNoLinesError();
 
+    const unsignedNote = args.allowUnsignedPartners
+        ? 'Invoice exception: generated before all required partner signatures.'
+        : null;
+    const requestId = String(row.id ?? '').trim() || undefined;
+    const body = {
+        clientId: clientId.trim(),
+        projectId,
+        issueDate,
+        dueDate: addDaysIso(30),
+        currency: preview.currency,
+        taxPercent: 0,
+        tax2Percent: 0,
+        discountPercent: 0,
+        timeEntryIds: preview.timeEntryIds,
+        expenseIds: preview.expenseIds,
+        partnerBillingPeriodFrom: dateFrom,
+        partnerBillingPeriodTo: dateTo,
+        partnerConfirmationRequestId: requestId,
+        ...(args.allowUnsignedPartners ? { skipPartnerInvoiceConfirmation: true } : {}),
+        ...(unsignedNote ? { internalNote: unsignedNote } : {}),
+    };
+
+    const create = async (omitRequestId: boolean) => createInvoice(
+        omitRequestId ? { ...body, partnerConfirmationRequestId: undefined } : body,
+    );
+
     try {
-        return await createInvoice({
-            clientId: clientId.trim(),
-            projectId,
-            issueDate,
-            dueDate: addDaysIso(30),
-            currency: preview.currency,
-            // Align with confirmed report total (pre-tax). Tax/discount can be edited on the draft.
-            taxPercent: 0,
-            tax2Percent: 0,
-            discountPercent: 0,
-            timeEntryIds: preview.timeEntryIds,
-            expenseIds: preview.expenseIds,
-            partnerBillingPeriodFrom: dateFrom,
-            partnerBillingPeriodTo: dateTo,
-            partnerConfirmationRequestId: String(row.id ?? '').trim() || undefined,
-        });
+        return await create(false);
     }
     catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -147,6 +174,22 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
                 preview.currency,
                 msg,
             );
+        }
+        if (args.allowUnsignedPartners && isPartnerSignatureGateError(msg)) {
+            try {
+                return await create(true);
+            }
+            catch (retry) {
+                const retryMsg = retry instanceof Error ? retry.message : String(retry);
+                if (retryMsg.includes('INVOICE_SUBTOTAL_MISMATCH') || retryMsg.includes('не совпала')) {
+                    throw new PartnerConfirmedInvoiceMismatchError(
+                        preview.expectedSubtotal,
+                        preview.currency,
+                        retryMsg,
+                    );
+                }
+                throw retry;
+            }
         }
         throw e;
     }

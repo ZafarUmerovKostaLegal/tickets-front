@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
+import { getInvoiceDetailUrl } from '@shared/config';
 import {
     confirmPartnerReportConfirmation,
     createPartnerConfirmationComment,
     patchPartnerConfirmationComment,
     deletePartnerReportConfirmation,
+    fetchAllInvoices,
     fetchReportsUsersForFilter,
+    isForbiddenError,
     listPartnerConfirmationComments,
     listPartnerReportConfirmationsPending,
     notifyPartnerConfirmedReportsListInvalidate,
     patchPartnerReportConfirmationPriority,
+    type InvoiceDto,
     type PartnerConfirmedReportComment,
     type PartnerPendingListScope,
     type PartnerReportConfirmationRequest,
@@ -22,6 +26,7 @@ import { getUsers, type User } from '@entities/user';
 import { formatIsoRangeTitle } from '@entities/time-tracking/lib/reportsPeriodRange';
 import {
     resolvePartnerReportClientLabel,
+    resolvePartnerReportDisplayMeta,
     resolvePartnerReportProjectLabel,
 } from '@entities/time-tracking/lib/partnerReportDisplay';
 import {
@@ -37,6 +42,17 @@ import {
 } from '@entities/time-tracking/lib/forReviewPriority';
 import { canViewAllForReviewReports } from '@entities/time-tracking/model/timeTrackingAccess';
 import { openForReviewReportPreview } from '@pages/time-tracking/lib/partnerReportPreviewNav';
+import {
+    findInvoiceForPartnerConfirmedRow,
+    generateInvoiceFromPartnerConfirmedReport,
+    pendingPartnerDisplayNames,
+    PartnerConfirmedInvoiceMismatchError,
+    PartnerConfirmedInvoiceNoLinesError,
+} from '@pages/time-tracking/lib/partnerConfirmedInvoice';
+import {
+    formatUnpaidExpenseListLines,
+    isProjectUnpaidExpensesError,
+} from '@pages/time-tracking/lib/projectUnpaidExpenses';
 import {
     applyPartnerConfirmationCommentsSummary,
     hydratePartnerConfirmationCommentsSummaries,
@@ -66,6 +82,13 @@ const IcoRefresh = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="
 const IcoEye = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
     <circle cx="12" cy="12" r="3" />
+</svg>);
+
+const IcoInvoice = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+    <line x1="8" y1="13" x2="16" y2="13" />
+    <line x1="8" y1="17" x2="14" y2="17" />
 </svg>);
 
 const IcoCheck = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -379,6 +402,8 @@ export function ForReviewReportsPanel() {
     const [usersById, setUsersById] = useState<Map<number, PartnerUserMeta>>(new Map());
     const [confirmBusyId, setConfirmBusyId] = useState<string | null>(null);
     const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
+    const [invoiceBusyId, setInvoiceBusyId] = useState<string | null>(null);
+    const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
     const [priorityBusyId, setPriorityBusyId] = useState<string | null>(null);
     const [drawerComments, setDrawerComments] = useState<PartnerConfirmedReportComment[]>([]);
     const [commentsDrawerRow, setCommentsDrawerRow] = useState<PartnerReportConfirmationRequest | null>(null);
@@ -710,6 +735,95 @@ export function ForReviewReportsPanel() {
         void openForReviewReportPreview(r, navigate);
     }, [navigate]);
 
+    const loadInvoices = useCallback(() => {
+        void fetchAllInvoices().then((items) => {
+            setInvoices(Array.isArray(items) ? items : []);
+        }).catch(() => {
+            setInvoices([]);
+        });
+    }, []);
+
+    const generateInvoiceForRow = useCallback(async (r: PartnerReportConfirmationRequest) => {
+        const existing = (r.invoiceId?.trim()
+            ? invoices.find((inv) => inv.id === r.invoiceId?.trim())
+            : null) ?? findInvoiceForPartnerConfirmedRow(r, invoices);
+        if (existing) {
+            navigate(getInvoiceDetailUrl(existing.id));
+            return;
+        }
+        const fullyConfirmed = String(r.status || '').trim().toLowerCase() === 'fully_confirmed';
+        if (!fullyConfirmed) {
+            const names = pendingPartnerDisplayNames(r, usersByIdLabels);
+            const ok = await showConfirm({
+                title: t('timeTrackingPage.reports.partnerConfirmed.invoiceExceptionConfirmTitle'),
+                message: names
+                    ? t('timeTrackingPage.reports.partnerConfirmed.invoiceExceptionConfirmMessage').replace('{names}', names)
+                    : t('timeTrackingPage.reports.partnerConfirmed.invoiceExceptionConfirmMessageNone'),
+                confirmLabel: t('timeTrackingPage.reports.partnerConfirmed.invoiceExceptionConfirmLabel'),
+            });
+            if (!ok)
+                return;
+        }
+        const clientId = resolvePartnerReportDisplayMeta(r, projectRows, clientNamesById, undefined, clientMetaByProjectId).clientId;
+        if (!clientId.trim()) {
+            await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.invoiceNoClient') });
+            return;
+        }
+        setInvoiceBusyId(r.id);
+        try {
+            const created = await generateInvoiceFromPartnerConfirmedReport({
+                row: r,
+                clientId,
+                allowUnsignedPartners: !fullyConfirmed,
+            });
+            loadInvoices();
+            navigate(getInvoiceDetailUrl(created.id));
+        }
+        catch (e) {
+            if (isProjectUnpaidExpensesError(e)) {
+                await showAlert({
+                    message: t('timeTrackingPage.reports.partnerConfirmed.invoiceUnpaidExpenses')
+                        .replace('{count}', String(e.expenses.length))
+                        .replace('{list}', formatUnpaidExpenseListLines(e.expenses)),
+                });
+                return;
+            }
+            if (e instanceof PartnerConfirmedInvoiceNoLinesError) {
+                await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.invoiceNoLines') });
+                return;
+            }
+            if (e instanceof PartnerConfirmedInvoiceMismatchError) {
+                await showAlert({
+                    message: `${t('timeTrackingPage.reports.partnerConfirmed.invoiceFailed')}: ${e.message}`,
+                });
+                return;
+            }
+            const base = e instanceof Error ? e.message : t('timeTrackingPage.reports.partnerConfirmed.invoiceFailed');
+            const hint = isForbiddenError(e)
+                ? t('timeTrackingPage.invoices.errors.partnerConfirmHint')
+                : '';
+            await showAlert({ message: `${base}${hint}` });
+        }
+        finally {
+            setInvoiceBusyId(null);
+        }
+    }, [
+        clientMetaByProjectId,
+        clientNamesById,
+        invoices,
+        loadInvoices,
+        navigate,
+        projectRows,
+        showAlert,
+        showConfirm,
+        t,
+        usersByIdLabels,
+    ]);
+
+    useEffect(() => {
+        loadInvoices();
+    }, [loadInvoices]);
+
     const confirmRow = useCallback(async (r: PartnerReportConfirmationRequest) => {
         const uid = user?.id;
         if (uid == null || confirmBusyId != null)
@@ -834,8 +948,22 @@ export function ForReviewReportsPanel() {
                     const allowPriorityEdit = canSetPriority(r);
                     const confirmBusy = confirmBusyId === r.id;
                     const deleteBusy = deleteBusyId === r.id;
+                    const invoiceBusy = invoiceBusyId === r.id;
                     const priorityBusy = priorityBusyId === r.id;
-                    const actionsBusy = confirmBusyId != null || deleteBusyId != null || priorityBusyId != null;
+                    const actionsBusy = confirmBusyId != null || deleteBusyId != null || priorityBusyId != null || invoiceBusyId != null;
+                    const linkedInvoice = (r.invoiceId?.trim()
+                        ? invoices.find((inv) => inv.id === r.invoiceId?.trim())
+                        : null) ?? findInvoiceForPartnerConfirmedRow(r, invoices);
+                    const invoiceTitle = linkedInvoice
+                        ? t('timeTrackingPage.reports.partnerConfirmed.invoiceOpenTitle')
+                        : invoiceBusy
+                            ? t('timeTrackingPage.reports.partnerConfirmed.invoiceBusy')
+                            : t('timeTrackingPage.reports.partnerConfirmed.invoiceUnsignedTitle');
+                    const invoiceAria = linkedInvoice
+                        ? t('timeTrackingPage.reports.partnerConfirmed.invoiceOpenAria')
+                        : invoiceBusy
+                            ? t('timeTrackingPage.reports.partnerConfirmed.invoiceBusyAria')
+                            : t('timeTrackingPage.reports.partnerConfirmed.invoiceUnsignedAria');
                     const commentsCount = r.commentsCount ?? 0;
                     const commentsPreview = r.lastComment?.text?.trim() || null;
                     const commentsCountLabel = partnerConfirmedCommentsCountLabel(commentsCount, locale, {
@@ -933,6 +1061,9 @@ export function ForReviewReportsPanel() {
                             <div className="tt-partner-confirmed__actions" role="group" aria-label={columnLabels.actions}>
                                 <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn tt-partner-confirmed__icon-btn--primary" onClick={() => openReportPreviewForRow(r)} title={t('timeTrackingPage.reports.forReview.previewTitle')} aria-label={t('timeTrackingPage.reports.forReview.previewAria')}>
                                     <IcoEye />
+                                </button>
+                                <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={invoiceBusy} onClick={() => void generateInvoiceForRow(r)} title={invoiceTitle} aria-label={invoiceAria}>
+                                    {invoiceBusy ? <IcoSpinner /> : <IcoInvoice />}
                                 </button>
                                 {canConfirm ? (<button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={actionsBusy} onClick={() => void confirmRow(r)} title={confirmBusy ? t('timeTrackingPage.reports.forReview.confirmBusy') : t('timeTrackingPage.reports.forReview.confirmTitle')} aria-label={confirmBusy ? t('timeTrackingPage.reports.forReview.confirmBusyAria') : t('timeTrackingPage.reports.forReview.confirmAria')}>
                                     {confirmBusy ? <IcoSpinner /> : <IcoCheck />}

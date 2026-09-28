@@ -59,6 +59,7 @@ import {
 import { formatCoverServicesPeriod } from '../../invoice-preview/lib/invoiceCoverLetterI18n';
 import { getLegalInvoiceLabels } from '../../invoice-preview/lib/invoiceLegalPageI18n';
 import type { InvoiceCoverLanguage } from '../../invoice-preview/lib/invoiceCoverLetterModel';
+import { CombinedInvoicePanel } from './CombinedInvoicePanel';
 import './TimeTrackingPage.css';
 import './TimesheetPanel.css';
 import './InvoicePage.css';
@@ -90,6 +91,7 @@ export function InvoiceCreatePage() {
   const [confirmedReportsForCreate, setConfirmedReportsForCreate] = useState<PartnerReportConfirmationRequest[]>([]);
   const [confirmedProjectIdsForCreate, setConfirmedProjectIdsForCreate] = useState<Set<string>>(() => new Set());
   const [clientsErr, setClientsErr] = useState<string | null>(null);
+  const [invoiceKind, setInvoiceKind] = useState<'single' | 'combined'>('single');
   const [createClientId, setCreateClientId] = useState('');
   const [createProjectId, setCreateProjectId] = useState('');
   const [projects, setProjects] = useState<TimeManagerClientProjectRow[]>([]);
@@ -109,6 +111,7 @@ export function InvoiceCreatePage() {
   const [unbilledLoading, setUnbilledLoading] = useState(false);
   const [createBusy, setCreateBusy] = useState(false);
   const [skipPartnerSaving, setSkipPartnerSaving] = useState(false);
+  const [oneOffSkipPartner, setOneOffSkipPartner] = useState(false);
   const [unbilledPeriodGranularity, setUnbilledPeriodGranularity] = useState<PeriodGranularity>('month');
   const [unbilledPeriodDropdown, setUnbilledPeriodDropdown] = useState(false);
   const unbilledPeriodDropdownRef = useRef<HTMLDivElement>(null);
@@ -137,6 +140,11 @@ export function InvoiceCreatePage() {
     () => projectSkipsPartnerInvoiceConfirmation(selectedProject),
     [selectedProject],
   );
+  const skipPartnerGate = selectedProjectSkipsPartner || oneOffSkipPartner;
+
+  useEffect(() => {
+    setOneOffSkipPartner(false);
+  }, [createProjectId]);
   const invoiceCurrency = useMemo(() => {
     const projectCur = String(selectedProject?.currency ?? '').trim().toUpperCase();
     if (projectCur)
@@ -268,7 +276,7 @@ export function InvoiceCreatePage() {
     return pid !== '' && confirmedProjectIdsForCreate.has(pid);
   }, [createProjectId, confirmedProjectIdsForCreate]);
   const showSkipPartnerToggle = Boolean(createProjectId && createClientId);
-  const unbilledPeriodEditable = selectedProjectSkipsPartner;
+  const unbilledPeriodEditable = skipPartnerGate;
 
   const applyUnbilledPeriodPreset = useCallback((granularity: PeriodGranularity) => {
     const range = periodToDates(new Date(), granularity);
@@ -433,7 +441,7 @@ export function InvoiceCreatePage() {
     const pid = createProjectId.trim();
     if (!pid)
       return;
-    if (selectedProjectSkipsPartner)
+    if (skipPartnerGate)
       return;
     const candidates = confirmedReportsForCreate.filter((r) => String(r.projectId ?? '').trim() === pid);
     if (candidates.length === 0)
@@ -451,7 +459,7 @@ export function InvoiceCreatePage() {
       setUnbilledFrom(nextFrom);
     if (unbilledTo !== nextTo)
       setUnbilledTo(nextTo);
-  }, [createProjectId, confirmedReportsForCreate, unbilledFrom, unbilledTo, selectedProjectSkipsPartner]);
+  }, [createProjectId, confirmedReportsForCreate, unbilledFrom, unbilledTo, skipPartnerGate]);
 
   const requireFullyConfirmedPeriod = useCallback(async (projectIdRaw: string, fromRaw: string, toRaw: string): Promise<boolean> => {
     const projectId = projectIdRaw.trim();
@@ -496,7 +504,7 @@ export function InvoiceCreatePage() {
         }
         throw e;
       }
-      const allowed = selectedProjectSkipsPartner
+      const allowed = skipPartnerGate
         || await requireFullyConfirmedPeriod(createProjectId, unbilledFrom, unbilledTo);
       if (!allowed) {
         const msg = t('timeTrackingPage.invoices.errors.confirmedOnlyRequired');
@@ -511,7 +519,7 @@ export function InvoiceCreatePage() {
       ]);
 
       let filteredTime = timeRows;
-      if (!selectedProjectSkipsPartner) {
+      if (!skipPartnerGate) {
         const matchingConfirm = confirmedReportsForCreate.find((r) =>
           String(r.projectId ?? '').trim() === createProjectId.trim()
           && String(r.dateFrom ?? '').slice(0, 10) === unbilledFrom.trim().slice(0, 10)
@@ -568,7 +576,7 @@ export function InvoiceCreatePage() {
     finally {
       setUnbilledLoading(false);
     }
-  }, [createProjectId, unbilledFrom, unbilledTo, confirmedReportsForCreate, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, showAlert, t, selectedProjectSkipsPartner]);
+  }, [createProjectId, unbilledFrom, unbilledTo, confirmedReportsForCreate, requireFullyConfirmedPeriod, unpaidExpensesAlertMessage, showAlert, t, skipPartnerGate]);
 
   useEffect(() => {
     if (resumeAppliedRef.current)
@@ -715,7 +723,7 @@ export function InvoiceCreatePage() {
     }
     // Pure custom-billed invoice does not close a partner period — skip confirmation gate.
     if (closingReportLines) {
-      const confirmedAllowed = selectedProjectSkipsPartner
+      const confirmedAllowed = skipPartnerGate
         || await requireFullyConfirmedPeriod(billProjectId, unbilledFrom, unbilledTo);
       if (!confirmedAllowed) {
         const msg = t('timeTrackingPage.invoices.errors.confirmedOnlyRequired');
@@ -775,6 +783,7 @@ export function InvoiceCreatePage() {
               partnerBillingPeriodTo: periodTo,
             }
           : {}),
+        ...(skipPartnerGate ? { skipPartnerInvoiceConfirmation: true } : {}),
         ...(billedAmountNum != null
           ? {
               billedAmount: billedAmountNum,
@@ -792,7 +801,7 @@ export function InvoiceCreatePage() {
       const raw = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.createFailed');
       const conflict = /409|уже существует|already exists/i.test(raw);
       const base = conflict ? t('timeTrackingPage.invoices.errors.invoiceNumberConflict') : raw;
-      const hint = isForbiddenError(e) && !selectedProjectSkipsPartner && closingReportLines
+      const hint = isForbiddenError(e) && !skipPartnerGate && closingReportLines
         ? t('timeTrackingPage.invoices.errors.partnerConfirmHint')
         : '';
       await showAlert({ message: `${base}${hint}` });
@@ -817,7 +826,7 @@ export function InvoiceCreatePage() {
     navigate,
     showAlert,
     t,
-    selectedProjectSkipsPartner,
+    skipPartnerGate,
     selectedProject,
     customBilledEnabled,
     customBilledAmount,
@@ -866,6 +875,7 @@ export function InvoiceCreatePage() {
           <div className="time-page__navbar-sep" aria-hidden="true" />
           <span className="time-page__navbar-title">{t('timeTrackingPage.invoices.createDialog.title')}</span>
           <div className="time-page__navbar-spacer" />
+          {invoiceKind === 'single' ? (
           <div className="tt-inv-page__nav-actions" role="group" aria-label={t('timeTrackingPage.invoices.createDialog.title')}>
             <button
               type="button"
@@ -887,6 +897,7 @@ export function InvoiceCreatePage() {
                 : t('timeTrackingPage.invoices.createDialog.createDraft')}
             </button>
           </div>
+          ) : null}
           <div className="time-page__navbar-settings">
             <AppPageSettings />
           </div>
@@ -900,6 +911,19 @@ export function InvoiceCreatePage() {
           </header>
 
           <div className="tt-inv-page__body">
+            <div className="tt-inv-kind" role="tablist" aria-label="Вид счёта">
+              <button type="button" role="tab" aria-selected={invoiceKind === 'single'} className={invoiceKind === 'single' ? 'is-on' : ''} onClick={() => setInvoiceKind('single')}>Один проект</button>
+              <button type="button" role="tab" aria-selected={invoiceKind === 'combined'} className={invoiceKind === 'combined' ? 'is-on' : ''} onClick={() => setInvoiceKind('combined')}>Сводный счёт</button>
+            </div>
+            {invoiceKind === 'combined' ? (
+              <CombinedInvoicePanel
+                clients={clients}
+                projects={activeProjectsAll}
+                onCreated={(invoiceId) => { void navigate(getInvoiceDetailUrl(invoiceId)); }}
+                onError={(message) => { void showAlert({ title: 'Сводный счёт', message }); }}
+              />
+            ) : (
+            <>
             <section className="tt-inv-page__section">
               <div className="tt-inv-page__section-head">
                 <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.clientRequired')}</h2>
@@ -947,6 +971,29 @@ export function InvoiceCreatePage() {
                         ? t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmationHint')
                         : t('timeTrackingPage.invoices.createDialog.skipPartnerToggleNeed')}
                   </p>
+                  {selectedProjectSkipsPartner ? null : (
+                    <label className="tt-ios-toggle-row" style={{ marginTop: '0.75rem' }}>
+                      <span className="tt-ios-toggle-row__text">
+                        {t('timeTrackingPage.invoices.createDialog.oneOffSkipPartner')}
+                      </span>
+                      <span className="tt-ios-toggle">
+                        <input
+                          type="checkbox"
+                          className="tt-ios-toggle__input"
+                          checked={oneOffSkipPartner}
+                          onChange={(e) => setOneOffSkipPartner(e.target.checked)}
+                          disabled={createBusy}
+                          aria-describedby="tt-inv-one-off-skip-hint"
+                        />
+                        <span className="tt-ios-toggle__slider" aria-hidden />
+                      </span>
+                    </label>
+                  )}
+                  {selectedProjectSkipsPartner ? null : (
+                    <p id="tt-inv-one-off-skip-hint" className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                      {t('timeTrackingPage.invoices.createDialog.oneOffSkipPartnerHint')}
+                    </p>
+                  )}
                 </div>
               ) : null}
             </section>
@@ -1292,6 +1339,8 @@ export function InvoiceCreatePage() {
                 ) : null}
               </section>
             ) : null}
+            </>
+            )}
           </div>
         </div>
       </main>

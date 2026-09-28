@@ -35,6 +35,7 @@ import {
 import {
     findInvoiceForPartnerConfirmedRow,
     generateInvoiceFromPartnerConfirmedReport,
+    pendingPartnerDisplayNames,
     PartnerConfirmedInvoiceMismatchError,
     PartnerConfirmedInvoiceNoLinesError,
 } from '@pages/time-tracking/lib/partnerConfirmedInvoice';
@@ -731,9 +732,20 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             openInvoiceForRow(existing.id);
             return;
         }
-        if (!isFullyConfirmed(r)) {
-            await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.invoicePartialBlocked') });
-            return;
+        const fullyConfirmed = isFullyConfirmed(r);
+        if (!fullyConfirmed) {
+            const names = pendingPartnerDisplayNames(r, new Map(
+                [...usersById.entries()].map(([id, meta]) => [id, meta.label]),
+            ));
+            const ok = await showConfirm({
+                title: t('timeTrackingPage.reports.partnerConfirmed.invoiceExceptionConfirmTitle'),
+                message: names
+                    ? t('timeTrackingPage.reports.partnerConfirmed.invoiceExceptionConfirmMessage').replace('{names}', names)
+                    : t('timeTrackingPage.reports.partnerConfirmed.invoiceExceptionConfirmMessageNone'),
+                confirmLabel: t('timeTrackingPage.reports.partnerConfirmed.invoiceExceptionConfirmLabel'),
+            });
+            if (!ok)
+                return;
         }
         const clientId = resolvePartnerReportDisplayMeta(r, projectRows, clientNamesById, extraRowMetaByProjectId, clientMetaByProjectId).clientId;
         if (!clientId.trim()) {
@@ -742,7 +754,11 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         }
         setInvoiceBusyId(r.id);
         try {
-            const created = await generateInvoiceFromPartnerConfirmedReport({ row: r, clientId });
+            const created = await generateInvoiceFromPartnerConfirmedReport({
+                row: r,
+                clientId,
+                allowUnsignedPartners: !fullyConfirmed,
+            });
             loadInvoices();
             openInvoiceForRow(created.id);
         }
@@ -779,7 +795,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         finally {
             setInvoiceBusyId(null);
         }
-    }, [clientMetaByProjectId, clientNamesById, extraRowMetaByProjectId, invoices, loadInvoices, openInvoiceForRow, projectRows, showAlert, t]);
+    }, [clientMetaByProjectId, clientNamesById, extraRowMetaByProjectId, invoices, loadInvoices, openInvoiceForRow, projectRows, showAlert, showConfirm, t, usersById]);
 
     const exportSnapshotExcel = useCallback(async (r: PartnerReportConfirmationRequest) => {
         setExportBusySnapshotId(r.snapshotId.trim() || r.id);
@@ -957,7 +973,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                     });
                     const linkedInvoice = findInvoiceForPartnerConfirmedRow(r, invoices);
                     const invoiceBusy = invoiceBusyId === r.id;
-                    const canGenerateInvoice = isFullyConfirmed(r);
+                    const fullyConfirmed = isFullyConfirmed(r);
                     const canDelete = canDeletePartnerConfirmedRow(r, currentUser?.id, canManageAll);
                     const deleteBusy = deleteBusyId === r.id;
                     const actionsBusy = deleteBusyId != null || invoiceBusyId != null || exportBusySnapshotId != null || revokeBusyKey != null;
@@ -980,16 +996,16 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                         ? t('timeTrackingPage.reports.partnerConfirmed.invoiceOpenTitle')
                         : invoiceBusy
                             ? t('timeTrackingPage.reports.partnerConfirmed.invoiceBusy')
-                            : canGenerateInvoice
+                            : fullyConfirmed
                                 ? t('timeTrackingPage.reports.partnerConfirmed.invoiceGenerateTitle')
-                                : t('timeTrackingPage.reports.partnerConfirmed.invoicePartialBlocked');
+                                : t('timeTrackingPage.reports.partnerConfirmed.invoiceUnsignedTitle');
                     const invoiceAria = linkedInvoice
                         ? t('timeTrackingPage.reports.partnerConfirmed.invoiceOpenAria')
                         : invoiceBusy
                             ? t('timeTrackingPage.reports.partnerConfirmed.invoiceBusyAria')
-                            : canGenerateInvoice
+                            : fullyConfirmed
                                 ? t('timeTrackingPage.reports.partnerConfirmed.invoiceGenerateAria')
-                                : t('timeTrackingPage.reports.partnerConfirmed.invoicePartialBlocked');
+                                : t('timeTrackingPage.reports.partnerConfirmed.invoiceUnsignedAria');
                     return (<tr key={r.id}>
                     <td className="tt-partner-confirmed__td-client" data-label={columnLabels.client}>{resolveClientLabel(r)}</td>
                     <td className="tt-partner-confirmed__cell-title tt-partner-confirmed__td-primary" data-label={columnLabels.project}>
@@ -1044,7 +1060,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                             <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={exportBusySnapshotId === r.snapshotId} onClick={() => void exportSnapshotExcel(r)} title={exportBusySnapshotId === r.snapshotId ? t('timeTrackingPage.reports.partnerConfirmed.exportBusy') : t('timeTrackingPage.reports.partnerConfirmed.exportTitle')} aria-label={exportBusySnapshotId === r.snapshotId ? t('timeTrackingPage.reports.partnerConfirmed.exportBusyAria') : t('timeTrackingPage.reports.partnerConfirmed.exportAria')}>
                                 {exportBusySnapshotId === r.snapshotId ? <IcoSpinner /> : <IcoDownload />}
                             </button>
-                            <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={invoiceBusy || (!linkedInvoice && !canGenerateInvoice)} onClick={() => void generateInvoiceForRow(r)} title={invoiceTitle} aria-label={invoiceAria}>
+                            <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn" disabled={invoiceBusy} onClick={() => void generateInvoiceForRow(r)} title={invoiceTitle} aria-label={invoiceAria}>
                                 {invoiceBusy ? <IcoSpinner /> : <IcoInvoice />}
                             </button>
                             {canDelete ? (

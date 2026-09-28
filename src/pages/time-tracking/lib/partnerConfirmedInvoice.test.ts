@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { InvoiceDto, PartnerReportConfirmationRequest } from '@entities/time-tracking';
-import { findInvoiceForPartnerConfirmedRow } from './partnerConfirmedInvoice';
+import { findInvoiceForPartnerConfirmedRow, pendingPartnerDisplayNames } from './partnerConfirmedInvoice';
 
 function baseRow(partial?: Partial<PartnerReportConfirmationRequest>): PartnerReportConfirmationRequest {
     return {
@@ -76,5 +76,17 @@ describe('findInvoiceForPartnerConfirmedRow', () => {
             baseInv({ totalAmount: 0, subtotal: 0, balanceDue: 0 }),
         ]);
         expect(found).toBeNull();
+    });
+});
+
+describe('pendingPartnerDisplayNames', () => {
+    it('lists pending partner names for exception invoices', () => {
+        const names = pendingPartnerDisplayNames(
+            baseRow({
+                pendingPartnerAuthUserIds: [7, 9],
+            }),
+            new Map([[7, 'AAA'], [9, 'VBG']]),
+        );
+        expect(names).toBe('AAA, VBG');
     });
 });

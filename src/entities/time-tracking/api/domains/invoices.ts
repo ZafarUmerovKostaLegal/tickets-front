@@ -199,6 +199,8 @@ export type InvoiceCreateInput = {
     partnerBillingPeriodFrom?: string;
     partnerBillingPeriodTo?: string;
     partnerConfirmationRequestId?: string;
+    /** One-off: bill this period without requiring every partner signature. */
+    skipPartnerInvoiceConfirmation?: boolean;
     /** Client-facing total; closes selected time/expenses but bills this amount. */
     billedAmount?: number | null;
     /** Service line on the legal invoice page (with billedAmount). */
