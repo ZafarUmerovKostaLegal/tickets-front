@@ -1,6 +1,19 @@
 import { VACATION_MONTH_NAMES } from '../lib/vacationScheduleModel';
 import type { VacationDayDetailRow } from './VacationDayDetails';
 
+function monthCountLabel(count: number): string {
+    if (count === 0)
+        return 'Нет отсутствий';
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    const word = mod10 === 1 && mod100 !== 11
+        ? 'отсутствие'
+        : mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)
+            ? 'отсутствия'
+            : 'отсутствий';
+    return `${count} ${word}`;
+}
+
 type Props = {
     year: number;
     monthIndex: number;
@@ -17,6 +30,12 @@ export function VacationMonthPanel({ year, monthIndex, open, rows, onToggle, onO
     return (
         <aside className={`vac-month${open ? '' : ' vac-month--closed'}`} aria-label={`Отсутствия за ${title}`}>
             <div className="vac-month__bar">
+                {open ? (
+                    <div className="vac-month__heading">
+                        <h2 className="vac-month__title">{title}</h2>
+                        <p className="vac-month__count">{monthCountLabel(rows.length)}</p>
+                    </div>
+                ) : null}
                 <button
                     type="button"
                     className="vac-month__toggle"
@@ -27,7 +46,6 @@ export function VacationMonthPanel({ year, monthIndex, open, rows, onToggle, onO
                 >
                     {open ? '›' : '‹'}
                 </button>
-                {open ? <h2 className="vac-month__title">{title}</h2> : null}
             </div>
             {open ? (
                 rows.length === 0 ? (
@@ -35,23 +53,22 @@ export function VacationMonthPanel({ year, monthIndex, open, rows, onToggle, onO
                 ) : (
                     <ul className="vac-month__list">
                         {rows.map((row) => (
-                            <li key={`${row.employeeId}-${row.kindLabel}`} className="vac-month__item">
-                                <span className="vac-month__dot" style={{ background: row.color }} aria-hidden />
+                            <li key={`${row.employeeId}-${row.kindLabel}`} className="vac-month__item" style={{ borderLeftColor: row.color }}>
                                 <div className="vac-month__copy">
                                     <strong>{row.label}</strong>
                                     <span>{row.rangeLabel}</span>
-                                    {row.canOpenCard ? (
-                                        <span className="vac-month__links">
-                                            <button type="button" onClick={() => onOpenCard(row.employeeId)}>Карточка</button>
-                                            {showDocs ? (
-                                                <button type="button" onClick={() => onOpenDocs(row.employeeId, row.label)}>Документы</button>
-                                            ) : null}
-                                        </span>
-                                    ) : null}
                                 </div>
-                                <span className="vac-month__badge" style={{ color: row.color, background: `color-mix(in srgb, ${row.color} 14%, #fff)` }}>
+                                <span className="vac-month__badge" style={{ color: row.color, background: `color-mix(in srgb, ${row.color} 16%, #fff)` }}>
                                     {row.kindLabel}
                                 </span>
+                                {row.canOpenCard ? (
+                                    <span className="vac-month__links">
+                                        <button type="button" onClick={() => onOpenCard(row.employeeId)}>Карточка</button>
+                                        {showDocs ? (
+                                            <button type="button" onClick={() => onOpenDocs(row.employeeId, row.label)}>Документы</button>
+                                        ) : null}
+                                    </span>
+                                ) : null}
                             </li>
                         ))}
                     </ul>
