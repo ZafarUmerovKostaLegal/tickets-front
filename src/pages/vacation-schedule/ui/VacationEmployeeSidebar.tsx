@@ -88,7 +88,8 @@ type Props = {
     initialQuery?: string;
     initialTeamFilterIds?: readonly string[];
     initialHiddenOpen?: boolean;
-    onStaffUiChange?: (ui: { query: string; teamFilterIds: string[]; hiddenOpen: boolean }) => void;
+    initialCollapsedTeamIds?: readonly string[];
+    onStaffUiChange?: (ui: { query: string; teamFilterIds: string[]; hiddenOpen: boolean; collapsedTeamIds: string[] }) => void;
 };
 
 function teamFilterLabel(ids: ReadonlySet<string>, groups: TeamGroup[]): string {
@@ -120,6 +121,7 @@ export function VacationEmployeeSidebar({
     initialQuery = '',
     initialTeamFilterIds = [],
     initialHiddenOpen = false,
+    initialCollapsedTeamIds = [],
     onStaffUiChange,
 }: Props) {
     const { user, loading: userLoading } = useCurrentUser();
@@ -133,6 +135,7 @@ export function VacationEmployeeSidebar({
     const [hiddenOpen, setHiddenOpen] = useState(initialHiddenOpen);
     const [query, setQuery] = useState(initialQuery);
     const [teamFilterIds, setTeamFilterIds] = useState<Set<string>>(() => new Set(initialTeamFilterIds));
+    const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(() => new Set(initialCollapsedTeamIds));
     const [teamMenuOpen, setTeamMenuOpen] = useState(false);
     const [teamQuery, setTeamQuery] = useState('');
     const teamMenuRef = useRef<HTMLDivElement>(null);
@@ -263,8 +266,9 @@ export function VacationEmployeeSidebar({
             query,
             teamFilterIds: [...teamFilterIds],
             hiddenOpen,
+            collapsedTeamIds: [...collapsedTeams],
         });
-    }, [hiddenOpen, query, teamFilterIds]);
+    }, [collapsedTeams, hiddenOpen, query, teamFilterIds]);
 
     const onShownEmployeesRef = useRef(onShownEmployees);
     onShownEmployeesRef.current = onShownEmployees;
@@ -497,10 +501,28 @@ export function VacationEmployeeSidebar({
                 {!hiddenOpen && shownGroups.map((group) => (
                     <section key={group.id} className="vac-staff__team">
                         <div className="vac-staff__team-hd">
-                            <h2 className="vac-staff__team-name">
+                            <button
+                                type="button"
+                                className="vac-staff__team-name"
+                                aria-expanded={!collapsedTeams.has(group.id)}
+                                title={collapsedTeams.has(group.id) ? 'Развернуть команду' : 'Свернуть команду'}
+                                onClick={() => {
+                                    setCollapsedTeams((prev) => {
+                                        const next = new Set(prev);
+                                        if (next.has(group.id))
+                                            next.delete(group.id);
+                                        else
+                                            next.add(group.id);
+                                        return next;
+                                    });
+                                }}
+                            >
+                                <svg className={`vac-staff__team-chev${collapsedTeams.has(group.id) ? '' : ' is-open'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                    <polyline points="9 6 15 12 9 18" />
+                                </svg>
                                 <span className="vac-staff__team-label">{group.name}</span>
                                 <span className="vac-staff__team-count">{group.employees.length}</span>
-                            </h2>
+                            </button>
                             <button
                                 type="button"
                                 className="vac-staff__team-all"
@@ -509,6 +531,7 @@ export function VacationEmployeeSidebar({
                                 Вся команда
                             </button>
                         </div>
+                        {collapsedTeams.has(group.id) ? null : (
                         <ul className="vac-staff__people">
                             {group.employees.map((employee) => {
                                 const selected = selectedIds.has(employee.id);
@@ -554,6 +577,7 @@ export function VacationEmployeeSidebar({
                                 );
                             })}
                         </ul>
+                        )}
                     </section>
                 ))}
             </div>

@@ -11,6 +11,7 @@ export type VacationCalendarStaffUi = {
     query: string;
     teamFilterIds: string[];
     hiddenOpen: boolean;
+    collapsedTeamIds: string[];
 };
 
 export type VacationCalendarUiState = {
@@ -29,6 +30,7 @@ const EMPTY_STAFF: VacationCalendarStaffUi = {
     query: '',
     teamFilterIds: [],
     hiddenOpen: false,
+    collapsedTeamIds: [],
 };
 
 function numberList(value: unknown): number[] {
@@ -92,6 +94,7 @@ export function loadVacationCalendarUi(): VacationCalendarUiState | null {
                 query: typeof staffRaw.query === 'string' ? staffRaw.query : '',
                 teamFilterIds: stringList(staffRaw.teamFilterIds),
                 hiddenOpen: staffRaw.hiddenOpen === true,
+                collapsedTeamIds: stringList(staffRaw.collapsedTeamIds),
             },
             hideLates: parsed.hideLates === true,
         };
@@ -113,5 +116,5 @@ export function saveVacationCalendarUi(state: VacationCalendarUiState): void {
 }
 
 export function emptyVacationStaffUi(): VacationCalendarStaffUi {
-    return { ...EMPTY_STAFF, teamFilterIds: [] };
+    return { ...EMPTY_STAFF, teamFilterIds: [], collapsedTeamIds: [] };
 }

@@ -16,7 +16,6 @@ type Props = {
     monthOpen: boolean;
     monthIndex: number | null;
     onMonthStep: (delta: number) => void;
-    onToday: () => void;
     onShowYear: () => void;
     onShowMonth: () => void;
     legend: ReadonlyArray<VacationUiLegendItem>;
@@ -34,7 +33,6 @@ export function VacationCalendarFilters({
     monthOpen,
     monthIndex,
     onMonthStep,
-    onToday,
     onShowYear,
     onShowMonth,
     legend,
@@ -51,7 +49,6 @@ export function VacationCalendarFilters({
                     <span>{monthIndex != null ? `${VACATION_MONTH_NAMES[monthIndex]} ${year}` : year}</span>
                     <button type="button" aria-label={monthOpen ? 'Следующий месяц' : 'Следующий год'} onClick={() => (monthOpen ? onMonthStep(1) : onYearChange(year + 1))} disabled={!monthOpen && year >= 2100}>›</button>
                 </div>
-                <button type="button" className="vac-filters__today" onClick={onToday}>Сегодня</button>
                 <div className="vac-filters__chips" role="group" aria-label="Статус отсутствия">
                     {STATUSES.map((item) => (
                         <button

@@ -512,11 +512,6 @@ export function VacationSchedulePage() {
         setScheduleYear(year);
         setViewMonth(month);
     };
-    const showToday = () => {
-        const now = new Date();
-        setScheduleYear(now.getFullYear());
-        setViewMonth(now.getMonth());
-    };
     const requestsOpen = view !== 'calendar';
     const showToDecideAttention = view === 'calendar' && canDecideRequests && counts.toDecideCount > 0;
     const showMinePendingAttention = view === 'calendar' && counts.minePendingCount > 0;
@@ -642,6 +637,7 @@ export function VacationSchedulePage() {
                                 initialQuery={staffUi.query}
                                 initialTeamFilterIds={staffUi.teamFilterIds}
                                 initialHiddenOpen={staffUi.hiddenOpen}
+                                initialCollapsedTeamIds={staffUi.collapsedTeamIds}
                                 onStaffUiChange={rememberStaffUi}
                             />
                             <div className="vac-board__main">
@@ -653,7 +649,6 @@ export function VacationSchedulePage() {
                                 monthOpen={viewMonth != null}
                                 monthIndex={viewMonth}
                                 onMonthStep={stepCalendarMonth}
-                                onToday={showToday}
                                 onShowYear={() => openCalendarMonth(null)}
                                 onShowMonth={() => openCalendarMonth(scheduleYear === today.getFullYear() ? today.getMonth() : (viewMonth ?? 0))}
                                 legend={facts.legend}

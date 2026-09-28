@@ -556,7 +556,6 @@
   line-height: 1;
 }
 
-.vac-filters__today,
 .vac-toolbar .vac-filters__chip,
 .vac-toolbar .vac-filters__mode,
 .vac-toolbar .vac-filters__legend-row {
@@ -568,17 +567,6 @@
   padding: 0 0.75rem;
   line-height: 1;
   white-space: nowrap;
-}
-
-.vac-filters__today {
-  border: 1px solid var(--app-border, #e2e8f0);
-  border-radius: 999px;
-  background: var(--app-surface, #fff);
-  font: inherit;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--app-text, #334155);
-  cursor: pointer;
 }
 
 .vac-toolbar .vac-filters__chips,
@@ -1873,13 +1861,31 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
 .vac-staff__team-name {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   min-width: 0;
   margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--app-text, #0f172a);
+  cursor: pointer;
+  text-align: left;
+}
+
+.vac-staff__team-chev {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: #94a3b8;
+  transition: transform 0.18s ease;
+}
+
+.vac-staff__team-chev.is-open {
+  transform: rotate(90deg);
 }
 
 .vac-staff__team-label {
