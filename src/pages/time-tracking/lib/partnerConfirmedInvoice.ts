@@ -155,7 +155,9 @@ export async function generateInvoiceFromPartnerConfirmedReport(args: {
         partnerBillingPeriodFrom: dateFrom,
         partnerBillingPeriodTo: dateTo,
         partnerConfirmationRequestId: requestId,
-        ...(args.allowUnsignedPartners ? { skipPartnerInvoiceConfirmation: true } : {}),
+        ...(args.allowUnsignedPartners
+            ? { skipPartnerInvoiceConfirmation: true, deferPartnerConfirmation: true }
+            : {}),
         ...(unsignedNote ? { internalNote: unsignedNote } : {}),
     };
 

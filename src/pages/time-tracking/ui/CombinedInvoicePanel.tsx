@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
     createInvoice,
+    ensureInvoiceFxRatesForBilling,
     fetchUnbilledExpenses,
     fetchUnbilledTimeEntries,
+    isForbiddenError,
     listTimeTrackingUsers,
     pickUserDisplayLabel,
     type TimeManagerClientProjectRow,
@@ -23,6 +25,11 @@ import {
     type CombinedTimeLine,
 } from '../lib/combinedInvoice';
 import { addDaysIso, firstOfMonthIso, lastOfMonthIso, todayIso } from '../lib/invoicePageShared';
+import {
+    assertNoApprovedUnpaidProjectExpenses,
+    formatUnpaidExpenseListLines,
+    isProjectUnpaidExpensesError,
+} from '../lib/projectUnpaidExpenses';
 
 type Props = {
     clients: TimeManagerClientRow[];
@@ -51,6 +58,7 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
     const [templates, setTemplates] = useState<CombinedInvoiceTemplate[]>(() => loadCombinedInvoiceTemplates());
     const [templateId, setTemplateId] = useState('');
     const [templateName, setTemplateName] = useState('');
+    const [loadNote, setLoadNote] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -97,6 +105,14 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
     const totalExp = expenses.reduce((sum, line) => sum + line.equivalentAmount, 0);
     const currency = time.find((line) => line.currency)?.currency ?? 'USD';
 
+    useEffect(() => {
+        if (payerId)
+            return;
+        const ids = [...new Set(selectedProjects.map((project) => project.client_id).filter(Boolean))];
+        if (ids.length === 1)
+            setPayerId(ids[0]!);
+    }, [payerId, selectedProjects]);
+
     const toggleProject = (id: string) => {
         setProjectIds((prev) => (prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]));
     };
@@ -107,23 +123,51 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
             return;
         }
         setLoading(true);
+        setLoadNote(null);
         try {
             const packs = await Promise.all(projectIds.map(async (projectId) => {
-                const [timeRows, expenseRows] = await Promise.all([
-                    fetchUnbilledTimeEntries({ projectId, dateFrom: from, dateTo: to }),
-                    fetchUnbilledExpenses({ projectId, dateFrom: from, dateTo: to }),
-                ]);
-                return {
-                    time: timeRows.map((row) => ({ ...row, projectId })),
-                    expenses: expenseRows.map((row) => ({ ...row, projectId })),
-                };
+                const label = projects.find((project) => project.id === projectId)?.name ?? projectId;
+                try {
+                    const [timeRows, expenseRows] = await Promise.all([
+                        fetchUnbilledTimeEntries({ projectId, dateFrom: from, dateTo: to }),
+                        fetchUnbilledExpenses({ projectId, dateFrom: from, dateTo: to }),
+                    ]);
+                    return {
+                        ok: true as const,
+                        label,
+                        time: timeRows.map((row) => ({ ...row, projectId })),
+                        expenses: expenseRows.map((row) => ({ ...row, projectId })),
+                    };
+                }
+                catch (error: unknown) {
+                    const message = error instanceof Error ? error.message : 'ошибка загрузки';
+                    return { ok: false as const, label, message };
+                }
             }));
-            const nextTime = packs.flatMap((pack) => pack.time);
-            const nextExpenses = packs.flatMap((pack) => pack.expenses);
+            const nextTime: CombinedTimeLine[] = [];
+            const nextExpenses: CombinedExpenseLine[] = [];
+            const failed: string[] = [];
+            for (const pack of packs) {
+                if (pack.ok) {
+                    nextTime.push(...pack.time);
+                    nextExpenses.push(...pack.expenses);
+                }
+                else {
+                    failed.push(`${pack.label}: ${pack.message}`);
+                }
+            }
             setTime(nextTime);
             setExpenses(nextExpenses);
-            if (nextTime.length === 0 && nextExpenses.length === 0)
-                onError('За период нет незакрытых часов и расходов.');
+            if (nextTime.length === 0 && nextExpenses.length === 0) {
+                const extra = failed.length > 0 ? `\n${failed.join('\n')}` : '';
+                onError(`За период нет незакрытых часов и расходов.${extra}`);
+                setLoadNote(null);
+                return;
+            }
+            const hours = nextTime.reduce((sum, line) => sum + (line.billableHours ?? line.hours), 0);
+            setLoadNote(`Загружено: ${nextTime.length} записей времени (${hours.toFixed(2)} ч), расходов: ${nextExpenses.length}.${failed.length ? ` Не удалось загрузить ${failed.length} проект(а).` : ''}`);
+            if (failed.length > 0)
+                onError(`Часть проектов не загрузилась:\n${failed.join('\n')}`);
         }
         catch (error: unknown) {
             onError(error instanceof Error ? error.message : 'Не удалось загрузить строки.');
@@ -180,34 +224,67 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
 
     const createDraft = async () => {
         if (!payerId) {
-            onError('Выберите плательщика.');
+            onError('Выберите плательщика — поле вверху формы.');
             return;
         }
         if (time.length === 0 && expenses.length === 0) {
-            onError('Сначала загрузите строки за период.');
+            onError('Сначала нажмите «Загрузить часы».');
             return;
         }
         setBusy(true);
         try {
+            for (const project of selectedProjects) {
+                try {
+                    await assertNoApprovedUnpaidProjectExpenses(project.id);
+                }
+                catch (error) {
+                    if (isProjectUnpaidExpensesError(error)) {
+                        onError(`${project.name}: нельзя сформировать счёт, есть неоплаченные возмещаемые расходы (${error.expenses.length}).\n${formatUnpaidExpenseListLines(error.expenses)}`);
+                        return;
+                    }
+                    throw error;
+                }
+            }
+            const billedTotal = Math.round((totalFees + totalExp) * 100) / 100;
             const shareNote = formatCombinedShareNote(shares);
+            const expenseDates = expenses
+                .map((line) => String(line.expenseDate ?? '').trim().slice(0, 10))
+                .filter(Boolean);
+            await ensureInvoiceFxRatesForBilling({
+                dateFrom: from,
+                dateTo: to,
+                issueDate,
+                expenseDates,
+                currency,
+            });
             const created = await createInvoice({
                 clientId: payerId,
                 issueDate,
                 dueDate,
                 invoiceNumber: number.trim() || null,
                 currency,
+                skipPartnerInvoiceConfirmation: true,
+                deferPartnerConfirmation: true,
                 partnerBillingPeriodFrom: from,
                 partnerBillingPeriodTo: to,
                 timeEntryIds: time.map((line) => line.id),
                 expenseIds: expenses.map((line) => line.id),
+                billedAmount: billedTotal,
                 serviceDescription: feeTitle.trim() || 'Fees for services under several projects',
                 clientNote: shareNote,
                 internalNote: `${allocation === 'equal' ? 'Equal split' : 'Hours split'}\n${shareNote}`,
+                taxPercent: 0,
+                tax2Percent: 0,
+                discountPercent: 0,
             });
             onCreated(created.id);
         }
         catch (error: unknown) {
-            onError(error instanceof Error ? error.message : 'Не удалось создать черновик.');
+            const raw = error instanceof Error ? error.message : 'Не удалось создать черновик.';
+            const hint = isForbiddenError(error)
+                ? ' Нет полного подтверждения партнёров или строки принадлежат другому клиенту — сводный счёт уходит как исключение без ожидания всех подписей. Если ошибка повторяется, нужен донастрой API.'
+                : '';
+            onError(`${raw}${hint}`);
         }
         finally {
             setBusy(false);
@@ -305,15 +382,8 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                 <span className="tt-inv-dialog__label">Номер</span>
                 <input className="tt-inv-dialog__control" value={number} onChange={(event) => setNumber(event.target.value)} placeholder="Пусто — номер назначит система" />
             </label>
-            <div className="tt-inv-combined__actions">
-                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => void loadLines()} disabled={loading}>{loading ? 'Загрузка…' : 'Загрузить часы'}</button>
-                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setPreview(true)} disabled={time.length + expenses.length === 0}>Предпросмотр</button>
-                <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={() => void createDraft()} disabled={busy || time.length + expenses.length === 0}>{busy ? 'Создание…' : 'Создать черновик'}</button>
-            </div>
-            <div className="tt-inv-combined__template">
-                <input className="tt-inv-dialog__control" value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Имя шаблона для следующих клиентов" />
-                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={persistTemplate}>Сохранить шаблон</button>
-            </div>
+            {loadNote ? <p className="tt-inv-page__section-desc" role="status">{loadNote}</p> : null}
+            {!payerId ? <p className="tt-inv-page__section-desc">Сначала выберите плательщика вверху формы.</p> : null}
             {shares.length > 0 && time.length + expenses.length > 0 ? (
                 <table className="tt-inv-combined__table">
                     <caption>Распределение: {allocation === 'equal' ? 'поровну' : 'по часам проекта'} · {currency}</caption>
@@ -348,6 +418,15 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                     </tfoot>
                 </table>
             ) : null}
+            <div className="tt-inv-combined__actions">
+                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => void loadLines()} disabled={loading}>{loading ? 'Загрузка…' : 'Загрузить часы'}</button>
+                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setPreview(true)} disabled={time.length + expenses.length === 0}>Предпросмотр</button>
+                <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={() => void createDraft()} disabled={busy || !payerId || time.length + expenses.length === 0}>{busy ? 'Создание…' : 'Создать черновик'}</button>
+            </div>
+            <div className="tt-inv-combined__template">
+                <input className="tt-inv-dialog__control" value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Имя шаблона для следующих клиентов" />
+                <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={persistTemplate}>Сохранить шаблон</button>
+            </div>
             {preview ? (
                 <div className="tt-inv-combined__preview" role="dialog" aria-modal="true">
                     <article>

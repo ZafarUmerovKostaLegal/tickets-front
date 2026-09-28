@@ -783,7 +783,7 @@ export function InvoiceCreatePage() {
               partnerBillingPeriodTo: periodTo,
             }
           : {}),
-        ...(skipPartnerGate ? { skipPartnerInvoiceConfirmation: true } : {}),
+        ...(skipPartnerGate ? { skipPartnerInvoiceConfirmation: true, deferPartnerConfirmation: true } : {}),
         ...(billedAmountNum != null
           ? {
               billedAmount: billedAmountNum,

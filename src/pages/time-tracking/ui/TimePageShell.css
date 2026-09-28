@@ -653,6 +653,11 @@
   border: 1px solid transparent;
 }
 
+.tt-reports__btn--accent:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .tt-reports__btn--accent:hover {
   background: #4338ca;
 }
