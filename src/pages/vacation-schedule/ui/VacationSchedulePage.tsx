@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useVacationLeavePendingBadge } from '@entities/vacation';
 import { useCurrentUser } from '@shared/hooks';
@@ -15,6 +15,12 @@ import { VacationEmployeeSidebar } from './VacationEmployeeSidebar';
 import { VacationLeaveRequestsPanel } from './VacationLeaveRequestsPanel';
 import { VacationPeriodDocsModal } from './VacationPeriodDocsModal';
 import { VacationYearCalendar, type VacationCalendarPaint, type VacationCalendarPeriod } from './VacationYearCalendar';
+import {
+    emptyVacationStaffUi,
+    loadVacationCalendarUi,
+    saveVacationCalendarUi,
+    type VacationCalendarStaffUi,
+} from '../lib/vacationCalendarUiStorage';
 import {
     absenceRunAround,
     employeeMatchesStatus,
@@ -74,6 +80,7 @@ function tabParam(view: View): string {
 const EMPTY_KINDS = new Set<VacationAbsenceKind>();
 
 export function VacationSchedulePage() {
+    const remembered = useRef(loadVacationCalendarUi()).current;
     const { t, locale } = useI18n();
     const { user, loading } = useCurrentUser();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -86,15 +93,20 @@ export function VacationSchedulePage() {
     const [selectedEmployees, setSelectedEmployees] = useState<VacationScheduleEmployeeRow[]>([]);
     const [requestModalOpen, setRequestModalOpen] = useState(false);
     const [refreshToken, setRefreshToken] = useState(0);
-    const [scheduleYear, setScheduleYear] = useState(() => new Date().getFullYear());
+    const [scheduleYear, setScheduleYear] = useState(() => remembered?.year ?? new Date().getFullYear());
     const [scheduleReload, setScheduleReload] = useState(0);
-    const [selectedPeriod, setSelectedPeriod] = useState<VacationCalendarPeriod | null>(null);
-    const [monthPanelOpen, setMonthPanelOpen] = useState(true);
+    const [selectedPeriod, setSelectedPeriod] = useState<VacationCalendarPeriod | null>(() => remembered?.selectedPeriod ?? null);
+    const [monthPanelOpen, setMonthPanelOpen] = useState(() => remembered?.monthPanelOpen ?? true);
+    const [staffUi, setStaffUi] = useState<VacationCalendarStaffUi>(() => remembered?.staff ?? emptyVacationStaffUi());
     const [detailEmployeeId, setDetailEmployeeId] = useState<number | null>(null);
     const [docsTarget, setDocsTarget] = useState<{ employeeId: number; label: string; dateIso: string } | null>(null);
-    const [statusFilter, setStatusFilter] = useState<VacationCalendarStatus>('all');
-    const [hiddenKinds, setHiddenKinds] = useState<Set<VacationAbsenceKind>>(() => new Set());
-    const [viewMonth, setViewMonth] = useState<number | null>(null);
+    const [statusFilter, setStatusFilter] = useState<VacationCalendarStatus>(() => remembered?.status ?? 'all');
+    const [hiddenKinds, setHiddenKinds] = useState<Set<VacationAbsenceKind>>(() => new Set(remembered?.hiddenKinds ?? []));
+    const [viewMonth, setViewMonth] = useState<number | null>(() => remembered?.viewMonth ?? null);
+    const pendingEmployeeIds = useRef(remembered?.selectedEmployeeIds ?? []);
+    const saveReady = useRef(false);
+    const restoredEmployeeIds = useRef<number[] | null>(null);
+    const storedMonthOpened = useRef(false);
     const [openToken, setOpenToken] = useState(0);
     const [directory, setDirectory] = useState<VacationRosterPerson[]>([]);
     const [shownPeople, setShownPeople] = useState<VacationRosterPerson[]>([]);
@@ -219,6 +231,49 @@ export function VacationSchedulePage() {
     const rememberShown = useCallback((rows: VacationRosterPerson[]) => {
         setShownPeople(rows);
     }, []);
+    const rememberStaffUi = useCallback((ui: VacationCalendarStaffUi) => {
+        setStaffUi(ui);
+    }, []);
+
+    useEffect(() => {
+        if (storedMonthOpened.current)
+            return;
+        storedMonthOpened.current = true;
+        if (viewMonth != null)
+            setOpenToken((value) => value + 1);
+    }, [viewMonth]);
+
+    useEffect(() => {
+        if (pendingEmployeeIds.current.length === 0) {
+            saveReady.current = true;
+            return;
+        }
+        if (directory.length === 0)
+            return;
+        const wanted = new Set(pendingEmployeeIds.current);
+        pendingEmployeeIds.current = [];
+        const rows = directory.filter((person) => wanted.has(person.id));
+        restoredEmployeeIds.current = rows.map((person) => person.id);
+        saveReady.current = true;
+        setSelectedEmployees(rows);
+    }, [directory]);
+
+    useEffect(() => {
+        if (!saveReady.current)
+            return;
+        const selectedEmployeeIds = restoredEmployeeIds.current ?? selectedEmployees.map((person) => person.id);
+        restoredEmployeeIds.current = null;
+        saveVacationCalendarUi({
+            year: scheduleYear,
+            viewMonth,
+            monthPanelOpen,
+            status: statusFilter,
+            hiddenKinds: [...hiddenKinds],
+            selectedEmployeeIds,
+            selectedPeriod,
+            staff: staffUi,
+        });
+    }, [hiddenKinds, monthPanelOpen, scheduleYear, selectedEmployees, selectedPeriod, staffUi, statusFilter, viewMonth]);
     const canEditSchedule = !loading && canEditVacationSchedule(user);
     const canViewDocs = !loading && canViewVacationManualEntryDocs(user);
     const dayRows = useMemo(() => {
@@ -382,6 +437,10 @@ export function VacationSchedulePage() {
                                 }}
                                 onShownEmployees={rememberShown}
                                 onDirectory={rememberDirectory}
+                                initialQuery={staffUi.query}
+                                initialTeamFilterIds={staffUi.teamFilterIds}
+                                initialHiddenOpen={staffUi.hiddenOpen}
+                                onStaffUiChange={rememberStaffUi}
                             />
                             <div className="vac-board__main">
                             <VacationCalendarFilters

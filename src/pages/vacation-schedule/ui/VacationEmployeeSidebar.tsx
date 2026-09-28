@@ -85,6 +85,10 @@ type Props = {
     onToggleEmployee: (employee: VacationScheduleEmployeeRow) => void;
     onShownEmployees: (rows: Array<VacationScheduleEmployeeRow & { teamName: string }>) => void;
     onDirectory: (rows: Array<VacationScheduleEmployeeRow & { teamName: string }>) => void;
+    initialQuery?: string;
+    initialTeamFilterIds?: readonly string[];
+    initialHiddenOpen?: boolean;
+    onStaffUiChange?: (ui: { query: string; teamFilterIds: string[]; hiddenOpen: boolean }) => void;
 };
 
 function teamFilterLabel(ids: ReadonlySet<string>, groups: TeamGroup[]): string {
@@ -105,7 +109,19 @@ function teamFilterLabel(ids: ReadonlySet<string>, groups: TeamGroup[]): string 
     return `${n} ${word}`;
 }
 
-export function VacationEmployeeSidebar({ year, selectedIds, allowedIds, onSelectEmployees, onToggleEmployee, onShownEmployees, onDirectory }: Props) {
+export function VacationEmployeeSidebar({
+    year,
+    selectedIds,
+    allowedIds,
+    onSelectEmployees,
+    onToggleEmployee,
+    onShownEmployees,
+    onDirectory,
+    initialQuery = '',
+    initialTeamFilterIds = [],
+    initialHiddenOpen = false,
+    onStaffUiChange,
+}: Props) {
     const { user, loading: userLoading } = useCurrentUser();
     const [groups, setGroups] = useState<TeamGroup[]>([]);
     const [hiddenUsers, setHiddenUsers] = useState<Set<number>>(() => new Set());
@@ -114,9 +130,9 @@ export function VacationEmployeeSidebar({ year, selectedIds, allowedIds, onSelec
     const [error, setError] = useState<string | null>(null);
     const [hideError, setHideError] = useState<string | null>(null);
     const [hidingKey, setHidingKey] = useState<string | null>(null);
-    const [hiddenOpen, setHiddenOpen] = useState(false);
-    const [query, setQuery] = useState('');
-    const [teamFilterIds, setTeamFilterIds] = useState<Set<string>>(() => new Set());
+    const [hiddenOpen, setHiddenOpen] = useState(initialHiddenOpen);
+    const [query, setQuery] = useState(initialQuery);
+    const [teamFilterIds, setTeamFilterIds] = useState<Set<string>>(() => new Set(initialTeamFilterIds));
     const [teamMenuOpen, setTeamMenuOpen] = useState(false);
     const [teamQuery, setTeamQuery] = useState('');
     const teamMenuRef = useRef<HTMLDivElement>(null);
@@ -238,6 +254,17 @@ export function VacationEmployeeSidebar({ year, selectedIds, allowedIds, onSelec
         }
         return shown;
     }, [allowedIds, filteredByTeam, hiddenEmployees, hiddenUsers, query]);
+
+    const onStaffUiChangeRef = useRef(onStaffUiChange);
+    onStaffUiChangeRef.current = onStaffUiChange;
+
+    useEffect(() => {
+        onStaffUiChangeRef.current?.({
+            query,
+            teamFilterIds: [...teamFilterIds],
+            hiddenOpen,
+        });
+    }, [hiddenOpen, query, teamFilterIds]);
 
     const onShownEmployeesRef = useRef(onShownEmployees);
     onShownEmployeesRef.current = onShownEmployees;
