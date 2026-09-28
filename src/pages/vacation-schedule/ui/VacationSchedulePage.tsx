@@ -7,8 +7,9 @@ import { AppBackButton, AppHomeLogo } from '@shared/ui';
 import { isVacationSystemRowId, type VacationAbsenceKind, type VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
 import { canDecideVacationLeaveRequests, canEditVacationSchedule, canViewVacationManualEntryDocs } from '../model/vacationScheduleAccess';
 import { VacationAbsenceRequestModal } from './VacationAbsenceRequestModal';
-import { VacationCalendarFilters, type VacationTodayRow } from './VacationCalendarFilters';
+import { VacationCalendarFilters } from './VacationCalendarFilters';
 import { VacationDayDetails, type VacationDayDetailRow } from './VacationDayDetails';
+import { VacationMonthPanel } from './VacationMonthPanel';
 import { VacationEmployeeDetailModal } from './VacationEmployeeDetailModal';
 import { VacationEmployeeSidebar } from './VacationEmployeeSidebar';
 import { VacationLeaveRequestsPanel } from './VacationLeaveRequestsPanel';
@@ -32,6 +33,30 @@ type View = 'calendar' | 'mine' | 'to_decide' | 'all';
 
 const VIEW_IDS = new Set<View>(['calendar', 'mine', 'to_decide', 'all']);
 
+function ruCountWord(count: number, one: string, few: string, many: string): string {
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    if (mod10 === 1 && mod100 !== 11)
+        return one;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
+        return few;
+    return many;
+}
+
+function vacationAttentionText(locale: string, kind: 'decide' | 'mine', count: number): string {
+    if (locale === 'en') {
+        const noun = count === 1 ? 'request' : 'requests';
+        return kind === 'decide'
+            ? `${count} leave ${noun} awaiting your approval`
+            : `${count} leave ${noun} pending partner review`;
+    }
+    const noun = ruCountWord(count, 'заявка', 'заявки', 'заявок');
+    const verb = ruCountWord(count, 'ждёт', 'ждут', 'ждут');
+    return kind === 'decide'
+        ? `${count} ${noun} ${verb} согласования`
+        : `${count} ${noun} на рассмотрении у партнёра`;
+}
+
 function padIso(year: number, part: { monthIndex: number; day: number }): string {
     return `${year}-${String(part.monthIndex + 1).padStart(2, '0')}-${String(part.day).padStart(2, '0')}`;
 }
@@ -49,7 +74,7 @@ function tabParam(view: View): string {
 const EMPTY_KINDS = new Set<VacationAbsenceKind>();
 
 export function VacationSchedulePage() {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const { user, loading } = useCurrentUser();
     const [searchParams, setSearchParams] = useSearchParams();
     const canDecideRequests = useMemo(
@@ -64,6 +89,7 @@ export function VacationSchedulePage() {
     const [scheduleYear, setScheduleYear] = useState(() => new Date().getFullYear());
     const [scheduleReload, setScheduleReload] = useState(0);
     const [selectedPeriod, setSelectedPeriod] = useState<VacationCalendarPeriod | null>(null);
+    const [monthPanelOpen, setMonthPanelOpen] = useState(true);
     const [detailEmployeeId, setDetailEmployeeId] = useState<number | null>(null);
     const [docsTarget, setDocsTarget] = useState<{ employeeId: number; label: string; dateIso: string } | null>(null);
     const [statusFilter, setStatusFilter] = useState<VacationCalendarStatus>('all');
@@ -155,37 +181,38 @@ export function VacationSchedulePage() {
         }
         return map;
     }, [daysByEmployee, facts.legend, focusPeople, hiddenKinds]);
-    const todayRows = useMemo(() => {
-        if (scheduleYear !== today.getFullYear())
-            return [];
+    const detailMonth = viewMonth ?? (scheduleYear === today.getFullYear() ? today.getMonth() : 0);
+    const monthRows = useMemo(() => {
+        const fromIso = padIso(scheduleYear, { monthIndex: detailMonth, day: 1 });
+        const toIso = padIso(scheduleYear, { monthIndex: detailMonth, day: 31 });
         const legendByKind = new Map(facts.legend.map((item) => [item.kind, item]));
-        const rows: VacationTodayRow[] = [];
+        const rows: VacationDayDetailRow[] = [];
         for (const person of focusPeople) {
             const days = daysByEmployee.get(person.id) ?? [];
-            const kindsToday = [...new Set(days.filter((day) => day.iso === todayIso && !hiddenKinds.has(day.kind)).map((day) => day.kind))];
-            for (const kind of kindsToday) {
-                const run = absenceRunAround(days, todayIso, kind);
+            const inside = days.filter((day) => day.iso >= fromIso && day.iso <= toIso && !hiddenKinds.has(day.kind));
+            const kinds = [...new Set(inside.map((day) => day.kind))];
+            for (const kind of kinds) {
+                const sample = inside.find((day) => day.kind === kind);
+                if (!sample)
+                    continue;
+                const run = absenceRunAround(days, sample.iso, kind);
                 if (!run)
                     continue;
                 const legendItem = legendByKind.get(kind);
-                const parts = person.label.trim().split(/\s+/).filter(Boolean);
-                const initials = parts.length <= 1
-                    ? (parts[0] ?? '?').slice(0, 2).toUpperCase()
-                    : `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
                 rows.push({
                     employeeId: person.id,
                     label: person.label,
                     teamName: person.teamName,
-                    initials,
                     color: legendItem?.color ?? '#64748b',
                     kindLabel: legendItem?.label ?? kind,
                     rangeLabel: formatAbsenceRange(run.from, run.to),
+                    canOpenCard: !isVacationSystemRowId(person.id),
                 });
             }
         }
-        rows.sort((a, b) => a.label.localeCompare(b.label, 'ru'));
+        rows.sort((a, b) => a.rangeLabel.localeCompare(b.rangeLabel, 'ru') || a.label.localeCompare(b.label, 'ru'));
         return rows;
-    }, [daysByEmployee, facts.legend, focusPeople, hiddenKinds, scheduleYear, today, todayIso]);
+    }, [daysByEmployee, detailMonth, facts.legend, focusPeople, hiddenKinds, scheduleYear]);
     const rememberDirectory = useCallback((rows: VacationRosterPerson[]) => {
         setDirectory(rows);
     }, []);
@@ -286,18 +313,16 @@ export function VacationSchedulePage() {
                 </header>
                 {showToDecideAttention ? (
                     <div className="vac-attention" role="status">
-                        <p className="vac-attention__text">
-                            {t('vacationSchedule.attention.toDecide').replace('{count}', String(counts.toDecideCount))}
-                        </p>
+                        <span className="vac-attention__dot" aria-hidden />
+                        <p className="vac-attention__text">{vacationAttentionText(locale, 'decide', counts.toDecideCount)}</p>
                         <button type="button" className="vac-attention__action" onClick={() => setView('to_decide')}>
                             {t('vacationSchedule.attention.goToDecide')}
                         </button>
                     </div>
                 ) : showMinePendingAttention ? (
                     <div className="vac-attention vac-attention--info" role="status">
-                        <p className="vac-attention__text">
-                            {t('vacationSchedule.attention.minePending').replace('{count}', String(counts.minePendingCount))}
-                        </p>
+                        <span className="vac-attention__dot" aria-hidden />
+                        <p className="vac-attention__text">{vacationAttentionText(locale, 'mine', counts.minePendingCount)}</p>
                         <button type="button" className="vac-attention__action" onClick={() => setView('mine')}>
                             {t('vacationSchedule.attention.goToMine')}
                         </button>
@@ -358,6 +383,23 @@ export function VacationSchedulePage() {
                                 onShownEmployees={rememberShown}
                                 onDirectory={rememberDirectory}
                             />
+                            <VacationMonthPanel
+                                year={scheduleYear}
+                                monthIndex={detailMonth}
+                                open={monthPanelOpen}
+                                rows={monthRows}
+                                showDocs={canViewDocs}
+                                onToggle={() => setMonthPanelOpen((open) => !open)}
+                                onOpenCard={setDetailEmployeeId}
+                                onOpenDocs={(employeeId, label) => {
+                                    const hit = (daysByEmployee.get(employeeId) ?? []).find((day) => day.monthIndex === detailMonth);
+                                    setDocsTarget({
+                                        employeeId,
+                                        label,
+                                        dateIso: hit?.iso ?? padIso(scheduleYear, { monthIndex: detailMonth, day: 1 }),
+                                    });
+                                }}
+                            />
                             <div className="vac-board__main">
                             <VacationCalendarFilters
                                 year={scheduleYear}
@@ -379,13 +421,6 @@ export function VacationSchedulePage() {
                                             next.add(kind);
                                         return next;
                                     });
-                                }}
-                                todayLabel={today.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                todayRows={todayRows}
-                                onPickToday={(employeeId) => {
-                                    const person = shownPeople.find((row) => row.id === employeeId) ?? directory.find((row) => row.id === employeeId);
-                                    if (person)
-                                        setSelectedEmployees([person]);
                                 }}
                             />
                             <VacationYearCalendar

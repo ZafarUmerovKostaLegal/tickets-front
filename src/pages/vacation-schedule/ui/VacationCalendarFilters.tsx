@@ -8,16 +8,6 @@ const STATUSES: ReadonlyArray<{ id: VacationCalendarStatus; label: string }> = [
     { id: 'declined', label: 'Отклонён' },
 ];
 
-export type VacationTodayRow = {
-    employeeId: number;
-    label: string;
-    teamName: string;
-    initials: string;
-    color: string;
-    kindLabel: string;
-    rangeLabel: string;
-};
-
 type Props = {
     year: number;
     onYearChange: (year: number) => void;
@@ -30,9 +20,6 @@ type Props = {
     kindCounts: ReadonlyMap<VacationAbsenceKind, number>;
     hiddenKinds: ReadonlySet<VacationAbsenceKind>;
     onToggleKind: (kind: VacationAbsenceKind) => void;
-    todayLabel: string;
-    todayRows: ReadonlyArray<VacationTodayRow>;
-    onPickToday: (employeeId: number) => void;
 };
 
 export function VacationCalendarFilters({
@@ -47,9 +34,6 @@ export function VacationCalendarFilters({
     kindCounts,
     hiddenKinds,
     onToggleKind,
-    todayLabel,
-    todayRows,
-    onPickToday,
 }: Props) {
     return (
         <div className="vac-toolbar" aria-label="Фильтры календаря">
@@ -111,24 +95,6 @@ export function VacationCalendarFilters({
                     );
                 })}
             </div>
-            ) : null}
-            {todayRows.length > 0 ? (
-                <div className="vac-toolbar__today">
-                    <span className="vac-toolbar__today-label" title={todayLabel}>Сегодня</span>
-                    <ul className="vac-toolbar__today-list">
-                        {todayRows.map((row) => (
-                            <li key={`${row.employeeId}-${row.kindLabel}`}>
-                                <button type="button" className="vac-filters__today-row" onClick={() => onPickToday(row.employeeId)}>
-                                    <span className="vac-filters__avatar" style={{ background: row.color }} aria-hidden>{row.initials}</span>
-                                    <span className="vac-filters__today-copy">
-                                        <strong>{row.label}</strong>
-                                        <span>{row.rangeLabel}</span>
-                                    </span>
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
             ) : null}
         </div>
     );
