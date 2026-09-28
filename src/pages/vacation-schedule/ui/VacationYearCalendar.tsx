@@ -355,6 +355,17 @@ export function VacationYearCalendar({
         });
     };
 
+    const restoredMonth = useRef(false);
+    useEffect(() => {
+        if (restoredMonth.current)
+            return;
+        restoredMonth.current = true;
+        const month = requestedMonthRef.current;
+        if (month == null)
+            return;
+        openMonth(month);
+    }, []);
+
     useEffect(() => {
         if (openToken === openTokenSeen.current)
             return;

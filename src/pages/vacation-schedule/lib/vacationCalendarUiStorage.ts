@@ -34,7 +34,7 @@ const EMPTY_STAFF: VacationCalendarStaffUi = {
 function numberList(value: unknown): number[] {
     if (!Array.isArray(value))
         return [];
-    return value.filter((item): item is number => Number.isInteger(item) && item > 0);
+    return value.filter((item): item is number => Number.isInteger(item) && item !== 0);
 }
 
 function stringList(value: unknown): string[] {

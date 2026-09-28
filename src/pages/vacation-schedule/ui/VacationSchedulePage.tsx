@@ -313,12 +313,13 @@ export function VacationSchedulePage() {
         }
         if (directory.length === 0)
             return;
-        const wanted = new Set(pendingEmployeeIds.current);
+        const wanted = [...pendingEmployeeIds.current];
         pendingEmployeeIds.current = [];
-        const rows = directory.filter((person) => wanted.has(person.id));
-        restoredEmployeeIds.current = rows.map((person) => person.id);
+        const rows = directory.filter((person) => wanted.includes(person.id));
+        restoredEmployeeIds.current = rows.length > 0 ? rows.map((person) => person.id) : wanted;
         saveReady.current = true;
-        setSelectedEmployees(rows);
+        if (rows.length > 0)
+            setSelectedEmployees(rows);
     }, [directory]);
 
     useEffect(() => {
