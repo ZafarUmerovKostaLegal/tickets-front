@@ -1024,7 +1024,8 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                                     className="tt-partner-confirmed__unsigned-invoice"
                                     title={t('timeTrackingPage.reports.forReview.unsignedInvoiceTitle').replace('{date}', fmtIsoDateShort(linkedInvoice.createdAt, locale))}
                                 >
-                                    {t('timeTrackingPage.reports.forReview.unsignedInvoiceBadge').replace('{date}', fmtIsoDateShort(linkedInvoice.createdAt, locale))}
+                                    <span className="tt-partner-confirmed__unsigned-invoice-tag">{t('timeTrackingPage.reports.forReview.unsignedInvoiceTag')}</span>
+                                    <span className="tt-partner-confirmed__unsigned-invoice-meta">{t('timeTrackingPage.reports.forReview.unsignedInvoiceMeta').replace('{date}', fmtIsoDateShort(linkedInvoice.createdAt, locale))}</span>
                                 </span>
                             ) : null}
                         </span>

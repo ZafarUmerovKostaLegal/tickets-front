@@ -761,13 +761,14 @@ export function InvoiceDetailPage() {
                   {clientSubtitle && <p className="tt-inv-page__sub">{clientSubtitle}</p>}
                   {invoiceCreatedBeforeAllSignatures(detail.internalNote) ? (
                     <p className="tt-inv-unsigned-banner" role="status">
-                      {t('timeTrackingPage.invoices.unsignedInvoiceBanner').replace('{date}', (() => {
+                      <span className="tt-inv-unsigned-banner__tag">{t('timeTrackingPage.reports.forReview.unsignedInvoiceTag')}</span>
+                      <span>{t('timeTrackingPage.invoices.unsignedInvoiceBanner').replace('{date}', (() => {
                         const raw = String(detail.createdAt ?? '').trim();
                         const d = new Date(raw);
                         return Number.isNaN(d.getTime())
                           ? raw
-                          : d.toLocaleString(localeTag(locale), { dateStyle: 'short', timeStyle: 'short' });
-                      })())}
+                          : d.toLocaleString(localeTag(locale), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                      })())}</span>
                     </p>
                   ) : null}
                   {detail.storedStatus !== detail.status && (

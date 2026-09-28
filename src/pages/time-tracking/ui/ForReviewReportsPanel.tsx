@@ -253,6 +253,15 @@ function ForReviewPrioritySelect({
     );
 }
 
+function fmtUnsignedMarkDate(iso: string | null | undefined, locale: 'ru' | 'en'): string {
+    if (!iso?.trim())
+        return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime()))
+        return iso;
+    return d.toLocaleString(localeTag(locale), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
 function fmtIsoWhen(iso: string | null | undefined, locale: 'ru' | 'en'): string {
     if (!iso?.trim())
         return '—';
@@ -1006,7 +1015,8 @@ export function ForReviewReportsPanel() {
                                         className="tt-partner-confirmed__unsigned-invoice"
                                         title={t('timeTrackingPage.reports.forReview.unsignedInvoiceTitle').replace('{date}', fmtIsoWhen(linkedInvoice.createdAt, locale))}
                                     >
-                                        {t('timeTrackingPage.reports.forReview.unsignedInvoiceBadge').replace('{date}', fmtIsoWhen(linkedInvoice.createdAt, locale))}
+                                        <span className="tt-partner-confirmed__unsigned-invoice-tag">{t('timeTrackingPage.reports.forReview.unsignedInvoiceTag')}</span>
+                                        <span className="tt-partner-confirmed__unsigned-invoice-meta">{t('timeTrackingPage.reports.forReview.unsignedInvoiceMeta').replace('{date}', fmtUnsignedMarkDate(linkedInvoice.createdAt, locale))}</span>
                                     </span>
                                 ) : null}
                             </span>
