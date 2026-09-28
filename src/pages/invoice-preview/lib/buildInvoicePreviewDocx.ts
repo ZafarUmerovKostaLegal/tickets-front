@@ -215,12 +215,14 @@ function pctWidths(weights: readonly number[]): number[] {
 
 function trHeadCell(txt: string, pct: number): TableCell {
     return new TableCell({
-        borders: cellBorderGrid,
+        borders: {
+            ...cellBorderGrid,
+            bottom: { style: BorderStyle.SINGLE, size: 12, color: '18181B' },
+        },
         width: { size: pct, type: WidthType.PERCENTAGE },
-        shading: { type: ShadingType.SOLID, fill: INV_RED, color: INV_RED },
         verticalAlign: VerticalAlignTable.CENTER,
         children: [new Paragraph({
-            children: [new TextRun({ text: txt, bold: true, color: 'FFFFFF', size: DOC_SIZE, font: DOC_FONT })],
+            children: [new TextRun({ text: txt, bold: true, color: '18181B', size: DOC_SIZE, font: DOC_FONT })],
         })],
     });
 }
@@ -252,7 +254,7 @@ function trFootValueCell(txt: string, pct: number, align: DocParaAlign): TableCe
         children: [new Paragraph({
             alignment: align,
             children: [
-                new TextRun({ text: t.length ? t : '\u00a0', bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT }),
+                new TextRun({ text: t.length ? t : '\u00a0', bold: true, color: '18181B', size: DOC_SIZE, font: DOC_FONT }),
             ],
         })],
     });
@@ -263,6 +265,8 @@ type TimeReportDocxChunkOpts = {
     pageNumStr: string;
     isLastChunk: boolean;
     showInitiatorName?: boolean;
+    projectName?: string;
+    logoRuns?: ParagraphChild[];
 };
 
 function timeReportDocxSectionChildren(
@@ -275,36 +279,31 @@ function timeReportDocxSectionChildren(
     const labels = getTimeReportLabels(model.coverLanguage);
     const amountHdr = labels.amount(cur);
     const showName = opts.showInitiatorName === true;
-    const DW = pctWidths(showName ? [13, 8, 11, 16, 12, 7, 16, 17] : [15, 9, 13, 18, 8, 18, 19]);
-    const hoursI = showName ? 5 : 4;
-    const rateI = showName ? 6 : 5;
-    const amountI = showName ? 7 : 6;
-    const totalSpan = showName ? 5 : 4;
+    const DW = pctWidths(showName ? [12, 16, 30, 14, 10, 18] : [14, 18, 40, 10, 18]);
+    const hoursI = showName ? 4 : 3;
+    const amountI = showName ? 5 : 4;
+    const totalSpan = showName ? 4 : 3;
     const detailCells = (r: InvoiceTimeReportDetailRow) => {
         const split = showName ? splitServiceInitiatorName(r.description) : null;
         return [
             trBodyTextCell(r.date, DW[0]!, AlignmentType.LEFT),
             trBodyTextCell(r.initials, DW[1]!, AlignmentType.LEFT),
-            trBodyTextCell(r.task, DW[2]!, AlignmentType.LEFT),
-            trBodyTextCell(split ? split.note : r.description, DW[3]!, AlignmentType.LEFT),
-            ...(showName ? [trBodyTextCell(split?.name ?? '', DW[4]!, AlignmentType.LEFT)] : []),
+            trBodyTextCell(split ? (split.note || r.task) : (r.description || r.task), DW[2]!, AlignmentType.LEFT),
+            ...(showName ? [trBodyTextCell(split?.name ?? '', DW[3]!, AlignmentType.LEFT)] : []),
             trBodyTextCell(r.hours, DW[hoursI]!, AlignmentType.RIGHT),
-            trBodyTextCell(r.hourlyRate, DW[rateI]!, AlignmentType.RIGHT),
             trBodyTextCell(r.amount, DW[amountI]!, AlignmentType.RIGHT),
         ];
     };
-    const SW = pctWidths([9, 20, 18, 12, 18, 23]);
+    const SW = pctWidths([8, 18, 16, 14, 10, 16, 18]);
 
     const detailHeader = new TableRow({
         children: [
-            trHeadCell(labels.date, DW[0] ?? 12),
-            trHeadCell(labels.initials, DW[1] ?? 10),
-            trHeadCell(labels.task, DW[2] ?? 11),
-            trHeadCell(labels.description, DW[3] ?? 22),
-            ...(showName ? [trHeadCell(labels.initiatorName, DW[4] ?? 12)] : []),
-            trHeadCell(labels.hours, DW[hoursI] ?? 9),
-            trHeadCell(labels.rate, DW[rateI] ?? 14),
-            trHeadCell(amountHdr, DW[amountI] ?? 22),
+            trHeadCell(labels.date, DW[0] ?? 14),
+            trHeadCell(labels.user, DW[1] ?? 18),
+            trHeadCell(labels.description, DW[2] ?? 40),
+            ...(showName ? [trHeadCell(labels.initiatorName, DW[3] ?? 14)] : []),
+            trHeadCell(labels.hours, DW[hoursI] ?? 10),
+            trHeadCell(amountHdr, DW[amountI] ?? 18),
         ],
     });
     const detailBodyRows: TableRow[] = detailChunk.map((r) => new TableRow({
@@ -318,11 +317,10 @@ function timeReportDocxSectionChildren(
                     borders: cellBorderGrid,
                     columnSpan: totalSpan,
                     children: [new Paragraph({
-                        children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                        children: [new TextRun({ text: labels.total, bold: true, color: '18181B', size: DOC_SIZE, font: DOC_FONT })],
                     })],
                 }),
                 trFootValueCell(pack.detailTotalHoursDisplay, DW[hoursI]!, AlignmentType.RIGHT),
-                trFootValueCell('—', DW[rateI]!, AlignmentType.RIGHT),
                 trFootValueCell(pack.detailTotalAmountDisplay, DW[amountI]!, AlignmentType.RIGHT),
             ],
         }));
@@ -339,7 +337,7 @@ function timeReportDocxSectionChildren(
         rows: [detailHeader, ...detailBodyRows],
     });
 
-    const confidentialRow = new Table({
+    const letterhead = new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         layout: TableLayoutType.FIXED,
         borders: TableBorders.NONE,
@@ -348,24 +346,25 @@ function timeReportDocxSectionChildren(
                 children: [
                     new TableCell({
                         borders: cellBorderNil,
-                        width: { size: 74, type: WidthType.PERCENTAGE },
-                        children: [new Paragraph({ children: [new TextRun({ text: '\u200b', size: h(2), font: DOC_FONT })] })],
+                        width: { size: 48, type: WidthType.PERCENTAGE },
+                        children: [new Paragraph({
+                            children: opts.logoRuns?.length
+                                ? opts.logoRuns
+                                : [new TextRun({ text: KOSTA_LEGAL_FIRM.brandName, bold: true, size: DOC_SIZE, font: DOC_FONT })],
+                        })],
                     }),
                     new TableCell({
                         borders: cellBorderNil,
-                        width: { size: 26, type: WidthType.PERCENTAGE },
-                        shading: { type: ShadingType.SOLID, fill: INV_RED, color: INV_RED },
-                        margins: { top: 52, bottom: 52, left: 90, right: 90 },
-                        children: [new Paragraph({
-                            alignment: AlignmentType.CENTER,
-                            children: [new TextRun({
-                                text: labels.confidential,
-                                bold: true,
-                                color: 'FFFFFF',
-                                size: DOC_SIZE,
-                                font: DOC_FONT,
-                            })],
-                        })],
+                        width: { size: 52, type: WidthType.PERCENTAGE },
+                        children: [
+                            KOSTA_LEGAL_FIRM.addressLine,
+                            KOSTA_LEGAL_FIRM.phone,
+                            KOSTA_LEGAL_FIRM.email,
+                            KOSTA_LEGAL_FIRM.web,
+                        ].map((line) => new Paragraph({
+                            alignment: AlignmentType.RIGHT,
+                            children: [new TextRun({ text: line, size: h(8), font: DOC_FONT, color: '4B5563' })],
+                        })),
                     }),
                 ],
             }),
@@ -375,24 +374,32 @@ function timeReportDocxSectionChildren(
     const titleText = opts.continuation
         ? labels.titleContinued(model.servicesMonthYear)
         : labels.title(model.servicesMonthYear);
+    const project = (opts.projectName ?? '').trim();
 
     const out: (Paragraph | Table)[] = [
-        confidentialRow,
+        letterhead,
         new Paragraph({
-            spacing: { after: 120 },
-            border: { bottom: { style: BorderStyle.SINGLE, color: INV_RED, size: 10, space: 1 } },
-            children: [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
-        }),
-        new Paragraph({
-            spacing: { after: 160 },
+            spacing: { before: 200, after: 120 },
             children: [new TextRun({
                 text: titleText,
                 bold: true,
-                size: DOC_SIZE,
+                size: h(9),
                 font: DOC_FONT,
-                color: INV_RED,
+                color: '18181B',
             })],
         }),
+        ...(project && !opts.continuation
+            ? [new Paragraph({
+                spacing: { after: 120 },
+                children: [new TextRun({
+                    text: labels.subProject(project),
+                    bold: true,
+                    size: DOC_SIZE,
+                    font: DOC_FONT,
+                    color: '18181B',
+                })],
+            })]
+            : []),
         detailTbl,
     ];
 
@@ -408,18 +415,17 @@ function timeReportDocxSectionChildren(
                         borders: cellBorderGrid,
                         columnSpan: totalSpan,
                         children: [new Paragraph({
-                            children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                            children: [new TextRun({ text: labels.total, bold: true, color: '18181B', size: DOC_SIZE, font: DOC_FONT })],
                         })],
                     }),
                     trFootValueCell(pack.mehnatTotalHoursDisplay, DW[hoursI]!, AlignmentType.RIGHT),
-                    trFootValueCell('—', DW[rateI]!, AlignmentType.RIGHT),
                     trFootValueCell(pack.mehnatTotalAmountDisplay, DW[amountI]!, AlignmentType.RIGHT),
                 ],
             }));
             out.push(
                 new Paragraph({
                     spacing: { before: 260, after: 120 },
-                    children: [new TextRun({ text: labels.mehnatTitle, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                    children: [new TextRun({ text: labels.mehnatTitle, bold: true, color: '18181B', size: DOC_SIZE, font: DOC_FONT })],
                 }),
                 new Table({
                     ...tableOpts,
@@ -430,12 +436,13 @@ function timeReportDocxSectionChildren(
 
         const summaryHeader = new TableRow({
             children: [
-                trHeadCell(labels.initials, SW[0] ?? 9),
-                trHeadCell(labels.name, SW[1] ?? 26),
-                trHeadCell(labels.titleCol, SW[2] ?? 26),
-                trHeadCell(labels.hours, SW[3] ?? 13),
-                trHeadCell(labels.hourlyRate, SW[4] ?? 13),
-                trHeadCell(labels.totalPrice(cur), SW[5] ?? 13),
+                trHeadCell(labels.initials, SW[0] ?? 8),
+                trHeadCell(labels.name, SW[1] ?? 18),
+                trHeadCell(labels.titleCol, SW[2] ?? 16),
+                trHeadCell(labels.rate, SW[3] ?? 14),
+                trHeadCell(labels.hours, SW[4] ?? 10),
+                trHeadCell(labels.hourlyRate, SW[5] ?? 16),
+                trHeadCell(labels.totalPrice(cur), SW[6] ?? 18),
             ],
         });
         const summaryDataRows: TableRow[] = pack.summarySlots.map((r) => new TableRow({
@@ -443,9 +450,10 @@ function timeReportDocxSectionChildren(
                 trBodyTextCell(r.initials, SW[0]!, AlignmentType.LEFT),
                 trBodyTextCell(r.name, SW[1]!, AlignmentType.LEFT),
                 trBodyTextCell(r.title, SW[2]!, AlignmentType.LEFT),
-                trBodyTextCell(r.hours, SW[3]!, AlignmentType.RIGHT),
-                trBodyTextCell(r.hourlyRate, SW[4]!, AlignmentType.RIGHT),
-                trBodyTextCell(r.totalPrice, SW[5]!, AlignmentType.RIGHT),
+                trBodyTextCell(r.hourlyRate, SW[3]!, AlignmentType.RIGHT),
+                trBodyTextCell(r.hours, SW[4]!, AlignmentType.RIGHT),
+                trBodyTextCell(r.hourlyRate, SW[5]!, AlignmentType.RIGHT),
+                trBodyTextCell(r.totalPrice, SW[6]!, AlignmentType.RIGHT),
             ],
         }));
 
@@ -455,14 +463,14 @@ function timeReportDocxSectionChildren(
             children: [
                 new TableCell({
                     borders: cellBorderGrid,
-                    columnSpan: 3,
+                    columnSpan: 4,
                     children: [new Paragraph({
-                        children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                        children: [new TextRun({ text: labels.total, bold: true, color: '18181B', size: DOC_SIZE, font: DOC_FONT })],
                     })],
                 }),
-                trFootValueCell(pack.summaryGrandHoursDisplay, SW[3]!, AlignmentType.RIGHT),
-                trFootValueCell('—', SW[4]!, AlignmentType.RIGHT),
-                trFootValueCell(sumGrandAmt, SW[5]!, AlignmentType.RIGHT),
+                trFootValueCell(pack.summaryGrandHoursDisplay, SW[4]!, AlignmentType.RIGHT),
+                trFootValueCell('', SW[5]!, AlignmentType.RIGHT),
+                trFootValueCell(sumGrandAmt, SW[6]!, AlignmentType.RIGHT),
             ],
         }));
 
@@ -474,25 +482,25 @@ function timeReportDocxSectionChildren(
         out.push(
             new Paragraph({
                 spacing: { before: 260, after: 120 },
-                children: [new TextRun({ text: labels.summaryTitle, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                children: [new TextRun({ text: labels.summaryTitle, bold: true, color: '18181B', size: DOC_SIZE, font: DOC_FONT })],
             }),
             sumTbl,
         );
 
         const expenseRows = trimTrailingEmptyDetailSlots(pack.expenseSlots);
         if (expenseRows.length > 0) {
-            const EW = pctWidths([18, 52, 30]);
+            const EW = pctWidths([52, 18, 30]);
             const expenseHeader = new TableRow({
                 children: [
-                    trHeadCell(labels.date, EW[0] ?? 18),
-                    trHeadCell(labels.description, EW[1] ?? 52),
+                    trHeadCell(labels.description, EW[0] ?? 52),
+                    trHeadCell(labels.emailDate, EW[1] ?? 18),
                     trHeadCell(amountHdr, EW[2] ?? 30),
                 ],
             });
             const expenseDataRows: TableRow[] = expenseRows.map((r) => new TableRow({
                 children: [
-                    trBodyTextCell(r.date, EW[0]!, AlignmentType.LEFT),
-                    trBodyTextCell(r.description, EW[1]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.description, EW[0]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.date, EW[1]!, AlignmentType.LEFT),
                     trBodyTextCell(r.amount, EW[2]!, AlignmentType.RIGHT),
                 ],
             }));
@@ -502,7 +510,7 @@ function timeReportDocxSectionChildren(
                         borders: cellBorderGrid,
                         columnSpan: 2,
                         children: [new Paragraph({
-                            children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                            children: [new TextRun({ text: labels.total, bold: true, color: '18181B', size: DOC_SIZE, font: DOC_FONT })],
                         })],
                     }),
                     trFootValueCell(pack.expenseTotalAmountDisplay, EW[2]!, AlignmentType.RIGHT),
@@ -511,7 +519,7 @@ function timeReportDocxSectionChildren(
             out.push(
                 new Paragraph({
                     spacing: { before: 260, after: 120 },
-                    children: [new TextRun({ text: labels.expensesTitle, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                    children: [new TextRun({ text: labels.expensesTitle, bold: true, color: '18181B', size: DOC_SIZE, font: DOC_FONT })],
                 }),
                 new Table({
                     ...tableOpts,
@@ -519,18 +527,39 @@ function timeReportDocxSectionChildren(
                 }),
             );
         }
+        const shareW = pctWidths([44, 28, 28]);
+        const shareName = (opts.projectName ?? '').trim() || model.quotedCompanyName;
+        out.push(new Table({
+            ...tableOpts,
+            rows: [
+                new TableRow({
+                    children: [
+                        trHeadCell(labels.sharedAmounts, shareW[0] ?? 44),
+                        trHeadCell(labels.reimbursable, shareW[1] ?? 28),
+                        trHeadCell(labels.toBeInvoiced, shareW[2] ?? 28),
+                    ],
+                }),
+                new TableRow({
+                    children: [
+                        trBodyTextCell(`${shareName}    100%`, shareW[0]!, AlignmentType.LEFT),
+                        trBodyTextCell(sumGrandAmt, shareW[1]!, AlignmentType.RIGHT),
+                        trBodyTextCell(sumGrandAmt, shareW[2]!, AlignmentType.RIGHT),
+                    ],
+                }),
+            ],
+        }));
     }
 
     out.push(
         new Paragraph({
             spacing: { before: 360 },
-            border: { top: { style: BorderStyle.SINGLE, color: INV_RED, size: 12, space: 2 } },
+            border: { top: { style: BorderStyle.SINGLE, color: '18181B', size: 12, space: 2 } },
             children: [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
         }),
         new Paragraph({
             spacing: { before: 60 },
             alignment: AlignmentType.RIGHT,
-            children: [new TextRun({ text: opts.pageNumStr, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+            children: [new TextRun({ text: opts.pageNumStr, bold: true, color: '18181B', size: DOC_SIZE, font: DOC_FONT })],
         }),
     );
 
@@ -973,6 +1002,8 @@ export async function buildInvoicePreviewDocxBlob(input: InvoicePreviewPackInput
                 pageNumStr: String(pageNum),
                 isLastChunk: i === trChunks.length - 1,
                 showInitiatorName: input.showServiceInitiatorName === true,
+                projectName: session?.meta.projectLabel ?? '',
+                logoRuns: coverLogoRuns,
             }),
         });
     });

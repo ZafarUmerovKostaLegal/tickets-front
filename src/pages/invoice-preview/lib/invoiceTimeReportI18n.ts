@@ -10,6 +10,8 @@ export type TimeReportLabels = {
     confidential: string;
     title: (servicesMonthYear: string) => string;
     titleContinued: (servicesMonthYear: string) => string;
+    subProject: (name: string) => string;
+    user: string;
     date: string;
     initials: string;
     task: string;
@@ -21,6 +23,10 @@ export type TimeReportLabels = {
     total: string;
     summaryTitle: string;
     expensesTitle: string;
+    emailDate: string;
+    sharedAmounts: string;
+    reimbursable: string;
+    toBeInvoiced: string;
     mehnatTitle: string;
     name: string;
     titleCol: string;
@@ -31,8 +37,10 @@ export type TimeReportLabels = {
 const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
     ENG: {
         confidential: 'CONFIDENTIAL',
-        title: (period) => `TIME REPORT FOR SERVICES PROVIDED IN ${period.toUpperCase()}`,
-        titleContinued: (period) => `TIME REPORT FOR SERVICES PROVIDED IN ${period.toUpperCase()} — CONTINUED`,
+        title: (period) => `FEES FOR SERVICES IN ${period.toUpperCase()}`,
+        titleContinued: (period) => `FEES FOR SERVICES IN ${period.toUpperCase()} — CONTINUED`,
+        subProject: (name) => `Sub-project name: ${name}`,
+        user: 'User',
         date: 'Date',
         initials: 'Initials',
         task: 'Task',
@@ -42,8 +50,12 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
         rate: 'Rate',
         amount: (cur) => (cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`),
         total: 'Total',
-        summaryTitle: 'Summary of services',
-        expensesTitle: 'Expenses',
+        summaryTitle: 'Summary of Services',
+        expensesTitle: 'Reimbursable Expenses via',
+        emailDate: 'Email date',
+        sharedAmounts: 'Shared amounts',
+        reimbursable: 'Reimbursable expenses',
+        toBeInvoiced: 'TO BE INVOICED',
         mehnatTitle: 'My Mehnat',
         name: 'Name',
         titleCol: 'Title',
@@ -52,8 +64,10 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
     },
     RU: {
         confidential: 'КОНФИДЕНЦИАЛЬНО',
-        title: (period) => `ОТЧЁТ О ВРЕМЕНИ ЗА УСЛУГИ, ОКАЗАННЫЕ В ${period.toUpperCase()}`,
-        titleContinued: (period) => `ОТЧЁТ О ВРЕМЕНИ ЗА УСЛУГИ, ОКАЗАННЫЕ В ${period.toUpperCase()} — ПРОДОЛЖЕНИЕ`,
+        title: (period) => `ВОЗНАГРАЖДЕНИЕ ЗА УСЛУГИ В ${period.toUpperCase()}`,
+        titleContinued: (period) => `ВОЗНАГРАЖДЕНИЕ ЗА УСЛУГИ В ${period.toUpperCase()} — ПРОДОЛЖЕНИЕ`,
+        subProject: (name) => `Подпроект: ${name}`,
+        user: 'Сотрудник',
         date: 'Дата',
         initials: 'Инициалы',
         task: 'Задача',
@@ -64,7 +78,11 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
         amount: (cur) => `Сумма (${cur})`,
         total: 'Итого',
         summaryTitle: 'Сводка по услугам',
-        expensesTitle: 'Расходы',
+        expensesTitle: 'Возмещаемые расходы',
+        emailDate: 'Дата',
+        sharedAmounts: 'Распределение',
+        reimbursable: 'Возмещаемые расходы',
+        toBeInvoiced: 'К ВЫСТАВЛЕНИЮ',
         mehnatTitle: 'My Mehnat',
         name: 'ФИО',
         titleCol: 'Должность',

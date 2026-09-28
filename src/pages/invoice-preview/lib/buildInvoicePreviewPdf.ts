@@ -53,7 +53,6 @@ const MR = mmToPt(12);
 const MT = mmToPt(20);
 const MB = mmToPt(20);
 
-const TR_RED = rgb(232 / 255, 51 / 255, 55 / 255);
 const MUTED_TEXT = rgb(0.41, 0.44, 0.52);
 const GRID_LINE = rgb(0.74, 0.77, 0.8);
 const BODY = rgb(0.12, 0.14, 0.18);
@@ -397,7 +396,7 @@ function drawRightFitPdfBold(
         y: yBaseline,
         size: fitted.size,
         font: fontBold,
-        color: TR_RED,
+        color: rgb(0.1, 0.1, 0.1),
     });
 }
 
@@ -536,15 +535,15 @@ function estimateGridTableHeight(
 }
 
 function estimateTimeReportTableTop(continuation: boolean, model: InvoiceCoverLetterModel, fontBold: PDFFont): number {
-    let yTop = H - MT - 4;
-    yTop -= 18;
-    yTop -= 14;
+    let yTop = H - MT - COVER_LOGO_H_PT - 16;
     const labels = getTimeReportLabels(model.coverLanguage);
     const title = continuation
         ? labels.titleContinued(model.servicesMonthYear)
         : labels.title(model.servicesMonthYear);
-    const titleLines = splitTextLines(title, W - ML - MR, DOC_FS, fontBold);
-    yTop -= Math.max(titleLines.length, 1) * DOC_LH;
+    const titleLines = splitTextLines(title, W - ML - MR, 8, fontBold);
+    yTop -= Math.max(titleLines.length, 1) * 11;
+    if (!continuation)
+        yTop -= 16;
     return yTop - TR_TITLE_TABLE_GAP;
 }
 
@@ -580,13 +579,13 @@ function paginateDetailRowsForPdf(
     const detailWrap = showInitiatorName ? TR_DETAIL_NAME_WRAP_COLS : TR_DETAIL_WRAP_COLS;
     const detailFixed = showInitiatorName ? TR_DETAIL_NAME_FIXED_FS_COLS : TR_DETAIL_FIXED_FS_COLS;
     const detailHeaders = showInitiatorName
-        ? [labels.date, labels.initials, labels.task, labels.description, labels.initiatorName, labels.hours, labels.rate, labels.amount(cur)]
-        : [labels.date, labels.initials, labels.task, labels.description, labels.hours, labels.rate, labels.amount(cur)];
-    const summaryHeaders = [labels.initials, labels.name, labels.titleCol, labels.hours, labels.hourlyRate, labels.totalPrice(cur)] as const;
+        ? [labels.date, labels.user, labels.description, labels.initiatorName, labels.hours, labels.amount(cur)]
+        : [labels.date, labels.user, labels.description, labels.hours, labels.amount(cur)];
+    const summaryHeaders = [labels.initials, labels.name, labels.titleCol, labels.rate, labels.hours, labels.hourlyRate, labels.totalPrice(cur)] as const;
     const summaryBody = trimTrailingEmptySummarySlots(pack.summarySlots)
-        .map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
+        .map((r) => [r.initials, r.name, r.title, r.hourlyRate, r.hours, r.hourlyRate, r.totalPrice] as const);
     const expenseBody = trimTrailingEmptyDetailSlots(pack.expenseSlots)
-        .map((r) => [r.date, r.description, r.amount] as const);
+        .map((r) => [r.description, r.date, r.amount] as const);
     const mehnatBody = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? [])
         .map((r) => detailPdfRowCells(r, showInitiatorName));
     const expenseReserve = expenseBody.length
@@ -594,9 +593,9 @@ function paginateDetailRowsForPdf(
             + estimateGridTableHeight(
                 tableW,
                 TIME_REPORT_PDF_EXPENSE_WEIGHTS,
-                [labels.date, labels.description, labels.amount(cur)],
+                [labels.description, labels.emailDate, labels.amount(cur)],
                 expenseBody,
-                new Set([1]),
+                new Set([0]),
                 font,
                 fontBold,
                 true,
@@ -621,7 +620,7 @@ function paginateDetailRowsForPdf(
             tableW,
             TIME_REPORT_PDF_SUMMARY_WEIGHTS,
             summaryHeaders,
-            summaryBody.length ? summaryBody : [['', '', '', '', '', '']],
+            summaryBody.length ? summaryBody : [['', '', '', '', '', '', '']],
             TR_SUMMARY_WRAP_COLS,
             font,
             fontBold,
@@ -744,7 +743,7 @@ function trimDetailSliceToFitSummary(
             tableW,
             TIME_REPORT_PDF_SUMMARY_WEIGHTS,
             summaryHeaders,
-            summaryBody.length ? summaryBody : [['', '', '', '', '', '']],
+            summaryBody.length ? summaryBody : [['', '', '', '', '', '', '']],
             TR_SUMMARY_WRAP_COLS,
             font,
             fontBold,
@@ -853,12 +852,11 @@ function drawTimeReportGridTable(
     const bodyHeight = rowHeights.reduce((s, h) => s + h, 0);
     const tableBottom = yHeaderBot - bodyHeight - (innerFootLines > 0 ? footerH : 0);
 
-    page.drawRectangle({
-        x: tableLeft,
-        y: yHeaderBot,
-        width: tableW,
-        height: headerH,
-        color: TR_RED,
+    page.drawLine({
+        start: { x: tableLeft, y: yHeaderBot },
+        end: { x: tableLeft + tableW, y: yHeaderBot },
+        thickness: 1.1,
+        color: rgb(0.1, 0.1, 0.1),
     });
 
     for (let i = 0; i < headerCells.length; i++) {
@@ -877,7 +875,7 @@ function drawTimeReportGridTable(
             y: yLine,
             size,
             font: fontBold,
-            color: rgb(1, 1, 1),
+            color: rgb(0.1, 0.1, 0.1),
         });
     }
 
@@ -940,7 +938,7 @@ function drawTimeReportGridTable(
             y: yFoot,
             size: DOC_FS,
             font: fontBold,
-            color: TR_RED,
+            color: rgb(0.1, 0.1, 0.1),
         });
 
         if (footerKind === 'detail' && footerTotals?.detail) {
@@ -951,7 +949,7 @@ function drawTimeReportGridTable(
                     drawRightFitPdfBold(page, amount, xs[ai]!, widths[ai]!, yFoot, fontBold);
             }
             else {
-                const hi = colWeights.length - 3;
+                const hi = colWeights.length - 2;
                 const ai = colWeights.length - 1;
                 if (hours?.trim())
                     drawRightFitPdfBold(page, hours, xs[hi]!, widths[hi]!, yFoot, fontBold);
@@ -961,15 +959,12 @@ function drawTimeReportGridTable(
         }
 
         if (footerKind === 'summary' && footerTotals?.summary) {
-            const { hours, hourly, amount } = footerTotals.summary;
-            const hci = 3;
-            const rci = 4;
-            const aci = 5;
+            const { hours, amount } = footerTotals.summary;
+            const hci = 4;
+            const aci = colWeights.length - 1;
 
             if (hours?.trim())
                 drawRightFitPdfBold(page, hours, xs[hci]!, widths[hci]!, yFoot, fontBold);
-            if (hourly?.trim())
-                drawRightFitPdfBold(page, hourly, xs[rci]!, widths[rci]!, yFoot, fontBold);
 
             let amtDraw = amount?.trim();
             if (!amtDraw && summaryCurrency)
@@ -990,68 +985,80 @@ function drawTimeReportGridTable(
 }
 
 /** Wider Date so `25 Mar 2026` / `25 мар 2026` fit at DOC_FS (no shrink). */
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [15, 9, 13, 18, 8, 18, 19] as const;
-const TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS = [13, 8, 11, 16, 12, 7, 16, 17] as const;
-const TIME_REPORT_PDF_EXPENSE_WEIGHTS = [18, 52, 30] as const;
-const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 20, 18, 12, 18, 23] as const;
-/** Task, Description, Rate, Amount — wrap at spaces; long tokens may split mid-word to fit the column. */
-const TR_DETAIL_WRAP_COLS = new Set([2, 3, 5, 6]);
-const TR_DETAIL_NAME_WRAP_COLS = new Set([2, 3, 4, 6, 7]);
-const TR_SUMMARY_WRAP_COLS = new Set([1, 2, 4, 5]);
-/** Date / Initials / Hours — always DOC_FS (never shrink to fit). */
-const TR_DETAIL_FIXED_FS_COLS = new Set([0, 1, 4]);
-const TR_DETAIL_NAME_FIXED_FS_COLS = new Set([0, 1, 5]);
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [14, 18, 40, 10, 18] as const;
+const TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS = [12, 16, 30, 14, 10, 18] as const;
+const TIME_REPORT_PDF_EXPENSE_WEIGHTS = [52, 18, 30] as const;
+const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [8, 18, 16, 14, 10, 16, 18] as const;
+const TIME_REPORT_PDF_SHARE_WEIGHTS = [44, 28, 28] as const;
+/** Description wraps; hours and amount stay on one line. */
+const TR_DETAIL_WRAP_COLS = new Set([2]);
+const TR_DETAIL_NAME_WRAP_COLS = new Set([2, 3]);
+const TR_SUMMARY_WRAP_COLS = new Set([1, 2]);
+/** Date / User / Hours — always DOC_FS (never shrink to fit). */
+const TR_DETAIL_FIXED_FS_COLS = new Set([0, 1, 3]);
+const TR_DETAIL_NAME_FIXED_FS_COLS = new Set([0, 1, 4]);
 
 function detailPdfRowCells(
     row: InvoiceTimeReportDetailRow,
     showInitiatorName: boolean,
 ): string[] {
     if (!showInitiatorName)
-        return [row.date, row.initials, row.task, row.description, row.hours, row.hourlyRate, row.amount];
+        return [row.date, row.initials, row.description || row.task, row.hours, row.amount];
     const split = splitServiceInitiatorName(row.description);
-    return [row.date, row.initials, row.task, split.note, split.name, row.hours, row.hourlyRate, row.amount];
+    return [row.date, row.initials, split.note || row.task, split.name, row.hours, row.amount];
 }
 const TR_SUMMARY_FIXED_FS_COLS = new Set([0, 3]);
 
-function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, fontBold: PDFFont, continuation: boolean): number {
-    let yTop = H - MT - 4;
+function drawTimeReportBandHeader(
+    page: PDFPage,
+    model: InvoiceCoverLetterModel,
+    font: PDFFont,
+    fontBold: PDFFont,
+    continuation: boolean,
+    logoImage: Awaited<ReturnType<PDFDocument['embedPng']>> | null,
+    projectName: string,
+): number {
+    const logoTop = H - MT;
+    if (logoImage) {
+        page.drawImage(logoImage, {
+            x: ML,
+            y: logoTop - COVER_LOGO_H_PT,
+            width: COVER_LOGO_W_PT,
+            height: COVER_LOGO_H_PT,
+        });
+    }
+    const muted = rgb(0.29, 0.33, 0.39);
+    const contact = [
+        KOSTA_LEGAL_FIRM.addressLine,
+        KOSTA_LEGAL_FIRM.phone,
+        KOSTA_LEGAL_FIRM.email,
+        KOSTA_LEGAL_FIRM.web,
+    ];
+    let cy = logoTop - 2;
+    for (const line of contact) {
+        const tw = font.widthOfTextAtSize(line, COVER_CONTACT_FS);
+        page.drawText(line, { x: W - MR - tw, y: cy, size: COVER_CONTACT_FS, font, color: muted });
+        cy -= COVER_CONTACT_LH;
+    }
+    let yTop = logoTop - COVER_LOGO_H_PT - 16;
     const labels = getTimeReportLabels(model.coverLanguage);
-    const confLabel = labels.confidential;
-    const fsConf = DOC_FS;
-    const cw = fontBold.widthOfTextAtSize(confLabel, fsConf);
-    const padConfX = 6;
-    const padConfY = 4;
-    const boxW = cw + padConfX * 2;
-    const boxH = fsConf + padConfY * 2;
-    const boxX = W - MR - boxW;
-    const boxBottom = yTop - boxH + 4;
-    page.drawRectangle({
-        x: boxX,
-        y: boxBottom,
-        width: boxW,
-        height: boxH,
-        color: TR_RED,
-    });
-    page.drawText(confLabel, {
-        x: boxX + padConfX,
-        y: boxBottom + padConfY - 1,
-        size: fsConf,
-        font: fontBold,
-        color: rgb(1, 1, 1),
-    });
-    yTop -= 18;
-    page.drawLine({
-        start: { x: ML, y: yTop + 6 },
-        end: { x: W - MR, y: yTop + 6 },
-        thickness: 0.6,
-        color: TR_RED,
-    });
-    yTop -= 14;
     const title = continuation
         ? labels.titleContinued(model.servicesMonthYear)
         : labels.title(model.servicesMonthYear);
-    const yAfterTitle = wrapTextBlock(page, title, ML, yTop, W - ML - MR, DOC_FS, fontBold, TR_RED, DOC_LH);
-    return yAfterTitle - TR_TITLE_TABLE_GAP;
+    const yAfterTitle = wrapTextBlock(page, title, ML, yTop, W - ML - MR, 8, fontBold, rgb(0.1, 0.1, 0.1), 11);
+    yTop = yAfterTitle - 12;
+    const project = projectName.trim();
+    if (project && !continuation) {
+        page.drawText(labels.subProject(project), {
+            x: ML,
+            y: yTop,
+            size: DOC_FS,
+            font: fontBold,
+            color: rgb(0.1, 0.1, 0.1),
+        });
+        yTop -= 16;
+    }
+    return yTop - TR_TITLE_TABLE_GAP;
 }
 
 function drawTimeReportBandFooter(page: PDFPage, fontBold: PDFFont, pageTag: number): void {
@@ -1060,7 +1067,7 @@ function drawTimeReportBandFooter(page: PDFPage, fontBold: PDFFont, pageTag: num
         start: { x: ML, y: footerLine },
         end: { x: W - MR, y: footerLine },
         thickness: 0.55,
-        color: TR_RED,
+        color: rgb(0.1, 0.1, 0.1),
     });
     const box = 13;
     const bx = W - MR - box;
@@ -1069,7 +1076,7 @@ function drawTimeReportBandFooter(page: PDFPage, fontBold: PDFFont, pageTag: num
         y: footerLine - box - 2,
         width: box,
         height: box,
-        borderColor: TR_RED,
+        borderColor: rgb(0.1, 0.1, 0.1),
         borderWidth: 1,
         color: rgb(1, 1, 1),
     });
@@ -1079,7 +1086,7 @@ function drawTimeReportBandFooter(page: PDFPage, fontBold: PDFFont, pageTag: num
         y: footerLine - box + 1,
         size: DOC_FS,
         font: fontBold,
-        color: TR_RED,
+        color: rgb(0.1, 0.1, 0.1),
     });
 }
 
@@ -1096,10 +1103,20 @@ function drawSingleTimeReportPdfPage(
         showDetailTotals: boolean;
         showSummarySection: boolean;
         showInitiatorName?: boolean;
+        projectName?: string;
+        logoImage?: Awaited<ReturnType<PDFDocument['embedPng']>> | null;
     },
 ): void {
     const showInitiatorName = opts.showInitiatorName === true;
-    const yGridTop = drawTimeReportBandHeader(page, model, fontBold, opts.continuation);
+    const yGridTop = drawTimeReportBandHeader(
+        page,
+        model,
+        font,
+        fontBold,
+        opts.continuation,
+        opts.logoImage ?? null,
+        opts.projectName ?? '',
+    );
     const tableW = W - ML - MR;
     const cur = packCurrencyCode(model);
     const labels = getTimeReportLabels(model.coverLanguage);
@@ -1107,21 +1124,21 @@ function drawSingleTimeReportPdfPage(
     const detailWeights = showInitiatorName ? TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS : TIME_REPORT_PDF_DETAIL_WEIGHTS;
     const detailWrap = showInitiatorName ? TR_DETAIL_NAME_WRAP_COLS : TR_DETAIL_WRAP_COLS;
     const detailFixed = showInitiatorName ? TR_DETAIL_NAME_FIXED_FS_COLS : TR_DETAIL_FIXED_FS_COLS;
-    const detailRight = showInitiatorName ? new Set([5, 6, 7]) : new Set([4, 5, 6]);
-    const emptyDetail = showInitiatorName ? [['', '', '', '', '', '', '', '']] : [['', '', '', '', '', '', '']];
+    const detailRight = showInitiatorName ? new Set([4, 5]) : new Set([3, 4]);
+    const emptyDetail = showInitiatorName ? [['', '', '', '', '', '']] : [['', '', '', '', '']];
     const detailHeaders = showInitiatorName
-        ? [labels.date, labels.initials, labels.task, labels.description, labels.initiatorName, labels.hours, labels.rate, amountHdr]
-        : [labels.date, labels.initials, labels.task, labels.description, labels.hours, labels.rate, amountHdr];
-    const summaryHeaders = [labels.initials, labels.name, labels.titleCol, labels.hours, labels.hourlyRate, labels.totalPrice(cur)] as const;
+        ? [labels.date, labels.user, labels.description, labels.initiatorName, labels.hours, amountHdr]
+        : [labels.date, labels.user, labels.description, labels.hours, amountHdr];
+    const summaryHeaders = [labels.initials, labels.name, labels.titleCol, labels.rate, labels.hours, labels.hourlyRate, labels.totalPrice(cur)] as const;
 
     const trimmedSummary = trimTrailingEmptySummarySlots(pack.summarySlots);
-    const summaryBody = trimmedSummary.map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
+    const summaryBody = trimmedSummary.map((r) => [r.initials, r.name, r.title, r.hourlyRate, r.hours, r.hourlyRate, r.totalPrice] as const);
     const summaryRows = Math.max(summaryBody.length, 1);
 
     let detailSlice = slice;
     if (opts.showSummarySection) {
         const expenseBodyForReserve = trimTrailingEmptyDetailSlots(pack.expenseSlots)
-            .map((r) => [r.date, r.description, r.amount] as const);
+            .map((r) => [r.description, r.date, r.amount] as const);
         const mehnatBodyForReserve = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? [])
             .map((r) => detailPdfRowCells(r, showInitiatorName));
         const expenseReserve = expenseBodyForReserve.length
@@ -1129,9 +1146,9 @@ function drawSingleTimeReportPdfPage(
                 + estimateGridTableHeight(
                     tableW,
                     TIME_REPORT_PDF_EXPENSE_WEIGHTS,
-                    [labels.date, labels.description, amountHdr],
+                    [labels.description, labels.emailDate, amountHdr],
                     expenseBodyForReserve,
-                    new Set([1]),
+                    new Set([0]),
                     font,
                     fontBold,
                     true,
@@ -1213,7 +1230,7 @@ function drawSingleTimeReportPdfPage(
             y: yMid,
             size: DOC_FS,
             font: fontBold,
-            color: TR_RED,
+            color: rgb(0.1, 0.1, 0.1),
         });
         yMid -= TR_SUMMARY_TITLE_GAP;
         const mehnatBody = mehnatRows.map((r) => detailPdfRowCells(r, showInitiatorName));
@@ -1249,7 +1266,7 @@ function drawSingleTimeReportPdfPage(
         y: yMid,
         size: DOC_FS,
         font: fontBold,
-        color: TR_RED,
+        color: rgb(0.1, 0.1, 0.1),
     });
     yMid -= TR_SUMMARY_TITLE_GAP;
 
@@ -1264,8 +1281,8 @@ function drawSingleTimeReportPdfPage(
         summaryCurrency: cur,
         font,
         fontBold,
-        bodyTexts: summaryBody.length ? summaryBody : [['', '', '', '', '', '']],
-        rightAlignedBodyCols: new Set([3, 4, 5]),
+        bodyTexts: summaryBody.length ? summaryBody : [['', '', '', '', '', '', '']],
+        rightAlignedBodyCols: new Set([3, 4, 5, 6]),
         wrapBodyCols: TR_SUMMARY_WRAP_COLS,
         fixedFsBodyCols: TR_SUMMARY_FIXED_FS_COLS,
         totalLabel: labels.total,
@@ -1286,12 +1303,12 @@ function drawSingleTimeReportPdfPage(
             y: yMid,
             size: DOC_FS,
             font: fontBold,
-            color: TR_RED,
+            color: rgb(0.1, 0.1, 0.1),
         });
         yMid -= TR_SUMMARY_TITLE_GAP;
-        const expenseHeaders = [labels.date, labels.description, amountHdr] as const;
-        const expenseBody = expenseRows.map((r) => [r.date, r.description, r.amount] as const);
-        drawTimeReportGridTable(page, {
+        const expenseHeaders = [labels.description, labels.emailDate, amountHdr] as const;
+        const expenseBody = expenseRows.map((r) => [r.description, r.date, r.amount] as const);
+        yMid = drawTimeReportGridTable(page, {
             tableLeft: ML,
             tableW,
             yTopPdf: yMid,
@@ -1304,7 +1321,7 @@ function drawSingleTimeReportPdfPage(
             fontBold,
             bodyTexts: expenseBody.length ? expenseBody : [['', '', '']],
             rightAlignedBodyCols: new Set([2]),
-            wrapBodyCols: new Set([1]),
+            wrapBodyCols: new Set([0]),
             fixedFsBodyCols: new Set([2]),
             showInnerTotal: true,
             totalLabel: labels.total,
@@ -1316,6 +1333,27 @@ function drawSingleTimeReportPdfPage(
             },
         });
     }
+
+    const shareAmount = pack.summaryGrandAmountDisplay.trim() || cur;
+    const shareName = (opts.projectName ?? '').trim() || model.quotedCompanyName;
+    yMid -= TR_SECTION_GAP;
+    drawTimeReportGridTable(page, {
+        tableLeft: ML,
+        tableW,
+        yTopPdf: yMid,
+        colWeights: TIME_REPORT_PDF_SHARE_WEIGHTS,
+        headers: [labels.sharedAmounts, labels.reimbursable, labels.toBeInvoiced],
+        bodyRows: 1,
+        footerKind: 'detail',
+        summaryCurrency: null,
+        font,
+        fontBold,
+        bodyTexts: [[`${shareName}    100%`, shareAmount, shareAmount]],
+        rightAlignedBodyCols: new Set([1, 2]),
+        wrapBodyCols: new Set([0]),
+        showInnerTotal: false,
+        totalLabel: labels.total,
+    });
 
     drawTimeReportBandFooter(page, fontBold, pageTag);
 }
@@ -1736,6 +1774,8 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
             showDetailTotals: plan.showDetailTotals,
             showSummarySection: plan.showSummarySection,
             showInitiatorName,
+            projectName: session?.meta.projectLabel ?? '',
+            logoImage: coverLogoImage,
         });
         trPageTag++;
     }

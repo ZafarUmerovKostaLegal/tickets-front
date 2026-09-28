@@ -1,5 +1,6 @@
 import type { ChangeEvent } from 'react';
-import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
+import { KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
+import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
 import type { InvoiceTimeReportDetailRow, InvoiceTimeReportPack, InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { getTimeReportLabels } from '../lib/invoiceTimeReportI18n';
@@ -11,6 +12,7 @@ export type InvoiceTimeReportPageProps = {
     pack: InvoiceTimeReportPack;
 
     pageNumber: number;
+    projectName?: string | null;
 
     detailRows?: readonly InvoiceTimeReportDetailRow[];
     continuation?: boolean;
@@ -64,6 +66,7 @@ export function InvoiceTimeReportPage({
     model,
     pack,
     pageNumber,
+    projectName,
     detailRows,
     continuation = false,
     showDetailTotalRow = true,
@@ -96,27 +99,39 @@ export function InvoiceTimeReportPage({
     const title = continuation
         ? labels.titleContinued(model.servicesMonthYear)
         : labels.title(model.servicesMonthYear);
+    const subProject = (projectName ?? '').trim();
+    const nameByInitials = new Map(
+        pack.summarySlots
+            .filter((row) => row.initials.trim() && row.name.trim())
+            .map((row) => [row.initials.trim(), row.name.trim()]),
+    );
+    const userLabel = (initials: string) => nameByInitials.get(initials.trim()) || initials;
+    const leadSpan = showInitiatorName ? 4 : 3;
 
     return (<div className={`tt-inv-tr${editable ? ' tt-inv-tr--editable' : ''}`}>
-      <div className="tt-inv-tr__top">
-        <span className="tt-inv-tr__confidential">{labels.confidential}</span>
-      </div>
-      <div className="tt-inv-tr__rule" aria-hidden />
-      <h2 className="tt-inv-tr__title">{title}</h2>
+      <header className="tt-inv-tr__letterhead">
+        <img className="tt-inv-tr__logo" src={coverLetterheadLogoUrl()} alt="KOSTA LEGAL" />
+        <address>
+          <span>{KOSTA_LEGAL_FIRM.addressLine}</span>
+          <span>{KOSTA_LEGAL_FIRM.phone}</span>
+          <span>{KOSTA_LEGAL_FIRM.email}</span>
+          <span>{KOSTA_LEGAL_FIRM.web}</span>
+        </address>
+      </header>
+      <p className="tt-inv-tr__lead">{title}</p>
+      {subProject && !continuation ? <h2 className="tt-inv-tr__sub">{labels.subProject(subProject)}</h2> : null}
 
       {showMainTimeTable ? (
       <div className="tt-inv-tr__table-wrap">
         <table className="tt-inv-tr__table" role="grid" aria-label="Детальный отчёт по времени">
           <thead className="tt-inv-tr__thead">
             <tr>
-              <th scope="col" style={{ width: showInitiatorName ? '13%' : '15%' }}>{labels.date}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '8%' : '9%' }}>{labels.initials}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '11%' : '13%' }}>{labels.task}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.description}</th>
-              {showInitiatorName ? <th scope="col" style={{ width: '12%' }}>{labels.initiatorName}</th> : null}
-              <th scope="col" style={{ width: showInitiatorName ? '7%' : '8%' }}>{labels.hours}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.rate}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '17%' : '19%' }}>{amountHeader}</th>
+              <th scope="col" style={{ width: '14%' }}>{labels.date}</th>
+              <th scope="col" style={{ width: '16%' }}>{labels.user}</th>
+              <th scope="col">{labels.description}</th>
+              {showInitiatorName ? <th scope="col" style={{ width: '14%' }}>{labels.initiatorName}</th> : null}
+              <th scope="col" style={{ width: '10%' }}>{labels.hours}</th>
+              <th scope="col" style={{ width: '16%' }}>{amountHeader}</th>
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">
@@ -128,14 +143,12 @@ export function InvoiceTimeReportPage({
                 return (
                     <tr key={i}>
                       <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'date', v)} />
-                      <TrCell editable={editable} className={cellClass} value={r.initials} ariaLabel={`${labels.initials}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'initials', v)} />
-                      <TrCell editable={editable} className={cellClass} value={r.task} ariaLabel={`${labels.task}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'task', v)} />
-                      <TrCell editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(r.description).note : r.description} ariaLabel={`${labels.description}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
+                      <TrCell editable={editable} className={cellClass} value={editable ? r.initials : userLabel(r.initials)} ariaLabel={`${labels.user}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'initials', v)} />
+                      <TrCell editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(r.description).note : (r.description || r.task)} ariaLabel={`${labels.description}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
                       {showInitiatorName ? (
                         <TrCell editable={editable} className={cellClass} value={splitServiceInitiatorName(r.description).name} ariaLabel={`${labels.initiatorName}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'description', joinServiceInitiatorName(splitServiceInitiatorName(r.description).note, v, splitServiceInitiatorName(r.description).mark))} />
                       ) : null}
                       <TrCell editable={editable} className={numClass} value={r.hours} ariaLabel={`${labels.hours}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'hours', v)} />
-                      <TrCell editable={editable} className={moneyClass} value={r.hourlyRate} ariaLabel={`${labels.rate}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'hourlyRate', v)} />
                       <TrCell editable={editable} className={moneyClass} value={r.amount} ariaLabel={`${labels.amount(cur)}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'amount', v)} />
                     </tr>
                 );
@@ -144,7 +157,7 @@ export function InvoiceTimeReportPage({
           {showDetailTotalRow ? (
               <tfoot className="tt-inv-tr__tfoot">
                 <tr>
-                  <td colSpan={showInitiatorName ? 5 : 4}>{labels.total}</td>
+                  <td colSpan={leadSpan}>{labels.total}</td>
                   <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">
                     {editable
                       ? (
@@ -158,7 +171,6 @@ export function InvoiceTimeReportPage({
                         )
                       : (pack.detailTotalHoursDisplay || '\u00a0')}
                   </td>
-                  <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">—</td>
                   <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num tt-inv-tr__cell--amount">
                     {editable
                       ? (
@@ -186,14 +198,12 @@ export function InvoiceTimeReportPage({
               <table className="tt-inv-tr__table" role="grid" aria-label={labels.mehnatTitle}>
                 <thead className="tt-inv-tr__thead">
                   <tr>
-                    <th scope="col" style={{ width: showInitiatorName ? '13%' : '15%' }}>{labels.date}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '8%' : '9%' }}>{labels.initials}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '11%' : '13%' }}>{labels.task}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.description}</th>
-                    {showInitiatorName ? <th scope="col" style={{ width: '12%' }}>{labels.initiatorName}</th> : null}
-                    <th scope="col" style={{ width: showInitiatorName ? '7%' : '8%' }}>{labels.hours}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.rate}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '17%' : '19%' }}>{amountHeader}</th>
+                    <th scope="col" style={{ width: '14%' }}>{labels.date}</th>
+                    <th scope="col" style={{ width: '16%' }}>{labels.user}</th>
+                    <th scope="col">{labels.description}</th>
+                    {showInitiatorName ? <th scope="col" style={{ width: '14%' }}>{labels.initiatorName}</th> : null}
+                    <th scope="col" style={{ width: '10%' }}>{labels.hours}</th>
+                    <th scope="col" style={{ width: '16%' }}>{amountHeader}</th>
                   </tr>
                 </thead>
                 <tbody className="tt-inv-tr__tbody">
@@ -205,14 +215,12 @@ export function InvoiceTimeReportPage({
                       return (
                           <tr key={i}>
                             <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'date', v)} />
-                            <TrCell editable={editable} className={cellClass} value={r.initials} ariaLabel={`${labels.initials}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'initials', v)} />
-                            <TrCell editable={editable} className={cellClass} value={r.task} ariaLabel={`${labels.task}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'task', v)} />
-                            <TrCell editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(r.description).note : r.description} ariaLabel={`${labels.description}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
+                            <TrCell editable={editable} className={cellClass} value={editable ? r.initials : userLabel(r.initials)} ariaLabel={`${labels.user}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'initials', v)} />
+                            <TrCell editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(r.description).note : (r.description || r.task)} ariaLabel={`${labels.description}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
                             {showInitiatorName ? (
                               <TrCell editable={editable} className={cellClass} value={splitServiceInitiatorName(r.description).name} ariaLabel={`${labels.initiatorName}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'description', joinServiceInitiatorName(splitServiceInitiatorName(r.description).note, v, splitServiceInitiatorName(r.description).mark))} />
                             ) : null}
                             <TrCell editable={editable} className={numClass} value={r.hours} ariaLabel={`${labels.hours}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'hours', v)} />
-                            <TrCell editable={editable} className={moneyClass} value={r.hourlyRate} ariaLabel={`${labels.rate}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'hourlyRate', v)} />
                             <TrCell editable={editable} className={moneyClass} value={r.amount} ariaLabel={`${labels.amount(cur)}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'amount', v)} />
                           </tr>
                       );
@@ -220,7 +228,7 @@ export function InvoiceTimeReportPage({
                 </tbody>
                 <tfoot className="tt-inv-tr__tfoot">
                   <tr>
-                    <td colSpan={showInitiatorName ? 5 : 4}>{labels.total}</td>
+                    <td colSpan={leadSpan}>{labels.total}</td>
                     <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">
                       {editable
                         ? (
@@ -234,7 +242,6 @@ export function InvoiceTimeReportPage({
                           )
                         : (pack.mehnatTotalHoursDisplay || '\u00a0')}
                     </td>
-                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">—</td>
                     <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num tt-inv-tr__cell--amount">
                       {editable
                         ? (
@@ -262,12 +269,13 @@ export function InvoiceTimeReportPage({
               <table className="tt-inv-tr__table" role="grid" aria-label="Сводка по сервисам">
                 <thead className="tt-inv-tr__thead">
                   <tr>
-                    <th scope="col" style={{ width: '9%' }}>{labels.initials}</th>
-                    <th scope="col" style={{ width: '20%' }}>{labels.name}</th>
-                    <th scope="col" style={{ width: '18%' }}>{labels.titleCol}</th>
-                    <th scope="col" style={{ width: '12%' }}>{labels.hours}</th>
-                    <th scope="col" style={{ width: '18%' }}>{labels.hourlyRate}</th>
-                    <th scope="col" style={{ width: '23%' }}>{labels.totalPrice(cur)}</th>
+                    <th scope="col" style={{ width: '8%' }}>{labels.initials}</th>
+                    <th scope="col" style={{ width: '18%' }}>{labels.name}</th>
+                    <th scope="col" style={{ width: '16%' }}>{labels.titleCol}</th>
+                    <th scope="col" style={{ width: '14%' }}>{labels.rate}</th>
+                    <th scope="col" style={{ width: '10%' }}>{labels.hours}</th>
+                    <th scope="col" style={{ width: '16%' }}>{labels.hourlyRate}</th>
+                    <th scope="col" style={{ width: '18%' }}>{labels.totalPrice(cur)}</th>
                   </tr>
                 </thead>
                 <tbody className="tt-inv-tr__tbody">
@@ -281,6 +289,7 @@ export function InvoiceTimeReportPage({
                             <TrCell editable={editable} className={cellClass} value={r.initials} ariaLabel={`${labels.initials}, row ${i + 1}`}                             onChange={(v) => onPatchSummaryRow?.(i, 'initials', v)} />
                             <TrCell editable={editable} className={cellClass} value={r.name} ariaLabel={`${labels.name}, row ${i + 1}`} onChange={(v) => onPatchSummaryRow?.(i, 'name', v)} />
                             <TrCell editable={editable} className={cellClass} value={r.title} ariaLabel={`${labels.titleCol}, row ${i + 1}`} onChange={(v) => onPatchSummaryRow?.(i, 'title', v)} />
+                            <TrCell editable={editable} className={moneyClass} value={r.hourlyRate} ariaLabel={`${labels.rate}, row ${i + 1}`} onChange={(v) => onPatchSummaryRow?.(i, 'hourlyRate', v)} />
                             <TrCell editable={editable} className={numClass} value={r.hours} ariaLabel={`${labels.hours}, row ${i + 1}`} onChange={(v) => onPatchSummaryRow?.(i, 'hours', v)} />
                             <TrCell editable={editable} className={moneyClass} value={r.hourlyRate} ariaLabel={`${labels.hourlyRate}, row ${i + 1}`} onChange={(v) => onPatchSummaryRow?.(i, 'hourlyRate', v)} />
                             <TrCell editable={editable} className={moneyClass} value={r.totalPrice} ariaLabel={`${labels.totalPrice(cur)}, row ${i + 1}`} onChange={(v) => onPatchSummaryRow?.(i, 'totalPrice', v)} />
@@ -290,7 +299,7 @@ export function InvoiceTimeReportPage({
                 </tbody>
                 <tfoot className="tt-inv-tr__tfoot">
                   <tr>
-                    <td colSpan={3}>{labels.total}</td>
+                    <td colSpan={4}>{labels.total}</td>
                     <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">
                       {editable
                         ? (
@@ -304,7 +313,7 @@ export function InvoiceTimeReportPage({
                           )
                         : (pack.summaryGrandHoursDisplay || '\u00a0')}
                     </td>
-                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">—</td>
+                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num" />
                     <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num tt-inv-tr__currency-foot">
                       {editable
                         ? (
@@ -325,15 +334,15 @@ export function InvoiceTimeReportPage({
           </>
         ) : null}
 
-      {showExpenseSection && expenses.length > 0 ? (
+      {showExpenseSection ? (
           <>
             <h3 className="tt-inv-tr__subtitle">{labels.expensesTitle}</h3>
             <div className="tt-inv-tr__table-wrap">
               <table className="tt-inv-tr__table tt-inv-tr__table--expenses" role="grid" aria-label={labels.expensesTitle}>
                 <thead className="tt-inv-tr__thead">
                   <tr>
-                    <th scope="col" style={{ width: '18%' }}>{labels.date}</th>
                     <th scope="col" style={{ width: '52%' }}>{labels.description}</th>
+                    <th scope="col" style={{ width: '18%' }}>{labels.emailDate}</th>
                     <th scope="col" style={{ width: '30%' }}>{amountHeader}</th>
                   </tr>
                 </thead>
@@ -344,8 +353,8 @@ export function InvoiceTimeReportPage({
                       const moneyClass = `tt-inv-tr__cell--num tt-inv-tr__cell--amount${empty ? ' tt-inv-tr__cell--empty' : ''}`;
                       return (
                           <tr key={i}>
-                            <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'date', v)} />
                             <TrCell editable={editable} className={cellClass} value={r.description} ariaLabel={`${labels.description}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'description', v)} />
+                            <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.emailDate}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'date', v)} />
                             <TrCell editable={editable} className={moneyClass} value={r.amount} ariaLabel={`${labels.amount(cur)}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'amount', v)} />
                           </tr>
                       );
@@ -353,7 +362,7 @@ export function InvoiceTimeReportPage({
                 </tbody>
                 <tfoot className="tt-inv-tr__tfoot">
                   <tr>
-                    <td colSpan={2}>{labels.total}</td>
+                    <td colSpan={2}>Subtotal</td>
                     <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num tt-inv-tr__cell--amount">
                       {editable
                         ? (
@@ -371,6 +380,26 @@ export function InvoiceTimeReportPage({
                 </tfoot>
               </table>
             </div>
+            <p className="tt-inv-tr__cur">{cur}</p>
+            <table className="tt-inv-tr__table" role="grid" aria-label={labels.sharedAmounts}>
+              <thead className="tt-inv-tr__thead">
+                <tr>
+                  <th scope="col">{labels.sharedAmounts}</th>
+                  <th scope="col" style={{ width: '28%' }}>{labels.reimbursable}</th>
+                  <th scope="col" style={{ width: '28%' }}>{labels.toBeInvoiced}</th>
+                </tr>
+              </thead>
+              <tbody className="tt-inv-tr__tbody">
+                <tr>
+                  <td className="tt-inv-tr__share">
+                    <span>{subProject || model.quotedCompanyName}</span>
+                    <span>100%</span>
+                  </td>
+                  <td className="tt-inv-tr__cell--num">{sumGrandAmt}</td>
+                  <td className="tt-inv-tr__cell--num">{sumGrandAmt}</td>
+                </tr>
+              </tbody>
+            </table>
           </>
         ) : null}
 
