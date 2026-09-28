@@ -434,7 +434,19 @@ export function VacationEmployeeSidebar({
                 ) : null}
             </div>
             <div className="vac-staff__list">
-                {loading ? <p className="vac-staff__note">Загрузка…</p> : null}
+                {loading ? (
+                    <ul className="vac-staff-skel" aria-hidden>
+                        {Array.from({ length: 8 }, (_, index) => (
+                            <li key={index} className="vac-staff-skel__row">
+                                <span className="vac-staff-skel__avatar" />
+                                <span className="vac-staff-skel__lines">
+                                    <span />
+                                    <span />
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                ) : null}
                 {error ? <p className="vac-staff__note vac-staff__note--err">{error}</p> : null}
                 {hideError ? <p className="vac-staff__note vac-staff__note--err">{hideError}</p> : null}
                 {!loading && !error && !hiddenOpen && shownGroups.length === 0 ? (

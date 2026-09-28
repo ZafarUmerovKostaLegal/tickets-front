@@ -18,6 +18,7 @@ type Props = {
     year: number;
     monthIndex: number;
     open: boolean;
+    visible?: boolean;
     rows: ReadonlyArray<VacationDayDetailRow>;
     onToggle: () => void;
     onOpenCard: (employeeId: number) => void;
@@ -25,10 +26,10 @@ type Props = {
     showDocs: boolean;
 };
 
-export function VacationMonthPanel({ year, monthIndex, open, rows, onToggle, onOpenCard, onOpenDocs, showDocs }: Props) {
+export function VacationMonthPanel({ year, monthIndex, open, visible = true, rows, onToggle, onOpenCard, onOpenDocs, showDocs }: Props) {
     const title = `${VACATION_MONTH_NAMES[monthIndex]} ${year}`;
     return (
-        <aside className={`vac-month${open ? '' : ' vac-month--closed'}`} aria-label={`Отсутствия за ${title}`}>
+        <aside className={`vac-month${open ? '' : ' vac-month--closed'}${visible ? '' : ' vac-month--away'}`} aria-hidden={!visible} aria-label={`Отсутствия за ${title}`}>
             <div className="vac-month__bar">
                 {open ? (
                     <div className="vac-month__heading">

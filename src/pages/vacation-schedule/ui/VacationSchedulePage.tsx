@@ -535,6 +535,13 @@ export function VacationSchedulePage() {
                                     onToggle: () => setHideLates((hidden) => !hidden),
                                 } : null}
                             />
+                            {!facts.ready ? (
+                                <div className="vac-cal-skel" aria-busy="true" aria-label="Загрузка календаря">
+                                    {Array.from({ length: 12 }, (_, index) => (
+                                        <div key={index} className="vac-cal-skel__month" />
+                                    ))}
+                                </div>
+                            ) : (
                             <VacationYearCalendar
                                 year={scheduleYear}
                                 marksByDay={marksByDay}
@@ -550,9 +557,10 @@ export function VacationSchedulePage() {
                                     });
                                 }}
                             />
+                            )}
                             </div>
-                            {viewMonth == null ? (
                             <VacationMonthPanel
+                                visible={viewMonth == null}
                                 year={scheduleYear}
                                 monthIndex={detailMonth}
                                 open={monthPanelOpen}
@@ -569,7 +577,6 @@ export function VacationSchedulePage() {
                                     });
                                 }}
                             />
-                            ) : null}
                             {selectedPeriod ? (
                                 <VacationDayDetails
                                     year={scheduleYear}

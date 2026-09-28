@@ -79,9 +79,11 @@ export function useVacationCalendarFacts(year: number, seeAllRequests: boolean, 
     const [legend, setLegend] = useState<VacationUiLegendItem[]>(() => vacationUiLegendFallback());
     const [requests, setRequests] = useState<VacationLeaveRequestApi[]>([]);
     const [attendance, setAttendance] = useState<VacationAttendanceMarkerApi[]>([]);
+    const [ready, setReady] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
+        setReady(false);
         const from = `${year}-01-01`;
         const yearEnd = `${year}-12-31`;
         const today = new Date();
@@ -113,6 +115,10 @@ export function useVacationCalendarFacts(year: number, seeAllRequests: boolean, 
             .catch(() => {
                 if (!cancelled)
                     setDays([]);
+            })
+            .finally(() => {
+                if (!cancelled)
+                    setReady(true);
             });
         void getVacationKindLegend()
             .then((items) => {
@@ -152,7 +158,7 @@ export function useVacationCalendarFacts(year: number, seeAllRequests: boolean, 
         };
     }, [reloadToken, seeAllRequests, trackAttendance, year]);
 
-    return { days, legend, requests, attendance };
+    return { days, legend, requests, attendance, ready };
 }
 
 export function marksForRoster(
