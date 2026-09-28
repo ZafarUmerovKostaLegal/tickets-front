@@ -22,6 +22,7 @@ export type VacationCalendarUiState = {
     selectedEmployeeIds: number[];
     selectedPeriod: { start: StoredDay; end: StoredDay } | null;
     staff: VacationCalendarStaffUi;
+    hideLates: boolean;
 };
 
 const EMPTY_STAFF: VacationCalendarStaffUi = {
@@ -92,6 +93,7 @@ export function loadVacationCalendarUi(): VacationCalendarUiState | null {
                 teamFilterIds: stringList(staffRaw.teamFilterIds),
                 hiddenOpen: staffRaw.hiddenOpen === true,
             },
+            hideLates: parsed.hideLates === true,
         };
     }
     catch {

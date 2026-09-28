@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import {
     getVacationKindLegend,
+    invalidateAttendanceMarkersCache,
     listVacationAbsenceDays,
+    listVacationAttendanceMarkers,
     listVacationLeaveRequests,
+    type VacationAttendanceMarkerApi,
     type VacationLeaveRequestApi,
 } from '@entities/vacation';
 import {
@@ -10,6 +13,7 @@ import {
     parseVacationCellKey,
     vacationIsoDateFromParts,
     vacationMarksFromAbsenceDays,
+    type VacationAttendanceMarksState,
     vacationUiLegendFallback,
     vacationUiLegendFromKindLegendApi,
     type VacationAbsenceKind,
@@ -33,16 +37,74 @@ export type EmployeeAbsenceDay = {
 
 const PLANNED_STATUSES = new Set(['pending', 'pending_final', 'approved']);
 
-export function useVacationCalendarFacts(year: number, seeAllRequests: boolean, reloadToken = 0) {
+export const VACATION_LATE_COLOR = '#b45309';
+
+export type LateMark = {
+    employeeId: number;
+    monthIndex: number;
+    day: number;
+    iso: string;
+    arrival: string | null;
+};
+
+function arrivalClock(value: string | null | undefined): string | null {
+    if (!value)
+        return null;
+    const match = /(\d{2}):(\d{2})/.exec(value);
+    return match ? `${match[1]}:${match[2]}` : null;
+}
+
+export function lateMarksFromAttendance(year: number, marks: VacationAttendanceMarksState): LateMark[] {
+    const out: LateMark[] = [];
+    for (const [key, cell] of Object.entries(marks)) {
+        if (cell.status !== 'late')
+            continue;
+        const parsed = parseVacationCellKey(key);
+        if (!parsed || parsed.year !== year)
+            continue;
+        out.push({
+            employeeId: parsed.userId,
+            monthIndex: parsed.monthIndex,
+            day: parsed.day,
+            iso: vacationIsoDateFromParts(year, parsed.monthIndex, parsed.day),
+            arrival: arrivalClock(cell.firstEventTime),
+        });
+    }
+    out.sort((a, b) => a.iso.localeCompare(b.iso) || a.employeeId - b.employeeId);
+    return out;
+}
+
+export function useVacationCalendarFacts(year: number, seeAllRequests: boolean, reloadToken = 0, trackAttendance = false) {
     const [days, setDays] = useState<ReturnType<typeof coerceVacationAbsenceDayRow>[]>([]);
     const [legend, setLegend] = useState<VacationUiLegendItem[]>(() => vacationUiLegendFallback());
     const [requests, setRequests] = useState<VacationLeaveRequestApi[]>([]);
+    const [attendance, setAttendance] = useState<VacationAttendanceMarkerApi[]>([]);
 
     useEffect(() => {
         let cancelled = false;
         const from = `${year}-01-01`;
-        const to = `${year}-12-31`;
-        void listVacationAbsenceDays(year, { dateFrom: from, dateTo: to })
+        const yearEnd = `${year}-12-31`;
+        const today = new Date();
+        const attendanceTo = year === today.getFullYear()
+            ? vacationIsoDateFromParts(today.getFullYear(), today.getMonth(), today.getDate())
+            : yearEnd;
+        if (reloadToken > 0)
+            invalidateAttendanceMarkersCache();
+        if (!trackAttendance) {
+            setAttendance([]);
+        }
+        else {
+            void listVacationAttendanceMarkers(from, attendanceTo)
+                .then((rows) => {
+                    if (!cancelled)
+                        setAttendance(rows);
+                })
+                .catch(() => {
+                    if (!cancelled)
+                        setAttendance([]);
+                });
+        }
+        void listVacationAbsenceDays(year, { dateFrom: from, dateTo: yearEnd })
             .then((rows) => {
                 if (cancelled)
                     return;
@@ -88,9 +150,9 @@ export function useVacationCalendarFacts(year: number, seeAllRequests: boolean, 
         return () => {
             cancelled = true;
         };
-    }, [reloadToken, seeAllRequests, year]);
+    }, [reloadToken, seeAllRequests, trackAttendance, year]);
 
-    return { days, legend, requests };
+    return { days, legend, requests, attendance };
 }
 
 export function marksForRoster(

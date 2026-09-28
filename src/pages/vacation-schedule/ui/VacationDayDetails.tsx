@@ -15,6 +15,7 @@ export type VacationDayDetailRow = {
     kindLabel: string;
     rangeLabel: string;
     canOpenCard: boolean;
+    allowDocs?: boolean;
 };
 
 type Props = {
@@ -80,7 +81,7 @@ export function VacationDayDetails({ year, monthIndex, day, endMonthIndex = mont
                                     {row.canOpenCard ? (
                                         <span className="vac-day__links">
                                             <button type="button" onClick={() => onOpenCard(row.employeeId)}>Карточка</button>
-                                            {showDocs ? (
+                                            {showDocs && row.allowDocs !== false ? (
                                                 <button type="button" onClick={() => onOpenDocs(row.employeeId, row.label)}>Документы</button>
                                             ) : null}
                                         </span>

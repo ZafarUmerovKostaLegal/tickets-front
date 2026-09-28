@@ -4,7 +4,7 @@ import { useVacationLeavePendingBadge } from '@entities/vacation';
 import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import { AppBackButton, AppHomeLogo } from '@shared/ui';
-import { isVacationSystemRowId, type VacationAbsenceKind, type VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
+import { isVacationSystemRowId, vacationAttendanceMarksFromApi, type VacationAbsenceKind, type VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
 import { canDecideVacationLeaveRequests, canEditVacationSchedule, canViewVacationManualEntryDocs } from '../model/vacationScheduleAccess';
 import { VacationAbsenceRequestModal } from './VacationAbsenceRequestModal';
 import { VacationCalendarFilters } from './VacationCalendarFilters';
@@ -26,10 +26,12 @@ import {
     employeeMatchesStatus,
     formatAbsenceRange,
     indexAbsenceDays,
+    lateMarksFromAttendance,
     marksForRoster,
     requestsByUser,
     todayIsoDate,
     useVacationCalendarFacts,
+    VACATION_LATE_COLOR,
     type VacationCalendarStatus,
     type VacationRosterPerson,
 } from '../lib/vacationCalendarFacts';
@@ -61,6 +63,37 @@ function vacationAttentionText(locale: string, kind: 'decide' | 'mine', count: n
     return kind === 'decide'
         ? `${count} ${noun} ${verb} согласования`
         : `${count} ${noun} на рассмотрении у партнёра`;
+}
+
+function appendLateRows(
+    rows: VacationDayDetailRow[],
+    people: readonly VacationRosterPerson[],
+    lates: readonly { employeeId: number; iso: string; arrival: string | null }[],
+    fromIso: string,
+    toIso: string,
+    hidden: boolean,
+): void {
+    if (hidden)
+        return;
+    const byId = new Map(people.map((person) => [person.id, person]));
+    for (const late of lates) {
+        if (late.iso < fromIso || late.iso > toIso)
+            continue;
+        const person = byId.get(late.employeeId);
+        if (!person)
+            continue;
+        const dateLabel = formatAbsenceRange(late.iso, late.iso);
+        rows.push({
+            employeeId: person.id,
+            label: person.label,
+            teamName: person.teamName,
+            color: VACATION_LATE_COLOR,
+            kindLabel: 'Опоздание',
+            rangeLabel: late.arrival ? `${dateLabel} · ${late.arrival}` : dateLabel,
+            canOpenCard: !isVacationSystemRowId(person.id),
+            allowDocs: false,
+        });
+    }
 }
 
 function padIso(year: number, part: { monthIndex: number; day: number }): string {
@@ -103,6 +136,7 @@ export function VacationSchedulePage() {
     const [statusFilter, setStatusFilter] = useState<VacationCalendarStatus>(() => remembered?.status ?? 'all');
     const [hiddenKinds, setHiddenKinds] = useState<Set<VacationAbsenceKind>>(() => new Set(remembered?.hiddenKinds ?? []));
     const [viewMonth, setViewMonth] = useState<number | null>(() => remembered?.viewMonth ?? null);
+    const [hideLates, setHideLates] = useState(() => remembered?.hideLates ?? false);
     const pendingEmployeeIds = useRef(remembered?.selectedEmployeeIds ?? []);
     const saveReady = useRef(false);
     const restoredEmployeeIds = useRef<number[] | null>(null);
@@ -110,7 +144,8 @@ export function VacationSchedulePage() {
     const [openToken, setOpenToken] = useState(0);
     const [directory, setDirectory] = useState<VacationRosterPerson[]>([]);
     const [shownPeople, setShownPeople] = useState<VacationRosterPerson[]>([]);
-    const facts = useVacationCalendarFacts(scheduleYear, canDecideRequests, scheduleReload);
+    const trackAttendance = !loading && canEditVacationSchedule(user);
+    const facts = useVacationCalendarFacts(scheduleYear, canDecideRequests, scheduleReload, trackAttendance);
     const selectedIds = new Set(selectedEmployees.map((row) => row.id));
 
     useEffect(() => {
@@ -157,6 +192,14 @@ export function VacationSchedulePage() {
         }
         return ids;
     }, [daysByEmployee, directory, requestMap, scheduleYear, statusFilter, todayIso]);
+    const lateMarks = useMemo(() => {
+        if (!trackAttendance || directory.length === 0)
+            return [];
+        return lateMarksFromAttendance(
+            scheduleYear,
+            vacationAttendanceMarksFromApi(scheduleYear, facts.attendance, directory),
+        );
+    }, [directory, facts.attendance, scheduleYear, trackAttendance]);
     const focusPeople = useMemo(() => {
         const base = selectedIds.size === 0
             ? shownPeople
@@ -191,8 +234,27 @@ export function VacationSchedulePage() {
                 map.set(key, list);
             }
         }
+        if (!hideLates) {
+            const visible = new Set(focusPeople.map((person) => person.id));
+            for (const late of lateMarks) {
+                if (!visible.has(late.employeeId))
+                    continue;
+                const person = focusPeople.find((item) => item.id === late.employeeId);
+                if (!person)
+                    continue;
+                const key = `${late.monthIndex}-${late.day}`;
+                const list = map.get(key) ?? [];
+                list.push({
+                    employeeId: person.id,
+                    label: person.label,
+                    color: VACATION_LATE_COLOR,
+                    kindLabel: late.arrival ? `Опоздание ${late.arrival}` : 'Опоздание',
+                });
+                map.set(key, list);
+            }
+        }
         return map;
-    }, [daysByEmployee, facts.legend, focusPeople, hiddenKinds]);
+    }, [daysByEmployee, facts.legend, focusPeople, hiddenKinds, hideLates, lateMarks]);
     const detailMonth = viewMonth ?? (scheduleYear === today.getFullYear() ? today.getMonth() : 0);
     const monthRows = useMemo(() => {
         const fromIso = padIso(scheduleYear, { monthIndex: detailMonth, day: 1 });
@@ -222,9 +284,10 @@ export function VacationSchedulePage() {
                 });
             }
         }
+        appendLateRows(rows, focusPeople, lateMarks, fromIso, toIso, hideLates);
         rows.sort((a, b) => a.rangeLabel.localeCompare(b.rangeLabel, 'ru') || a.label.localeCompare(b.label, 'ru'));
         return rows;
-    }, [daysByEmployee, detailMonth, facts.legend, focusPeople, hiddenKinds, scheduleYear]);
+    }, [daysByEmployee, detailMonth, facts.legend, focusPeople, hiddenKinds, hideLates, lateMarks, scheduleYear]);
     const rememberDirectory = useCallback((rows: VacationRosterPerson[]) => {
         setDirectory(rows);
     }, []);
@@ -272,8 +335,9 @@ export function VacationSchedulePage() {
             selectedEmployeeIds,
             selectedPeriod,
             staff: staffUi,
+            hideLates,
         });
-    }, [hiddenKinds, monthPanelOpen, scheduleYear, selectedEmployees, selectedPeriod, staffUi, statusFilter, viewMonth]);
+    }, [hiddenKinds, hideLates, monthPanelOpen, scheduleYear, selectedEmployees, selectedPeriod, staffUi, statusFilter, viewMonth]);
     const canEditSchedule = !loading && canEditVacationSchedule(user);
     const canViewDocs = !loading && canViewVacationManualEntryDocs(user);
     const dayRows = useMemo(() => {
@@ -308,9 +372,10 @@ export function VacationSchedulePage() {
                 });
             }
         }
+        appendLateRows(rows, focusPeople, lateMarks, fromIso, toIso, hideLates);
         rows.sort((a, b) => a.label.localeCompare(b.label, 'ru'));
         return rows;
-    }, [daysByEmployee, facts.legend, focusPeople, hiddenKinds, scheduleYear, selectedPeriod]);
+    }, [daysByEmployee, facts.legend, focusPeople, hiddenKinds, hideLates, lateMarks, scheduleYear, selectedPeriod]);
     const openCalendarMonth = (month: number | null) => {
         setViewMonth(month);
         setOpenToken((value) => value + 1);
@@ -464,6 +529,11 @@ export function VacationSchedulePage() {
                                         return next;
                                     });
                                 }}
+                                lates={trackAttendance ? {
+                                    count: new Set(lateMarks.filter((late) => focusPeople.some((person) => person.id === late.employeeId)).map((late) => late.employeeId)).size,
+                                    hidden: hideLates,
+                                    onToggle: () => setHideLates((hidden) => !hidden),
+                                } : null}
                             />
                             <VacationYearCalendar
                                 year={scheduleYear}

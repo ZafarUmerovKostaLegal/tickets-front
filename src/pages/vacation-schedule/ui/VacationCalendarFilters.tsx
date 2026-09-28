@@ -20,6 +20,7 @@ type Props = {
     kindCounts: ReadonlyMap<VacationAbsenceKind, number>;
     hiddenKinds: ReadonlySet<VacationAbsenceKind>;
     onToggleKind: (kind: VacationAbsenceKind) => void;
+    lates?: { count: number; hidden: boolean; onToggle: () => void } | null;
 };
 
 export function VacationCalendarFilters({
@@ -34,6 +35,7 @@ export function VacationCalendarFilters({
     kindCounts,
     hiddenKinds,
     onToggleKind,
+    lates = null,
 }: Props) {
     return (
         <div className="vac-toolbar" aria-label="Фильтры календаря">
@@ -75,7 +77,7 @@ export function VacationCalendarFilters({
                     </button>
                 </div>
             </div>
-            {legend.some((item) => (kindCounts.get(item.kind) ?? 0) > 0) ? (
+            {(legend.some((item) => (kindCounts.get(item.kind) ?? 0) > 0) || (lates && lates.count > 0)) ? (
             <div className="vac-toolbar__legend" role="group" aria-label="Легенда">
                 {legend.filter((item) => (kindCounts.get(item.kind) ?? 0) > 0).map((item) => {
                     const hidden = hiddenKinds.has(item.kind);
@@ -94,6 +96,19 @@ export function VacationCalendarFilters({
                         </button>
                     );
                 })}
+                {lates && lates.count > 0 ? (
+                    <button
+                        type="button"
+                        className={`vac-filters__legend-row${lates.hidden ? ' vac-filters__legend-row--off' : ''}`}
+                        aria-pressed={!lates.hidden}
+                        title={lates.hidden ? 'Показать опоздания' : 'Скрыть опоздания'}
+                        onClick={lates.onToggle}
+                    >
+                        <i style={{ background: '#b45309' }} aria-hidden />
+                        <span>Опоздание</span>
+                        <b>{lates.count}</b>
+                    </button>
+                ) : null}
             </div>
             ) : null}
         </div>

@@ -64,7 +64,7 @@ export function VacationMonthPanel({ year, monthIndex, open, rows, onToggle, onO
                                 {row.canOpenCard ? (
                                     <span className="vac-month__links">
                                         <button type="button" onClick={() => onOpenCard(row.employeeId)}>Карточка</button>
-                                        {showDocs ? (
+                                        {showDocs && row.allowDocs !== false ? (
                                             <button type="button" onClick={() => onOpenDocs(row.employeeId, row.label)}>Документы</button>
                                         ) : null}
                                     </span>
