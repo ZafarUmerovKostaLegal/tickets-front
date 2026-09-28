@@ -463,7 +463,7 @@ export function InvoicePreviewPage() {
             void persistPreviewEdits({ silent: true });
         }, 900);
         return () => window.clearTimeout(t);
-    }, [editMode, session, coverModel, legalOverrides, timeReportPack, includedPageKeys, persistPreviewEdits]);
+    }, [editMode, session, coverModel, legalOverrides, timeReportPack, combinedReport, includedPageKeys, persistPreviewEdits]);
 
     const editingPage = editMode ? activePage : null;
 
@@ -1296,7 +1296,14 @@ export function InvoicePreviewPage() {
                               aria-label={`Страница ${pageNum} из ${pageCount} — time report${slot.chunkIndex > 0 ? ', продолжение' : ''}`}
                             >
                               {combinedReport
-                                ? <CombinedReportPage report={combinedReport} pageNumber={pageNum} />
+                                ? (
+                                    <CombinedReportPage
+                                      report={combinedReport}
+                                      pageNumber={pageNum}
+                                      editable={editingPage === pageNum}
+                                      onChange={setCombinedReport}
+                                    />
+                                  )
                                 : (
                               <InvoiceTimeReportPage
                                 model={displayModel}

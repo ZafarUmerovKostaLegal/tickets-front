@@ -40,6 +40,29 @@
   color: #e83337;
 }
 
+.tt-inv-creport__lead-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 0.85rem;
+  padding: 0.2rem 0.35rem;
+  border: 1px solid rgba(var(--app-accent-rgb, 79, 70, 229), 0.45);
+  border-radius: 2px;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  line-height: 1.35;
+  color: #e83337;
+  background: #fff;
+  resize: vertical;
+}
+
+.tt-inv-creport__share .tt-inv-tr__cell-input {
+  min-width: 0;
+}
+
 .tt-inv-creport__block {
   margin: 0 0 0.8rem;
 }
