@@ -33,6 +33,7 @@ import {
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
 import { resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from '../lib/resolveInvoiceTimeReportPack';
 import type { CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import { CombinedReportPage } from './CombinedReportPage';
 import { InvoiceTimeReportPage } from './InvoiceTimeReportPage';
@@ -473,11 +474,16 @@ export function InvoicePreviewPage() {
     );
     const resolvedTimeReportPack = ensureMehnatSeparatedPack(timeReportPack ?? timeReportFallback);
 
+    const combinedReportPages = useMemo(
+        () => combinedReport ? Math.max(1, planCombinedReportPreviewPages(combinedReport).length) : 0,
+        [combinedReport],
+    );
+
     const timeReportChunks = useMemo(
         () => combinedReport
-            ? [resolvedTimeReportPack.detailSlots]
+            ? Array.from({ length: combinedReportPages }, () => resolvedTimeReportPack.detailSlots)
             : splitDetailRowsForPagedTimeReport(resolvedTimeReportPack.detailSlots),
-        [combinedReport, resolvedTimeReportPack.detailSlots],
+        [combinedReport, combinedReportPages, resolvedTimeReportPack.detailSlots],
     );
 
     const allPageSlots = useMemo(
@@ -1025,7 +1031,7 @@ export function InvoicePreviewPage() {
                               ? (
                                   <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--timerpt">
                                     {combinedReport
-                                      ? <CombinedReportPage report={combinedReport} pageNumber={2 + slot.chunkIndex} />
+                                      ? <CombinedReportPage report={combinedReport} pageIndex={slot.chunkIndex} pageNumber={2 + slot.chunkIndex} />
                                       : (
                                     <InvoiceTimeReportPage
                                       model={displayModel}
@@ -1292,13 +1298,14 @@ export function InvoicePreviewPage() {
                               ref={(el) => {
                                 pageRefs.current[visibleIdx] = el;
                               }}
-                              className={`tt-inv-a4-page tt-inv-a4-page--timerpt${editingPage === pageNum ? ' tt-inv-a4-page--editing' : ''}`}
+                              className={`tt-inv-a4-page tt-inv-a4-page--timerpt${combinedReport ? ' tt-inv-a4-page--creport' : ''}${editingPage === pageNum ? ' tt-inv-a4-page--editing' : ''}`}
                               aria-label={`Страница ${pageNum} из ${pageCount} — time report${slot.chunkIndex > 0 ? ', продолжение' : ''}`}
                             >
                               {combinedReport
                                 ? (
                                     <CombinedReportPage
                                       report={combinedReport}
+                                      pageIndex={slot.chunkIndex}
                                       pageNumber={pageNum}
                                       editable={editingPage === pageNum}
                                       onChange={setCombinedReport}

@@ -1,12 +1,15 @@
 import { useState, type ChangeEvent } from 'react';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from '../lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
+import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
 import type { CombinedReportLine, CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import './InvoiceTimeReportPage.css';
 
 type Props = {
     report: CombinedReportSnapshot;
     pageNumber: number;
+    /** Which A4 sheet of the combined report to paint. */
+    pageIndex?: number;
     editable?: boolean;
     onChange?: (next: CombinedReportSnapshot) => void;
 };
@@ -147,9 +150,11 @@ function detailRefs(report: CombinedReportSnapshot): DetailRef[] {
             || (a.line.initials || a.line.user).localeCompare(b.line.initials || b.line.user));
 }
 
-export function CombinedReportPage({ report, pageNumber, editable = false, onChange }: Props) {
+export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable = false, onChange }: Props) {
     const cur = report.currency || 'USD';
     const invoiced = report.totalFees + report.totalExpenses;
+    const slices = planCombinedReportPreviewPages(report);
+    const slice = slices[Math.max(0, Math.min(pageIndex, slices.length - 1))] ?? slices[0]!;
     const emit = (next: CombinedReportSnapshot) => onChange?.(next);
     const patchLine = (projectIndex: number, lineIndex: number, patch: Partial<CombinedReportLine>) => {
         emit({
@@ -162,25 +167,35 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                 }),
         });
     };
+    const showTime = slice.showTimeTotal || slice.timeTo > slice.timeFrom;
+    const showPeople = slice.showPeopleTotal || slice.peopleTo > slice.peopleFrom;
+    const showExpenses = slice.showExpensesTotal || slice.expensesTo > slice.expensesFrom;
+    const showShares = slice.showSharesTotal || slice.sharesTo > slice.sharesFrom;
+    const timeRows = detailRefs(report).slice(slice.timeFrom, slice.timeTo);
     return (
         <div className={`tt-inv-tr tt-inv-creport${editable ? ' tt-inv-tr--editable' : ''}`}>
-            <header className="tt-inv-creport__head">
-                <img className="tt-inv-creport__logo" src={coverLetterheadLogoUrl()} alt="KOSTA LEGAL" />
-                <address>
-                    {KOSTA_LEGAL_LETTERHEAD_LINES.map((line) => <span key={line}>{line}</span>)}
-                </address>
-            </header>
-            {editable
-                ? (
-                    <textarea
-                        className="tt-inv-creport__lead-input"
-                        value={report.feeTitle}
-                        aria-label="Fees for services"
-                        rows={3}
-                        onChange={(e) => emit({ ...report, feeTitle: e.target.value })}
-                    />
-                )
-                : <p className="tt-inv-creport__lead">{report.feeTitle}</p>}
+            {slice.showMasthead ? (
+                <header className="tt-inv-creport__head">
+                    <img className="tt-inv-creport__logo" src={coverLetterheadLogoUrl()} alt="KOSTA LEGAL" />
+                    <address>
+                        {KOSTA_LEGAL_LETTERHEAD_LINES.map((line) => <span key={line}>{line}</span>)}
+                    </address>
+                </header>
+            ) : null}
+            {slice.showMasthead
+                ? (editable
+                    ? (
+                        <textarea
+                            className="tt-inv-creport__lead-input"
+                            value={report.feeTitle}
+                            aria-label="Fees for services"
+                            rows={3}
+                            onChange={(e) => emit({ ...report, feeTitle: e.target.value })}
+                        />
+                    )
+                    : <p className="tt-inv-creport__lead">{report.feeTitle}</p>)
+                : null}
+            {showTime ? (
             <section className="tt-inv-creport__block">
                 <table className="tt-inv-creport__time">
                     <thead>
@@ -194,7 +209,7 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                         </tr>
                     </thead>
                     <tbody>
-                        {detailRefs(report).map(({ key, line, projectIndex, lineIndex }) => (
+                        {timeRows.map(({ key, line, projectIndex, lineIndex }) => (
                             <tr key={key}>
                                 <TextCell
                                     editable={editable}
@@ -240,6 +255,7 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                             </tr>
                         ))}
                     </tbody>
+                    {slice.showTimeTotal ? (
                     <tfoot>
                         <tr>
                             <td colSpan={4}>Total</td>
@@ -263,8 +279,11 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                             />
                         </tr>
                     </tfoot>
+                    ) : null}
                 </table>
             </section>
+            ) : null}
+            {showPeople ? (
             <section className="tt-inv-creport__block">
                 <h2>Summary of Services</h2>
                 <table>
@@ -280,7 +299,9 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                         </tr>
                     </thead>
                     <tbody>
-                        {report.people.map((person, index) => (
+                        {report.people.slice(Math.max(0, slice.peopleFrom), Math.max(0, slice.peopleTo)).map((person, offset) => {
+                            const index = Math.max(0, slice.peopleFrom) + offset;
+                            return (
                             <tr key={`person-${index}`}>
                                 <TextCell editable={editable} ariaLabel="Initials" value={person.initials} onChange={(v) => emit({
                                     ...report,
@@ -318,8 +339,10 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                                 })}
                                 />
                             </tr>
-                        ))}
+                            );
+                        })}
                     </tbody>
+                    {slice.showPeopleTotal ? (
                     <tfoot>
                         <tr>
                             <td colSpan={4}>Total</td>
@@ -344,8 +367,11 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                             />
                         </tr>
                     </tfoot>
+                    ) : null}
                 </table>
             </section>
+            ) : null}
+            {showExpenses ? (
             <section className="tt-inv-creport__block">
                 <h2>Reimbursable Expenses via</h2>
                 <table>
@@ -357,7 +383,9 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                         </tr>
                     </thead>
                     <tbody>
-                        {report.expenses.map((line, index) => (
+                        {report.expenses.slice(Math.max(0, slice.expensesFrom), Math.max(0, slice.expensesTo)).map((line, offset) => {
+                            const index = Math.max(0, slice.expensesFrom) + offset;
+                            return (
                             <tr key={`expense-${index}`}>
                                 <TextCell editable={editable} ariaLabel="Description" value={line.description} onChange={(v) => emit({
                                     ...report,
@@ -375,8 +403,10 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                                 })}
                                 />
                             </tr>
-                        ))}
+                            );
+                        })}
                     </tbody>
+                    {slice.showExpensesTotal ? (
                     <tfoot>
                         <tr>
                             <td colSpan={2}>Subtotal</td>
@@ -391,8 +421,11 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                             />
                         </tr>
                     </tfoot>
+                    ) : null}
                 </table>
             </section>
+            ) : null}
+            {showShares ? (
             <section className="tt-inv-creport__block">
                 <p className="tt-inv-creport__cur">{cur}</p>
                 <table className="tt-inv-creport__shares">
@@ -409,7 +442,9 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                         </tr>
                     </thead>
                     <tbody>
-                        {report.shares.map((share, index) => (
+                        {report.shares.slice(Math.max(0, slice.sharesFrom), Math.max(0, slice.sharesTo)).map((share, offset) => {
+                            const index = Math.max(0, slice.sharesFrom) + offset;
+                            return (
                             <tr key={`share-${index}`}>
                                 <td className="tt-inv-creport__share">
                                     {editable
@@ -470,8 +505,10 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                                     })}
                                 />
                             </tr>
-                        ))}
+                            );
+                        })}
                     </tbody>
+                    {slice.showSharesTotal ? (
                     <tfoot>
                         <tr>
                             <td className="tt-inv-creport__share"><span>Total</span><span className="tt-inv-creport__share-pct">100%</span></td>
@@ -479,8 +516,10 @@ export function CombinedReportPage({ report, pageNumber, editable = false, onCha
                             <td className="num">{money(invoiced)}</td>
                         </tr>
                     </tfoot>
+                    ) : null}
                 </table>
             </section>
+            ) : null}
             <footer className="tt-inv-tr__bottom">
                 <div className="tt-inv-tr__bottom-line" aria-hidden />
                 <div className="tt-inv-tr__bottom-meta">

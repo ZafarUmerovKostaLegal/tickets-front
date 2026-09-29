@@ -31,6 +31,7 @@ import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { COVER_LETTERHEAD_LOGO_ASPECT, LEGAL_VERT_LOGO_ASPECT, rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { countCombinedReportPages, drawCombinedReportPages } from './drawCombinedFeesReportPdf';
+import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
@@ -1691,7 +1692,7 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     if (input.combinedReport) {
         const reportPages = Math.max(1, countCombinedReportPages(input.combinedReport, font, fontBold));
         const pdfPageCount = 2 + reportPages;
-        const previewPageCount = 3;
+        const previewPageCount = 2 + Math.max(1, planCombinedReportPreviewPages(input.combinedReport).length);
         const selectedPreview = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;
         const selectedPdf = remapPreviewPageSelectionToPdf(selectedPreview, previewPageCount, pdfPageCount);
         const includePage = (n: number) => !selectedPdf || selectedPdf.has(n);

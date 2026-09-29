@@ -910,6 +910,12 @@
   line-height: inherit;
 }
 
+.tt-inv-preview .tt-inv-a4-page--timerpt.tt-inv-a4-page--creport {
+  height: 297mm;
+  max-height: 297mm;
+  overflow: hidden;
+}
+
 .tt-inv-preview .tt-inv-a4-page--timerpt,
 .tt-inv-preview .tt-inv-a4-page--invoice {
   display: flex;
