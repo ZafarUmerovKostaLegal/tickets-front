@@ -210,7 +210,12 @@ function formatConflictRange(range: AnalyticsConflictRange): string {
 const VACATION_QUOTA_DAYS = 21;
 
 function AnalyticsBody({ report }: { report: AnalyticsReport }) {
+    const [employeeQuery, setEmployeeQuery] = useState('');
     const conflictPreview = report.conflicts.slice(0, 8);
+    const needle = employeeQuery.trim().toLocaleLowerCase('ru');
+    const employees = needle
+        ? report.employees.filter((row) => row.name.toLocaleLowerCase('ru').includes(needle))
+        : report.employees;
     return (
         <>
             <div className="vac-an__kpis">
@@ -295,7 +300,22 @@ function AnalyticsBody({ report }: { report: AnalyticsReport }) {
             </div>
 
             <section className="vac-an__card">
-                <h3>Сотрудники</h3>
+                <div className="vac-an__card-head">
+                    <h3>Сотрудники</h3>
+                    <label className="vac-an__search">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                            <circle cx="11" cy="11" r="7" />
+                            <line x1="16.5" y1="16.5" x2="21" y2="21" />
+                        </svg>
+                        <input
+                            type="search"
+                            value={employeeQuery}
+                            placeholder="Найти сотрудника"
+                            aria-label="Поиск по сотруднику"
+                            onChange={(event) => setEmployeeQuery(event.target.value)}
+                        />
+                    </label>
+                </div>
                 <div className="vac-an__table-scroll">
                     <table>
                         <thead>
@@ -310,7 +330,12 @@ function AnalyticsBody({ report }: { report: AnalyticsReport }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {report.employees.map((row) => (
+                            {employees.length === 0 ? (
+                                <tr>
+                                    <td className="vac-an__empty" colSpan={7}>Никого не найдено</td>
+                                </tr>
+                            ) : null}
+                            {employees.map((row) => (
                                 <tr key={row.id}>
                                     <td>{row.name}</td>
                                     <td>{row.teamName}</td>
