@@ -70,6 +70,7 @@ function DayCell({
     ranged,
     label,
     onSelect,
+    onHover,
     children,
 }: {
     className: string;
@@ -78,6 +79,7 @@ function DayCell({
     ranged: boolean;
     label: string;
     onSelect: () => void;
+    onHover?: (anchor: HTMLElement | null) => void;
     children: ReactNode;
 }) {
     if (day == null)
@@ -88,6 +90,10 @@ function DayCell({
             className={`${className}${picked ? ' is-picked' : ''}${ranged ? ' is-range' : ''}`}
             aria-pressed={picked}
             aria-label={label}
+            onMouseEnter={(event) => onHover?.(event.currentTarget)}
+            onMouseLeave={() => onHover?.(null)}
+            onFocus={(event) => onHover?.(event.currentTarget)}
+            onBlur={() => onHover?.(null)}
             onClick={(event) => {
                 event.stopPropagation();
                 onSelect();
@@ -247,6 +253,34 @@ export function VacationYearCalendar({
     const now = new Date();
     const currentMonth = now.getFullYear() === year ? now.getMonth() : -1;
     const yearRecede = motion === 'enter' || motion === 'opening' || motion === 'open';
+    const [tip, setTip] = useState<{
+        left: number;
+        top: number;
+        below: boolean;
+        date: string;
+        people: VacationCalendarPaint[];
+    } | null>(null);
+
+    const showDayTip = (month: number, day: number, anchor: HTMLElement | null) => {
+        if (!anchor) {
+            setTip(null);
+            return;
+        }
+        const people = (marksByDay.get(`${month}-${day}`) ?? []).filter((mark) => !mark.kindLabel.startsWith('Опоздание'));
+        if (people.length === 0) {
+            setTip(null);
+            return;
+        }
+        const rect = anchor.getBoundingClientRect();
+        const below = rect.top < 120;
+        setTip({
+            left: rect.left + rect.width / 2,
+            top: below ? rect.bottom : rect.top,
+            below,
+            date: `${day} ${VACATION_MONTH_NAMES[month]}`,
+            people,
+        });
+    };
 
     const reset = () => {
         setMonthIndex(null);
@@ -427,6 +461,12 @@ export function VacationYearCalendar({
                                 {cells.map((day, cellIndex) => {
                                     const count = day == null ? 0 : (occupancy?.get(`${index}-${day}`) ?? 0);
                                     const today = day != null && isToday(year, index, day);
+                                    const away = day == null
+                                        ? []
+                                        : (marksByDay.get(`${index}-${day}`) ?? []).filter((mark) => !mark.kindLabel.startsWith('Опоздание'));
+                                    const awayLabel = away.length === 0
+                                        ? ''
+                                        : `. В отпуске: ${away.map((mark) => mark.label).join(', ')}`;
                                     return (
                                     <DayCell
                                         key={`${index}-${cellIndex}`}
@@ -434,7 +474,8 @@ export function VacationYearCalendar({
                                         day={day}
                                         picked={day != null && periodEdge(index, day, selectedPeriod) === 'end'}
                                         ranged={day != null && periodEdge(index, day, selectedPeriod) === 'mid'}
-                                        label={day == null ? '' : `${day} ${name} ${year}`}
+                                        label={day == null ? '' : `${day} ${name} ${year}${awayLabel}`}
+                                        onHover={day == null ? undefined : (anchor) => showDayTip(index, day, anchor)}
                                         onSelect={() => {
                                             if (day != null)
                                                 onSelectDay?.(index, day);
@@ -466,6 +507,24 @@ export function VacationYearCalendar({
                         onBack={closeMonth}
                     />
                 </section>
+            ) : null}
+            {tip ? (
+                <div
+                    className={`vac-cal__tip${tip.below ? ' vac-cal__tip--below' : ''}`}
+                    style={{ left: tip.left, top: tip.top }}
+                    role="tooltip"
+                >
+                    <p className="vac-cal__tip-date">{tip.date}</p>
+                    <ul>
+                        {tip.people.map((person) => (
+                            <li key={`${person.employeeId}-${person.kindLabel}`}>
+                                <i style={{ background: person.color }} aria-hidden />
+                                <span>{person.label}</span>
+                                <em>{person.kindLabel}</em>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
             ) : null}
         </div>
     );
