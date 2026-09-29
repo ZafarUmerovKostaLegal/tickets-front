@@ -7,7 +7,7 @@ let subscribeInFlight: Promise<void> | null = null;
 function sameApplicationServerKey(subscription: PushSubscription, next: Uint8Array): boolean {
     const current = subscription.options?.applicationServerKey;
     if (!current)
-        return false;
+        return true;
     const bytes = new Uint8Array(current);
     if (bytes.length !== next.length)
         return false;
@@ -45,10 +45,22 @@ async function subscribeGranted(): Promise<void> {
     return subscribeInFlight;
 }
 
+let swReadyPromise: Promise<ServiceWorkerRegistration> | null = null;
+
+function serviceWorkerReady(): Promise<ServiceWorkerRegistration> {
+    if (!swReadyPromise) {
+        swReadyPromise = navigator.serviceWorker.register(SW_URL, { scope: '/' })
+            .then(() => navigator.serviceWorker.ready)
+            .catch((error: unknown) => {
+                swReadyPromise = null;
+                throw error;
+            });
+    }
+    return swReadyPromise;
+}
+
 async function registrationReady(): Promise<ServiceWorkerRegistration> {
-    const registration = await navigator.serviceWorker.register(SW_URL, { scope: '/' });
-    await navigator.serviceWorker.ready;
-    return registration;
+    return serviceWorkerReady();
 }
 
 export function showChatOsNotification(input: {
@@ -67,12 +79,9 @@ export function showChatOsNotification(input: {
         roomId: input.roomId,
         url: `/kosta-daily?room=${input.roomId}`,
     };
-    void navigator.serviceWorker.getRegistration()
+    void serviceWorkerReady()
         .then((registration) => {
-            const worker = registration?.active;
-            if (!worker)
-                return;
-            worker.postMessage(payload);
+            registration.active?.postMessage(payload);
         })
         .catch(() => undefined);
 }

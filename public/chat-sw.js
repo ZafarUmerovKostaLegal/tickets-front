@@ -18,7 +18,7 @@ self.addEventListener('message', (event) => {
     const data = event.data;
     if (!data || data.type !== 'show-chat-notification')
         return;
-    event.waitUntil(showChatNotification(data, { fromPage: true }));
+    event.waitUntil(showChatNotification(data));
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -36,34 +36,42 @@ function notificationUrl(data) {
     return new URL(path, self.location.origin).href;
 }
 
-async function showChatNotification(data, opts) {
+async function showChatNotification(data) {
     const roomId = Number(data.roomId);
     const title = typeof data.title === 'string' && data.title.trim() ? data.title.trim() : 'Kosta Daily';
     const body = typeof data.body === 'string' && data.body.trim() ? data.body.trim() : 'Новое сообщение';
     const icon = new URL('/notification-icon.png', self.location.origin).href;
     const image = typeof data.image === 'string' && data.image.startsWith('https://') ? data.image : '';
     const url = typeof data.url === 'string' ? data.url : '/kosta-daily';
-    if (opts && opts.fromPage) {
-        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-        const pageInFront = windows.some((client) => client.focused && client.visibilityState === 'visible');
-        if (pageInFront)
-            return;
-    }
-    const options = {
+    const tag = Number.isFinite(roomId) && roomId > 0 ? `chat-room-${roomId}` : 'chat-room';
+    const payload = { url, roomId };
+    const full = {
         body,
         icon,
         badge: icon,
-        tag: Number.isFinite(roomId) && roomId > 0 ? `chat-room-${roomId}` : 'chat-room',
+        tag,
         renotify: true,
-        data: { url, roomId },
+        data: payload,
         actions: [
             { action: 'open', title: 'Открыть' },
             { action: 'dismiss', title: 'Закрыть' },
         ],
     };
     if (image)
-        options.image = image;
-    await self.registration.showNotification(title, options);
+        full.image = image;
+    try {
+        await self.registration.showNotification(title, full);
+        return;
+    } catch {
+        /* Chrome drops the whole card if the icon, image, or actions fail to load. */
+    }
+    try {
+        await self.registration.showNotification(title, { body, tag, renotify: true, data: payload });
+        return;
+    } catch {
+        /* Last attempt is the smallest payload Chrome still accepts. */
+    }
+    await self.registration.showNotification(title, { body, tag, data: payload });
 }
 
 async function openChat(url) {
