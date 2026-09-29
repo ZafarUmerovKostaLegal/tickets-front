@@ -6,7 +6,9 @@ import {
     fetchUnbilledExpenses,
     fetchUnbilledTimeEntries,
     isForbiddenError,
+    listPartnerReportConfirmationsConfirmed,
     listTimeTrackingUsers,
+    type PartnerReportConfirmationRequest,
     type TimeManagerClientProjectRow,
     type TimeManagerClientRow,
     type TimeTrackingUserRow,
@@ -45,6 +47,8 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
     const [query, setQuery] = useState('');
     const [suggestOpen, setSuggestOpen] = useState(false);
     const [suggestIndex, setSuggestIndex] = useState(0);
+    const [projectSource, setProjectSource] = useState<'all' | 'confirmed'>('all');
+    const [confirmedRows, setConfirmedRows] = useState<PartnerReportConfirmationRequest[]>([]);
     const [allocation, setAllocation] = useState<CombinedAllocation>('hours');
     const [from, setFrom] = useState(firstOfMonthIso());
     const [to, setTo] = useState(lastOfMonthIso());
@@ -62,6 +66,22 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
     const [templateId, setTemplateId] = useState('');
     const [templateName, setTemplateName] = useState('');
     const [loadNote, setLoadNote] = useState<string | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        void listPartnerReportConfirmationsConfirmed()
+            .then((rows) => {
+                if (!cancelled)
+                    setConfirmedRows(rows.filter((row) => String(row.status ?? '').trim().toLowerCase() === 'fully_confirmed'));
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setConfirmedRows([]);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -95,19 +115,46 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
             .filter((project): project is TimeManagerClientProjectRow => Boolean(project)),
         [projectIds, projects],
     );
+    const confirmedPeriodByProject = useMemo(() => {
+        const map = new Map<string, { dateFrom: string; dateTo: string }>();
+        for (const row of confirmedRows) {
+            const projectId = String(row.projectId ?? '').trim();
+            const dateFrom = String(row.dateFrom ?? '').slice(0, 10);
+            const dateTo = String(row.dateTo ?? '').slice(0, 10);
+            if (!projectId || !/^\d{4}-\d{2}-\d{2}$/.test(dateFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(dateTo))
+                continue;
+            const overlaps = Boolean(from && to) && dateFrom <= to && dateTo >= from;
+            const prev = map.get(projectId);
+            if (!prev) {
+                map.set(projectId, { dateFrom, dateTo });
+                continue;
+            }
+            const prevOverlaps = Boolean(from && to) && prev.dateFrom <= to && prev.dateTo >= from;
+            if (overlaps && !prevOverlaps)
+                map.set(projectId, { dateFrom, dateTo });
+            else if (overlaps === prevOverlaps && dateTo > prev.dateTo)
+                map.set(projectId, { dateFrom, dateTo });
+        }
+        return map;
+    }, [confirmedRows, from, to]);
     const suggestions = useMemo(() => {
         const q = query.trim().toLocaleLowerCase('ru');
-        if (!q)
+        const pool = projectSource === 'confirmed'
+            ? projects.filter((project) => confirmedPeriodByProject.has(project.id))
+            : projects;
+        if (projectSource === 'all' && !q)
             return [];
-        return projects
+        return pool
             .filter((project) => {
                 if (projectIds.includes(project.id))
                     return false;
+                if (!q)
+                    return true;
                 const client = clientName.get(project.client_id) ?? '';
                 return `${project.name} ${project.code ?? ''} ${client}`.toLocaleLowerCase('ru').includes(q);
             })
             .slice(0, 8);
-    }, [clientName, projectIds, projects, query]);
+    }, [clientName, confirmedPeriodByProject, projectIds, projectSource, projects, query]);
     const shares = useMemo(
         () => buildCombinedShares(selectedProjects, clientName, time, expenses, allocation),
         [allocation, clientName, expenses, selectedProjects, time],
@@ -128,7 +175,19 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
     const projectTitle = (project: TimeManagerClientProjectRow) => (
         project.code ? `${project.name} (${project.code})` : project.name
     );
+    const periodLabel = (isoFrom: string, isoTo: string) => {
+        const fmt = (iso: string) => {
+            const [year, month, day] = iso.slice(0, 10).split('-');
+            return day && month && year ? `${day}.${month}.${year}` : iso;
+        };
+        return `${fmt(isoFrom)}–${fmt(isoTo)}`;
+    };
     const addProject = (id: string) => {
+        const period = projectSource === 'confirmed' ? confirmedPeriodByProject.get(id) : undefined;
+        if (projectIds.length === 0 && period) {
+            setFrom(period.dateFrom);
+            setTo(period.dateTo);
+        }
         setProjectIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
         setQuery('');
         setSuggestOpen(false);
@@ -425,16 +484,20 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                         <button type="button" className="tt-inv-combined__link" onClick={() => setProjectIds([])}>Снять все</button>
                     ) : null}
                 </div>
+                <div className="tt-inv-combined__alloc tt-inv-combined__source" role="tablist" aria-label="Откуда брать проекты">
+                    <button type="button" role="tab" aria-selected={projectSource === 'all'} className={projectSource === 'all' ? 'is-on' : ''} onClick={() => { setProjectSource('all'); setSuggestIndex(0); if (!query.trim()) setSuggestOpen(false); }}>Все</button>
+                    <button type="button" role="tab" aria-selected={projectSource === 'confirmed'} className={projectSource === 'confirmed' ? 'is-on' : ''} onClick={() => { setProjectSource('confirmed'); setSuggestIndex(0); }}>Подтверждённые</button>
+                </div>
                 <div className="tt-inv-combined__suggest">
                     <input
                         id="tt-inv-combined-project-search"
                         className="tt-inv-dialog__control"
                         role="combobox"
-                        aria-expanded={suggestOpen && query.trim().length > 0}
+                        aria-expanded={suggestOpen && (query.trim().length > 0 || projectSource === 'confirmed')}
                         aria-autocomplete="list"
                         aria-controls="tt-inv-combined-project-suggest"
                         value={query}
-                        placeholder={projects.length === 0 ? 'Проекты загружаются…' : 'Найти проект или клиента'}
+                        placeholder={projects.length === 0 ? 'Проекты загружаются…' : projectSource === 'confirmed' ? 'Найти подтверждённый проект' : 'Найти проект или клиента'}
                         disabled={projects.length === 0}
                         onChange={(event) => {
                             setQuery(event.target.value);
@@ -445,24 +508,31 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                         onBlur={() => setSuggestOpen(false)}
                         onKeyDown={onSuggestKeyDown}
                     />
-                    {suggestOpen && query.trim() ? (
+                    {suggestOpen && (query.trim() || projectSource === 'confirmed') ? (
                         <ul id="tt-inv-combined-project-suggest" className="tt-inv-combined__suggest-list" role="listbox">
                             {suggestions.length === 0 ? (
-                                <li className="tt-inv-combined__suggest-empty">Ничего не найдено</li>
-                            ) : suggestions.map((project, index) => (
-                                <li key={project.id} role="option" aria-selected={index === suggestIndex}>
-                                    <button
-                                        type="button"
-                                        className={index === suggestIndex ? 'is-on' : ''}
-                                        onMouseDown={(event) => event.preventDefault()}
-                                        onClick={() => addProject(project.id)}
-                                        onMouseEnter={() => setSuggestIndex(index)}
-                                    >
-                                        <span>{projectTitle(project)}</span>
-                                        <em>{clientName.get(project.client_id) ?? 'Без клиента'}</em>
-                                    </button>
-                                </li>
-                            ))}
+                                <li className="tt-inv-combined__suggest-empty">{projectSource === 'confirmed' ? 'Нет проектов с полным подтверждением партнёров' : 'Ничего не найдено'}</li>
+                            ) : suggestions.map((project, index) => {
+                                const period = projectSource === 'confirmed' ? confirmedPeriodByProject.get(project.id) : undefined;
+                                const meta = [
+                                    clientName.get(project.client_id) ?? 'Без клиента',
+                                    period ? periodLabel(period.dateFrom, period.dateTo) : '',
+                                ].filter(Boolean).join(' · ');
+                                return (
+                                    <li key={project.id} role="option" aria-selected={index === suggestIndex}>
+                                        <button
+                                            type="button"
+                                            className={index === suggestIndex ? 'is-on' : ''}
+                                            onMouseDown={(event) => event.preventDefault()}
+                                            onClick={() => addProject(project.id)}
+                                            onMouseEnter={() => setSuggestIndex(index)}
+                                        >
+                                            <span>{projectTitle(project)}</span>
+                                            <em>{meta}</em>
+                                        </button>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     ) : null}
                 </div>
@@ -477,7 +547,7 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                         ))}
                     </ul>
                 ) : (
-                    <p className="tt-inv-combined__pick-hint">Начните вводить название — проект добавится из подсказки.</p>
+                    <p className="tt-inv-combined__pick-hint">{projectSource === 'confirmed' ? 'В подсказках только проекты, которые партнёры подтвердили полностью. Период первого проекта подставится из отчёта.' : 'Начните вводить название — проект добавится из подсказки.'}</p>
                 )}
             </div>
             <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2 tt-inv-combined__block">
