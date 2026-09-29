@@ -14,6 +14,7 @@ export type ExpenseReportColumnId =
     | 'isReimbursable'
     | 'paymentMethod'
     | 'vendor'
+    | 'client'
     | 'projectId'
     | 'comment'
     | 'author'
@@ -39,6 +40,37 @@ function fmtDate(iso: string | null | undefined): string {
 }
 function fmtMoney(n: number): string {
     return n.toLocaleString('ru-RU', { maximumFractionDigits: 0 });
+}
+
+type ExpenseProjectLabel = { clientName: string; projectName: string };
+
+const expenseProjectLabels = new Map<string, ExpenseProjectLabel>();
+
+export function setExpenseReportProjectLabels(rows: Array<{ id: string; name: string; clientName: string }>): void {
+    expenseProjectLabels.clear();
+    for (const row of rows) {
+        const id = row.id.trim();
+        if (!id)
+            continue;
+        expenseProjectLabels.set(id, {
+            clientName: row.clientName.trim(),
+            projectName: row.name.trim(),
+        });
+    }
+}
+
+export function expenseReportClientName(request: ExpenseRequest): string {
+    const id = request.projectId?.trim();
+    if (!id)
+        return '';
+    return expenseProjectLabels.get(id)?.clientName ?? '';
+}
+
+export function expenseReportProjectName(request: ExpenseRequest): string {
+    const id = request.projectId?.trim();
+    if (!id)
+        return '';
+    return expenseProjectLabels.get(id)?.projectName || id;
 }
 export const EXPENSE_REPORT_COLUMNS: ExpenseReportColumnDef[] = [
     {
@@ -127,6 +159,13 @@ export const EXPENSE_REPORT_COLUMNS: ExpenseReportColumnDef[] = [
         },
     },
     {
+        id: 'client',
+        label: 'Клиент',
+        defaultVisible: true,
+        minWidth: 180,
+        value: r => expenseReportClientName(r),
+    },
+    {
         id: 'vendor',
         label: 'Контрагент / поставщик',
         defaultVisible: true,
@@ -135,10 +174,10 @@ export const EXPENSE_REPORT_COLUMNS: ExpenseReportColumnDef[] = [
     },
     {
         id: 'projectId',
-        label: 'Проект (ID)',
-        defaultVisible: false,
-        minWidth: 280,
-        value: r => r.projectId ?? '',
+        label: 'Проект',
+        defaultVisible: true,
+        minWidth: 180,
+        value: r => expenseReportProjectName(r),
     },
     {
         id: 'comment',

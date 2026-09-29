@@ -4,7 +4,8 @@ import { loadExcelJS, writeExcelWorkbookBuffer, excelWorkbookBufferToBlob } from
 import { STATUS_META, TYPE_META, REIMBURSABLE_META, PAYMENT_META } from '@entities/expenses/model/constants';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { formatExpenseAuthorExport } from '@entities/expenses/model/expenseAuthor';
-import { getColumnDef, type ExpenseReportColumnId, type ExpenseReportColumnDef, } from '@entities/expenses/model/expensesReportColumns';
+import { getColumnDef, setExpenseReportProjectLabels, expenseReportClientName, expenseReportProjectName, type ExpenseReportColumnId, type ExpenseReportColumnDef, } from '@entities/expenses/model/expensesReportColumns';
+import { listProjectsForExpenses } from '@entities/time-tracking';
 export interface ReportConfig {
     title: string;
     dateFrom: string;
@@ -81,7 +82,18 @@ function font(opts: Omit<Partial<Font>, 'wrapText'> & {
     const { color, ...rest } = opts;
     return { name: 'Calibri', size: 9, ...(color ? { color: color as Color } : {}), ...rest };
 }
+async function loadExpenseProjectLabels(): Promise<void> {
+    try {
+        const rows = await listProjectsForExpenses({ includeArchived: true });
+        setExpenseReportProjectLabels(rows);
+    }
+    catch {
+        setExpenseReportProjectLabels([]);
+    }
+}
+
 export async function exportExpensesToExcel(allRequests: ExpenseRequest[], config: ReportConfig): Promise<void> {
+    await loadExpenseProjectLabels();
     const ExcelJS = await loadExcelJS();
     const data = applyFilters(allRequests, config);
     const wb = new ExcelJS.Workbook();
@@ -100,10 +112,11 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
         views: [{ showGridLines: false, state: 'frozen', ySplit: 5 }],
         properties: { tabColor: C_ACCENT },
     });
-    const LAST_COL = 'N';
+    const LAST_COL = 'O';
     ws.columns = [
         { width: 6 },
         { width: 46 },
+        { width: 28 },
         { width: 28 },
         { width: 14 },
         { width: 20 },
@@ -113,7 +126,7 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
         { width: 18 },
         { width: 20 },
         { width: 18 },
-        { width: 22 },
+        { width: 28 },
         { width: 26 },
         { width: 36 },
     ];
@@ -155,6 +168,7 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
         { ru: '№', en: 'No.', align: 'center' },
         { ru: 'Описание расхода', en: 'Description of the expense', align: 'left' },
         { ru: 'Автор', en: 'Author / Submitter', align: 'left' },
+        { ru: 'Клиент', en: 'Client', align: 'left' },
         { ru: 'Дата расхода', en: 'Date of incurred expense', align: 'center' },
         { ru: 'Тип расхода', en: 'Expense type', align: 'center' },
         { ru: 'Возмещение', en: 'Reimbursable / Non-reimbursable', align: 'center' },
@@ -193,6 +207,7 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
             i + 1,
             r.description,
             formatExpenseAuthorExport(r),
+            expenseReportClientName(r),
             fmtDate(r.expenseDate),
             TYPE_META[r.expenseType as ExpenseType]?.label ?? r.expenseType,
             REIMBURSABLE_META[reimbKey].label,
@@ -201,12 +216,12 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
             asExpenseNumber(r.equivalentAmount as unknown),
             STATUS_META[r.status]?.label ?? r.status,
             r.paymentMethod && PAYMENT_META[r.paymentMethod as PaymentMethod] ? PAYMENT_META[r.paymentMethod as PaymentMethod].label : '',
-            r.projectId ?? '',
+            expenseReportProjectName(r),
             r.vendor ?? '',
             r.comment ?? '',
         ];
         const aligns: Alignment['horizontal'][] = [
-            'center', 'left', 'left', 'center', 'center', 'center', 'right', 'right', 'right', 'center', 'center', 'left', 'left', 'left',
+            'center', 'left', 'left', 'left', 'center', 'center', 'center', 'right', 'right', 'right', 'center', 'center', 'left', 'left', 'left',
         ];
         values.forEach((val, ci) => {
             const cell = row.getCell(ci + 1);
@@ -217,7 +232,7 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
             cell.alignment = { horizontal: aligns[ci], vertical: 'middle' };
         });
         row.getCell(8).numFmt = '#,##0';
-        row.getCell(9).numFmt = '#,##0';
+        row.getCell(9).numFmt = '#,##0.000';
         row.getCell(10).numFmt = '#,##0.00';
     });
     const TOTAL_ROW = DATA_ROW_START + data.length;
@@ -225,7 +240,7 @@ export async function exportExpensesToExcel(allRequests: ExpenseRequest[], confi
     totalRow.height = 20;
     const brdTotal = border(C_BORDER_DARK);
     const totalFont = font({ bold: true, size: 9 });
-    ws.mergeCells(`A${TOTAL_ROW}:F${TOTAL_ROW}`);
+    ws.mergeCells(`A${TOTAL_ROW}:G${TOTAL_ROW}`);
     const labelCell2 = totalRow.getCell(1);
     labelCell2.value = `ИТОГО / TOTAL  (${data.length} записей / records)`;
     labelCell2.font = totalFont;
@@ -394,6 +409,7 @@ export async function exportExpensesCustomTableToExcel(rows: ExpenseRequest[], c
     title: string;
     subtitle: string;
 }): Promise<void> {
+    await loadExpenseProjectLabels();
     const ExcelJS = await loadExcelJS();
     const cols = columnIds
         .map(id => getColumnDef(id))
