@@ -1220,10 +1220,22 @@
 .tt-partner-confirmed__combine-payer {
   min-width: 16rem;
 }
-.tt-partner-confirmed__check-col {
-  width: 2.25rem;
-  text-align: left;
-  vertical-align: middle;
+.tt-partner-confirmed__actions-head {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  width: 100%;
+}
+.tt-partner-confirmed__row-check-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.15rem;
+  height: 2.15rem;
+  margin: 0;
+  flex: 0 0 auto;
+  cursor: pointer;
 }
 .tt-partner-confirmed__row-check {
   width: 1.05rem;
@@ -1693,44 +1705,11 @@
   max-width: 12.5rem;
 }
 
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable th:nth-child(1),
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable td:nth-child(1) {
-  width: 2.25rem;
-  min-width: 2.25rem;
-  max-width: 2.25rem;
-  padding-left: 0.35rem;
-  padding-right: 0.15rem;
-  text-align: left;
-}
-
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable th:nth-child(2),
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable td:nth-child(2),
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable th:nth-child(3),
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable td:nth-child(3) {
-  width: 20%;
-  min-width: 12rem;
-  max-width: none;
-}
-
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable th:nth-child(4),
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable td:nth-child(4) {
-  width: 12%;
-  min-width: 11rem;
-  max-width: none;
-}
-
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable th:nth-child(5),
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable td:nth-child(5) {
-  width: 18%;
-  min-width: 10rem;
-  max-width: none;
-}
-
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable th:nth-child(6),
-.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable td:nth-child(6) {
-  width: 15%;
-  min-width: 11rem;
-  max-width: none;
+.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable .tt-partner-confirmed__th-actions,
+.tt-partner-confirmed__table--confirmed.tt-partner-confirmed__table--selectable .tt-partner-confirmed__td-actions {
+  width: 15rem;
+  min-width: 15rem;
+  max-width: 15rem;
 }
 
 .tt-partner-confirmed__table--confirmed .tt-partner-confirmed__td-client {
@@ -1789,7 +1768,8 @@
   padding: 0.25rem;
 }
 
-.tt-partner-confirmed__table--confirmed .tt-partner-confirmed__icon-btn.tt-reports__btn--icon {
+.tt-partner-confirmed__table--confirmed .tt-partner-confirmed__icon-btn.tt-reports__btn--icon,
+.tt-partner-confirmed__table--confirmed .tt-partner-confirmed__row-check-btn {
   min-width: 2.35rem;
   min-height: 2.35rem;
   width: 2.35rem;

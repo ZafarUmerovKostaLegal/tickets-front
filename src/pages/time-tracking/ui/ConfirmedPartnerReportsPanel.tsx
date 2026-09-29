@@ -1080,27 +1080,31 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         <table className={`tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly tt-partner-confirmed__table--confirmed${selectable ? ' tt-partner-confirmed__table--selectable' : ''}`} aria-label={t('timeTrackingPage.reports.partnerConfirmed.tableAria')}>
             <thead>
                 <tr>
-                    {selectable ? (
-                        <th scope="col" className="tt-partner-confirmed__check-col">
-                            <input
-                                className="tt-partner-confirmed__row-check"
-                                type="checkbox"
-                                checked={allVisibleSelected}
-                                ref={(el) => {
-                                    if (el)
-                                        el.indeterminate = selectedVisible > 0 && !allVisibleSelected;
-                                }}
-                                onChange={() => toggleVisibleReports(list, !allVisibleSelected)}
-                                aria-label={t('timeTrackingPage.reports.partnerConfirmed.combineSelectAll')}
-                            />
-                        </th>
-                    ) : null}
                     <th scope="col">{columnLabels.client}</th>
                     <th scope="col">{columnLabels.project}</th>
                     <th scope="col">{columnLabels.period}</th>
                     <th scope="col">{columnLabels.partners}</th>
                     <th scope="col">{columnLabels.comments}</th>
-                    <th scope="col" className="tt-partner-confirmed__th-actions">{columnLabels.actions}</th>
+                    <th scope="col" className="tt-partner-confirmed__th-actions">
+                        <span className="tt-partner-confirmed__actions-head">
+                            {selectable ? (
+                                <label className="tt-partner-confirmed__row-check-btn">
+                                    <input
+                                        className="tt-partner-confirmed__row-check"
+                                        type="checkbox"
+                                        checked={allVisibleSelected}
+                                        ref={(el) => {
+                                            if (el)
+                                                el.indeterminate = selectedVisible > 0 && !allVisibleSelected;
+                                        }}
+                                        onChange={() => toggleVisibleReports(list, !allVisibleSelected)}
+                                        aria-label={t('timeTrackingPage.reports.partnerConfirmed.combineSelectAll')}
+                                    />
+                                </label>
+                            ) : null}
+                            <span>{columnLabels.actions}</span>
+                        </span>
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -1149,17 +1153,6 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                                 ? t('timeTrackingPage.reports.partnerConfirmed.invoiceGenerateAria')
                                 : t('timeTrackingPage.reports.partnerConfirmed.invoiceUnsignedAria');
                     return (<tr key={r.id} className={selectable && selectedReportIds.has(r.id) ? 'is-selected' : ''}>
-                    {selectable ? (
-                        <td className="tt-partner-confirmed__check-col" data-label={t('timeTrackingPage.reports.partnerConfirmed.combineSelect')}>
-                            <input
-                                className="tt-partner-confirmed__row-check"
-                                type="checkbox"
-                                checked={selectedReportIds.has(r.id)}
-                                onChange={() => toggleReportSelected(r.id)}
-                                aria-label={t('timeTrackingPage.reports.partnerConfirmed.combineSelectRow').replace('{project}', resolveProjectLabel(r))}
-                            />
-                        </td>
-                    ) : null}
                     <td className="tt-partner-confirmed__td-client" data-label={columnLabels.client}>{resolveClientLabel(r)}</td>
                     <td className="tt-partner-confirmed__cell-title tt-partner-confirmed__td-primary" data-label={columnLabels.project}>
                         <span className="tt-partner-confirmed__project-cell">
@@ -1216,6 +1209,17 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                     </td>
                     <td className="tt-partner-confirmed__actions-cell tt-partner-confirmed__td-actions" data-label={columnLabels.actions}>
                         <div className="tt-partner-confirmed__actions" role="group" aria-label={columnLabels.actions}>
+                            {selectable ? (
+                                <label className="tt-partner-confirmed__row-check-btn" title={t('timeTrackingPage.reports.partnerConfirmed.combineSelectRow').replace('{project}', resolveProjectLabel(r))}>
+                                    <input
+                                        className="tt-partner-confirmed__row-check"
+                                        type="checkbox"
+                                        checked={selectedReportIds.has(r.id)}
+                                        onChange={() => toggleReportSelected(r.id)}
+                                        aria-label={t('timeTrackingPage.reports.partnerConfirmed.combineSelectRow').replace('{project}', resolveProjectLabel(r))}
+                                    />
+                                </label>
+                            ) : null}
                             <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon tt-partner-confirmed__icon-btn tt-partner-confirmed__icon-btn--primary" onClick={() => openReportPreviewForRow(r)} title={t('timeTrackingPage.reports.partnerConfirmed.previewTitle')} aria-label={t('timeTrackingPage.reports.partnerConfirmed.previewAria')}>
                                 <IcoEye />
                             </button>
@@ -1355,7 +1359,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
 
         {error ? (<p className="tt-reports__table-err tt-partner-confirmed__err" role="alert">{error}</p>) : null}
 
-        {loading ? (<PartnerReportsListLoading label={t('timeTrackingPage.reports.partnerConfirmed.loading')} columns={7} />) : null}
+        {loading ? (<PartnerReportsListLoading label={t('timeTrackingPage.reports.partnerConfirmed.loading')} columns={6} />) : null}
 
         {!loading && !error && rows.length === 0 ? (<p className="tt-partner-confirmed__empty">{t('timeTrackingPage.reports.partnerConfirmed.empty')}</p>) : null}
 
