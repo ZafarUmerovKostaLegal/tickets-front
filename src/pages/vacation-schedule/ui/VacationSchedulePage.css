@@ -400,19 +400,19 @@ span.vac-month__who {
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   flex: none;
   background: transparent;
   box-shadow: none;
-  color: var(--app-text, #1e293b);
-  font-size: 11px;
-  font-weight: 650;
+  color: var(--app-text, #0f172a);
+  font-size: 10px;
+  font-weight: 700;
   line-height: 1;
 }
 
 .vac-cal:not(.vac-cal--month) .vac-cal__num--ring.vac-cal__num--weekend {
-  color: #fb7185;
+  color: #e11d48;
 }
 
 .vac-cal:not(.vac-cal--month) .vac-cal__num--today {
@@ -431,8 +431,8 @@ span.vac-month__who {
   position: absolute;
   inset: 0;
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   overflow: visible;
   pointer-events: none;
 }
@@ -1565,7 +1565,7 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
 }
 
 .vac-cal__wd--end {
-  color: #fda4af;
+  color: #e11d48;
 }
 
 .vac-cal__num {
@@ -1587,7 +1587,8 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
 }
 
 .vac-cal__num--weekend {
-  color: #fb7185;
+  color: #e11d48;
+  font-weight: 700;
 }
 
 .vac-cal__tip {

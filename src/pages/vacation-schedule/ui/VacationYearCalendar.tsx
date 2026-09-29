@@ -119,11 +119,12 @@ function ringSectorPath(radius: number, startDeg: number, sweepDeg: number): str
 }
 
 function DayRing({ colors }: { colors: readonly string[] }) {
-    const radius = 9.15;
+    const radius = 10.35;
+    const stroke = colors[0] ?? '#9C27FF';
     if (colors.length === 1) {
         return (
             <svg className="vac-cal__ring" viewBox="0 0 24 24" aria-hidden>
-                <circle cx="12" cy="12" r={radius} fill="none" stroke={colors[0]} strokeWidth="2.7" />
+                <circle cx="12" cy="12" r={radius} fill="none" stroke={stroke} strokeWidth="2.55" />
             </svg>
         );
     }
@@ -136,7 +137,7 @@ function DayRing({ colors }: { colors: readonly string[] }) {
                     d={ringSectorPath(radius, index * slice - 0.35, slice + 0.7)}
                     fill="none"
                     stroke={color}
-                    strokeWidth="2.7"
+                    strokeWidth="2.55"
                     strokeLinecap="butt"
                 />
             ))}
