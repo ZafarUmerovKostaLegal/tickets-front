@@ -83,7 +83,7 @@ export function KostaDailyChecklistComposerModal({
             title="Новый чеклист"
             ariaLabel="Новый чеклист"
             onClose={onClose}
-            className="kd-tg__modal--poll"
+            className="kd-tg__modal--checklist"
             footer={(
                 <div className="kd-tg__modal-actions">
                     <button type="button" className="kd-tg__modal-btn" onClick={onClose} disabled={saving}>
@@ -114,14 +114,17 @@ export function KostaDailyChecklistComposerModal({
             </label>
 
             <div className="kd-tg__modal-field">
-                <span className="kd-tg__modal-label">Задачи</span>
-                <div className="kd-tg__modal-options">
+                <span className="kd-tg__modal-label">
+                    Задачи
+                    <span className="kd-cl__count">{tasks.length}/{MAX_TASKS}</span>
+                </span>
+                <div className="kd-cl__tasks">
                     {tasks.map((task, index) => (
-                        <div key={index} className="kd-tg__poll-compose-row">
-                            <span className="kd-tg__poll-compose-num" aria-hidden>{index + 1}</span>
+                        <div key={index} className="kd-cl__task">
+                            <span className="kd-cl__box" aria-hidden />
                             <input
                                 type="text"
-                                className="kd-tg__modal-input kd-tg__modal-input--plain"
+                                className="kd-cl__task-input"
                                 value={task}
                                 maxLength={200}
                                 placeholder="Задача"
@@ -136,7 +139,7 @@ export function KostaDailyChecklistComposerModal({
                             />
                             <button
                                 type="button"
-                                className="kd-tg__modal-option-remove"
+                                className="kd-cl__remove"
                                 aria-label="Удалить задачу"
                                 disabled={tasks.length <= 1}
                                 onClick={() => removeTask(index)}
@@ -148,7 +151,7 @@ export function KostaDailyChecklistComposerModal({
                 </div>
                 <button
                     type="button"
-                    className="kd-tg__modal-link"
+                    className="kd-cl__add"
                     onClick={addTask}
                     disabled={tasks.length >= MAX_TASKS}
                 >
@@ -156,25 +159,33 @@ export function KostaDailyChecklistComposerModal({
                 </button>
             </div>
 
-            <div className="kd-tg__modal-settings">
-                <p className="kd-tg__modal-label">Параметры</p>
-                <label className="kd-tg__modal-check">
+            <div className="kd-cl__options">
+                <p className="kd-tg__modal-label">Кто ещё может менять список</p>
+                <label className="kd-cl__switch">
+                    <span className="kd-cl__switch-copy">
+                        <span className="kd-cl__switch-title">Отмечать выполненным</span>
+                        <span className="kd-cl__switch-hint">Участники чата смогут ставить и снимать галочки</span>
+                    </span>
                     <input
                         type="checkbox"
+                        className="kd-cl__switch-input"
                         checked={othersCanComplete}
                         onChange={(e) => setOthersCanComplete(e.target.checked)}
                     />
-                    <span className="kd-tg__modal-check-box" aria-hidden />
-                    <span>Другие могут отмечать выполненным</span>
+                    <span className="kd-cl__switch-track" aria-hidden />
                 </label>
-                <label className="kd-tg__modal-check">
+                <label className="kd-cl__switch">
+                    <span className="kd-cl__switch-copy">
+                        <span className="kd-cl__switch-title">Добавлять задачи</span>
+                        <span className="kd-cl__switch-hint">Участники смогут дописывать новые пункты</span>
+                    </span>
                     <input
                         type="checkbox"
+                        className="kd-cl__switch-input"
                         checked={othersCanAppend}
                         onChange={(e) => setOthersCanAppend(e.target.checked)}
                     />
-                    <span className="kd-tg__modal-check-box" aria-hidden />
-                    <span>Другие могут добавлять задачи</span>
+                    <span className="kd-cl__switch-track" aria-hidden />
                 </label>
             </div>
 

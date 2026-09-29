@@ -4,6 +4,8 @@ import { mergeMessagesSorted } from './lib/kostaDailyUi';
 import type {
     ChatAttachment,
     ChatChecklist,
+    ChatPinnedMessage,
+    ChatPins,
     ChatMessage,
     ChatPoll,
     ChatReaction,
@@ -430,6 +432,50 @@ export async function createChatPoll(roomId: number, input: CreatePollInput): Pr
         body: JSON.stringify(payload),
     });
     return parseMessage(await readJson(res));
+}
+
+function parsePinnedMessage(raw: unknown): ChatPinnedMessage | null {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const row = raw as Record<string, unknown>;
+    const id = numField(row, 'message_id', 'messageId', 0);
+    if (!id)
+        return null;
+    return {
+        message_id: id,
+        preview: strField(row, 'preview', 'preview') ?? '',
+        message_kind: strField(row, 'message_kind', 'messageKind') ?? 'text',
+        author_user_id: numField(row, 'author_user_id', 'authorUserId', 0),
+        pinned_at: strField(row, 'pinned_at', 'pinnedAt') ?? '',
+    };
+}
+
+export function parseChatPins(raw: unknown): ChatPins {
+    const o = raw && typeof raw === 'object' ? raw as Record<string, unknown> : {};
+    const itemsRaw = Array.isArray(o.items) ? o.items : Array.isArray(raw) ? raw : [];
+    return {
+        items: itemsRaw.map(parsePinnedMessage).filter((item): item is ChatPinnedMessage => item != null),
+        can_pin: boolField(o, 'can_pin', 'canPin'),
+    };
+}
+
+export async function fetchChatPins(roomId: number): Promise<ChatPins> {
+    const res = await apiFetch(`${CHAT}/rooms/${roomId}/pins`);
+    return parseChatPins(await readJson(res));
+}
+
+export async function pinChatMessage(roomId: number, messageId: number): Promise<ChatPins> {
+    const res = await apiFetch(`${CHAT}/rooms/${roomId}/pins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messageId }),
+    });
+    return parseChatPins(await readJson(res));
+}
+
+export async function unpinChatMessage(roomId: number, messageId: number): Promise<ChatPins> {
+    const res = await apiFetch(`${CHAT}/rooms/${roomId}/pins/${messageId}`, { method: 'DELETE' });
+    return parseChatPins(await readJson(res));
 }
 
 export async function createChatChecklist(roomId: number, input: CreateChecklistInput): Promise<ChatMessage> {

@@ -65,6 +65,19 @@ export type CreateChecklistInput = {
     othersCanAppend: boolean;
 };
 
+export type ChatPinnedMessage = {
+    message_id: number;
+    preview: string;
+    message_kind: string;
+    author_user_id: number;
+    pinned_at: string;
+};
+
+export type ChatPins = {
+    items: ChatPinnedMessage[];
+    can_pin: boolean;
+};
+
 export type ChatMessage = {
     id: number;
     room_id: number;

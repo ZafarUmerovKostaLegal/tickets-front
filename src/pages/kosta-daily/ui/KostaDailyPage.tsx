@@ -25,6 +25,7 @@ import { KostaDailyVirtualFeed, type KostaDailyVirtualFeedHandle } from './Kosta
 import { KostaDailyVirtualChatList, type KostaDailyChatListItem } from './KostaDailyVirtualChatList';
 import { KostaDailyVirtualEmployeesList, type KostaDailyEmployeeListItem } from './KostaDailyVirtualEmployeesList';
 import { KostaDailyFeedBlock } from './KostaDailyFeedBlock';
+import { KostaDailyPinnedBar } from './KostaDailyPinnedBar';
 import { avatarColor, initials } from './kostaDailyAvatar';
 import { dailyMessageMatchesSearch } from './kostaDailySearchHighlight';
 import { REACTION_EMOJIS } from './kostaDailyReactions';
@@ -203,6 +204,11 @@ export function KostaDailyPage() {
         removeChecklistTask,
         votePoll,
         closePoll,
+        pins,
+        canPin,
+        pinMessage,
+        unpinMessage,
+        revealMessage,
         canPost,
     } = useKostaDailyChat(user?.id, employees);
 
@@ -653,7 +659,7 @@ export function KostaDailyPage() {
         if (msg.isDeleted)
             return;
         const MENU_W = 240;
-        const MENU_H = 280;
+        const MENU_H = 320;
         const pad = 8;
         const vw = window.innerWidth;
         const vh = window.innerHeight;
@@ -1085,6 +1091,24 @@ export function KostaDailyPage() {
             )}
           </header>
 
+          {!chatSearchOpen && pins.length > 0 ? (
+            <KostaDailyPinnedBar
+              pins={pins}
+              canUnpin={canPin}
+              onOpen={(messageId) => {
+                void (async () => {
+                  if (activeRoomId == null)
+                    return;
+                  await revealMessage(activeRoomId, messageId);
+                  setReplyFlashId(String(messageId));
+                  window.setTimeout(() => scrollToMessage(messageId), 60);
+                  window.setTimeout(() => setReplyFlashId(null), 1200);
+                })();
+              }}
+              onUnpin={(messageId) => { void unpinMessage(messageId); }}
+            />
+          ) : null}
+
           {messagesError && (
             <p className="kd-tg__chat-pane-error" role="alert">{messagesError}</p>
           )}
@@ -1183,6 +1207,27 @@ export function KostaDailyPage() {
                 </svg>
                 <span>Ответить</span>
               </button>
+              {canPin ? (
+                <button
+                  type="button"
+                  className="kd-tg__ctx-item"
+                  role="menuitem"
+                  onClick={() => {
+                    const id = Number(ctxMenu.msg.id);
+                    const pinned = pins.some((pin) => pin.message_id === id);
+                    closeCtxMenu();
+                    if (!Number.isFinite(id))
+                      return;
+                    void (pinned ? unpinMessage(id) : pinMessage(id));
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="M12 17v5" />
+                    <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+                  </svg>
+                  <span>{pins.some((pin) => pin.message_id === Number(ctxMenu.msg.id)) ? 'Открепить' : 'Закрепить'}</span>
+                </button>
+              ) : null}
               {ctxMenu.msg.text.trim().length > 0 ? (
                 <button
                   type="button"

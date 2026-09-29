@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getUsersPublic } from '@entities/user';
 import {
     fetchChatMessages,
+    fetchChatPins,
+    pinChatMessage,
+    unpinChatMessage,
+    parseChatPins,
     CHAT_MESSAGES_MAX_LIMIT,
     fetchChatRooms,
     invalidateChatRoomsCache,
@@ -30,6 +34,7 @@ import {
     buildRenderBlocks,
     COMPANY_CHANNEL_HINT,
     type ChatMessage,
+    type ChatPinnedMessage,
     type ChatReaction,
     type ChatRoom,
     type ChatPreview,
@@ -53,6 +58,10 @@ export function useKostaDailyChat(
     const [roomsError, setRoomsError] = useState<string | null>(null);
     const [activeRoomId, setActiveRoomId] = useState<number | null>(null);
     const [messagesByRoom, setMessagesByRoom] = useState<Record<number, ChatMessage[]>>({});
+    const [pinsByRoom, setPinsByRoom] = useState<Record<number, ChatPinnedMessage[]>>({});
+    const [canPinByRoom, setCanPinByRoom] = useState<Record<number, boolean>>({});
+    const messagesByRoomRef = useRef(messagesByRoom);
+    messagesByRoomRef.current = messagesByRoom;
     const [hasMoreOlderByRoom, setHasMoreOlderByRoom] = useState<Record<number, boolean>>({});
     const [messagesLoading, setMessagesLoading] = useState(false);
     const [loadingOlder, setLoadingOlder] = useState(false);
@@ -190,6 +199,11 @@ export function useKostaDailyChat(
                 upsertRoomMessage(event.room_id, msg);
                 return;
             }
+            if (event.type === 'pins_updated') {
+                const items = parseChatPins(event.payload).items;
+                setPinsByRoom((prev) => ({ ...prev, [event.room_id]: items }));
+                return;
+            }
             if (event.type === 'room_created' || event.type === 'room_updated' || event.type === 'members_removed') {
                 invalidateChatRoomsCache();
                 void refreshRooms();
@@ -261,9 +275,12 @@ export function useKostaDailyChat(
         setMessagesLoading(true);
         setMessagesError(null);
         try {
-            const { items, has_more } = await fetchChatMessages(roomId, {
-                limit: MESSAGES_OLDER_BATCH,
-            });
+            const [{ items, has_more }, pins] = await Promise.all([
+                fetchChatMessages(roomId, { limit: MESSAGES_OLDER_BATCH }),
+                fetchChatPins(roomId).catch(() => ({ items: [], can_pin: false })),
+            ]);
+            setPinsByRoom((prev) => ({ ...prev, [roomId]: pins.items }));
+            setCanPinByRoom((prev) => ({ ...prev, [roomId]: pins.can_pin }));
             setHasMoreOlderByRoom((prev) => ({ ...prev, [roomId]: has_more }));
             let mergedForRoom: ChatMessage[] = [];
             setMessagesByRoom((prev) => {
@@ -405,6 +422,55 @@ export function useKostaDailyChat(
         }
         return roomSubtitle(activeRoom);
     }, [activeRoom, employees.length]);
+
+    const revealMessage = useCallback(async (roomId: number, messageId: number) => {
+        let list = messagesByRoomRef.current[roomId] ?? [];
+        if (list.some((m) => m.id === messageId))
+            return true;
+        let beforeId = list[0]?.id;
+        let hasMore = true;
+        for (let step = 0; step < 30 && hasMore && beforeId != null; step += 1) {
+            const page = await fetchChatMessages(roomId, { beforeId, limit: MESSAGES_OLDER_BATCH });
+            hasMore = page.has_more;
+            setHasMoreOlderByRoom((prev) => ({ ...prev, [roomId]: page.has_more }));
+            if (page.items.length === 0)
+                return false;
+            list = mergeMessagesSorted(page.items, list);
+            messagesByRoomRef.current = { ...messagesByRoomRef.current, [roomId]: list };
+            setMessagesByRoom((prev) => ({ ...prev, [roomId]: list }));
+            if (page.items.some((m) => m.id === messageId))
+                return true;
+            beforeId = page.items[0]?.id;
+        }
+        return list.some((m) => m.id === messageId);
+    }, []);
+
+    const pinMessage = useCallback(async (messageId: number) => {
+        if (activeRoomId == null)
+            return;
+        try {
+            const pins = await pinChatMessage(activeRoomId, messageId);
+            setPinsByRoom((prev) => ({ ...prev, [activeRoomId]: pins.items }));
+            setCanPinByRoom((prev) => ({ ...prev, [activeRoomId]: pins.can_pin }));
+            setSendError(null);
+        }
+        catch (e: unknown) {
+            setSendError(e instanceof Error ? e.message : 'Не удалось закрепить сообщение');
+        }
+    }, [activeRoomId]);
+
+    const unpinMessage = useCallback(async (messageId: number) => {
+        if (activeRoomId == null)
+            return;
+        try {
+            const pins = await unpinChatMessage(activeRoomId, messageId);
+            setPinsByRoom((prev) => ({ ...prev, [activeRoomId]: pins.items }));
+            setCanPinByRoom((prev) => ({ ...prev, [activeRoomId]: pins.can_pin }));
+        }
+        catch (e: unknown) {
+            setSendError(e instanceof Error ? e.message : 'Не удалось открепить сообщение');
+        }
+    }, [activeRoomId]);
 
     const selectRoom = useCallback((roomId: number) => {
         setActiveRoomId(roomId);
@@ -654,6 +720,11 @@ export function useKostaDailyChat(
         removeChecklistTask,
         votePoll,
         closePoll,
+        pins: activeRoomId != null ? (pinsByRoom[activeRoomId] ?? []) : [],
+        canPin: activeRoomId != null ? Boolean(canPinByRoom[activeRoomId]) : false,
+        pinMessage,
+        unpinMessage,
+        revealMessage,
         canPost: activeRoom?.is_company_channel || activeRoom?.room_type === 'group' || activeRoom?.room_type === 'dm'
             ? true
             : (activeRoom?.can_post ?? true),

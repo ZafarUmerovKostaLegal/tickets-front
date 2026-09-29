@@ -12,6 +12,7 @@ export type ChatWsPayload = {
         room_id?: number;
         messageId?: number;
         reactions?: unknown[];
+        items?: unknown[];
     };
 };
 
@@ -28,6 +29,7 @@ export type ChatWsEvent =
     | { type: 'room_created'; room_id: number; payload: ChatWsPayload['payload'] }
     | { type: 'room_updated'; room_id: number; payload: ChatWsPayload['payload'] }
     | { type: 'room_deleted'; room_id: number; payload: ChatWsPayload['payload'] }
+    | { type: 'pins_updated'; room_id: number; payload: ChatWsPayload['payload'] }
     | { type: 'pong' }
     | { type: 'error'; error?: string };
 
@@ -140,7 +142,7 @@ function parseEvent(data: Record<string, unknown>): ChatWsEvent | null {
         const reactions = parseChatReactions(Array.isArray(p?.reactions) ? p.reactions : []);
         return { type: 'reaction', room_id, messageId, reactions };
     }
-    if (type === 'poll_vote' || type === 'poll_closed' || type === 'room_created' || type === 'room_updated' || type === 'room_deleted') {
+    if (type === 'poll_vote' || type === 'poll_closed' || type === 'room_created' || type === 'room_updated' || type === 'room_deleted' || type === 'pins_updated') {
         return { type, room_id, payload } as ChatWsEvent;
     }
     return null;
