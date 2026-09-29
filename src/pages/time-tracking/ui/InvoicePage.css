@@ -560,23 +560,20 @@
 }
 
 .tt-inv-cdoc__shares col.name {
-  width: 48%;
+  width: 36%;
+}
+
+.tt-inv-cdoc__shares col.pct {
+  width: 14%;
 }
 
 .tt-inv-cdoc__shares col.num {
-  width: 26%;
+  width: 25%;
 }
 
-.tt-inv-cdoc__share {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.tt-inv-cdoc__pct {
+.tt-inv-cdoc__shares td.num,
+.tt-inv-cdoc__shares th.num {
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 @media print {

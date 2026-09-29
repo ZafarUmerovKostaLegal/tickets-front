@@ -145,12 +145,12 @@ export function combinedReportDocxChildren(snapshot: CombinedReportSnapshot): (P
     ));
     out.push(heading(cur));
     out.push(table(
-        ['Shared amounts', 'Reimbursable expenses', 'TO BE INVOICED'],
+        ['Shared amounts', '', 'Reimbursable expenses', 'TO BE INVOICED:'],
         [
-            ...snapshot.shares.map((share) => [`${share.name}   ${share.percent.toFixed(2)}%`, shareExpenseText(share.expenses), money(share.total)]),
-            [`Total   100%`, `${cur} ${money(invoiced)}`, money(invoiced)],
+            ...snapshot.shares.map((share) => [share.name, `${share.percent.toFixed(2)}%`, shareExpenseText(share.expenses), money(share.total)]),
+            ['Total', '100%', money(invoiced), money(invoiced)],
         ],
-        [44, 28, 28],
+        [36, 14, 25, 25],
         1,
     ));
     return out;

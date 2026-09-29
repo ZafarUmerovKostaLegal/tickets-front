@@ -205,23 +205,22 @@ export function CombinedInvoiceDocument({
                     <table className="tt-inv-cdoc__shares">
                         <colgroup>
                             <col className="name" />
+                            <col className="pct" />
                             <col className="num" />
                             <col className="num" />
                         </colgroup>
                         <thead>
                             <tr>
-                                <th>Shared amounts</th>
+                                <th colSpan={2}>Shared amounts</th>
                                 <th className="num">Reimbursable expenses</th>
-                                <th className="num">TO BE INVOICED</th>
+                                <th className="num">TO BE INVOICED:</th>
                             </tr>
                         </thead>
                         <tbody>
                             {shares.map((share) => (
                                 <tr key={share.projectId}>
-                                    <td className="tt-inv-cdoc__share">
-                                        <span>{share.projectName}</span>
-                                        <span className="tt-inv-cdoc__pct">{share.percent.toFixed(2)}%</span>
-                                    </td>
+                                    <td>{share.projectName}</td>
+                                    <td className="num">{share.percent.toFixed(2)}%</td>
                                     <td className="num">{Math.abs(share.expenses) < 0.005 ? '-' : money(share.expenses)}</td>
                                     <td className="num">{money(share.total)}</td>
                                 </tr>
@@ -229,8 +228,9 @@ export function CombinedInvoiceDocument({
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td className="tt-inv-cdoc__share"><span>Total</span><span className="tt-inv-cdoc__pct">100%</span></td>
-                                <td className="num">{currency} {money(totalFees + totalExp)}</td>
+                                <td>Total</td>
+                                <td className="num">100%</td>
+                                <td className="num">{money(totalFees + totalExp)}</td>
                                 <td className="num">{money(totalFees + totalExp)}</td>
                             </tr>
                         </tfoot>

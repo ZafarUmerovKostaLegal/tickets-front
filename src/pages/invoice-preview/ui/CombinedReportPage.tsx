@@ -431,14 +431,15 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                 <table className="tt-inv-creport__shares">
                     <colgroup>
                         <col className="name" />
+                        <col className="pct" />
                         <col className="num" />
                         <col className="num" />
                     </colgroup>
                     <thead>
                         <tr>
-                            <th>Shared amounts</th>
+                            <th colSpan={2}>Shared amounts</th>
                             <th className="num">Reimbursable expenses</th>
-                            <th className="num">TO BE INVOICED</th>
+                            <th className="num">TO BE INVOICED:</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -446,37 +447,36 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                             const index = Math.max(0, slice.sharesFrom) + offset;
                             return (
                             <tr key={`share-${index}`}>
-                                <td className="tt-inv-creport__share">
+                                <td>
                                     {editable
                                         ? (
-                                            <>
-                                                <input
-                                                    type="text"
-                                                    className="tt-inv-tr__cell-input"
-                                                    value={share.name}
-                                                    aria-label="Shared amount name"
-                                                    onChange={(e) => emit({
-                                                        ...report,
-                                                        shares: report.shares.map((row, i) => i === index ? { ...row, name: e.target.value } : row),
-                                                    })}
-                                                />
-                                                <NumInput
-                                                    value={share.percent}
-                                                    ariaLabel="Percent"
-                                                    format={(n) => n.toFixed(2)}
-                                                    onChange={(v) => emit({
-                                                        ...report,
-                                                        shares: report.shares.map((row, i) => i === index ? { ...row, percent: v } : row),
-                                                    })}
-                                                />
-                                            </>
+                                            <input
+                                                type="text"
+                                                className="tt-inv-tr__cell-input"
+                                                value={share.name}
+                                                aria-label="Shared amount name"
+                                                onChange={(e) => emit({
+                                                    ...report,
+                                                    shares: report.shares.map((row, i) => i === index ? { ...row, name: e.target.value } : row),
+                                                })}
+                                            />
                                         )
-                                        : (
-                                            <>
-                                                <span>{share.name}</span>
-                                                <span className="tt-inv-creport__share-pct">{share.percent.toFixed(2)}%</span>
-                                            </>
-                                        )}
+                                        : share.name}
+                                </td>
+                                <td className="num">
+                                    {editable
+                                        ? (
+                                            <NumInput
+                                                value={share.percent}
+                                                ariaLabel="Percent"
+                                                format={(n) => n.toFixed(2)}
+                                                onChange={(v) => emit({
+                                                    ...report,
+                                                    shares: report.shares.map((row, i) => i === index ? { ...row, percent: v } : row),
+                                                })}
+                                            />
+                                        )
+                                        : `${share.percent.toFixed(2)}%`}
                                 </td>
                                 {editable
                                     ? (
@@ -511,8 +511,9 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                     {slice.showSharesTotal ? (
                     <tfoot>
                         <tr>
-                            <td className="tt-inv-creport__share"><span>Total</span><span className="tt-inv-creport__share-pct">100%</span></td>
-                            <td className="num">{cur} {money(invoiced)}</td>
+                            <td>Total</td>
+                            <td className="num">100%</td>
+                            <td className="num">{money(invoiced)}</td>
                             <td className="num">{money(invoiced)}</td>
                         </tr>
                     </tfoot>

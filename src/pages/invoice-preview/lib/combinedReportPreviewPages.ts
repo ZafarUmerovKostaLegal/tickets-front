@@ -1,7 +1,7 @@
 import { combinedReportDetailLines, type CombinedReportLine, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 
 /** Usable content height inside the A4 sheet, after page padding and the footer. */
-const USABLE_PX = 800;
+const USABLE_PX = 920;
 const THEAD_PX = 26;
 const ROW_PX = 23;
 const EXTRA_LINE_PX = 14;
@@ -64,8 +64,8 @@ function mastheadPx(title: string): number {
 
 function timeRowPx(line: CombinedReportLine): number {
     return rowPx(Math.max(
-        textLines(line.task || '', 26),
-        textLines(line.description || '', 40),
+        textLines(line.task || '', 32),
+        textLines(line.description || '', 58),
     ));
 }
 

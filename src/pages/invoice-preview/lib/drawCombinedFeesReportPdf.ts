@@ -122,14 +122,14 @@ function blocks(snapshot: CombinedReportSnapshot): Array<{ title?: string; heade
     });
     out.push({
         title: cur,
-        headers: ['Shared amounts', 'Reimbursable expenses', 'TO BE INVOICED'],
-        weights: [44, 28, 28],
-        right: new Set([1, 2]),
+        headers: ['Shared amounts', '', 'Reimbursable expenses', 'TO BE INVOICED:'],
+        weights: [36, 14, 25, 25],
+        right: new Set([1, 2, 3]),
         rows: [
             ...snapshot.shares.map((share) => ({
-                cells: [`${share.name}   ${share.percent.toFixed(2)}%`, shareExpenseText(share.expenses), money(share.total)],
+                cells: [share.name, `${share.percent.toFixed(2)}%`, shareExpenseText(share.expenses), money(share.total)],
             })),
-            { bold: true, cells: [`Total   100%`, `${cur} ${money(invoiced)}`, money(invoiced)] },
+            { bold: true, cells: ['Total', '100%', money(invoiced), money(invoiced)] },
         ],
     });
     return out;
@@ -203,6 +203,8 @@ function drawThead(page: PDFPage, fontBold: PDFFont, y: number, headers: string[
     const tableW = W - ML - MR;
     page.drawRectangle({ x: ML, y: y - 4, width: tableW, height: 14, color: RED });
     headers.forEach((cell, i) => {
+        if (!cell.trim())
+            return;
         const text = clip(cell, fontBold, CELL, widths[i]! - 6);
         const tw = fontBold.widthOfTextAtSize(text, CELL);
         const dx = right.has(i) ? xs[i]! + widths[i]! - 4 - tw : xs[i]! + 3;
