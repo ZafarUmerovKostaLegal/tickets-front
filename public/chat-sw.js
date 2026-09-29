@@ -10,6 +10,13 @@ self.addEventListener('push', (event) => {
     event.waitUntil(showChatNotification(data));
 });
 
+self.addEventListener('message', (event) => {
+    const data = event.data;
+    if (!data || data.type !== 'show-chat-notification')
+        return;
+    event.waitUntil(showChatNotification(data));
+});
+
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
     if (event.action === 'dismiss')

@@ -37,27 +37,30 @@ async function registrationReady(): Promise<ServiceWorkerRegistration> {
     return registration;
 }
 
-export async function showChatOsNotification(input: {
+export function showChatOsNotification(input: {
     roomId: number;
     title: string;
     body: string;
-}): Promise<void> {
+}): void {
     if (!pushSupported() || Notification.permission !== 'granted')
         return;
-    const registration = await registrationReady();
-    const options: NotificationOptions & { renotify?: boolean; actions?: Array<{ action: string; title: string }> } = {
+    const payload = {
+        type: 'show-chat-notification',
+        title: input.title,
+        body: input.body,
+        roomId: input.roomId,
+        url: `/kosta-daily?room=${input.roomId}`,
+    };
+    const options: NotificationOptions = {
         body: input.body,
         icon: '/notification-icon.png',
-        badge: '/notification-icon.png',
         tag: `chat-room-${input.roomId}`,
-        renotify: true,
-        data: { url: `/kosta-daily?room=${input.roomId}`, roomId: input.roomId },
-        actions: [
-            { action: 'open', title: 'Открыть' },
-            { action: 'dismiss', title: 'Закрыть' },
-        ],
+        data: { url: payload.url, roomId: input.roomId },
     };
-    await registration.showNotification(input.title, options);
+    void navigator.serviceWorker.getRegistration()
+        .then((existing) => existing ?? navigator.serviceWorker.register(SW_URL, { scope: '/' }))
+        .then((registration) => registration.showNotification(input.title, options))
+        .catch(() => undefined);
 }
 
 async function subscribeGrantedNow(): Promise<void> {

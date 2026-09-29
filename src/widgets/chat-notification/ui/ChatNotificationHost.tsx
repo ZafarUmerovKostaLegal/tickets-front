@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { router } from '@app/router';
 import { listContactsColleagues } from '@entities/contacts';
 import {
+    chatMessageNotificationPreview,
     chatNotificationSenderLine,
     chatNotificationTitle,
     connectChatWs,
@@ -135,6 +136,12 @@ export function ChatNotificationHost() {
             if (!shouldShowChatMessageNotification(msg, roomId, meId))
                 return;
 
+            showChatOsNotification({
+                roomId,
+                title: 'Kosta Daily',
+                body: chatMessageNotificationPreview(msg),
+            });
+
             const cachedRoom = roomsRef.current.get(roomId);
             const build = (room: ChatRoom) => {
                 if (cancelled)
@@ -143,7 +150,7 @@ export function ChatNotificationHost() {
                 const title = chatNotificationTitle(room, meId, labelByUserId);
                 const preview = chatNotificationSenderLine(room, msg, labelByUserId);
                 upsertNotification(room, title, preview);
-                void showChatOsNotification({ roomId: room.id, title, body: preview }).catch(() => undefined);
+                showChatOsNotification({ roomId: room.id, title, body: preview });
             };
 
             const roomPromise = cachedRoom ? Promise.resolve(cachedRoom) : fetchChatRoom(roomId);
