@@ -105,13 +105,24 @@ function DayCell({
     );
 }
 
-function DayNum({ year, monthIndex, day }: { year: number; monthIndex: number; day: number | null }) {
+function ringFill(colors: readonly string[]): string {
+    if (colors.length <= 1)
+        return colors[0] ?? 'transparent';
+    const step = 100 / colors.length;
+    return `conic-gradient(${colors.map((color, index) => `${color} ${index * step}% ${(index + 1) * step}%`).join(',')})`;
+}
+
+function DayNum({ year, monthIndex, day, colors = [] }: { year: number; monthIndex: number; day: number | null; colors?: readonly string[] }) {
     if (day == null)
         return <span className="vac-cal__num vac-cal__num--empty" />;
     const weekend = vacationDayIsWeekendRu(year, monthIndex, day);
     const today = isToday(year, monthIndex, day);
+    const ring = colors.length > 0;
     return (
-        <span className={`vac-cal__num${weekend ? ' vac-cal__num--weekend' : ''}${today ? ' vac-cal__num--today' : ''}`}>
+        <span
+            className={`vac-cal__num${weekend ? ' vac-cal__num--weekend' : ''}${today ? ' vac-cal__num--today' : ''}${ring ? ' vac-cal__num--ring' : ''}`}
+            style={ring ? { ['--vac-ring' as string]: ringFill(colors) } : undefined}
+        >
             {day}
         </span>
     );
@@ -234,7 +245,6 @@ export function VacationYearCalendar({
     onMonthChange,
     selectedPeriod = null,
     onSelectDay,
-    occupancy,
     focusMonth = null,
     onOpenMonth,
 }: Props) {
@@ -461,18 +471,18 @@ export function VacationYearCalendar({
                                     <div key={label} className={`vac-cal__wd${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
                                 ))}
                                 {cells.map((day, cellIndex) => {
-                                    const count = day == null ? 0 : (occupancy?.get(`${index}-${day}`) ?? 0);
                                     const today = day != null && isToday(year, index, day);
                                     const away = day == null
                                         ? []
                                         : (marksByDay.get(`${index}-${day}`) ?? []).filter((mark) => !mark.kindLabel.startsWith('Опоздание'));
+                                    const ringColors = [...new Set(away.map((mark) => mark.color))];
                                     const awayLabel = away.length === 0
                                         ? ''
                                         : `. В отпуске: ${away.map((mark) => mark.label).join(', ')}`;
                                     return (
                                     <DayCell
                                         key={`${index}-${cellIndex}`}
-                                        className={`vac-cal__cell${count >= 4 ? ' is-hot' : count > 0 ? ' is-busy' : ''}${today ? ' is-today' : ''}`}
+                                        className={`vac-cal__cell${today ? ' is-today' : ''}`}
                                         day={day}
                                         picked={day != null && periodEdge(index, day, selectedPeriod) === 'end'}
                                         ranged={day != null && periodEdge(index, day, selectedPeriod) === 'mid'}
@@ -483,7 +493,7 @@ export function VacationYearCalendar({
                                                 onSelectDay?.(index, day);
                                         }}
                                     >
-                                        <DayNum year={year} monthIndex={index} day={day} />
+                                        <DayNum year={year} monthIndex={index} day={day} colors={ringColors} />
                                     </DayCell>
                                     );
                                 })}

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
 import {
     createVacationLeaveRequest,
@@ -15,6 +15,10 @@ import {
 } from '@entities/vacation';
 import { useCurrentUser } from '@shared/hooks';
 import { DatePicker, SearchableSelect, useAppToast } from '@shared/ui';
+import {
+    emptyAnnualOverlapCache,
+    loadAnnualTeamOverlapWarning,
+} from '../lib/annualTeamOverlap';
 import {
     countCalendarDaysInclusive,
     leaveKindLabel,
@@ -89,6 +93,8 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
     const [error, setError] = useState<string | null>(null);
     const [balance, setBalance] = useState<VacationLeaveBalanceApi | null>(null);
     const [balanceLoading, setBalanceLoading] = useState(false);
+    const [teamWarning, setTeamWarning] = useState<string | null>(null);
+    const overlapCache = useRef(emptyAnnualOverlapCache());
 
     const dayCount = useMemo(() => countCalendarDaysInclusive(dateFrom, dateTo), [dateFrom, dateTo]);
     const selectedPartner = useMemo(
@@ -111,6 +117,8 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
         setError(null);
         setSubmitting(false);
         setBalance(null);
+        setTeamWarning(null);
+        overlapCache.current = emptyAnnualOverlapCache();
     }, [open]);
 
     useEffect(() => {
@@ -207,6 +215,30 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
             document.body.style.overflow = '';
         };
     }, [open, onClose, submitting]);
+
+    useEffect(() => {
+        if (!open || kind !== 'annual_vacation' || !dateFrom || !dateTo || dayCount < 1 || user?.id == null) {
+            setTeamWarning(null);
+            return;
+        }
+        let cancelled = false;
+        const userId = user.id;
+        const from = dateFrom.slice(0, 10);
+        const to = dateTo.slice(0, 10);
+        setTeamWarning(null);
+        void loadAnnualTeamOverlapWarning(overlapCache.current, userId, from, to)
+            .then((text) => {
+                if (!cancelled)
+                    setTeamWarning(text);
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setTeamWarning(null);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [open, kind, dateFrom, dateTo, dayCount, user?.id]);
 
     const handleSubmit = useCallback(async (e: FormEvent) => {
         e.preventDefault();
@@ -438,6 +470,9 @@ export function VacationAbsenceRequestModal({ open, onClose, onSubmitted }: Prop
                                 {daysMeta}
                             </span>
                         </div>
+                        {kind === 'annual_vacation' && teamWarning ? (
+                            <p className="vac-req-modal__team-warn" role="status">{teamWarning}</p>
+                        ) : null}
                     </fieldset>
 
                     <fieldset className="vac-req-modal__section">

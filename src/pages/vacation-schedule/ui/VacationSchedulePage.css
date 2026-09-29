@@ -396,20 +396,33 @@ span.vac-month__who {
   display: none;
 }
 
-.vac-cal:not(.vac-cal--month) .vac-cal__cell.is-busy .vac-cal__num,
-.vac-cal:not(.vac-cal--month) .vac-cal__cell.is-hot .vac-cal__num {
+.vac-cal:not(.vac-cal--month) .vac-cal__num--ring {
+  position: relative;
   width: 1.55rem;
   height: 1.55rem;
-  border-radius: 999px;
-  background: #6d4aff;
-  color: #fff;
+  background: transparent;
+  box-shadow: none;
+  color: var(--app-text, #1e293b);
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(109, 74, 255, 0.28);
 }
 
-.vac-cal:not(.vac-cal--month) .vac-cal__cell.is-hot .vac-cal__num {
-  background: #5b35f5;
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+.vac-cal:not(.vac-cal--month) .vac-cal__num--ring.vac-cal__num--weekend {
+  color: #fb7185;
+}
+
+.vac-cal:not(.vac-cal--month) .vac-cal__num--ring.vac-cal__num--today {
+  color: var(--app-accent, #4f46e5);
+}
+
+.vac-cal:not(.vac-cal--month) .vac-cal__num--ring::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--vac-ring);
+  -webkit-mask: radial-gradient(circle at center, transparent 52%, #000 54%);
+  mask: radial-gradient(circle at center, transparent 52%, #000 54%);
+  pointer-events: none;
 }
 
 .vac-cal:not(.vac-cal--month) .vac-cal__cell.is-today .vac-cal__num {
