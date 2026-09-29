@@ -49,6 +49,7 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
     const [suggestIndex, setSuggestIndex] = useState(0);
     const [projectSource, setProjectSource] = useState<'all' | 'confirmed'>('all');
     const [confirmedRows, setConfirmedRows] = useState<PartnerReportConfirmationRequest[]>([]);
+    const [confirmedLoading, setConfirmedLoading] = useState(true);
     const [allocation, setAllocation] = useState<CombinedAllocation>('hours');
     const [from, setFrom] = useState(firstOfMonthIso());
     const [to, setTo] = useState(lastOfMonthIso());
@@ -77,6 +78,10 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
             .catch(() => {
                 if (!cancelled)
                     setConfirmedRows([]);
+            })
+            .finally(() => {
+                if (!cancelled)
+                    setConfirmedLoading(false);
             });
         return () => {
             cancelled = true;
@@ -137,24 +142,25 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
         }
         return map;
     }, [confirmedRows, from, to]);
+    const confirmedProjects = useMemo(
+        () => projects
+            .filter((project) => confirmedPeriodByProject.has(project.id))
+            .sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+        [confirmedPeriodByProject, projects],
+    );
     const suggestions = useMemo(() => {
         const q = query.trim().toLocaleLowerCase('ru');
-        const pool = projectSource === 'confirmed'
-            ? projects.filter((project) => confirmedPeriodByProject.has(project.id))
-            : projects;
-        if (projectSource === 'all' && !q)
+        if (!q)
             return [];
-        return pool
+        return projects
             .filter((project) => {
                 if (projectIds.includes(project.id))
                     return false;
-                if (!q)
-                    return true;
                 const client = clientName.get(project.client_id) ?? '';
                 return `${project.name} ${project.code ?? ''} ${client}`.toLocaleLowerCase('ru').includes(q);
             })
             .slice(0, 8);
-    }, [clientName, confirmedPeriodByProject, projectIds, projectSource, projects, query]);
+    }, [clientName, projectIds, projects, query]);
     const shares = useMemo(
         () => buildCombinedShares(selectedProjects, clientName, time, expenses, allocation),
         [allocation, clientName, expenses, selectedProjects, time],
@@ -183,15 +189,24 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
         return `${fmt(isoFrom)}–${fmt(isoTo)}`;
     };
     const addProject = (id: string) => {
-        const period = projectSource === 'confirmed' ? confirmedPeriodByProject.get(id) : undefined;
-        if (projectIds.length === 0 && period) {
-            setFrom(period.dateFrom);
-            setTo(period.dateTo);
-        }
         setProjectIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
         setQuery('');
         setSuggestOpen(false);
         setSuggestIndex(0);
+    };
+    const applyConfirmedIds = (ids: string[]) => {
+        setProjectIds(ids);
+        const periods = ids.flatMap((id) => {
+            const period = confirmedPeriodByProject.get(id);
+            return period ? [period] : [];
+        });
+        if (periods.length === 0)
+            return;
+        setFrom(periods.reduce((min, period) => period.dateFrom < min ? period.dateFrom : min, periods[0]!.dateFrom));
+        setTo(periods.reduce((max, period) => period.dateTo > max ? period.dateTo : max, periods[0]!.dateTo));
+    };
+    const toggleConfirmed = (id: string) => {
+        applyConfirmedIds(projectIds.includes(id) ? projectIds.filter((item) => item !== id) : [...projectIds, id]);
     };
     const removeProject = (id: string) => {
         setProjectIds((prev) => prev.filter((item) => item !== id));
@@ -479,75 +494,99 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
             </div>
             <div className="tt-inv-combined__pick">
                 <div className="tt-inv-combined__pick-label">
-                    <label className="tt-inv-dialog__label" htmlFor="tt-inv-combined-project-search">Проекты, в том числе чужие</label>
+                    <label className="tt-inv-dialog__label" htmlFor={projectSource === 'all' ? 'tt-inv-combined-project-search' : undefined}>Проекты, в том числе чужие</label>
                     {projectIds.length > 0 ? (
                         <button type="button" className="tt-inv-combined__link" onClick={() => setProjectIds([])}>Снять все</button>
                     ) : null}
                 </div>
                 <div className="tt-inv-combined__alloc tt-inv-combined__source" role="tablist" aria-label="Откуда брать проекты">
                     <button type="button" role="tab" aria-selected={projectSource === 'all'} className={projectSource === 'all' ? 'is-on' : ''} onClick={() => { setProjectSource('all'); setSuggestIndex(0); if (!query.trim()) setSuggestOpen(false); }}>Все</button>
-                    <button type="button" role="tab" aria-selected={projectSource === 'confirmed'} className={projectSource === 'confirmed' ? 'is-on' : ''} onClick={() => { setProjectSource('confirmed'); setSuggestIndex(0); }}>Подтверждённые</button>
+                    <button type="button" role="tab" aria-selected={projectSource === 'confirmed'} className={projectSource === 'confirmed' ? 'is-on' : ''} onClick={() => { setProjectSource('confirmed'); setSuggestOpen(false); }}>Подтверждённые</button>
                 </div>
-                <div className="tt-inv-combined__suggest">
-                    <input
-                        id="tt-inv-combined-project-search"
-                        className="tt-inv-dialog__control"
-                        role="combobox"
-                        aria-expanded={suggestOpen && (query.trim().length > 0 || projectSource === 'confirmed')}
-                        aria-autocomplete="list"
-                        aria-controls="tt-inv-combined-project-suggest"
-                        value={query}
-                        placeholder={projects.length === 0 ? 'Проекты загружаются…' : projectSource === 'confirmed' ? 'Найти подтверждённый проект' : 'Найти проект или клиента'}
-                        disabled={projects.length === 0}
-                        onChange={(event) => {
-                            setQuery(event.target.value);
-                            setSuggestOpen(true);
-                            setSuggestIndex(0);
-                        }}
-                        onFocus={() => setSuggestOpen(true)}
-                        onBlur={() => setSuggestOpen(false)}
-                        onKeyDown={onSuggestKeyDown}
-                    />
-                    {suggestOpen && (query.trim() || projectSource === 'confirmed') ? (
-                        <ul id="tt-inv-combined-project-suggest" className="tt-inv-combined__suggest-list" role="listbox">
-                            {suggestions.length === 0 ? (
-                                <li className="tt-inv-combined__suggest-empty">{projectSource === 'confirmed' ? 'Нет проектов с полным подтверждением партнёров' : 'Ничего не найдено'}</li>
-                            ) : suggestions.map((project, index) => {
-                                const period = projectSource === 'confirmed' ? confirmedPeriodByProject.get(project.id) : undefined;
-                                const meta = [
-                                    clientName.get(project.client_id) ?? 'Без клиента',
-                                    period ? periodLabel(period.dateFrom, period.dateTo) : '',
-                                ].filter(Boolean).join(' · ');
+                {projectSource === 'confirmed' ? (
+                    <>
+                        <div className="tt-inv-combined__confirmed-tools">
+                            <span>{confirmedProjects.filter((project) => projectIds.includes(project.id)).length} из {confirmedProjects.length}</span>
+                            <button type="button" className="tt-inv-combined__link" onClick={() => applyConfirmedIds([...new Set([...projectIds, ...confirmedProjects.map((project) => project.id)])])} disabled={confirmedProjects.length === 0}>Выбрать все</button>
+                            <button type="button" className="tt-inv-combined__link" onClick={() => applyConfirmedIds(projectIds.filter((id) => !confirmedPeriodByProject.has(id)))} disabled={!confirmedProjects.some((project) => projectIds.includes(project.id))}>Снять выбор</button>
+                        </div>
+                        <ul className="tt-inv-combined__confirmed">
+                            {confirmedLoading || projects.length === 0 ? (
+                                <li className="tt-inv-combined__suggest-empty">Проекты загружаются…</li>
+                            ) : confirmedProjects.length === 0 ? (
+                                <li className="tt-inv-combined__suggest-empty">Нет проектов с полным подтверждением партнёров</li>
+                            ) : confirmedProjects.map((project) => {
+                                const checked = projectIds.includes(project.id);
+                                const period = confirmedPeriodByProject.get(project.id);
                                 return (
-                                    <li key={project.id} role="option" aria-selected={index === suggestIndex}>
-                                        <button
-                                            type="button"
-                                            className={index === suggestIndex ? 'is-on' : ''}
-                                            onMouseDown={(event) => event.preventDefault()}
-                                            onClick={() => addProject(project.id)}
-                                            onMouseEnter={() => setSuggestIndex(index)}
-                                        >
+                                    <li key={project.id} className={checked ? 'is-on' : ''}>
+                                        <label>
+                                            <input className="tt-inv-combined__check" type="checkbox" checked={checked} onChange={() => toggleConfirmed(project.id)} />
                                             <span>{projectTitle(project)}</span>
-                                            <em>{meta}</em>
-                                        </button>
+                                            <em>{[clientName.get(project.client_id) ?? 'Без клиента', period ? periodLabel(period.dateFrom, period.dateTo) : ''].filter(Boolean).join(' · ')}</em>
+                                        </label>
                                     </li>
                                 );
                             })}
                         </ul>
-                    ) : null}
-                </div>
-                {selectedProjects.length > 0 ? (
-                    <ul className="tt-inv-combined__chips">
-                        {selectedProjects.map((project) => (
-                            <li key={project.id}>
-                                <span>{projectTitle(project)}</span>
-                                <small>{clientName.get(project.client_id) ?? 'Без клиента'}</small>
-                                <button type="button" aria-label={`Убрать ${projectTitle(project)}`} onClick={() => removeProject(project.id)}>×</button>
-                            </li>
-                        ))}
-                    </ul>
+                    </>
                 ) : (
-                    <p className="tt-inv-combined__pick-hint">{projectSource === 'confirmed' ? 'В подсказках только проекты, которые партнёры подтвердили полностью. Период первого проекта подставится из отчёта.' : 'Начните вводить название — проект добавится из подсказки.'}</p>
+                    <>
+                        <div className="tt-inv-combined__suggest">
+                            <input
+                                id="tt-inv-combined-project-search"
+                                className="tt-inv-dialog__control"
+                                role="combobox"
+                                aria-expanded={suggestOpen && query.trim().length > 0}
+                                aria-autocomplete="list"
+                                aria-controls="tt-inv-combined-project-suggest"
+                                value={query}
+                                placeholder={projects.length === 0 ? 'Проекты загружаются…' : 'Найти проект или клиента'}
+                                disabled={projects.length === 0}
+                                onChange={(event) => {
+                                    setQuery(event.target.value);
+                                    setSuggestOpen(true);
+                                    setSuggestIndex(0);
+                                }}
+                                onFocus={() => setSuggestOpen(true)}
+                                onBlur={() => setSuggestOpen(false)}
+                                onKeyDown={onSuggestKeyDown}
+                            />
+                            {suggestOpen && query.trim() ? (
+                                <ul id="tt-inv-combined-project-suggest" className="tt-inv-combined__suggest-list" role="listbox">
+                                    {suggestions.length === 0 ? (
+                                        <li className="tt-inv-combined__suggest-empty">Ничего не найдено</li>
+                                    ) : suggestions.map((project, index) => (
+                                        <li key={project.id} role="option" aria-selected={index === suggestIndex}>
+                                            <button
+                                                type="button"
+                                                className={index === suggestIndex ? 'is-on' : ''}
+                                                onMouseDown={(event) => event.preventDefault()}
+                                                onClick={() => addProject(project.id)}
+                                                onMouseEnter={() => setSuggestIndex(index)}
+                                            >
+                                                <span>{projectTitle(project)}</span>
+                                                <em>{clientName.get(project.client_id) ?? 'Без клиента'}</em>
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : null}
+                        </div>
+                        {selectedProjects.length > 0 ? (
+                            <ul className="tt-inv-combined__chips">
+                                {selectedProjects.map((project) => (
+                                    <li key={project.id}>
+                                        <span>{projectTitle(project)}</span>
+                                        <small>{clientName.get(project.client_id) ?? 'Без клиента'}</small>
+                                        <button type="button" aria-label={`Убрать ${projectTitle(project)}`} onClick={() => removeProject(project.id)}>×</button>
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <p className="tt-inv-combined__pick-hint">Начните вводить название — проект добавится из подсказки.</p>
+                        )}
+                    </>
                 )}
             </div>
             <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2 tt-inv-combined__block">

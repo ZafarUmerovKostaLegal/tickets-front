@@ -179,6 +179,86 @@
   margin: 0.35rem 0 0.55rem;
 }
 
+.tt-inv-combined__confirmed-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.4rem;
+  color: var(--app-muted, #64748b);
+  font-size: 0.78rem;
+}
+
+.tt-inv-combined__confirmed-tools button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.tt-inv-combined__confirmed {
+  max-height: 280px;
+  margin: 0;
+  padding: 0.25rem;
+  overflow: auto;
+  list-style: none;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--app-surface, #fff);
+}
+
+.tt-inv-combined__confirmed li.is-on {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, transparent);
+  border-radius: 8px;
+}
+
+.tt-inv-combined__confirmed label {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  min-height: 2.35rem;
+  padding: 0.35rem 0.55rem;
+  cursor: pointer;
+}
+
+.tt-inv-combined__confirmed label:hover {
+  background: color-mix(in srgb, var(--app-text, #0f172a) 4%, transparent);
+  border-radius: 8px;
+}
+
+.tt-inv-combined__check {
+  appearance: none;
+  flex-shrink: 0;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  border: 1.5px solid var(--app-border, #cbd5e1);
+  border-radius: 5px;
+  background: var(--app-surface, #fff);
+  cursor: pointer;
+}
+
+.tt-inv-combined__check:checked {
+  border-color: var(--app-accent, #4f46e5);
+  background: var(--app-accent, #4f46e5) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' d='M3.5 8.2 6.4 11 12.5 4.8'/%3E%3C/svg%3E") center / 0.85rem no-repeat;
+}
+
+.tt-inv-combined__check:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--app-accent, #4f46e5) 45%, transparent);
+  outline-offset: 2px;
+}
+
+.tt-inv-combined__confirmed span {
+  min-width: 0;
+  font-size: 0.875rem;
+}
+
+.tt-inv-combined__confirmed em {
+  margin-left: auto;
+  color: var(--app-muted, #64748b);
+  font-style: normal;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
 .tt-inv-combined__pick {
   margin-top: 0.85rem;
 }
