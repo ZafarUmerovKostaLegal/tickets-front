@@ -1217,9 +1217,6 @@
   gap: 0.65rem 0.85rem;
   margin-left: auto;
 }
-.tt-partner-confirmed__combine-payer {
-  min-width: 16rem;
-}
 .tt-partner-confirmed__actions-head {
   display: inline-flex;
   align-items: center;

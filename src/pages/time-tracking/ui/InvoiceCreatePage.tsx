@@ -771,27 +771,27 @@ export function InvoiceCreatePage() {
         ...(currency ? { currency } : {}),
         ...(closingReportLines
           ? {
-              timeEntryIds: [...selTime],
-              expenseIds: [...selExp],
-            }
+            timeEntryIds: [...selTime],
+            expenseIds: [...selExp],
+          }
           : {}),
         // Always persist billing period for ribbon / «services rendered in …»
         // (pure billedAmount skips partner snapshot materialization on the backend).
         ...(hasBillingPeriod
           ? {
-              partnerBillingPeriodFrom: periodFrom,
-              partnerBillingPeriodTo: periodTo,
-            }
+            partnerBillingPeriodFrom: periodFrom,
+            partnerBillingPeriodTo: periodTo,
+          }
           : {}),
         ...(skipPartnerGate ? { skipPartnerInvoiceConfirmation: true, deferPartnerConfirmation: true } : {}),
         ...(billedAmountNum != null
           ? {
-              billedAmount: billedAmountNum,
-              serviceDescription,
-              taxPercent: 0,
-              tax2Percent: 0,
-              discountPercent: 0,
-            }
+            billedAmount: billedAmountNum,
+            serviceDescription,
+            taxPercent: 0,
+            tax2Percent: 0,
+            discountPercent: 0,
+          }
           : {}),
       });
       notifyReportsInvalidated();
@@ -876,27 +876,27 @@ export function InvoiceCreatePage() {
           <span className="time-page__navbar-title">{t('timeTrackingPage.invoices.createDialog.title')}</span>
           <div className="time-page__navbar-spacer" />
           {invoiceKind === 'single' ? (
-          <div className="tt-inv-page__nav-actions" role="group" aria-label={t('timeTrackingPage.invoices.createDialog.title')}>
-            <button
-              type="button"
-              className="tt-reports__btn tt-reports__btn--outline tt-inv-page__nav-btn"
-              onClick={() => void openInvoicePreview()}
-              disabled={createBusy}
-              title={t('timeTrackingPage.invoices.createDialog.previewTitle')}
-            >
-              {t('timeTrackingPage.invoices.createDialog.preview')}
-            </button>
-            <button
-              type="button"
-              className="tt-reports__btn tt-reports__btn--accent tt-inv-page__nav-btn"
-              onClick={() => void handleCreate()}
-              disabled={createBusy}
-            >
-              {createBusy
-                ? t('timeTrackingPage.invoices.createDialog.creating')
-                : t('timeTrackingPage.invoices.createDialog.createDraft')}
-            </button>
-          </div>
+            <div className="tt-inv-page__nav-actions" role="group" aria-label={t('timeTrackingPage.invoices.createDialog.title')}>
+              <button
+                type="button"
+                className="tt-reports__btn tt-reports__btn--outline tt-inv-page__nav-btn"
+                onClick={() => void openInvoicePreview()}
+                disabled={createBusy}
+                title={t('timeTrackingPage.invoices.createDialog.previewTitle')}
+              >
+                {t('timeTrackingPage.invoices.createDialog.preview')}
+              </button>
+              <button
+                type="button"
+                className="tt-reports__btn tt-reports__btn--accent tt-inv-page__nav-btn"
+                onClick={() => void handleCreate()}
+                disabled={createBusy}
+              >
+                {createBusy
+                  ? t('timeTrackingPage.invoices.createDialog.creating')
+                  : t('timeTrackingPage.invoices.createDialog.createDraft')}
+              </button>
+            </div>
           ) : null}
           <div className="time-page__navbar-settings">
             <AppPageSettings />
@@ -923,423 +923,423 @@ export function InvoiceCreatePage() {
                 onError={(message) => { void showAlert({ title: 'Сводный счёт', message }); }}
               />
             ) : (
-            <>
-            <section className="tt-inv-page__section">
-              <div className="tt-inv-page__section-head">
-                <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.clientRequired')}</h2>
-              </div>
-              <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
-                <div className="tt-inv-dialog__field">
-                  <label id="tt-inv-create-client-lbl" className="tt-inv-dialog__label" htmlFor="tt-inv-create-client-btn">{t('timeTrackingPage.invoices.createDialog.clientRequired')}</label>
-                  <SearchableSelect<TimeManagerClientRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-client-btn" portalDropdown portalZIndex={12050} portalMinWidth={400} placeholder={clientsErr ? t('timeTrackingPage.invoices.createDialog.clientsLoadError') : clientsForCreate.length === 0 ? t('timeTrackingPage.invoices.createDialog.clientsLoading') : t('timeTrackingPage.invoices.createDialog.selectClient')} emptyListText={t('timeTrackingPage.common.noClients')} noMatchText={t('timeTrackingPage.common.clientNotFound')} value={createClientId} items={clientsForCreate} getOptionValue={(c) => c.id} getOptionLabel={(c) => c.name} getSearchText={(c) => `${c.name} ${c.id}`.trim()} onSelect={(c) => {
-                    setCreateClientId(c.id);
-                    setCreateProjectId('');
-                  }} disabled={Boolean(clientsErr) || clientsForCreate.length === 0} aria-labelledby="tt-inv-create-client-lbl" />
-                </div>
-                <div className="tt-inv-dialog__field">
-                  <label id="tt-inv-create-project-lbl" className="tt-inv-dialog__label" htmlFor="tt-inv-create-project-btn">{t('timeTrackingPage.invoices.createDialog.project')}</label>
-                  <SearchableSelect<TimeManagerClientProjectRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-project-btn" portalDropdown portalZIndex={12050} portalMinWidth={560} placeholder={!createClientId ? t('timeTrackingPage.common.selectClientFirst') : projects.length === 0 ? t('timeTrackingPage.common.noProjects') : t('timeTrackingPage.invoices.createDialog.selectProject')} emptyListText={t('timeTrackingPage.common.noProjects')} noMatchText={t('timeTrackingPage.common.projectNotFound')} value={createProjectId} items={projects} getOptionValue={(p) => p.id} getOptionLabel={(p) => {
-                    const base = p.code ? `${p.name} (${p.code})` : p.name;
-                    return projectSkipsPartnerInvoiceConfirmation(p)
-                      ? `${base} — ${t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmation')}`
-                      : base;
-                  }} getSearchText={(p) => `${p.name} ${p.code ?? ''} ${p.id}`.trim()} onSelect={(p) => setCreateProjectId(p.id)} disabled={!createClientId} aria-labelledby="tt-inv-create-project-lbl" />
-                </div>
-              </div>
-              {showSkipPartnerToggle ? (
-                <div className="tt-inv-dialog__field" style={{ marginTop: '0.85rem' }}>
-                  <label className="tt-ios-toggle-row">
-                    <span className="tt-ios-toggle-row__text">
-                      {t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmation')}
-                    </span>
-                    <span className="tt-ios-toggle">
+              <>
+                <section className="tt-inv-page__section">
+                  <div className="tt-inv-page__section-head">
+                    <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.clientRequired')}</h2>
+                  </div>
+                  <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
+                    <div className="tt-inv-dialog__field">
+                      <label id="tt-inv-create-client-lbl" className="tt-inv-dialog__label" htmlFor="tt-inv-create-client-btn">{t('timeTrackingPage.invoices.createDialog.clientRequired')}</label>
+                      <SearchableSelect<TimeManagerClientRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-client-btn" portalDropdown portalZIndex={12050} portalMinWidth={400} placeholder={clientsErr ? t('timeTrackingPage.invoices.createDialog.clientsLoadError') : clientsForCreate.length === 0 ? t('timeTrackingPage.invoices.createDialog.clientsLoading') : t('timeTrackingPage.invoices.createDialog.selectClient')} emptyListText={t('timeTrackingPage.common.noClients')} noMatchText={t('timeTrackingPage.common.clientNotFound')} value={createClientId} items={clientsForCreate} getOptionValue={(c) => c.id} getOptionLabel={(c) => c.name} getSearchText={(c) => `${c.name} ${c.id}`.trim()} onSelect={(c) => {
+                        setCreateClientId(c.id);
+                        setCreateProjectId('');
+                      }} disabled={Boolean(clientsErr) || clientsForCreate.length === 0} aria-labelledby="tt-inv-create-client-lbl" />
+                    </div>
+                    <div className="tt-inv-dialog__field">
+                      <label id="tt-inv-create-project-lbl" className="tt-inv-dialog__label" htmlFor="tt-inv-create-project-btn">{t('timeTrackingPage.invoices.createDialog.project')}</label>
+                      <SearchableSelect<TimeManagerClientProjectRow> className="tsp-srch tt-inv-dialog-searchable" buttonClassName="tsp-srch__btn tt-inv-dialog-searchable__btn" buttonId="tt-inv-create-project-btn" portalDropdown portalZIndex={12050} portalMinWidth={560} placeholder={!createClientId ? t('timeTrackingPage.common.selectClientFirst') : projects.length === 0 ? t('timeTrackingPage.common.noProjects') : t('timeTrackingPage.invoices.createDialog.selectProject')} emptyListText={t('timeTrackingPage.common.noProjects')} noMatchText={t('timeTrackingPage.common.projectNotFound')} value={createProjectId} items={projects} getOptionValue={(p) => p.id} getOptionLabel={(p) => {
+                        const base = p.code ? `${p.name} (${p.code})` : p.name;
+                        return projectSkipsPartnerInvoiceConfirmation(p)
+                          ? `${base} — ${t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmation')}`
+                          : base;
+                      }} getSearchText={(p) => `${p.name} ${p.code ?? ''} ${p.id}`.trim()} onSelect={(p) => setCreateProjectId(p.id)} disabled={!createClientId} aria-labelledby="tt-inv-create-project-lbl" />
+                    </div>
+                  </div>
+                  {showSkipPartnerToggle ? (
+                    <div className="tt-inv-dialog__field" style={{ marginTop: '0.85rem' }}>
+                      <label className="tt-ios-toggle-row">
+                        <span className="tt-ios-toggle-row__text">
+                          {t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmation')}
+                        </span>
+                        <span className="tt-ios-toggle">
+                          <input
+                            type="checkbox"
+                            className="tt-ios-toggle__input"
+                            checked={selectedProjectSkipsPartner}
+                            onChange={(e) => void onToggleSkipPartnerInvoice(e.target.checked)}
+                            disabled={skipPartnerSaving || createBusy}
+                            aria-describedby="tt-inv-skip-partner-hint"
+                          />
+                          <span className="tt-ios-toggle__slider" aria-hidden />
+                        </span>
+                      </label>
+                      <p id="tt-inv-skip-partner-hint" className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                        {selectedProjectSkipsPartner
+                          ? t('timeTrackingPage.invoices.createDialog.skipPartnerProjectHint')
+                          : selectedProjectHasConfirmed
+                            ? t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmationHint')
+                            : t('timeTrackingPage.invoices.createDialog.skipPartnerToggleNeed')}
+                      </p>
+                      {selectedProjectSkipsPartner ? null : (
+                        <label className="tt-ios-toggle-row" style={{ marginTop: '0.75rem' }}>
+                          <span className="tt-ios-toggle-row__text">
+                            {t('timeTrackingPage.invoices.createDialog.oneOffSkipPartner')}
+                          </span>
+                          <span className="tt-ios-toggle">
+                            <input
+                              type="checkbox"
+                              className="tt-ios-toggle__input"
+                              checked={oneOffSkipPartner}
+                              onChange={(e) => setOneOffSkipPartner(e.target.checked)}
+                              disabled={createBusy}
+                              aria-describedby="tt-inv-one-off-skip-hint"
+                            />
+                            <span className="tt-ios-toggle__slider" aria-hidden />
+                          </span>
+                        </label>
+                      )}
+                      {selectedProjectSkipsPartner ? null : (
+                        <p id="tt-inv-one-off-skip-hint" className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                          {t('timeTrackingPage.invoices.createDialog.oneOffSkipPartnerHint')}
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
+                </section>
+
+                <section className="tt-inv-page__section">
+                  <div className="tt-inv-page__section-head">
+                    <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.issueDate')}</h2>
+                  </div>
+                  <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
+                    <div className="tt-inv-dialog__field">
+                      <span id="tt-inv-issue-date-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.issueDate')}</span>
+                      <DatePicker id="tt-inv-issue-date" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={issueDate} max={dueDate || undefined} onChange={(iso) => setIssueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.issueDate')} showChevron aria-labelledby="tt-inv-issue-date-lbl" />
+                    </div>
+                    <div className="tt-inv-dialog__field">
+                      <span id="tt-inv-due-date-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.dueDate')}</span>
+                      <DatePicker id="tt-inv-due-date" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={dueDate} min={issueDate || undefined} onChange={(iso) => setDueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.dueDate')} showChevron aria-labelledby="tt-inv-due-date-lbl" />
+                    </div>
+                  </div>
+                  <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2" style={{ marginTop: '0.75rem' }}>
+                    <div className="tt-inv-dialog__field">
+                      <label className="tt-inv-dialog__label" htmlFor="tt-inv-create-number">{t('timeTrackingPage.invoices.createDialog.invoiceNumber')}</label>
                       <input
-                        type="checkbox"
-                        className="tt-ios-toggle__input"
-                        checked={selectedProjectSkipsPartner}
-                        onChange={(e) => void onToggleSkipPartnerInvoice(e.target.checked)}
-                        disabled={skipPartnerSaving || createBusy}
-                        aria-describedby="tt-inv-skip-partner-hint"
+                        id="tt-inv-create-number"
+                        type="text"
+                        className="tt-inv-dialog__control"
+                        value={createInvoiceNumber}
+                        onChange={(e) => setCreateInvoiceNumber(e.target.value)}
+                        placeholder={t('timeTrackingPage.invoices.createDialog.invoiceNumberPlaceholder')}
+                        maxLength={64}
+                        autoComplete="off"
+                        disabled={createBusy}
                       />
-                      <span className="tt-ios-toggle__slider" aria-hidden />
-                    </span>
-                  </label>
-                  <p id="tt-inv-skip-partner-hint" className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
-                    {selectedProjectSkipsPartner
-                      ? t('timeTrackingPage.invoices.createDialog.skipPartnerProjectHint')
-                      : selectedProjectHasConfirmed
-                        ? t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmationHint')
-                        : t('timeTrackingPage.invoices.createDialog.skipPartnerToggleNeed')}
-                  </p>
-                  {selectedProjectSkipsPartner ? null : (
-                    <label className="tt-ios-toggle-row" style={{ marginTop: '0.75rem' }}>
+                      <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                        {t('timeTrackingPage.invoices.createDialog.invoiceNumberHint')}
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="tt-inv-page__section tt-inv-page__section--soft">
+                  <div className="tt-inv-page__section-head">
+                    <div>
+                      <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.unbilledSectionTitle')}</h2>
+                      <p className="tt-inv-page__section-desc">
+                        {t('timeTrackingPage.invoices.createDialog.unbilledReimbursableNote')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="tt-inv-dialog__period-bar">
+                    <div className="tt-inv-dialog__field">
+                      <span id="tt-inv-unbill-from-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.fromLabel')}</span>
+                      <DatePicker id="tt-inv-unbill-from" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledFrom} max={unbilledTo || undefined} onChange={unbilledPeriodEditable ? (iso) => setUnbilledFrom(iso) : () => { }} disabled={!unbilledPeriodEditable} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledFrom')} showChevron aria-labelledby="tt-inv-unbill-from-lbl" />
+                    </div>
+                    <div className="tt-inv-dialog__field">
+                      <span id="tt-inv-unbill-to-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.toLabel')}</span>
+                      <DatePicker id="tt-inv-unbill-to" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledTo} min={unbilledFrom || undefined} onChange={unbilledPeriodEditable ? (iso) => setUnbilledTo(iso) : () => { }} disabled={!unbilledPeriodEditable} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledTo')} showChevron aria-labelledby="tt-inv-unbill-to-lbl" />
+                    </div>
+                    <div className="tt-inv-dialog__period-action">
+                      <div className="tt-reports__period-dropdown-wrap" ref={unbilledPeriodDropdownRef}>
+                        <button
+                          type="button"
+                          className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--dropdown"
+                          onClick={() => unbilledPeriodEditable && setUnbilledPeriodDropdown((v) => !v)}
+                          aria-expanded={unbilledPeriodDropdown}
+                          disabled={!unbilledPeriodEditable}
+                          title={t('timeTrackingPage.invoices.createDialog.periodPresetTitle')}
+                        >
+                          {ttReportPeriodLabel(unbilledPeriodGranularity, t)}
+                          {' '}
+                          <IcoChevDown />
+                        </button>
+                        {unbilledPeriodDropdown && unbilledPeriodEditable ? (
+                          <div className="tt-reports__period-dropdown" role="listbox">
+                            {PERIOD_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                role="option"
+                                aria-selected={unbilledPeriodGranularity === opt.id}
+                                className={`tt-reports__period-opt${unbilledPeriodGranularity === opt.id ? ' tt-reports__period-opt--active' : ''}`}
+                                onClick={() => applyUnbilledPeriodPreset(opt.id)}
+                              >
+                                {ttReportPeriodLabel(opt.id, t)}
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                      <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" onClick={() => void loadUnbilled()} disabled={unbilledLoading || !createProjectId} title={!createProjectId ? t('timeTrackingPage.invoices.createDialog.selectProjectFirst') : t('timeTrackingPage.invoices.createDialog.loadUnbilledTitle')}>
+                        <IcoRefresh />
+                        {unbilledLoading ? t('timeTrackingPage.common.loading') : t('timeTrackingPage.invoices.createDialog.loadUnbilled')}
+                      </button>
+                    </div>
+                  </div>
+                </section>
+
+                {unpaidExpensesBlockReason ? (
+                  <section className="tt-inv-page__section tt-inv-dialog__partner-gate" role="alert">
+                    <p className="tt-inv-page__section-desc" style={{ marginBottom: '0.75rem', whiteSpace: 'pre-wrap' }}>{unpaidExpensesBlockReason}</p>
+                    <p style={{ margin: 0 }} className="tt-inv-page__section-desc">
+                      <Link className="tt-inv-dialog__partner-gate-link" to={routes.expenses}>
+                        {t('timeTrackingPage.invoices.createDialog.openExpensesLink')}
+                      </Link>
+                    </p>
+                  </section>
+                ) : null}
+
+                {unbilledPartnerBlockReason ? (
+                  <section className="tt-inv-page__section tt-inv-dialog__partner-gate" role="alert">
+                    <p className="tt-inv-page__section-desc" style={{ marginBottom: '0.75rem', whiteSpace: 'pre-wrap' }}>{unbilledPartnerBlockReason}</p>
+                    <p style={{ margin: 0 }} className="tt-inv-page__section-desc">
+                      <Link className="tt-inv-dialog__partner-gate-link" to={`${routes.timeTracking}?tab=reports`}>{t('timeTrackingPage.invoices.createDialog.openReportsLink')}</Link>
+                      {createProjectId.trim() !== '' ? (
+                        <>
+                          {' '}·{' '}
+                          <Link className="tt-inv-dialog__partner-gate-link" to={getProjectDetailUrl(createProjectId.trim())}>
+                            {t('timeTrackingPage.invoices.empty.projectCardLink')}
+                          </Link>
+                        </>
+                      ) : null}
+                    </p>
+                  </section>
+                ) : null}
+
+                {unbilledTime.length > 0 && (
+                  <section className="tt-inv-page__section">
+                    <div className="tt-inv-page__section-head">
+                      <h2 className="tt-inv-page__section-title">
+                        {t('timeTrackingPage.invoices.createDialog.timeSection').replace('{count}', String(unbilledTime.length))}
+                      </h2>
+                    </div>
+                    <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
+                      <table className="tt-inv-mini">
+                        <thead>
+                          <tr>
+                            <th scope="col">
+                              <input ref={timeSelectAllRef} type="checkbox" aria-label={t('timeTrackingPage.invoices.createDialog.timeSelectAll')} checked={unbilledTime.length > 0 && unbilledTime.every((x) => selTime.has(x.id))} onChange={() => {
+                                setSelTime((prev) => {
+                                  const ids = unbilledTime.map((x) => x.id);
+                                  const allOn = ids.length > 0 && ids.every((id) => prev.has(id));
+                                  if (allOn) {
+                                    const n = new Set(prev);
+                                    ids.forEach((id) => n.delete(id));
+                                    return n;
+                                  }
+                                  return new Set([...prev, ...ids]);
+                                });
+                              }} />
+                            </th>
+                            <th>{t('timeTrackingPage.invoices.createDialog.date')}</th>
+                            <th title={t('timeTrackingPage.invoices.createDialog.durationTitle')}>{t('timeTrackingPage.invoices.createDialog.duration')}</th>
+                            <th title={t('timeTrackingPage.invoices.createDialog.hoursTitle')}>{t('timeTrackingPage.invoices.createDialog.hours')}</th>
+                            <th>{t('timeTrackingPage.invoices.createDialog.amount')}</th>
+                            <th>{t('timeTrackingPage.invoices.createDialog.description')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {unbilledTime.map((x) => {
+                            const seconds = typeof x.durationSeconds === 'number' && Number.isFinite(x.durationSeconds)
+                              ? x.durationSeconds
+                              : Math.round(Number(x.hours) * 3600);
+                            return (
+                              <tr key={x.id}>
+                                <td>
+                                  <input type="checkbox" checked={selTime.has(x.id)} onChange={() => setSelTime((prev) => {
+                                    const n = new Set(prev);
+                                    if (n.has(x.id))
+                                      n.delete(x.id);
+                                    else
+                                      n.add(x.id);
+                                    return n;
+                                  })} />
+                                </td>
+                                <td>{x.workDate}</td>
+                                <td>{formatHM(seconds)}</td>
+                                <td>{Number(x.hours).toFixed(2)}</td>
+                                <td>{fmtMoney(x.billableAmount, x.currency, locale)}{x.packageCovered ? ` (${t('timeTrackingPage.invoices.createDialog.packageCovered')})` : ''}</td>
+                                <td>{invoiceClientDescription(x.description) || '—'}</td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                )}
+
+                {unbilledExp.length > 0 && (
+                  <section className="tt-inv-page__section">
+                    <div className="tt-inv-page__section-head">
+                      <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.expensesSection').replace('{count}', String(unbilledExp.length))}</h2>
+                    </div>
+                    <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
+                      <table className="tt-inv-mini">
+                        <thead>
+                          <tr>
+                            <th scope="col">
+                              <input ref={expSelectAllRef} type="checkbox" aria-label={t('timeTrackingPage.invoices.createDialog.expSelectAll')} checked={unbilledExp.length > 0 && unbilledExp.every((x) => selExp.has(x.id))} onChange={() => {
+                                setSelExp((prev) => {
+                                  const ids = unbilledExp.map((x) => x.id);
+                                  const allOn = ids.length > 0 && ids.every((id) => prev.has(id));
+                                  if (allOn) {
+                                    const n = new Set(prev);
+                                    ids.forEach((id) => n.delete(id));
+                                    return n;
+                                  }
+                                  return new Set([...prev, ...ids]);
+                                });
+                              }} />
+                            </th>
+                            <th>{t('timeTrackingPage.invoices.createDialog.date')}</th>
+                            <th>{t('timeTrackingPage.invoices.createDialog.expAmountUsd')}</th>
+                            <th>{t('timeTrackingPage.invoices.createDialog.expStatus')}</th>
+                            <th>{t('timeTrackingPage.invoices.createDialog.description')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {unbilledExp.map((x) => (
+                            <tr key={x.id}>
+                              <td>
+                                <input type="checkbox" checked={selExp.has(x.id)} onChange={() => setSelExp((prev) => {
+                                  const n = new Set(prev);
+                                  if (n.has(x.id))
+                                    n.delete(x.id);
+                                  else
+                                    n.add(x.id);
+                                  return n;
+                                })} />
+                              </td>
+                              <td>{String(x.expenseDate)}</td>
+                              <td>{fmtMoney(x.equivalentAmount, 'USD', locale)}</td>
+                              <td>{x.status}</td>
+                              <td>{x.description ?? '—'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                )}
+
+                {(createClientId && createProjectId) ? (
+                  <section className="tt-inv-page__section">
+                    <div className="tt-inv-page__section-head">
+                      <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.customBilledToggle')}</h2>
+                    </div>
+                    <label className="tt-ios-toggle-row">
                       <span className="tt-ios-toggle-row__text">
-                        {t('timeTrackingPage.invoices.createDialog.oneOffSkipPartner')}
+                        {t('timeTrackingPage.invoices.createDialog.customBilledToggle')}
                       </span>
                       <span className="tt-ios-toggle">
                         <input
                           type="checkbox"
                           className="tt-ios-toggle__input"
-                          checked={oneOffSkipPartner}
-                          onChange={(e) => setOneOffSkipPartner(e.target.checked)}
+                          checked={customBilledEnabled}
+                          onChange={(e) => enableCustomBilled(e.target.checked)}
                           disabled={createBusy}
-                          aria-describedby="tt-inv-one-off-skip-hint"
                         />
                         <span className="tt-ios-toggle__slider" aria-hidden />
                       </span>
                     </label>
-                  )}
-                  {selectedProjectSkipsPartner ? null : (
-                    <p id="tt-inv-one-off-skip-hint" className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
-                      {t('timeTrackingPage.invoices.createDialog.oneOffSkipPartnerHint')}
+                    <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                      {t('timeTrackingPage.invoices.createDialog.customBilledHint')}
                     </p>
-                  )}
-                </div>
-              ) : null}
-            </section>
-
-            <section className="tt-inv-page__section">
-              <div className="tt-inv-page__section-head">
-                <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.issueDate')}</h2>
-              </div>
-              <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
-                <div className="tt-inv-dialog__field">
-                  <span id="tt-inv-issue-date-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.issueDate')}</span>
-                  <DatePicker id="tt-inv-issue-date" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={issueDate} max={dueDate || undefined} onChange={(iso) => setIssueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.issueDate')} showChevron aria-labelledby="tt-inv-issue-date-lbl" />
-                </div>
-                <div className="tt-inv-dialog__field">
-                  <span id="tt-inv-due-date-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.dueDate')}</span>
-                  <DatePicker id="tt-inv-due-date" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={dueDate} min={issueDate || undefined} onChange={(iso) => setDueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.dueDate')} showChevron aria-labelledby="tt-inv-due-date-lbl" />
-                </div>
-              </div>
-              <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2" style={{ marginTop: '0.75rem' }}>
-                <div className="tt-inv-dialog__field">
-                  <label className="tt-inv-dialog__label" htmlFor="tt-inv-create-number">{t('timeTrackingPage.invoices.createDialog.invoiceNumber')}</label>
-                  <input
-                    id="tt-inv-create-number"
-                    type="text"
-                    className="tt-inv-dialog__control"
-                    value={createInvoiceNumber}
-                    onChange={(e) => setCreateInvoiceNumber(e.target.value)}
-                    placeholder={t('timeTrackingPage.invoices.createDialog.invoiceNumberPlaceholder')}
-                    maxLength={64}
-                    autoComplete="off"
-                    disabled={createBusy}
-                  />
-                  <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
-                    {t('timeTrackingPage.invoices.createDialog.invoiceNumberHint')}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="tt-inv-page__section tt-inv-page__section--soft">
-              <div className="tt-inv-page__section-head">
-                <div>
-                  <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.unbilledSectionTitle')}</h2>
-                  <p className="tt-inv-page__section-desc">
-                    {t('timeTrackingPage.invoices.createDialog.unbilledReimbursableNote')}
-                  </p>
-                </div>
-              </div>
-              <div className="tt-inv-dialog__period-bar">
-                <div className="tt-inv-dialog__field">
-                  <span id="tt-inv-unbill-from-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.fromLabel')}</span>
-                  <DatePicker id="tt-inv-unbill-from" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledFrom} max={unbilledTo || undefined} onChange={unbilledPeriodEditable ? (iso) => setUnbilledFrom(iso) : () => {}} disabled={!unbilledPeriodEditable} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledFrom')} showChevron aria-labelledby="tt-inv-unbill-from-lbl" />
-                </div>
-                <div className="tt-inv-dialog__field">
-                  <span id="tt-inv-unbill-to-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.toLabel')}</span>
-                  <DatePicker id="tt-inv-unbill-to" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={unbilledTo} min={unbilledFrom || undefined} onChange={unbilledPeriodEditable ? (iso) => setUnbilledTo(iso) : () => {}} disabled={!unbilledPeriodEditable} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.unbilledTo')} showChevron aria-labelledby="tt-inv-unbill-to-lbl" />
-                </div>
-                <div className="tt-inv-dialog__period-action">
-                  <div className="tt-reports__period-dropdown-wrap" ref={unbilledPeriodDropdownRef}>
-                    <button
-                      type="button"
-                      className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--dropdown"
-                      onClick={() => unbilledPeriodEditable && setUnbilledPeriodDropdown((v) => !v)}
-                      aria-expanded={unbilledPeriodDropdown}
-                      disabled={!unbilledPeriodEditable}
-                      title={t('timeTrackingPage.invoices.createDialog.periodPresetTitle')}
-                    >
-                      {ttReportPeriodLabel(unbilledPeriodGranularity, t)}
-                      {' '}
-                      <IcoChevDown />
-                    </button>
-                    {unbilledPeriodDropdown && unbilledPeriodEditable ? (
-                      <div className="tt-reports__period-dropdown" role="listbox">
-                        {PERIOD_OPTIONS.map((opt) => (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            role="option"
-                            aria-selected={unbilledPeriodGranularity === opt.id}
-                            className={`tt-reports__period-opt${unbilledPeriodGranularity === opt.id ? ' tt-reports__period-opt--active' : ''}`}
-                            onClick={() => applyUnbilledPeriodPreset(opt.id)}
+                    {selTime.size > 0 ? (
+                      <p className="tt-inv-page__section-desc">
+                        {t('timeTrackingPage.invoices.createDialog.customBilledWorkedTime').replace(
+                          '{amount}',
+                          fmtMoney(workedTimeTotal, workedTimeCurrency, locale),
+                        )}
+                      </p>
+                    ) : null}
+                    {selExp.size > 0 ? (
+                      <p className="tt-inv-page__section-desc">
+                        {t('timeTrackingPage.invoices.createDialog.customBilledWorkedExpenses').replace(
+                          '{amount}',
+                          fmtMoney(workedExpUsdTotal, 'USD', locale),
+                        )}
+                      </p>
+                    ) : null}
+                    {customBilledEnabled ? (
+                      <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2" style={{ marginTop: '0.75rem' }}>
+                        <div className="tt-inv-dialog__field">
+                          <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-amount">
+                            {t('timeTrackingPage.invoices.createDialog.customBilledAmount')}
+                          </label>
+                          <input
+                            id="tt-inv-custom-billed-amount"
+                            type="text"
+                            inputMode="decimal"
+                            className="tt-inv-dialog__control"
+                            value={customBilledAmount}
+                            onChange={(e) => setCustomBilledAmount(e.target.value)}
+                            disabled={createBusy}
+                          />
+                        </div>
+                        <div className="tt-inv-dialog__field">
+                          <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-ccy">
+                            {t('timeTrackingPage.invoices.createDialog.customBilledCurrency')}
+                          </label>
+                          <select
+                            id="tt-inv-custom-billed-ccy"
+                            className="tt-inv-dialog__control"
+                            value={customBilledCurrency}
+                            disabled={createBusy}
+                            onChange={(e) => {
+                              const next = e.target.value;
+                              setCustomBilledCurrency(
+                                TIME_TRACKING_PROJECT_CURRENCIES.includes(next as TimeManagerProjectCurrency)
+                                  ? (next as TimeManagerProjectCurrency)
+                                  : 'USD',
+                              );
+                            }}
                           >
-                            {ttReportPeriodLabel(opt.id, t)}
-                          </button>
-                        ))}
+                            {TIME_TRACKING_PROJECT_CURRENCIES.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="tt-inv-dialog__field" style={{ gridColumn: '1 / -1' }}>
+                          <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-desc">
+                            {t('timeTrackingPage.invoices.createDialog.customBilledDescription')}
+                          </label>
+                          <input
+                            id="tt-inv-custom-billed-desc"
+                            type="text"
+                            className="tt-inv-dialog__control"
+                            value={customBilledDescription}
+                            onChange={(e) => setCustomBilledDescription(e.target.value)}
+                            disabled={createBusy}
+                          />
+                        </div>
+                        <p className="tt-inv-page__section-desc" style={{ gridColumn: '1 / -1', margin: 0 }} role="status">
+                          {customBilledFxLoading
+                            ? t('timeTrackingPage.invoices.createDialog.customBilledFxLoading')
+                            : customBilledFxError
+                              ? customBilledFxError
+                              : (customBilledFxHint ?? t('timeTrackingPage.invoices.createDialog.customBilledFxRule')
+                                .replace('{currency}', effectiveInvoiceCurrency)
+                                .replace('{date}', (customBilledFxRateDate ?? '').split('-').reverse().join('.') || '—'))}
+                        </p>
                       </div>
                     ) : null}
-                  </div>
-                  <button type="button" className="tt-reports__btn tt-reports__btn--outline tt-reports__btn--icon" onClick={() => void loadUnbilled()} disabled={unbilledLoading || !createProjectId} title={!createProjectId ? t('timeTrackingPage.invoices.createDialog.selectProjectFirst') : t('timeTrackingPage.invoices.createDialog.loadUnbilledTitle')}>
-                    <IcoRefresh />
-                    {unbilledLoading ? t('timeTrackingPage.common.loading') : t('timeTrackingPage.invoices.createDialog.loadUnbilled')}
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            {unpaidExpensesBlockReason ? (
-              <section className="tt-inv-page__section tt-inv-dialog__partner-gate" role="alert">
-                <p className="tt-inv-page__section-desc" style={{ marginBottom: '0.75rem', whiteSpace: 'pre-wrap' }}>{unpaidExpensesBlockReason}</p>
-                <p style={{ margin: 0 }} className="tt-inv-page__section-desc">
-                  <Link className="tt-inv-dialog__partner-gate-link" to={routes.expenses}>
-                    {t('timeTrackingPage.invoices.createDialog.openExpensesLink')}
-                  </Link>
-                </p>
-              </section>
-            ) : null}
-
-            {unbilledPartnerBlockReason ? (
-              <section className="tt-inv-page__section tt-inv-dialog__partner-gate" role="alert">
-                <p className="tt-inv-page__section-desc" style={{ marginBottom: '0.75rem', whiteSpace: 'pre-wrap' }}>{unbilledPartnerBlockReason}</p>
-                <p style={{ margin: 0 }} className="tt-inv-page__section-desc">
-                  <Link className="tt-inv-dialog__partner-gate-link" to={`${routes.timeTracking}?tab=reports`}>{t('timeTrackingPage.invoices.createDialog.openReportsLink')}</Link>
-                  {createProjectId.trim() !== '' ? (
-                    <>
-                      {' '}·{' '}
-                      <Link className="tt-inv-dialog__partner-gate-link" to={getProjectDetailUrl(createProjectId.trim())}>
-                        {t('timeTrackingPage.invoices.empty.projectCardLink')}
-                      </Link>
-                    </>
-                  ) : null}
-                </p>
-              </section>
-            ) : null}
-
-            {unbilledTime.length > 0 && (
-              <section className="tt-inv-page__section">
-                <div className="tt-inv-page__section-head">
-                  <h2 className="tt-inv-page__section-title">
-                    {t('timeTrackingPage.invoices.createDialog.timeSection').replace('{count}', String(unbilledTime.length))}
-                  </h2>
-                </div>
-                <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
-                  <table className="tt-inv-mini">
-                    <thead>
-                      <tr>
-                        <th scope="col">
-                          <input ref={timeSelectAllRef} type="checkbox" aria-label={t('timeTrackingPage.invoices.createDialog.timeSelectAll')} checked={unbilledTime.length > 0 && unbilledTime.every((x) => selTime.has(x.id))} onChange={() => {
-                            setSelTime((prev) => {
-                              const ids = unbilledTime.map((x) => x.id);
-                              const allOn = ids.length > 0 && ids.every((id) => prev.has(id));
-                              if (allOn) {
-                                const n = new Set(prev);
-                                ids.forEach((id) => n.delete(id));
-                                return n;
-                              }
-                              return new Set([...prev, ...ids]);
-                            });
-                          }} />
-                        </th>
-                        <th>{t('timeTrackingPage.invoices.createDialog.date')}</th>
-                        <th title={t('timeTrackingPage.invoices.createDialog.durationTitle')}>{t('timeTrackingPage.invoices.createDialog.duration')}</th>
-                        <th title={t('timeTrackingPage.invoices.createDialog.hoursTitle')}>{t('timeTrackingPage.invoices.createDialog.hours')}</th>
-                        <th>{t('timeTrackingPage.invoices.createDialog.amount')}</th>
-                        <th>{t('timeTrackingPage.invoices.createDialog.description')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {unbilledTime.map((x) => {
-                        const seconds = typeof x.durationSeconds === 'number' && Number.isFinite(x.durationSeconds)
-                          ? x.durationSeconds
-                          : Math.round(Number(x.hours) * 3600);
-                        return (
-                          <tr key={x.id}>
-                            <td>
-                              <input type="checkbox" checked={selTime.has(x.id)} onChange={() => setSelTime((prev) => {
-                                const n = new Set(prev);
-                                if (n.has(x.id))
-                                  n.delete(x.id);
-                                else
-                                  n.add(x.id);
-                                return n;
-                              })} />
-                            </td>
-                            <td>{x.workDate}</td>
-                            <td>{formatHM(seconds)}</td>
-                            <td>{Number(x.hours).toFixed(2)}</td>
-                            <td>{fmtMoney(x.billableAmount, x.currency, locale)}{x.packageCovered ? ` (${t('timeTrackingPage.invoices.createDialog.packageCovered')})` : ''}</td>
-                            <td>{invoiceClientDescription(x.description) || '—'}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            )}
-
-            {unbilledExp.length > 0 && (
-              <section className="tt-inv-page__section">
-                <div className="tt-inv-page__section-head">
-                  <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.expensesSection').replace('{count}', String(unbilledExp.length))}</h2>
-                </div>
-                <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
-                  <table className="tt-inv-mini">
-                    <thead>
-                      <tr>
-                        <th scope="col">
-                          <input ref={expSelectAllRef} type="checkbox" aria-label={t('timeTrackingPage.invoices.createDialog.expSelectAll')} checked={unbilledExp.length > 0 && unbilledExp.every((x) => selExp.has(x.id))} onChange={() => {
-                            setSelExp((prev) => {
-                              const ids = unbilledExp.map((x) => x.id);
-                              const allOn = ids.length > 0 && ids.every((id) => prev.has(id));
-                              if (allOn) {
-                                const n = new Set(prev);
-                                ids.forEach((id) => n.delete(id));
-                                return n;
-                              }
-                              return new Set([...prev, ...ids]);
-                            });
-                          }} />
-                        </th>
-                        <th>{t('timeTrackingPage.invoices.createDialog.date')}</th>
-                        <th>{t('timeTrackingPage.invoices.createDialog.expAmountUsd')}</th>
-                        <th>{t('timeTrackingPage.invoices.createDialog.expStatus')}</th>
-                        <th>{t('timeTrackingPage.invoices.createDialog.description')}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {unbilledExp.map((x) => (
-                        <tr key={x.id}>
-                          <td>
-                            <input type="checkbox" checked={selExp.has(x.id)} onChange={() => setSelExp((prev) => {
-                              const n = new Set(prev);
-                              if (n.has(x.id))
-                                n.delete(x.id);
-                              else
-                                n.add(x.id);
-                              return n;
-                            })} />
-                          </td>
-                          <td>{String(x.expenseDate)}</td>
-                          <td>{fmtMoney(x.equivalentAmount, 'USD', locale)}</td>
-                          <td>{x.status}</td>
-                          <td>{x.description ?? '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            )}
-
-            {(createClientId && createProjectId) ? (
-              <section className="tt-inv-page__section">
-                <div className="tt-inv-page__section-head">
-                  <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.customBilledToggle')}</h2>
-                </div>
-                <label className="tt-ios-toggle-row">
-                  <span className="tt-ios-toggle-row__text">
-                    {t('timeTrackingPage.invoices.createDialog.customBilledToggle')}
-                  </span>
-                  <span className="tt-ios-toggle">
-                    <input
-                      type="checkbox"
-                      className="tt-ios-toggle__input"
-                      checked={customBilledEnabled}
-                      onChange={(e) => enableCustomBilled(e.target.checked)}
-                      disabled={createBusy}
-                    />
-                    <span className="tt-ios-toggle__slider" aria-hidden />
-                  </span>
-                </label>
-                <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
-                  {t('timeTrackingPage.invoices.createDialog.customBilledHint')}
-                </p>
-                {selTime.size > 0 ? (
-                  <p className="tt-inv-page__section-desc">
-                    {t('timeTrackingPage.invoices.createDialog.customBilledWorkedTime').replace(
-                      '{amount}',
-                      fmtMoney(workedTimeTotal, workedTimeCurrency, locale),
-                    )}
-                  </p>
+                  </section>
                 ) : null}
-                {selExp.size > 0 ? (
-                  <p className="tt-inv-page__section-desc">
-                    {t('timeTrackingPage.invoices.createDialog.customBilledWorkedExpenses').replace(
-                      '{amount}',
-                      fmtMoney(workedExpUsdTotal, 'USD', locale),
-                    )}
-                  </p>
-                ) : null}
-                {customBilledEnabled ? (
-                  <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2" style={{ marginTop: '0.75rem' }}>
-                    <div className="tt-inv-dialog__field">
-                      <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-amount">
-                        {t('timeTrackingPage.invoices.createDialog.customBilledAmount')}
-                      </label>
-                      <input
-                        id="tt-inv-custom-billed-amount"
-                        type="text"
-                        inputMode="decimal"
-                        className="tt-inv-dialog__control"
-                        value={customBilledAmount}
-                        onChange={(e) => setCustomBilledAmount(e.target.value)}
-                        disabled={createBusy}
-                      />
-                    </div>
-                    <div className="tt-inv-dialog__field">
-                      <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-ccy">
-                        {t('timeTrackingPage.invoices.createDialog.customBilledCurrency')}
-                      </label>
-                      <select
-                        id="tt-inv-custom-billed-ccy"
-                        className="tt-inv-dialog__control"
-                        value={customBilledCurrency}
-                        disabled={createBusy}
-                        onChange={(e) => {
-                          const next = e.target.value;
-                          setCustomBilledCurrency(
-                            TIME_TRACKING_PROJECT_CURRENCIES.includes(next as TimeManagerProjectCurrency)
-                              ? (next as TimeManagerProjectCurrency)
-                              : 'USD',
-                          );
-                        }}
-                      >
-                        {TIME_TRACKING_PROJECT_CURRENCIES.map((c) => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="tt-inv-dialog__field" style={{ gridColumn: '1 / -1' }}>
-                      <label className="tt-inv-dialog__label" htmlFor="tt-inv-custom-billed-desc">
-                        {t('timeTrackingPage.invoices.createDialog.customBilledDescription')}
-                      </label>
-                      <input
-                        id="tt-inv-custom-billed-desc"
-                        type="text"
-                        className="tt-inv-dialog__control"
-                        value={customBilledDescription}
-                        onChange={(e) => setCustomBilledDescription(e.target.value)}
-                        disabled={createBusy}
-                      />
-                    </div>
-                    <p className="tt-inv-page__section-desc" style={{ gridColumn: '1 / -1', margin: 0 }} role="status">
-                      {customBilledFxLoading
-                        ? t('timeTrackingPage.invoices.createDialog.customBilledFxLoading')
-                        : customBilledFxError
-                          ? customBilledFxError
-                          : (customBilledFxHint ?? t('timeTrackingPage.invoices.createDialog.customBilledFxRule')
-                            .replace('{currency}', effectiveInvoiceCurrency)
-                            .replace('{date}', (customBilledFxRateDate ?? '').split('-').reverse().join('.') || '—'))}
-                    </p>
-                  </div>
-                ) : null}
-              </section>
-            ) : null}
-            </>
+              </>
             )}
           </div>
         </div>

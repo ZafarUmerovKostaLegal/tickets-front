@@ -323,7 +323,6 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
     const [invoiceBusyId, setInvoiceBusyId] = useState<string | null>(null);
     const [combinedBusy, setCombinedBusy] = useState(false);
     const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(() => new Set());
-    const [combinePayerId, setCombinePayerId] = useState('');
     const [trackingUsers, setTrackingUsers] = useState<TimeTrackingUserRow[]>([]);
     const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
     const [revokeBusyKey, setRevokeBusyKey] = useState<string | null>(null);
@@ -821,15 +820,6 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         return [...seen.entries()].map(([id, name]) => ({ id, name }));
     }, [clientMetaByProjectId, clientNamesById, extraRowMetaByProjectId, projectRows, resolveClientLabel, selectedRows]);
 
-    useEffect(() => {
-        if (combineClients.length === 0) {
-            setCombinePayerId('');
-            return;
-        }
-        if (!combineClients.some((client) => client.id === combinePayerId))
-            setCombinePayerId(combineClients[0]!.id);
-    }, [combineClients, combinePayerId]);
-
     const toggleReportSelected = useCallback((id: string) => {
         setSelectedReportIds((prev) => {
             const next = new Set(prev);
@@ -857,7 +847,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
     const createCombinedInvoice = useCallback(async () => {
         if (selectedRows.length < 2 || combinedBusy)
             return;
-        const payer = combineClients.find((client) => client.id === combinePayerId) ?? combineClients[0];
+        const payer = combineClients[0];
         if (!payer) {
             await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.invoiceNoClient') });
             return;
@@ -919,7 +909,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         finally {
             setCombinedBusy(false);
         }
-    }, [clientMetaByProjectId, clientNamesById, combineClients, combinePayerId, combinedBusy, extraRowMetaByProjectId, loadInvoices, openInvoiceForRow, projectRows, resolveClientLabel, resolveProjectLabel, selectedRows, showAlert, showConfirm, t, trackingUsers]);
+    }, [clientMetaByProjectId, clientNamesById, combineClients, combinedBusy, extraRowMetaByProjectId, loadInvoices, openInvoiceForRow, projectRows, resolveClientLabel, resolveProjectLabel, selectedRows, showAlert, showConfirm, t, trackingUsers]);
 
     const exportSnapshotExcel = useCallback(async (r: PartnerReportConfirmationRequest) => {
         setExportBusySnapshotId(r.snapshotId.trim() || r.id);
@@ -1308,26 +1298,6 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             {!loading && !error && rows.length > 0 ? (
                 <div className="tt-partner-confirmed__combine">
                     <span>{t('timeTrackingPage.reports.partnerConfirmed.combineSelected').replace('{count}', String(selectedRows.length))}</span>
-                    {combineClients.length > 1 ? (
-                        <SearchableSelect<{ id: string; name: string }>
-                            className="tsp-srch tt-partner-confirmed__combine-payer"
-                            buttonClassName="tsp-srch__btn"
-                            buttonId="tt-partner-confirmed-combine-payer"
-                            portalDropdown
-                            portalZIndex={10050}
-                            portalMinWidth={280}
-                            placeholder={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
-                            emptyListText={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
-                            noMatchText={t('timeTrackingPage.common.notFound')}
-                            value={combinePayerId}
-                            items={combineClients}
-                            getOptionValue={(client) => client.id}
-                            getOptionLabel={(client) => client.name}
-                            getSearchText={(client) => client.name}
-                            onSelect={(client) => setCombinePayerId(client.id)}
-                            aria-label={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
-                        />
-                    ) : null}
                     <button
                         type="button"
                         className="tt-reports__btn tt-reports__btn--accent"
