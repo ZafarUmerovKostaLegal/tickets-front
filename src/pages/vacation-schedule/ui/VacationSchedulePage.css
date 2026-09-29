@@ -271,44 +271,29 @@
   display: none;
 }
 
-.vac-cal__name {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-}
-
-.vac-cal__load {
-  font-size: 0.68rem;
-  font-weight: 700;
-  color: #64748b;
-  white-space: nowrap;
-}
-
-.vac-cal__load.is-warn {
-  color: #dc2626;
-}
-
 .vac-cal:not(.vac-cal--month) .vac-cal__cell.is-busy .vac-cal__num,
 .vac-cal:not(.vac-cal--month) .vac-cal__cell.is-hot .vac-cal__num {
-  width: 1.65rem;
-  height: 1.65rem;
-  border-radius: 7px;
-  background: #7c3aed;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 999px;
+  background: #6d4aff;
   color: #fff;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(109, 74, 255, 0.28);
 }
 
 .vac-cal:not(.vac-cal--month) .vac-cal__cell.is-hot .vac-cal__num {
-  background: #dc2626;
+  background: #5b35f5;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
 }
 
 .vac-cal:not(.vac-cal--month) .vac-cal__cell.is-today .vac-cal__num {
-  box-shadow: 0 0 0 2px var(--app-surface, #fff), 0 0 0 3px #7c3aed;
+  box-shadow: 0 0 0 2px var(--app-surface, #fff), 0 0 0 3px #6d4aff;
 }
 
 .vac-cal:not(.vac-cal--month) .vac-cal__cell.is-picked .vac-cal__num,
 .vac-cal:not(.vac-cal--month) .vac-cal__cell.is-range .vac-cal__num {
-  box-shadow: 0 0 0 2px var(--app-surface, #fff), 0 0 0 3px #6d28d9;
+  box-shadow: 0 0 0 2px var(--app-surface, #fff), 0 0 0 3px #4c1d95;
 }
 
 .vac-gantt {
@@ -1293,13 +1278,12 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
   min-width: 0;
   min-height: 0;
   margin: 0;
-  padding: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-template-rows: repeat(3, minmax(0, 1fr));
   background: var(--app-bg, #f4f6fb);
-  gap: 8px;
-  padding: 8px;
+  gap: 12px;
+  padding: 12px;
   box-sizing: border-box;
 }
 
@@ -1315,16 +1299,17 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
   min-width: 0;
   min-height: 0;
   margin: 0;
-  padding: 0;
+  padding: 0.15rem 0.2rem 0.35rem;
   display: flex;
   flex-direction: column;
   background: var(--app-surface, #fff);
-  border: 1px solid var(--app-border, #e6ebf2);
-  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--app-border, #e6ebf2) 80%, transparent);
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px rgba(15, 23, 42, 0.04);
   overflow: hidden;
   cursor: pointer;
   user-select: none;
-  transition: opacity 0.34s ease, transform 0.46s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease;
+  transition: opacity 0.34s ease, transform 0.46s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .vac-cal--recede {
@@ -1343,7 +1328,7 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
   margin: 0;
   overflow: hidden;
   border: 1px solid var(--app-border, #e6ebf2);
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: 0 18px 44px rgba(15, 23, 42, 0.14);
 }
 
@@ -1371,20 +1356,23 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
 }
 
 .vac-cal__month:hover {
-  background: color-mix(in srgb, var(--app-accent, #4f46e5) 5%, var(--app-surface, #fff));
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 28%, var(--app-border, #e6ebf2));
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
 }
 
 .vac-cal__month--now {
-  background: color-mix(in srgb, var(--app-accent, #4f46e5) 7%, var(--app-surface, #fff));
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 42%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-accent, #4f46e5) 18%, transparent), 0 8px 20px rgba(79, 70, 229, 0.08);
 }
 
 .vac-cal__name,
 .vac-cal__month-title {
   margin: 0;
-  padding: 0.5rem 0.4rem 0.2rem;
-  font-size: 0.78rem;
+  padding: 0.55rem 0.45rem 0.15rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   text-align: center;
   color: var(--app-text, #0f172a);
 }
@@ -1412,26 +1400,26 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
 }
 
 .vac-cal__wd {
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   color: #94a3b8;
   text-transform: uppercase;
 }
 
 .vac-cal__wd--end {
-  color: #fb7185;
+  color: #fda4af;
 }
 
 .vac-cal__num {
-  width: 1.35rem;
-  height: 1.35rem;
+  width: 1.4rem;
+  height: 1.4rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   line-height: 1;
   color: var(--app-text, #1e293b);
@@ -1442,7 +1430,7 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
 }
 
 .vac-cal__num--weekend {
-  color: #e11d48;
+  color: #fb7185;
 }
 
 .vac-cal__num--today {

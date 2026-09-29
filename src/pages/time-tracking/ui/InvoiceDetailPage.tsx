@@ -1116,22 +1116,22 @@ export function InvoiceDetailPage() {
                             expenseRegistryUsd,
                           );
                           return (
-                          <tr key={ln.id}>
-                            <td>
-                              <span className={`tt-inv-line-kind tt-inv-line-kind--${invoiceLineKindSlug(ln)}`}>
-                                {invoiceLineKindLabel(ln, t)}
-                              </span>
-                            </td>
-                            <td>{ln.description ? invoiceClientDescription(ln.description) || '—' : '—'}</td>
-                            <td>{Number.isFinite(Number(ln.quantity)) ? Number(ln.quantity).toFixed(2) : ln.quantity}</td>
-                            <td>{fmtMoney(amounts.unitAmount, detail.currency, locale)}</td>
-                            <td>
-                              {fmtMoney(amounts.lineTotal, detail.currency, locale)}
-                              {ln.sourceCurrency && ln.sourceCurrency !== detail.currency && ln.sourceAmount != null
-                                ? ` (${fmtMoney(ln.sourceAmount, ln.sourceCurrency, locale)})`
-                                : ''}
-                            </td>
-                          </tr>
+                            <tr key={ln.id}>
+                              <td>
+                                <span className={`tt-inv-line-kind tt-inv-line-kind--${invoiceLineKindSlug(ln)}`}>
+                                  {invoiceLineKindLabel(ln, t)}
+                                </span>
+                              </td>
+                              <td>{ln.description ? invoiceClientDescription(ln.description) || '—' : '—'}</td>
+                              <td>{Number.isFinite(Number(ln.quantity)) ? Number(ln.quantity).toFixed(2) : ln.quantity}</td>
+                              <td>{fmtMoney(amounts.unitAmount, detail.currency, locale)}</td>
+                              <td>
+                                {fmtMoney(amounts.lineTotal, detail.currency, locale)}
+                                {ln.sourceCurrency && ln.sourceCurrency !== detail.currency && ln.sourceAmount != null
+                                  ? ` (${fmtMoney(ln.sourceAmount, ln.sourceCurrency, locale)})`
+                                  : ''}
+                              </td>
+                            </tr>
                           );
                         })}
                       </tbody>

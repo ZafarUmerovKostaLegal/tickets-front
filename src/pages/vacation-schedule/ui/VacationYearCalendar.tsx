@@ -51,27 +51,6 @@ function daySerial(monthIndex: number, day: number): number {
     return monthIndex * 40 + day;
 }
 
-function monthHot(occupancy: ReadonlyMap<string, number> | undefined, monthIndex: number): boolean {
-    if (!occupancy)
-        return false;
-    for (const [key, count] of occupancy) {
-        if (key.startsWith(`${monthIndex}-`) && count >= 4)
-            return true;
-    }
-    return false;
-}
-
-function monthLoad(occupancy: ReadonlyMap<string, number> | undefined, monthIndex: number): number {
-    if (!occupancy)
-        return 0;
-    let sum = 0;
-    for (const [key, count] of occupancy) {
-        if (key.startsWith(`${monthIndex}-`))
-            sum += count;
-    }
-    return sum;
-}
-
 function periodEdge(monthIndex: number, day: number, period: VacationCalendarPeriod | null): 'end' | 'mid' | null {
     if (!period)
         return null;
@@ -440,14 +419,7 @@ export function VacationYearCalendar({
                             className={`vac-cal__month${index === currentMonth ? ' vac-cal__month--now' : ''}${source ? ' is-source' : ''}`}
                             onDoubleClick={() => (onOpenMonth ? onOpenMonth(index) : openMonth(index))}
                         >
-                            <h2 className="vac-cal__name">
-                                <span>{name}</span>
-                                {monthLoad(occupancy, index) > 0 ? (
-                                    <span className={`vac-cal__load${monthHot(occupancy, index) ? ' is-warn' : ''}`}>
-                                        {monthHot(occupancy, index) ? '⚠ ' : ''}{monthLoad(occupancy, index)} дн.
-                                    </span>
-                                ) : null}
-                            </h2>
+                            <h2 className="vac-cal__name">{name}</h2>
                             <div className="vac-cal__mini">
                                 {WEEKDAYS.map((label, weekday) => (
                                     <div key={label} className={`vac-cal__wd${weekday >= 5 ? ' vac-cal__wd--end' : ''}`}>{label}</div>
