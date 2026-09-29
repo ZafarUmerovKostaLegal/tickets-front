@@ -7,6 +7,7 @@ import {
     chatNotificationTitle,
     connectChatWs,
     ensureChatBrowserPush,
+    showChatOsNotification,
     fetchChatRoom,
     parseChatMessageFromWsPayload,
     shouldShowChatMessageNotification,
@@ -142,6 +143,7 @@ export function ChatNotificationHost() {
                 const title = chatNotificationTitle(room, meId, labelByUserId);
                 const preview = chatNotificationSenderLine(room, msg, labelByUserId);
                 upsertNotification(room, title, preview);
+                void showChatOsNotification({ roomId: room.id, title, body: preview }).catch(() => undefined);
             };
 
             const roomPromise = cachedRoom ? Promise.resolve(cachedRoom) : fetchChatRoom(roomId);

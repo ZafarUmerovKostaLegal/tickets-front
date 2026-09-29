@@ -33,8 +33,17 @@ async function showChatNotification(data) {
     const image = typeof data.image === 'string' && data.image.startsWith('https://') ? data.image : '';
     const url = typeof data.url === 'string' ? data.url : '/kosta-daily';
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const appInFront = windows.some((client) => client.focused && client.visibilityState === 'visible');
-    if (appInFront)
+    const viewingThisRoom = windows.some((client) => {
+        if (!client.focused || client.visibilityState !== 'visible')
+            return false;
+        try {
+            const here = new URL(client.url);
+            return here.pathname.includes('/kosta-daily') && here.searchParams.get('room') === String(roomId);
+        } catch {
+            return false;
+        }
+    });
+    if (viewingThisRoom)
         return;
     const options = {
         body,
