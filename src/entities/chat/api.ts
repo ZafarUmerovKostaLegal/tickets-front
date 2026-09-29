@@ -3,12 +3,14 @@ import { createQueryCache } from '@shared/lib/queryCache';
 import { mergeMessagesSorted } from './lib/kostaDailyUi';
 import type {
     ChatAttachment,
+    ChatChecklist,
     ChatMessage,
     ChatPoll,
     ChatReaction,
     ChatReplyTo,
     ChatRoom,
     ChatRoomMember,
+    CreateChecklistInput,
     CreatePollInput,
 } from './types';
 
@@ -171,6 +173,41 @@ function parseMessage(raw: Record<string, unknown>): ChatMessage {
         reply_to: parseReplyTo(raw.reply_to ?? raw.replyTo),
         reactions: parseChatReactions(raw.reactions),
         poll: parsePoll(raw.poll),
+        checklist: parseChecklist(raw.checklist),
+    };
+}
+
+function parseChecklist(raw: unknown): ChatChecklist | null {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const o = raw as Record<string, unknown>;
+    const id = numField(o, 'id', 'id', 0);
+    if (!id)
+        return null;
+    const tasksRaw = o.tasks;
+    const tasks = Array.isArray(tasksRaw)
+        ? tasksRaw.map((item) => {
+            const row = item as Record<string, unknown>;
+            const by = row.completed_by_user_id ?? row.completedByUserId;
+            const completedBy = by == null || by === '' ? null : Number(by);
+            return {
+                id: numField(row, 'id', 'id', 0),
+                text: strField(row, 'text', 'text') ?? '',
+                completed_by_user_id: Number.isFinite(completedBy) ? completedBy : null,
+                completed_by_me: boolField(row, 'completed_by_me', 'completedByMe'),
+            };
+        }).filter((task) => task.id > 0)
+        : [];
+    return {
+        id,
+        title: strField(o, 'title', 'title') ?? '',
+        others_can_complete: boolField(o, 'others_can_complete', 'othersCanComplete'),
+        others_can_append: boolField(o, 'others_can_append', 'othersCanAppend'),
+        can_toggle: boolField(o, 'can_toggle', 'canToggle'),
+        can_append: boolField(o, 'can_append', 'canAppend'),
+        can_remove: boolField(o, 'can_remove', 'canRemove'),
+        done_count: numField(o, 'done_count', 'doneCount', 0),
+        tasks,
     };
 }
 
@@ -395,6 +432,39 @@ export async function createChatPoll(roomId: number, input: CreatePollInput): Pr
     return parseMessage(await readJson(res));
 }
 
+export async function createChatChecklist(roomId: number, input: CreateChecklistInput): Promise<ChatMessage> {
+    const res = await apiFetch(`${CHAT}/rooms/${roomId}/checklists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            title: input.title,
+            tasks: input.tasks,
+            othersCanComplete: input.othersCanComplete,
+            othersCanAppend: input.othersCanAppend,
+        }),
+    });
+    return parseMessage(await readJson(res));
+}
+
+export async function toggleChatChecklistItem(checklistId: number, itemId: number): Promise<ChatMessage> {
+    const res = await apiFetch(`${CHAT}/checklists/${checklistId}/items/${itemId}/toggle`, { method: 'POST' });
+    return parseMessage(await readJson(res));
+}
+
+export async function appendChatChecklistTask(checklistId: number, text: string): Promise<ChatMessage> {
+    const res = await apiFetch(`${CHAT}/checklists/${checklistId}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+    });
+    return parseMessage(await readJson(res));
+}
+
+export async function removeChatChecklistTask(checklistId: number, itemId: number): Promise<ChatMessage> {
+    const res = await apiFetch(`${CHAT}/checklists/${checklistId}/items/${itemId}`, { method: 'DELETE' });
+    return parseMessage(await readJson(res));
+}
+
 export async function voteChatPoll(pollId: number, optionIndex: number): Promise<ChatMessage> {
     const res = await apiFetch(`${CHAT}/polls/${pollId}/vote`, {
         method: 'POST',
@@ -436,6 +506,30 @@ function parseRoomMembers(raw: unknown): ChatRoomMember[] {
 export async function fetchChatRoomMembers(roomId: number): Promise<ChatRoomMember[]> {
     const res = await apiFetch(`${CHAT}/rooms/${roomId}/members`);
     return parseRoomMembers(await readJson(res));
+}
+
+export async function patchChatGroupRoom(roomId: number, title: string): Promise<ChatRoom> {
+    const res = await apiFetch(`${CHAT}/rooms/${roomId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title }),
+    });
+    const room = parseRoom(await readJson(res));
+    invalidateChatRoomsCache();
+    return room;
+}
+
+export async function deleteChatGroupRoom(roomId: number): Promise<void> {
+    const res = await apiFetch(`${CHAT}/rooms/${roomId}`, { method: 'DELETE' });
+    await readJson(res);
+    invalidateChatRoomsCache();
+}
+
+export async function removeChatRoomMember(roomId: number, userId: number): Promise<ChatRoomMember[]> {
+    const res = await apiFetch(`${CHAT}/rooms/${roomId}/members/${userId}`, { method: 'DELETE' });
+    const members = parseRoomMembers(await readJson(res));
+    invalidateChatRoomsCache();
+    return members;
 }
 
 export async function addChatRoomMembers(roomId: number, userIds: number[]): Promise<ChatRoomMember[]> {

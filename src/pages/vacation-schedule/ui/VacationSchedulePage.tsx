@@ -821,7 +821,7 @@ export function VacationSchedulePage() {
                             ) : null}
                         </div>
                         </>
-                    )}
+                        )}
                     </div>
                 </div>
             </main>

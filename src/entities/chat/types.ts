@@ -39,6 +39,32 @@ export type ChatPoll = {
     my_votes: number[];
 };
 
+export type ChatChecklistTask = {
+    id: number;
+    text: string;
+    completed_by_user_id: number | null;
+    completed_by_me: boolean;
+};
+
+export type ChatChecklist = {
+    id: number;
+    title: string;
+    others_can_complete: boolean;
+    others_can_append: boolean;
+    can_toggle: boolean;
+    can_append: boolean;
+    can_remove: boolean;
+    done_count: number;
+    tasks: ChatChecklistTask[];
+};
+
+export type CreateChecklistInput = {
+    title: string;
+    tasks: string[];
+    othersCanComplete: boolean;
+    othersCanAppend: boolean;
+};
+
 export type ChatMessage = {
     id: number;
     room_id: number;
@@ -52,6 +78,7 @@ export type ChatMessage = {
     reply_to: ChatReplyTo | null;
     reactions: ChatReaction[];
     poll: ChatPoll | null;
+    checklist: ChatChecklist | null;
 };
 
 export type ChatRoom = {

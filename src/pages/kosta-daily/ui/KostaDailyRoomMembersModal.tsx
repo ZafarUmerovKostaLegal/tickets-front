@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { TimeTrackingUserRow } from '@entities/time-tracking';
-import { addChatRoomMembers, fetchChatRoomMembers, type ChatRoomMember } from '@entities/chat';
+import { addChatRoomMembers, fetchChatRoomMembers, patchChatGroupRoom, removeChatRoomMember, type ChatRoomMember } from '@entities/chat';
+import { showConfirm } from '@shared/ui/app-dialog/appDialogGate';
 import { KostaDailyChatModalShell } from './KostaDailyChatModalShell';
 
 export type KostaDailyRoomMembersModalProps = {
@@ -14,6 +15,8 @@ export type KostaDailyRoomMembersModalProps = {
     labelByUserId: (id: number) => string;
     onClose: () => void;
     onMembersChanged?: () => void;
+    onRenamed?: () => void;
+    onDeleted?: () => Promise<void>;
 };
 
 const AVATAR_COLORS = ['#e17076', '#7bc862', '#65aadd', '#a695e7', '#ee7aae', '#6ec9cb', '#faa774', '#5b9bd5'];
@@ -63,6 +66,8 @@ export function KostaDailyRoomMembersModal({
     labelByUserId,
     onClose,
     onMembersChanged,
+    onRenamed,
+    onDeleted,
 }: KostaDailyRoomMembersModalProps) {
     const [members, setMembers] = useState<ChatRoomMember[]>([]);
     const [loading, setLoading] = useState(false);
@@ -72,6 +77,10 @@ export function KostaDailyRoomMembersModal({
     const [saving, setSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [addOpen, setAddOpen] = useState(false);
+    const [titleDraft, setTitleDraft] = useState(roomTitle);
+    const [titleSaving, setTitleSaving] = useState(false);
+    const [removingUserId, setRemovingUserId] = useState<number | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     const memberIds = useMemo(
         () => new Set(members.map((m) => m.user_id)),
@@ -135,10 +144,15 @@ export function KostaDailyRoomMembersModal({
             setSelected(new Set());
             setSaveError(null);
             setAddOpen(false);
+            setTitleDraft(roomTitle);
+            setTitleSaving(false);
+            setRemovingUserId(null);
+            setDeleting(false);
             return;
         }
+        setTitleDraft(roomTitle);
         void loadMembers();
-    }, [open, roomId, loadMembers]);
+    }, [open, roomId, roomTitle, loadMembers]);
 
     const toggle = (id: number) => {
         setSelected((prev) => {
@@ -172,6 +186,77 @@ export function KostaDailyRoomMembersModal({
         }
     };
 
+    const canEditGroup = canManageMembers && roomType === 'group';
+    const titleDirty = titleDraft.trim() !== roomTitle.trim() && titleDraft.trim().length > 0;
+
+    const handleRename = async () => {
+        const next = titleDraft.trim();
+        if (roomId == null || !next || next === roomTitle.trim())
+            return;
+        setTitleSaving(true);
+        setSaveError(null);
+        try {
+            await patchChatGroupRoom(roomId, next);
+            onRenamed?.();
+        }
+        catch (e: unknown) {
+            setSaveError(e instanceof Error ? e.message : 'Не удалось переименовать группу');
+        }
+        finally {
+            setTitleSaving(false);
+        }
+    };
+
+    const handleRemoveMember = async (userId: number, name: string) => {
+        if (roomId == null)
+            return;
+        const ok = await showConfirm({
+            title: 'Исключить участника?',
+            message: `${name} больше не будет видеть сообщения этой группы.`,
+            confirmLabel: 'Исключить',
+            cancelLabel: 'Отмена',
+            variant: 'danger',
+        });
+        if (!ok)
+            return;
+        setRemovingUserId(userId);
+        setSaveError(null);
+        try {
+            const updated = await removeChatRoomMember(roomId, userId);
+            setMembers(updated);
+            onMembersChanged?.();
+        }
+        catch (e: unknown) {
+            setSaveError(e instanceof Error ? e.message : 'Не удалось исключить участника');
+        }
+        finally {
+            setRemovingUserId(null);
+        }
+    };
+
+    const handleDeleteGroup = async () => {
+        if (!onDeleted)
+            return;
+        const ok = await showConfirm({
+            title: 'Удалить группу?',
+            message: `Группа «${roomTitle}» и её сообщения будут удалены для всех участников.`,
+            confirmLabel: 'Удалить',
+            cancelLabel: 'Отмена',
+            variant: 'danger',
+        });
+        if (!ok)
+            return;
+        setDeleting(true);
+        setSaveError(null);
+        try {
+            await onDeleted();
+        }
+        catch (e: unknown) {
+            setSaveError(e instanceof Error ? e.message : 'Не удалось удалить группу');
+            setDeleting(false);
+        }
+    };
+
     const subtitle = `${roomKindLabel(roomType)} · ${members.length} ${
         members.length === 1 ? 'участник' : members.length < 5 ? 'участника' : 'участников'
     }`;
@@ -200,6 +285,30 @@ export function KostaDailyRoomMembersModal({
             ) : undefined}
         >
             <p className="kd-tg__modal-hint">{subtitle}</p>
+
+            {canEditGroup ? (
+                <label className="kd-tg__modal-field">
+                    <span className="kd-tg__modal-label">Название</span>
+                    <span className="kd-tg__modal-title-row">
+                        <input
+                            type="text"
+                            className="kd-tg__modal-input"
+                            value={titleDraft}
+                            maxLength={200}
+                            onChange={(e) => setTitleDraft(e.target.value)}
+                            aria-label="Название группы"
+                        />
+                        <button
+                            type="button"
+                            className="kd-tg__modal-btn kd-tg__modal-btn--primary"
+                            onClick={() => void handleRename()}
+                            disabled={!titleDirty || titleSaving || deleting}
+                        >
+                            {titleSaving ? '…' : 'Сохранить'}
+                        </button>
+                    </span>
+                </label>
+            ) : null}
 
             {loading ? (
                 <p className="kd-tg__modal-members-status">Загрузка участников…</p>
@@ -233,6 +342,16 @@ export function KostaDailyRoomMembersModal({
                                     </span>
                                     {member.role === 'admin' ? (
                                         <span className="kd-tg__modal-member-badge">админ</span>
+                                    ) : null}
+                                    {canEditGroup && !isMe ? (
+                                        <button
+                                            type="button"
+                                            className="kd-tg__modal-member-remove"
+                                            onClick={() => void handleRemoveMember(member.user_id, name)}
+                                            disabled={removingUserId != null || deleting}
+                                        >
+                                            {removingUserId === member.user_id ? '…' : 'Исключить'}
+                                        </button>
                                     ) : null}
                                 </div>
                             </li>
@@ -304,6 +423,17 @@ export function KostaDailyRoomMembersModal({
                         })}
                     </ul>
                 </div>
+            ) : null}
+
+            {canEditGroup ? (
+                <button
+                    type="button"
+                    className="kd-tg__modal-delete-group"
+                    onClick={() => void handleDeleteGroup()}
+                    disabled={deleting || titleSaving || removingUserId != null}
+                >
+                    {deleting ? 'Удаление…' : 'Удалить группу'}
+                </button>
             ) : null}
 
             {saveError ? <p className="kd-tg__modal-error" role="alert">{saveError}</p> : null}

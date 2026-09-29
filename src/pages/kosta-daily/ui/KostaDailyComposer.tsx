@@ -38,6 +38,16 @@ function IconSend() {
     );
 }
 
+function IconChecklist() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M9 11l2 2 4-4" />
+            <rect x="4" y="4" width="16" height="16" rx="2" />
+            <path d="M8 17h8" />
+        </svg>
+    );
+}
+
 function IconPoll() {
     return (
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -67,6 +77,7 @@ export type KostaDailyComposerProps = {
     replyTo?: ComposerReplyPreview | null;
     onCancelReply?: () => void;
     onCreatePoll?: () => void;
+    onCreateChecklist?: () => void;
 };
 
 export function KostaDailyComposer({
@@ -85,6 +96,7 @@ export function KostaDailyComposer({
     replyTo,
     onCancelReply,
     onCreatePoll,
+    onCreateChecklist,
 }: KostaDailyComposerProps) {
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -213,6 +225,19 @@ export function KostaDailyComposer({
                         onClick={onCreatePoll}
                     >
                         <IconPoll />
+                    </button>
+                ) : null}
+
+                {onCreateChecklist ? (
+                    <button
+                        type="button"
+                        className="kd-tg__composer-btn"
+                        title="Чеклист"
+                        aria-label="Чеклист"
+                        disabled={disabled || sending}
+                        onClick={onCreateChecklist}
+                    >
+                        <IconChecklist />
                     </button>
                 ) : null}
 

@@ -6,6 +6,10 @@ import { resolveRoomTitle } from './kostaDailyUi';
 export function chatMessageNotificationPreview(msg: ChatMessage): string {
     if (msg.is_deleted)
         return 'Сообщение удалено';
+    if (msg.checklist || msg.message_kind === 'checklist') {
+        const title = msg.checklist?.title?.trim() || msg.body.trim();
+        return title ? `Чеклист: ${title}` : 'Чеклист';
+    }
     if (msg.poll || msg.message_kind === 'poll' || msg.message_kind === 'quiz') {
         const label = msg.poll?.kind === 'quiz' || msg.message_kind === 'quiz' ? 'Викторина' : 'Опрос';
         const q = msg.poll?.question?.trim() || msg.body.trim();

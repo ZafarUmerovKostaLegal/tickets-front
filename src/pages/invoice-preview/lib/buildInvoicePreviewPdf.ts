@@ -590,38 +590,7 @@ function paginateDetailRowsForPdf(
     const summaryHeaders = [labels.initials, labels.name, labels.titleCol, labels.hours, labels.hourlyRate, labels.totalPrice(cur)] as const;
     const summaryBody = trimTrailingEmptySummarySlots(pack.summarySlots)
         .map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
-    const expenseBody = trimTrailingEmptyDetailSlots(pack.expenseSlots)
-        .map((r) => [r.date, r.description, r.amount] as const);
-    const mehnatBody = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? [])
-        .map((r) => detailPdfRowCells(r, showInitiatorName));
-    const expenseReserve = expenseBody.length
-        ? TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
-            + estimateGridTableHeight(
-                tableW,
-                TIME_REPORT_PDF_EXPENSE_WEIGHTS,
-                [labels.date, labels.description, labels.amount(cur)],
-                expenseBody,
-                new Set([1]),
-                font,
-                fontBold,
-                true,
-            )
-        : 0;
-    const mehnatReserve = mehnatBody.length
-        ? TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
-            + estimateGridTableHeight(
-                tableW,
-                detailWeights,
-                detailHeaders,
-                mehnatBody,
-                detailWrap,
-                font,
-                fontBold,
-                true,
-                detailFixed,
-            )
-        : 0;
-    const summaryReserve = mehnatReserve + expenseReserve + TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
+    const summaryOnlyReserve = TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
         + estimateGridTableHeight(
             tableW,
             TIME_REPORT_PDF_SUMMARY_WEIGHTS,
@@ -632,6 +601,9 @@ function paginateDetailRowsForPdf(
             fontBold,
             true,
         );
+    // Mehnat/expenses must not push Summary of services onto the next sheet
+    // when the detail table still has a large empty region under it.
+    const summaryReserve = summaryOnlyReserve;
 
     const pages: PdfTimeReportPagePlan[] = [];
     let i = 0;
@@ -654,6 +626,7 @@ function paginateDetailRowsForPdf(
                 font,
                 fontBold,
                 withFooter,
+                detailFixed,
             );
         };
 
@@ -686,27 +659,28 @@ function paginateDetailRowsForPdf(
         if (take < 1)
             take = 1;
 
-        // Rows can fill the page without the summary and then the loop ends,
-        // so the summary table is never drawn. Keep the last rows for a page
-        // that still has room for Summary of services.
-        if (take >= remaining)
-            take = remaining - Math.max(takeWithSummary, 1);
-
-        if (take < 1) {
+        if (take >= remaining) {
+            // Rows fit on this page, but the summary estimate does not.
+            // A one-row lead sheet is the huge blank gap — keep the summary
+            // on this page when the detail block leaves real room under it.
+            const detailH = heightFor(remaining, true);
+            const roomForSummary = detailH + summaryOnlyReserve <= maxH;
             pages.push({
-                slice: trimmed.slice(i, i + 1),
+                slice: trimmed.slice(i),
                 continuation,
                 showDetailTotals: true,
-                showSummarySection: false,
+                showSummarySection: roomForSummary,
                 showDetailGrid: true,
             });
-            pages.push({
-                slice: [],
-                continuation: true,
-                showDetailTotals: false,
-                showSummarySection: true,
-                showDetailGrid: false,
-            });
+            if (!roomForSummary) {
+                pages.push({
+                    slice: [],
+                    continuation: true,
+                    showDetailTotals: false,
+                    showSummarySection: true,
+                    showDetailGrid: false,
+                });
+            }
             break;
         }
 
@@ -1166,37 +1140,6 @@ function drawSingleTimeReportPdfPage(
     const showDetailGrid = opts.showDetailGrid !== false;
     let detailSlice = slice;
     if (showDetailGrid && opts.showSummarySection) {
-        const expenseBodyForReserve = trimTrailingEmptyDetailSlots(pack.expenseSlots)
-            .map((r) => [r.date, r.description, r.amount] as const);
-        const mehnatBodyForReserve = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? [])
-            .map((r) => detailPdfRowCells(r, showInitiatorName));
-        const expenseReserve = expenseBodyForReserve.length
-            ? TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
-                + estimateGridTableHeight(
-                    tableW,
-                    TIME_REPORT_PDF_EXPENSE_WEIGHTS,
-                    [labels.date, labels.description, amountHdr],
-                    expenseBodyForReserve,
-                    new Set([1]),
-                    font,
-                    fontBold,
-                    true,
-                )
-            : 0;
-        const mehnatReserve = mehnatBodyForReserve.length
-            ? TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
-                + estimateGridTableHeight(
-                    tableW,
-                    detailWeights,
-                    detailHeaders,
-                    mehnatBodyForReserve,
-                    detailWrap,
-                    font,
-                    fontBold,
-                    true,
-                    detailFixed,
-                )
-            : 0;
         detailSlice = trimDetailSliceToFitSummary(
             slice,
             yGridTop,
@@ -1207,7 +1150,7 @@ function drawSingleTimeReportPdfPage(
             opts.showDetailTotals,
             font,
             fontBold,
-            mehnatReserve + expenseReserve,
+            0,
             showInitiatorName,
         );
     }

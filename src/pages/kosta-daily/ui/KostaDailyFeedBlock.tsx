@@ -6,6 +6,7 @@ import { highlightSearchText, messageMatchesSearch } from './kostaDailySearchHig
 import { KostaDailyMessageContent, isStickerOrGifMessage } from './KostaDailyMessageContent';
 import { KostaDailyAttachment } from './KostaDailyAttachment';
 import { KostaDailyPollMessage } from './KostaDailyPollMessage';
+import { KostaDailyChecklistMessage } from './KostaDailyChecklistMessage';
 
 import { REACTION_EMOJIS } from './kostaDailyReactions';
 import { feedBlockPropsEqual } from './feedBlockPropsEqual';
@@ -26,6 +27,9 @@ export type KostaDailyFeedBlockProps = {
     onScrollToMessage: (messageId: number) => void;
     onVotePoll: (pollId: number, optionIndex: number) => void;
     onClosePoll: (pollId: number) => void;
+    onToggleChecklistItem: (checklistId: number, itemId: number) => void;
+    onAppendChecklistTask: (checklistId: number, text: string) => Promise<void>;
+    onRemoveChecklistTask: (checklistId: number, itemId: number) => void;
     onPreviewAttachment: (url: string) => void;
     onBubbleContextMenu: (e: MouseEvent, msg: DailyMessage, own: boolean) => void;
     onBubbleTouchStart: (e: TouchEvent, msg: DailyMessage, own: boolean) => void;
@@ -48,6 +52,9 @@ function KostaDailyFeedBlockInner({
     onScrollToMessage,
     onVotePoll,
     onClosePoll,
+    onToggleChecklistItem,
+    onAppendChecklistTask,
+    onRemoveChecklistTask,
     onPreviewAttachment,
     onBubbleContextMenu,
     onBubbleTouchStart,
@@ -71,7 +78,8 @@ function KostaDailyFeedBlockInner({
     const { msg, own, showAvatar, showName, groupedTop, groupedBottom } = block;
     const attachments = msg.attachments ?? [];
     const hasPoll = !!msg.poll;
-    const hasText = !hasPoll && msg.text.trim().length > 0;
+    const hasChecklist = !!msg.checklist;
+    const hasText = !hasPoll && !hasChecklist && msg.text.trim().length > 0;
     const isMedia = isStickerOrGifMessage(msg.text);
     const isSearchHit = chatSearchOpen && chatSearchTrimmed && messageMatchesSearch(msg.text, msg.authorName, chatSearchTrimmed);
     const isSearchCurrent = isSearchHit && block.id === activeSearchMatchId;
@@ -206,6 +214,14 @@ function KostaDailyFeedBlockInner({
                                 onVote={(idx) => onVotePoll(msg.poll!.id, idx)}
                                 onClose={() => onClosePoll(msg.poll!.id)}
                                 canClose={canClosePoll}
+                            />
+                        ) : null}
+                        {hasChecklist && msg.checklist ? (
+                            <KostaDailyChecklistMessage
+                                checklist={msg.checklist}
+                                onToggle={(itemId) => onToggleChecklistItem(msg.checklist!.id, itemId)}
+                                onAppend={(text) => onAppendChecklistTask(msg.checklist!.id, text)}
+                                onRemove={(itemId) => onRemoveChecklistTask(msg.checklist!.id, itemId)}
                             />
                         ) : null}
                         {hasText && (

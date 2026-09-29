@@ -21,10 +21,13 @@ export type ChatWsEvent =
     | { type: 'message_edited'; room_id: number; payload: ChatWsPayload['payload'] }
     | { type: 'message_deleted'; room_id: number; payload: ChatWsPayload['payload'] }
     | { type: 'members_added'; room_id: number; payload: ChatWsPayload['payload'] }
+    | { type: 'members_removed'; room_id: number; payload: ChatWsPayload['payload'] }
     | { type: 'reaction'; room_id: number; messageId: number; reactions: ChatReaction[] }
     | { type: 'poll_vote'; room_id: number; payload: ChatWsPayload['payload'] }
     | { type: 'poll_closed'; room_id: number; payload: ChatWsPayload['payload'] }
     | { type: 'room_created'; room_id: number; payload: ChatWsPayload['payload'] }
+    | { type: 'room_updated'; room_id: number; payload: ChatWsPayload['payload'] }
+    | { type: 'room_deleted'; room_id: number; payload: ChatWsPayload['payload'] }
     | { type: 'pong' }
     | { type: 'error'; error?: string };
 
@@ -125,7 +128,7 @@ function parseEvent(data: Record<string, unknown>): ChatWsEvent | null {
     if (!Number.isFinite(room_id))
         return null;
     const payload = data.payload as ChatWsPayload['payload'] | undefined;
-    if (type === 'message' || type === 'message_edited' || type === 'message_deleted' || type === 'members_added') {
+    if (type === 'message' || type === 'message_edited' || type === 'message_deleted' || type === 'members_added' || type === 'members_removed') {
         return { type, room_id, payload } as ChatWsEvent;
     }
     if (type === 'reaction') {
@@ -137,7 +140,7 @@ function parseEvent(data: Record<string, unknown>): ChatWsEvent | null {
         const reactions = parseChatReactions(Array.isArray(p?.reactions) ? p.reactions : []);
         return { type: 'reaction', room_id, messageId, reactions };
     }
-    if (type === 'poll_vote' || type === 'poll_closed' || type === 'room_created') {
+    if (type === 'poll_vote' || type === 'poll_closed' || type === 'room_created' || type === 'room_updated' || type === 'room_deleted') {
         return { type, room_id, payload } as ChatWsEvent;
     }
     return null;

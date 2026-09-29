@@ -11,7 +11,12 @@ import {
     toggleChatReaction,
     createOrGetChatDmRoom,
     createChatGroupRoom,
+    deleteChatGroupRoom,
     createChatChannelRoom,
+    createChatChecklist,
+    toggleChatChecklistItem,
+    appendChatChecklistTask,
+    removeChatChecklistTask,
     createChatPoll,
     voteChatPoll,
     closeChatPoll,
@@ -28,6 +33,7 @@ import {
     type ChatReaction,
     type ChatRoom,
     type ChatPreview,
+    type CreateChecklistInput,
     type CreatePollInput,
     type DailyMessage,
     type RenderBlock,
@@ -184,9 +190,29 @@ export function useKostaDailyChat(
                 upsertRoomMessage(event.room_id, msg);
                 return;
             }
-            if (event.type === 'room_created') {
+            if (event.type === 'room_created' || event.type === 'room_updated' || event.type === 'members_removed') {
                 invalidateChatRoomsCache();
                 void refreshRooms();
+                return;
+            }
+            if (event.type === 'room_deleted') {
+                invalidateChatRoomsCache();
+                const deletedId = event.room_id;
+                setMessagesByRoom((prev) => {
+                    if (!(deletedId in prev))
+                        return prev;
+                    const next = { ...prev };
+                    delete next[deletedId];
+                    return next;
+                });
+                void refreshRooms().then((list) => {
+                    setActiveRoomId((prev) => {
+                        if (prev !== deletedId)
+                            return prev;
+                        const company = list.find((r) => r.is_company_channel);
+                        return company?.id ?? list[0]?.id ?? null;
+                    });
+                }).catch(() => { });
                 return;
             }
             if (event.type === 'message' || event.type === 'message_edited' || event.type === 'message_deleted') {
@@ -447,6 +473,24 @@ export function useKostaDailyChat(
         }
     }, [activeRoomId, patchMessageReactions]);
 
+    const deleteGroupRoom = useCallback(async (roomId: number) => {
+        await deleteChatGroupRoom(roomId);
+        setMessagesByRoom((prev) => {
+            if (!(roomId in prev))
+                return prev;
+            const next = { ...prev };
+            delete next[roomId];
+            return next;
+        });
+        const list = await refreshRooms().catch(() => [] as ChatRoom[]);
+        setActiveRoomId((prev) => {
+            if (prev !== roomId)
+                return prev;
+            const company = list.find((r) => r.is_company_channel);
+            return company?.id ?? list.find((r) => r.id !== roomId)?.id ?? null;
+        });
+    }, [refreshRooms]);
+
     const createGroupRoom = useCallback(async (title: string, memberUserIds: number[]) => {
         const room = await createChatGroupRoom(title, memberUserIds);
         await refreshRooms();
@@ -460,6 +504,50 @@ export function useKostaDailyChat(
         selectRoom(room.id);
         return room.id;
     }, [refreshRooms, selectRoom]);
+
+    const applyChecklistMessage = useCallback((msg: ChatMessage) => {
+        upsertRoomMessage(msg.room_id, msg);
+        patchRoomInList(msg.room_id, msg);
+    }, [upsertRoomMessage, patchRoomInList]);
+
+    const createChecklist = useCallback(async (input: CreateChecklistInput) => {
+        if (activeRoomId == null)
+            return;
+        setSending(true);
+        setSendError(null);
+        try {
+            const msg = await createChatChecklist(activeRoomId, input);
+            applyChecklistMessage(msg);
+            await markChatRoomRead(activeRoomId, msg.id);
+        }
+        catch (e: unknown) {
+            setSendError(e instanceof Error ? e.message : 'Не удалось создать чеклист');
+            throw e;
+        }
+        finally {
+            setSending(false);
+        }
+    }, [activeRoomId, applyChecklistMessage]);
+
+    const toggleChecklistItem = useCallback(async (checklistId: number, itemId: number) => {
+        try {
+            applyChecklistMessage(await toggleChatChecklistItem(checklistId, itemId));
+        }
+        catch {
+        }
+    }, [applyChecklistMessage]);
+
+    const appendChecklistTask = useCallback(async (checklistId: number, text: string) => {
+        applyChecklistMessage(await appendChatChecklistTask(checklistId, text));
+    }, [applyChecklistMessage]);
+
+    const removeChecklistTask = useCallback(async (checklistId: number, itemId: number) => {
+        try {
+            applyChecklistMessage(await removeChatChecklistTask(checklistId, itemId));
+        }
+        catch {
+        }
+    }, [applyChecklistMessage]);
 
     const createPoll = useCallback(async (input: CreatePollInput) => {
         if (activeRoomId == null)
@@ -557,8 +645,13 @@ export function useKostaDailyChat(
         toggleReaction,
         deleteMessage,
         createGroupRoom,
+        deleteGroupRoom,
         createChannelRoom,
         createPoll,
+        createChecklist,
+        toggleChecklistItem,
+        appendChecklistTask,
+        removeChecklistTask,
         votePoll,
         closePoll,
         canPost: activeRoom?.is_company_channel || activeRoom?.room_type === 'group' || activeRoom?.room_type === 'dm'

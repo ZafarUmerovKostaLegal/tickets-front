@@ -1,4 +1,4 @@
-import type { ChatAttachment, ChatMessage, ChatPoll, ChatReaction, ChatRoom } from '../types';
+import type { ChatAttachment, ChatChecklist, ChatMessage, ChatPoll, ChatReaction, ChatRoom } from '../types';
 import { formatChatMessagePreview } from './chatRichContent';
 
 export type DailyReplyTo = {
@@ -35,6 +35,7 @@ export type DailyMessage = {
     replyTo?: DailyReplyTo;
     reactions?: ChatReaction[];
     poll?: ChatPoll | null;
+    checklist?: ChatChecklist | null;
 };
 
 export type ChatPreview = {
@@ -162,6 +163,10 @@ export function lastMessagePreview(
         : room.room_type !== 'dm'
             ? `${labelByUserId(last.author_user_id).split(' ')[0] ?? 'Коллега'}: `
             : '';
+    if (last.message_kind === 'checklist' || last.checklist) {
+        const title = last.checklist?.title?.trim() || last.body.trim();
+        return `${prefix}✅ ${title || 'Чеклист'}`.slice(0, 80);
+    }
     if (last.message_kind === 'poll' || last.message_kind === 'quiz' || last.poll) {
         const label = last.poll?.kind === 'quiz' || last.message_kind === 'quiz' ? '🧠 Викторина' : '📊 Опрос';
         return `${prefix}${label}: ${last.poll?.question ?? last.body}`.slice(0, 80);
@@ -228,6 +233,7 @@ export function apiMessageToDaily(
         replyTo,
         reactions: msg.reactions,
         poll: msg.is_deleted ? null : msg.poll,
+        checklist: msg.is_deleted ? null : msg.checklist,
     };
 }
 

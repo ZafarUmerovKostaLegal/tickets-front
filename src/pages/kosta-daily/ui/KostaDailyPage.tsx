@@ -19,6 +19,7 @@ import { KostaDailyComposer } from './KostaDailyComposer';
 import type { ComposerPickerTab } from './KostaDailyComposerPicker';
 import { KostaDailyCreateRoomModal, type CreateRoomKind } from './KostaDailyCreateRoomModal';
 import { KostaDailyPollComposerModal } from './KostaDailyPollComposerModal';
+import { KostaDailyChecklistComposerModal } from './KostaDailyChecklistComposerModal';
 import { KostaDailyRoomMembersModal } from './KostaDailyRoomMembersModal';
 import { KostaDailyVirtualFeed, type KostaDailyVirtualFeedHandle } from './KostaDailyVirtualFeed';
 import { KostaDailyVirtualChatList, type KostaDailyChatListItem } from './KostaDailyVirtualChatList';
@@ -34,15 +35,6 @@ type SidebarView = 'chats' | 'members';
 const MOBILE_LAYOUT_MQ = '(max-width: 860px)';
 const CHAT_BOTTOM_PIN_THRESHOLD_PX = 96;
 const CHAT_LOAD_OLDER_THRESHOLD_PX = 120;
-
-function IconSeal() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-            <path d="M12 2L4 6v6c0 5 3.4 8.7 8 10 4.6-1.3 8-5 8-10V6l-8-4z" />
-            <path d="M9 12l2 2 4-4" />
-        </svg>
-    );
-}
 
 function IconGroupPeople() {
     return (
@@ -164,6 +156,7 @@ export function KostaDailyPage() {
     const [replyFlashId, setReplyFlashId] = useState<string | null>(null);
     const [createRoomKind, setCreateRoomKind] = useState<CreateRoomKind | null>(null);
     const [pollModalOpen, setPollModalOpen] = useState(false);
+    const [checklistModalOpen, setChecklistModalOpen] = useState(false);
     const [roomMembersOpen, setRoomMembersOpen] = useState(false);
     const [ctxMenu, setCtxMenu] = useState<{
         msg: DailyMessage;
@@ -200,8 +193,14 @@ export function KostaDailyPage() {
         toggleReaction,
         deleteMessage,
         createGroupRoom,
+        deleteGroupRoom,
+        refreshRooms,
         createChannelRoom,
         createPoll,
+        createChecklist,
+        toggleChecklistItem,
+        appendChecklistTask,
+        removeChecklistTask,
         votePoll,
         closePoll,
         canPost,
@@ -493,6 +492,13 @@ export function KostaDailyPage() {
             return;
         setRoomMembersOpen(true);
     }, [canOpenRoomMembers]);
+
+    useEffect(() => {
+        if (!roomMembersOpen || activeRoomId == null)
+            return;
+        if (!chatPreviews.some((c) => c.roomId === activeRoomId))
+            setRoomMembersOpen(false);
+    }, [roomMembersOpen, activeRoomId, chatPreviews]);
 
     const goToNextSearchMatch = useCallback(() => {
         if (chatSearchMatches.length === 0)
@@ -798,6 +804,9 @@ export function KostaDailyPage() {
             onScrollToMessage={scrollToMessage}
             onVotePoll={votePoll}
             onClosePoll={closePoll}
+            onToggleChecklistItem={toggleChecklistItem}
+            onAppendChecklistTask={appendChecklistTask}
+            onRemoveChecklistTask={removeChecklistTask}
             onPreviewAttachment={setLightboxUrl}
             onBubbleContextMenu={handleBubbleContextMenu}
             onBubbleTouchStart={handleBubbleTouchStart}
@@ -818,6 +827,9 @@ export function KostaDailyPage() {
         scrollToMessage,
         votePoll,
         closePoll,
+        toggleChecklistItem,
+        appendChecklistTask,
+        removeChecklistTask,
         handleBubbleContextMenu,
         handleBubbleTouchStart,
         cancelLongPress,
@@ -839,21 +851,9 @@ export function KostaDailyPage() {
           aria-label={sidebarView === 'chats' ? 'Список чатов' : 'Список сотрудников'}
         >
           <header className="kd-tg__sidebar-head">
-            <AppBackButton to={routes.home} iconOnly className="kd-tg__sidebar-back" />
-            <span className="kd-tg__sidebar-seal" aria-hidden>
-                <IconSeal />
-            </span>
-            <div className="kd-tg__search-wrap">
-              <span className="kd-tg__search-icon" aria-hidden><IconSearch /></span>
-              <input
-                type="search"
-                className="kd-tg__search"
-                placeholder={sidebarView === 'chats' ? 'Поиск' : 'Поиск сотрудника'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <div className="kd-tg__sidebar-actions">
+            <div className="kd-tg__sidebar-toolbar">
+              <AppBackButton to={routes.home} iconOnly className="kd-tg__sidebar-back" />
+              <div className="kd-tg__sidebar-actions">
               {sidebarView === 'chats' ? (
                 <>
                   <button
@@ -881,6 +881,28 @@ export function KostaDailyPage() {
                 </>
               ) : null}
               <AppPageSettings />
+              </div>
+            </div>
+            <div className="kd-tg__search-wrap">
+              <span className="kd-tg__search-icon" aria-hidden><IconSearch /></span>
+              <input
+                type="search"
+                className="kd-tg__search"
+                placeholder={sidebarView === 'chats' ? 'Поиск' : 'Поиск сотрудника'}
+                aria-label={sidebarView === 'chats' ? 'Поиск чатов' : 'Поиск сотрудника'}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  className="kd-tg__search-clear"
+                  aria-label="Очистить поиск"
+                  onClick={() => setSearchQuery('')}
+                >
+                  ×
+                </button>
+              ) : null}
             </div>
           </header>
 
@@ -1099,6 +1121,11 @@ export function KostaDailyPage() {
               replyTo={replyTo ? { authorName: replyTo.authorName, preview: replyTo.preview } : null}
               onCancelReply={clearReply}
               onCreatePoll={() => setPollModalOpen(true)}
+              onCreateChecklist={
+                activeRoom?.room_type === 'group' || activeRoom?.room_type === 'dm'
+                  ? () => setChecklistModalOpen(true)
+                  : undefined
+              }
             />
           ) : (
             <footer className="kd-tg__composer kd-tg__composer--readonly">
@@ -1236,6 +1263,12 @@ export function KostaDailyPage() {
         onSubmit={createPoll}
       />
 
+      <KostaDailyChecklistComposerModal
+        open={checklistModalOpen}
+        onClose={() => setChecklistModalOpen(false)}
+        onSubmit={createChecklist}
+      />
+
       <KostaDailyRoomMembersModal
         open={roomMembersOpen}
         roomId={activeRoomId}
@@ -1246,6 +1279,13 @@ export function KostaDailyPage() {
         currentUserId={user?.id}
         labelByUserId={labelByUserId}
         onClose={() => setRoomMembersOpen(false)}
+        onRenamed={() => { void refreshRooms(); }}
+        onDeleted={async () => {
+          if (activeRoomId == null)
+            return;
+          await deleteGroupRoom(activeRoomId);
+          setRoomMembersOpen(false);
+        }}
       />
       </>
     );
