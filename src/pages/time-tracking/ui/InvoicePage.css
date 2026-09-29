@@ -94,26 +94,33 @@
 }
 
 .tt-inv-kind {
-  display: flex;
-  gap: 0.4rem;
-  margin-bottom: 0.9rem;
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 0.25rem;
+  margin-bottom: 0.15rem;
+  padding: 0.2rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 999px;
+  background: var(--app-surface-soft, #f8fafc);
 }
 
 .tt-inv-kind button {
-  height: 36px;
-  padding: 0 0.9rem;
-  border: 1px solid var(--app-border, #e2e8f0);
+  height: 32px;
+  padding: 0 0.85rem;
+  border: 0;
   border-radius: 999px;
-  background: var(--app-surface, #fff);
+  background: transparent;
+  color: var(--app-muted, #64748b);
   font: inherit;
-  font-weight: 700;
+  font-size: 0.8125rem;
+  font-weight: 650;
   cursor: pointer;
 }
 
 .tt-inv-kind button.is-on {
-  background: var(--app-accent, #4f46e5);
-  border-color: transparent;
-  color: #fff;
+  background: var(--app-surface, #fff);
+  color: var(--app-text, #0f172a);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--app-text, #0f172a) 8%, transparent);
 }
 
 .tt-inv-combined .tt-inv-page__section-head {
