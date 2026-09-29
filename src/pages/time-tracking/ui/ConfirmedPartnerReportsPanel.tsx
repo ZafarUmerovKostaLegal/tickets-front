@@ -34,7 +34,9 @@ import {
 } from '@entities/time-tracking/lib/partnerReportDisplayLookups';
 import {
     findInvoiceForPartnerConfirmedRow,
+    generateCombinedInvoiceFromConfirmedReports,
     generateInvoiceFromPartnerConfirmedReport,
+    PartnerConfirmedCombinedCurrencyError,
     invoiceCreatedBeforeAllSignatures,
     pendingPartnerDisplayNames,
     PartnerConfirmedInvoiceMismatchError,
@@ -319,6 +321,10 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
     const snapshotMetaAttemptedRef = useRef<Set<string>>(new Set());
     const [exportBusySnapshotId, setExportBusySnapshotId] = useState<string | null>(null);
     const [invoiceBusyId, setInvoiceBusyId] = useState<string | null>(null);
+    const [combinedBusy, setCombinedBusy] = useState(false);
+    const [selectedReportIds, setSelectedReportIds] = useState<Set<string>>(() => new Set());
+    const [combinePayerId, setCombinePayerId] = useState('');
+    const [trackingUsers, setTrackingUsers] = useState<TimeTrackingUserRow[]>([]);
     const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null);
     const [revokeBusyKey, setRevokeBusyKey] = useState<string | null>(null);
     const [invoices, setInvoices] = useState<InvoiceDto[]>([]);
@@ -462,6 +468,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]),
             getUsers(true).catch(() => [] as User[]),
         ]).then(([ttUsers, authUsers]) => {
+            setTrackingUsers(ttUsers);
             const m = new Map<number, PartnerUserMeta>();
             for (const r of ttUsers) {
                 const label = r.display_name?.trim() || r.email?.trim() || `ID ${r.id}`;
@@ -798,6 +805,122 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         }
     }, [clientMetaByProjectId, clientNamesById, extraRowMetaByProjectId, invoices, loadInvoices, openInvoiceForRow, projectRows, showAlert, showConfirm, t, usersById]);
 
+    const selectedRows = useMemo(
+        () => rows.filter((row) => selectedReportIds.has(row.id)),
+        [rows, selectedReportIds],
+    );
+    const combineClients = useMemo(() => {
+        const seen = new Map<string, string>();
+        for (const row of selectedRows) {
+            const meta = resolvePartnerReportDisplayMeta(row, projectRows, clientNamesById, extraRowMetaByProjectId, clientMetaByProjectId);
+            const clientId = meta.clientId.trim();
+            if (!clientId || seen.has(clientId))
+                continue;
+            seen.set(clientId, resolveClientLabel(row));
+        }
+        return [...seen.entries()].map(([id, name]) => ({ id, name }));
+    }, [clientMetaByProjectId, clientNamesById, extraRowMetaByProjectId, projectRows, resolveClientLabel, selectedRows]);
+
+    useEffect(() => {
+        if (combineClients.length === 0) {
+            setCombinePayerId('');
+            return;
+        }
+        if (!combineClients.some((client) => client.id === combinePayerId))
+            setCombinePayerId(combineClients[0]!.id);
+    }, [combineClients, combinePayerId]);
+
+    const toggleReportSelected = useCallback((id: string) => {
+        setSelectedReportIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id))
+                next.delete(id);
+            else
+                next.add(id);
+            return next;
+        });
+    }, []);
+
+    const toggleVisibleReports = useCallback((list: PartnerReportConfirmationRequest[], on: boolean) => {
+        setSelectedReportIds((prev) => {
+            const next = new Set(prev);
+            for (const row of list) {
+                if (on)
+                    next.add(row.id);
+                else
+                    next.delete(row.id);
+            }
+            return next;
+        });
+    }, []);
+
+    const createCombinedInvoice = useCallback(async () => {
+        if (selectedRows.length < 2 || combinedBusy)
+            return;
+        const payer = combineClients.find((client) => client.id === combinePayerId) ?? combineClients[0];
+        if (!payer) {
+            await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.invoiceNoClient') });
+            return;
+        }
+        const ok = await showConfirm({
+            title: t('timeTrackingPage.reports.partnerConfirmed.combineConfirmTitle'),
+            message: t('timeTrackingPage.reports.partnerConfirmed.combineConfirmMessage')
+                .replace('{count}', String(selectedRows.length))
+                .replace('{payer}', payer.name),
+            confirmLabel: t('timeTrackingPage.reports.partnerConfirmed.combineConfirmLabel'),
+        });
+        if (!ok)
+            return;
+        setCombinedBusy(true);
+        try {
+            const projectMeta = selectedRows.flatMap((row) => {
+                const projectId = String(row.projectId ?? '').trim();
+                if (!projectId)
+                    return [];
+                const meta = resolvePartnerReportDisplayMeta(row, projectRows, clientNamesById, extraRowMetaByProjectId, clientMetaByProjectId);
+                return [{
+                    id: projectId,
+                    name: resolveProjectLabel(row),
+                    clientId: meta.clientId.trim() || payer.id,
+                    clientName: resolveClientLabel(row),
+                }];
+            });
+            const uniqueProjects = [...new Map(projectMeta.map((project) => [project.id, project])).values()];
+            const created = await generateCombinedInvoiceFromConfirmedReports({
+                rows: selectedRows,
+                payerClientId: payer.id,
+                projectMeta: uniqueProjects,
+                users: trackingUsers,
+            });
+            setSelectedReportIds(new Set());
+            loadInvoices();
+            openInvoiceForRow(created.id);
+        }
+        catch (e) {
+            if (e instanceof PartnerConfirmedCombinedCurrencyError) {
+                await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.combineCurrencyMismatch') });
+                return;
+            }
+            if (isProjectUnpaidExpensesError(e)) {
+                await showAlert({
+                    message: t('timeTrackingPage.reports.partnerConfirmed.invoiceUnpaidExpenses')
+                        .replace('{count}', String(e.expenses.length))
+                        .replace('{list}', formatUnpaidExpenseListLines(e.expenses)),
+                });
+                return;
+            }
+            if (e instanceof PartnerConfirmedInvoiceNoLinesError) {
+                await showAlert({ message: t('timeTrackingPage.reports.partnerConfirmed.combineNoLines') });
+                return;
+            }
+            const base = e instanceof Error ? e.message : t('timeTrackingPage.reports.partnerConfirmed.combineFailed');
+            await showAlert({ message: base });
+        }
+        finally {
+            setCombinedBusy(false);
+        }
+    }, [clientMetaByProjectId, clientNamesById, combineClients, combinePayerId, combinedBusy, extraRowMetaByProjectId, loadInvoices, openInvoiceForRow, projectRows, resolveClientLabel, resolveProjectLabel, selectedRows, showAlert, showConfirm, t, trackingUsers]);
+
     const exportSnapshotExcel = useCallback(async (r: PartnerReportConfirmationRequest) => {
         setExportBusySnapshotId(r.snapshotId.trim() || r.id);
         try {
@@ -950,10 +1073,28 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         actions: t('timeTrackingPage.reports.partnerConfirmed.columns.actions'),
     }), [t]);
 
-    const renderTable = (list: PartnerReportConfirmationRequest[]) => (<div className="tt-reports__table-wrap tt-reports__table-wrap--scroll-x tt-partner-confirmed__table-wrap">
+    const renderTable = (list: PartnerReportConfirmationRequest[], selectable = false) => {
+        const selectedVisible = selectable ? list.filter((row) => selectedReportIds.has(row.id)).length : 0;
+        const allVisibleSelected = selectable && list.length > 0 && selectedVisible === list.length;
+        return (<div className="tt-reports__table-wrap tt-reports__table-wrap--scroll-x tt-partner-confirmed__table-wrap">
         <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly tt-partner-confirmed__table--confirmed" aria-label={t('timeTrackingPage.reports.partnerConfirmed.tableAria')}>
             <thead>
                 <tr>
+                    {selectable ? (
+                        <th scope="col" className="tt-partner-confirmed__check-col">
+                            <input
+                                className="tt-partner-confirmed__row-check"
+                                type="checkbox"
+                                checked={allVisibleSelected}
+                                ref={(el) => {
+                                    if (el)
+                                        el.indeterminate = selectedVisible > 0 && !allVisibleSelected;
+                                }}
+                                onChange={() => toggleVisibleReports(list, !allVisibleSelected)}
+                                aria-label={t('timeTrackingPage.reports.partnerConfirmed.combineSelectAll')}
+                            />
+                        </th>
+                    ) : null}
                     <th scope="col">{columnLabels.client}</th>
                     <th scope="col">{columnLabels.project}</th>
                     <th scope="col">{columnLabels.period}</th>
@@ -977,7 +1118,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                     const fullyConfirmed = isFullyConfirmed(r);
                     const canDelete = canDeletePartnerConfirmedRow(r, currentUser?.id, canManageAll);
                     const deleteBusy = deleteBusyId === r.id;
-                    const actionsBusy = deleteBusyId != null || invoiceBusyId != null || exportBusySnapshotId != null || revokeBusyKey != null;
+                    const actionsBusy = deleteBusyId != null || invoiceBusyId != null || combinedBusy || exportBusySnapshotId != null || revokeBusyKey != null;
                     const deleteBlockedByInvoice = Boolean(linkedInvoice);
                     const revokeBlockedByInvoice = Boolean(linkedInvoice);
                     const rowRevokeBusyPartnerId = revokeBusyKey?.startsWith(`${r.id}:`)
@@ -1007,7 +1148,18 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                             : fullyConfirmed
                                 ? t('timeTrackingPage.reports.partnerConfirmed.invoiceGenerateAria')
                                 : t('timeTrackingPage.reports.partnerConfirmed.invoiceUnsignedAria');
-                    return (<tr key={r.id}>
+                    return (<tr key={r.id} className={selectable && selectedReportIds.has(r.id) ? 'is-selected' : ''}>
+                    {selectable ? (
+                        <td className="tt-partner-confirmed__check-col" data-label={t('timeTrackingPage.reports.partnerConfirmed.combineSelect')}>
+                            <input
+                                className="tt-partner-confirmed__row-check"
+                                type="checkbox"
+                                checked={selectedReportIds.has(r.id)}
+                                onChange={() => toggleReportSelected(r.id)}
+                                aria-label={t('timeTrackingPage.reports.partnerConfirmed.combineSelectRow').replace('{project}', resolveProjectLabel(r))}
+                            />
+                        </td>
+                    ) : null}
                     <td className="tt-partner-confirmed__td-client" data-label={columnLabels.client}>{resolveClientLabel(r)}</td>
                     <td className="tt-partner-confirmed__cell-title tt-partner-confirmed__td-primary" data-label={columnLabels.project}>
                         <span className="tt-partner-confirmed__project-cell">
@@ -1092,6 +1244,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
             </tbody>
         </table>
     </div>);
+    };
 
     return (<div className="tt-partner-confirmed" aria-labelledby="tt-partner-confirmed-heading">
         <div className="tt-partner-confirmed__head">
@@ -1168,11 +1321,46 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
 
         {error ? (<p className="tt-reports__table-err tt-partner-confirmed__err" role="alert">{error}</p>) : null}
 
-        {loading ? (<PartnerReportsListLoading label={t('timeTrackingPage.reports.partnerConfirmed.loading')} columns={6} />) : null}
+        {loading ? (<PartnerReportsListLoading label={t('timeTrackingPage.reports.partnerConfirmed.loading')} columns={7} />) : null}
 
         {!loading && !error && rows.length === 0 ? (<p className="tt-partner-confirmed__empty">{t('timeTrackingPage.reports.partnerConfirmed.empty')}</p>) : null}
 
-        {!loading && !error && rows.length > 0 ? renderTable(filtered) : null}
+        {!loading && !error && rows.length > 0 ? (
+            <div className="tt-partner-confirmed__combine">
+                <span>{t('timeTrackingPage.reports.partnerConfirmed.combineSelected').replace('{count}', String(selectedRows.length))}</span>
+                {combineClients.length > 1 ? (
+                    <SearchableSelect<{ id: string; name: string }>
+                        className="tsp-srch tt-partner-confirmed__combine-payer"
+                        buttonClassName="tsp-srch__btn"
+                        buttonId="tt-partner-confirmed-combine-payer"
+                        portalDropdown
+                        portalZIndex={10050}
+                        portalMinWidth={280}
+                        placeholder={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
+                        emptyListText={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
+                        noMatchText={t('timeTrackingPage.common.notFound')}
+                        value={combinePayerId}
+                        items={combineClients}
+                        getOptionValue={(client) => client.id}
+                        getOptionLabel={(client) => client.name}
+                        getSearchText={(client) => client.name}
+                        onSelect={(client) => setCombinePayerId(client.id)}
+                        aria-label={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
+                    />
+                ) : null}
+                <button
+                    type="button"
+                    className="tt-reports__btn tt-reports__btn--accent"
+                    disabled={selectedRows.length < 2 || combinedBusy}
+                    title={selectedRows.length < 2 ? t('timeTrackingPage.reports.partnerConfirmed.combineNeedTwo') : t('timeTrackingPage.reports.partnerConfirmed.combineAction')}
+                    onClick={() => void createCombinedInvoice()}
+                >
+                    {combinedBusy ? t('timeTrackingPage.reports.partnerConfirmed.combineBusy') : t('timeTrackingPage.reports.partnerConfirmed.combineAction')}
+                </button>
+            </div>
+        ) : null}
+
+        {!loading && !error && rows.length > 0 ? renderTable(filtered, true) : null}
 
         {!loading && hasActiveFilters && filtered.length === 0 && rows.length > 0 ? (<p className="tt-partner-confirmed__empty">{t('timeTrackingPage.reports.partnerConfirmed.noFilterMatch')}</p>) : null}
 

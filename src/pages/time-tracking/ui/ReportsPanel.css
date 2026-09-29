@@ -1209,6 +1209,31 @@
   padding: 0 0 1rem;
   min-width: 0;
 }
+.tt-partner-confirmed__combine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.85rem;
+  margin: 0 0 0.75rem;
+}
+.tt-partner-confirmed__combine-payer {
+  min-width: 16rem;
+}
+.tt-partner-confirmed__check-col {
+  width: 2.4rem;
+  text-align: center;
+  vertical-align: middle;
+}
+.tt-partner-confirmed__row-check {
+  width: 1.05rem;
+  height: 1.05rem;
+  margin: 0;
+  accent-color: var(--app-accent, #4f46e5);
+  cursor: pointer;
+}
+.tt-partner-confirmed__table tbody tr.is-selected td {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 7%, transparent);
+}
 .tt-partner-confirmed__head {
   display: flex;
   flex-wrap: wrap;
