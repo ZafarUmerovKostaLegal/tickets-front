@@ -172,8 +172,25 @@ export function ChatNotificationHost() {
             const data = event.data as { type?: string; url?: string } | null;
             if (!data || data.type !== 'chat-notification-open' || typeof data.url !== 'string')
                 return;
-            const next = new URL(data.url, window.location.origin);
-            void router.navigate(`${next.pathname}${next.search}`);
+            let next: URL;
+            try {
+                next = new URL(data.url, window.location.origin);
+            }
+            catch {
+                return;
+            }
+            const roomRaw = next.searchParams.get('room');
+            const roomId = roomRaw != null ? Number(roomRaw) : NaN;
+            const samePath = window.location.pathname === next.pathname;
+            if (samePath && Number.isFinite(roomId) && roomId > 0) {
+                window.dispatchEvent(new CustomEvent('kosta-daily-open-room', { detail: { roomId } }));
+                return;
+            }
+            const target = `${next.pathname}${next.search}`;
+            const here = `${window.location.pathname}${window.location.search}`;
+            if (target === here)
+                return;
+            void router.navigate(target);
         };
         navigator.serviceWorker.addEventListener('message', onMessage);
         return () => navigator.serviceWorker.removeEventListener('message', onMessage);

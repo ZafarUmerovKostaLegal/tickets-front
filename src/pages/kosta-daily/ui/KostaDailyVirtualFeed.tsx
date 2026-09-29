@@ -36,6 +36,11 @@ export const KostaDailyVirtualFeed = forwardRef<KostaDailyVirtualFeedHandle, Kos
                 if (blocks.length === 0)
                     return;
                 const el = scrollRef.current;
+                if (el) {
+                    const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+                    if (dist <= 2)
+                        return;
+                }
                 if (!virtualEnabled) {
                     if (el)
                         el.scrollTo({ top: el.scrollHeight, behavior });
@@ -63,7 +68,7 @@ export const KostaDailyVirtualFeed = forwardRef<KostaDailyVirtualFeedHandle, Kos
 
         if (!virtualEnabled) {
             return (
-                <div className="kd-tg__messages" ref={innerRef} role="log" aria-live="polite">
+                <div className="kd-tg__messages" ref={innerRef}>
                     {blocks.map((block, index) => (
                         <div key={block.id} data-block-id={block.id} style={{ contentVisibility: 'auto', containIntrinsicSize: 'auto 72px' }}>
                             {renderBlock(block, index)}
@@ -78,8 +83,6 @@ export const KostaDailyVirtualFeed = forwardRef<KostaDailyVirtualFeedHandle, Kos
             <div
                 className="kd-tg__messages kd-tg__messages--virtual"
                 ref={innerRef}
-                role="log"
-                aria-live="polite"
                 style={{ height: virtualizer.getTotalSize(), position: 'relative' }}
             >
                 {virtualItems.map((virtualRow) => {

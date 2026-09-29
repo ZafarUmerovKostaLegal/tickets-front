@@ -28,7 +28,7 @@ export function shouldShowChatMessageNotification(
 ): boolean {
     if (meId == null)
         return false;
-    if (msg.author_user_id === meId)
+    if (Number(msg.author_user_id) === Number(meId))
         return false;
     if (msg.is_deleted)
         return false;
@@ -37,7 +37,7 @@ export function shouldShowChatMessageNotification(
     const ctx = getChatNotificationContext();
     if (!ctx.onKostaDailyPage)
         return true;
-    return ctx.activeRoomId !== roomId;
+    return Number(ctx.activeRoomId) !== Number(roomId);
 }
 
 export function chatNotificationTitle(

@@ -4,10 +4,6 @@ self.addEventListener('install', (event) => {
     event.waitUntil(self.skipWaiting());
 });
 
-self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
-});
-
 self.addEventListener('push', (event) => {
     let data = {};
     try {
@@ -22,7 +18,7 @@ self.addEventListener('message', (event) => {
     const data = event.data;
     if (!data || data.type !== 'show-chat-notification')
         return;
-    event.waitUntil(showChatNotification(data));
+    event.waitUntil(showChatNotification(data, { fromPage: true }));
 });
 
 self.addEventListener('notificationclick', (event) => {
@@ -40,13 +36,19 @@ function notificationUrl(data) {
     return new URL(path, self.location.origin).href;
 }
 
-async function showChatNotification(data) {
+async function showChatNotification(data, opts) {
     const roomId = Number(data.roomId);
     const title = typeof data.title === 'string' && data.title.trim() ? data.title.trim() : 'Kosta Daily';
     const body = typeof data.body === 'string' && data.body.trim() ? data.body.trim() : 'Новое сообщение';
     const icon = new URL('/notification-icon.png', self.location.origin).href;
     const image = typeof data.image === 'string' && data.image.startsWith('https://') ? data.image : '';
     const url = typeof data.url === 'string' ? data.url : '/kosta-daily';
+    if (opts && opts.fromPage) {
+        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const pageInFront = windows.some((client) => client.focused && client.visibilityState === 'visible');
+        if (pageInFront)
+            return;
+    }
     const options = {
         body,
         icon,
@@ -69,7 +71,8 @@ async function openChat(url) {
     for (const client of windows) {
         if (!('focus' in client))
             continue;
-        await client.focus();
+        if (!client.focused)
+            await client.focus();
         client.postMessage({ type: 'chat-notification-open', url });
         return;
     }

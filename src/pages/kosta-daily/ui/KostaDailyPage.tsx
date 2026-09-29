@@ -358,8 +358,15 @@ export function KostaDailyPage() {
     if (!inner || chatSearchOpen)
       return;
     const ro = new ResizeObserver(() => {
-      if (pinnedToBottomRef.current)
-        scrollFeedToBottom('auto');
+      if (!pinnedToBottomRef.current)
+        return;
+      const el = feedRef.current;
+      if (!el)
+        return;
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      if (dist <= 2)
+        return;
+      scrollFeedToBottom('auto');
     });
     ro.observe(inner);
     return () => ro.disconnect();
@@ -398,22 +405,42 @@ export function KostaDailyPage() {
     return () => setChatNotificationContext({ onKostaDailyPage: false, activeRoomId: null });
   }, [activeRoomId]);
 
+  const roomParam = searchParams.get('room');
+  const consumedRoomParamRef = useRef<string | null>(null);
+
   useEffect(() => {
-    const raw = searchParams.get('room');
-    const roomId = raw != null ? Number(raw) : NaN;
+    const onOpenRoom = (event: Event) => {
+      const roomId = Number((event as CustomEvent<{ roomId?: number }>).detail?.roomId);
+      if (!Number.isFinite(roomId) || roomId <= 0)
+        return;
+      selectRoom(roomId);
+      if (window.matchMedia(MOBILE_LAYOUT_MQ).matches)
+        setMobileShowChat(true);
+    };
+    window.addEventListener('kosta-daily-open-room', onOpenRoom);
+    return () => window.removeEventListener('kosta-daily-open-room', onOpenRoom);
+  }, [selectRoom]);
+
+  useEffect(() => {
+    if (roomParam == null || roomParam === '' || consumedRoomParamRef.current === roomParam)
+      return;
+    const roomId = Number(roomParam);
     if (!Number.isFinite(roomId) || roomId <= 0 || roomsLoading)
       return;
     if (!chatPreviews.some((c) => c.roomId === roomId))
       return;
+    consumedRoomParamRef.current = roomParam;
     selectRoom(roomId);
     if (isMobile)
       setMobileShowChat(true);
     setSearchParams((prev) => {
+      if (prev.get('room') !== roomParam)
+        return prev;
       const next = new URLSearchParams(prev);
       next.delete('room');
       return next;
     }, { replace: true });
-  }, [searchParams, roomsLoading, chatPreviews, selectRoom, isMobile, setSearchParams]);
+  }, [roomParam, roomsLoading, chatPreviews, selectRoom, isMobile, setSearchParams]);
 
   useEffect(() => {
     setDraft('');

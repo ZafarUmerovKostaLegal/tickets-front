@@ -58,6 +58,8 @@ export function showChatOsNotification(input: {
 }): void {
     if (!pushSupported() || Notification.permission !== 'granted')
         return;
+    if (document.visibilityState === 'visible' && document.hasFocus())
+        return;
     const payload = {
         type: 'show-chat-notification',
         title: input.title,
@@ -65,20 +67,12 @@ export function showChatOsNotification(input: {
         roomId: input.roomId,
         url: `/kosta-daily?room=${input.roomId}`,
     };
-    void navigator.serviceWorker.register(SW_URL, { scope: '/' })
-        .then(() => navigator.serviceWorker.ready)
+    void navigator.serviceWorker.getRegistration()
         .then((registration) => {
-            const worker = registration.active;
-            if (worker) {
-                worker.postMessage(payload);
+            const worker = registration?.active;
+            if (!worker)
                 return;
-            }
-            return registration.showNotification(input.title, {
-                body: input.body,
-                icon: '/notification-icon.png',
-                tag: `chat-room-${input.roomId}`,
-                data: { url: payload.url, roomId: input.roomId },
-            });
+            worker.postMessage(payload);
         })
         .catch(() => undefined);
 }
