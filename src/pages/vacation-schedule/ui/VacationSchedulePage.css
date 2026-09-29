@@ -45,9 +45,46 @@
   min-height: 0;
   display: flex;
   align-items: stretch;
+  overflow: hidden;
+}
+
+.vacation-schedule-page__pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  animation: vac-pane-in 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.vacation-schedule-page__pane.is-requests {
+  animation-name: vac-pane-in-right;
+}
+
+@keyframes vac-pane-in {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes vac-pane-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .vac-switch {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
@@ -56,7 +93,20 @@
   background: var(--app-bg, #f1f5f9);
 }
 
+.vac-switch__thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 10px;
+  background: var(--app-surface, #fff);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), width 0.32s cubic-bezier(0.22, 1, 0.36, 1), height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
 .vac-switch__item {
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
@@ -70,12 +120,11 @@
   font-weight: 700;
   color: #475569;
   cursor: pointer;
+  transition: color 0.22s ease;
 }
 
 .vac-switch__item--on {
-  background: var(--app-surface, #fff);
   color: var(--app-accent, #4f46e5);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .vac-switch__badge {
@@ -1640,7 +1689,10 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
 @media (prefers-reduced-motion: reduce) {
   .vac-cal__month,
   .vac-cal--fly.is-anim,
-  .vac-day {
+  .vac-day,
+  .vacation-schedule-page__pane,
+  .vac-switch__thumb,
+  .vac-switch__item {
     transition: none;
     animation: none;
   }

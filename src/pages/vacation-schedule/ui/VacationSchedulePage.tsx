@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useVacationLeavePendingBadge } from '@entities/vacation';
 import { useCurrentUser } from '@shared/hooks';
@@ -513,6 +513,20 @@ export function VacationSchedulePage() {
         setViewMonth(month);
     };
     const requestsOpen = view !== 'calendar';
+    const switchRef = useRef<HTMLElement>(null);
+    const [switchThumb, setSwitchThumb] = useState({ x: 0, y: 0, w: 0, h: 0 });
+    useLayoutEffect(() => {
+        const nav = switchRef.current;
+        const active = nav?.querySelector<HTMLElement>('.vac-switch__item--on');
+        if (!nav || !active)
+            return;
+        setSwitchThumb({
+            x: active.offsetLeft,
+            y: active.offsetTop,
+            w: active.offsetWidth,
+            h: active.offsetHeight,
+        });
+    }, [requestsOpen, requestsBadge]);
     const showToDecideAttention = view === 'calendar' && canDecideRequests && counts.toDecideCount > 0;
     const showMinePendingAttention = view === 'calendar' && counts.minePendingCount > 0;
 
@@ -533,7 +547,16 @@ export function VacationSchedulePage() {
                         <h1 className="vacation-schedule-page__title">График отпусков</h1>
                     </div>
                     <div className="app-page-header-end">
-                        <nav className="vac-switch" aria-label="Разделы графика отпусков">
+                        <nav className="vac-switch" ref={switchRef} aria-label="Разделы графика отпусков">
+                            <span
+                                className="vac-switch__thumb"
+                                aria-hidden
+                                style={{
+                                    width: switchThumb.w,
+                                    height: switchThumb.h,
+                                    transform: `translate(${switchThumb.x}px, ${switchThumb.y}px)`,
+                                }}
+                            />
                             <button
                                 type="button"
                                 className={`vac-switch__item${!requestsOpen ? ' vac-switch__item--on' : ''}`}
@@ -581,6 +604,10 @@ export function VacationSchedulePage() {
                     </div>
                 ) : null}
                 <div className="vacation-schedule-page__body">
+                    <div
+                        key={requestsOpen ? 'requests' : 'calendar'}
+                        className={`vacation-schedule-page__pane${requestsOpen ? ' is-requests' : ' is-calendar'}`}
+                    >
                     {requestsOpen ? (
                         <div className="vac-requests">
                             {canDecideRequests ? (
@@ -763,6 +790,7 @@ export function VacationSchedulePage() {
                         </div>
                         </>
                     )}
+                    </div>
                 </div>
             </main>
             <VacationAbsenceRequestModal
