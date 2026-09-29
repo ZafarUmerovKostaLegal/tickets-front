@@ -105,11 +105,33 @@ function DayCell({
     );
 }
 
-function ringFill(colors: readonly string[]): string {
-    if (colors.length <= 1)
-        return colors[0] ?? 'transparent';
-    const step = 100 / colors.length;
-    return `conic-gradient(${colors.map((color, index) => `${color} ${index * step}% ${(index + 1) * step}%`).join(',')})`;
+function DayRing({ colors }: { colors: readonly string[] }) {
+    const radius = 10.25;
+    const turn = 2 * Math.PI * radius;
+    const count = colors.length;
+    const gap = count > 1 ? 4.2 : 0;
+    const sector = turn / count;
+    const dash = Math.max(sector - gap, 1);
+    return (
+        <svg className="vac-cal__ring" viewBox="0 0 24 24" aria-hidden>
+            {colors.map((color, index) => (
+                <circle
+                    key={`${color}-${index}`}
+                    cx="12"
+                    cy="12"
+                    r={radius}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="1.25"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                    strokeDasharray={count > 1 ? `${dash} ${turn - dash}` : undefined}
+                    strokeDashoffset={count > 1 ? -(index * sector + gap / 2) : undefined}
+                    transform="rotate(-90 12 12)"
+                />
+            ))}
+        </svg>
+    );
 }
 
 function DayNum({ year, monthIndex, day, colors = [] }: { year: number; monthIndex: number; day: number | null; colors?: readonly string[] }) {
@@ -121,9 +143,9 @@ function DayNum({ year, monthIndex, day, colors = [] }: { year: number; monthInd
     return (
         <span
             className={`vac-cal__num${weekend ? ' vac-cal__num--weekend' : ''}${today ? ' vac-cal__num--today' : ''}${ring ? ' vac-cal__num--ring' : ''}`}
-            style={ring ? { ['--vac-ring' as string]: ringFill(colors) } : undefined}
         >
-            {day}
+            {ring ? <DayRing colors={colors} /> : null}
+            <span className="vac-cal__digit">{day}</span>
         </span>
     );
 }
