@@ -1077,7 +1077,7 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         const selectedVisible = selectable ? list.filter((row) => selectedReportIds.has(row.id)).length : 0;
         const allVisibleSelected = selectable && list.length > 0 && selectedVisible === list.length;
         return (<div className="tt-reports__table-wrap tt-reports__table-wrap--scroll-x tt-partner-confirmed__table-wrap">
-        <table className="tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly tt-partner-confirmed__table--confirmed" aria-label={t('timeTrackingPage.reports.partnerConfirmed.tableAria')}>
+        <table className={`tt-reports__table tt-partner-confirmed__table tt-partner-confirmed__table--readonly tt-partner-confirmed__table--confirmed${selectable ? ' tt-partner-confirmed__table--selectable' : ''}`} aria-label={t('timeTrackingPage.reports.partnerConfirmed.tableAria')}>
             <thead>
                 <tr>
                     {selectable ? (
@@ -1301,6 +1301,40 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
                 <label className="tt-partner-confirmed__filter-label" htmlFor="tt-partner-confirmed-partner-btn">{t('timeTrackingPage.reports.partnerConfirmed.filters.partner')}</label>
                 <SearchableSelect<PartnerFilterItem> className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-partner-confirmed-partner-btn" portalDropdown portalZIndex={10050} portalMinWidth={280} placeholder={t('timeTrackingPage.reports.partnerConfirmed.filters.allPartners')} emptyListText={t('timeTrackingPage.reports.partnerConfirmed.filters.allPartners')} noMatchText={t('timeTrackingPage.common.notFound')} value={partnerFilterId} items={partnerFilterItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => setPartnerFilterId(o.id)} aria-label={t('timeTrackingPage.reports.partnerConfirmed.filters.partnerFilterAria')} />
             </div>
+            {!loading && !error && rows.length > 0 ? (
+                <div className="tt-partner-confirmed__combine">
+                    <span>{t('timeTrackingPage.reports.partnerConfirmed.combineSelected').replace('{count}', String(selectedRows.length))}</span>
+                    {combineClients.length > 1 ? (
+                        <SearchableSelect<{ id: string; name: string }>
+                            className="tsp-srch tt-partner-confirmed__combine-payer"
+                            buttonClassName="tsp-srch__btn"
+                            buttonId="tt-partner-confirmed-combine-payer"
+                            portalDropdown
+                            portalZIndex={10050}
+                            portalMinWidth={280}
+                            placeholder={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
+                            emptyListText={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
+                            noMatchText={t('timeTrackingPage.common.notFound')}
+                            value={combinePayerId}
+                            items={combineClients}
+                            getOptionValue={(client) => client.id}
+                            getOptionLabel={(client) => client.name}
+                            getSearchText={(client) => client.name}
+                            onSelect={(client) => setCombinePayerId(client.id)}
+                            aria-label={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
+                        />
+                    ) : null}
+                    <button
+                        type="button"
+                        className="tt-reports__btn tt-reports__btn--accent"
+                        disabled={selectedRows.length < 2 || combinedBusy}
+                        title={selectedRows.length < 2 ? t('timeTrackingPage.reports.partnerConfirmed.combineNeedTwo') : t('timeTrackingPage.reports.partnerConfirmed.combineAction')}
+                        onClick={() => void createCombinedInvoice()}
+                    >
+                        {combinedBusy ? t('timeTrackingPage.reports.partnerConfirmed.combineBusy') : t('timeTrackingPage.reports.partnerConfirmed.combineAction')}
+                    </button>
+                </div>
+            ) : null}
         </div>
 
         <div className="tt-partner-confirmed__toolbar">
@@ -1324,41 +1358,6 @@ export function ConfirmedPartnerReportsPanel({ subView, onSubViewChange, }: {
         {loading ? (<PartnerReportsListLoading label={t('timeTrackingPage.reports.partnerConfirmed.loading')} columns={7} />) : null}
 
         {!loading && !error && rows.length === 0 ? (<p className="tt-partner-confirmed__empty">{t('timeTrackingPage.reports.partnerConfirmed.empty')}</p>) : null}
-
-        {!loading && !error && rows.length > 0 ? (
-            <div className="tt-partner-confirmed__combine">
-                <span>{t('timeTrackingPage.reports.partnerConfirmed.combineSelected').replace('{count}', String(selectedRows.length))}</span>
-                {combineClients.length > 1 ? (
-                    <SearchableSelect<{ id: string; name: string }>
-                        className="tsp-srch tt-partner-confirmed__combine-payer"
-                        buttonClassName="tsp-srch__btn"
-                        buttonId="tt-partner-confirmed-combine-payer"
-                        portalDropdown
-                        portalZIndex={10050}
-                        portalMinWidth={280}
-                        placeholder={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
-                        emptyListText={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
-                        noMatchText={t('timeTrackingPage.common.notFound')}
-                        value={combinePayerId}
-                        items={combineClients}
-                        getOptionValue={(client) => client.id}
-                        getOptionLabel={(client) => client.name}
-                        getSearchText={(client) => client.name}
-                        onSelect={(client) => setCombinePayerId(client.id)}
-                        aria-label={t('timeTrackingPage.reports.partnerConfirmed.combinePayer')}
-                    />
-                ) : null}
-                <button
-                    type="button"
-                    className="tt-reports__btn tt-reports__btn--accent"
-                    disabled={selectedRows.length < 2 || combinedBusy}
-                    title={selectedRows.length < 2 ? t('timeTrackingPage.reports.partnerConfirmed.combineNeedTwo') : t('timeTrackingPage.reports.partnerConfirmed.combineAction')}
-                    onClick={() => void createCombinedInvoice()}
-                >
-                    {combinedBusy ? t('timeTrackingPage.reports.partnerConfirmed.combineBusy') : t('timeTrackingPage.reports.partnerConfirmed.combineAction')}
-                </button>
-            </div>
-        ) : null}
 
         {!loading && !error && rows.length > 0 ? renderTable(filtered, true) : null}
 
