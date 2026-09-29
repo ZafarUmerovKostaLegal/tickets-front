@@ -50,6 +50,12 @@ export async function logout(): Promise<void> {
     }
     catch {
     }
+    try {
+        const { disableChatBrowserPush } = await import('@entities/chat/lib/chatBrowserPush');
+        await disableChatBrowserPush();
+    }
+    catch {
+    }
     const base = getApiBaseUrl();
     if (isSessionCookieOnly() && base) {
         try {

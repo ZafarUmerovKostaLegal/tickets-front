@@ -6,6 +6,7 @@ import {
     chatNotificationSenderLine,
     chatNotificationTitle,
     connectChatWs,
+    ensureChatBrowserPush,
     fetchChatRoom,
     parseChatMessageFromWsPayload,
     shouldShowChatMessageNotification,
@@ -118,6 +119,7 @@ export function ChatNotificationHost() {
         if (!isAuthenticated() || meId == null)
             return;
         let cancelled = false;
+        void ensureChatBrowserPush();
         const disconnect = connectChatWs();
         const unsub = subscribeChatWs((event) => {
             if (event.type !== 'message')
@@ -153,6 +155,20 @@ export function ChatNotificationHost() {
             disconnect();
         };
     }, [ensureLabels, meId, labelByUserId, upsertNotification]);
+
+    useEffect(() => {
+        if (!('serviceWorker' in navigator))
+            return;
+        const onMessage = (event: MessageEvent) => {
+            const data = event.data as { type?: string; url?: string } | null;
+            if (!data || data.type !== 'chat-notification-open' || typeof data.url !== 'string')
+                return;
+            const next = new URL(data.url, window.location.origin);
+            void router.navigate(`${next.pathname}${next.search}`);
+        };
+        navigator.serviceWorker.addEventListener('message', onMessage);
+        return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+    }, []);
 
     useEffect(() => () => {
         for (const timer of timersRef.current.values())

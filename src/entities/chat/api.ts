@@ -616,3 +616,30 @@ export async function toggleChatReaction(
     const items = Array.isArray(raw) ? raw : (Array.isArray((raw as Record<string, unknown>).items) ? (raw as Record<string, unknown>).items : [raw]);
     return parseChatReactions(Array.isArray(raw) ? raw : items);
 }
+
+export async function fetchChatPushConfig(): Promise<{ enabled: boolean; publicKey: string }> {
+    const res = await apiFetch(`${CHAT}/push/vapid-public-key`);
+    const raw = await readJson(res);
+    return {
+        enabled: raw.enabled === true,
+        publicKey: typeof raw.publicKey === 'string' ? raw.publicKey : '',
+    };
+}
+
+export async function saveChatPushSubscription(subscription: PushSubscriptionJSON): Promise<void> {
+    const res = await apiFetch(`${CHAT}/push/subscription`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription),
+    });
+    await readJson(res);
+}
+
+export async function deleteChatPushSubscription(endpoint: string): Promise<void> {
+    const res = await apiFetch(`${CHAT}/push/subscription`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint }),
+    });
+    await readJson(res);
+}

@@ -7,3 +7,4 @@ export * from './lib/chatMediaCatalog';
 export * from './lib/useChatUnreadTotal';
 export * from './lib/chatNotificationSession';
 export * from './lib/chatNotificationPreview';
+export * from './lib/chatBrowserPush';
