@@ -76,6 +76,7 @@ export type AnalyticsReport = {
 };
 
 const NONE = 'none';
+const CONTINUOUS_BLOCK_DAYS = 14;
 
 function isoOf(date: Date): string {
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -140,13 +141,21 @@ export function buildVacationAnalytics(input: AnalyticsInput): AnalyticsReport {
 
     const away = new Map<string, Set<number>>();
     const kindDays = new Map<number, Record<AnalyticsAbsenceKind, string[]>>();
+    const annualDates = new Map<number, string[]>();
     const touch = (personId: number) => {
         const current = kindDays.get(personId) ?? { annual: [], sick: [], dayoff: [] };
         kindDays.set(personId, current);
         return current;
     };
     for (const day of input.days) {
-        if (!known.has(day.personId) || day.iso.slice(0, 4) !== String(input.year) || analyticsIsWeekend(day.iso))
+        if (!known.has(day.personId) || day.iso.slice(0, 4) !== String(input.year))
+            continue;
+        if (day.kind === 'annual') {
+            const dates = annualDates.get(day.personId) ?? [];
+            dates.push(day.iso);
+            annualDates.set(day.personId, dates);
+        }
+        if (analyticsIsWeekend(day.iso))
             continue;
         touch(day.personId)[day.kind].push(day.iso);
         const bucket = away.get(day.iso) ?? new Set<number>();
@@ -261,21 +270,21 @@ export function buildVacationAnalytics(input: AnalyticsInput): AnalyticsReport {
 
     const employees: AnalyticsEmployeeRow[] = people.map((person) => {
         const bags = kindDays.get(person.id) ?? { annual: [], sick: [], dayoff: [] };
-        const annual = [...new Set(bags.annual)].sort();
-        const vacationDays = annual.length;
+        const annual = [...new Set(annualDates.get(person.id) ?? [])].sort();
+        const vacationDays = new Set(bags.annual).size;
         let longest = 0;
         let runFrom = '';
         let runTo = '';
         for (const iso of annual) {
             if (!runFrom || !continuesAbsence(runTo, iso)) {
                 if (runFrom)
-                    longest = Math.max(longest, workingDaysBetween(runFrom, runTo));
+                    longest = Math.max(longest, calendarDaysBetween(runFrom, runTo));
                 runFrom = iso;
             }
             runTo = iso;
         }
         if (runFrom)
-            longest = Math.max(longest, workingDaysBetween(runFrom, runTo));
+            longest = Math.max(longest, calendarDaysBetween(runFrom, runTo));
         return {
             id: person.id,
             name: person.name,
@@ -286,7 +295,7 @@ export function buildVacationAnalytics(input: AnalyticsInput): AnalyticsReport {
             remaining: quota - vacationDays,
             longestVacationBlock: longest,
             noVacation: vacationDays === 0,
-            shortBlock: vacationDays > 0 && longest < 10,
+            shortBlock: vacationDays > 0 && longest < CONTINUOUS_BLOCK_DAYS,
             overQuota: vacationDays > quota,
         };
     }).sort((a, b) => b.vacationDays - a.vacationDays || a.name.localeCompare(b.name, 'ru'));
@@ -320,13 +329,9 @@ function continuesAbsence(previous: string, next: string): boolean {
     return cursor === next;
 }
 
-function workingDaysBetween(from: string, to: string): number {
-    let count = 0;
-    for (let cursor = from; cursor <= to; cursor = addDays(cursor, 1)) {
-        if (!analyticsIsWeekend(cursor))
-            count += 1;
-    }
-    return count;
+function calendarDaysBetween(from: string, to: string): number {
+    const ms = dateOf(to).getTime() - dateOf(from).getTime();
+    return Math.round(ms / 86_400_000) + 1;
 }
 
 const SHORT_MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'] as const;

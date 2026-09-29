@@ -24,7 +24,6 @@
 }
 
 .vac-an__head p,
-.vac-an__controls p,
 .vac-an__card p,
 .vac-an__wait,
 .vac-an__error {
@@ -51,8 +50,7 @@
   font-weight: 750;
 }
 
-.vac-an__year button,
-.vac-an__controls input {
+.vac-an__year button {
   border: 1px solid var(--app-border, #e2e8f0);
   background: var(--app-surface, #fff);
   color: var(--app-text, #0f172a);
@@ -71,36 +69,6 @@
 .vac-an__year button:hover {
   color: var(--app-accent, #4f46e5);
   background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface, #fff));
-}
-
-.vac-an__controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem 1.1rem;
-  margin-bottom: 0.9rem;
-}
-
-.vac-an__controls label {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  color: #64748b;
-  font-size: 0.84rem;
-  font-weight: 600;
-}
-
-.vac-an__controls input {
-  width: 4.2rem;
-  height: 32px;
-  padding: 0 0.45rem;
-  border-radius: 10px;
-  font-weight: 700;
-  color: var(--app-text, #0f172a);
-}
-
-.vac-an__controls p {
-  margin: 0;
 }
 
 .vac-an__kpis {

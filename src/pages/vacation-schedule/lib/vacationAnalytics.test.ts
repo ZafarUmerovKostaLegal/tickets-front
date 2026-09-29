@@ -40,6 +40,23 @@ describe('buildVacationAnalytics', () => {
         expect(report.freeWeeks.every((week) => week.personDays === 0)).toBe(true);
     });
 
+    it('treats 14 calendar days in a row as a continuous block', () => {
+        const days = [];
+        for (let day = 7; day <= 20; day += 1)
+            days.push({ personId: 1, iso: `2026-09-${String(day).padStart(2, '0')}`, kind: 'annual' as const });
+        const report = buildVacationAnalytics({
+            year: 2026,
+            todayIso: '2026-09-01',
+            teamLimitPercent: 40,
+            quotaWorkingDays: 21,
+            people: [person(1, 'Анна')],
+            days,
+        });
+        expect(report.employees[0]?.longestVacationBlock).toBe(14);
+        expect(report.employees[0]?.shortBlock).toBe(false);
+        expect(report.employees[0]?.remaining).toBe(11);
+    });
+
     it('does not flag a team that stays inside the limit', () => {
         const report = buildVacationAnalytics({
             year: 2026,

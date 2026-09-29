@@ -107,8 +107,6 @@ export function VacationAnalyticsPanel({ year, onYearChange }: Props) {
     const [people, setPeople] = useState<AnalyticsPerson[] | null>(null);
     const [days, setDays] = useState<AnalyticsAbsence[]>([]);
     const [error, setError] = useState<string | null>(null);
-    const [limitPercent, setLimitPercent] = useState(40);
-    const [quota, setQuota] = useState(20);
 
     useEffect(() => {
         let cancelled = false;
@@ -146,10 +144,10 @@ export function VacationAnalyticsPanel({ year, onYearChange }: Props) {
             todayIso: todayIso(),
             people,
             days,
-            teamLimitPercent: limitPercent,
-            quotaWorkingDays: quota,
+            teamLimitPercent: 40,
+            quotaWorkingDays: 21,
         });
-    }, [days, limitPercent, people, quota, year]);
+    }, [days, people, year]);
 
     const stepYear = (delta: number) => {
         onYearChange(Math.min(2100, Math.max(2000, year + delta)));
@@ -172,47 +170,16 @@ export function VacationAnalyticsPanel({ year, onYearChange }: Props) {
                     <button type="button" onClick={() => stepYear(1)} aria-label="Следующий год">›</button>
                 </div>
             </div>
-            <div className="vac-an__controls">
-                <label>
-                    Лимит в команде, %
-                    <input
-                        type="number"
-                        min={10}
-                        max={100}
-                        step={5}
-                        value={limitPercent}
-                        onChange={(event) => setLimitPercent(clampNumber(event.target.value, 40, 10, 100))}
-                    />
-                </label>
-                <label>
-                    Норма отпуска, раб. дн.
-                    <input
-                        type="number"
-                        min={10}
-                        max={40}
-                        step={1}
-                        value={quota}
-                        onChange={(event) => setQuota(clampNumber(event.target.value, 20, 10, 40))}
-                    />
-                </label>
-                <p>Суббота и воскресенье не считаются. Удалёнка и командировки в нагрузку не входят.</p>
-            </div>
             {error ? <p className="vac-an__error">{error}</p> : null}
-            {!report ? <p className="vac-an__wait">Считаем отсутствие по командам…</p> : <AnalyticsBody report={report} quota={quota} />}
+            {!report ? <p className="vac-an__wait">Считаем отсутствие по командам…</p> : <AnalyticsBody report={report} />}
         </section>
     );
 }
 
-function clampNumber(raw: string, fallback: number, min: number, max: number): number {
-    const value = Number(raw);
-    if (!Number.isFinite(value))
-        return fallback;
-    return Math.min(max, Math.max(min, Math.round(value)));
-}
-
 const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+const VACATION_QUOTA_DAYS = 21;
 
-function AnalyticsBody({ report, quota }: { report: AnalyticsReport; quota: number }) {
+function AnalyticsBody({ report }: { report: AnalyticsReport }) {
     const conflictPreview = report.conflicts.slice(0, 8);
     return (
         <>
@@ -223,7 +190,7 @@ function AnalyticsBody({ report, quota }: { report: AnalyticsReport; quota: numb
                 </article>
                 <article>
                     <b>{report.averageVacation.toFixed(1)}</b>
-                    <span>в среднем на человека, норма {quota}</span>
+                    <span>в среднем на человека, норма {VACATION_QUOTA_DAYS} дн.</span>
                 </article>
                 <article>
                     <b className={report.conflicts.length > 0 ? 'is-bad' : undefined}>{report.conflicts.length}</b>
@@ -241,7 +208,7 @@ function AnalyticsBody({ report, quota }: { report: AnalyticsReport; quota: numb
 
             <section className="vac-an__card">
                 <h3>Нагрузка по месяцам</h3>
-                <p>Доля рабочих дней, которые команда провела в отпуске, на больничном или в неоплачиваемом отпуске. Красным — месяц в среднем выше лимита.</p>
+                <p>Доля рабочих дней вне офиса: отпуск, больничный и неоплачиваемый. Красным — месяц, где в среднем отсутствует больше 40% команды.</p>
                 <div className="vac-an__heat-scroll">
                     <div className="vac-an__heat">
                         <div />
@@ -308,15 +275,15 @@ function AnalyticsBody({ report, quota }: { report: AnalyticsReport; quota: numb
                                     <td>{row.name}</td>
                                     <td>{row.teamName}</td>
                                     <td>
-                                        <span className="vac-an__bar" aria-hidden><i style={{ width: `${Math.min(100, row.vacationDays / quota * 100)}%` }} /></span>
+                                        <span className="vac-an__bar" aria-hidden><i style={{ width: `${Math.min(100, row.vacationDays / VACATION_QUOTA_DAYS * 100)}%` }} /></span>
                                         {row.vacationDays} дн.
                                     </td>
                                     <td className={row.remaining < 0 ? 'is-bad' : undefined}>{row.remaining}</td>
                                     <td>{row.sickDays}</td>
                                     <td>{row.dayOffDays}</td>
                                     <td>
-                                        {row.noVacation ? <em className="vac-an__tag is-warn">нет отпуска</em> : null}
-                                        {row.shortBlock ? <em className="vac-an__tag">нет блока от 10 дн.</em> : null}
+                                        {row.noVacation ? <em className="vac-an__tag is-warn">не запланирован</em> : null}
+                                        {row.shortBlock ? <em className="vac-an__tag">нет 14 непрерывных дн.</em> : null}
                                         {row.overQuota ? <em className="vac-an__tag is-warn">больше нормы</em> : null}
                                     </td>
                                 </tr>
