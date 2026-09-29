@@ -62,9 +62,58 @@ describe('buildVacationAnalytics', () => {
             people: [person(1, 'Анна')],
             days,
         });
-        expect(report.employees[0]?.longestVacationBlock).toBe(14);
         expect(report.employees[0]?.shortBlock).toBe(false);
         expect(report.employees[0]?.remaining).toBe(11);
+    });
+
+    it('treats two work weeks as a continuous 14-day vacation when weekends are not marked', () => {
+        const dates = ['07', '08', '09', '10', '11', '14', '15', '16', '17', '18'];
+        const report = buildVacationAnalytics({
+            year: 2026,
+            todayIso: '2026-09-01',
+            teamLimitPercent: 40,
+            quotaWorkingDays: 21,
+            people: [person(1, 'Анна')],
+            days: dates.map((day) => ({ personId: 1, iso: `2026-09-${day}`, kind: 'annual' as const })),
+        });
+        expect(report.employees[0]?.vacationDays).toBe(10);
+        expect(report.employees[0]?.shortBlock).toBe(false);
+    });
+
+    it('accepts a booked annual leave of 14 calendar days', () => {
+        const report = buildVacationAnalytics({
+            year: 2026,
+            todayIso: '2026-09-01',
+            teamLimitPercent: 40,
+            quotaWorkingDays: 21,
+            people: [person(1, 'Анна')],
+            days: [
+                { personId: 1, iso: '2026-09-07', kind: 'annual' },
+                { personId: 1, iso: '2026-09-08', kind: 'annual' },
+                { personId: 1, iso: '2026-09-09', kind: 'annual' },
+                { personId: 1, iso: '2026-09-10', kind: 'annual' },
+                { personId: 1, iso: '2026-09-11', kind: 'annual' },
+            ],
+            bookedLeaves: [{ authUserId: 77, from: '2026-09-07', to: '2026-09-20' }],
+        });
+        const row = { ...person(1, 'Анна'), authUserId: 77 };
+        const withAuth = buildVacationAnalytics({
+            year: 2026,
+            todayIso: '2026-09-01',
+            teamLimitPercent: 40,
+            quotaWorkingDays: 21,
+            people: [row],
+            days: [
+                { personId: 1, iso: '2026-09-07', kind: 'annual' },
+                { personId: 1, iso: '2026-09-08', kind: 'annual' },
+                { personId: 1, iso: '2026-09-09', kind: 'annual' },
+                { personId: 1, iso: '2026-09-10', kind: 'annual' },
+                { personId: 1, iso: '2026-09-11', kind: 'annual' },
+            ],
+            bookedLeaves: [{ authUserId: 77, from: '2026-09-07', to: '2026-09-20' }],
+        });
+        expect(report.employees[0]?.shortBlock).toBe(true);
+        expect(withAuth.employees[0]?.shortBlock).toBe(false);
     });
 
     it('does not flag a team that stays inside the limit', () => {

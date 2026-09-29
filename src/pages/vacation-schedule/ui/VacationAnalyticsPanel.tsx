@@ -3,14 +3,17 @@ import { listTimeTrackingTeams, type TimeTrackingTeamRow } from '@entities/time-
 import {
     getVacationRosterHidden,
     listVacationAbsenceDays,
+    listVacationLeaveRequests,
     listVacationScheduleEmployees,
     type VacationAbsenceDayApi,
+    type VacationLeaveRequestApi,
     type VacationScheduleEmployeeApi,
 } from '@entities/vacation';
 import {
     buildVacationAnalytics,
     formatAnalyticsRange,
     type AnalyticsAbsence,
+    type AnalyticsBookedLeave,
     type AnalyticsConflictRange,
     type AnalyticsPerson,
     type AnalyticsReport,
@@ -73,6 +76,7 @@ function toPeople(
             name: employee.full_name.trim() || 'Сотрудник',
             teamId: team?.id ?? 'none',
             teamName: team?.name ?? 'Без команды',
+            authUserId: authId,
         });
     }
     return people;
@@ -93,6 +97,18 @@ function toAbsences(days: VacationAbsenceDayApi[]): AnalyticsAbsence[] {
     return out;
 }
 
+const BOOKED_LEAVE_STATUSES = new Set(['pending', 'pending_final', 'approved']);
+
+function toBookedLeaves(requests: VacationLeaveRequestApi[]): AnalyticsBookedLeave[] {
+    return requests
+        .filter((request) => request.kind === 'annual_vacation' && BOOKED_LEAVE_STATUSES.has(request.status))
+        .map((request) => ({
+            authUserId: request.employee_user_id,
+            from: request.date_from.slice(0, 10),
+            to: request.date_to.slice(0, 10),
+        }));
+}
+
 function heatStyle(percent: number, over: boolean): { background: string; color: string } | undefined {
     if (percent <= 0)
         return undefined;
@@ -107,6 +123,7 @@ function heatStyle(percent: number, over: boolean): { background: string; color:
 export function VacationAnalyticsPanel({ year, onYearChange }: Props) {
     const [people, setPeople] = useState<AnalyticsPerson[] | null>(null);
     const [days, setDays] = useState<AnalyticsAbsence[]>([]);
+    const [bookedLeaves, setBookedLeaves] = useState<AnalyticsBookedLeave[]>([]);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -118,12 +135,14 @@ export function VacationAnalyticsPanel({ year, onYearChange }: Props) {
             listTimeTrackingTeams().catch(() => [] as TimeTrackingTeamRow[]),
             listVacationAbsenceDays(year),
             getVacationRosterHidden().catch(() => ({ authUserIds: [] as number[], employeeIds: [] as number[] })),
+            listVacationLeaveRequests({ scope: 'all', status: 'any' }).catch(() => [] as VacationLeaveRequestApi[]),
         ])
-            .then(([employees, teams, absences, hidden]) => {
+            .then(([employees, teams, absences, hidden, requests]) => {
                 if (cancelled)
                     return;
                 setPeople(toPeople(employees, teams, new Set(hidden.authUserIds), new Set(hidden.employeeIds)));
                 setDays(toAbsences(absences));
+                setBookedLeaves(toBookedLeaves(requests));
             })
             .catch((err: unknown) => {
                 if (cancelled)
@@ -147,8 +166,9 @@ export function VacationAnalyticsPanel({ year, onYearChange }: Props) {
             days,
             teamLimitPercent: 40,
             quotaWorkingDays: 21,
+            bookedLeaves,
         });
-    }, [days, people, year]);
+    }, [bookedLeaves, days, people, year]);
 
     const stepYear = (delta: number) => {
         onYearChange(Math.min(2100, Math.max(2000, year + delta)));

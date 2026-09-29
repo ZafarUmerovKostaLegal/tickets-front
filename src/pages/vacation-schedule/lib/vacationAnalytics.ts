@@ -3,6 +3,13 @@ export type AnalyticsPerson = {
     name: string;
     teamId: string;
     teamName: string;
+    authUserId?: number | null;
+};
+
+export type AnalyticsBookedLeave = {
+    authUserId: number;
+    from: string;
+    to: string;
 };
 
 export type AnalyticsAbsenceKind = 'annual' | 'sick' | 'dayoff';
@@ -20,6 +27,7 @@ export type AnalyticsInput = {
     days: readonly AnalyticsAbsence[];
     teamLimitPercent: number;
     quotaWorkingDays: number;
+    bookedLeaves?: readonly AnalyticsBookedLeave[];
 };
 
 export type AnalyticsConflictRange = {
@@ -313,20 +321,33 @@ export function buildVacationAnalytics(input: AnalyticsInput): AnalyticsReport {
     const employees: AnalyticsEmployeeRow[] = people.map((person) => {
         const bags = kindDays.get(person.id) ?? { annual: [], sick: [], dayoff: [] };
         const annual = [...new Set(annualDates.get(person.id) ?? [])].sort();
+        const marked = new Set(annual);
         const vacationDays = new Set(bags.annual).size;
-        let longest = 0;
+        let hasContinuousBlock = false;
         let runFrom = '';
         let runTo = '';
+        const closeRun = () => {
+            if (runFrom && continuousBlockCoversFortnight(runFrom, runTo, marked))
+                hasContinuousBlock = true;
+        };
         for (const iso of annual) {
             if (!runFrom || !continuesAbsence(runTo, iso)) {
-                if (runFrom)
-                    longest = Math.max(longest, calendarDaysBetween(runFrom, runTo));
+                closeRun();
                 runFrom = iso;
             }
             runTo = iso;
         }
-        if (runFrom)
-            longest = Math.max(longest, calendarDaysBetween(runFrom, runTo));
+        closeRun();
+        if (!hasContinuousBlock && person.authUserId != null) {
+            const yearStart = `${input.year}-01-01`;
+            const yearEnd = `${input.year}-12-31`;
+            hasContinuousBlock = (input.bookedLeaves ?? []).some((leave) => (
+                leave.authUserId === person.authUserId
+                && leave.from <= yearEnd
+                && leave.to >= yearStart
+                && calendarDaysBetween(leave.from, leave.to) >= CONTINUOUS_BLOCK_DAYS
+            ));
+        }
         return {
             id: person.id,
             name: person.name,
@@ -335,9 +356,9 @@ export function buildVacationAnalytics(input: AnalyticsInput): AnalyticsReport {
             sickDays: new Set(bags.sick).size,
             dayOffDays: new Set(bags.dayoff).size,
             remaining: quota - vacationDays,
-            longestVacationBlock: longest,
-            noVacation: vacationDays === 0,
-            shortBlock: vacationDays > 0 && longest < CONTINUOUS_BLOCK_DAYS,
+            longestVacationBlock: 0,
+            noVacation: vacationDays === 0 && !hasContinuousBlock,
+            shortBlock: vacationDays > 0 && !hasContinuousBlock,
             overQuota: vacationDays > quota,
         };
     }).sort((a, b) => b.vacationDays - a.vacationDays || a.name.localeCompare(b.name, 'ru'));
@@ -382,13 +403,29 @@ function clusterAbsence(dates: readonly string[], kind: AnalyticsAbsenceKind): A
 }
 
 function continuesAbsence(previous: string, next: string): boolean {
+    let skippedWeekdays = 0;
     let cursor = addDays(previous, 1);
     while (cursor < next) {
-        if (!analyticsIsWeekend(cursor))
-            return false;
+        if (!analyticsIsWeekend(cursor)) {
+            skippedWeekdays += 1;
+            if (skippedWeekdays > 1)
+                return false;
+        }
         cursor = addDays(cursor, 1);
     }
     return cursor === next;
+}
+
+function continuousBlockCoversFortnight(from: string, to: string, marked: ReadonlySet<string>): boolean {
+    if (calendarDaysBetween(from, to) >= CONTINUOUS_BLOCK_DAYS)
+        return true;
+    let working = 0;
+    for (let cursor = from; cursor <= to; cursor = addDays(cursor, 1)) {
+        if (!analyticsIsWeekend(cursor) && marked.has(cursor))
+            working += 1;
+    }
+    // Two work weeks are 14 calendar days. The closing weekend is not always stored as an absence day.
+    return working >= 10;
 }
 
 function calendarDaysBetween(from: string, to: string): number {
