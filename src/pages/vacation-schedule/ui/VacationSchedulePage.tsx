@@ -7,6 +7,7 @@ import { AppBackButton, AppHomeLogo } from '@shared/ui';
 import { absenceKindToUi, isVacationSystemRowId, vacationAttendanceMarksFromApi, type VacationAbsenceKind, type VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
 import { canDecideVacationLeaveRequests, canEditVacationSchedule, canViewVacationManualEntryDocs } from '../model/vacationScheduleAccess';
 import { VacationAbsenceRequestModal } from './VacationAbsenceRequestModal';
+import { VacationAnalyticsPanel } from './VacationAnalyticsPanel';
 import { VacationCalendarFilters } from './VacationCalendarFilters';
 import { VacationDayDetails, type VacationDayDetailRow } from './VacationDayDetails';
 import { VacationMonthPanel } from './VacationMonthPanel';
@@ -38,7 +39,7 @@ import {
 } from '../lib/vacationCalendarFacts';
 import './VacationSchedulePage.css';
 
-type View = 'calendar' | 'mine' | 'to_decide' | 'all';
+type View = 'calendar' | 'analytics' | 'mine' | 'to_decide' | 'all';
 
 const VIEW_IDS = new Set<View>(['calendar', 'mine', 'to_decide', 'all']);
 
@@ -531,7 +532,7 @@ export function VacationSchedulePage() {
         setScheduleYear(year);
         setViewMonth(month);
     };
-    const requestsOpen = view !== 'calendar';
+    const section = view === 'calendar' ? 'calendar' : view === 'analytics' ? 'analytics' : 'requests';
     const switchRef = useRef<HTMLElement>(null);
     const [switchThumb, setSwitchThumb] = useState({ x: 0, y: 0, w: 0, h: 0 });
     useLayoutEffect(() => {
@@ -545,7 +546,7 @@ export function VacationSchedulePage() {
             w: active.offsetWidth,
             h: active.offsetHeight,
         });
-    }, [requestsOpen, requestsBadge]);
+    }, [section, requestsBadge]);
     const showToDecideAttention = view === 'calendar' && canDecideRequests && counts.toDecideCount > 0;
     const showMinePendingAttention = view === 'calendar' && counts.minePendingCount > 0;
 
@@ -578,16 +579,24 @@ export function VacationSchedulePage() {
                             />
                             <button
                                 type="button"
-                                className={`vac-switch__item${!requestsOpen ? ' vac-switch__item--on' : ''}`}
-                                aria-current={!requestsOpen ? 'page' : undefined}
+                                className={`vac-switch__item${section === 'calendar' ? ' vac-switch__item--on' : ''}`}
+                                aria-current={section === 'calendar' ? 'page' : undefined}
                                 onClick={() => setView('calendar')}
                             >
                                 Календарь
                             </button>
                             <button
                                 type="button"
-                                className={`vac-switch__item${requestsOpen ? ' vac-switch__item--on' : ''}`}
-                                aria-current={requestsOpen ? 'page' : undefined}
+                                className={`vac-switch__item${section === 'analytics' ? ' vac-switch__item--on' : ''}`}
+                                aria-current={section === 'analytics' ? 'page' : undefined}
+                                onClick={() => setView('analytics')}
+                            >
+                                Анализ
+                            </button>
+                            <button
+                                type="button"
+                                className={`vac-switch__item${section === 'requests' ? ' vac-switch__item--on' : ''}`}
+                                aria-current={section === 'requests' ? 'page' : undefined}
                                 onClick={openRequests}
                             >
                                 Заявки
@@ -624,10 +633,12 @@ export function VacationSchedulePage() {
                 ) : null}
                 <div className="vacation-schedule-page__body">
                     <div
-                        key={requestsOpen ? 'requests' : 'calendar'}
-                        className={`vacation-schedule-page__pane${requestsOpen ? ' is-requests' : ' is-calendar'}`}
+                        key={section}
+                        className={`vacation-schedule-page__pane is-${section}`}
                     >
-                    {requestsOpen ? (
+                    {section === 'analytics' ? (
+                        <VacationAnalyticsPanel year={scheduleYear} onYearChange={setScheduleYear} />
+                    ) : section === 'requests' ? (
                         <div className="vac-requests">
                             {canDecideRequests ? (
                                 <div className="vac-tabs" role="tablist" aria-label="Какие заявки показать">
@@ -658,7 +669,7 @@ export function VacationSchedulePage() {
                                 </div>
                             ) : null}
                             <VacationLeaveRequestsPanel
-                                mode={view}
+                                mode={view === 'to_decide' || view === 'all' ? view : 'mine'}
                                 refreshToken={refreshToken}
                                 onScheduleMayHaveChanged={() => setRefreshToken((value) => value + 1)}
                             />

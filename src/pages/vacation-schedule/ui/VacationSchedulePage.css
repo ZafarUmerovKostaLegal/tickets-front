@@ -398,14 +398,17 @@ span.vac-month__who {
 
 .vac-cal:not(.vac-cal--month) .vac-cal__num--ring {
   position: relative;
-  width: min(1.35rem, 92%);
-  height: auto;
-  aspect-ratio: 1;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex: none;
   background: transparent;
   box-shadow: none;
   color: var(--app-text, #1e293b);
-  font-size: 0.68rem;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
 }
 
 .vac-cal:not(.vac-cal--month) .vac-cal__num--ring.vac-cal__num--weekend {
@@ -414,7 +417,7 @@ span.vac-month__who {
 
 .vac-cal:not(.vac-cal--month) .vac-cal__num--today {
   background: transparent;
-  box-shadow: 0 0 0 1.25px var(--app-accent, #4f46e5);
+  box-shadow: 0 0 0 2px var(--app-accent, #4f46e5);
   color: var(--app-accent, #4f46e5);
   font-weight: 700;
 }
@@ -428,11 +431,10 @@ span.vac-month__who {
   position: absolute;
   inset: 0;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 22px;
+  height: 22px;
   overflow: visible;
   pointer-events: none;
-  shape-rendering: geometricPrecision;
 }
 
 .vac-cal__digit {

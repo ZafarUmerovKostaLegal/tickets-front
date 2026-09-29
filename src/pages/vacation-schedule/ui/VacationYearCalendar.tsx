@@ -105,29 +105,39 @@ function DayCell({
     );
 }
 
+function ringSectorPath(radius: number, startDeg: number, sweepDeg: number): string {
+    const cx = 12;
+    const cy = 12;
+    const start = ((startDeg - 90) * Math.PI) / 180;
+    const end = ((startDeg + sweepDeg - 90) * Math.PI) / 180;
+    const x1 = cx + radius * Math.cos(start);
+    const y1 = cy + radius * Math.sin(start);
+    const x2 = cx + radius * Math.cos(end);
+    const y2 = cy + radius * Math.sin(end);
+    const large = sweepDeg > 180 ? 1 : 0;
+    return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius} ${radius} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+}
+
 function DayRing({ colors }: { colors: readonly string[] }) {
-    const radius = 10.25;
-    const turn = 2 * Math.PI * radius;
-    const count = colors.length;
-    const gap = count > 1 ? 4.2 : 0;
-    const sector = turn / count;
-    const dash = Math.max(sector - gap, 1);
+    const radius = 9.15;
+    if (colors.length === 1) {
+        return (
+            <svg className="vac-cal__ring" viewBox="0 0 24 24" aria-hidden>
+                <circle cx="12" cy="12" r={radius} fill="none" stroke={colors[0]} strokeWidth="2.7" />
+            </svg>
+        );
+    }
+    const slice = 360 / colors.length;
     return (
         <svg className="vac-cal__ring" viewBox="0 0 24 24" aria-hidden>
             {colors.map((color, index) => (
-                <circle
+                <path
                     key={`${color}-${index}`}
-                    cx="12"
-                    cy="12"
-                    r={radius}
+                    d={ringSectorPath(radius, index * slice - 0.35, slice + 0.7)}
                     fill="none"
                     stroke={color}
-                    strokeWidth="1.25"
-                    strokeLinecap="round"
-                    vectorEffect="non-scaling-stroke"
-                    strokeDasharray={count > 1 ? `${dash} ${turn - dash}` : undefined}
-                    strokeDashoffset={count > 1 ? -(index * sector + gap / 2) : undefined}
-                    transform="rotate(-90 12 12)"
+                    strokeWidth="2.7"
+                    strokeLinecap="butt"
                 />
             ))}
         </svg>
