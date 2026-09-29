@@ -1,5 +1,13 @@
 /* Kosta Daily browser push. Served from /chat-sw.js so the scope is the whole site. */
 
+self.addEventListener('install', (event) => {
+    event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener('activate', (event) => {
+    event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('push', (event) => {
     let data = {};
     try {
@@ -39,19 +47,6 @@ async function showChatNotification(data) {
     const icon = new URL('/notification-icon.png', self.location.origin).href;
     const image = typeof data.image === 'string' && data.image.startsWith('https://') ? data.image : '';
     const url = typeof data.url === 'string' ? data.url : '/kosta-daily';
-    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const viewingThisRoom = windows.some((client) => {
-        if (!client.focused || client.visibilityState !== 'visible')
-            return false;
-        try {
-            const here = new URL(client.url);
-            return here.pathname.includes('/kosta-daily') && here.searchParams.get('room') === String(roomId);
-        } catch {
-            return false;
-        }
-    });
-    if (viewingThisRoom)
-        return;
     const options = {
         body,
         icon,
@@ -76,13 +71,6 @@ async function openChat(url) {
             continue;
         await client.focus();
         client.postMessage({ type: 'chat-notification-open', url });
-        if (typeof client.navigate === 'function') {
-            try {
-                await client.navigate(url);
-            } catch {
-                /* The page handles the postMessage and opens the room. */
-            }
-        }
         return;
     }
     await self.clients.openWindow(url);

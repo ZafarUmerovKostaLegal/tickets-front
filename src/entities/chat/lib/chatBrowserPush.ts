@@ -4,6 +4,20 @@ const SW_URL = '/chat-sw.js';
 let gestureBound = false;
 let subscribeInFlight: Promise<void> | null = null;
 
+function sameApplicationServerKey(subscription: PushSubscription, next: Uint8Array): boolean {
+    const current = subscription.options?.applicationServerKey;
+    if (!current)
+        return false;
+    const bytes = new Uint8Array(current);
+    if (bytes.length !== next.length)
+        return false;
+    for (let i = 0; i < bytes.length; i++) {
+        if (bytes[i] !== next[i])
+            return false;
+    }
+    return true;
+}
+
 function urlBase64ToUint8Array(value: string): Uint8Array {
     const padded = value + '='.repeat((4 - (value.length % 4)) % 4);
     const base64 = padded.replace(/-/g, '+').replace(/_/g, '/');
@@ -51,15 +65,21 @@ export function showChatOsNotification(input: {
         roomId: input.roomId,
         url: `/kosta-daily?room=${input.roomId}`,
     };
-    const options: NotificationOptions = {
-        body: input.body,
-        icon: '/notification-icon.png',
-        tag: `chat-room-${input.roomId}`,
-        data: { url: payload.url, roomId: input.roomId },
-    };
-    void navigator.serviceWorker.getRegistration()
-        .then((existing) => existing ?? navigator.serviceWorker.register(SW_URL, { scope: '/' }))
-        .then((registration) => registration.showNotification(input.title, options))
+    void navigator.serviceWorker.register(SW_URL, { scope: '/' })
+        .then(() => navigator.serviceWorker.ready)
+        .then((registration) => {
+            const worker = registration.active;
+            if (worker) {
+                worker.postMessage(payload);
+                return;
+            }
+            return registration.showNotification(input.title, {
+                body: input.body,
+                icon: '/notification-icon.png',
+                tag: `chat-room-${input.roomId}`,
+                data: { url: payload.url, roomId: input.roomId },
+            });
+        })
         .catch(() => undefined);
 }
 
@@ -68,8 +88,12 @@ async function subscribeGrantedNow(): Promise<void> {
     const config = await fetchChatPushConfig().catch(() => ({ enabled: false, publicKey: '' }));
     if (!config.enabled || !config.publicKey)
         return;
-    const existing = await registration.pushManager.getSubscription();
+    let existing = await registration.pushManager.getSubscription();
     const applicationServerKey = urlBase64ToUint8Array(config.publicKey);
+    if (existing && !sameApplicationServerKey(existing, applicationServerKey)) {
+        await existing.unsubscribe();
+        existing = null;
+    }
     const subscription = existing ?? await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: applicationServerKey as BufferSource,
