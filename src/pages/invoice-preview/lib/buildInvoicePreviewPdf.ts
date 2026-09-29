@@ -555,6 +555,8 @@ type PdfTimeReportPagePlan = {
     continuation: boolean;
     showDetailTotals: boolean;
     showSummarySection: boolean;
+    /** False on a continuation page that only carries the summary block. */
+    showDetailGrid: boolean;
 };
 
 function paginateDetailRowsForPdf(
@@ -572,6 +574,7 @@ function paginateDetailRowsForPdf(
             continuation: false,
             showDetailTotals: true,
             showSummarySection: true,
+            showDetailGrid: true,
         }];
     }
 
@@ -668,6 +671,7 @@ function paginateDetailRowsForPdf(
                 continuation,
                 showDetailTotals: true,
                 showSummarySection: true,
+                showDetailGrid: true,
             });
             break;
         }
@@ -682,14 +686,52 @@ function paginateDetailRowsForPdf(
         if (take < 1)
             take = 1;
 
+        // Rows can fill the page without the summary and then the loop ends,
+        // so the summary table is never drawn. Keep the last rows for a page
+        // that still has room for Summary of services.
+        if (take >= remaining)
+            take = remaining - Math.max(takeWithSummary, 1);
+
+        if (take < 1) {
+            pages.push({
+                slice: trimmed.slice(i, i + 1),
+                continuation,
+                showDetailTotals: true,
+                showSummarySection: false,
+                showDetailGrid: true,
+            });
+            pages.push({
+                slice: [],
+                continuation: true,
+                showDetailTotals: false,
+                showSummarySection: true,
+                showDetailGrid: false,
+            });
+            break;
+        }
+
         pages.push({
             slice: trimmed.slice(i, i + take),
             continuation,
             showDetailTotals: false,
             showSummarySection: false,
+            showDetailGrid: true,
         });
         i += take;
         pageIndex++;
+    }
+
+    if (!pages.some((p) => p.showSummarySection)) {
+        const lastDetail = [...pages].reverse().find((p) => p.showDetailGrid && p.slice.some((r) => r.date || r.description || r.hours));
+        if (lastDetail)
+            lastDetail.showDetailTotals = true;
+        pages.push({
+            slice: [],
+            continuation: pages.length > 0,
+            showDetailTotals: false,
+            showSummarySection: true,
+            showDetailGrid: false,
+        });
     }
 
     return pages;
@@ -1097,6 +1139,7 @@ function drawSingleTimeReportPdfPage(
         continuation: boolean;
         showDetailTotals: boolean;
         showSummarySection: boolean;
+        showDetailGrid?: boolean;
         showInitiatorName?: boolean;
     },
 ): void {
@@ -1120,8 +1163,9 @@ function drawSingleTimeReportPdfPage(
     const summaryBody = trimmedSummary.map((r) => [r.initials, r.name, r.title, r.hours, r.hourlyRate, r.totalPrice] as const);
     const summaryRows = Math.max(summaryBody.length, 1);
 
+    const showDetailGrid = opts.showDetailGrid !== false;
     let detailSlice = slice;
-    if (opts.showSummarySection) {
+    if (showDetailGrid && opts.showSummarySection) {
         const expenseBodyForReserve = trimTrailingEmptyDetailSlots(pack.expenseSlots)
             .map((r) => [r.date, r.description, r.amount] as const);
         const mehnatBodyForReserve = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? [])
@@ -1167,39 +1211,42 @@ function drawSingleTimeReportPdfPage(
             showInitiatorName,
         );
     }
-    else {
+    else if (showDetailGrid) {
         detailSlice = trimDetailSliceToFitPage(slice, yGridTop, tableW, detailHeaders, false, font, fontBold, showInitiatorName);
     }
 
-    const detailBody = detailSlice.map((r) => detailPdfRowCells(r, showInitiatorName));
-    const nRows = Math.max(detailSlice.length, 1);
+    let yAfterDetail = yGridTop;
+    if (showDetailGrid) {
+        const detailBody = detailSlice.map((r) => detailPdfRowCells(r, showInitiatorName));
+        const nRows = Math.max(detailSlice.length, 1);
 
-    const yAfterDetail = drawTimeReportGridTable(page, {
-        tableLeft: ML,
-        tableW,
-        yTopPdf: yGridTop,
-        colWeights: detailWeights,
-        headers: detailHeaders,
-        bodyRows: nRows,
-        footerKind: 'detail',
-        summaryCurrency: null,
-        font,
-        fontBold,
-        bodyTexts: detailBody.length ? detailBody : emptyDetail,
-        rightAlignedBodyCols: detailRight,
-        wrapBodyCols: detailWrap,
-        fixedFsBodyCols: detailFixed,
-        showInnerTotal: opts.showDetailTotals,
-        totalLabel: labels.total,
-        footerTotals: opts.showDetailTotals
-            ? {
-                detail: {
-                    hours: pack.detailTotalHoursDisplay,
-                    amount: pack.detailTotalAmountDisplay,
-                },
-            }
-            : null,
-    });
+        yAfterDetail = drawTimeReportGridTable(page, {
+            tableLeft: ML,
+            tableW,
+            yTopPdf: yGridTop,
+            colWeights: detailWeights,
+            headers: detailHeaders,
+            bodyRows: nRows,
+            footerKind: 'detail',
+            summaryCurrency: null,
+            font,
+            fontBold,
+            bodyTexts: detailBody.length ? detailBody : emptyDetail,
+            rightAlignedBodyCols: detailRight,
+            wrapBodyCols: detailWrap,
+            fixedFsBodyCols: detailFixed,
+            showInnerTotal: opts.showDetailTotals,
+            totalLabel: labels.total,
+            footerTotals: opts.showDetailTotals
+                ? {
+                    detail: {
+                        hours: pack.detailTotalHoursDisplay,
+                        amount: pack.detailTotalAmountDisplay,
+                    },
+                }
+                : null,
+        });
+    }
 
     if (!opts.showSummarySection) {
         drawTimeReportBandFooter(page, fontBold, pageTag);
@@ -1760,6 +1807,7 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
             continuation: plan.continuation,
             showDetailTotals: plan.showDetailTotals,
             showSummarySection: plan.showSummarySection,
+            showDetailGrid: plan.showDetailGrid,
             showInitiatorName,
         });
         trPageTag++;

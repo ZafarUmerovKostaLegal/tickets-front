@@ -196,8 +196,8 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
                 return;
             setOpen(false);
         };
-        document.addEventListener('mousedown', onDoc);
-        return () => document.removeEventListener('mousedown', onDoc);
+        document.addEventListener('mousedown', onDoc, true);
+        return () => document.removeEventListener('mousedown', onDoc, true);
     }, [open]);
     useEffect(() => {
         if (!open)
