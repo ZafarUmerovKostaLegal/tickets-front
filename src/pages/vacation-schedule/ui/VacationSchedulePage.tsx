@@ -277,7 +277,8 @@ export function VacationSchedulePage() {
         }
         return map;
     }, [marksByDay]);
-    const detailMonth = viewMonth ?? (scheduleYear === today.getFullYear() ? today.getMonth() : 0);
+    const [sideMonth, setSideMonth] = useState(() => new Date().getMonth());
+    const detailMonth = viewMonth ?? sideMonth;
     const monthRows = useMemo(() => {
         const fromIso = padIso(scheduleYear, { monthIndex: detailMonth, day: 1 });
         const toIso = padIso(scheduleYear, { monthIndex: detailMonth, day: 31 });
@@ -496,6 +497,24 @@ export function VacationSchedulePage() {
         setViewMonth(month);
         setOpenToken((value) => value + 1);
     };
+    const stepSideMonth = (delta: number) => {
+        const next = sideMonth + delta;
+        if (next < 0) {
+            if (scheduleYear <= 2000)
+                return;
+            setScheduleYear(scheduleYear - 1);
+            setSideMonth(11);
+            return;
+        }
+        if (next > 11) {
+            if (scheduleYear >= 2100)
+                return;
+            setScheduleYear(scheduleYear + 1);
+            setSideMonth(0);
+            return;
+        }
+        setSideMonth(next);
+    };
     const stepCalendarMonth = (delta: number) => {
         const current = viewMonth ?? today.getMonth();
         let month = current + delta;
@@ -711,6 +730,7 @@ export function VacationSchedulePage() {
                                 requestedMonth={null}
                                 onMonthChange={setViewMonth}
                                 occupancy={occupancy}
+                                focusMonth={sideMonth}
                                 onOpenMonth={(monthIndex) => openCalendarMonth(monthIndex)}
                                 selectedPeriod={selectedPeriod}
                                 onSelectDay={(monthIndex, day) => {
@@ -758,6 +778,7 @@ export function VacationSchedulePage() {
                                 rows={monthRows}
                                 showDocs={canViewDocs}
                                 onToggle={() => setMonthPanelOpen((open) => !open)}
+                                onStepMonth={stepSideMonth}
                                 onOpenCard={setDetailEmployeeId}
                                 onOpenDocs={(employeeId, label) => {
                                     const hit = (daysByEmployee.get(employeeId) ?? []).find((day) => day.monthIndex === detailMonth);

@@ -30,6 +30,7 @@ type Props = {
     selectedPeriod?: VacationCalendarPeriod | null;
     onSelectDay?: (monthIndex: number, day: number) => void;
     occupancy?: ReadonlyMap<string, number>;
+    focusMonth?: number | null;
     onOpenMonth?: (monthIndex: number) => void;
 };
 
@@ -234,6 +235,7 @@ export function VacationYearCalendar({
     selectedPeriod = null,
     onSelectDay,
     occupancy,
+    focusMonth = null,
     onOpenMonth,
 }: Props) {
     const stageRef = useRef<HTMLDivElement>(null);
@@ -450,7 +452,7 @@ export function VacationYearCalendar({
                         <article
                             key={name}
                             ref={(node) => { cardRefs.current[index] = node; }}
-                            className={`vac-cal__month${index === currentMonth ? ' vac-cal__month--now' : ''}${source ? ' is-source' : ''}`}
+                            className={`vac-cal__month${index === currentMonth ? ' vac-cal__month--now' : ''}${index === focusMonth ? ' vac-cal__month--focus' : ''}${source ? ' is-source' : ''}`}
                             onDoubleClick={() => (onOpenMonth ? onOpenMonth(index) : openMonth(index))}
                         >
                             <h2 className="vac-cal__name">{name}</h2>

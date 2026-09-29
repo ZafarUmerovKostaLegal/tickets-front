@@ -185,9 +185,36 @@
 
 .vac-month__heading {
   min-width: 0;
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
+}
+
+.vac-month__nav {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.vac-month__step {
+  width: 1.6rem;
+  height: 1.6rem;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.vac-month__step:hover {
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 10%, transparent);
+  color: var(--app-accent, #4f46e5);
 }
 
 .vac-month__title {
@@ -1462,6 +1489,11 @@ button.vac-cal__cell:not(.vac-cal__cell--lg) {
 .vac-cal__month--now {
   border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 42%, transparent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--app-accent, #4f46e5) 18%, transparent), 0 8px 20px rgba(79, 70, 229, 0.08);
+}
+
+.vac-cal__month--focus {
+  border-color: color-mix(in srgb, var(--app-accent, #4f46e5) 55%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent, #4f46e5) 22%, transparent);
 }
 
 .vac-cal__name,
