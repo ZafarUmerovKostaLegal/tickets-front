@@ -11,6 +11,7 @@ import {
     buildVacationAnalytics,
     formatAnalyticsRange,
     type AnalyticsAbsence,
+    type AnalyticsConflictRange,
     type AnalyticsPerson,
     type AnalyticsReport,
 } from '../lib/vacationAnalytics';
@@ -177,6 +178,15 @@ export function VacationAnalyticsPanel({ year, onYearChange }: Props) {
 }
 
 const MONTHS = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+
+function formatConflictRange(range: AnalyticsConflictRange): string {
+    const span = formatAnalyticsRange(range.from, range.to);
+    if (range.kind === 'sick')
+        return `больничный ${span}`;
+    if (range.kind === 'dayoff')
+        return `неоплачиваемый ${span}`;
+    return span;
+}
 const VACATION_QUOTA_DAYS = 21;
 
 function AnalyticsBody({ report }: { report: AnalyticsReport }) {
@@ -233,9 +243,19 @@ function AnalyticsBody({ report }: { report: AnalyticsReport }) {
                     <p>В команде одновременно отсутствуют больше людей, чем разрешает лимит.</p>
                     <ul>
                         {conflictPreview.length === 0 ? <li><span>Таких периодов нет</span></li> : conflictPreview.map((conflict) => (
-                            <li key={`${conflict.teamId}-${conflict.from}`}>
-                                <span>{conflict.teamName}: {formatAnalyticsRange(conflict.from, conflict.to)}</span>
-                                <b>{conflict.max} из {conflict.size}</b>
+                            <li key={`${conflict.teamId}-${conflict.from}`} className="vac-an__conflict">
+                                <div className="vac-an__conflict-top">
+                                    <span>{conflict.teamName}: {formatAnalyticsRange(conflict.from, conflict.to)}</span>
+                                    <b>{conflict.max} из {conflict.size}</b>
+                                </div>
+                                <ul className="vac-an__people">
+                                    {conflict.people.map((person) => (
+                                        <li key={person.id}>
+                                            <span>{person.name}</span>
+                                            <span>{person.ranges.map(formatConflictRange).join(', ')}</span>
+                                        </li>
+                                    ))}
+                                </ul>
                             </li>
                         ))}
                     </ul>

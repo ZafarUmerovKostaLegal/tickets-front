@@ -32,6 +32,16 @@ describe('buildVacationAnalytics', () => {
         expect(report.conflicts).toEqual([
             expect.objectContaining({ teamName: 'Litigation', from: '2026-09-07', to: '2026-09-07', max: 2, size: 2 }),
         ]);
+        expect(report.conflicts[0]?.people).toEqual([
+            expect.objectContaining({
+                name: 'Анна',
+                ranges: [expect.objectContaining({ from: '2026-09-05', to: '2026-09-11', kind: 'annual' })],
+            }),
+            expect.objectContaining({
+                name: 'Борис',
+                ranges: [expect.objectContaining({ from: '2026-09-07', to: '2026-09-07', kind: 'sick' })],
+            }),
+        ]);
         expect(report.employees.find((row) => row.id === 1)?.shortBlock).toBe(true);
         expect(report.employees.find((row) => row.id === 2)?.noVacation).toBe(true);
         const september = report.heatmap.find((row) => row.teamId === TEAM)?.months[8];

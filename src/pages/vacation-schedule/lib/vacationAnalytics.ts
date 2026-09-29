@@ -22,6 +22,18 @@ export type AnalyticsInput = {
     quotaWorkingDays: number;
 };
 
+export type AnalyticsConflictRange = {
+    from: string;
+    to: string;
+    kind: AnalyticsAbsenceKind;
+};
+
+export type AnalyticsConflictPerson = {
+    id: number;
+    name: string;
+    ranges: AnalyticsConflictRange[];
+};
+
 export type AnalyticsConflict = {
     teamId: string;
     teamName: string;
@@ -29,6 +41,7 @@ export type AnalyticsConflict = {
     to: string;
     max: number;
     size: number;
+    people: AnalyticsConflictPerson[];
 };
 
 export type AnalyticsHeatCell = {
@@ -210,6 +223,30 @@ export function buildVacationAnalytics(input: AnalyticsInput): AnalyticsReport {
     ));
     heatmap.push(heatRow('all', 'Вся компания', people.length, companyAbsent));
 
+    const peopleAwayDuring = (teamId: string, from: string, to: string): AnalyticsConflictPerson[] => {
+        const listed: AnalyticsConflictPerson[] = [];
+        for (const person of byTeam.get(teamId) ?? []) {
+            let present = false;
+            for (let cursor = from; cursor <= to; cursor = addDays(cursor, 1)) {
+                if (!analyticsIsWeekend(cursor) && away.get(cursor)?.has(person.id)) {
+                    present = true;
+                    break;
+                }
+            }
+            if (!present)
+                continue;
+            const bags = kindDays.get(person.id);
+            const ranges = [
+                ...clusterAbsence(annualDates.get(person.id) ?? [], 'annual'),
+                ...clusterAbsence(bags?.sick ?? [], 'sick'),
+                ...clusterAbsence(bags?.dayoff ?? [], 'dayoff'),
+            ].filter((range) => range.from <= to && range.to >= from);
+            listed.push({ id: person.id, name: person.name, ranges });
+        }
+        listed.sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' }));
+        return listed;
+    };
+
     const conflicts: AnalyticsConflict[] = [];
     for (const teamId of teamIds) {
         if (teamId === NONE)
@@ -217,6 +254,10 @@ export function buildVacationAnalytics(input: AnalyticsInput): AnalyticsReport {
         const size = byTeam.get(teamId)?.length ?? 0;
         const limit = teamLimit(size, percent);
         let current: AnalyticsConflict | null = null;
+        const closeConflict = (item: AnalyticsConflict) => {
+            item.people = peopleAwayDuring(item.teamId, item.from, item.to);
+            conflicts.push(item);
+        };
         eachDay(input.year, (iso) => {
             if (analyticsIsWeekend(iso))
                 return;
@@ -234,16 +275,17 @@ export function buildVacationAnalytics(input: AnalyticsInput): AnalyticsReport {
                         to: iso,
                         max: count,
                         size,
+                        people: [],
                     };
                 }
             }
             else if (current) {
-                conflicts.push(current);
+                closeConflict(current);
                 current = null;
             }
         });
         if (current)
-            conflicts.push(current);
+            closeConflict(current);
     }
 
     const yearStart = `${input.year}-01-01`;
@@ -317,6 +359,26 @@ export function buildVacationAnalytics(input: AnalyticsInput): AnalyticsReport {
         employees,
         looksAhead,
     };
+}
+
+function clusterAbsence(dates: readonly string[], kind: AnalyticsAbsenceKind): AnalyticsConflictRange[] {
+    const unique = [...new Set(dates)].sort();
+    const ranges: AnalyticsConflictRange[] = [];
+    let from = '';
+    let to = '';
+    const push = () => {
+        if (from)
+            ranges.push({ from, to, kind });
+    };
+    for (const iso of unique) {
+        if (!from || !continuesAbsence(to, iso)) {
+            push();
+            from = iso;
+        }
+        to = iso;
+    }
+    push();
+    return ranges;
 }
 
 function continuesAbsence(previous: string, next: string): boolean {

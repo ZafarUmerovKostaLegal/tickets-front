@@ -210,6 +210,36 @@
   font-weight: 700;
 }
 
+.vac-an__conflict {
+  display: block;
+}
+
+.vac-an__conflict-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.vac-an__people {
+  margin: 0.35rem 0 0;
+  padding: 0 0 0.15rem;
+}
+
+.vac-an__people li {
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.18rem 0 0.18rem 0.15rem;
+  border-top: none;
+  color: #64748b;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.vac-an__people li span:last-child {
+  font-weight: 650;
+  text-align: right;
+}
+
 .vac-an table {
   width: 100%;
   min-width: 760px;
