@@ -1,4 +1,5 @@
 import { deleteChatPushSubscription, fetchChatPushConfig, saveChatPushSubscription } from '../api';
+import { chatWindowIsInFront } from './chatNotificationSession';
 
 const SW_URL = '/chat-sw.js';
 let gestureBound = false;
@@ -70,7 +71,7 @@ export function showChatOsNotification(input: {
 }): void {
     if (!pushSupported() || Notification.permission !== 'granted')
         return;
-    if (document.visibilityState === 'visible' && document.hasFocus())
+    if (chatWindowIsInFront())
         return;
     const payload = {
         type: 'show-chat-notification',
@@ -99,7 +100,7 @@ async function subscribeGrantedNow(): Promise<void> {
     }
     const subscription = existing ?? await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: applicationServerKey as BufferSource,
+        applicationServerKey: applicationServerKey.slice(),
     });
     const json = subscription.toJSON();
     if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth)

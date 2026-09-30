@@ -1,6 +1,6 @@
 import type { ChatMessage, ChatRoom } from '../types';
 import { formatChatMessagePreview } from './chatRichContent';
-import { getChatNotificationContext } from './chatNotificationSession';
+import { chatWindowIsInFront, getChatNotificationContext } from './chatNotificationSession';
 import { resolveRoomTitle } from './kostaDailyUi';
 
 export function chatMessageNotificationPreview(msg: ChatMessage): string {
@@ -32,7 +32,7 @@ export function shouldShowChatMessageNotification(
         return false;
     if (msg.is_deleted)
         return false;
-    if (document.hidden || !document.hasFocus())
+    if (!chatWindowIsInFront())
         return true;
     const ctx = getChatNotificationContext();
     if (!ctx.onKostaDailyPage)

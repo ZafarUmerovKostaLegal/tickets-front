@@ -59,19 +59,36 @@ async function showChatNotification(data) {
     };
     if (image)
         full.image = image;
-    try {
-        await self.registration.showNotification(title, full);
+    const shown = await showOnce(title, full);
+    if (shown)
         return;
-    } catch {
-        /* Chrome drops the whole card if the icon, image, or actions fail to load. */
-    }
-    try {
-        await self.registration.showNotification(title, { body, tag, renotify: true, data: payload });
+    const plain = await showOnce(title, { body, tag, renotify: true, data: payload });
+    if (plain)
         return;
-    } catch {
-        /* Last attempt is the smallest payload Chrome still accepts. */
-    }
-    await self.registration.showNotification(title, { body, tag, data: payload });
+    await showOnce(title, { body, tag, data: payload });
+}
+
+function showOnce(title, options) {
+    return new Promise((resolve) => {
+        let settled = false;
+        const finish = (ok) => {
+            if (settled)
+                return;
+            settled = true;
+            resolve(ok);
+        };
+        const timer = setTimeout(() => finish(false), 1200);
+        self.registration.showNotification(title, options).then(
+            () => {
+                clearTimeout(timer);
+                finish(true);
+            },
+            () => {
+                clearTimeout(timer);
+                finish(false);
+            },
+        );
+    });
 }
 
 async function openChat(url) {
