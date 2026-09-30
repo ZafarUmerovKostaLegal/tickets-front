@@ -1834,13 +1834,24 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
 
                     {mode === 'create' && allowExpenseBackdate && (<div className={`exp-form-field${errors.expenseDate ? ' exp-form-field--err' : ''}`}>
                         <label className="exp-form-label">Дата расхода <span className="exp-form-req">*</span></label>
-                        <input type="date" className="exp-form-input" value={values.expenseDate} max={todayIsoLocal()} onChange={e => set('expenseDate', e.target.value)} disabled={isView || cbuLoading} />
+                        <input
+                            type="date"
+                            className="exp-form-input exp-form-input--date"
+                            value={values.expenseDate}
+                            max={todayIsoLocal()}
+                            onChange={e => set('expenseDate', e.target.value)}
+                            disabled={isView}
+                        />
                         <p className="exp-form-hint">Можно указать прошедшую дату; курс подставится с cbu.uz на выбранный день.</p>
                         {errors.expenseDate && <p className="exp-form-err-msg" data-err>{errors.expenseDate}</p>}
                     </div>)}
 
                     {mode === 'create' && cbuLoading && (<p className="exp-form-hint">Загрузка курса ЦБ РУз…</p>)}
-                    {mode === 'create' && cbuParsed && !cbuLoading && (<p className="exp-form-hint">Курс UZS/USD подставлен с ЦБ РУз ({cbuParsed.rateDateRu}).</p>)}
+                    {mode === 'create' && cbuParsed && !cbuLoading && (<p className="exp-form-hint">
+                        {cbuParsed.source === 'market'
+                            ? `Сайт ЦБ не ответил. Подставлен резервный курс USD на ${cbuParsed.rateDateRu || 'выбранную дату'}.`
+                            : `Курс UZS/USD подставлен с ЦБ РУз (${cbuParsed.rateDateRu}).`}
+                    </p>)}
                     {mode === 'create' && (cbuError || errors.exchangeRate) && !cbuLoading && (<p className="exp-form-err-msg" role="alert" data-err>{cbuError || errors.exchangeRate}</p>)}
 
                     {(mode === 'edit' || mode === 'view') && values.expenseDate && (<div className="exp-form-field">

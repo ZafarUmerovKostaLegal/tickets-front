@@ -2681,7 +2681,19 @@ body[data-theme='dark'] .exp-table__status-reason--revision .exp-table__status-r
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
-.exp-form-input:disabled,
+.exp-form-input--date {
+  color-scheme: light;
+  min-height: 2.75rem;
+}
+
+.exp-form-input--date::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.85;
+}
+
+body[data-theme='dark'] .exp-form-input--date {
+  color-scheme: dark;
+}
 .exp-form-textarea:disabled,
 .exp-form-select:disabled {
   opacity: 0.65;

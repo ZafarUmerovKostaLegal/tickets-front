@@ -14,6 +14,8 @@ export interface CbuParsed {
     rateDateRu: string;
     uzsPerUsd: number;
     uzsPerUnit: Map<string, number>;
+    /** cbu — официальный ответ ЦБ; market — резервный курс на ту же дату, если сайт ЦБ недоступен. */
+    source?: 'cbu' | 'market';
 }
 
 /** Dev-only direct/proxy origin; production always goes through gateway (no browser CORS to cbu.uz). */
@@ -117,54 +119,67 @@ async function fetchCbuViaGateway(isoDate: string): Promise<CbuParsed> {
         }
         throw new Error(msg);
     }
-    const raw = await res.json() as { rows?: CbuJsonRow[] } | CbuJsonRow[];
+    const raw = await res.json() as { rows?: CbuJsonRow[]; source?: string } | CbuJsonRow[];
     const rows = Array.isArray(raw) ? raw : (raw.rows ?? []);
-    return parseCbuRows(rows);
+    const parsed = parseCbuRows(rows);
+    if (!Array.isArray(raw) && raw.source === 'market')
+        parsed.source = 'market';
+    return parsed;
 }
 
-async function fetchCbuDirectWithFallback(isoDate: string): Promise<CbuParsed> {
-    const base = getCbuOrigin();
-    const anchor = isoDate.trim().slice(0, 10);
-    const urls: string[] = [];
-    const [y, m, d] = anchor.split('-').map(Number);
-    // At most exact day + 2 previous + latest — avoid 8× console noise.
-    if (y && m && d) {
-        const start = new Date(y, m - 1, d);
-        for (let back = 0; back < 3; back++) {
-            const dt = new Date(start);
-            dt.setDate(start.getDate() - back);
-            const yy = dt.getFullYear();
-            const mm = String(dt.getMonth() + 1).padStart(2, '0');
-            const dd = String(dt.getDate()).padStart(2, '0');
-            urls.push(`${base}${CBU_JSON_BASE_PATH}/all/${yy}-${mm}-${dd}/`);
-        }
+const MARKET_RATE_CODES = ['EUR', 'RUB', 'GBP'] as const;
+
+async function fetchMarketParsed(isoDate: string): Promise<CbuParsed> {
+    const res = await withTimeout(
+        fetch(`https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@${isoDate}/v1/currencies/usd.min.json`, {
+            headers: { Accept: 'application/json' },
+        }),
+        8_000,
+        'Резервный курс',
+    );
+    if (!res.ok)
+        throw new Error(`HTTP ${res.status}`);
+    const data = await res.json() as { usd?: Record<string, number> };
+    const usd = data.usd ?? {};
+    const uzs = Number(usd.uzs);
+    if (!(uzs > 0))
+        throw new Error('В резервном курсе нет UZS');
+    const [year, month, day] = isoDate.split('-');
+    const dateRu = `${day}.${month}.${year}`;
+    const rows: CbuJsonRow[] = [
+        { id: 1, Ccy: 'USD', Nominal: '1', Rate: String(uzs), Date: dateRu },
+    ];
+    for (const code of MARKET_RATE_CODES) {
+        const perUsd = Number(usd[code.toLowerCase()]);
+        if (!(perUsd > 0))
+            continue;
+        rows.push({
+            id: rows.length + 1,
+            Ccy: code,
+            Nominal: '1',
+            Rate: String(uzs / perUsd),
+            Date: dateRu,
+        });
     }
-    else {
-        urls.push(`${base}${CBU_JSON_BASE_PATH}/all/${anchor}/`);
-    }
-    urls.push(`${base}${CBU_JSON_BASE_PATH}/`);
-    const errors: string[] = [];
-    for (const url of urls) {
-        try {
-            return parseCbuRows(await fetchCbuRowsFrom(url));
-        }
-        catch (err) {
-            errors.push(err instanceof Error ? err.message : String(err));
-        }
-    }
-    throw new Error(`ЦБ РУз: не удалось получить курс на ${anchor}. ${errors.slice(0, 2).join('; ')}`);
+    const parsed = parseCbuRows(rows);
+    parsed.source = 'market';
+    return parsed;
 }
 
 async function loadCbuParsed(anchor: string): Promise<CbuParsed> {
-    if (!import.meta.env.DEV) {
+    try {
+        return await fetchCbuViaGateway(anchor);
+    }
+    catch {
         try {
-            return await fetchCbuViaGateway(anchor);
+            return await fetchMarketParsed(anchor);
         }
         catch {
-            // Gateway missing/slow — fall back (may CORS in browser).
+            /* Official CBU and the reserve table both failed. One short direct try. */
         }
     }
-    return fetchCbuDirectWithFallback(anchor);
+    const direct = `${getCbuOrigin()}${CBU_JSON_BASE_PATH}/all/${anchor}/`;
+    return parseCbuRows(await fetchCbuRowsFrom(direct));
 }
 
 export async function fetchCbuParsedForDate(isoDate: string): Promise<CbuParsed> {
