@@ -80,6 +80,7 @@ export const PARTNER_EXPENSE_CATEGORY_META: Record<PartnerExpenseCategory, {
     partner_meetings_food: { label: 'встречи (рестораны, еда)' },
     partner_shop: { label: 'покупки (shop)' },
     partner_misc: { label: 'разное' },
+    partner_general: { label: 'общий расход' },
 };
 const LEGACY_PARTNER_EXPENSE_LABELS: Record<string, string> = {
     partner_office: 'Офис и административные расходы',
@@ -108,6 +109,7 @@ export const PARTNER_EXPENSE_CATEGORIES: {
     { value: 'partner_meetings_food', label: PARTNER_EXPENSE_CATEGORY_META.partner_meetings_food.label },
     { value: 'partner_shop', label: PARTNER_EXPENSE_CATEGORY_META.partner_shop.label },
     { value: 'partner_misc', label: PARTNER_EXPENSE_CATEGORY_META.partner_misc.label },
+    { value: 'partner_general', label: PARTNER_EXPENSE_CATEGORY_META.partner_general.label },
 ];
 export const EXPENSE_TYPES: {
     value: ExpenseType;

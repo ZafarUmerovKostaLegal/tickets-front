@@ -97,6 +97,36 @@ export function resolveCoverSignatoryPartner(input: {
         ?? findCoverSignatoryPartnerByName(input.name);
 }
 
+export type CoverSignatoryDirectoryRow = {
+    id: number;
+    displayName: string;
+};
+
+/** Letter dropdown: every partner from the directory, plus signature files when the name matches. */
+export function mergeCoverSignatoryOptions(
+    directory: readonly CoverSignatoryDirectoryRow[],
+): CoverSignatoryPartner[] {
+    const fromDirectory: CoverSignatoryPartner[] = [];
+    const seen = new Set<string>();
+    for (const row of directory) {
+        const displayName = row.displayName.trim();
+        if (!displayName)
+            continue;
+        const key = normalizeNameKey(displayName);
+        if (!key || seen.has(key))
+            continue;
+        seen.add(key);
+        const catalog = findCoverSignatoryPartnerByName(displayName);
+        fromDirectory.push(catalog ?? {
+            initials: `user:${row.id}`,
+            displayName,
+            fileName: '',
+        });
+    }
+    const extras = COVER_SIGNATORY_PARTNERS.filter((partner) => !seen.has(normalizeNameKey(partner.displayName)));
+    return [...fromDirectory, ...extras];
+}
+
 export function coverSignaturePublicUrl(initialsOrPartner: string | CoverSignatoryPartner | null | undefined): string | null {
     const partner = typeof initialsOrPartner === 'string' || initialsOrPartner == null
         ? findCoverSignatoryPartnerByInitials(initialsOrPartner)

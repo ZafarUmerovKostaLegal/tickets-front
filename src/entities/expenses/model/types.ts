@@ -1,6 +1,6 @@
 export type ExpenseStatus = 'draft' | 'pending_approval' | 'revision_required' | 'approved' | 'rejected' | 'paid' | 'closed' | 'not_reimbursable' | 'withdrawn';
 export type ExpenseType = 'transport' | 'food' | 'accommodation' | 'purchase' | 'services' | 'entertainment' | 'client_expense' | 'partner_expense' | 'other';
-export type PartnerExpenseCategory = 'partner_fuel' | 'partner_air' | 'partner_meetings_food' | 'partner_shop' | 'partner_misc';
+export type PartnerExpenseCategory = 'partner_fuel' | 'partner_air' | 'partner_meetings_food' | 'partner_shop' | 'partner_misc' | 'partner_general';
 export type PaymentMethod = 'cash' | 'transfer' | 'card';
 export type ExpenseAmountCurrency = 'UZS' | 'USD' | 'RUB' | 'GBP' | 'EUR';
 export type ExpenseAttachmentKind = 'payment_document' | 'payment_receipt';

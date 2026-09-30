@@ -249,10 +249,13 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
         e.description = 'Обязательное поле';
     if (!v.expenseDate)
         e.expenseDate = 'Укажите дату';
-    if (v.expenseType === 'partner_expense' && v.expenseDate) {
+    if (v.expenseDate && v.expenseType !== EXPENSE_TYPE_CLIENT) {
         const today = todayIsoLocal();
         if (v.expenseDate > today)
             e.expenseDate = 'Дата не может быть в будущем';
+    }
+    if (v.expenseType === EXPENSE_TYPE_CLIENT && v.expenseDate && v.expenseDate !== todayIsoLocal()) {
+        e.expenseDate = 'Для типа «За клиента» дата расхода — сегодняшний день';
     }
     if (!v.expenseType)
         e.expenseType = 'Выберите тип расхода';
@@ -442,8 +445,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
         return line;
     }, [values.amountCurrency, cbuParsed?.rateDateRu]);
     const showForeignRate = needsForeignUsdRate(values.amountCurrency);
-    const isPartnerExpenseForm = values.expenseType === 'partner_expense';
-    const allowPartnerBackdate = isPartnerExpenseForm && mode === 'create';
+    const allowExpenseBackdate = mode === 'create' && values.expenseType !== EXPENSE_TYPE_CLIENT;
     const foreignLocked = mode === 'create' &&
         cbuParsed != null &&
         !cbuError &&
@@ -527,7 +529,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
         setFileSizeHint(null);
         setErrors({});
     }, [isOpen, mode, editingRequest]);
-    const partnerExpenseDateKey = allowPartnerBackdate
+    const expenseDateKey = allowExpenseBackdate
         ? values.expenseDate.trim().slice(0, 10)
         : '';
     useEffect(() => {
@@ -535,8 +537,8 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             setCbuLoading(false);
             return;
         }
-        const iso = allowPartnerBackdate && partnerExpenseDateKey
-            ? partnerExpenseDateKey
+        const iso = allowExpenseBackdate && expenseDateKey
+            ? expenseDateKey
             : todayIsoLocal();
         let cancelled = false;
         setCbuLoading(true);
@@ -555,7 +557,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                         if (fp != null && fp > 0)
                             fr = formatForeignFp(fp);
                     }
-                    const nextDate = allowPartnerBackdate && prev.expenseDate.trim()
+                    const nextDate = allowExpenseBackdate && prev.expenseDate.trim()
                         ? prev.expenseDate.trim().slice(0, 10)
                         : iso;
                     if (prev.expenseDate === nextDate && prev.exchangeRate === er && prev.foreignPerUsd === fr)
@@ -573,7 +575,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
         return () => {
             cancelled = true;
         };
-    }, [isOpen, mode, allowPartnerBackdate, partnerExpenseDateKey]);
+    }, [isOpen, mode, allowExpenseBackdate, expenseDateKey]);
     useEffect(() => {
         if (!isOpen || values.expenseType !== 'partner_expense') {
             setPartnerOptions([]);
@@ -767,6 +769,9 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                 next.vendor = '';
                 next.comment = '';
             }
+            if (field === 'expenseType' && val === EXPENSE_TYPE_CLIENT) {
+                next.expenseDate = todayIsoLocal();
+            }
             if (field === 'paymentMethod' && val !== 'cash') {
                 next.reimbursementCardNumber = '';
             }
@@ -936,7 +941,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
     const filesByKind: ExpenseFilesByKind = useMemo(() => ({ payment_document: filesPaymentDoc, payment_receipt: filesReceipt }), [filesPaymentDoc, filesReceipt]);
     const valuesForSave = useCallback((): ExpenseFormValues => {
         if (mode === 'create') {
-            if (values.expenseType === 'partner_expense' && values.expenseDate.trim()) {
+            if (values.expenseType !== EXPENSE_TYPE_CLIENT && values.expenseDate.trim()) {
                 return { ...values, expenseDate: values.expenseDate.trim().slice(0, 10) };
             }
             return { ...values, expenseDate: todayIsoLocal() };
@@ -1823,11 +1828,11 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                 <div className="exp-form-block">
                     <p className="exp-form-block__title">Финансы</p>
 
-                    {mode === 'create' && !allowPartnerBackdate && (<p className="exp-form-hint">
+                    {mode === 'create' && !allowExpenseBackdate && (<p className="exp-form-hint">
                         Дата расхода — сегодняшний день; курс UZS/USD и кросс-курсы подставляются автоматически с cbu.uz на эту дату.
                     </p>)}
 
-                    {mode === 'create' && allowPartnerBackdate && (<div className={`exp-form-field${errors.expenseDate ? ' exp-form-field--err' : ''}`}>
+                    {mode === 'create' && allowExpenseBackdate && (<div className={`exp-form-field${errors.expenseDate ? ' exp-form-field--err' : ''}`}>
                         <label className="exp-form-label">Дата расхода <span className="exp-form-req">*</span></label>
                         <input type="date" className="exp-form-input" value={values.expenseDate} max={todayIsoLocal()} onChange={e => set('expenseDate', e.target.value)} disabled={isView || cbuLoading} />
                         <p className="exp-form-hint">Можно указать прошедшую дату; курс подставится с cbu.uz на выбранный день.</p>

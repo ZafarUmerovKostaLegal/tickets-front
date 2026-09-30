@@ -1,9 +1,13 @@
-import type { ChangeEvent } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
+import { listPartners } from '@entities/user';
 import { SearchableSelect } from '@shared/ui';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
 import {
     COVER_SIGNATORY_PARTNERS,
     coverSignaturePublicUrl,
+    findCoverSignatoryPartnerByInitials,
+    findCoverSignatoryPartnerByName,
+    mergeCoverSignatoryOptions,
     resolveCoverSignatoryPartner,
     type CoverSignatoryPartner,
 } from '../lib/invoiceCoverSignature';
@@ -75,21 +79,47 @@ export function InvoiceCoverLetter({
     const showSecondParagraph = secondParagraphMode === 'invoice'
         || editable
         || Boolean(model.invoiceParagraphOverride?.trim());
+    const [directoryPartners, setDirectoryPartners] = useState<CoverSignatoryPartner[] | null>(null);
+    useEffect(() => {
+        let cancelled = false;
+        void listPartners()
+            .then((rows) => {
+                if (cancelled)
+                    return;
+                const merged = mergeCoverSignatoryOptions(rows.map((row) => ({
+                    id: row.id,
+                    displayName: row.display_name?.trim() || row.email?.trim() || '',
+                })));
+                setDirectoryPartners(merged.length > 0 ? merged : [...COVER_SIGNATORY_PARTNERS]);
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setDirectoryPartners(null);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
     const activePartner = resolveActiveSignatory(model);
     const signatureUrl = coverSignaturePublicUrl(activePartner);
-    const partnerItems: CoverSignatoryPartner[] = (() => {
-        if (activePartner || !model.signatoryName.trim())
-            return [...COVER_SIGNATORY_PARTNERS];
-        return [
+    const signatoryOptions = directoryPartners ?? [...COVER_SIGNATORY_PARTNERS];
+    const namedOption = signatoryOptions.find((partner) => (
+        partner.displayName.trim().toLocaleLowerCase() === model.signatoryName.trim().toLocaleLowerCase()
+    ));
+    const partnerItems: CoverSignatoryPartner[] = namedOption || !model.signatoryName.trim()
+        ? signatoryOptions
+        : [
             {
                 initials: '__current__',
                 displayName: model.signatoryName.trim(),
                 fileName: '',
             },
-            ...COVER_SIGNATORY_PARTNERS,
+            ...signatoryOptions,
         ];
-    })();
-    const selectValue = activePartner?.initials
+    const selectValue = (activePartner && signatoryOptions.some((partner) => partner.initials === activePartner.initials)
+        ? activePartner.initials
+        : null)
+        ?? namedOption?.initials
         ?? (model.signatoryName.trim() ? '__current__' : '');
 
     return (<div className={`tt-inv-cover${editable ? ' tt-inv-cover--editable' : ''}`}>
@@ -235,9 +265,11 @@ export function InvoiceCoverLetter({
                 onSelect={(p) => {
                     if (p.initials === '__current__')
                         return;
+                    const catalog = findCoverSignatoryPartnerByInitials(p.initials)
+                        ?? findCoverSignatoryPartnerByName(p.displayName);
                     patch?.({
                         signatoryName: p.displayName,
-                        signatoryInitials: p.initials,
+                        signatoryInitials: catalog?.initials ?? '',
                     });
                 }}
                 placeholder="Выберите партнёра"
