@@ -79,10 +79,10 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
     });
 }
 
-async function fetchCbuRowsFrom(url: string): Promise<CbuJsonRow[]> {
+async function fetchCbuRowsFrom(url: string, timeoutMs = CBU_FETCH_TIMEOUT_MS): Promise<CbuJsonRow[]> {
     const res = await withTimeout(
         fetch(url, { headers: { Accept: 'application/json' } }),
-        CBU_FETCH_TIMEOUT_MS,
+        timeoutMs,
         'ЦБ РУз',
     );
     if (!res.ok)
@@ -105,7 +105,7 @@ async function fetchCbuViaGateway(isoDate: string): Promise<CbuParsed> {
             `/api/v1/cbu-rates?date=${encodeURIComponent(isoDate)}`,
             { getReuseWindowMs: 0 },
         ),
-        CBU_FETCH_TIMEOUT_MS,
+        20_000,
         'Курс ЦБ (шлюз)',
     );
     if (!res.ok) {
@@ -166,20 +166,31 @@ async function fetchMarketParsed(isoDate: string): Promise<CbuParsed> {
     return parsed;
 }
 
+async function fetchOfficialDirect(anchor: string): Promise<CbuParsed> {
+    const direct = `${getCbuOrigin()}${CBU_JSON_BASE_PATH}/all/${anchor}/`;
+    const parsed = parseCbuRows(await fetchCbuRowsFrom(direct, 12_000));
+    parsed.source = 'cbu';
+    return parsed;
+}
+
 async function loadCbuParsed(anchor: string): Promise<CbuParsed> {
+    const official = fetchOfficialDirect(anchor).then(
+        (value) => ({ ok: true as const, value }),
+        () => ({ ok: false as const }),
+    );
     try {
-        return await fetchCbuViaGateway(anchor);
+        const via = await fetchCbuViaGateway(anchor);
+        if (via.source !== 'market')
+            return via;
+        const direct = await official;
+        return direct.ok ? direct.value : via;
     }
     catch {
-        try {
-            return await fetchMarketParsed(anchor);
-        }
-        catch {
-            /* Official CBU and the reserve table both failed. One short direct try. */
-        }
+        const direct = await official;
+        if (direct.ok)
+            return direct.value;
+        return fetchMarketParsed(anchor);
     }
-    const direct = `${getCbuOrigin()}${CBU_JSON_BASE_PATH}/all/${anchor}/`;
-    return parseCbuRows(await fetchCbuRowsFrom(direct));
 }
 
 export async function fetchCbuParsedForDate(isoDate: string): Promise<CbuParsed> {
