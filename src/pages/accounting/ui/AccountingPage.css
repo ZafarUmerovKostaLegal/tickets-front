@@ -27,11 +27,46 @@
   width: 100%;
 }
 
+.acct-page__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  grid-column: 1 / -1;
+}
+
+.acct-page__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.acct-page__stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.acct-page__stat-label {
+  color: var(--app-muted, #64748b);
+  font-size: 0.8125rem;
+}
+
 .acct-page__hub {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
   width: 100%;
+  padding: 1.25rem var(--app-page-padding-x, 1rem) 2rem;
+  box-sizing: border-box;
 }
 
 @media (min-width: 720px) {
@@ -215,7 +250,74 @@
   padding-top: 0;
 }
 
-.acct-settings {
+.acct-hr {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.25rem var(--app-page-padding-x, 1rem) 2rem;
+  min-width: 0;
+}
+
+.acct-hr__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.acct-hr__search,
+.acct-hr__select {
+  height: 36px;
+  padding: 0 0.65rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.acct-hr__search {
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 22rem;
+}
+
+.acct-hr__count {
+  color: var(--app-muted, #64748b);
+  font-size: 0.8125rem;
+}
+
+.acct-hr__table-wrap {
+  overflow: auto;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--app-surface, #fff);
+}
+
+.acct-hr__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.acct-hr__table th,
+.acct-hr__table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--app-border, #e2e8f0);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.acct-hr__table th {
+  background: #f8fafc;
+  font-weight: 650;
+  color: #334155;
+}
+
+.acct-hr__table tr:last-child td {
+  border-bottom: none;
+}
   display: flex;
   flex-direction: column;
   gap: 0.85rem;

@@ -114,7 +114,9 @@ const router = createBrowserRouter([
             { path: routes.correspondenceOutgoingCreate, element: withProtected(<OutgoingLetterCreatePage />) },
             { path: routes.correspondenceOutgoingPreview, element: withProtected(<OutgoingLetterPreviewPage />) },
             { path: routes.accounting, element: withProtected(<AccountingAccessRoute>
-                    <AccountingPage />
+                    <EnsureTimeTrackingI18n fallback={<LazyFallback />}>
+                      <AccountingPage />
+                    </EnsureTimeTrackingI18n>
                   </AccountingAccessRoute>) },
             { path: routes.inventory, element: withProtected(<InventoryPage />) },
             { path: routes.timeTracking, element: withProtected(<TimeTrackingRoute />) },
