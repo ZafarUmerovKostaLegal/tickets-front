@@ -5,14 +5,15 @@ import type { InvoiceRegistryRow, InvoiceRegistryYearId } from '../../model/invo
 export type InvoiceRegistryYearMeta = {
     id: InvoiceRegistryYearId;
     sheetName: string;
-    mode: 'active' | 'archive';
+    mode: 'active' | 'archive' | 'system';
     rowCount: number;
+    seedRevision?: string;
 };
 
 export type InvoiceRegistrySheetDto = {
     year: InvoiceRegistryYearId;
     sheetName: string;
-    mode: 'active' | 'archive';
+    mode: 'active' | 'archive' | 'system';
     columns: Array<{ key: string; label: string; editor?: 'text' | 'status' }>;
     rows: InvoiceRegistryRow[];
     statuses?: string[];
@@ -27,11 +28,20 @@ export type InvoiceRegistryStatisticsDto = {
     };
 };
 
-export async function getInvoiceRegistryYears(): Promise<InvoiceRegistryYearMeta[]> {
+export async function getInvoiceRegistryYears(): Promise<{
+    years: InvoiceRegistryYearMeta[];
+    /** null — старый сервер без версии сида, автозамену листа не делаем. */
+    seedRevision2026: string | null;
+}> {
     const res = await apiFetch('/api/v1/time-tracking/invoice-registry/years');
     await reportsThrowIfNotOk(res);
-    const data = await res.json() as { years?: InvoiceRegistryYearMeta[] };
-    return Array.isArray(data.years) ? data.years : [];
+    const data = await res.json() as { years?: InvoiceRegistryYearMeta[]; seedRevision2026?: string | null };
+    return {
+        years: Array.isArray(data.years) ? data.years : [],
+        seedRevision2026: typeof data.seedRevision2026 === 'string' || data.seedRevision2026 === null
+            ? (data.seedRevision2026 ?? null)
+            : null,
+    };
 }
 
 export async function getInvoiceRegistrySheet(year: InvoiceRegistryYearId, q?: string): Promise<InvoiceRegistrySheetDto> {
@@ -61,11 +71,19 @@ export async function patchInvoiceRegistryRow2026(rowId: string, patch: Partial<
     return res.json() as Promise<InvoiceRegistryRow>;
 }
 
+export const MANUAL_2026_SEED_REVISION = 'manual-excel-2026-v1';
+
 export async function replaceInvoiceRegistryRows2026(
     rows: InvoiceRegistryRow[],
-    opts?: { force?: boolean },
+    opts?: { force?: boolean; seedRevision?: string },
 ): Promise<void> {
-    const qs = opts?.force ? '?force=true' : '';
+    const params = new URLSearchParams();
+    if (opts?.force)
+        params.set('force', 'true');
+    if (opts?.seedRevision)
+        params.set('seedRevision', opts.seedRevision);
+    const query = params.toString();
+    const qs = query ? `?${query}` : '';
     const res = await apiFetch(`/api/v1/time-tracking/invoice-registry/2026/rows${qs}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -75,7 +93,7 @@ export async function replaceInvoiceRegistryRows2026(
 }
 
 export async function replaceInvoiceRegistryArchiveSheet(
-    year: Exclude<InvoiceRegistryYearId, '2026'>,
+    year: Exclude<InvoiceRegistryYearId, '2026' | '2026-system'>,
     rows: InvoiceRegistryRow[],
     opts?: { force?: boolean },
 ): Promise<void> {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    formatAdvanceFeeLines,
     formatRegistryAmount,
     formatRegistryAmountCell,
     parseAdvanceFeeSplits,
@@ -64,6 +65,19 @@ describe('sumInvoicedByPartnerCurrency', () => {
         expect(matrix.partners).toEqual([
             { partner: 'NFH', amounts: { USD: 1000, UZS: 2000 } },
             { partner: 'MAD', amounts: { USD: 500.5 } },
+        ]);
+    });
+});
+
+describe('formatAdvanceFeeLines', () => {
+    it('aligns partner splits and a second amount after a semicolon', () => {
+        expect(formatAdvanceFeeLines('MAD: 12 036 000\nVGB:8 952 000\nAAA: 8 070 000')).toEqual([
+            { partner: 'MAD', amounts: ['12,036,000.00'] },
+            { partner: 'VGB', amounts: ['8,952,000.00'] },
+            { partner: 'AAA', amounts: ['8,070,000.00'] },
+        ]);
+        expect(formatAdvanceFeeLines('SHMYU: 5 305,10; 3 550.')).toEqual([
+            { partner: 'SHMYU', amounts: ['5,305.10', '3,550.00'] },
         ]);
     });
 });

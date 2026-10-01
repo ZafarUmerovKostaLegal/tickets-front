@@ -5,6 +5,7 @@ import { readInvoiceRegistryOverrides, writeInvoiceRegistryOverrides } from './s
 
 const seedLoaders: Record<InvoiceRegistryYearId, () => Promise<{ default: InvoiceRegistryRow[] }>> = {
     '2026': () => import('./seed/year-2026.json'),
+    '2026-system': async () => ({ default: [] }),
     '2025': () => import('./seed/year-2025.json'),
     '2024': () => import('./seed/year-2024.json'),
     '2023': () => import('./seed/year-2023.json'),

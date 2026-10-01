@@ -1304,7 +1304,9 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             statistics: 'Statistics',
         },
         registry: {
-            intro: 'Excel invoice registry (year sheets). Year 2026 is editable; older years are archive. Data is stored on the server. TT invoice payments (Invoices → card) are not synced here — set status “Paid” in the registry manually.',
+            intro: 'The 2026 sheet is invoices issued manually. “2026 (system)” lists invoices created in the Invoices section. Only the manual 2026 sheet is editable; older years are archive.',
+            systemTab: '2026 (system)',
+            systemReadonly: 'system invoices (read only)',
             emptyTitle: 'Registry is empty for now',
             emptyText: 'If the table is empty, click “Load from Excel” to import the bundled seed.',
             emptyDb: 'No rows for this sheet in the database. Click “Load from Excel” to import the seed.',

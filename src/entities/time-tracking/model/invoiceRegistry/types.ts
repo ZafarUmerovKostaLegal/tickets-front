@@ -1,5 +1,6 @@
 export type InvoiceRegistryYearId =
     | '2026'
+    | '2026-system'
     | '2025'
     | '2024'
     | '2023'

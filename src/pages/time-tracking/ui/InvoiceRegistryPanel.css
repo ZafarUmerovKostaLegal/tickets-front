@@ -168,6 +168,56 @@
   font-variant-numeric: tabular-nums;
 }
 
+.tt-inv-reg__td--fee {
+  min-width: 13.5rem;
+  max-width: 18rem;
+}
+
+.tt-inv-reg-fee {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tt-inv-reg-fee__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tt-inv-reg-fee__code {
+  flex: 0 0 auto;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: #14213d;
+}
+
+.tt-inv-reg-fee__amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.tt-inv-reg-fee__amt {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tt-inv-reg-fee__plain {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.tt-inv-reg__tr:hover .tt-inv-reg__td {
+  background: #f8f6f2;
+}
+
 .tt-inv-reg__td--editing {
   padding: 0.15rem;
   background: color-mix(in srgb, var(--app-accent, #4f46e5) 6%, #fff);
@@ -204,8 +254,8 @@
 }
 
 .tt-inv-reg__td--status {
-  min-width: 12.5rem;
-  max-width: 18rem;
+  min-width: 9.5rem;
+  max-width: 14rem;
   padding: 0.2rem 0.35rem;
   cursor: default;
   overflow: visible;
@@ -221,7 +271,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   box-sizing: border-box;
   margin: 0;
   padding: 0.28rem 0.45rem 0.28rem 0.55rem;
@@ -290,6 +341,12 @@
   background: color-mix(in srgb, #22c55e 12%, #fff);
   border-color: color-mix(in srgb, #22c55e 40%, var(--app-border, #e2e8f0));
   color: #15803d;
+}
+
+.tt-inv-reg-status--canceled {
+  background: color-mix(in srgb, #64748b 12%, #fff);
+  border-color: color-mix(in srgb, #64748b 35%, var(--app-border, #e2e8f0));
+  color: #475569;
 }
 
 .tt-inv-reg-status--legacy {
@@ -367,6 +424,7 @@
 .tt-inv-reg-status__dot.tt-inv-reg-status--review { background: #f59e0b; }
 .tt-inv-reg-status__dot.tt-inv-reg-status--issued { background: #3b82f6; }
 .tt-inv-reg-status__dot.tt-inv-reg-status--paid { background: #22c55e; }
+.tt-inv-reg-status__dot.tt-inv-reg-status--canceled { background: #64748b; }
 .tt-inv-reg-status__dot.tt-inv-reg-status--legacy { background: #a855f7; }
 .tt-inv-reg-status__dot.tt-inv-reg-status--empty { background: #cbd5e1; }
 

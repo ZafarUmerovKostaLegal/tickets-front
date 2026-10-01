@@ -6,7 +6,7 @@ import { mapInvoiceRegistryPartnerCode } from './partnerCodeMap';
 
 export const INVOICE_REGISTRY_STATS_YEARS: InvoiceRegistryYearId[] = INVOICE_REGISTRY_SHEETS
     .map((s) => s.year)
-    .filter((y): y is InvoiceRegistryYearId => y !== 'checklist');
+    .filter((y): y is InvoiceRegistryYearId => y !== 'checklist' && y !== '2026-system');
 
 export type RegistryStatsYearFilter = 'all' | InvoiceRegistryYearId;
 
@@ -110,6 +110,40 @@ export function formatRegistryAmountCell(raw: string): string {
 
 export function isInvoiceRegistryMoneyColumnKey(key: string): boolean {
     return key === 'amount' || key === 'balance';
+}
+
+export type AdvanceFeeDisplayLine =
+    | { partner: string; amounts: string[] }
+    | { text: string };
+
+/** Visual lines for «Пред.вознаграждение»: partner code and one or more amounts. */
+export function formatAdvanceFeeLines(raw: string): AdvanceFeeDisplayLine[] {
+    const out: AdvanceFeeDisplayLine[] = [];
+    for (const line of raw.split(/\n/)) {
+        const trimmed = line.trim();
+        if (!trimmed)
+            continue;
+        const match = trimmed.match(/^([A-Za-zА-Яа-яЁё]{2,6})\s*:\s*(.+)$/);
+        if (!match) {
+            out.push({ text: trimmed });
+            continue;
+        }
+        const partner = mapInvoiceRegistryPartnerCode(match[1] ?? '');
+        const amounts = (match[2] ?? '')
+            .split(';')
+            .map((part) => {
+                const piece = part.trim();
+                const amount = parseRegistryAmount(piece);
+                return amount != null ? formatRegistryAmount(amount) : piece;
+            })
+            .filter(Boolean);
+        if (!partner || amounts.length === 0) {
+            out.push({ text: trimmed });
+            continue;
+        }
+        out.push({ partner, amounts });
+    }
+    return out;
 }
 
 export function parseAdvanceFeeSplits(text: string): { partner: string; amount: number }[] {
