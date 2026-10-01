@@ -215,6 +215,88 @@
   padding-top: 0;
 }
 
+.acct-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 52rem;
+  padding: 1.25rem var(--app-page-padding-x, 1rem) 2rem;
+}
+
+.acct-settings__lead,
+.acct-settings__muted {
+  margin: 0;
+  color: var(--app-muted, #64748b);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.acct-settings__error {
+  margin: 0;
+  color: #b91c1c;
+  font-size: 0.875rem;
+}
+
+.acct-settings__list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.acct-settings__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.acct-settings__key {
+  min-width: 8rem;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.acct-settings__input {
+  flex: 1 1 14rem;
+  min-width: 0;
+  height: 36px;
+  padding: 0 0.65rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: inherit;
+  font: inherit;
+  font-size: 0.875rem;
+}
+
+.acct-settings__input--key {
+  flex: 0 1 12rem;
+}
+
+.acct-settings__btn {
+  height: 36px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--app-surface, #fff);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.acct-settings__btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.acct-settings__btn--quiet {
+  color: var(--app-muted, #64748b);
+}
+
 .acct-page__invoices-wrap .tt-inv__head-row {
   align-items: flex-start;
 }

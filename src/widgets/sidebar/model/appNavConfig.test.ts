@@ -51,7 +51,7 @@ describe('getVisibleAppNavItems', () => {
         expect(ids).not.toContain('networkDrive');
     });
 
-    it('партнёр видит admin, но не accounting/contacts', () => {
+    it('партнёр видит admin и accounting, но не contacts', () => {
         const items = getVisibleAppNavItems(user({
             role: 'Партнёр',
             time_tracking_role: 'manager',
@@ -59,7 +59,7 @@ describe('getVisibleAppNavItems', () => {
         const ids = items.map((i) => i.id);
         expect(ids).toContain('admin');
         expect(ids).toContain('attendance');
-        expect(ids).not.toContain('accounting');
+        expect(ids).toContain('accounting');
         expect(ids).not.toContain('contacts');
     });
 

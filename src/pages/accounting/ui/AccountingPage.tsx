@@ -4,9 +4,10 @@ import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { routes } from '@shared/config';
 import { LazyInvoicesPanel } from '@features/invoices';
 import { TimeTrackingPanelSuspense } from '@pages/time-tracking/ui/timeTrackingLazyPanels';
+import { AccountingSettingsPanel } from './AccountingSettingsPanel';
 import './AccountingPage.css';
 
-type AccountingTab = 'overview' | 'invoices';
+type AccountingTab = 'overview' | 'invoices' | 'hr' | 'settings';
 
 const HUB_TILES = [
     {
@@ -59,7 +60,7 @@ export function AccountingPage() {
                             <AppHomeLogo withSeparator />
                             <div>
                                 <h1 className="acct-page__title">Бухгалтерия</h1>
-                                <p className="acct-page__subtitle">Учёт, отчётность и финансовые документы</p>
+                                <p className="acct-page__subtitle">Учёт, HR и настройки. Доступно администраторам и партнёрам</p>
                             </div>
                         </div>
                         <AppPageSettings />
@@ -84,6 +85,24 @@ export function AccountingPage() {
                         onClick={() => setActiveTab('invoices')}
                     >
                         Инвойсы
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === 'hr'}
+                        className={`acct-tabs__tab${activeTab === 'hr' ? ' acct-tabs__tab--on' : ''}`}
+                        onClick={() => setActiveTab('hr')}
+                    >
+                        HR
+                    </button>
+                    <button
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === 'settings'}
+                        className={`acct-tabs__tab${activeTab === 'settings' ? ' acct-tabs__tab--on' : ''}`}
+                        onClick={() => setActiveTab('settings')}
+                    >
+                        Настройки
                     </button>
                 </nav>
 
@@ -117,6 +136,16 @@ export function AccountingPage() {
                             ))}
                         </section>
                     )}
+
+                    {activeTab === 'hr' && (
+                        <section className="acct-settings" aria-label="HR">
+                            <p className="acct-settings__lead">
+                                Раздел HR обслуживает отдельный сервис. Здесь будут карточки сотрудников и кадровые данные. Настройки бухгалтерии уже пишутся в этот сервис — вкладка «Настройки».
+                            </p>
+                        </section>
+                    )}
+
+                    {activeTab === 'settings' && <AccountingSettingsPanel />}
 
                     {activeTab === 'invoices' && (
                         <div className="acct-page__invoices-wrap">

@@ -2,6 +2,7 @@ export type { InvoiceRegistryYearId, InvoiceRegistryRow, InvoiceRegistryColumnDe
 export { INVOICE_REGISTRY_SHEETS, getInvoiceRegistrySheet } from './columns';
 export { INVOICE_REGISTRY_STATUSES, LEGACY_INVOICE_REGISTRY_STATUSES, collectRegistryStatusOptions, isInvoiceRegistryStatus, registryStatusToneClass, type InvoiceRegistryStatus } from './statuses';
 export { loadInvoiceRegistryRows } from './loadSeed';
+export { filterInvoiceRegistryRows, parseRegistryDay, type InvoiceRegistryFilter, type RegistryDay } from './registryFilters';
 export {
     aggregatePartnerRegistryStats,
     flattenPartnerStats,

@@ -67,7 +67,7 @@ export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { id: 'todo', to: routes.todo, icon: IconList },
     { id: 'tickets', to: routes.tickets, icon: IconTicket },
     { id: 'correspondence', to: routes.correspondence, icon: IconMailInbox },
-    { id: 'accounting', to: routes.accounting, icon: IconAccounting, adminOnly: true, adminModulesOnly: true },
+    { id: 'accounting', to: routes.accounting, icon: IconAccounting, adminOnly: true },
     { id: 'kostaDaily', to: routes.kostaDaily, icon: IconMessages },
     { id: 'vacationSchedule', to: routes.vacationSchedule, icon: IconCalendarCheck },
     { id: 'inventory', to: routes.inventory, icon: IconBox },

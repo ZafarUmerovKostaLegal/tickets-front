@@ -5,6 +5,7 @@ import {
     formatAdvanceFeeLines,
     formatRegistryAmountCell,
     collectRegistryStatusOptions,
+    filterInvoiceRegistryRows,
     getInvoiceRegistrySheet,
     isInvoiceRegistryMoneyColumnKey,
     registryStatusToneClass,
@@ -410,7 +411,7 @@ function RegistryEditableCell({
 }
 
 export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean }) {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const [year, setYear] = useState<InvoiceRegistryYearId>('2026');
     const [rows, setRows] = useState<InvoiceRegistryRow[]>([]);
     const [years, setYears] = useState<InvoiceRegistryYearMeta[]>([]);
@@ -419,6 +420,11 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
     const [dirty, setDirty] = useState(false);
     const [focus, setFocus] = useState<FocusCell>(null);
     const [search, setSearch] = useState('');
+    const [partners, setPartners] = useState<Set<string>>(() => new Set());
+    const [numberQuery, setNumberQuery] = useState('');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const [months, setMonths] = useState<Set<number>>(() => new Set());
     const [fullscreen, setFullscreen] = useState(false);
     const sheet = useMemo(() => getInvoiceRegistrySheet(year), [year]);
     const columns = sheet.columns;
@@ -447,6 +453,11 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
         setLoading(true);
         setFocus(null);
         setSearch('');
+        setPartners(new Set());
+        setNumberQuery('');
+        setDateFrom('');
+        setDateTo('');
+        setMonths(new Set());
 
         const loadSheet = async () => {
             try {
@@ -573,13 +584,57 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
         );
     }, [year]);
 
-    const filteredRows = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        if (!q)
-            return rows;
-        return rows.filter((r) =>
-            columnKeys.some((k) => String(r[k] ?? '').toLowerCase().includes(q)));
-    }, [rows, search, columnKeys]);
+    const partnerOptions = useMemo(() => {
+        const codes = new Set<string>();
+        for (const row of rows) {
+            const code = String(row.partner ?? '').trim();
+            if (code)
+                codes.add(code);
+        }
+        return [...codes].sort((a, b) => a.localeCompare(b, 'ru'));
+    }, [rows]);
+    const monthLabels = useMemo(() => {
+        const fmt = new Intl.DateTimeFormat(locale === 'en' ? 'en' : 'ru', { month: 'long' });
+        return Array.from({ length: 12 }, (_, index) => fmt.format(new Date(2026, index, 1)));
+    }, [locale]);
+    const filtersActive = partners.size > 0 || numberQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || months.size > 0;
+    const filteredRows = useMemo(() => filterInvoiceRegistryRows(rows, {
+        search,
+        searchKeys: columnKeys,
+        partners,
+        numberQuery,
+        dateFrom,
+        dateTo,
+        months,
+    }), [rows, search, columnKeys, partners, numberQuery, dateFrom, dateTo, months]);
+
+    const togglePartner = (code: string) => {
+        setPartners((prev) => {
+            const next = new Set(prev);
+            if (next.has(code))
+                next.delete(code);
+            else
+                next.add(code);
+            return next;
+        });
+    };
+    const toggleMonth = (month: number) => {
+        setMonths((prev) => {
+            const next = new Set(prev);
+            if (next.has(month))
+                next.delete(month);
+            else
+                next.add(month);
+            return next;
+        });
+    };
+    const clearFilters = () => {
+        setPartners(new Set());
+        setNumberQuery('');
+        setDateFrom('');
+        setDateTo('');
+        setMonths(new Set());
+    };
 
     const patchCell = useCallback((rowId: string, key: string, value: string) => {
         if (!canEditYear)
@@ -758,6 +813,89 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                         <IcoFullscreen exit={fullscreen} />
                     </button>
                 </div>
+            </div>
+
+            <div className="tt-inv-reg__filters">
+                <select
+                    className="tt-inv-reg__filter"
+                    value=""
+                    aria-label={t('timeTrackingPage.invoices.registry.filterPartner')}
+                    onChange={(e) => {
+                        if (e.target.value)
+                            togglePartner(e.target.value);
+                    }}
+                >
+                    <option value="">{t('timeTrackingPage.invoices.registry.filterPartnerAll')}</option>
+                    {partnerOptions.map((code) => (
+                        <option key={code} value={code}>{partners.has(code) ? `✓ ${code}` : code}</option>
+                    ))}
+                </select>
+                <input
+                    type="search"
+                    className="tt-settings__search tt-inv-reg__filter tt-inv-reg__filter--number"
+                    placeholder={t('timeTrackingPage.invoices.registry.filterNumber')}
+                    aria-label={t('timeTrackingPage.invoices.registry.filterNumber')}
+                    value={numberQuery}
+                    onChange={(e) => setNumberQuery(e.target.value)}
+                />
+                <label className="tt-inv-reg__filter-label">
+                    {t('timeTrackingPage.invoices.registry.filterDateFrom')}
+                    <input
+                        type="date"
+                        className="tt-inv-reg__filter tt-inv-reg__filter--date"
+                        value={dateFrom}
+                        max={dateTo || undefined}
+                        aria-label={t('timeTrackingPage.invoices.registry.filterDateFrom')}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                    />
+                </label>
+                <label className="tt-inv-reg__filter-label">
+                    {t('timeTrackingPage.invoices.registry.filterDateTo')}
+                    <input
+                        type="date"
+                        className="tt-inv-reg__filter tt-inv-reg__filter--date"
+                        value={dateTo}
+                        min={dateFrom || undefined}
+                        aria-label={t('timeTrackingPage.invoices.registry.filterDateTo')}
+                        onChange={(e) => setDateTo(e.target.value)}
+                    />
+                </label>
+                <select
+                    className="tt-inv-reg__filter"
+                    value=""
+                    aria-label={t('timeTrackingPage.invoices.registry.filterMonth')}
+                    onChange={(e) => {
+                        const month = Number(e.target.value);
+                        if (month >= 1 && month <= 12)
+                            toggleMonth(month);
+                    }}
+                >
+                    <option value="">{t('timeTrackingPage.invoices.registry.filterMonthAll')}</option>
+                    {monthLabels.map((label, index) => (
+                        <option key={label} value={index + 1}>{months.has(index + 1) ? `✓ ${label}` : label}</option>
+                    ))}
+                </select>
+                {filtersActive && (
+                    <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={clearFilters}>
+                        {t('timeTrackingPage.invoices.registry.filterClear')}
+                    </button>
+                )}
+                {(partners.size > 0 || months.size > 0) && (
+                    <div className="tt-inv-reg__chips">
+                        {[...partners].map((code) => (
+                            <button key={code} type="button" className="tt-inv-reg__chip" onClick={() => togglePartner(code)}>
+                                {code}
+                                <span aria-hidden>×</span>
+                            </button>
+                        ))}
+                        {[...months].sort((a, b) => a - b).map((month) => (
+                            <button key={month} type="button" className="tt-inv-reg__chip" onClick={() => toggleMonth(month)}>
+                                {monthLabels[month - 1]}
+                                <span aria-hidden>×</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
             </div>
 
             <p className="tt-inv-reg__meta">

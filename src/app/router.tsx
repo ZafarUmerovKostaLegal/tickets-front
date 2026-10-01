@@ -8,6 +8,7 @@ import { DocumentTitle } from '@app/ui/DocumentTitle';
 import { TimeTrackingRoute } from '@app/TimeTrackingRoute';
 import { ExpensesAccessRoute } from '@app/ExpensesAccessRoute';
 import { AttendanceAccessRoute } from '@app/AttendanceAccessRoute';
+import { AccountingAccessRoute } from '@app/AccountingAccessRoute';
 import { AdminOnlyModuleRoute } from '@app/AdminOnlyModuleRoute';
 import { ExpensesMgmtRoute } from '@app/ExpensesMgmtRoute';
 import { ExpensesNestedLayout } from '@app/ExpensesNestedLayout';
@@ -112,9 +113,9 @@ const router = createBrowserRouter([
             { path: routes.correspondence, element: withProtected(<CorrespondencePage />) },
             { path: routes.correspondenceOutgoingCreate, element: withProtected(<OutgoingLetterCreatePage />) },
             { path: routes.correspondenceOutgoingPreview, element: withProtected(<OutgoingLetterPreviewPage />) },
-            { path: routes.accounting, element: withProtected(<AdminOnlyModuleRoute>
+            { path: routes.accounting, element: withProtected(<AccountingAccessRoute>
                     <AccountingPage />
-                  </AdminOnlyModuleRoute>) },
+                  </AccountingAccessRoute>) },
             { path: routes.inventory, element: withProtected(<InventoryPage />) },
             { path: routes.timeTracking, element: withProtected(<TimeTrackingRoute />) },
             { path: routes.timeTrackingNewProject, element: withProtected(<EnsureTimeTrackingI18n fallback={<LazyFallback />}><TimeTrackingNewProjectPage /></EnsureTimeTrackingI18n>) },
