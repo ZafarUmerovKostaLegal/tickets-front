@@ -177,12 +177,12 @@ export function TodoBoardsBar({
     try {
       const body: CreateTodoBoardBody = newBoardVisibility === 'shared'
         ? {
-            title: name,
-            visibility: 'shared',
-            color,
-            memberUserIds: selectedMemberIds,
-            instantAddMembers,
-          }
+          title: name,
+          visibility: 'shared',
+          color,
+          memberUserIds: selectedMemberIds,
+          instantAddMembers,
+        }
         : { title: name, visibility: 'personal', color };
       await onCreateBoard(body);
       setAddBoardOpen(false);

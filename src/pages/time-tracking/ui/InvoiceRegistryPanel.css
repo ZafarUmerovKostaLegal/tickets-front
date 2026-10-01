@@ -155,24 +155,23 @@
 .tt-inv-reg__td--pin {
   position: sticky;
   left: 0;
-  min-width: 3.25rem;
-  max-width: 4.5rem;
+  width: 3.5rem;
+  min-width: 3.5rem;
+  max-width: 3.5rem;
+  box-sizing: border-box;
+  text-align: right;
   background: #f8fafc;
   box-shadow: 1px 0 0 var(--app-border, #e2e8f0);
 }
 
 .tt-inv-reg__th--pin {
   z-index: 4;
+  text-align: center;
 }
 
 .tt-inv-reg__td--pin {
   z-index: 1;
   background: var(--app-surface, #fff);
-}
-
-.tt-inv-reg__table--editable .tt-inv-reg__th--pin,
-.tt-inv-reg__table--editable .tt-inv-reg__td--pin {
-  left: 2.25rem;
 }
 
 .tt-inv-reg__tr:hover .tt-inv-reg__td--pin {
