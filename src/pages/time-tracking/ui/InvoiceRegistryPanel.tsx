@@ -2,12 +2,11 @@ import './TimeTrackingForms.css';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-    INVOICE_REGISTRY_STATUSES,
     formatAdvanceFeeLines,
     formatRegistryAmountCell,
+    collectRegistryStatusOptions,
     getInvoiceRegistrySheet,
     isInvoiceRegistryMoneyColumnKey,
-    isInvoiceRegistryStatus,
     registryStatusToneClass,
     loadInvoiceRegistryRows,
     type InvoiceRegistryRow,
@@ -23,6 +22,7 @@ import {
     replaceInvoiceRegistryRows2026,
     type InvoiceRegistryYearMeta,
 } from '@entities/time-tracking/api/domains/invoiceRegistry';
+import { downloadExistingInvoicePdf } from '../lib/invoicePageShared';
 import { useI18n } from '@shared/i18n';
 import { showToast } from '@shared/ui/app-toast';
 import './InvoiceRegistryPanel.css';
@@ -35,11 +35,13 @@ function RegistryStatusDropdown({
     value,
     ariaLabel,
     readOnly,
+    choices,
     onChange,
 }: {
     value: string;
     ariaLabel: string;
     readOnly?: boolean;
+    choices: readonly string[];
     onChange: (next: string) => void;
 }) {
     const uid = useId();
@@ -49,25 +51,23 @@ function RegistryStatusDropdown({
     const menuRef = useRef<HTMLDivElement>(null);
     const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
-    const known = isInvoiceRegistryStatus(value);
     const label = value || '—';
+    const [draft, setDraft] = useState(value);
 
     const options = useMemo(() => {
-        const base: { value: string; label: string }[] = [
+        const values = collectRegistryStatusOptions([value, ...choices]);
+        return [
             { value: STATUS_EMPTY, label: '—' },
-            ...INVOICE_REGISTRY_STATUSES.map((s) => ({ value: s, label: s })),
+            ...values.map((s) => ({ value: s, label: s })),
         ];
-        if (value && !known)
-            base.push({ value, label: value });
-        return base;
-    }, [value, known]);
+    }, [value, choices]);
 
     const updatePos = useCallback(() => {
         const btn = btnRef.current;
         if (!btn)
             return;
         const r = btn.getBoundingClientRect();
-        const width = Math.max(r.width, 220);
+        const width = Math.max(r.width, 280);
         const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
         const below = r.bottom + 4;
         const menuH = Math.min(280, 44 + options.length * 36);
@@ -124,6 +124,7 @@ function RegistryStatusDropdown({
                 onClick={() => {
                     if (readOnly)
                         return;
+                    setDraft(value);
                     setOpen((v) => !v);
                 }}
             >
@@ -144,17 +145,14 @@ function RegistryStatusDropdown({
                 >
                     {options.map((opt) => {
                         const selected = opt.value === value || (!value && opt.value === STATUS_EMPTY);
-                        const isLegacyOpt = Boolean(opt.value && !isInvoiceRegistryStatus(opt.value) && opt.value !== STATUS_EMPTY);
                         return (
                             <button
                                 key={opt.value || '__empty'}
                                 type="button"
                                 role="option"
                                 aria-selected={selected}
-                                className={`tt-inv-reg-status__opt${selected ? ' tt-inv-reg-status__opt--active' : ''}${isLegacyOpt ? ' tt-inv-reg-status__opt--legacy' : ''}`}
+                                className={`tt-inv-reg-status__opt${selected ? ' tt-inv-reg-status__opt--active' : ''}`}
                                 onClick={() => {
-                                    if (isLegacyOpt)
-                                        return;
                                     onChange(opt.value);
                                     setOpen(false);
                                 }}
@@ -164,10 +162,60 @@ function RegistryStatusDropdown({
                             </button>
                         );
                     })}
+                    <form
+                        className="tt-inv-reg-status__custom"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            onChange(draft.trim());
+                            setOpen(false);
+                        }}
+                    >
+                        <input
+                            className="tt-inv-reg-status__custom-input"
+                            value={draft}
+                            aria-label={ariaLabel}
+                            onChange={(e) => setDraft(e.target.value)}
+                        />
+                    </form>
                 </div>,
                 document.body,
             )}
         </div>
+    );
+}
+
+function systemInvoiceId(row: InvoiceRegistryRow): string {
+    const explicit = String(row.invoiceId ?? '').trim();
+    if (explicit)
+        return explicit;
+    return row.id.startsWith('sys-') ? row.id.slice(4) : '';
+}
+
+function RegistryPdfButton({ invoiceId, ariaLabel }: { invoiceId: string; ariaLabel: string }) {
+    const { t } = useI18n();
+    const [busy, setBusy] = useState(false);
+    return (
+        <button
+            type="button"
+            className="tt-inv-reg__pdf"
+            disabled={!invoiceId || busy}
+            aria-label={ariaLabel}
+            onClick={() => {
+                if (!invoiceId || busy)
+                    return;
+                setBusy(true);
+                void downloadExistingInvoicePdf(invoiceId)
+                    .catch(() => {
+                        showToast({
+                            message: t('timeTrackingPage.invoices.errors.pdfFailed'),
+                            variant: 'error',
+                        });
+                    })
+                    .finally(() => setBusy(false));
+            }}
+        >
+            PDF
+        </button>
     );
 }
 
@@ -232,6 +280,8 @@ function RegistryEditableCell({
     money = false,
     readOnly,
     active,
+    invoiceId = '',
+    statusChoices,
     onActivate,
     onChange,
     onBlurCommit,
@@ -240,10 +290,12 @@ function RegistryEditableCell({
     ariaLabel: string;
     wide?: boolean;
     columnKey?: string;
-    editor?: 'text' | 'status';
+    editor?: 'text' | 'status' | 'pdf';
     money?: boolean;
     readOnly?: boolean;
     active: boolean;
+    invoiceId?: string;
+    statusChoices: readonly string[];
     onActivate: () => void;
     onChange: (next: string) => void;
     onBlurCommit: () => void;
@@ -258,6 +310,14 @@ function RegistryEditableCell({
         }
     }, [active, editor]);
 
+    if (editor === 'pdf') {
+        return (
+            <td className="tt-inv-reg__td tt-inv-reg__td--pdf">
+                <RegistryPdfButton invoiceId={invoiceId} ariaLabel={ariaLabel} />
+            </td>
+        );
+    }
+
     if (editor === 'status') {
         return (
             <td className="tt-inv-reg__td tt-inv-reg__td--status">
@@ -265,6 +325,7 @@ function RegistryEditableCell({
                     value={value}
                     ariaLabel={ariaLabel}
                     readOnly={readOnly}
+                    choices={statusChoices}
                     onChange={onChange}
                 />
             </td>
@@ -276,7 +337,7 @@ function RegistryEditableCell({
         const fee = columnKey === 'advanceFee';
         return (
             <td
-                className={`tt-inv-reg__td${wide ? ' tt-inv-reg__td--wide' : ''}${isMoney ? ' tt-inv-reg__td--money' : ''}${fee ? ' tt-inv-reg__td--fee' : ''}`}
+                className={`tt-inv-reg__td${wide ? ' tt-inv-reg__td--wide' : ''}${isMoney ? ' tt-inv-reg__td--money' : ''}${fee ? ' tt-inv-reg__td--fee' : ''}${columnKey === 'seqNo' ? ' tt-inv-reg__td--pin' : ''}`}
                 onClick={onActivate}
                 onFocus={onActivate}
                 tabIndex={0}
@@ -363,7 +424,7 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
     const columns = sheet.columns;
     const columnKeys = useMemo(() => columns.map((c) => c.key), [columns]);
 
-    const canEditYear = !readOnly && year === '2026' && sheetMode === 'active';
+    const canEditYear = !readOnly && year !== '2026-system' && year !== 'checklist';
     const seededYearsRef = useRef<Set<string>>(new Set());
 
     const refreshYears = useCallback(() => {
@@ -471,6 +532,47 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
         };
     }, [year, t, readOnly, refreshYears]);
 
+    const statusChoices = useMemo(
+        () => collectRegistryStatusOptions(rows.map((row) => String(row.statusNote ?? ''))),
+        [rows],
+    );
+    const archiveSaveTimer = useRef<number | null>(null);
+    const pendingArchiveSave = useRef<{ year: InvoiceRegistryYearId; rows: InvoiceRegistryRow[] } | null>(null);
+
+    const persistArchiveRows = useCallback((next: InvoiceRegistryRow[], sheetYear: InvoiceRegistryYearId) => {
+        if (sheetYear === '2026' || sheetYear === '2026-system' || sheetYear === 'checklist')
+            return;
+        pendingArchiveSave.current = { year: sheetYear, rows: next };
+        if (archiveSaveTimer.current !== null)
+            window.clearTimeout(archiveSaveTimer.current);
+        archiveSaveTimer.current = window.setTimeout(() => {
+            archiveSaveTimer.current = null;
+            pendingArchiveSave.current = null;
+            void replaceInvoiceRegistryArchiveSheet(
+                sheetYear as Exclude<InvoiceRegistryYearId, '2026' | '2026-system'>,
+                next,
+            ).catch(() => {
+                showToast({
+                    message: t('timeTrackingPage.invoices.registry.loadFailed'),
+                    variant: 'error',
+                });
+            });
+        }, 400);
+    }, [t]);
+
+    useEffect(() => () => {
+        if (archiveSaveTimer.current !== null)
+            window.clearTimeout(archiveSaveTimer.current);
+        const pending = pendingArchiveSave.current;
+        pendingArchiveSave.current = null;
+        if (!pending || pending.year === '2026' || pending.year === '2026-system' || pending.year === 'checklist')
+            return;
+        void replaceInvoiceRegistryArchiveSheet(
+            pending.year as Exclude<InvoiceRegistryYearId, '2026' | '2026-system'>,
+            pending.rows,
+        );
+    }, [year]);
+
     const filteredRows = useMemo(() => {
         const q = search.trim().toLowerCase();
         if (!q)
@@ -484,21 +586,34 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
             return;
         setRows((prev) => {
             const next = prev.map((r) => (r.id === rowId ? { ...r, [key]: value } : r));
-            setDirty(true);
+            if (year !== '2026')
+                persistArchiveRows(next, year);
             return next;
         });
-        void patchInvoiceRegistryRow2026(rowId, { [key]: value })
-            .catch(() => {
-                showToast({
-                    message: t('timeTrackingPage.invoices.registry.loadFailed'),
-                    variant: 'error',
+        setDirty(true);
+        if (year === '2026') {
+            void patchInvoiceRegistryRow2026(rowId, { [key]: value })
+                .catch(() => {
+                    showToast({
+                        message: t('timeTrackingPage.invoices.registry.loadFailed'),
+                        variant: 'error',
+                    });
                 });
-            });
-    }, [canEditYear, t]);
+        }
+    }, [canEditYear, persistArchiveRows, t, year]);
 
     const addRow = useCallback(() => {
         if (!canEditYear)
             return;
+        if (year !== '2026') {
+            setRows((prev) => {
+                const next = [...prev, emptyRow(year, columnKeys, prev.length + 1)];
+                persistArchiveRows(next, year);
+                return next;
+            });
+            setDirty(true);
+            return;
+        }
         setRows((prev) => {
             const next = [...prev, emptyRow(year, columnKeys, prev.length + 1)];
             return next;
@@ -523,7 +638,7 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
         }).catch(() => {
             showToast({ message: t('timeTrackingPage.invoices.registry.loadFailed'), variant: 'error' });
         });
-    }, [canEditYear, year, columnKeys, t, refreshYears]);
+    }, [canEditYear, persistArchiveRows, year, columnKeys, t, refreshYears]);
 
     const resetToSeed = useCallback(() => {
         if (readOnly)
@@ -652,7 +767,6 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                     .replace('{shown}', String(filteredRows.length))
                     .replace('{total}', String(rows.length))}
                 {dirty ? ` · ${t('timeTrackingPage.invoices.registry.savedOnServer')}` : ''}
-                {sheetMode === 'archive' ? ` · ${t('timeTrackingPage.invoices.registry.archiveReadonly')}` : ''}
                 {sheetMode === 'system' ? ` · ${t('timeTrackingPage.invoices.registry.systemReadonly')}` : ''}
             </p>
 
@@ -660,13 +774,13 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                 <p className="tt-tm-hint" role="status">{t('timeTrackingPage.common.loading')}</p>
             ) : (
                 <div className="tt-inv-reg__table-wrap">
-                    <table className="tt-inv-reg__table" role="grid">
+                    <table className={`tt-inv-reg__table${canEditYear ? ' tt-inv-reg__table--editable' : ''}`} role="grid">
                         <thead>
                             <tr>
                                 {columns.map((col) => (
                                     <th
                                         key={col.key}
-                                        className={`tt-inv-reg__th${col.wide ? ' tt-inv-reg__th--wide' : ''}`}
+                                        className={`tt-inv-reg__th${col.wide ? ' tt-inv-reg__th--wide' : ''}${col.key === 'seqNo' ? ' tt-inv-reg__th--pin' : ''}`}
                                         scope="col"
                                         title={col.label}
                                     >
@@ -700,8 +814,10 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                                                 wide={col.wide}
                                                 columnKey={col.key}
                                                 editor={col.editor}
+                                                invoiceId={systemInvoiceId(row)}
                                                 money={money}
                                                 readOnly={!canEditYear}
+                                                statusChoices={statusChoices}
                                                 active={canEditYear && active && col.editor !== 'status'}
                                                 ariaLabel={`${col.label}, ${t('timeTrackingPage.invoices.registry.rowN').replace('{n}', String(idx + 1))}`}
                                                 onActivate={() => {

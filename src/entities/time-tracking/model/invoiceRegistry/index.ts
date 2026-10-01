@@ -1,6 +1,6 @@
 export type { InvoiceRegistryYearId, InvoiceRegistryRow, InvoiceRegistryColumnDef, InvoiceRegistrySheetMeta } from './types';
 export { INVOICE_REGISTRY_SHEETS, getInvoiceRegistrySheet } from './columns';
-export { INVOICE_REGISTRY_STATUSES, isInvoiceRegistryStatus, registryStatusToneClass, type InvoiceRegistryStatus } from './statuses';
+export { INVOICE_REGISTRY_STATUSES, LEGACY_INVOICE_REGISTRY_STATUSES, collectRegistryStatusOptions, isInvoiceRegistryStatus, registryStatusToneClass, type InvoiceRegistryStatus } from './statuses';
 export { loadInvoiceRegistryRows } from './loadSeed';
 export {
     aggregatePartnerRegistryStats,

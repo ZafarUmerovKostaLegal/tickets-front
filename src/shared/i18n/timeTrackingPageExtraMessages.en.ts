@@ -1304,7 +1304,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             statistics: 'Statistics',
         },
         registry: {
-            intro: 'The 2026 sheet is invoices issued manually. “2026 (system)” lists invoices created in the Invoices section. Only the manual 2026 sheet is editable; older years are archive.',
+            intro: 'Sheets 2020–2026 can be edited by hand, including the old Excel statuses. “2026 (system)” is view-only: those invoices come from the Invoices section.',
             systemTab: '2026 (system)',
             systemReadonly: 'system invoices (read only)',
             emptyTitle: 'Registry is empty for now',

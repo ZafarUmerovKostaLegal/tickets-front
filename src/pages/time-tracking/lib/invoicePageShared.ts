@@ -336,6 +336,69 @@ export function lastDayOfPreviousMonthIso(isoDate: string): string | null {
   return `${last.getFullYear()}-${String(last.getMonth() + 1).padStart(2, '0')}-${String(last.getDate()).padStart(2, '0')}`;
 }
 
+/** Full invoice PDF, the same file as «Скачать PDF» on the invoice card. */
+export async function downloadExistingInvoicePdf(invoiceId: string): Promise<void> {
+  const id = invoiceId.trim();
+  if (!id)
+    throw new Error('invoiceId');
+  const { getInvoice, getTimeManagerClient } = await import('@entities/time-tracking');
+  const { buildInvoiceCoverLetterModel } = await import('@pages/invoice-preview/lib/invoiceCoverLetterModel');
+  const { buildInvoicePreviewExportBasename, triggerBrowserDownload } = await import('@pages/invoice-preview/lib/invoicePreviewDownload');
+  const fresh = await getInvoice(id, false);
+  const { applyCoverDocumentOverrides, parseInvoiceDocumentOverrides, scrubStaleBillingPeriodDocumentOverrides } = await import('@pages/invoice-preview/lib/invoiceDocumentOverrides');
+  const client = await getTimeManagerClient(fresh.clientId);
+  const clientLabel = (client.name || fresh.clientId).trim();
+  const meta = await invoicePreviewMetaForExisting(fresh, clientLabel);
+  const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || null;
+  const doc = scrubStaleBillingPeriodDocumentOverrides(
+    parseInvoiceDocumentOverrides(fresh.documentOverrides),
+    {
+      issueDateIso: meta.issueDateIso ?? fresh.issueDate.slice(0, 10),
+      billingPeriodIso: periodIso,
+    },
+  );
+  const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({
+    issueDateIso: fresh.issueDate.slice(0, 10),
+    billingPeriodIso: periodIso ?? fresh.issueDate.slice(0, 10),
+    clientName: client.name,
+    clientAddress: client.address,
+    contactName: client.contact_name ?? null,
+    totalAmount: fresh.totalAmount,
+    currency: fresh.currency,
+  }), doc?.cover);
+  if (doc?.legal?.invoiceNumber?.trim())
+    meta.invoiceNumber = doc.legal.invoiceNumber.trim();
+  const previewSession = {
+    v: 1 as const,
+    mode: 'existing' as const,
+    invoiceId: fresh.id,
+    meta,
+    ...(doc ? { documentOverrides: doc as unknown as Record<string, unknown> } : {}),
+  };
+  const { buildInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewPdf');
+  const { splitDetailRowsForPagedTimeReport } = await import('@pages/invoice-preview/lib/invoiceTimeReportChunking');
+  const { pageNumbersForIncludedKeys } = await import('@pages/invoice-preview/lib/invoicePreviewPageSlots');
+  const trChunks = doc?.combinedReport
+    ? 1
+    : (doc?.timeReport
+      ? splitDetailRowsForPagedTimeReport(doc.timeReport.detailSlots).length
+      : 1);
+  const blob = await buildInvoicePreviewPdfBlob({
+    model,
+    session: previewSession,
+    timeReportPack: doc?.timeReport ?? undefined,
+    legalOverrides: doc?.legal ?? undefined,
+    combinedReport: doc?.combinedReport,
+    selectedPageNumbers: pageNumbersForIncludedKeys(doc?.includedPageKeys, trChunks),
+  });
+  const base = buildInvoicePreviewExportBasename({
+    invoiceNumber: fresh.invoiceNumber,
+    clientLabel,
+    issueDateIso: fresh.issueDate.slice(0, 10),
+  });
+  triggerBrowserDownload(blob, `${base}.pdf`);
+}
+
 export function notifyReportsInvalidated() {
   window.dispatchEvent(new Event('tt-reports-invalidate'));
 }

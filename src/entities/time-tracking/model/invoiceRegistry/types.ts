@@ -18,8 +18,8 @@ export type InvoiceRegistryColumnDef = {
     /** Excel header (RU) — shown 1:1 in the table */
     label: string;
     wide?: boolean;
-    /** Dropdown editor (fixed status list) */
-    editor?: 'text' | 'status';
+    /** Dropdown editor (fixed status list) or a PDF download. */
+    editor?: 'text' | 'status' | 'pdf';
 };
 
 export type InvoiceRegistrySheetMeta = {

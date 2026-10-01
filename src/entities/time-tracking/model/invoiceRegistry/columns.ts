@@ -65,6 +65,7 @@ const COL_2022: InvoiceRegistryColumnDef[] = [
     { key: 'amount', label: 'Сумма' },
     { key: 'currency', label: 'Валюта' },
     { key: 'details', label: 'Детали', wide: true },
+    { key: 'statusNote', label: 'Статус', editor: 'status' },
 ];
 
 const COL_2021: InvoiceRegistryColumnDef[] = [
@@ -77,6 +78,7 @@ const COL_2021: InvoiceRegistryColumnDef[] = [
     { key: 'currency', label: 'Валюта' },
     { key: 'details', label: 'Детали', wide: true },
     { key: 'uzbSia', label: 'UZB/SIA' },
+    { key: 'statusNote', label: 'Статус', editor: 'status' },
 ];
 
 const COL_2020: InvoiceRegistryColumnDef[] = [
@@ -89,6 +91,7 @@ const COL_2020: InvoiceRegistryColumnDef[] = [
     { key: 'currency', label: 'Валюта' },
     { key: 'details', label: 'Детали', wide: true },
     { key: 'uzbSia', label: 'UZB/SIA' },
+    { key: 'statusNote', label: 'Статус', editor: 'status' },
 ];
 
 const COL_CHECKLIST: InvoiceRegistryColumnDef[] = [
@@ -107,7 +110,7 @@ const COL_CHECKLIST: InvoiceRegistryColumnDef[] = [
 
 export const INVOICE_REGISTRY_SHEETS: InvoiceRegistrySheetMeta[] = [
     { year: '2026', sheetName: 'Инвойс 2026', columns: COL_2026 },
-    { year: '2026-system', sheetName: '2026 (система)', columns: COL_2026 },
+    { year: '2026-system', sheetName: '2026 (система)', columns: [...COL_2026, { key: 'invoicePdf', label: 'PDF', editor: 'pdf' }] },
     { year: '2025', sheetName: 'Инвойс 2025', columns: COL_2025 },
     { year: '2024', sheetName: 'Инвойс 2024', columns: COL_2024 },
     { year: '2023', sheetName: 'Инвойс 2023', columns: COL_2023 },

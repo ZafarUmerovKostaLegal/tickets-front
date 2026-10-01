@@ -3511,6 +3511,7 @@
   flex-direction: column;
   gap: 0;
   min-height: 0;
+  min-width: 0;
   width: 100%;
   max-width: none;
   box-sizing: border-box;

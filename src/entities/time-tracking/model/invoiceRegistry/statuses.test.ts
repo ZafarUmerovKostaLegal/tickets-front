@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import year2026 from './seed/year-2026.json';
 import { getInvoiceRegistrySheet } from './columns';
-import { registryStatusToneClass } from './statuses';
+import { collectRegistryStatusOptions, registryStatusToneClass } from './statuses';
 import type { InvoiceRegistryRow } from './types';
 
 const rows = year2026 as InvoiceRegistryRow[];
@@ -26,6 +26,23 @@ describe('registry status tones', () => {
 
     it('keeps a free-text Excel note visibly different from the fixed list', () => {
         expect(registryStatusToneClass('Ольге направила')).toBe('tt-inv-reg-status--legacy');
+    });
+
+    it('offers the old Excel phrases next to the fixed statuses', () => {
+        const options = collectRegistryStatusOptions([
+            'Ольге направила',
+            'жду подтверждения от клиента',
+            'Выставили этот инвойс в феврале 2026 года',
+        ]);
+        expect(options.slice(0, 4)).toEqual([
+            'Черновик',
+            'На согласовании с Клиентом',
+            'Выставлен',
+            'Оплачен',
+        ]);
+        expect(options).toContain('Ольге направила');
+        expect(options).toContain('Аннулирован');
+        expect(options).toContain('Выставили этот инвойс в феврале 2026 года');
     });
 });
 
@@ -54,6 +71,17 @@ describe('2026 system sheet', () => {
         const manual = getInvoiceRegistrySheet('2026');
         const system = getInvoiceRegistrySheet('2026-system');
         expect(system.sheetName).toBe('2026 (система)');
-        expect(system.columns.map((column) => column.key)).toEqual(manual.columns.map((column) => column.key));
+        expect(system.columns.map((column) => column.key)).toEqual([
+            ...manual.columns.map((column) => column.key),
+            'invoicePdf',
+        ]);
+        expect(system.columns.at(-1)?.editor).toBe('pdf');
+    });
+
+    it('keeps a status column on the older manual years', () => {
+        for (const year of ['2025', '2024', '2023', '2022', '2021', '2020'] as const) {
+            const sheet = getInvoiceRegistrySheet(year);
+            expect(sheet.columns.some((column) => column.key === 'statusNote' && column.editor === 'status')).toBe(true);
+        }
     });
 });

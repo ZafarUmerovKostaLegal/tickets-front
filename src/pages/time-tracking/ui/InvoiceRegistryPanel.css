@@ -2,6 +2,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  width: 100%;
+  max-width: 100%;
   min-width: 0;
 }
 
@@ -52,25 +54,36 @@
 .tt-inv-reg__toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.75rem 1rem;
+  gap: 0.65rem 1rem;
+  width: 100%;
+  min-width: 0;
 }
 
 .tt-inv-reg__year-nav {
-  flex: 1 1 auto;
+  flex: 1 1 16rem;
   min-width: 0;
+  max-width: 100%;
+  flex-shrink: 1;
 }
 
 .tt-inv-reg__toolbar-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.5rem;
+  flex: 1 1 16rem;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .tt-inv-reg__search {
-  width: min(220px, 100%);
+  flex: 1 1 10rem;
+  width: auto;
+  min-width: 0;
+  max-width: 18rem;
   height: 36px;
 }
 
@@ -78,14 +91,32 @@
   margin: 0;
   font-size: 0.8125rem;
   color: var(--app-muted, #64748b);
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .tt-inv-reg__toolbar-actions,
+  .tt-inv-reg__year-nav,
+  .tt-inv-reg__search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .tt-inv-reg__toolbar-actions {
+    justify-content: flex-start;
+  }
 }
 
 .tt-inv-reg__table-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow: auto;
   max-height: min(70vh, 820px);
   border: 1px solid var(--app-border, #e2e8f0);
   border-radius: 10px;
   background: var(--app-surface, #fff);
+  -webkit-overflow-scrolling: touch;
 }
 
 .tt-inv-reg__table {
@@ -113,14 +144,39 @@
   color: #334155;
   font-weight: 600;
   white-space: nowrap;
-  max-width: 14rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .tt-inv-reg__th--wide {
   max-width: 22rem;
   white-space: normal;
+}
+
+.tt-inv-reg__th--pin,
+.tt-inv-reg__td--pin {
+  position: sticky;
+  left: 0;
+  min-width: 3.25rem;
+  max-width: 4.5rem;
+  background: #f8fafc;
+  box-shadow: 1px 0 0 var(--app-border, #e2e8f0);
+}
+
+.tt-inv-reg__th--pin {
+  z-index: 4;
+}
+
+.tt-inv-reg__td--pin {
+  z-index: 1;
+  background: var(--app-surface, #fff);
+}
+
+.tt-inv-reg__table--editable .tt-inv-reg__th--pin,
+.tt-inv-reg__table--editable .tt-inv-reg__td--pin {
+  left: 2.25rem;
+}
+
+.tt-inv-reg__tr:hover .tt-inv-reg__td--pin {
+  background: #f8f6f2;
 }
 
 .tt-inv-reg__th--actions,
@@ -367,10 +423,63 @@
   font-weight: 500;
 }
 
+.tt-inv-reg__pdf {
+  height: 28px;
+  padding: 0 0.55rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 7px;
+  background: var(--app-surface, #fff);
+  color: var(--app-text, #0f172a);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tt-inv-reg__pdf:hover:not(:disabled) {
+  border-color: var(--app-accent, #4f46e5);
+  color: var(--app-accent, #4f46e5);
+}
+
+.tt-inv-reg__pdf:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+.tt-inv-reg__td--pdf {
+  white-space: nowrap;
+}
+
+.tt-inv-reg__table--editable .tt-inv-reg__td {
+  cursor: text;
+}
+
+.tt-inv-reg-status__custom {
+  display: flex;
+  margin-top: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--app-border, #e2e8f0);
+}
+
+.tt-inv-reg-status__custom-input {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 0.55rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 7px;
+  background: var(--app-surface, #fff);
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+}
+
 .tt-inv-reg-status__menu {
   position: fixed;
   z-index: 13050;
-  max-height: min(280px, calc(100vh - 16px));
+  max-height: min(360px, calc(100vh - 16px));
   overflow: auto;
   padding: 0.35rem;
   border: 1px solid var(--app-border, #e2e8f0);
