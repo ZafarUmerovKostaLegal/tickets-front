@@ -28,7 +28,7 @@ import {
     type InvoiceLegalPageOverrides,
 } from './invoiceLegalPageModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
-import { COVER_LETTERHEAD_LOGO_ASPECT, LEGAL_VERT_LOGO_ASPECT, rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
+import { COVER_LETTERHEAD_LOGO_ASPECT, rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { countCombinedReportPages, drawCombinedReportPages } from './drawCombinedFeesReportPdf';
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
@@ -97,8 +97,6 @@ const COVER_SALUTE_GAP = CSS_REM_PT;
 const COVER_PARA_GAP = CSS_REM_PT;
 const COVER_CLOSING_BEFORE = CSS_REM_PT * 1.65;
 const COVER_SIG_BEFORE = CSS_REM_PT * 2;
-const LEGAL_LOGO_H_PT = 52;
-const LEGAL_LOGO_W_PT = LEGAL_LOGO_H_PT * LEGAL_VERT_LOGO_ASPECT;
 const LEGAL_MASTHEAD_MB = CSS_REM_PT * 0.85;
 /** Match InvoiceLegalInvoicePage.css: ribbon margin-bottom + panels padding-top. */
 const LEGAL_RIBBON_MB = CSS_REM_PT * (0.75 + 0.55);
