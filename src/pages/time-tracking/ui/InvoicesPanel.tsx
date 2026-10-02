@@ -643,10 +643,12 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       </div>
 
       <div className="tt-reports__table-wrap tt-inv__table-outer">
-        {listLoading ? (<div className="tt-inv__loading" role="status" aria-live="polite" aria-busy="true">
+        {listLoading ? (accountingEmbed ? (<div className="acct-inv-skel" role="status" aria-live="polite" aria-busy="true">
+          {Array.from({ length: 8 }, (_, i) => <div key={i} className="acct-skel acct-skel--row" />)}
+        </div>) : (<div className="tt-inv__loading" role="status" aria-live="polite" aria-busy="true">
           <div className="tt-inv__loading-spinner" />
           <span>{t('timeTrackingPage.invoices.list.loading')}</span>
-        </div>) : items.length === 0 && partnerListBlocked ? (<div className="tt-inv__empty tt-inv__empty--gate">
+        </div>)) : items.length === 0 && partnerListBlocked ? (<div className="tt-inv__empty tt-inv__empty--gate">
           <IcoInvoiceEmpty />
           <h3 className="tt-inv__empty-title">{t('timeTrackingPage.invoices.empty.gateTitle')}</h3>
           <p className="tt-inv__empty-text">

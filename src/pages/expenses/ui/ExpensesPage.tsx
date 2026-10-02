@@ -8,7 +8,7 @@ import type { PanelMode } from './ExpensesFormPanel';
 import { ExpenseConfirmDialog } from './ExpenseConfirmDialog';
 import type { ExpenseRequest, ExpenseFormValues, ExpenseFilesByKind, ExpenseType, ExpenseCreatedBy, PartnerExpenseCategory, } from '@entities/expenses/model/types';
 import { EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG, EXPENSE_ATTACHMENT_MAX_COUNT } from '@entities/expenses/model/types';
-import { TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, } from '@entities/expenses/model/constants';
+import { TYPE_META, REIMBURSABLE_META, COMPANY_EXPENSE_TYPE_CODES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, COMPANY_PRIVATE_EXPENSE_TYPE, canManageCompanyExpense, } from '@entities/expenses/model/constants';
 import { approveExpense, payExpense, deleteExpense, fetchExpenses, fetchExpenseById, uploadAttachment, rejectExpense, reviseExpense, } from '@entities/expenses/model/expensesApi';
 import { saveExpenseFromForm } from '@entities/expenses/model/saveExpenseFromForm';
 import {
@@ -1490,7 +1490,12 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         [filterPeriod, filterDateFrom, filterDateTo],
     );
     const statuses = EXPENSE_STATUS_FILTER_OPTIONS;
-    const types: ExpenseType[] = [...COMPANY_EXPENSE_TYPE_CODES];
+    const types: ExpenseType[] = [
+        ...COMPANY_EXPENSE_TYPE_CODES,
+        ...(isPartnerOrgRole(user?.role, user?.position) || canManageCompanyExpense(user?.email)
+            ? [COMPANY_PRIVATE_EXPENSE_TYPE.value]
+            : []),
+    ];
     const partnerFilterLabel = useMemo(() => {
         if (!filterPartnerUserId)
             return 'Партнёр';

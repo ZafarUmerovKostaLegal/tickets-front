@@ -47,6 +47,7 @@ export const TYPE_META: Record<ExpenseType, {
     entertainment: { label: 'Представительские' },
     client_expense: { label: 'За клиента' },
     partner_expense: { label: 'Расход партнёра' },
+    company_expense: { label: 'Расход компании' },
     other: { label: 'Прочее' },
 };
 export const PAYMENT_META: Record<PaymentMethod, {
@@ -133,7 +134,24 @@ export const COMPANY_EXPENSE_TYPES: {
     (t): t is { value: Exclude<ExpenseType, 'partner_expense'>; label: string } =>
         t.value !== 'partner_expense',
 );
-export const COMPANY_EXPENSE_TYPE_CODES: Exclude<ExpenseType, 'partner_expense'>[] = COMPANY_EXPENSE_TYPES.map(t => t.value);
+export const COMPANY_EXPENSE_TYPE_CODES: Exclude<ExpenseType, 'partner_expense' | 'company_expense'>[] = COMPANY_EXPENSE_TYPES.map(t => t.value);
+
+/** Приватный тип: в списке у партнёров, создать и согласовать могут только эти почты. */
+export const COMPANY_EXPENSE_ACTOR_EMAILS = [
+    'oidrisova@kostalegal.com',
+    'zumerov@kostalegal.com',
+    'aakhmadjonov@kostalegal.com',
+] as const;
+
+export function canManageCompanyExpense(email: string | null | undefined): boolean {
+    const e = (email || '').trim().toLowerCase();
+    return (COMPANY_EXPENSE_ACTOR_EMAILS as readonly string[]).includes(e);
+}
+
+export const COMPANY_PRIVATE_EXPENSE_TYPE: { value: 'company_expense'; label: string } = {
+    value: 'company_expense',
+    label: 'Расход компании',
+};
 export const PAYMENT_METHODS: {
     value: PaymentMethod;
     label: string;

@@ -34,7 +34,7 @@ const PERIODS = new Set<ExpensesUiFilterPeriod>([
 ]);
 const SORTS = new Set<ExpensesUiSortBy>(['createdAt', 'expenseDate']);
 const STATUSES = new Set<ExpenseStatus>(EXPENSE_REGISTRY_STATUSES);
-const TYPES = new Set<ExpenseType>(EXPENSE_TYPES.map(item => item.value));
+const TYPES = new Set<ExpenseType>([...EXPENSE_TYPES.map(item => item.value), 'company_expense']);
 const SUBTYPES = new Set<PartnerExpenseCategory>(PARTNER_EXPENSE_CATEGORIES.map(item => item.value));
 
 function isRecord(value: unknown): value is Record<string, unknown> {

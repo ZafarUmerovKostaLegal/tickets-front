@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo, type Dispatch, type SetStateAction, type TransitionEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { type ExpenseRequest, type ExpenseFormValues, type ExpenseFormErrors, type ExpenseFilesByKind, type AttachmentItem, EXPENSE_ATTACHMENT_MAX_BYTES, EXPENSE_ATTACHMENT_MAX_COUNT, EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG, } from '@entities/expenses/model/types';
-import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, } from '@entities/expenses/model/constants';
+import { EXPENSE_CURRENCIES, EXPENSE_TYPES, PARTNER_EXPENSE_CATEGORIES, getPartnerExpenseSubtypeLabel, PAYMENT_METHODS, COMPANY_PRIVATE_EXPENSE_TYPE, canManageCompanyExpense, } from '@entities/expenses/model/constants';
 import { computeAmountUzsForApi, computeUsdEquivalent, formatExchangeRate, needsForeignUsdRate, parseExpenseMoney, roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import { formatReimbursementCardNumber, isEmployeePersonalFundsPayout, isValidReimbursementCardNumber, reimbursementCardDigits } from '@entities/expenses/model/expensePaymentDetails';
 import { fetchCbuParsedForDate, foreignUnitsPerUsd, type CbuParsed } from '@entities/expenses/model/cbuRates';
@@ -1063,10 +1063,13 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             return EXPENSE_TYPES.filter(t => t.value === 'client_expense');
         // Company create/edit: all types except partner (partners use their own page).
         const company = EXPENSE_TYPES.filter(t => t.value !== 'partner_expense');
+        const showPrivate = canManageCompanyExpense(currentUserEmail)
+            || editingRequest?.expenseType === 'company_expense';
+        const withPrivate = showPrivate ? [...company, COMPANY_PRIVATE_EXPENSE_TYPE] : company;
         if (editingRequest?.expenseType === 'partner_expense')
-            return [...company, ...EXPENSE_TYPES.filter(t => t.value === 'partner_expense')];
-        return company;
-    }, [formScope, editingRequest?.expenseType]);
+            return [...withPrivate, ...EXPENSE_TYPES.filter(t => t.value === 'partner_expense')];
+        return withPrivate;
+    }, [formScope, editingRequest?.expenseType, currentUserEmail]);
     const partnerSubtypeItems = useMemo(() => [...PARTNER_EXPENSE_CATEGORIES], []);
     const partnerUserItems = useMemo(() => {
         type PartnerPick = { id: string; label: string; search: string };
