@@ -46,14 +46,22 @@ function showDesktopChatToast(title: string, body: string): Promise<void> {
         return Promise.resolve();
     if (title === 'Kosta Daily')
         return Promise.resolve();
-    return import('@tauri-apps/plugin-notification')
-        .then(async ({ isPermissionGranted, requestPermission, sendNotification }) => {
-            let granted = await isPermissionGranted();
-            if (!granted)
-                granted = (await requestPermission()) === 'granted';
-            if (!granted)
-                return;
-            sendNotification({ title, body });
+    const NotificationApi = window.Notification;
+    if (!NotificationApi)
+        return Promise.resolve();
+    const show = () => {
+        new NotificationApi(title, { body });
+    };
+    if (NotificationApi.permission === 'granted') {
+        show();
+        return Promise.resolve();
+    }
+    if (NotificationApi.permission !== 'default')
+        return Promise.resolve();
+    return NotificationApi.requestPermission()
+        .then((permission) => {
+            if (permission === 'granted')
+                show();
         })
         .catch(() => undefined);
 }
