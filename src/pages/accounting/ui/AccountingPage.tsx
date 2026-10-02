@@ -233,13 +233,13 @@ export function AccountingPage() {
                                         <HubChevron />
                                     </>
                                 );
-                                if ('tab' in tile) {
+                                if ('tab' in tile && tile.tab) {
                                     return (
                                         <button
                                             key={tile.key}
                                             type="button"
                                             className={`acct-page__hub-tile acct-page__hub-tile--${tile.variant}`}
-                                            onClick={() => selectTab(tile.tab)}
+                                            onClick={() => selectTab(tile.tab!)}
                                         >
                                             {body}
                                         </button>

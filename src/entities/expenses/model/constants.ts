@@ -134,7 +134,9 @@ export const COMPANY_EXPENSE_TYPES: {
     (t): t is { value: Exclude<ExpenseType, 'partner_expense'>; label: string } =>
         t.value !== 'partner_expense',
 );
-export const COMPANY_EXPENSE_TYPE_CODES: Exclude<ExpenseType, 'partner_expense' | 'company_expense'>[] = COMPANY_EXPENSE_TYPES.map(t => t.value);
+export const COMPANY_EXPENSE_TYPE_CODES = COMPANY_EXPENSE_TYPES
+    .map(t => t.value)
+    .filter((value): value is Exclude<ExpenseType, 'partner_expense' | 'company_expense'> => value !== 'company_expense');
 
 /** Приватный тип: в списке у партнёров, создать и согласовать могут только эти почты. */
 export const COMPANY_EXPENSE_ACTOR_EMAILS = [
