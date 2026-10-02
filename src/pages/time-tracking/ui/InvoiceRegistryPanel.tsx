@@ -534,9 +534,26 @@ function RegistryMonthMenu({
     );
 }
 
+const REGISTRY_YEAR_KEY = 'tt-inv-reg-year';
+const REGISTRY_YEARS = new Set<InvoiceRegistryYearId>([
+    '2026', '2026-system', '2025', '2024', '2023', '2022', '2021', '2020', 'checklist',
+]);
+
+function readRegistryYear(): InvoiceRegistryYearId {
+    try {
+        const saved = window.sessionStorage.getItem(REGISTRY_YEAR_KEY);
+        if (saved && REGISTRY_YEARS.has(saved as InvoiceRegistryYearId))
+            return saved as InvoiceRegistryYearId;
+    }
+    catch {
+        /* private mode */
+    }
+    return '2026';
+}
+
 export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean }) {
     const { t, locale } = useI18n();
-    const [year, setYear] = useState<InvoiceRegistryYearId>('2026');
+    const [year, setYear] = useState<InvoiceRegistryYearId>(readRegistryYear);
     const [rows, setRows] = useState<InvoiceRegistryRow[]>([]);
     const [years, setYears] = useState<InvoiceRegistryYearMeta[]>([]);
     const [sheetMode, setSheetMode] = useState<'active' | 'archive' | 'system'>('active');
@@ -882,7 +899,15 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                             role="tab"
                             aria-selected={year === s.id}
                             className={`tt-reports__type-tab${year === s.id ? ' tt-reports__type-tab--active' : ''}`}
-                            onClick={() => setYear(s.id)}
+                            onClick={() => {
+                                setYear(s.id);
+                                try {
+                                    window.sessionStorage.setItem(REGISTRY_YEAR_KEY, s.id);
+                                }
+                                catch {
+                                    /* private mode */
+                                }
+                            }}
                         >
                             {s.id === 'checklist'
                                 ? t('timeTrackingPage.invoices.registry.checklistTab')

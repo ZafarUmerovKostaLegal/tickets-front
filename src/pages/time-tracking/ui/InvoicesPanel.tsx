@@ -436,12 +436,19 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     }, { replace: true });
     navigate(getInvoiceDetailUrl(oid, accountingEmbed ? { variant: 'accounting' } : undefined), { replace: true });
   }, [searchParams, setSearchParams, navigate, accountingEmbed]);
+  const INV_TAB_KEY = 'tt-inv-subtab';
   const invoicesSubTab = searchParams.get('invTab') === 'registry'
     ? 'registry'
     : searchParams.get('invTab') === 'statistics'
       ? 'statistics'
       : 'list';
   const selectInvoicesSubTab = useCallback((tab: 'list' | 'registry' | 'statistics') => {
+    try {
+      window.sessionStorage.setItem(INV_TAB_KEY, tab);
+    }
+    catch {
+      /* private mode */
+    }
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (tab === 'registry')
@@ -453,6 +460,19 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       return next;
     }, { replace: true });
   }, [setSearchParams]);
+  useEffect(() => {
+    if (searchParams.get('invTab'))
+      return;
+    let saved = '';
+    try {
+      saved = window.sessionStorage.getItem(INV_TAB_KEY) ?? '';
+    }
+    catch {
+      saved = '';
+    }
+    if (saved === 'registry' || saved === 'statistics')
+      selectInvoicesSubTab(saved);
+  }, [searchParams, selectInvoicesSubTab]);
   return (<div className={`tt-inv${accountingEmbed ? ' tt-inv--accounting' : ''}`}>
     <div className="tt-reports__type-block">
       {!accountingEmbed && (

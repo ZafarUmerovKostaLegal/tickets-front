@@ -50,10 +50,34 @@ function HubIcon() {
     );
 }
 
+const ACCOUNTING_TAB_KEY = 'acct-tab';
+
+function readAccountingTab(): AccountingTab {
+    try {
+        const saved = window.sessionStorage.getItem(ACCOUNTING_TAB_KEY);
+        if (saved === 'overview' || saved === 'invoices' || saved === 'hr')
+            return saved;
+    }
+    catch {
+        /* private mode */
+    }
+    return 'overview';
+}
+
 export function AccountingPage() {
-    const [activeTab, setActiveTab] = useState<AccountingTab>('overview');
+    const [activeTab, setActiveTab] = useState<AccountingTab>(readAccountingTab);
     const [staffCount, setStaffCount] = useState<number | null>(null);
     const [invoiceCount, setInvoiceCount] = useState<number | null>(null);
+
+    const selectTab = (tab: AccountingTab) => {
+        setActiveTab(tab);
+        try {
+            window.sessionStorage.setItem(ACCOUNTING_TAB_KEY, tab);
+        }
+        catch {
+            /* private mode */
+        }
+    };
 
     useEffect(() => {
         let cancelled = false;
@@ -103,7 +127,7 @@ export function AccountingPage() {
                         role="tab"
                         aria-selected={activeTab === 'overview'}
                         className={`acct-tabs__tab${activeTab === 'overview' ? ' acct-tabs__tab--on' : ''}`}
-                        onClick={() => setActiveTab('overview')}
+                        onClick={() => selectTab('overview')}
                     >
                         Обзор
                     </button>
@@ -112,7 +136,7 @@ export function AccountingPage() {
                         role="tab"
                         aria-selected={activeTab === 'invoices'}
                         className={`acct-tabs__tab${activeTab === 'invoices' ? ' acct-tabs__tab--on' : ''}`}
-                        onClick={() => setActiveTab('invoices')}
+                        onClick={() => selectTab('invoices')}
                     >
                         Инвойсы
                     </button>
@@ -121,7 +145,7 @@ export function AccountingPage() {
                         role="tab"
                         aria-selected={activeTab === 'hr'}
                         className={`acct-tabs__tab${activeTab === 'hr' ? ' acct-tabs__tab--on' : ''}`}
-                        onClick={() => setActiveTab('hr')}
+                        onClick={() => selectTab('hr')}
                     >
                         HR
                     </button>
@@ -134,11 +158,11 @@ export function AccountingPage() {
                     {activeTab === 'overview' && (
                         <section className="acct-page__hub" aria-label="Разделы бухгалтерии">
                             <div className="acct-page__stats">
-                                <button type="button" className="acct-page__stat" onClick={() => setActiveTab('hr')}>
+                                <button type="button" className="acct-page__stat" onClick={() => selectTab('hr')}>
                                     <span className="acct-page__stat-value">{staffCount ?? '—'}</span>
                                     <span className="acct-page__stat-label">сотрудников</span>
                                 </button>
-                                <button type="button" className="acct-page__stat" onClick={() => setActiveTab('invoices')}>
+                                <button type="button" className="acct-page__stat" onClick={() => selectTab('invoices')}>
                                     <span className="acct-page__stat-value">{invoiceCount ?? '—'}</span>
                                     <span className="acct-page__stat-label">счетов 2026 из системы</span>
                                 </button>
@@ -161,7 +185,7 @@ export function AccountingPage() {
                                             key={tile.key}
                                             type="button"
                                             className={`acct-page__hub-tile acct-page__hub-tile--${tile.variant}`}
-                                            onClick={() => setActiveTab(tile.tab)}
+                                            onClick={() => selectTab(tile.tab)}
                                         >
                                             {body}
                                         </button>
