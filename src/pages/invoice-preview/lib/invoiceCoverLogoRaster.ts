@@ -1,7 +1,7 @@
 import letterheadFullSvgRaw from '../../../assets/brand/KostaLegal-logo-letterhead-full.svg?raw';
 import letterheadFullLogoUrl from '../../../assets/brand/KostaLegal-logo-letterhead-full.svg?url';
 
-export type InvoiceLogoVariant = 'cover' | 'legal';
+export type InvoiceLogoVariant = 'cover' | 'legal' | 'mark';
 
 export type InvoiceCoverRasterizedLogo = {
     png: Uint8Array;
@@ -42,6 +42,18 @@ async function svgMarkupForVariant(variant: InvoiceLogoVariant): Promise<string 
         if (!trimmed.includes('<svg'))
             return null;
         return ensureTightFullLogoViewBoxIfIllustratorPage(trimmed);
+    }
+    if (variant === 'mark') {
+        try {
+            const res = await fetch(publicAssetUrl('logo.svg'));
+            if (!res.ok)
+                return null;
+            const trimmed = (await res.text()).trim();
+            return trimmed.includes('<svg') ? trimmed : null;
+        }
+        catch {
+            return null;
+        }
     }
     try {
         const res = await fetch(publicAssetUrl(VERT_LOGO_PUBLIC_PATH), { signal: AbortSignal.timeout(8000) });

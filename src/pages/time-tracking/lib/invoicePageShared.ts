@@ -376,6 +376,14 @@ export async function buildExistingInvoicePdfFile(invoiceId: string): Promise<{
   }), doc?.cover);
   if (doc?.legal?.invoiceNumber?.trim())
     meta.invoiceNumber = doc.legal.invoiceNumber.trim();
+  const savedLegal = { ...(doc?.legal ?? {}) };
+  const { applyFirmBankingProfileToLegalOverrides, pickFirmBankingProfileForCurrency, listFirmBankingProfiles } = await import('@entities/time-tracking/lib/firmBankingDetailsStorage');
+  const legalOverrides = (savedLegal.bankName ?? '').trim()
+    ? savedLegal
+    : applyFirmBankingProfileToLegalOverrides(
+      savedLegal,
+      pickFirmBankingProfileForCurrency(listFirmBankingProfiles(), fresh.currency),
+    );
   const session = {
     v: 1 as const,
     mode: 'existing' as const,
@@ -395,7 +403,7 @@ export async function buildExistingInvoicePdfFile(invoiceId: string): Promise<{
     model,
     session,
     timeReportPack: doc?.timeReport ?? undefined,
-    legalOverrides: doc?.legal ?? undefined,
+    legalOverrides,
     combinedReport: doc?.combinedReport,
     selectedPageNumbers: pageNumbersForIncludedKeys(doc?.includedPageKeys, trChunks),
   });
