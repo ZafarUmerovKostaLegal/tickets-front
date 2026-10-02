@@ -3,6 +3,18 @@ import { chatWindowIsInFront } from './chatNotificationSession';
 
 const SW_URL = '/chat-sw.js';
 let gestureBound = false;
+let refreshBound = false;
+
+function refreshSubscriptionWhenVisible(): void {
+    if (refreshBound || typeof document === 'undefined')
+        return;
+    refreshBound = true;
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible' || Notification.permission !== 'granted')
+            return;
+        void subscribeGranted().catch(() => undefined);
+    });
+}
 let subscribeInFlight: Promise<void> | null = null;
 
 function sameApplicationServerKey(subscription: PushSubscription, next: Uint8Array): boolean {
@@ -119,6 +131,7 @@ export async function ensureChatBrowserPush(): Promise<void> {
         } catch {
             /* Push setup must not break the open app. */
         }
+        refreshSubscriptionWhenVisible();
         return;
     }
     if (gestureBound)
@@ -128,8 +141,10 @@ export async function ensureChatBrowserPush(): Promise<void> {
         document.removeEventListener('pointerdown', ask);
         void Notification.requestPermission()
             .then((permission) => {
-                if (permission === 'granted')
+                if (permission === 'granted') {
+                    refreshSubscriptionWhenVisible();
                     return subscribeGranted();
+                }
                 return undefined;
             })
             .catch(() => undefined);

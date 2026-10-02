@@ -43,21 +43,26 @@ async function showChatNotification(data) {
     const icon = new URL('/notification-icon.png', self.location.origin).href;
     const image = typeof data.image === 'string' && data.image.startsWith('https://') ? data.image : '';
     const url = typeof data.url === 'string' ? data.url : '/kosta-daily';
-    const tag = Number.isFinite(roomId) && roomId > 0 ? `chat-room-${roomId}` : 'chat-room';
+    const ios = /iPhone|iPad|iPod/i.test(self.navigator.userAgent || '');
+    const roomTag = Number.isFinite(roomId) && roomId > 0 ? `chat-room-${roomId}` : 'chat-room';
+    // iOS replaces a notification with the same tag and does not banner again.
+    const tag = ios ? `${roomTag}-${Date.now()}` : roomTag;
     const payload = { url, roomId };
     const full = {
         body,
         icon,
         badge: icon,
         tag,
-        renotify: true,
+        renotify: !ios,
         data: payload,
-        actions: [
+    };
+    if (!ios) {
+        full.actions = [
             { action: 'open', title: 'Открыть' },
             { action: 'dismiss', title: 'Закрыть' },
-        ],
-    };
-    if (image)
+        ];
+    }
+    if (image && !ios)
         full.image = image;
     const shown = await showOnce(title, full);
     if (shown)
