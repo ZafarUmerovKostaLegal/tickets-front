@@ -130,6 +130,7 @@ export function KostaDailyPage() {
   const messagesInnerRef = useRef<HTMLDivElement>(null);
   const virtualFeedRef = useRef<KostaDailyVirtualFeedHandle>(null);
   const pinnedToBottomRef = useRef(true);
+  const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   const loadingOlderScrollRef = useRef(false);
   const chatSearchInputRef = useRef<HTMLInputElement>(null);
   const chatListRef = useRef<HTMLUListElement>(null);
@@ -308,6 +309,7 @@ export function KostaDailyPage() {
 
   useEffect(() => {
     pinnedToBottomRef.current = true;
+    setShowJumpToBottom(false);
   }, [activeChatId]);
 
   useEffect(() => {
@@ -322,7 +324,9 @@ export function KostaDailyPage() {
       return;
     const onScroll = () => {
       const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-      pinnedToBottomRef.current = dist <= CHAT_BOTTOM_PIN_THRESHOLD_PX;
+      const atBottom = dist <= CHAT_BOTTOM_PIN_THRESHOLD_PX;
+      pinnedToBottomRef.current = atBottom;
+      setShowJumpToBottom((prev) => (prev === !atBottom ? prev : !atBottom));
       if (el.scrollTop <= CHAT_LOAD_OLDER_THRESHOLD_PX)
         void loadOlderWithScrollAnchor();
     };
@@ -1154,6 +1158,24 @@ export function KostaDailyPage() {
                 renderBlock={renderFeedBlock}
               />
             </div>
+
+            {showJumpToBottom && !chatSearchOpen && (
+              <button
+                type="button"
+                className="kd-tg__jump-bottom"
+                aria-label="Вниз"
+                title="Вниз"
+                onClick={() => {
+                  pinnedToBottomRef.current = true;
+                  setShowJumpToBottom(false);
+                  scrollFeedToBottom('smooth');
+                }}
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+            )}
 
             {canPost ? (
               <KostaDailyComposer

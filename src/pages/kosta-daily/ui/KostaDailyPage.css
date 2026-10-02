@@ -871,6 +871,27 @@ body[data-theme='dark'] .kd-tg__search-mark {
   display: none;
 }
 
+.kd-tg__jump-bottom {
+  position: absolute;
+  right: 1.35rem;
+  bottom: 5.6rem;
+  z-index: 4;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--kd-tg-head-bg);
+  color: var(--kd-tg-text);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+
+.kd-tg__jump-bottom:hover {
+  background: var(--kd-tg-sidebar-hover);
+}
+
 .kd-tg__chat-scroll {
   position: relative;
   z-index: 1;

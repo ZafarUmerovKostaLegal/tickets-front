@@ -41,6 +41,23 @@ function urlBase64ToUint8Array(value: string): Uint8Array {
     return out;
 }
 
+function showDesktopChatToast(title: string, body: string): Promise<void> {
+    if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window))
+        return Promise.resolve();
+    if (title === 'Kosta Daily')
+        return Promise.resolve();
+    return import('@tauri-apps/plugin-notification')
+        .then(async ({ isPermissionGranted, requestPermission, sendNotification }) => {
+            let granted = await isPermissionGranted();
+            if (!granted)
+                granted = (await requestPermission()) === 'granted';
+            if (!granted)
+                return;
+            sendNotification({ title, body });
+        })
+        .catch(() => undefined);
+}
+
 function pushSupported(): boolean {
     return typeof window !== 'undefined'
         && window.isSecureContext
@@ -85,6 +102,7 @@ export function showChatOsNotification(input: {
         return;
     if (chatWindowIsInFront())
         return;
+    void showDesktopChatToast(input.title, input.body);
     const payload = {
         type: 'show-chat-notification',
         title: input.title,
