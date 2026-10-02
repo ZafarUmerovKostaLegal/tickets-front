@@ -12,6 +12,7 @@ import {
     type AddClientContactEditTarget,
 } from './AddClientContactForClientModal';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
+import './TimeTrackingForms.css';
 
 const PRIMARY_KEY = 'primary';
 

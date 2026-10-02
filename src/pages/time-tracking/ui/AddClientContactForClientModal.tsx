@@ -7,6 +7,7 @@ import {
 } from '@entities/time-tracking';
 import { useI18n } from '@shared/i18n';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
+import './TimeTrackingForms.css';
 
 export type AddClientContactEditTarget = {
     kind: 'primary' | 'extra';
