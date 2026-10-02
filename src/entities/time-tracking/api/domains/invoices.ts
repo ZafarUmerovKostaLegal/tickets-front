@@ -1075,6 +1075,7 @@ export type InvoiceOutlookDraftInput = {
     pdfBase64: string;
     pdfFileName?: string | null;
     logoPngBase64?: string | null;
+    signal?: AbortSignal;
 };
 
 export type InvoiceOutlookDraftResult = {
@@ -1110,7 +1111,7 @@ export async function createInvoiceOutlookDraft(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
-            signal: AbortSignal.timeout(90_000),
+            signal: body.signal ?? AbortSignal.timeout(90_000),
         },
     );
     await throwIfNotOk(res);

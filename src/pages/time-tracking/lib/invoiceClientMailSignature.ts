@@ -76,8 +76,18 @@ export function invoiceClientMailSignature(input: {
 export async function rasterizePublicLogoPng(): Promise<string | null> {
     try {
         const img = new Image();
-        img.src = '/logo.svg';
-        await img.decode();
+        await new Promise<void>((resolve, reject) => {
+            const timer = window.setTimeout(() => reject(new Error('logo timeout')), 4000);
+            img.onload = () => {
+                window.clearTimeout(timer);
+                resolve();
+            };
+            img.onerror = () => {
+                window.clearTimeout(timer);
+                reject(new Error('logo'));
+            };
+            img.src = '/logo.svg';
+        });
         const width = 96;
         const height = Math.max(1, Math.round(width * (img.naturalHeight / Math.max(1, img.naturalWidth))));
         const canvas = document.createElement('canvas');

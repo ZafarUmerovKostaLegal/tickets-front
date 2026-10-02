@@ -337,13 +337,21 @@ export function lastDayOfPreviousMonthIso(isoDate: string): string | null {
 }
 
 /** Full invoice PDF, the same file as «Скачать PDF» on the invoice card. */
-export async function downloadExistingInvoicePdf(invoiceId: string): Promise<void> {
+export async function buildExistingInvoicePdfFile(invoiceId: string): Promise<{
+  blob: Blob;
+  fileBase: string;
+  model: import('@pages/invoice-preview/lib/invoiceCoverLetterModel').InvoiceCoverLetterModel;
+  session: import('@entities/time-tracking/model/invoicePreviewSession').InvoicePreviewSessionV1;
+  clientLabel: string;
+  invoiceNumber: string | null;
+  issueDateIso: string;
+}> {
   const id = invoiceId.trim();
   if (!id)
     throw new Error('invoiceId');
   const { getInvoice, getTimeManagerClient } = await import('@entities/time-tracking');
   const { buildInvoiceCoverLetterModel } = await import('@pages/invoice-preview/lib/invoiceCoverLetterModel');
-  const { buildInvoicePreviewExportBasename, triggerBrowserDownload } = await import('@pages/invoice-preview/lib/invoicePreviewDownload');
+  const { buildInvoicePreviewExportBasename } = await import('@pages/invoice-preview/lib/invoicePreviewDownload');
   const fresh = await getInvoice(id, false);
   const { applyCoverDocumentOverrides, parseInvoiceDocumentOverrides, scrubStaleBillingPeriodDocumentOverrides } = await import('@pages/invoice-preview/lib/invoiceDocumentOverrides');
   const client = await getTimeManagerClient(fresh.clientId);
@@ -368,7 +376,7 @@ export async function downloadExistingInvoicePdf(invoiceId: string): Promise<voi
   }), doc?.cover);
   if (doc?.legal?.invoiceNumber?.trim())
     meta.invoiceNumber = doc.legal.invoiceNumber.trim();
-  const previewSession = {
+  const session = {
     v: 1 as const,
     mode: 'existing' as const,
     invoiceId: fresh.id,
@@ -385,18 +393,33 @@ export async function downloadExistingInvoicePdf(invoiceId: string): Promise<voi
       : 1);
   const blob = await buildInvoicePreviewPdfBlob({
     model,
-    session: previewSession,
+    session,
     timeReportPack: doc?.timeReport ?? undefined,
     legalOverrides: doc?.legal ?? undefined,
     combinedReport: doc?.combinedReport,
     selectedPageNumbers: pageNumbersForIncludedKeys(doc?.includedPageKeys, trChunks),
   });
-  const base = buildInvoicePreviewExportBasename({
-    invoiceNumber: fresh.invoiceNumber,
+  const issueDateIso = fresh.issueDate.slice(0, 10);
+  return {
+    blob,
+    fileBase: buildInvoicePreviewExportBasename({
+      invoiceNumber: fresh.invoiceNumber,
+      clientLabel,
+      issueDateIso,
+    }),
+    model,
+    session,
     clientLabel,
-    issueDateIso: fresh.issueDate.slice(0, 10),
-  });
-  triggerBrowserDownload(blob, `${base}.pdf`);
+    invoiceNumber: fresh.invoiceNumber,
+    issueDateIso,
+  };
+}
+
+/** Full invoice PDF, the same file as «Скачать PDF» on the invoice card. */
+export async function downloadExistingInvoicePdf(invoiceId: string): Promise<void> {
+  const { triggerBrowserDownload } = await import('@pages/invoice-preview/lib/invoicePreviewDownload');
+  const file = await buildExistingInvoicePdfFile(invoiceId);
+  triggerBrowserDownload(file.blob, `${file.fileBase}.pdf`);
 }
 
 export function notifyReportsInvalidated() {

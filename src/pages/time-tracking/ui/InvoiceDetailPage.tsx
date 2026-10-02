@@ -58,6 +58,7 @@ import {
   invoiceLineKindLabel,
   invoiceLineKindSlug,
   invoicePreviewMetaForExisting,
+  buildExistingInvoicePdfFile,
   notifyAccountingLastInvoicePage,
   notifyReportsInvalidated,
   openOutlookComposePopup,
@@ -101,6 +102,7 @@ export function InvoiceDetailPage() {
   const [sendContactOpen, setSendContactOpen] = useState(false);
   const [outlookSendWait, setOutlookSendWait] = useState<{ invoiceId: string; label: string } | null>(null);
   const outlookWaitAbortRef = useRef<AbortController | null>(null);
+  const sendAbortRef = useRef<AbortController | null>(null);
   const [detailExportBusy, setDetailExportBusy] = useState<'pdf' | 'word' | null>(null);
   const [draftIssueDate, setDraftIssueDate] = useState('');
   const [draftDueDate, setDraftDueDate] = useState('');
@@ -1170,49 +1172,45 @@ export function InvoiceDetailPage() {
           clientName={clientNameById.get(detail.clientId) ?? detail.clientId}
           invoiceLabel={detail.invoiceNumber || detail.id}
           onClose={() => {
-            if (!actionBusy)
-              setSendContactOpen(false);
+            sendAbortRef.current?.abort();
+            setActionBusy(false);
+            setSendContactOpen(false);
           }}
           onConfirm={async (contact) => {
+            const ac = new AbortController();
+            sendAbortRef.current = ac;
+            const signal = AbortSignal.any([ac.signal, AbortSignal.timeout(90_000)]);
+            const cancelled = () => ac.signal.aborted;
             setActionBusy(true);
             try {
               invalidateCalendarApiCache();
               const outlookSt = await getCalendarStatus();
+              if (cancelled())
+                return;
               if (!outlookSt.connected || outlookSt.mailReady === false) {
                 // Modal stays open with Connect Outlook — do not open another dialog under it.
                 return;
               }
 
-              const client = await getTimeManagerClient(detail.clientId);
-              const clientLabel = (clientNameById.get(detail.clientId) ?? detail.clientId).trim();
-              const meta = await invoicePreviewMetaForExisting(detail, clientLabel);
-              const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || detail.issueDate.slice(0, 10);
-              const model = buildInvoiceCoverLetterModel({
-                issueDateIso: detail.issueDate.slice(0, 10),
-                billingPeriodIso: periodIso,
-                clientName: client.name,
-                clientAddress: client.address,
-                contactName: client.contact_name ?? null,
-                totalAmount: detail.totalAmount,
-                currency: detail.currency,
-              });
-              const previewSession = { v: 1 as const, mode: 'existing' as const, invoiceId: detail.id, meta };
-              const { buildInvoicePreviewPdfBlob } = await import('@pages/invoice-preview/lib/buildInvoicePreviewPdf');
-              const blob = await buildInvoicePreviewPdfBlob({ model, session: previewSession });
-              const pdfBase64 = await blobToBase64(blob);
+              const pdfFile = await buildExistingInvoicePdfFile(detail.id);
+              if (cancelled())
+                return;
+              const pdfBase64 = await blobToBase64(pdfFile.blob);
               const invoiceLabel = detail.invoiceNumber || detail.id;
               const greetingName = (contact.name || '').trim().split(/\s+/)[0] || 'Sir or Madam';
-              const projectOnly = (meta.projectLabel || '').trim().replace(/\s*\([^)]*\)\s*$/, '').trim();
-              const clientOnly = (client.name || clientLabel).trim();
+              const projectOnly = (pdfFile.session.meta.projectLabel || '').trim().replace(/\s*\([^)]*\)\s*$/, '').trim();
+              const clientOnly = pdfFile.clientLabel.trim();
               const matterCore = projectOnly && clientOnly && projectOnly.localeCompare(clientOnly, undefined, { sensitivity: 'accent' }) !== 0
                 ? `${clientOnly}/${projectOnly}`
                 : (projectOnly || clientOnly);
               const matter = matterCore ? `${matterCore} project` : 'the project';
               const subject = t('timeTrackingPage.invoices.sendDialog.mailSubject').replace('{invoice}', invoiceLabel);
               const logoPngBase64 = await rasterizePublicLogoPng();
+              if (cancelled())
+                return;
               const signature = invoiceClientMailSignature({
                 name: user?.display_name?.trim() || 'Kosta Legal',
-                position: user?.position,
+                position: 'Contract Manager',
                 embedLogo: Boolean(logoPngBase64),
               });
               const bodyHtml = t('timeTrackingPage.invoices.sendDialog.mailBodyHtml')
@@ -1223,11 +1221,7 @@ export function InvoiceDetailPage() {
                 .replaceAll('{greetingName}', greetingName)
                 .replaceAll('{matter}', matter)
                 .replaceAll('{signatureText}', signature.text);
-              const pdfFileName = `${buildInvoicePreviewExportBasename({
-                invoiceNumber: detail.invoiceNumber,
-                clientLabel,
-                issueDateIso: detail.issueDate.slice(0, 10),
-              })}.pdf`;
+              const pdfFileName = `${pdfFile.fileBase}.pdf`;
 
               const draft = await createInvoiceOutlookDraft(detail.id, {
                 toEmail: contact.email,
@@ -1238,15 +1232,18 @@ export function InvoiceDetailPage() {
                 pdfBase64,
                 pdfFileName,
                 logoPngBase64,
+                signal,
               });
+              if (cancelled())
+                return;
 
               const notifyAccounting = () => notifyAccountingLastInvoicePage({
                 invoiceId: detail.id,
-                model,
-                session: previewSession,
-                clientLabel,
-                invoiceNumber: detail.invoiceNumber,
-                issueDateIso: detail.issueDate.slice(0, 10),
+                model: pdfFile.model,
+                session: pdfFile.session,
+                clientLabel: pdfFile.clientLabel,
+                invoiceNumber: pdfFile.invoiceNumber,
+                issueDateIso: pdfFile.issueDateIso,
               });
 
               const opened = openOutlookComposePopup(draft.webLink);
@@ -1281,6 +1278,8 @@ export function InvoiceDetailPage() {
               });
             }
             catch (e) {
+              if (ac.signal.aborted)
+                return;
               const aborted = e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError');
               const msg = aborted
                 ? 'Сервер слишком долго готовил черновик письма. Повторите отправку.'
@@ -1307,6 +1306,8 @@ export function InvoiceDetailPage() {
               await showAlert({ message: msg || t('timeTrackingPage.invoices.errors.outlookDraftFailed') });
             }
             finally {
+              if (sendAbortRef.current === ac)
+                sendAbortRef.current = null;
               setActionBusy(false);
             }
           }}

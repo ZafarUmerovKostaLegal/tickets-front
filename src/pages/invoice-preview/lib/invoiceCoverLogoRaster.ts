@@ -44,7 +44,7 @@ async function svgMarkupForVariant(variant: InvoiceLogoVariant): Promise<string 
         return ensureTightFullLogoViewBoxIfIllustratorPage(trimmed);
     }
     try {
-        const res = await fetch(publicAssetUrl(VERT_LOGO_PUBLIC_PATH));
+        const res = await fetch(publicAssetUrl(VERT_LOGO_PUBLIC_PATH), { signal: AbortSignal.timeout(8000) });
         if (!res.ok)
             return null;
         const trimmed = (await res.text()).trim();
@@ -73,8 +73,15 @@ export async function rasterizeInvoiceLogoSvg(
             img.decoding = 'async';
             img.crossOrigin = 'anonymous';
             await new Promise<void>((resolve, reject) => {
-                img.onload = () => resolve();
-                img.onerror = () => reject(new Error(`invoice ${variant} logo img`));
+                const timer = window.setTimeout(() => reject(new Error(`invoice ${variant} logo timeout`)), 8000);
+                img.onload = () => {
+                    window.clearTimeout(timer);
+                    resolve();
+                };
+                img.onerror = () => {
+                    window.clearTimeout(timer);
+                    reject(new Error(`invoice ${variant} logo img`));
+                };
                 img.src = objUrl;
             });
             const iw = Math.max(1, img.naturalWidth || img.width);

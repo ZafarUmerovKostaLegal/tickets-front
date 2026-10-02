@@ -141,7 +141,7 @@ export function coverSignaturePublicUrl(initialsOrPartner: string | CoverSignato
 export const COVER_SIGNATURE_PUBLIC_URL = coverSignaturePublicUrl('AAA') ?? '/signatures/AAA.svg';
 
 async function loadPngFromUrl(url: string): Promise<CoverSignaturePng | null> {
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
     if (!res.ok)
         return null;
     const contentType = (res.headers.get('content-type') ?? '').toLowerCase();
@@ -150,11 +150,17 @@ async function loadPngFromUrl(url: string): Promise<CoverSignaturePng | null> {
         const img = await new Promise<HTMLImageElement>((resolve, reject) => {
             const el = new Image();
             const objUrl = URL.createObjectURL(new Blob([buf], { type: 'image/png' }));
+            const timer = window.setTimeout(() => {
+                URL.revokeObjectURL(objUrl);
+                reject(new Error('png load timeout'));
+            }, 8000);
             el.onload = () => {
+                window.clearTimeout(timer);
                 URL.revokeObjectURL(objUrl);
                 resolve(el);
             };
             el.onerror = () => {
+                window.clearTimeout(timer);
                 URL.revokeObjectURL(objUrl);
                 reject(new Error('png load failed'));
             };
@@ -186,8 +192,15 @@ async function loadPngFromUrl(url: string): Promise<CoverSignaturePng | null> {
     try {
         const img = await new Promise<HTMLImageElement>((resolve, reject) => {
             const el = new Image();
-            el.onload = () => resolve(el);
-            el.onerror = () => reject(new Error('signature image load failed'));
+            const timer = window.setTimeout(() => reject(new Error('signature image timeout')), 8000);
+            el.onload = () => {
+                window.clearTimeout(timer);
+                resolve(el);
+            };
+            el.onerror = () => {
+                window.clearTimeout(timer);
+                reject(new Error('signature image load failed'));
+            };
             el.src = objUrl;
         });
         const widthPx = Math.max(1, img.naturalWidth || 341);
