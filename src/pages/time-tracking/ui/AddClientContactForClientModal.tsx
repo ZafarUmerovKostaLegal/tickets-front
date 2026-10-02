@@ -9,6 +9,18 @@ import { useI18n } from '@shared/i18n';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 import './TimeTrackingForms.css';
 
+const CONTACT_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** One address, or several separated by `;`. Returns null when empty, false when invalid. */
+function normalizeContactEmails(raw: string): string | null | false {
+    const parts = raw.split(';').map((part) => part.trim()).filter(Boolean);
+    if (parts.length === 0)
+        return null;
+    if (parts.some((part) => !CONTACT_EMAIL_RE.test(part)))
+        return false;
+    return parts.join('; ');
+}
+
 export type AddClientContactEditTarget = {
     kind: 'primary' | 'extra';
     /** Extra contact id; ignored for primary. */
@@ -81,7 +93,12 @@ export function AddClientContactForClientModal({
         setSaving(true);
         try {
             const nextPhone = phone.trim() || null;
-            const nextEmail = email.trim() || null;
+            const nextEmail = normalizeContactEmails(email);
+            if (nextEmail === false) {
+                setError(t('timeTrackingPage.clients.addContactModal.emailInvalid'));
+                setSaving(false);
+                return;
+            }
             if (isEdit && editContact) {
                 if (editContact.kind === 'primary') {
                     await patchTimeManagerClient(clientId, {
@@ -171,7 +188,7 @@ export function AddClientContactForClientModal({
               <label className="tt-tm-label" htmlFor={`${uid}-cemail`}>
                 {t('timeTrackingPage.clients.modal.email')}
               </label>
-              <input id={`${uid}-cemail`} type="email" className="tt-tm-input" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" disabled={formLocked}/>
+              <input id={`${uid}-cemail`} type="text" className="tt-tm-input" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('timeTrackingPage.clients.addContactModal.emailPlaceholder')} autoComplete="off" inputMode="email" disabled={formLocked}/>
             </div>
           </div>
           <p className="tt-tm-hint">

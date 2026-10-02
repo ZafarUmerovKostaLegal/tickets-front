@@ -761,6 +761,8 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             clientArchivedHint: 'This client is archived. Restore the client in the edit card, then add a contact.',
             contactName: 'Contact name',
             contactNamePlaceholder: 'Full name or title',
+            emailPlaceholder: 'name@company.com; name2@company.com',
+            emailInvalid: 'Enter valid email addresses separated by “;”.',
             hint: 'The contact is saved in the client’s additional contacts list. Main contact and organization details are configured in “Edit client”.',
             editHint: 'Changes are saved to the client’s additional contacts list.',
             editPrimaryHint: 'Changes are saved to the client’s primary contact.',
