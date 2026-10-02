@@ -242,7 +242,9 @@
 .acct-page__invoices-wrap {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   scrollbar-gutter: stable;
 }
 
