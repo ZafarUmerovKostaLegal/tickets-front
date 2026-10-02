@@ -28,7 +28,7 @@ import {
     type InvoiceLegalPageOverrides,
 } from './invoiceLegalPageModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
-import { COVER_LETTERHEAD_LOGO_ASPECT, rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
+import { COVER_LETTERHEAD_LOGO_ASPECT, LEGAL_VERT_LOGO_ASPECT, rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { countCombinedReportPages, drawCombinedReportPages } from './drawCombinedFeesReportPdf';
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
@@ -97,6 +97,8 @@ const COVER_SALUTE_GAP = CSS_REM_PT;
 const COVER_PARA_GAP = CSS_REM_PT;
 const COVER_CLOSING_BEFORE = CSS_REM_PT * 1.65;
 const COVER_SIG_BEFORE = CSS_REM_PT * 2;
+const LEGAL_LOGO_H_PT = 52;
+const LEGAL_LOGO_W_PT = LEGAL_LOGO_H_PT * LEGAL_VERT_LOGO_ASPECT;
 const LEGAL_MASTHEAD_MB = CSS_REM_PT * 0.85;
 /** Match InvoiceLegalInvoicePage.css: ribbon margin-bottom + panels padding-top. */
 const LEGAL_RIBBON_MB = CSS_REM_PT * (0.75 + 0.55);
@@ -1345,42 +1347,32 @@ function drawLegalInvoicePdfPage(
     let y = H - MT;
 
     let logoBottom = y;
-    let yBlurb = y;
-    const textW = contentW * 0.62;
-    const textRight = W - MR;
-    const drawRight = (text: string, baseline: number, face: PDFFont, size: number, color: PdfRgb) => {
-        const width = face.widthOfTextAtSize(text, size);
-        page.drawText(text, { x: textRight - width, y: baseline, size, font: face, color });
-    };
-    const firmName = `${KOSTA_LEGAL_FIRM.brandName} LF`;
-    drawRight(firmName, yBlurb, fontBold, DOC_FS, FIRM_NAME);
-    yBlurb -= DOC_LH * 1.15;
-    for (const block of [firmAddress, KOSTA_LEGAL_FIRM.phone, KOSTA_LEGAL_FIRM.email, KOSTA_LEGAL_FIRM.web]) {
-        const lines = splitTextLines(block, textW, DOC_FS, font);
-        for (const line of lines) {
-            drawRight(line, yBlurb, font, DOC_FS, MUTED_TEXT);
-            yBlurb -= DOC_LH * 0.92;
-        }
-    }
-    const leftBlurb = resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage);
-    for (const ln of leftBlurb) {
-        const lines = splitTextLines(ln, textW, DOC_FS, font);
-        for (const line of lines) {
-            drawRight(line, yBlurb, font, DOC_FS, MUTED_TEXT);
-            yBlurb -= DOC_LH * 0.92;
-        }
+    if (logoImage) {
+        const logoBottomY = y - LEGAL_LOGO_H_PT;
+        logoBottom = logoBottomY;
+        page.drawImage(logoImage, {
+            x: W - MR - LEGAL_LOGO_W_PT,
+            y: logoBottomY,
+            width: LEGAL_LOGO_W_PT,
+            height: LEGAL_LOGO_H_PT,
+        });
     }
 
-    const markH = 52;
-    const markW = markH * (143 / 209);
-    if (logoImage) {
-        page.drawImage(logoImage, {
-            x: ML,
-            y: y - markH,
-            width: markW,
-            height: markH,
-        });
-        logoBottom = y - markH;
+    const blurbW = contentW * 0.62;
+    const firmName = `${KOSTA_LEGAL_FIRM.brandName} LF`;
+    page.drawText(firmName, {
+        x: ML,
+        y,
+        size: DOC_FS,
+        font: fontBold,
+        color: FIRM_NAME,
+    });
+    let yBlurb = y - DOC_LH * 1.15;
+
+    yBlurb = wrapTextBlockPreservingNewlines(page, firmAddress, ML, yBlurb, blurbW, DOC_FS, font, MUTED_TEXT, DOC_LH * 0.92);
+    const leftBlurb = resolveLegalFirmBankingLines(cur, legalOverrides, model.coverLanguage);
+    for (const ln of leftBlurb) {
+        yBlurb = wrapTextBlock(page, ln, ML, yBlurb, blurbW, DOC_FS, font, MUTED_TEXT, DOC_LH * 0.92);
     }
 
     y = Math.min(yBlurb, logoBottom) - LEGAL_MASTHEAD_MB;
@@ -1658,7 +1650,7 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     if (typeof window !== 'undefined') {
         const [coverRaster, legalRaster, signatureRaster] = await Promise.all([
             rasterizeInvoiceLogoSvg(500, 'cover'),
-            rasterizeInvoiceLogoSvg(220, 'mark'),
+            rasterizeInvoiceLogoSvg(180, 'legal'),
             loadCoverSignaturePng(model.signatoryInitials || model.signatoryName),
         ]);
         if (coverRaster?.png.length) {
