@@ -52,9 +52,9 @@ export function invoiceClientMailSignature(input: {
         + '</td></tr>'
         + '<tr><td style="padding:8px 0 0;border-top:1px solid #94a3b8;">'
         + '<div style="margin-top:10px;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;">DISCLAIMER:</div>'
-        + `<div style="margin-top:4px;font-family:'Calibri Light',Calibri,sans-serif;font-size:11pt;font-weight:300;line-height:1.35;color:#1e293b;">${DISCLAIMER_EN}</div>`
+        + `<p align="justify" style="margin:4px 0 0;font-family:'Calibri Light',Calibri,sans-serif;font-size:11pt;font-weight:300;line-height:1.35;color:#1e293b;text-align:justify;">${DISCLAIMER_EN}</p>`
         + '<div style="margin-top:12px;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;">ПРЕДУПРЕЖДЕНИЕ:</div>'
-        + `<div style="margin-top:4px;font-family:'Calibri Light',Calibri,sans-serif;font-size:11pt;font-weight:300;line-height:1.35;color:#1e293b;">${DISCLAIMER_RU}</div>`
+        + `<p align="justify" style="margin:4px 0 0;font-family:'Calibri Light',Calibri,sans-serif;font-size:11pt;font-weight:300;line-height:1.35;color:#1e293b;text-align:justify;">${DISCLAIMER_RU}</p>`
         + '</td></tr></table>';
     const text = [
         name,
