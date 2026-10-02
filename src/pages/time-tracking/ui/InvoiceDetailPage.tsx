@@ -48,6 +48,7 @@ import {
 } from '@entities/todo/lib/calendarApi';
 import { InvoiceSendContactModal } from './InvoiceSendContactModal';
 import { invoiceClientDescription } from '../lib/invoiceClientDescription';
+import { invoiceClientMailSignature } from '../lib/invoiceClientMailSignature';
 import {
   blobToBase64,
   buildPaidAtForPaymentApi,
@@ -1200,19 +1201,27 @@ export function InvoiceDetailPage() {
               const blob = await buildInvoicePreviewPdfBlob({ model, session: previewSession });
               const pdfBase64 = await blobToBase64(blob);
               const invoiceLabel = detail.invoiceNumber || detail.id;
-              const amountLabel = fmtMoney(displayTotalAmount, detail.currency, locale);
-              const nameSuffix = contact.name
-                ? t('timeTrackingPage.invoices.sendDialog.nameSuffix').replace('{name}', contact.name)
-                : '';
+              const greetingName = (contact.name || '').trim().split(/\s+/)[0] || 'Sir or Madam';
+              const projectOnly = (meta.projectLabel || '').trim().replace(/\s*\([^)]*\)\s*$/, '').trim();
+              const clientOnly = (client.name || clientLabel).trim();
+              const matterCore = projectOnly && clientOnly && projectOnly.localeCompare(clientOnly, undefined, { sensitivity: 'accent' }) !== 0
+                ? `${clientOnly}/${projectOnly}`
+                : (projectOnly || clientOnly);
+              const matter = matterCore ? `${matterCore} project` : 'the project';
               const subject = t('timeTrackingPage.invoices.sendDialog.mailSubject').replace('{invoice}', invoiceLabel);
+              const signature = invoiceClientMailSignature({
+                name: user?.display_name?.trim() || 'Kosta Legal',
+                position: user?.position,
+                logoUrl: `${window.location.origin}/logo.svg`,
+              });
               const bodyHtml = t('timeTrackingPage.invoices.sendDialog.mailBodyHtml')
-                .replaceAll('{nameSuffix}', escapeHtml(nameSuffix))
-                .replaceAll('{invoice}', escapeHtml(invoiceLabel))
-                .replaceAll('{amount}', escapeHtml(amountLabel));
+                .replaceAll('{greetingName}', escapeHtml(greetingName))
+                .replaceAll('{matter}', escapeHtml(matter))
+                .replaceAll('{signatureHtml}', signature.html);
               const bodyText = t('timeTrackingPage.invoices.sendDialog.mailBodyText')
-                .replaceAll('{nameSuffix}', nameSuffix)
-                .replaceAll('{invoice}', invoiceLabel)
-                .replaceAll('{amount}', amountLabel);
+                .replaceAll('{greetingName}', greetingName)
+                .replaceAll('{matter}', matter)
+                .replaceAll('{signatureText}', signature.text);
               const pdfFileName = `${buildInvoicePreviewExportBasename({
                 invoiceNumber: detail.invoiceNumber,
                 clientLabel,

@@ -1426,28 +1426,19 @@ export const timeTrackingPageExtraMessages = {
             mailSubject: 'Kosta Legal — счёт {invoice}',
             mailBodyHtml:
                 '<div style="margin:0;padding:0;background:#ffffff;color:#1e293b;font-family:\'Segoe UI\',Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;">'
-                + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:560px;border-collapse:collapse;">'
-                + '<tr><td style="padding:0 0 14px;border-bottom:2px solid #0f172a;">'
-                + '<span style="font-size:17px;font-weight:700;color:#0f172a;letter-spacing:0.02em;">Kosta Legal</span>'
-                + '</td></tr>'
-                + '<tr><td style="padding:20px 0 0;">'
-                + '<p style="margin:0 0 14px;color:#1e293b;">Добрый день{nameSuffix}!</p>'
-                + '<p style="margin:0 0 16px;color:#334155;">Во вложении направляем счёт <strong style="color:#0f172a;">{invoice}</strong>.</p>'
-                + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;">'
-                + '<tr><td style="padding:14px 16px;">'
-                + '<div style="font-size:11px;font-weight:600;color:#64748b;letter-spacing:0.06em;text-transform:uppercase;">Сумма к оплате</div>'
-                + '<div style="margin-top:6px;font-size:20px;font-weight:700;color:#0f172a;">{amount}</div>'
-                + '<div style="margin-top:4px;font-size:12px;color:#64748b;">№ {invoice}</div>'
-                + '</td></tr></table>'
-                + '<p style="margin:16px 0 0;font-size:13px;color:#64748b;">PDF счёта прикреплён к этому письму.</p>'
-                + '<p style="margin:28px 0 0;color:#1e293b;">С уважением,<br/><strong>Kosta Legal</strong></p>'
-                + '</td></tr></table></div>',
+                + '<p style="margin:0 0 14px;">Dear {greetingName},</p>'
+                + '<p style="margin:0 0 14px;">Hope this email finds you well.</p>'
+                + '<p style="margin:0 0 14px;">Herewith, find attached the invoice for services rendered in the framework of {matter}.</p>'
+                + '<p style="margin:0 0 14px;">The acknowledgment upon the receipt will be appreciated.</p>'
+                + '<p style="margin:22px 0 0;">Kind regards,</p>'
+                + '{signatureHtml}'
+                + '</div>',
             mailBodyText:
-                'Добрый день{nameSuffix}!\n\n'
-                + 'Во вложении направляем счёт {invoice}.\n'
-                + 'Сумма к оплате: {amount}\n\n'
-                + 'PDF счёта прикреплён к этому письму.\n\n'
-                + 'С уважением,\nKosta Legal',
+                'Dear {greetingName},\n\n'
+                + 'Hope this email finds you well.\n\n'
+                + 'Herewith, find attached the invoice for services rendered in the framework of {matter}.\n\n'
+                + 'The acknowledgment upon the receipt will be appreciated.\n\n'
+                + 'Kind regards,\n{signatureText}',
             nameSuffix: ', {name}',
         },
         summary: {
