@@ -25,6 +25,7 @@ import {
 } from '@entities/time-tracking/api/domains/invoiceRegistry';
 import { downloadExistingInvoicePdf } from '../lib/invoicePageShared';
 import { useI18n } from '@shared/i18n';
+import { DatePicker } from '@shared/ui/DatePicker';
 import { showToast } from '@shared/ui/app-toast';
 import './InvoiceRegistryPanel.css';
 
@@ -410,6 +411,129 @@ function RegistryEditableCell({
     );
 }
 
+function RegistryMonthMenu({
+    labels,
+    selected,
+    allLabel,
+    ariaLabel,
+    onToggle,
+}: {
+    labels: string[];
+    selected: Set<number>;
+    allLabel: string;
+    ariaLabel: string;
+    onToggle: (month: number) => void;
+}) {
+    const uid = useId();
+    const listId = `${uid}-months`;
+    const [open, setOpen] = useState(false);
+    const btnRef = useRef<HTMLButtonElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+    const buttonLabel = selected.size === 0
+        ? allLabel
+        : selected.size === 1
+            ? labels[[...selected][0]! - 1] ?? allLabel
+            : `${allLabel} (${selected.size})`;
+
+    const updatePos = useCallback(() => {
+        const btn = btnRef.current;
+        if (!btn)
+            return;
+        const r = btn.getBoundingClientRect();
+        const width = Math.max(r.width, 220);
+        const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
+        const menuH = 320;
+        const below = r.bottom + 4;
+        const top = below + menuH > window.innerHeight - 8
+            ? Math.max(8, r.top - menuH - 4)
+            : below;
+        setMenuPos({ top, left, width });
+    }, []);
+
+    useLayoutEffect(() => {
+        if (!open)
+            return;
+        updatePos();
+    }, [open, updatePos]);
+
+    useEffect(() => {
+        if (!open)
+            return;
+        const onScroll = () => updatePos();
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape')
+                setOpen(false);
+        };
+        const onPointer = (e: PointerEvent) => {
+            const t = e.target as Node;
+            if (btnRef.current?.contains(t) || menuRef.current?.contains(t))
+                return;
+            setOpen(false);
+        };
+        window.addEventListener('resize', onScroll);
+        window.addEventListener('scroll', onScroll, true);
+        document.addEventListener('keydown', onKey);
+        document.addEventListener('pointerdown', onPointer, true);
+        return () => {
+            window.removeEventListener('resize', onScroll);
+            window.removeEventListener('scroll', onScroll, true);
+            document.removeEventListener('keydown', onKey);
+            document.removeEventListener('pointerdown', onPointer, true);
+        };
+    }, [open, updatePos]);
+
+    return (
+        <>
+            <button
+                ref={btnRef}
+                type="button"
+                className={`tt-inv-reg__filter tt-inv-reg__month-btn${open ? ' tt-inv-reg__month-btn--open' : ''}`}
+                aria-label={ariaLabel}
+                aria-expanded={open}
+                aria-haspopup="listbox"
+                aria-controls={open ? listId : undefined}
+                onClick={() => setOpen((v) => !v)}
+            >
+                <span className="tt-inv-reg__month-btn-label">{buttonLabel}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+            </button>
+            {open && menuPos && createPortal(
+                <div
+                    ref={menuRef}
+                    id={listId}
+                    className="tt-inv-reg__month-menu"
+                    role="listbox"
+                    aria-multiselectable
+                    style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
+                >
+                    {labels.map((label, index) => {
+                        const month = index + 1;
+                        const on = selected.has(month);
+                        return (
+                            <button
+                                key={label}
+                                type="button"
+                                role="option"
+                                aria-selected={on}
+                                className={`tt-inv-reg__month-opt${on ? ' tt-inv-reg__month-opt--on' : ''}`}
+                                onClick={() => onToggle(month)}
+                            >
+                                <span className="tt-inv-reg__month-check" aria-hidden>{on ? '✓' : ''}</span>
+                                {label}
+                            </button>
+                        );
+                    })}
+                </div>,
+                document.body,
+            )}
+        </>
+    );
+}
+
 export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean }) {
     const { t, locale } = useI18n();
     const [year, setYear] = useState<InvoiceRegistryYearId>('2026');
@@ -595,7 +719,10 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
     }, [rows]);
     const monthLabels = useMemo(() => {
         const fmt = new Intl.DateTimeFormat(locale === 'en' ? 'en' : 'ru', { month: 'long' });
-        return Array.from({ length: 12 }, (_, index) => fmt.format(new Date(2026, index, 1)));
+        return Array.from({ length: 12 }, (_, index) => {
+            const raw = fmt.format(new Date(2026, index, 1));
+            return raw.charAt(0).toUpperCase() + raw.slice(1);
+        });
     }, [locale]);
     const filtersActive = partners.size > 0 || numberQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || months.size > 0;
     const filteredRows = useMemo(() => filterInvoiceRegistryRows(rows, {
@@ -840,41 +967,39 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                 />
                 <label className="tt-inv-reg__filter-label">
                     {t('timeTrackingPage.invoices.registry.filterDateFrom')}
-                    <input
-                        type="date"
-                        className="tt-inv-reg__filter tt-inv-reg__filter--date"
+                    <DatePicker
+                        className="tt-inv-reg__date"
                         value={dateFrom}
                         max={dateTo || undefined}
-                        aria-label={t('timeTrackingPage.invoices.registry.filterDateFrom')}
-                        onChange={(e) => setDateFrom(e.target.value)}
+                        portal
+                        portalZIndex={1400}
+                        emptyLabel="дд.мм.гггг"
+                        showChevron={false}
+                        title={t('timeTrackingPage.invoices.registry.filterDateFrom')}
+                        onChange={setDateFrom}
                     />
                 </label>
                 <label className="tt-inv-reg__filter-label">
                     {t('timeTrackingPage.invoices.registry.filterDateTo')}
-                    <input
-                        type="date"
-                        className="tt-inv-reg__filter tt-inv-reg__filter--date"
+                    <DatePicker
+                        className="tt-inv-reg__date"
                         value={dateTo}
                         min={dateFrom || undefined}
-                        aria-label={t('timeTrackingPage.invoices.registry.filterDateTo')}
-                        onChange={(e) => setDateTo(e.target.value)}
+                        portal
+                        portalZIndex={1400}
+                        emptyLabel="дд.мм.гггг"
+                        showChevron={false}
+                        title={t('timeTrackingPage.invoices.registry.filterDateTo')}
+                        onChange={setDateTo}
                     />
                 </label>
-                <select
-                    className="tt-inv-reg__filter"
-                    value=""
-                    aria-label={t('timeTrackingPage.invoices.registry.filterMonth')}
-                    onChange={(e) => {
-                        const month = Number(e.target.value);
-                        if (month >= 1 && month <= 12)
-                            toggleMonth(month);
-                    }}
-                >
-                    <option value="">{t('timeTrackingPage.invoices.registry.filterMonthAll')}</option>
-                    {monthLabels.map((label, index) => (
-                        <option key={label} value={index + 1}>{months.has(index + 1) ? `✓ ${label}` : label}</option>
-                    ))}
-                </select>
+                <RegistryMonthMenu
+                    labels={monthLabels}
+                    selected={months}
+                    allLabel={t('timeTrackingPage.invoices.registry.filterMonthAll')}
+                    ariaLabel={t('timeTrackingPage.invoices.registry.filterMonth')}
+                    onToggle={toggleMonth}
+                />
                 {filtersActive && (
                     <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={clearFilters}>
                         {t('timeTrackingPage.invoices.registry.filterClear')}

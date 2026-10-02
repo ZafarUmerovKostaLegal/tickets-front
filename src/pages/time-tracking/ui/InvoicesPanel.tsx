@@ -1,5 +1,6 @@
 import './TimesheetPanel.css';
 import './TimeTrackingForms.css';
+import './TimeTrackingPage.css';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { routes, getProjectDetailUrl, getInvoiceCreateUrl, getInvoiceDetailUrl } from '@shared/config';
