@@ -19,13 +19,17 @@ export function invoiceClientMailSignature(input: {
     name: string;
     position?: string | null;
     logoUrl?: string | null;
+    /** When true, the PNG is attached to the Outlook draft as cid:kosta-legal-logo. */
+    embedLogo?: boolean;
 }): { html: string; text: string } {
     const name = (input.name || 'Kosta Legal').trim() || 'Kosta Legal';
     const position = (input.position || '').trim();
     const logoUrl = (input.logoUrl || '').trim();
-    const logo = logoUrl
-        ? `<img src="${esc(logoUrl)}" alt="Kosta Legal" width="72" height="72" style="display:block;border:0;outline:none;text-decoration:none;" />`
-        : '<div style="font-size:13px;font-weight:700;letter-spacing:0.08em;color:#b91c1c;">KOSTA<br/>LEGAL</div>';
+    const logo = input.embedLogo
+        ? '<img src="cid:kosta-legal-logo" alt="Kosta Legal" width="72" style="display:block;border:0;outline:none;text-decoration:none;" />'
+        : logoUrl
+            ? `<img src="${esc(logoUrl)}" alt="Kosta Legal" width="72" style="display:block;border:0;outline:none;text-decoration:none;" />`
+            : '<div style="font-size:13px;font-weight:700;letter-spacing:0.08em;color:#b91c1c;">KOSTA<br/>LEGAL</div>';
     const positionHtml = position
         ? `<div style="margin-top:2px;font-size:14px;color:#334155;">${esc(position)}</div>`
         : '';
@@ -66,4 +70,28 @@ export function invoiceClientMailSignature(input: {
         `ПРЕДУПРЕЖДЕНИЕ:\n${DISCLAIMER_RU}`,
     ].filter((line) => line !== '').join('\n');
     return { html, text };
+}
+
+/** Rasterize the public mark so Outlook can show it as an inline PNG, not an SVG link. */
+export async function rasterizePublicLogoPng(): Promise<string | null> {
+    try {
+        const img = new Image();
+        img.src = '/logo.svg';
+        await img.decode();
+        const width = 96;
+        const height = Math.max(1, Math.round(width * (img.naturalHeight / Math.max(1, img.naturalWidth))));
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx)
+            return null;
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL('image/png');
+        const comma = dataUrl.indexOf(',');
+        return comma >= 0 ? dataUrl.slice(comma + 1) : null;
+    }
+    catch {
+        return null;
+    }
 }

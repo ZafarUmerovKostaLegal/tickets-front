@@ -48,7 +48,7 @@ import {
 } from '@entities/todo/lib/calendarApi';
 import { InvoiceSendContactModal } from './InvoiceSendContactModal';
 import { invoiceClientDescription } from '../lib/invoiceClientDescription';
-import { invoiceClientMailSignature } from '../lib/invoiceClientMailSignature';
+import { invoiceClientMailSignature, rasterizePublicLogoPng } from '../lib/invoiceClientMailSignature';
 import {
   blobToBase64,
   buildPaidAtForPaymentApi,
@@ -1209,10 +1209,11 @@ export function InvoiceDetailPage() {
                 : (projectOnly || clientOnly);
               const matter = matterCore ? `${matterCore} project` : 'the project';
               const subject = t('timeTrackingPage.invoices.sendDialog.mailSubject').replace('{invoice}', invoiceLabel);
+              const logoPngBase64 = await rasterizePublicLogoPng();
               const signature = invoiceClientMailSignature({
                 name: user?.display_name?.trim() || 'Kosta Legal',
                 position: user?.position,
-                logoUrl: `${window.location.origin}/logo.svg`,
+                embedLogo: Boolean(logoPngBase64),
               });
               const bodyHtml = t('timeTrackingPage.invoices.sendDialog.mailBodyHtml')
                 .replaceAll('{greetingName}', escapeHtml(greetingName))
@@ -1236,6 +1237,7 @@ export function InvoiceDetailPage() {
                 bodyText,
                 pdfBase64,
                 pdfFileName,
+                logoPngBase64,
               });
 
               const notifyAccounting = () => notifyAccountingLastInvoicePage({

@@ -1074,6 +1074,7 @@ export type InvoiceOutlookDraftInput = {
     bodyText?: string | null;
     pdfBase64: string;
     pdfFileName?: string | null;
+    logoPngBase64?: string | null;
 };
 
 export type InvoiceOutlookDraftResult = {
@@ -1099,6 +1100,8 @@ export async function createInvoiceOutlookDraft(
         payload.bodyText = String(body.bodyText);
     if (body.pdfFileName != null && String(body.pdfFileName).trim() !== '')
         payload.pdfFileName = String(body.pdfFileName).trim();
+    if (body.logoPngBase64 != null && String(body.logoPngBase64).trim() !== '')
+        payload.logoPngBase64 = String(body.logoPngBase64).trim();
 
     const res = await apiFetch(
         `/api/v1/time-tracking/invoices/${encodeURIComponent(invoiceId)}/outlook-draft`,
