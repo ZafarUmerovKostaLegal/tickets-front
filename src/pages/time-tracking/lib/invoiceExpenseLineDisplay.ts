@@ -4,6 +4,20 @@ import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import type { InvoiceLineDto } from '@entities/time-tracking';
 import { invoiceLineKindSlug } from './invoicePageShared';
 
+const missingExpenseIds = new Set<string>();
+
+async function mapWithLimit<T>(items: readonly T[], limit: number, run: (item: T) => Promise<void>): Promise<void> {
+    let next = 0;
+    const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+        while (next < items.length) {
+            const item = items[next];
+            next += 1;
+            await run(item);
+        }
+    });
+    await Promise.all(workers);
+}
+
 /**
  * Load registry USD for invoice expense lines (by expenseRequestId).
  * Used so «Строки счёта» match the expenses list, not invoice issue-date FX.
@@ -16,9 +30,9 @@ export async function loadInvoiceExpenseRegistryUsd(
         (lines ?? [])
             .filter((ln) => invoiceLineKindSlug(ln) === 'expense')
             .map((ln) => (ln.expenseRequestId ?? '').trim())
-            .filter(Boolean),
+            .filter((id) => id && !missingExpenseIds.has(id)),
     )];
-    await Promise.all(ids.map(async (id) => {
+    await mapWithLimit(ids, 4, async (id) => {
         try {
             const req = await fetchExpenseById(id);
             const locked = lockedExpenseUsdAmount(req);
@@ -26,9 +40,9 @@ export async function loadInvoiceExpenseRegistryUsd(
                 out.set(id, locked);
         }
         catch {
-            // keep invoice line amount
+            missingExpenseIds.add(id);
         }
-    }));
+    });
     return out;
 }
 

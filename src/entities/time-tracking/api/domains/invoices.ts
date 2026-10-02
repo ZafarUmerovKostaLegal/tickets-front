@@ -1107,6 +1107,7 @@ export async function createInvoiceOutlookDraft(
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(90_000),
         },
     );
     await throwIfNotOk(res);

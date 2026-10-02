@@ -1279,7 +1279,10 @@ export function InvoiceDetailPage() {
               });
             }
             catch (e) {
-              const msg = e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic');
+              const aborted = e instanceof DOMException && (e.name === 'TimeoutError' || e.name === 'AbortError');
+              const msg = aborted
+                ? 'Сервер слишком долго готовил черновик письма. Повторите отправку.'
+                : e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic');
               const lower = msg.toLowerCase();
               const outlookAuthIssue =
                 isTimeTrackingHttpError(e, 409)
