@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import {
     formatAdvanceFeeLines,
     formatRegistryAmountCell,
+    SYSTEM_INVOICE_REGISTRY_STATUSES,
     collectRegistryStatusOptions,
     filterInvoiceRegistryRows,
     getInvoiceRegistrySheet,
@@ -18,6 +19,12 @@ import {
     getInvoiceRegistrySheet as getInvoiceRegistrySheetApi,
     getInvoiceRegistryYears,
     MANUAL_2026_SEED_REVISION,
+    cancelInvoice,
+    markInvoiceViewed,
+    sendInvoice,
+    unsendInvoice,
+} from '@entities/time-tracking/api/domains/invoices';
+import {
     patchInvoiceRegistryRow2026,
     replaceInvoiceRegistryArchiveSheet,
     replaceInvoiceRegistryRows2026,
@@ -38,12 +45,14 @@ function RegistryStatusDropdown({
     ariaLabel,
     readOnly,
     choices,
+    allowCustom = true,
     onChange,
 }: {
     value: string;
     ariaLabel: string;
     readOnly?: boolean;
     choices: readonly string[];
+    allowCustom?: boolean;
     onChange: (next: string) => void;
 }) {
     const uid = useId();
@@ -164,6 +173,7 @@ function RegistryStatusDropdown({
                             </button>
                         );
                     })}
+                    {allowCustom && (
                     <form
                         className="tt-inv-reg-status__custom"
                         onSubmit={(e) => {
@@ -179,11 +189,25 @@ function RegistryStatusDropdown({
                             onChange={(e) => setDraft(e.target.value)}
                         />
                     </form>
+                    )}
                 </div>,
                 document.body,
             )}
         </div>
     );
+}
+
+async function applySystemRegistryStatus(invoiceId: string, label: string): Promise<void> {
+    if (label === 'Черновик')
+        await unsendInvoice(invoiceId);
+    else if (label === 'Отправлен')
+        await sendInvoice(invoiceId);
+    else if (label === 'Просмотрен')
+        await markInvoiceViewed(invoiceId);
+    else if (label === 'Отменён')
+        await cancelInvoice(invoiceId);
+    else
+        throw new Error('Этот статус для системного счёта задаётся оплатой или сроком, а не вручную.');
 }
 
 function systemInvoiceId(row: InvoiceRegistryRow): string {
@@ -284,6 +308,7 @@ function RegistryEditableCell({
     active,
     invoiceId = '',
     statusChoices,
+    allowCustomStatus = true,
     onActivate,
     onChange,
     onBlurCommit,
@@ -298,6 +323,7 @@ function RegistryEditableCell({
     active: boolean;
     invoiceId?: string;
     statusChoices: readonly string[];
+    allowCustomStatus?: boolean;
     onActivate: () => void;
     onChange: (next: string) => void;
     onBlurCommit: () => void;
@@ -328,6 +354,7 @@ function RegistryEditableCell({
                     ariaLabel={ariaLabel}
                     readOnly={readOnly}
                     choices={statusChoices}
+                    allowCustom={allowCustomStatus}
                     onChange={onChange}
                 />
             </td>
@@ -684,10 +711,11 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
         };
     }, [year, t, readOnly, refreshYears]);
 
-    const statusChoices = useMemo(
-        () => collectRegistryStatusOptions(rows.map((row) => String(row.statusNote ?? ''))),
-        [rows],
-    );
+    const statusChoices = useMemo(() => {
+        if (year === '2026-system')
+            return [...SYSTEM_INVOICE_REGISTRY_STATUSES];
+        return collectRegistryStatusOptions(rows.map((row) => String(row.statusNote ?? '')));
+    }, [rows, year]);
     const archiveSaveTimer = useRef<number | null>(null);
     const pendingArchiveSave = useRef<{ year: InvoiceRegistryYearId; rows: InvoiceRegistryRow[] } | null>(null);
 
@@ -781,6 +809,27 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
     };
 
     const patchCell = useCallback((rowId: string, key: string, value: string) => {
+        if (year === '2026-system') {
+            if (readOnly || key !== 'statusNote')
+                return;
+            const row = rows.find((item) => item.id === rowId);
+            const invoiceId = row ? systemInvoiceId(row) : '';
+            const previous = String(row?.statusNote ?? '');
+            if (!invoiceId || value === previous)
+                return;
+            setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, statusNote: value } : item)));
+            void applySystemRegistryStatus(invoiceId, value)
+                .catch((error: unknown) => {
+                    setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, statusNote: previous } : item)));
+                    showToast({
+                        message: error instanceof Error && error.message
+                            ? error.message
+                            : t('timeTrackingPage.invoices.registry.loadFailed'),
+                        variant: 'error',
+                    });
+                });
+            return;
+        }
         if (!canEditYear)
             return;
         setRows((prev) => {
@@ -799,7 +848,7 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                     });
                 });
         }
-    }, [canEditYear, persistArchiveRows, t, year]);
+    }, [canEditYear, persistArchiveRows, readOnly, rows, t, year]);
 
     const addRow = useCallback(() => {
         if (!canEditYear)
@@ -1095,6 +1144,7 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                                         const val = row[col.key] ?? '';
                                         const active = focus?.rowId === row.id && focus.key === col.key;
                                         const money = isInvoiceRegistryMoneyColumnKey(col.key);
+                                        const systemStatus = year === '2026-system' && col.key === 'statusNote';
                                         return (
                                             <RegistryEditableCell
                                                 key={col.key}
@@ -1104,8 +1154,9 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                                                 editor={col.editor}
                                                 invoiceId={systemInvoiceId(row)}
                                                 money={money}
-                                                readOnly={!canEditYear}
+                                                readOnly={systemStatus ? readOnly : !canEditYear}
                                                 statusChoices={statusChoices}
+                                                allowCustomStatus={!systemStatus}
                                                 active={canEditYear && active && col.editor !== 'status'}
                                                 ariaLabel={`${col.label}, ${t('timeTrackingPage.invoices.registry.rowN').replace('{n}', String(idx + 1))}`}
                                                 onActivate={() => {
