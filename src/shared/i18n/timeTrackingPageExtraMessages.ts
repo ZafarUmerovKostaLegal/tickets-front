@@ -1427,18 +1427,18 @@ export const timeTrackingPageExtraMessages = {
             outlookAdminConsentHint: 'Доступы в Azure уже могут быть выданы, но Microsoft всё равно показывает «нужен администратор», если требуется повторное согласие пользователя или включено назначение приложения. Проверьте: Enterprise applications → «Тикет Система Kosta Legal» → Properties → Assignment required = No (или добавьте сотрудника в Users and groups). Затем сотрудник снова нажимает «Подключить Outlook» своим аккаунтом — не входите под админом с этого экрана.',
             mailSubject: 'Kosta Legal — счёт {invoice}',
             mailBodyHtml:
-                '<div style="margin:0;padding:0;background:#ffffff;color:#1e293b;font-family:\'Segoe UI\',Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;">'
-                + '<p style="margin:0 0 14px;">Dear {greetingName},</p>'
-                + '<p style="margin:0 0 14px;">Hope this email finds you well.</p>'
-                + '<p style="margin:0 0 14px;">Herewith, find attached the invoice for services rendered in the framework of {matter}.</p>'
-                + '<p style="margin:0 0 14px;">The acknowledgment upon the receipt will be appreciated.</p>'
-                + '<p style="margin:22px 0 0;">Kind regards,</p>'
+                '<div style="margin:0;padding:0;background:#ffffff;color:#1e293b;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;line-height:1.35;">'
+                + '<p style="margin:0 0 12px;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;">Dear {greetingName},</p>'
+                + '<p style="margin:0 0 12px;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;">Hope this email finds you well.</p>'
+                + '<p style="margin:0 0 12px;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;">Herewith, find attached the invoice for services rendered for your further processing.</p>'
+                + '<p style="margin:0 0 12px;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;">The acknowledgment upon the receipt will be appreciated.</p>'
+                + '<p style="margin:16px 0 0;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;">Kind regards,</p>'
                 + '{signatureHtml}'
                 + '</div>',
             mailBodyText:
                 'Dear {greetingName},\n\n'
                 + 'Hope this email finds you well.\n\n'
-                + 'Herewith, find attached the invoice for services rendered in the framework of {matter}.\n\n'
+                + 'Herewith, find attached the invoice for services rendered for your further processing.\n\n'
                 + 'The acknowledgment upon the receipt will be appreciated.\n\n'
                 + 'Kind regards,\n{signatureText}',
             nameSuffix: ', {name}',

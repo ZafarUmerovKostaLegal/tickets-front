@@ -29,21 +29,21 @@ export function invoiceClientMailSignature(input: {
         ? '<img src="cid:kosta-legal-logo" alt="Kosta Legal" width="210" style="display:block;border:0;outline:none;text-decoration:none;" />'
         : logoUrl
             ? `<img src="${esc(logoUrl)}" alt="Kosta Legal" width="72" style="display:block;border:0;outline:none;text-decoration:none;" />`
-            : '<div style="font-size:13px;font-weight:700;letter-spacing:0.08em;color:#b91c1c;">KOSTA<br/>LEGAL</div>';
+            : '<div style="font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;letter-spacing:0.08em;color:#b91c1c;">KOSTA<br/>LEGAL</div>';
     const positionHtml = position
-        ? `<div style="margin-top:2px;font-size:14px;color:#334155;">${esc(position)}</div>`
+        ? `<div style="margin-top:2px;font-family:'Calibri Light',Calibri,sans-serif;font-size:11pt;font-weight:300;color:#1e293b;">${esc(position)}</div>`
         : '';
     const html = ''
-        + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:22px;border-collapse:collapse;font-family:\'Segoe UI\',Arial,Helvetica,sans-serif;color:#1e293b;">'
-        + '<tr><td style="padding:0 0 16px;font-size:15px;line-height:1.45;">'
-        + `<div style="font-weight:700;">${esc(name)}</div>`
+        + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-top:16px;border-collapse:collapse;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;color:#1e293b;">'
+        + '<tr><td style="padding:0 0 14px;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;line-height:1.35;">'
+        + `<div>${esc(name)}</div>`
         + positionHtml
         + '</td></tr>'
         + '<tr><td style="padding:0 0 14px;">'
         + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">'
         + '<tr>'
         + `<td style="vertical-align:middle;width:46%;" align="left">${logo}</td>`
-        + '<td style="vertical-align:middle;text-align:right;font-size:13px;line-height:1.45;color:#1e293b;" align="right">'
+        + '<td style="vertical-align:middle;text-align:right;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;line-height:1.35;color:#1e293b;" align="right">'
         + `<div>${esc(ADDRESS_RU)} |</div>`
         + `<div>${esc(ADDRESS_EN)}</div>`
         + `<div style="margin-top:6px;">${PHONES}</div>`
@@ -51,10 +51,10 @@ export function invoiceClientMailSignature(input: {
         + '</td></tr></table>'
         + '</td></tr>'
         + '<tr><td style="padding:8px 0 0;border-top:1px solid #94a3b8;">'
-        + '<div style="margin-top:10px;font-size:11px;font-weight:700;letter-spacing:0.04em;">DISCLAIMER:</div>'
-        + `<div style="margin-top:4px;font-size:11px;line-height:1.45;color:#334155;">${DISCLAIMER_EN}</div>`
-        + '<div style="margin-top:12px;font-size:11px;font-weight:700;letter-spacing:0.04em;">ПРЕДУПРЕЖДЕНИЕ:</div>'
-        + `<div style="margin-top:4px;font-size:11px;line-height:1.45;color:#334155;">${DISCLAIMER_RU}</div>`
+        + '<div style="margin-top:10px;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;">DISCLAIMER:</div>'
+        + `<div style="margin-top:4px;font-family:'Calibri Light',Calibri,sans-serif;font-size:11pt;font-weight:300;line-height:1.35;color:#1e293b;">${DISCLAIMER_EN}</div>`
+        + '<div style="margin-top:12px;font-family:\'Calibri Light\',Calibri,sans-serif;font-size:11pt;font-weight:300;">ПРЕДУПРЕЖДЕНИЕ:</div>'
+        + `<div style="margin-top:4px;font-family:'Calibri Light',Calibri,sans-serif;font-size:11pt;font-weight:300;line-height:1.35;color:#1e293b;">${DISCLAIMER_RU}</div>`
         + '</td></tr></table>';
     const text = [
         name,
