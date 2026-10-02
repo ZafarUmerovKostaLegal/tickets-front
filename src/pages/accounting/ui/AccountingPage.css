@@ -574,12 +574,6 @@
   margin: 0;
   font-size: 0.95rem;
 }
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  max-width: 52rem;
-  padding: 1.25rem var(--app-page-padding-x, 1rem) 2rem;
-}
 
 .acct-settings__lead,
 .acct-settings__muted {
