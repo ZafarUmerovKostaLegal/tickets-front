@@ -26,7 +26,7 @@ export function invoiceClientMailSignature(input: {
     const position = (input.position || '').trim();
     const logoUrl = (input.logoUrl || '').trim();
     const logo = input.embedLogo
-        ? '<img src="cid:kosta-legal-logo" alt="Kosta Legal" width="72" style="display:block;border:0;outline:none;text-decoration:none;" />'
+        ? '<img src="cid:kosta-legal-logo" alt="Kosta Legal" width="210" style="display:block;border:0;outline:none;text-decoration:none;" />'
         : logoUrl
             ? `<img src="${esc(logoUrl)}" alt="Kosta Legal" width="72" style="display:block;border:0;outline:none;text-decoration:none;" />`
             : '<div style="font-size:13px;font-weight:700;letter-spacing:0.08em;color:#b91c1c;">KOSTA<br/>LEGAL</div>';
@@ -40,10 +40,10 @@ export function invoiceClientMailSignature(input: {
         + positionHtml
         + '</td></tr>'
         + '<tr><td style="padding:0 0 14px;">'
-        + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">'
+        + '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">'
         + '<tr>'
-        + `<td style="vertical-align:middle;padding:0 16px 0 0;">${logo}</td>`
-        + '<td style="vertical-align:middle;font-size:13px;line-height:1.45;color:#1e293b;">'
+        + `<td style="vertical-align:middle;width:46%;" align="left">${logo}</td>`
+        + '<td style="vertical-align:middle;text-align:right;font-size:13px;line-height:1.45;color:#1e293b;" align="right">'
         + `<div>${esc(ADDRESS_RU)} |</div>`
         + `<div>${esc(ADDRESS_EN)}</div>`
         + `<div style="margin-top:6px;">${PHONES}</div>`
@@ -86,9 +86,9 @@ export async function rasterizePublicLogoPng(): Promise<string | null> {
                 window.clearTimeout(timer);
                 reject(new Error('logo'));
             };
-            img.src = '/logo.svg';
+            img.src = '/KostaLegal-logo-02-black.svg';
         });
-        const width = 96;
+        const width = 420;
         const height = Math.max(1, Math.round(width * (img.naturalHeight / Math.max(1, img.naturalWidth))));
         const canvas = document.createElement('canvas');
         canvas.width = width;
