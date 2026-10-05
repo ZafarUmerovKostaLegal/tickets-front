@@ -40,7 +40,9 @@ describe('registry status tones', () => {
             'Выставлен',
             'Оплачен',
         ]);
-        expect(options).toContain('Ольге направила');
+        expect(options).not.toContain('Ольге направила');
+        expect(options).not.toContain('Попросил выставить в октябре');
+        expect(options).not.toContain('Просмотрен');
         expect(options).toContain('Аннулирован');
         expect(options).toContain('Выставили этот инвойс в феврале 2026 года');
     });

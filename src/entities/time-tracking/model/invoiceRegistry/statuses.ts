@@ -12,7 +12,6 @@ export type InvoiceRegistryStatus = (typeof INVOICE_REGISTRY_STATUSES)[number];
 export const SYSTEM_INVOICE_REGISTRY_STATUSES = [
     'Черновик',
     'Отправлен',
-    'Просмотрен',
     'Отменён',
 ] as const;
 
@@ -22,12 +21,19 @@ export function isInvoiceRegistryStatus(value: string): value is InvoiceRegistry
 
 /** Short free-text statuses already used on the Excel sheets. */
 export const LEGACY_INVOICE_REGISTRY_STATUSES = [
-    'Ольге направила',
-    'Ольге направила.',
     'жду подтверждения от клиента',
     'Аннулирован',
-    'Попросил выставить в октябре',
 ] as const;
+
+const HIDDEN_REGISTRY_STATUSES = new Set([
+    'ольге направила',
+    'попросил выставить в октябре',
+    'просмотрен',
+]);
+
+function registryStatusKey(raw: string): string {
+    return raw.replace(/\s+/g, ' ').trim().replace(/\.+$/g, '').toLowerCase();
+}
 
 /** Fixed list, then the old Excel phrases, then any other text already on the sheet. */
 export function collectRegistryStatusOptions(used: readonly string[]): string[] {
@@ -35,7 +41,7 @@ export function collectRegistryStatusOptions(used: readonly string[]): string[] 
     const out: string[] = [];
     const push = (raw: string) => {
         const value = raw.replace(/\s+/g, ' ').trim();
-        if (!value || seen.has(value))
+        if (!value || seen.has(value) || HIDDEN_REGISTRY_STATUSES.has(registryStatusKey(value)))
             return;
         seen.add(value);
         out.push(value);

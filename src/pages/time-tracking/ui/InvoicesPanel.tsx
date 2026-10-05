@@ -1,18 +1,16 @@
 import './TimesheetPanel.css';
 import './TimeTrackingForms.css';
 import './TimeTrackingPage.css';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { routes, getProjectDetailUrl, getInvoiceCreateUrl, getInvoiceDetailUrl } from '@shared/config';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { useAppDialog, useAppToast } from '@shared/ui';
 import { useI18n, ttInvoiceStatusLabel } from '@shared/i18n';
-import { localeTag } from '@shared/i18n/ticketUi';
 import {
   listInvoices,
   getInvoicesAggregatedStats,
-  aggregateInvoicesMoneyExcludingCanceled,
   deleteDraftInvoice,
   listAllTimeManagerClientsMerged,
   listAllClientProjectsMerged,
@@ -82,67 +80,6 @@ const IcoChevRight = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill
 const IcoTrash = () => (<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
   <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
 </svg>);
-const IcoChevDown = () => (<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-  <path d="M6 9l6 6 6-6" />
-</svg>);
-type InvSelectOption = {
-  value: string;
-  label: string;
-};
-function InvoicesSelectDropdown({ id, value, options, onChange, disabled, variant, 'aria-label': ariaLabel, }: {
-  id: string;
-  value: string;
-  options: InvSelectOption[];
-  onChange: (next: string) => void;
-  disabled?: boolean;
-  variant: 'filter' | 'dialog';
-  'aria-label'?: string;
-}) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const listId = `${id}-listbox`;
-  const selectedLabel = options.find((o) => o.value === value)?.label ?? options[0]?.label ?? '—';
-  useEffect(() => {
-    if (!open)
-      return;
-    function onPointerDown(e: PointerEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node))
-        setOpen(false);
-    }
-    document.addEventListener('pointerdown', onPointerDown, true);
-    return () => document.removeEventListener('pointerdown', onPointerDown, true);
-  }, [open]);
-  useEffect(() => {
-    if (!open)
-      return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape')
-        setOpen(false);
-    }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open]);
-  return (<div ref={wrapRef} className={`tt-inv-dd${variant === 'filter' ? ' tt-inv-dd--filter' : ' tt-inv-dd--dialog'}`}>
-    <button type="button" id={id} className={`tt-inv-dd__trigger${variant === 'dialog' ? ' tt-inv-dd__trigger--dialog' : ''}`} disabled={disabled} aria-expanded={open} aria-haspopup="listbox" aria-controls={open ? listId : undefined} aria-label={ariaLabel} onClick={() => {
-      if (disabled)
-        return;
-      setOpen((v) => !v);
-    }}>
-      <span className="tt-inv-dd__value">{selectedLabel}</span>
-      <span className="tt-inv-dd__chev" aria-hidden>
-        <IcoChevDown />
-      </span>
-    </button>
-    {open && !disabled && (<div id={listId} className="tt-inv-dd__menu" role="listbox">
-      {options.map((opt) => (<button key={opt.value === '' ? '__all' : opt.value} type="button" role="option" aria-selected={opt.value === value} className={`tt-inv-dd__opt${opt.value === value ? ' tt-inv-dd__opt--active' : ''}`} onClick={() => {
-        onChange(opt.value);
-        setOpen(false);
-      }}>
-        {opt.label}
-      </button>))}
-    </div>)}
-  </div>);
-}
 const IcoInvoiceEmpty = () => (<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" aria-hidden>
   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
   <polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="14" y2="17" />
@@ -167,7 +104,6 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
   const [listLoading, setListLoading] = useState(true);
   const [listErr, setListErr] = useState<string | null>(null);
   const [partnerListBlocked, setPartnerListBlocked] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<string>('');
   const [clientFilter, setClientFilter] = useState<string>('');
   const [projectFilter, setProjectFilter] = useState('');
   const [listProjectsFilter, setListProjectsFilter] = useState<TimeManagerClientProjectRow[]>([]);
@@ -190,13 +126,6 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     name: c.name,
     search: `${c.name} ${c.id}`.trim().toLowerCase(),
   }))], [clients, t]);
-  const statusFilterOptions = useMemo(() => [
-    { value: '', label: t('timeTrackingPage.invoices.filters.allStatuses') },
-    ...(['draft', 'sent', 'viewed', 'partial_paid', 'paid', 'canceled', 'overdue'] as const).map((s) => ({
-      value: s,
-      label: ttInvoiceStatusLabel(s, t),
-    })),
-  ], [t]);
   const projectFilterSearchItems = useMemo(() => {
     const allOpt = { id: '', name: t('timeTrackingPage.invoices.filters.allProjects'), search: t('timeTrackingPage.invoices.filters.allProjectsSearch') };
     if (!clientFilter) {
@@ -226,13 +155,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       return null;
     const by = aggStats.byEffectiveStatus;
     const n = (k: string) => by[k] ?? 0;
-    return {
-      drafts: n('draft'),
-      open: n('sent') + n('viewed') + n('partial_paid'),
-      paid: n('paid'),
-      canceled: n('canceled'),
-      overdue: n('overdue'),
-    };
+    return { drafts: n('draft') };
   }, [aggStats]);
   const loadClients = useCallback(() => {
     Promise.all([
@@ -261,7 +184,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     setListErr(null);
     const billingGate = invoiceListPartnerBillingGateOpts(projectFilter, listDateFrom, listDateTo);
     return listInvoices({
-      status: statusFilter || undefined,
+      status: 'draft',
       clientId: clientFilter || undefined,
       projectId: projectFilter || undefined,
       dateFrom: listDateFrom || undefined,
@@ -293,32 +216,24 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
         if (!silent && !signal?.aborted)
           setListLoading(false);
       });
-  }, [statusFilter, clientFilter, projectFilter, listDateFrom, listDateTo, invoiceListPage, INV_PAGE, t]);
+  }, [clientFilter, projectFilter, listDateFrom, listDateTo, invoiceListPage, INV_PAGE, t]);
   const loadAggStats = useCallback((signal?: AbortSignal) => {
     setAggStatsLoading(true);
     setAggStatsErr(null);
     const billingGate = invoiceListPartnerBillingGateOpts(projectFilter, listDateFrom, listDateTo);
     const filterBase = {
-      status: statusFilter || undefined,
+      status: 'draft',
       clientId: clientFilter || undefined,
       projectId: projectFilter || undefined,
       dateFrom: listDateFrom || undefined,
       dateTo: listDateTo || undefined,
       ...billingGate,
     };
-    return Promise.all([
-      getInvoicesAggregatedStats(filterBase, signal),
-      aggregateInvoicesMoneyExcludingCanceled(filterBase, signal),
-    ])
-      .then(([s, ex]) => {
+    return getInvoicesAggregatedStats(filterBase, signal)
+      .then((s) => {
         if (signal?.aborted)
           return;
-        setAggStats({
-          ...s,
-          byCurrency: ex.byCurrency,
-          unpaidInvoicesCount: ex.unpaidInvoicesCount,
-          openBalanceDue: ex.openBalanceDue,
-        });
+        setAggStats(s);
       })
       .catch((e: unknown) => {
         if (signal?.aborted)
@@ -330,11 +245,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
         if (!signal?.aborted)
           setAggStatsLoading(false);
       });
-  }, [statusFilter, clientFilter, projectFilter, listDateFrom, listDateTo, t]);
-  const changeStatusFilter = useCallback((value: string) => {
-    setStatusFilter(value);
-    setInvoiceListPage(1);
-  }, []);
+  }, [clientFilter, projectFilter, listDateFrom, listDateTo, t]);
   const changeClientFilter = useCallback((value: string) => {
     setClientFilter(value);
     setProjectFilter('');
@@ -542,50 +453,12 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       {aggStatsLoading || !listStatsFromAgg ? (<div className="tt-reports__summary-card tt-reports__summary-card--full">
         <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.summary.label')}</span>
         <span className="tt-reports__summary-value" style={{ fontSize: '0.95rem' }}>{aggStatsLoading ? t('timeTrackingPage.common.loading') : '—'}</span>
-      </div>) : (<>
-        <div className="tt-reports__summary-card tt-inv__summary-card--accent">
-          <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.summary.active')}</span>
-          <span className="tt-reports__summary-value">{listStatsFromAgg.open}</span>
-        </div>
+      </div>) : (
         <div className="tt-reports__summary-card">
           <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.summary.drafts')}</span>
           <span className="tt-reports__summary-value">{listStatsFromAgg.drafts}</span>
         </div>
-        <div className="tt-reports__summary-card tt-inv__summary-card--success">
-          <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.summary.paid')}</span>
-          <span className="tt-reports__summary-value">{listStatsFromAgg.paid}</span>
-        </div>
-        {listStatsFromAgg.overdue > 0 && (<div className="tt-reports__summary-card tt-inv__summary-card--danger">
-          <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.summary.overdue')}</span>
-          <span className="tt-reports__summary-value">{listStatsFromAgg.overdue}</span>
-        </div>)}
-        {listStatsFromAgg.canceled > 0 && (<div className="tt-reports__summary-card tt-inv__summary-card--muted">
-          <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.summary.canceled')}</span>
-          <span className="tt-reports__summary-value">{listStatsFromAgg.canceled}</span>
-        </div>)}
-        {aggStats != null && (<div className="tt-reports__summary-card tt-inv__summary-card--accent">
-          <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.summary.withBalance')}</span>
-          <span className="tt-reports__summary-value">{aggStats.unpaidInvoicesCount}</span>
-        </div>)}
-        {aggStats != null && (aggStats.openBalanceDue > 0 || aggStats.unpaidInvoicesCount > 0) && (() => {
-          const curKeys = Object.keys(aggStats.byCurrency);
-          const singleCur = curKeys.length === 1 ? curKeys[0] : null;
-          return (<div className="tt-reports__summary-card">
-            <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.summary.totalBalance')}</span>
-            <span className="tt-reports__summary-value" style={{ fontSize: '0.95rem' }}>
-              {singleCur != null
-                ? fmtMoney(aggStats.openBalanceDue, singleCur, locale)
-                : aggStats.openBalanceDue.toLocaleString(localeTag(locale), { useGrouping: true, minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-            </span>
-            {singleCur == null && curKeys.length > 1 ? (<p className="tt-inv__list-hint" style={{ margin: '0.35rem 0 0', maxWidth: '14rem' }}>
-              {t('timeTrackingPage.invoices.summary.multiCurrencyHint')}
-            </p>) : null}
-          </div>);
-        })()}
-        {aggStats?.isCapped ? (<p className="tt-inv__list-hint" role="note" style={{ flexBasis: '100%', margin: '0.25rem 0 0' }}>
-          {t('timeTrackingPage.invoices.summary.cappedHint').replace('{cap}', String(aggStats.cappedAt ?? 50000))}
-        </p>) : null}
-      </>)}
+      )}
     </div>)}
 
     <div className="tt-reports__content">
@@ -608,10 +481,6 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
           <div className="tt-reports__sort-wrap">
             <label className="tt-reports__sort-label" htmlFor="tt-inv-filter-client-btn">{t('timeTrackingPage.invoices.filters.client')}</label>
             <SearchableSelect className="tsp-srch" buttonClassName="tsp-srch__btn" buttonId="tt-inv-filter-client-btn" portalDropdown portalZIndex={10050} portalMinWidth={420} placeholder={t('timeTrackingPage.invoices.filters.client')} emptyListText={t('timeTrackingPage.common.noClients')} noMatchText={t('timeTrackingPage.common.notFound')} value={clientFilter} items={clientFilterSearchItems} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.name} getSearchText={(o) => o.search} onSelect={(o) => changeClientFilter(o.id)} aria-label={t('timeTrackingPage.invoices.filters.clientFilterAria')} />
-          </div>
-          <div className="tt-reports__sort-wrap">
-            <label className="tt-reports__sort-label" htmlFor="tt-inv-filter-status">{t('timeTrackingPage.invoices.filters.status')}</label>
-            <InvoicesSelectDropdown id="tt-inv-filter-status" variant="filter" value={statusFilter} options={statusFilterOptions} onChange={changeStatusFilter} aria-label={t('timeTrackingPage.invoices.filters.statusFilterAria')} />
           </div>
           <div className="tt-reports__sort-wrap">
             <label className="tt-reports__sort-label" htmlFor="tt-inv-filter-project-btn">{t('timeTrackingPage.invoices.filters.project')}</label>

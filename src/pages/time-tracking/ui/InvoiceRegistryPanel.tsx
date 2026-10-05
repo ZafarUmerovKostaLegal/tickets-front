@@ -38,8 +38,6 @@ import './InvoiceRegistryPanel.css';
 
 type FocusCell = { rowId: string; key: string } | null;
 
-const STATUS_EMPTY = '';
-
 function RegistryStatusDropdown({
     value,
     ariaLabel,
@@ -67,10 +65,7 @@ function RegistryStatusDropdown({
 
     const options = useMemo(() => {
         const values = collectRegistryStatusOptions([value, ...choices]);
-        return [
-            { value: STATUS_EMPTY, label: '—' },
-            ...values.map((s) => ({ value: s, label: s })),
-        ];
+        return values.map((s) => ({ value: s, label: s }));
     }, [value, choices]);
 
     const updatePos = useCallback(() => {
@@ -155,7 +150,7 @@ function RegistryStatusDropdown({
                     style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
                 >
                     {options.map((opt) => {
-                        const selected = opt.value === value || (!value && opt.value === STATUS_EMPTY);
+                        const selected = opt.value === value;
                         return (
                             <button
                                 key={opt.value || '__empty'}
