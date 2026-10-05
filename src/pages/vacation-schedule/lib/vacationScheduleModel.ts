@@ -232,12 +232,60 @@ export function isVacationSystemRowId(id: number): boolean {
 }
 
 
+export function mergeUsersWithScheduleEmployees(
+    users: ReadonlyArray<{ id: number; display_name?: string | null; email?: string | null; position?: string | null; is_archived?: boolean; is_blocked?: boolean }>,
+    scheduleRows: ReadonlyArray<VacationScheduleEmployeeRow>,
+): Array<{ id: number; display_name?: string | null; email?: string | null; position?: string | null; is_archived?: boolean; is_blocked?: boolean }> {
+    const byId = new Map<number, { id: number; display_name?: string | null; email?: string | null; position?: string | null; is_archived?: boolean; is_blocked?: boolean }>();
+    for (const user of users) {
+        if (!user.id)
+            continue;
+        byId.set(user.id, {
+            id: user.id,
+            display_name: user.display_name ?? null,
+            email: user.email ?? '',
+            position: user.position ?? null,
+            is_archived: user.is_archived ?? false,
+            is_blocked: user.is_blocked ?? false,
+        });
+    }
+    for (const row of scheduleRows) {
+        const authId = row.systemUserId;
+        if (authId == null || authId <= 0)
+            continue;
+        const existing = byId.get(authId);
+        const scheduleLabel = row.label?.trim() || '';
+        const scheduleEmail = row.email?.trim() || '';
+        if (!existing) {
+            byId.set(authId, {
+                id: authId,
+                display_name: scheduleLabel || null,
+                email: scheduleEmail,
+                position: row.position ?? null,
+                is_archived: false,
+                is_blocked: false,
+            });
+            continue;
+        }
+        byId.set(authId, {
+            ...existing,
+            display_name: (existing.display_name ?? '').trim() || scheduleLabel || existing.display_name,
+            email: (existing.email ?? '').trim() || scheduleEmail || existing.email,
+            position: existing.position ?? row.position ?? null,
+        });
+    }
+    return [...byId.values()];
+}
+
 export function buildVacationScheduleRowsFromUsers(
     users: ReadonlyArray<{ id: number; display_name?: string | null; email?: string | null; position?: string | null; is_archived?: boolean; is_blocked?: boolean }>,
     scheduleRows: ReadonlyArray<VacationScheduleEmployeeRow> = [],
 ): VacationScheduleEmployeeRow[] {
+    const scheduleByAuthId = new Map<number, VacationScheduleEmployeeRow>();
     const scheduleByName = new Map<string, VacationScheduleEmployeeRow>();
     for (const row of scheduleRows) {
+        if (row.systemUserId != null && row.systemUserId > 0 && !scheduleByAuthId.has(row.systemUserId))
+            scheduleByAuthId.set(row.systemUserId, row);
         const norm = normalizeVacationFullName(row.label);
         if (norm && !scheduleByName.has(norm))
             scheduleByName.set(norm, row);
@@ -253,22 +301,28 @@ export function buildVacationScheduleRowsFromUsers(
             continue;
         if (isHiddenSystemUser(u))
             continue;
-        const label = (u.display_name?.trim() || u.email?.trim() || '').trim();
+        const linkedByAuth = scheduleByAuthId.get(u.id);
+        const label = (
+            u.display_name?.trim()
+            || linkedByAuth?.label?.trim()
+            || u.email?.trim()
+            || ''
+        ).trim();
         if (!label)
             continue;
         seen.add(u.id);
-        const email = u.email?.trim() ?? null;
+        const email = u.email?.trim() || linkedByAuth?.email?.trim() || null;
         const norm = normalizeVacationFullName(label);
-        const linked = norm ? scheduleByName.get(norm) : undefined;
+        const linked = linkedByAuth ?? (norm ? scheduleByName.get(norm) : undefined);
         if (linked) {
             rows.push({
                 id: linked.id,
-                label,
+                label: linked.label?.trim() || label,
                 excelRowNo: linked.excelRowNo ?? null,
                 plannedPeriodNote: linked.plannedPeriodNote ?? null,
                 systemUserId: linked.systemUserId ?? u.id,
                 email: linked.email ?? email,
-                position: u.position ?? null,
+                position: u.position ?? linked.position ?? null,
             });
             usedScheduleRowIds.add(linked.id);
         }
@@ -296,6 +350,7 @@ export function buildVacationScheduleRowsFromUsers(
             plannedPeriodNote: row.plannedPeriodNote ?? null,
             systemUserId: row.systemUserId,
             email: row.email ?? null,
+            position: row.position ?? null,
         });
     }
 

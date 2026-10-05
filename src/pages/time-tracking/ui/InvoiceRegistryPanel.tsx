@@ -1,6 +1,8 @@
 import './TimeTrackingForms.css';
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
+import { getInvoiceDetailUrl } from '@shared/config';
 import {
     formatAdvanceFeeLines,
     formatRegistryAmountCell,
@@ -573,8 +575,22 @@ function readRegistryYear(): InvoiceRegistryYearId {
     return '2026';
 }
 
-export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean }) {
+export function InvoiceRegistryPanel({
+    readOnly = false,
+    variant = 'default',
+}: {
+    readOnly?: boolean;
+    variant?: 'default' | 'accounting';
+}) {
     const { t, locale } = useI18n();
+    const navigate = useNavigate();
+    const accountingEmbed = variant === 'accounting';
+    const openInvoiceDetail = useCallback((invoiceId: string) => {
+        const id = invoiceId.trim();
+        if (!id)
+            return;
+        navigate(getInvoiceDetailUrl(id, accountingEmbed ? { variant: 'accounting' } : undefined));
+    }, [accountingEmbed, navigate]);
     const [year, setYear] = useState<InvoiceRegistryYearId>(readRegistryYear);
     const [rows, setRows] = useState<InvoiceRegistryRow[]>([]);
     const [years, setYears] = useState<InvoiceRegistryYearMeta[]>([]);
@@ -1133,8 +1149,38 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                                             : t('timeTrackingPage.invoices.registry.emptyDb')}
                                     </td>
                                 </tr>
-                            ) : filteredRows.map((row, idx) => (
-                                <tr key={row.id} className="tt-inv-reg__tr">
+                            ) : filteredRows.map((row, idx) => {
+                                const invoiceId = systemInvoiceId(row);
+                                const canOpenInvoice = Boolean(invoiceId) && !canEditYear;
+                                return (
+                                <tr
+                                    key={row.id}
+                                    className={`tt-inv-reg__tr${canOpenInvoice ? ' tt-inv-reg__tr--openable' : ''}`}
+                                    tabIndex={canOpenInvoice ? 0 : undefined}
+                                    aria-label={canOpenInvoice
+                                        ? t('timeTrackingPage.invoices.registry.openInvoiceAria')
+                                            .replace('{number}', String(row.clientNumber || invoiceId))
+                                        : undefined}
+                                    onClick={(event) => {
+                                        if (!canOpenInvoice)
+                                            return;
+                                        const target = event.target as HTMLElement | null;
+                                        if (target?.closest('button, a, input, textarea, select, .tt-inv-reg__td--status, .tt-inv-reg__td--pdf, .tt-inv-reg-status'))
+                                            return;
+                                        openInvoiceDetail(invoiceId);
+                                    }}
+                                    onKeyDown={(event) => {
+                                        if (!canOpenInvoice)
+                                            return;
+                                        if (event.key !== 'Enter' && event.key !== ' ')
+                                            return;
+                                        const target = event.target as HTMLElement | null;
+                                        if (target?.closest('button, a, input, textarea, select, .tt-inv-reg__td--status, .tt-inv-reg__td--pdf, .tt-inv-reg-status'))
+                                            return;
+                                        event.preventDefault();
+                                        openInvoiceDetail(invoiceId);
+                                    }}
+                                >
                                     {columns.map((col) => {
                                         const val = row[col.key] ?? '';
                                         const active = focus?.rowId === row.id && focus.key === col.key;
@@ -1147,7 +1193,7 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                                                 wide={col.wide}
                                                 columnKey={col.key}
                                                 editor={col.editor}
-                                                invoiceId={systemInvoiceId(row)}
+                                                invoiceId={invoiceId}
                                                 money={money}
                                                 readOnly={systemStatus ? readOnly : !canEditYear}
                                                 statusChoices={statusChoices}
@@ -1164,7 +1210,8 @@ export function InvoiceRegistryPanel({ readOnly = false }: { readOnly?: boolean 
                                         );
                                     })}
                                 </tr>
-                            ))}
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>

@@ -5,7 +5,7 @@ import type { User } from '@entities/user';
 import { getVacationPartners, getVacationRosterHidden, listVacationScheduleEmployees, patchVacationRosterHidden, syncVacationScheduleEmployees, type VacationPartnerApi } from '@entities/vacation';
 import { useCurrentUser } from '@shared/hooks';
 import { canEditVacationSchedule } from '../model/vacationScheduleAccess';
-import { buildVacationScheduleRowsFromUsers, markVacationSchedulePartnerRows, mergeUsersWithVacationPartners, type VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
+import { buildVacationScheduleRowsFromUsers, markVacationSchedulePartnerRows, mergeUsersWithScheduleEmployees, mergeUsersWithVacationPartners, type VacationScheduleEmployeeRow } from '../lib/vacationScheduleModel';
 
 type TeamGroup = {
     id: string;
@@ -173,7 +173,10 @@ export function VacationEmployeeSidebar({
                 systemUserId: row.auth_user_id ?? undefined,
                 email: row.email ?? null,
             }));
-            const usersWithPartners = mergeUsersWithVacationPartners(allUsers, partners);
+            const usersWithPartners = mergeUsersWithScheduleEmployees(
+                mergeUsersWithVacationPartners(allUsers, partners),
+                scheduleRows,
+            );
             const rows = markVacationSchedulePartnerRows(
                 buildVacationScheduleRowsFromUsers(usersWithPartners, scheduleRows),
                 usersWithPartners,

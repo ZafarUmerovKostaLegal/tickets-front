@@ -5,7 +5,7 @@ import { listColleaguesAsUsers } from '@entities/contacts';
 import { useCurrentUser } from '@shared/hooks';
 import { canEditVacationSchedule, canViewVacationManualEntryDocs } from '../model/vacationScheduleAccess';
 import { loadVacationAbsenceBasisMap, pruneVacationAbsenceBasisForYear, removeVacationAbsenceBasis, setVacationAbsenceBasis, type VacationAbsenceBasis, } from '../lib/vacationAbsenceBasisStorage';
-import { buildVacationScheduleRowsFromUsers, coerceVacationAbsenceDayRow, isVacationSystemRowId, markVacationSchedulePartnerRows, mergeUsersWithVacationPartners, vacationAttendanceMarksFromApi, vacationCellKey, vacationIsoDateFromParts, vacationMarksFromAbsenceDays, vacationUiLegendFromKindCodes, vacationUiLegendFromKindLegendApi, type VacationAttendanceMarksState, type VacationMarkCell, type VacationMarksState, type VacationScheduleEmployeeRow, type VacationUiLegendItem, } from '../lib/vacationScheduleModel';
+import { buildVacationScheduleRowsFromUsers, coerceVacationAbsenceDayRow, isVacationSystemRowId, markVacationSchedulePartnerRows, mergeUsersWithScheduleEmployees, mergeUsersWithVacationPartners, vacationAttendanceMarksFromApi, vacationCellKey, vacationIsoDateFromParts, vacationMarksFromAbsenceDays, vacationUiLegendFromKindCodes, vacationUiLegendFromKindLegendApi, type VacationAttendanceMarksState, type VacationMarkCell, type VacationMarksState, type VacationScheduleEmployeeRow, type VacationUiLegendItem, } from '../lib/vacationScheduleModel';
 import type { VacationAbsenceDayApi, VacationPartnerApi } from '@entities/vacation';
 import { fetchWorkdaySettings, workdayDtoToSettings } from '@entities/attendance';
 import { DEFAULT_WORKDAY_SETTINGS, type WorkdaySettings } from '@shared/lib/attendanceSettings';
@@ -170,7 +170,10 @@ export function VacationScheduleGrid({ onHeaderActionsChange, externalRefreshTok
                 systemUserId: e.auth_user_id ?? undefined,
                 email: e.email ?? null,
             }));
-            const usersWithPartners = mergeUsersWithVacationPartners(allUsers, partners);
+            const usersWithPartners = mergeUsersWithScheduleEmployees(
+                mergeUsersWithVacationPartners(allUsers, partners),
+                scheduleRows,
+            );
             const partnerIds = partners.map((p) => p.user_id);
             const rows = markVacationSchedulePartnerRows(
                 buildVacationScheduleRowsFromUsers(usersWithPartners, scheduleRows),

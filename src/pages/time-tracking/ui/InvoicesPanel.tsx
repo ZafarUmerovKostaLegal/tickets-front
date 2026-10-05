@@ -444,7 +444,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     </div>
 
     {invoicesSubTab === 'registry' ? (
-      <InvoiceRegistryPanel readOnly={readOnly} />
+      <InvoiceRegistryPanel readOnly={readOnly} variant={accountingEmbed ? 'accounting' : 'default'} />
     ) : invoicesSubTab === 'statistics' ? (
       <InvoiceRegistryStatisticsPanel />
     ) : (<>

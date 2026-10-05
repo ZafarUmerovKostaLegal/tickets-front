@@ -32,7 +32,7 @@ const DOC_TYPES = new Set<CorrDocType>([
 ]);
 const STATUSES = new Set<CorrDocStatus>([
     'draft',
-    'pending_review',
+    'pending_review', 
     'rejected',
     'new',
     'received',
