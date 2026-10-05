@@ -50,6 +50,17 @@ fn configure_main_window(app: &tauri::App) -> tauri::Result<()> {
   Ok(())
 }
 
+#[tauri::command]
+fn show_chat_notification(app: tauri::AppHandle, title: String, body: String) -> Result<(), String> {
+  use tauri_plugin_notification::NotificationExt;
+  app.notification()
+    .builder()
+    .title(title)
+    .body(body)
+    .show()
+    .map_err(|err| err.to_string())
+}
+
 #[cfg(desktop)]
 fn show_main(app: &tauri::AppHandle) {
   use tauri::Manager;
@@ -86,6 +97,7 @@ pub fn run() {
       network_drive::revoke_folder_access,
       network_drive::get_folder_owner,
       network_drive::set_folder_owner,
+      show_chat_notification,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

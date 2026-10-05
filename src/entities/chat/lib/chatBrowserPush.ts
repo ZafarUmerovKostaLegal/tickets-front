@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { deleteChatPushSubscription, fetchChatPushConfig, saveChatPushSubscription } from '../api';
 import { chatWindowIsInFront } from './chatNotificationSession';
 
@@ -46,24 +47,7 @@ function showDesktopChatToast(title: string, body: string): Promise<void> {
         return Promise.resolve();
     if (title === 'Kosta Daily')
         return Promise.resolve();
-    const NotificationApi = window.Notification;
-    if (!NotificationApi)
-        return Promise.resolve();
-    const show = () => {
-        new NotificationApi(title, { body });
-    };
-    if (NotificationApi.permission === 'granted') {
-        show();
-        return Promise.resolve();
-    }
-    if (NotificationApi.permission !== 'default')
-        return Promise.resolve();
-    return NotificationApi.requestPermission()
-        .then((permission) => {
-            if (permission === 'granted')
-                show();
-        })
-        .catch(() => undefined);
+    return invoke('show_chat_notification', { title, body }).then(() => undefined).catch(() => undefined);
 }
 
 function pushSupported(): boolean {

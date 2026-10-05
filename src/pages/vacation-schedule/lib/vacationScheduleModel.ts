@@ -10,7 +10,7 @@ export type VacationScheduleEmployeeRow = {
     systemOnly?: boolean;
     systemUserId?: number;
     email?: string | null;
-    
+    position?: string | null;
     isPartner?: boolean;
 };
 export const VACATION_ABSENCE_KINDS = ['annual', 'sick', 'dayoff', 'business', 'remote', 'red_pass'] as const;
@@ -233,7 +233,7 @@ export function isVacationSystemRowId(id: number): boolean {
 
 
 export function buildVacationScheduleRowsFromUsers(
-    users: ReadonlyArray<{ id: number; display_name?: string | null; email?: string | null; is_archived?: boolean; is_blocked?: boolean }>,
+    users: ReadonlyArray<{ id: number; display_name?: string | null; email?: string | null; position?: string | null; is_archived?: boolean; is_blocked?: boolean }>,
     scheduleRows: ReadonlyArray<VacationScheduleEmployeeRow> = [],
 ): VacationScheduleEmployeeRow[] {
     const scheduleByName = new Map<string, VacationScheduleEmployeeRow>();
@@ -268,6 +268,7 @@ export function buildVacationScheduleRowsFromUsers(
                 plannedPeriodNote: linked.plannedPeriodNote ?? null,
                 systemUserId: linked.systemUserId ?? u.id,
                 email: linked.email ?? email,
+                position: u.position ?? null,
             });
             usedScheduleRowIds.add(linked.id);
         }
@@ -280,6 +281,7 @@ export function buildVacationScheduleRowsFromUsers(
                 systemOnly: true,
                 systemUserId: u.id,
                 email,
+                position: u.position ?? null,
             });
         }
     }
