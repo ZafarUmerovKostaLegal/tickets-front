@@ -17,9 +17,12 @@ export {
 } from './model/monitorSpecs';
 export {
     buildInventoryItemExportText,
+    buildInventoryItemExportFields,
     downloadInventoryItemCard,
     inventoryItemExportStem,
     processInventoryPhotoForExport,
+    type InventoryItemExportFormat,
     type InventoryItemExportInput,
+    type InventoryExportField,
 } from './lib/exportInventoryItemCard';
 export { getStatuses, getCategories, getCategory, createCategory, updateCategory, deleteCategory, getItems, getItem, createItem, updateItem, uploadItemPhoto, assignItem, unassignItem, archiveItem, deleteItem, getItemPhotoUrl, } from './api';

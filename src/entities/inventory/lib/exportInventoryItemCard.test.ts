@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+    buildInventoryItemExportFields,
     buildInventoryItemExportText,
     inventoryItemExportStem,
 } from './exportInventoryItemCard';
@@ -44,23 +45,29 @@ describe('inventoryItemExportStem', () => {
     });
 });
 
-describe('buildInventoryItemExportText', () => {
-    it('includes core fields, score, monitor chips and photo note', () => {
+describe('buildInventoryItemExportFields / text', () => {
+    it('includes core fields, score, monitor chips and notes', () => {
+        const fields = buildInventoryItemExportFields({
+            item: item(),
+            categoryName: 'Мониторы',
+            assignedLabel: null,
+            statusLabel: 'На складе',
+        });
+        expect(fields.title).toBe('Монитор Xiaomi');
+        expect(fields.monitorChips.some((c) => c.includes('23.8'))).toBe(true);
+        expect(fields.notes).toBe('Офисный монитор');
+
         const text = buildInventoryItemExportText({
             item: item(),
             categoryName: 'Мониторы',
             assignedLabel: null,
             statusLabel: 'На складе',
         });
-        expect(text).toContain('Монитор Xiaomi');
         expect(text).toContain('Инв. номер: mnx29');
         expect(text).toContain('Категория: Мониторы');
         expect(text).toContain('Статус: На складе');
         expect(text).toContain('Оценка техники: 10/10');
-        expect(text).toContain('Характеристики монитора');
-        expect(text).toContain('23.8"');
-        expect(text).toContain('Офисный монитор');
-        expect(text).toContain('mnx29_Монитор_Xiaomi.jpg');
+        expect(text).toContain('PDF или Word');
         expect(text).toContain('aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
     });
 });

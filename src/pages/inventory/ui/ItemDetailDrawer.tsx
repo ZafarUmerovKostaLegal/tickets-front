@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
-import { useCallback, useEffect, useState } from 'react';
-import type { InventoryItem } from '@entities/inventory';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { InventoryItem, InventoryItemExportFormat } from '@entities/inventory';
 import {
     downloadInventoryItemCard,
     resolveEquipmentScore,
@@ -19,6 +19,12 @@ type Props = {
     item: InventoryItem;
     onClose: () => void;
 };
+
+const EXPORT_FORMAT_OPTIONS: { format: InventoryItemExportFormat; label: string; hint: string }[] = [
+    { format: 'pdf', label: 'PDF', hint: 'С фото' },
+    { format: 'docx', label: 'Word', hint: 'С фото' },
+    { format: 'txt', label: 'TXT', hint: 'Только текст' },
+];
 
 export function ItemDetailDrawer({ item, onClose }: Props) {
     const {
@@ -45,19 +51,38 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
     const freeNotes = monitorParsed ? monitorParsed.notes : (item.description?.trim() || '');
     const [downloadBusy, setDownloadBusy] = useState(false);
     const [downloadErr, setDownloadErr] = useState<string | null>(null);
+    const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+    const downloadWrapRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => {
-            if (e.key === 'Escape')
-                onClose();
+            if (e.key !== 'Escape')
+                return;
+            if (downloadMenuOpen) {
+                setDownloadMenuOpen(false);
+                return;
+            }
+            onClose();
         };
         document.addEventListener('keydown', onKey);
         return () => document.removeEventListener('keydown', onKey);
-    }, [onClose]);
+    }, [onClose, downloadMenuOpen]);
 
-    const handleDownload = useCallback(async () => {
+    useEffect(() => {
+        if (!downloadMenuOpen)
+            return;
+        const handleClick = (e: MouseEvent) => {
+            if (downloadWrapRef.current && !downloadWrapRef.current.contains(e.target as Node))
+                setDownloadMenuOpen(false);
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [downloadMenuOpen]);
+
+    const handleDownload = useCallback(async (format: InventoryItemExportFormat) => {
         if (downloadBusy)
             return;
+        setDownloadMenuOpen(false);
         setDownloadBusy(true);
         setDownloadErr(null);
         try {
@@ -68,7 +93,7 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
                     ? (assigned.display_name || assigned.email)
                     : null,
                 statusLabel: statusLabel(item.status),
-            });
+            }, format);
         }
         catch (err) {
             setDownloadErr(err instanceof Error ? err.message : 'Не удалось скачать карточку');
@@ -199,21 +224,56 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
                 </div>
 
                 <div className="inv-drawer__footer">
-                    <button
-                        type="button"
-                        className="inv__btn inv__btn--ghost inv-drawer__action"
-                        onClick={() => { void handleDownload(); }}
-                        disabled={downloadBusy}
-                        aria-busy={downloadBusy}
-                        title={item.photo_path ? 'TXT-карточка и обработанное фото JPEG' : 'TXT-карточка техники'}
-                    >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                            <polyline points="7 10 12 15 17 10" />
-                            <line x1="12" y1="15" x2="12" y2="3" />
-                        </svg>
-                        {downloadBusy ? 'Скачивание…' : 'Скачать'}
-                    </button>
+                    <div className="inv-drawer__download" ref={downloadWrapRef}>
+                        <button
+                            type="button"
+                            className="inv__btn inv__btn--ghost inv-drawer__action"
+                            onClick={() => {
+                                if (!downloadBusy)
+                                    setDownloadMenuOpen((open) => !open);
+                            }}
+                            disabled={downloadBusy}
+                            aria-busy={downloadBusy}
+                            aria-expanded={downloadMenuOpen}
+                            aria-haspopup="menu"
+                            title="Скачать карточку техники"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            {downloadBusy ? 'Скачивание…' : 'Скачать'}
+                            <svg
+                                className="inv-drawer__download-chevron"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                aria-hidden
+                            >
+                                <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                        </button>
+                        {downloadMenuOpen && !downloadBusy ? (
+                            <div className="inv-drawer__download-menu" role="menu">
+                                {EXPORT_FORMAT_OPTIONS.map((opt) => (
+                                    <button
+                                        key={opt.format}
+                                        type="button"
+                                        role="menuitem"
+                                        className="inv-drawer__download-option"
+                                        onClick={() => { void handleDownload(opt.format); }}
+                                    >
+                                        <span className="inv-drawer__download-option-label">{opt.label}</span>
+                                        <span className="inv-drawer__download-option-hint">{opt.hint}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
                     {downloadErr ? <p className="inv-drawer__download-err" role="alert">{downloadErr}</p> : null}
 
                     {canEdit ? (
