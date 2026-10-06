@@ -5,6 +5,21 @@
   min-width: 0;
 }
 
+.tt-inv-stats__year-nav {
+  flex: 0 0 auto;
+  align-self: stretch;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.tt-inv-stats__year-nav .tt-reports__type-tab {
+  flex: 0 0 auto;
+  align-self: center;
+  height: auto;
+}
+
 .tt-inv-stats__state {
   padding: 1rem;
   border: 1px dashed var(--app-border, #e2e8f0);

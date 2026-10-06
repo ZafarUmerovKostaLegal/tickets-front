@@ -66,6 +66,12 @@
   min-width: 0;
   max-width: 100%;
   flex-shrink: 1;
+  align-items: center;
+}
+
+.tt-inv-reg__year-nav .tt-reports__type-tab {
+  flex: 0 0 auto;
+  height: auto;
 }
 
 .tt-inv-reg__toolbar-actions {

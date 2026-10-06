@@ -111,7 +111,7 @@ export function InvoiceRegistryStatisticsPanel() {
     return (
         <div className="tt-inv-stats">
             <nav
-                className="tt-inv-reg__year-nav tt-reports__type-nav"
+                className="tt-inv-stats__year-nav tt-reports__type-nav"
                 role="tablist"
                 aria-label={t('timeTrackingPage.invoices.statistics.yearTabsAria')}
             >
