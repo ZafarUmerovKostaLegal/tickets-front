@@ -66,8 +66,8 @@ import {
   parseOptionalPercentField,
   summarizeBilledOverrideLines,
 } from '../lib/invoicePageShared';
-import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import {
+  invoiceDisplayMoneyTotals,
   invoiceExpenseLineDisplayAmounts,
   loadInvoiceExpenseRegistryUsd,
 } from '../lib/invoiceExpenseLineDisplay';
@@ -122,26 +122,14 @@ export function InvoiceDetailPage() {
     [detail?.lines, detail?.currency],
   );
 
-  /** KPI / send labels: bump total by registry USD delta on expense lines. */
-  const displayTotalAmount = useMemo(() => {
+  /** KPI: expense lines at registry USD — keep total and balance on the same basis. */
+  const displayMoney = useMemo(() => {
     if (!detail)
-      return 0;
-    const base = Number(detail.totalAmount);
-    if (!Number.isFinite(base))
-      return 0;
-    if ((detail.currency || '').trim().toUpperCase() !== 'USD' || expenseRegistryUsd.size === 0)
-      return base;
-    let delta = 0;
-    for (const ln of detail.lines ?? []) {
-      if (invoiceLineKindSlug(ln) !== 'expense')
-        continue;
-      const stored = Number(ln.lineTotal);
-      const shown = invoiceExpenseLineDisplayAmounts(ln, detail.currency, expenseRegistryUsd).lineTotal;
-      if (Number.isFinite(stored) && Number.isFinite(shown))
-        delta += shown - stored;
-    }
-    return roundMoney2(base + delta);
+      return { totalAmount: 0, balanceDue: 0 };
+    return invoiceDisplayMoneyTotals(detail, expenseRegistryUsd);
   }, [detail, expenseRegistryUsd]);
+  const displayTotalAmount = displayMoney.totalAmount;
+  const displayBalanceDue = displayMoney.balanceDue;
 
   const listHref = getInvoicesListUrl(accountingVariant ? { variant: 'accounting' } : undefined);
   const toInvoices = () => {
@@ -575,7 +563,7 @@ export function InvoiceDetailPage() {
   const handleFullPaymentNow = useCallback(async () => {
     if (!invoiceId || !detail)
       return;
-    const due = Number(detail.balanceDue);
+    const due = displayBalanceDue;
     if (!Number.isFinite(due) || due <= 1e-9) {
       await showAlert({ message: t('timeTrackingPage.invoices.errors.alreadyPaid') });
       return;
@@ -617,7 +605,7 @@ export function InvoiceDetailPage() {
     finally {
       setActionBusy(false);
     }
-  }, [invoiceId, detail, locale, showAlert, showConfirm, pushToast, t]);
+  }, [invoiceId, detail, displayBalanceDue, locale, showAlert, showConfirm, pushToast, t]);
 
   const handleSubmitPaymentConfirmation = useCallback(async () => {
     if (!invoiceId)
@@ -823,9 +811,9 @@ export function InvoiceDetailPage() {
                     <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.paid')}</span>
                     <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtMoney(detail.amountPaid, detail.currency, locale)}</span>
                   </div>
-                  <div className={`tt-reports__summary-card${detail.balanceDue > 1e-9 ? ' tt-inv__summary-card--danger' : ' tt-inv__summary-card--muted'}`}>
+                  <div className={`tt-reports__summary-card${displayBalanceDue > 1e-9 ? ' tt-inv__summary-card--danger' : ' tt-inv__summary-card--muted'}`}>
                     <span className="tt-reports__summary-label">{t('timeTrackingPage.invoices.detail.balance')}</span>
-                    <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtMoney(detail.balanceDue, detail.currency, locale)}</span>
+                    <span className="tt-reports__summary-value" style={{ fontSize: '1.05rem' }}>{fmtMoney(displayBalanceDue, detail.currency, locale)}</span>
                   </div>
                 </div>
 
@@ -896,13 +884,13 @@ export function InvoiceDetailPage() {
                             {t('timeTrackingPage.invoices.detail.markViewed')}
                           </button>
                         )}
-                        {invoiceCanRegisterPayment(detail.status as InvoiceUiStatus, detail.balanceDue) && (
+                        {invoiceCanRegisterPayment(detail.status as InvoiceUiStatus, displayBalanceDue) && (
                           <>
                             <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleFullPaymentNow()}>
                               {t('timeTrackingPage.invoices.detail.fullPayment')}
                             </button>
                             <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={() => {
-                              setPayAmount(detail.balanceDue > 1e-9 ? String(detail.balanceDue).replace('.', ',') : '');
+                              setPayAmount(displayBalanceDue > 1e-9 ? String(displayBalanceDue).replace('.', ',') : '');
                               setPayAt('');
                               setPayOpen(true);
                             }}>

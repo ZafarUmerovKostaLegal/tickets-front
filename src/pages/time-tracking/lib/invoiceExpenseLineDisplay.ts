@@ -72,3 +72,45 @@ export function invoiceExpenseLineDisplayAmounts(
     const lineTotal = roundMoney2(unitAmount * q);
     return { unitAmount, lineTotal };
 }
+
+/**
+ * KPI totals: when expense lines are shown at registry USD, bump invoice total by the
+ * same delta and recompute balance so «Сумма» and «Остаток» stay consistent.
+ */
+export function invoiceDisplayMoneyTotals(
+    invoice: {
+        totalAmount: number;
+        amountPaid: number;
+        balanceDue: number;
+        currency: string;
+        lines?: readonly InvoiceLineDto[] | null;
+    },
+    registryUsdByExpenseId: ReadonlyMap<string, number>,
+): { totalAmount: number; balanceDue: number } {
+    const base = Number(invoice.totalAmount);
+    const paid = Number(invoice.amountPaid);
+    const paidSafe = Number.isFinite(paid) ? paid : 0;
+    if (!Number.isFinite(base)) {
+        const bal = Number(invoice.balanceDue);
+        return {
+            totalAmount: 0,
+            balanceDue: Number.isFinite(bal) ? Math.max(0, bal) : 0,
+        };
+    }
+
+    let delta = 0;
+    if ((invoice.currency || '').trim().toUpperCase() === 'USD' && registryUsdByExpenseId.size > 0) {
+        for (const ln of invoice.lines ?? []) {
+            if (invoiceLineKindSlug(ln) !== 'expense')
+                continue;
+            const stored = Number(ln.lineTotal);
+            const shown = invoiceExpenseLineDisplayAmounts(ln, invoice.currency, registryUsdByExpenseId).lineTotal;
+            if (Number.isFinite(stored) && Number.isFinite(shown))
+                delta += shown - stored;
+        }
+    }
+
+    const totalAmount = roundMoney2(base + delta);
+    const balanceDue = roundMoney2(Math.max(0, totalAmount - paidSafe));
+    return { totalAmount, balanceDue };
+}
