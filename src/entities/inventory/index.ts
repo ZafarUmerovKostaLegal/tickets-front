@@ -25,4 +25,10 @@ export {
     type InventoryItemExportInput,
     type InventoryExportField,
 } from './lib/exportInventoryItemCard';
+export {
+    exportInventoryCategoryToExcel,
+    fetchInventoryItemsForCategoryExport,
+    buildInventoryCategoryExcelRows,
+    type InventoryCategoryExcelInput,
+} from './lib/exportInventoryCategoryExcel';
 export { getStatuses, getCategories, getCategory, createCategory, updateCategory, deleteCategory, getItems, getItem, createItem, updateItem, uploadItemPhoto, assignItem, unassignItem, archiveItem, deleteItem, getItemPhotoUrl, } from './api';

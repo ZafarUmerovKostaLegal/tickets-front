@@ -1,16 +1,51 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useInventory } from '../model';
 import { InvSelect } from './InvSelect';
 import { ItemDetailDrawer } from './ItemDetailDrawer';
 import { EquipmentScoreBadge } from './EquipmentScoreBadge';
 import { LIMIT } from '../model/constants';
 import { AuthImg, Pagination } from '@shared/ui';
-import { EQUIPMENT_SCORE_MAX, EQUIPMENT_SCORE_POINTS, laptopRamUpgrade } from '@entities/inventory';
+import { EQUIPMENT_SCORE_MAX, EQUIPMENT_SCORE_POINTS, exportInventoryCategoryToExcel, laptopRamUpgrade } from '@entities/inventory';
 import type { InventoryItem } from '@entities/inventory';
 export function InventoryItemsSection() {
     const { canEdit, canCreateItems, categories, statuses, users, items, loadingItems, filterCategoryId, setFilterCategoryId, filterStatus, setFilterStatus, filterScore, setFilterScore, scoreSort, setScoreSort, filterAssignedTo, setFilterAssignedTo, includeArchived, setIncludeArchived, skip, setSkip, itemsTotal, setItemModal, resetItemForm, setFormError, categoryById, statusLabel, } = useInventory();
     const [viewItem, setViewItem] = useState<InventoryItem | null>(null);
+    const [excelBusy, setExcelBusy] = useState(false);
+    const [excelErr, setExcelErr] = useState<string | null>(null);
     const page = Math.floor(skip / LIMIT) + 1;
+    const selectedCategory = typeof filterCategoryId === 'number'
+        ? categories.find((c) => c.id === filterCategoryId) ?? null
+        : null;
+
+    const handleExportExcel = useCallback(async () => {
+        if (!selectedCategory || excelBusy)
+            return;
+        setExcelBusy(true);
+        setExcelErr(null);
+        try {
+            await exportInventoryCategoryToExcel({
+                categoryId: selectedCategory.id,
+                categoryName: selectedCategory.name,
+                status: filterStatus || undefined,
+                includeArchived,
+                assignedToUserId: filterAssignedTo === '' ? null : filterAssignedTo,
+                statusLabel,
+                userLabel: (userId) => {
+                    if (userId == null)
+                        return '';
+                    const u = users.find((x) => x.id === userId);
+                    return u ? (u.display_name || u.email || String(userId)) : String(userId);
+                },
+            });
+        }
+        catch (err) {
+            setExcelErr(err instanceof Error ? err.message : 'Не удалось выгрузить Excel');
+        }
+        finally {
+            setExcelBusy(false);
+        }
+    }, [selectedCategory, excelBusy, filterStatus, includeArchived, filterAssignedTo, statusLabel, users]);
+
     return (<section className="inv__card">
       <div className="inv__card-head">
         <h2 className="inv__card-title">
@@ -22,6 +57,24 @@ export function InventoryItemsSection() {
         </h2>
         <div className="inv__card-head-right">
           <span className="inv__card-count">{itemsTotal}</span>
+          <button
+            type="button"
+            className="inv__btn inv__btn--ghost"
+            disabled={!selectedCategory || excelBusy}
+            aria-busy={excelBusy}
+            title={selectedCategory
+                ? `Выгрузить Excel: ${selectedCategory.name}`
+                : 'Сначала выберите категорию в фильтре'}
+            onClick={() => { void handleExportExcel(); }}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="8" y1="13" x2="16" y2="13"/>
+              <line x1="8" y1="17" x2="16" y2="17"/>
+            </svg>
+            {excelBusy ? 'Excel…' : 'Excel'}
+          </button>
           {canCreateItems && (<button type="button" className="inv__btn inv__btn--primary" onClick={() => {
                 setItemModal('add');
                 resetItemForm();
@@ -31,6 +84,7 @@ export function InventoryItemsSection() {
             </button>)}
         </div>
       </div>
+      {excelErr ? <p className="inv__export-err" role="alert">{excelErr}</p> : null}
 
       <div className="inv__toolbar">
         <div className="inv__toolbar-group">
@@ -39,6 +93,7 @@ export function InventoryItemsSection() {
             <InvSelect value={filterCategoryId === '' ? '' : filterCategoryId} placeholder="Все" options={categories.map((c) => ({ value: c.id, label: c.name }))} onChange={(v) => {
             setFilterCategoryId(v === '' ? '' : Number(v));
             setSkip(0);
+            setExcelErr(null);
         }}/>
           </label>
           <label className="inv__field">
