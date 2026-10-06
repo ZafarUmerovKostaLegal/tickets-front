@@ -74,8 +74,8 @@ export function invoiceExpenseLineDisplayAmounts(
 }
 
 /**
- * KPI totals: when expense lines are shown at registry USD, bump invoice total by the
- * same delta and recompute balance so «Сумма» and «Остаток» stay consistent.
+ * KPI totals: rebuild from displayed line amounts so «Сумма» and «Остаток» never drift.
+ * Expense lines use registry USD when available; residual keeps tax/discount from server total.
  */
 export function invoiceDisplayMoneyTotals(
     invoice: {
@@ -90,27 +90,42 @@ export function invoiceDisplayMoneyTotals(
     const base = Number(invoice.totalAmount);
     const paid = Number(invoice.amountPaid);
     const paidSafe = Number.isFinite(paid) ? paid : 0;
-    if (!Number.isFinite(base)) {
-        const bal = Number(invoice.balanceDue);
+    const lines = invoice.lines ?? [];
+
+    let storedLinesSum = 0;
+    let displayLinesSum = 0;
+    for (const ln of lines) {
+        const stored = Number(ln.lineTotal);
+        const storedSafe = Number.isFinite(stored) ? stored : 0;
+        storedLinesSum += storedSafe;
+        displayLinesSum += invoiceExpenseLineDisplayAmounts(
+            ln,
+            invoice.currency,
+            registryUsdByExpenseId,
+        ).lineTotal;
+    }
+    storedLinesSum = roundMoney2(storedLinesSum);
+    displayLinesSum = roundMoney2(displayLinesSum);
+
+    let totalAmount: number;
+    if (Number.isFinite(base) && lines.length > 0) {
+        // Preserve tax/discount (total − sum of stored lines), apply display line amounts.
+        const residual = roundMoney2(base - storedLinesSum);
+        totalAmount = roundMoney2(displayLinesSum + residual);
+    }
+    else if (Number.isFinite(base)) {
+        totalAmount = roundMoney2(base);
+    }
+    else if (lines.length > 0) {
+        totalAmount = displayLinesSum;
+    }
+    else {
         return {
             totalAmount: 0,
-            balanceDue: Number.isFinite(bal) ? Math.max(0, bal) : 0,
+            balanceDue: 0,
         };
     }
 
-    let delta = 0;
-    if ((invoice.currency || '').trim().toUpperCase() === 'USD' && registryUsdByExpenseId.size > 0) {
-        for (const ln of invoice.lines ?? []) {
-            if (invoiceLineKindSlug(ln) !== 'expense')
-                continue;
-            const stored = Number(ln.lineTotal);
-            const shown = invoiceExpenseLineDisplayAmounts(ln, invoice.currency, registryUsdByExpenseId).lineTotal;
-            if (Number.isFinite(stored) && Number.isFinite(shown))
-                delta += shown - stored;
-        }
-    }
-
-    const totalAmount = roundMoney2(base + delta);
     const balanceDue = roundMoney2(Math.max(0, totalAmount - paidSafe));
     return { totalAmount, balanceDue };
 }

@@ -79,4 +79,22 @@ describe('invoiceDisplayMoneyTotals', () => {
         expect(totals.totalAmount).toBe(596.6);
         expect(totals.balanceDue).toBe(596.6);
     });
+
+    it('aligns balance to total when server balance drifts by 0.01', () => {
+        const totals = invoiceDisplayMoneyTotals(
+            {
+                totalAmount: 596.6,
+                amountPaid: 0,
+                balanceDue: 596.61,
+                currency: 'USD',
+                lines: [
+                    line({ id: 't1', lineKind: 'time', unitAmount: 150, lineTotal: 591.6, expenseRequestId: null }),
+                    line({ id: 'e1', unitAmount: 5, lineTotal: 5 }),
+                ],
+            },
+            new Map(),
+        );
+        expect(totals.totalAmount).toBe(596.6);
+        expect(totals.balanceDue).toBe(596.6);
+    });
 });

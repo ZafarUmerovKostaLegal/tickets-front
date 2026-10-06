@@ -930,10 +930,8 @@ export function normalizeInvoiceDto(raw: unknown): InvoiceDto {
     let amountPaid = coalesceInvoiceMoney(o.amountPaid, o.amount_paid, invoice.amountPaid);
     if (paidFromPayments > 1e-9)
         amountPaid = Math.max(amountPaid, paidFromPayments);
-    let balanceDue = coalesceInvoiceMoney(o.balanceDue, o.balance_due, invoice.balanceDue);
-    const impliedBal = Math.max(0, totalAmount - amountPaid);
-    if (totalAmount > 1e-9 && Math.abs(balanceDue - impliedBal) > INV_MONEY_TOLERANCE)
-        balanceDue = impliedBal;
+    // Always derive balance from total − paid. Server can drift by 0.01 (expense FX vs registry USD).
+    const balanceDue = Math.max(0, Math.round((totalAmount - amountPaid) * 100) / 100);
 
     let statusPick: InvoiceUiStatus = invoice.status;
     const effRaw = o.status ?? o.effective_status ?? o.effectiveStatus;
