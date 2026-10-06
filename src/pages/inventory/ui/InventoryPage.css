@@ -1104,6 +1104,37 @@ body[data-theme='dark'] .inv__tab--active {
   color: var(--app-muted);
 }
 
+.inv__chip-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.inv__chip-pick-btn {
+  height: 34px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 999px;
+  background: var(--app-surface, #fff);
+  color: var(--app-muted, #64748b);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.inv__chip-pick-btn:hover {
+  color: var(--app-text, #0f172a);
+  border-color: color-mix(in srgb, var(--app-accent, #2563eb) 35%, var(--app-border, #e2e8f0));
+}
+
+.inv__chip-pick-btn--on {
+  color: #1d4ed8;
+  border-color: color-mix(in srgb, #2563eb 40%, var(--app-border, #e2e8f0));
+  background: rgba(37, 99, 235, 0.1);
+}
+
 .inv__photo-upload {
   display: block;
   cursor: pointer;
@@ -1554,6 +1585,24 @@ body[data-theme='dark'] .inv__score-badge--E { color: #cbd5e1; background: rgba(
   background: var(--app-surface-soft);
   border: 1px solid var(--app-border);
   border-radius: 10px;
+}
+
+.inv-drawer__monitor-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.inv-drawer__monitor-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: #1d4ed8;
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid color-mix(in srgb, #2563eb 25%, transparent);
 }
 
 .inv-drawer__desc {

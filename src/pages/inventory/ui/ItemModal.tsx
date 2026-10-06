@@ -1,5 +1,15 @@
 import { createPortal } from 'react-dom';
-import { EQUIPMENT_SCORE_RANGES, equipmentAgeYears, equipmentScoreFromAgeYears, equipmentScoreText, equipmentScoreTier } from '@entities/inventory';
+import {
+    EQUIPMENT_SCORE_RANGES,
+    equipmentAgeYears,
+    equipmentScoreFromAgeYears,
+    equipmentScoreText,
+    equipmentScoreTier,
+    isMonitorCategory,
+    MONITOR_PORT_OPTIONS,
+    MONITOR_RESOLUTION_PRESETS,
+    type MonitorPanel,
+} from '@entities/inventory';
 import { useInventory } from '../model';
 
 function IconClose() {
@@ -40,9 +50,23 @@ export function ItemModal() {
     if (!itemModal)
         return null;
 
+    const selectedCategory = categories.find((c) => c.id === itemForm.category_id);
+    const isMonitor = isMonitorCategory(selectedCategory?.name);
     const selectedRange = EQUIPMENT_SCORE_RANGES.find((r) => r.code === itemForm.equipment_class);
     const formAgeYears = equipmentAgeYears(itemForm.purchase_date);
     const formScore = formAgeYears == null ? null : equipmentScoreFromAgeYears(formAgeYears);
+
+    const togglePort = (port: string) => {
+        setItemForm((f) => {
+            const has = f.monitor_ports.includes(port);
+            return {
+                ...f,
+                monitor_ports: has
+                    ? f.monitor_ports.filter((p) => p !== port)
+                    : [...f.monitor_ports, port],
+            };
+        });
+    };
 
     const content = (
         <div className="inv__overlay" role="dialog" aria-modal="true" aria-labelledby="inv-item-modal-title">
@@ -76,7 +100,7 @@ export function ItemModal() {
                                     value={itemForm.name}
                                     onChange={(e) => setItemForm((f) => ({ ...f, name: e.target.value }))}
                                     required
-                                    placeholder="Например, MacBook Pro 14"
+                                    placeholder={isMonitor ? 'Например, Dell UltraSharp 27' : 'Например, MacBook Pro 14'}
                                 />
                             </label>
                             <label className="inv__form-field">
@@ -130,18 +154,140 @@ export function ItemModal() {
                                     </p>
                                 )}
                             </div>
-                            <label className="inv__form-field inv__form-field--span2">
-                                <span className="inv__form-label">Описание</span>
-                                <textarea
-                                    className="inv__input inv__input--textarea"
-                                    rows={3}
-                                    value={itemForm.description}
-                                    onChange={(e) => setItemForm((f) => ({ ...f, description: e.target.value }))}
-                                    placeholder="Модель, комплектация, заметки…"
-                                />
-                            </label>
+                            {!isMonitor && (
+                                <label className="inv__form-field inv__form-field--span2">
+                                    <span className="inv__form-label">Описание</span>
+                                    <textarea
+                                        className="inv__input inv__input--textarea"
+                                        rows={3}
+                                        value={itemForm.description}
+                                        onChange={(e) => setItemForm((f) => ({ ...f, description: e.target.value }))}
+                                        placeholder="Модель, комплектация, заметки…"
+                                    />
+                                </label>
+                            )}
                         </div>
                     </section>
+
+                    {isMonitor && (
+                        <section className="inv__form-section">
+                            <h4 className="inv__form-section-title">Характеристики монитора</h4>
+                            <div className="inv__form-grid">
+                                <label className="inv__form-field">
+                                    <span className="inv__form-label">Диагональ, дюймы</span>
+                                    <input
+                                        className="inv__input"
+                                        inputMode="decimal"
+                                        value={itemForm.monitor_diagonal}
+                                        onChange={(e) => setItemForm((f) => ({ ...f, monitor_diagonal: e.target.value }))}
+                                        placeholder="27"
+                                    />
+                                </label>
+                                <label className="inv__form-field">
+                                    <span className="inv__form-label">Разрешение</span>
+                                    <input
+                                        className="inv__input"
+                                        list="inv-monitor-resolutions"
+                                        value={itemForm.monitor_resolution}
+                                        onChange={(e) => setItemForm((f) => ({ ...f, monitor_resolution: e.target.value }))}
+                                        placeholder="2560×1440"
+                                    />
+                                    <datalist id="inv-monitor-resolutions">
+                                        {MONITOR_RESOLUTION_PRESETS.map((r) => (
+                                            <option key={r} value={r} />
+                                        ))}
+                                    </datalist>
+                                </label>
+                                <label className="inv__form-field">
+                                    <span className="inv__form-label">Частота, Гц</span>
+                                    <input
+                                        className="inv__input"
+                                        inputMode="numeric"
+                                        value={itemForm.monitor_refresh_hz}
+                                        onChange={(e) => setItemForm((f) => ({ ...f, monitor_refresh_hz: e.target.value }))}
+                                        placeholder="60 / 144 / 165"
+                                    />
+                                </label>
+                                <label className="inv__form-field">
+                                    <span className="inv__form-label">Тип панели</span>
+                                    <select
+                                        className="inv__input"
+                                        value={itemForm.monitor_panel}
+                                        onChange={(e) => setItemForm((f) => ({
+                                            ...f,
+                                            monitor_panel: e.target.value as MonitorPanel,
+                                        }))}
+                                    >
+                                        <option value="">Не указано</option>
+                                        <option value="IPS">IPS</option>
+                                        <option value="VA">VA</option>
+                                        <option value="TN">TN</option>
+                                        <option value="OLED">OLED</option>
+                                        <option value="Mini-LED">Mini-LED</option>
+                                    </select>
+                                </label>
+                                <div className="inv__form-field inv__form-field--span2">
+                                    <span className="inv__form-label">Разъёмы</span>
+                                    <div className="inv__chip-pick" role="group" aria-label="Разъёмы монитора">
+                                        {MONITOR_PORT_OPTIONS.map((port) => {
+                                            const on = itemForm.monitor_ports.includes(port);
+                                            return (
+                                                <button
+                                                    key={port}
+                                                    type="button"
+                                                    className={`inv__chip-pick-btn${on ? ' inv__chip-pick-btn--on' : ''}`}
+                                                    aria-pressed={on}
+                                                    onClick={() => togglePort(port)}
+                                                >
+                                                    {port}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <label className="inv__form-field">
+                                    <span className="inv__form-label">Крепление VESA</span>
+                                    <select
+                                        className="inv__input"
+                                        value={itemForm.monitor_vesa}
+                                        onChange={(e) => setItemForm((f) => ({
+                                            ...f,
+                                            monitor_vesa: e.target.value as '' | 'yes' | 'no',
+                                        }))}
+                                    >
+                                        <option value="">Не указано</option>
+                                        <option value="yes">Да</option>
+                                        <option value="no">Нет</option>
+                                    </select>
+                                </label>
+                                <label className="inv__form-field">
+                                    <span className="inv__form-label">Изогнутый экран</span>
+                                    <select
+                                        className="inv__input"
+                                        value={itemForm.monitor_curved}
+                                        onChange={(e) => setItemForm((f) => ({
+                                            ...f,
+                                            monitor_curved: e.target.value as '' | 'yes' | 'no',
+                                        }))}
+                                    >
+                                        <option value="">Не указано</option>
+                                        <option value="yes">Да</option>
+                                        <option value="no">Нет</option>
+                                    </select>
+                                </label>
+                                <label className="inv__form-field inv__form-field--span2">
+                                    <span className="inv__form-label">Дополнительные заметки</span>
+                                    <textarea
+                                        className="inv__input inv__input--textarea"
+                                        rows={2}
+                                        value={itemForm.description}
+                                        onChange={(e) => setItemForm((f) => ({ ...f, description: e.target.value }))}
+                                        placeholder="Модель, комплектация, особенности…"
+                                    />
+                                </label>
+                            </div>
+                        </section>
+                    )}
 
                     <section className="inv__form-section">
                         <h4 className="inv__form-section-title">Учёт</h4>

@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import type { InventoryItem } from '@entities/inventory';
 import { useInventory } from '../model';
 import { AuthImg } from '@shared/ui';
-import { resolveEquipmentScore, laptopRamUpgrade } from '@entities/inventory';
+import { resolveEquipmentScore, laptopRamUpgrade, isMonitorCategory, parseMonitorDescription, monitorSpecsSummary, hasMonitorSpecs } from '@entities/inventory';
 import { EquipmentScoreBadge } from './EquipmentScoreBadge';
 import { formatDateOnly } from '@shared/lib/formatDate';
 type Props = {
@@ -16,6 +16,11 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
     const assigned = users.find((u) => u.id === item.assigned_to_user_id);
     const itemScore = resolveEquipmentScore(item);
     const ramUpgrade = laptopRamUpgrade({ ...item, categoryName: cat?.name });
+    const monitorParsed = isMonitorCategory(cat?.name) ? parseMonitorDescription(item.description) : null;
+    const monitorSummary = monitorParsed && hasMonitorSpecs(monitorParsed.specs)
+        ? monitorSpecsSummary(monitorParsed.specs)
+        : [];
+    const freeNotes = monitorParsed ? monitorParsed.notes : (item.description?.trim() || '');
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape')
             onClose(); };
@@ -122,11 +127,26 @@ export function ItemDetailDrawer({ item, onClose }: Props) {
             </div>
           </div>
 
-          
-          {item.description?.trim() && (<div className="inv-drawer__desc-section">
+          {monitorSummary.length > 0 && (
+            <div className="inv-drawer__desc-section">
+              <span className="inv-drawer__field-label">Характеристики монитора</span>
+              <div className="inv-drawer__monitor-chips">
+                {monitorSummary.map((chip) => (
+                  <span key={chip} className="inv-drawer__monitor-chip">{chip}</span>
+                ))}
+              </div>
+              {monitorParsed?.specs.vesa === 'no' ? (
+                <p className="inv-drawer__score-hint">Без крепления VESA</p>
+              ) : null}
+            </div>
+          )}
+
+          {freeNotes ? (
+            <div className="inv-drawer__desc-section">
               <span className="inv-drawer__field-label">Описание / Заметки</span>
-              <p className="inv-drawer__desc">{item.description.trim()}</p>
-            </div>)}
+              <p className="inv-drawer__desc">{freeNotes}</p>
+            </div>
+          ) : null}
         </div>
 
         

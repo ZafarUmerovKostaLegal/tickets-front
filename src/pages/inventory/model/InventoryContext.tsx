@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, type ReactNode, } from 'react';
-import { getStatuses, getCategories, getItems, createCategory, updateCategory, deleteCategory, createItem, updateItem, uploadItemPhoto, assignItem, unassignItem, archiveItem, deleteItem, getItemPhotoUrl, isEquipmentClassCode, itemMatchesEquipmentScore, compareItemsByEquipmentScore, type InventoryCategory, type InventoryItem, type InventoryStatusItem, } from '@entities/inventory';
+import { getStatuses, getCategories, getItems, createCategory, updateCategory, deleteCategory, createItem, updateItem, uploadItemPhoto, assignItem, unassignItem, archiveItem, deleteItem, getItemPhotoUrl, isEquipmentClassCode, itemMatchesEquipmentScore, compareItemsByEquipmentScore, formatMonitorDescription, isMonitorCategory, parseMonitorDescription, type InventoryCategory, type InventoryItem, type InventoryStatusItem, type MonitorPanel, type MonitorSpecs, } from '@entities/inventory';
 import { getUsers, type User } from '@entities/user';
 import { useCurrentUser } from '@shared/hooks';
 import { isHiddenSystemUser } from '@shared/lib';
@@ -81,6 +81,13 @@ type InventoryContextValue = {
         status: string;
         purchase_date: string;
         warranty_until: string;
+        monitor_diagonal: string;
+        monitor_resolution: string;
+        monitor_refresh_hz: string;
+        monitor_panel: MonitorPanel;
+        monitor_ports: string[];
+        monitor_vesa: '' | 'yes' | 'no';
+        monitor_curved: '' | 'yes' | 'no';
     };
     setItemForm: (v: typeof defaultItemForm | ((prev: typeof defaultItemForm) => typeof defaultItemForm)) => void;
     itemPhotoFile: File | null;
@@ -122,7 +129,40 @@ const defaultItemForm = {
     status: 'in_stock',
     purchase_date: '',
     warranty_until: '',
+    monitor_diagonal: '',
+    monitor_resolution: '',
+    monitor_refresh_hz: '',
+    monitor_panel: '' as MonitorPanel,
+    monitor_ports: [] as string[],
+    monitor_vesa: '' as '' | 'yes' | 'no',
+    monitor_curved: '' as '' | 'yes' | 'no',
 };
+
+function monitorSpecsFromForm(form: typeof defaultItemForm): MonitorSpecs {
+    return {
+        diagonalIn: form.monitor_diagonal,
+        resolution: form.monitor_resolution,
+        refreshHz: form.monitor_refresh_hz,
+        panel: form.monitor_panel,
+        ports: form.monitor_ports,
+        vesa: form.monitor_vesa,
+        curved: form.monitor_curved,
+    };
+}
+
+function formPatchFromMonitorDescription(description: string | null | undefined) {
+    const parsed = parseMonitorDescription(description);
+    return {
+        description: parsed.notes,
+        monitor_diagonal: parsed.specs.diagonalIn,
+        monitor_resolution: parsed.specs.resolution,
+        monitor_refresh_hz: parsed.specs.refreshHz,
+        monitor_panel: parsed.specs.panel,
+        monitor_ports: parsed.specs.ports,
+        monitor_vesa: parsed.specs.vesa,
+        monitor_curved: parsed.specs.curved,
+    };
+}
 const InventoryContext = createContext<InventoryContextValue | null>(null);
 export function useInventory() {
     const ctx = useContext(InventoryContext);
@@ -320,6 +360,10 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
             return;
         }
         const equipmentClass = classRaw && isEquipmentClassCode(classRaw) ? classRaw : null;
+        const categoryName = categories.find((c) => c.id === itemForm.category_id)?.name ?? '';
+        const description = isMonitorCategory(categoryName)
+            ? formatMonitorDescription(monitorSpecsFromForm(itemForm), itemForm.description)
+            : itemForm.description.trim();
         setSubmitting(true);
         try {
             if (itemModal === 'add') {
@@ -327,8 +371,8 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
                 form.append('name', itemForm.name.trim());
                 form.append('category_id', String(itemForm.category_id));
                 form.append('inventory_number', itemForm.inventory_number.trim());
-                if (itemForm.description.trim())
-                    form.append('description', itemForm.description.trim());
+                if (description)
+                    form.append('description', description);
                 if (itemForm.serial_number.trim())
                     form.append('serial_number', itemForm.serial_number.trim());
                 if (equipmentClass)
@@ -350,7 +394,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
                     name: itemForm.name.trim(),
                     category_id: itemForm.category_id || undefined,
                     inventory_number: itemForm.inventory_number.trim() || undefined,
-                    description: itemForm.description.trim() || undefined,
+                    description: description || undefined,
                     serial_number: itemForm.serial_number.trim() || undefined,
                     equipment_class: equipmentClass,
                     status: itemForm.status,
@@ -370,7 +414,7 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
         finally {
             setSubmitting(false);
         }
-    }, [itemModal, itemForm, itemPhotoFile, resetItemForm, loadItems]);
+    }, [itemModal, itemForm, itemPhotoFile, categories, resetItemForm, loadItems]);
     const handleAssignSubmit = useCallback(async (e: React.FormEvent) => {
         e.preventDefault();
         if (!assignModal || assignUserId === '')
@@ -435,16 +479,17 @@ export function InventoryProvider({ children }: InventoryProviderProps) {
     }, [loadItems]);
     const openEditItem = useCallback((item: InventoryItem) => {
         setFormError(null);
+        const monitorPatch = formPatchFromMonitorDescription(item.description);
         setItemForm({
             name: item.name,
             category_id: item.category_id,
             inventory_number: item.inventory_number,
-            description: item.description || '',
             serial_number: item.serial_number || '',
             equipment_class: item.equipment_class || '',
             status: item.status,
             purchase_date: toDateInput(item.purchase_date),
             warranty_until: toDateInput(item.warranty_until),
+            ...monitorPatch,
         });
         setItemPhotoFile(null);
         setItemModal({ uuid: item.uuid });
