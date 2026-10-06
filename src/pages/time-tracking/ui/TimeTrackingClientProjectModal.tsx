@@ -156,10 +156,10 @@ function projectCurrencySymbol(iso: string): string {
 
 function rowToBudgetFormSlice(row: TimeManagerClientProjectRow): Pick<ProjectFormState, 'budgetType' | 'budgetAmount' | 'budgetHours' | 'progressBudgetAmount'> {
   const t = (row.budget_type ?? '').toLowerCase().replace(/-/g, '_');
-  const rawA = row.budget_amount;
-  const rawP = row.progress_budget_amount;
-  const rawH = row.budget_hours;
-  const rawFixed = row.fixed_fee_amount;
+  const rawA = row.budget_amount ?? (row as { budgetAmount?: string | number | null }).budgetAmount;
+  const rawP = row.progress_budget_amount ?? row.progressBudgetAmount;
+  const rawH = row.budget_hours ?? (row as { budgetHours?: string | number | null }).budgetHours;
+  const rawFixed = row.fixed_fee_amount ?? (row as { fixedFeeAmount?: string | number | null }).fixedFeeAmount;
   const aStr = rawA != null && String(rawA).trim() !== '' ? String(rawA) : '';
   const pStr = rawP != null && String(rawP).trim() !== '' ? String(rawP) : '';
   const hStr = rawH != null && String(rawH).trim() !== '' ? String(rawH) : '';

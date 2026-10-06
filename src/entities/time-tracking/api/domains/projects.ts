@@ -347,6 +347,8 @@ export type TimeManagerClientProjectRow = {
     budget_amount: string | number | null;
 
     progress_budget_amount?: string | number | null;
+    /** API alias for progress_budget_amount (FastAPI by_alias). */
+    progressBudgetAmount?: string | number | null;
     budget_hours: string | number | null;
     budget_resets_every_month: boolean;
     budget_includes_expenses: boolean;
@@ -409,6 +411,24 @@ export function readProjectRecordsLanguage(
 }
 
 /** Normalize mixed camelCase/snake_case project payloads from the API. */
+function coalesceProjectNumericField(
+    o: Record<string, unknown>,
+    snake: string,
+    camel: string,
+): string | number | null | undefined {
+    const snakeVal = o[snake];
+    if (snakeVal != null && String(snakeVal).trim() !== '')
+        return snakeVal as string | number;
+    const camelVal = o[camel];
+    if (camelVal != null && String(camelVal).trim() !== '')
+        return camelVal as string | number;
+    if (snakeVal !== undefined)
+        return snakeVal as string | number | null;
+    if (camelVal !== undefined)
+        return camelVal as string | number | null;
+    return undefined;
+}
+
 export function normalizeTimeManagerClientProjectRow(raw: unknown): TimeManagerClientProjectRow | null {
     if (!raw || typeof raw !== 'object')
         return null;
@@ -424,6 +444,34 @@ export function normalizeTimeManagerClientProjectRow(raw: unknown): TimeManagerC
     const skipPartner = o.skip_partner_invoice_confirmation === true || o.skipPartnerInvoiceConfirmation === true;
     row.skip_partner_invoice_confirmation = skipPartner;
     row.skipPartnerInvoiceConfirmation = skipPartner;
+    // Out schema aliases progress/package/rate fields; hydrate snake_case for form + list consumers.
+    const progressBudget = coalesceProjectNumericField(o, 'progress_budget_amount', 'progressBudgetAmount');
+    if (progressBudget !== undefined) {
+        row.progress_budget_amount = progressBudget;
+        row.progressBudgetAmount = progressBudget;
+    }
+    const packageHours = coalesceProjectNumericField(o, 'package_hours_per_month', 'packageHoursPerMonth');
+    if (packageHours !== undefined) {
+        row.package_hours_per_month = packageHours;
+        row.packageHoursPerMonth = packageHours;
+    }
+    const packageFee = coalesceProjectNumericField(o, 'package_fee_amount', 'packageFeeAmount');
+    if (packageFee !== undefined) {
+        row.package_fee_amount = packageFee;
+        row.packageFeeAmount = packageFee;
+    }
+    const projectRate = coalesceProjectNumericField(o, 'project_billable_rate_amount', 'projectBillableRateAmount');
+    if (projectRate !== undefined)
+        row.project_billable_rate_amount = projectRate;
+    const budgetAmount = coalesceProjectNumericField(o, 'budget_amount', 'budgetAmount');
+    if (budgetAmount !== undefined)
+        row.budget_amount = budgetAmount;
+    const budgetHours = coalesceProjectNumericField(o, 'budget_hours', 'budgetHours');
+    if (budgetHours !== undefined)
+        row.budget_hours = budgetHours;
+    const budgetType = o.budget_type ?? o.budgetType;
+    if (budgetType !== undefined)
+        row.budget_type = budgetType == null ? null : String(budgetType);
     if (o.clientId != null && row.client_id)
         (row as Record<string, unknown>).clientId = row.client_id;
     return row;

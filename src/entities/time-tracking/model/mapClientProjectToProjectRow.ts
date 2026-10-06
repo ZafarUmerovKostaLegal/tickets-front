@@ -74,14 +74,14 @@ export function mapClientProjectToProjectRow(p: TimeManagerClientProjectRow, cli
             ?? toNum(p.budget_amount);
     }
     else if (p.budget_type === 'total_project_fees' || p.budget_type === 'money') {
-        budget = budget ?? toNum(p.budget_amount) ?? toNum(p.progress_budget_amount);
+        budget = budget ?? toNum(p.budget_amount) ?? toNum(p.progress_budget_amount ?? p.progressBudgetAmount);
     }
     else if (p.budget_type === 'hours_and_money') {
-        budget = budget ?? toNum(p.budget_amount) ?? toNum(p.progress_budget_amount);
+        budget = budget ?? toNum(p.budget_amount) ?? toNum(p.progress_budget_amount ?? p.progressBudgetAmount);
     }
     if (budget === undefined && p.project_type !== 'fixed_fee' && p.project_type !== 'hour_package') {
         const ba = toNum(p.budget_amount);
-        const pb = toNum(p.progress_budget_amount);
+        const pb = toNum(p.progress_budget_amount ?? p.progressBudgetAmount);
         if (ba != null || pb != null)
             budget = ba ?? pb;
     }

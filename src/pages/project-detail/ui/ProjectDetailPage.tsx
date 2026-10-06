@@ -732,8 +732,9 @@ function duplicateProjectCreatePayload(src: TimeManagerClientProjectRow): TimeMa
         : (src.project_type === 'fixed_fee' && src.fixed_fee_amount != null && String(src.fixed_fee_amount).trim() !== ''
             ? src.fixed_fee_amount
             : null);
-    const prog = src.progress_budget_amount != null && String(src.progress_budget_amount).trim() !== ''
-        ? src.progress_budget_amount
+    const progRaw = src.progress_budget_amount ?? src.progressBudgetAmount;
+    const prog = progRaw != null && String(progRaw).trim() !== ''
+        ? progRaw
         : null;
     return {
         name: `${String(src.name ?? '').trim()} (копия)`,
