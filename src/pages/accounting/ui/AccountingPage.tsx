@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, type CSSProperties } from 'react';
 import { NavLink } from 'react-router-dom';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { routes } from '@shared/config';
@@ -42,22 +42,38 @@ const HUB_TILES = [
     },
 ];
 
-function TileIcon({ name }: { name: 'invoices' | 'hr' | 'expenses' | 'reporting' }) {
-    const common = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, 'aria-hidden': true as const };
-    if (name === 'invoices') {
-        return (
-            <svg {...common}>
-                <path d="M7 3.5h7.5L19 8v12.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1z" />
-                <path d="M14 3.5V8h5M8.5 12h7M8.5 15.5h5" />
-            </svg>
-        );
-    }
-    if (name === 'hr') {
+function TileIcon({ name }: { name: 'invoices' | 'hr' | 'expenses' | 'reporting' | 'team' | 'system' }) {
+    const common = {
+        viewBox: '0 0 24 24',
+        fill: 'none',
+        stroke: 'currentColor',
+        strokeWidth: 1.75,
+        strokeLinecap: 'round' as const,
+        strokeLinejoin: 'round' as const,
+        'aria-hidden': true as const,
+    };
+    if (name === 'team' || name === 'hr') {
         return (
             <svg {...common}>
                 <circle cx="9" cy="8" r="2.4" />
                 <circle cx="16" cy="9" r="2" />
                 <path d="M4.5 18.5c.6-2.4 2.5-3.8 4.5-3.8s3.9 1.4 4.5 3.8M14 14.8c1.3-.5 2.6-.4 3.6.3 1 .7 1.6 1.8 1.9 3.4" />
+            </svg>
+        );
+    }
+    if (name === 'system') {
+        return (
+            <svg {...common}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+            </svg>
+        );
+    }
+    if (name === 'invoices') {
+        return (
+            <svg {...common}>
+                <path d="M7 3.5h7.5L19 8v12.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-16a1 1 0 0 1 1-1z" />
+                <path d="M14 3.5V8h5M8.5 12h7M8.5 15.5h5" />
             </svg>
         );
     }
@@ -76,14 +92,6 @@ function TileIcon({ name }: { name: 'invoices' | 'hr' | 'expenses' | 'reporting'
     );
 }
 
-function HubChevron() {
-    return (
-        <svg className="acct-page__hub-tile-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M9 6l6 6-6 6" />
-        </svg>
-    );
-}
-
 function OverviewSkeleton() {
     return (
         <section className="acct-page__hub" aria-busy="true" aria-label="Загрузка обзора">
@@ -91,7 +99,9 @@ function OverviewSkeleton() {
                 <div className="acct-skel acct-skel--stat" />
                 <div className="acct-skel acct-skel--stat" />
             </div>
-            {Array.from({ length: 4 }, (_, i) => <div key={i} className="acct-skel acct-skel--tile" />)}
+            <div className="acct-page__hub-grid">
+                {Array.from({ length: 4 }, (_, i) => <div key={i} className="acct-skel acct-skel--tile" />)}
+            </div>
         </section>
     );
 }
@@ -210,51 +220,76 @@ export function AccountingPage() {
                         <section className="acct-page__hub" aria-label="Разделы бухгалтерии">
                             <div className="acct-page__stats">
                                 <button type="button" className="acct-page__stat acct-page__stat--hr" onClick={() => selectTab('hr')}>
+                                    <span className="acct-page__stat-icon" aria-hidden>
+                                        <TileIcon name="team" />
+                                    </span>
+                                    <span className="acct-page__stat-text">
+                                        <span className="acct-page__stat-value">{staffCount ?? '—'}</span>
+                                        <span className="acct-page__stat-label">сотрудников</span>
+                                    </span>
                                     <span className="acct-page__stat-kicker">Команда</span>
-                                    <span className="acct-page__stat-value">{staffCount ?? '—'}</span>
-                                    <span className="acct-page__stat-label">сотрудников</span>
                                 </button>
                                 <button type="button" className="acct-page__stat acct-page__stat--invoices" onClick={() => selectTab('invoices')}>
+                                    <span className="acct-page__stat-icon" aria-hidden>
+                                        <TileIcon name="system" />
+                                    </span>
+                                    <span className="acct-page__stat-text">
+                                        <span className="acct-page__stat-value">{invoiceCount ?? '—'}</span>
+                                        <span className="acct-page__stat-label">счетов из системы</span>
+                                    </span>
                                     <span className="acct-page__stat-kicker">2026</span>
-                                    <span className="acct-page__stat-value">{invoiceCount ?? '—'}</span>
-                                    <span className="acct-page__stat-label">счетов из системы</span>
                                 </button>
                             </div>
-                            {HUB_TILES.map((tile) => {
-                                const body = (
-                                    <>
-                                        <div className={`acct-page__hub-tile-icon acct-page__hub-tile-icon--${tile.variant}`}>
-                                            <TileIcon name={tile.key} />
-                                        </div>
-                                        <div className="acct-page__hub-tile-body">
-                                            <span className="acct-page__hub-tile-label">{tile.label}</span>
-                                            <span className="acct-page__hub-tile-hint">{tile.hint}</span>
-                                        </div>
-                                        <HubChevron />
-                                    </>
-                                );
-                                if ('tab' in tile && tile.tab) {
+
+                            <div className="acct-page__hub-head">
+                                <h2 className="acct-page__hub-title">
+                                    <span className="acct-page__hub-dot" aria-hidden />
+                                    Разделы
+                                </h2>
+                                <span className="acct-page__hub-count" aria-hidden>{HUB_TILES.length}</span>
+                            </div>
+
+                            <div className="acct-page__hub-grid">
+                                {HUB_TILES.map((tile, index) => {
+                                    const body = (
+                                        <>
+                                            <span className={`acct-page__hub-tile-icon acct-page__hub-tile-icon--${tile.variant}`} aria-hidden>
+                                                <TileIcon name={tile.key} />
+                                            </span>
+                                            <span className="acct-page__hub-tile-body">
+                                                <span className="acct-page__hub-tile-label">{tile.label}</span>
+                                                <span className="acct-page__hub-tile-hint">{tile.hint}</span>
+                                                <span className="acct-page__hub-tile-kicker">Перейти →</span>
+                                            </span>
+                                        </>
+                                    );
+                                    const className = `acct-page__hub-tile acct-page__hub-tile--${tile.variant}`;
+                                    const style = { '--acct-tile-i': index } as CSSProperties;
+                                    if ('tab' in tile && tile.tab) {
+                                        return (
+                                            <button
+                                                key={tile.key}
+                                                type="button"
+                                                className={className}
+                                                style={style}
+                                                onClick={() => selectTab(tile.tab!)}
+                                            >
+                                                {body}
+                                            </button>
+                                        );
+                                    }
                                     return (
-                                        <button
+                                        <NavLink
                                             key={tile.key}
-                                            type="button"
-                                            className={`acct-page__hub-tile acct-page__hub-tile--${tile.variant}`}
-                                            onClick={() => selectTab(tile.tab!)}
+                                            to={tile.to}
+                                            className={className}
+                                            style={style}
                                         >
                                             {body}
-                                        </button>
+                                        </NavLink>
                                     );
-                                }
-                                return (
-                                    <NavLink
-                                        key={tile.key}
-                                        to={tile.to}
-                                        className={`acct-page__hub-tile acct-page__hub-tile--${tile.variant}`}
-                                    >
-                                        {body}
-                                    </NavLink>
-                                );
-                            })}
+                                })}
+                            </div>
                         </section>
                     ))}
 
