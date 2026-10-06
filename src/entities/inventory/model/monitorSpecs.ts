@@ -137,7 +137,13 @@ export function parseMonitorDescription(description: string | null | undefined):
                 loose = true;
             }
         }
-        return { specs, notes: loose ? '' : text, hasBlock: loose };
+        let notes = loose ? '' : text;
+        if (loose) {
+            const sep = text.match(/\n---\s*\n([\s\S]*)$/);
+            if (sep)
+                notes = sep[1]!.trim();
+        }
+        return { specs, notes, hasBlock: loose };
     }
 
     const afterStart = text.slice(startIdx + BLOCK_START.length).replace(/^\n+/, '');

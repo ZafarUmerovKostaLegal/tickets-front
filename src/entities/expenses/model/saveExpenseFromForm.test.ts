@@ -28,10 +28,7 @@ function baseValues(over: Partial<ExpenseFormValues> = {}): ExpenseFormValues {
 
 describe('resolveAmountUzsForApi / locked UZS', () => {
     it('keeps exact UZS when locked even if currency is USD (rounded display)', () => {
-        // 44000 / 11763.90 ≈ 3.74; rebuilding from 3.74 would store 43997
-        const rebuilt = Math.round(3.74 * 11763.9);
-        expect(rebuilt).toBe(43997);
-
+        // 44000 / 11763.90 ≈ 3.74; USD rebuild uses roundMoney2 → 43996.99 (not 44000)
         const values = baseValues({
             amountCurrency: 'USD',
             amountUzs: '3.74',
@@ -49,7 +46,8 @@ describe('resolveAmountUzsForApi / locked UZS', () => {
             lockedAmountUzs: null,
             exchangeRate: '11763.90',
         });
-        expect(resolveAmountUzsForApi(values)).toBe(43997);
+        // half-up to 2 dp: 3.74 * 11763.90 = 43996.986 → 43996.99
+        expect(resolveAmountUzsForApi(values)).toBe(43996.99);
     });
 
     it('stores exact entered UZS when currency is UZS', () => {

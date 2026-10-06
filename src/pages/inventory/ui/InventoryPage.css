@@ -1638,6 +1638,13 @@ body[data-theme='dark'] .inv__score-badge--E { color: #cbd5e1; background: rgba(
   flex-shrink: 0;
 }
 
+.inv-drawer__download-err {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.78rem;
+  color: #b91c1c;
+}
+
 @media (max-width: 768px) {
   .inv__main { margin-left: 0; }
 

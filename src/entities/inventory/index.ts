@@ -15,4 +15,11 @@ export {
     type MonitorPanel,
     type ParsedMonitorDescription,
 } from './model/monitorSpecs';
+export {
+    buildInventoryItemExportText,
+    downloadInventoryItemCard,
+    inventoryItemExportStem,
+    processInventoryPhotoForExport,
+    type InventoryItemExportInput,
+} from './lib/exportInventoryItemCard';
 export { getStatuses, getCategories, getCategory, createCategory, updateCategory, deleteCategory, getItems, getItem, createItem, updateItem, uploadItemPhoto, assignItem, unassignItem, archiveItem, deleteItem, getItemPhotoUrl, } from './api';
