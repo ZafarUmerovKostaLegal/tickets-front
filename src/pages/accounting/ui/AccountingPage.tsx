@@ -171,50 +171,30 @@ export function AccountingPage() {
                 <header className="acct-page__header">
                     <div className="acct-page__header-inner">
                         <div className="acct-page__header-start">
-                            <AppBackButton className="app-back-btn" />
+                            <AppBackButton
+                                className="app-back-btn"
+                                onClick={activeTab === 'overview' ? undefined : () => selectTab('overview')}
+                            />
                             <AppHomeLogo withSeparator />
                             <div>
-                                <h1 className="acct-page__title">Бухгалтерия</h1>
-                                <p className="acct-page__subtitle">Обзор, счета и сотрудники. Доступно администраторам и партнёрам</p>
+                                <h1 className="acct-page__title">
+                                    {activeTab === 'invoices' ? 'Инвойсы' : activeTab === 'hr' ? 'HR' : 'Бухгалтерия'}
+                                </h1>
+                                <p className="acct-page__subtitle">
+                                    {activeTab === 'invoices'
+                                        ? 'Счета, выставленные клиентам'
+                                        : activeTab === 'hr'
+                                            ? 'Сотрудники, роли и должности'
+                                            : 'Обзор, счета и сотрудники. Доступно администраторам и партнёрам'}
+                                </p>
                             </div>
                         </div>
                         <AppPageSettings />
                     </div>
                 </header>
 
-                <nav className="acct-tabs" role="tablist" aria-label="Разделы бухгалтерии">
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={activeTab === 'overview'}
-                        className={`acct-tabs__tab${activeTab === 'overview' ? ' acct-tabs__tab--on' : ''}`}
-                        onClick={() => selectTab('overview')}
-                    >
-                        Обзор
-                    </button>
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={activeTab === 'invoices'}
-                        className={`acct-tabs__tab${activeTab === 'invoices' ? ' acct-tabs__tab--on' : ''}`}
-                        onClick={() => selectTab('invoices')}
-                    >
-                        Инвойсы
-                    </button>
-                    <button
-                        type="button"
-                        role="tab"
-                        aria-selected={activeTab === 'hr'}
-                        className={`acct-tabs__tab${activeTab === 'hr' ? ' acct-tabs__tab--on' : ''}`}
-                        onClick={() => selectTab('hr')}
-                    >
-                        HR
-                    </button>
-                </nav>
-
                 <div
                     className={`acct-page__content${activeTab === 'invoices' ? ' acct-page__content--invoices' : ''}`}
-                    role="tabpanel"
                 >
                     {activeTab === 'overview' && (overviewLoading ? <OverviewSkeleton /> : (
                         <section className="acct-page__hub" aria-label="Разделы бухгалтерии">
