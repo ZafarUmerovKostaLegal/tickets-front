@@ -23,30 +23,22 @@ body[data-theme='dark'] .acct-page {
 
 .acct-page__header {
   box-shadow: 0 2px 12px rgba(15, 23, 42, 0.04);
-  /* Keep header gutters in sync with hub content (not only --app-page-padding-x). */
-  padding-inline: max(0.75rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)))
-    max(0.75rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
+  padding-inline: max(1rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)))
+    max(1rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
 }
 
 @media (min-width: 768px) {
   .acct-page__header {
-    padding-inline: max(1.5rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)))
-      max(1.5rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
-  }
-}
-
-@media (min-width: 1024px) {
-  .acct-page__header {
-    padding-inline: max(2rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)))
-      max(2rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
+    padding-inline: max(1.25rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)))
+      max(1.25rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
   }
 }
 
 @media (min-width: 1280px) {
   .acct-page__header,
   .acct-page__content {
-    padding-inline: max(2.5rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)))
-      max(2.5rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
+    padding-inline: max(1.5rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)))
+      max(1.5rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
   }
 }
 
@@ -54,10 +46,10 @@ body[data-theme='dark'] .acct-page {
   flex: 1;
   overflow-y: auto;
   width: 100%;
-  /* Match home hub page gutters (override shared app-page-layout). */
-  padding: 0.875rem max(0.75rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)))
+  max-width: none;
+  padding: 0.875rem max(1rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)))
     max(1rem, calc(var(--mob-safe-bottom, env(safe-area-inset-bottom, 0px)) + 0.35rem))
-    max(0.75rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)));
+    max(1rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)));
   gap: 0;
   box-sizing: border-box;
   background: transparent;
@@ -65,26 +57,47 @@ body[data-theme='dark'] .acct-page {
 
 @media (min-width: 768px) {
   .acct-page__content {
-    padding-top: 1.5rem;
-    padding-inline: max(1.5rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)))
-      max(1.5rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
+    padding-top: 1.25rem;
+    padding-inline: max(1.25rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)))
+      max(1.25rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
     padding-bottom: max(2rem, calc(var(--mob-safe-bottom, env(safe-area-inset-bottom, 0px)) + 0.5rem));
-  }
-}
-
-@media (min-width: 1024px) {
-  .acct-page__content {
-    padding-inline: max(2rem, var(--mob-safe-left, env(safe-area-inset-left, 0px)))
-      max(2rem, var(--mob-safe-right, env(safe-area-inset-right, 0px)));
   }
 }
 
 .acct-page__hub {
   width: 100%;
-  max-width: 1680px;
-  margin-inline: auto;
+  max-width: none !important;
+  margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+html[data-platform='desktop'] .acct-page__hub.home-nav-tiles--hub.home-nav-tiles {
+  max-width: none;
+  margin-inline: 0;
+  width: 100%;
+}
+
+/* Four accounting tiles — use the full content width earlier than the home hub. */
+.acct-page__hub .home-nav-tiles__grid {
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 560px) {
+  .acct-page__hub .home-nav-tiles__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 900px) {
+  .acct-page__hub .home-nav-tiles__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+  }
+
+  .acct-page__hub .home-nav-tiles__link {
+    min-height: 9.5rem;
+  }
 }
 
 /* Buttons as hub tiles (same look as NavLink tiles on home). */
