@@ -1,4 +1,4 @@
-import { computeAmountUzsForApi, parseExpenseMoney } from './expenseCurrency';
+import { computeAmountUzsForApi, parseExpenseMoney, roundMoney2 } from './expenseCurrency';
 import { reimbursementCardDigits } from './expensePaymentDetails';
 import {
     createExpense,
@@ -10,6 +10,19 @@ import {
 import type { ExpenseFilesByKind, ExpenseFormValues, ExpenseRequest } from './types';
 import { EXPENSE_ATTACHMENT_COUNT_LIMIT_MSG, EXPENSE_ATTACHMENT_MAX_COUNT } from './types';
 
+/** Prefer exact locked UZS over FX rebuild from rounded USD/foreign. */
+export function resolveAmountUzsForApi(values: ExpenseFormValues): number {
+    const locked = values.lockedAmountUzs;
+    if (locked != null && Number.isFinite(locked) && locked > 0)
+        return roundMoney2(locked);
+    return computeAmountUzsForApi(
+        values.amountCurrency,
+        values.amountUzs,
+        values.exchangeRate,
+        values.foreignPerUsd,
+    );
+}
+
 export function expenseFormValuesToApiBody(values: ExpenseFormValues): ExpenseCreateBody {
     const isPartner = values.expenseType === 'partner_expense';
     const isClient = values.expenseType === 'client_expense';
@@ -18,7 +31,7 @@ export function expenseFormValuesToApiBody(values: ExpenseFormValues): ExpenseCr
     return {
         description: values.description,
         expenseDate: values.expenseDate,
-        amountUzs: computeAmountUzsForApi(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd),
+        amountUzs: resolveAmountUzsForApi(values),
         exchangeRate: parseExpenseMoney(values.exchangeRate) || 0,
         expenseType: values.expenseType,
         expenseSubtype: isPartner ? values.expenseSubtype.trim() || null : null,

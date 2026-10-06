@@ -223,6 +223,7 @@ const EMPTY: ExpenseFormValues = {
     amountCurrency: 'UZS',
     foreignPerUsd: '',
     amountUzs: '',
+    lockedAmountUzs: null,
     exchangeRate: '',
     paymentMethod: '',
     reimbursementCardNumber: '',
@@ -362,7 +363,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
     // Read through a ref: a new object identity from the caller must not reset an open form.
     const presetValuesRef = useRef(presetValues);
     presetValuesRef.current = presetValues;
-    const uzsAmountAnchorRef = useRef<number | null>(null);
     const [errors, setErrors] = useState<ExpenseFormErrors>({});
     const [partnerOptions, setPartnerOptions] = useState<UserPublic[]>([]);
     const [partnersLoad, setPartnersLoad] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle');
@@ -413,10 +413,11 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
     const [approvalRoutingMeta, setApprovalRoutingMeta] = useState<ApprovalRoutingMeta | null>(null);
     const equivUsd = useMemo(() => computeUsdEquivalent(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd), [values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd]);
     const equiv = equivUsd != null ? roundMoney2(asExpenseNumber(equivUsd)).toFixed(2) : '';
-    const amountUzsForRouting = useMemo(
-        () => computeAmountUzsForApi(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd),
-        [values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd],
-    );
+    const amountUzsForRouting = useMemo(() => {
+        if (values.lockedAmountUzs != null && values.lockedAmountUzs > 0)
+            return roundMoney2(values.lockedAmountUzs);
+        return computeAmountUzsForApi(values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd);
+    }, [values.lockedAmountUzs, values.amountCurrency, values.amountUzs, values.exchangeRate, values.foreignPerUsd]);
     const amountUzsSaveHint = useMemo(() => {
         if (mode === 'view' || values.amountCurrency === 'UZS')
             return '';
@@ -467,8 +468,8 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                     ? { expenseType: EXPENSE_TYPE_CLIENT }
                     : {}),
             ...(presetValuesRef.current ?? {}),
+            lockedAmountUzs: presetValuesRef.current?.lockedAmountUzs ?? null,
         });
-        uzsAmountAnchorRef.current = null;
         setFilesPaymentDoc([]);
         setFilesReceipt([]);
         setFileSizeHint(null);
@@ -510,6 +511,10 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             amountCurrency: 'UZS',
             foreignPerUsd: '',
             amountUzs: String(editingRequest.amountUzs),
+            lockedAmountUzs: (() => {
+                const n = asExpenseNumber(editingRequest.amountUzs);
+                return n > 0 ? roundMoney2(n) : null;
+            })(),
             exchangeRate: String(editingRequest.exchangeRate),
             paymentMethod: editingRequest.paymentMethod ?? '',
             reimbursementCardNumber: formatReimbursementCardNumber(editingRequest.reimbursementCardNumber),
@@ -520,10 +525,6 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             comment: editingRequest.comment ?? '',
             partnerUserId: editingRequest.partnerUserId != null ? String(editingRequest.partnerUserId) : '',
         });
-        {
-            const n = asExpenseNumber(editingRequest.amountUzs);
-            uzsAmountAnchorRef.current = n > 0 ? roundMoney2(n) : null;
-        }
         setFilesPaymentDoc([]);
         setFilesReceipt([]);
         setFileSizeHint(null);
@@ -560,9 +561,33 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                     const nextDate = allowExpenseBackdate && prev.expenseDate.trim()
                         ? prev.expenseDate.trim().slice(0, 10)
                         : iso;
-                    if (prev.expenseDate === nextDate && prev.exchangeRate === er && prev.foreignPerUsd === fr)
+                    const rate = parseExpenseMoney(er);
+                    let nextAmount = prev.amountUzs;
+                    const locked = prev.lockedAmountUzs;
+                    if (locked != null && locked > 0 && prev.amountCurrency !== 'UZS' && rate > 0) {
+                        if (prev.amountCurrency === 'USD') {
+                            nextAmount = roundMoney2(locked / rate).toFixed(2);
+                        }
+                        else if (needsForeignUsdRate(prev.amountCurrency)) {
+                            const fp = parseExpenseMoney(fr);
+                            if (fp > 0)
+                                nextAmount = roundMoney2((locked / rate) * fp).toFixed(2);
+                        }
+                    }
+                    if (
+                        prev.expenseDate === nextDate
+                        && prev.exchangeRate === er
+                        && prev.foreignPerUsd === fr
+                        && prev.amountUzs === nextAmount
+                    )
                         return prev;
-                    return { ...prev, expenseDate: nextDate, exchangeRate: er, foreignPerUsd: fr };
+                    return {
+                        ...prev,
+                        expenseDate: nextDate,
+                        exchangeRate: er,
+                        foreignPerUsd: fr,
+                        amountUzs: nextAmount,
+                    };
                 });
             })
             .catch((err) => {
@@ -753,7 +778,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
         document.body.style.overflow = isOpen || motionOpen ? 'hidden' : '';
         return () => { document.body.style.overflow = ''; };
     }, [isOpen, motionOpen]);
-    const set = useCallback((field: keyof Omit<ExpenseFormValues, 'isReimbursable'>, val: string) => {
+    const set = useCallback((field: keyof Omit<ExpenseFormValues, 'isReimbursable' | 'lockedAmountUzs'>, val: string) => {
         if (field === 'expenseType' && val !== EXPENSE_TYPE_CLIENT) {
             setExpenseProjectClientId('');
         }
@@ -845,15 +870,20 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
         return rows.filter(r => r.client.id === expenseProjectClientId);
     }, [expenseProjectClientId]);
     const setAmount = useCallback((raw: string) => {
-        set('amountUzs', raw);
-        if (valuesRef.current.amountCurrency === 'UZS') {
-            const n = parseExpenseMoney(raw);
-            uzsAmountAnchorRef.current = Number.isFinite(n) && n > 0 ? roundMoney2(n) : null;
-        }
-        else {
-            uzsAmountAnchorRef.current = null;
-        }
-    }, [set]);
+        setValues(prev => {
+            const next: ExpenseFormValues = { ...prev, amountUzs: raw };
+            if (prev.amountCurrency === 'UZS') {
+                const n = parseExpenseMoney(raw);
+                next.lockedAmountUzs = Number.isFinite(n) && n > 0 ? roundMoney2(n) : null;
+            }
+            else {
+                // Editing foreign/USD amount: drop UZS lock so save follows the typed currency.
+                next.lockedAmountUzs = null;
+            }
+            return next;
+        });
+        setErrors(prev => ({ ...prev, amountUzs: undefined }));
+    }, []);
     const setCurrency = useCallback((c: ExpenseAmountCurrency) => {
         setValues(prev => {
             if (c === prev.amountCurrency) {
@@ -866,10 +896,11 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             let lockedUzs = 0;
             if (prev.amountCurrency === 'UZS') {
                 const n = parseExpenseMoney(prev.amountUzs);
-                if (Number.isFinite(n) && n > 0) {
+                if (Number.isFinite(n) && n > 0)
                     lockedUzs = roundMoney2(n);
-                    uzsAmountAnchorRef.current = lockedUzs;
-                }
+            }
+            else if (prev.lockedAmountUzs != null && prev.lockedAmountUzs > 0) {
+                lockedUzs = roundMoney2(prev.lockedAmountUzs);
             }
             else {
                 lockedUzs = computeAmountUzsForApi(
@@ -887,10 +918,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             }
             let nextAmount = prev.amountUzs;
             if (c === 'UZS') {
-                const anchor = uzsAmountAnchorRef.current;
-                nextAmount = String(anchor != null && anchor > 0
-                    ? anchor
-                    : (lockedUzs > 0 ? roundMoney2(lockedUzs) : prev.amountUzs));
+                nextAmount = String(lockedUzs > 0 ? lockedUzs : prev.amountUzs);
             }
             else if (c === 'USD' && rate > 0 && lockedUzs > 0) {
                 nextAmount = roundMoney2(lockedUzs / rate).toFixed(2);
@@ -905,6 +933,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                 amountCurrency: c,
                 amountUzs: nextAmount,
                 foreignPerUsd: nextForeign,
+                lockedAmountUzs: lockedUzs > 0 ? lockedUzs : null,
             };
         });
         setErrors(prev => ({ ...prev, foreignPerUsd: undefined }));

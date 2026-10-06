@@ -76,6 +76,12 @@ export interface ExpenseFormValues {
     amountCurrency: ExpenseAmountCurrency;
     foreignPerUsd: string;
     amountUzs: string;
+    /**
+     * Exact UZS when the user entered (or last confirmed) a sum in UZS.
+     * Survives UZS→USD/EUR switches so save never rebuilds from rounded USD.
+     * Cleared when the user edits the amount while currency ≠ UZS.
+     */
+    lockedAmountUzs: number | null;
     exchangeRate: string;
     paymentMethod: string;
     reimbursementCardNumber: string;
