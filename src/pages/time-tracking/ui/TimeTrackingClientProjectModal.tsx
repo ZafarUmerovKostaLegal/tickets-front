@@ -1,7 +1,9 @@
 import { useState, useEffect, useId, useMemo, useRef, useCallback } from 'react';
 import { DatePicker, SearchableSelect, useAppDialog } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
-import { getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, changeHourlyRateFrom, listUsersWithProjectAccessToProject, listProjectTasks, createProjectTask, deleteProjectTask, readTimeManagerProjectBillableRateAmount, readProjectRecordsLanguage, pickEffectiveBillableRateForProject, parseHourlyRateAmount, hourlyRateEffectiveOnDate, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerInitialProjectAccessMember, type TimeManagerProjectCurrency, type TimeManagerProjectRecordsLanguage, } from '@entities/time-tracking';
+import {
+  getUserProjectAccess, listAllClientProjectsForClientMerged, createClientProject, patchClientProject, putUserProjectAccess, listHourlyRates, createHourlyRate, changeHourlyRateFrom, listUsersWithProjectAccessToProject, listProjectTasks, createProjectTask, deleteProjectTask, patchProjectTask, readTimeManagerProjectBillableRateAmount, readProjectRecordsLanguage, pickEffectiveBillableRateForProject, parseHourlyRateAmount, hourlyRateEffectiveOnDate, TIME_TRACKING_PROJECT_CURRENCIES, type TimeManagerClientRow, type TimeManagerClientProjectRow, type TimeManagerClientProjectCreatePayload, type TimeManagerClientProjectPatchPayload, type TimeManagerInitialProjectAccessMember, type TimeManagerProjectCurrency, type TimeManagerProjectRecordsLanguage,
+} from '@entities/time-tracking';
 import { suggestedNextKlProjectCode } from '@entities/time-tracking/lib/klProjectCode';
 import { portalTimeTrackingModal } from './timeTrackingModalPortal';
 import { QuickCreateClientModal } from './QuickCreateClientModal';
@@ -116,6 +118,10 @@ const DEFAULT_PROJECT_TASK_SEED: Array<{
   { name: 'Publications', billableByDefault: false },
   { name: 'Review new legislation', billableByDefault: false },
 ];
+const MEHNAT_TASK_NAME = 'My mehnat registration';
+const MEHNAT_TASK_NAME_KEY = MEHNAT_TASK_NAME.toLocaleLowerCase('ru');
+const DEFAULT_MEHNAT_FLAT_FEE_AMOUNT = 230000;
+const DEFAULT_MEHNAT_FLAT_FEE_CURRENCY = 'UZS';
 const DEFAULT_PROJECT_TASK_BILLABLE_MAP = new Map<string, boolean>(DEFAULT_PROJECT_TASK_SEED.map((task) => [task.name, task.billableByDefault]));
 const DEFAULT_PROJECT_TASK_FLAT_FEE_MAP = new Map(
   DEFAULT_PROJECT_TASK_SEED
@@ -440,6 +446,7 @@ async function syncSelectedProjectTasksAfterCreate(
   selectedNames: string[],
   billableByTaskName: Map<string, boolean>,
   genericError: string,
+  mehnatBillingMode: 'hourly' | 'flat_fee' = 'flat_fee',
 ): Promise<string[]> {
   const selected = new Set(selectedNames.map((n) => n.trim().toLocaleLowerCase('ru')));
   const errors: string[] = [];
@@ -469,17 +476,26 @@ async function syncSelectedProjectTasksAfterCreate(
     if (!trimmed || existing.has(key))
       continue;
     try {
+      const isMehnat = key === MEHNAT_TASK_NAME_KEY;
+      const flatSeed = DEFAULT_PROJECT_TASK_FLAT_FEE_MAP.get(trimmed);
+      const useFlatFee = isMehnat
+        ? mehnatBillingMode === 'flat_fee'
+        : Boolean(flatSeed);
       await withTaskSyncRetry(() => createProjectTask(clientId, projectId, {
         name: trimmed,
         defaultBillableRate: null,
         billableByDefault: billableByTaskName.get(trimmed) ?? true,
-        ...(DEFAULT_PROJECT_TASK_FLAT_FEE_MAP.get(trimmed)
+        ...(useFlatFee
           ? {
               billingMode: 'flat_fee' as const,
-              flatFeeAmount: DEFAULT_PROJECT_TASK_FLAT_FEE_MAP.get(trimmed)!.flatFeeAmount ?? null,
-              flatFeeCurrency: DEFAULT_PROJECT_TASK_FLAT_FEE_MAP.get(trimmed)!.flatFeeCurrency ?? 'UZS',
+              flatFeeAmount: flatSeed?.flatFeeAmount ?? DEFAULT_MEHNAT_FLAT_FEE_AMOUNT,
+              flatFeeCurrency: flatSeed?.flatFeeCurrency ?? DEFAULT_MEHNAT_FLAT_FEE_CURRENCY,
             }
-          : {}),
+          : {
+              billingMode: 'hourly' as const,
+              flatFeeAmount: null,
+              flatFeeCurrency: null,
+            }),
       }));
     }
     catch (e) {
@@ -520,6 +536,8 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [initialTaskNames, setInitialTaskNames] = useState<string[]>(() => [...DEFAULT_PROJECT_TASK_NAMES]);
+  const [mehnatBillingMode, setMehnatBillingMode] = useState<'hourly' | 'flat_fee'>('flat_fee');
+  const [mehnatTaskId, setMehnatTaskId] = useState<string | null>(null);
   const [taskPickerOpen, setTaskPickerOpen] = useState(false);
   const [taskPickerDraft, setTaskPickerDraft] = useState<string[]>(() => [...DEFAULT_PROJECT_TASK_NAMES]);
   const [taskSelectionCollapsed, setTaskSelectionCollapsed] = useState(true);
@@ -689,6 +707,36 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
       cancelled = true;
     };
   }, [mode, initial, canManage]);
+  useEffect(() => {
+    if (mode !== 'edit' || !initial) {
+      setMehnatBillingMode('flat_fee');
+      setMehnatTaskId(null);
+      return;
+    }
+    let cancelled = false;
+    void listProjectTasks(initial.client_id, initial.id, { bypassGetReuse: true })
+      .then((tasks) => {
+        if (cancelled)
+          return;
+        const mehnat = tasks.find((task) => task.name.trim().toLocaleLowerCase('ru') === MEHNAT_TASK_NAME_KEY);
+        if (!mehnat) {
+          setMehnatTaskId(null);
+          setMehnatBillingMode('flat_fee');
+          return;
+        }
+        setMehnatTaskId(mehnat.id);
+        setMehnatBillingMode(mehnat.billing_mode === 'flat_fee' ? 'flat_fee' : 'hourly');
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMehnatTaskId(null);
+          setMehnatBillingMode('flat_fee');
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, initial]);
   async function reloadMemberRate(authUserId: number, projectId: string) {
     const cur0 = (form.currency || 'USD').trim() || 'USD';
     const rows = await listHourlyRates(authUserId, 'billable');
@@ -981,6 +1029,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
           normalizedInitialTaskNames,
           DEFAULT_PROJECT_TASK_BILLABLE_MAP,
           t('timeTrackingPage.projects.modal.errors.generic'),
+          mehnatBillingMode,
         );
         if (taskSyncErrs.length > 0) {
           await showAlert({
@@ -1001,6 +1050,45 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
         const row = await patchClientProject(initial.client_id, initial.id, patch);
         if (canManage)
           await applyProjectMemberAccessAndRates(row.id);
+        if (canManage) {
+          const wantFlat = mehnatBillingMode === 'flat_fee';
+          let taskId = mehnatTaskId;
+          if (!taskId) {
+            const tasks = await listProjectTasks(initial.client_id, initial.id, { bypassGetReuse: true });
+            taskId = tasks.find((task) => task.name.trim().toLocaleLowerCase('ru') === MEHNAT_TASK_NAME_KEY)?.id ?? null;
+          }
+          if (taskId) {
+            await patchProjectTask(initial.client_id, initial.id, taskId, wantFlat
+              ? {
+                  billingMode: 'flat_fee',
+                  flatFeeAmount: DEFAULT_MEHNAT_FLAT_FEE_AMOUNT,
+                  flatFeeCurrency: DEFAULT_MEHNAT_FLAT_FEE_CURRENCY,
+                }
+              : {
+                  billingMode: 'hourly',
+                  flatFeeAmount: null,
+                  flatFeeCurrency: null,
+                });
+          }
+          else if (wantFlat || mehnatBillingMode === 'hourly') {
+            await createProjectTask(initial.client_id, initial.id, {
+              name: MEHNAT_TASK_NAME,
+              defaultBillableRate: null,
+              billableByDefault: true,
+              ...(wantFlat
+                ? {
+                    billingMode: 'flat_fee' as const,
+                    flatFeeAmount: DEFAULT_MEHNAT_FLAT_FEE_AMOUNT,
+                    flatFeeCurrency: DEFAULT_MEHNAT_FLAT_FEE_CURRENCY,
+                  }
+                : {
+                    billingMode: 'hourly' as const,
+                    flatFeeAmount: null,
+                    flatFeeCurrency: null,
+                  }),
+            });
+          }
+        }
         onSaved(row);
       }
       onClose();
@@ -1214,10 +1302,28 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
             <span className="tt-ios-toggle__slider" aria-hidden />
           </span>
         </label>
+        <label className="tt-ios-toggle-row">
+          <span className="tt-ios-toggle-row__text">{t('timeTrackingPage.projects.modal.mehnatFlatFee')}</span>
+          <span className="tt-ios-toggle">
+            <input
+              type="checkbox"
+              className="tt-ios-toggle__input"
+              checked={mehnatBillingMode === 'flat_fee'}
+              onChange={(e) => setMehnatBillingMode(e.target.checked ? 'flat_fee' : 'hourly')}
+              disabled={saving || !canManage}
+            />
+            <span className="tt-ios-toggle__slider" aria-hidden />
+          </span>
+        </label>
       </div>
       {form.skipPartnerInvoiceConfirmation && (
         <p className="tt-tm-hint tt-tm-fieldset--budget__extra">{t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmationHint')}</p>
       )}
+      <p className="tt-tm-hint tt-tm-fieldset--budget__extra">
+        {mehnatBillingMode === 'flat_fee'
+          ? t('timeTrackingPage.projects.modal.mehnatFlatFeeHint')
+          : t('timeTrackingPage.projects.modal.mehnatHourlyHint')}
+      </p>
       {form.sendBudgetAlerts && (<div className="tt-tm-field tt-tm-fieldset--budget__extra">
         <label className="tt-tm-label" htmlFor={`${uid}-thr`}>
           {t('timeTrackingPage.projects.modal.budgetAlertThreshold')}
