@@ -1,10 +1,19 @@
 import { emptyDetailRow, type InvoiceTimeReportDetailRow, trimTrailingEmptyDetailSlots } from './invoiceTimeReportModel';
 
-/** Detail rows on a continuation page (no summary block). */
-export const TIME_REPORT_PDF_ROWS_MID_CHUNK = 22;
+/**
+ * Continuation pages (title only + detail grid, no summary / expenses).
+ * Keep high so mid pages stay dense instead of half-blank A4 sheets.
+ */
+export const TIME_REPORT_PDF_ROWS_MID_CHUNK = 24;
 
-/** Detail rows on the last time-report page (summary table below). */
-export const TIME_REPORT_PDF_ROWS_LAST_CHUNK = 7;
+/**
+ * Last time-report page also carries totals + summary (+ expenses/mehnat when present).
+ * Align with TIME_REPORT_DETAIL_ROWS (14) so typical monthly reports stay on one sheet.
+ */
+export const TIME_REPORT_PDF_ROWS_LAST_CHUNK = 16;
+
+/** If the penultimate page would hold fewer rows than this, fold everything onto the last page. */
+const MIN_DENSE_MID_CHUNK = 6;
 
 export function splitDetailRowsForPagedTimeReport(rows: readonly InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[][] {
     const trimmed = trimTrailingEmptyDetailSlots(rows);
@@ -28,22 +37,17 @@ export function splitDetailRowsForPagedTimeReport(rows: readonly InvoiceTimeRepo
             break;
         }
 
-        const rowsBeforeFinal = remaining - LAST;
-        if (rowsBeforeFinal <= MID) {
-            const firstSize = Math.min(MID, Math.ceil(remaining / 2));
-            const secondSize = remaining - firstSize;
-            if (secondSize <= LAST && firstSize >= 1) {
-                chunks.push(trimmed.slice(i, i + firstSize));
-                chunks.push(trimmed.slice(i + firstSize));
-                break;
-            }
+        let take = Math.min(MID, remaining - LAST);
+        // Prefer one denser final page over a nearly empty lead sheet ([4]+[4] style).
+        if (take > 0 && take < MIN_DENSE_MID_CHUNK) {
+            chunks.push(trimmed.slice(i));
+            break;
         }
-
-        const take = Math.min(MID, remaining - LAST);
         if (take < 1) {
             chunks.push(trimmed.slice(i));
             break;
         }
+
         chunks.push(trimmed.slice(i, i + take));
         i += take;
     }

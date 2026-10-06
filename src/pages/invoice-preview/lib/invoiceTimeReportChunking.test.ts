@@ -25,32 +25,36 @@ function chunkSizes(n: number): number[] {
 describe('splitDetailRowsForPagedTimeReport', () => {
     it('keeps short reports on one page', () => {
         expect(chunkSizes(5)).toEqual([5]);
+        expect(chunkSizes(8)).toEqual([8]);
         expect(chunkSizes(TIME_REPORT_PDF_ROWS_LAST_CHUNK)).toEqual([TIME_REPORT_PDF_ROWS_LAST_CHUNK]);
     });
 
-    it('keeps the summary page within its reduced capacity', () => {
-        expect(chunkSizes(19)).toEqual([12, 7]);
-        expect(chunkSizes(23)).toEqual([16, 7]);
-        expect(chunkSizes(24)).toEqual([17, 7]);
+    it('does not create sparse balanced pairs like [4,4]', () => {
+        for (let n = 1; n <= TIME_REPORT_PDF_ROWS_LAST_CHUNK; n += 1)
+            expect(chunkSizes(n)).toEqual([n]);
+        // Just over last-page capacity: fill mid, then last — never half/half.
+        expect(chunkSizes(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 1).length).toBeGreaterThanOrEqual(1);
+        const over = chunkSizes(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 8);
+        expect(over.reduce((a, b) => a + b, 0)).toBe(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 8);
+        expect(over[over.length - 1]).toBeLessThanOrEqual(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 5);
     });
 
-    it('respects last-page and mid-page capacity limits', () => {
-        const sizes = chunkSizes(35);
-        expect(sizes.reduce((a, b) => a + b, 0)).toBe(35);
-        expect(sizes[sizes.length - 1]).toBeLessThanOrEqual(TIME_REPORT_PDF_ROWS_LAST_CHUNK);
+    it('keeps the summary page within capacity and mid pages dense', () => {
+        expect(chunkSizes(19)).toEqual([19]);
+        expect(chunkSizes(24)).toEqual([8, 16]);
+        expect(chunkSizes(25)).toEqual([9, 16]);
+    });
+
+    it('respects mid-page capacity on longer reports', () => {
+        const sizes = chunkSizes(55);
+        expect(sizes.reduce((a, b) => a + b, 0)).toBe(55);
         for (let i = 0; i < sizes.length - 1; i += 1)
             expect(sizes[i]).toBeLessThanOrEqual(TIME_REPORT_PDF_ROWS_MID_CHUNK);
+        expect(sizes[sizes.length - 1]).toBeLessThanOrEqual(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 5);
     });
 
-    it('avoids tiny first pages when a balanced two-page split fits', () => {
-        for (let n = TIME_REPORT_PDF_ROWS_LAST_CHUNK + 1; n <= TIME_REPORT_PDF_ROWS_LAST_CHUNK + TIME_REPORT_PDF_ROWS_MID_CHUNK; n += 1) {
-            const sizes = chunkSizes(n);
-            if (sizes.length !== 2)
-                continue;
-            const [first, second] = sizes;
-            expect(second).toBeLessThanOrEqual(TIME_REPORT_PDF_ROWS_LAST_CHUNK);
-            if (n <= TIME_REPORT_PDF_ROWS_LAST_CHUNK * 2)
-                expect(Math.abs(first - second)).toBeLessThanOrEqual(2);
-        }
+    it('folds tiny penultimate pages into the last page', () => {
+        // remaining-LAST would be 3 (< MIN_DENSE_MID_CHUNK) → single page
+        expect(chunkSizes(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 3)).toEqual([TIME_REPORT_PDF_ROWS_LAST_CHUNK + 3]);
     });
 });
