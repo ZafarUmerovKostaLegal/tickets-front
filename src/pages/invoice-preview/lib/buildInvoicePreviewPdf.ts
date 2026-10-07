@@ -1556,9 +1556,31 @@ function drawLegalInvoicePdfPage(
         const labelColor = due ? CORAL : BODY;
         const valueColor = BODY;
         const valW = fontBold.widthOfTextAtSize(value, DOC_FS);
+        const labelStartY = y - DOC_FS + 1;
+        // Due date stays on one line. The totals column is too narrow and split
+        // «OCTOBER 21, 2026» onto the next line in the downloaded file.
+        if (due) {
+            const labelW = fontBold.widthOfTextAtSize(label, DOC_FS);
+            const labelX = Math.max(ML, rightX - valW - valueGap - labelW);
+            page.drawText(label, {
+                x: labelX,
+                y: labelStartY,
+                size: DOC_FS,
+                font: fontBold,
+                color: labelColor,
+            });
+            page.drawText(value, {
+                x: rightX - valW,
+                y: labelStartY,
+                size: DOC_FS,
+                font: fontBold,
+                color: valueColor,
+            });
+            y -= DOC_LH * 0.95 + 3;
+            return;
+        }
         const labelLines = splitTextLines(label, labelMaxW, DOC_FS, fontBold);
         const blockH = Math.max(labelLines.length, 1) * (DOC_LH * 0.95);
-        const labelStartY = y - DOC_FS + 1;
         let labelY = labelStartY;
         for (const ln of labelLines) {
             page.drawText(ln, {
@@ -1577,7 +1599,7 @@ function drawLegalInvoicePdfPage(
             font: fontBold,
             color: valueColor,
         });
-        y -= blockH + (due ? 3 : 1);
+        y -= blockH + 1;
     };
 
     drawTotalRow(labels.subtotal, totalText);
