@@ -17,6 +17,7 @@ import {
 import { getUsers, type User } from '@entities/user';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expensesApi';
+import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { lockedExpenseUsdAmount } from './lockedExpenseUsdAmount';
@@ -169,9 +170,27 @@ function lineAmount(ln: InvoiceLineDto): number {
     return Number.isFinite(t) ? t : 0;
 }
 
+/** UZS invoices show the som amount entered on the expense, not the USD equivalent. */
+function expenseAmountForInvoiceCurrency(
+    currency: string,
+    req: { amountUzs?: number | null; exchangeRate?: number | null; equivalentAmount?: number | null } | null,
+): number | null {
+    const cur = (currency || '').trim().toUpperCase();
+    if (cur === 'UZS' && req) {
+        const uzs = asExpenseNumber(req.amountUzs);
+        if (uzs > 0)
+            return roundMoney2(uzs);
+        return null;
+    }
+    return req ? lockedExpenseUsdAmount(req) : null;
+}
+
 function preferExpenseUsdForInvoice(currency: string, ln: InvoiceLineDto, lockedUsd: number | null): number {
     const cur = (currency || '').trim().toUpperCase();
     const line = lineAmount(ln);
+    // UZS invoices must not display a dollar equivalent under a UZS label.
+    if (cur === 'UZS')
+        return line;
     // Registry USD wins when present and sane; never Math.max with UZS principals.
     if (lockedUsd != null && lockedUsd > 0 && lockedUsd < 1_000_000)
         return lockedUsd;
@@ -384,6 +403,16 @@ export async function overlayExpenseAmountsFromRegistry(
         });
         if (!match)
             return slot;
+        if (cur === 'UZS') {
+            const uzs = roundMoney2(asExpenseNumber(match.amountUzs));
+            if (!(uzs > 0))
+                return slot;
+            const currentUzs = roundMoney2(parseTimeReportAmountDisplay(slot.amount));
+            if (Math.abs(currentUzs - uzs) < 0.001)
+                return slot;
+            changed = true;
+            return { ...slot, amount: formatTimeReportAmount(uzs, cur) };
+        }
         const locked = lockedExpenseUsdAmount(match);
         // Only replace when registry USD is sane and clearly a FX correction (not UZS-as-USD).
         if (locked == null || locked <= 0 || locked >= 1_000_000)
@@ -528,14 +557,14 @@ export async function resolveInvoiceTimeReportPack(
                     : 0;
                 try {
                     const req = await fetchExpenseById(e.id);
-                    const locked = lockedExpenseUsdAmount(req);
-                    if (locked != null && locked > 0)
-                        a = locked;
+                    const fromRegistry = expenseAmountForInvoiceCurrency(currency, req);
+                    if (fromRegistry != null && fromRegistry > 0)
+                        a = fromRegistry;
                 }
                 catch {
-                    a = unbilledRounded;
+                    a = currency.trim().toUpperCase() === 'UZS' ? 0 : unbilledRounded;
                 }
-                if (!(a > 0))
+                if (!(a > 0) && currency.trim().toUpperCase() !== 'UZS')
                     a = unbilledRounded;
                 details.push({
                     date: dateDisplayFromIso(e.expenseDate, lang),
@@ -585,7 +614,8 @@ export async function resolveInvoiceTimeReportPack(
 
         type ExpenseLineSnap = {
             dateIso: string | null;
-            lockedUsd: number | null;
+            /** Amount in the invoice currency: UZS principal, otherwise locked USD. */
+            amount: number | null;
         };
         const expenseSnapByRequestId = new Map<string, ExpenseLineSnap>();
         let projectExpenseById: Map<string, Awaited<ReturnType<typeof fetchExpenseById>>> | null = null;
@@ -630,21 +660,28 @@ export async function resolveInvoiceTimeReportPack(
                         break;
                     }
                 }
+                if (!matched && wantDate) {
+                    const sameDay = [...byProject.values()].filter((req) => (
+                        (req.expenseDate?.trim().slice(0, 10) ?? '') === wantDate
+                    ));
+                    if (sameDay.length === 1)
+                        matched = sameDay[0] ?? null;
+                }
                 if (matched) {
                     const iso = matched.expenseDate?.trim().slice(0, 10) ?? '';
                     const ok = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
                     return {
                         dateIso: embeddedOk ?? ok,
-                        lockedUsd: lockedExpenseUsdAmount(matched),
+                        amount: expenseAmountForInvoiceCurrency(currency, matched),
                     };
                 }
-                return { dateIso: embeddedOk, lockedUsd: null };
+                return { dateIso: embeddedOk, amount: null };
             }
             const cached = expenseSnapByRequestId.get(rid);
             if (cached) {
                 return {
                     dateIso: embeddedOk ?? cached.dateIso,
-                    lockedUsd: cached.lockedUsd,
+                    amount: cached.amount,
                 };
             }
             let req: Awaited<ReturnType<typeof fetchExpenseById>> | null = null;
@@ -656,20 +693,20 @@ export async function resolveInvoiceTimeReportPack(
                 req = byProject.get(rid) ?? null;
             }
             if (!req) {
-                const snap: ExpenseLineSnap = { dateIso: null, lockedUsd: null };
+                const snap: ExpenseLineSnap = { dateIso: null, amount: null };
                 expenseSnapByRequestId.set(rid, snap);
-                return { dateIso: embeddedOk, lockedUsd: null };
+                return { dateIso: embeddedOk, amount: null };
             }
             const iso = req.expenseDate?.trim().slice(0, 10) ?? '';
             const ok = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
             const snap: ExpenseLineSnap = {
                 dateIso: ok,
-                lockedUsd: lockedExpenseUsdAmount(req),
+                amount: expenseAmountForInvoiceCurrency(currency, req),
             };
             expenseSnapByRequestId.set(rid, snap);
             return {
                 dateIso: embeddedOk ?? snap.dateIso,
-                lockedUsd: snap.lockedUsd,
+                amount: snap.amount,
             };
         }
 
@@ -727,7 +764,9 @@ export async function resolveInvoiceTimeReportPack(
             }
             else if (kind === 'expense') {
                 const snap = await resolveExpenseLineSnap(ln);
-                const expenseAmt = preferExpenseUsdForInvoice(currency, ln, snap.lockedUsd);
+                const expenseAmt = snap.amount != null && snap.amount > 0
+                    ? snap.amount
+                    : preferExpenseUsdForInvoice(currency, ln, null);
                 details.push({
                     date: snap.dateIso ? dateDisplayFromIso(snap.dateIso, lang) : '—',
                     initials: '—',
