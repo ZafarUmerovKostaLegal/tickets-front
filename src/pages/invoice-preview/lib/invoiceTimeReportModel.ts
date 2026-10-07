@@ -104,9 +104,51 @@ export function timeReportPackHasContent(pack: InvoiceTimeReportPack | null | un
         || trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []).length > 0;
 }
 
+function expenseAmountKey(row: InvoiceTimeReportDetailRow): number {
+    return Math.round(parseTimeReportAmountDisplay(row.amount) * 100);
+}
+
 /**
- * Keep saved user edits for time/mehnat/summary, but always take expense amounts
- * from a freshly resolved pack (registry UZS÷CBU), so invoice FX drift cannot stick.
+ * Live rows supply the amount (FX). A saved description in another language
+ * stays on the same expense, matched by date and amount.
+ */
+export function mergeExpenseSlotsKeepSavedText(
+    saved: readonly InvoiceTimeReportDetailRow[],
+    live: readonly InvoiceTimeReportDetailRow[],
+): InvoiceTimeReportDetailRow[] {
+    const savedRows = trimTrailingEmptyDetailSlots(saved);
+    const liveRows = trimTrailingEmptyDetailSlots(live);
+    const used = new Set<number>();
+    return liveRows.map((liveRow, index) => {
+        const date = liveRow.date.trim();
+        const liveCents = expenseAmountKey(liveRow);
+        let best = -1;
+        let bestDelta = Number.POSITIVE_INFINITY;
+        savedRows.forEach((savedRow, i) => {
+            if (used.has(i) || savedRow.date.trim() !== date)
+                return;
+            const delta = Math.abs(expenseAmountKey(savedRow) - liveCents);
+            if (delta < bestDelta) {
+                bestDelta = delta;
+                best = i;
+            }
+        });
+        if (best < 0 && savedRows[index] && !used.has(index))
+            best = index;
+        if (best < 0)
+            return liveRow;
+        used.add(best);
+        const savedRow = savedRows[best]!;
+        const savedDesc = savedRow.description.trim();
+        if (!savedDesc || savedDesc === liveRow.description.trim())
+            return liveRow;
+        return { ...liveRow, description: savedRow.description };
+    });
+}
+
+/**
+ * Keep saved user edits for time/mehnat/summary and expense wording, but always
+ * take expense amounts from a freshly resolved pack (registry UZS÷CBU).
  */
 export function mergeTimeReportPackPreferLiveExpenses(
     saved: InvoiceTimeReportPack,
@@ -117,14 +159,14 @@ export function mergeTimeReportPackPreferLiveExpenses(
     if (!hasLiveExpenses)
         return saved;
     const cur = (live.currency || saved.currency || 'USD').trim().toUpperCase() || 'USD';
+    const expenseSlots = mergeExpenseSlotsKeepSavedText(saved.expenseSlots ?? [], liveExpenses);
     const totalFromLive = (live.expenseTotalAmountDisplay ?? '').trim();
-    // Prefer live total; if missing, sum displayed line amounts so Total matches rows.
     const expenseTotalAmountDisplay = totalFromLive
-        || formatTimeReportAmount(sumDetailAmounts(trimTrailingEmptyDetailSlots(liveExpenses)), cur);
+        || formatTimeReportAmount(sumDetailAmounts(trimTrailingEmptyDetailSlots(expenseSlots)), cur);
     return {
         ...saved,
         currency: live.currency || saved.currency,
-        expenseSlots: liveExpenses,
+        expenseSlots,
         expenseTotalAmountDisplay,
     };
 }

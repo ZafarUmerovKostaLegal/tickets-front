@@ -3,6 +3,7 @@ import {
     emptyInvoiceTimeReportPack,
     ensureMehnatSeparatedPack,
     isMyMehnatTimeReportRow,
+    mergeTimeReportPackPreferLiveExpenses,
     type InvoiceTimeReportDetailRow,
 } from './invoiceTimeReportModel';
 
@@ -59,5 +60,28 @@ describe('ensureMehnatSeparatedPack', () => {
         const twice = ensureMehnatSeparatedPack(once);
         expect(twice.mehnatSlots).toHaveLength(1);
         expect(twice.detailSlots).toHaveLength(0);
+    });
+});
+
+describe('mergeTimeReportPackPreferLiveExpenses', () => {
+    it('keeps a translated expense description and takes the live amount', () => {
+        const saved = emptyInvoiceTimeReportPack('USD');
+        const live = emptyInvoiceTimeReportPack('USD');
+        const expense = {
+            date: '03.09.2026',
+            initials: '',
+            task: '',
+            description: '',
+            hours: '',
+            hourlyRate: '',
+            amount: 'USD 5.00',
+        };
+        saved.expenseSlots = [{ ...expense, description: 'Visa application fee for Alfred Benedict' }];
+        live.expenseSlots = [{ ...expense, description: 'оплата за подачу визовой заявки за Alfred Benedict', amount: 'USD 5.06' }];
+        live.expenseTotalAmountDisplay = 'USD 5.06';
+        const merged = mergeTimeReportPackPreferLiveExpenses(saved, live);
+        expect(merged.expenseSlots[0]?.description).toBe('Visa application fee for Alfred Benedict');
+        expect(merged.expenseSlots[0]?.amount).toBe('USD 5.06');
+        expect(merged.expenseTotalAmountDisplay).toBe('USD 5.06');
     });
 });
