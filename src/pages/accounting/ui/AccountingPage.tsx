@@ -13,7 +13,7 @@ import { AccountingCorporateCardPanel } from './AccountingCorporateCardPanel';
 import '@pages/home/ui/HomeNavTiles.css';
 import './AccountingPage.css';
 
-type AccountingTab = 'overview' | 'invoices' | 'hr' | 'corporate-card';
+type AccountingTab = 'overview' | 'invoices' | 'hr' | 'corporate-card' | 'coming-soon';
 
 const FINANCE_SECTION = getHubSectionDef('finance');
 
@@ -46,6 +46,12 @@ const HUB_TILES = [
         key: 'corporate-card' as const,
         tab: 'corporate-card' as const,
         label: 'Корпоративная карта',
+        badgeKey: null,
+    },
+    {
+        key: 'coming-soon' as const,
+        tab: 'coming-soon' as const,
+        label: 'Скоро в системе',
         badgeKey: null,
     },
 ];
@@ -93,6 +99,14 @@ function TileIcon({ name }: { name: (typeof HUB_TILES)[number]['key'] }) {
             </svg>
         );
     }
+    if (name === 'coming-soon') {
+        return (
+            <svg {...common}>
+                <circle cx="12" cy="12" r="8" />
+                <path d="M12 8v4.5l3 2" />
+            </svg>
+        );
+    }
     return (
         <svg {...common}>
             <path d="M5 19V10M10 19V5M15 19v-6M20 19V8" />
@@ -116,7 +130,7 @@ function OverviewSkeleton() {
                     <div className="acct-skel acct-skel--head" />
                 </div>
                 <ul className="home-nav-tiles__grid" role="list">
-                    {Array.from({ length: 5 }, (_, i) => (
+                    {Array.from({ length: 6 }, (_, i) => (
                         <li key={i} className="home-nav-tiles__item">
                             <div className="acct-skel acct-skel--tile" />
                         </li>
@@ -132,7 +146,7 @@ const ACCOUNTING_TAB_KEY = 'acct-tab';
 function readAccountingTab(): AccountingTab {
     try {
         const saved = window.sessionStorage.getItem(ACCOUNTING_TAB_KEY);
-        if (saved === 'overview' || saved === 'invoices' || saved === 'hr' || saved === 'corporate-card')
+        if (saved === 'overview' || saved === 'invoices' || saved === 'hr' || saved === 'corporate-card' || saved === 'coming-soon')
             return saved;
     }
     catch {
@@ -214,7 +228,9 @@ export function AccountingPage() {
                                             ? 'HR'
                                             : activeTab === 'corporate-card'
                                                 ? 'Корпоративная карта'
-                                                : 'Бухгалтерия'}
+                                                : activeTab === 'coming-soon'
+                                                    ? 'Скоро в системе'
+                                                    : 'Бухгалтерия'}
                                 </h1>
                                 <p className="acct-page__subtitle">
                                     {activeTab === 'invoices'
@@ -223,7 +239,9 @@ export function AccountingPage() {
                                             ? 'Сотрудники, роли и должности'
                                             : activeTab === 'corporate-card'
                                                 ? 'Расходы, оплаченные корпоративной картой офиса'
-                                                : 'Обзор, счета и сотрудники. Доступно администраторам и партнёрам'}
+                                                : activeTab === 'coming-soon'
+                                                    ? 'Разделы, которые появятся в следующих обновлениях'
+                                                    : 'Обзор, счета и сотрудники. Доступно администраторам и партнёрам'}
                                 </p>
                             </div>
                         </div>
@@ -306,6 +324,13 @@ export function AccountingPage() {
                     {activeTab === 'hr' && <AccountingHrPanel />}
 
                     {activeTab === 'corporate-card' && <AccountingCorporateCardPanel />}
+
+                    {activeTab === 'coming-soon' && (
+                        <section className="acct-soon" aria-label="Скоро в системе">
+                            <h2 className="acct-soon__title">Скоро в системе</h2>
+                            <p className="acct-soon__text">Этот раздел ещё готовится и появится в одном из следующих обновлений.</p>
+                        </section>
+                    )}
 
                     {activeTab === 'invoices' && (
                         <div className="acct-page__invoices-wrap">
