@@ -1,0 +1,30 @@
+export const OUTLOOK_CALENDAR_ALL_ID = '__all__';
+const PALETTE = [
+    '#4f46e5',
+    '#0891b2',
+    '#d97706',
+    '#059669',
+    '#db2777',
+    '#7c3aed',
+    '#dc2626',
+    '#2563eb',
+    '#0d9488',
+    '#ca8a04',
+];
+export function buildOutlookCalendarColorOrder(calendarIds) {
+    return [...new Set(calendarIds.filter((id) => id && id.trim()))];
+}
+export function outlookCalendarAccentColor(calendarId, order) {
+    const idx = order.indexOf(calendarId);
+    const i = idx >= 0 ? idx : hashCalendarId(calendarId) % PALETTE.length;
+    return PALETTE[i % PALETTE.length];
+}
+function hashCalendarId(id) {
+    let h = 0;
+    for (let i = 0; i < id.length; i += 1)
+        h = (h * 31 + id.charCodeAt(i)) | 0;
+    return Math.abs(h);
+}
+export function outlookCalendarAccentStyle(accent) {
+    return { '--ev-cal-accent': accent };
+}

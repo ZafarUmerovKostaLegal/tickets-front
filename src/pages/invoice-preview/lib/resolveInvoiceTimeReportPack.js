@@ -1,54 +1,18 @@
-import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
-import {
-    fetchReportsUsersForFilter,
-    fetchTimeEntry,
-    fetchUnbilledExpenses,
-    fetchUnbilledTimeEntries,
-    getInvoice,
-    isForbiddenError,
-    listProjectTasksCached,
-    listTimeTrackingUsers,
-    type InvoiceLineDto,
-    type TimeEntryRow,
-    type TimeTrackingUserRow,
-    type UnbilledExpenseEntryDto,
-    type UnbilledTimeEntryDto,
-} from '@entities/time-tracking';
-import { getUsers, type User } from '@entities/user';
+import { fetchReportsUsersForFilter, fetchTimeEntry, fetchUnbilledExpenses, fetchUnbilledTimeEntries, getInvoice, isForbiddenError, listProjectTasksCached, listTimeTrackingUsers, } from '@entities/time-tracking';
+import { getUsers } from '@entities/user';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expensesApi';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
-import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { lockedExpenseUsdAmount } from './lockedExpenseUsdAmount';
 import { parseTimeEntryDescriptionLines } from './parseTimeEntryDescriptionLines';
-import {
-    buildProjectTaskNameByIdMap,
-    resolveInvoiceTimeReportTaskLabel,
-} from './resolveInvoiceTimeReportTaskLabel';
+import { buildProjectTaskNameByIdMap, resolveInvoiceTimeReportTaskLabel, } from './resolveInvoiceTimeReportTaskLabel';
 import { packCurrencyCode } from './invoicePreviewPackShared';
 import { invoiceClientDescription } from '@pages/time-tracking/lib/invoiceClientDescription';
-import {
-    formatTimeReportDateDisplay,
-    localizeTimeReportTaskLabel,
-} from './invoiceTimeReportI18n';
+import { formatTimeReportDateDisplay, localizeTimeReportTaskLabel, } from './invoiceTimeReportI18n';
 import { normalizeCoverLanguage } from './invoiceCoverLetterI18n';
-import {
-    emptyInvoiceTimeReportPack,
-    finalizeDetailSlots,
-    formatTimeReportAmount,
-    formatTimeReportHours,
-    sumRoundedTimeReportHours,
-    isMyMehnatTimeReportRow,
-    padSummaryRows,
-    parseTimeReportAmountDisplay,
-    trimTrailingEmptyDetailSlots,
-    type InvoiceTimeReportDetailRow,
-    type InvoiceTimeReportPack,
-    type InvoiceTimeReportSummaryRow,
-} from './invoiceTimeReportModel';
-
-function lineKind(ln: InvoiceLineDto): string {
+import { emptyInvoiceTimeReportPack, finalizeDetailSlots, formatTimeReportAmount, formatTimeReportHours, sumRoundedTimeReportHours, isMyMehnatTimeReportRow, padSummaryRows, parseTimeReportAmountDisplay, trimTrailingEmptyDetailSlots, } from './invoiceTimeReportModel';
+function lineKind(ln) {
     const k = (ln.lineKind ?? '').toLowerCase().trim();
     if (k === 'time' || Boolean(ln.timeEntryId))
         return 'time';
@@ -58,18 +22,12 @@ function lineKind(ln: InvoiceLineDto): string {
         return 'manual';
     return k || 'other';
 }
-
-function normalizeStoredInitials(raw: string | null | undefined): string {
+function normalizeStoredInitials(raw) {
     return (raw ?? '').trim().toUpperCase().replace(/Ё/g, 'Е');
 }
-
 /** Prefer auth `/users` initials (source of truth), then reports filter, then TT users. */
-function buildAuthInitialsLookup(
-    authUsers: User[],
-    filterUsers: { id: number; initials?: string | null; displayName?: string; email?: string }[],
-    ttUsers: TimeTrackingUserRow[],
-): Map<number, string> {
-    const out = new Map<number, string>();
+function buildAuthInitialsLookup(authUsers, filterUsers, ttUsers) {
+    const out = new Map();
     for (const u of ttUsers) {
         const ini = normalizeStoredInitials(u.initials);
         if (ini)
@@ -87,12 +45,7 @@ function buildAuthInitialsLookup(
     }
     return out;
 }
-
-function initialsForAuthUser(
-    authId: number,
-    users: TimeTrackingUserRow[],
-    initialsByAuthId: ReadonlyMap<number, string>,
-): string {
+function initialsForAuthUser(authId, users, initialsByAuthId) {
     const u = users.find((row) => row.id === authId) ?? null;
     const stored = initialsByAuthId.get(authId) ?? u?.initials ?? null;
     return resolveReportEmployeeInitials({
@@ -101,29 +54,21 @@ function initialsForAuthUser(
         email: u?.email,
     }) || '—';
 }
-
-function initialsFromUser(u: TimeTrackingUserRow, initialsByAuthId?: ReadonlyMap<number, string>): string {
+function initialsFromUser(u, initialsByAuthId) {
     return resolveReportEmployeeInitials({
         stored: initialsByAuthId?.get(u.id) ?? u.initials,
         displayName: u.display_name,
         email: u.email,
     }) || '—';
 }
-
-function readEntryRateSource(entry: TimeEntryRow | null | undefined): number | null {
+function readEntryRateSource(entry) {
     if (!entry)
         return null;
     const raw = entry.rate_source_amount ?? entry.rateSourceAmount;
     const n = Number(raw);
     return Number.isFinite(n) && n > 0 ? n : null;
 }
-
-function resolveDetailHourlyRate(opts: {
-    unitAmount?: number | null;
-    rateSource?: number | null;
-    hours: number;
-    amount: number;
-}): number {
+function resolveDetailHourlyRate(opts) {
     const unit = Number(opts.unitAmount);
     if (Number.isFinite(unit) && unit > 0)
         return unit;
@@ -134,47 +79,33 @@ function resolveDetailHourlyRate(opts: {
         return opts.amount / opts.hours;
     return 0;
 }
-
-function formatDetailHourlyRate(rate: number, currency: string): string {
+function formatDetailHourlyRate(rate, currency) {
     if (!Number.isFinite(rate) || rate <= 0)
         return '';
     return formatTimeReportAmount(rate, currency);
 }
-
-function displayUserName(u: TimeTrackingUserRow): string {
+function displayUserName(u) {
     return (u.display_name ?? '').trim() || u.email || '—';
 }
-
-function userTitle(u: TimeTrackingUserRow): string {
+function userTitle(u) {
     return (u.position ?? '').trim() || (u.role ?? '').trim() || '—';
 }
-
-function userByAuthId(users: TimeTrackingUserRow[], authId: number): TimeTrackingUserRow | null {
+function userByAuthId(users, authId) {
     return users.find((u) => u.id === authId) ?? null;
 }
-
-function dateDisplayFromIso(
-    iso: string | undefined | null,
-    lang: ReturnType<typeof normalizeCoverLanguage>,
-): string {
+function dateDisplayFromIso(iso, lang) {
     return formatTimeReportDateDisplay(iso, lang);
 }
-
-function numHoursFromLine(ln: InvoiceLineDto): number {
+function numHoursFromLine(ln) {
     const q = Number(ln.quantity);
     return Number.isFinite(q) ? q : 0;
 }
-
-function lineAmount(ln: InvoiceLineDto): number {
+function lineAmount(ln) {
     const t = Number(ln.lineTotal);
     return Number.isFinite(t) ? t : 0;
 }
-
 /** UZS invoices show the som amount entered on the expense, not the USD equivalent. */
-function expenseAmountForInvoiceCurrency(
-    currency: string,
-    req: { amountUzs?: number | null; exchangeRate?: number | null; equivalentAmount?: number | null } | null,
-): number | null {
+function expenseAmountForInvoiceCurrency(currency, req) {
     const cur = (currency || '').trim().toUpperCase();
     if (cur === 'UZS' && req) {
         const uzs = asExpenseNumber(req.amountUzs);
@@ -182,16 +113,9 @@ function expenseAmountForInvoiceCurrency(
             return roundMoney2(uzs);
         return null;
     }
-    if (!req)
-        return null;
-    return lockedExpenseUsdAmount({
-        amountUzs: asExpenseNumber(req.amountUzs),
-        exchangeRate: asExpenseNumber(req.exchangeRate),
-        equivalentAmount: asExpenseNumber(req.equivalentAmount),
-    });
+    return req ? lockedExpenseUsdAmount(req) : null;
 }
-
-function preferExpenseUsdForInvoice(currency: string, ln: InvoiceLineDto, lockedUsd: number | null): number {
+function preferExpenseUsdForInvoice(currency, ln, lockedUsd) {
     const cur = (currency || '').trim().toUpperCase();
     const line = lineAmount(ln);
     // UZS invoices must not display a dollar equivalent under a UZS label.
@@ -202,7 +126,6 @@ function preferExpenseUsdForInvoice(currency: string, ln: InvoiceLineDto, locked
         return lockedUsd;
     if (cur !== 'USD')
         return line;
-
     const srcCur = (ln.sourceCurrency ?? '').trim().toUpperCase();
     const srcAmt = Number(ln.sourceAmount);
     const fx = Number(ln.fxRate);
@@ -215,16 +138,7 @@ function preferExpenseUsdForInvoice(currency: string, ln: InvoiceLineDto, locked
     }
     return line;
 }
-
-type BuildingDetail = InvoiceTimeReportDetailRow & {
-    authId: number | null;
-    hoursNum: number;
-    amtNum: number;
-    rateNum: number;
-    rowKind: 'time' | 'expense' | 'other';
-};
-
-async function loadProjectTaskNameById(clientId: string, projectId: string): Promise<Map<string, string>> {
+async function loadProjectTaskNameById(clientId, projectId) {
     const cid = clientId.trim();
     const pid = projectId.trim();
     if (!cid || !pid)
@@ -237,8 +151,7 @@ async function loadProjectTaskNameById(clientId: string, projectId: string): Pro
         return new Map();
     }
 }
-
-function toPublicRow(d: BuildingDetail): InvoiceTimeReportDetailRow {
+function toPublicRow(d) {
     return {
         date: d.date,
         initials: d.initials,
@@ -249,9 +162,8 @@ function toPublicRow(d: BuildingDetail): InvoiceTimeReportDetailRow {
         amount: d.amount,
     };
 }
-
 /** Prefer the actual billed rate from detail rows (hours-weighted mode), not amount÷hours. */
-function pickSummaryHourlyRate(rateByHours: Map<number, number>, totalHours: number, totalAmount: number): number {
+function pickSummaryHourlyRate(rateByHours, totalHours, totalAmount) {
     let bestRate = 0;
     let bestHours = -1;
     for (const [rate, hours] of rateByHours) {
@@ -264,20 +176,9 @@ function pickSummaryHourlyRate(rateByHours: Map<number, number>, totalHours: num
         return bestRate;
     return totalHours > 0 ? totalAmount / totalHours : 0;
 }
-
-function buildSummaryAndTotals(
-    details: BuildingDetail[],
-    users: TimeTrackingUserRow[],
-    currency: string,
-    initialsByAuthId: ReadonlyMap<number, string>,
-): Pick<InvoiceTimeReportPack, 'summarySlots' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay'> {
+function buildSummaryAndTotals(details, users, currency, initialsByAuthId) {
     const timeLike = details.filter((d) => d.rowKind !== 'expense');
-    const agg = new Map<number, {
-        hours: number;
-        amount: number;
-        u: TimeTrackingUserRow | null;
-        rateByHours: Map<number, number>;
-    }>();
+    const agg = new Map();
     let otherAmount = 0;
     for (const d of timeLike) {
         if (d.authId != null) {
@@ -285,7 +186,7 @@ function buildSummaryAndTotals(
                 hours: 0,
                 amount: 0,
                 u: userByAuthId(users, d.authId),
-                rateByHours: new Map<number, number>(),
+                rateByHours: new Map(),
             };
             cur.hours += sumRoundedTimeReportHours([d.hoursNum]);
             cur.amount += d.amtNum;
@@ -300,22 +201,20 @@ function buildSummaryAndTotals(
         else if (d.amtNum !== 0)
             otherAmount += d.amtNum;
     }
-
-    const summaryRows: InvoiceTimeReportSummaryRow[] = [...agg.entries()]
+    const summaryRows = [...agg.entries()]
         .sort((a, b) => b[1].amount - a[1].amount)
         .map(([uid, v]) => {
-            const u = v.u ?? userByAuthId(users, uid);
-            const rate = pickSummaryHourlyRate(v.rateByHours, v.hours, v.amount);
-            return {
-                initials: initialsForAuthUser(uid, users, initialsByAuthId),
-                name: u ? displayUserName(u) : `User ${uid}`,
-                title: u ? userTitle(u) : '—',
-                hours: formatTimeReportHours(v.hours),
-                hourlyRate: formatDetailHourlyRate(rate, currency) || '—',
-                totalPrice: formatTimeReportAmount(v.amount, currency),
-            };
-        });
-
+        const u = v.u ?? userByAuthId(users, uid);
+        const rate = pickSummaryHourlyRate(v.rateByHours, v.hours, v.amount);
+        return {
+            initials: initialsForAuthUser(uid, users, initialsByAuthId),
+            name: u ? displayUserName(u) : `User ${uid}`,
+            title: u ? userTitle(u) : '—',
+            hours: formatTimeReportHours(v.hours),
+            hourlyRate: formatDetailHourlyRate(rate, currency) || '—',
+            totalPrice: formatTimeReportAmount(v.amount, currency),
+        };
+    });
     if (otherAmount !== 0) {
         summaryRows.push({
             initials: '—',
@@ -326,12 +225,10 @@ function buildSummaryAndTotals(
             totalPrice: formatTimeReportAmount(otherAmount, currency),
         });
     }
-
     const totalH = sumRoundedTimeReportHours(timeLike.map((d) => d.hoursNum));
     const totalA = timeLike.reduce((s, d) => s + d.amtNum, 0);
     const sumH = sumRoundedTimeReportHours([...agg.values()].map((v) => v.hours));
     const sumA = [...agg.values()].reduce((s, v) => s + v.amount, 0) + otherAmount;
-
     return {
         detailTotalHoursDisplay: formatTimeReportHours(totalH),
         detailTotalAmountDisplay: formatTimeReportAmount(totalA, currency),
@@ -340,13 +237,7 @@ function buildSummaryAndTotals(
         summarySlots: padSummaryRows(summaryRows),
     };
 }
-
-function packFromDetails(
-    details: BuildingDetail[],
-    users: TimeTrackingUserRow[],
-    currency: string,
-    initialsByAuthId: ReadonlyMap<number, string>,
-): InvoiceTimeReportPack {
+function packFromDetails(details, users, currency, initialsByAuthId) {
     const allTime = details.filter((d) => d.rowKind !== 'expense');
     const mehnatRows = allTime.filter((d) => isMyMehnatTimeReportRow(d));
     const timeRows = allTime.filter((d) => !isMyMehnatTimeReportRow(d));
@@ -370,24 +261,19 @@ function packFromDetails(
         detailTotalAmountDisplay: formatTimeReportAmount(timeTotal, currency),
     };
 }
-
-function normalizeExpenseDesc(raw: string): string {
+function normalizeExpenseDesc(raw) {
     return (raw ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
-
 /**
  * Final pass: bump expense row amounts up to the expenses-registry USD when a
  * description match is found. Covers missing expenseRequestId and stale overrides.
  */
-export async function overlayExpenseAmountsFromRegistry(
-    pack: InvoiceTimeReportPack,
-    projectId: string | null | undefined,
-): Promise<InvoiceTimeReportPack> {
+export async function overlayExpenseAmountsFromRegistry(pack, projectId) {
     const pid = (projectId ?? '').trim();
     const slots = trimTrailingEmptyDetailSlots(pack.expenseSlots ?? []);
     if (!pid || slots.length === 0)
         return pack;
-    let items: Awaited<ReturnType<typeof fetchExpenses>>['items'];
+    let items;
     try {
         items = (await fetchExpenses({ projectId: pid, limit: 500 })).items;
     }
@@ -396,7 +282,6 @@ export async function overlayExpenseAmountsFromRegistry(
     }
     if (!items.length)
         return pack;
-
     const cur = (pack.currency || 'USD').trim().toUpperCase() || 'USD';
     let changed = false;
     const next = slots.map((slot) => {
@@ -444,46 +329,31 @@ export async function overlayExpenseAmountsFromRegistry(
         expenseTotalAmountDisplay: formatTimeReportAmount(total, cur),
     };
 }
-
-export type ResolveInvoiceTimeReportPackOptions = {
-
-    onPartnerConfirmationBlocked?: (message: string) => void;
-};
-
-export async function resolveInvoiceTimeReportPack(
-    session: InvoicePreviewSessionV1 | null,
-    model: InvoiceCoverLetterModel,
-    options?: ResolveInvoiceTimeReportPackOptions,
-): Promise<InvoiceTimeReportPack> {
+export async function resolveInvoiceTimeReportPack(session, model, options) {
     const currency = packCurrencyCode(model);
     const lang = normalizeCoverLanguage(model.coverLanguage);
     const empty = emptyInvoiceTimeReportPack(currency);
-
     if (!session)
         return empty;
-
-    const localizeTask = (raw: string) => localizeTimeReportTaskLabel(raw, lang);
+    const localizeTask = (raw) => localizeTimeReportTaskLabel(raw, lang);
     const expenseTask = localizeTask('Expense');
     const manualTask = localizeTask('Manual');
     const otherTask = localizeTask('Other');
-
     try {
         const [ttUsers, filterUsers, authUsers] = await Promise.all([
-            listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]),
-            fetchReportsUsersForFilter().catch(() => [] as Awaited<ReturnType<typeof fetchReportsUsersForFilter>>),
-            getUsers(true).catch(() => [] as User[]),
+            listTimeTrackingUsers().catch(() => []),
+            fetchReportsUsersForFilter().catch(() => []),
+            getUsers(true).catch(() => []),
         ]);
         const users = ttUsers;
         const initialsByAuthId = buildAuthInitialsLookup(authUsers, filterUsers, ttUsers);
-
         if (session.mode === 'create') {
             const f = session.form;
             const pid = f.createProjectId?.trim();
             if (!pid)
                 return empty;
-
-            let timeRows: UnbilledTimeEntryDto[];
-            let expRows: UnbilledExpenseEntryDto[];
+            let timeRows;
+            let expRows;
             try {
                 [timeRows, expRows] = await Promise.all([
                     fetchUnbilledTimeEntries({
@@ -498,7 +368,7 @@ export async function resolveInvoiceTimeReportPack(
                     }),
                 ]);
             }
-            catch (e: unknown) {
+            catch (e) {
                 if (isForbiddenError(e)) {
                     const fallback = 'Для этого проекта и периода нет полного подтверждения партнёров. Сначала завершите подписание отчёта партнёрами.';
                     const msg = e instanceof Error && e.message.trim().length ? e.message.trim() : fallback;
@@ -507,20 +377,17 @@ export async function resolveInvoiceTimeReportPack(
                 }
                 throw e;
             }
-
             const selT = new Set(f.selTime);
             const selE = new Set(f.selExp);
-            const details: BuildingDetail[] = [];
+            const details = [];
             const clientId = f.createClientId.trim();
             const taskNameById = await loadProjectTaskNameById(clientId, pid);
-
             const selectedTimeRows = timeRows.filter((x) => selT.has(x.id));
-            const entryById = new Map<string, TimeEntryRow | null>();
+            const entryById = new Map();
             await Promise.all(selectedTimeRows.map(async (e) => {
                 const row = await fetchTimeEntry(e.authUserId, e.id).catch(() => null);
                 entryById.set(e.id, row);
             }));
-
             for (const e of selectedTimeRows) {
                 const hrs = Number(e.hours);
                 const h = Number.isFinite(hrs) ? hrs : 0;
@@ -554,7 +421,6 @@ export async function resolveInvoiceTimeReportPack(
                     rowKind: 'time',
                 });
             }
-
             for (const e of expRows.filter((x) => selE.has(x.id))) {
                 let a = 0;
                 const unbilledEq = Number(e.equivalentAmount);
@@ -587,20 +453,14 @@ export async function resolveInvoiceTimeReportPack(
                     rowKind: 'expense',
                 });
             }
-
-            return overlayExpenseAmountsFromRegistry(
-                packFromDetails(details, users, currency, initialsByAuthId),
-                pid,
-            );
+            return overlayExpenseAmountsFromRegistry(packFromDetails(details, users, currency, initialsByAuthId), pid);
         }
-
         const inv = await getInvoice(session.invoiceId, true);
         const lines = [...(inv.lines ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
-        const details: BuildingDetail[] = [];
+        const details = [];
         const taskNameById = await loadProjectTaskNameById(inv.clientId, inv.projectId ?? '');
-
-        const entryCache = new Map<string, TimeEntryRow | null>();
-        async function getEntry(id: string | null | undefined, preferredAuthUserId: number | null): Promise<TimeEntryRow | null> {
+        const entryCache = new Map();
+        async function getEntry(id, preferredAuthUserId) {
             const k = (id ?? '').trim();
             if (!k)
                 return null;
@@ -611,24 +471,18 @@ export async function resolveInvoiceTimeReportPack(
             const hint = preferredAuthUserId != null && Number.isFinite(preferredAuthUserId)
                 ? Math.trunc(preferredAuthUserId)
                 : null;
-            let found: TimeEntryRow | null = null;
+            let found = null;
             if (hint != null)
                 found = await fetchTimeEntry(hint, k).catch(() => null);
             entryCache.set(k, found);
             return found;
         }
-
-        type ExpenseLineSnap = {
-            dateIso: string | null;
-            /** Amount in the invoice currency: UZS principal, otherwise locked USD. */
-            amount: number | null;
-        };
-        const expenseSnapByRequestId = new Map<string, ExpenseLineSnap>();
-        let projectExpenseById: Map<string, Awaited<ReturnType<typeof fetchExpenseById>>> | null = null;
-        async function loadProjectExpenses(): Promise<Map<string, Awaited<ReturnType<typeof fetchExpenseById>>>> {
+        const expenseSnapByRequestId = new Map();
+        let projectExpenseById = null;
+        async function loadProjectExpenses() {
             if (projectExpenseById)
                 return projectExpenseById;
-            const map = new Map<string, Awaited<ReturnType<typeof fetchExpenseById>>>();
+            const map = new Map();
             const pid = (inv.projectId ?? '').trim();
             if (!pid) {
                 projectExpenseById = map;
@@ -645,7 +499,7 @@ export async function resolveInvoiceTimeReportPack(
             projectExpenseById = map;
             return map;
         }
-        async function resolveExpenseLineSnap(ln: InvoiceLineDto): Promise<ExpenseLineSnap> {
+        async function resolveExpenseLineSnap(ln) {
             const embedded = ln.expenseDate?.trim().slice(0, 10);
             const embeddedOk = embedded && /^\d{4}-\d{2}-\d{2}$/.test(embedded) ? embedded : null;
             const rid = ln.expenseRequestId?.trim();
@@ -654,7 +508,7 @@ export async function resolveInvoiceTimeReportPack(
                 const byProject = await loadProjectExpenses();
                 const desc = (ln.description ?? '').trim().toLowerCase();
                 const wantDate = embeddedOk;
-                let matched: Awaited<ReturnType<typeof fetchExpenseById>> | null = null;
+                let matched = null;
                 for (const req of byProject.values()) {
                     const rd = (req.description ?? req.businessPurpose ?? '').trim().toLowerCase();
                     const iso = req.expenseDate?.trim().slice(0, 10) ?? '';
@@ -667,9 +521,7 @@ export async function resolveInvoiceTimeReportPack(
                     }
                 }
                 if (!matched && wantDate) {
-                    const sameDay = [...byProject.values()].filter((req) => (
-                        (req.expenseDate?.trim().slice(0, 10) ?? '') === wantDate
-                    ));
+                    const sameDay = [...byProject.values()].filter((req) => ((req.expenseDate?.trim().slice(0, 10) ?? '') === wantDate));
                     if (sameDay.length === 1)
                         matched = sameDay[0] ?? null;
                 }
@@ -690,7 +542,7 @@ export async function resolveInvoiceTimeReportPack(
                     amount: cached.amount,
                 };
             }
-            let req: Awaited<ReturnType<typeof fetchExpenseById>> | null = null;
+            let req = null;
             try {
                 req = await fetchExpenseById(rid);
             }
@@ -699,13 +551,13 @@ export async function resolveInvoiceTimeReportPack(
                 req = byProject.get(rid) ?? null;
             }
             if (!req) {
-                const snap: ExpenseLineSnap = { dateIso: null, amount: null };
+                const snap = { dateIso: null, amount: null };
                 expenseSnapByRequestId.set(rid, snap);
                 return { dateIso: embeddedOk, amount: null };
             }
             const iso = req.expenseDate?.trim().slice(0, 10) ?? '';
             const ok = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
-            const snap: ExpenseLineSnap = {
+            const snap = {
                 dateIso: ok,
                 amount: expenseAmountForInvoiceCurrency(currency, req),
             };
@@ -715,21 +567,17 @@ export async function resolveInvoiceTimeReportPack(
                 amount: snap.amount,
             };
         }
-
         for (const ln of lines) {
             const kind = lineKind(ln);
             const desc = (ln.description ?? '').trim() || '—';
             const amt = lineAmount(ln);
-
             if (kind === 'time') {
                 const embeddedIso = ln.timeEntryWorkDate?.trim().slice(0, 10);
                 let workIso = embeddedIso && /^\d{4}-\d{2}-\d{2}$/.test(embeddedIso) ? embeddedIso : null;
-                let authId =
-                    ln.timeAuthorAuthUserId != null && Number.isFinite(Number(ln.timeAuthorAuthUserId))
-                        ? Math.trunc(Number(ln.timeAuthorAuthUserId))
-                        : null;
-
-                let entry: TimeEntryRow | null = null;
+                let authId = ln.timeAuthorAuthUserId != null && Number.isFinite(Number(ln.timeAuthorAuthUserId))
+                    ? Math.trunc(Number(ln.timeAuthorAuthUserId))
+                    : null;
+                let entry = null;
                 if (ln.timeEntryId?.trim())
                     entry = await getEntry(ln.timeEntryId, authId);
                 if (authId == null && entry?.auth_user_id != null)
@@ -737,7 +585,6 @@ export async function resolveInvoiceTimeReportPack(
                 const fromEntry = entry?.work_date?.trim().slice(0, 10) ?? '';
                 if (!workIso && /^\d{4}-\d{2}-\d{2}$/.test(fromEntry))
                     workIso = fromEntry;
-
                 const u = authId != null ? userByAuthId(users, authId) : null;
                 const hours = numHoursFromLine(ln);
                 const taskLabel = localizeTask(resolveInvoiceTimeReportTaskLabel({
@@ -806,11 +653,7 @@ export async function resolveInvoiceTimeReportPack(
                 });
             }
         }
-
-        return overlayExpenseAmountsFromRegistry(
-            packFromDetails(details, users, currency, initialsByAuthId),
-            inv.projectId,
-        );
+        return overlayExpenseAmountsFromRegistry(packFromDetails(details, users, currency, initialsByAuthId), inv.projectId);
     }
     catch (err) {
         console.error('resolveInvoiceTimeReportPack failed', err);

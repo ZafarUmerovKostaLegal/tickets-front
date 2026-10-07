@@ -1,0 +1,168 @@
+import { invoke } from '@tauri-apps/api/core';
+import { deleteChatPushSubscription, fetchChatPushConfig, saveChatPushSubscription } from '../api';
+import { chatWindowIsInFront } from './chatNotificationSession';
+const SW_URL = '/chat-sw.js';
+let gestureBound = false;
+let refreshBound = false;
+function refreshSubscriptionWhenVisible() {
+    if (refreshBound || typeof document === 'undefined')
+        return;
+    refreshBound = true;
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible' || Notification.permission !== 'granted')
+            return;
+        void subscribeGranted().catch(() => undefined);
+    });
+}
+let subscribeInFlight = null;
+function sameApplicationServerKey(subscription, next) {
+    const current = subscription.options?.applicationServerKey;
+    if (!current)
+        return true;
+    const bytes = new Uint8Array(current);
+    if (bytes.length !== next.length)
+        return false;
+    for (let i = 0; i < bytes.length; i++) {
+        if (bytes[i] !== next[i])
+            return false;
+    }
+    return true;
+}
+function urlBase64ToUint8Array(value) {
+    const padded = value + '='.repeat((4 - (value.length % 4)) % 4);
+    const base64 = padded.replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(base64);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++)
+        out[i] = raw.charCodeAt(i);
+    return out;
+}
+function showDesktopChatToast(title, body) {
+    if (typeof window === 'undefined' || !('__TAURI_INTERNALS__' in window))
+        return Promise.resolve();
+    if (title === 'Kosta Daily')
+        return Promise.resolve();
+    return invoke('show_chat_notification', { title, body }).then(() => undefined).catch(() => undefined);
+}
+function pushSupported() {
+    return typeof window !== 'undefined'
+        && window.isSecureContext
+        && 'serviceWorker' in navigator
+        && 'PushManager' in window
+        && 'Notification' in window;
+}
+async function subscribeGranted() {
+    if (subscribeInFlight)
+        return subscribeInFlight;
+    subscribeInFlight = subscribeGrantedNow().finally(() => {
+        subscribeInFlight = null;
+    });
+    return subscribeInFlight;
+}
+let swReadyPromise = null;
+function serviceWorkerReady() {
+    if (!swReadyPromise) {
+        swReadyPromise = navigator.serviceWorker.register(SW_URL, { scope: '/' })
+            .then(() => navigator.serviceWorker.ready)
+            .catch((error) => {
+            swReadyPromise = null;
+            throw error;
+        });
+    }
+    return swReadyPromise;
+}
+async function registrationReady() {
+    return serviceWorkerReady();
+}
+export function showChatOsNotification(input) {
+    if (!pushSupported() || Notification.permission !== 'granted')
+        return;
+    if (chatWindowIsInFront())
+        return;
+    void showDesktopChatToast(input.title, input.body);
+    const payload = {
+        type: 'show-chat-notification',
+        title: input.title,
+        body: input.body,
+        roomId: input.roomId,
+        url: `/kosta-daily?room=${input.roomId}`,
+    };
+    void serviceWorkerReady()
+        .then((registration) => {
+        registration.active?.postMessage(payload);
+    })
+        .catch(() => undefined);
+}
+async function subscribeGrantedNow() {
+    const registration = await registrationReady();
+    const config = await fetchChatPushConfig().catch(() => ({ enabled: false, publicKey: '' }));
+    if (!config.enabled || !config.publicKey)
+        return;
+    let existing = await registration.pushManager.getSubscription();
+    const applicationServerKey = urlBase64ToUint8Array(config.publicKey);
+    if (existing && !sameApplicationServerKey(existing, applicationServerKey)) {
+        await existing.unsubscribe();
+        existing = null;
+    }
+    const subscription = existing ?? await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: applicationServerKey.slice(),
+    });
+    const json = subscription.toJSON();
+    if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth)
+        return;
+    await saveChatPushSubscription(json);
+}
+export async function ensureChatBrowserPush() {
+    if (!pushSupported())
+        return;
+    if (Notification.permission === 'denied')
+        return;
+    if (Notification.permission === 'granted') {
+        try {
+            await subscribeGranted();
+        }
+        catch {
+            /* Push setup must not break the open app. */
+        }
+        refreshSubscriptionWhenVisible();
+        return;
+    }
+    if (gestureBound)
+        return;
+    gestureBound = true;
+    const ask = () => {
+        document.removeEventListener('pointerdown', ask);
+        void Notification.requestPermission()
+            .then((permission) => {
+            if (permission === 'granted') {
+                refreshSubscriptionWhenVisible();
+                return subscribeGranted();
+            }
+            return undefined;
+        })
+            .catch(() => undefined);
+    };
+    document.addEventListener('pointerdown', ask, { once: true });
+}
+export async function disableChatBrowserPush() {
+    if (!pushSupported())
+        return;
+    const registration = await navigator.serviceWorker.getRegistration(SW_URL);
+    const subscription = await registration?.pushManager.getSubscription();
+    const endpoint = subscription?.endpoint;
+    if (endpoint) {
+        try {
+            await deleteChatPushSubscription(endpoint);
+        }
+        catch {
+            /* Logout still continues if the server is unreachable. */
+        }
+    }
+    try {
+        await subscription?.unsubscribe();
+    }
+    catch {
+        /* Local unsubscribe is best-effort. */
+    }
+}

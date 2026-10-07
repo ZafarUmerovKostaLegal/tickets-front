@@ -1,0 +1,194 @@
+const DOC_TYPES = new Set([
+    'letter',
+    'request',
+    'claim',
+    'demand',
+    'notification',
+    'application',
+    'complaint',
+    'lawsuit',
+    'court',
+    'enforcement',
+    'contract',
+    'addendum',
+    'act',
+    'financial',
+    'proposal',
+    'other',
+    'note',
+]);
+const STATUSES = new Set([
+    'draft',
+    'pending_review',
+    'rejected',
+    'new',
+    'received',
+    'progress',
+    'approval',
+    'awaiting_signature',
+    'done',
+]);
+const DIRECTIONS = new Set(['incoming', 'outgoing']);
+const ATT_KINDS = new Set(['scan', 'attachment', 'signed']);
+function num(v) {
+    const n = typeof v === 'number' ? v : Number(v);
+    return Number.isFinite(n) ? n : null;
+}
+function pickStr(o, ...keys) {
+    for (const k of keys) {
+        const v = o[k];
+        if (v != null && String(v).trim())
+            return String(v).trim();
+    }
+    return '';
+}
+function normalizeUserSnippet(raw) {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const o = raw;
+    const id = num(o.id);
+    if (id == null || id <= 0)
+        return null;
+    return {
+        id,
+        displayName: pickStr(o, 'displayName', 'display_name') || null,
+        email: pickStr(o, 'email') || null,
+        picture: pickStr(o, 'picture') || null,
+        position: pickStr(o, 'position', 'job_title') || null,
+    };
+}
+function userLabel(u) {
+    if (!u)
+        return '—';
+    return u.displayName?.trim() || u.email?.trim() || `User #${u.id}`;
+}
+export function formatCorrRegisteredAt(iso) {
+    if (!iso)
+        return '—';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime()))
+        return iso;
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+export function normalizeCorrespondenceAttachment(raw) {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const o = raw;
+    const id = pickStr(o, 'id');
+    if (!id)
+        return null;
+    const kindRaw = pickStr(o, 'attachmentKind', 'attachment_kind').toLowerCase();
+    const attachmentKind = ATT_KINDS.has(kindRaw)
+        ? kindRaw
+        : 'attachment';
+    return {
+        id,
+        fileName: pickStr(o, 'fileName', 'file_name') || 'file',
+        contentType: pickStr(o, 'contentType', 'content_type') || null,
+        sizeBytes: num(o.sizeBytes ?? o.size_bytes) ?? 0,
+        attachmentKind,
+        createdAt: pickStr(o, 'createdAt', 'created_at') || new Date().toISOString(),
+    };
+}
+export function normalizeCorrespondenceComment(raw) {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const o = raw;
+    const id = pickStr(o, 'id');
+    const body = pickStr(o, 'body');
+    const authorUserId = num(o.authorUserId ?? o.author_user_id);
+    if (!id || !body || authorUserId == null || authorUserId <= 0)
+        return null;
+    return {
+        id,
+        body,
+        authorUserId,
+        authorUser: normalizeUserSnippet(o.authorUser ?? o.author_user),
+        createdAt: pickStr(o, 'createdAt', 'created_at') || new Date().toISOString(),
+    };
+}
+export function normalizeCorrespondenceDocument(raw) {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const o = raw;
+    const id = pickStr(o, 'id');
+    if (!id)
+        return null;
+    const registryNumber = pickStr(o, 'registryNumber', 'registry_number') || null;
+    const directionRaw = pickStr(o, 'direction').toLowerCase();
+    if (!DIRECTIONS.has(directionRaw))
+        return null;
+    const docTypeRaw = pickStr(o, 'docType', 'doc_type').toLowerCase() || 'letter';
+    const docType = DOC_TYPES.has(docTypeRaw) ? docTypeRaw : 'letter';
+    const statusRaw = pickStr(o, 'status').toLowerCase() || 'progress';
+    const status = STATUSES.has(statusRaw) ? statusRaw : 'progress';
+    const responsibleUserId = num(o.responsibleUserId ?? o.responsible_user_id) ?? 0;
+    const partnerUserId = num(o.partnerUserId ?? o.partner_user_id);
+    const attachmentsRaw = o.attachments;
+    const attachments = Array.isArray(attachmentsRaw)
+        ? attachmentsRaw.map(normalizeCorrespondenceAttachment).filter((x) => x != null)
+        : undefined;
+    const registeredAt = pickStr(o, 'registeredAt', 'registered_at') || null;
+    const createdAt = pickStr(o, 'createdAt', 'created_at') || null;
+    return {
+        id,
+        registryNumber,
+        direction: directionRaw,
+        counterparty: pickStr(o, 'counterparty'),
+        subject: pickStr(o, 'subject'),
+        docType,
+        status,
+        registeredAt,
+        responsibleUserId,
+        responsibleUser: normalizeUserSnippet(o.responsibleUser ?? o.responsible_user),
+        partnerUserId,
+        partnerUser: normalizeUserSnippet(o.partnerUser ?? o.partner_user),
+        attachmentsCount: num(o.attachmentsCount ?? o.attachments_count) ?? attachments?.length ?? 0,
+        commentsCount: num(o.commentsCount ?? o.comments_count) ?? 0,
+        hasScan: Boolean(o.hasScan ?? o.has_scan),
+        comment: pickStr(o, 'comment') || null,
+        rejectionComment: pickStr(o, 'rejectionComment', 'rejection_comment') || null,
+        createdAt,
+        ...(attachments ? { attachments } : {}),
+    };
+}
+export function normalizeCorrespondenceStats(raw) {
+    const o = raw && typeof raw === 'object' ? raw : {};
+    return {
+        incomingTotal: num(o.incomingTotal ?? o.incoming_total) ?? 0,
+        outgoingTotal: num(o.outgoingTotal ?? o.outgoing_total) ?? 0,
+        approvalTotal: num(o.approvalTotal ?? o.approval_total) ?? 0,
+        incomingNewTotal: num(o.incomingNewTotal ?? o.incoming_new_total) ?? 0,
+        pendingReviewTotal: num(o.pendingReviewTotal ?? o.pending_review_total) ?? 0,
+        partnerAttentionTotal: num(o.partnerAttentionTotal ?? o.partner_attention_total) ?? 0,
+        partnerOutgoingPending: num(o.partnerOutgoingPending ?? o.partner_outgoing_pending) ?? 0,
+        partnerIncomingNew: num(o.partnerIncomingNew ?? o.partner_incoming_new) ?? 0,
+    };
+}
+export function mapDocumentToCorrRow(doc) {
+    return {
+        id: doc.id,
+        registryNumber: doc.registryNumber || (doc.status === 'pending_review'
+            ? 'На проверке'
+            : doc.status === 'rejected'
+                ? 'Отклонено'
+                : doc.status === 'draft'
+                    ? 'Черновик'
+                    : '—'),
+        direction: doc.direction,
+        counterparty: doc.counterparty,
+        subject: doc.subject,
+        type: doc.docType,
+        date: formatCorrRegisteredAt(doc.registeredAt || doc.createdAt),
+        responsible: userLabel(doc.responsibleUser),
+        status: doc.status,
+        partnerUserId: doc.partnerUserId ?? undefined,
+        partnerName: doc.partnerUser ? userLabel(doc.partnerUser) : undefined,
+        hasScan: doc.hasScan,
+        commentsCount: doc.commentsCount ?? 0,
+    };
+}
+export function isAllowedScanFile(file, maxBytes = 15 * 1024 * 1024) {
+    return file.size > 0 && file.size <= maxBytes;
+}
