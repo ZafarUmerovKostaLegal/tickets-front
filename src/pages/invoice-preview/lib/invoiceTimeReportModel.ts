@@ -61,6 +61,13 @@ export function emptyInvoiceTimeReportPack(currency: string): InvoiceTimeReportP
     };
 }
 
+/** Same 2-decimal rounding as the partner Excel export (`excelNum2`). */
+export function roundTimeReportHours2(n: number): number {
+    if (!Number.isFinite(n))
+        return 0;
+    return Math.round(n * 100) / 100;
+}
+
 export function formatTimeReportHours(n: number): string {
     if (!Number.isFinite(n))
         return '';
@@ -69,6 +76,11 @@ export function formatTimeReportHours(n: number): string {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
+}
+
+/** Sum hours the way the invoice grid shows them: round each line, then add. */
+export function sumRoundedTimeReportHours(values: readonly number[]): number {
+    return roundTimeReportHours2(values.reduce((sum, n) => sum + roundTimeReportHours2(n), 0));
 }
 
 function detailRowIsTrailingEmpty(row: InvoiceTimeReportDetailRow): boolean {

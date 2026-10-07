@@ -17,7 +17,7 @@ export const FRONTEND_API_ROUTES: ApiRouteSpec[] = [
     { module: 'todo', method: 'GET', path: '/api/v1/todos/boards' },
     { module: 'todo', method: 'GET', path: '/api/v1/todos/boards/current' },
     { module: 'todo', method: 'GET', path: '/api/v1/todos/calendar/status' },
-    { module: 'chat', method: 'GET', path: '/api/v1/chat/rooms' },
+    { module: 'chat', method: 'GET', path: '/api/v1/kosta-daily/rooms' },
     { module: 'expenses', method: 'GET', path: '/api/v1/expenses' },
     { module: 'expenses', method: 'GET', path: '/api/v1/expense-types' },
     { module: 'expenses', method: 'GET', path: '/api/v1/exchange-rates' },

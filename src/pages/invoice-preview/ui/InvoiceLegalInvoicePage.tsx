@@ -11,7 +11,7 @@ import {
   packUppercaseRibbonDate,
   packZeroCommaAmount,
 } from '../lib/invoicePreviewPackShared';
-import { getLegalInvoiceLabels } from '../lib/invoiceLegalPageI18n';
+import { getLegalInvoiceLabels, uppercaseLegalDateDisplay } from '../lib/invoiceLegalPageI18n';
 import {
   legalBankingInputValue,
   legalFirmBankingRows,
@@ -115,8 +115,14 @@ export function InvoiceLegalInvoicePage({
   const defaultInvNo = packInvoiceNumberDisplay(session);
   const defaultZero = packZeroCommaAmount(model);
 
-  const ribbonIssue = resolveLegalOverrideText(legalOverrides?.issueDateDisplay, defaultRibbonIssue);
-  const dueBanner = resolveLegalOverrideText(legalOverrides?.dueDateDisplay, defaultDueBanner);
+  const ribbonIssue = uppercaseLegalDateDisplay(
+    resolveLegalOverrideText(legalOverrides?.issueDateDisplay, defaultRibbonIssue),
+    model.coverLanguage,
+  );
+  const dueBanner = uppercaseLegalDateDisplay(
+    resolveLegalOverrideText(legalOverrides?.dueDateDisplay, defaultDueBanner),
+    model.coverLanguage,
+  );
   const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, defaultInvNo);
   const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, defaultZero);
   const extraExpensesAmount = resolveLegalOverrideText(legalOverrides?.extraExpensesAmount, defaultZero);

@@ -191,15 +191,18 @@ async function handleApiRoute(route: Route, options: ApiMockOptions): Promise<vo
     }
 
     
-    if (path === '/api/v1/chat/rooms') {
+    if (path === '/api/v1/kosta-daily/rooms' || path === '/api/v1/chat/rooms') {
         await json(route, CHAT_ROOMS);
         return;
     }
-    if (path.startsWith('/api/v1/chat/rooms/') && path.endsWith('/messages')) {
+    if (
+        (path.startsWith('/api/v1/kosta-daily/rooms/') || path.startsWith('/api/v1/chat/rooms/'))
+        && path.endsWith('/messages')
+    ) {
         await json(route, CHAT_MESSAGES);
         return;
     }
-    if (path.startsWith('/api/v1/chat/')) {
+    if (path.startsWith('/api/v1/kosta-daily/') || path.startsWith('/api/v1/chat/')) {
         if (method === 'GET')
             await emptyObject(route);
         else

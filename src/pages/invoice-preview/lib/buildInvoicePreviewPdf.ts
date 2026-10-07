@@ -34,7 +34,7 @@ import { countCombinedReportPages, drawCombinedReportPages } from './drawCombine
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
 import { getTimeReportLabels } from './invoiceTimeReportI18n';
 import { splitServiceInitiatorName } from './splitServiceInitiatorName';
-import { getLegalInvoiceLabels } from './invoiceLegalPageI18n';
+import { getLegalInvoiceLabels, uppercaseLegalDateDisplay } from './invoiceLegalPageI18n';
 import {
     KOSTA_LEGAL_FIRM,
     getCoverLetterLabels,
@@ -1325,13 +1325,19 @@ function drawLegalInvoicePdfPage(
     const dueIso = packResolveDueIso(session, issueIso);
     const labels = getLegalInvoiceLabels(model.coverLanguage);
     const zeroFallback = packZeroCommaAmount(model);
-    const ribbonIssue = resolveLegalOverrideText(
-        legalOverrides?.issueDateDisplay,
-        packUppercaseRibbonDate(issueIso, model.coverLanguage),
+    const ribbonIssue = uppercaseLegalDateDisplay(
+        resolveLegalOverrideText(
+            legalOverrides?.issueDateDisplay,
+            packUppercaseRibbonDate(issueIso, model.coverLanguage),
+        ),
+        model.coverLanguage,
     );
-    const dueBanner = resolveLegalOverrideText(
-        legalOverrides?.dueDateDisplay,
-        packUppercaseRibbonDate(dueIso, model.coverLanguage),
+    const dueBanner = uppercaseLegalDateDisplay(
+        resolveLegalOverrideText(
+            legalOverrides?.dueDateDisplay,
+            packUppercaseRibbonDate(dueIso, model.coverLanguage),
+        ),
+        model.coverLanguage,
     );
     const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, packInvoiceNumberDisplay(session));
     const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, zeroFallback);

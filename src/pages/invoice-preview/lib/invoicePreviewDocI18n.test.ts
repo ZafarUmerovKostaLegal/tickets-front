@@ -6,6 +6,7 @@ import {
 } from './invoiceTimeReportI18n';
 import {
     formatLegalRibbonDate,
+    uppercaseLegalDateDisplay,
     formatLegalRibbonPeriodMonth,
     getLegalInvoiceLabels,
     resolveLocalizedLegalServiceDescription,
@@ -37,6 +38,7 @@ describe('invoiceLegalPageI18n', () => {
         expect(labels.invoiceNo('INV-1')).toBe('СЧЁТ № INV-1');
         expect(labels.billTo).toBe('Плательщик');
         expect(formatLegalRibbonDate('2026-07-09', 'RU')).toMatch(/ИЮЛ/i);
+        expect(uppercaseLegalDateDisplay('october 21, 2026', 'ENG')).toBe('OCTOBER 21, 2026');
         expect(formatLegalRibbonPeriodMonth('2026-07-31', 'ENG')).toBe('JULY');
         expect(formatLegalRibbonPeriodMonth('2026-07-31', 'RU')).toBe('ИЮЛЬ');
 

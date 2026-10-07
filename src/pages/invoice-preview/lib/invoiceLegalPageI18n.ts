@@ -120,6 +120,19 @@ export function formatLegalRibbonDate(
     }).toUpperCase();
 }
 
+/** Ribbon and due-date lines are all caps. Overrides can be stored in mixed case. */
+export function uppercaseLegalDateDisplay(
+    text: string,
+    lang?: InvoiceCoverLanguage | null,
+): string {
+    const value = text.trim();
+    if (!value)
+        return text;
+    return normalizeCoverLanguage(lang) === 'RU'
+        ? value.toLocaleUpperCase('ru-RU')
+        : value.toLocaleUpperCase('en-US');
+}
+
 /** Ribbon period label: month only (e.g. JULY / ИЮЛЬ), not the invoice issue date. */
 const RU_MONTH_NOMINATIVE = [
     'январь',

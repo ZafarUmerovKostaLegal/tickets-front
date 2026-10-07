@@ -31,7 +31,7 @@ describe('chat room request policies', () => {
         expect(second).toEqual(first);
         expect(third).toEqual(first);
         expect(apiFetchMock).toHaveBeenCalledTimes(1);
-        expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/chat/rooms', expect.objectContaining({
+        expect(apiFetchMock).toHaveBeenCalledWith('/api/v1/kosta-daily/rooms', expect.objectContaining({
             signal: expect.any(AbortSignal),
             getReuseWindowMs: 10_000,
         }));

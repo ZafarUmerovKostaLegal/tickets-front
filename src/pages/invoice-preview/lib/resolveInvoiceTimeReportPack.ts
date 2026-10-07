@@ -37,6 +37,7 @@ import {
     finalizeDetailSlots,
     formatTimeReportAmount,
     formatTimeReportHours,
+    sumRoundedTimeReportHours,
     isMyMehnatTimeReportRow,
     padSummaryRows,
     parseTimeReportAmountDisplay,
@@ -261,7 +262,7 @@ function buildSummaryAndTotals(
                 u: userByAuthId(users, d.authId),
                 rateByHours: new Map<number, number>(),
             };
-            cur.hours += d.hoursNum;
+            cur.hours += sumRoundedTimeReportHours([d.hoursNum]);
             cur.amount += d.amtNum;
             cur.u = cur.u ?? userByAuthId(users, d.authId);
             if (d.rateNum > 0 && d.hoursNum > 0) {
@@ -301,9 +302,9 @@ function buildSummaryAndTotals(
         });
     }
 
-    const totalH = timeLike.reduce((s, d) => s + d.hoursNum, 0);
+    const totalH = sumRoundedTimeReportHours(timeLike.map((d) => d.hoursNum));
     const totalA = timeLike.reduce((s, d) => s + d.amtNum, 0);
-    const sumH = [...agg.values()].reduce((s, v) => s + v.hours, 0);
+    const sumH = sumRoundedTimeReportHours([...agg.values()].map((v) => v.hours));
     const sumA = [...agg.values()].reduce((s, v) => s + v.amount, 0) + otherAmount;
 
     return {
@@ -326,10 +327,10 @@ function packFromDetails(
     const timeRows = allTime.filter((d) => !isMyMehnatTimeReportRow(d));
     const expenseRows = details.filter((d) => d.rowKind === 'expense');
     const expenseTotal = expenseRows.reduce((s, d) => s + roundMoney2(d.amtNum), 0);
-    const mehnatHours = mehnatRows.reduce((s, d) => s + d.hoursNum, 0);
+    const mehnatHours = sumRoundedTimeReportHours(mehnatRows.map((d) => d.hoursNum));
     const mehnatTotal = mehnatRows.reduce((s, d) => s + d.amtNum, 0);
     const tail = buildSummaryAndTotals(details, users, currency, initialsByAuthId);
-    const timeHours = timeRows.reduce((s, d) => s + d.hoursNum, 0);
+    const timeHours = sumRoundedTimeReportHours(timeRows.map((d) => d.hoursNum));
     const timeTotal = timeRows.reduce((s, d) => s + d.amtNum, 0);
     return {
         currency,
