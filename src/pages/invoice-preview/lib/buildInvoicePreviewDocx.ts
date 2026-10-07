@@ -829,47 +829,7 @@ function legalInvoiceDocxBlocks(
             mkTotalRow(labels.subtotal, model.totalFormatted, false, totalsNil),
             mkTotalRow(labels.vat, vatAmount, false, totalsNil),
             mkTotalRow(labels.extraExpenses, extraExpensesAmount, false, totalsNil),
-        ],
-    });
-    // Full page width so «OCTOBER 21, 2026» stays on the same line as the amount.
-    const dueTbl = new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        layout: TableLayoutType.FIXED,
-        alignment: AlignmentType.RIGHT,
-        borders: TableBorders.NONE,
-        rows: [
-            new TableRow({
-                children: [
-                    new TableCell({
-                        borders: totalsNil,
-                        width: { size: 72, type: WidthType.PERCENTAGE },
-                        children: [new Paragraph({
-                            alignment: AlignmentType.RIGHT,
-                            children: [new TextRun({
-                                text: labels.totalDueBy(dueBanner),
-                                bold: true,
-                                color: INV_RED,
-                                size: DOC_SIZE,
-                                font: DOC_FONT,
-                            })],
-                        })],
-                    }),
-                    new TableCell({
-                        borders: totalsNil,
-                        width: { size: 28, type: WidthType.PERCENTAGE },
-                        children: [new Paragraph({
-                            alignment: AlignmentType.RIGHT,
-                            children: [new TextRun({
-                                text: model.totalFormatted,
-                                bold: true,
-                                color: '1E293B',
-                                size: DOC_SIZE,
-                                font: DOC_FONT,
-                            })],
-                        })],
-                    }),
-                ],
-            }),
+            mkTotalRow(labels.totalDueBy(dueBanner), model.totalFormatted, true, totalsNil),
         ],
     });
 
@@ -895,7 +855,6 @@ function legalInvoiceDocxBlocks(
             children: [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
         }),
         totalsTbl,
-        dueTbl,
         new Paragraph({
             spacing: { before: 480, after: 160 },
             alignment: AlignmentType.CENTER,
