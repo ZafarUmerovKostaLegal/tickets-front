@@ -1,0 +1,87 @@
+.acct-card {
+  margin: 1.25rem 0 2rem;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 16px;
+  padding: 1.25rem 1.25rem 0.5rem;
+}
+
+.acct-card__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.acct-card__title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.acct-card__sub {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.875rem;
+}
+
+.acct-card__total {
+  margin: 0;
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
+.acct-card__total strong {
+  font-size: 1.05rem;
+  color: #1e293b;
+}
+
+.acct-card__empty,
+.acct-card__error {
+  margin: 0 0 1rem;
+  color: #64748b;
+}
+
+.acct-card__error {
+  color: #b91c1c;
+}
+
+.acct-card__table-wrap {
+  overflow-x: auto;
+}
+
+.acct-card__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.acct-card__table th,
+.acct-card__table td {
+  text-align: left;
+  padding: 0.7rem 0.5rem;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  vertical-align: top;
+}
+
+.acct-card__table th {
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.75rem;
+}
+
+.acct-card__num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.acct-card__table th:last-child {
+  text-align: right;
+}

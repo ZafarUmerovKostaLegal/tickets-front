@@ -9,10 +9,11 @@ import { LazyInvoicesPanel } from '@features/invoices';
 import { InvoicesSkeleton } from '@pages/time-tracking/ui/InvoicesSkeleton';
 import { getHubSectionDef } from '@pages/home/model/hubSections';
 import { AccountingHrPanel } from './AccountingHrPanel';
+import { AccountingCorporateCardPanel } from './AccountingCorporateCardPanel';
 import '@pages/home/ui/HomeNavTiles.css';
 import './AccountingPage.css';
 
-type AccountingTab = 'overview' | 'invoices' | 'hr';
+type AccountingTab = 'overview' | 'invoices' | 'hr' | 'corporate-card';
 
 const FINANCE_SECTION = getHubSectionDef('finance');
 
@@ -33,11 +34,19 @@ const HUB_TILES = [
         key: 'expenses' as const,
         to: routes.expenses,
         label: 'Расходы',
+        badgeKey: null,
     },
     {
         key: 'reporting' as const,
         to: routes.expensesReport,
         label: 'Отчётность',
+        badgeKey: null,
+    },
+    {
+        key: 'corporate-card' as const,
+        tab: 'corporate-card' as const,
+        label: 'Корпоративная карта',
+        badgeKey: null,
     },
 ];
 
@@ -76,6 +85,14 @@ function TileIcon({ name }: { name: (typeof HUB_TILES)[number]['key'] }) {
             </svg>
         );
     }
+    if (name === 'corporate-card') {
+        return (
+            <svg {...common}>
+                <rect x="3" y="5.5" width="18" height="13" rx="2" />
+                <path d="M3 10h18M7 15h4" />
+            </svg>
+        );
+    }
     return (
         <svg {...common}>
             <path d="M5 19V10M10 19V5M15 19v-6M20 19V8" />
@@ -99,7 +116,7 @@ function OverviewSkeleton() {
                     <div className="acct-skel acct-skel--head" />
                 </div>
                 <ul className="home-nav-tiles__grid" role="list">
-                    {Array.from({ length: 4 }, (_, i) => (
+                    {Array.from({ length: 5 }, (_, i) => (
                         <li key={i} className="home-nav-tiles__item">
                             <div className="acct-skel acct-skel--tile" />
                         </li>
@@ -115,7 +132,7 @@ const ACCOUNTING_TAB_KEY = 'acct-tab';
 function readAccountingTab(): AccountingTab {
     try {
         const saved = window.sessionStorage.getItem(ACCOUNTING_TAB_KEY);
-        if (saved === 'overview' || saved === 'invoices' || saved === 'hr')
+        if (saved === 'overview' || saved === 'invoices' || saved === 'hr' || saved === 'corporate-card')
             return saved;
     }
     catch {
@@ -191,14 +208,22 @@ export function AccountingPage() {
                             <AppHomeLogo withSeparator />
                             <div>
                                 <h1 className="acct-page__title">
-                                    {activeTab === 'invoices' ? 'Инвойсы' : activeTab === 'hr' ? 'HR' : 'Бухгалтерия'}
+                                    {activeTab === 'invoices'
+                                        ? 'Инвойсы'
+                                        : activeTab === 'hr'
+                                            ? 'HR'
+                                            : activeTab === 'corporate-card'
+                                                ? 'Корпоративная карта'
+                                                : 'Бухгалтерия'}
                                 </h1>
                                 <p className="acct-page__subtitle">
                                     {activeTab === 'invoices'
                                         ? 'Счета, выставленные клиентам'
                                         : activeTab === 'hr'
                                             ? 'Сотрудники, роли и должности'
-                                            : 'Обзор, счета и сотрудники. Доступно администраторам и партнёрам'}
+                                            : activeTab === 'corporate-card'
+                                                ? 'Расходы, оплаченные корпоративной картой офиса'
+                                                : 'Обзор, счета и сотрудники. Доступно администраторам и партнёрам'}
                                 </p>
                             </div>
                         </div>
@@ -279,6 +304,8 @@ export function AccountingPage() {
                     ))}
 
                     {activeTab === 'hr' && <AccountingHrPanel />}
+
+                    {activeTab === 'corporate-card' && <AccountingCorporateCardPanel />}
 
                     {activeTab === 'invoices' && (
                         <div className="acct-page__invoices-wrap">
