@@ -175,10 +175,16 @@ export function InvoiceDetailPage() {
       .then(async (inv) => {
         if (cancelled)
           return;
-        setDetail(inv);
         const registry = await loadInvoiceExpenseRegistryUsd(inv.lines);
-        if (!cancelled)
-          setExpenseRegistryUsd(registry);
+        if (cancelled)
+          return;
+        const money = invoiceDisplayMoneyTotals(inv, registry);
+        setExpenseRegistryUsd(registry);
+        setDetail({
+          ...inv,
+          totalAmount: money.totalAmount,
+          balanceDue: money.balanceDue,
+        });
       })
       .catch(() => {
         if (!cancelled)
@@ -211,9 +217,14 @@ export function InvoiceDetailPage() {
 
   const refreshDetail = useCallback(async (id: string) => {
     const inv = await getInvoice(id, true);
-    setDetail(inv);
     const registry = await loadInvoiceExpenseRegistryUsd(inv.lines);
+    const money = invoiceDisplayMoneyTotals(inv, registry);
     setExpenseRegistryUsd(registry);
+    setDetail({
+      ...inv,
+      totalAmount: money.totalAmount,
+      balanceDue: money.balanceDue,
+    });
     notifyReportsInvalidated();
   }, []);
 
@@ -364,13 +375,17 @@ export function InvoiceDetailPage() {
         },
       );
       const client = await getTimeManagerClient(fresh.clientId);
+      const displayTotal = invoiceDisplayMoneyTotals(
+        fresh,
+        await loadInvoiceExpenseRegistryUsd(fresh.lines),
+      ).totalAmount;
       const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({
         issueDateIso: fresh.issueDate.slice(0, 10),
         billingPeriodIso: periodIso ?? fresh.issueDate.slice(0, 10),
         clientName: client.name,
         clientAddress: client.address,
         contactName: client.contact_name ?? null,
-        totalAmount: fresh.totalAmount,
+        totalAmount: displayTotal,
         currency: fresh.currency,
       }), doc?.cover);
       if (doc?.legal?.invoiceNumber?.trim())
@@ -430,13 +445,17 @@ export function InvoiceDetailPage() {
         },
       );
       const client = await getTimeManagerClient(fresh.clientId);
+      const displayTotal = invoiceDisplayMoneyTotals(
+        fresh,
+        await loadInvoiceExpenseRegistryUsd(fresh.lines),
+      ).totalAmount;
       const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({
         issueDateIso: fresh.issueDate.slice(0, 10),
         billingPeriodIso: periodIso ?? fresh.issueDate.slice(0, 10),
         clientName: client.name,
         clientAddress: client.address,
         contactName: client.contact_name ?? null,
-        totalAmount: fresh.totalAmount,
+        totalAmount: displayTotal,
         currency: fresh.currency,
       }), doc?.cover);
       if (doc?.legal?.invoiceNumber?.trim())

@@ -365,13 +365,15 @@ export async function buildExistingInvoicePdfFile(invoiceId: string): Promise<{
       billingPeriodIso: periodIso,
     },
   );
+  const { resolveInvoiceDisplayMoney } = await import('./invoiceExpenseLineDisplay');
+  const displayMoney = await resolveInvoiceDisplayMoney(fresh);
   const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({
     issueDateIso: fresh.issueDate.slice(0, 10),
     billingPeriodIso: periodIso ?? fresh.issueDate.slice(0, 10),
     clientName: client.name,
     clientAddress: client.address,
     contactName: client.contact_name ?? null,
-    totalAmount: fresh.totalAmount,
+    totalAmount: displayMoney.totalAmount,
     currency: fresh.currency,
   }), doc?.cover);
   if (doc?.legal?.invoiceNumber?.trim())

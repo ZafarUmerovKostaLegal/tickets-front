@@ -1,10 +1,24 @@
 import { fetchExpenseById } from '@entities/expenses/model/expensesApi';
 import { lockedExpenseUsdAmount } from '@entities/expenses/model/lockedExpenseUsdAmount';
 import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
-import type { InvoiceLineDto } from '@entities/time-tracking';
-import { invoiceLineKindSlug } from './invoicePageShared';
+import { getInvoice } from '@entities/time-tracking/api/domains/invoices';
+import type { InvoiceDto, InvoiceLineDto } from '@entities/time-tracking';
 
 const missingExpenseIds = new Set<string>();
+
+/** FX / float noise between server total and sum(lines); real tax/discount is larger. */
+const DISPLAY_TOTAL_RESIDUAL_EPS = 0.02;
+
+function lineKindSlug(ln: InvoiceLineDto): string {
+    const k = (ln.lineKind ?? '').toLowerCase().trim();
+    if (k === 'time' || Boolean(ln.timeEntryId))
+        return 'time';
+    if (k === 'expense' || Boolean(ln.expenseRequestId))
+        return 'expense';
+    if (k === 'manual')
+        return 'manual';
+    return 'other';
+}
 
 async function mapWithLimit<T>(items: readonly T[], limit: number, run: (item: T) => Promise<void>): Promise<void> {
     let next = 0;
@@ -19,6 +33,24 @@ async function mapWithLimit<T>(items: readonly T[], limit: number, run: (item: T
 }
 
 /**
+ * Manual billed lines + zeroed time/expense linkage — registry must not re-add
+ * expense USD onto intentionally zeroed expense rows.
+ */
+export function invoiceHasBilledOverrideLines(lines: readonly InvoiceLineDto[] | null | undefined): boolean {
+    const all = lines ?? [];
+    const zeroTimeExpense = all.filter((ln) => {
+        const slug = lineKindSlug(ln);
+        if (slug !== 'time' && slug !== 'expense')
+            return false;
+        return Math.abs(Number(ln.lineTotal) || 0) < 1e-9;
+    });
+    const moneyManual = all.filter((ln) => {
+        return lineKindSlug(ln) === 'manual' && Math.abs(Number(ln.lineTotal) || 0) > 1e-9;
+    });
+    return moneyManual.length > 0 && zeroTimeExpense.length > 0;
+}
+
+/**
  * Load registry USD for invoice expense lines (by expenseRequestId).
  * Used so «Строки счёта» match the expenses list, not invoice issue-date FX.
  */
@@ -28,7 +60,7 @@ export async function loadInvoiceExpenseRegistryUsd(
     const out = new Map<string, number>();
     const ids = [...new Set(
         (lines ?? [])
-            .filter((ln) => invoiceLineKindSlug(ln) === 'expense')
+            .filter((ln) => lineKindSlug(ln) === 'expense')
             .map((ln) => (ln.expenseRequestId ?? '').trim())
             .filter((id) => id && !missingExpenseIds.has(id)),
     )];
@@ -50,6 +82,7 @@ export function invoiceExpenseLineDisplayAmounts(
     ln: InvoiceLineDto,
     invoiceCurrency: string,
     registryUsdByExpenseId: ReadonlyMap<string, number>,
+    opts?: { skipRegistryForZeroExpense?: boolean },
 ): { unitAmount: number; lineTotal: number } {
     const cur = (invoiceCurrency || '').trim().toUpperCase();
     const qty = Number(ln.quantity);
@@ -59,7 +92,10 @@ export function invoiceExpenseLineDisplayAmounts(
     const fallbackUnit = Number.isFinite(unit) ? unit : 0;
     const fallbackTotal = Number.isFinite(total) ? total : roundMoney2(fallbackUnit * q);
 
-    if (cur !== 'USD' || invoiceLineKindSlug(ln) !== 'expense')
+    if (cur !== 'USD' || lineKindSlug(ln) !== 'expense')
+        return { unitAmount: fallbackUnit, lineTotal: fallbackTotal };
+
+    if (opts?.skipRegistryForZeroExpense && Math.abs(fallbackTotal) < 1e-9)
         return { unitAmount: fallbackUnit, lineTotal: fallbackTotal };
 
     const rid = (ln.expenseRequestId ?? '').trim();
@@ -75,7 +111,7 @@ export function invoiceExpenseLineDisplayAmounts(
 
 /**
  * KPI totals: rebuild from displayed line amounts so «Сумма» and «Остаток» never drift.
- * Expense lines use registry USD when available; residual keeps tax/discount from server total.
+ * Expense lines use registry USD when available; residual keeps real tax/discount only.
  */
 export function invoiceDisplayMoneyTotals(
     invoice: {
@@ -91,6 +127,7 @@ export function invoiceDisplayMoneyTotals(
     const paid = Number(invoice.amountPaid);
     const paidSafe = Number.isFinite(paid) ? paid : 0;
     const lines = invoice.lines ?? [];
+    const skipRegistryForZeroExpense = invoiceHasBilledOverrideLines(lines);
 
     let storedLinesSum = 0;
     let displayLinesSum = 0;
@@ -102,6 +139,7 @@ export function invoiceDisplayMoneyTotals(
             ln,
             invoice.currency,
             registryUsdByExpenseId,
+            { skipRegistryForZeroExpense },
         ).lineTotal;
     }
     storedLinesSum = roundMoney2(storedLinesSum);
@@ -110,8 +148,10 @@ export function invoiceDisplayMoneyTotals(
     let totalAmount: number;
     if (Number.isFinite(base) && lines.length > 0) {
         // Preserve tax/discount (total − sum of stored lines), apply display line amounts.
+        // Drop sub-cent / FX noise so server 596.61 with lines 596.60 becomes 596.60.
         const residual = roundMoney2(base - storedLinesSum);
-        totalAmount = roundMoney2(displayLinesSum + residual);
+        const residualSafe = Math.abs(residual) <= DISPLAY_TOTAL_RESIDUAL_EPS ? 0 : residual;
+        totalAmount = roundMoney2(displayLinesSum + residualSafe);
     }
     else if (Number.isFinite(base)) {
         totalAmount = roundMoney2(base);
@@ -128,4 +168,73 @@ export function invoiceDisplayMoneyTotals(
 
     const balanceDue = roundMoney2(Math.max(0, totalAmount - paidSafe));
     return { totalAmount, balanceDue };
+}
+
+/** Apply registry-based display totals onto an invoice DTO (list / PDF / cover). */
+export function withInvoiceDisplayMoney(
+    invoice: InvoiceDto,
+    registryUsdByExpenseId: ReadonlyMap<string, number>,
+): InvoiceDto {
+    const money = invoiceDisplayMoneyTotals(invoice, registryUsdByExpenseId);
+    if (
+        money.totalAmount === invoice.totalAmount
+        && money.balanceDue === invoice.balanceDue
+    ) {
+        return invoice;
+    }
+    return {
+        ...invoice,
+        totalAmount: money.totalAmount,
+        balanceDue: money.balanceDue,
+    };
+}
+
+export async function resolveInvoiceDisplayMoney(
+    invoice: InvoiceDto,
+): Promise<{ totalAmount: number; balanceDue: number }> {
+    const registry = await loadInvoiceExpenseRegistryUsd(invoice.lines);
+    return invoiceDisplayMoneyTotals(invoice, registry);
+}
+
+/**
+ * Correct list/detail money for USD invoices using lines + expense registry.
+ * Fetches full invoice when the list row has no lines.
+ */
+export async function enrichInvoiceWithDisplayMoney(invoice: InvoiceDto): Promise<InvoiceDto> {
+    const cur = (invoice.currency || '').trim().toUpperCase();
+    if (cur !== 'USD')
+        return invoice;
+
+    let inv = invoice;
+    if (!(inv.lines?.length)) {
+        try {
+            inv = await getInvoice(inv.id, false);
+        }
+        catch {
+            return invoice;
+        }
+    }
+
+    const registry = await loadInvoiceExpenseRegistryUsd(inv.lines);
+    const money = invoiceDisplayMoneyTotals(inv, registry);
+    return {
+        ...invoice,
+        lines: inv.lines ?? invoice.lines,
+        totalAmount: money.totalAmount,
+        balanceDue: money.balanceDue,
+        amountPaid: inv.amountPaid ?? invoice.amountPaid,
+    };
+}
+
+export async function enrichInvoicesWithDisplayMoney(
+    invoices: readonly InvoiceDto[],
+    signal?: AbortSignal,
+): Promise<InvoiceDto[]> {
+    const out = invoices.slice();
+    await mapWithLimit(out.map((_, i) => i), 4, async (i) => {
+        if (signal?.aborted)
+            return;
+        out[i] = await enrichInvoiceWithDisplayMoney(out[i]!);
+    });
+    return out;
 }

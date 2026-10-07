@@ -95,4 +95,17 @@ describe('buildInvoiceDocumentOverridesPayload', () => {
         const applied = applyCoverDocumentOverrides(cover, { totalFormatted: 'EUR 0.00' });
         expect(applied.totalFormatted).toBe(cover.totalFormatted);
     });
+
+    it('keeps computed total when saved cover differs by FX cents', () => {
+        const cover = buildInvoiceCoverLetterModel({
+            issueDateIso: '2026-09-08',
+            clientName: 'GBI',
+            clientAddress: null,
+            contactName: null,
+            totalAmount: 596.6,
+            currency: 'USD',
+        });
+        const applied = applyCoverDocumentOverrides(cover, { totalFormatted: 'USD 596.61' });
+        expect(applied.totalFormatted).toBe(cover.totalFormatted);
+    });
 });

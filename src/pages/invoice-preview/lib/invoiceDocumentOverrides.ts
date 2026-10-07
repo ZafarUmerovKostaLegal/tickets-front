@@ -207,7 +207,18 @@ export function applyCoverDocumentOverrides(
         const overrideZero = /(?:^|\s)0(?:[.,]00)?$/.test(override.replace(/^[A-Z]{3}\s+/i, '').trim())
             || /(?:^|\s)0[.,]00$/.test(override);
         const currentHasMoney = current.length > 0 && !/(?:^|\s)0[.,]00$/.test(current);
-        if (!(overrideZero && currentHasMoney))
+        const parseAmt = (raw: string): number | null => {
+            const m = raw.replace(/^[−-]?[A-Z]{3}\s+/i, '').replace(/,/g, '').trim();
+            const n = Number(m);
+            return Number.isFinite(n) ? n : null;
+        };
+        const overrideAmt = parseAmt(override);
+        const currentAmt = parseAmt(current);
+        // Keep freshly computed total when saved cover only differs by FX/float cents.
+        const fxCentDrift = overrideAmt != null && currentAmt != null
+            && Math.abs(overrideAmt - currentAmt) > 0
+            && Math.abs(overrideAmt - currentAmt) <= 0.02;
+        if (!(overrideZero && currentHasMoney) && !fxCentDrift)
             next.totalFormatted = cover.totalFormatted;
     }
     if (typeof cover.signatoryName === 'string')

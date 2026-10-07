@@ -97,4 +97,60 @@ describe('invoiceDisplayMoneyTotals', () => {
         expect(totals.totalAmount).toBe(596.6);
         expect(totals.balanceDue).toBe(596.6);
     });
+
+    it('drops FX residual when server total is 0.01 above sum of lines', () => {
+        const totals = invoiceDisplayMoneyTotals(
+            {
+                totalAmount: 596.61,
+                amountPaid: 0,
+                balanceDue: 596.61,
+                currency: 'USD',
+                lines: [
+                    line({ id: 't1', lineKind: 'time', unitAmount: 150, lineTotal: 591.6, expenseRequestId: null }),
+                    line({ id: 'e1', unitAmount: 5, lineTotal: 5 }),
+                ],
+            },
+            new Map(),
+        );
+        expect(totals.totalAmount).toBe(596.6);
+        expect(totals.balanceDue).toBe(596.6);
+    });
+
+    it('keeps real tax residual above FX noise', () => {
+        const totals = invoiceDisplayMoneyTotals(
+            {
+                totalAmount: 656.26,
+                amountPaid: 0,
+                balanceDue: 656.26,
+                currency: 'USD',
+                lines: [
+                    line({ id: 't1', lineKind: 'time', unitAmount: 150, lineTotal: 591.6, expenseRequestId: null }),
+                    line({ id: 'e1', unitAmount: 5, lineTotal: 5 }),
+                ],
+            },
+            new Map(),
+        );
+        expect(totals.totalAmount).toBe(656.26);
+        expect(totals.balanceDue).toBe(656.26);
+    });
+
+    it('does not re-add registry USD onto zeroed expense rows in billed override', () => {
+        const map = new Map([['e1', 5]]);
+        const totals = invoiceDisplayMoneyTotals(
+            {
+                totalAmount: 596.6,
+                amountPaid: 0,
+                balanceDue: 596.6,
+                currency: 'USD',
+                lines: [
+                    line({ id: 'm1', lineKind: 'manual', unitAmount: 596.6, lineTotal: 596.6, expenseRequestId: null }),
+                    line({ id: 't1', lineKind: 'time', unitAmount: 0, lineTotal: 0, expenseRequestId: null }),
+                    line({ id: 'e1', unitAmount: 0, lineTotal: 0 }),
+                ],
+            },
+            map,
+        );
+        expect(totals.totalAmount).toBe(596.6);
+        expect(totals.balanceDue).toBe(596.6);
+    });
 });

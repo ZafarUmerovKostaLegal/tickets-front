@@ -29,6 +29,7 @@ import {
 import { isActiveTimeManagerClientRow, isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
 import { TIME_TRACKING_LIST_PAGE_SIZE } from '@entities/time-tracking/model/timeTrackingListPageSize';
 import { fmtMoney, fmtDisplayDate, notifyReportsInvalidated } from '../lib/invoicePageShared';
+import { enrichInvoicesWithDisplayMoney } from '../lib/invoiceExpenseLineDisplay';
 import { InvoiceRegistryPanel } from './InvoiceRegistryPanel';
 import { InvoiceRegistryStatisticsPanel } from './InvoiceRegistryStatisticsPanel';
 
@@ -194,7 +195,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       includeTotalCount: true,
       ...billingGate,
     }, signal)
-      .then((r) => {
+      .then(async (r) => {
         if (signal?.aborted)
           return;
         let rows = r.items;
@@ -203,6 +204,12 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
         setItems(rows);
         setPartnerListBlocked(r.partnerConfirmationBlocked === true);
         setInvoiceListTotalCount(typeof r.totalCount === 'number' ? r.totalCount : null);
+        if (!silent && !signal?.aborted)
+          setListLoading(false);
+        // Align USD list Сумма/Остаток with expense registry (not issue-date FX).
+        const enriched = await enrichInvoicesWithDisplayMoney(rows, signal);
+        if (!signal?.aborted)
+          setItems(enriched);
       })
       .catch((e: unknown) => {
         if (signal?.aborted)

@@ -150,6 +150,8 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
             }
             if (!/^\d{4}-\d{2}-\d{2}$/.test(billingPeriodIso))
                 billingPeriodIso = issueIso;
+            const { resolveInvoiceDisplayMoney } = await import('@pages/time-tracking/lib/invoiceExpenseLineDisplay');
+            const displayMoney = await resolveInvoiceDisplayMoney(inv);
             const model = buildInvoiceCoverLetterModel({
                 issueDateIso: issueIso,
                 billingPeriodIso,
@@ -157,7 +159,7 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
                 clientName: client.name,
                 clientAddress: client.address,
                 contactName: client.contact_name ?? null,
-                totalAmount: inv.totalAmount,
+                totalAmount: displayMoney.totalAmount,
                 currency: inv.currency,
                 coverLanguage,
             });
