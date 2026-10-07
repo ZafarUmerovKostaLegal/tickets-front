@@ -1,5 +1,9 @@
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
-import { formatCoverServicesPeriod } from './invoiceCoverLetterI18n';
+import {
+    formatCoverServicesPeriod,
+    parseCoverLetterMoneyAmount,
+    syncStaleCoverTotalInText,
+} from './invoiceCoverLetterI18n';
 import { formatLegalRibbonPeriodMonth } from './invoiceLegalPageI18n';
 import type { InvoiceLegalPageOverrides } from './invoiceLegalPageModel';
 import type { CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
@@ -207,13 +211,8 @@ export function applyCoverDocumentOverrides(
         const overrideZero = /(?:^|\s)0(?:[.,]00)?$/.test(override.replace(/^[A-Z]{3}\s+/i, '').trim())
             || /(?:^|\s)0[.,]00$/.test(override);
         const currentHasMoney = current.length > 0 && !/(?:^|\s)0[.,]00$/.test(current);
-        const parseAmt = (raw: string): number | null => {
-            const m = raw.replace(/^[−-]?[A-Z]{3}\s+/i, '').replace(/,/g, '').trim();
-            const n = Number(m);
-            return Number.isFinite(n) ? n : null;
-        };
-        const overrideAmt = parseAmt(override);
-        const currentAmt = parseAmt(current);
+        const overrideAmt = parseCoverLetterMoneyAmount(override);
+        const currentAmt = parseCoverLetterMoneyAmount(current);
         // Keep freshly computed total when saved cover only differs by FX/float cents.
         const fxCentDrift = overrideAmt != null && currentAmt != null
             && Math.abs(overrideAmt - currentAmt) > 0
@@ -229,8 +228,12 @@ export function applyCoverDocumentOverrides(
         next.signatoryTitle = cover.signatoryTitle;
     if (cover.introParagraphOverride !== undefined)
         next.introParagraphOverride = cover.introParagraphOverride;
-    if (cover.invoiceParagraphOverride !== undefined)
-        next.invoiceParagraphOverride = cover.invoiceParagraphOverride;
+    if (cover.invoiceParagraphOverride !== undefined) {
+        const para = cover.invoiceParagraphOverride;
+        next.invoiceParagraphOverride = typeof para === 'string'
+            ? syncStaleCoverTotalInText(para, next.totalFormatted)
+            : para;
+    }
     return next;
 }
 

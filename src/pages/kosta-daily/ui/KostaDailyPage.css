@@ -319,6 +319,55 @@ body[data-theme='dark'] .kd-tg {
 
 .kd-tg__members-status--error {
   color: #dc2626;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding: 0.65rem 0.75rem;
+  text-align: left;
+}
+
+.kd-tg__members-status--error p {
+  margin: 0;
+}
+
+.kd-tg__retry-btn {
+  align-self: flex-start;
+  border: 1px solid #fecaca;
+  background: #fff;
+  color: #b91c1c;
+  border-radius: 0.4rem;
+  padding: 0.35rem 0.7rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.kd-tg__retry-btn:hover:not(:disabled) {
+  background: #fef2f2;
+}
+
+.kd-tg__retry-btn:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+.kd-tg__chat-pane-error--full {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem;
+  text-align: center;
+  background: transparent;
+}
+
+.kd-tg__chat-pane-error--full p {
+  margin: 0;
+  max-width: 28rem;
 }
 
 .kd-tg__members-list {

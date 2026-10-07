@@ -166,6 +166,45 @@ export function formatCoverServicesPeriodRange(
     return joinWithAnd(points.map((p) => `${EN_MONTHS[p.month] ?? 'Month'} ${p.year}`), 'and');
 }
 
+/** Parse "USD 596.61" / "EUR 3,250.50" from cover letter money text. */
+export function parseCoverLetterMoneyAmount(raw: string): number | null {
+    const s = String(raw ?? '').trim();
+    if (!s)
+        return null;
+    const m = s.replace(/^[−-]?[A-Z]{3}\s+/i, '').replace(/,/g, '').trim();
+    const n = Number(m);
+    return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Saved cover paragraphs often embed the invoice total at issue time.
+ * When the live total only differs by FX/float cents, rewrite those amounts.
+ */
+export function syncStaleCoverTotalInText(text: string, correctTotalFormatted: string): string {
+    const correctRaw = String(correctTotalFormatted ?? '').trim();
+    const correctAmt = parseCoverLetterMoneyAmount(correctRaw);
+    if (!text || correctAmt == null)
+        return text;
+    const correctCur = (correctRaw.split(/\s+/)[0] ?? '').toUpperCase();
+    if (!/^[A-Z]{3}$/.test(correctCur))
+        return text;
+
+    return text.replace(
+        /\b([A-Z]{3})\s+(\d{1,3}(?:,\d{3})*(?:\.\d{2})|\d+\.\d{2})\b/g,
+        (match, cur: string, _num: string) => {
+            if (cur.toUpperCase() !== correctCur)
+                return match;
+            const amt = parseCoverLetterMoneyAmount(match);
+            if (amt == null)
+                return match;
+            const drift = Math.abs(amt - correctAmt);
+            if (drift > 0 && drift <= 0.02)
+                return correctRaw;
+            return match;
+        },
+    );
+}
+
 export function resolveLocalizedCoverIntroParagraph(model: InvoiceCoverLetterModel): string {
     const custom = model.introParagraphOverride?.trim();
     if (custom)
@@ -180,7 +219,7 @@ export function resolveLocalizedCoverIntroParagraph(model: InvoiceCoverLetterMod
 export function resolveLocalizedCoverInvoiceParagraph(model: InvoiceCoverLetterModel): string {
     const custom = model.invoiceParagraphOverride?.trim();
     if (custom)
-        return custom;
+        return syncStaleCoverTotalInText(custom, model.totalFormatted);
     const lang = normalizeCoverLanguage(model.coverLanguage);
     if (lang === 'RU') {
         return `Настоящим направляем отчёт и/или счёт за юридические услуги, оказанные в ${model.servicesMonthYear}, на общую сумму ${model.totalFormatted}.`;

@@ -7,6 +7,7 @@ import {
     formatCoverServicesPeriodRange,
     resolveLocalizedCoverIntroParagraph,
     resolveLocalizedCoverInvoiceParagraph,
+    syncStaleCoverTotalInText,
 } from './invoiceCoverLetterI18n';
 
 describe('invoiceCoverLetterI18n', () => {
@@ -75,5 +76,24 @@ describe('invoiceCoverLetterI18n', () => {
             coverLanguage: 'ENG',
         }).servicesMonthYear).toBe('July and August 2026');
         expect(resolveLocalizedCoverIntroParagraph(ru)).toMatch(/юридическую помощь/i);
+    });
+
+    it('rewrites FX-cent total inside a saved invoice paragraph override', () => {
+        const model = buildInvoiceCoverLetterModel({
+            issueDateIso: '2026-10-07',
+            clientName: 'ALLIED GREEN AMMONIA',
+            clientAddress: null,
+            contactName: 'Mr. Alfred Benedict',
+            totalAmount: 596.6,
+            currency: 'USD',
+            coverLanguage: 'ENG',
+        });
+        model.invoiceParagraphOverride = 'Herewith, we are sending the report with the invoice on legal services rendered in September 2026 for the total amount of USD 596.61.';
+        expect(resolveLocalizedCoverInvoiceParagraph(model)).toContain('USD 596.60');
+        expect(resolveLocalizedCoverInvoiceParagraph(model)).not.toContain('USD 596.61');
+        expect(syncStaleCoverTotalInText(
+            'на общую сумму USD 596.61.',
+            'USD 596.60',
+        )).toBe('на общую сумму USD 596.60.');
     });
 });

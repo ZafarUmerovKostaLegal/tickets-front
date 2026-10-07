@@ -130,24 +130,39 @@ export function useKostaDailyChat(
 
     useEffect(() => {
         let cancelled = false;
-        setRoomsLoading(true);
-        setRoomsError(null);
-        void refreshRooms()
-            .then((list) => {
-                if (cancelled || list.length === 0)
-                    return;
-                setActiveRoomId((prev) => {
-                    if (prev != null && list.some((r) => r.id === prev))
-                        return prev;
-                    const company = list.find((r) => r.is_company_channel);
-                    return company?.id ?? list[0].id;
-                });
-            })
-            .catch(() => { })
-            .finally(() => {
-                if (!cancelled)
-                    setRoomsLoading(false);
-            });
+        let attempt = 0;
+        const maxAttempts = 3;
+
+        const load = async () => {
+            setRoomsLoading(true);
+            setRoomsError(null);
+            while (!cancelled && attempt < maxAttempts) {
+                attempt += 1;
+                try {
+                    const list = await refreshRooms();
+                    if (cancelled)
+                        return;
+                    if (list.length > 0) {
+                        setActiveRoomId((prev) => {
+                            if (prev != null && list.some((r) => r.id === prev))
+                                return prev;
+                            const company = list.find((r) => r.is_company_channel);
+                            return company?.id ?? list[0]!.id;
+                        });
+                    }
+                    break;
+                }
+                catch {
+                    if (cancelled || attempt >= maxAttempts)
+                        break;
+                    await new Promise((r) => setTimeout(r, 800 * attempt));
+                }
+            }
+            if (!cancelled)
+                setRoomsLoading(false);
+        };
+
+        void load();
         return () => {
             cancelled = true;
         };

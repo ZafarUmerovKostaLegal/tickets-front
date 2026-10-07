@@ -235,13 +235,22 @@ function parseRoom(raw: Record<string, unknown>): ChatRoom {
     };
 }
 
+function localizeChatServiceError(detail: string, hint?: string): string {
+    const d = detail.trim();
+    if (/chat service unavailable|chat unreachable from gateway|CHAT_SERVICE_URL not configured/i.test(d)) {
+        return hint?.trim()
+            || 'Сервис чата временно недоступен. Попробуйте обновить список через минуту.';
+    }
+    return d;
+}
+
 async function parseHttpError(status: number, text: string): Promise<Error> {
     let msg = `Ошибка ${status}`;
     if (text) {
         try {
-            const j = JSON.parse(text) as { detail?: string };
+            const j = JSON.parse(text) as { detail?: string; hint?: string };
             if (typeof j.detail === 'string')
-                msg = j.detail;
+                msg = localizeChatServiceError(j.detail, typeof j.hint === 'string' ? j.hint : undefined);
         }
         catch {
             msg = text.slice(0, 500);

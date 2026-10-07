@@ -142,6 +142,7 @@ export function KostaDailyPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [mobileShowChat, setMobileShowChat] = useState(false);
+  const [roomsRetrying, setRoomsRetrying] = useState(false);
   const [draft, setDraft] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerTab, setPickerTab] = useState<ComposerPickerTab>('emoji');
@@ -214,6 +215,23 @@ export function KostaDailyPage() {
   } = useKostaDailyChat(user?.id, employees);
 
   const { showConfirm } = useAppDialog();
+
+  const handleRetryRooms = useCallback(() => {
+    if (roomsRetrying || roomsLoading)
+      return;
+    setRoomsRetrying(true);
+    void refreshRooms()
+      .then((list) => {
+        if (list.length === 0)
+          return;
+        const company = list.find((r) => r.is_company_channel);
+        const first = company ?? list[0];
+        if (first)
+          selectRoom(first.id);
+      })
+      .catch(() => { })
+      .finally(() => setRoomsRetrying(false));
+  }, [refreshRooms, roomsLoading, roomsRetrying, selectRoom]);
 
   const activeChatId = activeRoomId != null ? String(activeRoomId) : '';
   const unreadTotal = useMemo(
@@ -986,7 +1004,17 @@ export function KostaDailyPage() {
           ) : null}
 
           {roomsError && sidebarView === 'chats' && (
-            <p className="kd-tg__members-status kd-tg__members-status--error" role="alert">{roomsError}</p>
+            <div className="kd-tg__members-status kd-tg__members-status--error" role="alert">
+              <p>{roomsError}</p>
+              <button
+                type="button"
+                className="kd-tg__retry-btn"
+                disabled={roomsRetrying || roomsLoading}
+                onClick={handleRetryRooms}
+              >
+                {roomsRetrying || roomsLoading ? 'Загрузка…' : 'Повторить'}
+              </button>
+            </div>
           )}
           {sidebarBusy ? (
             sidebarView === 'chats' ? <KostaDailyChatListSkeleton /> : <KostaDailyMembersSkeleton />
@@ -1015,7 +1043,19 @@ export function KostaDailyPage() {
           className={`kd-tg__chat-pane${mobileShowChat ? ' kd-tg__chat-pane--visible-mobile' : ''}`}
           aria-label={activeChat.title}
         >
-          {initialPaneLoading || activeRoomId == null ? (
+          {roomsError && activeRoomId == null ? (
+            <div className="kd-tg__chat-pane-error kd-tg__chat-pane-error--full" role="alert">
+              <p>{roomsError}</p>
+              <button
+                type="button"
+                className="kd-tg__retry-btn"
+                disabled={roomsRetrying || roomsLoading}
+                onClick={handleRetryRooms}
+              >
+                {roomsRetrying || roomsLoading ? 'Загрузка…' : 'Повторить'}
+              </button>
+            </div>
+          ) : initialPaneLoading || activeRoomId == null ? (
             <KostaDailyChatPaneSkeleton />
           ) : (<>
             <header className={`kd-tg__chat-head${chatSearchOpen ? ' kd-tg__chat-head--search' : ''}`}>
