@@ -154,8 +154,72 @@ export function parseTimeReportAmountDisplay(raw: string): number {
     return neg ? -n : n;
 }
 
+function hoursShownOnLine(raw: string): number {
+    return roundTimeReportHours2(parseTimeReportHoursDisplay(raw));
+}
+
+function withLineHoursRounded(row: InvoiceTimeReportDetailRow): InvoiceTimeReportDetailRow {
+    if (!String(row.hours ?? '').trim())
+        return row;
+    const next = formatTimeReportHours(hoursShownOnLine(row.hours));
+    return next === row.hours ? row : { ...row, hours: next };
+}
+
 function sumDetailHours(rows: readonly InvoiceTimeReportDetailRow[]): number {
-    return rows.reduce((s, r) => s + parseTimeReportHoursDisplay(r.hours), 0);
+    return roundTimeReportHours2(rows.reduce((s, r) => s + hoursShownOnLine(r.hours), 0));
+}
+
+/**
+ * Line hours, the person row and both totals must use the same 2-decimal hours.
+ * Raw 0,083 + 0,084 is 0,17, while each line shows 0,08 and 0,08 + 0,08 = 0,16.
+ */
+function alignHoursToDisplayedLines(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
+    const detailSlots = pack.detailSlots.map(withLineHoursRounded);
+    const mehnatSlots = (pack.mehnatSlots ?? []).map(withLineHoursRounded);
+    const details = trimTrailingEmptyDetailSlots(detailSlots);
+    const mehnat = trimTrailingEmptyDetailSlots(mehnatSlots);
+    const byInitials = new Map<string, number>();
+    for (const row of details) {
+        const key = row.initials.trim().toUpperCase();
+        if (!key)
+            continue;
+        byInitials.set(key, roundTimeReportHours2((byInitials.get(key) ?? 0) + hoursShownOnLine(row.hours)));
+    }
+    const summarySlots = pack.summarySlots.map((row) => {
+        if (summaryRowIsEmpty(row))
+            return row;
+        const key = row.initials.trim().toUpperCase();
+        if (!key || key === '—' || key === '-')
+            return row;
+        const hours = byInitials.get(key);
+        if (hours == null)
+            return row;
+        const next = formatTimeReportHours(hours);
+        return next === row.hours ? row : { ...row, hours: next };
+    });
+    const detailTotal = formatTimeReportHours(sumDetailHours(details));
+    const mehnatTotal = mehnat.length ? formatTimeReportHours(sumDetailHours(mehnat)) : (pack.mehnatTotalHoursDisplay ?? '');
+    const grandTotal = detailTotal;
+    const slotsSame = detailSlots.every((row, i) => row === pack.detailSlots[i])
+        && mehnatSlots.every((row, i) => row === (pack.mehnatSlots ?? [])[i]);
+    if (
+        slotsSame
+        && detailTotal === pack.detailTotalHoursDisplay
+        && mehnatTotal === (pack.mehnatTotalHoursDisplay ?? '')
+        && grandTotal === pack.summaryGrandHoursDisplay
+        && summarySlots.every((row, i) => row === pack.summarySlots[i])
+    ) {
+        return pack;
+    }
+    return {
+        ...pack,
+        detailSlots,
+        mehnatSlots,
+        summarySlots,
+        detailTotalHoursDisplay: details.length ? detailTotal : pack.detailTotalHoursDisplay,
+        mehnatTotalHoursDisplay: mehnatTotal,
+        summaryGrandHoursDisplay: details.length ? grandTotal : pack.summaryGrandHoursDisplay,
+    };
 }
 
 function sumDetailAmounts(rows: readonly InvoiceTimeReportDetailRow[]): number {
@@ -173,26 +237,26 @@ export function ensureMehnatSeparatedPack(pack: InvoiceTimeReportPack): InvoiceT
     if (fromDetails.length === 0) {
         if (already.length === 0) {
             if (pack.mehnatSlots != null)
-                return pack;
-            return {
+                return alignHoursToDisplayedLines(pack);
+            return alignHoursToDisplayedLines({
                 ...pack,
                 mehnatSlots: [],
                 mehnatTotalHoursDisplay: pack.mehnatTotalHoursDisplay ?? '',
                 mehnatTotalAmountDisplay: pack.mehnatTotalAmountDisplay ?? '',
-            };
+            });
         }
         if ((pack.mehnatTotalHoursDisplay ?? '').trim() && (pack.mehnatTotalAmountDisplay ?? '').trim())
-            return pack;
-        return {
+            return alignHoursToDisplayedLines(pack);
+        return alignHoursToDisplayedLines({
             ...pack,
             mehnatSlots: already,
             mehnatTotalHoursDisplay: formatTimeReportHours(sumDetailHours(already)),
             mehnatTotalAmountDisplay: formatTimeReportAmount(sumDetailAmounts(already), cur),
-        };
+        });
     }
 
     const mehnat = [...already, ...fromDetails];
-    return {
+    return alignHoursToDisplayedLines({
         ...pack,
         detailSlots: regular.length ? finalizeDetailSlots(regular) : [],
         detailTotalHoursDisplay: formatTimeReportHours(sumDetailHours(regular)),
@@ -200,7 +264,7 @@ export function ensureMehnatSeparatedPack(pack: InvoiceTimeReportPack): InvoiceT
         mehnatSlots: finalizeDetailSlots(mehnat),
         mehnatTotalHoursDisplay: formatTimeReportHours(sumDetailHours(mehnat)),
         mehnatTotalAmountDisplay: formatTimeReportAmount(sumDetailAmounts(mehnat), cur),
-    };
+    });
 }
 
 export function finalizeDetailSlots(rows: InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {
