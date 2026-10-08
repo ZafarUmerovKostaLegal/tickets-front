@@ -71,9 +71,28 @@
 }
 
 .acct-card__table th {
-  color: #64748b;
-  font-weight: 600;
+  color: #0f172a;
+  font-weight: 700;
   font-size: 0.75rem;
+  background: #b7f7c8;
+  border-top: none;
+}
+
+.acct-card__table--rules {
+  margin-bottom: 1.25rem;
+}
+
+.acct-card__table--rules tbody tr,
+.acct-card__expense {
+  cursor: pointer;
+}
+
+.acct-card__table tbody tr.is-active td {
+  background: rgba(183, 247, 200, 0.45);
+}
+
+.acct-card__expense:hover td {
+  background: rgba(15, 23, 42, 0.03);
 }
 
 .acct-card__num {
@@ -82,6 +101,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.acct-card__table th:last-child {
+.acct-card__table:not(.acct-card__table--rules) th:last-child {
   text-align: right;
 }
