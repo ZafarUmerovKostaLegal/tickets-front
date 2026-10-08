@@ -52,8 +52,59 @@
   color: #b91c1c;
 }
 
+.acct-card__filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.65rem 0.75rem;
+  margin-bottom: 1rem;
+  align-items: end;
+}
+
+.acct-card__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.acct-card__field--search {
+  grid-column: span 2;
+}
+
+.acct-card__field input,
+.acct-card__field select {
+  height: 36px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 8px;
+  padding: 0 0.6rem;
+  font: inherit;
+  font-size: 0.875rem;
+  color: #0f172a;
+  background: #fff;
+}
+
+.acct-card__reset {
+  height: 36px;
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.acct-card__reset:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
 .acct-card__table-wrap {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: min(70vh, 720px);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
 }
 
 .acct-card__table {
@@ -71,11 +122,19 @@
 }
 
 .acct-card__table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   color: #0f172a;
   font-weight: 700;
   font-size: 0.75rem;
   background: #b7f7c8;
   border-top: none;
+  white-space: nowrap;
+}
+
+.acct-card__table tbody tr:nth-child(even) td {
+  background: rgba(15, 23, 42, 0.025);
 }
 
 .acct-card__table--rules {

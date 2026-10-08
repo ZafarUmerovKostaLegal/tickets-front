@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { PAYMENT_META, STATUS_META } from '@entities/expenses/model/constants';
 import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expensesApi';
-import type { ExpenseRequest } from '@entities/expenses/model/types';
+import type { ExpenseRequest, ExpenseStatus, PaymentMethod } from '@entities/expenses/model/types';
 import { useCurrentUser } from '@shared/hooks';
 import './AccountingCorporateCardPanel.css';
 
@@ -100,6 +101,13 @@ export function AccountingCorporateCardPanel() {
     const [rows, setRows] = useState<ExpenseRequest[] | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [cardId, setCardId] = useState(ALL_CARDS);
+    const [query, setQuery] = useState('');
+    const [kind, setKind] = useState('');
+    const [status, setStatus] = useState('');
+    const [payment, setPayment] = useState('');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const [sort, setSort] = useState<'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc'>('date_desc');
     const [open, setOpen] = useState<ExpenseRequest | null>(null);
     const [panelMounted, setPanelMounted] = useState(false);
 
@@ -126,10 +134,53 @@ export function AccountingCorporateCardPanel() {
         };
     }, []);
 
-    const visible = useMemo(
-        () => (rows ?? []).filter((row) => belongsToCard(row, cardId)),
-        [rows, cardId],
-    );
+    const kindOptions = useMemo(() => {
+        const values = new Set<string>();
+        for (const rule of CARD_RULES) {
+            if (rule.kind)
+                values.add(rule.kind);
+        }
+        values.add('расход партнера');
+        return [...values];
+    }, []);
+
+    const visible = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        const list = (rows ?? []).filter((row) => {
+            if (!belongsToCard(row, cardId))
+                return false;
+            const rowKind = expenseKind(row);
+            if (kind === '__none' ? rowKind !== '' : kind && rowKind !== kind)
+                return false;
+            if (status && row.status !== status)
+                return false;
+            if (payment && (row.paymentMethod ?? '') !== payment)
+                return false;
+            const day = (row.expenseDate ?? '').slice(0, 10);
+            if (dateFrom && day < dateFrom)
+                return false;
+            if (dateTo && day > dateTo)
+                return false;
+            if (!q)
+                return true;
+            const blob = [cardOwner(row), expenseKind(row), expenseDescription(row), personName(row), row.vendor, row.comment]
+                .filter(Boolean)
+                .join(' ')
+                .toLowerCase();
+            return blob.includes(q);
+        });
+        list.sort((a, b) => {
+            if (sort === 'amount_desc' || sort === 'amount_asc') {
+                const diff = (Number(a.amountUzs) || 0) - (Number(b.amountUzs) || 0);
+                return sort === 'amount_asc' ? diff : -diff;
+            }
+            const diff = (a.expenseDate ?? '').localeCompare(b.expenseDate ?? '');
+            return sort === 'date_asc' ? diff : -diff;
+        });
+        return list;
+    }, [rows, cardId, query, kind, status, payment, dateFrom, dateTo, sort]);
+
+    const filtersOn = Boolean(query || kind || status || payment || dateFrom || dateTo || cardId !== ALL_CARDS || sort !== 'date_desc');
     const totalUzs = visible.reduce((sum, row) => sum + (Number(row.amountUzs) || 0), 0);
 
     const openExpense = (row: ExpenseRequest) => {
@@ -155,37 +206,82 @@ export function AccountingCorporateCardPanel() {
                 ) : null}
             </header>
 
-            <div className="acct-card__table-wrap">
-                <table className="acct-card__table acct-card__table--rules">
-                    <thead>
-                        <tr>
-                            <th>карта (владелец)</th>
-                            <th>вид расхода</th>
-                            <th>описание</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            className={cardId === ALL_CARDS ? 'is-active' : undefined}
-                            onClick={() => setCardId(ALL_CARDS)}
-                        >
-                            <td>Все карты</td>
-                            <td />
-                            <td>общий список, включая расходы партнеров</td>
-                        </tr>
+            <div className="acct-card__filters">
+                <label className="acct-card__field acct-card__field--search">
+                    <span>Поиск</span>
+                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Описание, владелец, комментарий" />
+                </label>
+                <label className="acct-card__field">
+                    <span>Карта (владелец)</span>
+                    <select value={cardId} onChange={(e) => setCardId(e.target.value)}>
+                        <option value={ALL_CARDS}>Все карты</option>
                         {CARD_RULES.map((rule) => (
-                            <tr
-                                key={rule.id}
-                                className={cardId === rule.id ? 'is-active' : undefined}
-                                onClick={() => setCardId(rule.id)}
-                            >
-                                <td>{rule.owner}</td>
-                                <td>{rule.kind}</td>
-                                <td>{rule.note}</td>
-                            </tr>
+                            <option key={rule.id} value={rule.id}>{rule.owner}</option>
                         ))}
-                    </tbody>
-                </table>
+                    </select>
+                </label>
+                <label className="acct-card__field">
+                    <span>Вид расхода</span>
+                    <select value={kind} onChange={(e) => setKind(e.target.value)}>
+                        <option value="">Все виды</option>
+                        {kindOptions.map((value) => (
+                            <option key={value} value={value}>{value}</option>
+                        ))}
+                        <option value="__none">Без вида</option>
+                    </select>
+                </label>
+                <label className="acct-card__field">
+                    <span>Статус</span>
+                    <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                        <option value="">Все статусы</option>
+                        {(Object.keys(STATUS_META) as ExpenseStatus[]).map((value) => (
+                            <option key={value} value={value}>{STATUS_META[value].label}</option>
+                        ))}
+                    </select>
+                </label>
+                <label className="acct-card__field">
+                    <span>Способ оплаты</span>
+                    <select value={payment} onChange={(e) => setPayment(e.target.value)}>
+                        <option value="">Все способы</option>
+                        {(Object.keys(PAYMENT_META) as PaymentMethod[]).map((value) => (
+                            <option key={value} value={value}>{PAYMENT_META[value].label}</option>
+                        ))}
+                    </select>
+                </label>
+                <label className="acct-card__field">
+                    <span>Дата от</span>
+                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                </label>
+                <label className="acct-card__field">
+                    <span>Дата до</span>
+                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                </label>
+                <label className="acct-card__field">
+                    <span>Сортировка</span>
+                    <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
+                        <option value="date_desc">Сначала новые</option>
+                        <option value="date_asc">Сначала старые</option>
+                        <option value="amount_desc">Сумма по убыванию</option>
+                        <option value="amount_asc">Сумма по возрастанию</option>
+                    </select>
+                </label>
+                <button
+                    type="button"
+                    className="acct-card__reset"
+                    disabled={!filtersOn}
+                    onClick={() => {
+                        setQuery('');
+                        setCardId(ALL_CARDS);
+                        setKind('');
+                        setStatus('');
+                        setPayment('');
+                        setDateFrom('');
+                        setDateTo('');
+                        setSort('date_desc');
+                    }}
+                >
+                    Сбросить
+                </button>
             </div>
 
             {error ? <p className="acct-card__error">{error}</p> : null}
@@ -197,9 +293,11 @@ export function AccountingCorporateCardPanel() {
                         <thead>
                             <tr>
                                 <th>Дата</th>
-                                <th>карта (владелец)</th>
-                                <th>вид расхода</th>
-                                <th>описание</th>
+                                <th>Карта (владелец)</th>
+                                <th>Вид расхода</th>
+                                <th>Описание</th>
+                                <th>Статус</th>
+                                <th>Способ оплаты</th>
                                 <th>Сумма, UZS</th>
                             </tr>
                         </thead>
@@ -210,6 +308,8 @@ export function AccountingCorporateCardPanel() {
                                     <td>{cardOwner(row)}</td>
                                     <td>{expenseKind(row)}</td>
                                     <td>{expenseDescription(row)}</td>
+                                    <td>{STATUS_META[row.status]?.label ?? row.status}</td>
+                                    <td>{PAYMENT_META[(row.paymentMethod ?? '') as PaymentMethod]?.label ?? (row.paymentMethod || '—')}</td>
                                     <td className="acct-card__num">{money(Number(row.amountUzs) || 0)}</td>
                                 </tr>
                             ))}
