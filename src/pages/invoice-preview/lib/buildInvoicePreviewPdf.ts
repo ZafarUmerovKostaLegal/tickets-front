@@ -13,7 +13,7 @@ import {
     packUppercaseRibbonDate,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
-import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { descriptionKeepingTaskWords, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { wrapPdfCellLines } from './invoicePdfCellWrap';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import {
@@ -1024,9 +1024,10 @@ function detailPdfRowCells(
     row: InvoiceTimeReportDetailRow,
     showInitiatorName: boolean,
 ): string[] {
+    const description = descriptionKeepingTaskWords(row.task, row.description);
     if (!showInitiatorName)
-        return [row.date, row.initials, row.task, row.description, row.hours, row.hourlyRate, row.amount];
-    const split = splitServiceInitiatorName(row.description);
+        return [row.date, row.initials, row.task, description, row.hours, row.hourlyRate, row.amount];
+    const split = splitServiceInitiatorName(description);
     return [row.date, row.initials, row.task, split.note, split.name, row.hours, row.hourlyRate, row.amount];
 }
 const TR_SUMMARY_FIXED_FS_COLS = new Set([0, 3]);

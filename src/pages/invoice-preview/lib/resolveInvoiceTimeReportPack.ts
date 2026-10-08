@@ -35,6 +35,7 @@ import {
     emptyInvoiceTimeReportPack,
     finalizeDetailSlots,
     formatTimeReportAmount,
+    descriptionKeepingTaskWords,
     formatTimeReportHours,
     sumRoundedTimeReportHours,
     isMyMehnatTimeReportRow,
@@ -46,13 +47,13 @@ import {
     type InvoiceTimeReportSummaryRow,
 } from './invoiceTimeReportModel';
 
-/** Full time-entry text for the report. Task words stay in Description. */
-function timeReportDescriptionText(raw: string | null | undefined, fallback: string): string {
+/** Full time-entry text, with the task name kept at the start of Description. */
+function timeReportDescriptionText(raw: string | null | undefined, taskLabel: string): string {
     const text = (raw ?? '')
         .replace(/[ \t]*\n+[ \t]*/g, ' ')
         .replace(/[ \t]{2,}/g, ' ')
         .trim();
-    return text || fallback;
+    return descriptionKeepingTaskWords(taskLabel, text) || '—';
 }
 
 function lineKind(ln: InvoiceLineDto): string {
@@ -548,7 +549,7 @@ export async function resolveInvoiceTimeReportPack(
                     date: dateDisplayFromIso(e.workDate, lang),
                     initials: initialsForAuthUser(e.authUserId, users, initialsByAuthId),
                     task: taskLabel,
-                    description: timeReportDescriptionText(entry?.description ?? e.description, taskLabel || '—'),
+                    description: timeReportDescriptionText(entry?.description ?? e.description, taskLabel),
                     hours: formatTimeReportHours(h),
                     hourlyRate: formatDetailHourlyRate(rate, currency),
                     amount: formatTimeReportAmount(a, currency),
@@ -762,7 +763,7 @@ export async function resolveInvoiceTimeReportPack(
                         ? initialsForAuthUser(authId, users, initialsByAuthId)
                         : (u ? initialsFromUser(u, initialsByAuthId) : '—'),
                     task: taskLabel,
-                    description: timeReportDescriptionText(entry?.description ?? desc, desc || '—'),
+                    description: timeReportDescriptionText(entry?.description ?? desc, taskLabel),
                     hours: hours > 0 ? formatTimeReportHours(hours) : '',
                     hourlyRate: formatDetailHourlyRate(rate, currency),
                     amount: formatTimeReportAmount(amt, currency),

@@ -68,6 +68,21 @@ export function roundTimeReportHours2(n: number): number {
     return Math.round(n * 100) / 100;
 }
 
+/** Task label stays in the description. It used to be stripped before the notes. */
+export function descriptionKeepingTaskWords(task: string, description: string): string {
+    const taskText = task.trim();
+    const note = description.trim();
+    const taskMissing = !taskText || taskText === '—' || taskText === '-';
+    const noteMissing = !note || note === '—' || note === '-';
+    if (taskMissing)
+        return noteMissing ? '' : note;
+    if (noteMissing)
+        return taskText;
+    if (note.toLowerCase().startsWith(taskText.toLowerCase()))
+        return note;
+    return `${taskText} ${note}`;
+}
+
 export function formatTimeReportHours(n: number): string {
     if (!Number.isFinite(n))
         return '';
