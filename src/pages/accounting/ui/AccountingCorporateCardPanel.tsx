@@ -12,17 +12,18 @@ type CardRule = {
     owner: string;
     kind: string;
     note: string;
-    match: string | null;
+    /** Кириллица и латиница: в заявке партнёр часто записан как Vazgen Grigoryan. */
+    aliases: string[];
 };
 
 /** Карты и подписи видов расхода — как в согласованной таблице. */
 const CARD_RULES: CardRule[] = [
-    { id: 'akhmadjonov', owner: 'Ахмаджонов А', kind: 'расход партнера', note: '', match: 'ахмадж' },
-    { id: 'khasanov', owner: 'Хасанов Н', kind: 'общий', note: '', match: 'хасанов' },
-    { id: 'grigoryan', owner: 'Григорян В', kind: 'офисный расход', note: '', match: 'григор' },
-    { id: 'dogonkin', owner: 'Догонкин М', kind: '', note: '', match: 'догонк' },
-    { id: 'yunusov', owner: 'Юнусов Ш', kind: '', note: '', match: 'юнусов' },
-    { id: 'office', owner: 'Карта офиса', kind: '', note: 'обязательное по карте офиса', match: null },
+    { id: 'akhmadjonov', owner: 'Ахмаджонов А', kind: 'расход партнера', note: '', aliases: ['ахмадж', 'akhmad', 'ahmadjon', 'aakhmad'] },
+    { id: 'khasanov', owner: 'Хасанов Н', kind: 'общий', note: '', aliases: ['хасанов', 'khasanov', 'hasanov', 'xasanov'] },
+    { id: 'grigoryan', owner: 'Григорян В', kind: 'офисный расход', note: '', aliases: ['григор', 'grigor', 'grigoryan'] },
+    { id: 'dogonkin', owner: 'Догонкин М', kind: '', note: '', aliases: ['догонк', 'dogonkin', 'dogonk'] },
+    { id: 'yunusov', owner: 'Юнусов Ш', kind: '', note: '', aliases: ['юнусов', 'yunusov', 'iunusov', 'yunus'] },
+    { id: 'office', owner: 'Карта офиса', kind: '', note: 'обязательное по карте офиса', aliases: [] },
 ];
 
 const ALL_CARDS = 'all';
@@ -38,8 +39,14 @@ function personName(row: ExpenseRequest): string {
 }
 
 function matchRule(row: ExpenseRequest): CardRule | null {
-    const hay = `${personName(row)} ${row.createdBy?.email ?? ''} ${row.partnerUser?.email ?? ''}`.toLowerCase();
-    return CARD_RULES.find((rule) => rule.match && hay.includes(rule.match)) ?? null;
+    const hay = [
+        personName(row),
+        row.partnerUser?.displayName,
+        row.partnerUser?.email,
+        row.createdBy?.displayName,
+        row.createdBy?.email,
+    ].filter(Boolean).join(' ').toLowerCase();
+    return CARD_RULES.find((rule) => rule.aliases.some((alias) => hay.includes(alias))) ?? null;
 }
 
 function isOfficeCard(row: ExpenseRequest): boolean {
@@ -79,7 +86,9 @@ function belongsToCard(row: ExpenseRequest, cardId: string): boolean {
     if (!rule)
         return false;
     if (rule.id === 'office')
-        return isOfficeCard(row) && !matchRule(row);
+        return isOfficeCard(row) && row.expenseType !== 'partner_expense' && !matchRule(row);
+    if (row.expenseType === 'partner_expense' && matchRule(row)?.id === rule.id)
+        return true;
     return matchRule(row)?.id === rule.id;
 }
 
