@@ -47,7 +47,7 @@ import {
   reconnectOutlookCalendar,
 } from '@entities/todo/lib/calendarApi';
 import { InvoiceSendContactModal } from './InvoiceSendContactModal';
-import { invoiceClientDescription } from '../lib/invoiceClientDescription';
+import { invoiceDescriptionWithTask } from '../lib/invoiceClientDescription';
 import { invoiceClientMailSignature, rasterizePublicLogoPng } from '../lib/invoiceClientMailSignature';
 import {
   blobToBase64,
@@ -1133,7 +1133,7 @@ export function InvoiceDetailPage() {
                                   {invoiceLineKindLabel(ln, t)}
                                 </span>
                               </td>
-                              <td>{ln.description ? invoiceClientDescription(ln.description) || '—' : '—'}</td>
+                              <td>{invoiceDescriptionWithTask(ln.description) || '—'}</td>
                               <td>{Number.isFinite(Number(ln.quantity)) ? Number(ln.quantity).toFixed(2) : ln.quantity}</td>
                               <td>{fmtMoney(amounts.unitAmount, detail.currency, locale)}</td>
                               <td>

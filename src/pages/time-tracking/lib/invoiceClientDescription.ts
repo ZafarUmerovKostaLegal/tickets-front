@@ -49,6 +49,11 @@ function isSafePrefixBoundary(after: string): boolean {
  * (`Task\\nNotes` storage) or a leading known task label (`Document Review …`).
  * Also strips glued labels without a separator (`Document ReviewЗаконодательство`).
  */
+/** Invoice line text with the task label kept (`Emails an email`). */
+export function invoiceDescriptionWithTask(raw: string | null | undefined): string {
+    return (raw ?? '').replace(/\s+/g, ' ').trim();
+}
+
 export function invoiceClientDescription(
     raw: string | null | undefined,
     taskName?: string | null,

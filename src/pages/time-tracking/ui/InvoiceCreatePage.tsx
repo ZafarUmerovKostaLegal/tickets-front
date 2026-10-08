@@ -46,7 +46,7 @@ import {
   notifyReportsInvalidated,
   todayIso,
 } from '../lib/invoicePageShared';
-import { invoiceClientDescription } from '../lib/invoiceClientDescription';
+import { invoiceDescriptionWithTask } from '../lib/invoiceClientDescription';
 import {
   collectConfirmedSnapshotTimeEntryIds,
   intersectPreviewTimeEntryIdsWithSnapshot,
@@ -1171,7 +1171,7 @@ export function InvoiceCreatePage() {
                                 <td>{formatHM(seconds)}</td>
                                 <td>{Number(x.hours).toFixed(2)}</td>
                                 <td>{fmtMoney(x.billableAmount, x.currency, locale)}{x.packageCovered ? ` (${t('timeTrackingPage.invoices.createDialog.packageCovered')})` : ''}</td>
-                                <td>{invoiceClientDescription(x.description) || '—'}</td>
+                                <td>{invoiceDescriptionWithTask(x.description) || '—'}</td>
                               </tr>
                             );
                           })}

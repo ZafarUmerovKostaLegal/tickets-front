@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { invoiceClientDescription, detectInvoiceDescriptionTaskPrefix } from './invoiceClientDescription';
+import { invoiceClientDescription, invoiceDescriptionWithTask, detectInvoiceDescriptionTaskPrefix } from './invoiceClientDescription';
 import {
     collectConfirmedSnapshotTimeEntryIds,
     intersectPreviewTimeEntryIdsWithSnapshot,
 } from './confirmedSnapshotInvoiceLines';
 import type { ReportSnapshotRow } from '@entities/time-tracking';
+
+describe('invoiceDescriptionWithTask', () => {
+    it('keeps the task label in front of the note', () => {
+        expect(invoiceDescriptionWithTask('Emails\nan email')).toBe('Emails an email');
+        expect(invoiceDescriptionWithTask('Meetings with Agritek')).toBe('Meetings with Agritek');
+    });
+});
 
 describe('invoiceClientDescription', () => {
     it('strips Task\\nNotes storage format', () => {

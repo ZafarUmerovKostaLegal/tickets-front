@@ -20,6 +20,7 @@ function resolveMaxThreads(): number {
 export default defineConfig({
     plugins: [react()],
     resolve: {
+        extensions: ['.mjs', '.mts', '.ts', '.tsx', '.jsx', '.js', '.json'],
         alias: {
             '@app': path.resolve(__dirname, './src/app'),
             '@pages': path.resolve(__dirname, './src/pages'),

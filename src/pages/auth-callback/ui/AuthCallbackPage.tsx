@@ -67,6 +67,6 @@ export function AuthCallbackPage() {
         color: 'var(--app-text, #0f172a)',
         background: 'var(--app-bg, #f8fafc)',
     }}>
-      <span style={{ fontSize: '0.95rem', color: 'var(--app-muted, #64748b)' }}>Выполняется вход…</span>
+        <span style={{ fontSize: '0.95rem', color: 'var(--app-muted, #64748b)' }}>Выполняется вход…</span>
     </div>);
 }
