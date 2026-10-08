@@ -4,7 +4,7 @@ import { PDFDocument, rgb } from 'pdf-lib';
 import dejavuSansBoldUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans-Bold.ttf?url';
 import dejavuSansRegularUrl from 'dejavu-fonts-ttf/ttf/DejaVuSans.ttf?url';
 import { packCurrencyCode, packInvoiceNumberDisplay, packResolveDueIso, packResolveIssueIso, packUppercaseRibbonDate, packZeroCommaAmount, } from './invoicePreviewPackShared';
-import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots } from './invoiceTimeReportModel';
+import { descriptionKeepingTaskWords, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots } from './invoiceTimeReportModel';
 import { wrapPdfCellLines } from './invoicePdfCellWrap';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { resolveLegalBillToBankName, resolveLegalBillToSwift, resolveLegalCaseDetailLine, resolveLegalFirmBankingLines, resolveLegalOverrideText, resolveLegalPaymentDisclaimer, resolveLegalServiceDescriptionLine, invoicePreviewPageCount, } from './invoiceLegalPageModel';
@@ -689,9 +689,10 @@ const TR_SUMMARY_WRAP_COLS = new Set([1, 2, 4, 5]);
 const TR_DETAIL_FIXED_FS_COLS = new Set([0, 1, 4]);
 const TR_DETAIL_NAME_FIXED_FS_COLS = new Set([0, 1, 5]);
 function detailPdfRowCells(row, showInitiatorName) {
+    const description = descriptionKeepingTaskWords(row.task, row.description);
     if (!showInitiatorName)
-        return [row.date, row.initials, row.task, row.description, row.hours, row.hourlyRate, row.amount];
-    const split = splitServiceInitiatorName(row.description);
+        return [row.date, row.initials, row.task, description, row.hours, row.hourlyRate, row.amount];
+    const split = splitServiceInitiatorName(description);
     return [row.date, row.initials, row.task, split.note, split.name, row.hours, row.hourlyRate, row.amount];
 }
 const TR_SUMMARY_FIXED_FS_COLS = new Set([0, 3]);

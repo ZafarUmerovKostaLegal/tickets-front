@@ -10,6 +10,7 @@ import { LazyInvoicesPanel } from '@features/invoices';
 import { InvoicesSkeleton } from '@pages/time-tracking/ui/InvoicesSkeleton';
 import { getHubSectionDef } from '@pages/home/model/hubSections';
 import { AccountingHrPanel } from './AccountingHrPanel';
+import { AccountingCorporateCardPanel } from './AccountingCorporateCardPanel';
 import '@pages/home/ui/HomeNavTiles.css';
 import './AccountingPage.css';
 const FINANCE_SECTION = getHubSectionDef('finance');
@@ -30,11 +31,25 @@ const HUB_TILES = [
         key: 'expenses',
         to: routes.expenses,
         label: 'Расходы',
+        badgeKey: null,
     },
     {
         key: 'reporting',
         to: routes.expensesReport,
         label: 'Отчётность',
+        badgeKey: null,
+    },
+    {
+        key: 'corporate-card',
+        tab: 'corporate-card',
+        label: 'Корпоративная карта',
+        badgeKey: null,
+    },
+    {
+        key: 'coming-soon',
+        tab: 'coming-soon',
+        label: 'Скоро в системе',
+        badgeKey: null,
     },
 ];
 function TileIcon({ name }) {
@@ -56,6 +71,12 @@ function TileIcon({ name }) {
     if (name === 'expenses') {
         return (_jsxs("svg", { ...common, children: [_jsx("rect", { x: "3.5", y: "6", width: "17", height: "12.5", rx: "2" }), _jsx("path", { d: "M3.5 10h17M7 14.5h3" })] }));
     }
+    if (name === 'corporate-card') {
+        return (_jsxs("svg", { ...common, children: [_jsx("rect", { x: "3", y: "5.5", width: "18", height: "13", rx: "2" }), _jsx("path", { d: "M3 10h18M7 15h4" })] }));
+    }
+    if (name === 'coming-soon') {
+        return (_jsxs("svg", { ...common, children: [_jsx("circle", { cx: "12", cy: "12", r: "8" }), _jsx("path", { d: "M12 8v4.5l3 2" })] }));
+    }
     return (_jsx("svg", { ...common, children: _jsx("path", { d: "M5 19V10M10 19V5M15 19v-6M20 19V8" }) }));
 }
 function formatBadge(n) {
@@ -66,13 +87,13 @@ function formatBadge(n) {
     return String(n);
 }
 function OverviewSkeleton() {
-    return (_jsx("div", { className: "home-nav-tiles home-nav-tiles--hub acct-page__hub", "aria-busy": "true", "aria-label": "\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043E\u0431\u0437\u043E\u0440\u0430", children: _jsxs("div", { className: "home-nav-tiles__section-block", children: [_jsx("div", { className: "home-nav-tiles__section-head", children: _jsx("div", { className: "acct-skel acct-skel--head" }) }), _jsx("ul", { className: "home-nav-tiles__grid", role: "list", children: Array.from({ length: 4 }, (_, i) => (_jsx("li", { className: "home-nav-tiles__item", children: _jsx("div", { className: "acct-skel acct-skel--tile" }) }, i))) })] }) }));
+    return (_jsx("div", { className: "home-nav-tiles home-nav-tiles--hub acct-page__hub", "aria-busy": "true", "aria-label": "\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u043E\u0431\u0437\u043E\u0440\u0430", children: _jsxs("div", { className: "home-nav-tiles__section-block", children: [_jsx("div", { className: "home-nav-tiles__section-head", children: _jsx("div", { className: "acct-skel acct-skel--head" }) }), _jsx("ul", { className: "home-nav-tiles__grid", role: "list", children: Array.from({ length: 6 }, (_, i) => (_jsx("li", { className: "home-nav-tiles__item", children: _jsx("div", { className: "acct-skel acct-skel--tile" }) }, i))) })] }) }));
 }
 const ACCOUNTING_TAB_KEY = 'acct-tab';
 function readAccountingTab() {
     try {
         const saved = window.sessionStorage.getItem(ACCOUNTING_TAB_KEY);
-        if (saved === 'overview' || saved === 'invoices' || saved === 'hr')
+        if (saved === 'overview' || saved === 'invoices' || saved === 'hr' || saved === 'corporate-card' || saved === 'coming-soon')
             return saved;
     }
     catch {
@@ -129,11 +150,29 @@ export function AccountingPage() {
         '--hub-section-border': FINANCE_SECTION.accentBorder,
     };
     const goToKicker = `${t('common.goTo')} →`;
-    return (_jsx("div", { className: "acct-page", children: _jsxs("main", { className: "acct-page__main", children: [_jsx("header", { className: "acct-page__header", children: _jsxs("div", { className: "acct-page__header-inner", children: [_jsxs("div", { className: "acct-page__header-start", children: [_jsx(AppBackButton, { className: "app-back-btn", onClick: activeTab === 'overview' ? undefined : () => selectTab('overview') }), _jsx(AppHomeLogo, { withSeparator: true }), _jsxs("div", { children: [_jsx("h1", { className: "acct-page__title", children: activeTab === 'invoices' ? 'Инвойсы' : activeTab === 'hr' ? 'HR' : 'Бухгалтерия' }), _jsx("p", { className: "acct-page__subtitle", children: activeTab === 'invoices'
+    return (_jsx("div", { className: "acct-page", children: _jsxs("main", { className: "acct-page__main", children: [_jsx("header", { className: "acct-page__header", children: _jsxs("div", { className: "acct-page__header-inner", children: [_jsxs("div", { className: "acct-page__header-start", children: [_jsx(AppBackButton, { className: "app-back-btn", onClick: activeTab === 'overview' ? undefined : () => selectTab('overview') }), _jsx(AppHomeLogo, { withSeparator: true }), _jsxs("div", { children: [_jsx("h1", { className: "acct-page__title", children: activeTab === 'invoices'
+                                                    ? 'Инвойсы'
+                                                    : activeTab === 'hr'
+                                                        ? 'HR'
+                                                        : activeTab === 'corporate-card'
+                                                            ? 'Корпоративная карта'
+                                                            : activeTab === 'coming-soon'
+                                                                ? 'Скоро в системе'
+                                                                : 'Бухгалтерия' }), _jsx("p", { className: "acct-page__subtitle", children: activeTab === 'invoices'
                                                     ? 'Счета, выставленные клиентам'
                                                     : activeTab === 'hr'
                                                         ? 'Сотрудники, роли и должности'
-                                                        : 'Обзор, счета и сотрудники. Доступно администраторам и партнёрам' })] })] }), _jsx(AppPageSettings, {})] }) }), _jsxs("div", { className: `acct-page__content${activeTab === 'invoices' ? ' acct-page__content--invoices' : ''}`, children: [activeTab === 'overview' && (overviewLoading ? _jsx(OverviewSkeleton, {}) : (_jsx("div", { className: "home-nav-tiles home-nav-tiles--hub acct-page__hub", "aria-label": "\u0420\u0430\u0437\u0434\u0435\u043B\u044B \u0431\u0443\u0445\u0433\u0430\u043B\u0442\u0435\u0440\u0438\u0438", children: _jsxs("div", { className: "home-nav-tiles__section-block", style: sectionStyle, children: [_jsxs("div", { className: "home-nav-tiles__section-head", children: [_jsxs("h2", { className: "home-nav-tiles__section-title", children: [_jsx("span", { className: "home-nav-tiles__section-dot", "aria-hidden": true }), "\u0414\u043E\u043A\u0443\u043C\u0435\u043D\u0442\u044B \u0438 \u0444\u0438\u043D\u0430\u043D\u0441\u044B"] }), _jsx("span", { className: "home-nav-tiles__section-count", "aria-hidden": true, children: String(HUB_TILES.length).padStart(2, '0') })] }), _jsx("ul", { className: "home-nav-tiles__grid", role: "list", children: HUB_TILES.map((tile, index) => {
+                                                        : activeTab === 'corporate-card'
+                                                            ? 'Расходы, оплаченные корпоративной картой офиса'
+                                                            : activeTab === 'coming-soon'
+                                                                ? 'Разделы, которые появятся в следующих обновлениях'
+                                                                : 'Обзор, счета и сотрудники. Доступно администраторам и партнёрам' })] })] }), _jsx(AppPageSettings, {})] }) }), _jsx("nav", { className: "acct-tabs", role: "tablist", "aria-label": "\u0420\u0430\u0437\u0434\u0435\u043B\u044B \u0431\u0443\u0445\u0433\u0430\u043B\u0442\u0435\u0440\u0438\u0438", children: [
+                        ['overview', 'Обзор'],
+                        ['invoices', 'Инвойсы'],
+                        ['hr', 'HR'],
+                        ['corporate-card', 'Корпоративная карта'],
+                        ['coming-soon', 'Скоро в системе'],
+                    ].map(([tab, label]) => (_jsx("button", { type: "button", role: "tab", "aria-selected": activeTab === tab, className: `acct-tabs__tab${activeTab === tab ? ' acct-tabs__tab--on' : ''}`, onClick: () => selectTab(tab), children: label }, tab))) }), _jsxs("div", { className: `acct-page__content${activeTab === 'invoices' ? ' acct-page__content--invoices' : ''}${activeTab === 'corporate-card' ? ' acct-page__content--card' : ''}`, children: [activeTab === 'overview' && (overviewLoading ? _jsx(OverviewSkeleton, {}) : (_jsx("div", { className: "home-nav-tiles home-nav-tiles--hub acct-page__hub", "aria-label": "\u0420\u0430\u0437\u0434\u0435\u043B\u044B \u0431\u0443\u0445\u0433\u0430\u043B\u0442\u0435\u0440\u0438\u0438", children: _jsxs("div", { className: "home-nav-tiles__section-block", style: sectionStyle, children: [_jsxs("div", { className: "home-nav-tiles__section-head", children: [_jsxs("h2", { className: "home-nav-tiles__section-title", children: [_jsx("span", { className: "home-nav-tiles__section-dot", "aria-hidden": true }), "\u0414\u043E\u043A\u0443\u043C\u0435\u043D\u0442\u044B \u0438 \u0444\u0438\u043D\u0430\u043D\u0441\u044B"] }), _jsx("span", { className: "home-nav-tiles__section-count", "aria-hidden": true, children: String(HUB_TILES.length).padStart(2, '0') })] }), _jsx("ul", { className: "home-nav-tiles__grid", role: "list", children: HUB_TILES.map((tile, index) => {
                                             const badge = tile.badgeKey === 'hr'
                                                 ? formatBadge(staffCount)
                                                 : tile.badgeKey === 'invoices'
@@ -150,5 +189,5 @@ export function AccountingPage() {
                                                 return (_jsx("li", { className: "home-nav-tiles__item", style: itemStyle, children: _jsx("button", { type: "button", className: "home-nav-tiles__link", onClick: () => selectTab(tile.tab), children: body }) }, tile.key));
                                             }
                                             return (_jsx("li", { className: "home-nav-tiles__item", style: itemStyle, children: _jsx(NavLink, { to: tile.to, className: "home-nav-tiles__link", children: body }) }, tile.key));
-                                        }) })] }) }))), activeTab === 'hr' && _jsx(AccountingHrPanel, {}), activeTab === 'invoices' && (_jsx("div", { className: "acct-page__invoices-wrap", children: _jsx(Suspense, { fallback: _jsx(InvoicesSkeleton, {}), children: _jsx(LazyInvoicesPanel, { variant: "accounting" }) }) }))] })] }) }));
+                                        }) })] }) }))), activeTab === 'hr' && _jsx(AccountingHrPanel, {}), activeTab === 'corporate-card' && _jsx(AccountingCorporateCardPanel, {}), activeTab === 'coming-soon' && (_jsxs("section", { className: "acct-soon", "aria-label": "\u0421\u043A\u043E\u0440\u043E \u0432 \u0441\u0438\u0441\u0442\u0435\u043C\u0435", children: [_jsx("h2", { className: "acct-soon__title", children: "\u0421\u043A\u043E\u0440\u043E \u0432 \u0441\u0438\u0441\u0442\u0435\u043C\u0435" }), _jsx("p", { className: "acct-soon__text", children: "\u042D\u0442\u043E\u0442 \u0440\u0430\u0437\u0434\u0435\u043B \u0435\u0449\u0451 \u0433\u043E\u0442\u043E\u0432\u0438\u0442\u0441\u044F \u0438 \u043F\u043E\u044F\u0432\u0438\u0442\u0441\u044F \u0432 \u043E\u0434\u043D\u043E\u043C \u0438\u0437 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0445 \u043E\u0431\u043D\u043E\u0432\u043B\u0435\u043D\u0438\u0439." })] })), activeTab === 'invoices' && (_jsx("div", { className: "acct-page__invoices-wrap", children: _jsx(Suspense, { fallback: _jsx(InvoicesSkeleton, {}), children: _jsx(LazyInvoicesPanel, { variant: "accounting" }) }) }))] })] }) }));
 }

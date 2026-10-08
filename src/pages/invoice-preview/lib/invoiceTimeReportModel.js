@@ -27,6 +27,20 @@ export function roundTimeReportHours2(n) {
         return 0;
     return Math.round(n * 100) / 100;
 }
+/** Task label stays in the description. It used to be stripped before the notes. */
+export function descriptionKeepingTaskWords(task, description) {
+    const taskText = task.trim();
+    const note = description.trim();
+    const taskMissing = !taskText || taskText === '—' || taskText === '-';
+    const noteMissing = !note || note === '—' || note === '-';
+    if (taskMissing)
+        return noteMissing ? '' : note;
+    if (noteMissing)
+        return taskText;
+    if (note.toLowerCase().startsWith(taskText.toLowerCase()))
+        return note;
+    return `${taskText} ${note}`;
+}
 export function formatTimeReportHours(n) {
     if (!Number.isFinite(n))
         return '';
@@ -95,6 +109,28 @@ export function mergeExpenseSlotsKeepSavedText(saved, live) {
         return { ...liveRow, description: savedRow.description };
     });
 }
+/** Saved time rows keep hours and amounts; Description comes from the full live text. */
+function mergeTimeRowsKeepLiveDescription(saved, live) {
+    const liveRows = trimTrailingEmptyDetailSlots(live);
+    if (!liveRows.length)
+        return [...saved];
+    if (!trimTrailingEmptyDetailSlots(saved).length)
+        return liveRows;
+    const used = new Set();
+    return saved.map((savedRow) => {
+        const match = liveRows.findIndex((liveRow, index) => (!used.has(index)
+            && liveRow.date.trim() === savedRow.date.trim()
+            && liveRow.initials.trim() === savedRow.initials.trim()
+            && liveRow.task.trim() === savedRow.task.trim()));
+        if (match < 0)
+            return savedRow;
+        used.add(match);
+        const next = liveRows[match].description.trim();
+        if (!next || next === savedRow.description.trim())
+            return savedRow;
+        return { ...savedRow, description: liveRows[match].description };
+    });
+}
 /**
  * Keep saved user edits for time/mehnat/summary and expense wording, but always
  * take expense amounts from a freshly resolved pack (registry UZS÷CBU).
@@ -102,8 +138,9 @@ export function mergeExpenseSlotsKeepSavedText(saved, live) {
 export function mergeTimeReportPackPreferLiveExpenses(saved, live) {
     const liveExpenses = live.expenseSlots ?? [];
     const hasLiveExpenses = trimTrailingEmptyDetailSlots(liveExpenses).length > 0;
+    const detailSlots = mergeTimeRowsKeepLiveDescription(saved.detailSlots ?? [], live.detailSlots ?? []);
     if (!hasLiveExpenses)
-        return saved;
+        return { ...saved, detailSlots };
     const cur = (live.currency || saved.currency || 'USD').trim().toUpperCase() || 'USD';
     const expenseSlots = mergeExpenseSlotsKeepSavedText(saved.expenseSlots ?? [], liveExpenses);
     const totalFromLive = (live.expenseTotalAmountDisplay ?? '').trim();
@@ -112,6 +149,7 @@ export function mergeTimeReportPackPreferLiveExpenses(saved, live) {
     return {
         ...saved,
         currency: live.currency || saved.currency,
+        detailSlots,
         expenseSlots,
         expenseTotalAmountDisplay,
     };

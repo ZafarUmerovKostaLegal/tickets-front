@@ -5,13 +5,19 @@ import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expens
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import { lockedExpenseUsdAmount } from './lockedExpenseUsdAmount';
-import { parseTimeEntryDescriptionLines } from './parseTimeEntryDescriptionLines';
 import { buildProjectTaskNameByIdMap, resolveInvoiceTimeReportTaskLabel, } from './resolveInvoiceTimeReportTaskLabel';
 import { packCurrencyCode } from './invoicePreviewPackShared';
-import { invoiceClientDescription } from '@pages/time-tracking/lib/invoiceClientDescription';
 import { formatTimeReportDateDisplay, localizeTimeReportTaskLabel, } from './invoiceTimeReportI18n';
 import { normalizeCoverLanguage } from './invoiceCoverLetterI18n';
-import { emptyInvoiceTimeReportPack, finalizeDetailSlots, formatTimeReportAmount, formatTimeReportHours, sumRoundedTimeReportHours, isMyMehnatTimeReportRow, padSummaryRows, parseTimeReportAmountDisplay, trimTrailingEmptyDetailSlots, } from './invoiceTimeReportModel';
+import { emptyInvoiceTimeReportPack, finalizeDetailSlots, formatTimeReportAmount, descriptionKeepingTaskWords, formatTimeReportHours, sumRoundedTimeReportHours, isMyMehnatTimeReportRow, padSummaryRows, parseTimeReportAmountDisplay, trimTrailingEmptyDetailSlots, } from './invoiceTimeReportModel';
+/** Full time-entry text, with the task name kept at the start of Description. */
+function timeReportDescriptionText(raw, taskLabel) {
+    const text = (raw ?? '')
+        .replace(/[ \t]*\n+[ \t]*/g, ' ')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+    return descriptionKeepingTaskWords(taskLabel, text) || '—';
+}
 function lineKind(ln) {
     const k = (ln.lineKind ?? '').toLowerCase().trim();
     if (k === 'time' || Boolean(ln.timeEntryId))
@@ -113,7 +119,13 @@ function expenseAmountForInvoiceCurrency(currency, req) {
             return roundMoney2(uzs);
         return null;
     }
-    return req ? lockedExpenseUsdAmount(req) : null;
+    if (!req)
+        return null;
+    return lockedExpenseUsdAmount({
+        amountUzs: asExpenseNumber(req.amountUzs),
+        exchangeRate: asExpenseNumber(req.exchangeRate),
+        equivalentAmount: asExpenseNumber(req.equivalentAmount),
+    });
 }
 function preferExpenseUsdForInvoice(currency, ln, lockedUsd) {
     const cur = (currency || '').trim().toUpperCase();
@@ -399,7 +411,6 @@ export async function resolveInvoiceTimeReportPack(session, model, options) {
                     invoiceLineDescription: e.description,
                     taskNameById,
                 }));
-                const { notes } = parseTimeEntryDescriptionLines(entry?.description ?? e.description ?? null);
                 const rate = resolveDetailHourlyRate({
                     rateSource: readEntryRateSource(entry),
                     hours: h,
@@ -409,8 +420,7 @@ export async function resolveInvoiceTimeReportPack(session, model, options) {
                     date: dateDisplayFromIso(e.workDate, lang),
                     initials: initialsForAuthUser(e.authUserId, users, initialsByAuthId),
                     task: taskLabel,
-                    description: invoiceClientDescription(entry?.description ?? e.description, taskLabel)
-                        || (notes.trim().length ? notes : (taskLabel || '—')),
+                    description: timeReportDescriptionText(entry?.description ?? e.description, taskLabel),
                     hours: formatTimeReportHours(h),
                     hourlyRate: formatDetailHourlyRate(rate, currency),
                     amount: formatTimeReportAmount(a, currency),
@@ -604,7 +614,7 @@ export async function resolveInvoiceTimeReportPack(session, model, options) {
                         ? initialsForAuthUser(authId, users, initialsByAuthId)
                         : (u ? initialsFromUser(u, initialsByAuthId) : '—'),
                     task: taskLabel,
-                    description: invoiceClientDescription(entry?.description ?? desc, taskLabel) || desc || '—',
+                    description: timeReportDescriptionText(entry?.description ?? desc, taskLabel),
                     hours: hours > 0 ? formatTimeReportHours(hours) : '',
                     hourlyRate: formatDetailHourlyRate(rate, currency),
                     amount: formatTimeReportAmount(amt, currency),

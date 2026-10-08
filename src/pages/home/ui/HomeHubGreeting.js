@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import './HomeHubGreeting.css';
@@ -28,13 +28,23 @@ export function HomeHubGreeting() {
         const name = getFirstName(user?.display_name, user?.email, t('common.user'));
         return `${t(`homeHub.greeting.${key}`)}, ${name}`;
     }, [t, user?.display_name, user?.email]);
+    const [now, setNow] = useState(() => new Date());
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(new Date()), 1000);
+        return () => window.clearInterval(timer);
+    }, []);
     const formattedDate = useMemo(() => {
         const tag = locale === 'en' ? 'en-US' : 'ru-RU';
-        return new Intl.DateTimeFormat(tag, {
+        const date = new Intl.DateTimeFormat(tag, {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
-        }).format(new Date());
-    }, [locale]);
-    return (_jsxs("header", { className: "home-hub-greeting", children: [_jsxs("div", { className: "home-hub-greeting__text", children: [_jsx("h1", { className: "home-hub-greeting__title", children: loading ? t('common.loading') : greeting }), _jsx("p", { className: "home-hub-greeting__subtitle", children: t('homeHub.greetingSubtitle') })] }), _jsx("time", { className: "home-hub-greeting__date", dateTime: new Date().toISOString().slice(0, 10), children: formattedDate })] }));
+        }).format(now);
+        const time = new Intl.DateTimeFormat(tag, {
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(now);
+        return `${date}, ${time}`;
+    }, [locale, now]);
+    return (_jsxs("header", { className: "home-hub-greeting", children: [_jsxs("div", { className: "home-hub-greeting__text", children: [_jsx("h1", { className: "home-hub-greeting__title", children: loading ? t('common.loading') : greeting }), _jsx("p", { className: "home-hub-greeting__subtitle", children: t('homeHub.greetingSubtitle') })] }), _jsx("time", { className: "home-hub-greeting__date", dateTime: now.toISOString(), children: formattedDate })] }));
 }

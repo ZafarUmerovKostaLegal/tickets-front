@@ -16,7 +16,7 @@ import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTim
 import { loadSnapshotRowsForPartnerExcel } from '@entities/time-tracking/lib/exportPartnerConfirmedSnapshotExcel';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 import { addDaysIso, firstOfMonthIso, fmtMoney, lastDayOfPreviousMonthIso, lastOfMonthIso, notifyReportsInvalidated, todayIso, } from '../lib/invoicePageShared';
-import { invoiceClientDescription } from '../lib/invoiceClientDescription';
+import { invoiceDescriptionWithTask } from '../lib/invoiceClientDescription';
 import { collectConfirmedSnapshotTimeEntryIds, intersectPreviewTimeEntryIdsWithSnapshot, } from '../lib/confirmedSnapshotInvoiceLines';
 import { assertNoApprovedUnpaidProjectExpenses, formatUnpaidExpenseListLines, isProjectUnpaidExpensesError, } from '../lib/projectUnpaidExpenses';
 import { formatCoverServicesPeriod } from '../../invoice-preview/lib/invoiceCoverLetterI18n';
@@ -780,7 +780,7 @@ export function InvoiceCreatePage() {
                                                                                         else
                                                                                             n.add(x.id);
                                                                                         return n;
-                                                                                    }) }) }), _jsx("td", { children: x.workDate }), _jsx("td", { children: formatHM(seconds) }), _jsx("td", { children: Number(x.hours).toFixed(2) }), _jsxs("td", { children: [fmtMoney(x.billableAmount, x.currency, locale), x.packageCovered ? ` (${t('timeTrackingPage.invoices.createDialog.packageCovered')})` : ''] }), _jsx("td", { children: invoiceClientDescription(x.description) || '—' })] }, x.id));
+                                                                                    }) }) }), _jsx("td", { children: x.workDate }), _jsx("td", { children: formatHM(seconds) }), _jsx("td", { children: Number(x.hours).toFixed(2) }), _jsxs("td", { children: [fmtMoney(x.billableAmount, x.currency, locale), x.packageCovered ? ` (${t('timeTrackingPage.invoices.createDialog.packageCovered')})` : ''] }), _jsx("td", { children: invoiceDescriptionWithTask(x.description) || '—' })] }, x.id));
                                                                 }) })] }) })] })), unbilledExp.length > 0 && (_jsxs("section", { className: "tt-inv-page__section", children: [_jsx("div", { className: "tt-inv-page__section-head", children: _jsx("h2", { className: "tt-inv-page__section-title", children: t('timeTrackingPage.invoices.createDialog.expensesSection').replace('{count}', String(unbilledExp.length)) }) }), _jsx("div", { className: "tt-reports__table-wrap tt-inv-page__table-wrap", children: _jsxs("table", { className: "tt-inv-mini", children: [_jsx("thead", { children: _jsxs("tr", { children: [_jsx("th", { scope: "col", children: _jsx("input", { ref: expSelectAllRef, type: "checkbox", "aria-label": t('timeTrackingPage.invoices.createDialog.expSelectAll'), checked: unbilledExp.length > 0 && unbilledExp.every((x) => selExp.has(x.id)), onChange: () => {
                                                                                     setSelExp((prev) => {
                                                                                         const ids = unbilledExp.map((x) => x.id);

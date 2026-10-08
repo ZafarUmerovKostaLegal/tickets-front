@@ -2,7 +2,7 @@ import { AlignmentType, BorderStyle, Document, ImageRun, Packer, Paragraph, Shad
 import { KOSTA_LEGAL_FIRM, getCoverLetterLabels, resolveCoverIntroParagraph, resolveCoverInvoiceParagraph, } from './invoiceCoverLetterModel';
 import { packCurrencyCode, packInvoiceNumberDisplay, packResolveDueIso, packResolveIssueIso, packUppercaseRibbonDate, packZeroCommaAmount, } from './invoicePreviewPackShared';
 import { getInvoice } from '@entities/time-tracking';
-import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots } from './invoiceTimeReportModel';
+import { descriptionKeepingTaskWords, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots } from './invoiceTimeReportModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
@@ -194,12 +194,13 @@ function timeReportDocxSectionChildren(model, pack, detailChunk, opts) {
     const amountI = showName ? 7 : 6;
     const totalSpan = showName ? 5 : 4;
     const detailCells = (r) => {
-        const split = showName ? splitServiceInitiatorName(r.description) : null;
+        const description = descriptionKeepingTaskWords(r.task, r.description);
+        const split = showName ? splitServiceInitiatorName(description) : null;
         return [
             trBodyTextCell(r.date, DW[0], AlignmentType.LEFT),
             trBodyTextCell(r.initials, DW[1], AlignmentType.LEFT),
             trBodyTextCell(r.task, DW[2], AlignmentType.LEFT),
-            trBodyTextCell(split ? split.note : r.description, DW[3], AlignmentType.LEFT),
+            trBodyTextCell(split ? split.note : description, DW[3], AlignmentType.LEFT),
             ...(showName ? [trBodyTextCell(split?.name ?? '', DW[4], AlignmentType.LEFT)] : []),
             trBodyTextCell(r.hours, DW[hoursI], AlignmentType.RIGHT),
             trBodyTextCell(r.hourlyRate, DW[rateI], AlignmentType.RIGHT),

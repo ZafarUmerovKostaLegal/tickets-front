@@ -41,6 +41,10 @@ function isSafePrefixBoundary(after) {
  * (`Task\\nNotes` storage) or a leading known task label (`Document Review …`).
  * Also strips glued labels without a separator (`Document ReviewЗаконодательство`).
  */
+/** Invoice line text with the task label kept (`Emails an email`). */
+export function invoiceDescriptionWithTask(raw) {
+    return (raw ?? '').replace(/\s+/g, ' ').trim();
+}
 export function invoiceClientDescription(raw, taskName) {
     const fromNotes = resolveTimeEntryNotesOnly(raw, taskName);
     const base = (fromNotes || (raw ?? '')).trim();
