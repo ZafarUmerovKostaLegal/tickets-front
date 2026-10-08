@@ -24,11 +24,6 @@ export default defineConfig(({ mode }) => {
     return {
 
         base: '/',
-        resolve: {
-            // Stale .js files sit next to the .tsx sources. Vite otherwise loads the .js
-            // and the published image never picks up the TypeScript changes.
-            extensions: ['.mjs', '.mts', '.ts', '.tsx', '.jsx', '.js', '.json'],
-        },
         clearScreen: false,
         envPrefix: ['VITE_', 'TAURI_ENV', 'TAURI_'],
         plugins: [react()],
@@ -99,6 +94,9 @@ export default defineConfig(({ mode }) => {
             force: process.env.VITE_FORCE_OPTIMIZE === '1',
         },
         resolve: {
+            // Stale .js files sit next to the .tsx sources. Vite otherwise loads the .js
+            // and the published image never picks up the TypeScript changes.
+            extensions: ['.mjs', '.mts', '.ts', '.tsx', '.jsx', '.js', '.json'],
             dedupe: ['buffer'],
             alias: {
 
