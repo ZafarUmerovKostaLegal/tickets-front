@@ -135,6 +135,54 @@ body[data-theme='dark'] .acct-page .home-nav-tiles--hub .home-nav-tiles__section
   border-radius: 8px;
 }
 
+.acct-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding: 0.4rem var(--app-page-padding-x, 1rem) 0.15rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+  flex-shrink: 0;
+}
+
+.acct-tabs__tab {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 0.85rem;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--app-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px 8px 0 0;
+  cursor: pointer;
+}
+
+.acct-tabs__tab:hover {
+  color: var(--app-text);
+  background: var(--app-surface-soft, #f1f5f9);
+}
+
+.acct-tabs__tab--on {
+  color: var(--app-accent);
+  font-weight: 700;
+  position: relative;
+}
+
+.acct-tabs__tab--on::after {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  right: 0.5rem;
+  bottom: -1px;
+  height: 2px;
+  background: var(--app-accent);
+  border-radius: 2px;
+}
+
 .acct-page__content--invoices {
   flex: 1;
   min-height: 0;
