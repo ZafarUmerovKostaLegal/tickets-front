@@ -146,6 +146,34 @@ export function mergeExpenseSlotsKeepSavedText(
     });
 }
 
+/** Saved time rows keep hours and amounts; Description comes from the full live text. */
+function mergeTimeRowsKeepLiveDescription(
+    saved: readonly InvoiceTimeReportDetailRow[],
+    live: readonly InvoiceTimeReportDetailRow[],
+): InvoiceTimeReportDetailRow[] {
+    const liveRows = trimTrailingEmptyDetailSlots(live);
+    if (!liveRows.length)
+        return [...saved];
+    if (!trimTrailingEmptyDetailSlots(saved).length)
+        return liveRows;
+    const used = new Set<number>();
+    return saved.map((savedRow) => {
+        const match = liveRows.findIndex((liveRow, index) => (
+            !used.has(index)
+            && liveRow.date.trim() === savedRow.date.trim()
+            && liveRow.initials.trim() === savedRow.initials.trim()
+            && liveRow.task.trim() === savedRow.task.trim()
+        ));
+        if (match < 0)
+            return savedRow;
+        used.add(match);
+        const next = liveRows[match]!.description.trim();
+        if (!next || next === savedRow.description.trim())
+            return savedRow;
+        return { ...savedRow, description: liveRows[match]!.description };
+    });
+}
+
 /**
  * Keep saved user edits for time/mehnat/summary and expense wording, but always
  * take expense amounts from a freshly resolved pack (registry UZS÷CBU).
@@ -156,8 +184,9 @@ export function mergeTimeReportPackPreferLiveExpenses(
 ): InvoiceTimeReportPack {
     const liveExpenses = live.expenseSlots ?? [];
     const hasLiveExpenses = trimTrailingEmptyDetailSlots(liveExpenses).length > 0;
+    const detailSlots = mergeTimeRowsKeepLiveDescription(saved.detailSlots ?? [], live.detailSlots ?? []);
     if (!hasLiveExpenses)
-        return saved;
+        return { ...saved, detailSlots };
     const cur = (live.currency || saved.currency || 'USD').trim().toUpperCase() || 'USD';
     const expenseSlots = mergeExpenseSlotsKeepSavedText(saved.expenseSlots ?? [], liveExpenses);
     const totalFromLive = (live.expenseTotalAmountDisplay ?? '').trim();
@@ -166,6 +195,7 @@ export function mergeTimeReportPackPreferLiveExpenses(
     return {
         ...saved,
         currency: live.currency || saved.currency,
+        detailSlots,
         expenseSlots,
         expenseTotalAmountDisplay,
     };

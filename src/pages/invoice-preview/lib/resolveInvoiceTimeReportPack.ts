@@ -21,13 +21,11 @@ import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
 import type { InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { lockedExpenseUsdAmount } from './lockedExpenseUsdAmount';
-import { parseTimeEntryDescriptionLines } from './parseTimeEntryDescriptionLines';
 import {
     buildProjectTaskNameByIdMap,
     resolveInvoiceTimeReportTaskLabel,
 } from './resolveInvoiceTimeReportTaskLabel';
 import { packCurrencyCode } from './invoicePreviewPackShared';
-import { invoiceClientDescription } from '@pages/time-tracking/lib/invoiceClientDescription';
 import {
     formatTimeReportDateDisplay,
     localizeTimeReportTaskLabel,
@@ -47,6 +45,15 @@ import {
     type InvoiceTimeReportPack,
     type InvoiceTimeReportSummaryRow,
 } from './invoiceTimeReportModel';
+
+/** Full time-entry text for the report. Task words stay in Description. */
+function timeReportDescriptionText(raw: string | null | undefined, fallback: string): string {
+    const text = (raw ?? '')
+        .replace(/[ \t]*\n+[ \t]*/g, ' ')
+        .replace(/[ \t]{2,}/g, ' ')
+        .trim();
+    return text || fallback;
+}
 
 function lineKind(ln: InvoiceLineDto): string {
     const k = (ln.lineKind ?? '').toLowerCase().trim();
@@ -532,7 +539,6 @@ export async function resolveInvoiceTimeReportPack(
                     invoiceLineDescription: e.description,
                     taskNameById,
                 }));
-                const { notes } = parseTimeEntryDescriptionLines(entry?.description ?? e.description ?? null);
                 const rate = resolveDetailHourlyRate({
                     rateSource: readEntryRateSource(entry),
                     hours: h,
@@ -542,8 +548,7 @@ export async function resolveInvoiceTimeReportPack(
                     date: dateDisplayFromIso(e.workDate, lang),
                     initials: initialsForAuthUser(e.authUserId, users, initialsByAuthId),
                     task: taskLabel,
-                    description: invoiceClientDescription(entry?.description ?? e.description, taskLabel)
-                        || (notes.trim().length ? notes : (taskLabel || '—')),
+                    description: timeReportDescriptionText(entry?.description ?? e.description, taskLabel || '—'),
                     hours: formatTimeReportHours(h),
                     hourlyRate: formatDetailHourlyRate(rate, currency),
                     amount: formatTimeReportAmount(a, currency),
@@ -757,7 +762,7 @@ export async function resolveInvoiceTimeReportPack(
                         ? initialsForAuthUser(authId, users, initialsByAuthId)
                         : (u ? initialsFromUser(u, initialsByAuthId) : '—'),
                     task: taskLabel,
-                    description: invoiceClientDescription(entry?.description ?? desc, taskLabel) || desc || '—',
+                    description: timeReportDescriptionText(entry?.description ?? desc, desc || '—'),
                     hours: hours > 0 ? formatTimeReportHours(hours) : '',
                     hourlyRate: formatDetailHourlyRate(rate, currency),
                     amount: formatTimeReportAmount(amt, currency),
