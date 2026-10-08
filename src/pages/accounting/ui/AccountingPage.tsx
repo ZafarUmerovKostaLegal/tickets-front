@@ -271,7 +271,7 @@ export function AccountingPage() {
                 </nav>
 
                 <div
-                    className={`acct-page__content${activeTab === 'invoices' ? ' acct-page__content--invoices' : ''}`}
+                    className={`acct-page__content${activeTab === 'invoices' ? ' acct-page__content--invoices' : ''}${activeTab === 'corporate-card' ? ' acct-page__content--card' : ''}`}
                 >
                     {activeTab === 'overview' && (overviewLoading ? <OverviewSkeleton /> : (
                         <div className="home-nav-tiles home-nav-tiles--hub acct-page__hub" aria-label="Разделы бухгалтерии">

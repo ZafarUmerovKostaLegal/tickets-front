@@ -23,6 +23,7 @@ const CARD_RULES: CardRule[] = [
     { id: 'grigoryan', owner: 'Григорян В', kind: 'офисный расход', note: '', aliases: ['григор', 'grigor', 'grigoryan'] },
     { id: 'dogonkin', owner: 'Догонкин М', kind: '', note: '', aliases: ['догонк', 'dogonkin', 'dogonk'] },
     { id: 'yunusov', owner: 'Юнусов Ш', kind: '', note: '', aliases: ['юнусов', 'yunusov', 'iunusov', 'yunus'] },
+    { id: 'general', owner: 'Общий', kind: 'общий', note: '', aliases: [] },
     { id: 'office', owner: 'Карта офиса', kind: '', note: 'обязательное по карте офиса', aliases: [] },
 ];
 
@@ -54,6 +55,8 @@ function isOfficeCard(row: ExpenseRequest): boolean {
 }
 
 function cardOwner(row: ExpenseRequest): string {
+    if (isGeneralExpense(row))
+        return 'Общий';
     const rule = matchRule(row);
     if (rule)
         return rule.owner;
@@ -64,7 +67,15 @@ function cardOwner(row: ExpenseRequest): string {
     return personName(row) || '—';
 }
 
+function isGeneralExpense(row: ExpenseRequest): boolean {
+    if (row.expenseType === 'company_expense')
+        return true;
+    return (row.expenseSubtype ?? '').trim() === 'partner_general';
+}
+
 function expenseKind(row: ExpenseRequest): string {
+    if (isGeneralExpense(row))
+        return 'общий';
     if (row.expenseType === 'partner_expense')
         return 'расход партнера';
     return matchRule(row)?.kind ?? '';
@@ -85,8 +96,10 @@ function belongsToCard(row: ExpenseRequest, cardId: string): boolean {
     const rule = CARD_RULES.find((item) => item.id === cardId);
     if (!rule)
         return false;
+    if (rule.id === 'general')
+        return isGeneralExpense(row);
     if (rule.id === 'office')
-        return isOfficeCard(row) && row.expenseType !== 'partner_expense' && !matchRule(row);
+        return isOfficeCard(row) && row.expenseType !== 'partner_expense' && !isGeneralExpense(row) && !matchRule(row);
     if (row.expenseType === 'partner_expense' && matchRule(row)?.id === rule.id)
         return true;
     return matchRule(row)?.id === rule.id;
@@ -125,12 +138,13 @@ export function AccountingCorporateCardPanel() {
         void Promise.all([
             fetchExpenses({ paymentMethod: 'card', limit: 200, sortBy: 'expenseDate', sortOrder: 'desc' }),
             fetchExpenses({ expenseType: 'partner_expense', limit: 200, sortBy: 'expenseDate', sortOrder: 'desc' }),
+            fetchExpenses({ expenseType: 'company_expense', limit: 200, sortBy: 'expenseDate', sortOrder: 'desc' }),
         ])
-            .then(([cardRes, partnerRes]) => {
+            .then(([cardRes, partnerRes, companyRes]) => {
                 if (cancelled)
                     return;
                 const byId = new Map<string, ExpenseRequest>();
-                for (const row of [...(cardRes.items ?? []), ...(partnerRes.items ?? [])])
+                for (const row of [...(cardRes.items ?? []), ...(partnerRes.items ?? []), ...(companyRes.items ?? [])])
                     byId.set(row.id, row);
                 setRows([...byId.values()]);
             })

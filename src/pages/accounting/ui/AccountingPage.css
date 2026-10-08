@@ -1,8 +1,10 @@
 .acct-page {
   width: 100%;
   max-width: none;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   background: #f5f6f8;
   display: flex;
   flex-direction: column;
@@ -144,6 +146,9 @@ body[data-theme='dark'] .acct-page .home-nav-tiles--hub .home-nav-tiles__section
   border-bottom: 1px solid var(--app-border);
   background: var(--app-surface);
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 4;
 }
 
 .acct-tabs__tab {
@@ -181,6 +186,22 @@ body[data-theme='dark'] .acct-page .home-nav-tiles--hub .home-nav-tiles__section
   height: 2px;
   background: var(--app-accent);
   border-radius: 2px;
+}
+
+.acct-page__content--card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: 0.75rem;
+}
+
+.acct-page__content--card .acct-card {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .acct-page__content--invoices {

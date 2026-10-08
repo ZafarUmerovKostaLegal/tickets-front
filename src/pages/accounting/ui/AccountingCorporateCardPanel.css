@@ -101,14 +101,16 @@
 }
 
 .acct-card__table-wrap {
+  flex: 1;
+  min-height: 0;
   overflow: auto;
-  max-height: min(70vh, 720px);
   border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 12px;
 }
 
 .acct-card__table {
   width: 100%;
+  min-width: 100%;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
