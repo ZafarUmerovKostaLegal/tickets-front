@@ -1,10 +1,10 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { PAYMENT_META, STATUS_META } from '@entities/expenses/model/constants';
 import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expensesApi';
 import type { ExpenseRequest, ExpenseStatus, PaymentMethod } from '@entities/expenses/model/types';
 import { useCurrentUser } from '@shared/hooks';
 import { DatePicker } from '@shared/ui/DatePicker';
-import { SearchableSelect } from '@shared/ui/SearchableSelect';
+import '../../expenses/ui/ExpensesPage.css';
 import './AccountingCorporateCardPanel.css';
 
 const ExpensesFormPanel = lazy(() => import('@pages/expenses/ui/ExpensesFormPanel').then((m) => ({ default: m.ExpensesFormPanel })));
@@ -107,26 +107,65 @@ function belongsToCard(row: ExpenseRequest, cardId: string): boolean {
     return matchRule(row)?.id === rule.id;
 }
 
-function FilterPick({ label, value, options, onChange }: {
+function ChipFilter({ label, active, open, onToggle, children, wide = false }: {
     label: string;
+    active: boolean;
+    open: boolean;
+    onToggle: () => void;
+    children: ReactNode;
+    wide?: boolean;
+}) {
+    return (
+        <div className={`exp-filter${active ? ' exp-filter--active' : ''}${wide ? ' exp-filter--wide' : ''}`} onMouseDown={(event) => event.stopPropagation()}>
+            <button type="button" className="exp-filter__btn" onClick={onToggle}>
+                <span className="exp-filter__btn-text">{label}</span>
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <polyline points={open ? '4 10 8 6 12 10' : '4 6 8 10 12 6'} />
+                </svg>
+            </button>
+            {open ? (
+                <div className="exp-filter__drop">
+                    {children}
+                </div>
+            ) : null}
+        </div>
+    );
+}
+
+function ChipOptions({ value, options, onChange }: {
     value: string;
     options: { value: string; label: string }[];
     onChange: (value: string) => void;
 }) {
+    const [q, setQ] = useState('');
+    const query = q.trim().toLowerCase();
+    const shown = query
+        ? options.filter((item) => item.label.toLowerCase().includes(query))
+        : options;
     return (
-        <div className="acct-card__field">
-            <span id={`acct-card-${label}`}>{label}</span>
-            <SearchableSelect
-                portalDropdown
-                value={value}
-                items={options}
-                getOptionValue={(item) => item.value}
-                getOptionLabel={(item) => item.label}
-                getSearchText={(item) => item.label}
-                onSelect={(item) => onChange(item.value)}
-                aria-labelledby={`acct-card-${label}`}
-            />
-        </div>
+        <>
+            <div className="exp-filter__author-search" onClick={(e) => e.stopPropagation()}>
+                <input
+                    type="search"
+                    className="exp-filter__author-search-input"
+                    placeholder="Поиск…"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    aria-label="Поиск в списке"
+                />
+            </div>
+            {shown.length === 0 ? <p className="exp-filter__opt">Ничего не найдено</p> : null}
+            {shown.map((item) => (
+                <button
+                    key={item.value || 'all'}
+                    type="button"
+                    className={`exp-filter__opt${value === item.value ? ' exp-filter__opt--on' : ''}`}
+                    onClick={() => onChange(item.value)}
+                >
+                    {item.label}
+                </button>
+            ))}
+        </>
     );
 }
 
@@ -155,6 +194,7 @@ export function AccountingCorporateCardPanel() {
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
     const [sort, setSort] = useState<'date_desc' | 'date_asc' | 'amount_desc' | 'amount_asc'>('date_desc');
+    const [openChip, setOpenChip] = useState<string | null>(null);
     const [open, setOpen] = useState<ExpenseRequest | null>(null);
     const [panelMounted, setPanelMounted] = useState(false);
 
@@ -239,138 +279,137 @@ export function AccountingCorporateCardPanel() {
             .catch(() => { });
     };
 
-    return (
-        <section className="acct-card" aria-label="Корпоративная карта">
-            <header className="acct-card__head">
-                <div>
-                    <h2 className="acct-card__title">Корпоративная карта</h2>
-                    <p className="acct-card__sub">Карты, вид расхода и операции. Расходы партнёров подписаны «расход партнера» и входят в общий список.</p>
-                </div>
-                {rows ? (
-                    <p className="acct-card__total">
-                        <span>Итого, UZS</span>
-                        <strong>{money(totalUzs)}</strong>
-                    </p>
-                ) : null}
-            </header>
+    const cardLabel = cardId === ALL_CARDS
+        ? 'Карта (владелец)'
+        : (CARD_RULES.find((rule) => rule.id === cardId)?.owner ?? 'Карта (владелец)');
+    const kindLabel = kind === '__none' ? 'Без вида' : (kind || 'Вид расхода');
+    const statusLabel = status ? (STATUS_META[status as ExpenseStatus]?.label ?? 'Статус') : 'Статус';
+    const paymentLabel = payment ? (PAYMENT_META[payment as PaymentMethod]?.label ?? 'Способ оплаты') : 'Способ оплаты';
+    const sortLabel = sort === 'date_asc'
+        ? 'Сначала старые'
+        : sort === 'amount_desc'
+            ? 'Сумма по убыванию'
+            : sort === 'amount_asc'
+                ? 'Сумма по возрастанию'
+                : 'Сначала новые';
+    const toggleChip = (id: string) => setOpenChip((prev) => (prev === id ? null : id));
 
-            <div className="acct-card__filters">
-                <label className="acct-card__field acct-card__field--search">
-                    <span>Поиск</span>
-                    <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Описание, владелец, комментарий" />
-                </label>
-                <FilterPick
-                    label="Карта (владелец)"
-                    value={cardId}
-                    onChange={setCardId}
-                    options={[
-                        { value: ALL_CARDS, label: 'Все карты' },
-                        ...CARD_RULES.map((rule) => ({ value: rule.id, label: rule.owner })),
-                    ]}
-                />
-                <FilterPick
-                    label="Вид расхода"
-                    value={kind}
-                    onChange={setKind}
-                    options={[
-                        { value: '', label: 'Все виды' },
-                        ...kindOptions.map((value) => ({ value, label: value })),
-                        { value: '__none', label: 'Без вида' },
-                    ]}
-                />
-                <FilterPick
-                    label="Статус"
-                    value={status}
-                    onChange={setStatus}
-                    options={[
-                        { value: '', label: 'Все статусы' },
-                        ...(Object.keys(STATUS_META) as ExpenseStatus[]).map((value) => ({
-                            value,
-                            label: STATUS_META[value].label,
-                        })),
-                    ]}
-                />
-                <FilterPick
-                    label="Способ оплаты"
-                    value={payment}
-                    onChange={setPayment}
-                    options={[
-                        { value: '', label: 'Все способы' },
-                        ...(Object.keys(PAYMENT_META) as PaymentMethod[]).map((value) => ({
-                            value,
-                            label: PAYMENT_META[value].label,
-                        })),
-                    ]}
-                />
-                <div className="acct-card__field">
-                    <span id="acct-card-date-from">Дата от</span>
-                    <DatePicker portal value={dateFrom} onChange={setDateFrom} max={dateTo || undefined} emptyLabel="дд.мм.гггг" aria-labelledby="acct-card-date-from" />
+    return (
+        <section className="acct-card acct-card-list" aria-label="Корпоративная карта">
+            <div className="tt-settings__actions-row tt-settings__actions-row--clients exp-tt-toolbar">
+                <div className="tt-settings__toolbar-left">
+                    {rows ? <p className="acct-card__total acct-card__total--inline"><span>Итого, UZS</span> <strong>{money(totalUzs)}</strong></p> : null}
                 </div>
-                <div className="acct-card__field">
-                    <span id="acct-card-date-to">Дата до</span>
-                    <DatePicker portal value={dateTo} onChange={setDateTo} min={dateFrom || undefined} emptyLabel="дд.мм.гггг" aria-labelledby="acct-card-date-to" />
+                <div className="tt-settings__actions-end">
+                    <div className="tt-settings__search-wrap">
+                        <span className="tt-settings__search-icon" aria-hidden>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </span>
+                        <input type="search" className="tt-settings__search" placeholder="По описанию, владельцу или комментарию" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Поиск по операциям" />
+                    </div>
                 </div>
-                <FilterPick
-                    label="Сортировка"
-                    value={sort}
-                    onChange={(value) => setSort(value as typeof sort)}
-                    options={[
-                        { value: 'date_desc', label: 'Сначала новые' },
-                        { value: 'date_asc', label: 'Сначала старые' },
-                        { value: 'amount_desc', label: 'Сумма по убыванию' },
-                        { value: 'amount_asc', label: 'Сумма по возрастанию' },
-                    ]}
-                />
-                <button
-                    type="button"
-                    className="acct-card__reset"
-                    disabled={!filtersOn}
-                    onClick={() => {
-                        setQuery('');
-                        setCardId(ALL_CARDS);
-                        setKind('');
-                        setStatus('');
-                        setPayment('');
-                        setDateFrom('');
-                        setDateTo('');
-                        setSort('date_desc');
-                    }}
-                >
-                    Сбросить
-                </button>
+            </div>
+            <div className="exp-tt-filters-outer">
+                <div className="exp-filters" aria-label="Фильтры">
+                    <ChipFilter label={cardLabel} active={cardId !== ALL_CARDS} open={openChip === 'card'} onToggle={() => toggleChip('card')} wide>
+                        <ChipOptions
+                            value={cardId}
+                            onChange={(value) => { setCardId(value); setOpenChip(null); }}
+                            options={[{ value: ALL_CARDS, label: 'Все карты' }, ...CARD_RULES.map((rule) => ({ value: rule.id, label: rule.owner }))]}
+                        />
+                    </ChipFilter>
+                    <ChipFilter label={kindLabel} active={Boolean(kind)} open={openChip === 'kind'} onToggle={() => toggleChip('kind')}>
+                        <ChipOptions
+                            value={kind}
+                            onChange={(value) => { setKind(value); setOpenChip(null); }}
+                            options={[{ value: '', label: 'Все виды' }, ...kindOptions.map((value) => ({ value, label: value })), { value: '__none', label: 'Без вида' }]}
+                        />
+                    </ChipFilter>
+                    <ChipFilter label={statusLabel} active={Boolean(status)} open={openChip === 'status'} onToggle={() => toggleChip('status')}>
+                        <ChipOptions
+                            value={status}
+                            onChange={(value) => { setStatus(value); setOpenChip(null); }}
+                            options={[{ value: '', label: 'Все статусы' }, ...(Object.keys(STATUS_META) as ExpenseStatus[]).map((value) => ({ value, label: STATUS_META[value].label }))]}
+                        />
+                    </ChipFilter>
+                    <ChipFilter label={paymentLabel} active={Boolean(payment)} open={openChip === 'pay'} onToggle={() => toggleChip('pay')} wide>
+                        <ChipOptions
+                            value={payment}
+                            onChange={(value) => { setPayment(value); setOpenChip(null); }}
+                            options={[{ value: '', label: 'Все способы' }, ...(Object.keys(PAYMENT_META) as PaymentMethod[]).map((value) => ({ value, label: PAYMENT_META[value].label }))]}
+                        />
+                    </ChipFilter>
+                    <ChipFilter label={sortLabel} active={sort !== 'date_desc'} open={openChip === 'sort'} onToggle={() => toggleChip('sort')}>
+                        <ChipOptions
+                            value={sort}
+                            onChange={(value) => { setSort(value as typeof sort); setOpenChip(null); }}
+                            options={[
+                                { value: 'date_desc', label: 'Сначала новые' },
+                                { value: 'date_asc', label: 'Сначала старые' },
+                                { value: 'amount_desc', label: 'Сумма по убыванию' },
+                                { value: 'amount_asc', label: 'Сумма по возрастанию' },
+                            ]}
+                        />
+                    </ChipFilter>
+                    {filtersOn ? (
+                        <button type="button" className="exp-filters-reset" onClick={() => {
+                            setQuery('');
+                            setCardId(ALL_CARDS);
+                            setKind('');
+                            setStatus('');
+                            setPayment('');
+                            setDateFrom('');
+                            setDateTo('');
+                            setSort('date_desc');
+                            setOpenChip(null);
+                        }}>
+                            Сбросить
+                        </button>
+                    ) : null}
+                </div>
+                <div className="exp-filters-custom-range" aria-label="Период">
+                    <span className="exp-filters-custom-range__label">Период:</span>
+                    <div className="exp-filters-custom-range__field">
+                        <span className="exp-filters-custom-range__field-label">С</span>
+                        <DatePicker value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} portal buttonClassName="exp-filters-custom-range__picker" emptyLabel="дд.мм.гггг" />
+                    </div>
+                    <div className="exp-filters-custom-range__field">
+                        <span className="exp-filters-custom-range__field-label">По</span>
+                        <DatePicker value={dateTo} min={dateFrom || undefined} onChange={setDateTo} portal buttonClassName="exp-filters-custom-range__picker" emptyLabel="дд.мм.гггг" />
+                    </div>
+                </div>
             </div>
 
             {error ? <p className="acct-card__error">{error}</p> : null}
             {rows == null && !error ? <p className="acct-card__empty">Загрузка…</p> : null}
             {rows && visible.length === 0 ? <p className="acct-card__empty">По этой карте операций пока нет</p> : null}
             {rows && visible.length > 0 ? (
-                <div className="acct-card__table-wrap">
-                    <table className="acct-card__table">
-                        <thead>
-                            <tr>
-                                <th>Дата</th>
-                                <th>Карта (владелец)</th>
-                                <th>Вид расхода</th>
-                                <th>Описание</th>
-                                <th>Статус</th>
-                                <th>Способ оплаты</th>
-                                <th>Сумма, UZS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {visible.map((row) => (
-                                <tr key={row.id} className="acct-card__expense" onClick={() => openExpense(row)}>
-                                    <td>{formatDate(row.expenseDate)}</td>
-                                    <td>{cardOwner(row)}</td>
-                                    <td>{expenseKind(row)}</td>
-                                    <td>{expenseDescription(row)}</td>
-                                    <td>{STATUS_META[row.status]?.label ?? row.status}</td>
-                                    <td>{PAYMENT_META[(row.paymentMethod ?? '') as PaymentMethod]?.label ?? (row.paymentMethod || '—')}</td>
-                                    <td className="acct-card__num">{money(Number(row.amountUzs) || 0)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                <div className="exp-table acct-card-table" role="region" aria-label="Операции по корпоративной карте">
+                    <div className="exp-table__body">
+                        <div className="exp-table__row exp-table__row--head" role="row">
+                            <div className="exp-table__th" role="columnheader">Дата</div>
+                            <div className="exp-table__th" role="columnheader">Карта (владелец)</div>
+                            <div className="exp-table__th" role="columnheader">Вид расхода</div>
+                            <div className="exp-table__th" role="columnheader">Описание</div>
+                            <div className="exp-table__th" role="columnheader">Статус</div>
+                            <div className="exp-table__th" role="columnheader">Способ оплаты</div>
+                            <div className="exp-table__th" role="columnheader">Сумма, UZS</div>
+                        </div>
+                        {visible.map((row) => (
+                            <button key={row.id} type="button" className="exp-table__row acct-card-table__row" onClick={() => openExpense(row)}>
+                                <span>{formatDate(row.expenseDate)}</span>
+                                <span>{cardOwner(row)}</span>
+                                <span>{expenseKind(row) || '—'}</span>
+                                <span className="acct-card-table__desc">{expenseDescription(row)}</span>
+                                <span className={`exp-status exp-status--${row.status}`}>{STATUS_META[row.status]?.label ?? row.status}</span>
+                                <span>{PAYMENT_META[(row.paymentMethod ?? '') as PaymentMethod]?.label ?? (row.paymentMethod || '—')}</span>
+                                <span className="acct-card__num">{money(Number(row.amountUzs) || 0)}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             ) : null}
 

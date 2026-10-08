@@ -1,9 +1,49 @@
-.acct-card {
-  margin: 1.25rem 0 2rem;
-  background: #fff;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  border-radius: 16px;
-  padding: 1.25rem 1.25rem 0.5rem;
+.acct-card.acct-card-list {
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  min-height: 0;
+}
+
+.acct-card__total--inline {
+  margin: 0;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+}
+
+.acct-card-table.exp-table {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 0 1rem;
+}
+
+.acct-card-table .exp-table__row {
+  grid-template-columns:
+    108px minmax(140px, 180px) minmax(120px, 160px) minmax(180px, 1.4fr)
+    minmax(120px, 150px) minmax(160px, 200px) 120px;
+  min-width: 1100px;
+  width: 100%;
+}
+
+.acct-card-table__row {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.acct-card-table__desc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .acct-card__head {
