@@ -24,8 +24,7 @@ COPY src ./src
 
 ARG VITE_API_BASE_URL
 ARG VITE_USE_SESSION_COOKIE=true
-# Change this on every server build (git SHA). An empty value lets Docker reuse
-# the previous `npm run build` layer, so the site stays on the old bundle.
+
 ARG BUILD_REV=unknown
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_USE_SESSION_COOKIE=$VITE_USE_SESSION_COOKIE
