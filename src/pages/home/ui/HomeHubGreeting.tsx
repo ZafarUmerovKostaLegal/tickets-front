@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import './HomeHubGreeting.css';
@@ -32,14 +32,25 @@ export function HomeHubGreeting() {
         return `${t(`homeHub.greeting.${key}`)}, ${name}`;
     }, [t, user?.display_name, user?.email]);
 
+    const [now, setNow] = useState(() => new Date());
+    useEffect(() => {
+        const timer = window.setInterval(() => setNow(new Date()), 1000);
+        return () => window.clearInterval(timer);
+    }, []);
+
     const formattedDate = useMemo(() => {
         const tag = locale === 'en' ? 'en-US' : 'ru-RU';
-        return new Intl.DateTimeFormat(tag, {
+        const date = new Intl.DateTimeFormat(tag, {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
-        }).format(new Date());
-    }, [locale]);
+        }).format(now);
+        const time = new Intl.DateTimeFormat(tag, {
+            hour: '2-digit',
+            minute: '2-digit',
+        }).format(now);
+        return `${date}, ${time}`;
+    }, [locale, now]);
 
     return (
         <header className="home-hub-greeting">
@@ -49,7 +60,7 @@ export function HomeHubGreeting() {
                 </h1>
                 <p className="home-hub-greeting__subtitle">{t('homeHub.greetingSubtitle')}</p>
             </div>
-            <time className="home-hub-greeting__date" dateTime={new Date().toISOString().slice(0, 10)}>
+            <time className="home-hub-greeting__date" dateTime={now.toISOString()}>
                 {formattedDate}
             </time>
         </header>
