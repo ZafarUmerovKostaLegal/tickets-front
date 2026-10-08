@@ -1,5 +1,7 @@
 services:
   tickets-front:
+    image: ghcr.io/zafarumerovkostalegal/tickets-front:latest
+    pull_policy: always
     build:
       context: .
       args:
