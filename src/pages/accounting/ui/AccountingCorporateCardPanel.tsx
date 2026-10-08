@@ -3,6 +3,7 @@ import { PAYMENT_META, STATUS_META } from '@entities/expenses/model/constants';
 import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expensesApi';
 import type { ExpenseRequest, ExpenseStatus, PaymentMethod } from '@entities/expenses/model/types';
 import { useCurrentUser } from '@shared/hooks';
+import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import './AccountingCorporateCardPanel.css';
 
 const ExpensesFormPanel = lazy(() => import('@pages/expenses/ui/ExpensesFormPanel').then((m) => ({ default: m.ExpensesFormPanel })));
@@ -103,6 +104,29 @@ function belongsToCard(row: ExpenseRequest, cardId: string): boolean {
     if (row.expenseType === 'partner_expense' && matchRule(row)?.id === rule.id)
         return true;
     return matchRule(row)?.id === rule.id;
+}
+
+function FilterPick({ label, value, options, onChange }: {
+    label: string;
+    value: string;
+    options: { value: string; label: string }[];
+    onChange: (value: string) => void;
+}) {
+    return (
+        <div className="acct-card__field">
+            <span id={`acct-card-${label}`}>{label}</span>
+            <SearchableSelect
+                portalDropdown
+                value={value}
+                items={options}
+                getOptionValue={(item) => item.value}
+                getOptionLabel={(item) => item.label}
+                getSearchText={(item) => item.label}
+                onSelect={(item) => onChange(item.value)}
+                aria-labelledby={`acct-card-${label}`}
+            />
+        </div>
+    );
 }
 
 function money(n: number): string {
@@ -234,43 +258,49 @@ export function AccountingCorporateCardPanel() {
                     <span>Поиск</span>
                     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Описание, владелец, комментарий" />
                 </label>
-                <label className="acct-card__field">
-                    <span>Карта (владелец)</span>
-                    <select value={cardId} onChange={(e) => setCardId(e.target.value)}>
-                        <option value={ALL_CARDS}>Все карты</option>
-                        {CARD_RULES.map((rule) => (
-                            <option key={rule.id} value={rule.id}>{rule.owner}</option>
-                        ))}
-                    </select>
-                </label>
-                <label className="acct-card__field">
-                    <span>Вид расхода</span>
-                    <select value={kind} onChange={(e) => setKind(e.target.value)}>
-                        <option value="">Все виды</option>
-                        {kindOptions.map((value) => (
-                            <option key={value} value={value}>{value}</option>
-                        ))}
-                        <option value="__none">Без вида</option>
-                    </select>
-                </label>
-                <label className="acct-card__field">
-                    <span>Статус</span>
-                    <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                        <option value="">Все статусы</option>
-                        {(Object.keys(STATUS_META) as ExpenseStatus[]).map((value) => (
-                            <option key={value} value={value}>{STATUS_META[value].label}</option>
-                        ))}
-                    </select>
-                </label>
-                <label className="acct-card__field">
-                    <span>Способ оплаты</span>
-                    <select value={payment} onChange={(e) => setPayment(e.target.value)}>
-                        <option value="">Все способы</option>
-                        {(Object.keys(PAYMENT_META) as PaymentMethod[]).map((value) => (
-                            <option key={value} value={value}>{PAYMENT_META[value].label}</option>
-                        ))}
-                    </select>
-                </label>
+                <FilterPick
+                    label="Карта (владелец)"
+                    value={cardId}
+                    onChange={setCardId}
+                    options={[
+                        { value: ALL_CARDS, label: 'Все карты' },
+                        ...CARD_RULES.map((rule) => ({ value: rule.id, label: rule.owner })),
+                    ]}
+                />
+                <FilterPick
+                    label="Вид расхода"
+                    value={kind}
+                    onChange={setKind}
+                    options={[
+                        { value: '', label: 'Все виды' },
+                        ...kindOptions.map((value) => ({ value, label: value })),
+                        { value: '__none', label: 'Без вида' },
+                    ]}
+                />
+                <FilterPick
+                    label="Статус"
+                    value={status}
+                    onChange={setStatus}
+                    options={[
+                        { value: '', label: 'Все статусы' },
+                        ...(Object.keys(STATUS_META) as ExpenseStatus[]).map((value) => ({
+                            value,
+                            label: STATUS_META[value].label,
+                        })),
+                    ]}
+                />
+                <FilterPick
+                    label="Способ оплаты"
+                    value={payment}
+                    onChange={setPayment}
+                    options={[
+                        { value: '', label: 'Все способы' },
+                        ...(Object.keys(PAYMENT_META) as PaymentMethod[]).map((value) => ({
+                            value,
+                            label: PAYMENT_META[value].label,
+                        })),
+                    ]}
+                />
                 <label className="acct-card__field">
                     <span>Дата от</span>
                     <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
@@ -279,15 +309,17 @@ export function AccountingCorporateCardPanel() {
                     <span>Дата до</span>
                     <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
                 </label>
-                <label className="acct-card__field">
-                    <span>Сортировка</span>
-                    <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)}>
-                        <option value="date_desc">Сначала новые</option>
-                        <option value="date_asc">Сначала старые</option>
-                        <option value="amount_desc">Сумма по убыванию</option>
-                        <option value="amount_asc">Сумма по возрастанию</option>
-                    </select>
-                </label>
+                <FilterPick
+                    label="Сортировка"
+                    value={sort}
+                    onChange={(value) => setSort(value as typeof sort)}
+                    options={[
+                        { value: 'date_desc', label: 'Сначала новые' },
+                        { value: 'date_asc', label: 'Сначала старые' },
+                        { value: 'amount_desc', label: 'Сумма по убыванию' },
+                        { value: 'amount_asc', label: 'Сумма по возрастанию' },
+                    ]}
+                />
                 <button
                     type="button"
                     className="acct-card__reset"

@@ -73,6 +73,16 @@
   grid-column: span 2;
 }
 
+.acct-card__field .tsp-srch {
+  width: 100%;
+}
+
+.acct-card__field .tsp-srch__btn {
+  width: 100%;
+  height: 36px;
+  border-radius: 8px;
+}
+
 .acct-card__field input,
 .acct-card__field select {
   height: 36px;
