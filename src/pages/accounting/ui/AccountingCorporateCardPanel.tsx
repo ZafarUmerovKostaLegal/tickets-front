@@ -3,6 +3,7 @@ import { PAYMENT_META, STATUS_META } from '@entities/expenses/model/constants';
 import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expensesApi';
 import type { ExpenseRequest, ExpenseStatus, PaymentMethod } from '@entities/expenses/model/types';
 import { useCurrentUser } from '@shared/hooks';
+import { DatePicker } from '@shared/ui/DatePicker';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import './AccountingCorporateCardPanel.css';
 
@@ -301,14 +302,14 @@ export function AccountingCorporateCardPanel() {
                         })),
                     ]}
                 />
-                <label className="acct-card__field">
-                    <span>Дата от</span>
-                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-                </label>
-                <label className="acct-card__field">
-                    <span>Дата до</span>
-                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-                </label>
+                <div className="acct-card__field">
+                    <span id="acct-card-date-from">Дата от</span>
+                    <DatePicker portal value={dateFrom} onChange={setDateFrom} max={dateTo || undefined} emptyLabel="дд.мм.гггг" aria-labelledby="acct-card-date-from" />
+                </div>
+                <div className="acct-card__field">
+                    <span id="acct-card-date-to">Дата до</span>
+                    <DatePicker portal value={dateTo} onChange={setDateTo} min={dateFrom || undefined} emptyLabel="дд.мм.гггг" aria-labelledby="acct-card-date-to" />
+                </div>
                 <FilterPick
                     label="Сортировка"
                     value={sort}

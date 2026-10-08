@@ -73,6 +73,17 @@
   grid-column: span 2;
 }
 
+.acct-card__field .ttp,
+.acct-card__field .ttp__btn {
+  width: 100%;
+}
+
+.acct-card__field .ttp__btn {
+  height: 36px;
+  border-radius: 8px;
+  justify-content: space-between;
+}
+
 .acct-card__field .tsp-srch {
   width: 100%;
 }
