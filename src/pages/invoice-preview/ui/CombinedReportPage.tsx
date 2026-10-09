@@ -223,16 +223,16 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                         <table className="tt-inv-tr__table">
                             <thead className="tt-inv-tr__thead">
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Initials</th>
-                                    <th>Task</th>
-                                    <th>Description</th>
-                                    <th className="num">Hours</th>
-                                    <th className="num">Rate</th>
-                                    <th className="num">Amount ({cur})</th>
+                                    <th style={{ width: '12%' }}>Date</th>
+                                    <th style={{ width: '8%' }}>Initials</th>
+                                    <th style={{ width: '16%' }}>Task</th>
+                                    <th style={{ width: '34%' }}>Description</th>
+                                    <th className="num" style={{ width: '8%' }}>Hours</th>
+                                    <th className="num" style={{ width: '10%' }}>Rate</th>
+                                    <th className="num" style={{ width: '12%' }}>Amount ({cur})</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="tt-inv-tr__tbody">
                                 {visibleLines.map((line) => {
                                     const lineIndex = project?.lines.indexOf(line) ?? -1;
                                     return (
@@ -241,9 +241,9 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                             <TextCell editable={editable} ariaLabel="Initials" value={line.initials || line.user} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { initials: v })} />
                                             <TextCell editable={editable} ariaLabel="Task" value={line.task || ''} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { task: v })} />
                                             <TextCell editable={editable} ariaLabel="Description" value={line.description} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { description: v })} />
-                                            <NumCell editable={editable} className="num" ariaLabel="Hours" value={line.hours} format={formatTimeReportHours} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { hours: v })} />
-                                            <td className="num">{formatTimeReportHours(line.rate ?? (line.hours > 0 ? line.amount / line.hours : 0))}</td>
-                                            <NumCell editable={editable} className="num" ariaLabel="Amount" value={line.amount} format={(n) => formatTimeReportHours(n)} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { amount: v })} />
+                                            <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Hours" value={line.hours} format={formatTimeReportHours} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { hours: v })} />
+                                            <td className="tt-inv-tr__cell--num">{formatTimeReportHours(line.rate ?? (line.hours > 0 ? line.amount / line.hours : 0))}</td>
+                                            <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Amount" value={line.amount} format={(n) => formatTimeReportHours(n)} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { amount: v })} />
                                         </tr>
                                     );
                                 })}
@@ -274,15 +274,15 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                     <th className="num">Amount ({cur})</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="tt-inv-tr__tbody">
                                 {projectPeople.map((person) => (
                                     <tr key={person.initials + person.name}>
                                         <td>{person.initials}</td>
                                         <td>{person.name}</td>
                                         <td>{person.title}</td>
-                                        <td className="num">{formatTimeReportHours(person.hours)}</td>
-                                        <td className="num">{formatTimeReportHours(person.hours > 0 ? person.amount / person.hours : 0)}</td>
-                                        <td className="num">{formatTimeReportHours(person.amount)}</td>
+                                        <td className="tt-inv-tr__cell--num">{formatTimeReportHours(person.hours)}</td>
+                                        <td className="tt-inv-tr__cell--num">{formatTimeReportHours(person.hours > 0 ? person.amount / person.hours : 0)}</td>
+                                        <td className="tt-inv-tr__cell--num">{formatTimeReportHours(person.amount)}</td>
                                     </tr>
                                 ))}
                             </tbody>
