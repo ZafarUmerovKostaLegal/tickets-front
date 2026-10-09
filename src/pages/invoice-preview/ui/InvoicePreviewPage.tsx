@@ -32,7 +32,9 @@ import {
 } from '../lib/invoicePreviewPageSlots';
 import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetterModel';
 import { resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from '../lib/resolveInvoiceTimeReportPack';
-import type { CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { getUsers } from '@entities/user';
+import { systemInitialsForDisplayedCode } from '@entities/time-tracking/lib/reportEmployeeInitials';
+import { applyStoredUserInitials, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import { CombinedReportPage } from './CombinedReportPage';
@@ -165,6 +167,42 @@ export function InvoicePreviewPage() {
     const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [activePage, setActivePage] = useState(1);
     const [sheetZoomPct, setSheetZoomPct] = useState(100);
+
+    useEffect(() => {
+        let cancelled = false;
+        void getUsers(true).then((users) => {
+            if (cancelled)
+                return;
+            setCombinedReport((prev) => (prev ? applyStoredUserInitials(prev, users) : prev));
+            setTimeReportPack((prev) => {
+                if (!prev)
+                    return prev;
+                const mapCode = (code: string) => systemInitialsForDisplayedCode(code, users);
+                let changed = false;
+                const detailSlots = prev.detailSlots.map((row) => {
+                    const initials = mapCode(row.initials);
+                    if (initials === row.initials)
+                        return row;
+                    changed = true;
+                    return { ...row, initials };
+                });
+                const summarySlots = prev.summarySlots.map((row) => {
+                    const match = users.find((user) => (user.display_name ?? '').trim().toLowerCase() === row.name.trim().toLowerCase());
+                    const initials = match?.initials?.trim()
+                        ? match.initials.trim().toUpperCase()
+                        : mapCode(row.initials);
+                    if (initials === row.initials)
+                        return row;
+                    changed = true;
+                    return { ...row, initials };
+                });
+                return changed ? { ...prev, detailSlots, summarySlots } : prev;
+            });
+        }).catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
+    }, [timeReportPack, combinedReport]);
 
     const displayModel = useMemo(() => coverModel ?? fallbackCoverModel(), [coverModel]);
 

@@ -9,6 +9,30 @@ export function initialsFromDisplayName(name: string): string {
     return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
+/** Swap name-derived codes (AA) for the single system user whose stored initials differ. */
+export function systemInitialsForDisplayedCode(
+    displayed: string,
+    users: ReadonlyArray<{ display_name?: string | null; initials?: string | null }>,
+): string {
+    const current = displayed.trim().toUpperCase();
+    if (!current)
+        return displayed;
+    const hits: string[] = [];
+    for (const user of users) {
+        const stored = resolveReportEmployeeInitials({
+            stored: user.initials,
+            displayName: user.display_name,
+        });
+        const derived = initialsFromDisplayName(user.display_name ?? '');
+        if (!stored || !derived || stored === derived)
+            continue;
+        if (current === derived || current === stored)
+            hits.push(stored);
+    }
+    const unique = [...new Set(hits)];
+    return unique.length === 1 ? unique[0]! : displayed;
+}
+
 export function resolveReportEmployeeInitials(params: {
     stored?: string | null;
     displayName?: string | null;

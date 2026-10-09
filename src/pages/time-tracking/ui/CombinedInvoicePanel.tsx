@@ -13,6 +13,7 @@ import {
     type TimeManagerClientRow,
     type TimeTrackingUserRow,
 } from '@entities/time-tracking';
+import { getUsers } from '@entities/user';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { CombinedInvoiceDocument } from './CombinedInvoiceDocument';
@@ -92,10 +93,15 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
 
     useEffect(() => {
         let cancelled = false;
-        void listTimeTrackingUsers()
-            .then((rows) => {
-                if (!cancelled)
-                    setUsers(rows);
+        void Promise.all([listTimeTrackingUsers(), getUsers(true).catch(() => [])])
+            .then(([rows, authUsers]) => {
+                if (cancelled)
+                    return;
+                const initialsById = new Map(authUsers.map((user) => [user.id, user.initials]));
+                setUsers(rows.map((row) => ({
+                    ...row,
+                    initials: initialsById.get(row.id)?.trim() || row.initials,
+                })));
             })
             .catch(() => {
                 if (!cancelled)

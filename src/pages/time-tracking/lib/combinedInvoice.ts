@@ -1,4 +1,5 @@
 import type { TimeManagerClientProjectRow, UnbilledExpenseEntryDto, UnbilledTimeEntryDto } from '@entities/time-tracking';
+import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { invoiceClientDescription, INVOICE_DESCRIPTION_TASK_PREFIXES } from './invoiceClientDescription';
 import { parseTimeEntryDescription } from '@entities/time-tracking/lib/timesheetTimerPersist';
 
@@ -144,11 +145,54 @@ export type CombinedReportSnapshot = {
 };
 
 function initialsOf(name: string, stored: string | null | undefined): string {
-    const saved = stored?.trim();
-    if (saved)
-        return saved;
-    const letters = name.split(/\s+/).filter(Boolean).map((part) => part[0] ?? '').join('');
-    return letters.toUpperCase().slice(0, 4) || '—';
+    return resolveReportEmployeeInitials({ stored, displayName: name }) || '—';
+}
+
+function nameKey(value: string): string {
+    return value.trim().toLowerCase().replace(/ё/g, 'е').replace(/\s+/g, ' ');
+}
+
+/** Replace generated initials with the codes stored on system users, matched by name. */
+export function applyStoredUserInitials(
+    report: CombinedReportSnapshot,
+    users: ReadonlyArray<{ display_name?: string | null; email?: string | null; initials?: string | null }>,
+): CombinedReportSnapshot {
+    const byName = new Map<string, string>();
+    for (const user of users) {
+        const stored = resolveReportEmployeeInitials({
+            stored: user.initials,
+            displayName: user.display_name,
+            email: user.email,
+        });
+        const saved = (user.initials ?? '').trim();
+        if (!saved || !stored)
+            continue;
+        const name = user.display_name?.trim();
+        if (name)
+            byName.set(nameKey(name), stored);
+    }
+    if (byName.size === 0)
+        return report;
+    const codeFor = (name: string, current: string | undefined) => byName.get(nameKey(name)) ?? current;
+    let changed = false;
+    const projects = report.projects.map((project) => ({
+        ...project,
+        lines: project.lines.map((line) => {
+            const initials = codeFor(line.user, line.initials);
+            if (initials === line.initials)
+                return line;
+            changed = true;
+            return { ...line, initials };
+        }),
+    }));
+    const people = report.people.map((person) => {
+        const initials = codeFor(person.name, person.initials);
+        if (initials === person.initials)
+            return person;
+        changed = true;
+        return { ...person, initials: initials || person.initials };
+    });
+    return changed ? { ...report, projects, people } : report;
 }
 
 export function buildCombinedReportSnapshot(input: {
