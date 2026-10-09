@@ -10,6 +10,8 @@ const TOTAL_PX = 28;
 const GAP_PX = 14;
 
 export type CombinedReportPreviewSlice = {
+    /** Project sheet. -1 is the merged report. */
+    projectIndex: number;
     showMasthead: boolean;
     timeFrom: number;
     timeTo: number;
@@ -27,6 +29,7 @@ export type CombinedReportPreviewSlice = {
 
 function emptySlice(): CombinedReportPreviewSlice {
     return {
+        projectIndex: -1,
         showMasthead: false,
         timeFrom: 0,
         timeTo: 0,
@@ -69,7 +72,68 @@ function timeRowPx(line: CombinedReportLine): number {
     ));
 }
 
+function sortedProjectLines(report: CombinedReportSnapshot, projectIndex: number): CombinedReportLine[] {
+    const lines = report.projects[projectIndex]?.lines ?? [];
+    return [...lines].sort((a, b) => a.date.localeCompare(b.date)
+        || (a.initials || a.user).localeCompare(b.initials || b.user));
+}
+
+function planPerProjectPages(report: CombinedReportSnapshot): CombinedReportPreviewSlice[] {
+    const pages: CombinedReportPreviewSlice[] = [];
+    report.projects.forEach((project, projectIndex) => {
+        const lines = sortedProjectLines(report, projectIndex);
+        const people = new Set(lines.map((line) => line.initials || line.user)).size;
+        let page = { ...emptySlice(), projectIndex };
+        let used = 0;
+        const commit = () => {
+            if (used <= 0)
+                return;
+            pages.push(page);
+            page = { ...emptySlice(), projectIndex };
+            used = 0;
+        };
+        const fits = (height: number) => used + height <= USABLE_PX;
+        const title = project.pageTitle?.trim() || `${report.feeTitle} (${project.name})`;
+        page.showMasthead = true;
+        used += mastheadPx(title);
+        if (!fits(THEAD_PX))
+            commit();
+        used += THEAD_PX;
+        page.timeFrom = 0;
+        lines.forEach((line, index) => {
+            const height = timeRowPx(line);
+            if (!fits(height)) {
+                page.timeTo = index;
+                commit();
+                page.timeFrom = index;
+                used += THEAD_PX;
+            }
+            page.timeTo = index + 1;
+            used += height;
+        });
+        if (!fits(TOTAL_PX)) {
+            commit();
+            page.timeFrom = lines.length;
+            page.timeTo = lines.length;
+            used += THEAD_PX;
+        }
+        page.showTimeTotal = true;
+        used += TOTAL_PX + GAP_PX;
+        const peopleBlock = SECTION_HEAD_PX + people * ROW_PX + TOTAL_PX;
+        if (people > 0 && !fits(peopleBlock))
+            commit();
+        page.peopleFrom = 0;
+        page.peopleTo = people;
+        page.showPeopleTotal = people > 0;
+        used += people > 0 ? peopleBlock : 0;
+        commit();
+    });
+    return pages.length > 0 ? pages : [emptySlice()];
+}
+
 export function planCombinedReportPreviewPages(report: CombinedReportSnapshot): CombinedReportPreviewSlice[] {
+    if (report.layout === 'perProject')
+        return planPerProjectPages(report);
     const lines = combinedReportDetailLines(report);
     const pages: CombinedReportPreviewSlice[] = [];
     let page = emptySlice();

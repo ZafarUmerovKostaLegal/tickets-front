@@ -2,6 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from '../lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
 import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
+import { formatTimeReportAmount, formatTimeReportHours } from '../lib/invoiceTimeReportModel';
 import type { CombinedReportLine, CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import './InvoiceTimeReportPage.css';
 
@@ -172,6 +173,139 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
     const showExpenses = slice.showExpensesTotal || slice.expensesTo > slice.expensesFrom;
     const showShares = slice.showSharesTotal || slice.sharesTo > slice.sharesFrom;
     const timeRows = detailRefs(report).slice(slice.timeFrom, slice.timeTo);
+    if (slice.projectIndex >= 0) {
+        const project = report.projects[slice.projectIndex];
+        const projectLines = [...(project?.lines ?? [])].sort((a, b) => a.date.localeCompare(b.date)
+            || (a.initials || a.user).localeCompare(b.initials || b.user));
+        const visibleLines = projectLines.slice(slice.timeFrom, slice.timeTo);
+        const title = project?.pageTitle?.trim() || `${report.feeTitle} (${project?.name ?? ''})`;
+        const peopleByKey = new Map<string, { initials: string; name: string; title: string; hours: number; amount: number }>();
+        for (const line of projectLines) {
+            const key = `${line.initials || ''}|${line.user}`;
+            const prev = peopleByKey.get(key) ?? {
+                initials: line.initials || line.user,
+                name: line.user,
+                title: report.people.find((person) => person.initials === line.initials || person.name === line.user)?.title || '—',
+                hours: 0,
+                amount: 0,
+            };
+            prev.hours += line.hours;
+            prev.amount += line.amount;
+            peopleByKey.set(key, prev);
+        }
+        const projectPeople = [...peopleByKey.values()];
+        const projectHours = projectLines.reduce((sum, line) => sum + line.hours, 0);
+        const projectFees = projectLines.reduce((sum, line) => sum + line.amount, 0);
+        return (
+            <div className={`tt-inv-tr${editable ? ' tt-inv-tr--editable' : ''}`}>
+                <div className="tt-inv-tr__top">
+                    <span className="tt-inv-tr__confidential">Private and confidential</span>
+                </div>
+                <hr className="tt-inv-tr__rule" />
+                {slice.showMasthead ? (
+                    editable ? (
+                        <textarea
+                            className="tt-inv-tr__title"
+                            value={title}
+                            aria-label="Fees for services"
+                            rows={2}
+                            onChange={(e) => emit({
+                                ...report,
+                                projects: report.projects.map((row, index) => index === slice.projectIndex
+                                    ? { ...row, pageTitle: e.target.value }
+                                    : row),
+                            })}
+                        />
+                    ) : <h1 className="tt-inv-tr__title">{title}</h1>
+                ) : null}
+                {showTime ? (
+                    <div className="tt-inv-tr__table-wrap">
+                        <table className="tt-inv-tr__table">
+                            <thead className="tt-inv-tr__thead">
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Initials</th>
+                                    <th>Task</th>
+                                    <th>Description</th>
+                                    <th className="num">Hours</th>
+                                    <th className="num">Rate</th>
+                                    <th className="num">Amount ({cur})</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {visibleLines.map((line) => {
+                                    const lineIndex = project?.lines.indexOf(line) ?? -1;
+                                    return (
+                                        <tr key={`${line.date}-${line.initials}-${lineIndex}`}>
+                                            <TextCell editable={editable} ariaLabel="Date" value={dateRu(line.date)} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { date: commitDate(v) })} />
+                                            <TextCell editable={editable} ariaLabel="Initials" value={line.initials || line.user} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { initials: v })} />
+                                            <TextCell editable={editable} ariaLabel="Task" value={line.task || ''} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { task: v })} />
+                                            <TextCell editable={editable} ariaLabel="Description" value={line.description} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { description: v })} />
+                                            <NumCell editable={editable} className="num" ariaLabel="Hours" value={line.hours} format={formatTimeReportHours} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { hours: v })} />
+                                            <td className="num">{formatTimeReportHours(line.rate ?? (line.hours > 0 ? line.amount / line.hours : 0))}</td>
+                                            <NumCell editable={editable} className="num" ariaLabel="Amount" value={line.amount} format={(n) => formatTimeReportHours(n)} onChange={(v) => patchLine(slice.projectIndex, lineIndex, { amount: v })} />
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                            {slice.showTimeTotal ? (
+                                <tfoot>
+                                    <tr>
+                                        <td colSpan={4}>Total ({cur})</td>
+                                        <td className="num">{formatTimeReportHours(projectHours)}</td>
+                                        <td />
+                                        <td className="num">{formatTimeReportAmount(projectFees, cur)}</td>
+                                    </tr>
+                                </tfoot>
+                            ) : null}
+                        </table>
+                    </div>
+                ) : null}
+                {slice.showPeopleTotal ? (
+                    <div className="tt-inv-tr__table-wrap">
+                        <table className="tt-inv-tr__table">
+                            <thead className="tt-inv-tr__thead">
+                                <tr>
+                                    <th>Initials</th>
+                                    <th>Name</th>
+                                    <th>Title</th>
+                                    <th className="num">Hours</th>
+                                    <th className="num">Rate ({cur})</th>
+                                    <th className="num">Amount ({cur})</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {projectPeople.map((person) => (
+                                    <tr key={person.initials + person.name}>
+                                        <td>{person.initials}</td>
+                                        <td>{person.name}</td>
+                                        <td>{person.title}</td>
+                                        <td className="num">{formatTimeReportHours(person.hours)}</td>
+                                        <td className="num">{formatTimeReportHours(person.hours > 0 ? person.amount / person.hours : 0)}</td>
+                                        <td className="num">{formatTimeReportHours(person.amount)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colSpan={3}>Total ({cur})</td>
+                                    <td className="num">{formatTimeReportHours(projectHours)}</td>
+                                    <td />
+                                    <td className="num">{formatTimeReportAmount(projectFees, cur)}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                ) : null}
+                <footer className="tt-inv-tr__bottom">
+                    <div className="tt-inv-tr__bottom-line" aria-hidden />
+                    <div className="tt-inv-tr__bottom-meta">
+                        <span className="tt-inv-tr__page-box">{pageNumber}</span>
+                    </div>
+                </footer>
+            </div>
+        );
+    }
     return (
         <div className={`tt-inv-tr tt-inv-creport${editable ? ' tt-inv-tr--editable' : ''}`}>
             {slice.showMasthead ? (

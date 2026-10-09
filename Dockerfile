@@ -18,8 +18,8 @@ COPY index.html vite.config.ts tsconfig.json tsconfig.build.json ./
 COPY public ./public
 COPY scripts ./scripts
 COPY src ./src
-# public/twemoji is gitignored. Download it after COPY public, otherwise that
-# copy wipes the assets and npm run build downloads them a second time.
+# public/twemoji is gitignored. Copy it from the npm package after COPY public,
+# otherwise that copy wipes the assets and npm run build copies them again.
 RUN node scripts/copy-twemoji-assets.mjs
 
 ARG VITE_API_BASE_URL

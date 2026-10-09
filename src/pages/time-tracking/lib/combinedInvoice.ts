@@ -85,6 +85,8 @@ export function buildCombinedShares(
     });
 }
 
+export type CombinedReportLayout = 'merged' | 'perProject';
+
 export type CombinedReportLine = {
     date: string;
     user: string;
@@ -92,6 +94,7 @@ export type CombinedReportLine = {
     task?: string;
     description: string;
     hours: number;
+    rate?: number;
     amount: number;
 };
 
@@ -122,7 +125,9 @@ export function combinedTimeTaskAndNotes(raw: string | null | undefined): { task
 export type CombinedReportSnapshot = {
     feeTitle: string;
     currency: string;
-    projects: Array<{ name: string; lines: CombinedReportLine[] }>;
+    /** perProject: each project is its own report page. Omitted means one merged table. */
+    layout?: CombinedReportLayout;
+    projects: Array<{ name: string; pageTitle?: string; lines: CombinedReportLine[] }>;
     people: Array<{
         initials: string;
         name: string;
@@ -149,6 +154,7 @@ function initialsOf(name: string, stored: string | null | undefined): string {
 export function buildCombinedReportSnapshot(input: {
     feeTitle: string;
     currency: string;
+    layout?: CombinedReportLayout;
     projects: TimeManagerClientProjectRow[];
     time: CombinedTimeLine[];
     expenses: CombinedExpenseLine[];
@@ -169,6 +175,7 @@ export function buildCombinedReportSnapshot(input: {
     return {
         feeTitle: input.feeTitle.trim() || 'Fees for services',
         currency: input.currency || 'USD',
+        layout: input.layout === 'perProject' ? 'perProject' : 'merged',
         projects: input.projects.flatMap((project) => {
             const lines = input.time.filter((line) => line.projectId === project.id);
             if (lines.length === 0)
@@ -179,14 +186,17 @@ export function buildCombinedReportSnapshot(input: {
                     const user = userById.get(line.authUserId);
                     const name = user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId);
                     const split = combinedTimeTaskAndNotes(line.description);
+                    const hours = line.billableHours ?? line.hours;
+                    const amount = line.billableAmount;
                     return {
                         date: line.workDate.slice(0, 10),
                         user: name,
                         initials: initialsOf(name, user?.initials),
                         task: split.task,
                         description: split.description,
-                        hours: line.billableHours ?? line.hours,
-                        amount: line.billableAmount,
+                        hours,
+                        rate: hours > 0 ? amount / hours : 0,
+                        amount,
                     };
                 }),
             }];

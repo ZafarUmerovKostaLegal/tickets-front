@@ -1,13 +1,8 @@
-
 import fs from 'node:fs';
 import path from 'node:path';
-import { pipeline } from 'node:stream/promises';
-import { createWriteStream } from 'node:fs';
-import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const root = path.join(__dirname, '..');
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dest = path.join(root, 'public', 'twemoji');
 const marker = path.join(dest, 'svg', '1f525.svg');
 
@@ -17,39 +12,11 @@ if (fs.existsSync(marker)) {
 }
 
 const packageAssets = path.join(root, 'node_modules', 'twemoji', 'assets');
-if (fs.existsSync(path.join(packageAssets, 'svg', '1f525.svg'))) {
-    fs.cpSync(packageAssets, dest, { recursive: true });
-    console.log('[twemoji] copied from node_modules/twemoji');
+const packageMarker = path.join(packageAssets, 'svg', '1f525.svg');
+if (!fs.existsSync(packageMarker)) {
+    console.error('[twemoji] node_modules/twemoji/assets is missing; emoji images will be absent');
     process.exit(0);
 }
 
-const cacheDir = path.join(root, 'node_modules', '.twemoji-cache');
-const archivePath = path.join(cacheDir, 'twemoji-14.0.2.tar.gz');
-const TWEMOJI_TAG = 'v14.0.2';
-const DOWNLOAD_URL = `https://github.com/twitter/twemoji/archive/refs/tags/${TWEMOJI_TAG}.tar.gz`;
-
-fs.mkdirSync(cacheDir, { recursive: true });
-fs.mkdirSync(dest, { recursive: true });
-
-console.log('[twemoji] downloading assets…');
-const res = await fetch(DOWNLOAD_URL);
-if (!res.ok) {
-    console.error(`[twemoji] download failed: HTTP ${res.status}`);
-    process.exit(1);
-}
-await pipeline(res.body, createWriteStream(archivePath));
-
-const extractDir = path.join(cacheDir, 'extract');
-fs.rmSync(extractDir, { recursive: true, force: true });
-fs.mkdirSync(extractDir, { recursive: true });
-
-execSync(`tar -xzf "${archivePath}" -C "${extractDir}"`, { stdio: 'inherit' });
-
-const assetsSrc = path.join(extractDir, `twemoji-${TWEMOJI_TAG.slice(1)}`, 'assets');
-if (!fs.existsSync(assetsSrc)) {
-    console.error('[twemoji] assets folder not found in archive');
-    process.exit(1);
-}
-
-fs.cpSync(assetsSrc, dest, { recursive: true });
-console.log('[twemoji] copied to public/twemoji');
+fs.cpSync(packageAssets, dest, { recursive: true });
+console.log('[twemoji] copied from node_modules/twemoji');

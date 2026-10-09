@@ -1,10 +1,11 @@
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '@pages/invoice-preview/lib/invoiceCoverLogoRaster';
 import type { TimeManagerClientProjectRow, TimeTrackingUserRow } from '@entities/time-tracking';
-import { combinedTimeTaskAndNotes, type CombinedExpenseLine, type CombinedShare, type CombinedTimeLine } from '../lib/combinedInvoice';
+import { combinedTimeTaskAndNotes, type CombinedExpenseLine, type CombinedReportLayout, type CombinedShare, type CombinedTimeLine } from '../lib/combinedInvoice';
 
 type Props = {
     feeTitle: string;
+    layout?: CombinedReportLayout;
     payerName: string;
     from: string;
     to: string;
@@ -47,7 +48,9 @@ function dateRu(iso: string): string {
 
 export function CombinedInvoiceDocument({
     feeTitle,
+    layout = 'merged',
     payerName,
+    projects,
     from,
     to,
     currency,
@@ -90,6 +93,104 @@ export function CombinedInvoiceDocument({
                 <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => window.print()}>Печать / PDF</button>
                 <button type="button" className="tt-reports__btn tt-reports__btn--accent" onClick={onClose}>Закрыть</button>
             </div>
+            {layout === 'perProject' ? projects.filter((project) => time.some((line) => line.projectId === project.id)).map((project, index) => {
+                const projectTime = time.filter((line) => line.projectId === project.id);
+                const projectHours = projectTime.reduce((sum, line) => sum + (line.billableHours ?? line.hours), 0);
+                const projectFees = projectTime.reduce((sum, line) => sum + line.billableAmount, 0);
+                const projectPeople = new Map<number, { hours: number; amount: number }>();
+                for (const line of projectTime) {
+                    const prev = projectPeople.get(line.authUserId) ?? { hours: 0, amount: 0 };
+                    prev.hours += line.billableHours ?? line.hours;
+                    prev.amount += line.billableAmount;
+                    projectPeople.set(line.authUserId, prev);
+                }
+                return (
+                    <article key={project.id} className="tt-inv-cdoc" style={index > 0 ? { breakBefore: 'page' } : undefined}>
+                        <p className="tt-inv-cdoc__lead">{lead} ({project.name})</p>
+                        <section className="tt-inv-cdoc__block">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Initials</th>
+                                        <th>Task</th>
+                                        <th>Description</th>
+                                        <th className="num">Hours</th>
+                                        <th className="num">Rate</th>
+                                        <th className="num">Amount ({currency})</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {[...projectTime].sort((a, b) => a.workDate.localeCompare(b.workDate)).map((line) => {
+                                        const user = userById.get(line.authUserId);
+                                        const name = user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId);
+                                        const split = combinedTimeTaskAndNotes(line.description);
+                                        const hours = line.billableHours ?? line.hours;
+                                        const rate = hours > 0 ? line.billableAmount / hours : 0;
+                                        return (
+                                            <tr key={line.id}>
+                                                <td>{dateRu(line.workDate)}</td>
+                                                <td>{initialsOf(name, user?.initials)}</td>
+                                                <td>{split.task}</td>
+                                                <td>{split.description}</td>
+                                                <td className="num">{fmtHours(hours)}</td>
+                                                <td className="num">{money(rate)}</td>
+                                                <td className="num">{money(line.billableAmount)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colSpan={4}>Total ({currency})</td>
+                                        <td className="num">{fmtHours(projectHours)}</td>
+                                        <td />
+                                        <td className="num">{money(projectFees)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </section>
+                        <section className="tt-inv-cdoc__block">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Initials</th>
+                                        <th>Name</th>
+                                        <th>Title</th>
+                                        <th className="num">Hours</th>
+                                        <th className="num">Rate ({currency})</th>
+                                        <th className="num">Amount ({currency})</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {[...projectPeople.entries()].map(([id, totals]) => {
+                                        const user = userById.get(id);
+                                        const name = user?.display_name?.trim() || user?.email?.trim() || String(id);
+                                        return (
+                                            <tr key={id}>
+                                                <td>{initialsOf(name, user?.initials)}</td>
+                                                <td>{name}</td>
+                                                <td>{user?.position?.trim() || '—'}</td>
+                                                <td className="num">{fmtHours(totals.hours)}</td>
+                                                <td className="num">{money(totals.hours > 0 ? totals.amount / totals.hours : 0)}</td>
+                                                <td className="num">{money(totals.amount)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colSpan={3}>Total ({currency})</td>
+                                        <td className="num">{fmtHours(projectHours)}</td>
+                                        <td />
+                                        <td className="num">{money(projectFees)}</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </section>
+                    </article>
+                );
+            }) : (
             <article className="tt-inv-cdoc">
                 <header className="tt-inv-cdoc__head">
                     <img className="tt-inv-cdoc__logo" src={coverLetterheadLogoUrl()} alt="KOSTA LEGAL" />
@@ -237,6 +338,7 @@ export function CombinedInvoiceDocument({
                     </table>
                 </section>
             </article>
+            )}
         </div>
     );
 }

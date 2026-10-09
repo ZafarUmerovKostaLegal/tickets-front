@@ -18,6 +18,7 @@ import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { CombinedInvoiceDocument } from './CombinedInvoiceDocument';
 import {
     buildCombinedReportSnapshot,
+    type CombinedReportLayout,
     buildCombinedShares,
     formatCombinedShareNote,
     loadCombinedInvoiceTemplates,
@@ -51,6 +52,7 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
     const [confirmedRows, setConfirmedRows] = useState<PartnerReportConfirmationRequest[]>([]);
     const [confirmedLoading, setConfirmedLoading] = useState(true);
     const [allocation, setAllocation] = useState<CombinedAllocation>('hours');
+    const [reportLayout, setReportLayout] = useState<CombinedReportLayout>('merged');
     const [from, setFrom] = useState(firstOfMonthIso());
     const [to, setTo] = useState(lastOfMonthIso());
     const [issueDate, setIssueDate] = useState(todayIso());
@@ -378,6 +380,7 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
             const snapshot = buildCombinedReportSnapshot({
                 feeTitle,
                 currency,
+                layout: reportLayout,
                 projects: selectedProjects,
                 time,
                 expenses,
@@ -491,6 +494,10 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
             <div className="tt-inv-combined__alloc" role="group" aria-label="Как распределить сумму">
                 <button type="button" className={allocation === 'hours' ? 'is-on' : ''} onClick={() => setAllocation('hours')}>По наработанным часам</button>
                 <button type="button" className={allocation === 'equal' ? 'is-on' : ''} onClick={() => setAllocation('equal')}>Поровну по проектам</button>
+            </div>
+            <div className="tt-inv-combined__alloc" role="group" aria-label="Как собрать отчёт">
+                <button type="button" className={reportLayout === 'merged' ? 'is-on' : ''} onClick={() => setReportLayout('merged')}>Общая таблица</button>
+                <button type="button" className={reportLayout === 'perProject' ? 'is-on' : ''} onClick={() => setReportLayout('perProject')}>Каждый проект на своей странице</button>
             </div>
             <div className="tt-inv-combined__pick">
                 <div className="tt-inv-combined__pick-label">
@@ -662,6 +669,7 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
             {preview ? (
                 <CombinedInvoiceDocument
                     feeTitle={feeTitle}
+                    layout={reportLayout}
                     payerName={clientName.get(payerId) ?? '—'}
                     from={from}
                     to={to}
