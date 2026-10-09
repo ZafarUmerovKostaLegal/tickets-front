@@ -1,10 +1,42 @@
 .acct-card.acct-card-list {
   margin: 0;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   min-height: 0;
+  background: var(--app-surface, #fff);
+  border: 1px solid var(--app-border, rgba(15, 23, 42, 0.08));
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.acct-card-list .exp-tt-toolbar,
+.acct-card-list .exp-tt-filters-outer {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: var(--app-surface, #fff);
+}
+
+.acct-card-list .exp-tt-toolbar {
+  padding-bottom: 0.35rem;
+}
+
+.acct-card-list .exp-tt-filters-outer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-top: 0.35rem;
+  border-bottom: 1px solid var(--app-border, rgba(15, 23, 42, 0.08));
+}
+
+.acct-card-list .exp-filters {
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.acct-card-list .exp-filters-custom-range {
+  margin: 0;
+  padding: 0;
 }
 
 .acct-card__total--inline {
@@ -19,7 +51,39 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 0 0 1rem;
+  margin: 0;
+  padding: 0;
+  background: var(--app-surface, #fff);
+}
+
+.acct-card-table .exp-table__body {
+  border-radius: 0;
+}
+
+.acct-card-table .exp-table__row--head {
+  border: none;
+  border-bottom: 1px solid var(--app-border, rgba(15, 23, 42, 0.08));
+  border-radius: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.acct-card-table .exp-table__th {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.75rem;
+}
+
+.acct-card-table .exp-table__row:not(.exp-table__row--head) {
+  border-left: none;
+  border-right: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.acct-card-table .exp-table__row:not(.exp-table__row--head):last-child {
+  border-radius: 0;
 }
 
 .acct-card-table .exp-table__row {

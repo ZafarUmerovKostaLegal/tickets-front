@@ -249,27 +249,6 @@ export function AccountingPage() {
                     </div>
                 </header>
 
-                <nav className="acct-tabs" role="tablist" aria-label="Разделы бухгалтерии">
-                    {([
-                        ['overview', 'Обзор'],
-                        ['invoices', 'Инвойсы'],
-                        ['hr', 'HR'],
-                        ['corporate-card', 'Корпоративная карта'],
-                        ['coming-soon', 'Скоро в системе'],
-                    ] as const).map(([tab, label]) => (
-                        <button
-                            key={tab}
-                            type="button"
-                            role="tab"
-                            aria-selected={activeTab === tab}
-                            className={`acct-tabs__tab${activeTab === tab ? ' acct-tabs__tab--on' : ''}`}
-                            onClick={() => selectTab(tab)}
-                        >
-                            {label}
-                        </button>
-                    ))}
-                </nav>
-
                 <div
                     className={`acct-page__content${activeTab === 'invoices' ? ' acct-page__content--invoices' : ''}${activeTab === 'corporate-card' ? ' acct-page__content--card' : ''}`}
                 >

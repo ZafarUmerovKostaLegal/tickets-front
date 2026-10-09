@@ -1,9 +1,0 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { buildVacationLeaveApplicationCopy } from '../lib/vacationLeaveApplicationCopy';
-import './VacationLeaveApplicationLetter.css';
-export function VacationLeaveApplicationLetter({ request }) {
-    const copy = buildVacationLeaveApplicationCopy(request);
-    return (_jsxs("article", { className: "vac-leave-letter", "aria-label": "\u0417\u0430\u044F\u0432\u043B\u0435\u043D\u0438\u0435", children: [_jsxs("div", { className: "vac-leave-letter__addr", children: [_jsx("span", { className: "vac-leave-letter__k", children: "\u041A\u041E\u041C\u0423:" }), _jsxs("span", { className: "vac-leave-letter__v", children: [copy.addresseeOrg, _jsx("br", {}), copy.addresseeName] }), _jsx("span", { className: "vac-leave-letter__k", children: "\u041E\u0422:" }), _jsx("span", { className: "vac-leave-letter__v", children: copy.fromLine })] }), _jsx("p", { className: "vac-leave-letter__date", children: _jsx("span", { className: "vac-leave-letter__field", children: copy.dateLine }) }), _jsxs("header", { className: "vac-leave-letter__head", children: [_jsx("h1", { className: `vac-leave-letter__title${copy.subtitle ? '' : ' vac-leave-letter__title--long'}`, children: copy.title }), copy.subtitle ? _jsx("p", { className: "vac-leave-letter__subtitle", children: copy.subtitle }) : null] }), _jsx("p", { className: "vac-leave-letter__body", children: copy.bodyParts.map((part, i) => (part.type === 'field'
-                    ? _jsx("span", { className: "vac-leave-letter__field", children: part.text }, i)
-                    : _jsx("span", { children: part.text }, i))) }), _jsxs("footer", { className: "vac-leave-letter__sign", children: [_jsx("span", { className: "vac-leave-letter__sign-line", "aria-hidden": true }), _jsx("span", { className: "vac-leave-letter__field", children: copy.signerLine })] })] }));
-}
