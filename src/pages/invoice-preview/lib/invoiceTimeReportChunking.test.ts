@@ -53,6 +53,17 @@ describe('splitDetailRowsForPagedTimeReport', () => {
         expect(sizes[sizes.length - 1]).toBeLessThanOrEqual(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 5);
     });
 
+    it('splits wrapped descriptions before they run into the footer', () => {
+        const long = Array.from({ length: 12 }, (_, i) => ({
+            ...row(String(i + 1)),
+            description: 'Review of the registration with tax authorities issue and related correspondence with the client accountant and the lessor office',
+        }));
+        const sizes = splitDetailRowsForPagedTimeReport(long).map((c) => c.length);
+        expect(sizes.reduce((a, b) => a + b, 0)).toBe(12);
+        expect(sizes.length).toBeGreaterThan(1);
+        expect(Math.max(...sizes)).toBeLessThan(12);
+    });
+
     it('folds tiny penultimate pages into the last page', () => {
         // remaining-LAST would be 3 (< MIN_DENSE_MID_CHUNK) → single page
         expect(chunkSizes(TIME_REPORT_PDF_ROWS_LAST_CHUNK + 3)).toEqual([TIME_REPORT_PDF_ROWS_LAST_CHUNK + 3]);

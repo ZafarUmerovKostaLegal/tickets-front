@@ -233,7 +233,7 @@
 }
 
 .tt-inv-tr__tbody td {
-  padding: 0.38rem 0.35rem;
+  padding: 0.42rem 0.45rem;
   font-size: inherit;
   border-bottom: 1px solid #e2e8f0;
   vertical-align: top;
@@ -306,12 +306,13 @@
   background: rgba(232, 51, 55, 0.06);
 }
 
+.tt-inv-tr__tbody td.tt-inv-tr__cell--num {
+  white-space: nowrap;
+}
+
 .tt-inv-tr__cell--amount,
 .tt-inv-tr__tfoot .tt-inv-tr__cell--amount {
-  white-space: normal;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  hyphens: auto;
+  white-space: nowrap;
 }
 
 .tt-inv-tr__currency-foot {

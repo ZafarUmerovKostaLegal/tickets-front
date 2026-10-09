@@ -109,14 +109,14 @@ export function InvoiceTimeReportPage({
         <table className="tt-inv-tr__table" role="grid" aria-label="Детальный отчёт по времени">
           <thead className="tt-inv-tr__thead">
             <tr>
-              <th scope="col" style={{ width: showInitiatorName ? '13%' : '15%' }}>{labels.date}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '8%' : '9%' }}>{labels.initials}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '11%' : '13%' }}>{labels.task}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.description}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '11%' : '12%' }}>{labels.date}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '7%' : '8%' }}>{labels.initials}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '12%' : '14%' }}>{labels.task}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '26%' : '38%' }}>{labels.description}</th>
               {showInitiatorName ? <th scope="col" style={{ width: '12%' }}>{labels.initiatorName}</th> : null}
-              <th scope="col" style={{ width: showInitiatorName ? '7%' : '8%' }}>{labels.hours}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.rate}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '17%' : '19%' }}>{amountHeader}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '8%' : '8%' }}>{labels.hours}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '12%' : '10%' }}>{labels.rate}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '12%' : '10%' }}>{amountHeader}</th>
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">
@@ -187,14 +187,14 @@ export function InvoiceTimeReportPage({
               <table className="tt-inv-tr__table" role="grid" aria-label={labels.mehnatTitle}>
                 <thead className="tt-inv-tr__thead">
                   <tr>
-                    <th scope="col" style={{ width: showInitiatorName ? '13%' : '15%' }}>{labels.date}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '8%' : '9%' }}>{labels.initials}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '11%' : '13%' }}>{labels.task}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.description}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '11%' : '12%' }}>{labels.date}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '7%' : '8%' }}>{labels.initials}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '12%' : '14%' }}>{labels.task}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '26%' : '38%' }}>{labels.description}</th>
                     {showInitiatorName ? <th scope="col" style={{ width: '12%' }}>{labels.initiatorName}</th> : null}
-                    <th scope="col" style={{ width: showInitiatorName ? '7%' : '8%' }}>{labels.hours}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.rate}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '17%' : '19%' }}>{amountHeader}</th>
+                    <th scope="col" style={{ width: '8%' }}>{labels.hours}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '12%' : '10%' }}>{labels.rate}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '12%' : '10%' }}>{amountHeader}</th>
                   </tr>
                 </thead>
                 <tbody className="tt-inv-tr__tbody">
