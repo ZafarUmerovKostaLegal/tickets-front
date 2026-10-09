@@ -16,6 +16,13 @@ if (fs.existsSync(marker)) {
     process.exit(0);
 }
 
+const packageAssets = path.join(root, 'node_modules', 'twemoji', 'assets');
+if (fs.existsSync(path.join(packageAssets, 'svg', '1f525.svg'))) {
+    fs.cpSync(packageAssets, dest, { recursive: true });
+    console.log('[twemoji] copied from node_modules/twemoji');
+    process.exit(0);
+}
+
 const cacheDir = path.join(root, 'node_modules', '.twemoji-cache');
 const archivePath = path.join(cacheDir, 'twemoji-14.0.2.tar.gz');
 const TWEMOJI_TAG = 'v14.0.2';
