@@ -21,6 +21,8 @@ export type InvoiceTimeReportPageProps = {
     showMehnatSection?: boolean;
 
     showSummarySection?: boolean;
+    /** Summary of services on its own sheet, without the hours table. */
+    summaryOnly?: boolean;
     /** Cut the name after "/", "*" or "=" out of Description and show it in its own column. */
     showInitiatorName?: boolean;
     editable?: boolean;
@@ -70,6 +72,7 @@ export function InvoiceTimeReportPage({
     showExpenseSection = true,
     showMehnatSection = true,
     showSummarySection = true,
+    summaryOnly = false,
     showInitiatorName = false,
     editable = false,
     onPatchDetailRow,
@@ -92,7 +95,7 @@ export function InvoiceTimeReportPage({
     const detailHasContent = detail.some((r) =>
         [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0),
     );
-    const showMainTimeTable = detailHasContent || mehnat.length === 0;
+    const showMainTimeTable = !summaryOnly && (detailHasContent || mehnat.length === 0);
     const title = continuation
         ? labels.titleContinued(model.servicesMonthYear)
         : labels.title(model.servicesMonthYear);
@@ -180,7 +183,7 @@ export function InvoiceTimeReportPage({
       </div>
       ) : null}
 
-      {showMehnatSection && mehnat.length > 0 ? (
+      {showMehnatSection && !summaryOnly && mehnat.length > 0 ? (
           <>
             <h3 className="tt-inv-tr__subtitle">{labels.mehnatTitle}</h3>
             <div className="tt-inv-tr__table-wrap">
@@ -326,7 +329,7 @@ export function InvoiceTimeReportPage({
           </>
         ) : null}
 
-      {showExpenseSection && expenses.length > 0 ? (
+      {showExpenseSection && !summaryOnly && expenses.length > 0 ? (
           <>
             <h3 className="tt-inv-tr__subtitle">{labels.expensesTitle}</h3>
             <div className="tt-inv-tr__table-wrap">

@@ -643,8 +643,15 @@ function paginateDetailRowsForPdf(
                 slice: trimmed.slice(i),
                 continuation,
                 showDetailTotals: true,
-                showSummarySection: true,
+                showSummarySection: false,
                 showDetailGrid: true,
+            });
+            pages.push({
+                slice: [],
+                continuation: true,
+                showDetailTotals: false,
+                showSummarySection: true,
+                showDetailGrid: false,
             });
             break;
         }
@@ -660,27 +667,20 @@ function paginateDetailRowsForPdf(
             take = 1;
 
         if (take >= remaining) {
-            // Rows fit on this page, but the summary estimate does not.
-            // A one-row lead sheet is the huge blank gap — keep the summary
-            // on this page when the detail block leaves real room under it.
-            const detailH = heightFor(remaining, true);
-            const roomForSummary = detailH + summaryOnlyReserve <= maxH;
             pages.push({
                 slice: trimmed.slice(i),
                 continuation,
                 showDetailTotals: true,
-                showSummarySection: roomForSummary,
+                showSummarySection: false,
                 showDetailGrid: true,
             });
-            if (!roomForSummary) {
-                pages.push({
-                    slice: [],
-                    continuation: true,
-                    showDetailTotals: false,
-                    showSummarySection: true,
-                    showDetailGrid: false,
-                });
-            }
+            pages.push({
+                slice: [],
+                continuation: true,
+                showDetailTotals: false,
+                showSummarySection: true,
+                showDetailGrid: false,
+            });
             break;
         }
 

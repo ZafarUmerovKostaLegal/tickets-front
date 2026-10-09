@@ -490,9 +490,12 @@ export function InvoicePreviewPage() {
         [combinedReport, combinedReportPages, resolvedTimeReportPack.detailSlots, resolvedTimeReportPack.summarySlots],
     );
 
+    const summaryOnOwnPage = !combinedReport;
+    const timeReportPageCount = timeReportChunks.length + (summaryOnOwnPage ? 1 : 0);
+
     const allPageSlots = useMemo(
-        () => buildInvoicePreviewPageSlots(timeReportChunks.length),
-        [timeReportChunks.length],
+        () => buildInvoicePreviewPageSlots(timeReportPageCount),
+        [timeReportPageCount],
     );
 
     const resolvedIncludedKeys = useMemo(
@@ -1006,7 +1009,8 @@ export function InvoicePreviewPage() {
                     : -1;
                 const displayNum = visibleIdx >= 0 ? visibleIdx + 1 : null;
                 const isActive = included && displayNum === activePage;
-                const lastTr = timeReportChunks.length - 1;
+                const summaryOnly = summaryOnOwnPage && slot.kind === 'timeReport' && slot.chunkIndex >= timeReportChunks.length;
+                const lastDetail = timeReportChunks.length - 1;
                 return (
                   <div
                     key={slot.key}
@@ -1031,7 +1035,7 @@ export function InvoicePreviewPage() {
                                   <InvoiceCoverLetter model={displayModel}/>
                                 </div>
                               )
-                            : slot.kind === 'timeReport' && timeReportChunks[slot.chunkIndex]
+                            : slot.kind === 'timeReport' && (summaryOnly || timeReportChunks[slot.chunkIndex])
                               ? (
                                   <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--timerpt">
                                     {combinedReport
@@ -1041,12 +1045,13 @@ export function InvoicePreviewPage() {
                                       model={displayModel}
                                       pack={resolvedTimeReportPack}
                                       pageNumber={2 + slot.chunkIndex}
-                                      detailRows={timeReportChunks[slot.chunkIndex]}
+                                      detailRows={summaryOnly ? [] : timeReportChunks[slot.chunkIndex]}
                                       continuation={slot.chunkIndex > 0}
-                                      showDetailTotalRow={slot.chunkIndex === lastTr}
-                                      showExpenseSection={slot.chunkIndex === lastTr}
-                                      showMehnatSection={slot.chunkIndex === lastTr}
-                                      showSummarySection={slot.chunkIndex === lastTr}
+                                      summaryOnly={summaryOnly}
+                                      showDetailTotalRow={!summaryOnly && slot.chunkIndex === lastDetail}
+                                      showExpenseSection={!summaryOnly && slot.chunkIndex === lastDetail}
+                                      showMehnatSection={!summaryOnly && slot.chunkIndex === lastDetail}
+                                      showSummarySection={summaryOnly}
                                       showInitiatorName={showInitiatorName}
                                     />
                                       )}
@@ -1275,7 +1280,6 @@ export function InvoicePreviewPage() {
                 {coverModel
                   ? visiblePageSlots.map((slot, visibleIdx) => {
                       const pageNum = visibleIdx + 1;
-                      const lastTr = timeReportChunks.length - 1;
                       if (slot.kind === 'cover') {
                           return (
                             <div
@@ -1295,7 +1299,9 @@ export function InvoicePreviewPage() {
                           );
                       }
                       if (slot.kind === 'timeReport') {
-                          const chunk = timeReportChunks[slot.chunkIndex] ?? [];
+                          const summaryOnly = summaryOnOwnPage && slot.chunkIndex >= timeReportChunks.length;
+                          const chunk = summaryOnly ? [] : (timeReportChunks[slot.chunkIndex] ?? []);
+                          const lastDetail = timeReportChunks.length - 1;
                           return (
                             <div
                               key={slot.key}
@@ -1322,10 +1328,11 @@ export function InvoicePreviewPage() {
                                 pageNumber={pageNum}
                                 detailRows={chunk}
                                 continuation={slot.chunkIndex > 0}
-                                showDetailTotalRow={slot.chunkIndex === lastTr}
-                                showExpenseSection={slot.chunkIndex === lastTr}
-                                showMehnatSection={slot.chunkIndex === lastTr}
-                                showSummarySection={slot.chunkIndex === lastTr}
+                                summaryOnly={summaryOnly}
+                                showDetailTotalRow={!summaryOnly && slot.chunkIndex === lastDetail}
+                                showExpenseSection={!summaryOnly && slot.chunkIndex === lastDetail}
+                                showMehnatSection={!summaryOnly && slot.chunkIndex === lastDetail}
+                                showSummarySection={summaryOnly}
                                 showInitiatorName={showInitiatorName}
                                 editable={editingPage === pageNum}
                                 onPatchDetailRow={(rowIndex, field, value) => patchDetailRowInChunk(slot.chunkIndex, rowIndex, field, value)}
