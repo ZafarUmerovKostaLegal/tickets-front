@@ -34,6 +34,10 @@ export type InvoiceTimeReportPack = {
     mehnatTotalAmountDisplay: string;
     summaryGrandHoursDisplay: string;
     summaryGrandAmountDisplay: string;
+    /** Edited heading on the first time-report sheet. Empty means the generated title. */
+    reportTitle?: string | null;
+    /** Edited heading on continuation sheets. */
+    reportTitleContinued?: string | null;
 };
 
 export function emptyDetailRow(): InvoiceTimeReportDetailRow {

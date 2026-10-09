@@ -28,6 +28,22 @@ export type TimeReportLabels = {
     totalPrice: (currency: string) => string;
 };
 
+export function timeReportHeading(opts: {
+    language: InvoiceCoverLanguage;
+    servicesMonthYear: string;
+    continuation: boolean;
+    reportTitle?: string | null;
+    reportTitleContinued?: string | null;
+}): string {
+    const custom = (opts.continuation ? opts.reportTitleContinued : opts.reportTitle)?.trim();
+    if (custom)
+        return custom;
+    const labels = getTimeReportLabels(opts.language);
+    return opts.continuation
+        ? labels.titleContinued(opts.servicesMonthYear)
+        : labels.title(opts.servicesMonthYear);
+}
+
 const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
     ENG: {
         confidential: 'CONFIDENTIAL',

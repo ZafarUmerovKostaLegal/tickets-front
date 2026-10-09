@@ -32,7 +32,7 @@ import { COVER_LETTERHEAD_LOGO_ASPECT, LEGAL_VERT_LOGO_ASPECT, rasterizeInvoiceL
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { countCombinedReportPages, drawCombinedReportPages } from './drawCombinedFeesReportPdf';
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
-import { getTimeReportLabels } from './invoiceTimeReportI18n';
+import { getTimeReportLabels, timeReportHeading } from './invoiceTimeReportI18n';
 import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels, uppercaseLegalDateDisplay } from './invoiceLegalPageI18n';
 import {
@@ -537,14 +537,17 @@ function estimateGridTableHeight(
     return headerH + bodyH + (withFooter ? TABLE_FOOTER_H : 0);
 }
 
-function estimateTimeReportTableTop(continuation: boolean, model: InvoiceCoverLetterModel, fontBold: PDFFont): number {
+function estimateTimeReportTableTop(continuation: boolean, model: InvoiceCoverLetterModel, fontBold: PDFFont, pack?: InvoiceTimeReportPack): number {
     let yTop = H - MT - 4;
     yTop -= 18;
     yTop -= 14;
-    const labels = getTimeReportLabels(model.coverLanguage);
-    const title = continuation
-        ? labels.titleContinued(model.servicesMonthYear)
-        : labels.title(model.servicesMonthYear);
+    const title = timeReportHeading({
+        language: model.coverLanguage,
+        servicesMonthYear: model.servicesMonthYear,
+        continuation,
+        reportTitle: pack?.reportTitle,
+        reportTitleContinued: pack?.reportTitleContinued,
+    });
     const titleLines = splitTextLines(title, W - ML - MR, DOC_FS, fontBold);
     yTop -= Math.max(titleLines.length, 1) * DOC_LH;
     return yTop - TR_TITLE_TABLE_GAP;
@@ -611,7 +614,7 @@ function paginateDetailRowsForPdf(
 
     while (i < trimmed.length) {
         const continuation = pageIndex > 0;
-        const yGridTop = estimateTimeReportTableTop(continuation, model, fontBold);
+        const yGridTop = estimateTimeReportTableTop(continuation, model, fontBold, pack);
         const maxH = yGridTop - PAGE_FOOTER_ZONE_TOP;
         const remaining = trimmed.length - i;
 
@@ -1029,7 +1032,7 @@ function detailPdfRowCells(
 }
 const TR_SUMMARY_FIXED_FS_COLS = new Set([0, 3]);
 
-function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, fontBold: PDFFont, continuation: boolean): number {
+function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel, fontBold: PDFFont, continuation: boolean, pack?: InvoiceTimeReportPack): number {
     let yTop = H - MT - 4;
     const labels = getTimeReportLabels(model.coverLanguage);
     const confLabel = labels.confidential;
@@ -1063,9 +1066,13 @@ function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel,
         color: TR_RED,
     });
     yTop -= 14;
-    const title = continuation
-        ? labels.titleContinued(model.servicesMonthYear)
-        : labels.title(model.servicesMonthYear);
+    const title = timeReportHeading({
+        language: model.coverLanguage,
+        servicesMonthYear: model.servicesMonthYear,
+        continuation,
+        reportTitle: pack?.reportTitle,
+        reportTitleContinued: pack?.reportTitleContinued,
+    });
     const yAfterTitle = wrapTextBlock(page, title, ML, yTop, W - ML - MR, DOC_FS, fontBold, TR_RED, DOC_LH);
     return yAfterTitle - TR_TITLE_TABLE_GAP;
 }
@@ -1116,7 +1123,7 @@ function drawSingleTimeReportPdfPage(
     },
 ): void {
     const showInitiatorName = opts.showInitiatorName === true;
-    const yGridTop = drawTimeReportBandHeader(page, model, fontBold, opts.continuation);
+    const yGridTop = drawTimeReportBandHeader(page, model, fontBold, opts.continuation, pack);
     const tableW = W - ML - MR;
     const cur = packCurrencyCode(model);
     const labels = getTimeReportLabels(model.coverLanguage);

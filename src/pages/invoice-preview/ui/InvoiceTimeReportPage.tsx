@@ -2,7 +2,7 @@ import type { ChangeEvent } from 'react';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { descriptionKeepingTaskWords, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
-import { getTimeReportLabels } from '../lib/invoiceTimeReportI18n';
+import { getTimeReportLabels, timeReportHeading } from '../lib/invoiceTimeReportI18n';
 import { joinServiceInitiatorName, splitServiceInitiatorName } from '../lib/splitServiceInitiatorName';
 import './InvoiceTimeReportPage.css';
 
@@ -30,7 +30,7 @@ export type InvoiceTimeReportPageProps = {
     onPatchExpenseRow?: (rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => void;
     onPatchMehnatRow?: (rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => void;
     onPatchSummaryRow?: (rowIndex: number, field: keyof InvoiceTimeReportSummaryRow, value: string) => void;
-    onPatchPack?: (patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay'>>) => void;
+    onPatchPack?: (patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'reportTitle' | 'reportTitleContinued'>>) => void;
 };
 
 function TrCell({
@@ -96,16 +96,30 @@ export function InvoiceTimeReportPage({
         [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0),
     );
     const showMainTimeTable = !summaryOnly && (detailHasContent || mehnat.length === 0);
-    const title = continuation
-        ? labels.titleContinued(model.servicesMonthYear)
-        : labels.title(model.servicesMonthYear);
+    const title = timeReportHeading({
+        language: model.coverLanguage,
+        servicesMonthYear: model.servicesMonthYear,
+        continuation,
+        reportTitle: pack.reportTitle,
+        reportTitleContinued: pack.reportTitleContinued,
+    });
 
     return (<div className={`tt-inv-tr${editable ? ' tt-inv-tr--editable' : ''}`}>
       <div className="tt-inv-tr__top">
         <span className="tt-inv-tr__confidential">{labels.confidential}</span>
       </div>
       <div className="tt-inv-tr__rule" aria-hidden />
-      <h2 className="tt-inv-tr__title">{title}</h2>
+      {editable ? (
+          <textarea
+              className="tt-inv-tr__title tt-inv-tr__title-input"
+              value={title}
+              aria-label="Time report title"
+              rows={2}
+              onChange={(e) => onPatchPack?.(continuation
+                  ? { reportTitleContinued: e.target.value }
+                  : { reportTitle: e.target.value })}
+          />
+      ) : <h2 className="tt-inv-tr__title">{title}</h2>}
 
       {showMainTimeTable ? (
       <div className="tt-inv-tr__table-wrap">

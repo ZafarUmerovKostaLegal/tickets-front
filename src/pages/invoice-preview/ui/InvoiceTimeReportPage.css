@@ -177,6 +177,24 @@
   border: none;
 }
 
+textarea.tt-inv-tr__title-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+  resize: vertical;
+  background: transparent;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+}
+
+textarea.tt-inv-tr__title-input:focus {
+  border-color: rgba(232, 51, 55, 0.45);
+  outline: none;
+}
+
 .tt-inv-tr__title {
   margin: 0 0 0.65rem;
   font-size: inherit;
