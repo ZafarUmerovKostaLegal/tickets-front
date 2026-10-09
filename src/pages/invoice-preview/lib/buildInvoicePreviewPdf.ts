@@ -643,15 +643,8 @@ function paginateDetailRowsForPdf(
                 slice: trimmed.slice(i),
                 continuation,
                 showDetailTotals: true,
-                showSummarySection: false,
-                showDetailGrid: true,
-            });
-            pages.push({
-                slice: [],
-                continuation: true,
-                showDetailTotals: false,
                 showSummarySection: true,
-                showDetailGrid: false,
+                showDetailGrid: true,
             });
             break;
         }
@@ -667,20 +660,24 @@ function paginateDetailRowsForPdf(
             take = 1;
 
         if (take >= remaining) {
+            const detailH = heightFor(remaining, true);
+            const roomForSummary = detailH + summaryOnlyReserve <= maxH;
             pages.push({
                 slice: trimmed.slice(i),
                 continuation,
                 showDetailTotals: true,
-                showSummarySection: false,
+                showSummarySection: roomForSummary,
                 showDetailGrid: true,
             });
-            pages.push({
-                slice: [],
-                continuation: true,
-                showDetailTotals: false,
-                showSummarySection: true,
-                showDetailGrid: false,
-            });
+            if (!roomForSummary) {
+                pages.push({
+                    slice: [],
+                    continuation: true,
+                    showDetailTotals: false,
+                    showSummarySection: true,
+                    showDetailGrid: false,
+                });
+            }
             break;
         }
 

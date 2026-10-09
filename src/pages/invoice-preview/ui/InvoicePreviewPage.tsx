@@ -490,7 +490,7 @@ export function InvoicePreviewPage() {
         [combinedReport, combinedReportPages, resolvedTimeReportPack.detailSlots, resolvedTimeReportPack.summarySlots],
     );
 
-    const summaryOnOwnPage = !combinedReport;
+    const summaryOnOwnPage = false;
     const timeReportPageCount = timeReportChunks.length + (summaryOnOwnPage ? 1 : 0);
 
     const allPageSlots = useMemo(
@@ -1051,7 +1051,7 @@ export function InvoicePreviewPage() {
                                       showDetailTotalRow={!summaryOnly && slot.chunkIndex === lastDetail}
                                       showExpenseSection={!summaryOnly && slot.chunkIndex === lastDetail}
                                       showMehnatSection={!summaryOnly && slot.chunkIndex === lastDetail}
-                                      showSummarySection={summaryOnly}
+                                      showSummarySection={summaryOnly || slot.chunkIndex === lastDetail}
                                       showInitiatorName={showInitiatorName}
                                     />
                                       )}
@@ -1332,7 +1332,7 @@ export function InvoicePreviewPage() {
                                 showDetailTotalRow={!summaryOnly && slot.chunkIndex === lastDetail}
                                 showExpenseSection={!summaryOnly && slot.chunkIndex === lastDetail}
                                 showMehnatSection={!summaryOnly && slot.chunkIndex === lastDetail}
-                                showSummarySection={summaryOnly}
+                                showSummarySection={summaryOnly || slot.chunkIndex === lastDetail}
                                 showInitiatorName={showInitiatorName}
                                 editable={editingPage === pageNum}
                                 onPatchDetailRow={(rowIndex, field, value) => patchDetailRowInChunk(slot.chunkIndex, rowIndex, field, value)}
