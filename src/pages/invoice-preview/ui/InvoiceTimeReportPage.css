@@ -315,6 +315,21 @@
   white-space: nowrap;
 }
 
+.tt-inv-tr--sheet .tt-inv-tr__tbody td {
+  border-bottom: 1px solid #94a3b8;
+  color: #0f172a;
+}
+
+.tt-inv-tr--sheet .tt-inv-tr__thead th {
+  font-weight: 800;
+}
+
+.tt-inv-tr--sheet .tt-inv-tr__tfoot tr:first-child td {
+  border-top: 1.5px solid #0f172a;
+  font-weight: 800;
+  color: #0f172a;
+}
+
 .tt-inv-tr__currency-foot {
   white-space: normal;
   overflow-wrap: anywhere;

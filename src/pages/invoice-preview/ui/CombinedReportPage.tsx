@@ -2,7 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from '../lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
 import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
-import { formatTimeReportAmount, formatTimeReportHours } from '../lib/invoiceTimeReportModel';
+import { formatTimeReportHours } from '../lib/invoiceTimeReportModel';
 import type { CombinedReportLine, CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import './InvoiceTimeReportPage.css';
 
@@ -197,7 +197,7 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
         const projectHours = projectLines.reduce((sum, line) => sum + line.hours, 0);
         const projectFees = projectLines.reduce((sum, line) => sum + line.amount, 0);
         return (
-            <div className={`tt-inv-tr${editable ? ' tt-inv-tr--editable' : ''}`}>
+            <div className={`tt-inv-tr tt-inv-tr--sheet${editable ? ' tt-inv-tr--editable' : ''}`}>
                 <div className="tt-inv-tr__top">
                     <span className="tt-inv-tr__confidential">Private and confidential</span>
                 </div>
@@ -249,12 +249,12 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                 })}
                             </tbody>
                             {slice.showTimeTotal ? (
-                                <tfoot>
+                                <tfoot className="tt-inv-tr__tfoot">
                                     <tr>
                                         <td colSpan={4}>Total ({cur})</td>
-                                        <td className="num">{formatTimeReportHours(projectHours)}</td>
+                                        <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(projectHours)}</td>
                                         <td />
-                                        <td className="num">{formatTimeReportAmount(projectFees, cur)}</td>
+                                        <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(projectFees)}</td>
                                     </tr>
                                 </tfoot>
                             ) : null}
@@ -286,12 +286,12 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                     </tr>
                                 ))}
                             </tbody>
-                            <tfoot>
+                            <tfoot className="tt-inv-tr__tfoot">
                                 <tr>
                                     <td colSpan={3}>Total ({cur})</td>
-                                    <td className="num">{formatTimeReportHours(projectHours)}</td>
+                                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(projectHours)}</td>
                                     <td />
-                                    <td className="num">{formatTimeReportAmount(projectFees, cur)}</td>
+                                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(projectFees)}</td>
                                 </tr>
                             </tfoot>
                         </table>
