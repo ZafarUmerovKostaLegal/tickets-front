@@ -8,19 +8,19 @@ ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
     PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 \
     PUPPETEER_SKIP_DOWNLOAD=1 \
     CYPRESS_INSTALL_BINARY=0 \
-    NODE_OPTIONS="--max-old-space-size=8192"
+    NODE_OPTIONS="--max-old-space-size=4096"
 
 COPY package.docker.json ./package.json
 COPY package-lock.docker.json ./package-lock.json
 RUN npm ci
 
-COPY scripts/copy-twemoji-assets.mjs scripts/copy-twemoji-assets.mjs
-RUN node scripts/copy-twemoji-assets.mjs
-
 COPY index.html vite.config.ts tsconfig.json tsconfig.build.json ./
 COPY public ./public
 COPY scripts ./scripts
 COPY src ./src
+# public/twemoji is gitignored. Download it after COPY public, otherwise that
+# copy wipes the assets and npm run build downloads them a second time.
+RUN node scripts/copy-twemoji-assets.mjs
 
 ARG VITE_API_BASE_URL
 ARG VITE_USE_SESSION_COOKIE=true

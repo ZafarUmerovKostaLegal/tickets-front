@@ -1307,6 +1307,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             list: 'Invoice list',
             registry: 'Invoice registry',
             statistics: 'Statistics',
+            statisticsSystem: 'Statistics (System)',
         },
         registry: {
             intro: 'Sheets 2020–2026 can be edited by hand, including the old Excel statuses. “2026 (system)” is view-only: those invoices come from the Invoices section.',
@@ -1349,6 +1350,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
         },
         statistics: {
             intro: 'Partner profit and revenue from the invoice registry. Remuneration is taken from the advance fee column; amounts are not converted across currencies.',
+            introSystem: 'Partner revenue from system invoices (sheet “2026 (system)”). Amounts stay in the original currency.',
             allYears: 'All years',
             yearTabsAria: 'Statistics period',
             meta: 'Period: {period} · registry rows: {rows} · partners: {partners}',

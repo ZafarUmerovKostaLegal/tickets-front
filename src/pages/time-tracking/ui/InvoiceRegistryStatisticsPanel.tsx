@@ -8,9 +8,11 @@ import {
 } from 'recharts';
 import {
     INVOICE_REGISTRY_STATS_YEARS,
+    sumInvoicedByCurrency,
+    sumInvoicedByPartnerCurrency,
     type RegistryStatsYearFilter,
 } from '@entities/time-tracking/model/invoiceRegistry/partnerStatistics';
-import { getInvoiceRegistryStatistics, type InvoiceRegistryStatisticsDto } from '@entities/time-tracking/api/domains/invoiceRegistry';
+import { getInvoiceRegistrySheet, getInvoiceRegistryStatistics, type InvoiceRegistryStatisticsDto } from '@entities/time-tracking/api/domains/invoiceRegistry';
 import { useI18n } from '@shared/i18n';
 import './InvoiceRegistryStatisticsPanel.css';
 
@@ -48,7 +50,7 @@ function CurrencyPieTooltip({ active, payload, currency }: CurrencyPieTooltipPro
     );
 }
 
-export function InvoiceRegistryStatisticsPanel() {
+export function InvoiceRegistryStatisticsPanel({ source = 'registry' }: { source?: 'registry' | 'system' }) {
     const { t } = useI18n();
     const [yearFilter, setYearFilter] = useState<RegistryStatsYearFilter>('all');
     const [loading, setLoading] = useState(true);
@@ -63,7 +65,13 @@ export function InvoiceRegistryStatisticsPanel() {
         let cancelled = false;
         setLoading(true);
         setError(null);
-        getInvoiceRegistryStatistics(yearFilter === 'all' ? '2026' : '2026')
+        const load = source === 'system'
+            ? getInvoiceRegistrySheet('2026-system').then((sheet) => ({
+                invoicedByCurrency: sumInvoicedByCurrency(sheet.rows ?? []),
+                partnerMatrix: sumInvoicedByPartnerCurrency(sheet.rows ?? []),
+            }))
+            : getInvoiceRegistryStatistics(yearFilter === 'all' ? '2026' : '2026');
+        load
             .then((dto) => {
                 if (cancelled)
                     return;
@@ -81,7 +89,7 @@ export function InvoiceRegistryStatisticsPanel() {
         return () => {
             cancelled = true;
         };
-    }, [yearFilter, t]);
+    }, [yearFilter, source, t]);
 
     const tiles = useMemo(
         () => invoicedByCurrency.filter((row) => row.invoiced > 0),
@@ -110,7 +118,7 @@ export function InvoiceRegistryStatisticsPanel() {
 
     return (
         <div className="tt-inv-stats">
-            <nav
+            {source === 'system' ? null : <nav
                 className="tt-inv-stats__year-nav tt-reports__type-nav"
                 role="tablist"
                 aria-label={t('timeTrackingPage.invoices.statistics.yearTabsAria')}
@@ -136,7 +144,7 @@ export function InvoiceRegistryStatisticsPanel() {
                         {y}
                     </button>
                 ))}
-            </nav>
+            </nav>}
 
             {loading && (
                 <div className="tt-inv-stats__state">{t('timeTrackingPage.common.loading')}</div>
