@@ -1,13 +1,13 @@
 import { combinedReportDetailLines, type CombinedReportLine, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 
 /** Usable content height inside the A4 sheet, after page padding and the footer. */
-const USABLE_PX = 920;
-const THEAD_PX = 26;
-const ROW_PX = 23;
-const EXTRA_LINE_PX = 14;
-const SECTION_HEAD_PX = 46;
-const TOTAL_PX = 28;
-const GAP_PX = 14;
+const USABLE_PX = 700;
+const THEAD_PX = 36;
+const ROW_PX = 34;
+const EXTRA_LINE_PX = 16;
+const SECTION_HEAD_PX = 52;
+const TOTAL_PX = 36;
+const GAP_PX = 18;
 
 export type CombinedReportPreviewSlice = {
     /** Project sheet. -1 is the merged report. */
@@ -67,8 +67,8 @@ function mastheadPx(title: string): number {
 
 function timeRowPx(line: CombinedReportLine): number {
     return rowPx(Math.max(
-        textLines(line.task || '', 32),
-        textLines(line.description || '', 58),
+        textLines(line.task || '', 16),
+        textLines(line.description || '', 36),
     ));
 }
 
@@ -119,7 +119,7 @@ function planPerProjectPages(report: CombinedReportSnapshot): CombinedReportPrev
         }
         page.showTimeTotal = true;
         used += TOTAL_PX + GAP_PX;
-        const peopleBlock = SECTION_HEAD_PX + people * ROW_PX + TOTAL_PX;
+        const peopleBlock = SECTION_HEAD_PX + people * (ROW_PX + EXTRA_LINE_PX) + TOTAL_PX;
         if (people > 0 && !fits(peopleBlock))
             commit();
         page.peopleFrom = 0;

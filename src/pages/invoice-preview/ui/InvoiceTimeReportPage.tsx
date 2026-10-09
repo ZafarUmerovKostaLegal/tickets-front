@@ -263,12 +263,12 @@ export function InvoiceTimeReportPage({
               <table className="tt-inv-tr__table" role="grid" aria-label="Сводка по сервисам">
                 <thead className="tt-inv-tr__thead">
                   <tr>
-                    <th scope="col" style={{ width: '9%' }}>{labels.initials}</th>
-                    <th scope="col" style={{ width: '20%' }}>{labels.name}</th>
-                    <th scope="col" style={{ width: '18%' }}>{labels.titleCol}</th>
-                    <th scope="col" style={{ width: '12%' }}>{labels.hours}</th>
-                    <th scope="col" style={{ width: '18%' }}>{labels.hourlyRate}</th>
-                    <th scope="col" style={{ width: '23%' }}>{labels.totalPrice(cur)}</th>
+                    <th scope="col" style={{ width: '8%' }}>{labels.initials}</th>
+                    <th scope="col" style={{ width: '26%' }}>{labels.name}</th>
+                    <th scope="col" style={{ width: '22%' }}>{labels.titleCol}</th>
+                    <th scope="col" style={{ width: '10%' }}>{labels.hours}</th>
+                    <th scope="col" style={{ width: '16%' }}>{labels.hourlyRate}</th>
+                    <th scope="col" style={{ width: '18%' }}>{labels.totalPrice(cur)}</th>
                   </tr>
                 </thead>
                 <tbody className="tt-inv-tr__tbody">

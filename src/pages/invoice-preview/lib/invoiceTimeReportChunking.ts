@@ -34,7 +34,13 @@ function rowUnits(row: InvoiceTimeReportDetailRow): number {
         textLines(row.task, 18),
         1,
     );
-    return 1 + (lines - 1) * 0.75;
+    return 1 + (lines - 1) * 1;
+}
+
+function summaryReserveUnits(summaryRows: number): number {
+    if (summaryRows <= 0)
+        return 0;
+    return 5 + summaryRows * 1.6;
 }
 
 function unitSum(units: readonly number[], from: number, count: number): number {
@@ -45,14 +51,17 @@ function unitSum(units: readonly number[], from: number, count: number): number 
     return sum;
 }
 
-export function splitDetailRowsForPagedTimeReport(rows: readonly InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[][] {
+export function splitDetailRowsForPagedTimeReport(
+    rows: readonly InvoiceTimeReportDetailRow[],
+    options?: { summaryRows?: number },
+): InvoiceTimeReportDetailRow[][] {
     const trimmed = trimTrailingEmptyDetailSlots(rows);
     if (trimmed.length === 0)
         return [[emptyDetailRow()]];
 
     const MID = TIME_REPORT_PDF_ROWS_MID_CHUNK;
     const LAST = TIME_REPORT_PDF_ROWS_LAST_CHUNK;
-    const lastBudget = LAST + LAST_SLACK;
+    const lastBudget = Math.max(4, LAST + LAST_SLACK - summaryReserveUnits(options?.summaryRows ?? 0));
     const n = trimmed.length;
     const units = trimmed.map(rowUnits);
     const totalUnits = unitSum(units, 0, n);

@@ -482,8 +482,12 @@ export function InvoicePreviewPage() {
     const timeReportChunks = useMemo(
         () => combinedReport
             ? Array.from({ length: combinedReportPages }, () => resolvedTimeReportPack.detailSlots)
-            : splitDetailRowsForPagedTimeReport(resolvedTimeReportPack.detailSlots),
-        [combinedReport, combinedReportPages, resolvedTimeReportPack.detailSlots],
+            : splitDetailRowsForPagedTimeReport(resolvedTimeReportPack.detailSlots, {
+                summaryRows: resolvedTimeReportPack.summarySlots.filter((row) =>
+                    [row.initials, row.name, row.title, row.hours, row.hourlyRate, row.totalPrice].some((cell) => String(cell).trim().length > 0),
+                ).length,
+            }),
+        [combinedReport, combinedReportPages, resolvedTimeReportPack.detailSlots, resolvedTimeReportPack.summarySlots],
     );
 
     const allPageSlots = useMemo(

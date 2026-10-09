@@ -9,7 +9,6 @@ import './InvoiceTimeReportPage.css';
 type Props = {
     report: CombinedReportSnapshot;
     pageNumber: number;
-    /** Which A4 sheet of the combined report to paint. */
     pageIndex?: number;
     editable?: boolean;
     onChange?: (next: CombinedReportSnapshot) => void;
@@ -266,12 +265,12 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                         <table className="tt-inv-tr__table">
                             <thead className="tt-inv-tr__thead">
                                 <tr>
-                                    <th>Initials</th>
-                                    <th>Name</th>
-                                    <th>Title</th>
-                                    <th className="num">Hours</th>
-                                    <th className="num">Rate ({cur})</th>
-                                    <th className="num">Amount ({cur})</th>
+                                    <th style={{ width: '10%' }}>Initials</th>
+                                    <th style={{ width: '28%' }}>Name</th>
+                                    <th style={{ width: '22%' }}>Title</th>
+                                    <th className="num" style={{ width: '12%' }}>Hours</th>
+                                    <th className="num" style={{ width: '14%' }}>Rate ({cur})</th>
+                                    <th className="num" style={{ width: '14%' }}>Amount ({cur})</th>
                                 </tr>
                             </thead>
                             <tbody className="tt-inv-tr__tbody">
@@ -330,330 +329,330 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                     : <p className="tt-inv-creport__lead">{report.feeTitle}</p>)
                 : null}
             {showTime ? (
-            <section className="tt-inv-creport__block">
-                <table className="tt-inv-creport__time">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Initials</th>
-                            <th>Task</th>
-                            <th>Description</th>
-                            <th className="num">Hours</th>
-                            <th className="num">Amount ({cur})</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {timeRows.map(({ key, line, projectIndex, lineIndex }) => (
-                            <tr key={key}>
-                                <TextCell
-                                    editable={editable}
-                                    className=""
-                                    ariaLabel="Date"
-                                    value={dateRu(line.date)}
-                                    onChange={(v) => patchLine(projectIndex, lineIndex, { date: commitDate(v) })}
-                                />
-                                <TextCell
-                                    editable={editable}
-                                    ariaLabel="Initials"
-                                    value={line.initials || line.user}
-                                    onChange={(v) => patchLine(projectIndex, lineIndex, { initials: v })}
-                                />
-                                <TextCell
-                                    editable={editable}
-                                    ariaLabel="Task"
-                                    value={line.task || ''}
-                                    onChange={(v) => patchLine(projectIndex, lineIndex, { task: v })}
-                                />
-                                <TextCell
-                                    editable={editable}
-                                    ariaLabel="Description"
-                                    value={line.description}
-                                    onChange={(v) => patchLine(projectIndex, lineIndex, { description: v })}
-                                />
-                                <NumCell
-                                    editable={editable}
-                                    className="num"
-                                    ariaLabel="Hours"
-                                    value={line.hours}
-                                    format={hours}
-                                    onChange={(v) => patchLine(projectIndex, lineIndex, { hours: v })}
-                                />
-                                <NumCell
-                                    editable={editable}
-                                    className="num"
-                                    ariaLabel="Amount"
-                                    value={line.amount}
-                                    format={money}
-                                    onChange={(v) => patchLine(projectIndex, lineIndex, { amount: v })}
-                                />
+                <section className="tt-inv-creport__block">
+                    <table className="tt-inv-creport__time">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Initials</th>
+                                <th>Task</th>
+                                <th>Description</th>
+                                <th className="num">Hours</th>
+                                <th className="num">Amount ({cur})</th>
                             </tr>
-                        ))}
-                    </tbody>
-                    {slice.showTimeTotal ? (
-                    <tfoot>
-                        <tr>
-                            <td colSpan={4}>Total</td>
-                            <NumCell
-                                editable={editable}
-                                foot
-                                className="num"
-                                ariaLabel="Total hours"
-                                value={report.totalHours}
-                                format={hours}
-                                onChange={(v) => emit({ ...report, totalHours: v })}
-                            />
-                            <NumCell
-                                editable={editable}
-                                foot
-                                className="num"
-                                ariaLabel="Total amount"
-                                value={report.totalFees}
-                                format={money}
-                                onChange={(v) => emit({ ...report, totalFees: v })}
-                            />
-                        </tr>
-                    </tfoot>
-                    ) : null}
-                </table>
-            </section>
+                        </thead>
+                        <tbody>
+                            {timeRows.map(({ key, line, projectIndex, lineIndex }) => (
+                                <tr key={key}>
+                                    <TextCell
+                                        editable={editable}
+                                        className=""
+                                        ariaLabel="Date"
+                                        value={dateRu(line.date)}
+                                        onChange={(v) => patchLine(projectIndex, lineIndex, { date: commitDate(v) })}
+                                    />
+                                    <TextCell
+                                        editable={editable}
+                                        ariaLabel="Initials"
+                                        value={line.initials || line.user}
+                                        onChange={(v) => patchLine(projectIndex, lineIndex, { initials: v })}
+                                    />
+                                    <TextCell
+                                        editable={editable}
+                                        ariaLabel="Task"
+                                        value={line.task || ''}
+                                        onChange={(v) => patchLine(projectIndex, lineIndex, { task: v })}
+                                    />
+                                    <TextCell
+                                        editable={editable}
+                                        ariaLabel="Description"
+                                        value={line.description}
+                                        onChange={(v) => patchLine(projectIndex, lineIndex, { description: v })}
+                                    />
+                                    <NumCell
+                                        editable={editable}
+                                        className="num"
+                                        ariaLabel="Hours"
+                                        value={line.hours}
+                                        format={hours}
+                                        onChange={(v) => patchLine(projectIndex, lineIndex, { hours: v })}
+                                    />
+                                    <NumCell
+                                        editable={editable}
+                                        className="num"
+                                        ariaLabel="Amount"
+                                        value={line.amount}
+                                        format={money}
+                                        onChange={(v) => patchLine(projectIndex, lineIndex, { amount: v })}
+                                    />
+                                </tr>
+                            ))}
+                        </tbody>
+                        {slice.showTimeTotal ? (
+                            <tfoot>
+                                <tr>
+                                    <td colSpan={4}>Total</td>
+                                    <NumCell
+                                        editable={editable}
+                                        foot
+                                        className="num"
+                                        ariaLabel="Total hours"
+                                        value={report.totalHours}
+                                        format={hours}
+                                        onChange={(v) => emit({ ...report, totalHours: v })}
+                                    />
+                                    <NumCell
+                                        editable={editable}
+                                        foot
+                                        className="num"
+                                        ariaLabel="Total amount"
+                                        value={report.totalFees}
+                                        format={money}
+                                        onChange={(v) => emit({ ...report, totalFees: v })}
+                                    />
+                                </tr>
+                            </tfoot>
+                        ) : null}
+                    </table>
+                </section>
             ) : null}
             {showPeople ? (
-            <section className="tt-inv-creport__block">
-                <h2>Summary of Services</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Initials</th>
-                            <th>Name</th>
-                            <th>Title</th>
-                            <th className="num">Rate</th>
-                            <th className="num">Hours</th>
-                            <th className="num">Rate ({cur})</th>
-                            <th className="num">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {report.people.slice(Math.max(0, slice.peopleFrom), Math.max(0, slice.peopleTo)).map((person, offset) => {
-                            const index = Math.max(0, slice.peopleFrom) + offset;
-                            return (
-                            <tr key={`person-${index}`}>
-                                <TextCell editable={editable} ariaLabel="Initials" value={person.initials} onChange={(v) => emit({
-                                    ...report,
-                                    people: report.people.map((row, i) => i === index ? { ...row, initials: v } : row),
-                                })}
-                                />
-                                <TextCell editable={editable} ariaLabel="Name" value={person.name} onChange={(v) => emit({
-                                    ...report,
-                                    people: report.people.map((row, i) => i === index ? { ...row, name: v } : row),
-                                })}
-                                />
-                                <TextCell editable={editable} ariaLabel="Title" value={person.title} onChange={(v) => emit({
-                                    ...report,
-                                    people: report.people.map((row, i) => i === index ? { ...row, title: v } : row),
-                                })}
-                                />
-                                <NumCell editable={editable} className="num" ariaLabel="Rate" value={person.rate} format={money} onChange={(v) => emit({
-                                    ...report,
-                                    people: report.people.map((row, i) => i === index ? { ...row, rate: v } : row),
-                                })}
-                                />
-                                <NumCell editable={editable} className="num" ariaLabel="Hours" value={person.hours} format={hours} onChange={(v) => emit({
-                                    ...report,
-                                    people: report.people.map((row, i) => i === index ? { ...row, hours: v } : row),
-                                })}
-                                />
-                                <NumCell editable={editable} className="num" ariaLabel="Rate" value={person.rate} format={money} onChange={(v) => emit({
-                                    ...report,
-                                    people: report.people.map((row, i) => i === index ? { ...row, rate: v } : row),
-                                })}
-                                />
-                                <NumCell editable={editable} className="num" ariaLabel="Amount" value={person.amount} format={money} onChange={(v) => emit({
-                                    ...report,
-                                    people: report.people.map((row, i) => i === index ? { ...row, amount: v } : row),
-                                })}
-                                />
+                <section className="tt-inv-creport__block">
+                    <h2>Summary of Services</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Initials</th>
+                                <th>Name</th>
+                                <th>Title</th>
+                                <th className="num">Rate</th>
+                                <th className="num">Hours</th>
+                                <th className="num">Rate ({cur})</th>
+                                <th className="num">Amount</th>
                             </tr>
-                            );
-                        })}
-                    </tbody>
-                    {slice.showPeopleTotal ? (
-                    <tfoot>
-                        <tr>
-                            <td colSpan={4}>Total</td>
-                            <NumCell
-                                editable={editable}
-                                foot
-                                className="num"
-                                ariaLabel="Summary hours"
-                                value={report.totalHours}
-                                format={hours}
-                                onChange={(v) => emit({ ...report, totalHours: v })}
-                            />
-                            <td />
-                            <NumCell
-                                editable={editable}
-                                foot
-                                className="num"
-                                ariaLabel="Summary amount"
-                                value={report.totalFees}
-                                format={money}
-                                onChange={(v) => emit({ ...report, totalFees: v })}
-                            />
-                        </tr>
-                    </tfoot>
-                    ) : null}
-                </table>
-            </section>
+                        </thead>
+                        <tbody>
+                            {report.people.slice(Math.max(0, slice.peopleFrom), Math.max(0, slice.peopleTo)).map((person, offset) => {
+                                const index = Math.max(0, slice.peopleFrom) + offset;
+                                return (
+                                    <tr key={`person-${index}`}>
+                                        <TextCell editable={editable} ariaLabel="Initials" value={person.initials} onChange={(v) => emit({
+                                            ...report,
+                                            people: report.people.map((row, i) => i === index ? { ...row, initials: v } : row),
+                                        })}
+                                        />
+                                        <TextCell editable={editable} ariaLabel="Name" value={person.name} onChange={(v) => emit({
+                                            ...report,
+                                            people: report.people.map((row, i) => i === index ? { ...row, name: v } : row),
+                                        })}
+                                        />
+                                        <TextCell editable={editable} ariaLabel="Title" value={person.title} onChange={(v) => emit({
+                                            ...report,
+                                            people: report.people.map((row, i) => i === index ? { ...row, title: v } : row),
+                                        })}
+                                        />
+                                        <NumCell editable={editable} className="num" ariaLabel="Rate" value={person.rate} format={money} onChange={(v) => emit({
+                                            ...report,
+                                            people: report.people.map((row, i) => i === index ? { ...row, rate: v } : row),
+                                        })}
+                                        />
+                                        <NumCell editable={editable} className="num" ariaLabel="Hours" value={person.hours} format={hours} onChange={(v) => emit({
+                                            ...report,
+                                            people: report.people.map((row, i) => i === index ? { ...row, hours: v } : row),
+                                        })}
+                                        />
+                                        <NumCell editable={editable} className="num" ariaLabel="Rate" value={person.rate} format={money} onChange={(v) => emit({
+                                            ...report,
+                                            people: report.people.map((row, i) => i === index ? { ...row, rate: v } : row),
+                                        })}
+                                        />
+                                        <NumCell editable={editable} className="num" ariaLabel="Amount" value={person.amount} format={money} onChange={(v) => emit({
+                                            ...report,
+                                            people: report.people.map((row, i) => i === index ? { ...row, amount: v } : row),
+                                        })}
+                                        />
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                        {slice.showPeopleTotal ? (
+                            <tfoot>
+                                <tr>
+                                    <td colSpan={4}>Total</td>
+                                    <NumCell
+                                        editable={editable}
+                                        foot
+                                        className="num"
+                                        ariaLabel="Summary hours"
+                                        value={report.totalHours}
+                                        format={hours}
+                                        onChange={(v) => emit({ ...report, totalHours: v })}
+                                    />
+                                    <td />
+                                    <NumCell
+                                        editable={editable}
+                                        foot
+                                        className="num"
+                                        ariaLabel="Summary amount"
+                                        value={report.totalFees}
+                                        format={money}
+                                        onChange={(v) => emit({ ...report, totalFees: v })}
+                                    />
+                                </tr>
+                            </tfoot>
+                        ) : null}
+                    </table>
+                </section>
             ) : null}
             {showExpenses ? (
-            <section className="tt-inv-creport__block">
-                <h2>Reimbursable Expenses via</h2>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th>Email date</th>
-                            <th className="num">Amount ({cur})</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {report.expenses.slice(Math.max(0, slice.expensesFrom), Math.max(0, slice.expensesTo)).map((line, offset) => {
-                            const index = Math.max(0, slice.expensesFrom) + offset;
-                            return (
-                            <tr key={`expense-${index}`}>
-                                <TextCell editable={editable} ariaLabel="Description" value={line.description} onChange={(v) => emit({
-                                    ...report,
-                                    expenses: report.expenses.map((row, i) => i === index ? { ...row, description: v } : row),
-                                })}
-                                />
-                                <TextCell editable={editable} ariaLabel="Email date" value={dateRu(line.date)} onChange={(v) => emit({
-                                    ...report,
-                                    expenses: report.expenses.map((row, i) => i === index ? { ...row, date: commitDate(v) } : row),
-                                })}
-                                />
-                                <NumCell editable={editable} className="num" ariaLabel="Amount" value={line.amount} format={money} onChange={(v) => emit({
-                                    ...report,
-                                    expenses: report.expenses.map((row, i) => i === index ? { ...row, amount: v } : row),
-                                })}
-                                />
+                <section className="tt-inv-creport__block">
+                    <h2>Reimbursable Expenses via</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Email date</th>
+                                <th className="num">Amount ({cur})</th>
                             </tr>
-                            );
-                        })}
-                    </tbody>
-                    {slice.showExpensesTotal ? (
-                    <tfoot>
-                        <tr>
-                            <td colSpan={2}>Subtotal</td>
-                            <NumCell
-                                editable={editable}
-                                foot
-                                className="num"
-                                ariaLabel="Expenses subtotal"
-                                value={report.totalExpenses}
-                                format={money}
-                                onChange={(v) => emit({ ...report, totalExpenses: v })}
-                            />
-                        </tr>
-                    </tfoot>
-                    ) : null}
-                </table>
-            </section>
+                        </thead>
+                        <tbody>
+                            {report.expenses.slice(Math.max(0, slice.expensesFrom), Math.max(0, slice.expensesTo)).map((line, offset) => {
+                                const index = Math.max(0, slice.expensesFrom) + offset;
+                                return (
+                                    <tr key={`expense-${index}`}>
+                                        <TextCell editable={editable} ariaLabel="Description" value={line.description} onChange={(v) => emit({
+                                            ...report,
+                                            expenses: report.expenses.map((row, i) => i === index ? { ...row, description: v } : row),
+                                        })}
+                                        />
+                                        <TextCell editable={editable} ariaLabel="Email date" value={dateRu(line.date)} onChange={(v) => emit({
+                                            ...report,
+                                            expenses: report.expenses.map((row, i) => i === index ? { ...row, date: commitDate(v) } : row),
+                                        })}
+                                        />
+                                        <NumCell editable={editable} className="num" ariaLabel="Amount" value={line.amount} format={money} onChange={(v) => emit({
+                                            ...report,
+                                            expenses: report.expenses.map((row, i) => i === index ? { ...row, amount: v } : row),
+                                        })}
+                                        />
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                        {slice.showExpensesTotal ? (
+                            <tfoot>
+                                <tr>
+                                    <td colSpan={2}>Subtotal</td>
+                                    <NumCell
+                                        editable={editable}
+                                        foot
+                                        className="num"
+                                        ariaLabel="Expenses subtotal"
+                                        value={report.totalExpenses}
+                                        format={money}
+                                        onChange={(v) => emit({ ...report, totalExpenses: v })}
+                                    />
+                                </tr>
+                            </tfoot>
+                        ) : null}
+                    </table>
+                </section>
             ) : null}
             {showShares ? (
-            <section className="tt-inv-creport__block">
-                <p className="tt-inv-creport__cur">{cur}</p>
-                <table className="tt-inv-creport__shares">
-                    <colgroup>
-                        <col className="name" />
-                        <col className="pct" />
-                        <col className="num" />
-                        <col className="num" />
-                    </colgroup>
-                    <thead>
-                        <tr>
-                            <th colSpan={2}>Shared amounts</th>
-                            <th className="num">Reimbursable expenses</th>
-                            <th className="num">TO BE INVOICED:</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {report.shares.slice(Math.max(0, slice.sharesFrom), Math.max(0, slice.sharesTo)).map((share, offset) => {
-                            const index = Math.max(0, slice.sharesFrom) + offset;
-                            return (
-                            <tr key={`share-${index}`}>
-                                <td>
-                                    {editable
-                                        ? (
-                                            <input
-                                                type="text"
-                                                className="tt-inv-tr__cell-input"
-                                                value={share.name}
-                                                aria-label="Shared amount name"
-                                                onChange={(e) => emit({
-                                                    ...report,
-                                                    shares: report.shares.map((row, i) => i === index ? { ...row, name: e.target.value } : row),
-                                                })}
-                                            />
-                                        )
-                                        : share.name}
-                                </td>
-                                <td className="num">
-                                    {editable
-                                        ? (
-                                            <NumInput
-                                                value={share.percent}
-                                                ariaLabel="Percent"
-                                                format={(n) => n.toFixed(2)}
-                                                onChange={(v) => emit({
-                                                    ...report,
-                                                    shares: report.shares.map((row, i) => i === index ? { ...row, percent: v } : row),
-                                                })}
-                                            />
-                                        )
-                                        : `${share.percent.toFixed(2)}%`}
-                                </td>
-                                {editable
-                                    ? (
+                <section className="tt-inv-creport__block">
+                    <p className="tt-inv-creport__cur">{cur}</p>
+                    <table className="tt-inv-creport__shares">
+                        <colgroup>
+                            <col className="name" />
+                            <col className="pct" />
+                            <col className="num" />
+                            <col className="num" />
+                        </colgroup>
+                        <thead>
+                            <tr>
+                                <th colSpan={2}>Shared amounts</th>
+                                <th className="num">Reimbursable expenses</th>
+                                <th className="num">TO BE INVOICED:</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {report.shares.slice(Math.max(0, slice.sharesFrom), Math.max(0, slice.sharesTo)).map((share, offset) => {
+                                const index = Math.max(0, slice.sharesFrom) + offset;
+                                return (
+                                    <tr key={`share-${index}`}>
+                                        <td>
+                                            {editable
+                                                ? (
+                                                    <input
+                                                        type="text"
+                                                        className="tt-inv-tr__cell-input"
+                                                        value={share.name}
+                                                        aria-label="Shared amount name"
+                                                        onChange={(e) => emit({
+                                                            ...report,
+                                                            shares: report.shares.map((row, i) => i === index ? { ...row, name: e.target.value } : row),
+                                                        })}
+                                                    />
+                                                )
+                                                : share.name}
+                                        </td>
+                                        <td className="num">
+                                            {editable
+                                                ? (
+                                                    <NumInput
+                                                        value={share.percent}
+                                                        ariaLabel="Percent"
+                                                        format={(n) => n.toFixed(2)}
+                                                        onChange={(v) => emit({
+                                                            ...report,
+                                                            shares: report.shares.map((row, i) => i === index ? { ...row, percent: v } : row),
+                                                        })}
+                                                    />
+                                                )
+                                                : `${share.percent.toFixed(2)}%`}
+                                        </td>
+                                        {editable
+                                            ? (
+                                                <NumCell
+                                                    editable
+                                                    className="num"
+                                                    ariaLabel="Reimbursable expenses"
+                                                    value={share.expenses ?? 0}
+                                                    format={money}
+                                                    onChange={(v) => emit({
+                                                        ...report,
+                                                        shares: report.shares.map((row, i) => i === index ? { ...row, expenses: v } : row),
+                                                    })}
+                                                />
+                                            )
+                                            : <td className="num">{shareExpenseText(share.expenses)}</td>}
                                         <NumCell
-                                            editable
+                                            editable={editable}
                                             className="num"
-                                            ariaLabel="Reimbursable expenses"
-                                            value={share.expenses ?? 0}
+                                            ariaLabel="To be invoiced"
+                                            value={share.total}
                                             format={money}
                                             onChange={(v) => emit({
                                                 ...report,
-                                                shares: report.shares.map((row, i) => i === index ? { ...row, expenses: v } : row),
+                                                shares: report.shares.map((row, i) => i === index ? { ...row, total: v } : row),
                                             })}
                                         />
-                                    )
-                                    : <td className="num">{shareExpenseText(share.expenses)}</td>}
-                                <NumCell
-                                    editable={editable}
-                                    className="num"
-                                    ariaLabel="To be invoiced"
-                                    value={share.total}
-                                    format={money}
-                                    onChange={(v) => emit({
-                                        ...report,
-                                        shares: report.shares.map((row, i) => i === index ? { ...row, total: v } : row),
-                                    })}
-                                />
-                            </tr>
-                            );
-                        })}
-                    </tbody>
-                    {slice.showSharesTotal ? (
-                    <tfoot>
-                        <tr>
-                            <td>Total</td>
-                            <td className="num">100%</td>
-                            <td className="num">{money(invoiced)}</td>
-                            <td className="num">{money(invoiced)}</td>
-                        </tr>
-                    </tfoot>
-                    ) : null}
-                </table>
-            </section>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                        {slice.showSharesTotal ? (
+                            <tfoot>
+                                <tr>
+                                    <td>Total</td>
+                                    <td className="num">100%</td>
+                                    <td className="num">{money(invoiced)}</td>
+                                    <td className="num">{money(invoiced)}</td>
+                                </tr>
+                            </tfoot>
+                        ) : null}
+                    </table>
+                </section>
             ) : null}
             <footer className="tt-inv-tr__bottom">
                 <div className="tt-inv-tr__bottom-line" aria-hidden />
