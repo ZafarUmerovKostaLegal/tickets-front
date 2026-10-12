@@ -17,6 +17,7 @@ import {
 import { getUsers, type User } from '@entities/user';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
 import { parseTimeEntryDescription } from '@entities/time-tracking/lib/timesheetTimerPersist';
+import { fetchAllTimeReportPagesForGroup, type TimeRowProjects } from '@entities/time-tracking/api/domains/reports';
 import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expensesApi';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
@@ -232,6 +233,37 @@ type BuildingDetail = InvoiceTimeReportDetailRow & {
     rateNum: number;
     rowKind: 'time' | 'expense' | 'other';
 };
+
+/** Task names as shown in the time report, keyed by time entry id. */
+async function reportTaskNameByEntryId(projectId: string, dateFrom: string, dateTo: string): Promise<Map<string, string>> {
+    const pid = projectId.trim();
+    const from = dateFrom.trim().slice(0, 10);
+    const to = dateTo.trim().slice(0, 10);
+    if (!pid || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to))
+        return new Map();
+    try {
+        const rows = await fetchAllTimeReportPagesForGroup<TimeRowProjects>('projects', {
+            dateFrom: from,
+            dateTo: to,
+            project_id: pid,
+        });
+        const map = new Map<string, string>();
+        for (const row of rows) {
+            for (const user of row.users ?? []) {
+                for (const entry of user.entries ?? []) {
+                    const id = String(entry.time_entry_id || entry.id || '').trim();
+                    const name = String(entry.task_name || '').trim();
+                    if (id && name)
+                        map.set(id, name);
+                }
+            }
+        }
+        return map;
+    }
+    catch {
+        return new Map();
+    }
+}
 
 async function loadProjectTaskNameById(clientId: string, projectId: string): Promise<Map<string, string>> {
     const cid = clientId.trim();
@@ -522,6 +554,7 @@ export async function resolveInvoiceTimeReportPack(
             const details: BuildingDetail[] = [];
             const clientId = f.createClientId.trim();
             const taskNameById = await loadProjectTaskNameById(clientId, pid);
+            const reportTaskByEntryId = await reportTaskNameByEntryId(pid, f.unbilledFrom, f.unbilledTo);
 
             const selectedTimeRows = timeRows.filter((x) => selT.has(x.id));
             const entryById = new Map<string, TimeEntryRow | null>();
@@ -540,7 +573,7 @@ export async function resolveInvoiceTimeReportPack(
                     entry,
                     invoiceLineDescription: e.description,
                     taskNameById,
-                    storedTaskName: e.taskName,
+                    storedTaskName: reportTaskByEntryId.get(e.id) || e.taskName,
                 }));
                 const rate = resolveDetailHourlyRate({
                     rateSource: readEntryRateSource(entry),
@@ -606,6 +639,15 @@ export async function resolveInvoiceTimeReportPack(
         const lines = [...(inv.lines ?? [])].sort((a, b) => a.sortOrder - b.sortOrder);
         const details: BuildingDetail[] = [];
         const taskNameById = await loadProjectTaskNameById(inv.clientId, inv.projectId ?? '');
+        const entryDates = (inv.lines ?? [])
+            .map((line) => String(line.timeEntryWorkDate ?? '').slice(0, 10))
+            .filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day))
+            .sort();
+        const reportTaskByEntryId = await reportTaskNameByEntryId(
+            inv.projectId ?? '',
+            entryDates[0] ?? '',
+            entryDates[entryDates.length - 1] ?? '',
+        );
 
         const entryCache = new Map<string, TimeEntryRow | null>();
         async function getEntry(id: string | null | undefined, preferredAuthUserId: number | null): Promise<TimeEntryRow | null> {
@@ -752,7 +794,7 @@ export async function resolveInvoiceTimeReportPack(
                     entry,
                     invoiceLineDescription: desc,
                     taskNameById,
-                    storedTaskName: ln.timeEntryTaskName,
+                    storedTaskName: (ln.timeEntryId ? reportTaskByEntryId.get(ln.timeEntryId.trim()) : '') || ln.timeEntryTaskName,
                     taskId: ln.timeEntryTaskId,
                 }));
                 const rate = resolveDetailHourlyRate({
