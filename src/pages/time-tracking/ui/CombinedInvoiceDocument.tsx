@@ -124,7 +124,7 @@ export function CombinedInvoiceDocument({
                                     {[...projectTime].sort((a, b) => a.workDate.localeCompare(b.workDate)).map((line) => {
                                         const user = userById.get(line.authUserId);
                                         const name = user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId);
-                                        const split = combinedTimeTaskAndNotes(line.description);
+                                        const split = combinedTimeTaskAndNotes(line.description, line.taskName);
                                         const hours = line.billableHours ?? line.hours;
                                         const rate = hours > 0 ? line.billableAmount / hours : 0;
                                         return (
@@ -215,7 +215,7 @@ export function CombinedInvoiceDocument({
                             {[...time].sort((a, b) => a.workDate.localeCompare(b.workDate)).map((line) => {
                                 const user = userById.get(line.authUserId);
                                 const name = user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId);
-                                const split = combinedTimeTaskAndNotes(line.description);
+                                const split = combinedTimeTaskAndNotes(line.description, line.taskName);
                                 return (
                                     <tr key={line.id}>
                                         <td>{dateRu(line.workDate)}</td>

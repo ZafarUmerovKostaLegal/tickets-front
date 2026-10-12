@@ -1,6 +1,6 @@
 import type { ChangeEvent } from 'react';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
-import { descriptionKeepingTaskWords, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
+import { type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { getTimeReportLabels, timeReportHeading } from '../lib/invoiceTimeReportI18n';
 import { joinServiceInitiatorName, splitServiceInitiatorName } from '../lib/splitServiceInitiatorName';
@@ -138,7 +138,7 @@ export function InvoiceTimeReportPage({
           </thead>
           <tbody className="tt-inv-tr__tbody">
             {detail.map((r, i) => {
-                const descriptionText = descriptionKeepingTaskWords(r.task, r.description);
+                const descriptionText = r.description;
                 const empty = !([r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0));
                 const cellClass = empty ? 'tt-inv-tr__cell--empty' : undefined;
                 const numClass = `tt-inv-tr__cell--num${empty ? ' tt-inv-tr__cell--empty' : ''}`;

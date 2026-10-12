@@ -34,7 +34,7 @@ import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetter
 import { resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from '../lib/resolveInvoiceTimeReportPack';
 import { getUsers } from '@entities/user';
 import { systemInitialsForDisplayedCode } from '@entities/time-tracking/lib/reportEmployeeInitials';
-import { applyStoredUserInitials, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { applyLinkedTaskNames, applyStoredUserInitials, linkedTaskHintsForInvoiceLines, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import { CombinedReportPage } from './CombinedReportPage';
@@ -305,9 +305,15 @@ export function InvoicePreviewPage() {
             let docFromApi: InvoiceDocumentOverridesV1 | null = null;
             let invoiceCurrency: string | null = null;
             let invoiceIssueDate: string | null = null;
+            let invoiceLines: Awaited<ReturnType<typeof getInvoice>>['lines'] = [];
+            let invoiceClientId = '';
+            let invoiceProjectId = '';
             if (sessionNow?.mode === 'existing') {
                 try {
                     const inv = await getInvoice(sessionNow.invoiceId, false);
+                    invoiceLines = inv.lines ?? [];
+                    invoiceClientId = inv.clientId ?? '';
+                    invoiceProjectId = inv.projectId ?? '';
                     if (cancelled)
                         return;
                     setInvoiceStatus(String(inv.status ?? '').toLowerCase() || null);
@@ -346,12 +352,21 @@ export function InvoicePreviewPage() {
             const issueIso = sessionNow?.mode === 'existing'
                 ? (sessionNow.meta.issueDateIso ?? invoiceIssueDate ?? null)
                 : (sessionNow?.mode === 'create' ? sessionNow.form.issueDate : null);
-            const doc = issueIso
+            let doc = issueIso
                 ? scrubStaleBillingPeriodDocumentOverrides(rawDoc, {
                     issueDateIso: issueIso,
                     billingPeriodIso: periodIso,
                 })
                 : rawDoc;
+            if (doc?.combinedReport && invoiceLines.length) {
+                const hints = await linkedTaskHintsForInvoiceLines(invoiceLines, invoiceClientId, invoiceProjectId);
+                if (cancelled)
+                    return;
+                if (hints.length)
+                    doc = { ...doc, combinedReport: applyLinkedTaskNames(doc.combinedReport, hints) };
+            }
+            if (cancelled)
+                return;
 
             if (doc) {
                 applyDocumentOverridesToState(doc, sessionNow?.meta.invoiceNumber);

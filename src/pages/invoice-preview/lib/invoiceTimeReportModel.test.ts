@@ -64,6 +64,58 @@ describe('ensureMehnatSeparatedPack', () => {
 });
 
 describe('mergeTimeReportPackPreferLiveExpenses', () => {
+    it('replaces a saved task label with the live database task', () => {
+        const saved = emptyInvoiceTimeReportPack('USD');
+        const live = emptyInvoiceTimeReportPack('USD');
+        const base = {
+            date: '04.09.2026',
+            initials: 'AAA',
+            hours: '1,15',
+            hourlyRate: '320,00',
+            amount: '368,00',
+        };
+        saved.detailSlots = [{
+            ...base,
+            task: 'Drafting',
+            description: 'the draft LLA issues list',
+        }];
+        live.detailSlots = [{
+            ...base,
+            amount: 'USD 368.00',
+            task: 'LLA advice',
+            description: 'Drafting the draft LLA issues list',
+        }];
+        const merged = mergeTimeReportPackPreferLiveExpenses(saved, live);
+        expect(merged.detailSlots[0]?.task).toBe('LLA advice');
+        expect(merged.detailSlots[0]?.description).toBe('the draft LLA issues list');
+    });
+
+    it('replaces a note that was saved into the task column', () => {
+        const saved = emptyInvoiceTimeReportPack('USD');
+        const live = emptyInvoiceTimeReportPack('USD');
+        const base = {
+            date: '21.09.2026',
+            initials: 'SHMYU',
+            hours: '0,75',
+            hourlyRate: '320,00',
+            amount: '240,00',
+        };
+        saved.detailSlots = [{
+            ...base,
+            task: 'Attending CP call.',
+            description: 'Attending CP call.',
+        }];
+        live.detailSlots = [{
+            ...base,
+            amount: 'USD 240.00',
+            task: 'Telephone calls',
+            description: 'Attending CP call.',
+        }];
+        const merged = mergeTimeReportPackPreferLiveExpenses(saved, live);
+        expect(merged.detailSlots[0]?.task).toBe('Telephone calls');
+        expect(merged.detailSlots[0]?.description).toBe('Attending CP call.');
+    });
+
     it('keeps a translated expense description and takes the live amount', () => {
         const saved = emptyInvoiceTimeReportPack('USD');
         const live = emptyInvoiceTimeReportPack('USD');

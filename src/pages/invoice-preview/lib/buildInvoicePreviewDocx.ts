@@ -34,7 +34,7 @@ import {
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
 import { getInvoice } from '@entities/time-tracking';
-import { descriptionKeepingTaskWords, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
@@ -283,7 +283,7 @@ function timeReportDocxSectionChildren(
     const amountI = showName ? 7 : 6;
     const totalSpan = showName ? 5 : 4;
     const detailCells = (r: InvoiceTimeReportDetailRow) => {
-        const description = descriptionKeepingTaskWords(r.task, r.description);
+        const description = r.description;
         const split = showName ? splitServiceInitiatorName(description) : null;
         return [
             trBodyTextCell(r.date, DW[0]!, AlignmentType.LEFT),

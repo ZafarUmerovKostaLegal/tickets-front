@@ -16,6 +16,8 @@ export type TimeEntryRow = {
     client_id?: string | null;
     client_name?: string | null;
     task_id: string | null;
+    task_name?: string | null;
+    taskName?: string | null;
     description: string | null;
     recorded_at?: string | null;
     created_at: string;
@@ -83,6 +85,8 @@ export function normalizeTimeEntryRow(r: TimeEntryRow): TimeEntryRow {
         ?? (typeof o.client === 'object' && o.client != null
             ? pickTimeEntryStr(o.client as Record<string, unknown>, ['id', 'client_id', 'clientId'])
             : null);
+    const task_id = pickTimeEntryStr(o, ['task_id', 'taskId']);
+    const task_name = pickTimeEntryStr(o, ['task_name', 'taskName', 'task_title', 'taskTitle']);
     const normalized: TimeEntryRow = {
         ...o,
         voided_at: voidedAt,
@@ -91,6 +95,8 @@ export function normalizeTimeEntryRow(r: TimeEntryRow): TimeEntryRow {
         project_name,
         client_name,
         client_id,
+        task_id,
+        ...(task_name ? { task_name, taskName: task_name } : {}),
     };
     absorbTimeEntryRowEditUnlockHint(normalized as TimeEntryRow & Record<string, unknown>);
     return normalized;

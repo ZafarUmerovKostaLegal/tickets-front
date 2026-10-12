@@ -165,7 +165,21 @@ export function mergeExpenseSlotsKeepSavedText(
     });
 }
 
-/** Saved time rows keep hours and amounts; Description comes from the full live text. */
+function normReportHours(raw: string): string {
+    return String(raw ?? '').trim().replace(/\s/g, '').replace(',', '.');
+}
+
+function sameTimeReportLine(
+    a: InvoiceTimeReportDetailRow,
+    b: InvoiceTimeReportDetailRow,
+): boolean {
+    return a.date.trim() === b.date.trim()
+        && a.initials.trim().toUpperCase() === b.initials.trim().toUpperCase()
+        && normReportHours(a.hours) === normReportHours(b.hours)
+        && parseTimeReportAmountDisplay(a.amount).toFixed(2) === parseTimeReportAmountDisplay(b.amount).toFixed(2);
+}
+
+/** Saved wording stays; Task always comes from the live row (task linked in the DB). */
 function mergeTimeRowsKeepLiveDescription(
     saved: readonly InvoiceTimeReportDetailRow[],
     live: readonly InvoiceTimeReportDetailRow[],
@@ -178,18 +192,15 @@ function mergeTimeRowsKeepLiveDescription(
     const used = new Set<number>();
     return saved.map((savedRow) => {
         const match = liveRows.findIndex((liveRow, index) => (
-            !used.has(index)
-            && liveRow.date.trim() === savedRow.date.trim()
-            && liveRow.initials.trim() === savedRow.initials.trim()
-            && liveRow.task.trim() === savedRow.task.trim()
+            !used.has(index) && sameTimeReportLine(liveRow, savedRow)
         ));
         if (match < 0)
             return savedRow;
         used.add(match);
-        const next = liveRows[match]!.description.trim();
-        if (!next || next === savedRow.description.trim())
+        const liveTask = liveRows[match]!.task.trim();
+        if (!liveTask || liveTask === savedRow.task.trim())
             return savedRow;
-        return { ...savedRow, description: liveRows[match]!.description };
+        return { ...savedRow, task: liveTask };
     });
 }
 

@@ -13,7 +13,7 @@ import {
     packUppercaseRibbonDate,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
-import { descriptionKeepingTaskWords, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { wrapPdfCellLines } from './invoicePdfCellWrap';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import {
@@ -1024,7 +1024,7 @@ function detailPdfRowCells(
     row: InvoiceTimeReportDetailRow,
     showInitiatorName: boolean,
 ): string[] {
-    const description = descriptionKeepingTaskWords(row.task, row.description);
+    const description = row.description;
     if (!showInitiatorName)
         return [row.date, row.initials, row.task, description, row.hours, row.hourlyRate, row.amount];
     const split = splitServiceInitiatorName(description);

@@ -16,6 +16,7 @@ import {
 } from '@entities/time-tracking';
 import { getUsers, type User } from '@entities/user';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
+import { parseTimeEntryDescription } from '@entities/time-tracking/lib/timesheetTimerPersist';
 import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expensesApi';
 import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { roundMoney2 } from '@entities/expenses/model/expenseCurrency';
@@ -35,7 +36,6 @@ import {
     emptyInvoiceTimeReportPack,
     finalizeDetailSlots,
     formatTimeReportAmount,
-    descriptionKeepingTaskWords,
     formatTimeReportHours,
     sumRoundedTimeReportHours,
     isMyMehnatTimeReportRow,
@@ -47,13 +47,14 @@ import {
     type InvoiceTimeReportSummaryRow,
 } from './invoiceTimeReportModel';
 
-/** Full time-entry text, with the task name kept at the start of Description. */
-function timeReportDescriptionText(raw: string | null | undefined, taskLabel: string): string {
-    const text = (raw ?? '')
+/** Notes only. The task name stays in the Task column. */
+function timeReportDescriptionText(raw: string | null | undefined): string {
+    const { notes } = parseTimeEntryDescription(raw);
+    const text = (notes.trim() ? notes : (raw ?? ''))
         .replace(/[ \t]*\n+[ \t]*/g, ' ')
         .replace(/[ \t]{2,}/g, ' ')
         .trim();
-    return descriptionKeepingTaskWords(taskLabel, text) || '—';
+    return text || '—';
 }
 
 function lineKind(ln: InvoiceLineDto): string {
@@ -539,6 +540,7 @@ export async function resolveInvoiceTimeReportPack(
                     entry,
                     invoiceLineDescription: e.description,
                     taskNameById,
+                    storedTaskName: e.taskName,
                 }));
                 const rate = resolveDetailHourlyRate({
                     rateSource: readEntryRateSource(entry),
@@ -549,7 +551,7 @@ export async function resolveInvoiceTimeReportPack(
                     date: dateDisplayFromIso(e.workDate, lang),
                     initials: initialsForAuthUser(e.authUserId, users, initialsByAuthId),
                     task: taskLabel,
-                    description: timeReportDescriptionText(entry?.description ?? e.description, taskLabel),
+                    description: timeReportDescriptionText(entry?.description ?? e.description),
                     hours: formatTimeReportHours(h),
                     hourlyRate: formatDetailHourlyRate(rate, currency),
                     amount: formatTimeReportAmount(a, currency),
@@ -748,8 +750,9 @@ export async function resolveInvoiceTimeReportPack(
                 const hours = numHoursFromLine(ln);
                 const taskLabel = localizeTask(resolveInvoiceTimeReportTaskLabel({
                     entry,
-                    invoiceLineDescription: desc,
+                    invoiceLineDescription: ln.timeEntryId?.trim() ? null : desc,
                     taskNameById,
+                    storedTaskName: ln.timeEntryTaskName,
                 }));
                 const rate = resolveDetailHourlyRate({
                     unitAmount: ln.unitAmount,
@@ -763,7 +766,7 @@ export async function resolveInvoiceTimeReportPack(
                         ? initialsForAuthUser(authId, users, initialsByAuthId)
                         : (u ? initialsFromUser(u, initialsByAuthId) : '—'),
                     task: taskLabel,
-                    description: timeReportDescriptionText(entry?.description ?? desc, taskLabel),
+                    description: timeReportDescriptionText(entry?.description ?? desc),
                     hours: hours > 0 ? formatTimeReportHours(hours) : '',
                     hourlyRate: formatDetailHourlyRate(rate, currency),
                     amount: formatTimeReportAmount(amt, currency),

@@ -1,6 +1,7 @@
-import type { TimeManagerClientProjectRow, UnbilledExpenseEntryDto, UnbilledTimeEntryDto } from '@entities/time-tracking';
+import type { InvoiceLineDto, TimeManagerClientProjectRow, UnbilledExpenseEntryDto, UnbilledTimeEntryDto } from '@entities/time-tracking';
+import { fetchTimeEntry } from '@entities/time-tracking/api/domains/timeEntries';
+import { listProjectTasksCached } from '@entities/time-tracking/lib/projectTasksCache';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
-import { invoiceClientDescription, INVOICE_DESCRIPTION_TASK_PREFIXES } from './invoiceClientDescription';
 import { parseTimeEntryDescription } from '@entities/time-tracking/lib/timesheetTimerPersist';
 
 export type CombinedAllocation = 'hours' | 'equal';
@@ -99,28 +100,87 @@ export type CombinedReportLine = {
     amount: number;
 };
 
-const TASK_PREFIXES = [...INVOICE_DESCRIPTION_TASK_PREFIXES].sort((a, b) => b.length - a.length);
-
-export function combinedTimeTaskAndNotes(raw: string | null | undefined): { task: string; description: string } {
+function noteFromTimeDescription(raw: string | null | undefined): string {
     const { taskLine, notes } = parseTimeEntryDescription(raw);
     if (notes.trim())
-        return { task: taskLine || '—', description: notes.trim() };
-    const text = (raw ?? '').trim();
-    for (const prefix of TASK_PREFIXES) {
-        if (text.length < prefix.length || !text.toLowerCase().startsWith(prefix.toLowerCase()))
-            continue;
-        const after = text.slice(prefix.length);
-        const ch = after[0];
-        const boundary = !ch
-            || /[\s:\n.\u2014\u2013-]/.test(ch)
-            || ch.charCodeAt(0) > 127
-            || (ch === ch.toUpperCase() && ch !== ch.toLowerCase());
-        if (!boundary)
-            continue;
-        const rest = after.replace(/^[\s:.\u2014\u2013-]+/u, '').trim();
-        return { task: prefix, description: rest || '—' };
+        return notes.trim();
+    return (raw ?? '').trim() || taskLine.trim();
+}
+
+/** Task is the linked task name. The note stays in Description and is not copied into Task. */
+export function combinedTimeTaskAndNotes(
+    raw: string | null | undefined,
+    taskName?: string | null,
+): { task: string; description: string } {
+    const linked = (taskName ?? '').trim();
+    const note = noteFromTimeDescription(raw);
+    if (linked) {
+        const description = note.toLowerCase() === linked.toLowerCase() ? note : (note || '—');
+        return { task: linked, description: description || '—' };
     }
-    return { task: taskLine || '—', description: invoiceClientDescription(raw) || taskLine || '—' };
+    const { taskLine, notes } = parseTimeEntryDescription(raw);
+    if (notes.trim())
+        return { task: '', description: notes.trim() };
+    return { task: '', description: (raw ?? '').trim() || taskLine.trim() || '—' };
+}
+
+export type LinkedTimeTaskHint = {
+    workDate: string;
+    hours: number;
+    description: string | null;
+    taskName: string;
+};
+
+function normTaskNote(raw: string | null | undefined): string {
+    return noteFromTimeDescription(raw).trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+/** Replace only the Task column on a saved combined report. Hours, rates and amounts stay. */
+export function applyLinkedTaskNames(
+    report: CombinedReportSnapshot,
+    hints: readonly LinkedTimeTaskHint[],
+): CombinedReportSnapshot {
+    if (!hints.length)
+        return report;
+    const used = new Set<number>();
+    let changed = false;
+    const projects = report.projects.map((project) => ({
+        ...project,
+        lines: project.lines.map((line) => {
+            const lineDate = line.date.slice(0, 10);
+            const lineNote = normTaskNote(line.description);
+            let best = -1;
+            let bestScore = 0;
+            hints.forEach((hint, index) => {
+                if (used.has(index))
+                    return;
+                if (hint.workDate.slice(0, 10) !== lineDate)
+                    return;
+                if (Math.abs(hint.hours - line.hours) > 0.02)
+                    return;
+                const hintNote = normTaskNote(hint.description);
+                const notesMatch = Boolean(
+                    hintNote && lineNote && (hintNote === lineNote || hintNote.includes(lineNote) || lineNote.includes(hintNote)),
+                );
+                if (!notesMatch)
+                    return;
+                const score = hintNote === lineNote ? 2 : 1;
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = index;
+                }
+            });
+            if (best < 0)
+                return line;
+            used.add(best);
+            const task = hints[best]!.taskName.trim();
+            if (!task || task === (line.task ?? '').trim())
+                return line;
+            changed = true;
+            return { ...line, task };
+        }),
+    }));
+    return changed ? { ...report, projects } : report;
 }
 
 export type CombinedReportSnapshot = {
@@ -229,7 +289,7 @@ export function buildCombinedReportSnapshot(input: {
                 lines: lines.map((line) => {
                     const user = userById.get(line.authUserId);
                     const name = user?.display_name?.trim() || user?.email?.trim() || String(line.authUserId);
-                    const split = combinedTimeTaskAndNotes(line.description);
+                    const split = combinedTimeTaskAndNotes(line.description, line.taskName);
                     const hours = line.billableHours ?? line.hours;
                     const amount = line.billableAmount;
                     return {
@@ -290,6 +350,42 @@ export function isCombinedReportSnapshot(raw: unknown): raw is CombinedReportSna
         && Array.isArray(o.projects)
         && Array.isArray(o.people)
         && Array.isArray(o.shares);
+}
+
+export async function linkedTaskHintsForInvoiceLines(
+    lines: readonly InvoiceLineDto[],
+    clientId: string,
+    projectId: string,
+): Promise<LinkedTimeTaskHint[]> {
+    const timeLines = lines.filter((line) => (line.lineKind ?? '').toLowerCase() === 'time' && line.timeEntryId);
+    if (!timeLines.length)
+        return [];
+    const tasks = clientId.trim() && projectId.trim()
+        ? await listProjectTasksCached(clientId, projectId).catch(() => [])
+        : [];
+    const nameById = new Map(tasks.map((task) => [task.id, task.name.trim()] as const));
+    const hints: LinkedTimeTaskHint[] = [];
+    await Promise.all(timeLines.map(async (line) => {
+        let taskName = (line.timeEntryTaskName ?? '').trim();
+        let description = line.description;
+        let workDate = (line.timeEntryWorkDate ?? '').slice(0, 10);
+        const hours = Number(line.quantity);
+        if (!taskName && line.timeAuthorAuthUserId != null && line.timeEntryId) {
+            const entry = await fetchTimeEntry(line.timeAuthorAuthUserId, line.timeEntryId).catch(() => null);
+            const fromEntry = (entry?.taskName ?? entry?.task_name ?? '').trim();
+            const fromMap = entry?.task_id ? (nameById.get(entry.task_id) ?? '') : '';
+            taskName = fromEntry || fromMap;
+            if (entry?.description)
+                description = entry.description;
+            const entryDate = (entry?.work_date ?? '').slice(0, 10);
+            if (/^\d{4}-\d{2}-\d{2}$/.test(entryDate))
+                workDate = entryDate;
+        }
+        if (!taskName || !/^\d{4}-\d{2}-\d{2}$/.test(workDate) || !Number.isFinite(hours))
+            return;
+        hints.push({ workDate, hours, description, taskName });
+    }));
+    return hints;
 }
 
 export function formatCombinedShareNote(shares: CombinedShare[]): string {
