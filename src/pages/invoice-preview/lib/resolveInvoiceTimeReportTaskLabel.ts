@@ -29,6 +29,8 @@ export type ResolveInvoiceTimeReportTaskLabelInput = {
     taskNameById?: Map<string, string>;
     /** Task name loaded with the time entry (DB), not parsed from the note. */
     storedTaskName?: string | null;
+    /** Linked task id when the entry row itself was not loaded. */
+    taskId?: string | null;
 };
 
 function sameText(a: string, b: string): boolean {
@@ -53,7 +55,7 @@ export function resolveInvoiceTimeReportTaskLabel(input: ResolveInvoiceTimeRepor
     const taskNameById = input.taskNameById;
 
     const stored = (input.storedTaskName ?? '').trim() || taskNameFromEntryRecord(entry);
-    const taskId = (entry?.task_id ?? '').trim();
+    const taskId = (entry?.task_id ?? input.taskId ?? '').trim();
     const linked = taskId && taskNameById?.has(taskId) ? taskNameById.get(taskId)! : '';
     const storedIsNote = Boolean(stored) && labelIsTheNote(stored, entry, input.invoiceLineDescription);
 

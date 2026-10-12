@@ -370,11 +370,14 @@ export async function linkedTaskHintsForInvoiceLines(
         let description = line.description;
         let workDate = (line.timeEntryWorkDate ?? '').slice(0, 10);
         const hours = Number(line.quantity);
-        if (!taskName && line.timeAuthorAuthUserId != null && line.timeEntryId) {
+        const taskLooksLikeNote = Boolean(taskName) && normTaskNote(description) === taskName.trim().toLowerCase();
+        if ((!taskName || taskLooksLikeNote) && line.timeAuthorAuthUserId != null && line.timeEntryId) {
             const entry = await fetchTimeEntry(line.timeAuthorAuthUserId, line.timeEntryId).catch(() => null);
-            const fromEntry = (entry?.taskName ?? entry?.task_name ?? '').trim();
             const fromMap = entry?.task_id ? (nameById.get(entry.task_id) ?? '') : '';
-            taskName = fromEntry || fromMap;
+            const fromEntry = (entry?.taskName ?? entry?.task_name ?? '').trim();
+            const linked = fromMap || (fromEntry && fromEntry.toLowerCase() !== normTaskNote(entry?.description) ? fromEntry : '');
+            if (linked)
+                taskName = linked;
             if (entry?.description)
                 description = entry.description;
             const entryDate = (entry?.work_date ?? '').slice(0, 10);

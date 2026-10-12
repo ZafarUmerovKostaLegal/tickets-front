@@ -11,7 +11,7 @@ import { firmBankingToLegalOverrides, applyFirmBankingProfileToLegalOverrides, p
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { applyCoverLetterLanguage, type InvoiceCoverLanguage } from '../lib/invoiceCoverLetterI18n';
-import { emptyInvoiceTimeReportPack, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
+import { applyLinkedTaskNamesToTimeReportPack, emptyInvoiceTimeReportPack, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { splitDetailRowsForPagedTimeReport } from '../lib/invoiceTimeReportChunking';
@@ -735,9 +735,19 @@ export function InvoicePreviewPage() {
                 const merged = savedPack && timeReportPackHasContent(savedPack)
                     ? mergeTimeReportPackPreferLiveExpenses(savedPack, live)
                     : live;
-                const healed = projectId
+                let healed = projectId
                     ? await overlayExpenseAmountsFromRegistry(merged, projectId)
                     : merged;
+                if (session.mode === 'existing') {
+                    try {
+                        const inv = await getInvoice(session.invoiceId, true);
+                        const hints = await linkedTaskHintsForInvoiceLines(inv.lines ?? [], inv.clientId ?? '', inv.projectId ?? '');
+                        healed = applyLinkedTaskNamesToTimeReportPack(healed, hints);
+                    }
+                    catch {
+                        // The report still shows without the extra task lookup.
+                    }
+                }
                 if (cancel)
                     return;
                 setTimeReportPack(ensureMehnatSeparatedPack(healed));

@@ -18,6 +18,7 @@ export type InvoiceLineDto = {
     timeAuthorAuthUserId?: number | null;
     /** Name of the task linked on the time entry (`time_tracking_client_tasks.name`). */
     timeEntryTaskName?: string | null;
+    timeEntryTaskId?: string | null;
 
     expenseDate?: string | null;
     sourceCurrency?: string | null;
@@ -777,6 +778,9 @@ export function normalizeInvoiceLineDto(raw: unknown, fallbackIdx: number): Invo
         ...(timeAuthorAuthUserId !== undefined ? { timeAuthorAuthUserId } : {}),
         ...(pickStr('timeEntryTaskName', 'time_entry_task_name')
             ? { timeEntryTaskName: pickStr('timeEntryTaskName', 'time_entry_task_name') }
+            : {}),
+        ...(pickStr('timeEntryTaskId', 'time_entry_task_id', 'taskId', 'task_id')
+            ? { timeEntryTaskId: pickStr('timeEntryTaskId', 'time_entry_task_id', 'taskId', 'task_id') }
             : {}),
         ...(expenseDate !== undefined ? { expenseDate } : {}),
         ...(sourceCurrency ? { sourceCurrency } : {}),

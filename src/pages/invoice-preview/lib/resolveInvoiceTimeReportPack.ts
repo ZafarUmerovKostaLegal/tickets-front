@@ -753,6 +753,7 @@ export async function resolveInvoiceTimeReportPack(
                     invoiceLineDescription: desc,
                     taskNameById,
                     storedTaskName: ln.timeEntryTaskName,
+                    taskId: ln.timeEntryTaskId,
                 }));
                 const rate = resolveDetailHourlyRate({
                     unitAmount: ln.unitAmount,

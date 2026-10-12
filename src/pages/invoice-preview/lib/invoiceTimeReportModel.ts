@@ -179,6 +179,54 @@ function sameTimeReportLine(
         && parseTimeReportAmountDisplay(a.amount).toFixed(2) === parseTimeReportAmountDisplay(b.amount).toFixed(2);
 }
 
+function reportDateToIso(display: string): string {
+    const match = display.trim().match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (match)
+        return `${match[3]}-${match[2]}-${match[1]}`;
+    return display.trim().slice(0, 10);
+}
+
+/** Fill Task from the linked project task when a saved row still shows the note. */
+export function applyLinkedTaskNamesToTimeReportPack(
+    pack: InvoiceTimeReportPack,
+    hints: readonly { workDate: string; hours: number; description: string | null; taskName: string }[],
+): InvoiceTimeReportPack {
+    if (!hints.length)
+        return pack;
+    const used = new Set<number>();
+    let changed = false;
+    const mapRows = (rows: InvoiceTimeReportDetailRow[]) => rows.map((row) => {
+        const lineDate = reportDateToIso(row.date);
+        const lineNote = row.description.trim().toLowerCase().replace(/\s+/g, ' ');
+        const lineHours = parseTimeReportHoursDisplay(row.hours);
+        let best = -1;
+        hints.forEach((hint, index) => {
+            if (used.has(index) || best >= 0)
+                return;
+            if (hint.workDate.slice(0, 10) !== lineDate)
+                return;
+            if (Math.abs(hint.hours - lineHours) > 0.02)
+                return;
+            const hintNote = (hint.description ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+            const notesMatch = Boolean(lineNote) && (hintNote === lineNote || hintNote.includes(lineNote) || lineNote.includes(hintNote));
+            if (!notesMatch && lineNote !== hint.taskName.trim().toLowerCase())
+                return;
+            best = index;
+        });
+        if (best < 0)
+            return row;
+        used.add(best);
+        const task = hints[best]!.taskName.trim();
+        if (!task || task.toLowerCase() === row.description.trim().toLowerCase() || task === row.task.trim())
+            return row;
+        changed = true;
+        return { ...row, task };
+    });
+    const detailSlots = mapRows(pack.detailSlots ?? []);
+    const mehnatSlots = mapRows(pack.mehnatSlots ?? []);
+    return changed ? { ...pack, detailSlots, mehnatSlots } : pack;
+}
+
 /** Saved wording stays; Task always comes from the live row (task linked in the DB). */
 function mergeTimeRowsKeepLiveDescription(
     saved: readonly InvoiceTimeReportDetailRow[],
@@ -198,7 +246,13 @@ function mergeTimeRowsKeepLiveDescription(
             return savedRow;
         used.add(match);
         const liveTask = liveRows[match]!.task.trim();
-        if (!liveTask || liveTask === savedRow.task.trim())
+        const savedTask = savedRow.task.trim();
+        const savedNote = savedRow.description.trim();
+        const savedTaskIsNote = Boolean(savedTask) && Boolean(savedNote)
+            && savedTask.toLowerCase() === savedNote.toLowerCase();
+        if (!liveTask)
+            return savedTaskIsNote ? { ...savedRow, task: '' } : savedRow;
+        if (liveTask === savedTask)
             return savedRow;
         return { ...savedRow, task: liveTask };
     });

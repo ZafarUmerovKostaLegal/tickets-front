@@ -85,8 +85,13 @@ export function normalizeTimeEntryRow(r: TimeEntryRow): TimeEntryRow {
         ?? (typeof o.client === 'object' && o.client != null
             ? pickTimeEntryStr(o.client as Record<string, unknown>, ['id', 'client_id', 'clientId'])
             : null);
-    const task_id = pickTimeEntryStr(o, ['task_id', 'taskId']);
-    const task_name = pickTimeEntryStr(o, ['task_name', 'taskName', 'task_title', 'taskTitle']);
+    const taskObj = o.task != null && typeof o.task === 'object'
+        ? o.task as Record<string, unknown>
+        : null;
+    const task_id = pickTimeEntryStr(o, ['task_id', 'taskId'])
+        ?? (taskObj ? pickTimeEntryStr(taskObj, ['id', 'task_id', 'taskId']) : null);
+    const task_name = pickTimeEntryStr(o, ['task_name', 'taskName', 'task_title', 'taskTitle'])
+        ?? (taskObj ? pickTimeEntryStr(taskObj, ['name', 'title', 'task_name', 'taskName']) : null);
     const normalized: TimeEntryRow = {
         ...o,
         voided_at: voidedAt,
