@@ -117,6 +117,25 @@ describe('resolveInvoiceTimeReportTaskLabel', () => {
         expect(label).toBe('Telephone calls');
     });
 
+    it('uses the linked task when the stored label is only the note', () => {
+        const label = resolveInvoiceTimeReportTaskLabel({
+            entry: entry({
+                id: 'e6',
+                auth_user_id: 1,
+                work_date: '2026-09-23',
+                hours: 1.07,
+                is_billable: true,
+                created_at: '2026-09-23',
+                task_id: 'task-1',
+                description: 'IA review',
+            }),
+            invoiceLineDescription: 'IA review',
+            taskNameById,
+            storedTaskName: 'IA review',
+        });
+        expect(label).toBe('Document Review');
+    });
+
     it('does not use the note as the task when no task is linked', () => {
         const label = resolveInvoiceTimeReportTaskLabel({
             entry: entry({

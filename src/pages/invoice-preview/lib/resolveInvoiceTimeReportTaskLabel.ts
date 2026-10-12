@@ -31,6 +31,19 @@ export type ResolveInvoiceTimeReportTaskLabelInput = {
     storedTaskName?: string | null;
 };
 
+function sameText(a: string, b: string): boolean {
+    return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/** True when a stored label is actually the time-entry note, not the project task. */
+function labelIsTheNote(label: string, entry: TimeEntryRow | null, invoiceLineDescription: string | null | undefined): boolean {
+    const note = (entry?.description ?? invoiceLineDescription ?? '').trim();
+    if (!label || !note)
+        return false;
+    const firstLine = note.split(/\r?\n/)[0]?.trim() ?? '';
+    return sameText(label, note) || sameText(label, firstLine);
+}
+
 /**
  * Task column is the linked task name (the same value as in the time report).
  * The note is never used as the task, even when it looks like one.
@@ -40,12 +53,13 @@ export function resolveInvoiceTimeReportTaskLabel(input: ResolveInvoiceTimeRepor
     const taskNameById = input.taskNameById;
 
     const stored = (input.storedTaskName ?? '').trim() || taskNameFromEntryRecord(entry);
-    if (stored)
-        return stored;
-
     const taskId = (entry?.task_id ?? '').trim();
-    if (taskId && taskNameById?.has(taskId))
-        return taskNameById.get(taskId)!;
+    const linked = taskId && taskNameById?.has(taskId) ? taskNameById.get(taskId)! : '';
+    const storedIsNote = Boolean(stored) && labelIsTheNote(stored, entry, input.invoiceLineDescription);
 
+    if (stored && !storedIsNote)
+        return stored;
+    if (linked)
+        return linked;
     return '';
 }

@@ -750,7 +750,7 @@ export async function resolveInvoiceTimeReportPack(
                 const hours = numHoursFromLine(ln);
                 const taskLabel = localizeTask(resolveInvoiceTimeReportTaskLabel({
                     entry,
-                    invoiceLineDescription: ln.timeEntryId?.trim() ? null : desc,
+                    invoiceLineDescription: desc,
                     taskNameById,
                     storedTaskName: ln.timeEntryTaskName,
                 }));
