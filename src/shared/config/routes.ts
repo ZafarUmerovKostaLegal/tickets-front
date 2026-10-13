@@ -7,6 +7,8 @@ export const routes = {
     attendance: '/attendance',
     vacationSchedule: '/vacation-schedule',
     inventory: '/inventory',
+    inventoryQrSheet: '/inventory/qr',
+    inventoryTag: '/inventory/tag/:code',
     timeTracking: '/time-tracking',
     timeTrackingNewProject: '/time-tracking/projects/new',
     timeTrackingReportPreview: '/time-tracking/reports/preview',

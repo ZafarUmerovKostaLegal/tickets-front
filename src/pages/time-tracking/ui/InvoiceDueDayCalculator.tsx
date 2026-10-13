@@ -27,17 +27,6 @@ export function InvoiceDueDayCalculator({ issueDate, dueDate, onDueDateChange }:
 
     return (
         <div className="tt-inv-daycalc">
-            <label className="tt-inv-daycalc__check">
-                <input
-                    type="checkbox"
-                    checked={includeEnd}
-                    onChange={(event) => {
-                        setIncludeEnd(event.target.checked);
-                        setDaysDraft(null);
-                    }}
-                />
-                {t('timeTrackingPage.invoices.detail.includeEndDate')}
-            </label>
             <label className="tt-inv-daycalc__row tt-inv-daycalc__row--days">
                 <input
                     type="text"
@@ -65,6 +54,17 @@ export function InvoiceDueDayCalculator({ issueDate, dueDate, onDueDateChange }:
                 />
                 <span className="tt-inv-daycalc__unit">{t('timeTrackingPage.invoices.detail.workingDays')}</span>
             </div>
+            <label className="tt-inv-daycalc__check">
+                <input
+                    type="checkbox"
+                    checked={includeEnd}
+                    onChange={(event) => {
+                        setIncludeEnd(event.target.checked);
+                        setDaysDraft(null);
+                    }}
+                />
+                {t('timeTrackingPage.invoices.detail.includeEndDate')}
+            </label>
         </div>
     );
 }

@@ -1,6 +1,10 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
+import { useCurrentUser } from '@shared/hooks';
+import { routes } from '@shared/config';
 import { useInventory } from '../model';
+import { canCreateInventoryItem } from '../model/constants';
 import { InventoryKPISection } from './InventoryKPISection';
 import { InventoryCategoriesSection } from './InventoryCategoriesSection';
 import { InventoryItemsSection } from './InventoryItemsSection';
@@ -11,6 +15,7 @@ import { DeleteConfirmModal } from './DeleteConfirmModal';
 import './InventoryPage.css';
 export function InventoryPageView() {
     const { error, loadingItems, loadItems, } = useInventory();
+    const { user } = useCurrentUser();
     const [inventoryTab, setInventoryTab] = useState<'positions' | 'categories'>('positions');
     return (<div className="inv">
       <main className="inv__main">
@@ -25,6 +30,9 @@ export function InventoryPageView() {
               </div>
             </div>
             <div className="app-page-header-end">
+              {canCreateInventoryItem(user?.role) ? (
+                <Link className="inv__btn inv__btn--ghost" to={routes.inventoryQrSheet}>QR-коды</Link>
+              ) : null}
               <button type="button" className="inv__icon-btn" onClick={loadItems} disabled={loadingItems} title="Обновить">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 2v6h-6"/>

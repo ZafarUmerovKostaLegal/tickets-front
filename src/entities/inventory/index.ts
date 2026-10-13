@@ -1,4 +1,5 @@
 export type { InventoryStatusItem, InventoryCategory, InventoryItem, InventoryItemsPage, CreateCategoryBody, UpdateCategoryBody, UpdateItemBody, ItemsParams, } from './model/types';
+export { EQUIPMENT_QR_COUNT, EQUIPMENT_QR_PREFIX, equipmentQrCode, equipmentQrCodes, equipmentQrPagePath, equipmentQrPublicUrl, parseEquipmentQrCode, } from './model/equipmentQr';
 export { EQUIPMENT_TIERS, equipmentTierByCode, isEquipmentClassCode, type EquipmentClassCode, type EquipmentTier, } from './model/equipmentClasses';
 export { EQUIPMENT_SCORE_MAX, EQUIPMENT_SCORE_RANGES, EQUIPMENT_SCORE_POINTS, equipmentAgeYears, equipmentScoreFromAgeYears, equipmentScoreText, equipmentScoreTier, equipmentScoreTitle, equipmentScoreToClassCode, itemMatchesEquipmentScore, compareItemsByEquipmentScore, resolveEquipmentScore, type EquipmentScoreInput, type EquipmentScoreRangeOption, type EquipmentScoreResult, type EquipmentScoreSource, type EquipmentScoreSort, } from './model/equipmentScore';
 export { laptopRamUpgrade, parseRamGbFromNotes, type LaptopRamUpgradeInput, type LaptopRamUpgradeResult, } from './model/laptopRamUpgrade';
@@ -31,4 +32,4 @@ export {
     buildInventoryCategoryExcelRows,
     type InventoryCategoryExcelInput,
 } from './lib/exportInventoryCategoryExcel';
-export { getStatuses, getCategories, getCategory, createCategory, updateCategory, deleteCategory, getItems, getItem, createItem, updateItem, uploadItemPhoto, assignItem, unassignItem, archiveItem, deleteItem, getItemPhotoUrl, } from './api';
+export { getStatuses, getCategories, getCategory, createCategory, updateCategory, deleteCategory, getItems, getItem, getItemByInventoryNumber, createItem, updateItem, uploadItemPhoto, assignItem, unassignItem, archiveItem, deleteItem, getItemPhotoUrl, } from './api';

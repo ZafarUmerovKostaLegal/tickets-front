@@ -1,0 +1,82 @@
+.inv-qr__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--app-border, #e5e7eb);
+  background: var(--app-surface, #fff);
+}
+.inv-qr__toolbar h1 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.inv-qr__toolbar p {
+  margin: 0.15rem 0 0;
+  color: var(--app-muted, #64748b);
+  font-size: 0.8125rem;
+}
+.inv-qr__toolbar button {
+  margin-left: auto;
+  height: 36px;
+  padding: 0 0.9rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--app-accent, #4f46e5);
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.inv-qr__toolbar button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+.inv-qr__error {
+  margin: 1rem 1.25rem;
+  color: #b91c1c;
+}
+.inv-qr__sheet {
+  display: grid;
+  grid-template-columns: repeat(4, 4cm);
+  gap: 3mm;
+  justify-content: center;
+  padding: 8mm;
+}
+.inv-qr__sticker {
+  width: 4cm;
+  height: 4cm;
+  margin: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1mm;
+  border: 0.2mm dashed #cbd5e1;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  background: #fff;
+}
+.inv-qr__sticker img {
+  width: 3.15cm;
+  height: 3.15cm;
+}
+.inv-qr__sticker figcaption {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 7pt;
+  letter-spacing: 0.02em;
+  color: #0f172a;
+}
+@media print {
+  .inv-qr__toolbar,
+  .inv-qr__error {
+    display: none !important;
+  }
+  .inv-qr__sheet {
+    padding: 0;
+  }
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+}

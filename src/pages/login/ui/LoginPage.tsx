@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { getAzureLoginUrl, AUTH_ERROR_AUTH_FAILED } from '@shared/config';
 import { rememberDesktopAppOrigin } from '@shared/lib/desktopAuth';
+import { rememberAuthReturnPath } from '@shared/lib/authReturnPath';
 import './LoginPage.css';
 type LoginLocationState = {
     from?: {
         pathname: string;
+        search?: string;
     };
     blocked?: boolean;
     archived?: boolean;
@@ -25,6 +27,7 @@ export function LoginPage() {
             return;
         setIsLoading(true);
         rememberDesktopAppOrigin();
+        rememberAuthReturnPath(state?.from?.pathname, state?.from?.search);
         window.location.href = getAzureLoginUrl();
     }
     return (<div className="lp">

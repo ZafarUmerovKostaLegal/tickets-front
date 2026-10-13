@@ -172,6 +172,14 @@ export async function getItems(params: ItemsParams = {}, signal?: AbortSignal): 
         archived_count: Number(data.archived_count ?? 0),
     };
 }
+export async function getItemByInventoryNumber(code: string): Promise<InventoryItem | null> {
+    const res = await inventoryFetch(`${ITEMS}/by-number/${encodeURIComponent(code.trim())}`);
+    if (res.status === 404)
+        return null;
+    if (!res.ok)
+        throw new Error(await parseError(res, 'Failed to fetch item'));
+    return res.json();
+}
 export async function getItem(uuid: string): Promise<InventoryItem> {
     const res = await inventoryFetch(`${ITEMS}/${uuid}`);
     if (!res.ok)

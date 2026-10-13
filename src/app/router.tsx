@@ -42,6 +42,8 @@ const OutgoingLetterCreatePage = lazy(() => import('@pages/correspondence/ui/Out
 const OutgoingLetterPreviewPage = lazy(() => import('@pages/correspondence/ui/OutgoingLetterPreviewPage').then(m => ({ default: m.OutgoingLetterPreviewPage })));
 const AccountingPage = lazy(() => import('@pages/accounting').then(m => ({ default: m.AccountingPage })));
 const InventoryPage = lazy(() => import('@pages/inventory').then(m => ({ default: m.InventoryPage })));
+const InventoryQrSheetPage = lazy(() => import('@pages/inventory/ui/InventoryQrSheetPage').then(m => ({ default: m.InventoryQrSheetPage })));
+const InventoryTagPage = lazy(() => import('@pages/inventory/ui/InventoryTagPage').then(m => ({ default: m.InventoryTagPage })));
 const ProjectDetailPage = lazy(() => import('@pages/project-detail').then(m => ({ default: m.ProjectDetailPage })));
 const TimeTrackingNewProjectPage = lazy(() => import('@pages/time-tracking/ui/TimeTrackingNewProjectPage').then(m => ({ default: m.TimeTrackingNewProjectPage })));
 const InvoiceCreatePage = lazy(() => import('@pages/time-tracking/ui/InvoiceCreatePage').then(m => ({ default: m.InvoiceCreatePage })));
@@ -119,6 +121,8 @@ const router = createBrowserRouter([
                     </EnsureTimeTrackingI18n>
                   </AccountingAccessRoute>) },
             { path: routes.inventory, element: withProtected(<InventoryPage />) },
+            { path: routes.inventoryQrSheet, element: withProtected(<InventoryQrSheetPage />) },
+            { path: routes.inventoryTag, element: withProtected(<InventoryTagPage />) },
             { path: routes.timeTracking, element: withProtected(<TimeTrackingRoute />) },
             { path: routes.timeTrackingNewProject, element: withProtected(<EnsureTimeTrackingI18n fallback={<LazyFallback />}><TimeTrackingNewProjectPage /></EnsureTimeTrackingI18n>) },
             { path: routes.timeTrackingReportPreview, element: withProtected(<ReportPreviewRouteLazy />) },
