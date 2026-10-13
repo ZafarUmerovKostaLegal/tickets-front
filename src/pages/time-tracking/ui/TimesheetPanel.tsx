@@ -201,6 +201,26 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
     const [calendarAnchor, setCalendarAnchor] = useState<Date>(() => startOfMonth(new Date()));
     const [viewMode, setViewMode] = useState<TimesheetViewMode>('day');
+    const [daySideCollapsed, setDaySideCollapsed] = useState(() => {
+        try {
+            return sessionStorage.getItem('tt-day-side-collapsed') === '1';
+        }
+        catch {
+            return false;
+        }
+    });
+    const toggleDaySide = useCallback(() => {
+        setDaySideCollapsed((collapsed) => {
+            const next = !collapsed;
+            try {
+                sessionStorage.setItem('tt-day-side-collapsed', next ? '1' : '0');
+            }
+            catch {
+                /* private mode */
+            }
+            return next;
+        });
+    }, []);
     const [entriesScopeMode, setEntriesScopeMode] = useState<TimesheetViewMode>('day');
     const [viewTxPhase, setViewTxPhase] = useState<ViewTxPhase>('idle');
     const viewTxTimersRef = useRef<number[]>([]);
@@ -1707,7 +1727,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                         <span className="tsp__wtotal-cap">{t('timeTrackingPage.timesheet.ofCap')} {fmtHours(periodNorm)}</span>
                     </div>
                 </div>
-                <div className={`tsp__body${viewMode === 'day' ? ' tsp__body--day' : ''}`}>
+                <div className={`tsp__body${viewMode === 'day' ? ' tsp__body--day' : ''}${viewMode === 'day' && daySideCollapsed ? ' tsp__body--side-collapsed' : ''}`}>
                     <div className={`tsp__content${viewMode === 'calendar' ? ' tsp__content--calendar' : ''}`} ref={contentScrollRef}>
                         {(hasAnyEntries || filterActive || viewMode === 'week') && (<div className="tsp__filter-bar" role="search">
                             <div className="tsp__filter-search">
@@ -1819,8 +1839,25 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                         </div>)}
                     </div>
                     {viewMode === 'day' ? (
-                        <div className="tsp-side">
-                            <TimesheetMiniCalendar
+                        <div className={`tsp-side${daySideCollapsed ? ' tsp-side--collapsed' : ''}`}>
+                            <div className="tsp-side__bar">
+                                {daySideCollapsed ? <span className="tsp-side__bar-label">{t('timeTrackingPage.timesheet.daySideExpand')}</span> : null}
+                                <button
+                                    type="button"
+                                    className="tsp-side__toggle"
+                                    aria-expanded={!daySideCollapsed}
+                                    aria-label={daySideCollapsed ? t('timeTrackingPage.timesheet.daySideExpand') : t('timeTrackingPage.timesheet.daySideCollapse')}
+                                    title={daySideCollapsed ? t('timeTrackingPage.timesheet.daySideExpand') : t('timeTrackingPage.timesheet.daySideCollapse')}
+                                    onClick={toggleDaySide}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                        {daySideCollapsed
+                                            ? <polyline points="15 6 9 12 15 18" />
+                                            : <polyline points="9 6 15 12 9 18" />}
+                                    </svg>
+                                </button>
+                            </div>
+                            {daySideCollapsed ? null : <TimesheetMiniCalendar
                                 selected={activeDay}
                                 today={today}
                                 hoursByDate={hoursByDate}
@@ -1828,8 +1865,8 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                                     setActiveDay(day);
                                     setWeekStart(startOfWeek(day));
                                 }}
-                            />
-                            <div className="tsp-side__list">
+                            />}
+                            {daySideCollapsed ? null : <div className="tsp-side__list">
                                 {outlookCalendar.connected && outlookCalendar.getEventsForDateKey(formatDate(activeDay)).length === 0 ? (
                                     <p className="tsp-side__empty">{t('timeTrackingPage.timesheet.outlookDayEmpty')}</p>
                                 ) : null}
@@ -1864,7 +1901,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                                         </div>
                                     );
                                 })}
-                            </div>
+                            </div>}
                         </div>
                     ) : null}
                 </div>
