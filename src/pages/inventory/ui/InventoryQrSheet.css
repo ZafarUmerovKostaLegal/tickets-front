@@ -35,39 +35,82 @@
   margin: 1rem 1.25rem;
   color: #b91c1c;
 }
-.inv-qr__sheet {
+.inv-qr__pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 1rem 2rem;
+  background: var(--app-bg, #f8fafc);
+}
+.inv-qr__page {
+  width: 184mm;
+  box-sizing: content-box;
   display: grid;
-  grid-template-columns: repeat(4, 4cm);
-  gap: 3mm;
-  justify-content: center;
-  padding: 8mm;
+  grid-template-columns: repeat(4, 40mm);
+  grid-auto-rows: 40mm;
+  column-gap: 8mm;
+  row-gap: 6mm;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
 }
 .inv-qr__sticker {
-  width: 4cm;
-  height: 4cm;
+  width: 40mm;
+  height: 40mm;
   margin: 0;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1mm;
+  gap: 0.6mm;
+  overflow: hidden;
   border: 0.2mm dashed #cbd5e1;
+  background: #fff;
   break-inside: avoid;
   page-break-inside: avoid;
-  background: #fff;
 }
-.inv-qr__sticker img {
-  width: 3.15cm;
-  height: 3.15cm;
+.inv-qr__mark {
+  width: 32mm;
+  height: 32mm;
+}
+.inv-qr__mark svg {
+  display: block;
+  width: 32mm;
+  height: 32mm;
+}
+.inv-qr__mark--wait {
+  background: #f8fafc;
 }
 .inv-qr__sticker figcaption {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 7pt;
+  line-height: 1;
   letter-spacing: 0.02em;
   color: #0f172a;
 }
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+  .inv,
+  .inv__main,
+  .inv__content,
+  .inv__tab-panel,
+  .inv-qr,
+  .inv-qr__pages {
+    display: block !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+  .app-desktop-bg,
   .inv__header,
   .inv__kpi,
   .inv__tabs-wrap,
@@ -76,11 +119,16 @@
   .inv-qr__error {
     display: none !important;
   }
-  .inv-qr__sheet {
+  .inv-qr__page {
+    width: 184mm;
+    margin: 0 auto;
     padding: 0;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
   }
-  @page {
-    size: A4;
-    margin: 8mm;
+  .inv-qr__page:last-child {
+    break-after: auto;
+    page-break-after: auto;
   }
 }

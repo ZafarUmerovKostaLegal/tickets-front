@@ -1,43 +1,50 @@
-import { useEffect, useState } from 'react';
-import QRCode from 'qrcode';
+import { useEffect, useMemo, useState } from 'react';
 import { equipmentQrCodes, equipmentQrPublicUrl } from '@entities/inventory';
 import { AppBackButton } from '@shared/ui';
+import { equipmentQrSvg } from './equipmentQrSvg';
 import './InventoryQrSheet.css';
 
-type Sticker = { code: string; src: string };
+const CODES = equipmentQrCodes();
+const PER_PAGE = 24;
 
 export function InventoryQrSheetPage({ embedded = false }: { embedded?: boolean }) {
-    const [stickers, setStickers] = useState<Sticker[]>([]);
+    const [readyCount, setReadyCount] = useState(0);
+    const [svgs, setSvgs] = useState<Record<string, string>>({});
     const [failed, setFailed] = useState(false);
+    const pages = useMemo(() => {
+        const chunks: string[][] = [];
+        for (let i = 0; i < CODES.length; i += PER_PAGE)
+            chunks.push(CODES.slice(i, i + PER_PAGE));
+        return chunks;
+    }, []);
 
     useEffect(() => {
         let live = true;
-        const codes = equipmentQrCodes();
-        void (async () => {
-            const next: Sticker[] = [];
+        let index = 0;
+        let timer = 0;
+        const next: Record<string, string> = {};
+        const step = () => {
+            if (!live)
+                return;
+            const end = Math.min(index + PER_PAGE, CODES.length);
             try {
-                for (let i = 0; i < codes.length; i += 25) {
-                    const batch = await Promise.all(codes.slice(i, i + 25).map(async (code) => ({
-                        code,
-                        src: await QRCode.toDataURL(equipmentQrPublicUrl(code), {
-                            errorCorrectionLevel: 'H',
-                            margin: 4,
-                            width: 320,
-                            color: { dark: '#0f172a', light: '#ffffff' },
-                        }),
-                    })));
-                    next.push(...batch);
-                    if (live)
-                        setStickers([...next]);
-                }
+                for (; index < end; index += 1)
+                    next[CODES[index]] = equipmentQrSvg(equipmentQrPublicUrl(CODES[index]));
             }
             catch {
-                if (live)
-                    setFailed(true);
+                setFailed(true);
+                return;
             }
-        })();
+            setSvgs({ ...next });
+            setReadyCount(index);
+            if (index < CODES.length)
+                timer = window.setTimeout(step, 0);
+        };
+        const frame = window.requestAnimationFrame(step);
         return () => {
             live = false;
+            window.cancelAnimationFrame(frame);
+            window.clearTimeout(timer);
         };
     }, []);
 
@@ -47,19 +54,25 @@ export function InventoryQrSheetPage({ embedded = false }: { embedded?: boolean 
                 {embedded ? null : <AppBackButton className="app-back-btn" />}
                 <div>
                     <h1>QR для техники</h1>
-                    <p>500 кодов KL-EQ-0001 — KL-EQ-0500, наклейка 4×4 см. Печатайте со масштабом 100%.</p>
+                    <p>24 наклейки 4×4 см на лист A4. В окне печати: масштаб 100%, поля «Нет».</p>
                 </div>
-                <button type="button" onClick={() => window.print()} disabled={stickers.length < 500}>
-                    {stickers.length < 500 ? `Готово ${stickers.length} из 500` : 'Печать'}
+                <button type="button" onClick={() => window.print()} disabled={readyCount < CODES.length}>
+                    {readyCount < CODES.length ? `Готово ${readyCount} из ${CODES.length}` : 'Печать'}
                 </button>
             </div>
             {failed ? <p className="inv-qr__error">Не удалось собрать коды.</p> : null}
-            <div className="inv-qr__sheet">
-                {stickers.map((sticker) => (
-                    <figure key={sticker.code} className="inv-qr__sticker">
-                        <img src={sticker.src} alt="" />
-                        <figcaption>{sticker.code}</figcaption>
-                    </figure>
+            <div className="inv-qr__pages">
+                {pages.map((page) => (
+                    <section key={page[0]} className="inv-qr__page">
+                        {page.map((code) => (
+                            <figure key={code} className="inv-qr__sticker">
+                                {svgs[code]
+                                    ? <div className="inv-qr__mark" dangerouslySetInnerHTML={{ __html: svgs[code] }} />
+                                    : <div className="inv-qr__mark inv-qr__mark--wait" />}
+                                <figcaption>{code}</figcaption>
+                            </figure>
+                        ))}
+                    </section>
                 ))}
             </div>
         </div>
