@@ -1366,26 +1366,13 @@
 }
 
 .tsp-side__ev {
-  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.7rem 0.7rem 0.6rem 0.85rem;
-  border: 1px solid color-mix(in srgb, var(--ev-cal-accent, #4f46e5) 28%, #e5e7eb);
-  border-radius: 12px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--ev-cal-accent, #4f46e5) 11%, #fff), #fff 72%);
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 18px color-mix(in srgb, var(--ev-cal-accent, #4f46e5) 12%, transparent);
-  overflow: hidden;
-}
-
-.tsp-side__ev::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--ev-cal-accent, #4f46e5);
+  gap: 0.65rem;
+  padding: 0.75rem;
+  border: 1px solid var(--app-border, #e5e7eb);
+  border-radius: 10px;
+  background: var(--app-surface, #fff);
 }
 
 .tsp-side__ev-main {
@@ -1402,9 +1389,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--ev-cal-accent, #4f46e5) 16%, #fff);
-  color: var(--ev-cal-accent, #4f46e5);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 10%, var(--app-surface, #fff));
+  color: var(--app-accent, #4f46e5);
 }
 
 .tsp-side__ev-ico svg {
@@ -1429,35 +1416,32 @@
 
 .tsp-side__ev-time {
   display: inline-flex;
-  margin-top: 0.28rem;
-  padding: 0.12rem 0.45rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--ev-cal-accent, #4f46e5) 14%, #fff);
-  color: var(--ev-cal-accent, #4f46e5);
-  font-size: 0.6875rem;
-  font-weight: 700;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--app-muted, #6b7280);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
 }
 
 .tsp-side__add {
   width: 100%;
-  height: 30px;
-  padding: 0 0.65rem;
+  min-height: 36px;
+  padding: 0.4rem 0.85rem;
   border: none;
   border-radius: 8px;
-  background: var(--ev-cal-accent, #4f46e5);
+  background: var(--app-accent, #4f46e5);
   color: #fff;
   font: inherit;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.8125rem;
+  font-weight: 600;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--ev-cal-accent, #4f46e5) 35%, transparent);
+  transition: opacity 0.13s, transform 0.12s;
 }
 
 .tsp-side__add:hover:not(:disabled) {
-  filter: brightness(1.08);
+  opacity: 0.92;
+  transform: translateY(-1px);
 }
 
 .tsp-side__add:disabled {
