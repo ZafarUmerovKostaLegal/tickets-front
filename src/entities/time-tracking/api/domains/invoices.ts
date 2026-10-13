@@ -1,7 +1,7 @@
 import { apiFetch } from '@shared/api';
 import { throwIfNotOk, dashNum } from './httpShared';
 
-export type InvoiceUiStatus = 'draft' | 'sent' | 'viewed' | 'partial_paid' | 'paid' | 'canceled' | 'overdue';
+export type InvoiceUiStatus = 'draft' | 'sent' | 'viewed' | 'partial_paid' | 'paid' | 'client_paid' | 'send_to_olga' | 'canceled' | 'overdue';
 export type InvoiceLineDto = {
     id: string;
     sortOrder: number;
@@ -1185,6 +1185,16 @@ export async function getInvoiceOutlookDraftStatus(
     };
 }
 
+export async function setInvoiceRegistryStatus(id: string, statusLabel: string): Promise<InvoiceDto> {
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/registry-status`, {
+        ...invoiceApiFetchInit,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: statusLabel }),
+    });
+    await throwIfNotOk(res);
+    return normalizeInvoiceDto(await res.json());
+}
 export async function markInvoiceViewed(id: string): Promise<InvoiceDto> {
     const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/mark-viewed`, {
         ...invoiceApiFetchInit,

@@ -14,8 +14,8 @@ function row(patch: Partial<InvoiceRegistryRow> & { id: string }): InvoiceRegist
 }
 
 const sample: InvoiceRegistryRow[] = [
-    row({ id: '1', seqNo: '1', billedTo: 'ADB Water', partner: 'NFH', issueDate: '2026-01-08', clientNumber: 'KL-ADB/OT-36/62' }),
-    row({ id: '2', seqNo: '2', billedTo: 'Hospital PPP', partner: 'AAA', issueDate: '2026-03-09', clientNumber: 'KL-H/2' }),
+        row({ id: '1', seqNo: '1', billedTo: 'ADB Water', partner: 'NFH', currency: 'USD', issueDate: '2026-01-08', clientNumber: 'KL-ADB/OT-36/62' }),
+        row({ id: '2', seqNo: '2', billedTo: 'Hospital PPP', partner: 'AAA', currency: 'EUR', issueDate: '2026-03-09', clientNumber: 'KL-H/2' }),
     row({ id: '12', seqNo: '12', billedTo: 'Other', partner: 'NFH', issueDate: '13.02.2025', clientNumber: 'X-12' }),
     row({ id: '13', seqNo: '13', billedTo: 'Blank', partner: 'VGB', issueDate: '', clientNumber: '' }),
 ];
@@ -50,6 +50,11 @@ describe('filterInvoiceRegistryRows', () => {
             months: new Set([1, 3]),
         });
         expect(matched.map((item) => item.id)).toEqual(['1', '2']);
+    });
+
+    it('keeps the selected currencies', () => {
+        expect(filterInvoiceRegistryRows(sample, { currencies: new Set(['eur']) }).map((item) => item.id)).toEqual(['2']);
+        expect(filterInvoiceRegistryRows(sample, { currencies: new Set(['USD', 'EUR']) }).map((item) => item.id)).toEqual(['1', '2']);
     });
 
     it('drops rows without an issue date when a date filter is on', () => {

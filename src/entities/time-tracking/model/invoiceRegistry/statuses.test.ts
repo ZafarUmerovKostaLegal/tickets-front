@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import year2026 from './seed/year-2026.json';
 import { getInvoiceRegistrySheet } from './columns';
-import { collectRegistryStatusOptions, registryStatusToneClass } from './statuses';
+import { collectRegistryStatusOptions, normalizeRegistryStatusLabel, registryStatusToneClass } from './statuses';
 import type { InvoiceRegistryRow } from './types';
 
 const rows = year2026 as InvoiceRegistryRow[];
@@ -24,6 +24,12 @@ describe('registry status tones', () => {
         expect(registryStatusToneClass('Отменён')).toBe('tt-inv-reg-status--canceled');
     });
 
+    it('uses one capitalised spelling for the Olga note', () => {
+        expect(normalizeRegistryStatusLabel('Ольге направила')).toBe('Ольге направить');
+        expect(normalizeRegistryStatusLabel('жду подтверждения от клиента')).toBe('Жду подтверждения от клиента');
+        expect(registryStatusToneClass('Оплачен клиентом')).toBe('tt-inv-reg-status--paid');
+    });
+
     it('keeps a free-text Excel note visibly different from the fixed list', () => {
         expect(registryStatusToneClass('Ольге направила')).toBe('tt-inv-reg-status--legacy');
     });
@@ -40,10 +46,15 @@ describe('registry status tones', () => {
             'Выставлен',
             'Оплачен',
         ]);
+        expect(options).toContain('Оплачен клиентом');
+        expect(options).toContain('Ольге направить');
+        expect(options).toContain('Жду подтверждения от клиента');
         expect(options).not.toContain('Ольге направила');
+        expect(options).not.toContain('жду подтверждения от клиента');
         expect(options).not.toContain('Попросил выставить в октябре');
         expect(options).not.toContain('Просмотрен');
         expect(options).toContain('Аннулирован');
+        expect(options.every((status) => status.charAt(0) === status.charAt(0).toLocaleUpperCase('ru'))).toBe(true);
         expect(options).toContain('Выставили этот инвойс в феврале 2026 года');
     });
 });

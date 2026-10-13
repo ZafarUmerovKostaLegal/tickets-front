@@ -7,6 +7,8 @@ export const INVOICE_STATUS_LABELS: Record<string, string> = {
     viewed: 'Просмотрен',
     partial_paid: 'Частично оплачен',
     paid: 'Оплачен',
+    client_paid: 'Оплачен клиентом',
+    send_to_olga: 'Ольге направить',
     canceled: 'Отменён',
     overdue: 'Просрочен',
 };
@@ -16,6 +18,8 @@ export const INVOICE_STATUS_BADGE_CLASS: Record<string, string> = {
     viewed: 'tt-inv__badge--indigo',
     partial_paid: 'tt-inv__badge--warn',
     paid: 'tt-inv__badge--success',
+    client_paid: 'tt-inv__badge--success',
+    send_to_olga: 'tt-inv__badge--neutral',
     canceled: 'tt-inv__badge--neutral',
     overdue: 'tt-inv__badge--danger',
 };

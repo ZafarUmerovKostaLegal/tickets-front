@@ -8,6 +8,7 @@ import {
     formatRegistryAmountCell,
     SYSTEM_INVOICE_REGISTRY_STATUSES,
     collectRegistryStatusOptions,
+    normalizeRegistryStatusLabel,
     filterInvoiceRegistryRows,
     getInvoiceRegistrySheet,
     isInvoiceRegistryMoneyColumnKey,
@@ -17,12 +18,10 @@ import {
     type InvoiceRegistryYearId,
 } from '@entities/time-tracking/model/invoiceRegistry';
 import {
-    cancelInvoice,
-    markInvoiceViewed,
     patchInvoice,
-    sendInvoice,
-    unsendInvoice,
+    setInvoiceRegistryStatus,
 } from '@entities/time-tracking/api/domains/invoices';
+import { INVOICE_STATUS_LABELS } from '@entities/time-tracking/invoiceUi';
 import {
     createInvoiceRegistryRow2026,
     getInvoiceRegistrySheet as getInvoiceRegistrySheetApi,
@@ -63,7 +62,7 @@ function RegistryStatusDropdown({
     const menuRef = useRef<HTMLDivElement>(null);
     const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
-    const label = value || '—';
+    const label = normalizeRegistryStatusLabel(value) || '—';
     const [draft, setDraft] = useState(value);
 
     const options = useMemo(() => {
@@ -153,7 +152,7 @@ function RegistryStatusDropdown({
                     style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
                 >
                     {options.map((opt) => {
-                        const selected = opt.value === value;
+                        const selected = opt.value === label;
                         return (
                             <button
                                 key={opt.value || '__empty'}
@@ -195,17 +194,24 @@ function RegistryStatusDropdown({
     );
 }
 
-async function applySystemRegistryStatus(invoiceId: string, label: string): Promise<void> {
-    if (label === 'Черновик')
-        await unsendInvoice(invoiceId);
-    else if (label === 'Отправлен')
-        await sendInvoice(invoiceId);
-    else if (label === 'Просмотрен')
-        await markInvoiceViewed(invoiceId);
-    else if (label === 'Отменён')
-        await cancelInvoice(invoiceId);
-    else
-        throw new Error('Этот статус для системного счёта задаётся оплатой или сроком, а не вручную.');
+function registryMoney(value: number, hideZero = false): string {
+    if (!Number.isFinite(value) || (hideZero && Math.abs(value) <= 0.009))
+        return '';
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+async function applySystemRegistryStatus(invoiceId: string, label: string): Promise<{
+    statusNote: string;
+    dueOrPayment: string;
+    balance: string;
+}> {
+    const updated = await setInvoiceRegistryStatus(invoiceId, label);
+    const statusNote = INVOICE_STATUS_LABELS[updated.status] ?? label;
+    return {
+        statusNote,
+        dueOrPayment: updated.dueDate || '',
+        balance: registryMoney(updated.balanceDue, true),
+    };
 }
 
 function systemInvoiceId(row: InvoiceRegistryRow): string {
@@ -681,6 +687,7 @@ export function InvoiceRegistryPanel({
     const [focus, setFocus] = useState<FocusCell>(null);
     const [search, setSearch] = useState('');
     const [partners, setPartners] = useState<Set<string>>(() => new Set());
+    const [currencies, setCurrencies] = useState<Set<string>>(() => new Set());
     const [numberQuery, setNumberQuery] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
@@ -854,6 +861,15 @@ export function InvoiceRegistryPanel({
         }
         return [...codes].sort((a, b) => a.localeCompare(b, 'ru'));
     }, [rows]);
+    const currencyOptions = useMemo(() => {
+        const codes = new Set<string>();
+        for (const row of rows) {
+            const code = String(row.currency ?? '').trim().toUpperCase();
+            if (code)
+                codes.add(code);
+        }
+        return [...codes].sort((a, b) => a.localeCompare(b, 'en'));
+    }, [rows]);
     const monthLabels = useMemo(() => {
         const fmt = new Intl.DateTimeFormat(locale === 'en' ? 'en' : 'ru', { month: 'long' });
         return Array.from({ length: 12 }, (_, index) => {
@@ -861,17 +877,28 @@ export function InvoiceRegistryPanel({
             return raw.charAt(0).toUpperCase() + raw.slice(1);
         });
     }, [locale]);
-    const filtersActive = partners.size > 0 || numberQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || months.size > 0;
+    const filtersActive = partners.size > 0 || currencies.size > 0 || numberQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || months.size > 0;
     const filteredRows = useMemo(() => filterInvoiceRegistryRows(rows, {
         search,
         searchKeys: columnKeys,
         partners,
+        currencies,
         numberQuery,
         dateFrom,
         dateTo,
         months,
-    }), [rows, search, columnKeys, partners, numberQuery, dateFrom, dateTo, months]);
+    }), [rows, search, columnKeys, partners, currencies, numberQuery, dateFrom, dateTo, months]);
 
+    const toggleCurrency = (code: string) => {
+        setCurrencies((prev) => {
+            const next = new Set(prev);
+            if (next.has(code))
+                next.delete(code);
+            else
+                next.add(code);
+            return next;
+        });
+    };
     const togglePartner = (code: string) => {
         setPartners((prev) => {
             const next = new Set(prev);
@@ -894,6 +921,7 @@ export function InvoiceRegistryPanel({
     };
     const clearFilters = () => {
         setPartners(new Set());
+        setCurrencies(new Set());
         setNumberQuery('');
         setDateFrom('');
         setDateTo('');
@@ -930,6 +958,9 @@ export function InvoiceRegistryPanel({
                 return;
             setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, statusNote: value } : item)));
             void applySystemRegistryStatus(invoiceId, value)
+                .then((saved) => {
+                    setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, ...saved } : item)));
+                })
                 .catch((error: unknown) => {
                     setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, statusNote: previous } : item)));
                     showToast({
@@ -1142,6 +1173,20 @@ export function InvoiceRegistryPanel({
                         <option key={code} value={code}>{partners.has(code) ? `✓ ${code}` : code}</option>
                     ))}
                 </select>
+                <select
+                    className="tt-inv-reg__filter"
+                    value=""
+                    aria-label={t('timeTrackingPage.invoices.registry.filterCurrency')}
+                    onChange={(e) => {
+                        if (e.target.value)
+                            toggleCurrency(e.target.value);
+                    }}
+                >
+                    <option value="">{t('timeTrackingPage.invoices.registry.filterCurrencyAll')}</option>
+                    {currencyOptions.map((code) => (
+                        <option key={code} value={code}>{currencies.has(code) ? `✓ ${code}` : code}</option>
+                    ))}
+                </select>
                 <input
                     type="search"
                     className="tt-settings__search tt-inv-reg__filter tt-inv-reg__filter--number"
@@ -1190,10 +1235,16 @@ export function InvoiceRegistryPanel({
                         {t('timeTrackingPage.invoices.registry.filterClear')}
                     </button>
                 )}
-                {(partners.size > 0 || months.size > 0) && (
+                {(partners.size > 0 || currencies.size > 0 || months.size > 0) && (
                     <div className="tt-inv-reg__chips">
                         {[...partners].map((code) => (
                             <button key={code} type="button" className="tt-inv-reg__chip" onClick={() => togglePartner(code)}>
+                                {code}
+                                <span aria-hidden>×</span>
+                            </button>
+                        ))}
+                        {[...currencies].map((code) => (
+                            <button key={code} type="button" className="tt-inv-reg__chip" onClick={() => toggleCurrency(code)}>
                                 {code}
                                 <span aria-hidden>×</span>
                             </button>
