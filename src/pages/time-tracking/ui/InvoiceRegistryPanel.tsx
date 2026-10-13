@@ -19,6 +19,7 @@ import {
 import {
     cancelInvoice,
     markInvoiceViewed,
+    patchInvoice,
     sendInvoice,
     unsendInvoice,
 } from '@entities/time-tracking/api/domains/invoices';
@@ -32,7 +33,7 @@ import {
     replaceInvoiceRegistryRows2026,
     type InvoiceRegistryYearMeta,
 } from '@entities/time-tracking/api/domains/invoiceRegistry';
-import { downloadExistingInvoicePdf } from '../lib/invoicePageShared';
+import { buildExistingInvoicePdfFile, downloadExistingInvoicePdf } from '../lib/invoicePageShared';
 import { useI18n } from '@shared/i18n';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { showToast } from '@shared/ui/app-toast';
@@ -214,31 +215,110 @@ function systemInvoiceId(row: InvoiceRegistryRow): string {
     return row.id.startsWith('sys-') ? row.id.slice(4) : '';
 }
 
-function RegistryPdfButton({ invoiceId, ariaLabel }: { invoiceId: string; ariaLabel: string }) {
+function RegistryPdfPreview({
+    invoiceId,
+    onClose,
+}: {
+    invoiceId: string;
+    onClose: () => void;
+}) {
     const { t } = useI18n();
-    const [busy, setBusy] = useState(false);
-    return (
-        <button
-            type="button"
-            className="tt-inv-reg__pdf"
-            disabled={!invoiceId || busy}
-            aria-label={ariaLabel}
-            onClick={() => {
-                if (!invoiceId || busy)
+    const [url, setUrl] = useState<string | null>(null);
+    const [fileName, setFileName] = useState('invoice.pdf');
+    const [failed, setFailed] = useState(false);
+    useEffect(() => {
+        let objectUrl = '';
+        let cancelled = false;
+        void buildExistingInvoicePdfFile(invoiceId)
+            .then((file) => {
+                if (cancelled)
                     return;
-                setBusy(true);
-                void downloadExistingInvoicePdf(invoiceId)
-                    .catch(() => {
-                        showToast({
-                            message: t('timeTrackingPage.invoices.errors.pdfFailed'),
-                            variant: 'error',
-                        });
-                    })
-                    .finally(() => setBusy(false));
-            }}
-        >
-            PDF
-        </button>
+                objectUrl = URL.createObjectURL(file.blob);
+                setUrl(objectUrl);
+                setFileName(`${file.fileBase}.pdf`);
+            })
+            .catch(() => {
+                if (!cancelled)
+                    setFailed(true);
+            });
+        return () => {
+            cancelled = true;
+            if (objectUrl)
+                URL.revokeObjectURL(objectUrl);
+        };
+    }, [invoiceId]);
+    useEffect(() => {
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape')
+                onClose();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose]);
+    return createPortal(
+        <div className="tt-inv-reg-pdf" role="presentation" onClick={onClose}>
+            <div
+                className="tt-inv-reg-pdf__dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-label={fileName}
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className="tt-inv-reg-pdf__bar">
+                    <span className="tt-inv-reg-pdf__name">{fileName}</span>
+                    <button
+                        type="button"
+                        className="tt-inv-reg__pdf"
+                        disabled={!url}
+                        onClick={() => {
+                            void downloadExistingInvoicePdf(invoiceId).catch(() => {
+                                showToast({
+                                    message: t('timeTrackingPage.invoices.errors.pdfFailed'),
+                                    variant: 'error',
+                                });
+                            });
+                        }}
+                    >
+                        {t('timeTrackingPage.invoices.detail.downloadPdf')}
+                    </button>
+                    <button type="button" className="tt-inv-reg__pdf" onClick={onClose}>
+                        {t('timeTrackingPage.common.close')}
+                    </button>
+                </div>
+                {url ? (
+                    <iframe className="tt-inv-reg-pdf__frame" src={url} title={fileName} />
+                ) : (
+                    <p className="tt-inv-reg-pdf__status" role="status">
+                        {failed
+                            ? t('timeTrackingPage.invoices.errors.pdfFailed')
+                            : t('timeTrackingPage.common.loading')}
+                    </p>
+                )}
+            </div>
+        </div>,
+        document.body,
+    );
+}
+
+function RegistryPdfButton({ invoiceId, ariaLabel }: { invoiceId: string; ariaLabel: string }) {
+    const [open, setOpen] = useState(false);
+    const close = useCallback(() => setOpen(false), []);
+    return (
+        <>
+            <button
+                type="button"
+                className="tt-inv-reg__pdf"
+                disabled={!invoiceId}
+                aria-label={ariaLabel}
+                onClick={() => {
+                    if (invoiceId)
+                        setOpen(true);
+                }}
+            >
+                PDF
+            </button>
+            {open && invoiceId ? <RegistryPdfPreview invoiceId={invoiceId} onClose={close} /> : null}
+        </>
     );
 }
 
@@ -364,6 +444,7 @@ function RegistryEditableCell({
         return (
             <td
                 className={`tt-inv-reg__td${wide ? ' tt-inv-reg__td--wide' : ''}${isMoney ? ' tt-inv-reg__td--money' : ''}${fee ? ' tt-inv-reg__td--fee' : ''}${columnKey === 'seqNo' ? ' tt-inv-reg__td--pin' : ''}`}
+                data-registry-edit={columnKey === 'details' ? '' : undefined}
                 onClick={onActivate}
                 onFocus={onActivate}
                 tabIndex={0}
@@ -819,12 +900,31 @@ export function InvoiceRegistryPanel({
         setMonths(new Set());
     };
 
+    const noteDraft = useRef<{ rowId: string; invoiceId: string; value: string; previous: string } | null>(null);
+
     const patchCell = useCallback((rowId: string, key: string, value: string) => {
         if (year === '2026-system') {
-            if (readOnly || key !== 'statusNote')
+            if (readOnly || (key !== 'statusNote' && key !== 'details'))
                 return;
             const row = rows.find((item) => item.id === rowId);
             const invoiceId = row ? systemInvoiceId(row) : '';
+            if (key === 'details') {
+                const previous = String(row?.details ?? '');
+                if (!invoiceId || value === previous)
+                    return;
+                setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, details: value } : item)));
+                void patchInvoice(invoiceId, { internalNote: value.trim() ? value : null })
+                    .catch((error: unknown) => {
+                        setRows((prev) => prev.map((item) => (item.id === rowId ? { ...item, details: previous } : item)));
+                        showToast({
+                            message: error instanceof Error && error.message
+                                ? error.message
+                                : t('timeTrackingPage.invoices.registry.loadFailed'),
+                            variant: 'error',
+                        });
+                    });
+                return;
+            }
             const previous = String(row?.statusNote ?? '');
             if (!invoiceId || value === previous)
                 return;
@@ -1165,7 +1265,7 @@ export function InvoiceRegistryPanel({
                                         if (!canOpenInvoice)
                                             return;
                                         const target = event.target as HTMLElement | null;
-                                        if (target?.closest('button, a, input, textarea, select, .tt-inv-reg__td--status, .tt-inv-reg__td--pdf, .tt-inv-reg-status'))
+                                        if (target?.closest('button, a, input, textarea, select, .tt-inv-reg__td--status, .tt-inv-reg__td--pdf, .tt-inv-reg-status, [data-registry-edit]'))
                                             return;
                                         openInvoiceDetail(invoiceId);
                                     }}
@@ -1175,7 +1275,7 @@ export function InvoiceRegistryPanel({
                                         if (event.key !== 'Enter' && event.key !== ' ')
                                             return;
                                         const target = event.target as HTMLElement | null;
-                                        if (target?.closest('button, a, input, textarea, select, .tt-inv-reg__td--status, .tt-inv-reg__td--pdf, .tt-inv-reg-status'))
+                                        if (target?.closest('button, a, input, textarea, select, .tt-inv-reg__td--status, .tt-inv-reg__td--pdf, .tt-inv-reg-status, [data-registry-edit]'))
                                             return;
                                         event.preventDefault();
                                         openInvoiceDetail(invoiceId);
@@ -1186,6 +1286,8 @@ export function InvoiceRegistryPanel({
                                         const active = focus?.rowId === row.id && focus.key === col.key;
                                         const money = isInvoiceRegistryMoneyColumnKey(col.key);
                                         const systemStatus = year === '2026-system' && col.key === 'statusNote';
+                                        const systemNote = year === '2026-system' && col.key === 'details';
+                                        const canEditCell = canEditYear || ((systemStatus || systemNote) && !readOnly);
                                         return (
                                             <RegistryEditableCell
                                                 key={col.key}
@@ -1195,17 +1297,55 @@ export function InvoiceRegistryPanel({
                                                 editor={col.editor}
                                                 invoiceId={invoiceId}
                                                 money={money}
-                                                readOnly={systemStatus ? readOnly : !canEditYear}
+                                                readOnly={!canEditCell}
                                                 statusChoices={statusChoices}
                                                 allowCustomStatus={!systemStatus}
-                                                active={canEditYear && active && col.editor !== 'status'}
+                                                active={canEditCell && active && col.editor !== 'status'}
                                                 ariaLabel={`${col.label}, ${t('timeTrackingPage.invoices.registry.rowN').replace('{n}', String(idx + 1))}`}
                                                 onActivate={() => {
-                                                    if (canEditYear && col.editor !== 'status')
+                                                    if (canEditCell && col.editor !== 'status')
                                                         setFocus({ rowId: row.id, key: col.key });
                                                 }}
-                                                onChange={(next) => patchCell(row.id, col.key, next)}
-                                                onBlurCommit={() => setFocus(null)}
+                                                onChange={(next) => {
+                                                    if (systemNote) {
+                                                        if (!noteDraft.current || noteDraft.current.rowId !== row.id) {
+                                                            noteDraft.current = {
+                                                                rowId: row.id,
+                                                                invoiceId,
+                                                                value: next,
+                                                                previous: val,
+                                                            };
+                                                        }
+                                                        else {
+                                                            noteDraft.current.value = next;
+                                                        }
+                                                        setRows((prev) => prev.map((item) => (
+                                                            item.id === row.id ? { ...item, details: next } : item
+                                                        )));
+                                                        return;
+                                                    }
+                                                    patchCell(row.id, col.key, next);
+                                                }}
+                                                onBlurCommit={() => {
+                                                    const draft = noteDraft.current;
+                                                    noteDraft.current = null;
+                                                    setFocus(null);
+                                                    if (!draft || !draft.invoiceId || draft.value === draft.previous)
+                                                        return;
+                                                    void patchInvoice(draft.invoiceId, {
+                                                        internalNote: draft.value.trim() ? draft.value : null,
+                                                    }).catch((error: unknown) => {
+                                                        setRows((prev) => prev.map((item) => (
+                                                            item.id === draft.rowId ? { ...item, details: draft.previous } : item
+                                                        )));
+                                                        showToast({
+                                                            message: error instanceof Error && error.message
+                                                                ? error.message
+                                                                : t('timeTrackingPage.invoices.registry.loadFailed'),
+                                                            variant: 'error',
+                                                        });
+                                                    });
+                                                }}
                                             />
                                         );
                                     })}

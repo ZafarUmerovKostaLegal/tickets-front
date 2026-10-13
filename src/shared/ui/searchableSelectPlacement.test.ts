@@ -25,6 +25,7 @@ describe('computePortalDropdownBox', () => {
         expect(box.bottom).toBeUndefined();
         expect(box.maxH).toBeGreaterThan(200);
     });
+    
 
     it('opens downward when there is room below in the upper half', () => {
         const box = computePortalDropdownBox(

@@ -74,10 +74,12 @@ describe('2026 system sheet', () => {
         const system = getInvoiceRegistrySheet('2026-system');
         expect(system.sheetName).toBe('2026 (система)');
         expect(system.columns.map((column) => column.key)).toEqual([
-            ...manual.columns.map((column) => column.key),
+            ...manual.columns.map((column) => column.key).filter((key) => key !== 'details'),
             'invoicePdf',
+            'details',
         ]);
-        expect(system.columns.at(-1)?.editor).toBe('pdf');
+        expect(system.columns.find((column) => column.key === 'details')?.label).toBe('Внутреннее примечание');
+        expect(system.columns.find((column) => column.key === 'invoicePdf')?.editor).toBe('pdf');
     });
 
     it('keeps a status column on the older manual years', () => {

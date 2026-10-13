@@ -603,6 +603,58 @@
   white-space: nowrap;
 }
 
+.tt-inv-reg-pdf {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgb(15 23 42 / 45%);
+}
+
+.tt-inv-reg-pdf__dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(960px, 100%);
+  height: min(88vh, 900px);
+  border-radius: 12px;
+  background: var(--app-surface, #fff);
+  box-shadow: 0 24px 60px rgb(15 23 42 / 28%);
+  overflow: hidden;
+}
+
+.tt-inv-reg-pdf__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.8rem;
+  border-bottom: 1px solid var(--app-border, #e2e8f0);
+}
+
+.tt-inv-reg-pdf__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  font-weight: 650;
+}
+
+.tt-inv-reg-pdf__frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: #f8fafc;
+}
+
+.tt-inv-reg-pdf__status {
+  margin: 2rem 1rem;
+  color: var(--app-muted, #64748b);
+}
+
 .tt-inv-reg__table--editable .tt-inv-reg__td {
   cursor: text;
 }
