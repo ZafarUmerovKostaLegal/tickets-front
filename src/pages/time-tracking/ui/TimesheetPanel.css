@@ -2169,11 +2169,11 @@
 .tsp__group--week-closed .tsp__day-sum-n { color: #9ca3af; }
 
 .tsp__foot {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0.875rem 1.5rem;
-  border-top: 1.5px solid var(--app-border, #e5e7eb);
+  display: flex; align-items: center; justify-content: flex-start;
+  padding: 0.4rem 1.25rem;
+  border-top: 1px solid var(--app-border, #e5e7eb);
   background: var(--app-surface, #fff);
-  gap: 1rem; flex-wrap: wrap;
+  gap: 1rem;
   flex-shrink: 0;
   margin-top: auto;
 }

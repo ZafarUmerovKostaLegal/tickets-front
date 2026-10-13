@@ -3,7 +3,7 @@ import './TimesheetPanel.css';
 import { createPortal } from 'react-dom';
 import { TimesheetGrantUnlockConfirm, TimesheetDeleteConfirm } from './TimesheetModals';
 import { EntryModal } from './TimesheetEntryModal';
-import { upsertTimeTrackingUser, listProjectTasksCached, listTimeEntries, createTimeEntry, patchTimeEntry, deleteTimeEntry, grantTimeEntryEditUnlock, submitWeeklyTime, listWeeklySubmissions, isTimeTrackingHttpError, isWorkDateInClosedReportingPeriod, isClosedReportingWeekEditingBlockedForSubject, setUserSubmittedWeeks, mergeUserSubmittedWeek, persistTimesheetTimerStopToApi, type TimeTrackingUserRow, type CreateTimeEntryBody, type PatchTimeEntryBody, } from '@entities/time-tracking';
+import { upsertTimeTrackingUser, listProjectTasksCached, listTimeEntries, createTimeEntry, patchTimeEntry, deleteTimeEntry, grantTimeEntryEditUnlock, listWeeklySubmissions, isTimeTrackingHttpError, isWorkDateInClosedReportingPeriod, isClosedReportingWeekEditingBlockedForSubject, setUserSubmittedWeeks, persistTimesheetTimerStopToApi, type TimeTrackingUserRow, type CreateTimeEntryBody, type PatchTimeEntryBody, } from '@entities/time-tracking';
 import { canGrantTimeEntryEditUnlock, canOverrideReportPreviewWeeklyLock } from '@entities/time-tracking/model/timeTrackingAccess';
 import { loadTimesheetProjectCatalogForEntriesView, type ProjectOption, } from './timesheetProjectLoader';
 import { useCurrentUser } from '@shared/hooks';
@@ -181,7 +181,6 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     const viewerCanOverrideWeeklyLock = useMemo(() => canOverrideReportPreviewWeeklyLock(currentUser), [currentUser]);
     const grantUnlockEligible = useMemo(() => Boolean(currentUser && entriesAuthUserId != null && canGrantTimeEntryEditUnlock(currentUser, entriesAuthUserId)), [currentUser, entriesAuthUserId]);
     const [grantUnlockBusy, setGrantUnlockBusy] = useState(false);
-    const [submitWeekBusy, setSubmitWeekBusy] = useState(false);
     const [grantUnlockConfirmOpen, setGrantUnlockConfirmOpen] = useState(false);
     const isSubjectDayReportingBlocked = useCallback((ymd: string) => {
         if (entriesAuthUserId == null)
@@ -620,36 +619,6 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     const periodTotal = viewMode === 'calendar' ? monthTotal : weekTotal;
     const periodNorm = viewMode === 'calendar' ? monthNormHours : weekNormHours;
     const periodBarPct = periodNorm > 0 ? Math.min(100, (periodTotal / periodNorm) * 100) : 0;
-    const handleSubmitWeek = useCallback(async () => {
-        if (entriesAuthUserId == null || submitWeekBusy)
-            return;
-        setSubmitWeekBusy(true);
-        try {
-            const anchor = viewMode === 'day' ? activeDayYmd : formatDate(weekDays[weekDays.length - 1] ?? activeDay);
-            const out = await submitWeeklyTime(entriesAuthUserId, anchor);
-            if (out.weekStart && out.weekEnd) {
-                mergeUserSubmittedWeek(entriesAuthUserId, {
-                    weekStart: out.weekStart,
-                    weekEnd: out.weekEnd,
-                });
-            }
-            setEntriesBanner({
-                message: out.created
-                    ? t('timeTrackingPage.timesheet.submitWeekSuccess')
-                    : t('timeTrackingPage.timesheet.submitWeekAlready'),
-                variant: 'success',
-            });
-        }
-        catch (e) {
-            setEntriesBanner({
-                message: e instanceof Error ? e.message : t('timeTrackingPage.timesheet.submitWeekFailed'),
-                variant: 'danger',
-            });
-        }
-        finally {
-            setSubmitWeekBusy(false);
-        }
-    }, [entriesAuthUserId, submitWeekBusy, activeDayYmd, viewMode, weekDays, activeDay, t, setEntriesBanner]);
     const calendarCells = useMemo(() => {
         const sm = startOfMonth(calendarAnchor);
         const lead = (sm.getDay() + 6) % 7;
@@ -1413,16 +1382,6 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                 {viewMode === 'calendar' ? t('timeTrackingPage.timesheet.footerTotalMonth') : t('timeTrackingPage.timesheet.footerTotalWeek')}
             </span>
             <span className="tsp__foot-total-n">{fmtHours(periodTotal)}</span>
-        </div>
-        <div className="tsp__submit-wrap">
-            <button type="button" className="tsp__submit" disabled={entriesAuthUserId == null || submitWeekBusy} onClick={() => void handleSubmitWeek()}>
-                {submitWeekBusy ? t('timeTrackingPage.saving') : t('timeTrackingPage.timesheet.submitApproval')}
-            </button>
-            <button className="tsp__submit-arr" aria-label={t('timeTrackingPage.timesheet.submitOptionsAria')}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                    <path d="M6 9l6 6 6-6" />
-                </svg>
-            </button>
         </div>
     </div>);
     return (<div className={`tsp${viewMode === 'calendar' ? ' tsp--calendar-layout' : ''}`}>
