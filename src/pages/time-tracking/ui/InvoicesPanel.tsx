@@ -395,7 +395,15 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     if (saved === 'registry' || saved === 'statistics' || saved === 'statistics-system')
       selectInvoicesSubTab(saved);
   }, [searchParams, selectInvoicesSubTab]);
-  return (<div className={`tt-inv${accountingEmbed ? ' tt-inv--accounting' : ''}`}>
+  if (accountingEmbed) {
+    return (
+      <div className="tt-inv tt-inv--accounting">
+        <InvoiceRegistryPanel variant="accounting" />
+      </div>
+    );
+  }
+
+  return (<div className="tt-inv">
     <div className="tt-reports__type-block">
       {!accountingEmbed && (
         <p className="tt-reports__type-block-title" id="tt-inv-page-title">{t('timeTrackingPage.invoices.title')}</p>

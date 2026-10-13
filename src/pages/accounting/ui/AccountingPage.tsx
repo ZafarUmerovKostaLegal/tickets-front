@@ -234,7 +234,7 @@ export function AccountingPage() {
                                 </h1>
                                 <p className="acct-page__subtitle">
                                     {activeTab === 'invoices'
-                                        ? 'Счета, выставленные клиентам'
+                                        ? 'Реестр инвойсов'
                                         : activeTab === 'hr'
                                             ? 'Сотрудники, роли и должности'
                                             : activeTab === 'corporate-card'
