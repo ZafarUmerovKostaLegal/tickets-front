@@ -72,8 +72,8 @@ export function TimesheetMiniCalendar({ selected, today, hoursByDate, onSelect }
                 </button>
             </div>
             <div className="tsp-mini__dows" aria-hidden>
-                {labels.map((label) => (
-                    <span key={label} className="tsp-mini__dow">{label}</span>
+                {labels.map((label, index) => (
+                    <span key={label} className={`tsp-mini__dow${index >= 5 ? ' tsp-mini__dow--wknd' : ''}`}>{label}</span>
                 ))}
             </div>
             <div className="tsp-mini__grid" role="grid">
@@ -82,6 +82,7 @@ export function TimesheetMiniCalendar({ selected, today, hoursByDate, onSelect }
                     const inMonth = isSameMonth(day, visibleMonth);
                     const selectedDay = sameDay(day, selected);
                     const todayDay = sameDay(day, today);
+                    const weekend = day.getDay() === 0 || day.getDay() === 6;
                     const hasHours = (hoursByDate.get(dateKey(day)) ?? 0) > 0;
                     return (
                         <button
@@ -91,6 +92,7 @@ export function TimesheetMiniCalendar({ selected, today, hoursByDate, onSelect }
                             className={[
                                 'tsp-mini__day',
                                 inMonth ? '' : 'tsp-mini__day--out',
+                                weekend ? 'tsp-mini__day--wknd' : '',
                                 selectedDay ? 'tsp-mini__day--selected' : '',
                                 todayDay ? 'tsp-mini__day--today' : '',
                                 future ? 'tsp-mini__day--future' : '',

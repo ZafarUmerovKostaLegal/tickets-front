@@ -279,7 +279,6 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     }, [entries]);
     const entryModalProjects = useMemo((): ProjectOption[] => {
         const items = projectsState.items;
-        // New/clone: only open projects. Edit: open + the entry's project (even if archived).
         const active = items.filter((p) => !p.isClosed);
         if (!modal.open)
             return active;
@@ -1878,8 +1877,12 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                             {outlookCalendar.getEventsForDateKey(formatDate(activeDay)).map((ev) => {
                                 const subject = ev.subject?.trim() || t('timeTrackingPage.timesheet.outlookEventFallback');
                                 const time = formatCalendarEventTime(ev) || t('timeTrackingPage.timesheet.outlookAllDay');
+                                const accent = outlookCalendarAccentColor(
+                                    ev.calendarId ?? 'default',
+                                    outlookCalendar.calendarColorOrder,
+                                );
                                 return (
-                                    <div key={`${ev.calendarId ?? 'default'}-${ev.id}`} className="tsp-side__ev">
+                                    <div key={`${ev.calendarId ?? 'default'}-${ev.id}`} className="tsp-side__ev" style={outlookCalendarAccentStyle(accent)}>
                                         <div className="tsp-side__ev-main">
                                             <div className="tsp-side__ev-ico" aria-hidden>
                                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
