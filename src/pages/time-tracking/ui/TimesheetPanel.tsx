@@ -657,10 +657,17 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         const gridStart = addDays(sm, -lead);
         return Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
     }, [calendarAnchor]);
+    const activeDayTime = activeDay.getTime();
+    const dayMonthAnchor = useMemo(() => startOfMonth(new Date(activeDayTime)), [activeDayTime]);
+    const dayMonthCells = useMemo(() => {
+        const lead = (dayMonthAnchor.getDay() + 6) % 7;
+        const gridStart = addDays(dayMonthAnchor, -lead);
+        return Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
+    }, [dayMonthAnchor]);
     const outlookCalendar = useTimesheetOutlookCalendar({
-        enabled: viewMode === 'calendar',
-        calendarAnchor,
-        calendarDays: calendarCells,
+        enabled: viewMode === 'calendar' || viewMode === 'day',
+        calendarAnchor: viewMode === 'day' ? dayMonthAnchor : calendarAnchor,
+        calendarDays: viewMode === 'day' ? dayMonthCells : calendarCells,
     });
     const monthIndex = (d: Date) => d.getFullYear() * 12 + d.getMonth();
     const canGoNextByWeek = weekStart.getTime() < thisWeekStart.getTime();
@@ -1854,15 +1861,53 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                     </div>)}
                 </div>
                 {viewMode === 'day' ? (
-                    <TimesheetMiniCalendar
-                        selected={activeDay}
-                        today={today}
-                        hoursByDate={hoursByDate}
-                        onSelect={(day) => {
-                            setActiveDay(day);
-                            setWeekStart(startOfWeek(day));
-                        }}
-                    />
+                    <div className="tsp-side">
+                        <TimesheetMiniCalendar
+                            selected={activeDay}
+                            today={today}
+                            hoursByDate={hoursByDate}
+                            onSelect={(day) => {
+                                setActiveDay(day);
+                                setWeekStart(startOfWeek(day));
+                            }}
+                        />
+                        <div className="tsp-side__list">
+                            {outlookCalendar.connected && outlookCalendar.getEventsForDateKey(formatDate(activeDay)).length === 0 ? (
+                                <p className="tsp-side__empty">{t('timeTrackingPage.timesheet.outlookDayEmpty')}</p>
+                            ) : null}
+                            {outlookCalendar.getEventsForDateKey(formatDate(activeDay)).map((ev) => {
+                                const subject = ev.subject?.trim() || t('timeTrackingPage.timesheet.outlookEventFallback');
+                                const time = formatCalendarEventTime(ev) || t('timeTrackingPage.timesheet.outlookAllDay');
+                                return (
+                                    <div key={`${ev.calendarId ?? 'default'}-${ev.id}`} className="tsp-side__ev">
+                                        <div className="tsp-side__ev-main">
+                                            <div className="tsp-side__ev-ico" aria-hidden>
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                                                    <line x1="16" y1="2" x2="16" y2="6" />
+                                                    <line x1="8" y1="2" x2="8" y2="6" />
+                                                    <line x1="3" y1="10" x2="21" y2="10" />
+                                                </svg>
+                                            </div>
+                                            <div className="tsp-side__ev-body">
+                                                <div className="tsp-side__ev-subject">{subject}</div>
+                                                <div className="tsp-side__ev-time">{time}</div>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="tsp-side__add"
+                                            disabled={activeDayReportingBlocked}
+                                            title={activeDayReportingBlocked ? weekClosedTitle : undefined}
+                                            onClick={() => openAddFromOutlookEvent(ev, activeDay)}
+                                        >
+                                            {t('timeTrackingPage.timesheet.addTime')}
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 ) : null}
                 </div>
                 {viewMode !== 'calendar' ? timesheetFooter : null}

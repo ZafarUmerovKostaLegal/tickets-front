@@ -378,6 +378,7 @@ export const timeTrackingPageMessages = {
         outlookMoreCount: 'Ещё {count}',
         outlookMoreTitle: 'Всего {count} событий. Нажмите, чтобы открыть список.',
         outlookDayAgendaCount: '{count} событий',
+        outlookDayEmpty: 'Нет событий за этот день',
         outlookAllDay: 'Весь день',
         calendarListAria: 'Календарь Outlook для отображения',
         outlookCalendarAria: 'Синхронизация Outlook',
