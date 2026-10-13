@@ -46,6 +46,7 @@ import {
   invalidateCalendarApiCache,
   reconnectOutlookCalendar,
 } from '@entities/todo/lib/calendarApi';
+import { InvoiceDueDayCalculator } from './InvoiceDueDayCalculator';
 import { InvoiceSendContactModal } from './InvoiceSendContactModal';
 import { invoiceDescriptionWithTask } from '../lib/invoiceClientDescription';
 import { invoiceClientMailSignature, rasterizePublicLogoPng } from '../lib/invoiceClientMailSignature';
@@ -1058,15 +1059,18 @@ export function InvoiceDetailPage() {
                       </div>
                     </div>
                     <div className="tt-inv-draft">
-                      <div className="tt-inv-dialog__grid tt-inv-dialog__grid--draft-invoice">
+                      <div className="tt-inv-date-row">
                         <div className="tt-inv-dialog__field">
                           <span id="inv-draft-issue-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.detail.issueDate')}</span>
                           <DatePicker id="inv-draft-issue" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={draftIssueDate} max={draftDueDate || undefined} onChange={(iso) => setDraftIssueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.detail.issueDate')} showChevron aria-labelledby="inv-draft-issue-lbl" />
                         </div>
+                        <InvoiceDueDayCalculator issueDate={draftIssueDate} dueDate={draftDueDate} onDueDateChange={setDraftDueDate} />
                         <div className="tt-inv-dialog__field">
                           <span id="inv-draft-due-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.detail.dueDate')}</span>
                           <DatePicker id="inv-draft-due" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={draftDueDate} min={draftIssueDate || undefined} onChange={(iso) => setDraftDueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.detail.dueDate')} showChevron aria-labelledby="inv-draft-due-lbl" />
                         </div>
+                      </div>
+                      <div className="tt-inv-dialog__grid tt-inv-dialog__grid--draft-invoice">
                         <div className="tt-inv-dialog__field">
                           <label className="tt-inv-dialog__label" htmlFor="inv-tax1">{t('timeTrackingPage.invoices.detail.tax1')}</label>
                           <input id="inv-tax1" type="text" inputMode="decimal" className="tt-inv-dialog__control" value={draftTaxPct} onChange={(e) => setDraftTaxPct(e.target.value)} placeholder={t('timeTrackingPage.invoices.detail.taxPlaceholder')} />

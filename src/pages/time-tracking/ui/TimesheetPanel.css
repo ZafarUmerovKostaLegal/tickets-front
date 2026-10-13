@@ -4565,26 +4565,76 @@
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.65rem 1rem;
 }
-.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(1),
-.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(2) {
-  grid-column: span 3;
-}
-.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(3),
-.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(4),
-.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(5) {
+.tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field {
   grid-column: span 2;
 }
 @media (max-width: 640px) {
   .tt-inv-dialog__grid--draft-invoice {
     grid-template-columns: 1fr;
   }
-  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(1),
-  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(2),
-  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(3),
-  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(4),
-  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field:nth-child(5) {
+  .tt-inv-dialog__grid--draft-invoice > .tt-inv-dialog__field {
     grid-column: auto;
   }
+}
+
+.tt-inv-date-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.65rem 1rem;
+  align-items: start;
+  margin-bottom: 0.75rem;
+}
+.tt-inv-date-row--span {
+  grid-column: 1 / -1;
+  margin-bottom: 0;
+}
+@media (max-width: 860px) {
+  .tt-inv-date-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tt-inv-daycalc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 12.5rem;
+  padding-top: 0.15rem;
+}
+.tt-inv-daycalc__check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--app-muted, #64748b);
+  cursor: pointer;
+}
+.tt-inv-daycalc__check input {
+  margin: 0;
+}
+.tt-inv-daycalc__row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.tt-inv-daycalc__input {
+  width: 4.5rem;
+  min-height: 2.125rem;
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.tt-inv-daycalc__input[readonly] {
+  background: var(--app-bg, #f3f4f6);
+  color: var(--app-text, #111827);
+  cursor: default;
+}
+.tt-inv-daycalc__unit {
+  font-size: 0.8125rem;
+  color: var(--app-text, #374151);
+  white-space: nowrap;
 }
 
 .tt-inv-dialog__field {

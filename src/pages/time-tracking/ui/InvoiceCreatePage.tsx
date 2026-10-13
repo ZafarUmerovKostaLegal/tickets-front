@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { getInvoiceDetailUrl, getInvoicesListUrl, getProjectDetailUrl, routes } from '@shared/config';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { DatePicker } from '@shared/ui/DatePicker';
+import { InvoiceDueDayCalculator } from './InvoiceDueDayCalculator';
 import { AppBackButton, AppHomeLogo, AppPageSettings, useAppDialog, useAppToast } from '@shared/ui';
 import { useI18n, ttReportPeriodLabel } from '@shared/i18n';
 import { useCurrentUser } from '@shared/hooks';
@@ -1002,11 +1003,12 @@ export function InvoiceCreatePage() {
                   <div className="tt-inv-page__section-head">
                     <h2 className="tt-inv-page__section-title">{t('timeTrackingPage.invoices.createDialog.issueDate')}</h2>
                   </div>
-                  <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2">
+                  <div className="tt-inv-date-row">
                     <div className="tt-inv-dialog__field">
                       <span id="tt-inv-issue-date-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.issueDate')}</span>
                       <DatePicker id="tt-inv-issue-date" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={issueDate} max={dueDate || undefined} onChange={(iso) => setIssueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.issueDate')} showChevron aria-labelledby="tt-inv-issue-date-lbl" />
                     </div>
+                    <InvoiceDueDayCalculator issueDate={issueDate} dueDate={dueDate} onDueDateChange={setDueDate} />
                     <div className="tt-inv-dialog__field">
                       <span id="tt-inv-due-date-lbl" className="tt-inv-dialog__label">{t('timeTrackingPage.invoices.createDialog.dueDate')}</span>
                       <DatePicker id="tt-inv-due-date" className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={dueDate} min={issueDate || undefined} onChange={(iso) => setDueDate(iso)} portal portalZIndex={12100} emptyLabel={t('timeTrackingPage.invoices.filters.dateEmpty')} title={t('timeTrackingPage.invoices.createDialog.dueDate')} showChevron aria-labelledby="tt-inv-due-date-lbl" />

@@ -1433,17 +1433,17 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                     </button>) : (<>
                         <div className="tsp__cal-outlook-row">
                             {outlookCalendar.calendars.length > 0 ? (
-                            <OutlookCalendarSelect
-                                value={outlookCalendar.calendarId}
-                                onChange={outlookCalendar.setCalendarId}
-                                calendars={outlookCalendar.calendars}
-                                showLabel={t('timeTrackingPage.timesheet.calendarShow')}
-                                listAriaLabel={t('timeTrackingPage.timesheet.calendarListAria')}
-                                defaultCalendarLabel={t('timeTrackingPage.timesheet.calendarDefault')}
-                                allCalendarsId={outlookCalendar.allCalendarsId}
-                                allCalendarsLabel={t('timeTrackingPage.timesheet.calendarAll')}
-                                disabled={!outlookCalendar.statusChecked}
-                            />
+                                <OutlookCalendarSelect
+                                    value={outlookCalendar.calendarId}
+                                    onChange={outlookCalendar.setCalendarId}
+                                    calendars={outlookCalendar.calendars}
+                                    showLabel={t('timeTrackingPage.timesheet.calendarShow')}
+                                    listAriaLabel={t('timeTrackingPage.timesheet.calendarListAria')}
+                                    defaultCalendarLabel={t('timeTrackingPage.timesheet.calendarDefault')}
+                                    allCalendarsId={outlookCalendar.allCalendarsId}
+                                    allCalendarsLabel={t('timeTrackingPage.timesheet.calendarAll')}
+                                    disabled={!outlookCalendar.statusChecked}
+                                />
                             ) : null}
                             <button
                                 type="button"
@@ -1708,165 +1708,165 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                     </div>
                 </div>
                 <div className={`tsp__body${viewMode === 'day' ? ' tsp__body--day' : ''}`}>
-                <div className={`tsp__content${viewMode === 'calendar' ? ' tsp__content--calendar' : ''}`} ref={contentScrollRef}>
-                    {(hasAnyEntries || filterActive || viewMode === 'week') && (<div className="tsp__filter-bar" role="search">
-                        <div className="tsp__filter-search">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                                <circle cx="11" cy="11" r="7" />
-                                <path d="M21 21l-4.3-4.3" />
-                            </svg>
-                            <input ref={searchInputRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('timeTrackingPage.timesheet.searchPlaceholder')} aria-label={t('timeTrackingPage.timesheet.searchAria')} />
-                            {query && (<button type="button" className="tsp__filter-search-clear" onClick={() => setQuery('')} aria-label={t('timeTrackingPage.timesheet.clearSearch')}>
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    <div className={`tsp__content${viewMode === 'calendar' ? ' tsp__content--calendar' : ''}`} ref={contentScrollRef}>
+                        {(hasAnyEntries || filterActive || viewMode === 'week') && (<div className="tsp__filter-bar" role="search">
+                            <div className="tsp__filter-search">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                                    <circle cx="11" cy="11" r="7" />
+                                    <path d="M21 21l-4.3-4.3" />
                                 </svg>
-                            </button>)}
-                        </div>
-                        {viewMode === 'week' && (<div className="tsp__filter-week" role="group" aria-label={t('timeTrackingPage.timesheet.weekDayFiltersAria')}>
-                            <div className="tsp__filter-week-sort" role="group" aria-label={t('timeTrackingPage.timesheet.weekDayOrderAria')}>
-                                <button type="button" className={`tsp__filter-chip${weekDayOrder === 'monday' ? ' tsp__filter-chip--on' : ''}`} onClick={() => { setWeekDayOrder('monday'); setWeekDayFilter('all'); }} aria-pressed={weekDayOrder === 'monday'} title={t('timeTrackingPage.timesheet.weekOrderMondayTitle')}>
-                                    {t('timeTrackingPage.timesheet.weekOrderMonday')}
-                                </button>
-                                <button type="button" className={`tsp__filter-chip${weekDayOrder === 'today' ? ' tsp__filter-chip--on' : ''}`} onClick={() => {
-                                    setWeekDayOrder('today');
-                                    setWeekDayFilter('all');
-                                    const now = getTodayDate();
-                                    setWeekStart(startOfWeek(now));
-                                    setActiveDay(now);
-                                }} aria-pressed={weekDayOrder === 'today'} title={t('timeTrackingPage.timesheet.weekOrderTodayTitle')}>
-                                    {t('timeTrackingPage.timesheet.weekOrderToday')}
-                                </button>
+                                <input ref={searchInputRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('timeTrackingPage.timesheet.searchPlaceholder')} aria-label={t('timeTrackingPage.timesheet.searchAria')} />
+                                {query && (<button type="button" className="tsp__filter-search-clear" onClick={() => setQuery('')} aria-label={t('timeTrackingPage.timesheet.clearSearch')}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                    </svg>
+                                </button>)}
                             </div>
-                            <div className="tsp__filter-week-days" role="group" aria-label={t('timeTrackingPage.timesheet.weekDayPickAria')}>
-                                <button type="button" className={`tsp__filter-day${weekDayFilter === 'all' ? ' tsp__filter-day--on' : ''}`} onClick={() => setWeekDayFilter('all')} aria-pressed={weekDayFilter === 'all'}>
-                                    {t('timeTrackingPage.timesheet.weekAllDays')}
-                                </button>
-                                {weekDays.map((d) => {
-                                    const key = formatDate(d);
-                                    const isToday = isSameDay(d, today);
-                                    const isFuture = isFutureCalendarDay(d, today) && !isToday;
-                                    const label = `${fmtShort(d, dateTag)} ${d.getDate()}`;
-                                    return (<button key={key} type="button" className={[
-                                        'tsp__filter-day',
-                                        weekDayFilter === key ? ' tsp__filter-day--on' : '',
-                                        isToday ? ' tsp__filter-day--today' : '',
-                                        isFuture ? ' tsp__filter-day--future' : '',
-                                    ].filter(Boolean).join(' ')} onClick={() => setWeekDayFilter((prev) => prev === key ? 'all' : key)} aria-pressed={weekDayFilter === key} disabled={isFuture} title={isFuture ? t('timeTrackingPage.timesheet.futureDates') : undefined}>
-                                        {label}
-                                    </button>);
-                                })}
+                            {viewMode === 'week' && (<div className="tsp__filter-week" role="group" aria-label={t('timeTrackingPage.timesheet.weekDayFiltersAria')}>
+                                <div className="tsp__filter-week-sort" role="group" aria-label={t('timeTrackingPage.timesheet.weekDayOrderAria')}>
+                                    <button type="button" className={`tsp__filter-chip${weekDayOrder === 'monday' ? ' tsp__filter-chip--on' : ''}`} onClick={() => { setWeekDayOrder('monday'); setWeekDayFilter('all'); }} aria-pressed={weekDayOrder === 'monday'} title={t('timeTrackingPage.timesheet.weekOrderMondayTitle')}>
+                                        {t('timeTrackingPage.timesheet.weekOrderMonday')}
+                                    </button>
+                                    <button type="button" className={`tsp__filter-chip${weekDayOrder === 'today' ? ' tsp__filter-chip--on' : ''}`} onClick={() => {
+                                        setWeekDayOrder('today');
+                                        setWeekDayFilter('all');
+                                        const now = getTodayDate();
+                                        setWeekStart(startOfWeek(now));
+                                        setActiveDay(now);
+                                    }} aria-pressed={weekDayOrder === 'today'} title={t('timeTrackingPage.timesheet.weekOrderTodayTitle')}>
+                                        {t('timeTrackingPage.timesheet.weekOrderToday')}
+                                    </button>
+                                </div>
+                                <div className="tsp__filter-week-days" role="group" aria-label={t('timeTrackingPage.timesheet.weekDayPickAria')}>
+                                    <button type="button" className={`tsp__filter-day${weekDayFilter === 'all' ? ' tsp__filter-day--on' : ''}`} onClick={() => setWeekDayFilter('all')} aria-pressed={weekDayFilter === 'all'}>
+                                        {t('timeTrackingPage.timesheet.weekAllDays')}
+                                    </button>
+                                    {weekDays.map((d) => {
+                                        const key = formatDate(d);
+                                        const isToday = isSameDay(d, today);
+                                        const isFuture = isFutureCalendarDay(d, today) && !isToday;
+                                        const label = `${fmtShort(d, dateTag)} ${d.getDate()}`;
+                                        return (<button key={key} type="button" className={[
+                                            'tsp__filter-day',
+                                            weekDayFilter === key ? ' tsp__filter-day--on' : '',
+                                            isToday ? ' tsp__filter-day--today' : '',
+                                            isFuture ? ' tsp__filter-day--future' : '',
+                                        ].filter(Boolean).join(' ')} onClick={() => setWeekDayFilter((prev) => prev === key ? 'all' : key)} aria-pressed={weekDayFilter === key} disabled={isFuture} title={isFuture ? t('timeTrackingPage.timesheet.futureDates') : undefined}>
+                                            {label}
+                                        </button>);
+                                    })}
+                                </div>
+                            </div>)}
+                            <button type="button" className={`tsp__filter-chip${billableOnly ? ' tsp__filter-chip--on' : ''}`} onClick={() => setBillableOnly((v) => !v)} aria-pressed={billableOnly} title={t('timeTrackingPage.timesheet.billableOnlyTitle')}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                {t('timeTrackingPage.timesheet.billableOnly')}
+                            </button>
+                            {filterActive && (<button type="button" className="tsp__filter-reset" onClick={resetFilters} title={t('timeTrackingPage.timesheet.resetFiltersTitle')}>
+                                {t('timeTrackingPage.timesheet.reset')}
+                            </button>)}
+                            <div className="tsp__filter-meta" aria-live="polite">
+                                {filterActive
+                                    ? `${t('timeTrackingPage.timesheet.shownPrefix')} ${shownRowsInPeriod} ${t('timeTrackingPage.timesheet.ofWord')} ${totalRowsInPeriod}`
+                                    : `${t('timeTrackingPage.timesheet.totalEntries')} ${totalRowsInPeriod}`}
                             </div>
                         </div>)}
-                        <button type="button" className={`tsp__filter-chip${billableOnly ? ' tsp__filter-chip--on' : ''}`} onClick={() => setBillableOnly((v) => !v)} aria-pressed={billableOnly} title={t('timeTrackingPage.timesheet.billableOnlyTitle')}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            {t('timeTrackingPage.timesheet.billableOnly')}
-                        </button>
-                        {filterActive && (<button type="button" className="tsp__filter-reset" onClick={resetFilters} title={t('timeTrackingPage.timesheet.resetFiltersTitle')}>
-                            {t('timeTrackingPage.timesheet.reset')}
-                        </button>)}
-                        <div className="tsp__filter-meta" aria-live="polite">
-                            {filterActive
-                                ? `${t('timeTrackingPage.timesheet.shownPrefix')} ${shownRowsInPeriod} ${t('timeTrackingPage.timesheet.ofWord')} ${totalRowsInPeriod}`
-                                : `${t('timeTrackingPage.timesheet.totalEntries')} ${totalRowsInPeriod}`}
-                        </div>
-                    </div>)}
-                    {!hasEntries ? (filterActive ? (<div className="tsp__empty tsp__empty--filter">
-                        <div className="tsp__empty-ico-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                                <circle cx="11" cy="11" r="7" />
-                                <path d="M21 21l-4.3-4.3" />
-                            </svg>
-                        </div>
-                        <p className="tsp__empty-h">{t('timeTrackingPage.timesheet.emptyFilterTitle')}</p>
-                        <p className="tsp__empty-s">{t('timeTrackingPage.timesheet.emptyFilterDesc')}</p>
-                        <button className="tsp__empty-cta tsp__empty-cta--ghost" onClick={resetFilters}>
-                            {t('timeTrackingPage.timesheet.resetFilters')}
-                        </button>
-                    </div>) : (<div className="tsp__empty">
-                        <div className="tsp__empty-ico-wrap">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 7v5l3.5 2" />
-                            </svg>
-                        </div>
-                        <p className="tsp__empty-h">{t('timeTrackingPage.timesheet.emptyDayTitle')}</p>
-                        <p className="tsp__empty-s">{t('timeTrackingPage.timesheet.emptyDayDesc')}</p>
-                        <button type="button" className="tsp__empty-cta" onClick={() => openAdd(formatDate(activeDay))} disabled={activeDayReportingBlocked} title={activeDayReportingBlocked ? weekClosedTitle : undefined}>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                            </svg>
-                            {t('timeTrackingPage.timesheet.addTime')}
-                        </button>
-                    </div>)) : (<div className="tsp__groups">
-                        <TimesheetVirtualList
-                            scrollRef={timesheetScrollRef}
-                            items={virtualTimesheetItems}
-                            renderItem={(item) => (
-                                <div
-                                    className={[
-                                        'tsp__virtual-block',
-                                        item.kind === 'header' ? 'tsp__virtual-block--header' : '',
-                                        item.kind === 'row' ? 'tsp__virtual-block--row' : '',
-                                        item.kind === 'footer' ? 'tsp__virtual-block--footer' : '',
-                                    ].filter(Boolean).join(' ')}
-                                >
-                                    {renderVirtualTimesheetItem(item)}
-                                </div>
-                            )}
-                        />
-                    </div>)}
-                </div>
-                {viewMode === 'day' ? (
-                    <div className="tsp-side">
-                        <TimesheetMiniCalendar
-                            selected={activeDay}
-                            today={today}
-                            hoursByDate={hoursByDate}
-                            onSelect={(day) => {
-                                setActiveDay(day);
-                                setWeekStart(startOfWeek(day));
-                            }}
-                        />
-                        <div className="tsp-side__list">
-                            {outlookCalendar.connected && outlookCalendar.getEventsForDateKey(formatDate(activeDay)).length === 0 ? (
-                                <p className="tsp-side__empty">{t('timeTrackingPage.timesheet.outlookDayEmpty')}</p>
-                            ) : null}
-                            {outlookCalendar.getEventsForDateKey(formatDate(activeDay)).map((ev) => {
-                                const subject = ev.subject?.trim() || t('timeTrackingPage.timesheet.outlookEventFallback');
-                                const time = formatCalendarEventTime(ev) || t('timeTrackingPage.timesheet.outlookAllDay');
-                                return (
-                                    <div key={`${ev.calendarId ?? 'default'}-${ev.id}`} className="tsp-side__ev">
-                                        <div className="tsp-side__ev-main">
-                                            <div className="tsp-side__ev-ico" aria-hidden>
-                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                                                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                                                    <line x1="16" y1="2" x2="16" y2="6" />
-                                                    <line x1="8" y1="2" x2="8" y2="6" />
-                                                    <line x1="3" y1="10" x2="21" y2="10" />
-                                                </svg>
-                                            </div>
-                                            <div className="tsp-side__ev-body">
-                                                <div className="tsp-side__ev-subject">{subject}</div>
-                                                <div className="tsp-side__ev-time">{time}</div>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            className="tsp-side__add"
-                                            disabled={activeDayReportingBlocked}
-                                            title={activeDayReportingBlocked ? weekClosedTitle : undefined}
-                                            onClick={() => openAddFromOutlookEvent(ev, activeDay)}
-                                        >
-                                            {t('timeTrackingPage.timesheet.addTime')}
-                                        </button>
+                        {!hasEntries ? (filterActive ? (<div className="tsp__empty tsp__empty--filter">
+                            <div className="tsp__empty-ico-wrap">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <path d="M21 21l-4.3-4.3" />
+                                </svg>
+                            </div>
+                            <p className="tsp__empty-h">{t('timeTrackingPage.timesheet.emptyFilterTitle')}</p>
+                            <p className="tsp__empty-s">{t('timeTrackingPage.timesheet.emptyFilterDesc')}</p>
+                            <button className="tsp__empty-cta tsp__empty-cta--ghost" onClick={resetFilters}>
+                                {t('timeTrackingPage.timesheet.resetFilters')}
+                            </button>
+                        </div>) : (<div className="tsp__empty">
+                            <div className="tsp__empty-ico-wrap">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M12 7v5l3.5 2" />
+                                </svg>
+                            </div>
+                            <p className="tsp__empty-h">{t('timeTrackingPage.timesheet.emptyDayTitle')}</p>
+                            <p className="tsp__empty-s">{t('timeTrackingPage.timesheet.emptyDayDesc')}</p>
+                            <button type="button" className="tsp__empty-cta" onClick={() => openAdd(formatDate(activeDay))} disabled={activeDayReportingBlocked} title={activeDayReportingBlocked ? weekClosedTitle : undefined}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                                </svg>
+                                {t('timeTrackingPage.timesheet.addTime')}
+                            </button>
+                        </div>)) : (<div className="tsp__groups">
+                            <TimesheetVirtualList
+                                scrollRef={timesheetScrollRef}
+                                items={virtualTimesheetItems}
+                                renderItem={(item) => (
+                                    <div
+                                        className={[
+                                            'tsp__virtual-block',
+                                            item.kind === 'header' ? 'tsp__virtual-block--header' : '',
+                                            item.kind === 'row' ? 'tsp__virtual-block--row' : '',
+                                            item.kind === 'footer' ? 'tsp__virtual-block--footer' : '',
+                                        ].filter(Boolean).join(' ')}
+                                    >
+                                        {renderVirtualTimesheetItem(item)}
                                     </div>
-                                );
-                            })}
-                        </div>
+                                )}
+                            />
+                        </div>)}
                     </div>
-                ) : null}
+                    {viewMode === 'day' ? (
+                        <div className="tsp-side">
+                            <TimesheetMiniCalendar
+                                selected={activeDay}
+                                today={today}
+                                hoursByDate={hoursByDate}
+                                onSelect={(day) => {
+                                    setActiveDay(day);
+                                    setWeekStart(startOfWeek(day));
+                                }}
+                            />
+                            <div className="tsp-side__list">
+                                {outlookCalendar.connected && outlookCalendar.getEventsForDateKey(formatDate(activeDay)).length === 0 ? (
+                                    <p className="tsp-side__empty">{t('timeTrackingPage.timesheet.outlookDayEmpty')}</p>
+                                ) : null}
+                                {outlookCalendar.getEventsForDateKey(formatDate(activeDay)).map((ev) => {
+                                    const subject = ev.subject?.trim() || t('timeTrackingPage.timesheet.outlookEventFallback');
+                                    const time = formatCalendarEventTime(ev) || t('timeTrackingPage.timesheet.outlookAllDay');
+                                    return (
+                                        <div key={`${ev.calendarId ?? 'default'}-${ev.id}`} className="tsp-side__ev">
+                                            <div className="tsp-side__ev-main">
+                                                <div className="tsp-side__ev-ico" aria-hidden>
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                                        <line x1="3" y1="10" x2="21" y2="10" />
+                                                    </svg>
+                                                </div>
+                                                <div className="tsp-side__ev-body">
+                                                    <div className="tsp-side__ev-subject">{subject}</div>
+                                                    <div className="tsp-side__ev-time">{time}</div>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="tsp-side__add"
+                                                disabled={activeDayReportingBlocked}
+                                                title={activeDayReportingBlocked ? weekClosedTitle : undefined}
+                                                onClick={() => openAddFromOutlookEvent(ev, activeDay)}
+                                            >
+                                                {t('timeTrackingPage.timesheet.addTime')}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    ) : null}
                 </div>
                 {viewMode !== 'calendar' ? timesheetFooter : null}
             </div>

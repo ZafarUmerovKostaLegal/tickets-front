@@ -15,6 +15,7 @@ import {
 } from '@entities/time-tracking';
 import { getUsers } from '@entities/user';
 import { DatePicker } from '@shared/ui/DatePicker';
+import { InvoiceDueDayCalculator } from './InvoiceDueDayCalculator';
 import { SearchableSelect } from '@shared/ui/SearchableSelect';
 import { CombinedInvoiceDocument } from './CombinedInvoiceDocument';
 import {
@@ -611,13 +612,16 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                     <span className="tt-inv-dialog__label">По</span>
                     <DatePicker className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={to} min={from || undefined} onChange={setTo} portal portalZIndex={12100} showChevron />
                 </div>
-                <div className="tt-inv-dialog__field">
-                    <span className="tt-inv-dialog__label">Дата счёта</span>
-                    <DatePicker className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={issueDate} max={dueDate || undefined} onChange={setIssueDate} portal portalZIndex={12100} showChevron />
-                </div>
-                <div className="tt-inv-dialog__field">
-                    <span className="tt-inv-dialog__label">Срок оплаты</span>
-                    <DatePicker className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={dueDate} min={issueDate || undefined} onChange={setDueDate} portal portalZIndex={12100} showChevron />
+                <div className="tt-inv-date-row tt-inv-date-row--span">
+                    <div className="tt-inv-dialog__field">
+                        <span className="tt-inv-dialog__label">Дата счёта</span>
+                        <DatePicker className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={issueDate} max={dueDate || undefined} onChange={setIssueDate} portal portalZIndex={12100} showChevron />
+                    </div>
+                    <InvoiceDueDayCalculator issueDate={issueDate} dueDate={dueDate} onDueDateChange={setDueDate} />
+                    <div className="tt-inv-dialog__field">
+                        <span className="tt-inv-dialog__label">Срок оплаты</span>
+                        <DatePicker className="tt-inv-dialog-dp" buttonClassName="tt-inv-dialog-dp-btn" value={dueDate} min={issueDate || undefined} onChange={setDueDate} portal portalZIndex={12100} showChevron />
+                    </div>
                 </div>
             </div>
             <label className="tt-inv-dialog__field tt-inv-combined__block">
