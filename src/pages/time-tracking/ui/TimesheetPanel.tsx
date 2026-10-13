@@ -49,8 +49,6 @@ import {
     VIEW_TX_HIDE_MS,
     VIEW_TX_SKEL_MS,
     VIEW_TX_SHOW_MS,
-    readStoredTimesheetViewMode,
-    writeStoredTimesheetViewMode,
     type WeekDayOrder,
     readStoredWeekDayOrder,
     writeStoredWeekDayOrder,
@@ -200,9 +198,8 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
     const pendingProjectTaskLoadsRef = useRef(new Set<string>());
     const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date()));
     const [calendarAnchor, setCalendarAnchor] = useState<Date>(() => startOfMonth(new Date()));
-    const initialTimesheetMode = readStoredTimesheetViewMode() ?? 'day';
-    const [viewMode, setViewMode] = useState<TimesheetViewMode>(initialTimesheetMode);
-    const [entriesScopeMode, setEntriesScopeMode] = useState<TimesheetViewMode>(initialTimesheetMode);
+    const [viewMode, setViewMode] = useState<TimesheetViewMode>('day');
+    const [entriesScopeMode, setEntriesScopeMode] = useState<TimesheetViewMode>('day');
     const [viewTxPhase, setViewTxPhase] = useState<ViewTxPhase>('idle');
     const viewTxTimersRef = useRef<number[]>([]);
     const [entries, setEntries] = useState<TimeEntry[]>([]);
@@ -387,9 +384,6 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
         }
         return { from: formatDate(weekStart), to: formatDate(addDays(weekStart, 6)) };
     }, [entriesScopeMode, calendarAnchor, weekStart]);
-    useEffect(() => {
-        writeStoredTimesheetViewMode(viewMode);
-    }, [viewMode]);
     useEffect(() => {
         setEntries([]);
         setRunningTimer(null);
@@ -1452,28 +1446,30 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                     >
                         {t('timeTrackingPage.timesheet.connectCalendar')}
                     </button>) : (<>
-                        {outlookCalendar.calendars.length > 0 ? (
-                        <OutlookCalendarSelect
-                            value={outlookCalendar.calendarId}
-                            onChange={outlookCalendar.setCalendarId}
-                            calendars={outlookCalendar.calendars}
-                            showLabel={t('timeTrackingPage.timesheet.calendarShow')}
-                            listAriaLabel={t('timeTrackingPage.timesheet.calendarListAria')}
-                            defaultCalendarLabel={t('timeTrackingPage.timesheet.calendarDefault')}
-                            allCalendarsId={outlookCalendar.allCalendarsId}
-                            allCalendarsLabel={t('timeTrackingPage.timesheet.calendarAll')}
-                            disabled={!outlookCalendar.statusChecked}
-                        />
-                        ) : null}
-                        <button
-                            type="button"
-                            className="tsp__cal-outlook-connect tsp__cal-outlook-reconnect"
-                            onClick={outlookCalendar.reconnect}
-                            disabled={!outlookCalendar.statusChecked}
-                            title={t('timeTrackingPage.timesheet.reconnectCalendarTitle')}
-                        >
-                            {t('timeTrackingPage.timesheet.reconnectCalendar')}
-                        </button>
+                        <div className="tsp__cal-outlook-row">
+                            {outlookCalendar.calendars.length > 0 ? (
+                            <OutlookCalendarSelect
+                                value={outlookCalendar.calendarId}
+                                onChange={outlookCalendar.setCalendarId}
+                                calendars={outlookCalendar.calendars}
+                                showLabel={t('timeTrackingPage.timesheet.calendarShow')}
+                                listAriaLabel={t('timeTrackingPage.timesheet.calendarListAria')}
+                                defaultCalendarLabel={t('timeTrackingPage.timesheet.calendarDefault')}
+                                allCalendarsId={outlookCalendar.allCalendarsId}
+                                allCalendarsLabel={t('timeTrackingPage.timesheet.calendarAll')}
+                                disabled={!outlookCalendar.statusChecked}
+                            />
+                            ) : null}
+                            <button
+                                type="button"
+                                className="tsp__cal-outlook-connect tsp__cal-outlook-reconnect"
+                                onClick={outlookCalendar.reconnect}
+                                disabled={!outlookCalendar.statusChecked}
+                                title={t('timeTrackingPage.timesheet.reconnectCalendarTitle')}
+                            >
+                                {t('timeTrackingPage.timesheet.reconnectCalendar')}
+                            </button>
+                        </div>
                     </>)}
                     {outlookCalendar.connectError ? (<span className="tsp__cal-outlook-err" role="alert">{outlookCalendar.connectError}</span>) : null}
                     {outlookCalendar.eventsError ? (<span className="tsp__cal-outlook-err" role="alert">

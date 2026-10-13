@@ -333,7 +333,13 @@
   align-items: center;
   gap: 0.45rem;
   flex-wrap: wrap;
-  max-width: min(100%, 20rem);
+}
+
+.tsp__cal-outlook-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: nowrap;
 }
 
 .tsp__cal-legend {
