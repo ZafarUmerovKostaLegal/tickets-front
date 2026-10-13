@@ -12,16 +12,16 @@ export function InvoiceDueDayCalculator({ issueDate, dueDate, onDueDateChange }:
     const { t } = useI18n();
     const [includeEnd, setIncludeEnd] = useState(false);
     const [daysDraft, setDaysDraft] = useState<string | null>(null);
-    const calendarDays = invoiceCalendarDayCount(issueDate, dueDate, includeEnd);
+    const calendarDays = invoiceCalendarDayCount(issueDate, dueDate, false);
     const workingDays = invoiceWorkingDayCount(issueDate, dueDate, includeEnd);
     const daysValue = daysDraft ?? (calendarDays == null ? '' : String(calendarDays));
 
-    function applyDays(raw: string, inclusive: boolean) {
+    function applyDays(raw: string) {
         const trimmed = raw.trim();
         if (!/^\d+$/.test(trimmed))
             return;
-        const nextDue = dueDateFromCalendarDays(issueDate, Number(trimmed), inclusive);
-        if (nextDue)
+        const nextDue = dueDateFromCalendarDays(issueDate, Number(trimmed), false);
+        if (nextDue && nextDue !== dueDate.slice(0, 10))
             onDueDateChange(nextDue);
     }
 
@@ -38,7 +38,7 @@ export function InvoiceDueDayCalculator({ issueDate, dueDate, onDueDateChange }:
                 />
                 {t('timeTrackingPage.invoices.detail.includeEndDate')}
             </label>
-            <label className="tt-inv-daycalc__row">
+            <label className="tt-inv-daycalc__row tt-inv-daycalc__row--days">
                 <input
                     type="text"
                     inputMode="numeric"
@@ -48,13 +48,13 @@ export function InvoiceDueDayCalculator({ issueDate, dueDate, onDueDateChange }:
                     onChange={(event) => {
                         const next = event.target.value.replace(/[^\d]/g, '');
                         setDaysDraft(next);
-                        applyDays(next, includeEnd);
+                        applyDays(next);
                     }}
                     onBlur={() => setDaysDraft(null)}
                 />
                 <span className="tt-inv-daycalc__unit">{t('timeTrackingPage.invoices.detail.calendarDays')}</span>
             </label>
-            <div className="tt-inv-daycalc__row">
+            <div className="tt-inv-daycalc__row tt-inv-daycalc__row--work">
                 <input
                     type="text"
                     className="tt-inv-dialog__control tt-inv-daycalc__input"
