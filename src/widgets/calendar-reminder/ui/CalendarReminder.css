@@ -299,14 +299,18 @@
 }
 
 .cal-remind__settings-btn {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 24px;
   height: 24px;
-  background: none;
-  border: none;
-  color: var(--cr-faint);
+  padding: 0 0.45rem;
+  background: var(--cr-soft);
+  border: 1px solid var(--cr-line);
+  color: var(--cr-title);
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
   cursor: pointer;
   border-radius: 6px;
 }
