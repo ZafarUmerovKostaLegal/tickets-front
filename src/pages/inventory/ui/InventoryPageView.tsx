@@ -1,10 +1,7 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
-import { useCurrentUser } from '@shared/hooks';
-import { routes } from '@shared/config';
 import { useInventory } from '../model';
-import { canCreateInventoryItem } from '../model/constants';
+import { InventoryQrSheetPage } from './InventoryQrSheetPage';
 import { InventoryKPISection } from './InventoryKPISection';
 import { InventoryCategoriesSection } from './InventoryCategoriesSection';
 import { InventoryItemsSection } from './InventoryItemsSection';
@@ -15,8 +12,7 @@ import { DeleteConfirmModal } from './DeleteConfirmModal';
 import './InventoryPage.css';
 export function InventoryPageView() {
     const { error, loadingItems, loadItems, } = useInventory();
-    const { user } = useCurrentUser();
-    const [inventoryTab, setInventoryTab] = useState<'positions' | 'categories'>('positions');
+    const [inventoryTab, setInventoryTab] = useState<'positions' | 'categories' | 'qr'>('positions');
     return (<div className="inv">
       <main className="inv__main">
         <header className="inv__header">
@@ -30,9 +26,6 @@ export function InventoryPageView() {
               </div>
             </div>
             <div className="app-page-header-end">
-              {canCreateInventoryItem(user?.role) ? (
-                <Link className="inv__btn inv__btn--ghost" to={routes.inventoryQrSheet}>QR-коды</Link>
-              ) : null}
               <button type="button" className="inv__icon-btn" onClick={loadItems} disabled={loadingItems} title="Обновить">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 2v6h-6"/>
@@ -56,7 +49,7 @@ export function InventoryPageView() {
               <span>{error}</span>
             </div>)}
 
-          <InventoryKPISection />
+          {inventoryTab === 'qr' ? null : <InventoryKPISection />}
 
           <div className="inv__tabs-wrap" role="tablist" aria-label="Разделы инвентаризации">
             <button type="button" role="tab" id="inv-tab-positions" aria-selected={inventoryTab === 'positions'} aria-controls="inv-panel-positions" tabIndex={inventoryTab === 'positions' ? 0 : -1} className={`inv__tab${inventoryTab === 'positions' ? ' inv__tab--active' : ''}`} onClick={() => setInventoryTab('positions')}>
@@ -65,6 +58,9 @@ export function InventoryPageView() {
             <button type="button" role="tab" id="inv-tab-categories" aria-selected={inventoryTab === 'categories'} aria-controls="inv-panel-categories" tabIndex={inventoryTab === 'categories' ? 0 : -1} className={`inv__tab${inventoryTab === 'categories' ? ' inv__tab--active' : ''}`} onClick={() => setInventoryTab('categories')}>
               Категории
             </button>
+            <button type="button" role="tab" id="inv-tab-qr" aria-selected={inventoryTab === 'qr'} aria-controls="inv-panel-qr" tabIndex={inventoryTab === 'qr' ? 0 : -1} className={`inv__tab${inventoryTab === 'qr' ? ' inv__tab--active' : ''}`} onClick={() => setInventoryTab('qr')}>
+              QR-коды
+            </button>
           </div>
 
           {inventoryTab === 'positions' && (<div id="inv-panel-positions" role="tabpanel" aria-labelledby="inv-tab-positions" className="inv__tab-panel">
@@ -72,6 +68,9 @@ export function InventoryPageView() {
             </div>)}
           {inventoryTab === 'categories' && (<div id="inv-panel-categories" role="tabpanel" aria-labelledby="inv-tab-categories" className="inv__tab-panel">
               <InventoryCategoriesSection />
+            </div>)}
+          {inventoryTab === 'qr' && (<div id="inv-panel-qr" role="tabpanel" aria-labelledby="inv-tab-qr" className="inv__tab-panel">
+              <InventoryQrSheetPage embedded />
             </div>)}
         </div>
       </main>

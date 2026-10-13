@@ -6,7 +6,7 @@ import './InventoryQrSheet.css';
 
 type Sticker = { code: string; src: string };
 
-export function InventoryQrSheetPage() {
+export function InventoryQrSheetPage({ embedded = false }: { embedded?: boolean }) {
     const [stickers, setStickers] = useState<Sticker[]>([]);
     const [failed, setFailed] = useState(false);
 
@@ -44,7 +44,7 @@ export function InventoryQrSheetPage() {
     return (
         <div className="inv-qr">
             <div className="inv-qr__toolbar">
-                <AppBackButton className="app-back-btn" />
+                {embedded ? null : <AppBackButton className="app-back-btn" />}
                 <div>
                     <h1>QR для техники</h1>
                     <p>500 кодов KL-EQ-0001 — KL-EQ-0500, наклейка 4×4 см. Печатайте со масштабом 100%.</p>

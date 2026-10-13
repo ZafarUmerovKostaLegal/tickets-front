@@ -68,6 +68,10 @@
   color: #0f172a;
 }
 @media print {
+  .inv__header,
+  .inv__kpi,
+  .inv__tabs-wrap,
+  .inv__alert,
   .inv-qr__toolbar,
   .inv-qr__error {
     display: none !important;
