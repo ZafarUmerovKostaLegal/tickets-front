@@ -20,6 +20,30 @@ const REMINDER_MINUTES = 15;
 const BASE_POLL_INTERVAL = 5 * 60000;
 const MAX_POLL_INTERVAL = 15 * 60000;
 const SNOOZE_OPTIONS = [5, 10, 15, 30, 60];
+const PREFS_KEY = 'cal-reminder-prefs';
+type ReminderCorner = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';
+type ReminderTheme = 'dark' | 'light';
+type ReminderPrefs = { corner: ReminderCorner; theme: ReminderTheme };
+const CORNERS: { id: ReminderCorner; label: string }[] = [
+    { id: 'top-left', label: 'Слева сверху' },
+    { id: 'top-right', label: 'Справа сверху' },
+    { id: 'bottom-left', label: 'Слева снизу' },
+    { id: 'bottom-right', label: 'Справа снизу' },
+];
+function readReminderPrefs(): ReminderPrefs {
+    try {
+        const raw = localStorage.getItem(PREFS_KEY);
+        if (!raw)
+            return { corner: 'top-right', theme: 'dark' };
+        const parsed = JSON.parse(raw) as Partial<ReminderPrefs>;
+        const corner = CORNERS.some((item) => item.id === parsed.corner) ? parsed.corner! : 'top-right';
+        const theme = parsed.theme === 'light' || parsed.theme === 'dark' ? parsed.theme : 'dark';
+        return { corner, theme };
+    }
+    catch {
+        return { corner: 'top-right', theme: 'dark' };
+    }
+}
 function parseMsDate(dateTime: string, timeZone?: string): Date | null {
     let dt = dateTime;
     if (timeZone === 'UTC' && !dt.endsWith('Z') && !dt.includes('+'))
@@ -135,6 +159,9 @@ export function CalendarReminder() {
     const [, forceRender] = useState(0);
     const [snoozed, setSnoozed] = useState<Record<string, number>>({});
     const [snoozeMenuId, setSnoozeMenuId] = useState<string | null>(null);
+    const [prefs, setPrefs] = useState<ReminderPrefs>(readReminderPrefs);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const settingsRef = useRef<HTMLDivElement>(null);
     const [connected, setConnected] = useState(false);
     const snoozeTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
     const prevReminderIds = useRef<Set<string>>(new Set());
@@ -295,6 +322,26 @@ export function CalendarReminder() {
         return () => clearInterval(interval);
     }, [reminders.length, processEvents]);
     useEffect(() => {
+        if (!settingsOpen)
+            return;
+        const handler = (e: MouseEvent) => {
+            if (settingsRef.current && !settingsRef.current.contains(e.target as Node))
+                setSettingsOpen(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [settingsOpen]);
+    const updatePrefs = useCallback((patch: Partial<ReminderPrefs>) => {
+        setPrefs((prev) => {
+            const next = { ...prev, ...patch };
+            try {
+                localStorage.setItem(PREFS_KEY, JSON.stringify(next));
+            }
+            catch { }
+            return next;
+        });
+    }, []);
+    useEffect(() => {
         if (!snoozeMenuId)
             return;
         const handler = (e: MouseEvent) => {
@@ -356,9 +403,60 @@ export function CalendarReminder() {
     const visible = useMemo(() => reminders.filter(r => !dismissed.has(r.id)), [reminders, dismissed]);
     if (!connected || visible.length === 0)
         return null;
-    return createPortal(<div className="cal-remind">
+    return createPortal(<div className={`cal-remind cal-remind--${prefs.corner} cal-remind--${prefs.theme}`}>
       <div className="cal-remind__header">
         <span className="cal-remind__title">Напоминания</span>
+        <div className="cal-remind__settings-wrap" ref={settingsRef}>
+          <button
+            type="button"
+            className={`cal-remind__settings-btn${settingsOpen ? ' cal-remind__settings-btn--on' : ''}`}
+            aria-label="Настройки напоминаний"
+            aria-expanded={settingsOpen}
+            onClick={() => {
+                setSnoozeMenuId(null);
+                setSettingsOpen((open) => !open);
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.77 1.05 1.41 1.12H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </button>
+          {settingsOpen && (
+            <div className="cal-remind__settings" role="dialog" aria-label="Настройки напоминаний">
+              <p className="cal-remind__settings-label">Откуда показывать</p>
+              <div className="cal-remind__choice-grid">
+                {CORNERS.map((corner) => (
+                  <button
+                    key={corner.id}
+                    type="button"
+                    className={`cal-remind__choice${prefs.corner === corner.id ? ' cal-remind__choice--on' : ''}`}
+                    onClick={() => updatePrefs({ corner: corner.id })}
+                  >
+                    {corner.label}
+                  </button>
+                ))}
+              </div>
+              <p className="cal-remind__settings-label">Тема</p>
+              <div className="cal-remind__choice-row">
+                <button
+                  type="button"
+                  className={`cal-remind__choice${prefs.theme === 'light' ? ' cal-remind__choice--on' : ''}`}
+                  onClick={() => updatePrefs({ theme: 'light' })}
+                >
+                  Светлая
+                </button>
+                <button
+                  type="button"
+                  className={`cal-remind__choice${prefs.theme === 'dark' ? ' cal-remind__choice--on' : ''}`}
+                  onClick={() => updatePrefs({ theme: 'dark' })}
+                >
+                  Тёмная
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         <button type="button" className="cal-remind__dismiss-all" onClick={handleDismissAll}>
           Прекратить все
         </button>
