@@ -50,7 +50,7 @@ export function TimesheetMiniCalendar({ selected, today, hoursByDate, onSelect }
     const nextBlocked = isFutureCalendarDay(startOfMonth(nextMonth), today) && !isSameMonth(nextMonth, today);
 
     return (
-        <aside className="tsp-mini" aria-label={t('timeTrackingPage.timesheet.jumpToDate')}>
+        <div className="tsp-mini" role="group" aria-label={t('timeTrackingPage.timesheet.jumpToDate')}>
             <div className="tsp-mini__head">
                 <button
                     type="button"
@@ -113,6 +113,6 @@ export function TimesheetMiniCalendar({ selected, today, hoursByDate, onSelect }
             >
                 {t('timeTrackingPage.timesheet.today')}
             </button>
-        </aside>
+        </div>
     );
 }
