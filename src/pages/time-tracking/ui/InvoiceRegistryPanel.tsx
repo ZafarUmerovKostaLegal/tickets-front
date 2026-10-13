@@ -66,9 +66,11 @@ function RegistryStatusDropdown({
     const [draft, setDraft] = useState(value);
 
     const options = useMemo(() => {
-        const values = collectRegistryStatusOptions([value, ...choices]);
+        const values = allowCustom
+            ? collectRegistryStatusOptions([value, ...choices])
+            : [...new Set(choices.map((item) => normalizeRegistryStatusLabel(item)).filter(Boolean))];
         return values.map((s) => ({ value: s, label: s }));
-    }, [value, choices]);
+    }, [allowCustom, value, choices]);
 
     const updatePos = useCallback(() => {
         const btn = btnRef.current;

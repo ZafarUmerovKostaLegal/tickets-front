@@ -9,6 +9,8 @@ export const INVOICE_STATUS_LABELS: Record<string, string> = {
     paid: 'Оплачен',
     client_paid: 'Оплачен клиентом',
     send_to_olga: 'Ольге направить',
+    client_review: 'На согласовании с Клиентом',
+    awaiting_client: 'Жду подтверждения от клиента',
     canceled: 'Отменён',
     overdue: 'Просрочен',
 };
@@ -20,6 +22,8 @@ export const INVOICE_STATUS_BADGE_CLASS: Record<string, string> = {
     paid: 'tt-inv__badge--success',
     client_paid: 'tt-inv__badge--success',
     send_to_olga: 'tt-inv__badge--neutral',
+    client_review: 'tt-inv__badge--warn',
+    awaiting_client: 'tt-inv__badge--warn',
     canceled: 'tt-inv__badge--neutral',
     overdue: 'tt-inv__badge--danger',
 };
@@ -38,6 +42,9 @@ export function invoiceCanRegisterPayment(status: InvoiceUiStatus, balanceDue: n
 }
 export function invoiceCanCancel(status: InvoiceUiStatus): boolean {
     return status !== 'canceled' && status !== 'draft';
+}
+export function invoiceCanRestore(status: InvoiceUiStatus): boolean {
+    return status === 'canceled';
 }
 /** Снять отметку «отправлен клиенту» → снова черновик (без оплат). */
 export function invoiceCanUnsend(status: InvoiceUiStatus): boolean {

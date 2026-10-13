@@ -1,7 +1,7 @@
 import { apiFetch } from '@shared/api';
 import { throwIfNotOk, dashNum } from './httpShared';
 
-export type InvoiceUiStatus = 'draft' | 'sent' | 'viewed' | 'partial_paid' | 'paid' | 'client_paid' | 'send_to_olga' | 'canceled' | 'overdue';
+export type InvoiceUiStatus = 'draft' | 'sent' | 'viewed' | 'partial_paid' | 'paid' | 'client_paid' | 'send_to_olga' | 'client_review' | 'awaiting_client' | 'canceled' | 'overdue';
 export type InvoiceLineDto = {
     id: string;
     sortOrder: number;
@@ -1237,6 +1237,16 @@ export async function submitInvoicePaymentConfirmation(id: string, body: Invoice
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ documentUrl, document_url: documentUrl }),
+    });
+    await throwIfNotOk(res);
+    return normalizeInvoiceDto(await res.json());
+}
+export async function restoreInvoice(id: string): Promise<InvoiceDto> {
+    const res = await apiFetch(`/api/v1/time-tracking/invoices/${encodeURIComponent(id)}/restore`, {
+        ...invoiceApiFetchInit,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: '{}',
     });
     await throwIfNotOk(res);
     return normalizeInvoiceDto(await res.json());

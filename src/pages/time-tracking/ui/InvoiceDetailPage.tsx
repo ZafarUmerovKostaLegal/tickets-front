@@ -20,6 +20,7 @@ import {
   markInvoiceViewed,
   registerInvoicePayment,
   submitInvoicePaymentConfirmation,
+  restoreInvoice,
   cancelInvoice,
   deleteDraftInvoice,
   listAllTimeManagerClientsMerged,
@@ -29,6 +30,7 @@ import {
   invoiceCanMarkViewed,
   invoiceCanRegisterPayment,
   invoiceCanCancel,
+  invoiceCanRestore,
   invoiceCanUnsend,
   invoiceCanDeleteDraft,
   invoiceCanPatchDraft,
@@ -917,6 +919,29 @@ export function InvoiceDetailPage() {
                               {t('timeTrackingPage.invoices.detail.partialPayment')}
                             </button>
                           </>
+                        )}
+                        {invoiceCanRestore(detail.status as InvoiceUiStatus) && (
+                          <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={async () => {
+                            if (!await showConfirm({
+                              title: t('timeTrackingPage.invoices.confirm.restoreTitle'),
+                              message: t('timeTrackingPage.invoices.confirm.restoreMessage'),
+                              confirmLabel: t('timeTrackingPage.invoices.confirm.restoreConfirm'),
+                            }))
+                              return;
+                            setActionBusy(true);
+                            try {
+                              await restoreInvoice(detail.id);
+                              await refreshDetail(detail.id);
+                            }
+                            catch (e) {
+                              await showAlert({ message: e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic') });
+                            }
+                            finally {
+                              setActionBusy(false);
+                            }
+                          }}>
+                            {t('timeTrackingPage.invoices.detail.restoreInvoice')}
+                          </button>
                         )}
                         {invoiceCanCancel(detail.status as InvoiceUiStatus) && (
                           <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={actionBusy} onClick={async () => {

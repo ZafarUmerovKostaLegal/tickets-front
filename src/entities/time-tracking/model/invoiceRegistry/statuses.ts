@@ -13,6 +13,8 @@ export type InvoiceRegistryStatus = (typeof INVOICE_REGISTRY_STATUSES)[number];
 /** Statuses an accountant can set on a live system invoice from the registry. */
 export const SYSTEM_INVOICE_REGISTRY_STATUSES = [
     'Черновик',
+    'На согласовании с Клиентом',
+    'Жду подтверждения от клиента',
     'Отправлен',
     'Просмотрен',
     'Частично оплачен',

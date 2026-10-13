@@ -21,6 +21,7 @@ export {
     registerInvoicePayment,
     mergeInvoiceDtoAfterPayment,
     submitInvoicePaymentConfirmation,
+    restoreInvoice,
     cancelInvoice,
     deleteDraftInvoice,
     type InvoiceUiStatus,
