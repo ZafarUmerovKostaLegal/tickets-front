@@ -30,6 +30,7 @@ import {
 import { OUTLOOK_ADD_TIME_EVENT, takeQueuedOutlookAddTime } from '@entities/todo/lib/outlookAddTimeRequest';
 import type { CalendarEvent } from '@entities/todo/lib/calendarApi';
 import { useTimesheetOutlookCalendar } from '../model/useTimesheetOutlookCalendar';
+import { TimesheetMiniCalendar } from './TimesheetMiniCalendar';
 import { TimesheetOutlookEventModal } from './TimesheetOutlookEventModal';
 import { resolveOutlookCalendarDisplayName, TimesheetOutlookDayAgendaModal } from './TimesheetOutlookDayAgendaModal';
 import { type TimesheetEntryRowData } from './TimesheetEntryRow';
@@ -1741,6 +1742,7 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                         <span className="tsp__wtotal-cap">{t('timeTrackingPage.timesheet.ofCap')} {fmtHours(periodNorm)}</span>
                     </div>
                 </div>
+                <div className={`tsp__body${viewMode === 'day' ? ' tsp__body--day' : ''}`}>
                 <div className={`tsp__content${viewMode === 'calendar' ? ' tsp__content--calendar' : ''}`} ref={contentScrollRef}>
                     {(hasAnyEntries || filterActive || viewMode === 'week') && (<div className="tsp__filter-bar" role="search">
                         <div className="tsp__filter-search">
@@ -1850,6 +1852,18 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
                             )}
                         />
                     </div>)}
+                </div>
+                {viewMode === 'day' ? (
+                    <TimesheetMiniCalendar
+                        selected={activeDay}
+                        today={today}
+                        hoursByDate={hoursByDate}
+                        onSelect={(day) => {
+                            setActiveDay(day);
+                            setWeekStart(startOfWeek(day));
+                        }}
+                    />
+                ) : null}
                 </div>
                 {viewMode !== 'calendar' ? timesheetFooter : null}
             </div>
