@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { routes } from '@shared/config';
+import { OUTLOOK_ADD_TIME_EVENT } from '@entities/todo/lib/outlookAddTimeRequest';
 import { AppBackButton, AppPageSettings, AttentionBanner } from '@shared/ui';
 import { useCurrentUser } from '@shared/hooks';
 import { isHiddenSystemUser } from '@shared/lib';
@@ -247,6 +248,11 @@ export function TimeTrackingPage() {
     const [searchParams, setSearchParams] = useSearchParams();
     const { user, loading } = useCurrentUser();
     const [activeTab, setActiveTab] = useState<TimeTabId>(() => readTabFromUrl() ?? 'timesheet');
+    useEffect(() => {
+        const openTimesheet = () => setActiveTab('timesheet');
+        window.addEventListener(OUTLOOK_ADD_TIME_EVENT, openTimesheet);
+        return () => window.removeEventListener(OUTLOOK_ADD_TIME_EVENT, openTimesheet);
+    }, []);
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [managedScopeUserId, setManagedScopeUserId] = useState<number | null>(() => readStoredScopeUserId());
     const [ttScopeUsers, setTtScopeUsers] = useState<TimeTrackingUserRow[]>([]);

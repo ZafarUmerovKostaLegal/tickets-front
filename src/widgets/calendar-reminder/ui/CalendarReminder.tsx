@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getCalendarStatus, getCalendarEvents, type CalendarEvent } from '@entities/todo/lib/calendarApi';
+import { queueOutlookAddTime } from '@entities/todo/lib/outlookAddTimeRequest';
+import { routes } from '@shared/config';
 import { getCalendarCache, isCacheFresh, onCacheUpdate } from '@entities/todo/lib/calendarCache';
 import { isAuthenticated } from '@shared/lib/auth';
 import './CalendarReminder.css';
@@ -12,6 +14,7 @@ type Reminder = {
     untilLabel: string;
     isAllDay: boolean;
     startMs: number;
+    event: CalendarEvent;
 };
 const REMINDER_MINUTES = 15;
 const BASE_POLL_INTERVAL = 5 * 60000;
@@ -120,6 +123,7 @@ function buildReminders(events: CalendarEvent[]): Reminder[] {
             untilLabel: computeUntilLabel(startMs, nowMs, allDay),
             isAllDay: allDay,
             startMs,
+            event: ev,
         });
     }
     result.sort((a, b) => a.startMs - b.startMs);
@@ -301,6 +305,20 @@ export function CalendarReminder() {
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, [snoozeMenuId]);
+    const handleAddTime = useCallback((reminder: Reminder) => {
+        queueOutlookAddTime(reminder.event);
+        const next = new Set(dismissedRef.current);
+        next.add(reminder.id);
+        saveDismissed(next);
+        setSnoozeMenuId(null);
+        const path = window.location.pathname;
+        const onTimeTracking = path === routes.timeTracking || path.startsWith(`${routes.timeTracking}/`);
+        if (!onTimeTracking) {
+            const url = new URL(routes.timeTracking, window.location.origin);
+            url.searchParams.set('tab', 'timesheet');
+            window.location.assign(`${url.pathname}${url.search}`);
+        }
+    }, [saveDismissed]);
     const handleDismiss = useCallback((id: string) => {
         const next = new Set(dismissedRef.current);
         next.add(id);
@@ -350,6 +368,7 @@ export function CalendarReminder() {
       </div>
       <div className="cal-remind__list">
         {visible.map(r => (<div key={r.id} className="cal-remind__item">
+            <div className="cal-remind__main">
             <div className="cal-remind__icon">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="4" width="18" height="18" rx="2"/>
@@ -376,6 +395,10 @@ export function CalendarReminder() {
                     </button>))}
                 </div>)}
             </div>
+            </div>
+            <button type="button" className="cal-remind__add" onClick={() => handleAddTime(r)}>
+              Добавить время
+            </button>
           </div>))}
       </div>
     </div>, containerRef.current!);

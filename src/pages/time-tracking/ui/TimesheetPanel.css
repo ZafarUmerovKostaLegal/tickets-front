@@ -326,20 +326,36 @@
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
 }
 .tsp__top-l { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-.tsp__top-r { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.tsp__top-r { display: flex; align-items: center; gap: 0.5rem; flex-wrap: nowrap; }
 
 .tsp__cal-outlook {
-  display: inline-flex;
+  display: flex;
+  flex-flow: row nowrap;
   align-items: center;
+  justify-content: flex-end;
   gap: 0.45rem;
-  flex-wrap: wrap;
+  width: max-content;
+  max-width: none;
+  min-width: max-content;
 }
 
 .tsp__cal-outlook-row {
-  display: inline-flex;
+  display: flex;
+  flex-flow: row nowrap;
   align-items: center;
+  justify-content: flex-start;
   gap: 0.45rem;
-  flex-wrap: nowrap;
+  width: max-content;
+  max-width: none;
+  min-width: max-content;
+}
+
+.tsp__cal-outlook-row .ocs {
+  display: inline-flex;
+  flex-flow: row nowrap;
+  flex: 0 0 auto;
+  width: auto;
+  max-width: none;
 }
 
 .tsp__cal-legend {

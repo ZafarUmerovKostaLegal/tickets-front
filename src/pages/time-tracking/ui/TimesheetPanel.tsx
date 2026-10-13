@@ -25,7 +25,9 @@ import {
     formatCalendarEventCellLabel,
     formatCalendarEventTime,
     OUTLOOK_CALL_TASK_NAME,
+    parseCalendarDateTime,
 } from '@entities/todo/lib/calendarEventHelpers';
+import { OUTLOOK_ADD_TIME_EVENT, takeQueuedOutlookAddTime } from '@entities/todo/lib/outlookAddTimeRequest';
 import type { CalendarEvent } from '@entities/todo/lib/calendarApi';
 import { useTimesheetOutlookCalendar } from '../model/useTimesheetOutlookCalendar';
 import { TimesheetOutlookEventModal } from './TimesheetOutlookEventModal';
@@ -756,6 +758,23 @@ export function TimesheetPanel(props?: TimesheetPanelProps) {
             preserveCloneHours: true,
         });
     }
+    const openAddFromOutlookEventRef = useRef(openAddFromOutlookEvent);
+    openAddFromOutlookEventRef.current = openAddFromOutlookEvent;
+    useEffect(() => {
+        const openQueued = () => {
+            const ev = takeQueuedOutlookAddTime();
+            if (!ev?.start?.dateTime)
+                return;
+            const start = parseCalendarDateTime(ev.start.dateTime, ev.start.timeZone);
+            const day = start
+                ? new Date(start.getFullYear(), start.getMonth(), start.getDate())
+                : new Date();
+            openAddFromOutlookEventRef.current(ev, day);
+        };
+        openQueued();
+        window.addEventListener(OUTLOOK_ADD_TIME_EVENT, openQueued);
+        return () => window.removeEventListener(OUTLOOK_ADD_TIME_EVENT, openQueued);
+    }, []);
     async function handleCopyEntry(entry: TimeEntry) {
         const text = formatTimeEntryDescriptionForClipboard(entry);
         if (!text) {
