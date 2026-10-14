@@ -803,3 +803,11 @@ body[data-theme='dark'] .tt-inv-reg__input--area {
   background: #0f172a;
   color: #e2e8f0;
 }
+
+body[data-theme='dark'] .tt-inv-reg__tr:hover .tt-inv-reg__td,
+body[data-theme='dark'] .tt-inv-reg__tr:hover .tt-inv-reg__td--pin,
+body[data-theme='dark'] .tt-inv-reg__tr:hover .tt-inv-reg__td--actions,
+body[data-theme='dark'] .tt-inv-reg__tr:hover .tt-inv-reg__td:not(.tt-inv-reg__td--editing) {
+  background: #243044;
+  color: #e2e8f0;
+}
