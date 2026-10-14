@@ -1,7 +1,7 @@
 import { apiFetch } from '@shared/api';
 import { throwIfNotOk, dashNum } from './httpShared';
 
-export type InvoiceUiStatus = 'draft' | 'sent' | 'viewed' | 'partial_paid' | 'paid' | 'client_paid' | 'send_to_olga' | 'client_review' | 'awaiting_client' | 'canceled' | 'overdue';
+export type InvoiceUiStatus = 'draft' | 'sent' | 'issued' | 'viewed' | 'partial_paid' | 'paid' | 'client_paid' | 'send_to_olga' | 'client_review' | 'awaiting_client' | 'canceled' | 'overdue';
 export type InvoiceLineDto = {
     id: string;
     sortOrder: number;

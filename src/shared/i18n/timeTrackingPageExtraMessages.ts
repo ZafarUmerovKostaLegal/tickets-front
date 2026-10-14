@@ -1388,6 +1388,7 @@ export const timeTrackingPageExtraMessages = {
         status: {
             draft: 'Черновик',
             sent: 'Отправлен',
+            issued: 'Выставлен',
             viewed: 'Просмотрен',
             partial_paid: 'Частично оплачен',
             paid: 'Оплачен',

@@ -4,6 +4,7 @@ import type { TimeTrackingT } from '@shared/i18n/timeTrackingLabelHelpers';
 export const INVOICE_STATUS_LABELS: Record<string, string> = {
     draft: 'Черновик',
     sent: 'Отправлен',
+    issued: 'Выставлен',
     viewed: 'Просмотрен',
     partial_paid: 'Частично оплачен',
     paid: 'Оплачен',
@@ -17,6 +18,7 @@ export const INVOICE_STATUS_LABELS: Record<string, string> = {
 export const INVOICE_STATUS_BADGE_CLASS: Record<string, string> = {
     draft: 'tt-inv__badge--muted',
     sent: 'tt-inv__badge--info',
+    issued: 'tt-inv__badge--info',
     viewed: 'tt-inv__badge--indigo',
     partial_paid: 'tt-inv__badge--warn',
     paid: 'tt-inv__badge--success',

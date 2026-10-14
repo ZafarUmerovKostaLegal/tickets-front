@@ -1390,6 +1390,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
         status: {
             draft: 'Draft',
             sent: 'Sent',
+            issued: 'Issued',
             viewed: 'Viewed',
             partial_paid: 'Partially paid',
             paid: 'Paid',
