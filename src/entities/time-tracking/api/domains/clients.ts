@@ -38,6 +38,7 @@ export type TimeManagerClientRow = {
     contact_phone?: string | null;
     contact_email?: string | null;
     is_archived?: boolean;
+    integration?: string | null;
     extra_contacts?: TimeManagerClientContactRow[];
 };
 export function readStr(v: unknown): string | null {
@@ -97,6 +98,7 @@ export function normalizeTimeManagerClient(raw: unknown): TimeManagerClientRow {
         contact_phone: readStr(o.contactPhone ?? o.contact_phone),
         contact_email: readStr(o.contactEmail ?? o.contact_email),
         is_archived: Boolean(o.isArchived ?? o.is_archived),
+        integration: readStr(o.integration),
         extra_contacts: Array.isArray(extraRaw) ? extra : undefined,
     };
 }
@@ -115,6 +117,7 @@ export type TimeManagerClientCreatePayload = {
     contactPhone?: string | null;
     contactEmail?: string | null;
     isArchived?: boolean;
+    integration?: string | null;
 };
 export type TimeManagerClientPatchPayload = {
     name?: string;
@@ -131,6 +134,7 @@ export type TimeManagerClientPatchPayload = {
     contactPhone?: string | null;
     contactEmail?: string | null;
     isArchived?: boolean;
+    integration?: string | null;
 };
 export function clientCreateJson(body: TimeManagerClientCreatePayload): Record<string, unknown> {
     return {
@@ -149,6 +153,7 @@ export function clientCreateJson(body: TimeManagerClientCreatePayload): Record<s
         contactEmail: body.contactEmail ?? null,
         isArchived: body.isArchived ?? false,
         is_archived: body.isArchived ?? false,
+        integration: body.integration ?? null,
     };
 }
 export function clientPatchJson(patch: TimeManagerClientPatchPayload): Record<string, unknown> {
@@ -183,6 +188,8 @@ export function clientPatchJson(patch: TimeManagerClientPatchPayload): Record<st
         payload.isArchived = patch.isArchived;
         payload.is_archived = patch.isArchived;
     }
+    if (patch.integration !== undefined)
+        payload.integration = patch.integration;
     return payload;
 }
 export async function listTimeManagerClients(includeArchived?: boolean): Promise<TimeManagerClientRow[]>;

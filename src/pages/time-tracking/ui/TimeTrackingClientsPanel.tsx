@@ -223,6 +223,7 @@ type FormState = {
     contactPhone: string;
     contactEmail: string;
     isArchived: boolean;
+    integration: string;
 };
 function emptyForm(): FormState {
     return {
@@ -240,6 +241,7 @@ function emptyForm(): FormState {
         contactPhone: '',
         contactEmail: '',
         isArchived: false,
+        integration: '',
     };
 }
 function rowToForm(c: TimeManagerClientRow): FormState {
@@ -258,6 +260,7 @@ function rowToForm(c: TimeManagerClientRow): FormState {
         contactPhone: c.contact_phone ?? '',
         contactEmail: c.contact_email ?? '',
         isArchived: Boolean(c.is_archived),
+        integration: c.integration === 'macroview' ? 'macroview' : '',
     };
 }
 function formatInvoiceDueLabel(c: TimeManagerClientRow, t: TimeTrackingT): string {
@@ -355,6 +358,7 @@ function ClientViewModal({ listRow, canManage, onClose, onEdit, onClientUpdated 
               {t('timeTrackingPage.clients.viewModal.archivedBanner')}
             </p>)}
           <ViewReadonlyField label={t('timeTrackingPage.clients.viewModal.name')} value={c.name}/>
+          <ViewReadonlyField label={t('timeTrackingPage.clients.modal.integration')} value={c.integration === 'macroview' ? t('timeTrackingPage.clients.modal.integrationMacroview') : ''}/>
           <ViewReadonlyField label={t('timeTrackingPage.clients.modal.address')} value={c.address ?? ''}/>
 
           <fieldset className="tt-tm-fieldset tt-tm-fieldset--view">
@@ -553,6 +557,7 @@ function TimeManagerClientModal({ mode, initial, canManage, onClose, onSaved }: 
             contactPhone: form.contactPhone.trim() || null,
             contactEmail: form.contactEmail.trim() || null,
             isArchived: form.isArchived,
+            integration: form.integration || null,
         };
         try {
             if (mode === 'create') {
@@ -691,6 +696,15 @@ function TimeManagerClientModal({ mode, initial, canManage, onClose, onSaved }: 
               {t('timeTrackingPage.clients.modal.clientName')} <span className="tt-tm-req">*</span>
             </label>
             <input id={`${uid}-name`} className="tt-tm-input" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} autoComplete="organization"/>
+          </div>
+          <div className="tt-tm-field">
+            <label className="tt-tm-label" htmlFor={`${uid}-integration`}>
+              {t('timeTrackingPage.clients.modal.integration')}
+            </label>
+            <select id={`${uid}-integration`} className="tt-tm-select" value={form.integration} onChange={(e) => setForm((f) => ({ ...f, integration: e.target.value }))}>
+              <option value="">{t('timeTrackingPage.clients.modal.integrationNone')}</option>
+              <option value="macroview">{t('timeTrackingPage.clients.modal.integrationMacroview')}</option>
+            </select>
           </div>
           <div className="tt-tm-field">
             <label className="tt-tm-label" htmlFor={`${uid}-addr`}>

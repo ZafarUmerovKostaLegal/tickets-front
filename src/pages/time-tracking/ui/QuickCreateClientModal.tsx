@@ -14,6 +14,7 @@ export function QuickCreateClientModal({ canManage, onClose, onCreated, onOpenFu
     const { t } = useI18n();
     const uid = useId();
     const [name, setName] = useState('');
+    const [integration, setIntegration] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
     useEffect(() => {
@@ -33,7 +34,10 @@ export function QuickCreateClientModal({ canManage, onClose, onCreated, onOpenFu
         setError(null);
         setSaving(true);
         try {
-            const row = await createTimeManagerClient({ name: trimmed });
+            const row = await createTimeManagerClient({
+                name: trimmed,
+                integration: integration || null,
+            });
             onCreated(row);
             onClose();
         }
@@ -70,6 +74,15 @@ export function QuickCreateClientModal({ canManage, onClose, onCreated, onOpenFu
                     void submit();
                 }
             }}/>
+          </div>
+          <div className="tt-tm-field">
+            <label className="tt-tm-label" htmlFor={`${uid}-qcc-integration`}>
+              {t('timeTrackingPage.clients.modal.integration')}
+            </label>
+            <select id={`${uid}-qcc-integration`} className="tt-tm-select" value={integration} disabled={!canManage || saving} onChange={(e) => setIntegration(e.target.value)}>
+              <option value="">{t('timeTrackingPage.clients.modal.integrationNone')}</option>
+              <option value="macroview">{t('timeTrackingPage.clients.modal.integrationMacroview')}</option>
+            </select>
           </div>
           {error ? (<p className="tt-tm-field-error" role="alert">
               {error}

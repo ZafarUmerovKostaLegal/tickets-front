@@ -746,6 +746,9 @@ export const timeTrackingPageExtraMessages = {
             paymentAfterInvoice: 'После даты счёта',
             additionalContacts: 'Дополнительные контакты',
             isArchived: 'В архиве',
+            integration: 'Интеграция',
+            integrationNone: 'Не выбрано',
+            integrationMacroview: 'Интеграция в MacroView',
         },
         quickCreate: {
             title: 'Новый клиент',
