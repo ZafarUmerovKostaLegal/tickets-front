@@ -1,4 +1,4 @@
-import type { ChangeEvent } from 'react';
+import { useLayoutEffect, useRef, type ChangeEvent } from 'react';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
@@ -33,31 +33,67 @@ export type InvoiceTimeReportPageProps = {
     onPatchPack?: (patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'reportTitle' | 'reportTitleContinued'>>) => void;
 };
 
+function TrMultilineInput({
+    value,
+    ariaLabel,
+    onChange,
+}: {
+    value: string;
+    ariaLabel?: string;
+    onChange?: (next: string) => void;
+}) {
+    const ref = useRef<HTMLTextAreaElement>(null);
+    useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el)
+            return;
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+    }, [value]);
+    return (
+        <textarea
+            ref={ref}
+            rows={1}
+            className="tt-inv-tr__cell-input tt-inv-tr__cell-input--multiline"
+            value={value}
+            aria-label={ariaLabel}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange?.(e.target.value)}
+        />
+    );
+}
+
 function TrCell({
     value,
     editable,
+    multiline,
     onChange,
     className,
     ariaLabel,
 }: {
     value: string;
     editable?: boolean;
+    multiline?: boolean;
     onChange?: (next: string) => void;
     className?: string;
     ariaLabel?: string;
 }) {
+    const cellClass = multiline ? [className, 'tt-inv-tr__cell--wrap'].filter(Boolean).join(' ') : className;
     if (!editable) {
-        return <td className={className}>{value || '\u00a0'}</td>;
+        return <td className={cellClass}>{value || '\u00a0'}</td>;
     }
     return (
-        <td className={className}>
-            <input
-                type="text"
-                className="tt-inv-tr__cell-input"
-                value={value}
-                aria-label={ariaLabel}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => onChange?.(e.target.value)}
-            />
+        <td className={cellClass}>
+            {multiline ? (
+                <TrMultilineInput value={value} ariaLabel={ariaLabel} onChange={onChange} />
+            ) : (
+                <input
+                    type="text"
+                    className="tt-inv-tr__cell-input"
+                    value={value}
+                    aria-label={ariaLabel}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => onChange?.(e.target.value)}
+                />
+            )}
         </td>
     );
 }
@@ -148,7 +184,7 @@ export function InvoiceTimeReportPage({
                       <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'date', v)} />
                       <TrCell editable={editable} className={cellClass} value={r.initials} ariaLabel={`${labels.initials}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'initials', v)} />
                       <TrCell editable={editable} className={cellClass} value={r.task} ariaLabel={`${labels.task}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'task', v)} />
-                      <TrCell editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(descriptionText).note : descriptionText} ariaLabel={`${labels.description}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
+                      <TrCell multiline editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(descriptionText).note : descriptionText} ariaLabel={`${labels.description}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
                       {showInitiatorName ? (
                         <TrCell editable={editable} className={cellClass} value={splitServiceInitiatorName(r.description).name} ariaLabel={`${labels.initiatorName}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'description', joinServiceInitiatorName(splitServiceInitiatorName(r.description).note, v, splitServiceInitiatorName(r.description).mark))} />
                       ) : null}
@@ -225,7 +261,7 @@ export function InvoiceTimeReportPage({
                             <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'date', v)} />
                             <TrCell editable={editable} className={cellClass} value={r.initials} ariaLabel={`${labels.initials}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'initials', v)} />
                             <TrCell editable={editable} className={cellClass} value={r.task} ariaLabel={`${labels.task}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'task', v)} />
-                            <TrCell editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(r.description).note : r.description} ariaLabel={`${labels.description}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
+                            <TrCell multiline editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(r.description).note : r.description} ariaLabel={`${labels.description}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
                             {showInitiatorName ? (
                               <TrCell editable={editable} className={cellClass} value={splitServiceInitiatorName(r.description).name} ariaLabel={`${labels.initiatorName}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'description', joinServiceInitiatorName(splitServiceInitiatorName(r.description).note, v, splitServiceInitiatorName(r.description).mark))} />
                             ) : null}
@@ -363,7 +399,7 @@ export function InvoiceTimeReportPage({
                       return (
                           <tr key={i}>
                             <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'date', v)} />
-                            <TrCell editable={editable} className={cellClass} value={r.description} ariaLabel={`${labels.description}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'description', v)} />
+                            <TrCell multiline editable={editable} className={cellClass} value={r.description} ariaLabel={`${labels.description}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'description', v)} />
                             <TrCell editable={editable} className={moneyClass} value={r.amount} ariaLabel={`${labels.amount(cur)}, ${labels.expensesTitle} ${i + 1}`} onChange={(v) => onPatchExpenseRow?.(i, 'amount', v)} />
                           </tr>
                       );

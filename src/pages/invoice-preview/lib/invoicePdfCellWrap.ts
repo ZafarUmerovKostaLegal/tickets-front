@@ -7,6 +7,25 @@ export function wrapPdfCellLines(
     maxW: number,
     measure: (s: string) => number,
 ): string[] {
+    const normalized = text.replace(/\r\n/g, '\n');
+    if (!normalized.includes('\n'))
+        return wrapPdfCellParagraph(normalized, maxW, measure);
+    const lines: string[] = [];
+    for (const part of normalized.split('\n')) {
+        const wrapped = wrapPdfCellParagraph(part, maxW, measure);
+        if (wrapped.length === 0)
+            lines.push('');
+        else
+            lines.push(...wrapped);
+    }
+    return lines;
+}
+
+function wrapPdfCellParagraph(
+    text: string,
+    maxW: number,
+    measure: (s: string) => number,
+): string[] {
     const words = text.trim().split(/\s+/).filter(Boolean);
     if (!words.length)
         return [];

@@ -383,3 +383,19 @@ textarea.tt-inv-tr__title-input:focus {
   font-weight: 700;
   text-align: right;
 }
+
+.tt-inv-tr__tbody td.tt-inv-tr__cell--wrap {
+  white-space: pre-wrap;
+}
+
+.tt-inv-tr--editable .tt-inv-tr__cell-input--multiline {
+  display: block;
+  resize: none;
+  overflow: hidden;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
+  min-height: 1.7em;
+  field-sizing: content;
+}

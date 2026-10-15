@@ -16,6 +16,11 @@ describe('wrapPdfCellLines', () => {
             expect(ln.length * 10).toBeLessThanOrEqual(50);
     });
 
+    it('keeps an explicit line break', () => {
+        const lines = wrapPdfCellLines('first line\nsecond line', 200, (s) => s.length);
+        expect(lines).toEqual(['first line', 'second line']);
+    });
+
     it('keeps short text on one line', () => {
         expect(wrapPdfCellLines('ok', 100, (s) => s.length)).toEqual(['ok']);
     });

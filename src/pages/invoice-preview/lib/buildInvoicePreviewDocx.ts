@@ -235,13 +235,13 @@ function trBodyTextCell(txt: string, pct: number, align: DocParaAlign): TableCel
         borders: cellBorderGrid,
         width: { size: pct, type: WidthType.PERCENTAGE },
         verticalAlign: VerticalAlignTable.TOP,
-        children: [new Paragraph({
+        children: (t.length ? t.split(/\r?\n/) : ['\u00a0']).map((line) => new Paragraph({
             alignment: align,
-            spacing: {},
+            spacing: { before: 0, after: 0 },
             children: [
-                new TextRun({ text: t.length ? t : '\u00a0', size: DOC_SIZE, font: DOC_FONT, color: '475569' }),
+                new TextRun({ text: line.length ? line : '\u00a0', size: DOC_SIZE, font: DOC_FONT, color: '475569' }),
             ],
-        })],
+        })),
     });
 }
 
