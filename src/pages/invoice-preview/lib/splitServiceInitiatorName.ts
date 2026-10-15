@@ -23,7 +23,7 @@ export function splitServiceInitiatorName(raw: string | null | undefined): {
     const name = text.slice(at + 1).trim();
     if (!name)
         return { note: text, name: '', mark: '/' };
-    return { note: text.slice(0, at).trimEnd(), name, mark };
+    return { note: text.slice(0, at).replace(/[ \t]$/, ''), name, mark };
 }
 
 export function joinServiceInitiatorName(
@@ -34,6 +34,6 @@ export function joinServiceInitiatorName(
     const initiator = name.trim();
     if (!initiator)
         return note;
-    const left = note.trimEnd();
-    return left ? `${left} ${mark} ${initiator}` : initiator;
+    const gap = /[ \t]$/.test(note) ? '' : ' ';
+    return note ? `${note}${gap}${mark} ${initiator}` : initiator;
 }

@@ -385,14 +385,14 @@ textarea.tt-inv-tr__title-input:focus {
 }
 
 .tt-inv-tr__tbody td.tt-inv-tr__cell--wrap {
-  white-space: pre-wrap;
+  white-space: break-spaces;
 }
 
 .tt-inv-tr--editable .tt-inv-tr__cell-input--multiline {
   display: block;
   resize: none;
   overflow: hidden;
-  white-space: pre-wrap;
+  white-space: break-spaces;
   overflow-wrap: anywhere;
   word-break: break-word;
   line-height: 1.35;

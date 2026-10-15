@@ -58,6 +58,26 @@ function TrMultilineInput({
             value={value}
             aria-label={ariaLabel}
             onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange?.(e.target.value)}
+            onKeyDown={(e) => {
+                if (e.key !== 'Enter')
+                    return;
+                e.preventDefault();
+                if (!e.ctrlKey && !e.metaKey)
+                    return;
+                const el = e.currentTarget;
+                const start = el.selectionStart ?? value.length;
+                const end = el.selectionEnd ?? start;
+                const next = `${value.slice(0, start)}\n${value.slice(end)}`;
+                onChange?.(next);
+                const caret = start + 1;
+                requestAnimationFrame(() => {
+                    const node = ref.current;
+                    if (!node)
+                        return;
+                    node.selectionStart = caret;
+                    node.selectionEnd = caret;
+                });
+            }}
         />
     );
 }

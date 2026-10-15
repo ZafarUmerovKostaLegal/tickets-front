@@ -445,14 +445,15 @@ function computeBodyRowLayouts(
         const rowCellLines: string[][] = [];
         let maxLines = 1;
         for (let c = 0; c < widths.length; c++) {
-            const raw = String(cols[c] ?? '').trim();
+            const original = String(cols[c] ?? '');
+            const raw = original.trim();
             const maxW = Math.max(8, widths[c]! - CELL_PAD_X * 2);
             let lines: string[];
             if (!raw) {
                 lines = [];
             }
             else if (wrapCols.has(c)) {
-                lines = wrapCellLines(raw, maxW, font, DOC_FS);
+                lines = wrapCellLines(original.replace(/^\s+/, ''), maxW, font, DOC_FS);
             }
             else if (fixedFsCols.has(c)) {
                 lines = [raw];

@@ -230,16 +230,22 @@ function trHeadCell(txt: string, pct: number): TableCell {
 type DocParaAlign = (typeof AlignmentType)[keyof typeof AlignmentType];
 
 function trBodyTextCell(txt: string, pct: number, align: DocParaAlign): TableCell {
-    const t = txt.trim();
+    const t = txt.replace(/^\s+/, '');
+    const lines = t.length ? t.split(/\r?\n/) : ['\u00a0'];
     return new TableCell({
         borders: cellBorderGrid,
         width: { size: pct, type: WidthType.PERCENTAGE },
         verticalAlign: VerticalAlignTable.TOP,
-        children: (t.length ? t.split(/\r?\n/) : ['\u00a0']).map((line) => new Paragraph({
+        children: lines.map((line) => new Paragraph({
             alignment: align,
             spacing: { before: 0, after: 0 },
             children: [
-                new TextRun({ text: line.length ? line : '\u00a0', size: DOC_SIZE, font: DOC_FONT, color: '475569' }),
+                new TextRun({
+                    text: (line.length ? line : '\u00a0').replace(/[ \t]+$/g, (spaces) => '\u00A0'.repeat(spaces.length)),
+                    size: DOC_SIZE,
+                    font: DOC_FONT,
+                    color: '475569',
+                }),
             ],
         })),
     });

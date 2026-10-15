@@ -26,6 +26,48 @@ function wrapPdfCellParagraph(
     maxW: number,
     measure: (s: string) => number,
 ): string[] {
+    const trailing = text.match(/[ \t]+$/)?.[0] ?? '';
+    const body = trailing ? text.slice(0, -trailing.length) : text;
+    const lines = wrapPdfCellWords(body, maxW, measure);
+    return appendTrailingSpaces(lines, trailing, maxW, measure);
+}
+
+function appendTrailingSpaces(
+    lines: string[],
+    trailing: string,
+    maxW: number,
+    measure: (s: string) => number,
+): string[] {
+    if (!trailing)
+        return lines;
+    const out = lines.length ? [...lines] : [''];
+    let rest = trailing;
+    while (rest) {
+        const last = out[out.length - 1] ?? '';
+        let fit = '';
+        for (const ch of rest) {
+            if (measure(`${last}${fit}${ch}`) <= maxW)
+                fit += ch;
+            else
+                break;
+        }
+        if (!fit) {
+            if (!last)
+                break;
+            out.push('');
+            continue;
+        }
+        out[out.length - 1] = `${last}${fit}`;
+        rest = rest.slice(fit.length);
+    }
+    return out;
+}
+
+function wrapPdfCellWords(
+    text: string,
+    maxW: number,
+    measure: (s: string) => number,
+): string[] {
     const words = text.trim().split(/\s+/).filter(Boolean);
     if (!words.length)
         return [];
