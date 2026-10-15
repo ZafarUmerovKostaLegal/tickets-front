@@ -33,6 +33,27 @@ export type InvoiceTimeReportPageProps = {
     onPatchPack?: (patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'reportTitle' | 'reportTitleContinued'>>) => void;
 };
 
+function fitBreakableTextarea(el: HTMLTextAreaElement) {
+    el.style.height = '0px';
+    const line = Number.parseFloat(getComputedStyle(el).lineHeight);
+    const linePx = Number.isFinite(line) ? line : 16;
+    let height = el.scrollHeight;
+    if (el.value.endsWith('\n'))
+        height += linePx;
+    el.style.height = `${Math.max(height, linePx)}px`;
+}
+
+function insertLineBreak(
+    value: string,
+    start: number,
+    end: number,
+): { next: string; caret: number } {
+    return {
+        next: `${value.slice(0, start)}\n${value.slice(end)}`,
+        caret: start + 1,
+    };
+}
+
 function TimeReportTitleInput({
     value,
     onChange,
@@ -41,12 +62,18 @@ function TimeReportTitleInput({
     onChange: (next: string) => void;
 }) {
     const ref = useRef<HTMLTextAreaElement>(null);
+    const caretRef = useRef<number | null>(null);
     useLayoutEffect(() => {
         const el = ref.current;
         if (!el)
             return;
-        el.style.height = 'auto';
-        el.style.height = `${el.scrollHeight}px`;
+        fitBreakableTextarea(el);
+        if (caretRef.current == null)
+            return;
+        const pos = Math.min(caretRef.current, el.value.length);
+        caretRef.current = null;
+        el.selectionStart = pos;
+        el.selectionEnd = pos;
     }, [value]);
     return (
         <textarea
@@ -65,15 +92,9 @@ function TimeReportTitleInput({
                 const el = e.currentTarget;
                 const start = el.selectionStart ?? value.length;
                 const end = el.selectionEnd ?? start;
-                onChange(`${value.slice(0, start)}\n${value.slice(end)}`);
-                const caret = start + 1;
-                requestAnimationFrame(() => {
-                    const node = ref.current;
-                    if (!node)
-                        return;
-                    node.selectionStart = caret;
-                    node.selectionEnd = caret;
-                });
+                const broken = insertLineBreak(value, start, end);
+                caretRef.current = broken.caret;
+                onChange(broken.next);
             }}
         />
     );
@@ -89,12 +110,18 @@ function TrMultilineInput({
     onChange?: (next: string) => void;
 }) {
     const ref = useRef<HTMLTextAreaElement>(null);
+    const caretRef = useRef<number | null>(null);
     useLayoutEffect(() => {
         const el = ref.current;
         if (!el)
             return;
-        el.style.height = 'auto';
-        el.style.height = `${el.scrollHeight}px`;
+        fitBreakableTextarea(el);
+        if (caretRef.current == null)
+            return;
+        const pos = Math.min(caretRef.current, el.value.length);
+        caretRef.current = null;
+        el.selectionStart = pos;
+        el.selectionEnd = pos;
     }, [value]);
     return (
         <textarea
@@ -113,16 +140,9 @@ function TrMultilineInput({
                 const el = e.currentTarget;
                 const start = el.selectionStart ?? value.length;
                 const end = el.selectionEnd ?? start;
-                const next = `${value.slice(0, start)}\n${value.slice(end)}`;
-                onChange?.(next);
-                const caret = start + 1;
-                requestAnimationFrame(() => {
-                    const node = ref.current;
-                    if (!node)
-                        return;
-                    node.selectionStart = caret;
-                    node.selectionEnd = caret;
-                });
+                const broken = insertLineBreak(value, start, end);
+                caretRef.current = broken.caret;
+                onChange?.(broken.next);
             }}
         />
     );

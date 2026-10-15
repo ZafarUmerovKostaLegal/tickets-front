@@ -195,7 +195,6 @@ textarea.tt-inv-tr__title-input {
   letter-spacing: inherit;
   text-transform: inherit;
   color: inherit;
-  field-sizing: content;
 }
 
 textarea.tt-inv-tr__title-input:focus {
@@ -408,5 +407,4 @@ textarea.tt-inv-tr__title-input:focus {
   word-break: break-word;
   line-height: 1.35;
   min-height: 1.7em;
-  field-sizing: content;
 }
