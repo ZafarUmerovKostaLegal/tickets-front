@@ -35,9 +35,9 @@ export function timeReportHeading(opts: {
     reportTitle?: string | null;
     reportTitleContinued?: string | null;
 }): string {
-    const custom = (opts.continuation ? opts.reportTitleContinued : opts.reportTitle)?.trim();
-    if (custom)
-        return custom;
+    const custom = (opts.continuation ? opts.reportTitleContinued : opts.reportTitle) ?? '';
+    if (custom.trim())
+        return custom.replace(/^\s+/, '');
     const labels = getTimeReportLabels(opts.language);
     return opts.continuation
         ? labels.titleContinued(opts.servicesMonthYear)

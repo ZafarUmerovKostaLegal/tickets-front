@@ -33,6 +33,52 @@ export type InvoiceTimeReportPageProps = {
     onPatchPack?: (patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'reportTitle' | 'reportTitleContinued'>>) => void;
 };
 
+function TimeReportTitleInput({
+    value,
+    onChange,
+}: {
+    value: string;
+    onChange: (next: string) => void;
+}) {
+    const ref = useRef<HTMLTextAreaElement>(null);
+    useLayoutEffect(() => {
+        const el = ref.current;
+        if (!el)
+            return;
+        el.style.height = 'auto';
+        el.style.height = `${el.scrollHeight}px`;
+    }, [value]);
+    return (
+        <textarea
+            ref={ref}
+            rows={1}
+            className="tt-inv-tr__title tt-inv-tr__title-input"
+            value={value}
+            aria-label="Time report title"
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange(e.target.value)}
+            onKeyDown={(e) => {
+                if (e.key !== 'Enter')
+                    return;
+                e.preventDefault();
+                if (!e.ctrlKey && !e.metaKey)
+                    return;
+                const el = e.currentTarget;
+                const start = el.selectionStart ?? value.length;
+                const end = el.selectionEnd ?? start;
+                onChange(`${value.slice(0, start)}\n${value.slice(end)}`);
+                const caret = start + 1;
+                requestAnimationFrame(() => {
+                    const node = ref.current;
+                    if (!node)
+                        return;
+                    node.selectionStart = caret;
+                    node.selectionEnd = caret;
+                });
+            }}
+        />
+    );
+}
+
 function TrMultilineInput({
     value,
     ariaLabel,
@@ -166,14 +212,11 @@ export function InvoiceTimeReportPage({
       </div>
       <div className="tt-inv-tr__rule" aria-hidden />
       {editable ? (
-          <textarea
-              className="tt-inv-tr__title tt-inv-tr__title-input"
+          <TimeReportTitleInput
               value={title}
-              aria-label="Time report title"
-              rows={2}
-              onChange={(e) => onPatchPack?.(continuation
-                  ? { reportTitleContinued: e.target.value }
-                  : { reportTitle: e.target.value })}
+              onChange={(next) => onPatchPack?.(continuation
+                  ? { reportTitleContinued: next }
+                  : { reportTitle: next })}
           />
       ) : <h2 className="tt-inv-tr__title">{title}</h2>}
 

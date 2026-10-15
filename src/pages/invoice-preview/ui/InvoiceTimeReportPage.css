@@ -177,17 +177,25 @@
   border: none;
 }
 
+textarea.tt-inv-tr__title,
 textarea.tt-inv-tr__title-input {
   display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  align-self: stretch;
   box-sizing: border-box;
   border: 1px solid transparent;
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
+  white-space: break-spaces;
+  overflow-wrap: anywhere;
   background: transparent;
   font: inherit;
   letter-spacing: inherit;
   text-transform: inherit;
   color: inherit;
+  field-sizing: content;
 }
 
 textarea.tt-inv-tr__title-input:focus {
@@ -197,12 +205,15 @@ textarea.tt-inv-tr__title-input:focus {
 
 .tt-inv-tr__title {
   margin: 0 0 0.65rem;
+  max-width: 100%;
   font-size: inherit;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--tt-inv-tr-red);
   line-height: 1.25;
+  white-space: break-spaces;
+  overflow-wrap: anywhere;
 }
 
 .tt-inv-tr__table-wrap {

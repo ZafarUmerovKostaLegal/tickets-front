@@ -191,6 +191,14 @@ function drawPdfLabelAndValue(
     return wrapTextBlock(page, shown, valueStart, y, valueMax, DOC_FS, font, color, lineGap);
 }
 
+function splitTextLinesKeepingBreaks(text: string, maxWidth: number, size: number, font: PDFFont): string[] {
+    const parts = text.replace(/\r\n/g, '\n').split('\n');
+    const lines: string[] = [];
+    for (const part of parts)
+        lines.push(...splitTextLines(part, maxWidth, size, font));
+    return lines.length ? lines : [''];
+}
+
 function splitTextLines(text: string, maxWidth: number, size: number, font: PDFFont): string[] {
     const words = text.split(/\s+/).filter(Boolean);
     const lines: string[] = [];
@@ -549,7 +557,7 @@ function estimateTimeReportTableTop(continuation: boolean, model: InvoiceCoverLe
         reportTitle: pack?.reportTitle,
         reportTitleContinued: pack?.reportTitleContinued,
     });
-    const titleLines = splitTextLines(title, W - ML - MR, DOC_FS, fontBold);
+    const titleLines = splitTextLinesKeepingBreaks(title, W - ML - MR, DOC_FS, fontBold);
     yTop -= Math.max(titleLines.length, 1) * DOC_LH;
     return yTop - TR_TITLE_TABLE_GAP;
 }
@@ -1074,7 +1082,14 @@ function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel,
         reportTitle: pack?.reportTitle,
         reportTitleContinued: pack?.reportTitleContinued,
     });
-    const yAfterTitle = wrapTextBlock(page, title, ML, yTop, W - ML - MR, DOC_FS, fontBold, TR_RED, DOC_LH);
+    let yAfterTitle = yTop;
+    for (const part of title.replace(/\r\n/g, '\n').split('\n')) {
+        if (!part.trim()) {
+            yAfterTitle -= DOC_LH;
+            continue;
+        }
+        yAfterTitle = wrapTextBlock(page, part, ML, yAfterTitle, W - ML - MR, DOC_FS, fontBold, TR_RED, DOC_LH);
+    }
     return yAfterTitle - TR_TITLE_TABLE_GAP;
 }
 

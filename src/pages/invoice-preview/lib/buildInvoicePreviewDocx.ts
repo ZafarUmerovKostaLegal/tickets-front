@@ -396,16 +396,16 @@ function timeReportDocxSectionChildren(
             border: { bottom: { style: BorderStyle.SINGLE, color: INV_RED, size: 10, space: 1 } },
             children: [new TextRun({ text: '\u200b', size: DOC_SIZE, font: DOC_FONT })],
         }),
-        new Paragraph({
-            spacing: { after: 160 },
+        ...titleText.split(/\r?\n/).map((line, index, lines) => new Paragraph({
+            spacing: { after: index === lines.length - 1 ? 160 : 0 },
             children: [new TextRun({
-                text: titleText,
+                text: line.length ? line : '\u00a0',
                 bold: true,
                 size: DOC_SIZE,
                 font: DOC_FONT,
                 color: INV_RED,
             })],
-        }),
+        })),
         detailTbl,
     ];
 
