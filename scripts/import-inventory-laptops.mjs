@@ -1,20 +1,8 @@
-/**
- * Заводит ноутбуки из отчёта автоинвентаризации в модуль «Инвентарь» через API.
- *
- * Год выпуска берём из BIOS-даты отчёта: скрипт на машинах отдаёт её как
- * /Date(1762387200000)/ и при неудачном разборе подставляет 2000, из-за чего
- * новая техника получала класс C. Здесь дата уже разобрана вручную.
- *
- * Usage: node scripts/import-inventory-laptops.mjs --token <access_token> [--dry-run]
- * Env: AUTH_TOKEN | API_TOKEN, API_BASE_URL | VITE_API_BASE_URL
- */
-
 const LAPTOPS = [
     {
         name: 'HP ProBook 450 15.6 inch G9',
         serial_number: '5CD2507RZL',
         inventory_number: 'NB-5CD2507RZL',
-        // BIOS /Date(1762387200000)/ → 2025-11-06
         purchase_date: '2025-11-06',
         equipment_class: 'A',
         status: 'in_use',
@@ -32,7 +20,6 @@ const LAPTOPS = [
         name: 'Acer Aspire A515-57',
         serial_number: 'NXKN4EY0013491042C3400',
         inventory_number: 'NB-NXKN4EY0013491042C3400',
-        // BIOS /Date(1780963200000)/ → 2026-06-09
         purchase_date: '2026-06-09',
         equipment_class: 'A',
         status: 'in_use',

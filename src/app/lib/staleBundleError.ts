@@ -70,10 +70,7 @@ export function reloadForStaleBundle(): boolean {
     return true;
 }
 
-/**
- * Auto-recover after deploy: old tabs keep hashed chunk URLs that 404 on the new build.
- * Vite fires `vite:preloadError` for failed dynamic imports / CSS preloads.
- */
+
 export function installStaleBundleReload(): void {
     if (typeof window === 'undefined')
         return;

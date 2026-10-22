@@ -1,6 +1,3 @@
-#!/bin/sh
-# Rebuild the frontend image from the current commit and replace the running container.
-# A plain `docker compose build` can reuse the old app layer, so the site stays unchanged.
 set -eu
 cd "$(dirname "$0")/.."
 

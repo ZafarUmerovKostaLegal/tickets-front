@@ -22,7 +22,6 @@ const optionalChunkLimits = [
     { prefix: 'exceljs-', rawKb: 560, gzipKb: 175 },
     { prefix: 'recharts-', rawKb: 410, gzipKb: 125 },
     { prefix: 'docx-', rawKb: 380, gzipKb: 115 },
-    // In-app letter editor (HarfBuzz WASM + fonts); lazy-only via compose page.
     { prefix: 'OutgoingLetterDocxEditor-', rawKb: 2800, gzipKb: 850 },
 ];
 

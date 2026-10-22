@@ -1,7 +1,3 @@
-/**
- * Split time-tracking api/monolith.ts into domain modules under api/domains/.
- * Run: node scripts/split-tt-monolith.mjs
- */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';

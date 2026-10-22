@@ -56,7 +56,6 @@ export default [
     },
     rules: {
       ...js.configs.recommended.rules,
-      // Existing codebase rethrows without { cause }; do not mass-rewrite
       'preserve-caught-error': 'off',
       'no-useless-assignment': 'off',
       'no-empty-pattern': 'warn',
@@ -66,10 +65,7 @@ export default [
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       'react/no-danger': 'warn',
-      // Contexts, route factories and lazy wrappers intentionally co-locate helper exports.
-      // This rule only affects development HMR boundaries, not production correctness.
       'react-refresh/only-export-components': 'off',
-      // Prefer sanitizeHtml / twemojiHtml before dangerouslySetInnerHTML
       'no-restricted-syntax': [
         'error',
         {
@@ -109,7 +105,6 @@ export default [
   {
     files: ['src/shared/ui/TwemojiText.tsx'],
     rules: {
-      // twemojiHtml sanitizes the generated markup before it reaches this renderer.
       'react/no-danger': 'off',
     },
   },

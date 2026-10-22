@@ -19,7 +19,6 @@ export default defineConfig(({ mode }) => {
     const viteBuildTarget =
         tauriPlatform === 'windows' || tauriPlatform === 'android'
             ? 'chrome105'
-            // Docx editor (HarfBuzz) uses top-level await + WASM — Safari 13 fails the build/runtime.
             : ['es2022', 'chrome89', 'firefox89', 'safari15'];
     return {
 
@@ -45,9 +44,6 @@ export default defineConfig(({ mode }) => {
                             return 'recharts';
                         if (id.includes('node_modules/pdf-lib') || id.includes('node_modules/@pdf-lib/'))
                             return 'pdf-lib';
-                        // Exact `docx` package only — do NOT match `@docx-editor.dev/*`
-                        // (and do not force @docx-editor into a shared chunk: that traps
-                        // Vite's preload helper and pulls ~2.5MB into the entry graph).
                         if (/\/node_modules\/docx\//.test(norm) || /\/node_modules\/docx["']?$/.test(norm))
                             return 'docx';
                         if (
@@ -94,8 +90,6 @@ export default defineConfig(({ mode }) => {
             force: process.env.VITE_FORCE_OPTIMIZE === '1',
         },
         resolve: {
-            // Stale .js files sit next to the .tsx sources. Vite otherwise loads the .js
-            // and the published image never picks up the TypeScript changes.
             extensions: ['.mjs', '.mts', '.ts', '.tsx', '.jsx', '.js', '.json'],
             dedupe: ['buffer'],
             alias: {

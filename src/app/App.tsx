@@ -41,27 +41,27 @@ function AppSplash() {
         return () => cancelAnimationFrame(rafId);
     }, []);
     return (<div className="app-splash">
-      <div className="app-splash__inner">
-        <img
-          src={APP_LOGO_PATH}
-          alt=""
-          className="app-splash__logo-mark"
-          width={56}
-          height={82}
-          draggable={false}
-        />
-        <div className="app-splash__brand">
-          <span className="app-splash__brand-title">{t('brand.title')}</span>
-          <span className="app-splash__brand-sub">{t('brand.subtitle')}</span>
+        <div className="app-splash__inner">
+            <img
+                src={APP_LOGO_PATH}
+                alt=""
+                className="app-splash__logo-mark"
+                width={56}
+                height={82}
+                draggable={false}
+            />
+            <div className="app-splash__brand">
+                <span className="app-splash__brand-title">{t('brand.title')}</span>
+                <span className="app-splash__brand-sub">{t('brand.subtitle')}</span>
+            </div>
+            <div className="app-splash__progress-wrap">
+                <svg className="app-splash__progress-ring" viewBox="0 0 36 36">
+                    <circle className="app-splash__progress-bg" cx="18" cy="18" r="15.9" />
+                    <circle className="app-splash__progress-fill" cx="18" cy="18" r="15.9" strokeDasharray={`${progress} 100`} transform="rotate(-90 18 18)" />
+                </svg>
+                <span className="app-splash__progress-text">{progress}%</span>
+            </div>
         </div>
-        <div className="app-splash__progress-wrap">
-          <svg className="app-splash__progress-ring" viewBox="0 0 36 36">
-            <circle className="app-splash__progress-bg" cx="18" cy="18" r="15.9"/>
-            <circle className="app-splash__progress-fill" cx="18" cy="18" r="15.9" strokeDasharray={`${progress} 100`} transform="rotate(-90 18 18)"/>
-          </svg>
-          <span className="app-splash__progress-text">{progress}%</span>
-        </div>
-      </div>
     </div>);
 }
 export function App() {
@@ -78,12 +78,12 @@ export function App() {
         runOneTimeTimeTrackingCacheReset();
         ensureCurrentUserLoaded()
             .then(() => {
-            setStartupStatus(StartupStatus.Ready);
-        })
+                setStartupStatus(StartupStatus.Ready);
+            })
             .catch((e) => {
-            setStartupError(e instanceof Error ? e.message : t('app.startupError'));
-            setStartupStatus(StartupStatus.Error);
-        });
+                setStartupError(e instanceof Error ? e.message : t('app.startupError'));
+                setStartupStatus(StartupStatus.Error);
+            });
     }, [startupStatus, t]);
     const handleRetry = () => {
         setStartupError(null);
@@ -93,7 +93,7 @@ export function App() {
         return <AppSplash />;
     }
     if (isAuthenticated() && startupStatus === StartupStatus.Error) {
-        return (<AppErrorPage message={startupError ?? t('app.startupError')} onRetry={handleRetry}/>);
+        return (<AppErrorPage message={startupError ?? t('app.startupError')} onRetry={handleRetry} />);
     }
     return (
         <DesktopApiConfigGate>
