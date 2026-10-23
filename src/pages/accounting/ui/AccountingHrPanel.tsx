@@ -36,6 +36,17 @@ function personName(user: User): string {
     return (user.display_name || user.email || '').trim();
 }
 
+const EQUIPMENT_STATUS_LABEL: Record<string, string> = {
+    in_use: 'В использовании',
+    in_stock: 'На складе',
+    repair: 'В ремонте',
+    written_off: 'Списано',
+};
+
+function equipmentStatusLabel(status: string): string {
+    return EQUIPMENT_STATUS_LABEL[status] ?? status;
+}
+
 function initials(user: User): string {
     const source = (user.initials || personName(user) || '?').trim();
     const parts = source.split(/\s+/).filter(Boolean);
@@ -867,17 +878,24 @@ export function AccountingHrPanel() {
                                     <p className="acct-hr__muted">За этим сотрудником нет закреплённого оборудования.</p>
                                 ) : (
                                     <ul className="acct-hr__equip-list">
-                                        {extras.equipment.map((item) => (
-                                            <li key={item.id} className="acct-hr__equip-row">
-                                                <strong>{item.name}</strong>
-                                                <span>
-                                                    {item.inventory_number}
-                                                    {item.serial_number ? ` · S/N ${item.serial_number}` : ''}
-                                                    {' · '}
-                                                    {item.status}
-                                                </span>
-                                            </li>
-                                        ))}
+                                        {extras.equipment.map((item) => {
+                                            const serial = item.serial_number?.trim() ?? '';
+                                            const sameAsInventory = serial.toLowerCase() === item.inventory_number.trim().toLowerCase();
+                                            return (
+                                                <li key={item.id} className="acct-hr__equip">
+                                                    <div className="acct-hr__equip-main">
+                                                        <strong>{item.name}</strong>
+                                                        <span className="acct-hr__equip-meta">
+                                                            {item.inventory_number}
+                                                            {serial && !sameAsInventory ? ` · S/N ${serial}` : ''}
+                                                        </span>
+                                                    </div>
+                                                    <span className={`acct-hr__equip-status acct-hr__equip-status--${item.status}`}>
+                                                        {equipmentStatusLabel(item.status)}
+                                                    </span>
+                                                </li>
+                                            );
+                                        })}
                                     </ul>
                                 )
                             )}

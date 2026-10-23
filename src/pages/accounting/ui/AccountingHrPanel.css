@@ -783,6 +783,56 @@ body[data-theme='dark'] .acct-hr {
   font-size: 0.875rem;
 }
 
+.acct-hr__equip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 12px;
+  background: var(--hr-card-bg);
+  text-align: left;
+}
+
+.acct-hr__equip-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.acct-hr__equip-main strong {
+  font-size: 0.9rem;
+  line-height: 1.3;
+}
+
+.acct-hr__equip-meta {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: var(--app-muted, #64748b);
+}
+
+.acct-hr__equip-status {
+  flex-shrink: 0;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.acct-hr__equip-status--in_use { background: #dbeafe; color: #1d4ed8; }
+.acct-hr__equip-status--in_stock { background: #dcfce7; color: #15803d; }
+.acct-hr__equip-status--repair { background: #ffedd5; color: #c2410c; }
+.acct-hr__equip-status--written_off { background: #f1f5f9; color: #64748b; }
+
 .acct-hr__doc-slot span,
 .acct-hr__doc-row span,
 .acct-hr__equip-row span,
