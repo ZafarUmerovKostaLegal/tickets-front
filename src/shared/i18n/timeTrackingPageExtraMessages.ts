@@ -1326,6 +1326,8 @@ export const timeTrackingPageExtraMessages = {
             filterPartnerAll: 'Все партнёры',
             filterClient: 'Клиент',
             filterClientAll: 'Все клиенты',
+            filterSearch: 'Поиск…',
+            filterEmpty: 'Ничего не найдено',
             filterCurrency: 'Валюта',
             filterCurrencyAll: 'Все валюты',
             filterNumber: 'Номер',

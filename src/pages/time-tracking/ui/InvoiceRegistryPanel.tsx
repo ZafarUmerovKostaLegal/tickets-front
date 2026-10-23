@@ -647,6 +647,159 @@ function RegistryMonthMenu({
     );
 }
 
+function RegistryChoiceMenu({
+    options,
+    selected,
+    allLabel,
+    ariaLabel,
+    searchPlaceholder,
+    emptyLabel,
+    onToggle,
+    menuWidth = 240,
+}: {
+    options: string[];
+    selected: Set<string>;
+    allLabel: string;
+    ariaLabel: string;
+    searchPlaceholder: string;
+    emptyLabel: string;
+    onToggle: (value: string) => void;
+    menuWidth?: number;
+}) {
+    const uid = useId();
+    const listId = `${uid}-choices`;
+    const searchRef = useRef<HTMLInputElement>(null);
+    const [open, setOpen] = useState(false);
+    const [query, setQuery] = useState('');
+    const btnRef = useRef<HTMLButtonElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const [menuPos, setMenuPos] = useState<{ top: number; left: number; width: number } | null>(null);
+
+    const buttonLabel = selected.size === 0
+        ? allLabel
+        : selected.size === 1
+            ? [...selected][0] ?? allLabel
+            : `${allLabel} (${selected.size})`;
+    const needle = query.trim().toLocaleLowerCase('ru');
+    const shown = needle
+        ? options.filter((option) => option.toLocaleLowerCase('ru').includes(needle))
+        : options;
+
+    const updatePos = useCallback(() => {
+        const btn = btnRef.current;
+        if (!btn)
+            return;
+        const r = btn.getBoundingClientRect();
+        const width = Math.max(r.width, menuWidth);
+        const left = Math.min(Math.max(8, r.left), window.innerWidth - width - 8);
+        const menuH = 320;
+        const below = r.bottom + 4;
+        const top = below + menuH > window.innerHeight - 8
+            ? Math.max(8, r.top - menuH - 4)
+            : below;
+        setMenuPos({ top, left, width });
+    }, [menuWidth]);
+
+    useEffect(() => {
+        if (!open)
+            setQuery('');
+    }, [open]);
+
+    useLayoutEffect(() => {
+        if (!open)
+            return;
+        updatePos();
+        searchRef.current?.focus();
+    }, [open, updatePos]);
+
+    useEffect(() => {
+        if (!open)
+            return;
+        const onScroll = () => updatePos();
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape')
+                setOpen(false);
+        };
+        const onPointer = (e: PointerEvent) => {
+            const t = e.target as Node;
+            if (btnRef.current?.contains(t) || menuRef.current?.contains(t))
+                return;
+            setOpen(false);
+        };
+        window.addEventListener('resize', onScroll);
+        window.addEventListener('scroll', onScroll, true);
+        document.addEventListener('keydown', onKey);
+        document.addEventListener('pointerdown', onPointer, true);
+        return () => {
+            window.removeEventListener('resize', onScroll);
+            window.removeEventListener('scroll', onScroll, true);
+            document.removeEventListener('keydown', onKey);
+            document.removeEventListener('pointerdown', onPointer, true);
+        };
+    }, [open, updatePos]);
+
+    return (
+        <>
+            <button
+                ref={btnRef}
+                type="button"
+                className={`tt-inv-reg__filter tt-inv-reg__month-btn${open ? ' tt-inv-reg__month-btn--open' : ''}`}
+                aria-label={ariaLabel}
+                aria-expanded={open}
+                aria-haspopup="listbox"
+                aria-controls={open ? listId : undefined}
+                onClick={() => setOpen((v) => !v)}
+            >
+                <span className="tt-inv-reg__month-btn-label">{buttonLabel}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden>
+                    <path d="M6 9l6 6 6-6"/>
+                </svg>
+            </button>
+            {open && menuPos && createPortal(
+                <div
+                    ref={menuRef}
+                    id={listId}
+                    className="tt-inv-reg__month-menu tt-inv-reg__choice-menu"
+                    role="listbox"
+                    aria-multiselectable
+                    style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
+                >
+                    <input
+                        ref={searchRef}
+                        type="search"
+                        className="tt-inv-reg__menu-search"
+                        value={query}
+                        placeholder={searchPlaceholder}
+                        aria-label={searchPlaceholder}
+                        onChange={(e) => setQuery(e.target.value)}
+                    />
+                    <div className="tt-inv-reg__menu-list">
+                        {shown.length === 0 ? (
+                            <p className="tt-inv-reg__menu-empty">{emptyLabel}</p>
+                        ) : shown.map((option) => {
+                            const on = selected.has(option);
+                            return (
+                                <button
+                                    key={option}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={on}
+                                    className={`tt-inv-reg__month-opt${on ? ' tt-inv-reg__month-opt--on' : ''}`}
+                                    onClick={() => onToggle(option)}
+                                >
+                                    <span className="tt-inv-reg__month-check" aria-hidden>{on ? '✓' : ''}</span>
+                                    <span className="tt-inv-reg__month-opt-label">{option}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>,
+                document.body,
+            )}
+        </>
+    );
+}
+
 const REGISTRY_YEAR_KEY = 'tt-inv-reg-year';
 const REGISTRY_YEARS = new Set<InvoiceRegistryYearId>([
     '2026', '2026-system', '2025', '2024', '2023', '2022', '2021', '2020', 'checklist',
@@ -1187,48 +1340,35 @@ export function InvoiceRegistryPanel({
             </div>
 
             <div className="tt-inv-reg__filters">
-                <select
-                    className="tt-inv-reg__filter"
-                    value=""
-                    aria-label={t('timeTrackingPage.invoices.registry.filterPartner')}
-                    onChange={(e) => {
-                        if (e.target.value)
-                            togglePartner(e.target.value);
-                    }}
-                >
-                    <option value="">{t('timeTrackingPage.invoices.registry.filterPartnerAll')}</option>
-                    {partnerOptions.map((code) => (
-                        <option key={code} value={code}>{partners.has(code) ? `✓ ${code}` : code}</option>
-                    ))}
-                </select>
-                <select
-                    className="tt-inv-reg__filter tt-inv-reg__filter--client"
-                    value=""
-                    aria-label={t('timeTrackingPage.invoices.registry.filterClient')}
-                    onChange={(e) => {
-                        if (e.target.value)
-                            toggleClient(e.target.value);
-                    }}
-                >
-                    <option value="">{t('timeTrackingPage.invoices.registry.filterClientAll')}</option>
-                    {clientOptions.map((name) => (
-                        <option key={name} value={name}>{clients.has(name) ? `✓ ${name}` : name}</option>
-                    ))}
-                </select>
-                <select
-                    className="tt-inv-reg__filter"
-                    value=""
-                    aria-label={t('timeTrackingPage.invoices.registry.filterCurrency')}
-                    onChange={(e) => {
-                        if (e.target.value)
-                            toggleCurrency(e.target.value);
-                    }}
-                >
-                    <option value="">{t('timeTrackingPage.invoices.registry.filterCurrencyAll')}</option>
-                    {currencyOptions.map((code) => (
-                        <option key={code} value={code}>{currencies.has(code) ? `✓ ${code}` : code}</option>
-                    ))}
-                </select>
+                <RegistryChoiceMenu
+                    options={partnerOptions}
+                    selected={partners}
+                    allLabel={t('timeTrackingPage.invoices.registry.filterPartnerAll')}
+                    ariaLabel={t('timeTrackingPage.invoices.registry.filterPartner')}
+                    searchPlaceholder={t('timeTrackingPage.invoices.registry.filterSearch')}
+                    emptyLabel={t('timeTrackingPage.invoices.registry.filterEmpty')}
+                    onToggle={togglePartner}
+                />
+                <RegistryChoiceMenu
+                    options={clientOptions}
+                    selected={clients}
+                    allLabel={t('timeTrackingPage.invoices.registry.filterClientAll')}
+                    ariaLabel={t('timeTrackingPage.invoices.registry.filterClient')}
+                    searchPlaceholder={t('timeTrackingPage.invoices.registry.filterSearch')}
+                    emptyLabel={t('timeTrackingPage.invoices.registry.filterEmpty')}
+                    onToggle={toggleClient}
+                    menuWidth={320}
+                />
+                <RegistryChoiceMenu
+                    options={currencyOptions}
+                    selected={currencies}
+                    allLabel={t('timeTrackingPage.invoices.registry.filterCurrencyAll')}
+                    ariaLabel={t('timeTrackingPage.invoices.registry.filterCurrency')}
+                    searchPlaceholder={t('timeTrackingPage.invoices.registry.filterSearch')}
+                    emptyLabel={t('timeTrackingPage.invoices.registry.filterEmpty')}
+                    onToggle={toggleCurrency}
+                    menuWidth={180}
+                />
                 <input
                     type="search"
                     className="tt-settings__search tt-inv-reg__filter tt-inv-reg__filter--number"

@@ -1328,6 +1328,8 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             filterPartnerAll: 'All partners',
             filterClient: 'Client',
             filterClientAll: 'All clients',
+            filterSearch: 'Search…',
+            filterEmpty: 'Nothing found',
             filterCurrency: 'Currency',
             filterCurrencyAll: 'All currencies',
             filterNumber: 'Number',
