@@ -783,7 +783,8 @@ body[data-theme='dark'] .acct-hr {
   font-size: 0.875rem;
 }
 
-.acct-hr__equip {
+.acct-hr__equip,
+.acct-hr__leave-card {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -796,7 +797,8 @@ body[data-theme='dark'] .acct-hr {
   text-align: left;
 }
 
-.acct-hr__equip-main {
+.acct-hr__equip-main,
+.acct-hr__leave-card-main {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -804,12 +806,14 @@ body[data-theme='dark'] .acct-hr {
   min-width: 0;
 }
 
-.acct-hr__equip-main strong {
+.acct-hr__equip-main strong,
+.acct-hr__leave-card-main strong {
   font-size: 0.9rem;
   line-height: 1.3;
 }
 
-.acct-hr__equip-meta {
+.acct-hr__equip-meta,
+.acct-hr__leave-card-meta {
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -832,6 +836,22 @@ body[data-theme='dark'] .acct-hr {
 .acct-hr__equip-status--in_stock { background: #dcfce7; color: #15803d; }
 .acct-hr__equip-status--repair { background: #ffedd5; color: #c2410c; }
 .acct-hr__equip-status--written_off { background: #f1f5f9; color: #64748b; }
+
+.acct-hr__leave-kind {
+  flex-shrink: 0;
+  max-width: 46%;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.acct-hr__leave-kind--annual_vacation { background: #f3e8ff; color: #6b21a8; }
+.acct-hr__leave-kind--sick_leave { background: #fce7f3; color: #9d174d; }
+.acct-hr__leave-kind--day_off { background: #e0f2fe; color: #0369a1; }
+.acct-hr__leave-kind--remote_work { background: #fef9c3; color: #a16207; }
 
 .acct-hr__doc-slot span,
 .acct-hr__doc-row span,

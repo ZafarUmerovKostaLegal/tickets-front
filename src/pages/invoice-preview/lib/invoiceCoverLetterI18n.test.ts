@@ -97,6 +97,8 @@ describe('invoiceCoverLetterI18n', () => {
         model.invoiceParagraphOverride = 'Herewith, we are sending the report with the invoice on legal services rendered in September 2026 for the total amount of USD 596.61.';
         expect(resolveLocalizedCoverInvoiceParagraph(model)).toContain('USD 596.60');
         expect(resolveLocalizedCoverInvoiceParagraph(model)).not.toContain('USD 596.61');
+        model.introParagraphOverride = 'Memo on termination. \n';
+        expect(resolveLocalizedCoverIntroParagraph(model)).toBe('Memo on termination. \n');
         expect(syncStaleCoverTotalInText(
             'на общую сумму USD 596.61.',
             'USD 596.60',

@@ -46,16 +46,15 @@ function CoverField({
     if (!editable) {
         return <span className={className}>{value}</span>;
     }
-    const shared = {
-        className: `tt-inv-cover__field${className ? ` ${className}` : ''}`,
-        value,
-        'aria-label': ariaLabel,
-        onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => onChange?.(e.target.value),
-    };
-    if (multiline) {
-        return <textarea {...shared} rows={2} />;
-    }
-    return <input type="text" {...shared} />;
+    return (
+        <textarea
+            className={`tt-inv-cover__field${className ? ` ${className}` : ''}`}
+            value={value}
+            aria-label={ariaLabel}
+            rows={multiline ? 2 : 1}
+            onChange={(e: ChangeEvent<HTMLTextAreaElement>) => onChange?.(e.target.value)}
+        />
+    );
 }
 
 function resolveActiveSignatory(model: InvoiceCoverLetterModel): CoverSignatoryPartner | null {

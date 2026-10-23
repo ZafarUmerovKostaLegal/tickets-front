@@ -240,9 +240,8 @@ export function syncStaleCoverTotalInText(text: string, correctTotalFormatted: s
 }
 
 export function resolveLocalizedCoverIntroParagraph(model: InvoiceCoverLetterModel): string {
-    const custom = model.introParagraphOverride?.trim();
-    if (custom)
-        return custom;
+    if (typeof model.introParagraphOverride === 'string')
+        return model.introParagraphOverride;
     const lang = normalizeCoverLanguage(model.coverLanguage);
     if (lang === 'RU') {
         return `Мы рады оказать юридическую помощь «${model.quotedCompanyName}» в связи с её деятельностью в Узбекистане.`;
@@ -251,9 +250,8 @@ export function resolveLocalizedCoverIntroParagraph(model: InvoiceCoverLetterMod
 }
 
 export function resolveLocalizedCoverInvoiceParagraph(model: InvoiceCoverLetterModel): string {
-    const custom = model.invoiceParagraphOverride?.trim();
-    if (custom)
-        return syncStaleCoverTotalInText(custom, model.totalFormatted);
+    if (typeof model.invoiceParagraphOverride === 'string')
+        return syncStaleCoverTotalInText(model.invoiceParagraphOverride, model.totalFormatted);
     const lang = normalizeCoverLanguage(model.coverLanguage);
     if (lang === 'RU') {
         return `Настоящим направляем отчёт и/или счёт за юридические услуги, оказанные в ${model.servicesMonthYear}, на общую сумму ${model.totalFormatted}.`;

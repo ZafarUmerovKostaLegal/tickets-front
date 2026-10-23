@@ -9,11 +9,16 @@ import {
     listVacationLeaveRequests,
     listVacationManualEntries,
     listVacationScheduleEmployees,
+    VACATION_LEAVE_REQUEST_KINDS,
+    VACATION_LEAVE_REQUEST_STATUSES,
     type VacationAbsenceDayApi,
     type VacationLeaveRequestApi,
+    type VacationLeaveRequestKind,
+    type VacationLeaveRequestStatus,
     type VacationManualEntryApi,
     type VacationScheduleEmployeeApi,
 } from '@entities/vacation';
+import { formatRuDateLong, formatRuRange, leaveKindLabel, leaveStatusLabel, ruDaysWord } from '@pages/vacation-schedule/lib/leaveRequestDisplay';
 import {
     deletePersonnelFile,
     fetchPersonnelFileBlob,
@@ -45,6 +50,48 @@ const EQUIPMENT_STATUS_LABEL: Record<string, string> = {
 
 function equipmentStatusLabel(status: string): string {
     return EQUIPMENT_STATUS_LABEL[status] ?? status;
+}
+
+function isLeaveKind(kind: string): kind is VacationLeaveRequestKind {
+    return (VACATION_LEAVE_REQUEST_KINDS as readonly string[]).includes(kind);
+}
+
+function isLeaveStatus(status: string): status is VacationLeaveRequestStatus {
+    return (VACATION_LEAVE_REQUEST_STATUSES as readonly string[]).includes(status);
+}
+
+function absenceKindLabel(kind: string): string {
+    return isLeaveKind(kind) ? leaveKindLabel(kind) : kind;
+}
+
+function nextIsoDay(iso: string): string {
+    const date = new Date(`${iso.slice(0, 10)}T12:00:00`);
+    date.setDate(date.getDate() + 1);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+}
+
+function groupAbsenceDays(days: VacationAbsenceDayApi[]): { key: string; from: string; to: string; kind: string; days: number }[] {
+    const sorted = [...days].sort((a, b) => a.absence_on.localeCompare(b.absence_on) || a.kind.localeCompare(b.kind));
+    const spans: { key: string; from: string; to: string; kind: string; days: number }[] = [];
+    for (const day of sorted) {
+        const iso = day.absence_on.slice(0, 10);
+        const last = spans[spans.length - 1];
+        if (last && last.kind === day.kind && nextIsoDay(last.to) === iso) {
+            last.to = iso;
+            last.days += 1;
+            continue;
+        }
+        spans.push({
+            key: `${day.employee_id}-${iso}-${day.kind}`,
+            from: iso,
+            to: iso,
+            kind: day.kind,
+            days: 1,
+        });
+    }
+    return spans;
 }
 
 function initials(user: User): string {
@@ -830,8 +877,8 @@ export function AccountingHrPanel() {
                                             {extras.leaveRequests.map((req) => (
                                                 <li key={req.id} className="acct-hr__doc-row">
                                                     <div>
-                                                        <strong>{req.kind} · {req.days_count} дн.</strong>
-                                                        <span>{req.date_from} — {req.date_to} · {req.status}</span>
+                                                        <strong>{absenceKindLabel(req.kind)} · {req.days_count} {ruDaysWord(req.days_count)}</strong>
+                                                        <span>{formatRuRange(req.date_from, req.date_to)} · {isLeaveStatus(req.status) ? leaveStatusLabel(req.status, req) : req.status}</span>
                                                     </div>
                                                     <button
                                                         type="button"
@@ -918,15 +965,23 @@ export function AccountingHrPanel() {
                                                 <p className="acct-hr__muted">Отмеченных отсутствий за год пока нет.</p>
                                             ) : (
                                                 <ul className="acct-hr__leave-list">
-                                                    {extras.absences
-                                                        .slice()
-                                                        .sort((a, b) => String(a.absence_on).localeCompare(String(b.absence_on)))
-                                                        .map((day) => (
-                                                            <li key={`${day.employee_id}-${day.absence_on}-${day.kind_code}`} className="acct-hr__leave-row">
-                                                                <strong>{day.absence_on}</strong>
-                                                                <span>{day.kind || `Код ${day.kind_code}`}</span>
-                                                            </li>
-                                                        ))}
+                                                    {groupAbsenceDays(extras.absences).map((span) => (
+                                                        <li key={span.key} className="acct-hr__leave-card">
+                                                            <div className="acct-hr__leave-card-main">
+                                                                <strong>
+                                                                    {span.from === span.to
+                                                                        ? formatRuDateLong(span.from)
+                                                                        : formatRuRange(span.from, span.to)}
+                                                                </strong>
+                                                                <span className="acct-hr__leave-card-meta">
+                                                                    {span.days} {ruDaysWord(span.days)}
+                                                                </span>
+                                                            </div>
+                                                            <span className={`acct-hr__leave-kind acct-hr__leave-kind--${span.kind}`}>
+                                                                {absenceKindLabel(span.kind)}
+                                                            </span>
+                                                        </li>
+                                                    ))}
                                                 </ul>
                                             )}
                                         </>

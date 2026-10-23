@@ -71,6 +71,17 @@ function h(pt: number): number {
 const DOC_FONT = 'Calibri Light';
 const DOC_SIZE = h(11);
 
+function coverTextRuns(text: string, extra?: { bold?: boolean }): TextRun[] {
+    const lines = String(text ?? '').split(/\r?\n/);
+    return lines.map((line, index) => new TextRun({
+        text: line,
+        bold: extra?.bold,
+        break: index > 0 ? 1 : undefined,
+        size: DOC_SIZE,
+        font: DOC_FONT,
+    }));
+}
+
 function contactParagraph(text: string, spacingAfter = 20): Paragraph {
     return new Paragraph({
         alignment: AlignmentType.RIGHT,
@@ -137,8 +148,8 @@ function coverChildren(
             spacing: { after: 240 },
             children: [new TextRun({ text: model.letterDateDisplay, size: DOC_SIZE, font: DOC_FONT })],
         }),
-        new Paragraph({ spacing: { before: 40 }, children: [new TextRun({ text: model.recipientCompany, bold: true, size: DOC_SIZE, font: DOC_FONT })] }),
-        new Paragraph({ children: [new TextRun({ text: model.recipientAddressLines[0], size: DOC_SIZE, font: DOC_FONT })] }),
+        new Paragraph({ spacing: { before: 40 }, children: coverTextRuns(model.recipientCompany, { bold: true }) }),
+        new Paragraph({ children: coverTextRuns(model.recipientAddressLines[0]) }),
     ];
 
     const coverAddrExtra = String(model.recipientAddressLines[1] ?? '')
@@ -154,24 +165,16 @@ function coverChildren(
     const labels = getCoverLetterLabels(model.coverLanguage);
 
     body.push(
-        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `${labels.attention}: ${model.attentionName}`, bold: true, size: DOC_SIZE, font: DOC_FONT })] }),
-        new Paragraph({ children: [new TextRun({ text: model.attentionTitle, size: DOC_SIZE, font: DOC_FONT })] }),
-        new Paragraph({ spacing: { before: 200 }, children: [new TextRun({ text: `${labels.dear} ${model.attentionName},`, size: DOC_SIZE, font: DOC_FONT })] }),
+        new Paragraph({ spacing: { before: 200 }, children: coverTextRuns(`${labels.attention}: ${model.attentionName}`, { bold: true }) }),
+        new Paragraph({ children: coverTextRuns(model.attentionTitle) }),
+        new Paragraph({ spacing: { before: 200 }, children: coverTextRuns(`${labels.dear} ${model.attentionName},`) }),
         new Paragraph({
             spacing: { before: 160 },
-            children: [new TextRun({
-                text: resolveCoverIntroParagraph(model),
-                size: DOC_SIZE,
-                font: DOC_FONT,
-            })],
+            children: coverTextRuns(resolveCoverIntroParagraph(model)),
         }),
         new Paragraph({
             spacing: { before: 160 },
-            children: [new TextRun({
-                text: resolveCoverInvoiceParagraph(model),
-                size: DOC_SIZE,
-                font: DOC_FONT,
-            })],
+            children: coverTextRuns(resolveCoverInvoiceParagraph(model)),
         }),
         new Paragraph({ spacing: { before: 240 }, children: [new TextRun({ text: labels.closing, size: DOC_SIZE, font: DOC_FONT })] }),
         new Paragraph({
@@ -182,7 +185,7 @@ function coverChildren(
         }),
         new Paragraph({ spacing: { before: 40 }, children: [new TextRun({ text: '_________________________', size: DOC_SIZE, font: DOC_FONT, color: '666666' })] }),
         new Paragraph({ spacing: { before: 80 }, children: [new TextRun({ text: model.signatoryName, size: DOC_SIZE, font: DOC_FONT })] }),
-        new Paragraph({ children: [new TextRun({ text: model.signatoryTitle, size: DOC_SIZE, font: DOC_FONT })] }),
+        new Paragraph({ children: coverTextRuns(model.signatoryTitle) }),
     );
 
     return body;

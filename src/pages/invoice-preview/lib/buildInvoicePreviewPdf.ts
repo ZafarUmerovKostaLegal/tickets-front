@@ -106,10 +106,6 @@ const LEGAL_PANELS_PT = CSS_REM_PT * 0.65;
 
 type PdfRgb = ReturnType<typeof rgb>;
 
-function wrapPlainParagraph(page: PDFPage, text: string, x: number, y: number, maxWidth: number, size: number, font: PDFFont, lineGap: number): number {
-    return wrapTextBlock(page, text, x, y, maxWidth, size, font, BODY, lineGap);
-}
-
 function wrapTextBlock(
     page: PDFPage,
     text: string,
@@ -273,15 +269,14 @@ function drawCoverPage(
 
     let y = headerContentBottom - COVER_HEADER_MARGIN_BOTTOM;
 
-    page.drawText(model.letterDateDisplay, { x: ML, y, size: DOC_FS, font, color: BODY });
+    const coverAddrW = W - ML - MR;
+    y = wrapTextBlockPreservingNewlines(page, model.letterDateDisplay, ML, y, coverAddrW, DOC_FS, font, BODY, DOC_LH);
 
     // PDF positions text by its baseline, while the preview's CSS margins start
     // after the current line box. Include both so exported block spacing matches
     // the on-screen cover letter.
-    y -= DOC_LH + COVER_DATE_AFTER;
-    page.drawText(model.recipientCompany, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
-    y -= DOC_LH;
-    const coverAddrW = W - ML - MR;
+    y -= COVER_DATE_AFTER;
+    y = wrapTextBlockPreservingNewlines(page, model.recipientCompany, ML, y, coverAddrW, DOC_FS, fontBold, BODY, DOC_LH);
     y = wrapTextBlockPreservingNewlines(
         page,
         model.recipientAddressLines[0],
@@ -309,23 +304,22 @@ function drawCoverPage(
 
     y -= COVER_BLOCK_GAP;
     const labels = getCoverLetterLabels(model.coverLanguage);
-    page.drawText(`${labels.attention}: ${model.attentionName}`, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
-    y -= DOC_LH;
-    page.drawText(model.attentionTitle, { x: ML, y, size: DOC_FS, font, color: BODY });
+    y = wrapTextBlockPreservingNewlines(page, `${labels.attention}: ${model.attentionName}`, ML, y, coverAddrW, DOC_FS, fontBold, BODY, DOC_LH);
+    y = wrapTextBlockPreservingNewlines(page, model.attentionTitle, ML, y, coverAddrW, DOC_FS, font, BODY, DOC_LH);
 
-    y -= DOC_LH + COVER_BLOCK_GAP;
-    page.drawText(`${labels.dear} ${model.attentionName},`, { x: ML, y, size: DOC_FS, font, color: BODY });
+    y -= COVER_BLOCK_GAP;
+    y = wrapTextBlockPreservingNewlines(page, `${labels.dear} ${model.attentionName},`, ML, y, coverAddrW, DOC_FS, font, BODY, DOC_LH);
 
-    y -= DOC_LH + COVER_SALUTE_GAP;
+    y -= COVER_SALUTE_GAP;
     const p1 = resolveCoverIntroParagraph(model);
     const maxW = W - ML - MR;
-    y = wrapPlainParagraph(page, p1, ML, y, maxW, DOC_FS, font, COVER_PARA_GAP);
+    y = wrapTextBlockPreservingNewlines(page, p1, ML, y, maxW, DOC_FS, font, BODY, COVER_PARA_GAP);
 
-    // wrapPlainParagraph already advances by one line height after its last
+    // The wrapper already advances by one line height after its last
     // line; this is the paragraph's CSS margin-bottom.
     y -= COVER_PARA_GAP;
     const p2 = resolveCoverInvoiceParagraph(model);
-    y = wrapPlainParagraph(page, p2, ML, y, maxW, DOC_FS, font, COVER_PARA_GAP);
+    y = wrapTextBlockPreservingNewlines(page, p2, ML, y, maxW, DOC_FS, font, BODY, COVER_PARA_GAP);
 
     y -= COVER_CLOSING_BEFORE;
     page.drawText(labels.closing, { x: ML, y, size: DOC_FS, font, color: BODY });
@@ -358,7 +352,7 @@ function drawCoverPage(
 
     page.drawText(model.signatoryName, { x: ML, y, size: DOC_FS, font: fontBold, color: BODY });
     y -= DOC_LH;
-    page.drawText(model.signatoryTitle, { x: ML, y, size: DOC_FS, font, color: BODY });
+    y = wrapTextBlockPreservingNewlines(page, model.signatoryTitle, ML, y, coverAddrW, DOC_FS, font, BODY, DOC_LH);
 }
 
 function colLayout(tableLeft: number, tableW: number, weights: readonly number[]) {
