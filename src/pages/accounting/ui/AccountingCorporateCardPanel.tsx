@@ -385,26 +385,27 @@ export function AccountingCorporateCardPanel() {
             {rows == null && !error ? <p className="acct-card__empty">Загрузка…</p> : null}
             {rows && visible.length === 0 ? <p className="acct-card__empty">По этой карте операций пока нет</p> : null}
             {rows && visible.length > 0 ? (
-                <div className="exp-table acct-card-table" role="region" aria-label="Операции по корпоративной карте">
-                    <div className="exp-table__body">
-                        <div className="exp-table__row exp-table__row--head" role="row">
-                            <div className="exp-table__th acct-card-table__date" role="columnheader">Дата</div>
-                            <div className="exp-table__th acct-card-table__owner" role="columnheader">Карта</div>
-                            <div className="exp-table__th acct-card-table__kind" role="columnheader">Вид</div>
-                            <div className="exp-table__th acct-card-table__desc" role="columnheader">Описание</div>
-                            <div className="exp-table__th acct-card-table__pay" role="columnheader">Оплата</div>
-                            <div className="exp-table__th acct-card-table__sum" role="columnheader">Сумма, UZS</div>
-                        </div>
+                <div className="acct-ops" role="region" aria-label="Операции по корпоративной карте">
+                    <div className="acct-ops__head" role="row">
+                        <span>Дата</span>
+                        <span>Карта</span>
+                        <span>Вид</span>
+                        <span>Описание</span>
+                        <span>Оплата</span>
+                        <span className="acct-ops__sum">Сумма, UZS</span>
+                    </div>
+                    <div className="acct-ops__body">
                         {visible.map((row) => {
                             const payFull = PAYMENT_META[(row.paymentMethod ?? '') as PaymentMethod]?.label ?? (row.paymentMethod || '—');
+                            const kind = expenseKind(row);
                             return (
-                                <button key={row.id} type="button" className="exp-table__row acct-card-table__row" onClick={() => openExpense(row)}>
-                                    <span className="acct-card-table__date">{formatDate(row.expenseDate)}</span>
-                                    <span className="acct-card-table__owner">{cardOwner(row)}</span>
-                                    <span className="acct-card-table__kind">{expenseKind(row) || '—'}</span>
-                                    <span className="acct-card-table__desc" title={expenseDescription(row)}>{expenseDescription(row)}</span>
-                                    <span className="acct-card-table__pay" title={payFull}>{paymentShort(row.paymentMethod)}</span>
-                                    <span className="acct-card-table__sum">{money(Number(row.amountUzs) || 0)}</span>
+                                <button key={row.id} type="button" className="acct-ops__row" onClick={() => openExpense(row)}>
+                                    <span className="acct-ops__date">{formatDate(row.expenseDate)}</span>
+                                    <span className="acct-ops__owner">{cardOwner(row)}</span>
+                                    <span className="acct-ops__kind">{kind || '—'}</span>
+                                    <span className="acct-ops__desc" title={expenseDescription(row)}>{expenseDescription(row)}</span>
+                                    <span className="acct-ops__pay" title={payFull}>{paymentShort(row.paymentMethod)}</span>
+                                    <span className="acct-ops__sum">{money(Number(row.amountUzs) || 0)}</span>
                                 </button>
                             );
                         })}
