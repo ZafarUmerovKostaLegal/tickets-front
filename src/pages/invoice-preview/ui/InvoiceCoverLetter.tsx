@@ -1,4 +1,4 @@
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { Fragment, useEffect, useState, type ChangeEvent, type ReactNode } from 'react';
 import { listPartners } from '@entities/user';
 import { SearchableSelect } from '@shared/ui';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
@@ -28,6 +28,18 @@ type InvoiceCoverLetterProps = {
     secondParagraphMode?: 'invoice' | 'freeform';
 };
 
+function coverLines(value: string): ReactNode {
+    const lines = value.split(/\r?\n/);
+    if (lines.length <= 1)
+        return value;
+    return lines.map((line, index) => (
+        <Fragment key={index}>
+            {index > 0 ? <br /> : null}
+            {line.length > 0 ? line : '\u00a0'}
+        </Fragment>
+    ));
+}
+
 function CoverField({
     className,
     value,
@@ -44,7 +56,7 @@ function CoverField({
     ariaLabel?: string;
 }) {
     if (!editable) {
-        return <span className={`tt-inv-cover__text${className ? ` ${className}` : ''}`}>{value}</span>;
+        return <span className={`tt-inv-cover__text${className ? ` ${className}` : ''}`}>{coverLines(value)}</span>;
     }
     return (
         <textarea
@@ -219,7 +231,7 @@ export function InvoiceCoverLetter({
             onChange={(e) => patch?.({ introParagraphOverride: e.target.value })}
           />
         ) : (
-          <p className="tt-inv-cover__para">{introText}</p>
+          <p className="tt-inv-cover__para">{coverLines(introText)}</p>
         )}
 
         {showSecondParagraph ? (
@@ -233,7 +245,7 @@ export function InvoiceCoverLetter({
               onChange={(e) => patch?.({ invoiceParagraphOverride: e.target.value })}
             />
           ) : (
-            <p className="tt-inv-cover__para">{invoiceText}</p>
+            <p className="tt-inv-cover__para">{coverLines(invoiceText)}</p>
           )
         ) : null}
 

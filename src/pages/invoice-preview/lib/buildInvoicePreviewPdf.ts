@@ -156,10 +156,12 @@ function wrapTextBlockPreservingNewlines(
     let cy = y;
     let drew = false;
     for (const chunk of chunks) {
-        const t = chunk.trim();
-        if (!t)
+        if (!chunk.trim()) {
+            cy -= lineGap;
+            drew = true;
             continue;
-        cy = wrapTextBlock(page, t, x, cy, maxWidth, size, font, color, lineGap);
+        }
+        cy = wrapTextBlock(page, chunk.trim(), x, cy, maxWidth, size, font, color, lineGap);
         drew = true;
     }
     return drew ? cy : y;

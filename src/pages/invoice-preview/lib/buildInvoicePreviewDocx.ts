@@ -74,7 +74,7 @@ const DOC_SIZE = h(11);
 function coverTextRuns(text: string, extra?: { bold?: boolean }): TextRun[] {
     const lines = String(text ?? '').split(/\r?\n/);
     return lines.map((line, index) => new TextRun({
-        text: line,
+        text: line.length > 0 ? line : '\u00a0',
         bold: extra?.bold,
         break: index > 0 ? 1 : undefined,
         size: DOC_SIZE,
@@ -152,13 +152,10 @@ function coverChildren(
         new Paragraph({ children: coverTextRuns(model.recipientAddressLines[0]) }),
     ];
 
-    const coverAddrExtra = String(model.recipientAddressLines[1] ?? '')
-        .split(/\r?\n/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-    for (const line of coverAddrExtra) {
+    const coverAddrExtra = String(model.recipientAddressLines[1] ?? '');
+    if (coverAddrExtra) {
         body.push(new Paragraph({
-            children: [new TextRun({ text: line, size: DOC_SIZE, font: DOC_FONT })],
+            children: coverTextRuns(coverAddrExtra),
         }));
     }
 

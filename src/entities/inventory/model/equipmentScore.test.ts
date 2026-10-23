@@ -92,8 +92,8 @@ describe('itemMatchesEquipmentScore', () => {
 
 describe('compareItemsByEquipmentScore', () => {
     it('sorts ascending and descending by score', () => {
-        const low = { purchase_date: null, equipment_class: 'E' as const }; // 2
-        const high = { purchase_date: null, equipment_class: 'A' as const }; // 10
+        const low = { purchase_date: null, equipment_class: 'E' as const };
+        const high = { purchase_date: null, equipment_class: 'A' as const }; 
         expect(compareItemsByEquipmentScore(low, high, 'asc', NOW)).toBeLessThan(0);
         expect(compareItemsByEquipmentScore(low, high, 'desc', NOW)).toBeGreaterThan(0);
     });
