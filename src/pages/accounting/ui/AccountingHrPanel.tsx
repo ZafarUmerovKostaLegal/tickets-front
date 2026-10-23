@@ -20,11 +20,11 @@ import {
     fetchPersonnelPhotoBlob,
     listPersonnelFiles,
     listPersonnelPhotoIndex,
-    setPersonnelPrimaryPhoto,
     uploadPersonnelFile,
     uploadPersonnelPhoto,
     type PersonnelFile,
 } from '@entities/hr';
+import { HrPhotoCropDialog } from './HrPhotoCropDialog';
 import { routes } from '@shared/config';
 import { NavLink } from 'react-router-dom';
 import './AccountingHrPanel.css';
@@ -178,6 +178,7 @@ export function AccountingHrPanel() {
     const docInputRef = useRef<HTMLInputElement>(null);
     const photoInputRef = useRef<HTMLInputElement>(null);
     const uploadSlotRef = useRef<string>('other');
+    const [photoAdjust, setPhotoAdjust] = useState<{ url: string } | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -220,12 +221,12 @@ export function AccountingHrPanel() {
         if (!selected)
             return undefined;
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape')
+            if (event.key === 'Escape' && !photoAdjust)
                 setSelected(null);
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [selected]);
+    }, [photoAdjust, selected]);
 
     useEffect(() => {
         if (!selected) {
@@ -396,9 +397,26 @@ export function AccountingHrPanel() {
         }
     };
 
+    const closePhotoAdjust = () => {
+        setPhotoAdjust((prev) => {
+            if (prev)
+                URL.revokeObjectURL(prev.url);
+            return null;
+        });
+    };
+
+    const openPhotoAdjust = (file: File) => {
+        const url = URL.createObjectURL(file);
+        setPhotoAdjust((prev) => {
+            if (prev)
+                URL.revokeObjectURL(prev.url);
+            return { url };
+        });
+    };
+
     const uploadMainPhoto = async (file: File) => {
         if (!selected)
-            return;
+            return false;
         setDocBusyId('upload-photo');
         setDossierError('');
         try {
@@ -411,9 +429,11 @@ export function AccountingHrPanel() {
                 ],
             }));
             rememberPhoto(created);
+            return true;
         }
         catch (e: unknown) {
             setDossierError(e instanceof Error ? e.message : 'Не удалось загрузить фото');
+            return false;
         }
         finally {
             setDocBusyId(null);
@@ -464,19 +484,11 @@ export function AccountingHrPanel() {
         setDocBusyId(`primary-${file.id}`);
         setDossierError('');
         try {
-            const updated = await setPersonnelPrimaryPhoto(file.userId, file.id);
-            setExtras((prev) => ({
-                ...prev,
-                personnelFiles: prev.personnelFiles.map((item) => (
-                    item.userId === updated.userId
-                        ? { ...item, isPrimary: item.id === updated.id }
-                        : item
-                )),
-            }));
-            rememberPhoto(updated);
+            const blob = await fetchPersonnelFileBlob(file.userId, file.id);
+            openPhotoAdjust(new File([blob], file.filename || 'photo.jpg', { type: blob.type || 'image/jpeg' }));
         }
         catch (e: unknown) {
-            setDossierError(e instanceof Error ? e.message : 'Не удалось сделать фото главным');
+            setDossierError(e instanceof Error ? e.message : 'Не удалось открыть фото');
         }
         finally {
             setDocBusyId(null);
@@ -591,6 +603,20 @@ export function AccountingHrPanel() {
                 </ul>
             )}
 
+            {photoAdjust ? (
+                <HrPhotoCropDialog
+                    src={photoAdjust.url}
+                    busy={docBusyId === 'upload-photo'}
+                    onCancel={closePhotoAdjust}
+                    onSave={(file) => {
+                        void uploadMainPhoto(file).then((ok) => {
+                            if (ok)
+                                closePhotoAdjust();
+                        });
+                    }}
+                />
+            ) : null}
+
             {selected && (
                 <>
                     <button type="button" className="acct-hr__backdrop" aria-label="Закрыть карточку" onClick={() => setSelected(null)} />
@@ -616,7 +642,7 @@ export function AccountingHrPanel() {
                                 const file = event.target.files?.[0];
                                 event.target.value = '';
                                 if (file)
-                                    void uploadMainPhoto(file);
+                                    openPhotoAdjust(file);
                             }}
                         />
                         <div className="acct-hr__drawer-hero">
@@ -741,14 +767,14 @@ export function AccountingHrPanel() {
                                                         </button>
                                                     </div>
                                                     {files.length === 0 ? <em>Нет файла</em> : (
-                                                        <ul className="acct-hr__doc-list">
+                                                        <ul className="acct-hr__file-list">
                                                             {files.map((file) => (
-                                                                <li key={file.id} className="acct-hr__doc-row">
-                                                                    <div>
-                                                                        <strong>{file.filename}</strong>
-                                                                        {file.isPrimary ? <span>Главное фото</span> : null}
-                                                                    </div>
-                                                                    <div className="acct-hr__doc-actions">
+                                                                <li key={file.id} className="acct-hr__file">
+                                                                    <p className="acct-hr__file-name" title={file.filename}>
+                                                                        <span className="acct-hr__file-text">{file.filename}</span>
+                                                                        {file.isPrimary ? <span className="acct-hr__file-badge">Главное фото</span> : null}
+                                                                    </p>
+                                                                    <div className="acct-hr__file-actions">
                                                                         <button
                                                                             type="button"
                                                                             className="acct-hr__doc-btn"
@@ -764,12 +790,12 @@ export function AccountingHrPanel() {
                                                                                 disabled={docBusyId === `primary-${file.id}`}
                                                                                 onClick={() => void makePrimaryPhoto(file)}
                                                                             >
-                                                                                Главное фото
+                                                                                На фото
                                                                             </button>
                                                                         ) : null}
                                                                         <button
                                                                             type="button"
-                                                                            className="acct-hr__doc-btn"
+                                                                            className="acct-hr__doc-btn acct-hr__doc-btn--quiet"
                                                                             disabled={docBusyId === `file-${file.id}`}
                                                                             onClick={() => void removePersonnelDoc(file)}
                                                                         >
