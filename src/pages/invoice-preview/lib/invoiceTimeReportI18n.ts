@@ -64,11 +64,57 @@ export function timeReportServicesMonthYear(
     return formatCoverServicesPeriodFromIsoDates(dates, language);
 }
 
+const MONTH_TOKEN: Record<string, string> = {
+    january: '1', february: '2', march: '3', april: '4', may: '5', june: '6',
+    july: '7', august: '8', september: '9', october: '10', november: '11', december: '12',
+    январь: '1', января: '1', январе: '1',
+    февраль: '2', февраля: '2', феврале: '2',
+    март: '3', марта: '3', марте: '3',
+    апрель: '4', апреля: '4', апреле: '4',
+    май: '5', мая: '5', мае: '5',
+    июнь: '6', июня: '6', июне: '6',
+    июль: '7', июля: '7', июле: '7',
+    август: '8', августа: '8', августе: '8',
+    сентябрь: '9', сентября: '9', сентябре: '9',
+    октябрь: '10', октября: '10', октябре: '10',
+    ноябрь: '11', ноября: '11', ноябре: '11',
+    декабрь: '12', декабря: '12', декабре: '12',
+};
+
+function monthYearPairs(text: string): string[] {
+    const tokens = text.toLowerCase().replace(/ё/g, 'е').split(/[^a-zа-я0-9]+/).filter(Boolean);
+    const pairs: string[] = [];
+    for (let i = 0; i < tokens.length; i += 1) {
+        const month = MONTH_TOKEN[tokens[i] ?? ''];
+        if (!month)
+            continue;
+        const next = tokens[i + 1] ?? '';
+        pairs.push(/^\d{4}$/.test(next) ? `${month}-${next}` : month);
+    }
+    return pairs;
+}
+
 export function isGeneratedTimeReportHeading(title: string | null | undefined): boolean {
     const t = String(title ?? '').replace(/\s+/g, ' ').trim();
     if (!t)
         return false;
     return /^(TIME REPORT FOR SERVICES PROVIDED IN |ОТЧЁТ О ВРЕМЕНИ ЗА УСЛУГИ, ОКАЗАННЫЕ В )/i.test(t);
+}
+
+/** Saved auto-titles that still list months absent from the current rows. */
+export function generatedTitleListsMonthsOutside(title: string, servicesMonthYear: string): boolean {
+    if (!isGeneratedTimeReportHeading(title))
+        return false;
+    const live = new Set(monthYearPairs(servicesMonthYear));
+    if (live.size === 0)
+        return false;
+    return monthYearPairs(title).some((pair) => {
+        if (live.has(pair))
+            return false;
+        if (!pair.includes('-'))
+            return ![...live].some((item) => item === pair || item.startsWith(`${pair}-`));
+        return true;
+    });
 }
 
 export function timeReportHeading(opts: {
@@ -79,7 +125,7 @@ export function timeReportHeading(opts: {
     reportTitleContinued?: string | null;
 }): string {
     const custom = (opts.continuation ? opts.reportTitleContinued : opts.reportTitle) ?? '';
-    if (custom.trim() && !isGeneratedTimeReportHeading(custom))
+    if (custom.trim() && !generatedTitleListsMonthsOutside(custom, opts.servicesMonthYear))
         return custom.replace(/^\s+/, '');
     const labels = getTimeReportLabels(opts.language);
     return opts.continuation

@@ -197,9 +197,19 @@ textarea.tt-inv-tr__title-input {
   color: inherit;
 }
 
+.tt-inv-tr--editable textarea.tt-inv-tr__title-input {
+  border: 1px solid rgba(var(--app-accent-rgb, 79, 70, 229), 0.45);
+  border-radius: 2px;
+  padding: 0.15rem 0.25rem;
+  background: #ffffff;
+  color: var(--tt-inv-paper-ink, #0f172a);
+  text-transform: none;
+  cursor: text;
+}
+
 textarea.tt-inv-tr__title-input:focus {
-  border-color: rgba(232, 51, 55, 0.45);
-  outline: none;
+  outline: 2px solid rgba(var(--app-accent-rgb, 79, 70, 229), 0.35);
+  outline-offset: 0;
 }
 
 .tt-inv-tr__title {

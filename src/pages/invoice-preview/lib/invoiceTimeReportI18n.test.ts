@@ -27,6 +27,12 @@ describe('time report heading period', () => {
             continuation: false,
             reportTitle: pack.reportTitle,
         })).toBe('TIME REPORT FOR SERVICES PROVIDED IN OCTOBER 2026');
+        expect(timeReportHeading({
+            language: 'ENG',
+            servicesMonthYear: 'October 2026',
+            continuation: false,
+            reportTitle: 'TIME REPORT FOR SERVICES PROVIDED IN OCTOBER 2026 — REVISED',
+        })).toBe('TIME REPORT FOR SERVICES PROVIDED IN OCTOBER 2026 — REVISED');
     });
 
     it('keeps a custom title that is not the generated template', () => {
