@@ -44,7 +44,7 @@ function CoverField({
     ariaLabel?: string;
 }) {
     if (!editable) {
-        return <span className={className}>{value}</span>;
+        return <span className={`tt-inv-cover__text${className ? ` ${className}` : ''}`}>{value}</span>;
     }
     return (
         <textarea

@@ -103,6 +103,11 @@
   margin: 0 0 1rem;
 }
 
+.tt-inv-cover__text,
+.tt-inv-cover__para {
+  white-space: pre-wrap;
+}
+
 .tt-inv-cover__para {
   margin: 0 0 1rem;
 }
