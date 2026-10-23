@@ -1326,6 +1326,8 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             searchAria: 'Search invoice registry',
             filterPartner: 'Partner',
             filterPartnerAll: 'All partners',
+            filterClient: 'Client',
+            filterClientAll: 'All clients',
             filterCurrency: 'Currency',
             filterCurrencyAll: 'All currencies',
             filterNumber: 'Number',

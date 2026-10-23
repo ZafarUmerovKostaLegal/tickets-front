@@ -1,1 +1,16 @@
-export { listAccountingSettings, saveAccountingSetting, deleteAccountingSetting, type AccountingSetting } from './api';
+export {
+    listAccountingSettings,
+    saveAccountingSetting,
+    deleteAccountingSetting,
+    listPersonnelFiles,
+    listPersonnelPhotoIndex,
+    uploadPersonnelFile,
+    uploadPersonnelPhoto,
+    setPersonnelPrimaryPhoto,
+    deletePersonnelFile,
+    fetchPersonnelFileBlob,
+    fetchPersonnelPhotoBlob,
+    type AccountingSetting,
+    type PersonnelFile,
+    type PersonnelPhotoIndexItem,
+} from './api';

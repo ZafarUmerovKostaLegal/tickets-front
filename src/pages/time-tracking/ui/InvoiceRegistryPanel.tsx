@@ -689,6 +689,7 @@ export function InvoiceRegistryPanel({
     const [focus, setFocus] = useState<FocusCell>(null);
     const [search, setSearch] = useState('');
     const [partners, setPartners] = useState<Set<string>>(() => new Set());
+    const [clients, setClients] = useState<Set<string>>(() => new Set());
     const [currencies, setCurrencies] = useState<Set<string>>(() => new Set());
     const [numberQuery, setNumberQuery] = useState('');
     const [dateFrom, setDateFrom] = useState('');
@@ -723,6 +724,7 @@ export function InvoiceRegistryPanel({
         setFocus(null);
         setSearch('');
         setPartners(new Set());
+        setClients(new Set());
         setNumberQuery('');
         setDateFrom('');
         setDateTo('');
@@ -863,6 +865,18 @@ export function InvoiceRegistryPanel({
         }
         return [...codes].sort((a, b) => a.localeCompare(b, 'ru'));
     }, [rows]);
+    const clientOptions = useMemo(() => {
+        const byKey = new Map<string, string>();
+        for (const row of rows) {
+            const name = String(row.billedTo ?? '').trim();
+            if (!name)
+                continue;
+            const key = name.toLocaleLowerCase('ru');
+            if (!byKey.has(key))
+                byKey.set(key, name);
+        }
+        return [...byKey.values()].sort((a, b) => a.localeCompare(b, 'ru'));
+    }, [rows]);
     const currencyOptions = useMemo(() => {
         const codes = new Set<string>();
         for (const row of rows) {
@@ -879,17 +893,18 @@ export function InvoiceRegistryPanel({
             return raw.charAt(0).toUpperCase() + raw.slice(1);
         });
     }, [locale]);
-    const filtersActive = partners.size > 0 || currencies.size > 0 || numberQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || months.size > 0;
+    const filtersActive = partners.size > 0 || clients.size > 0 || currencies.size > 0 || numberQuery.trim() !== '' || dateFrom !== '' || dateTo !== '' || months.size > 0;
     const filteredRows = useMemo(() => filterInvoiceRegistryRows(rows, {
         search,
         searchKeys: columnKeys,
         partners,
+        clients,
         currencies,
         numberQuery,
         dateFrom,
         dateTo,
         months,
-    }), [rows, search, columnKeys, partners, currencies, numberQuery, dateFrom, dateTo, months]);
+    }), [rows, search, columnKeys, partners, clients, currencies, numberQuery, dateFrom, dateTo, months]);
 
     const toggleCurrency = (code: string) => {
         setCurrencies((prev) => {
@@ -911,6 +926,16 @@ export function InvoiceRegistryPanel({
             return next;
         });
     };
+    const toggleClient = (name: string) => {
+        setClients((prev) => {
+            const next = new Set(prev);
+            if (next.has(name))
+                next.delete(name);
+            else
+                next.add(name);
+            return next;
+        });
+    };
     const toggleMonth = (month: number) => {
         setMonths((prev) => {
             const next = new Set(prev);
@@ -923,6 +948,7 @@ export function InvoiceRegistryPanel({
     };
     const clearFilters = () => {
         setPartners(new Set());
+        setClients(new Set());
         setCurrencies(new Set());
         setNumberQuery('');
         setDateFrom('');
@@ -1176,6 +1202,20 @@ export function InvoiceRegistryPanel({
                     ))}
                 </select>
                 <select
+                    className="tt-inv-reg__filter tt-inv-reg__filter--client"
+                    value=""
+                    aria-label={t('timeTrackingPage.invoices.registry.filterClient')}
+                    onChange={(e) => {
+                        if (e.target.value)
+                            toggleClient(e.target.value);
+                    }}
+                >
+                    <option value="">{t('timeTrackingPage.invoices.registry.filterClientAll')}</option>
+                    {clientOptions.map((name) => (
+                        <option key={name} value={name}>{clients.has(name) ? `✓ ${name}` : name}</option>
+                    ))}
+                </select>
+                <select
                     className="tt-inv-reg__filter"
                     value=""
                     aria-label={t('timeTrackingPage.invoices.registry.filterCurrency')}
@@ -1237,11 +1277,17 @@ export function InvoiceRegistryPanel({
                         {t('timeTrackingPage.invoices.registry.filterClear')}
                     </button>
                 )}
-                {(partners.size > 0 || currencies.size > 0 || months.size > 0) && (
+                {(partners.size > 0 || clients.size > 0 || currencies.size > 0 || months.size > 0) && (
                     <div className="tt-inv-reg__chips">
                         {[...partners].map((code) => (
                             <button key={code} type="button" className="tt-inv-reg__chip" onClick={() => togglePartner(code)}>
                                 {code}
+                                <span aria-hidden>×</span>
+                            </button>
+                        ))}
+                        {[...clients].map((name) => (
+                            <button key={name} type="button" className="tt-inv-reg__chip" onClick={() => toggleClient(name)}>
+                                {name}
                                 <span aria-hidden>×</span>
                             </button>
                         ))}

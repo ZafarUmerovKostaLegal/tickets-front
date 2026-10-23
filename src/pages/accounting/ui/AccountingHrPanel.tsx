@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getUsers, type User } from '@entities/user';
 import { fetchInternalExtensions, type InternalExtension } from '@entities/internal-communication';
 import { getItems, type InventoryItem } from '@entities/inventory';
@@ -14,6 +14,17 @@ import {
     type VacationManualEntryApi,
     type VacationScheduleEmployeeApi,
 } from '@entities/vacation';
+import {
+    deletePersonnelFile,
+    fetchPersonnelFileBlob,
+    fetchPersonnelPhotoBlob,
+    listPersonnelFiles,
+    listPersonnelPhotoIndex,
+    setPersonnelPrimaryPhoto,
+    uploadPersonnelFile,
+    uploadPersonnelPhoto,
+    type PersonnelFile,
+} from '@entities/hr';
 import { routes } from '@shared/config';
 import { NavLink } from 'react-router-dom';
 import './AccountingHrPanel.css';
@@ -68,15 +79,52 @@ function roleTone(role: string): 'partner' | 'admin' | 'staff' {
     return 'staff';
 }
 
-function PersonPhoto({ user, size }: { user: User; size: 'card' | 'hero' | 'sm' }) {
-    const picture = user.picture?.trim();
+const photoBlobUrls = new Map<string, string>();
+
+function useAuthImage(userId: number, version: string | null): string | null {
+    const cacheKey = version ? `${userId}:${version}` : '';
+    const [src, setSrc] = useState<string | null>(() => (cacheKey ? photoBlobUrls.get(cacheKey) ?? null : null));
+    useEffect(() => {
+        if (!cacheKey || !version) {
+            setSrc(null);
+            return undefined;
+        }
+        const cached = photoBlobUrls.get(cacheKey);
+        if (cached) {
+            setSrc(cached);
+            return undefined;
+        }
+        let cancel = false;
+        void fetchPersonnelPhotoBlob(userId, version).then((blob) => {
+            const url = URL.createObjectURL(blob);
+            photoBlobUrls.set(cacheKey, url);
+            if (!cancel)
+                setSrc(url);
+        }).catch(() => {
+            if (!cancel)
+                setSrc(null);
+        });
+        return () => {
+            cancel = true;
+        };
+    }, [cacheKey, userId, version]);
+    return src;
+}
+
+function PersonPhoto({ user, size, photoVersion }: { user: User; size: 'card' | 'hero' | 'sm'; photoVersion?: string | null }) {
+    const uploaded = useAuthImage(user.id, photoVersion ?? null);
+    const picture = uploaded || (photoVersion ? '' : user.picture?.trim()) || '';
     return (
         <span className={`acct-hr__photo acct-hr__photo--${size}${picture ? '' : ' acct-hr__photo--fallback'}`}>
             {picture
-                ? <img src={picture} alt="" loading="lazy" />
+                ? <img src={picture} alt="" />
                 : <span aria-hidden>{initials(user)}</span>}
         </span>
     );
+}
+
+function isPersonnelImage(file: PersonnelFile): boolean {
+    return /\.(jpe?g|png|webp|gif)$/i.test(file.filename) || (file.contentType ?? '').startsWith('image/');
 }
 
 const DOSSIER_SLOTS = [
@@ -84,6 +132,7 @@ const DOSSIER_SLOTS = [
     { id: 'id', title: 'Документ, удостоверяющий личность', hint: 'Паспорт / ID — сканы для кадрового дела' },
     { id: 'education', title: 'Образование', hint: 'Дипломы и сертификаты' },
     { id: 'medical', title: 'Медицинские справки', hint: 'При необходимости по должности' },
+    { id: 'other', title: 'Прочие документы', hint: 'Любые дополнительные файлы личного дела' },
 ] as const;
 
 type ProfileExtras = {
@@ -93,6 +142,7 @@ type ProfileExtras = {
     leaveRequests: VacationLeaveRequestApi[];
     absences: VacationAbsenceDayApi[];
     manualEntries: VacationManualEntryApi[];
+    personnelFiles: PersonnelFile[];
     scheduleEmployee: VacationScheduleEmployeeApi | null;
     error: string;
 };
@@ -104,6 +154,7 @@ const EMPTY_EXTRAS: ProfileExtras = {
     leaveRequests: [],
     absences: [],
     manualEntries: [],
+    personnelFiles: [],
     scheduleEmployee: null,
     error: '',
 };
@@ -122,6 +173,11 @@ export function AccountingHrPanel() {
     const [tab, setTab] = useState<DrawerTab>('profile');
     const [extras, setExtras] = useState<ProfileExtras>(EMPTY_EXTRAS);
     const [docBusyId, setDocBusyId] = useState<string | null>(null);
+    const [dossierError, setDossierError] = useState('');
+    const [photoVersions, setPhotoVersions] = useState<Record<number, string>>({});
+    const docInputRef = useRef<HTMLInputElement>(null);
+    const photoInputRef = useRef<HTMLInputElement>(null);
+    const uploadSlotRef = useRef<string>('other');
 
     useEffect(() => {
         let cancelled = false;
@@ -143,6 +199,14 @@ export function AccountingHrPanel() {
             }
             if (extResult.status === 'fulfilled')
                 setExtensions(extResult.value);
+            void listPersonnelPhotoIndex().then((items) => {
+                if (cancelled)
+                    return;
+                const next: Record<number, string> = {};
+                for (const item of items)
+                    next[item.userId] = item.updatedAt;
+                setPhotoVersions(next);
+            }).catch(() => undefined);
         }).finally(() => {
             if (!cancelled)
                 setLoading(false);
@@ -171,13 +235,15 @@ export function AccountingHrPanel() {
         }
         let cancelled = false;
         const userId = selected.id;
+        setDossierError('');
         setExtras({ ...EMPTY_EXTRAS, loading: true, extension: matchExtension(selected, extensions)?.extension ?? null });
         void (async () => {
             try {
-                const [equipPage, leaveAll, schedule] = await Promise.all([
+                const [equipPage, leaveAll, schedule, personnelFiles] = await Promise.all([
                     getItems({ assigned_to_user_id: userId, limit: 100 }).catch(() => ({ items: [] as InventoryItem[] })),
                     listVacationLeaveRequests({ scope: 'all', status: 'any' }).catch(() => [] as VacationLeaveRequestApi[]),
                     listVacationScheduleEmployees(year).catch(() => [] as VacationScheduleEmployeeApi[]),
+                    listPersonnelFiles(userId).catch(() => [] as PersonnelFile[]),
                 ]);
                 if (cancelled)
                     return;
@@ -202,6 +268,7 @@ export function AccountingHrPanel() {
                     leaveRequests,
                     absences,
                     manualEntries,
+                    personnelFiles,
                     scheduleEmployee,
                     error: '',
                 });
@@ -256,7 +323,7 @@ export function AccountingHrPanel() {
     }, [people, query, position, access, sort]);
 
     const stats = useMemo(() => {
-        const withPhoto = people.filter((u) => Boolean(u.picture?.trim())).length;
+        const withPhoto = people.filter((u) => Boolean(photoVersions[u.id] || u.picture?.trim())).length;
         const partners = people.filter((u) => roleTone(u.role) === 'partner').length;
         return {
             total: people.length,
@@ -264,7 +331,7 @@ export function AccountingHrPanel() {
             partners,
             positions: positions.length,
         };
-    }, [people, positions.length]);
+    }, [people, photoVersions, positions.length]);
 
     const openPdf = async (requestId: number) => {
         setDocBusyId(`leave-${requestId}`);
@@ -298,7 +365,126 @@ export function AccountingHrPanel() {
         }
     };
 
+    const rememberPhoto = (file: PersonnelFile) => {
+        if (!file.isPrimary || !file.createdAt)
+            return;
+        setPhotoVersions((prev) => ({ ...prev, [file.userId]: file.createdAt! }));
+        setExtras((prev) => ({
+            ...prev,
+            personnelFiles: prev.personnelFiles.map((item) => (
+                item.userId === file.userId ? { ...item, isPrimary: item.id === file.id } : item
+            )),
+        }));
+    };
+
+    const uploadDossierFiles = async (slot: string, files: File[]) => {
+        if (!selected || files.length === 0)
+            return;
+        setDocBusyId(`upload-${slot}`);
+        setDossierError('');
+        try {
+            const created: PersonnelFile[] = [];
+            for (const file of files)
+                created.push(await uploadPersonnelFile(selected.id, slot, file));
+            setExtras((prev) => ({ ...prev, personnelFiles: [...created, ...prev.personnelFiles] }));
+        }
+        catch (e: unknown) {
+            setDossierError(e instanceof Error ? e.message : 'Не удалось загрузить файл');
+        }
+        finally {
+            setDocBusyId(null);
+        }
+    };
+
+    const uploadMainPhoto = async (file: File) => {
+        if (!selected)
+            return;
+        setDocBusyId('upload-photo');
+        setDossierError('');
+        try {
+            const created = await uploadPersonnelPhoto(selected.id, file);
+            setExtras((prev) => ({
+                ...prev,
+                personnelFiles: [
+                    created,
+                    ...prev.personnelFiles.filter((item) => item.slot !== 'photo'),
+                ],
+            }));
+            rememberPhoto(created);
+        }
+        catch (e: unknown) {
+            setDossierError(e instanceof Error ? e.message : 'Не удалось загрузить фото');
+        }
+        finally {
+            setDocBusyId(null);
+        }
+    };
+
+    const openPersonnelDoc = async (file: PersonnelFile) => {
+        setDocBusyId(`file-${file.id}`);
+        try {
+            const blob = await fetchPersonnelFileBlob(file.userId, file.id);
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank', 'noopener,noreferrer');
+            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        }
+        catch (e: unknown) {
+            setDossierError(e instanceof Error ? e.message : 'Не удалось открыть файл');
+        }
+        finally {
+            setDocBusyId(null);
+        }
+    };
+
+    const removePersonnelDoc = async (file: PersonnelFile) => {
+        setDocBusyId(`file-${file.id}`);
+        setDossierError('');
+        try {
+            await deletePersonnelFile(file.userId, file.id);
+            setExtras((prev) => ({
+                ...prev,
+                personnelFiles: prev.personnelFiles.filter((item) => item.id !== file.id),
+            }));
+            if (file.isPrimary)
+                setPhotoVersions((prev) => {
+                    const next = { ...prev };
+                    delete next[file.userId];
+                    return next;
+                });
+        }
+        catch (e: unknown) {
+            setDossierError(e instanceof Error ? e.message : 'Не удалось удалить файл');
+        }
+        finally {
+            setDocBusyId(null);
+        }
+    };
+
+    const makePrimaryPhoto = async (file: PersonnelFile) => {
+        setDocBusyId(`primary-${file.id}`);
+        setDossierError('');
+        try {
+            const updated = await setPersonnelPrimaryPhoto(file.userId, file.id);
+            setExtras((prev) => ({
+                ...prev,
+                personnelFiles: prev.personnelFiles.map((item) => (
+                    item.userId === updated.userId
+                        ? { ...item, isPrimary: item.id === updated.id }
+                        : item
+                )),
+            }));
+            rememberPhoto(updated);
+        }
+        catch (e: unknown) {
+            setDossierError(e instanceof Error ? e.message : 'Не удалось сделать фото главным');
+        }
+        finally {
+            setDocBusyId(null);
+        }
+    };
+
     const docCount = extras.leaveRequests.length
+        + extras.personnelFiles.filter((file) => file.slot !== 'photo').length
         + extras.manualEntries.reduce((sum, entry) => sum + (entry.documents?.length ?? 0), 0);
 
     return (
@@ -390,7 +576,7 @@ export function AccountingHrPanel() {
                         return (
                             <li key={user.id}>
                                 <button type="button" className="acct-hr__card" onClick={() => setSelected(user)}>
-                                    <PersonPhoto user={user} size="card" />
+                                    <PersonPhoto user={user} size="card" photoVersion={photoVersions[user.id]} />
                                     <span className="acct-hr__card-body">
                                         <span className="acct-hr__card-name">{personName(user)}</span>
                                         <span className="acct-hr__card-position">{user.position || 'Должность не указана'}</span>
@@ -409,8 +595,42 @@ export function AccountingHrPanel() {
                 <>
                     <button type="button" className="acct-hr__backdrop" aria-label="Закрыть карточку" onClick={() => setSelected(null)} />
                     <aside className="acct-hr__drawer" role="dialog" aria-modal="true" aria-labelledby="acct-hr-drawer-title">
+                        <input
+                            ref={docInputRef}
+                            type="file"
+                            hidden
+                            multiple
+                            accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.heic,.doc,.docx,.xls,.xlsx,.txt"
+                            onChange={(event) => {
+                                const files = [...(event.target.files ?? [])];
+                                event.target.value = '';
+                                void uploadDossierFiles(uploadSlotRef.current, files);
+                            }}
+                        />
+                        <input
+                            ref={photoInputRef}
+                            type="file"
+                            hidden
+                            accept="image/jpeg,image/png,image/webp,image/gif,.jpg,.jpeg,.png,.webp,.gif"
+                            onChange={(event) => {
+                                const file = event.target.files?.[0];
+                                event.target.value = '';
+                                if (file)
+                                    void uploadMainPhoto(file);
+                            }}
+                        />
                         <div className="acct-hr__drawer-hero">
-                            <PersonPhoto user={selected} size="hero" />
+                            <div className="acct-hr__photo-wrap">
+                                <PersonPhoto user={selected} size="hero" photoVersion={photoVersions[selected.id]} />
+                                <button
+                                    type="button"
+                                    className="acct-hr__photo-btn"
+                                    disabled={docBusyId === 'upload-photo'}
+                                    onClick={() => photoInputRef.current?.click()}
+                                >
+                                    {photoVersions[selected.id] ? 'Сменить фото' : 'Главное фото'}
+                                </button>
+                            </div>
                             <div className="acct-hr__drawer-hero-text">
                                 <h2 id="acct-hr-drawer-title" className="acct-hr__drawer-name">{personName(selected)}</h2>
                                 <p className="acct-hr__drawer-position">{selected.position || 'Должность не указана'}</p>
@@ -441,6 +661,7 @@ export function AccountingHrPanel() {
                         </nav>
 
                         <div className="acct-hr__drawer-body">
+                            {dossierError ? <p className="acct-hr__error" role="alert">{dossierError}</p> : null}
                             {extras.loading ? <p className="acct-hr__muted">Загрузка данных сотрудника…</p> : null}
                             {extras.error ? <p className="acct-hr__error" role="alert">{extras.error}</p> : null}
 
@@ -494,20 +715,74 @@ export function AccountingHrPanel() {
                             {!extras.loading && tab === 'documents' && (
                                 <div className="acct-hr__docs">
                                     <p className="acct-hr__muted">
-                                        Живые файлы из заявок на отпуск и оснований отсутствий. Шаблоны кадрового досье —
-                                        структура под полноценный HR-архив (загрузка личного дела подключится отдельным API).
+                                        Загрузите файлы личного дела по разделам. Изображение можно сделать главным фото карточки.
                                     </p>
                                     <h3 className="acct-hr__block-title">Кадровое досье</h3>
                                     <ul className="acct-hr__doc-slots">
-                                        {DOSSIER_SLOTS.map((slot) => (
-                                            <li key={slot.id} className="acct-hr__doc-slot">
-                                                <div>
-                                                    <strong>{slot.title}</strong>
-                                                    <span>{slot.hint}</span>
-                                                </div>
-                                                <em>Нет файла</em>
-                                            </li>
-                                        ))}
+                                        {DOSSIER_SLOTS.map((slot) => {
+                                            const files = extras.personnelFiles.filter((file) => file.slot === slot.id);
+                                            return (
+                                                <li key={slot.id} className="acct-hr__doc-slot">
+                                                    <div className="acct-hr__doc-slot-head">
+                                                        <div>
+                                                            <strong>{slot.title}</strong>
+                                                            <span>{slot.hint}</span>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            className="acct-hr__doc-btn"
+                                                            disabled={docBusyId === `upload-${slot.id}`}
+                                                            onClick={() => {
+                                                                uploadSlotRef.current = slot.id;
+                                                                docInputRef.current?.click();
+                                                            }}
+                                                        >
+                                                            Загрузить
+                                                        </button>
+                                                    </div>
+                                                    {files.length === 0 ? <em>Нет файла</em> : (
+                                                        <ul className="acct-hr__doc-list">
+                                                            {files.map((file) => (
+                                                                <li key={file.id} className="acct-hr__doc-row">
+                                                                    <div>
+                                                                        <strong>{file.filename}</strong>
+                                                                        {file.isPrimary ? <span>Главное фото</span> : null}
+                                                                    </div>
+                                                                    <div className="acct-hr__doc-actions">
+                                                                        <button
+                                                                            type="button"
+                                                                            className="acct-hr__doc-btn"
+                                                                            disabled={docBusyId === `file-${file.id}`}
+                                                                            onClick={() => void openPersonnelDoc(file)}
+                                                                        >
+                                                                            Открыть
+                                                                        </button>
+                                                                        {isPersonnelImage(file) && !file.isPrimary ? (
+                                                                            <button
+                                                                                type="button"
+                                                                                className="acct-hr__doc-btn"
+                                                                                disabled={docBusyId === `primary-${file.id}`}
+                                                                                onClick={() => void makePrimaryPhoto(file)}
+                                                                            >
+                                                                                Главное фото
+                                                                            </button>
+                                                                        ) : null}
+                                                                        <button
+                                                                            type="button"
+                                                                            className="acct-hr__doc-btn"
+                                                                            disabled={docBusyId === `file-${file.id}`}
+                                                                            onClick={() => void removePersonnelDoc(file)}
+                                                                        >
+                                                                            Удалить
+                                                                        </button>
+                                                                    </div>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    )}
+                                                </li>
+                                            );
+                                        })}
                                     </ul>
 
                                     <h3 className="acct-hr__block-title">Заявления на отпуск</h3>

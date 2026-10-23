@@ -1324,6 +1324,8 @@ export const timeTrackingPageExtraMessages = {
             searchAria: 'Поиск по реестру инвойсов',
             filterPartner: 'Партнёр',
             filterPartnerAll: 'Все партнёры',
+            filterClient: 'Клиент',
+            filterClientAll: 'Все клиенты',
             filterCurrency: 'Валюта',
             filterCurrencyAll: 'Все валюты',
             filterNumber: 'Номер',

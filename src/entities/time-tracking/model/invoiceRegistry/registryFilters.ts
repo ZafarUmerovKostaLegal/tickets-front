@@ -30,6 +30,7 @@ export type InvoiceRegistryFilter = {
     search?: string;
     searchKeys?: readonly string[];
     partners?: ReadonlySet<string>;
+    clients?: ReadonlySet<string>;
     currencies?: ReadonlySet<string>;
     numberQuery?: string;
     dateFrom?: string;
@@ -44,12 +45,14 @@ export function filterInvoiceRegistryRows(
     const search = (filter.search ?? '').trim().toLowerCase();
     const searchKeys = filter.searchKeys ?? [];
     const partners = filter.partners ?? new Set<string>();
+    const clients = filter.clients ?? new Set<string>();
     const currencies = filter.currencies ?? new Set<string>();
     const numberQuery = (filter.numberQuery ?? '').trim().toLowerCase();
     const from = parseRegistryDay(filter.dateFrom ?? '');
     const to = parseRegistryDay(filter.dateTo ?? '');
     const months = filter.months ?? new Set<number>();
     const partnerNeedles = new Set([...partners].map((code) => code.trim().toUpperCase()).filter(Boolean));
+    const clientNeedles = new Set([...clients].map((name) => name.trim().toLocaleLowerCase('ru')).filter(Boolean));
     const currencyNeedles = new Set([...currencies].map((code) => code.trim().toUpperCase()).filter(Boolean));
 
     return rows.filter((row) => {
@@ -58,6 +61,11 @@ export function filterInvoiceRegistryRows(
         if (partnerNeedles.size > 0) {
             const code = String(row.partner ?? '').trim().toUpperCase();
             if (!partnerNeedles.has(code))
+                return false;
+        }
+        if (clientNeedles.size > 0) {
+            const name = String(row.billedTo ?? '').trim().toLocaleLowerCase('ru');
+            if (!clientNeedles.has(name))
                 return false;
         }
         if (currencyNeedles.size > 0) {

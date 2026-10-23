@@ -52,6 +52,11 @@ describe('filterInvoiceRegistryRows', () => {
         expect(matched.map((item) => item.id)).toEqual(['1', '2']);
     });
 
+    it('keeps the selected clients', () => {
+        expect(filterInvoiceRegistryRows(sample, { clients: new Set(['adb water']) }).map((item) => item.id)).toEqual(['1']);
+        expect(filterInvoiceRegistryRows(sample, { clients: new Set(['ADB Water', 'Hospital PPP']) }).map((item) => item.id)).toEqual(['1', '2']);
+    });
+
     it('keeps the selected currencies', () => {
         expect(filterInvoiceRegistryRows(sample, { currencies: new Set(['eur']) }).map((item) => item.id)).toEqual(['2']);
         expect(filterInvoiceRegistryRows(sample, { currencies: new Set(['USD', 'EUR']) }).map((item) => item.id)).toEqual(['1', '2']);

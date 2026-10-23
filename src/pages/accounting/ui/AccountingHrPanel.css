@@ -557,8 +557,61 @@ body[data-theme='dark'] .acct-hr {
   background: var(--hr-card-bg);
 }
 
-.acct-hr__doc-slot div,
-.acct-hr__doc-row div,
+.acct-hr__doc-slot {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.acct-hr__doc-slot-head,
+.acct-hr__doc-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.acct-hr__doc-slot-head {
+  justify-content: space-between;
+  width: 100%;
+}
+
+.acct-hr__doc-actions {
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.acct-hr__doc-slot .acct-hr__doc-list {
+  width: 100%;
+}
+
+.acct-hr__photo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.acct-hr__photo-btn {
+  height: 30px;
+  padding: 0 0.65rem;
+  border: 1px solid color-mix(in srgb, var(--hr-accent) 35%, var(--hr-border));
+  border-radius: 8px;
+  background: var(--hr-accent-soft);
+  color: #7a6835;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.acct-hr__photo-btn:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.acct-hr__doc-slot div:not(.acct-hr__doc-slot-head):not(.acct-hr__doc-actions),
+.acct-hr__doc-row div:not(.acct-hr__doc-actions),
 .acct-hr__equip-row,
 .acct-hr__leave-row {
   display: flex;
