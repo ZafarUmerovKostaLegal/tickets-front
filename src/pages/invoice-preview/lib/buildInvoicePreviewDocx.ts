@@ -41,7 +41,7 @@ import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { combinedReportDocxChildren } from './combinedReportDocx';
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
-import { getTimeReportLabels, timeReportHeading } from './invoiceTimeReportI18n';
+import { getTimeReportLabels, timeReportHeading, timeReportServicesMonthYear } from './invoiceTimeReportI18n';
 import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels, uppercaseLegalDateDisplay } from './invoiceLegalPageI18n';
 import {
@@ -383,7 +383,7 @@ function timeReportDocxSectionChildren(
 
     const titleText = timeReportHeading({
         language: model.coverLanguage,
-        servicesMonthYear: model.servicesMonthYear,
+        servicesMonthYear: timeReportServicesMonthYear(pack, model.servicesMonthYear, model.coverLanguage),
         continuation: opts.continuation,
         reportTitle: pack.reportTitle,
         reportTitleContinued: pack.reportTitleContinued,

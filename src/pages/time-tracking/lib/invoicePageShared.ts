@@ -192,6 +192,19 @@ export function fmtDisplayDate(iso: string, locale: AppLocale): string {
   return d.toLocaleDateString(localeTag(locale), { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+/** First and last valid ISO dates from work/expense lines. */
+export function billingPeriodBoundsFromIsoDates(
+  dates: readonly string[],
+): { from: string; to: string } | null {
+  const valid = dates
+    .map((d) => String(d ?? '').trim().slice(0, 10))
+    .filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d))
+    .sort();
+  if (valid.length === 0)
+    return null;
+  return { from: valid[0]!, to: valid[valid.length - 1]! };
+}
+
 /** Pick billing-period anchor ISO from work/expense dates (densest month, latest day). */
 export function inferBillingPeriodIsoFromDates(dates: readonly string[]): string | null {
   const valid = dates

@@ -4,6 +4,7 @@ import {
     applyCoverLetterLanguage,
     formatCoverLetterDate,
     formatCoverServicesPeriod,
+    formatCoverServicesPeriodFromIsoDates,
     formatCoverServicesPeriodRange,
     resolveLocalizedCoverIntroParagraph,
     resolveLocalizedCoverInvoiceParagraph,
@@ -63,6 +64,11 @@ describe('invoiceCoverLetterI18n', () => {
         expect(formatCoverLetterDate('2026-07-20', 'RU')).toContain('июл');
         expect(formatCoverServicesPeriod('2026-07-20', 'ENG')).toBe('July 2026');
         expect(formatCoverServicesPeriodRange('2026-07-01', '2026-08-31', 'ENG')).toBe('July and August 2026');
+        expect(formatCoverServicesPeriodFromIsoDates(['2026-10-16', '2026-10-19'], 'ENG')).toBe('October 2026');
+        expect(formatCoverServicesPeriodFromIsoDates(
+            ['2016-10-18', '2026-10-16'],
+            'ENG',
+        )).toBe('October 2016 and October 2026');
         expect(formatCoverServicesPeriodRange('2026-07-01', '2026-08-31', 'RU')).toBe('июле и августе 2026 года');
         expect(buildInvoiceCoverLetterModel({
             issueDateIso: '2026-09-04',

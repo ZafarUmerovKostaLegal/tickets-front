@@ -237,24 +237,27 @@ function mergeTimeRowsKeepLiveDescription(
         return [...saved];
     if (!trimTrailingEmptyDetailSlots(saved).length)
         return liveRows;
+    const savedRows = trimTrailingEmptyDetailSlots(saved);
     const used = new Set<number>();
-    return saved.map((savedRow) => {
-        const match = liveRows.findIndex((liveRow, index) => (
+    return liveRows.map((liveRow) => {
+        const match = savedRows.findIndex((savedRow, index) => (
             !used.has(index) && sameTimeReportLine(liveRow, savedRow)
         ));
         if (match < 0)
-            return savedRow;
+            return liveRow;
         used.add(match);
-        const liveTask = liveRows[match]!.task.trim();
+        const savedRow = savedRows[match]!;
+        const liveTask = liveRow.task.trim();
         const savedTask = savedRow.task.trim();
         const savedNote = savedRow.description.trim();
         const savedTaskIsNote = Boolean(savedTask) && Boolean(savedNote)
             && savedTask.toLowerCase() === savedNote.toLowerCase();
+        const withSavedWording = { ...liveRow, description: savedRow.description };
         if (!liveTask)
-            return savedTaskIsNote ? { ...savedRow, task: '' } : savedRow;
+            return savedTaskIsNote ? { ...withSavedWording, task: '' } : { ...withSavedWording, task: savedRow.task };
         if (liveTask === savedTask)
-            return savedRow;
-        return { ...savedRow, task: liveTask };
+            return withSavedWording;
+        return { ...withSavedWording, task: liveTask };
     });
 }
 

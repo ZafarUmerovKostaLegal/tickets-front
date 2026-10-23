@@ -153,17 +153,51 @@ export function formatCoverServicesPeriodRange(
             break;
     }
 
-    const sameYear = start.year === end.year;
+    return formatMonthPoints(points, lang);
+}
+
+function formatMonthPoints(
+    points: { year: number; month: number }[],
+    lang: InvoiceCoverLanguage,
+): string {
+    if (points.length === 0)
+        return formatCoverServicesPeriod('', lang);
+    if (points.length === 1) {
+        const p = points[0]!;
+        const iso = `${p.year}-${String(p.month + 1).padStart(2, '0')}-01`;
+        return formatCoverServicesPeriod(iso, lang);
+    }
+    const sameYear = points[0]!.year === points[points.length - 1]!.year;
     if (lang === 'RU') {
         const names = points.map((p) => RU_MONTH_GENITIVE[p.month] ?? 'месяце');
         if (sameYear)
-            return `${joinWithAnd(names, 'и')} ${end.year} года`;
+            return `${joinWithAnd(names, 'и')} ${points[points.length - 1]!.year} года`;
         return joinWithAnd(points.map((p) => `${RU_MONTH_GENITIVE[p.month] ?? 'месяце'} ${p.year} года`), 'и');
     }
     const names = points.map((p) => EN_MONTHS[p.month] ?? 'Month');
     if (sameYear)
-        return `${joinWithAnd(names, 'and')} ${end.year}`;
+        return `${joinWithAnd(names, 'and')} ${points[points.length - 1]!.year}`;
     return joinWithAnd(points.map((p) => `${EN_MONTHS[p.month] ?? 'Month'} ${p.year}`), 'and');
+}
+
+/** Months that actually appear in the given ISO dates — not the loaded from/to window. */
+export function formatCoverServicesPeriodFromIsoDates(
+    dates: readonly string[],
+    lang: InvoiceCoverLanguage,
+): string {
+    const keys = new Set<string>();
+    for (const raw of dates) {
+        const point = parseIsoMonth(raw);
+        if (point)
+            keys.add(`${point.year}-${String(point.month).padStart(2, '0')}`);
+    }
+    const points = [...keys]
+        .sort()
+        .map((key) => {
+            const [year, month] = key.split('-').map(Number);
+            return { year: year ?? 0, month: month ?? 0 };
+        });
+    return formatMonthPoints(points, lang);
 }
 
 /** Parse "USD 596.61" / "EUR 3,250.50" from cover letter money text. */

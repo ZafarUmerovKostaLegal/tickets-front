@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, type ChangeEvent } from 'react';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
-import { getTimeReportLabels, timeReportHeading } from '../lib/invoiceTimeReportI18n';
+import { getTimeReportLabels, timeReportHeading, timeReportServicesMonthYear } from '../lib/invoiceTimeReportI18n';
 import { joinServiceInitiatorName, splitServiceInitiatorName } from '../lib/splitServiceInitiatorName';
 import './InvoiceTimeReportPage.css';
 
@@ -220,7 +220,7 @@ export function InvoiceTimeReportPage({
     const showMainTimeTable = !summaryOnly && (detailHasContent || mehnat.length === 0);
     const title = timeReportHeading({
         language: model.coverLanguage,
-        servicesMonthYear: model.servicesMonthYear,
+        servicesMonthYear: timeReportServicesMonthYear(pack, model.servicesMonthYear, model.coverLanguage),
         continuation,
         reportTitle: pack.reportTitle,
         reportTitleContinued: pack.reportTitleContinued,

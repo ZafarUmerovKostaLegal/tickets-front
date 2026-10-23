@@ -2,9 +2,11 @@ import {
     INVOICE_DESCRIPTION_TASK_PREFIXES,
 } from '@pages/time-tracking/lib/invoiceClientDescription';
 import {
+    formatCoverServicesPeriodFromIsoDates,
     normalizeCoverLanguage,
     type InvoiceCoverLanguage,
 } from './invoiceCoverLetterI18n';
+import type { InvoiceTimeReportDetailRow, InvoiceTimeReportPack } from './invoiceTimeReportModel';
 
 export type TimeReportLabels = {
     confidential: string;
@@ -28,6 +30,47 @@ export type TimeReportLabels = {
     totalPrice: (currency: string) => string;
 };
 
+export function isoDateFromTimeReportDisplay(display: string): string | null {
+    const raw = String(display ?? '').trim();
+    const dmy = raw.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+    if (dmy)
+        return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+    const iso = raw.slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : null;
+}
+
+function isoDatesFromTimeReportRows(rows: readonly InvoiceTimeReportDetailRow[] | undefined): string[] {
+    const out: string[] = [];
+    for (const row of rows ?? []) {
+        const iso = isoDateFromTimeReportDisplay(row.date);
+        if (iso)
+            out.push(iso);
+    }
+    return out;
+}
+
+export function timeReportServicesMonthYear(
+    pack: Pick<InvoiceTimeReportPack, 'detailSlots' | 'expenseSlots' | 'mehnatSlots'>,
+    fallback: string,
+    language: InvoiceCoverLanguage,
+): string {
+    const dates = [
+        ...isoDatesFromTimeReportRows(pack.detailSlots),
+        ...isoDatesFromTimeReportRows(pack.expenseSlots),
+        ...isoDatesFromTimeReportRows(pack.mehnatSlots),
+    ];
+    if (dates.length === 0)
+        return fallback;
+    return formatCoverServicesPeriodFromIsoDates(dates, language);
+}
+
+export function isGeneratedTimeReportHeading(title: string | null | undefined): boolean {
+    const t = String(title ?? '').replace(/\s+/g, ' ').trim();
+    if (!t)
+        return false;
+    return /^(TIME REPORT FOR SERVICES PROVIDED IN |ОТЧЁТ О ВРЕМЕНИ ЗА УСЛУГИ, ОКАЗАННЫЕ В )/i.test(t);
+}
+
 export function timeReportHeading(opts: {
     language: InvoiceCoverLanguage;
     servicesMonthYear: string;
@@ -36,7 +79,7 @@ export function timeReportHeading(opts: {
     reportTitleContinued?: string | null;
 }): string {
     const custom = (opts.continuation ? opts.reportTitleContinued : opts.reportTitle) ?? '';
-    if (custom.trim())
+    if (custom.trim() && !isGeneratedTimeReportHeading(custom))
         return custom.replace(/^\s+/, '');
     const labels = getTimeReportLabels(opts.language);
     return opts.continuation

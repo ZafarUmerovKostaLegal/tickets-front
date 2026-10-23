@@ -1,6 +1,14 @@
-import { getInvoice, getTimeManagerClient, listAllClientProjectsMerged, listTimeTrackingUsers, readProjectRecordsLanguage } from '@entities/time-tracking';
+import {
+    fetchUnbilledExpenses,
+    fetchUnbilledTimeEntries,
+    getInvoice,
+    getTimeManagerClient,
+    listAllClientProjectsMerged,
+    listTimeTrackingUsers,
+    readProjectRecordsLanguage,
+} from '@entities/time-tracking';
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
-import { inferBillingPeriodIsoFromDates } from '@pages/time-tracking/lib/invoicePageShared';
+import { billingPeriodBoundsFromIsoDates, inferBillingPeriodIsoFromDates } from '@pages/time-tracking/lib/invoicePageShared';
 import { buildInvoiceCoverLetterModel, KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { coverLanguageFromRecordsLanguage, type InvoiceCoverLanguage } from './invoiceCoverLetterI18n';
 import {
@@ -138,11 +146,14 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
                 return out;
             });
             const inferred = inferBillingPeriodIsoFromDates(lineDates);
-            const fromOk = /^\d{4}-\d{2}-\d{2}$/.test(periodFrom);
-            const toOk = /^\d{4}-\d{2}-\d{2}$/.test(periodTo);
-            const spansMonths = fromOk && toOk && periodFrom.slice(0, 7) !== periodTo.slice(0, 7);
+            const lineBounds = billingPeriodBoundsFromIsoDates(lineDates);
             let billingPeriodIso = storedPeriod;
-            if (!spansMonths && inferred && (
+            let billingPeriodFromIso = /^\d{4}-\d{2}-\d{2}$/.test(periodFrom) ? periodFrom : '';
+            if (lineBounds) {
+                billingPeriodFromIso = lineBounds.from;
+                billingPeriodIso = lineBounds.to;
+            }
+            else if (inferred && (
                 !/^\d{4}-\d{2}-\d{2}$/.test(storedPeriod)
                 || storedPeriod.slice(0, 7) !== inferred.slice(0, 7)
             )) {
@@ -150,12 +161,14 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
             }
             if (!/^\d{4}-\d{2}-\d{2}$/.test(billingPeriodIso))
                 billingPeriodIso = issueIso;
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(billingPeriodFromIso))
+                billingPeriodFromIso = billingPeriodIso;
             const { resolveInvoiceDisplayMoney } = await import('@pages/time-tracking/lib/invoiceExpenseLineDisplay');
             const displayMoney = await resolveInvoiceDisplayMoney(inv);
             const model = buildInvoiceCoverLetterModel({
                 issueDateIso: issueIso,
                 billingPeriodIso,
-                billingPeriodFromIso: /^\d{4}-\d{2}-\d{2}$/.test(periodFrom) ? periodFrom : billingPeriodIso,
+                billingPeriodFromIso,
                 clientName: client.name,
                 clientAddress: client.address,
                 contactName: client.contact_name ?? null,
@@ -167,8 +180,33 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
         }
         const f = session.form;
         const iso = f.issueDate.slice(0, 10);
-        const billingPeriodIso = (f.unbilledTo || f.unbilledFrom || iso).slice(0, 10);
-        const billingPeriodFromIso = (f.unbilledFrom || billingPeriodIso).slice(0, 10);
+        let billingPeriodIso = (session.meta.billingPeriodTo || f.unbilledTo || f.unbilledFrom || iso).slice(0, 10);
+        let billingPeriodFromIso = (session.meta.billingPeriodFrom || f.unbilledFrom || billingPeriodIso).slice(0, 10);
+        const pid = f.createProjectId.trim();
+        if (pid && (f.selTime.length > 0 || f.selExp.length > 0)) {
+            try {
+                const selT = new Set(f.selTime);
+                const selE = new Set(f.selExp);
+                const from = f.unbilledFrom.slice(0, 10);
+                const to = f.unbilledTo.slice(0, 10);
+                const [timeRows, expRows] = await Promise.all([
+                    fetchUnbilledTimeEntries({ projectId: pid, dateFrom: from, dateTo: to }),
+                    fetchUnbilledExpenses({ projectId: pid, dateFrom: from, dateTo: to }),
+                ]);
+                const dates = [
+                    ...timeRows.filter((x) => selT.has(x.id)).map((x) => String(x.workDate ?? '').slice(0, 10)),
+                    ...expRows.filter((x) => selE.has(x.id)).map((x) => String(x.expenseDate ?? '').slice(0, 10)),
+                ];
+                const bounds = billingPeriodBoundsFromIsoDates(dates);
+                if (bounds) {
+                    billingPeriodFromIso = bounds.from;
+                    billingPeriodIso = bounds.to;
+                }
+            }
+            catch {
+                /* keep the loaded unbilled window if selected dates cannot be resolved */
+            }
+        }
         if (!f.createClientId.trim()) {
             const model = buildInvoiceCoverLetterModel({
                 issueDateIso: iso,

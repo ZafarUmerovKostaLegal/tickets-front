@@ -645,7 +645,27 @@ export function InvoiceCreatePage() {
     const projectLabel = proj
       ? (proj.code ? `${proj.name} (${proj.code})` : proj.name).trim()
       : undefined;
+    const selectedLineDates = [
+      ...unbilledTime.filter((x) => selTime.has(x.id)).map((x) => String(x.workDate ?? '').slice(0, 10)),
+      ...unbilledExp.filter((x) => selExp.has(x.id)).map((x) => String(x.expenseDate ?? '').slice(0, 10)),
+    ].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+    const selectedFrom = selectedLineDates[0];
+    const selectedTo = selectedLineDates[selectedLineDates.length - 1];
     const prevSession = readInvoicePreviewSession();
+    const prevDoc = prevSession?.mode === 'create' ? prevSession.documentOverrides : undefined;
+    const reusedDoc = (() => {
+      if (!prevDoc)
+        return undefined;
+      const next = { ...prevDoc };
+      delete next.timeReport;
+      delete next.combinedReport;
+      if (next.cover && typeof next.cover === 'object' && !Array.isArray(next.cover)) {
+        const cover = { ...(next.cover as Record<string, unknown>) };
+        delete cover.servicesMonthYear;
+        next.cover = cover;
+      }
+      return Object.keys(next).length > 0 ? next : undefined;
+    })();
     writeInvoicePreviewSession({
       v: 1,
       mode: 'create',
@@ -664,13 +684,13 @@ export function InvoiceCreatePage() {
         ...(clientLabel ? { clientLabel } : {}),
         ...(projectLabel ? { projectLabel } : {}),
         ...(createInvoiceNumber.trim() ? { invoiceNumber: createInvoiceNumber.trim() } : {}),
+        ...(selectedFrom ? { billingPeriodFrom: selectedFrom } : {}),
+        ...(selectedTo ? { billingPeriodTo: selectedTo } : {}),
       },
-      ...(prevSession?.mode === 'create' && prevSession.documentOverrides
-        ? { documentOverrides: prevSession.documentOverrides }
-        : {}),
+      ...(reusedDoc ? { documentOverrides: reusedDoc } : {}),
     });
     navigate(routes.timeTrackingInvoicePreview);
-  }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, createInvoiceNumber, selTime, selExp, projects, navigate, unpaidExpensesAlertMessage, showAlert, t]);
+  }, [clients, createClientId, createProjectId, unbilledFrom, unbilledTo, issueDate, dueDate, createInvoiceNumber, selTime, selExp, unbilledTime, unbilledExp, projects, navigate, unpaidExpensesAlertMessage, showAlert, t]);
 
   const handleCreate = useCallback(async () => {
     if (!createClientId) {

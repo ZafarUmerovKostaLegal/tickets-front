@@ -96,6 +96,26 @@ describe('buildInvoiceDocumentOverridesPayload', () => {
         expect(applied.totalFormatted).toBe(cover.totalFormatted);
     });
 
+    it('drops a saved multi-month period that is wider than the live line dates', () => {
+        const cover = buildInvoiceCoverLetterModel({
+            issueDateIso: '2026-10-23',
+            billingPeriodFromIso: '2026-10-16',
+            billingPeriodIso: '2026-10-19',
+            clientName: 'Client',
+            clientAddress: null,
+            contactName: null,
+            totalAmount: 710.5,
+            currency: 'EUR',
+            coverLanguage: 'ENG',
+        });
+        const applied = applyCoverDocumentOverrides(cover, {
+            servicesMonthYear: 'October 2016, November 2016, December 2016 and October 2018',
+            invoiceParagraphOverride: 'Herewith, we are sending the report or/and with the invoice on legal services rendered in October 2016, November 2016, December 2016 and October 2018 for the total amount of EUR 710.50.',
+        });
+        expect(applied.servicesMonthYear).toBe('October 2026');
+        expect(applied.invoiceParagraphOverride).toBeNull();
+    });
+
     it('keeps computed total when saved cover differs by FX cents', () => {
         const cover = buildInvoiceCoverLetterModel({
             issueDateIso: '2026-09-08',

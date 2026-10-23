@@ -347,7 +347,8 @@ export function InvoicePreviewPage() {
             const periodIso = sessionNow?.mode === 'existing'
                 ? (sessionNow.meta.billingPeriodTo || sessionNow.meta.billingPeriodFrom || null)
                 : (sessionNow?.mode === 'create'
-                    ? (sessionNow.form.unbilledTo || sessionNow.form.unbilledFrom || null)
+                    ? (sessionNow.meta.billingPeriodTo || sessionNow.meta.billingPeriodFrom
+                        || sessionNow.form.unbilledTo || sessionNow.form.unbilledFrom || null)
                     : null);
             const issueIso = sessionNow?.mode === 'existing'
                 ? (sessionNow.meta.issueDateIso ?? invoiceIssueDate ?? null)

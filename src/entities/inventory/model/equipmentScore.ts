@@ -51,15 +51,11 @@ export function equipmentScoreTier(score: number): EquipmentTier {
         ?? EQUIPMENT_TIERS[EQUIPMENT_TIERS.length - 1];
 }
 
-/** Буква для сохранения: балл превращаем в диапазон, который понимает бэкенд. */
 export function equipmentScoreToClassCode(score: number): EquipmentClassCode {
     return equipmentScoreTier(score).code;
 }
 
-/**
- * Оценка предмета: если известна дата покупки — считаем точный балл по возрасту,
- * иначе берём верхний балл диапазона из сохранённой буквы.
- */
+
 export function resolveEquipmentScore(item: EquipmentScoreInput, now?: Date): EquipmentScoreResult | null {
     const years = equipmentAgeYears(item.purchase_date, now);
     if (years != null) {

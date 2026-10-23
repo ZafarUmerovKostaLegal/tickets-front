@@ -51,6 +51,12 @@ function isMonthOnlyRibbon(text: string): boolean {
     return MONTH_ONLY_RIBBON.has(text.trim().toLowerCase());
 }
 
+const SERVICE_MONTH_TOKEN_RE = /january|february|march|april|may|june|july|august|september|october|november|december|январ[еья]|феврал[еья]|март[еа]?|апрел[еья]|ма[еяй]|июн[еья]|июл[еья]|август[еа]?|сентябр[еья]|октябр[еья]|ноябр[еья]|декабр[еья]/gi;
+
+function serviceMonthTokenCount(text: string): number {
+    return text.toLowerCase().match(SERVICE_MONTH_TOKEN_RE)?.length ?? 0;
+}
+
 function isStaleSingleMonthServicesLabel(stored: string, model: InvoiceCoverLetterModel): boolean {
     const live = model.servicesMonthYear.trim();
     const value = stored.trim();
@@ -61,6 +67,18 @@ function isStaleSingleMonthServicesLabel(stored: string, model: InvoiceCoverLett
         value === formatCoverServicesPeriod(iso, 'ENG')
         || value === formatCoverServicesPeriod(iso, 'RU')
     ));
+}
+
+function isStaleServicesMonthYear(stored: string, model: InvoiceCoverLetterModel): boolean {
+    const live = model.servicesMonthYear.trim();
+    const value = stored.trim();
+    if (!value || value === live)
+        return false;
+    if (isStaleSingleMonthServicesLabel(stored, model))
+        return true;
+    const storedCount = serviceMonthTokenCount(value);
+    const liveCount = serviceMonthTokenCount(live);
+    return storedCount > liveCount && liveCount > 0;
 }
 
 function looksLikeAutoServiceDescription(text: string): boolean {
@@ -203,7 +221,7 @@ export function applyCoverDocumentOverrides(
         next.attentionTitle = cover.attentionTitle;
     if (typeof cover.quotedCompanyName === 'string')
         next.quotedCompanyName = cover.quotedCompanyName;
-    if (typeof cover.servicesMonthYear === 'string' && !isStaleSingleMonthServicesLabel(cover.servicesMonthYear, model))
+    if (typeof cover.servicesMonthYear === 'string' && !isStaleServicesMonthYear(cover.servicesMonthYear, model))
         next.servicesMonthYear = cover.servicesMonthYear;
     if (typeof cover.totalFormatted === 'string') {
         const override = cover.totalFormatted.trim();
@@ -230,9 +248,14 @@ export function applyCoverDocumentOverrides(
         next.introParagraphOverride = cover.introParagraphOverride;
     if (cover.invoiceParagraphOverride !== undefined) {
         const para = cover.invoiceParagraphOverride;
-        next.invoiceParagraphOverride = typeof para === 'string'
-            ? syncStaleCoverTotalInText(para, next.totalFormatted)
-            : para;
+        const liveMonths = serviceMonthTokenCount(next.servicesMonthYear);
+        if (typeof para === 'string' && liveMonths > 0 && serviceMonthTokenCount(para) > liveMonths)
+            next.invoiceParagraphOverride = null;
+        else {
+            next.invoiceParagraphOverride = typeof para === 'string'
+                ? syncStaleCoverTotalInText(para, next.totalFormatted)
+                : para;
+        }
     }
     return next;
 }

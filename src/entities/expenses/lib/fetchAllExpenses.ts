@@ -14,7 +14,7 @@ export async function fetchAllExpenses(
             : initOrSignal;
     const out: ExpenseRequest[] = [];
     let skip = 0;
-    for (;;) {
+    for (; ;) {
         const data = await fetchExpenses({
             ...base,
             skip,

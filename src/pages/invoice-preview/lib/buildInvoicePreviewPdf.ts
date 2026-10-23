@@ -32,7 +32,7 @@ import { COVER_LETTERHEAD_LOGO_ASPECT, LEGAL_VERT_LOGO_ASPECT, rasterizeInvoiceL
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { countCombinedReportPages, drawCombinedReportPages } from './drawCombinedFeesReportPdf';
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
-import { getTimeReportLabels, timeReportHeading } from './invoiceTimeReportI18n';
+import { getTimeReportLabels, timeReportHeading, timeReportServicesMonthYear } from './invoiceTimeReportI18n';
 import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels, uppercaseLegalDateDisplay } from './invoiceLegalPageI18n';
 import {
@@ -552,7 +552,9 @@ function estimateTimeReportTableTop(continuation: boolean, model: InvoiceCoverLe
     yTop -= 14;
     const title = timeReportHeading({
         language: model.coverLanguage,
-        servicesMonthYear: model.servicesMonthYear,
+        servicesMonthYear: pack
+            ? timeReportServicesMonthYear(pack, model.servicesMonthYear, model.coverLanguage)
+            : model.servicesMonthYear,
         continuation,
         reportTitle: pack?.reportTitle,
         reportTitleContinued: pack?.reportTitleContinued,
@@ -1077,7 +1079,9 @@ function drawTimeReportBandHeader(page: PDFPage, model: InvoiceCoverLetterModel,
     yTop -= 14;
     const title = timeReportHeading({
         language: model.coverLanguage,
-        servicesMonthYear: model.servicesMonthYear,
+        servicesMonthYear: pack
+            ? timeReportServicesMonthYear(pack, model.servicesMonthYear, model.coverLanguage)
+            : model.servicesMonthYear,
         continuation,
         reportTitle: pack?.reportTitle,
         reportTitleContinued: pack?.reportTitleContinued,

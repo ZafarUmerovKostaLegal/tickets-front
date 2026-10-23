@@ -116,6 +116,28 @@ describe('mergeTimeReportPackPreferLiveExpenses', () => {
         expect(merged.detailSlots[0]?.description).toBe('Attending CP call.');
     });
 
+    it('drops saved time rows that are no longer selected live', () => {
+        const saved = emptyInvoiceTimeReportPack('USD');
+        const live = emptyInvoiceTimeReportPack('USD');
+        const kept = {
+            date: '22.09.2026',
+            initials: 'AAA',
+            task: 'Drafting',
+            description: 'termination order',
+            hours: '2,08',
+            hourlyRate: '320,00',
+            amount: 'USD 3843.84',
+        };
+        saved.detailSlots = [
+            { ...kept, date: '17.09.2026', description: 'emails', hours: '0,87', amount: 'USD 3215.52' },
+            kept,
+        ];
+        live.detailSlots = [kept];
+        const merged = mergeTimeReportPackPreferLiveExpenses(saved, live);
+        expect(merged.detailSlots).toHaveLength(1);
+        expect(merged.detailSlots[0]?.description).toBe('termination order');
+    });
+
     it('keeps a translated expense description and takes the live amount', () => {
         const saved = emptyInvoiceTimeReportPack('USD');
         const live = emptyInvoiceTimeReportPack('USD');
