@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { PAYMENT_META, STATUS_META } from '@entities/expenses/model/constants';
+import { PAYMENT_META } from '@entities/expenses/model/constants';
 import { fetchExpenseById, fetchExpenses } from '@entities/expenses/model/expensesApi';
-import type { ExpenseRequest, ExpenseStatus, PaymentMethod } from '@entities/expenses/model/types';
+import type { ExpenseRequest, PaymentMethod } from '@entities/expenses/model/types';
 import { useCurrentUser } from '@shared/hooks';
 import { DatePicker } from '@shared/ui/DatePicker';
 import '../../expenses/ui/ExpensesPage.css';
@@ -173,6 +173,16 @@ function money(n: number): string {
     return n.toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+function paymentShort(method: string | null | undefined): string {
+    if (method === 'cash')
+        return 'Наличные';
+    if (method === 'transfer')
+        return 'Перечисление';
+    if (method === 'card')
+        return 'Карта офиса';
+    return method || '—';
+}
+
 function formatDate(iso: string | null | undefined): string {
     if (!iso)
         return '—';
@@ -189,7 +199,6 @@ export function AccountingCorporateCardPanel() {
     const [cardId, setCardId] = useState(ALL_CARDS);
     const [query, setQuery] = useState('');
     const [kind, setKind] = useState('');
-    const [status, setStatus] = useState('');
     const [payment, setPayment] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
@@ -240,8 +249,6 @@ export function AccountingCorporateCardPanel() {
             const rowKind = expenseKind(row);
             if (kind === '__none' ? rowKind !== '' : kind && rowKind !== kind)
                 return false;
-            if (status && row.status !== status)
-                return false;
             if (payment && (row.paymentMethod ?? '') !== payment)
                 return false;
             const day = (row.expenseDate ?? '').slice(0, 10);
@@ -266,9 +273,9 @@ export function AccountingCorporateCardPanel() {
             return sort === 'date_asc' ? diff : -diff;
         });
         return list;
-    }, [rows, cardId, query, kind, status, payment, dateFrom, dateTo, sort]);
+    }, [rows, cardId, query, kind, payment, dateFrom, dateTo, sort]);
 
-    const filtersOn = Boolean(query || kind || status || payment || dateFrom || dateTo || cardId !== ALL_CARDS || sort !== 'date_desc');
+    const filtersOn = Boolean(query || kind || payment || dateFrom || dateTo || cardId !== ALL_CARDS || sort !== 'date_desc');
     const totalUzs = visible.reduce((sum, row) => sum + (Number(row.amountUzs) || 0), 0);
 
     const openExpense = (row: ExpenseRequest) => {
@@ -283,7 +290,6 @@ export function AccountingCorporateCardPanel() {
         ? 'Карта (владелец)'
         : (CARD_RULES.find((rule) => rule.id === cardId)?.owner ?? 'Карта (владелец)');
     const kindLabel = kind === '__none' ? 'Без вида' : (kind || 'Вид расхода');
-    const statusLabel = status ? (STATUS_META[status as ExpenseStatus]?.label ?? 'Статус') : 'Статус';
     const paymentLabel = payment ? (PAYMENT_META[payment as PaymentMethod]?.label ?? 'Способ оплаты') : 'Способ оплаты';
     const sortLabel = sort === 'date_asc'
         ? 'Сначала старые'
@@ -328,13 +334,6 @@ export function AccountingCorporateCardPanel() {
                             options={[{ value: '', label: 'Все виды' }, ...kindOptions.map((value) => ({ value, label: value })), { value: '__none', label: 'Без вида' }]}
                         />
                     </ChipFilter>
-                    <ChipFilter label={statusLabel} active={Boolean(status)} open={openChip === 'status'} onToggle={() => toggleChip('status')}>
-                        <ChipOptions
-                            value={status}
-                            onChange={(value) => { setStatus(value); setOpenChip(null); }}
-                            options={[{ value: '', label: 'Все статусы' }, ...(Object.keys(STATUS_META) as ExpenseStatus[]).map((value) => ({ value, label: STATUS_META[value].label }))]}
-                        />
-                    </ChipFilter>
                     <ChipFilter label={paymentLabel} active={Boolean(payment)} open={openChip === 'pay'} onToggle={() => toggleChip('pay')} wide>
                         <ChipOptions
                             value={payment}
@@ -359,7 +358,6 @@ export function AccountingCorporateCardPanel() {
                             setQuery('');
                             setCardId(ALL_CARDS);
                             setKind('');
-                            setStatus('');
                             setPayment('');
                             setDateFrom('');
                             setDateTo('');
@@ -390,25 +388,26 @@ export function AccountingCorporateCardPanel() {
                 <div className="exp-table acct-card-table" role="region" aria-label="Операции по корпоративной карте">
                     <div className="exp-table__body">
                         <div className="exp-table__row exp-table__row--head" role="row">
-                            <div className="exp-table__th" role="columnheader">Дата</div>
-                            <div className="exp-table__th" role="columnheader">Карта (владелец)</div>
-                            <div className="exp-table__th" role="columnheader">Вид расхода</div>
-                            <div className="exp-table__th" role="columnheader">Описание</div>
-                            <div className="exp-table__th" role="columnheader">Статус</div>
-                            <div className="exp-table__th" role="columnheader">Способ оплаты</div>
-                            <div className="exp-table__th" role="columnheader">Сумма, UZS</div>
+                            <div className="exp-table__th acct-card-table__date" role="columnheader">Дата</div>
+                            <div className="exp-table__th acct-card-table__owner" role="columnheader">Карта</div>
+                            <div className="exp-table__th acct-card-table__kind" role="columnheader">Вид</div>
+                            <div className="exp-table__th acct-card-table__desc" role="columnheader">Описание</div>
+                            <div className="exp-table__th acct-card-table__pay" role="columnheader">Оплата</div>
+                            <div className="exp-table__th acct-card-table__sum" role="columnheader">Сумма, UZS</div>
                         </div>
-                        {visible.map((row) => (
-                            <button key={row.id} type="button" className="exp-table__row acct-card-table__row" onClick={() => openExpense(row)}>
-                                <span>{formatDate(row.expenseDate)}</span>
-                                <span>{cardOwner(row)}</span>
-                                <span>{expenseKind(row) || '—'}</span>
-                                <span className="acct-card-table__desc">{expenseDescription(row)}</span>
-                                <span className={`exp-status exp-status--${row.status}`}>{STATUS_META[row.status]?.label ?? row.status}</span>
-                                <span>{PAYMENT_META[(row.paymentMethod ?? '') as PaymentMethod]?.label ?? (row.paymentMethod || '—')}</span>
-                                <span className="acct-card__num">{money(Number(row.amountUzs) || 0)}</span>
-                            </button>
-                        ))}
+                        {visible.map((row) => {
+                            const payFull = PAYMENT_META[(row.paymentMethod ?? '') as PaymentMethod]?.label ?? (row.paymentMethod || '—');
+                            return (
+                                <button key={row.id} type="button" className="exp-table__row acct-card-table__row" onClick={() => openExpense(row)}>
+                                    <span className="acct-card-table__date">{formatDate(row.expenseDate)}</span>
+                                    <span className="acct-card-table__owner">{cardOwner(row)}</span>
+                                    <span className="acct-card-table__kind">{expenseKind(row) || '—'}</span>
+                                    <span className="acct-card-table__desc" title={expenseDescription(row)}>{expenseDescription(row)}</span>
+                                    <span className="acct-card-table__pay" title={payFull}>{paymentShort(row.paymentMethod)}</span>
+                                    <span className="acct-card-table__sum">{money(Number(row.amountUzs) || 0)}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             ) : null}
