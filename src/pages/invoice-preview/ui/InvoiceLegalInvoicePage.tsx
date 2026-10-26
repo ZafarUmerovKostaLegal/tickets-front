@@ -125,7 +125,11 @@ export function InvoiceLegalInvoicePage({
   );
   const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, defaultInvNo);
   const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, defaultZero);
-  const extraExpensesAmount = resolveLegalOverrideText(legalOverrides?.extraExpensesAmount, defaultZero);
+  const extraExpensesAmount = resolveLegalOverrideText(
+    legalOverrides?.extraExpensesAmount,
+    model.extraFixedFeeFormatted?.trim() || defaultZero,
+  );
+  const servicesAmount = model.servicesAmountFormatted?.trim() || model.totalFormatted;
   const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
 
   const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
@@ -295,9 +299,11 @@ export function InvoiceLegalInvoicePage({
             <LiField
               editable={editable}
               className="tt-inv-li__field--amt"
-              value={model.totalFormatted}
+              value={servicesAmount}
               ariaLabel={labels.total(cur)}
-              onChange={(totalFormatted) => onChangeModel?.({ totalFormatted })}
+              onChange={(next) => onChangeModel?.(model.servicesAmountFormatted
+                ? { servicesAmountFormatted: next }
+                : { totalFormatted: next })}
             />
           </td>
         </tr>
@@ -311,9 +317,11 @@ export function InvoiceLegalInvoicePage({
           <LiField
             editable={editable}
             className="tt-inv-li__field--inline"
-            value={model.totalFormatted}
+            value={servicesAmount}
             ariaLabel={labels.subtotal}
-            onChange={(totalFormatted) => onChangeModel?.({ totalFormatted })}
+            onChange={(next) => onChangeModel?.(model.servicesAmountFormatted
+              ? { servicesAmountFormatted: next }
+              : { totalFormatted: next })}
           />
         </span>
       </div>

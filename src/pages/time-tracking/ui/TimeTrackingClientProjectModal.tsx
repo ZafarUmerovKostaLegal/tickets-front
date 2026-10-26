@@ -229,6 +229,8 @@ type ProjectFormState = {
   sendBudgetAlerts: boolean;
   budgetAlertThresholdPercent: string;
   skipPartnerInvoiceConfirmation: boolean;
+  extraFixedFeeAmount: string;
+  extraFixedFeeDescription: string;
 };
 
 function projectTypeUsesBillableRates(pt: ProjectFormState['projectType'] | string): boolean {
@@ -266,6 +268,8 @@ function emptyProjectForm(): ProjectFormState {
     sendBudgetAlerts: false,
     budgetAlertThresholdPercent: '70',
     skipPartnerInvoiceConfirmation: false,
+    extraFixedFeeAmount: '',
+    extraFixedFeeDescription: '',
   };
 }
 function rowToForm(row: TimeManagerClientProjectRow): ProjectFormState {
@@ -295,6 +299,8 @@ function rowToForm(row: TimeManagerClientProjectRow): ProjectFormState {
       : '70',
     skipPartnerInvoiceConfirmation: row.skip_partner_invoice_confirmation === true
       || row.skipPartnerInvoiceConfirmation === true,
+    extraFixedFeeAmount: readOptionalNumericField(row.extra_fixed_fee_amount, row.extraFixedFeeAmount),
+    extraFixedFeeDescription: row.extra_fixed_fee_description ?? row.extraFixedFeeDescription ?? '',
   };
 }
 function parseOptionalDecimal(raw: string): string | number | null {
@@ -409,6 +415,8 @@ function buildCreatePayload(
     sendBudgetAlerts: form.sendBudgetAlerts,
     budgetAlertThresholdPercent,
     skipPartnerInvoiceConfirmation: form.skipPartnerInvoiceConfirmation,
+    extraFixedFeeAmount: parseOptionalDecimal(form.extraFixedFeeAmount),
+    extraFixedFeeDescription: form.extraFixedFeeDescription.trim() || null,
     ...(initialTaskNames !== undefined ? { initialTaskNames } : {}),
     ...team,
   };
@@ -1319,6 +1327,34 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
       {form.skipPartnerInvoiceConfirmation && (
         <p className="tt-tm-hint tt-tm-fieldset--budget__extra">{t('timeTrackingPage.projects.modal.skipPartnerInvoiceConfirmationHint')}</p>
       )}
+      <div className="tt-tm-field tt-tm-fieldset--budget__extra">
+        <label className="tt-tm-label" htmlFor={`${uid}-extra-fee`}>
+          {t('timeTrackingPage.projects.modal.extraFixedFee')}
+        </label>
+        <input
+          id={`${uid}-extra-fee`}
+          className="tt-tm-input"
+          inputMode="decimal"
+          placeholder={t('timeTrackingPage.projects.modal.extraFixedFeePlaceholder')}
+          value={form.extraFixedFeeAmount}
+          onChange={(e) => setForm((f) => ({ ...f, extraFixedFeeAmount: e.target.value }))}
+          disabled={saving || !canManage}
+        />
+        <p className="tt-tm-hint">{t('timeTrackingPage.projects.modal.extraFixedFeeHint')}</p>
+      </div>
+      <div className="tt-tm-field tt-tm-fieldset--budget__extra">
+        <label className="tt-tm-label" htmlFor={`${uid}-extra-fee-desc`}>
+          {t('timeTrackingPage.projects.modal.extraFixedFeeDescription')}
+        </label>
+        <input
+          id={`${uid}-extra-fee-desc`}
+          className="tt-tm-input"
+          value={form.extraFixedFeeDescription}
+          placeholder={t('timeTrackingPage.projects.modal.extraFixedFeeDescriptionPlaceholder')}
+          onChange={(e) => setForm((f) => ({ ...f, extraFixedFeeDescription: e.target.value }))}
+          disabled={saving || !canManage || !form.extraFixedFeeAmount.trim()}
+        />
+      </div>
       <p className="tt-tm-hint tt-tm-fieldset--budget__extra">
         {mehnatBillingMode === 'flat_fee'
           ? t('timeTrackingPage.projects.modal.mehnatFlatFeeHint')

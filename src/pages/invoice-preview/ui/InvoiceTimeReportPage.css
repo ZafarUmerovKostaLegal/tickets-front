@@ -254,6 +254,13 @@ textarea.tt-inv-tr__title-input:focus {
   white-space: nowrap;
 }
 
+.tt-inv-tr__thead th.tt-inv-tr__th--money {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  padding-inline: 0.2rem;
+}
+
 .tt-inv-tr__thead th:last-child,
 .tt-inv-tr__thead th:nth-child(5):nth-last-child(3),
 .tt-inv-tr__thead th:nth-child(6):nth-last-child(2),
@@ -346,11 +353,14 @@ textarea.tt-inv-tr__title-input:focus {
 
 .tt-inv-tr__tbody td.tt-inv-tr__cell--num {
   white-space: nowrap;
+  overflow: visible;
+  padding-inline: 0.2rem;
 }
 
 .tt-inv-tr__cell--amount,
 .tt-inv-tr__tfoot .tt-inv-tr__cell--amount {
   white-space: nowrap;
+  overflow: visible;
 }
 
 .tt-inv-tr--sheet .tt-inv-tr__tbody td {

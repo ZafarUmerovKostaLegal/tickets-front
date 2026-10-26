@@ -32,6 +32,10 @@ export type InvoiceCoverLetterInput = {
     billingPeriodIso?: string | null;
     /** Billing period start. When it falls in another month, the report title lists both. */
     billingPeriodFromIso?: string | null;
+    /** Hours and expenses before the extra fixed fee. */
+    servicesAmount?: number | null;
+    /** Fixed amount added on top of hours, in the invoice currency. */
+    extraFixedFeeAmount?: number | null;
 };
 
 export type InvoiceCoverLetterModel = {
@@ -49,6 +53,10 @@ export type InvoiceCoverLetterModel = {
     quotedCompanyName: string;
     servicesMonthYear: string;
     totalFormatted: string;
+    /** Services row and subtotal when a fixed fee is split out. Due stays `totalFormatted`. */
+    servicesAmountFormatted?: string | null;
+    /** Default for the legal-page extra expenses row. */
+    extraFixedFeeFormatted?: string | null;
     signatoryName: string;
     /** Partner initials matching `public/signatures/{initials}.*` when known. */
     signatoryInitials: string;
@@ -123,6 +131,12 @@ export function buildInvoiceCoverLetterModel(input: InvoiceCoverLetterInput): In
         quotedCompanyName: company,
         servicesMonthYear: formatCoverServicesPeriodRange(periodFromIso, periodIso, lang),
         totalFormatted: formatCoverLetterTotal(input.totalAmount, input.currency),
+        servicesAmountFormatted: input.servicesAmount != null
+            ? formatCoverLetterTotal(input.servicesAmount, input.currency)
+            : null,
+        extraFixedFeeFormatted: input.extraFixedFeeAmount != null && input.extraFixedFeeAmount > 0
+            ? formatCoverLetterTotal(input.extraFixedFeeAmount, input.currency)
+            : null,
         signatoryName: KOSTA_LEGAL_FIRM.defaultSignatoryName,
         signatoryInitials: findCoverSignatoryPartnerByName(KOSTA_LEGAL_FIRM.defaultSignatoryName)?.initials
             ?? 'AAA',

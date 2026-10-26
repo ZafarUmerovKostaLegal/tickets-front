@@ -36,6 +36,7 @@ import {
 } from '@entities/time-tracking';
 import { fetchCbuParsedForDate, foreignUnitsPerUsd } from '@entities/expenses/model/cbuRates';
 import { collectClientIdsFromProjects, isActiveTimeManagerClientRow, isActiveTimeManagerProjectRow } from '@entities/time-tracking/lib/projectTimeEntry';
+import { parseInvoiceFixedFeeInput, readProjectExtraFixedFee } from '../lib/invoiceFixedFee';
 import { loadSnapshotRowsForPartnerExcel } from '@entities/time-tracking/lib/exportPartnerConfirmedSnapshotExcel';
 import { formatHM } from '@shared/lib/formatTrackingHours';
 import {
@@ -113,6 +114,9 @@ export function InvoiceCreatePage() {
   const [createBusy, setCreateBusy] = useState(false);
   const [skipPartnerSaving, setSkipPartnerSaving] = useState(false);
   const [oneOffSkipPartner, setOneOffSkipPartner] = useState(false);
+  const [includeExtraFee, setIncludeExtraFee] = useState(false);
+  const [extraFeeAmount, setExtraFeeAmount] = useState('');
+  const [extraFeeDesc, setExtraFeeDesc] = useState('');
   const [unbilledPeriodGranularity, setUnbilledPeriodGranularity] = useState<PeriodGranularity>('month');
   const [unbilledPeriodDropdown, setUnbilledPeriodDropdown] = useState(false);
   const unbilledPeriodDropdownRef = useRef<HTMLDivElement>(null);
@@ -146,6 +150,21 @@ export function InvoiceCreatePage() {
   useEffect(() => {
     setOneOffSkipPartner(false);
   }, [createProjectId]);
+  const projectExtraFee = useMemo(
+    () => readProjectExtraFixedFee(selectedProject),
+    [selectedProject],
+  );
+  useEffect(() => {
+    if (projectExtraFee.amount > 0) {
+      setIncludeExtraFee(true);
+      setExtraFeeAmount(String(projectExtraFee.amount));
+      setExtraFeeDesc(projectExtraFee.description);
+      return;
+    }
+    setIncludeExtraFee(false);
+    setExtraFeeAmount('');
+    setExtraFeeDesc('');
+  }, [createProjectId, projectExtraFee.amount, projectExtraFee.description]);
   const invoiceCurrency = useMemo(() => {
     const projectCur = String(selectedProject?.currency ?? '').trim().toUpperCase();
     if (projectCur)
@@ -714,6 +733,22 @@ export function InvoiceCreatePage() {
       billedAmountNum = Math.round(n * 100) / 100;
       serviceDescription = desc;
     }
+    let extraFixedFeeAmount: number | undefined;
+    let extraFixedFeeDescription: string | null | undefined;
+    if (!customBilledEnabled && includeExtraFee) {
+      const fee = parseInvoiceFixedFeeInput(extraFeeAmount);
+      if (fee == null || fee <= 0) {
+        await showAlert({ message: t('timeTrackingPage.invoices.createDialog.extraFixedFeeInvalid') });
+        return;
+      }
+      extraFixedFeeAmount = fee;
+      extraFixedFeeDescription = extraFeeDesc.trim()
+        || t('timeTrackingPage.projects.modal.extraFixedFeeDescriptionPlaceholder');
+    }
+    else if (!customBilledEnabled && projectExtraFee.amount > 0) {
+      extraFixedFeeAmount = 0;
+      extraFixedFeeDescription = null;
+    }
     const closingReportLines = selTime.size > 0 || selExp.size > 0;
     // Custom billed amount alone is enough; report lines are optional.
     if (!closingReportLines && billedAmountNum == null) {
@@ -805,6 +840,9 @@ export function InvoiceCreatePage() {
           }
           : {}),
         ...(skipPartnerGate ? { skipPartnerInvoiceConfirmation: true, deferPartnerConfirmation: true } : {}),
+        ...(extraFixedFeeAmount !== undefined
+          ? { extraFixedFeeAmount, extraFixedFeeDescription: extraFixedFeeDescription ?? null }
+          : {}),
         ...(billedAmountNum != null
           ? {
             billedAmount: billedAmountNum,
@@ -853,6 +891,10 @@ export function InvoiceCreatePage() {
     customBilledAmount,
     customBilledDescription,
     customBilledCurrency,
+    includeExtraFee,
+    extraFeeAmount,
+    extraFeeDesc,
+    projectExtraFee.amount,
   ]);
 
   const toInvoices = () => {
@@ -1015,6 +1057,61 @@ export function InvoiceCreatePage() {
                           {t('timeTrackingPage.invoices.createDialog.oneOffSkipPartnerHint')}
                         </p>
                       )}
+                    </div>
+                  ) : null}
+                  {createProjectId && !customBilledEnabled ? (
+                    <div className="tt-inv-dialog__field" style={{ marginTop: '0.85rem' }}>
+                      <label className="tt-ios-toggle-row">
+                        <span className="tt-ios-toggle-row__text">
+                          {t('timeTrackingPage.invoices.createDialog.extraFixedFee')}
+                        </span>
+                        <span className="tt-ios-toggle">
+                          <input
+                            type="checkbox"
+                            className="tt-ios-toggle__input"
+                            checked={includeExtraFee}
+                            onChange={(e) => setIncludeExtraFee(e.target.checked)}
+                            disabled={createBusy}
+                          />
+                          <span className="tt-ios-toggle__slider" aria-hidden />
+                        </span>
+                      </label>
+                      <p className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                        {t('timeTrackingPage.invoices.createDialog.extraFixedFeeHint')}
+                      </p>
+                      {includeExtraFee ? (
+                        <div className="tt-inv-dialog__grid tt-inv-dialog__grid--2" style={{ marginTop: '0.65rem' }}>
+                          <div className="tt-inv-dialog__field">
+                            <label className="tt-inv-dialog__label" htmlFor="tt-inv-extra-fee">
+                              {t('timeTrackingPage.invoices.createDialog.extraFixedFeeAmount')}
+                              {invoiceCurrency ? ` (${invoiceCurrency})` : ''}
+                            </label>
+                            <input
+                              id="tt-inv-extra-fee"
+                              type="text"
+                              inputMode="decimal"
+                              className="tt-inv-dialog__control"
+                              value={extraFeeAmount}
+                              onChange={(e) => setExtraFeeAmount(e.target.value)}
+                              disabled={createBusy}
+                            />
+                          </div>
+                          <div className="tt-inv-dialog__field">
+                            <label className="tt-inv-dialog__label" htmlFor="tt-inv-extra-fee-desc">
+                              {t('timeTrackingPage.invoices.createDialog.extraFixedFeeDescription')}
+                            </label>
+                            <input
+                              id="tt-inv-extra-fee-desc"
+                              type="text"
+                              className="tt-inv-dialog__control"
+                              value={extraFeeDesc}
+                              placeholder={t('timeTrackingPage.projects.modal.extraFixedFeeDescriptionPlaceholder')}
+                              onChange={(e) => setExtraFeeDesc(e.target.value)}
+                              disabled={createBusy}
+                            />
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ) : null}
                 </section>

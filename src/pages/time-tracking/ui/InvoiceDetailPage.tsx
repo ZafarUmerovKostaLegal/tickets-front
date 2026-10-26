@@ -50,6 +50,8 @@ import {
 } from '@entities/todo/lib/calendarApi';
 import { InvoiceDueDayCalculator } from './InvoiceDueDayCalculator';
 import { InvoiceSendContactModal } from './InvoiceSendContactModal';
+import { getClientProject } from '@entities/time-tracking/api/domains/projects';
+import { invoiceFixedFeeTotal, parseInvoiceFixedFeeInput, readProjectExtraFixedFee } from '../lib/invoiceFixedFee';
 import { invoiceDescriptionWithTask } from '../lib/invoiceClientDescription';
 import { invoiceClientMailSignature, rasterizePublicLogoPng } from '../lib/invoiceClientMailSignature';
 import {
@@ -112,6 +114,9 @@ export function InvoiceDetailPage() {
   const [draftTaxPct, setDraftTaxPct] = useState('');
   const [draftTax2Pct, setDraftTax2Pct] = useState('');
   const [draftDiscAmt, setDraftDiscAmt] = useState('');
+  const [draftFeeAmount, setDraftFeeAmount] = useState('');
+  const [draftFeeDesc, setDraftFeeDesc] = useState('');
+  const [syncedFeeKey, setSyncedFeeKey] = useState('');
   const [expenseRegistryUsd, setExpenseRegistryUsd] = useState<Map<string, number>>(() => new Map());
 
   const clientNameById = useMemo(() => {
@@ -213,6 +218,51 @@ export function InvoiceDetailPage() {
       ? String(detail.discountAmount)
       : '');
   }, [detail]);
+
+  const detailFeeKey = detail?.status === 'draft'
+    ? `${detail.id}:${detail.updatedAt ?? ''}:${invoiceFixedFeeTotal(detail.lines)}`
+    : '';
+  if (detail && detailFeeKey && syncedFeeKey !== detailFeeKey) {
+    const feeLine = (detail.lines ?? []).find((line) => (line.lineKind ?? '').toLowerCase() === 'fixed_fee');
+    const amount = feeLine ? Number(feeLine.lineTotal) : 0;
+    setSyncedFeeKey(detailFeeKey);
+    setDraftFeeAmount(Number.isFinite(amount) && amount > 0 ? String(amount) : '');
+    setDraftFeeDesc(feeLine?.description ?? '');
+  }
+
+  const prefilledFeeKeyRef = useRef('');
+  useEffect(() => {
+    if (!detail || detail.status !== 'draft' || !detailFeeKey || syncedFeeKey !== detailFeeKey)
+      return;
+    if (prefilledFeeKeyRef.current === detailFeeKey)
+      return;
+    if (invoiceFixedFeeTotal(detail.lines) > 0) {
+      prefilledFeeKeyRef.current = detailFeeKey;
+      return;
+    }
+    const clientId = detail.clientId;
+    const projectId = detail.projectId;
+    if (!clientId || !projectId) {
+      prefilledFeeKeyRef.current = detailFeeKey;
+      return;
+    }
+    let cancelled = false;
+    void getClientProject(clientId, projectId)
+      .then((row) => {
+        if (cancelled)
+          return;
+        prefilledFeeKeyRef.current = detailFeeKey;
+        const fee = readProjectExtraFixedFee(row);
+        if (fee.amount <= 0)
+          return;
+        setDraftFeeAmount((current) => current.trim() ? current : String(fee.amount));
+        setDraftFeeDesc((current) => current.trim() ? current : fee.description);
+      })
+      .catch(() => { /* project default is optional */ });
+    return () => {
+      cancelled = true;
+    };
+  }, [detail, detailFeeKey, syncedFeeKey]);
 
   useEffect(() => () => {
     outlookWaitAbortRef.current?.abort();
@@ -696,6 +746,21 @@ export function InvoiceDetailPage() {
       body.taxPercent = t1;
     if (t2 !== undefined)
       body.tax2Percent = t2;
+    const feeRaw = draftFeeAmount.trim();
+    if (!feeRaw) {
+      body.extraFixedFeeAmount = 0;
+      body.extraFixedFeeDescription = null;
+    }
+    else {
+      const fee = parseInvoiceFixedFeeInput(feeRaw);
+      if (fee == null || fee < 0) {
+        await showAlert({ message: t('timeTrackingPage.invoices.errors.invalidAmount') });
+        return;
+      }
+      body.extraFixedFeeAmount = fee;
+      body.extraFixedFeeDescription = draftFeeDesc.trim()
+        || t('timeTrackingPage.projects.modal.extraFixedFeeDescriptionPlaceholder');
+    }
     setActionBusy(true);
     try {
       await patchInvoice(detail.id, body);
@@ -707,7 +772,7 @@ export function InvoiceDetailPage() {
     finally {
       setActionBusy(false);
     }
-  }, [detail, draftIssueDate, draftDueDate, draftTaxPct, draftTax2Pct, draftDiscAmt, refreshDetail, showAlert, t]);
+  }, [detail, draftIssueDate, draftDueDate, draftTaxPct, draftTax2Pct, draftDiscAmt, draftFeeAmount, draftFeeDesc, refreshDetail, showAlert, t]);
 
   const title = detailLoading
     ? t('timeTrackingPage.invoices.detail.loading')
@@ -1119,6 +1184,33 @@ export function InvoiceDetailPage() {
                           <textarea className="tt-inv__textarea" rows={3} defaultValue={detail.internalNote ?? ''} id="inv-int-note" />
                         </label>
                       </div>
+                      <div className="tt-inv-draft__notes">
+                        <label htmlFor="inv-fixed-fee">
+                          {t('timeTrackingPage.invoices.detail.fixedFeeTitle')}
+                          <input
+                            id="inv-fixed-fee"
+                            type="text"
+                            inputMode="decimal"
+                            className="tt-inv-dialog__control"
+                            value={draftFeeAmount}
+                            placeholder={t('timeTrackingPage.projects.modal.extraFixedFeePlaceholder')}
+                            onChange={(e) => setDraftFeeAmount(e.target.value)}
+                          />
+                        </label>
+                        <label htmlFor="inv-fixed-fee-desc">
+                          {t('timeTrackingPage.invoices.detail.fixedFeeDescription')}
+                          <input
+                            id="inv-fixed-fee-desc"
+                            type="text"
+                            className="tt-inv-dialog__control"
+                            value={draftFeeDesc}
+                            placeholder={t('timeTrackingPage.projects.modal.extraFixedFeeDescriptionPlaceholder')}
+                            onChange={(e) => setDraftFeeDesc(e.target.value)}
+                            disabled={!draftFeeAmount.trim()}
+                          />
+                        </label>
+                      </div>
+                      <p className="tt-inv-page__section-desc">{t('timeTrackingPage.invoices.detail.fixedFeeHint')}</p>
                       <div className="tt-inv-page__draft-actions">
                         <button type="button" className="tt-reports__btn tt-reports__btn--accent" disabled={actionBusy} onClick={() => void handleSaveDraft()}>
                           {t('timeTrackingPage.invoices.detail.saveDraft')}

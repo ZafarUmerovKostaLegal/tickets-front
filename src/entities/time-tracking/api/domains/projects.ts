@@ -387,6 +387,10 @@ export type TimeManagerClientProjectRow = {
     isPaused?: boolean;
     skip_partner_invoice_confirmation?: boolean;
     skipPartnerInvoiceConfirmation?: boolean;
+    extra_fixed_fee_amount?: string | number | null;
+    extraFixedFeeAmount?: string | number | null;
+    extra_fixed_fee_description?: string | null;
+    extraFixedFeeDescription?: string | null;
 };
 
 /** True when project allows invoices without fully_confirmed partner period. */
@@ -459,6 +463,17 @@ export function normalizeTimeManagerClientProjectRow(raw: unknown): TimeManagerC
     if (packageFee !== undefined) {
         row.package_fee_amount = packageFee;
         row.packageFeeAmount = packageFee;
+    }
+    const extraFixedFee = coalesceProjectNumericField(o, 'extra_fixed_fee_amount', 'extraFixedFeeAmount');
+    if (extraFixedFee !== undefined) {
+        row.extra_fixed_fee_amount = extraFixedFee;
+        row.extraFixedFeeAmount = extraFixedFee;
+    }
+    const extraFixedFeeDescription = o.extra_fixed_fee_description ?? o.extraFixedFeeDescription;
+    if (extraFixedFeeDescription !== undefined) {
+        const text = extraFixedFeeDescription == null ? null : String(extraFixedFeeDescription);
+        row.extra_fixed_fee_description = text;
+        row.extraFixedFeeDescription = text;
     }
     const projectRate = coalesceProjectNumericField(o, 'project_billable_rate_amount', 'projectBillableRateAmount');
     if (projectRate !== undefined)
@@ -872,6 +887,8 @@ export type TimeManagerClientProjectCreatePayload = {
     fixedFeeAmount?: string | number | null;
     packageHoursPerMonth?: string | number | null;
     packageFeeAmount?: string | number | null;
+    extraFixedFeeAmount?: string | number | null;
+    extraFixedFeeDescription?: string | null;
     skipPartnerInvoiceConfirmation?: boolean;
 
     initialTimeTrackingUserAuthIds?: number[];
@@ -906,6 +923,8 @@ export type TimeManagerClientProjectPatchPayload = {
     fixedFeeAmount?: string | number | null;
     packageHoursPerMonth?: string | number | null;
     packageFeeAmount?: string | number | null;
+    extraFixedFeeAmount?: string | number | null;
+    extraFixedFeeDescription?: string | null;
     isArchived?: boolean;
     isPaused?: boolean;
     skipPartnerInvoiceConfirmation?: boolean;
@@ -964,6 +983,10 @@ export function projectCreateBody(body: TimeManagerClientProjectCreatePayload): 
         o.packageHoursPerMonth = body.packageHoursPerMonth;
     if (body.packageFeeAmount !== undefined)
         o.packageFeeAmount = body.packageFeeAmount;
+    if (body.extraFixedFeeAmount !== undefined)
+        o.extraFixedFeeAmount = body.extraFixedFeeAmount;
+    if (body.extraFixedFeeDescription !== undefined)
+        o.extraFixedFeeDescription = body.extraFixedFeeDescription;
     if (body.skipPartnerInvoiceConfirmation !== undefined)
         o.skipPartnerInvoiceConfirmation = body.skipPartnerInvoiceConfirmation;
     if (hasMembers) {
@@ -1056,6 +1079,10 @@ export function projectPatchBody(patch: TimeManagerClientProjectPatchPayload): R
         o.packageHoursPerMonth = patch.packageHoursPerMonth;
     if (patch.packageFeeAmount !== undefined)
         o.packageFeeAmount = patch.packageFeeAmount;
+    if (patch.extraFixedFeeAmount !== undefined)
+        o.extraFixedFeeAmount = patch.extraFixedFeeAmount;
+    if (patch.extraFixedFeeDescription !== undefined)
+        o.extraFixedFeeDescription = patch.extraFixedFeeDescription;
     if (patch.isArchived !== undefined) {
         o.isArchived = patch.isArchived;
         o.is_archived = patch.isArchived;

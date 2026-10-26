@@ -212,6 +212,9 @@ export type InvoiceCreateInput = {
     billedAmount?: number | null;
     /** Service line on the legal invoice page (with billedAmount). */
     serviceDescription?: string | null;
+    /** Amount added on top of hours, in the invoice currency. 0 skips the project default. */
+    extraFixedFeeAmount?: number | null;
+    extraFixedFeeDescription?: string | null;
 };
 export type InvoicePatchInput = {
     issueDate?: string;
@@ -227,6 +230,9 @@ export type InvoicePatchInput = {
     lines?: Record<string, unknown>[] | null;
     /** Preview document overrides; `null` clears stored overrides. */
     documentOverrides?: Record<string, unknown> | null;
+    /** Draft-only line added on top of hours. 0 removes it. */
+    extraFixedFeeAmount?: number | null;
+    extraFixedFeeDescription?: string | null;
 };
 export type InvoicePaymentInput = {
     amount?: number | string | null;

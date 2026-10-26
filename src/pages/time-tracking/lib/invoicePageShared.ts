@@ -102,6 +102,8 @@ export function invoiceLineKindSlug(ln: InvoiceLineDto): string {
     return 'expense';
   if (k === 'manual')
     return 'manual';
+  if (k === 'fixed_fee')
+    return 'fixed_fee';
   return 'other';
 }
 
@@ -113,6 +115,8 @@ export function invoiceLineKindLabel(ln: InvoiceLineDto, t: TimeTrackingT): stri
       return t('timeTrackingPage.invoices.lineTypes.expense');
     case 'manual':
       return t('timeTrackingPage.invoices.lineTypes.manual');
+    case 'fixed_fee':
+      return t('timeTrackingPage.invoices.lineTypes.fixedFee');
     default:
       return (ln.lineKind && ln.lineKind.trim()) || '—';
   }

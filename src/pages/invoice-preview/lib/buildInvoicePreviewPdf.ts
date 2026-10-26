@@ -1362,13 +1362,17 @@ function drawLegalInvoicePdfPage(
     );
     const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, packInvoiceNumberDisplay(session));
     const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, zeroFallback);
-    const extraExpensesAmount = resolveLegalOverrideText(legalOverrides?.extraExpensesAmount, zeroFallback);
+    const extraExpensesAmount = resolveLegalOverrideText(
+        legalOverrides?.extraExpensesAmount,
+        model.extraFixedFeeFormatted?.trim() || zeroFallback,
+    );
     const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
     const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
     const totalText = model.totalFormatted;
+    const servicesText = model.servicesAmountFormatted?.trim() || totalText;
 
     const contentW = W - ML - MR;
     let y = H - MT;
@@ -1545,8 +1549,8 @@ function drawLegalInvoicePdfPage(
         page.drawText(ln, { x: ML + 5, y: svcY, size: DOC_FS, font, color: BODY });
         svcY -= DOC_LH;
     }
-    const totW = fontBold.widthOfTextAtSize(totalText, DOC_FS);
-    page.drawText(totalText, {
+    const totW = fontBold.widthOfTextAtSize(servicesText, DOC_FS);
+    page.drawText(servicesText, {
         x: ML + contentW - 6 - totW,
         y: yRowTop - rowPad - DOC_FS,
         size: DOC_FS,
@@ -1628,7 +1632,7 @@ function drawLegalInvoicePdfPage(
         y -= blockH + 1;
     };
 
-    drawTotalRow(labels.subtotal, totalText);
+    drawTotalRow(labels.subtotal, servicesText);
     drawTotalRow(labels.vat, vatAmount);
     drawTotalRow(labels.extraExpenses, extraExpensesAmount);
     drawTotalRow(labels.totalDueBy(dueBanner), totalText, true);

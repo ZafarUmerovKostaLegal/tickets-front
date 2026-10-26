@@ -4967,6 +4967,11 @@
   background: rgba(100, 116, 139, 0.1);
   border-color: rgba(100, 116, 139, 0.28);
 }
+.tt-inv-line-kind--fixed_fee {
+  color: #166534;
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.28);
+}
 .tt-inv-line-kind--other {
   font-weight: 600;
   text-transform: none;

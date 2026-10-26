@@ -603,7 +603,11 @@ function legalInvoiceDocxBlocks(
     );
     const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, packInvoiceNumberDisplay(session));
     const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, zeroFallback);
-    const extraExpensesAmount = resolveLegalOverrideText(legalOverrides?.extraExpensesAmount, zeroFallback);
+    const extraExpensesAmount = resolveLegalOverrideText(
+        legalOverrides?.extraExpensesAmount,
+        model.extraFixedFeeFormatted?.trim() || zeroFallback,
+    );
+    const servicesAmount = model.servicesAmountFormatted?.trim() || model.totalFormatted;
     const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
     const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);
@@ -778,7 +782,7 @@ function legalInvoiceDocxBlocks(
                 verticalAlign: VerticalAlignTable.BOTTOM,
                 children: [new Paragraph({
                     alignment: AlignmentType.RIGHT,
-                    children: [new TextRun({ text: model.totalFormatted, bold: true, color: '1E293B', size: DOC_SIZE, font: DOC_FONT })],
+                    children: [new TextRun({ text: servicesAmount, bold: true, color: '1E293B', size: DOC_SIZE, font: DOC_FONT })],
                 })],
             }),
         ],
@@ -837,7 +841,7 @@ function legalInvoiceDocxBlocks(
         layout: TableLayoutType.FIXED,
         alignment: AlignmentType.RIGHT,
         rows: [
-            mkTotalRow(labels.subtotal, model.totalFormatted, false, totalsNil),
+            mkTotalRow(labels.subtotal, servicesAmount, false, totalsNil),
             mkTotalRow(labels.vat, vatAmount, false, totalsNil),
             mkTotalRow(labels.extraExpenses, extraExpensesAmount, false, totalsNil),
             mkTotalRow(labels.totalDueBy(dueBanner), model.totalFormatted, true, totalsNil),
