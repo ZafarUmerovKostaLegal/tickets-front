@@ -173,6 +173,8 @@ type Props = {
     onSubmit: (values: ExpenseFormValues, files: ExpenseFilesByKind) => void;
     saveDraftPending?: boolean;
     submitPending?: boolean;
+    /** Save or submit failure. Shown in the panel so it is not hidden behind the drawer. */
+    formActionError?: string | null;
     onExpenseSnapshotUpdated?: (expense: ExpenseRequest) => void;
     canModerate?: boolean;
     onExpenseUpdated?: (expense: ExpenseRequest) => void;
@@ -255,7 +257,7 @@ function validate(v: ExpenseFormValues, opts?: ValidateOpts): ExpenseFormErrors 
         if (v.expenseDate > today)
             e.expenseDate = 'Дата не может быть в будущем';
     }
-    if (v.expenseType === EXPENSE_TYPE_CLIENT && v.expenseDate && v.expenseDate !== todayIsoLocal()) {
+    if (opts?.mode === 'create' && v.expenseType === EXPENSE_TYPE_CLIENT && v.expenseDate && v.expenseDate !== todayIsoLocal()) {
         e.expenseDate = 'Для типа «За клиента» дата расхода — сегодняшний день';
     }
     if (!v.expenseType)
@@ -356,7 +358,7 @@ function formatForeignFp(n: number): string {
     const x = Math.round(n * 1e6) / 1e6;
     return x.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
 }
-export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExited, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, currentUserEmail = null, currentUserDisplayName = null, formScope = 'company', presetValues = null, }: Props) {
+export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExited, onSaveDraft, onSubmit, saveDraftPending = false, submitPending = false, formActionError = null, onExpenseSnapshotUpdated, canModerate = false, onExpenseUpdated, onExpenseDeleted, emailModerationIntent = null, onEmailModerationIntentConsumed, allowPaymentReceiptUpload = false, onUploadPaymentReceipts, receiptUploadPending = false, currentUserId = null, currentUserRole = null, currentUserEmail = null, currentUserDisplayName = null, formScope = 'company', presetValues = null, }: Props) {
     const [values, setValues] = useState<ExpenseFormValues>(EMPTY);
     const valuesRef = useRef(values);
     valuesRef.current = values;
@@ -2375,6 +2377,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             </div>
 
             {!isView ? (<div className="exp-panel__ft">
+                {formActionError ? <p className="exp-panel__ft-error" role="alert">{formActionError}</p> : null}
                 <button type="button" className="exp-panel-btn exp-panel-btn--ghost" onClick={onClose} disabled={formAsyncBusy}>
                     Отмена
                 </button>

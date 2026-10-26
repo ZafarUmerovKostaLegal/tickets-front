@@ -2212,9 +2212,18 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
   gap: 1.5rem;
 }
 
+.exp-panel__ft-error {
+  flex: 1 1 100%;
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--app-error);
+}
+
 .exp-panel__ft {
   flex-shrink: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;

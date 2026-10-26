@@ -1904,7 +1904,7 @@ function ExpensesPageInner({ variant = 'default' }: ExpensesPageProps) {
         {panelMounted && (<Suspense fallback={null}><ExpensesFormPanel isOpen={isPanelOpen} onExited={() => {
             if (!isPanelOpenRef.current)
                 setPanelMounted(false);
-        }} mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} onExpenseSnapshotUpdated={r => {
+        }} mode={panelMode} editingRequest={editingRequestForPanel} onClose={handleClosePanel} onSaveDraft={handleSaveDraft} onSubmit={handleSubmit} saveDraftPending={panelSavePending} submitPending={panelSubmitPending} formActionError={actionError} onExpenseSnapshotUpdated={r => {
             panelDataGenRef.current += 1;
             setEditingReq(r);
             setRequests(prev => prev.map(x => (x.id === r.id ? r : x)));
