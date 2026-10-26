@@ -2213,11 +2213,20 @@ body[data-theme='dark'] .expenses-page .exp-card__money {
 }
 
 .exp-panel__ft-error {
-  flex: 1 1 100%;
+  flex: 1 0 100%;
+  width: 100%;
   margin: 0;
   font-size: 0.82rem;
   line-height: 1.4;
   color: var(--app-error);
+}
+
+.exp-panel__ft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  width: 100%;
 }
 
 .exp-panel__ft {

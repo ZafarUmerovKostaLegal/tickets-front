@@ -1029,6 +1029,10 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
         validateOptsBase,
         onSubmit,
     ]);
+    const validationMessage = useMemo(() => {
+        const msgs = Object.values(errors).filter((m): m is string => typeof m === 'string' && m.length > 0);
+        return msgs.length > 0 ? msgs.join('. ') : null;
+    }, [errors]);
     const closeAttachPreview = useCallback(() => {
         setAttachPreview(prev => {
             if (prev?.previewObjectUrl)
@@ -1888,9 +1892,10 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                     </p>)}
                     {mode === 'create' && (cbuError || errors.exchangeRate) && !cbuLoading && (<p className="exp-form-err-msg" role="alert" data-err>{cbuError || errors.exchangeRate}</p>)}
 
-                    {(mode === 'edit' || mode === 'view') && values.expenseDate && (<div className="exp-form-field">
+                    {(mode === 'edit' || mode === 'view') && values.expenseDate && (<div className={`exp-form-field${errors.expenseDate ? ' exp-form-field--err' : ''}`}>
                         <div className="exp-form-label">Дата расхода</div>
                         <p className="exp-form-static">{fmtIsoDateRu(values.expenseDate)}</p>
+                        {errors.expenseDate && <p className="exp-form-err-msg" data-err>{errors.expenseDate}</p>}
                     </div>)}
 
                     <div className={`exp-form-field${errors.amountUzs ? ' exp-form-field--err' : ''}`}>
@@ -1939,6 +1944,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                             <span className="exp-form-suffix">USD</span>
                         </div>
                         <p className="exp-form-hint">{equivHint}</p>
+                        {mode !== 'create' && errors.exchangeRate && <p className="exp-form-err-msg" data-err>{errors.exchangeRate}</p>}
                     </div>
 
                     <div className={`exp-form-field${errors.paymentMethod ? ' exp-form-field--err' : ''}`}>
@@ -2377,10 +2383,8 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
             </div>
 
             {!isView ? (<div className="exp-panel__ft">
-                {formActionError ? <p className="exp-panel__ft-error" role="alert">{formActionError}</p> : null}
-                <button type="button" className="exp-panel-btn exp-panel-btn--ghost" onClick={onClose} disabled={formAsyncBusy}>
-                    Отмена
-                </button>
+                {(formActionError || validationMessage) ? <p className="exp-panel__ft-error" role="alert">{formActionError || validationMessage}</p> : null}
+                <div className="exp-panel__ft-actions">
                 {showDeleteAction && (<button type="button" className="exp-panel-btn exp-panel-btn--outline exp-panel-btn--danger-outline" disabled={formAsyncBusy} onClick={openDeleteConfirm}>
                     Удалить
                 </button>)}
@@ -2396,6 +2400,7 @@ export function ExpensesFormPanel({ isOpen, mode, editingRequest, onClose, onExi
                         {values.expenseType === 'partner_expense' ? 'Запись…' : 'Отправка…'}
                     </>) : (values.expenseType === 'partner_expense' ? 'Записать расход' : 'Отправить')}
                 </button>
+                </div>
             </div>) : (<div className={`exp-panel__ft${showModerationActions ||
                 showLifecycleRow ||
                 showWithdrawAction ||
