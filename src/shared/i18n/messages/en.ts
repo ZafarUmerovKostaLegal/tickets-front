@@ -48,8 +48,7 @@ export const enMessages = {
         },
     },
     itSecurityPage: {
-        subtitle: 'Restricted section',
-        empty: 'This section is empty for now.',
+        subtitle: 'File control log',
     },
     kostaLegalAi: {
         heroTitle: 'Where shall we start?',

@@ -1,5 +1,6 @@
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
+import { ItSecurityJournal } from './ItSecurityJournal';
 import './ItSecurityPage.css';
 
 export function ItSecurityPage() {
@@ -21,7 +22,7 @@ export function ItSecurityPage() {
                     </div>
                 </header>
                 <div className="its-page__content">
-                    <p className="its-page__empty">{t('itSecurityPage.empty')}</p>
+                    <ItSecurityJournal />
                 </div>
             </main>
         </div>

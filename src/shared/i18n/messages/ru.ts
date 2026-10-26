@@ -48,8 +48,7 @@ export const ruMessages: Messages = {
         },
     },
     itSecurityPage: {
-        subtitle: 'Закрытый раздел',
-        empty: 'Раздел пока пуст.',
+        subtitle: 'Журнал контроля файлов',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -761,7 +760,7 @@ export type Messages = {
         greeting: Record<'morning' | 'afternoon' | 'evening', string>;
         sections: Record<'daily' | 'finance' | 'team', string>;
     };
-    itSecurityPage: Record<'subtitle' | 'empty', string>;
+    itSecurityPage: Record<'subtitle', string>;
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;
     };
