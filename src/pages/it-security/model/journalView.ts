@@ -1,10 +1,6 @@
 import {
-    JOURNAL_DAYS,
-    JOURNAL_PERIOD_LABEL,
     journalDayLabel,
     journalEventKey,
-    journalSeedEvents,
-    journalUsers,
     type JournalChannel,
     type JournalEvent,
     type JournalKind,
@@ -25,6 +21,8 @@ export type JournalUiState = {
     uq: string;
     user: string;
     open: Record<string, boolean>;
+    remote: JournalEvent[];
+    remoteUsers: JournalUser[];
     extra: JournalEvent[];
 };
 
@@ -37,6 +35,8 @@ export const JOURNAL_UI_INITIAL: JournalUiState = {
     uq: '',
     user: 'all',
     open: {},
+    remote: [],
+    remoteUsers: [],
     extra: [],
 };
 
@@ -192,6 +192,8 @@ export type JournalDetail = {
     edits: number;
     dests: Array<{ label: string; count: number }>;
     history: JournalHistoryItem[];
+    eventId: string;
+    hasFile: boolean;
 };
 
 export type JournalViewModel = {
@@ -212,6 +214,7 @@ export type JournalViewModel = {
     shownText: string;
     searchHint: string;
     exportLabel: string;
+    periodLabel: string;
     totalEvents: number;
 };
 
@@ -269,17 +272,18 @@ function barHeight(value: number, max: number, peak: number, empty: number): num
 }
 
 export function buildJournalView(state: JournalUiState): JournalViewModel {
-    const users = journalUsers();
+    const users = state.remoteUsers;
     const byId = new Map(users.map((user) => [user.id, user]));
     const fullName = (id: string) => {
         const user = byId.get(id);
         return user ? `${user.host}\\${user.login}` : id;
     };
-    const events = state.extra.concat(journalSeedEvents()).sort((a, b) => {
+    const events = state.extra.concat(state.remote).sort((a, b) => {
         const ak = journalEventKey(a);
         const bk = journalEventKey(b);
         return ak < bk ? 1 : ak > bk ? -1 : 0;
     });
+    const days = eventDays(events);
     const query = state.q.trim().toLowerCase();
     const userQuery = state.uq.trim().toLowerCase();
     const matchesStatus = (row: JournalEvent) => state.status === 'all' || row.status === state.status;
@@ -446,7 +450,7 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
         .map((user) => {
             const own = userBase.filter((row) => row.u === user.id);
             const blocked = own.filter((row) => row.status === 'blocked').length;
-            const spark = JOURNAL_DAYS.map((day) => own.filter((row) => row.d === day && row.status === 'blocked').length);
+            const spark = days.map((day) => own.filter((row) => row.d === day && row.status === 'blocked').length);
             return {
                 id: user.id,
                 login: user.login,
@@ -466,7 +470,7 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
     let report: JournalReport | null = null;
     if (state.user !== 'all') {
         const own = userBase.filter(matchesUser);
-        const perDay = JOURNAL_DAYS.map((day) => own.filter((row) => row.d === day && isBlockedSend(row)).length);
+        const perDay = days.map((day) => own.filter((row) => row.d === day && isBlockedSend(row)).length);
         const maxDay = Math.max(...perDay, 1);
         const destCounts = new Map<string, number>();
         const fileCounts = new Map<string, number>();
@@ -480,8 +484,8 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
         report = {
             login: fullName(state.user),
             initial: user?.login.charAt(0).toUpperCase() ?? '?',
-            sub: [user?.dept, JOURNAL_PERIOD_LABEL].filter(Boolean).join(' · '),
-            days: JOURNAL_DAYS.map((day, index) => ({
+            sub: [user?.dept, user?.host].filter(Boolean).join(' · '),
+            days: days.map((day, index) => ({
                 label: day.slice(0, 2),
                 value: perDay[index] ?? 0,
                 height: barHeight(perDay[index] ?? 0, maxDay, 52, 3),
@@ -508,7 +512,7 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
         open: Boolean(accessKey && state.open[accessKey]),
         name: selected?.name ?? '',
         dir: selected?.dir || 'Содержимое буфера обмена',
-        userLine: selected ? `${fullName(selected.u)} · ${byId.get(selected.u)?.dept ?? ''}` : '',
+        userLine: selected ? [fullName(selected.u), byId.get(selected.u)?.dept].filter(Boolean).join(' · ') : '',
         status: selected?.status ?? 'logged',
         bannerTitle: selected ? actionTitle(selected) : '',
         bannerSub: selected
@@ -528,6 +532,8 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
             proc: row.proc,
             selected: row.id === selected?.id,
         })),
+        eventId: selected?.id ?? '',
+        hasFile: Boolean(selected?.hasFile),
     };
 
     const view = state.view;
@@ -555,6 +561,7 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
             : `Показано ${list.length} из ${events.length}`,
         searchHint: view === 'users' ? 'Логин, компьютер или отдел' : 'Файл, процесс, сайт или папка',
         exportLabel: state.user === 'all' ? 'Экспорт' : 'Экспорт отчёта',
+        periodLabel: days.length === 0 ? '' : days.length === 1 ? days[0] : `${days[0]} – ${days[days.length - 1]}`,
         totalEvents: events.length,
     };
 }
@@ -587,6 +594,16 @@ export function toggleFileAccess(state: JournalUiState, selected: JournalEvent):
 }
 
 export function selectedJournalEvent(state: JournalUiState): JournalEvent | null {
-    const events = state.extra.concat(journalSeedEvents());
+    const events = state.extra.concat(state.remote);
     return events.find((row) => row.id === state.sel) ?? events[0] ?? null;
+}
+
+function eventDays(events: JournalEvent[]): string[] {
+    const unique = [...new Set(events.map((row) => row.d).filter(Boolean))];
+    unique.sort((a, b) => (dayKey(a) < dayKey(b) ? -1 : dayKey(a) > dayKey(b) ? 1 : 0));
+    return unique;
+}
+
+function dayKey(day: string): string {
+    return day.slice(6, 10) + day.slice(3, 5) + day.slice(0, 2);
 }

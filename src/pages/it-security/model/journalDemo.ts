@@ -22,6 +22,7 @@ export type JournalEvent = {
     res: string;
     note: string;
     u: string;
+    hasFile?: boolean;
 };
 
 export const JOURNAL_DAYS: readonly string[] = [];

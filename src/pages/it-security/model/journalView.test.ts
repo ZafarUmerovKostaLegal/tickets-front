@@ -18,6 +18,32 @@ describe('buildJournalView', () => {
         expect(view.rows.filter((row) => row.kind === 'event')).toEqual([]);
     });
 
+    it('показывает событие, пришедшее с сервера', () => {
+        const view = buildJournalView({
+            ...JOURNAL_UI_INITIAL,
+            remoteUsers: [{ id: 'PC|KL\\ivan', login: 'ivan', host: 'PC', dept: '' }],
+            remote: [{
+                id: 'e1',
+                d: '26.10.2026',
+                t: '12:00:00',
+                kind: 'send',
+                status: 'blocked',
+                ch: 'telegram',
+                name: 'a.pdf',
+                dir: 'C:\\Users',
+                proc: 'Telegram.exe',
+                res: 'Telegram',
+                note: '',
+                u: 'PC|KL\\ivan',
+                hasFile: true,
+            }],
+        });
+        expect(view.rows.some((row) => row.kind === 'event' && row.name === 'a.pdf')).toBe(true);
+        expect(view.sideUsers.map((user) => user.id)).toContain('PC|KL\\ivan');
+        expect(view.detail.hasFile).toBe(true);
+        expect(view.periodLabel).toBe('26.10.2026');
+    });
+
     it('не подставляет демо-пользователя', () => {
         const view = buildJournalView({ ...JOURNAL_UI_INITIAL, user: 'u02' });
         expect(view.report?.login).toBe('u02');

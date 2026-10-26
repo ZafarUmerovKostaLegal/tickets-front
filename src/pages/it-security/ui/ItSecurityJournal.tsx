@@ -1,5 +1,6 @@
-import { useMemo, useState, type CSSProperties } from 'react';
-import { JOURNAL_PERIOD_LABEL, type JournalKind } from '../model/journalDemo';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import type { JournalKind } from '../model/journalDemo';
+import { downloadFileGuardEvent, fetchFileGuardEvents } from '../model/fileGuardApi';
 import {
     JOURNAL_UI_INITIAL,
     buildJournalView,
@@ -25,7 +26,32 @@ function actionIcon(kind: JournalKind, title = ''): JournalKind | 'unlock' {
 
 export function ItSecurityJournal() {
     const [state, setState] = useState<JournalUiState>(JOURNAL_UI_INITIAL);
+    const [loadError, setLoadError] = useState('');
+    const [downloadError, setDownloadError] = useState('');
     const model = useMemo(() => buildJournalView(state), [state]);
+
+    useEffect(() => {
+        let stopped = false;
+        const load = async () => {
+            try {
+                const feed = await fetchFileGuardEvents();
+                if (stopped)
+                    return;
+                setLoadError('');
+                setState((current) => ({ ...current, remote: feed.events, remoteUsers: feed.users }));
+            }
+            catch (error) {
+                if (!stopped)
+                    setLoadError(error instanceof Error ? error.message : 'Журнал защиты файлов недоступен');
+            }
+        };
+        void load();
+        const timer = window.setInterval(() => void load(), 15000);
+        return () => {
+            stopped = true;
+            window.clearInterval(timer);
+        };
+    }, []);
 
     const pickUser = (id: string, selectId: string, view?: JournalTab) => {
         setState((current) => ({
@@ -120,7 +146,7 @@ export function ItSecurityJournal() {
                             onChange={(event) => setState((current) => ({ ...current, q: event.target.value }))}
                         />
                     </label>
-                    {JOURNAL_PERIOD_LABEL ? <span className="its-j__period">{JOURNAL_PERIOD_LABEL}</span> : null}
+                    {model.periodLabel ? <span className="its-j__period">{model.periodLabel}</span> : null}
                     <button type="button" className="its-j__export">
                         <JournalIcon name="download" />
                         {model.exportLabel}
@@ -348,7 +374,7 @@ export function ItSecurityJournal() {
                     ) : null}
 
                     {model.isEmpty ? (
-                        <div className="its-j__empty">По этим фильтрам ничего нет</div>
+                        <div className="its-j__empty">{loadError || 'По этим фильтрам ничего нет'}</div>
                     ) : null}
                 </section>
                 </div>
@@ -436,10 +462,23 @@ export function ItSecurityJournal() {
                             </ol>
                         </div>
 
-                        <div className="its-j__detail-actions">
-                            <button type="button" className="its-j__btn">Показать в папке</button>
-                            <button type="button" className="its-j__btn its-j__btn--accent">Правило для файла</button>
-                        </div>
+                        {model.detail.hasFile ? (
+                            <div className="its-j__detail-actions">
+                                <button
+                                    type="button"
+                                    className="its-j__btn its-j__btn--accent"
+                                    onClick={() => {
+                                        setDownloadError('');
+                                        void downloadFileGuardEvent(model.detail.eventId, model.detail.name).catch((error: unknown) => {
+                                            setDownloadError(error instanceof Error ? error.message : 'Файл не удалось скачать');
+                                        });
+                                    }}
+                                >
+                                    Скачать файл
+                                </button>
+                                {downloadError ? <span className="its-j__bad">{downloadError}</span> : null}
+                            </div>
+                        ) : null}
                     </aside>
                 ) : null}
             </div>
