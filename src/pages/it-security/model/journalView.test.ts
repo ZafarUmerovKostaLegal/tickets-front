@@ -2,25 +2,25 @@ import { describe, expect, it } from 'vitest';
 import { JOURNAL_UI_INITIAL, buildJournalView } from './journalView';
 
 describe('buildJournalView', () => {
-    it('показывает события и карточку файла', () => {
+    it('без событий журнал пустой', () => {
         const view = buildJournalView(JOURNAL_UI_INITIAL);
-        expect(view.rows.some((row) => row.kind === 'event')).toBe(true);
-        expect(view.showDetail).toBe(true);
-        expect(view.detail.name.length).toBeGreaterThan(0);
-        expect(view.tiles[0]?.value).toBeGreaterThan(0);
+        expect(view.rows).toEqual([]);
+        expect(view.fileRows).toEqual([]);
+        expect(view.userRows).toEqual([]);
+        expect(view.showDetail).toBe(false);
+        expect(view.isEmpty).toBe(true);
+        expect(view.tiles.every((tile) => tile.value === 0)).toBe(true);
+        expect(view.sideUsers.map((user) => user.id)).toEqual(['all']);
     });
 
-    it('фильтр «Заблокировано» оставляет только блокировки', () => {
+    it('фильтр «Заблокировано» на пустом журнале ничего не показывает', () => {
         const view = buildJournalView({ ...JOURNAL_UI_INITIAL, status: 'blocked' });
-        const events = view.rows.filter((row) => row.kind === 'event');
-        expect(events.length).toBeGreaterThan(0);
-        expect(events.every((row) => row.kind === 'event' && row.status === 'blocked')).toBe(true);
+        expect(view.rows.filter((row) => row.kind === 'event')).toEqual([]);
     });
 
-    it('выбор пользователя открывает отчёт', () => {
+    it('не подставляет демо-пользователя', () => {
         const view = buildJournalView({ ...JOURNAL_UI_INITIAL, user: 'u02' });
-        expect(view.showReport).toBe(true);
-        expect(view.report?.login).toContain('a.saidov');
+        expect(view.report?.login).toBe('u02');
         expect(view.showUserColumn).toBe(false);
     });
 });

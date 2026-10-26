@@ -92,14 +92,6 @@ export function ItSecurityJournal() {
                             ))}
                         </div>
                     </div>
-
-                    <div className="its-j__guard">
-                        <span className="its-j__guard-title">
-                            <span className="its-j__guard-dot" aria-hidden />
-                            Защита активна
-                        </span>
-                        <span className="its-j__guard-text">Блокировать отправку файлов любого типа</span>
-                    </div>
                 </aside>
 
                 <div className="its-j__center">
@@ -128,7 +120,7 @@ export function ItSecurityJournal() {
                             onChange={(event) => setState((current) => ({ ...current, q: event.target.value }))}
                         />
                     </label>
-                    <span className="its-j__period">{JOURNAL_PERIOD_LABEL}</span>
+                    {JOURNAL_PERIOD_LABEL ? <span className="its-j__period">{JOURNAL_PERIOD_LABEL}</span> : null}
                     <button type="button" className="its-j__export">
                         <JournalIcon name="download" />
                         {model.exportLabel}
@@ -363,25 +355,6 @@ export function ItSecurityJournal() {
 
                 {model.showDetail ? (
                     <aside className="its-j__detail" aria-label="Карточка файла">
-                        <div className="its-j__detail-head">
-                            <span className="its-j__file-badge" aria-hidden>
-                                <JournalIcon name="file" />
-                            </span>
-                            <span className="its-j__stack">
-                                <span className="its-j__detail-name">{model.detail.name}</span>
-                                <span className="its-j__mono its-j__meta">{model.detail.dir}</span>
-                                <span className="its-j__detail-user">{model.detail.userLine}</span>
-                            </span>
-                        </div>
-
-                        <div className={`its-j__banner its-j__banner--${model.detail.status}`}>
-                            <StatusGlyph status={model.detail.status} />
-                            <span className="its-j__stack">
-                                <span className="its-j__strong">{model.detail.bannerTitle}</span>
-                                <span className="its-j__banner-sub">{model.detail.bannerSub}</span>
-                            </span>
-                        </div>
-
                         {model.detail.canToggle ? (
                             <div className="its-j__access">
                                 <span className="its-j__stack">

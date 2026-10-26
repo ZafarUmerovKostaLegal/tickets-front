@@ -1,5 +1,6 @@
 import {
     JOURNAL_DAYS,
+    JOURNAL_PERIOD_LABEL,
     journalDayLabel,
     journalEventKey,
     journalSeedEvents,
@@ -29,7 +30,7 @@ export type JournalUiState = {
 
 export const JOURNAL_UI_INITIAL: JournalUiState = {
     view: 'events',
-    sel: 'e3',
+    sel: '',
     status: 'all',
     channel: 'all',
     q: '',
@@ -479,7 +480,7 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
         report = {
             login: fullName(state.user),
             initial: user?.login.charAt(0).toUpperCase() ?? '?',
-            sub: `${user?.dept ?? ''} · 20–26 октября`,
+            sub: [user?.dept, JOURNAL_PERIOD_LABEL].filter(Boolean).join(' · '),
             days: JOURNAL_DAYS.map((day, index) => ({
                 label: day.slice(0, 2),
                 value: perDay[index] ?? 0,
@@ -565,7 +566,7 @@ export function toggleFileAccess(state: JournalUiState, selected: JournalEvent):
     const pad = (value: number) => String(value).padStart(2, '0');
     const accessEvent: JournalEvent = {
         id: `a${state.extra.length + 1}`,
-        d: '26.10.2026',
+        d: `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`,
         t: `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`,
         kind: 'access',
         status: 'logged',
