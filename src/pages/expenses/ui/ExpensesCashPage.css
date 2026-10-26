@@ -93,6 +93,15 @@
   height: 1.35rem;
 }
 
+.exp-cash__range {
+  margin: 0 0 0.45rem;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .exp-cash__stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -280,9 +289,94 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
   margin-bottom: 0.85rem;
 }
 
+.exp-cash__period {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.exp-cash__period-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  min-height: 2.4rem;
+  padding: 0.15rem;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+}
+
+.exp-cash__period-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--app-text);
+  cursor: pointer;
+}
+
+.exp-cash__period-step svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.exp-cash__period-step:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--app-text) 6%, transparent);
+}
+
+.exp-cash__period-step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.exp-cash__period-label {
+  min-width: 9.5rem;
+  padding: 0 0.35rem;
+  text-align: center;
+  font-size: 0.84rem;
+  font-weight: 650;
+  color: var(--app-text);
+}
+
+.exp-cash__period-dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem 0.75rem;
+}
+
+.exp-cash__period-dates label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.exp-cash__date-btn {
+  min-height: 2.4rem;
+  border-radius: 12px;
+  font-size: 0.84rem;
+}
+
 @media (max-width: 820px) {
   .exp-cash__ledger-head {
     grid-template-columns: 1fr;
+  }
+
+  .exp-cash__period-label {
+    min-width: 7.5rem;
   }
 }
 

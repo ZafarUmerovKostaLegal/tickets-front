@@ -7,6 +7,7 @@ import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import type { AttachmentPreviewModel } from '@entities/expenses/lib/buildAttachmentPreview';
 import { deleteCashAttachment, deleteCashMovement, fetchCashAttachmentBlob, fetchCashState, isManualCashMovement, openCashAttachment, postCashAction, updateCashMovement, uploadCashAttachment, type CashMovement, type CashState } from '@entities/expenses/model/cashApi';
 import { ExpenseAttachmentPreviewModal } from './ExpenseAttachmentPreviewModal';
+import { DatePicker } from '@shared/ui';
 import { showToast } from '@shared/ui/app-toast';
 import { ExpensesShell } from './ExpensesShell';
 import './ExpensesPage.css';
@@ -14,6 +15,128 @@ import './ExpensesCashPage.css';
 
 type FormKind = 'balance' | 'expense' | 'topup';
 type HistoryFilter = 'all' | 'topup' | 'expense' | 'set';
+type CashPeriodId = 'all' | 'today' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
+type SteppedPeriod = Exclude<CashPeriodId, 'all' | 'custom'>;
+
+const PERIODS: { id: CashPeriodId; label: string }[] = [
+    { id: 'all', label: 'Всё время' },
+    { id: 'today', label: 'Сегодня' },
+    { id: 'week', label: 'Неделя' },
+    { id: 'month', label: 'Месяц' },
+    { id: 'quarter', label: 'Квартал' },
+    { id: 'year', label: 'Год' },
+    { id: 'custom', label: 'Даты' },
+];
+
+function isoLocal(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+}
+
+function movementDayIso(iso: string): string {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime()))
+        return '';
+    return isoLocal(d);
+}
+
+function movementInRange(iso: string, range: { from: string; to: string } | null): boolean {
+    if (!range)
+        return true;
+    const day = movementDayIso(iso);
+    if (!day)
+        return false;
+    if (range.from && day < range.from)
+        return false;
+    if (range.to && day > range.to)
+        return false;
+    return true;
+}
+
+function startOfWeekMonday(d: Date): Date {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const dow = x.getDay();
+    const diff = dow === 0 ? -6 : 1 - dow;
+    x.setDate(x.getDate() + diff);
+    return x;
+}
+
+function periodRange(period: SteppedPeriod, anchor: Date): { from: string; to: string } {
+    const day = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+    if (period === 'today') {
+        const iso = isoLocal(day);
+        return { from: iso, to: iso };
+    }
+    if (period === 'week') {
+        const start = startOfWeekMonday(day);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        return { from: isoLocal(start), to: isoLocal(end) };
+    }
+    if (period === 'month') {
+        const start = new Date(day.getFullYear(), day.getMonth(), 1);
+        const end = new Date(day.getFullYear(), day.getMonth() + 1, 0);
+        return { from: isoLocal(start), to: isoLocal(end) };
+    }
+    if (period === 'quarter') {
+        const q = Math.floor(day.getMonth() / 3);
+        const start = new Date(day.getFullYear(), q * 3, 1);
+        const end = new Date(day.getFullYear(), q * 3 + 3, 0);
+        return { from: isoLocal(start), to: isoLocal(end) };
+    }
+    return {
+        from: isoLocal(new Date(day.getFullYear(), 0, 1)),
+        to: isoLocal(new Date(day.getFullYear(), 11, 31)),
+    };
+}
+
+function shiftPeriodAnchor(period: SteppedPeriod, anchor: Date, direction: -1 | 1): Date {
+    const next = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+    if (period === 'today')
+        next.setDate(next.getDate() + direction);
+    else if (period === 'week')
+        next.setDate(next.getDate() + direction * 7);
+    else if (period === 'month')
+        next.setMonth(next.getMonth() + direction);
+    else if (period === 'quarter')
+        next.setMonth(next.getMonth() + direction * 3);
+    else
+        next.setFullYear(next.getFullYear() + direction);
+    return next;
+}
+
+function capitalizeRu(text: string): string {
+    return text ? text.charAt(0).toUpperCase() + text.slice(1) : text;
+}
+
+function formatPeriodLabel(period: SteppedPeriod, from: string, to: string): string {
+    const parse = (iso: string) => {
+        const [y, m, d] = iso.split('-').map(Number);
+        return new Date(y, (m || 1) - 1, d || 1);
+    };
+    const start = parse(from);
+    const end = parse(to);
+    if (period === 'today')
+        return start.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    if (period === 'month')
+        return capitalizeRu(start.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }));
+    if (period === 'year')
+        return String(start.getFullYear());
+    if (period === 'quarter') {
+        const roman = ['I', 'II', 'III', 'IV'][Math.floor(start.getMonth() / 3)] ?? '';
+        return `${roman} квартал ${start.getFullYear()}`;
+    }
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const left = start.toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'short',
+        ...(sameYear ? {} : { year: 'numeric' }),
+    });
+    const right = end.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `${left} — ${right}`;
+}
 
 const FILE_ACCEPT = 'image/*,application/pdf,video/*,audio/*';
 
@@ -230,6 +353,10 @@ export function ExpensesCashPage() {
     const [editing, setEditing] = useState<CashMovement | null>(null);
     const [deleting, setDeleting] = useState<CashMovement | null>(null);
     const [filter, setFilter] = useState<HistoryFilter>('all');
+    const [period, setPeriod] = useState<CashPeriodId>('all');
+    const [periodAnchor, setPeriodAnchor] = useState(() => new Date());
+    const [customFrom, setCustomFrom] = useState('');
+    const [customTo, setCustomTo] = useState('');
     const [query, setQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
     const [searchHits, setSearchHits] = useState<CashMovement[] | null>(null);
@@ -369,8 +496,21 @@ export function ExpensesCashPage() {
         return () => window.removeEventListener('keydown', onKey);
     }, [dialogOpen, busy]);
 
+    const activeRange = useMemo(() => {
+        if (period === 'all')
+            return null;
+        if (period === 'custom') {
+            if (!customFrom && !customTo)
+                return null;
+            if (customFrom && customTo && customFrom > customTo)
+                return { from: customTo, to: customFrom };
+            return { from: customFrom, to: customTo };
+        }
+        return periodRange(period, periodAnchor);
+    }, [period, periodAnchor, customFrom, customTo]);
+
     const stats = useMemo(() => {
-        const rows = state?.history ?? [];
+        const rows = (state?.history ?? []).filter((row) => movementInRange(row.createdAt, activeRange));
         let spent = 0;
         let topped = 0;
         for (const row of rows) {
@@ -381,13 +521,29 @@ export function ExpensesCashPage() {
                 topped += n;
         }
         return { spent, topped, count: rows.length };
-    }, [state]);
+    }, [state, activeRange]);
+
+    const periodLabel = useMemo(() => {
+        if (!activeRange || period === 'all')
+            return '';
+        if (period === 'custom') {
+            if (!activeRange.from || !activeRange.to)
+                return '';
+            return formatPeriodLabel('week', activeRange.from, activeRange.to);
+        }
+        return formatPeriodLabel(period, activeRange.from, activeRange.to);
+    }, [activeRange, period]);
+
+    const nextPeriodDisabled = period === 'all' || period === 'custom'
+        || periodRange(period, shiftPeriodAnchor(period, periodAnchor, 1)).from > isoLocal(new Date());
 
     const groups = useMemo(() => {
         const source = debouncedQuery ? (searchHits ?? []) : (state?.history ?? []);
         const needle = debouncedQuery.toLowerCase();
         const rows = source.filter((row) => {
             if (filter !== 'all' && row.kind !== filter)
+                return false;
+            if (!movementInRange(row.createdAt, activeRange))
                 return false;
             if (!needle)
                 return true;
@@ -402,7 +558,7 @@ export function ExpensesCashPage() {
             map.set(key, list);
         }
         return [...map.entries()];
-    }, [state, filter, debouncedQuery, searchHits]);
+    }, [state, filter, debouncedQuery, searchHits, activeRange]);
 
     if (loading)
         return (
@@ -525,6 +681,19 @@ export function ExpensesCashPage() {
             ? { title: 'Списать расход', submit: 'Списать' }
             : { title: 'Пополнить кассу', submit: 'Пополнить' };
 
+    const choosePeriod = (id: CashPeriodId) => {
+        if (id === period)
+            return;
+        setPeriod(id);
+        if (id !== 'all' && id !== 'custom')
+            setPeriodAnchor(new Date());
+        if (id === 'custom' && (!customFrom || !customTo)) {
+            const month = periodRange('month', new Date());
+            setCustomFrom(month.from);
+            setCustomTo(month.to);
+        }
+    };
+
     const filters: { id: HistoryFilter; label: string }[] = [
         { id: 'all', label: 'Все' },
         { id: 'topup', label: 'Пополнения' },
@@ -556,6 +725,9 @@ export function ExpensesCashPage() {
                     </div>
                 </section>
 
+                {period !== 'all' && periodLabel ? (
+                    <p className="exp-cash__range">{periodLabel}</p>
+                ) : null}
                 <div className="exp-cash__stats">
                     <article className="exp-cash__stat">
                         <span className="exp-cash__stat-label">Пополнено</span>
@@ -748,9 +920,93 @@ export function ExpensesCashPage() {
                                 </button>
                             ))}
                         </div>
+                        <div className="exp-cash__period">
+                            <div className="exp-cash__filters" role="tablist" aria-label="Период">
+                                {PERIODS.map((item) => (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        role="tab"
+                                        aria-selected={period === item.id}
+                                        className={`exp-cash__filter${period === item.id ? ' exp-cash__filter--on' : ''}`}
+                                        onClick={() => choosePeriod(item.id)}
+                                    >
+                                        {item.label}
+                                    </button>
+                                ))}
+                            </div>
+                            {period !== 'all' && period !== 'custom' ? (
+                                <div className="exp-cash__period-nav" aria-label={periodLabel}>
+                                    <button
+                                        type="button"
+                                        className="exp-cash__period-step"
+                                        aria-label="Предыдущий период"
+                                        onClick={() => setPeriodAnchor((current) => shiftPeriodAnchor(period, current, -1))}
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                            <path d="M15 18l-6-6 6-6" />
+                                        </svg>
+                                    </button>
+                                    <span className="exp-cash__period-label">{periodLabel}</span>
+                                    <button
+                                        type="button"
+                                        className="exp-cash__period-step"
+                                        aria-label="Следующий период"
+                                        disabled={nextPeriodDisabled}
+                                        onClick={() => setPeriodAnchor((current) => shiftPeriodAnchor(period, current, 1))}
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                            <path d="M9 18l6-6-6-6" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ) : null}
+                            {period === 'custom' ? (
+                                <div className="exp-cash__period-dates">
+                                    <label>
+                                        <span id="exp-cash-from">С</span>
+                                        <DatePicker
+                                            value={customFrom}
+                                            onChange={setCustomFrom}
+                                            max={customTo || undefined}
+                                            portal
+                                            portalZIndex={1400}
+                                            emptyLabel="Дата"
+                                            title="Начало периода"
+                                            aria-labelledby="exp-cash-from"
+                                            className="exp-cash__date"
+                                            buttonClassName="exp-cash__date-btn"
+                                        />
+                                    </label>
+                                    <label>
+                                        <span id="exp-cash-to">По</span>
+                                        <DatePicker
+                                            value={customTo}
+                                            onChange={setCustomTo}
+                                            min={customFrom || undefined}
+                                            portal
+                                            portalZIndex={1400}
+                                            emptyLabel="Дата"
+                                            title="Конец периода"
+                                            aria-labelledby="exp-cash-to"
+                                            className="exp-cash__date"
+                                            buttonClassName="exp-cash__date-btn"
+                                        />
+                                    </label>
+                                </div>
+                            ) : null}
+                        </div>
                     </div>
                     {groups.length === 0 ? (
-                        <p className="exp-cash__empty">{debouncedQuery ? 'Ничего не найдено' : 'Операций нет'}</p>
+                        <p className="exp-cash__empty">
+                            {debouncedQuery
+                                ? 'Ничего не найдено'
+                                : period !== 'all'
+                                    ? 'За выбранный период операций нет'
+                                    : filter !== 'all'
+                                        ? 'Таких операций нет'
+                                        : 'Операций нет'}
+                        </p>
                     ) : groups.map(([day, rows]) => (
                         <div key={day} className="exp-cash__day">
                             <h3>{day}</h3>

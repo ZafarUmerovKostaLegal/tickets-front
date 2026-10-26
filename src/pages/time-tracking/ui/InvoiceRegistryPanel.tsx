@@ -34,6 +34,7 @@ import {
 } from '@entities/time-tracking/api/domains/invoiceRegistry';
 import { buildExistingInvoicePdfFile, downloadExistingInvoicePdf } from '../lib/invoicePageShared';
 import { useI18n } from '@shared/i18n';
+import { useAppDialog } from '@shared/ui';
 import { DatePicker } from '@shared/ui/DatePicker';
 import { showToast } from '@shared/ui/app-toast';
 import './InvoiceRegistryPanel.css';
@@ -825,6 +826,7 @@ export function InvoiceRegistryPanel({
     variant?: 'default' | 'accounting';
 }) {
     const { t, locale } = useI18n();
+    const { showConfirm } = useAppDialog();
     const navigate = useNavigate();
     const accountingEmbed = variant === 'accounting';
     const openInvoiceDetail = useCallback((invoiceId: string) => {
@@ -1112,6 +1114,7 @@ export function InvoiceRegistryPanel({
     const noteDraft = useRef<{ rowId: string; invoiceId: string; value: string; previous: string } | null>(null);
 
     const patchCell = useCallback((rowId: string, key: string, value: string) => {
+        const apply = () => {
         if (year === '2026-system') {
             if (readOnly || (key !== 'statusNote' && key !== 'details'))
                 return;
@@ -1171,7 +1174,31 @@ export function InvoiceRegistryPanel({
                     });
                 });
         }
-    }, [canEditYear, persistArchiveRows, readOnly, rows, t, year]);
+        };
+        if (key !== 'statusNote') {
+            apply();
+            return;
+        }
+        const row = rows.find((item) => item.id === rowId);
+        const previous = String(row?.statusNote ?? '');
+        if (value === previous)
+            return;
+        const invoiceLabel = [String(row?.clientNumber ?? '').trim(), String(row?.billedTo ?? '').trim()]
+            .filter(Boolean)
+            .join(' · ') || t('timeTrackingPage.invoices.registry.confirmStatusInvoice');
+        void showConfirm({
+            title: t('timeTrackingPage.invoices.registry.confirmStatusTitle'),
+            message: t('timeTrackingPage.invoices.registry.confirmStatusMessage')
+                .replace('{invoice}', invoiceLabel)
+                .replace('{from}', previous || '—')
+                .replace('{to}', value || '—'),
+            confirmLabel: t('timeTrackingPage.invoices.registry.confirmStatusConfirm'),
+            cancelLabel: t('timeTrackingPage.invoices.registry.confirmStatusCancel'),
+        }).then((ok) => {
+            if (ok)
+                apply();
+        });
+    }, [canEditYear, persistArchiveRows, readOnly, rows, showConfirm, t, year]);
 
     const addRow = useCallback(() => {
         if (!canEditYear)
