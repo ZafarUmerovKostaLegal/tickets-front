@@ -38,38 +38,6 @@ export function ItSecurityJournal() {
 
     return (
         <div className="its-j">
-            <div className="its-j__toolbar">
-                <div className="its-j__tabs" role="tablist" aria-label="Разделы журнала">
-                    {TABS.map((tab) => (
-                        <button
-                            key={tab.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={state.view === tab.id}
-                            className={`its-j__tab${state.view === tab.id ? ' is-active' : ''}`}
-                            onClick={() => setState((current) => ({ ...current, view: tab.id }))}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
-                </div>
-                <label className="its-j__search">
-                    <JournalIcon name="search" />
-                    <input
-                        type="search"
-                        value={state.q}
-                        placeholder={model.searchHint}
-                        aria-label="Поиск"
-                        onChange={(event) => setState((current) => ({ ...current, q: event.target.value }))}
-                    />
-                </label>
-                <span className="its-j__period">{JOURNAL_PERIOD_LABEL}</span>
-                <button type="button" className="its-j__export">
-                    <JournalIcon name="download" />
-                    {model.exportLabel}
-                </button>
-            </div>
-
             <div className={`its-j__body${model.showDetail ? ' its-j__body--detail' : ''}`}>
                 <aside className="its-j__side">
                     <div className="its-j__side-block its-j__side-block--grow">
@@ -133,6 +101,39 @@ export function ItSecurityJournal() {
                         <span className="its-j__guard-text">Блокировать отправку файлов любого типа</span>
                     </div>
                 </aside>
+
+                <div className="its-j__center">
+                <div className="its-j__toolbar">
+                    <div className="its-j__tabs" role="tablist" aria-label="Разделы журнала">
+                        {TABS.map((tab) => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                role="tab"
+                                aria-selected={state.view === tab.id}
+                                className={`its-j__tab${state.view === tab.id ? ' is-active' : ''}`}
+                                onClick={() => setState((current) => ({ ...current, view: tab.id }))}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                    <label className="its-j__search">
+                        <JournalIcon name="search" />
+                        <input
+                            type="search"
+                            value={state.q}
+                            placeholder={model.searchHint}
+                            aria-label="Поиск"
+                            onChange={(event) => setState((current) => ({ ...current, q: event.target.value }))}
+                        />
+                    </label>
+                    <span className="its-j__period">{JOURNAL_PERIOD_LABEL}</span>
+                    <button type="button" className="its-j__export">
+                        <JournalIcon name="download" />
+                        {model.exportLabel}
+                    </button>
+                </div>
 
                 <section className="its-j__main" aria-label="Журнал">
                     <div className="its-j__tiles">
@@ -358,6 +359,7 @@ export function ItSecurityJournal() {
                         <div className="its-j__empty">По этим фильтрам ничего нет</div>
                     ) : null}
                 </section>
+                </div>
 
                 {model.showDetail ? (
                     <aside className="its-j__detail" aria-label="Карточка файла">

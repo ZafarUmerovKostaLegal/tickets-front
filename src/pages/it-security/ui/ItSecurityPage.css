@@ -16,12 +16,13 @@
   overflow: hidden;
 }
 
-.its-page__content {
+.its-page .its-page__content {
   flex: 1;
   min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  padding: 0;
 }
 
 .its-j {
@@ -29,7 +30,6 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
 }
 
 .its-j__toolbar {
@@ -155,14 +155,24 @@
 .its-j__body {
   flex: 1;
   min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-columns: 272px minmax(0, 1fr);
-  gap: 0.85rem;
   align-items: stretch;
 }
 
 .its-j__body--detail {
   grid-template-columns: 272px minmax(0, 1fr) 360px;
+}
+
+.its-j__center {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem 1.1rem 1.1rem;
+  overflow: hidden;
 }
 
 .its-j__side,
@@ -175,13 +185,24 @@
   border-radius: 16px;
 }
 
+.its-j__side,
+.its-j__detail {
+  align-self: stretch;
+  height: 100%;
+  max-height: none;
+  border-radius: 0;
+  border-top: 0;
+  border-bottom: 0;
+}
+
 .its-j__side {
   min-height: 0;
   overflow: hidden;
-  padding: 0.7rem 0.55rem 0.65rem;
+  padding: 0.85rem 0.7rem 0.85rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  border-left: 0;
 }
 
 .its-j__side-block--grow {
@@ -785,10 +806,11 @@
 .its-j__detail {
   min-height: 0;
   overflow: auto;
-  padding: 1rem;
+  padding: 1rem 1rem 1.1rem;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
+  border-right: 0;
 }
 
 .its-j__detail-head,
@@ -1011,14 +1033,12 @@
 }
 
 @media (max-width: 1280px) {
-  .its-j__body,
-  .its-j__body--detail {
-    grid-template-columns: 248px minmax(0, 1fr);
+  .its-j__body {
+    grid-template-columns: 240px minmax(0, 1fr);
   }
 
-  .its-j__detail {
-    grid-column: 1 / -1;
-    max-height: 520px;
+  .its-j__body--detail {
+    grid-template-columns: 228px minmax(0, 1fr) 300px;
   }
 
   .its-j__tiles,
@@ -1033,13 +1053,27 @@
     min-height: 100dvh;
   }
 
-  .its-page__content {
+  .its-page .its-page__content {
     overflow: auto;
+    padding: var(--app-page-padding-y) var(--app-page-padding-x) var(--app-page-content-padding-bottom);
   }
 
   .its-j__body,
   .its-j__body--detail {
     grid-template-columns: 1fr;
+    height: auto;
+  }
+
+  .its-j__center {
+    padding: 0;
+    overflow: visible;
+  }
+
+  .its-j__side,
+  .its-j__detail {
+    height: auto;
+    border-radius: 16px;
+    border: 1px solid var(--app-border);
   }
 
   .its-j__side {
