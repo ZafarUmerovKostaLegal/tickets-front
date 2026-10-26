@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import type { JournalChannelFilter } from '../model/journalView';
 import type { JournalKind } from '../model/journalDemo';
 
-type IconName = JournalKind | 'unlock' | JournalChannelFilter | 'search' | 'download' | 'file' | 'shield';
+type IconName = JournalKind | 'unlock' | JournalChannelFilter | 'search' | 'download' | 'file' | 'shield' | 'users';
 
 const common = {
     viewBox: '0 0 24 24',
@@ -33,6 +33,7 @@ export function JournalIcon({ name }: { name: IconName }) {
         download: <path d="M12 4v11M7.5 11 12 15.5 16.5 11M5 20h14" />,
         file: <path d="M7 3h7l4 4v14H7zM14 3v4h4" />,
         shield: <path d="M12 3 5 6v6c0 4.2 2.8 7.4 7 8.5 4.2-1.1 7-4.3 7-8.5V6l-7-3zM9 12l2 2 4-4" />,
+        users: <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />,
     };
     return (
         <svg {...common}>

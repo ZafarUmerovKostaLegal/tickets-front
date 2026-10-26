@@ -72,7 +72,7 @@ export function ItSecurityJournal() {
 
             <div className={`its-j__body${model.showDetail ? ' its-j__body--detail' : ''}`}>
                 <aside className="its-j__side">
-                    <div className="its-j__side-block">
+                    <div className="its-j__side-block its-j__side-block--grow">
                         <div className="its-j__kicker">Пользователи</div>
                         <label className="its-j__search its-j__search--compact">
                             <JournalIcon name="search" />
@@ -92,7 +92,9 @@ export function ItSecurityJournal() {
                                     className={`its-j__side-item${user.active ? ' is-active' : ''}`}
                                     onClick={() => pickUser(user.id, user.selectId)}
                                 >
-                                    <span className="its-j__avatar">{user.initial}</span>
+                                    <span className={`its-j__avatar${user.id === 'all' ? ' its-j__avatar--icon' : ''}`}>
+                                        {user.id === 'all' ? <JournalIcon name="users" /> : user.initial}
+                                    </span>
                                     <span className="its-j__side-copy">
                                         <span className="its-j__side-label">{user.label}</span>
                                         <span className="its-j__mono its-j__side-sub">{user.sub}</span>
@@ -128,7 +130,7 @@ export function ItSecurityJournal() {
                             <span className="its-j__guard-dot" aria-hidden />
                             Защита активна
                         </span>
-                        <span className="its-j__guard-text">Правило: блокировать отправку файлов любого типа</span>
+                        <span className="its-j__guard-text">Блокировать отправку файлов любого типа</span>
                     </div>
                 </aside>
 
