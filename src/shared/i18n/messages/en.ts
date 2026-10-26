@@ -47,6 +47,10 @@ export const enMessages = {
             team: 'Team & resources',
         },
     },
+    itSecurityPage: {
+        subtitle: 'Restricted section',
+        empty: 'This section is empty for now.',
+    },
     kostaLegalAi: {
         heroTitle: 'Where shall we start?',
         queryLabel: 'Kosta Legal AI query',
@@ -161,6 +165,7 @@ export const enMessages = {
         help: 'Help',
         contacts: 'Contacts',
         internalCommunication: 'Internal directory',
+        itSecurity: 'IT security',
         kostaLegalAi: 'Kosta Legal AI',
         sectionsAria: 'Application sections',
     },

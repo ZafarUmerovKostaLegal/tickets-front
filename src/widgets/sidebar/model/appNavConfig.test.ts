@@ -79,6 +79,35 @@ describe('getVisibleAppNavItems', () => {
         }
     });
 
+    it('IT-безопасность видна только aakhmadjonov и zumerov', () => {
+        const allowed = getVisibleAppNavItems(user({
+            role: 'Сотрудник',
+            email: 'aakhmadjonov@kostalegal.com',
+            time_tracking_role: 'user',
+        }), false);
+        expect(allowed.map((i) => i.id)).toContain('itSecurity');
+
+        const partner = getVisibleAppNavItems(user({
+            role: 'Партнёр',
+            email: 'zumerov@kostalegal.com',
+            time_tracking_role: 'manager',
+        }), false);
+        expect(partner.map((i) => i.id)).toContain('itSecurity');
+
+        const other = getVisibleAppNavItems(user({
+            role: 'Администратор',
+            email: 'other@kostalegal.com',
+            time_tracking_role: 'manager',
+        }), false);
+        expect(other.map((i) => i.id)).not.toContain('itSecurity');
+
+        const loading = getVisibleAppNavItems(user({
+            role: 'Администратор',
+            email: 'aakhmadjonov@kostalegal.com',
+        }), true);
+        expect(loading.map((i) => i.id)).not.toContain('itSecurity');
+    });
+
     it('APP_NAV_DEFINITIONS покрывает все ключевые модули', () => {
         expect(APP_NAV_DEFINITIONS.length).toBeGreaterThanOrEqual(15);
         const ids = new Set(APP_NAV_DEFINITIONS.map((d) => d.id));

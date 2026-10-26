@@ -37,7 +37,8 @@
 .acct-page__header,
 .contacts-page__header,
 .td-page__header,
-.icom-page__header {
+.icom-page__header,
+.its-page__header {
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -61,7 +62,8 @@
 .acct-page__header-inner,
 .contacts-page__header-inner,
 .td-page__header-inner,
-.icom-page__header-inner {
+.icom-page__header-inner,
+.its-page__header-inner {
   flex: 1;
   display: flex;
   align-items: center;
@@ -83,7 +85,8 @@
 .acct-page__header-start,
 .contacts-page__header-start,
 .td-page__header-start,
-.icom-page__header-start {
+.icom-page__header-start,
+.its-page__header-start {
   display: flex;
   align-items: center;
   gap: var(--app-page-header-gap);
@@ -102,7 +105,8 @@
 .acct-page__header-start,
 .contacts-page__header-start,
 .td-page__header-start,
-.icom-page__header-start {
+.icom-page__header-start,
+.its-page__header-start {
   flex: 1;
 }
 
@@ -110,7 +114,8 @@
 .acct-page__header-start > div,
 .contacts-page__header-start > div,
 .td-page__header-start > div,
-.icom-page__header-start > div {
+.icom-page__header-start > div,
+.its-page__header-start > div {
   min-width: 0;
 }
 
@@ -127,7 +132,8 @@
 .acct-page__title,
 .contacts-page__title,
 .td-page__title,
-.icom-page__title {
+.icom-page__title,
+.its-page__title {
   margin: 0;
   font-size: var(--app-page-title-size);
   font-weight: 700;
@@ -144,7 +150,8 @@
 .corr__subtitle,
 .acct-page__subtitle,
 .contacts-page__subtitle,
-.icom-page__subtitle {
+.icom-page__subtitle,
+.its-page__subtitle {
   margin: 0.125rem 0 0;
   font-size: var(--app-page-subtitle-size);
   color: var(--app-muted);
@@ -161,7 +168,8 @@
 .acct-page__content,
 .contacts-page__content,
 .td-page__content,
-.icom-page__content {
+.icom-page__content,
+.its-page__content {
   box-sizing: border-box;
   padding: var(--app-page-padding-y) var(--app-page-padding-x) var(--app-page-content-padding-bottom);
 }
@@ -197,7 +205,8 @@
   .acct-page__header,
   .contacts-page__header,
   .td-page__header,
-  .icom-page__header {
+  .icom-page__header,
+  .its-page__header {
     padding-top: var(--mob-safe-top);
     min-height: calc(var(--app-page-header-height) + var(--mob-safe-top));
     height: auto;

@@ -47,6 +47,10 @@ export const ruMessages: Messages = {
             team: 'Команда и ресурсы',
         },
     },
+    itSecurityPage: {
+        subtitle: 'Закрытый раздел',
+        empty: 'Раздел пока пуст.',
+    },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
         queryLabel: 'Запрос к Kosta Legal AI',
@@ -161,6 +165,7 @@ export const ruMessages: Messages = {
         help: 'Помощь',
         contacts: 'Контакты',
         internalCommunication: 'Внутренняя связь',
+        itSecurity: 'IT-безопасность',
         kostaLegalAi: 'Kosta Legal AI',
         sectionsAria: 'Разделы приложения',
     },
@@ -756,6 +761,7 @@ export type Messages = {
         greeting: Record<'morning' | 'afternoon' | 'evening', string>;
         sections: Record<'daily' | 'finance' | 'team', string>;
     };
+    itSecurityPage: Record<'subtitle' | 'empty', string>;
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;
     };
@@ -837,6 +843,7 @@ export type Messages = {
         | 'help'
         | 'contacts'
         | 'internalCommunication'
+        | 'itSecurity'
         | 'kostaLegalAi'
         | 'sectionsAria',
         string

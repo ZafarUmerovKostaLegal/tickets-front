@@ -98,6 +98,7 @@ export function resolvePageTitleSection(pathname: string, search: string, t: (ke
         [routes.kostaDaily]: 'nav.kostaDaily',
         [routes.contacts]: 'nav.contacts',
         [routes.internalCommunication]: 'nav.internalCommunication',
+        [routes.itSecurity]: 'nav.itSecurity',
         [routes.admin]: 'nav.admin',
         [routes.networkDriveAccess]: 'nav.networkDrive',
     };

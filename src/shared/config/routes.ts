@@ -39,6 +39,7 @@ export const routes = {
     kostaDaily: '/kosta-daily',
     contacts: '/contacts',
     internalCommunication: '/internal-communication',
+    itSecurity: '/it-security',
 } as const;
 export function getTicketDetailUrl(uuid: string): string {
     return `/ticket/${uuid}`;

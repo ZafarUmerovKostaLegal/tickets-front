@@ -6,8 +6,9 @@ import { canAccessExpensesSection } from '@entities/expenses/model/expenseModera
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
 import { canAccessAdminPanel, canAccessAdminOnlyModules, canAccessAttendance, isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
+import { canAccessItSecurity } from '@shared/lib/itSecurityAccess';
 import type { TranslationKey } from '@shared/i18n/translate';
-import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconMailInbox, IconMessages, IconContacts, IconAccounting, } from '../ui/SidebarIcons';
+import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconMailInbox, IconMessages, IconContacts, IconAccounting, IconShield, } from '../ui/SidebarIcons';
 
 export type AppNavId =
     | 'home'
@@ -28,7 +29,8 @@ export type AppNavId =
     | 'rules'
     | 'help'
     | 'contacts'
-    | 'internalCommunication';
+    | 'internalCommunication'
+    | 'itSecurity';
 
 export type AppNavItemDef = {
     id: AppNavId;
@@ -55,6 +57,7 @@ const EMPLOYEE_NAV_IDS = new Set<AppNavId>([
     'rules',
     'help',
     'internalCommunication',
+    'itSecurity',
 ]);
 
 const MEETING_ROOM_NAV_IDS = new Set<AppNavId>(['home', 'callSchedule']);
@@ -79,6 +82,7 @@ export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { id: 'contacts', to: routes.contacts, icon: IconContacts, adminOnly: true, adminModulesOnly: true },
     { id: 'internalCommunication', to: routes.internalCommunication, icon: IconPhone },
     { id: 'help', to: routes.help, icon: IconHelpCircle },
+    { id: 'itSecurity', to: routes.itSecurity, icon: IconShield },
 ];
 
 export function getNavTranslationKey(id: AppNavId): TranslationKey {
@@ -122,6 +126,9 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
     }
     if (!loading && !isTauri()) {
         visible = visible.filter((item) => !item.desktopOnly);
+    }
+    if (loading || !canAccessItSecurity(user)) {
+        visible = visible.filter((item) => item.id !== 'itSecurity');
     }
     return visible;
 }

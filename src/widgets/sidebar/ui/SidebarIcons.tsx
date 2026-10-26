@@ -169,6 +169,12 @@ export function IconMessages() {
       <line x1="9" y1="14" x2="13" y2="14"/>
     </svg>);
 }
+export function IconShield() {
+    return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3 5 6v6c0 4.2 2.8 7.4 7 8.5 4.2-1.1 7-4.3 7-8.5V6l-7-3z"/>
+      <path d="m9 12 2 2 4-4"/>
+    </svg>);
+}
 export function IconMenu() {
     return (<svg className="burger-icon" viewBox="0 0 24 24" aria-hidden>
       <rect className="burger-icon__line burger-icon__line--top" x="5" y="7" width="14" height="2" rx="1"/>

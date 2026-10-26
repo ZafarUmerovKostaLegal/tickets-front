@@ -9,6 +9,7 @@ import { TimeTrackingRoute } from '@app/TimeTrackingRoute';
 import { ExpensesAccessRoute } from '@app/ExpensesAccessRoute';
 import { AttendanceAccessRoute } from '@app/AttendanceAccessRoute';
 import { AccountingAccessRoute } from '@app/AccountingAccessRoute';
+import { ItSecurityAccessRoute } from '@app/ItSecurityAccessRoute';
 import { AdminOnlyModuleRoute } from '@app/AdminOnlyModuleRoute';
 import { ExpensesMgmtRoute } from '@app/ExpensesMgmtRoute';
 import { ExpensesNestedLayout } from '@app/ExpensesNestedLayout';
@@ -56,6 +57,7 @@ const HelpPage = lazy(() => import('@pages/help').then(m => ({ default: m.HelpPa
 const KostaDailyPage = lazy(() => import('@pages/kosta-daily').then(m => ({ default: m.KostaDailyPage })));
 const ContactsPage = lazy(() => import('@pages/contacts').then(m => ({ default: m.ContactsPage })));
 const InternalCommunicationPage = lazy(() => import('@pages/internal-communication').then(m => ({ default: m.InternalCommunicationPage })));
+const ItSecurityPage = lazy(() => import('@pages/it-security').then(m => ({ default: m.ItSecurityPage })));
 const ExpensesPage = lazy(() => import('@pages/expenses/ui/ExpensesPage').then(m => ({ default: m.ExpensesPage })));
 const ExpensesRequestsPage = lazy(() => import('@pages/expenses/ui/ExpensesRequestsPage').then(m => ({ default: m.ExpensesRequestsPage })));
 const ExpensesReportPage = lazy(() => import('@pages/expenses/ui/ExpensesReportPage').then(m => ({ default: m.ExpensesReportPage })));
@@ -179,6 +181,9 @@ const router = createBrowserRouter([
                     <EnsureContactsI18n fallback={<LazyFallback />}><ContactsPage /></EnsureContactsI18n>
                   </AdminOnlyModuleRoute>) },
             { path: routes.internalCommunication, element: withProtected(<InternalCommunicationPage />) },
+            { path: routes.itSecurity, element: withProtected(<ItSecurityAccessRoute>
+                    <ItSecurityPage />
+                  </ItSecurityAccessRoute>) },
             { path: routes.admin, element: withProtected(<AdminPage />, true) },
             { path: routes.networkDriveAccess, element: withProtected(<DesktopOnlyRoute>
               <NetworkDriveAccessPage />
