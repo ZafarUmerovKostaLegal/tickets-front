@@ -1,17 +1,10 @@
-/**
- * Формат хранения оценки на бэкенде — одна буква A–E. Менять его нельзя: поле
- * equipment_class валидируется API и используется в серверном фильтре списка.
- * Пользователю оценка показывается по 10-балльной шкале (см. equipmentScore.ts):
- * буква задаёт диапазон оценки, точный балл считается по дате покупки.
- */
+
 export type EquipmentClassCode = 'A' | 'B' | 'C' | 'D' | 'E';
 
 export type EquipmentTier = {
     code: EquipmentClassCode;
-    /** Диапазон 10-балльной оценки, который покрывает эта буква. */
     minScore: number;
     maxScore: number;
-    /** Возраст техники в годах: [fromYears, toYears). */
     fromYears: number;
     toYears: number;
     short: string;

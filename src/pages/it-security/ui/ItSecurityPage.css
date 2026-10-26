@@ -33,10 +33,14 @@
 }
 
 .its-j__toolbar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   flex-wrap: wrap;
+  padding: 0.55rem 0.85rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
 }
 
 .its-j__tabs {
@@ -152,27 +156,24 @@
   border-color: var(--app-border-hover);
 }
 
-.its-j__body {
+.its-j__body,
+.its-j__body--detail {
   flex: 1;
   min-height: 0;
-  height: 100%;
-  display: grid;
-  grid-template-columns: 272px minmax(0, 1fr);
+  display: flex;
   align-items: stretch;
-}
-
-.its-j__body--detail {
-  grid-template-columns: 272px minmax(0, 1fr) 360px;
+  overflow: hidden;
+  background: var(--app-bg);
 }
 
 .its-j__center {
+  flex: 1;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
-  padding: 1rem 1.1rem 1.1rem;
   overflow: hidden;
+  background: var(--app-bg);
 }
 
 .its-j__side,
@@ -188,21 +189,22 @@
 .its-j__side,
 .its-j__detail {
   align-self: stretch;
-  height: 100%;
+  flex: none;
+  min-height: 0;
   max-height: none;
+  border: 0;
   border-radius: 0;
-  border-top: 0;
-  border-bottom: 0;
+  background: var(--app-surface);
 }
 
 .its-j__side {
-  min-height: 0;
+  width: 272px;
   overflow: hidden;
   padding: 0.85rem 0.7rem 0.85rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  border-left: 0;
+  border-right: 1px solid var(--app-border);
 }
 
 .its-j__side-block--grow {
@@ -438,13 +440,14 @@
 }
 
 .its-j__main {
+  flex: 1;
   min-width: 0;
   min-height: 0;
   overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  padding-right: 2px;
+  padding: 0.85rem 0.9rem 1.1rem;
 }
 
 .its-j__tiles {
@@ -804,13 +807,13 @@
 }
 
 .its-j__detail {
-  min-height: 0;
+  width: 360px;
   overflow: auto;
   padding: 1rem 1rem 1.1rem;
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-  border-right: 0;
+  border-left: 1px solid var(--app-border);
 }
 
 .its-j__detail-head,
@@ -1033,12 +1036,12 @@
 }
 
 @media (max-width: 1280px) {
-  .its-j__body {
-    grid-template-columns: 240px minmax(0, 1fr);
+  .its-j__side {
+    width: 240px;
   }
 
-  .its-j__body--detail {
-    grid-template-columns: 228px minmax(0, 1fr) 300px;
+  .its-j__detail {
+    width: 300px;
   }
 
   .its-j__tiles,
@@ -1060,20 +1063,30 @@
 
   .its-j__body,
   .its-j__body--detail {
-    grid-template-columns: 1fr;
+    flex-direction: column;
     height: auto;
+    overflow: visible;
   }
 
   .its-j__center {
-    padding: 0;
     overflow: visible;
+  }
+
+  .its-j__toolbar {
+    border: 1px solid var(--app-border);
+    border-radius: 16px;
+    margin-bottom: 0.85rem;
   }
 
   .its-j__side,
   .its-j__detail {
-    height: auto;
+    width: auto;
     border-radius: 16px;
     border: 1px solid var(--app-border);
+  }
+
+  .its-j__main {
+    padding: 0;
   }
 
   .its-j__side {
