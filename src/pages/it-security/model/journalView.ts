@@ -44,8 +44,8 @@ const KIND_LABEL: Record<JournalKind, string> = {
     send: 'Отправка',
     clip: 'Буфер обмена',
     copy: 'Копирование',
-    edit: 'Изменение',
-    new: 'Создание',
+    edit: 'Документ изменён',
+    new: 'Создан',
     open: 'Подключение',
     access: 'Доступ',
 };
@@ -249,9 +249,9 @@ function actionTitle(row: JournalEvent): string {
     if (row.kind === 'copy')
         return 'Файл скопирован';
     if (row.kind === 'edit')
-        return 'Файл изменён';
+        return 'Документ изменён';
     if (row.kind === 'new')
-        return 'Файл появился на диске';
+        return 'Создан';
     return 'Подключение';
 }
 
@@ -260,6 +260,8 @@ function actionDetail(row: JournalEvent): string {
         return 'Правило для этого файла изменено вручную';
     if (row.note)
         return row.note;
+    if (row.kind === 'new' || row.kind === 'edit' || row.kind === 'copy' || row.kind === 'open')
+        return row.dir || row.proc;
     if (row.res)
         return `→ ${row.res}`;
     return 'Получатель не определён';
