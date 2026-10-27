@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import type { JournalKind } from '../model/journalDemo';
 import { downloadFileGuardEvent, fetchFileGuardEvents } from '../model/fileGuardApi';
+import { downloadJournalReport } from '../model/journalReportPdf';
 import {
     JOURNAL_UI_INITIAL,
     buildJournalView,
@@ -28,6 +29,8 @@ export function ItSecurityJournal() {
     const [state, setState] = useState<JournalUiState>(JOURNAL_UI_INITIAL);
     const [loadError, setLoadError] = useState('');
     const [downloadError, setDownloadError] = useState('');
+    const [reportError, setReportError] = useState('');
+    const [reportBusy, setReportBusy] = useState(false);
     const model = useMemo(() => buildJournalView(state), [state]);
 
     useEffect(() => {
@@ -60,6 +63,16 @@ export function ItSecurityJournal() {
             view: view ?? current.view,
             sel: selectId || current.sel,
         }));
+    };
+
+    const downloadReport = () => {
+        setReportError('');
+        setReportBusy(true);
+        void downloadJournalReport(model, state.view)
+            .catch((error: unknown) => {
+                setReportError(error instanceof Error ? error.message : 'Отчёт не удалось скачать');
+            })
+            .finally(() => setReportBusy(false));
     };
 
     return (
@@ -147,10 +160,11 @@ export function ItSecurityJournal() {
                         />
                     </label>
                     {model.periodLabel ? <span className="its-j__period">{model.periodLabel}</span> : null}
-                    <button type="button" className="its-j__export">
+                    <button type="button" className="its-j__export" disabled={reportBusy} onClick={downloadReport}>
                         <JournalIcon name="download" />
-                        {model.exportLabel}
+                        {reportBusy ? 'Готовим отчёт…' : model.exportLabel}
                     </button>
+                    {reportError ? <span className="its-j__bad">{reportError}</span> : null}
                 </div>
 
                 <section className="its-j__main" aria-label="Журнал">
@@ -171,7 +185,9 @@ export function ItSecurityJournal() {
                                     <span className="its-j__report-title">Отчёт: {model.report.login}</span>
                                     <span className="its-j__mono its-j__side-sub">{model.report.sub}</span>
                                 </span>
-                                <button type="button" className="its-j__btn its-j__btn--accent">Скачать отчёт (PDF)</button>
+                                <button type="button" className="its-j__btn its-j__btn--accent" disabled={reportBusy} onClick={downloadReport}>
+                                    {reportBusy ? 'Готовим отчёт…' : 'Скачать отчёт (PDF)'}
+                                </button>
                                 <button
                                     type="button"
                                     className="its-j__btn"
@@ -181,17 +197,19 @@ export function ItSecurityJournal() {
                                 </button>
                             </div>
                             <div className="its-j__report-grid">
-                                <div>
+                                <div className="its-j__chart">
                                     <div className="its-j__kicker">Блокировки по дням</div>
-                                    <div className="its-j__bars">
+                                    <div className="its-j__bars" role="img" aria-label="Блокировки по дням">
                                         {model.report.days.map((day) => (
                                             <div key={day.label} className="its-j__bar-col">
-                                                <span className="its-j__mono its-j__bar-n">{day.value}</span>
-                                                <span
-                                                    className={`its-j__bar${day.value ? '' : ' is-empty'}`}
-                                                    style={{ '--its-h': `${day.height}px` } as CSSProperties}
-                                                />
-                                                <span className="its-j__mono its-j__bar-label">{day.label}</span>
+                                                <span className={`its-j__bar-n${day.value ? '' : ' is-zero'}`}>{day.value}</span>
+                                                <span className="its-j__bar-slot">
+                                                    <span
+                                                        className={`its-j__bar${day.value ? '' : ' is-empty'}`}
+                                                        style={{ '--its-h': `${day.height}px` } as CSSProperties}
+                                                    />
+                                                </span>
+                                                <span className="its-j__bar-label">{day.label}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -503,7 +521,7 @@ function RankList({
                 <div key={row.label} className="its-j__rank">
                     <span className="its-j__rank-top">
                         <span>{row.label}</span>
-                        <span className="its-j__mono its-j__num--danger">{row.count}</span>
+                        <span className={`its-j__rank-count its-j__rank-count--${tone}`}>{row.count}</span>
                     </span>
                     <span className="its-j__rank-track">
                         <span className={`its-j__rank-fill its-j__rank-fill--${tone}`} style={{ width: `${row.width}%` }} />

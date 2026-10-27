@@ -488,7 +488,7 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
             days: days.map((day, index) => ({
                 label: day.slice(0, 2),
                 value: perDay[index] ?? 0,
-                height: barHeight(perDay[index] ?? 0, maxDay, 52, 3),
+                height: barHeight(perDay[index] ?? 0, maxDay, 68, 4),
             })),
             dests: rankTop(destCounts),
             files: rankTop(fileCounts),
