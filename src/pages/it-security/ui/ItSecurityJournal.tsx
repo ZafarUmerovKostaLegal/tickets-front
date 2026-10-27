@@ -13,6 +13,7 @@ import {
 } from '../model/journalView';
 import { JournalIcon, StatusGlyph } from './JournalIcons';
 import { FileGuardFilePreview, type FileGuardPreviewState } from './FileGuardFilePreview';
+import { FileGuardLimitSettings } from './FileGuardLimitSettings';
 
 const TABS: Array<{ id: JournalTab; label: string }> = [
     { id: 'events', label: 'События' },
@@ -36,7 +37,7 @@ export function ItSecurityJournal() {
     const [policies, setPolicies] = useState<FileGuardPolicy[]>([]);
     const [sharedInput, setSharedInput] = useState('');
     const [userInput, setUserInput] = useState('');
-    const [limitHint, setLimitHint] = useState('Пустое общее поле блокирует всех, у кого нет своего лимита');
+    const [limitsOpen, setLimitsOpen] = useState(false);
     const [limitError, setLimitError] = useState('');
     const [limitBusy, setLimitBusy] = useState<'shared' | 'user' | ''>('');
     useEffect(() => {
@@ -70,17 +71,8 @@ export function ItSecurityJournal() {
         setUserInput(personalLimit == null ? '' : String(personalLimit));
     }, [personalLimit, scope.host, scope.windowsUser]);
 
-    useEffect(() => {
-        const sharedText = sharedLimit == null ? 'Общий лимит не задан' : `Общий лимит: ${sharedLimit} МБ в день`;
-        if (scope.host === '*')
-            setLimitHint(`${sharedText}. Выберите пользователя слева, чтобы задать личный лимит`);
-        else if (personalPolicy && personalLimit != null)
-            setLimitHint(`${sharedText}. Для ${personalName}: ${personalLimit} МБ в день`);
-        else if (sharedLimit != null)
-            setLimitHint(`${sharedText}. Для ${personalName} действует общий лимит`);
-        else
-            setLimitHint(`Для ${personalName} лимит не задан, отправка блокируется`);
-    }, [personalLimit, personalName, personalPolicy, scope.host, sharedLimit]);
+    const appliedLimit = scope.host !== '*' && personalLimit != null ? personalLimit : sharedLimit;
+    const limitChip = appliedLimit == null ? 'не задан' : `${appliedLimit} МБ`;
 
     const saveLimit = (host: string, windowsUser: string, text: string) => {
         const value = text.trim() === '' ? null : Number(text.trim());
@@ -217,6 +209,22 @@ export function ItSecurityJournal() {
                     });
                 }}
             />
+            <FileGuardLimitSettings
+                open={limitsOpen}
+                onClose={() => setLimitsOpen(false)}
+                sharedInput={sharedInput}
+                userInput={userInput}
+                onSharedInput={setSharedInput}
+                onUserInput={setUserInput}
+                sharedLimit={sharedLimit}
+                personalLimit={personalLimit}
+                personalName={personalName}
+                userSelected={scope.host !== '*'}
+                busy={limitBusy}
+                error={limitError}
+                onSaveShared={() => saveLimit('*', '*', sharedInput)}
+                onSaveUser={() => saveLimit(scope.host, scope.windowsUser, userInput)}
+            />
             <div className={`its-j__body${model.showDetail ? ' its-j__body--detail' : ''}`}>
                 <aside className="its-j__side">
                     <div className="its-j__side-block its-j__side-block--grow">
@@ -300,48 +308,11 @@ export function ItSecurityJournal() {
                         />
                     </label>
                     {model.periodLabel ? <span className="its-j__period">{model.periodLabel}</span> : null}
-                    <div className="its-j__limits">
-                        <label className="its-j__limit">
-                            Общий, МБ
-                            <input
-                                type="number"
-                                min={0}
-                                max={100000}
-                                inputMode="numeric"
-                                value={sharedInput}
-                                placeholder="блок"
-                                aria-label="Общий лимит отправки в мегабайтах за день"
-                                onChange={(event) => setSharedInput(event.target.value)}
-                            />
-                            <button type="button" disabled={limitBusy !== ''} onClick={() => saveLimit('*', '*', sharedInput)}>
-                                {limitBusy === 'shared' ? '…' : 'Сохранить'}
-                            </button>
-                        </label>
-                        <label className="its-j__limit">
-                            Пользователь, МБ
-                            <input
-                                type="number"
-                                min={0}
-                                max={100000}
-                                inputMode="numeric"
-                                value={scope.host === '*' ? '' : userInput}
-                                placeholder={scope.host === '*' ? 'выберите' : 'общий'}
-                                disabled={scope.host === '*'}
-                                aria-label="Личный лимит отправки в мегабайтах за день"
-                                title={personalName || 'Выберите пользователя'}
-                                onChange={(event) => setUserInput(event.target.value)}
-                            />
-                            <button
-                                type="button"
-                                disabled={scope.host === '*' || limitBusy !== ''}
-                                onClick={() => saveLimit(scope.host, scope.windowsUser, userInput)}
-                            >
-                                {limitBusy === 'user' ? '…' : 'Сохранить'}
-                            </button>
-                        </label>
-                        <span className="its-j__limit-hint">{limitHint}</span>
-                    </div>
-                    {limitError ? <span className="its-j__bad">{limitError}</span> : null}
+                    <button type="button" className="its-j__btn its-j__limit-btn" onClick={() => setLimitsOpen(true)}>
+                        <JournalIcon name="settings" />
+                        Лимиты
+                        <span className="its-j__limit-chip">{limitChip}</span>
+                    </button>
                     <button type="button" className="its-j__export" disabled={reportBusy} onClick={downloadReport}>
                         <JournalIcon name="download" />
                         {reportBusy ? 'Готовим отчёт…' : model.exportLabel}
