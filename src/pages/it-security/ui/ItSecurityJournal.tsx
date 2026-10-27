@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { JournalKind } from '../model/journalDemo';
-import { downloadFileGuardEvent, fetchFileGuardEvents } from '../model/fileGuardApi';
+import { downloadFileGuardEvent, fetchFileGuardEventFile, fetchFileGuardEvents, fileGuardPreviewBlob } from '../model/fileGuardApi';
 import { downloadJournalReport } from '../model/journalReportPdf';
 import {
     JOURNAL_UI_INITIAL,
@@ -12,6 +12,7 @@ import {
     type JournalUiState,
 } from '../model/journalView';
 import { JournalIcon, StatusGlyph } from './JournalIcons';
+import { FileGuardFilePreview, type FileGuardPreviewState } from './FileGuardFilePreview';
 
 const TABS: Array<{ id: JournalTab; label: string }> = [
     { id: 'events', label: 'События' },
@@ -31,6 +32,9 @@ export function ItSecurityJournal() {
     const [downloadError, setDownloadError] = useState('');
     const [reportError, setReportError] = useState('');
     const [reportBusy, setReportBusy] = useState(false);
+    const [preview, setPreview] = useState<FileGuardPreviewState | null>(null);
+    const previewUrl = useRef<string | null>(null);
+    const previewToken = useRef(0);
     const model = useMemo(() => buildJournalView(state), [state]);
 
     useEffect(() => {
@@ -75,8 +79,75 @@ export function ItSecurityJournal() {
             .finally(() => setReportBusy(false));
     };
 
+    const releasePreview = () => {
+        if (previewUrl.current) {
+            URL.revokeObjectURL(previewUrl.current);
+            previewUrl.current = null;
+        }
+    };
+
+    const closePreview = () => {
+        previewToken.current += 1;
+        releasePreview();
+        setPreview(null);
+    };
+
+    const openPreview = (eventId: string, fileName: string) => {
+        const token = previewToken.current + 1;
+        previewToken.current = token;
+        releasePreview();
+        setDownloadError('');
+        setPreview({ eventId, fileName, loading: true, error: '', model: null });
+        void (async () => {
+            try {
+                const file = await fetchFileGuardEventFile(eventId);
+                if (previewToken.current !== token)
+                    return;
+                const blob = fileGuardPreviewBlob(file.blob, fileName, file.contentType);
+                const { buildAttachmentPreview } = await import('@entities/expenses/lib/buildAttachmentPreview');
+                const built = await buildAttachmentPreview(blob, fileName, blob.type || file.contentType);
+                if (previewToken.current !== token) {
+                    if (built.objectUrl)
+                        URL.revokeObjectURL(built.objectUrl);
+                    return;
+                }
+                previewUrl.current = built.objectUrl;
+                setPreview({ eventId, fileName, loading: false, error: '', model: built.model });
+            }
+            catch (error) {
+                if (previewToken.current !== token)
+                    return;
+                setPreview({
+                    eventId,
+                    fileName,
+                    loading: false,
+                    error: error instanceof Error ? error.message : 'Файл не удалось открыть',
+                    model: null,
+                });
+            }
+        })();
+    };
+
+    useEffect(() => () => {
+        if (previewUrl.current)
+            URL.revokeObjectURL(previewUrl.current);
+    }, []);
+
     return (
         <div className="its-j">
+            <FileGuardFilePreview
+                preview={preview}
+                downloadError={downloadError}
+                onClose={closePreview}
+                onDownload={() => {
+                    if (!preview)
+                        return;
+                    setDownloadError('');
+                    void downloadFileGuardEvent(preview.eventId, preview.fileName).catch((error: unknown) => {
+                        setDownloadError(error instanceof Error ? error.message : 'Файл не удалось скачать');
+                    });
+                }}
+            />
             <div className={`its-j__body${model.showDetail ? ' its-j__body--detail' : ''}`}>
                 <aside className="its-j__side">
                     <div className="its-j__side-block its-j__side-block--grow">
@@ -485,6 +556,13 @@ export function ItSecurityJournal() {
                                 <button
                                     type="button"
                                     className="its-j__btn its-j__btn--accent"
+                                    onClick={() => openPreview(model.detail.eventId, model.detail.name)}
+                                >
+                                    Просмотр
+                                </button>
+                                <button
+                                    type="button"
+                                    className="its-j__btn"
                                     onClick={() => {
                                         setDownloadError('');
                                         void downloadFileGuardEvent(model.detail.eventId, model.detail.name).catch((error: unknown) => {

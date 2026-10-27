@@ -1,4 +1,5 @@
 import { apiFetch } from '@shared/api/client';
+import { downloadBlob } from '@shared/lib/downloadBlob';
 import type { JournalChannel, JournalEvent, JournalKind, JournalStatus, JournalUser } from './journalDemo';
 
 type FileGuardEventDto = {
@@ -104,15 +105,61 @@ export function fileGuardEventFilePath(eventId: string): string {
     return `/api/v1/file-guard/events/${encodeURIComponent(eventId)}/file`;
 }
 
-export async function downloadFileGuardEvent(eventId: string, fileName: string): Promise<void> {
+const PREVIEW_TYPES: Record<string, string> = {
+    pdf: 'application/pdf',
+    png: 'image/png',
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    gif: 'image/gif',
+    webp: 'image/webp',
+    bmp: 'image/bmp',
+    svg: 'image/svg+xml',
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    mov: 'video/quicktime',
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    txt: 'text/plain',
+    csv: 'text/csv',
+    log: 'text/plain',
+    md: 'text/plain',
+    json: 'text/plain',
+    xml: 'text/plain',
+    html: 'text/plain',
+    htm: 'text/plain',
+    rdp: 'text/plain',
+    sql: 'text/plain',
+    ini: 'text/plain',
+    cfg: 'text/plain',
+    yml: 'text/plain',
+    yaml: 'text/plain',
+};
+
+export function fileGuardPreviewType(fileName: string, contentType: string | null): string {
+    const raw = (contentType ?? '').split(';')[0].trim().toLowerCase();
+    if (raw && raw !== 'application/octet-stream')
+        return raw;
+    const dot = fileName.lastIndexOf('.');
+    const ext = dot >= 0 ? fileName.slice(dot + 1).toLowerCase() : '';
+    return PREVIEW_TYPES[ext] ?? 'application/octet-stream';
+}
+
+export function fileGuardPreviewBlob(blob: Blob, fileName: string, contentType: string | null): Blob {
+    const type = fileGuardPreviewType(fileName, contentType);
+    if (!type || blob.type === type)
+        return blob;
+    return blob.slice(0, blob.size, type);
+}
+
+export async function fetchFileGuardEventFile(eventId: string): Promise<{ blob: Blob; contentType: string | null }> {
     const response = await apiFetch(fileGuardEventFilePath(eventId));
     if (!response.ok)
-        throw new Error('Файл не удалось скачать');
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName || 'file';
-    link.click();
-    URL.revokeObjectURL(url);
+        throw new Error(response.status === 404 ? 'Файл не сохранён' : 'Файл не удалось открыть');
+    return { blob: await response.blob(), contentType: response.headers.get('Content-Type') };
+}
+
+export async function downloadFileGuardEvent(eventId: string, fileName: string): Promise<void> {
+    const { blob, contentType } = await fetchFileGuardEventFile(eventId);
+    downloadBlob(fileGuardPreviewBlob(blob, fileName, contentType), fileName || 'file');
 }

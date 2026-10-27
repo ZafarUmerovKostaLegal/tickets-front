@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileGuardEventFilePath, mapFileGuardEvents } from './fileGuardApi';
+import { fileGuardEventFilePath, fileGuardPreviewType, mapFileGuardEvents } from './fileGuardApi';
 
 describe('mapFileGuardEvents', () => {
     it('раскладывает событие по пользователю Windows', () => {
@@ -33,5 +33,13 @@ describe('mapFileGuardEvents', () => {
     it('кодирует идентификатор, чтобы путь файла не вышел из журнала', () => {
         expect(fileGuardEventFilePath('../secret')).toBe('/api/v1/file-guard/events/..%2Fsecret/file');
         expect(fileGuardEventFilePath('a?b')).toBe('/api/v1/file-guard/events/a%3Fb/file');
+    });
+
+    it('узнаёт тип файла по имени, когда сервер отдаёт его без типа', () => {
+        expect(fileGuardPreviewType('a.pdf', 'application/octet-stream')).toBe('application/pdf');
+        expect(fileGuardPreviewType('shot.png', null)).toBe('image/png');
+        expect(fileGuardPreviewType('link.rdp', 'application/octet-stream')).toBe('text/plain');
+        expect(fileGuardPreviewType('photo.jpg', 'image/jpeg')).toBe('image/jpeg');
+        expect(fileGuardPreviewType('data.bin', null)).toBe('application/octet-stream');
     });
 });

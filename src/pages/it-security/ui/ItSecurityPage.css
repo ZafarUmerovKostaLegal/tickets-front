@@ -1025,7 +1025,140 @@
 }
 
 .its-j__detail-actions .its-j__btn {
-  flex: 1 1 140px;
+  flex: 1 1 120px;
+}
+
+.its-preview {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.its-preview__dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(920px, 100%);
+  max-height: min(88dvh, 860px);
+  background: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.2);
+  overflow: hidden;
+}
+
+.its-preview__head,
+.its-preview__foot {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.its-preview__foot {
+  border-bottom: 0;
+  border-top: 1px solid var(--app-border);
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.its-preview__title {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.its-preview__close {
+  margin-left: auto;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--app-bg-soft);
+  color: var(--app-text-dim);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.its-preview__body {
+  flex: 1;
+  min-height: 220px;
+  overflow: auto;
+  padding: 0.9rem;
+}
+
+.its-preview__note {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 0.84rem;
+}
+
+.its-preview__image,
+.its-preview__media,
+.its-preview__frame {
+  display: block;
+  width: 100%;
+  max-height: 68dvh;
+  border: 0;
+  border-radius: 10px;
+  background: var(--app-bg);
+}
+
+.its-preview__image {
+  width: auto;
+  max-width: 100%;
+  margin: 0 auto;
+  object-fit: contain;
+}
+
+.its-preview__frame {
+  height: 68dvh;
+}
+
+.its-preview__audio {
+  width: 100%;
+}
+
+.its-preview__text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--app-font-family);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.its-preview__sheet {
+  margin: 0.8rem 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.its-preview__table-wrap {
+  overflow: auto;
+}
+
+.its-preview__table-wrap table {
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.its-preview__table-wrap td {
+  padding: 0.28rem 0.45rem;
+  border: 1px solid var(--app-border);
+  vertical-align: top;
 }
 
 .its-j__spark {
