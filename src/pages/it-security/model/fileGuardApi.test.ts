@@ -47,11 +47,11 @@ describe('mapFileGuardEvents', () => {
         expect(policyScope('all')).toEqual({ host: '*', windowsUser: '*' });
         expect(policyScope('DESKTOP|KOSTA\\User')).toEqual({ host: 'DESKTOP', windowsUser: 'KOSTA\\User' });
         const items = [
-            { id: '1', host: '*', windowsUser: '*', dailySendLimit: 5 },
-            { id: '2', host: 'DESKTOP', windowsUser: 'KOSTA\\User', dailySendLimit: 1 },
+            { id: '1', host: '*', windowsUser: '*', dailyLimitMb: 100 },
+            { id: '2', host: 'DESKTOP', windowsUser: 'KOSTA\\User', dailyLimitMb: 20 },
         ];
-        expect(matchingPolicy(items, '*', '*')?.dailySendLimit).toBe(5);
-        expect(matchingPolicy(items, 'DESKTOP', 'KOSTA\\User')?.dailySendLimit).toBe(1);
+        expect(matchingPolicy(items, '*', '*')?.dailyLimitMb).toBe(100);
+        expect(matchingPolicy(items, 'DESKTOP', 'KOSTA\\User')?.dailyLimitMb).toBe(20);
         expect(matchingPolicy(items, 'OTHER', 'KOSTA\\User')).toBeNull();
     });
 });

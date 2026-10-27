@@ -109,7 +109,8 @@ export type FileGuardPolicy = {
     id: string;
     host: string;
     windowsUser: string;
-    dailySendLimit: number | null;
+    dailyLimitMb: number | null;
+    removed?: boolean;
 };
 
 export function policyScope(userId: string): { host: string; windowsUser: string } {
@@ -133,11 +134,11 @@ export async function fetchFileGuardPolicies(): Promise<FileGuardPolicy[]> {
     return Array.isArray(body.items) ? body.items : [];
 }
 
-export async function saveFileGuardPolicy(host: string, windowsUser: string, dailySendLimit: number | null): Promise<FileGuardPolicy> {
+export async function saveFileGuardPolicy(host: string, windowsUser: string, dailyLimitMb: number | null): Promise<FileGuardPolicy> {
     const response = await apiFetch('/api/v1/file-guard/policies', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ host, windowsUser, dailySendLimit }),
+        body: JSON.stringify({ host, windowsUser, dailyLimitMb }),
     });
     if (!response.ok)
         throw new Error(response.status === 403 ? 'Нет доступа к лимиту отправки' : 'Лимит не удалось сохранить');

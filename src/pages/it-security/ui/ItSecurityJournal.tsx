@@ -34,10 +34,11 @@ export function ItSecurityJournal() {
     const [reportBusy, setReportBusy] = useState(false);
     const [preview, setPreview] = useState<FileGuardPreviewState | null>(null);
     const [policies, setPolicies] = useState<FileGuardPolicy[]>([]);
-    const [limitInput, setLimitInput] = useState('');
-    const [limitHint, setLimitHint] = useState('Пустое поле блокирует все отправки');
+    const [sharedInput, setSharedInput] = useState('');
+    const [userInput, setUserInput] = useState('');
+    const [limitHint, setLimitHint] = useState('Пустое общее поле блокирует всех, у кого нет своего лимита');
     const [limitError, setLimitError] = useState('');
-    const [limitBusy, setLimitBusy] = useState(false);
+    const [limitBusy, setLimitBusy] = useState<'shared' | 'user' | ''>('');
     useEffect(() => {
         let stopped = false;
         void fetchFileGuardPolicies()
@@ -55,43 +56,51 @@ export function ItSecurityJournal() {
     }, []);
 
     const scope = policyScope(state.user);
-    const exactPolicy = matchingPolicy(policies, scope.host, scope.windowsUser);
     const sharedPolicy = matchingPolicy(policies, '*', '*');
-    const exactLimit = exactPolicy?.dailySendLimit;
-    const sharedLimit = sharedPolicy?.dailySendLimit;
+    const personalPolicy = scope.host === '*' ? null : matchingPolicy(policies, scope.host, scope.windowsUser);
+    const sharedLimit = sharedPolicy?.dailyLimitMb;
+    const personalLimit = personalPolicy?.dailyLimitMb;
+    const personalName = scope.windowsUser === '*' ? '' : scope.windowsUser;
 
     useEffect(() => {
-        setLimitInput(exactLimit == null ? '' : String(exactLimit));
-        if (exactPolicy)
-            setLimitHint(exactLimit == null ? 'Для выбранного пользователя всё блокируется' : `Лимит: ${exactLimit} в день`);
-        else if (scope.host === '*')
-            setLimitHint('Пустое поле блокирует все отправки');
-        else if (sharedLimit != null)
-            setLimitHint(`Свой лимит не задан. Для всех: ${sharedLimit} в день`);
-        else
-            setLimitHint('Свой лимит не задан, сейчас всё блокируется');
-    }, [exactLimit, exactPolicy, scope.host, scope.windowsUser, sharedLimit]);
+        setSharedInput(sharedLimit == null ? '' : String(sharedLimit));
+    }, [sharedLimit]);
 
-    const saveLimit = () => {
-        const text = limitInput.trim();
-        const value = text === '' ? null : Number(text);
-        if (value != null && (!Number.isInteger(value) || value < 0 || value > 10000)) {
-            setLimitError('Введите число от 0 до 10000 или оставьте поле пустым');
+    useEffect(() => {
+        setUserInput(personalLimit == null ? '' : String(personalLimit));
+    }, [personalLimit, scope.host, scope.windowsUser]);
+
+    useEffect(() => {
+        const sharedText = sharedLimit == null ? 'Общий лимит не задан' : `Общий лимит: ${sharedLimit} МБ в день`;
+        if (scope.host === '*')
+            setLimitHint(`${sharedText}. Выберите пользователя слева, чтобы задать личный лимит`);
+        else if (personalPolicy && personalLimit != null)
+            setLimitHint(`${sharedText}. Для ${personalName}: ${personalLimit} МБ в день`);
+        else if (sharedLimit != null)
+            setLimitHint(`${sharedText}. Для ${personalName} действует общий лимит`);
+        else
+            setLimitHint(`Для ${personalName} лимит не задан, отправка блокируется`);
+    }, [personalLimit, personalName, personalPolicy, scope.host, sharedLimit]);
+
+    const saveLimit = (host: string, windowsUser: string, text: string) => {
+        const value = text.trim() === '' ? null : Number(text.trim());
+        if (value != null && (!Number.isInteger(value) || value < 0 || value > 100000)) {
+            setLimitError('Введите размер в МБ от 0 до 100000 или оставьте поле пустым');
             return;
         }
         setLimitError('');
-        setLimitBusy(true);
-        void saveFileGuardPolicy(scope.host, scope.windowsUser, value)
+        setLimitBusy(host === '*' ? 'shared' : 'user');
+        void saveFileGuardPolicy(host, windowsUser, value)
             .then((saved) => {
                 setPolicies((current) => {
                     const rest = current.filter((item) => item.host !== saved.host || item.windowsUser !== saved.windowsUser);
-                    return [...rest, saved];
+                    return saved.removed || saved.dailyLimitMb == null ? rest : [...rest, saved];
                 });
             })
             .catch((error: unknown) => {
                 setLimitError(error instanceof Error ? error.message : 'Лимит не удалось сохранить');
             })
-            .finally(() => setLimitBusy(false));
+            .finally(() => setLimitBusy(''));
     };
     const previewUrl = useRef<string | null>(null);
     const previewToken = useRef(0);
@@ -291,24 +300,47 @@ export function ItSecurityJournal() {
                         />
                     </label>
                     {model.periodLabel ? <span className="its-j__period">{model.periodLabel}</span> : null}
-                    <label className="its-j__limit">
-                        Лимит в день
-                        <input
-                            type="number"
-                            min={0}
-                            max={10000}
-                            inputMode="numeric"
-                            value={limitInput}
-                            placeholder="блок"
-                            aria-label="Лимит отправок в день"
-                            title={scope.host === '*' ? 'Лимит для всех пользователей' : `Лимит для ${scope.windowsUser}`}
-                            onChange={(event) => setLimitInput(event.target.value)}
-                        />
-                        <button type="button" disabled={limitBusy} onClick={saveLimit}>
-                            {limitBusy ? '…' : 'Сохранить'}
-                        </button>
-                    </label>
-                    <span className="its-j__limit-hint">{limitHint}</span>
+                    <div className="its-j__limits">
+                        <label className="its-j__limit">
+                            Общий, МБ
+                            <input
+                                type="number"
+                                min={0}
+                                max={100000}
+                                inputMode="numeric"
+                                value={sharedInput}
+                                placeholder="блок"
+                                aria-label="Общий лимит отправки в мегабайтах за день"
+                                onChange={(event) => setSharedInput(event.target.value)}
+                            />
+                            <button type="button" disabled={limitBusy !== ''} onClick={() => saveLimit('*', '*', sharedInput)}>
+                                {limitBusy === 'shared' ? '…' : 'Сохранить'}
+                            </button>
+                        </label>
+                        <label className="its-j__limit">
+                            Пользователь, МБ
+                            <input
+                                type="number"
+                                min={0}
+                                max={100000}
+                                inputMode="numeric"
+                                value={scope.host === '*' ? '' : userInput}
+                                placeholder={scope.host === '*' ? 'выберите' : 'общий'}
+                                disabled={scope.host === '*'}
+                                aria-label="Личный лимит отправки в мегабайтах за день"
+                                title={personalName || 'Выберите пользователя'}
+                                onChange={(event) => setUserInput(event.target.value)}
+                            />
+                            <button
+                                type="button"
+                                disabled={scope.host === '*' || limitBusy !== ''}
+                                onClick={() => saveLimit(scope.host, scope.windowsUser, userInput)}
+                            >
+                                {limitBusy === 'user' ? '…' : 'Сохранить'}
+                            </button>
+                        </label>
+                        <span className="its-j__limit-hint">{limitHint}</span>
+                    </div>
                     {limitError ? <span className="its-j__bad">{limitError}</span> : null}
                     <button type="button" className="its-j__export" disabled={reportBusy} onClick={downloadReport}>
                         <JournalIcon name="download" />
