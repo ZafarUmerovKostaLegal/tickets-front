@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { getUsers, type User } from '@entities/user';
 import { fetchInternalExtensions, type InternalExtension } from '@entities/internal-communication';
 import { getItems, type InventoryItem } from '@entities/inventory';
@@ -139,43 +140,72 @@ function roleTone(role: string): 'partner' | 'admin' | 'staff' {
 
 const photoBlobUrls = new Map<string, string>();
 
-function useAuthImage(userId: number, version: string | null): string | null {
+function useAuthImage(userId: number, version: string | null): { src: string | null; failed: boolean } {
     const cacheKey = version ? `${userId}:${version}` : '';
     const [src, setSrc] = useState<string | null>(() => (cacheKey ? photoBlobUrls.get(cacheKey) ?? null : null));
+    const [failed, setFailed] = useState(false);
     useEffect(() => {
         if (!cacheKey || !version) {
             setSrc(null);
+            setFailed(false);
             return undefined;
         }
         const cached = photoBlobUrls.get(cacheKey);
         if (cached) {
             setSrc(cached);
+            setFailed(false);
             return undefined;
         }
         let cancel = false;
+        setFailed(false);
         void fetchPersonnelPhotoBlob(userId, version).then((blob) => {
+            const kind = (blob.type || '').toLowerCase();
+            if (blob.size < 32 || kind.startsWith('text/') || kind.includes('json') || kind.includes('html'))
+                throw new Error('empty photo');
             const url = URL.createObjectURL(blob);
             photoBlobUrls.set(cacheKey, url);
-            if (!cancel)
+            if (!cancel) {
                 setSrc(url);
+                setFailed(false);
+            }
         }).catch(() => {
-            if (!cancel)
+            if (!cancel) {
                 setSrc(null);
+                setFailed(true);
+            }
         });
         return () => {
             cancel = true;
         };
     }, [cacheKey, userId, version]);
-    return src;
+    return { src, failed };
 }
 
-function PersonPhoto({ user, size, photoVersion }: { user: User; size: 'card' | 'hero' | 'sm'; photoVersion?: string | null }) {
+function PersonPhoto({
+    user,
+    size,
+    photoVersion,
+    onMissing,
+}: {
+    user: User;
+    size: 'card' | 'hero' | 'sm';
+    photoVersion?: string | null;
+    onMissing?: (missing: boolean) => void;
+}) {
     const uploaded = useAuthImage(user.id, photoVersion ?? null);
-    const picture = uploaded || (photoVersion ? '' : user.picture?.trim()) || '';
+    const [pictureBroken, setPictureBroken] = useState(false);
+    useEffect(() => {
+        setPictureBroken(false);
+    }, [user.id]);
+    const external = pictureBroken ? '' : (user.picture?.trim() || '');
+    const picture = uploaded.src || ((uploaded.failed || !photoVersion) ? external : '');
+    useEffect(() => {
+        onMissing?.(Boolean(photoVersion) && uploaded.failed && !picture);
+    }, [onMissing, photoVersion, picture, uploaded.failed]);
     return (
         <span className={`acct-hr__photo acct-hr__photo--${size}${picture ? '' : ' acct-hr__photo--fallback'}`}>
             {picture
-                ? <img src={picture} alt="" />
+                ? <img src={picture} alt="" onError={() => setPictureBroken(true)} />
                 : <span aria-hidden>{initials(user)}</span>}
         </span>
     );
@@ -238,6 +268,8 @@ export function AccountingHrPanel() {
     const photoInputRef = useRef<HTMLInputElement>(null);
     const uploadSlotRef = useRef<string>('other');
     const [photoAdjust, setPhotoAdjust] = useState<{ url: string } | null>(null);
+    const [photoMissing, setPhotoMissing] = useState(false);
+    const [pendingDelete, setPendingDelete] = useState<PersonnelFile | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -280,12 +312,17 @@ export function AccountingHrPanel() {
         if (!selected)
             return undefined;
         const onKey = (event: KeyboardEvent) => {
-            if (event.key === 'Escape' && !photoAdjust)
-                setSelected(null);
+            if (event.key !== 'Escape' || photoAdjust)
+                return;
+            if (pendingDelete) {
+                setPendingDelete(null);
+                return;
+            }
+            setSelected(null);
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
-    }, [photoAdjust, selected]);
+    }, [pendingDelete, photoAdjust, selected]);
 
     useEffect(() => {
         if (!selected) {
@@ -296,6 +333,8 @@ export function AccountingHrPanel() {
         let cancelled = false;
         const userId = selected.id;
         setDossierError('');
+        setPhotoMissing(false);
+        setPendingDelete(null);
         setExtras({ ...EMPTY_EXTRAS, loading: true, extension: matchExtension(selected, extensions)?.extension ?? null });
         void (async () => {
             try {
@@ -515,7 +554,7 @@ export function AccountingHrPanel() {
         }
     };
 
-    const removePersonnelDoc = async (file: PersonnelFile) => {
+    const removePersonnelDoc = async (file: PersonnelFile): Promise<boolean> => {
         setDocBusyId(`file-${file.id}`);
         setDossierError('');
         try {
@@ -530,9 +569,11 @@ export function AccountingHrPanel() {
                     delete next[file.userId];
                     return next;
                 });
+            return true;
         }
         catch (e: unknown) {
             setDossierError(e instanceof Error ? e.message : 'Не удалось удалить файл');
+            return false;
         }
         finally {
             setDocBusyId(null);
@@ -662,6 +703,50 @@ export function AccountingHrPanel() {
                 </ul>
             )}
 
+            {pendingDelete ? createPortal(
+                <div className="acct-hr acct-hr-confirm" role="presentation">
+                    <button
+                        type="button"
+                        className="acct-hr-confirm__backdrop"
+                        aria-label="Закрыть подтверждение"
+                        disabled={docBusyId === `file-${pendingDelete.id}`}
+                        onClick={() => setPendingDelete(null)}
+                    />
+                    <div className="acct-hr-confirm__dialog" role="dialog" aria-modal="true" aria-labelledby="acct-hr-delete-title">
+                        <h2 id="acct-hr-delete-title" className="acct-hr-confirm__title">Удалить документ?</h2>
+                        <p className="acct-hr-confirm__text">
+                            Файл «{pendingDelete.filename}» будет удалён из личного дела. Вернуть его нельзя.
+                        </p>
+                        {dossierError ? <p className="acct-hr__error" role="alert">{dossierError}</p> : null}
+                        <div className="acct-hr-confirm__actions">
+                            <button
+                                type="button"
+                                className="acct-hr__doc-btn"
+                                disabled={docBusyId === `file-${pendingDelete.id}`}
+                                onClick={() => setPendingDelete(null)}
+                            >
+                                Отмена
+                            </button>
+                            <button
+                                type="button"
+                                className="acct-hr__doc-btn acct-hr__doc-btn--danger-solid"
+                                disabled={docBusyId === `file-${pendingDelete.id}`}
+                                onClick={() => {
+                                    const file = pendingDelete;
+                                    void removePersonnelDoc(file).then((ok) => {
+                                        if (ok)
+                                            setPendingDelete(null);
+                                    });
+                                }}
+                            >
+                                Удалить
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body,
+            ) : null}
+
             {photoAdjust ? (
                 <HrPhotoCropDialog
                     src={photoAdjust.url}
@@ -706,7 +791,12 @@ export function AccountingHrPanel() {
                         />
                         <div className="acct-hr__drawer-hero">
                             <div className="acct-hr__photo-wrap">
-                                <PersonPhoto user={selected} size="hero" photoVersion={photoVersions[selected.id]} />
+                                <PersonPhoto
+                                    user={selected}
+                                    size="hero"
+                                    photoVersion={photoVersions[selected.id]}
+                                    onMissing={setPhotoMissing}
+                                />
                                 <button
                                     type="button"
                                     className="acct-hr__photo-btn"
@@ -715,6 +805,9 @@ export function AccountingHrPanel() {
                                 >
                                     {photoVersions[selected.id] ? 'Сменить фото' : 'Главное фото'}
                                 </button>
+                                {photoMissing ? (
+                                    <span className="acct-hr__photo-missing">Файл фото не найден. Загрузите снимок ещё раз.</span>
+                                ) : null}
                             </div>
                             <div className="acct-hr__drawer-hero-text">
                                 <h2 id="acct-hr-drawer-title" className="acct-hr__drawer-name">{personName(selected)}</h2>
@@ -854,9 +947,12 @@ export function AccountingHrPanel() {
                                                                         ) : null}
                                                                         <button
                                                                             type="button"
-                                                                            className="acct-hr__doc-btn acct-hr__doc-btn--quiet"
+                                                                            className="acct-hr__doc-btn acct-hr__doc-btn--danger"
                                                                             disabled={docBusyId === `file-${file.id}`}
-                                                                            onClick={() => void removePersonnelDoc(file)}
+                                                                            onClick={() => {
+                                                                                setDossierError('');
+                                                                                setPendingDelete(file);
+                                                                            }}
                                                                         >
                                                                             Удалить
                                                                         </button>

@@ -648,6 +648,78 @@ body[data-theme='dark'] .acct-hr {
   background: transparent;
 }
 
+.acct-hr__doc-btn--danger {
+  background: #fef2f2;
+  border-color: #f1b4b4;
+  color: #b42318;
+}
+
+.acct-hr__doc-btn--danger:hover {
+  background: #fee2e2;
+}
+
+.acct-hr__doc-btn--danger-solid {
+  background: #c24141;
+  border-color: transparent;
+  color: #fff;
+}
+
+.acct-hr__doc-btn--danger-solid:hover {
+  background: #a83232;
+}
+
+.acct-hr__photo-missing {
+  max-width: 9rem;
+  font-size: 0.68rem;
+  line-height: 1.35;
+  color: #b42318;
+}
+
+.acct-hr-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.acct-hr-confirm__backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(15, 23, 42, 0.45);
+  cursor: pointer;
+}
+
+.acct-hr-confirm__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(420px, calc(100vw - 1.5rem));
+  margin: 18vh auto 0;
+  padding: 1rem 1rem 0.9rem;
+  border: 1px solid var(--hr-border);
+  border-radius: 16px;
+  background: var(--hr-card-bg, #fff);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.22);
+}
+
+.acct-hr-confirm__title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.acct-hr-confirm__text {
+  margin: 0.45rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--app-muted, #64748b);
+}
+
+.acct-hr-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-top: 0.9rem;
+}
+
 .acct-hr__doc-slot .acct-hr__doc-list {
   width: 100%;
 }
