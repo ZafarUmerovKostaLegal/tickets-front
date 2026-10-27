@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fileGuardEventFilePath, fileGuardPreviewType, mapFileGuardEvents } from './fileGuardApi';
+import { fileGuardEventFilePath, fileGuardPreviewType, mapFileGuardEvents, matchingPolicy, policyScope } from './fileGuardApi';
 
 describe('mapFileGuardEvents', () => {
     it('раскладывает событие по пользователю Windows', () => {
@@ -41,5 +41,17 @@ describe('mapFileGuardEvents', () => {
         expect(fileGuardPreviewType('link.rdp', 'application/octet-stream')).toBe('text/plain');
         expect(fileGuardPreviewType('photo.jpg', 'image/jpeg')).toBe('image/jpeg');
         expect(fileGuardPreviewType('data.bin', null)).toBe('application/octet-stream');
+    });
+
+    it('лимит для всех и для выбранного пользователя ищется отдельно', () => {
+        expect(policyScope('all')).toEqual({ host: '*', windowsUser: '*' });
+        expect(policyScope('DESKTOP|KOSTA\\User')).toEqual({ host: 'DESKTOP', windowsUser: 'KOSTA\\User' });
+        const items = [
+            { id: '1', host: '*', windowsUser: '*', dailySendLimit: 5 },
+            { id: '2', host: 'DESKTOP', windowsUser: 'KOSTA\\User', dailySendLimit: 1 },
+        ];
+        expect(matchingPolicy(items, '*', '*')?.dailySendLimit).toBe(5);
+        expect(matchingPolicy(items, 'DESKTOP', 'KOSTA\\User')?.dailySendLimit).toBe(1);
+        expect(matchingPolicy(items, 'OTHER', 'KOSTA\\User')).toBeNull();
     });
 });

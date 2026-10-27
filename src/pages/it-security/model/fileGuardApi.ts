@@ -105,6 +105,45 @@ export function fileGuardEventFilePath(eventId: string): string {
     return `/api/v1/file-guard/events/${encodeURIComponent(eventId)}/file`;
 }
 
+export type FileGuardPolicy = {
+    id: string;
+    host: string;
+    windowsUser: string;
+    dailySendLimit: number | null;
+};
+
+export function policyScope(userId: string): { host: string; windowsUser: string } {
+    if (!userId || userId === 'all')
+        return { host: '*', windowsUser: '*' };
+    const split = userId.indexOf('|');
+    if (split < 0)
+        return { host: '*', windowsUser: userId };
+    return { host: userId.slice(0, split) || '*', windowsUser: userId.slice(split + 1) || '*' };
+}
+
+export function matchingPolicy(items: FileGuardPolicy[], host: string, windowsUser: string): FileGuardPolicy | null {
+    return items.find((item) => item.host === host && item.windowsUser === windowsUser) ?? null;
+}
+
+export async function fetchFileGuardPolicies(): Promise<FileGuardPolicy[]> {
+    const response = await apiFetch('/api/v1/file-guard/policies');
+    if (!response.ok)
+        throw new Error('Не удалось загрузить лимиты отправки');
+    const body = await response.json() as { items?: FileGuardPolicy[] };
+    return Array.isArray(body.items) ? body.items : [];
+}
+
+export async function saveFileGuardPolicy(host: string, windowsUser: string, dailySendLimit: number | null): Promise<FileGuardPolicy> {
+    const response = await apiFetch('/api/v1/file-guard/policies', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ host, windowsUser, dailySendLimit }),
+    });
+    if (!response.ok)
+        throw new Error(response.status === 403 ? 'Нет доступа к лимиту отправки' : 'Лимит не удалось сохранить');
+    return await response.json() as FileGuardPolicy;
+}
+
 const PREVIEW_TYPES: Record<string, string> = {
     pdf: 'application/pdf',
     png: 'image/png',

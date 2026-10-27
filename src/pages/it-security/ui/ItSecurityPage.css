@@ -134,6 +134,56 @@
   font-weight: 600;
 }
 
+.its-j__limit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.4rem;
+  padding: 0 0.35rem 0 0.7rem;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  color: var(--app-text-dim);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.its-j__limit input {
+  width: 4.4rem;
+  height: 1.7rem;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 0 0.4rem;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.its-j__limit button {
+  height: 1.7rem;
+  padding: 0 0.65rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--app-accent-light-bg);
+  color: var(--app-accent);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.its-j__limit button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.its-j__limit-hint {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+}
+
 .its-j__export,
 .its-j__btn {
   cursor: pointer;

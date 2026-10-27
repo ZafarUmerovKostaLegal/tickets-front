@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { JournalKind } from '../model/journalDemo';
-import { downloadFileGuardEvent, fetchFileGuardEventFile, fetchFileGuardEvents, fileGuardPreviewBlob } from '../model/fileGuardApi';
+import { downloadFileGuardEvent, fetchFileGuardEventFile, fetchFileGuardEvents, fetchFileGuardPolicies, fileGuardPreviewBlob, matchingPolicy, policyScope, saveFileGuardPolicy, type FileGuardPolicy } from '../model/fileGuardApi';
 import { downloadJournalReport } from '../model/journalReportPdf';
 import {
     JOURNAL_UI_INITIAL,
@@ -33,6 +33,66 @@ export function ItSecurityJournal() {
     const [reportError, setReportError] = useState('');
     const [reportBusy, setReportBusy] = useState(false);
     const [preview, setPreview] = useState<FileGuardPreviewState | null>(null);
+    const [policies, setPolicies] = useState<FileGuardPolicy[]>([]);
+    const [limitInput, setLimitInput] = useState('');
+    const [limitHint, setLimitHint] = useState('Пустое поле блокирует все отправки');
+    const [limitError, setLimitError] = useState('');
+    const [limitBusy, setLimitBusy] = useState(false);
+    useEffect(() => {
+        let stopped = false;
+        void fetchFileGuardPolicies()
+            .then((items) => {
+                if (!stopped)
+                    setPolicies(items);
+            })
+            .catch((error: unknown) => {
+                if (!stopped)
+                    setLimitError(error instanceof Error ? error.message : 'Лимит не загрузился');
+            });
+        return () => {
+            stopped = true;
+        };
+    }, []);
+
+    const scope = policyScope(state.user);
+    const exactPolicy = matchingPolicy(policies, scope.host, scope.windowsUser);
+    const sharedPolicy = matchingPolicy(policies, '*', '*');
+    const exactLimit = exactPolicy?.dailySendLimit;
+    const sharedLimit = sharedPolicy?.dailySendLimit;
+
+    useEffect(() => {
+        setLimitInput(exactLimit == null ? '' : String(exactLimit));
+        if (exactPolicy)
+            setLimitHint(exactLimit == null ? 'Для выбранного пользователя всё блокируется' : `Лимит: ${exactLimit} в день`);
+        else if (scope.host === '*')
+            setLimitHint('Пустое поле блокирует все отправки');
+        else if (sharedLimit != null)
+            setLimitHint(`Свой лимит не задан. Для всех: ${sharedLimit} в день`);
+        else
+            setLimitHint('Свой лимит не задан, сейчас всё блокируется');
+    }, [exactLimit, exactPolicy, scope.host, scope.windowsUser, sharedLimit]);
+
+    const saveLimit = () => {
+        const text = limitInput.trim();
+        const value = text === '' ? null : Number(text);
+        if (value != null && (!Number.isInteger(value) || value < 0 || value > 10000)) {
+            setLimitError('Введите число от 0 до 10000 или оставьте поле пустым');
+            return;
+        }
+        setLimitError('');
+        setLimitBusy(true);
+        void saveFileGuardPolicy(scope.host, scope.windowsUser, value)
+            .then((saved) => {
+                setPolicies((current) => {
+                    const rest = current.filter((item) => item.host !== saved.host || item.windowsUser !== saved.windowsUser);
+                    return [...rest, saved];
+                });
+            })
+            .catch((error: unknown) => {
+                setLimitError(error instanceof Error ? error.message : 'Лимит не удалось сохранить');
+            })
+            .finally(() => setLimitBusy(false));
+    };
     const previewUrl = useRef<string | null>(null);
     const previewToken = useRef(0);
     const model = useMemo(() => buildJournalView(state), [state]);
@@ -231,6 +291,25 @@ export function ItSecurityJournal() {
                         />
                     </label>
                     {model.periodLabel ? <span className="its-j__period">{model.periodLabel}</span> : null}
+                    <label className="its-j__limit">
+                        Лимит в день
+                        <input
+                            type="number"
+                            min={0}
+                            max={10000}
+                            inputMode="numeric"
+                            value={limitInput}
+                            placeholder="блок"
+                            aria-label="Лимит отправок в день"
+                            title={scope.host === '*' ? 'Лимит для всех пользователей' : `Лимит для ${scope.windowsUser}`}
+                            onChange={(event) => setLimitInput(event.target.value)}
+                        />
+                        <button type="button" disabled={limitBusy} onClick={saveLimit}>
+                            {limitBusy ? '…' : 'Сохранить'}
+                        </button>
+                    </label>
+                    <span className="its-j__limit-hint">{limitHint}</span>
+                    {limitError ? <span className="its-j__bad">{limitError}</span> : null}
                     <button type="button" className="its-j__export" disabled={reportBusy} onClick={downloadReport}>
                         <JournalIcon name="download" />
                         {reportBusy ? 'Готовим отчёт…' : model.exportLabel}
@@ -258,13 +337,6 @@ export function ItSecurityJournal() {
                                 </span>
                                 <button type="button" className="its-j__btn its-j__btn--accent" disabled={reportBusy} onClick={downloadReport}>
                                     {reportBusy ? 'Готовим отчёт…' : 'Скачать отчёт (PDF)'}
-                                </button>
-                                <button
-                                    type="button"
-                                    className="its-j__btn"
-                                    onClick={() => setState((current) => ({ ...current, user: 'all' }))}
-                                >
-                                    Все пользователи
                                 </button>
                             </div>
                             <div className="its-j__report-grid">
