@@ -32,7 +32,16 @@ export function registryAmountUsd(amount: number, currency: string, parsed: CbuP
     return Number.isFinite(usd) ? usd : null;
 }
 
-export function registryUsdRateDates(rows: readonly { amount?: string; currency?: string; issueDate?: string }[]): string[] {
+export type RegistryUsdRow = {
+    id?: string;
+    amount?: string;
+    currency?: string;
+    issueDate?: string;
+    amountUsd?: string;
+    amountUsdBasis?: string;
+};
+
+export function registryUsdRateDates(rows: readonly RegistryUsdRow[]): string[] {
     const dates = new Set<string>();
     for (const row of rows) {
         const amount = parseRegistryAmount(String(row.amount ?? ''));
@@ -47,15 +56,6 @@ export function registryUsdRateDates(rows: readonly { amount?: string; currency?
     }
     return [...dates].sort();
 }
-
-export type RegistryUsdRow = {
-    id?: string;
-    amount?: string;
-    currency?: string;
-    issueDate?: string;
-    amountUsd?: string;
-    amountUsdBasis?: string;
-};
 
 export type RegistryUsdSaveItem = {
     id: string;

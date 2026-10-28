@@ -1,0 +1,44 @@
+import { formatChatMessagePreview } from './chatRichContent';
+import { chatWindowIsInFront, getChatNotificationContext } from './chatNotificationSession';
+import { resolveRoomTitle } from './kostaDailyUi';
+export function chatMessageNotificationPreview(msg) {
+    if (msg.is_deleted)
+        return 'Сообщение удалено';
+    if (msg.checklist || msg.message_kind === 'checklist') {
+        const title = msg.checklist?.title?.trim() || msg.body.trim();
+        return title ? `Чеклист: ${title}` : 'Чеклист';
+    }
+    if (msg.poll || msg.message_kind === 'poll' || msg.message_kind === 'quiz') {
+        const label = msg.poll?.kind === 'quiz' || msg.message_kind === 'quiz' ? 'Викторина' : 'Опрос';
+        const q = msg.poll?.question?.trim() || msg.body.trim();
+        return q ? `${label}: ${q}` : label;
+    }
+    if ((msg.attachments?.length ?? 0) > 0 && !msg.body.trim())
+        return 'Файл';
+    const text = formatChatMessagePreview(msg.body).trim();
+    return text || 'Новое сообщение';
+}
+export function shouldShowChatMessageNotification(msg, roomId, meId) {
+    if (meId == null)
+        return false;
+    if (Number(msg.author_user_id) === Number(meId))
+        return false;
+    if (msg.is_deleted)
+        return false;
+    if (!chatWindowIsInFront())
+        return true;
+    const ctx = getChatNotificationContext();
+    if (!ctx.onKostaDailyPage)
+        return true;
+    return Number(ctx.activeRoomId) !== Number(roomId);
+}
+export function chatNotificationTitle(room, meId, labelByUserId) {
+    return resolveRoomTitle(room, meId, labelByUserId);
+}
+export function chatNotificationSenderLine(room, msg, labelByUserId) {
+    const preview = chatMessageNotificationPreview(msg);
+    if (room.room_type === 'dm')
+        return preview;
+    const sender = labelByUserId(msg.author_user_id).split(' ')[0] || 'Коллега';
+    return `${sender}: ${preview}`;
+}
