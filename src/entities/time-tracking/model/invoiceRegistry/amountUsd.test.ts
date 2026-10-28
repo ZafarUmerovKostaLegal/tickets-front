@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CbuParsed } from '@entities/expenses/model/cbuRates';
-import { formatRegistryAmountUsd, registryAmountUsd, registryIssueIso, registryUsdBasis, registryUsdPersistItem } from './amountUsd';
+import { formatRegistryAmountUsd, registryAmountUsd, registryIssueIso, registryUsdBasis, registryUsdPersistItem, registryUsdRateHint } from './amountUsd';
 
 const rates: CbuParsed = {
     rateDateRu: '02.10.2026',
@@ -66,5 +66,38 @@ describe('registry amount in USD', () => {
             amountUsd: '5,000.00',
             basis: '5000|USD|2026-10-02',
         });
+    });
+
+    it('показывает курс, от которого посчитали сумму в долларах', () => {
+        expect(registryUsdRateHint(
+            { amount: '5,000.00', currency: 'USD', issueDate: '2026-10-02' },
+            {},
+            {},
+        )).toBe('1 USD = 1 USD');
+        expect(registryUsdRateHint(
+            { amount: '12,000,000.00', currency: 'UZS', issueDate: '2026-10-02' },
+            { '2026-10-02': rates },
+            {},
+        )).toBe('1 USD = 12,000.00 UZS на 02.10.2026');
+        expect(registryUsdRateHint(
+            { amount: '120', currency: 'EUR', issueDate: '2026-10-02' },
+            { '2026-10-02': rates },
+            {},
+        )).toBe('1 EUR = 1.0833 USD на 02.10.2026');
+        expect(registryUsdRateHint(
+            {
+                amount: '120',
+                currency: 'EUR',
+                issueDate: '2026-10-04',
+                amountUsdBasis: '120|EUR|2026-10-04|0.92307692',
+            },
+            {},
+            { '2026-10-04': true },
+        )).toBe('1 EUR = 1.0833 USD на 04.10.2026');
+        expect(registryUsdPersistItem(
+            { id: 'sys-2', amount: '120', currency: 'EUR', issueDate: '2026-10-02' },
+            { '2026-10-02': rates },
+            {},
+        )?.basis).toBe('120|EUR|2026-10-02|0.92307692');
     });
 });

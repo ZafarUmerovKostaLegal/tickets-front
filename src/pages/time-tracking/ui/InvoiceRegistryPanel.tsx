@@ -10,6 +10,7 @@ import {
     INVOICE_REGISTRY_USD_COLUMN,
     registryUsdPersistItem,
     registryUsdRateDates,
+    registryUsdRateHint,
     SYSTEM_INVOICE_REGISTRY_STATUSES,
     collectRegistryStatusOptions,
     normalizeRegistryStatusLabel,
@@ -401,6 +402,7 @@ function RegistryEditableCell({
     invoiceId = '',
     statusChoices,
     allowCustomStatus = true,
+    title,
     onActivate,
     onChange,
     onBlurCommit,
@@ -416,6 +418,7 @@ function RegistryEditableCell({
     invoiceId?: string;
     statusChoices: readonly string[];
     allowCustomStatus?: boolean;
+    title?: string;
     onActivate: () => void;
     onChange: (next: string) => void;
     onBlurCommit: () => void;
@@ -465,7 +468,7 @@ function RegistryEditableCell({
                 tabIndex={0}
                 role="gridcell"
                 aria-label={ariaLabel}
-                title={fee ? value : (display || undefined)}
+                title={title || (fee ? value : (display || undefined))}
             >
                 {fee ? <AdvanceFeeReadout value={value} /> : <span className="tt-inv-reg__cell-text">{display || '\u00a0'}</span>}
             </td>
@@ -1661,6 +1664,9 @@ export function InvoiceRegistryPanel({
                                         const val = usdColumn
                                             ? formatRegistryAmountUsd(row, usdRates, usdFailed)
                                             : (row[col.key] ?? '');
+                                        const usdHint = usdColumn
+                                            ? registryUsdRateHint(row, usdRates, usdFailed)
+                                            : '';
                                         const active = focus?.rowId === row.id && focus.key === col.key;
                                         const money = isInvoiceRegistryMoneyColumnKey(col.key);
                                         const systemStatus = year === '2026-system' && col.key === 'statusNote';
@@ -1678,6 +1684,7 @@ export function InvoiceRegistryPanel({
                                                 readOnly={!canEditCell}
                                                 statusChoices={statusChoices}
                                                 allowCustomStatus={!systemStatus}
+                                                title={usdHint || undefined}
                                                 active={canEditCell && active && col.editor !== 'status'}
                                                 ariaLabel={`${col.label}, ${t('timeTrackingPage.invoices.registry.rowN').replace('{n}', String(idx + 1))}`}
                                                 onActivate={() => {
