@@ -1,6 +1,8 @@
 import {
     journalDayLabel,
     journalEventKey,
+    journalMonthKey,
+    journalMonthLabel,
     type JournalChannel,
     type JournalEvent,
     type JournalKind,
@@ -8,7 +10,7 @@ import {
     type JournalUser,
 } from './journalDemo';
 
-export type JournalTab = 'events' | 'files' | 'users';
+export type JournalTab = 'events' | 'files' | 'users' | 'storage';
 export type JournalStatusFilter = 'all' | JournalStatus;
 export type JournalChannelFilter = 'all' | JournalChannel;
 
@@ -22,6 +24,7 @@ export type JournalUiState = {
     user: string;
     open: Record<string, boolean>;
     daysOpen: Record<string, boolean>;
+    monthsOpen: Record<string, boolean>;
     remote: JournalEvent[];
     remoteUsers: JournalUser[];
     extra: JournalEvent[];
@@ -37,6 +40,7 @@ export const JOURNAL_UI_INITIAL: JournalUiState = {
     user: 'all',
     open: {},
     daysOpen: {},
+    monthsOpen: {},
     remote: [],
     remoteUsers: [],
     extra: [],
@@ -99,6 +103,7 @@ export type JournalTile = {
 };
 
 export type JournalEventRow =
+    | { kind: 'month'; id: string; month: string; label: string; summary: string; open: boolean }
     | { kind: 'head'; id: string; day: string; label: string; summary: string; open: boolean }
     | {
         kind: 'event';
@@ -275,6 +280,16 @@ function todayKey(now = new Date()): string {
     return `${day}.${month}.${now.getFullYear()}`;
 }
 
+function currentMonthKey(now = new Date()): string {
+    return journalMonthKey(todayKey(now));
+}
+
+function monthExpanded(month: string, monthsOpen: Record<string, boolean> | undefined): boolean {
+    if (monthsOpen && Object.prototype.hasOwnProperty.call(monthsOpen, month))
+        return Boolean(monthsOpen[month]);
+    return month === currentMonthKey();
+}
+
 function dayExpanded(day: string, daysOpen: Record<string, boolean> | undefined): boolean {
     if (daysOpen && Object.prototype.hasOwnProperty.call(daysOpen, day))
         return Boolean(daysOpen[day]);
@@ -369,8 +384,26 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
     ];
 
     const rows: JournalEventRow[] = [];
+    let lastMonth = '';
     let lastDay = '';
     list.forEach((row) => {
+        const month = journalMonthKey(row.d);
+        const monthIsOpen = monthExpanded(month, state.monthsOpen);
+        if (month !== lastMonth) {
+            lastMonth = month;
+            lastDay = '';
+            const group = list.filter((item) => journalMonthKey(item.d) === month);
+            rows.push({
+                kind: 'month',
+                id: `month-${month}`,
+                month,
+                label: journalMonthLabel(row.d),
+                summary: `Событий: ${group.length} · Заблокировано: ${group.filter((item) => item.status === 'blocked').length}`,
+                open: monthIsOpen,
+            });
+        }
+        if (!monthIsOpen)
+            return;
         const expanded = dayExpanded(row.d, state.daysOpen);
         if (row.d !== lastDay) {
             lastDay = row.d;
@@ -558,9 +591,11 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
     };
 
     const view = state.view;
-    const isEmpty = (view === 'events' && list.length === 0)
+    const isEmpty = view !== 'storage' && (
+        (view === 'events' && list.length === 0)
         || (view === 'files' && fileRows.length === 0)
-        || (view === 'users' && userRows.length === 0);
+        || (view === 'users' && userRows.length === 0)
+    );
 
     return {
         users,
@@ -574,13 +609,15 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
         report,
         detail,
         showUserColumn,
-        showReport: state.user !== 'all' && view !== 'users',
-        showDetail: view !== 'users' && selected != null,
+        showReport: state.user !== 'all' && view !== 'users' && view !== 'storage',
+        showDetail: view !== 'users' && view !== 'storage' && selected != null,
         isEmpty,
         shownText: view === 'users'
             ? `Пользователей: ${userRows.length} из ${users.length}`
             : `Показано ${list.length} из ${events.length}`,
-        searchHint: view === 'users' ? 'Логин, компьютер или отдел' : 'Файл, процесс, сайт или папка',
+        searchHint: view === 'storage'
+            ? 'Имя файла, сотрудник или компьютер'
+            : view === 'users' ? 'Логин, компьютер или отдел' : 'Файл, процесс, сайт или папка',
         exportLabel: state.user === 'all' ? 'Экспорт' : 'Экспорт отчёта',
         periodLabel: days.length === 0 ? '' : days.length === 1 ? days[0] : `${days[0]} – ${days[days.length - 1]}`,
         totalEvents: events.length,

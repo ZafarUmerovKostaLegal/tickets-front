@@ -21,6 +21,7 @@ describe('buildJournalView', () => {
     it('показывает событие, пришедшее с сервера', () => {
         const view = buildJournalView({
             ...JOURNAL_UI_INITIAL,
+            monthsOpen: { '2026-10': true },
             remoteUsers: [{ id: 'PC|KL\\ivan', login: 'ivan', host: 'PC', dept: '' }],
             remote: [{
                 id: 'e1',
@@ -42,6 +43,7 @@ describe('buildJournalView', () => {
         expect(view.rows.some((row) => row.kind === 'event' && row.name === 'a.pdf')).toBe(false);
         const opened = buildJournalView({
             ...JOURNAL_UI_INITIAL,
+            monthsOpen: { '2026-10': true },
             daysOpen: { '26.10.2026': true },
             remoteUsers: [{ id: 'PC|KL\\ivan', login: 'ivan', host: 'PC', dept: '' }],
             remote: [{
@@ -64,6 +66,33 @@ describe('buildJournalView', () => {
         expect(view.sideUsers.map((user) => user.id)).toContain('PC|KL\\ivan');
         expect(view.detail.hasFile).toBe(true);
         expect(view.periodLabel).toBe('26.10.2026');
+    });
+
+    it('старый месяц свёрнут, пока его не откроют', () => {
+        const oldEvent = {
+            id: 'old',
+            d: '01.01.2020',
+            t: '09:00:00',
+            kind: 'send' as const,
+            status: 'blocked' as const,
+            ch: 'telegram' as const,
+            name: 'old.pdf',
+            dir: 'C:\\Users',
+            proc: 'Telegram.exe',
+            res: 'Telegram',
+            note: '',
+            u: 'PC|KL\\ivan',
+        };
+        const closed = buildJournalView({ ...JOURNAL_UI_INITIAL, remote: [oldEvent] });
+        expect(closed.rows.some((row) => row.kind === 'month' && row.month === '2020-01' && row.open === false)).toBe(true);
+        expect(closed.rows.some((row) => row.kind === 'event')).toBe(false);
+        const opened = buildJournalView({
+            ...JOURNAL_UI_INITIAL,
+            monthsOpen: { '2020-01': true },
+            daysOpen: { '01.01.2020': true },
+            remote: [oldEvent],
+        });
+        expect(opened.rows.some((row) => row.kind === 'event' && row.name === 'old.pdf')).toBe(true);
     });
 
     it('не подставляет демо-пользователя', () => {

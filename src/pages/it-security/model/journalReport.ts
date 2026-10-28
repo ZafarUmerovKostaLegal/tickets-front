@@ -87,7 +87,7 @@ export function journalReportDocument(model: JournalViewModel, view: JournalTab)
         blocks.push({
             heading: 'События',
             lines: model.rows.length > 0
-                ? model.rows.map((row) => row.kind === 'head'
+                ? model.rows.map((row) => row.kind === 'head' || row.kind === 'month'
                     ? `${row.label}. ${row.summary}`
                     : [
                         row.time,

@@ -46,6 +46,26 @@ const MONTHS = [
     'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
 ];
 
+const MONTH_TITLE = [
+    'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь',
+];
+
+export function journalMonthKey(day: string): string {
+    const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(day);
+    if (!match)
+        return day || 'unknown';
+    return `${match[3]}-${match[2]}`;
+}
+
+export function journalMonthLabel(day: string): string {
+    const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(day);
+    if (!match)
+        return day || 'Без даты';
+    const title = MONTH_TITLE[Number(match[2]) - 1] ?? match[2];
+    return `${title} ${match[3]}`;
+}
+
 export function journalDayLabel(day: string): string {
     const match = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(day);
     if (!match)

@@ -203,3 +203,116 @@ export async function downloadFileGuardEvent(eventId: string, fileName: string):
     const { blob, contentType } = await fetchFileGuardEventFile(eventId);
     downloadBlob(fileGuardPreviewBlob(blob, fileName, contentType), fileName || 'file');
 }
+
+const STORED_ID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+export type FileGuardStoredUser = {
+    host: string;
+    windowsUser: string;
+};
+
+export type FileGuardStoredFile = {
+    id: string;
+    fileName: string;
+    fileSize: number;
+    host: string;
+    windowsUser: string;
+    occurredAt: string;
+    copies: number;
+    users: FileGuardStoredUser[];
+};
+
+export type FileGuardStorage = {
+    totalBytes: number;
+    items: FileGuardStoredFile[];
+};
+
+export type FileGuardStorageDeleteResult = {
+    removedFiles: number;
+    freedBytes: number;
+    clearedEvents: number;
+};
+
+function storedText(value: unknown, limit: number): string {
+    return typeof value === 'string' ? value.replace(/[\u0000-\u001f]/g, '').trim().slice(0, limit) : '';
+}
+
+function asStoredFile(item: unknown): FileGuardStoredFile | null {
+    if (!item || typeof item !== 'object')
+        return null;
+    const row = item as Record<string, unknown>;
+    const id = storedText(row.id, 36);
+    if (!STORED_ID.test(id))
+        return null;
+    const users = Array.isArray(row.users)
+        ? row.users.flatMap((person) => {
+            if (!person || typeof person !== 'object')
+                return [];
+            const entry = person as Record<string, unknown>;
+            const host = storedText(entry.host, 120);
+            const windowsUser = storedText(entry.windowsUser, 200);
+            return host || windowsUser ? [{ host, windowsUser }] : [];
+        }).slice(0, 20)
+        : [];
+    const size = Number(row.fileSize);
+    const copies = Number(row.copies);
+    return {
+        id,
+        fileName: storedText(row.fileName, 180) || 'file',
+        fileSize: Number.isFinite(size) && size > 0 ? Math.floor(size) : 0,
+        host: storedText(row.host, 120),
+        windowsUser: storedText(row.windowsUser, 200),
+        occurredAt: storedText(row.occurredAt, 40),
+        copies: Number.isFinite(copies) && copies > 0 ? Math.floor(copies) : 1,
+        users,
+    };
+}
+
+async function storageError(response: Response, fallback: string): Promise<string> {
+    try {
+        const body = await response.json() as { detail?: unknown };
+        if (typeof body.detail === 'string' && body.detail.trim())
+            return body.detail.trim().slice(0, 200);
+    }
+    catch {
+        /* ответ без json */
+    }
+    return response.status === 403 ? 'Нет доступа к хранилищу' : fallback;
+}
+
+export async function fetchFileGuardStorage(): Promise<FileGuardStorage> {
+    const response = await apiFetch('/api/v1/file-guard/storage');
+    if (!response.ok)
+        throw new Error(await storageError(response, 'Хранилище файлов недоступно'));
+    const body = await response.json() as { totalBytes?: unknown; items?: unknown[] };
+    const items = Array.isArray(body.items) ? body.items.flatMap((item) => {
+        const file = asStoredFile(item);
+        return file ? [file] : [];
+    }) : [];
+    const total = Number(body.totalBytes);
+    return {
+        totalBytes: Number.isFinite(total) && total >= 0 ? Math.floor(total) : items.reduce((sum, file) => sum + file.fileSize, 0),
+        items,
+    };
+}
+
+export async function deleteFileGuardStorage(ids: string[]): Promise<FileGuardStorageDeleteResult> {
+    const unique = [...new Set(ids.map((id) => id.trim()).filter((id) => STORED_ID.test(id)))];
+    if (unique.length === 0)
+        throw new Error('Не выбраны файлы');
+    const result: FileGuardStorageDeleteResult = { removedFiles: 0, freedBytes: 0, clearedEvents: 0 };
+    for (let offset = 0; offset < unique.length; offset += 200) {
+        const response = await apiFetch('/api/v1/file-guard/storage/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: unique.slice(offset, offset + 200) }),
+        });
+        if (!response.ok)
+            throw new Error(await storageError(response, 'Файл не удалось удалить'));
+        const body = await response.json() as Partial<FileGuardStorageDeleteResult>;
+        result.removedFiles += Number(body.removedFiles) || 0;
+        result.freedBytes += Number(body.freedBytes) || 0;
+        result.clearedEvents += Number(body.clearedEvents) || 0;
+    }
+    return result;
+}

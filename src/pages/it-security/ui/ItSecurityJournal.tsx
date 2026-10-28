@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import type { JournalKind } from '../model/journalDemo';
-import { downloadFileGuardEvent, fetchFileGuardEventFile, fetchFileGuardEvents, fetchFileGuardPolicies, fileGuardPreviewBlob, matchingPolicy, policyScope, saveFileGuardPolicy, type FileGuardPolicy } from '../model/fileGuardApi';
+import { downloadFileGuardEvent, fetchFileGuardEventFile, fetchFileGuardEvents, fetchFileGuardPolicies, fetchFileGuardStorage, fileGuardPreviewBlob, matchingPolicy, policyScope, saveFileGuardPolicy, type FileGuardPolicy, type FileGuardStoredFile } from '../model/fileGuardApi';
 import { downloadJournalReport } from '../model/journalReportPdf';
 import {
     JOURNAL_UI_INITIAL,
@@ -14,11 +14,13 @@ import {
 import { JournalIcon, StatusGlyph } from './JournalIcons';
 import { FileGuardFilePreview, type FileGuardPreviewState } from './FileGuardFilePreview';
 import { FileGuardLimitSettings } from './FileGuardLimitSettings';
+import { FileGuardStorage } from './FileGuardStorage';
 
 const TABS: Array<{ id: JournalTab; label: string }> = [
     { id: 'events', label: 'События' },
     { id: 'files', label: 'Файлы' },
     { id: 'users', label: 'Пользователи' },
+    { id: 'storage', label: 'Хранилище' },
 ];
 
 const JOURNAL_USER_KEY = 'it-security-journal-user';
@@ -66,6 +68,10 @@ export function ItSecurityJournal() {
     const [limitsOpen, setLimitsOpen] = useState(false);
     const [limitError, setLimitError] = useState('');
     const [limitBusy, setLimitBusy] = useState<'shared' | 'user' | ''>('');
+    const [storedFiles, setStoredFiles] = useState<FileGuardStoredFile[]>([]);
+    const [storedBytes, setStoredBytes] = useState(0);
+    const [storageError, setStorageError] = useState('');
+    const [storageReload, setStorageReload] = useState(0);
     useEffect(() => {
         let stopped = false;
         void fetchFileGuardPolicies()
@@ -145,6 +151,18 @@ export function ItSecurityJournal() {
                 if (!stopped)
                     setLoadError(error instanceof Error ? error.message : 'Журнал защиты файлов недоступен');
             }
+            try {
+                const catalog = await fetchFileGuardStorage();
+                if (stopped)
+                    return;
+                setStorageError('');
+                setStoredFiles(catalog.items);
+                setStoredBytes(catalog.totalBytes);
+            }
+            catch (error) {
+                if (!stopped)
+                    setStorageError(error instanceof Error ? error.message : 'Хранилище файлов недоступно');
+            }
         };
         void load();
         const timer = window.setInterval(() => void load(), 15000);
@@ -152,7 +170,7 @@ export function ItSecurityJournal() {
             stopped = true;
             window.clearInterval(timer);
         };
-    }, []);
+    }, [storageReload]);
 
     const pickUser = (id: string, selectId: string, view?: JournalTab) => {
         setState((current) => ({
@@ -358,6 +376,24 @@ export function ItSecurityJournal() {
                 </div>
 
                 <section className="its-j__main" aria-label="Журнал">
+                    {state.view === 'storage' ? (
+                        <FileGuardStorage
+                            items={storedFiles}
+                            totalBytes={storedBytes}
+                            query={state.q}
+                            userId={state.user}
+                            loadError={storageError}
+                            onPreview={openPreview}
+                            onDownload={(eventId, fileName) => {
+                                setDownloadError('');
+                                void downloadFileGuardEvent(eventId, fileName).catch((error: unknown) => {
+                                    setStorageError(error instanceof Error ? error.message : 'Файл не удалось скачать');
+                                });
+                            }}
+                            onChanged={() => setStorageReload((value) => value + 1)}
+                        />
+                    ) : null}
+                    {state.view !== 'storage' ? (<>
                     <div className="its-j__tiles">
                         {model.tiles.map((tile) => (
                             <div key={tile.label} className={`its-j__tile its-j__tile--${tile.tone}`}>
@@ -431,13 +467,16 @@ export function ItSecurityJournal() {
                                     <span>Действие</span>
                                     <span>Куда / процесс</span>
                                 </div>
-                                {model.rows.map((row) => row.kind === 'head' ? (
+                                {model.rows.map((row) => row.kind !== 'event' ? (
                                     <button
                                         key={row.id}
                                         type="button"
-                                        className={`its-j__day${row.open ? ' is-open' : ''}`}
+                                        className={`its-j__day${row.kind === 'month' ? ' its-j__month' : ''}${row.open ? ' is-open' : ''}`}
                                         aria-expanded={row.open}
-                                        onClick={() => setState((current) => ({
+                                        onClick={() => setState((current) => row.kind === 'month' ? ({
+                                            ...current,
+                                            monthsOpen: { ...current.monthsOpen, [row.month]: !row.open },
+                                        }) : ({
                                             ...current,
                                             daysOpen: { ...current.daysOpen, [row.day]: !row.open },
                                         }))}
@@ -589,6 +628,7 @@ export function ItSecurityJournal() {
                     {model.isEmpty ? (
                         <div className="its-j__empty">{loadError || 'По этим фильтрам ничего нет'}</div>
                     ) : null}
+                    </>) : null}
                 </section>
                 </div>
 

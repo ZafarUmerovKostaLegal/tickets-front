@@ -1007,6 +1007,88 @@
   margin-top: -0.2rem;
 }
 
+.its-j__month {
+  background: var(--app-surface-soft);
+  font-size: 0.8125rem;
+  color: var(--app-text);
+}
+
+.its-j__btn--danger {
+  border-color: #f1b4b4;
+  background: #fef2f2;
+  color: #b42318;
+}
+
+.its-j__btn--danger:hover {
+  border-color: #e3a0a0;
+  background: #fde8e8;
+}
+
+.its-j__btn--danger-solid {
+  border-color: #c24141;
+  background: #c24141;
+  color: #fff;
+}
+
+.its-j__btn--danger-solid:hover {
+  background: #a73535;
+  border-color: #a73535;
+}
+
+.its-j__storage-note {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.35rem 0.15rem 0.8rem;
+  color: var(--app-text-dim);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.its-j__storage-tools {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.45rem 0.7rem 0.15rem;
+}
+
+.its-j__store {
+  --its-cols: minmax(180px, 1.7fr) minmax(150px, 1fr) 148px 88px minmax(250px, auto);
+  min-width: 980px;
+}
+
+.its-j__store-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.its-j__store-actions .its-j__btn {
+  height: 2rem;
+  padding: 0 0.65rem;
+  font-size: 0.78rem;
+}
+
+.its-store-confirm {
+  width: min(440px, 100%);
+  padding: 1.1rem 1.15rem 1rem;
+}
+
+.its-store-confirm__text {
+  margin: 0.75rem 0 0;
+  color: var(--app-text-dim);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.its-store-confirm__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
 .its-j__day span:last-child {
   font-weight: 500;
   color: var(--app-muted);
