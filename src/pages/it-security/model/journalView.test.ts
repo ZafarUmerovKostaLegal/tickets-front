@@ -38,7 +38,29 @@ describe('buildJournalView', () => {
                 hasFile: true,
             }],
         });
-        expect(view.rows.some((row) => row.kind === 'event' && row.name === 'a.pdf')).toBe(true);
+        expect(view.rows.some((row) => row.kind === 'head' && row.day === '26.10.2026' && row.open === false)).toBe(true);
+        expect(view.rows.some((row) => row.kind === 'event' && row.name === 'a.pdf')).toBe(false);
+        const opened = buildJournalView({
+            ...JOURNAL_UI_INITIAL,
+            daysOpen: { '26.10.2026': true },
+            remoteUsers: [{ id: 'PC|KL\\ivan', login: 'ivan', host: 'PC', dept: '' }],
+            remote: [{
+                id: 'e1',
+                d: '26.10.2026',
+                t: '12:00:00',
+                kind: 'send',
+                status: 'blocked',
+                ch: 'telegram',
+                name: 'a.pdf',
+                dir: 'C:\\Users',
+                proc: 'Telegram.exe',
+                res: 'Telegram',
+                note: '',
+                u: 'PC|KL\\ivan',
+                hasFile: true,
+            }],
+        });
+        expect(opened.rows.some((row) => row.kind === 'event' && row.name === 'a.pdf')).toBe(true);
         expect(view.sideUsers.map((user) => user.id)).toContain('PC|KL\\ivan');
         expect(view.detail.hasFile).toBe(true);
         expect(view.periodLabel).toBe('26.10.2026');

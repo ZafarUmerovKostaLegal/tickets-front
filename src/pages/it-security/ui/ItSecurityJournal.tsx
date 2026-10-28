@@ -21,6 +21,29 @@ const TABS: Array<{ id: JournalTab; label: string }> = [
     { id: 'users', label: 'Пользователи' },
 ];
 
+const JOURNAL_USER_KEY = 'it-security-journal-user';
+
+function storedJournalUser(): string {
+    try {
+        const raw = window.localStorage.getItem(JOURNAL_USER_KEY)?.trim() ?? '';
+        if (!raw || raw.length > 300 || /[\u0000-\u001f]/.test(raw))
+            return 'all';
+        return raw;
+    }
+    catch {
+        return 'all';
+    }
+}
+
+function rememberJournalUser(userId: string) {
+    try {
+        window.localStorage.setItem(JOURNAL_USER_KEY, userId || 'all');
+    }
+    catch {
+        /* браузер может запретить хранилище */
+    }
+}
+
 function actionIcon(kind: JournalKind, title = ''): JournalKind | 'unlock' {
     if (kind === 'access' && title.includes('открыта'))
         return 'unlock';
@@ -28,7 +51,10 @@ function actionIcon(kind: JournalKind, title = ''): JournalKind | 'unlock' {
 }
 
 export function ItSecurityJournal() {
-    const [state, setState] = useState<JournalUiState>(JOURNAL_UI_INITIAL);
+    const [state, setState] = useState<JournalUiState>(() => ({
+        ...JOURNAL_UI_INITIAL,
+        user: storedJournalUser(),
+    }));
     const [loadError, setLoadError] = useState('');
     const [downloadError, setDownloadError] = useState('');
     const [reportError, setReportError] = useState('');
@@ -106,7 +132,14 @@ export function ItSecurityJournal() {
                 if (stopped)
                     return;
                 setLoadError('');
-                setState((current) => ({ ...current, remote: feed.events, remoteUsers: feed.users }));
+                setState((current) => ({
+                    ...current,
+                    remote: feed.events,
+                    remoteUsers: feed.users,
+                    user: current.user === 'all' || feed.users.some((user) => user.id === current.user)
+                        ? current.user
+                        : 'all',
+                }));
             }
             catch (error) {
                 if (!stopped)
@@ -129,6 +162,10 @@ export function ItSecurityJournal() {
             sel: selectId || current.sel,
         }));
     };
+
+    useEffect(() => {
+        rememberJournalUser(state.user);
+    }, [state.user]);
 
     const downloadReport = () => {
         setReportError('');
@@ -395,10 +432,22 @@ export function ItSecurityJournal() {
                                     <span>Куда / процесс</span>
                                 </div>
                                 {model.rows.map((row) => row.kind === 'head' ? (
-                                    <div key={row.id} className="its-j__day">
-                                        <span>{row.label}</span>
+                                    <button
+                                        key={row.id}
+                                        type="button"
+                                        className={`its-j__day${row.open ? ' is-open' : ''}`}
+                                        aria-expanded={row.open}
+                                        onClick={() => setState((current) => ({
+                                            ...current,
+                                            daysOpen: { ...current.daysOpen, [row.day]: !row.open },
+                                        }))}
+                                    >
+                                        <span className="its-j__day-title">
+                                            <span className="its-j__day-mark" aria-hidden />
+                                            {row.label}
+                                        </span>
                                         <span>{row.summary}</span>
-                                    </div>
+                                    </button>
                                 ) : (
                                     <button
                                         key={row.id}

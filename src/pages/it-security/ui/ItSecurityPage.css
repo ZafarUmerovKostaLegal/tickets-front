@@ -968,13 +968,43 @@
 .its-j__day {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 0.75rem;
+  width: 100%;
   padding: 0.38rem 0.7rem;
-  background: var(--app-bg);
+  border: 0;
   border-bottom: 1px solid var(--app-border);
+  background: var(--app-bg);
+  font: inherit;
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--app-text-dim);
+  text-align: left;
+  cursor: pointer;
+}
+
+.its-j__day:hover {
+  background: var(--app-bg-soft);
+}
+
+.its-j__day-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.its-j__day-mark {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  margin-top: -0.1rem;
+}
+
+.its-j__day.is-open .its-j__day-mark {
+  transform: rotate(45deg);
+  margin-top: -0.2rem;
 }
 
 .its-j__day span:last-child {

@@ -21,6 +21,7 @@ export type JournalUiState = {
     uq: string;
     user: string;
     open: Record<string, boolean>;
+    daysOpen: Record<string, boolean>;
     remote: JournalEvent[];
     remoteUsers: JournalUser[];
     extra: JournalEvent[];
@@ -35,6 +36,7 @@ export const JOURNAL_UI_INITIAL: JournalUiState = {
     uq: '',
     user: 'all',
     open: {},
+    daysOpen: {},
     remote: [],
     remoteUsers: [],
     extra: [],
@@ -97,7 +99,7 @@ export type JournalTile = {
 };
 
 export type JournalEventRow =
-    | { kind: 'head'; id: string; label: string; summary: string }
+    | { kind: 'head'; id: string; day: string; label: string; summary: string; open: boolean }
     | {
         kind: 'event';
         id: string;
@@ -267,6 +269,18 @@ function actionDetail(row: JournalEvent): string {
     return 'Получатель не определён';
 }
 
+function todayKey(now = new Date()): string {
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${day}.${month}.${now.getFullYear()}`;
+}
+
+function dayExpanded(day: string, daysOpen: Record<string, boolean> | undefined): boolean {
+    if (daysOpen && Object.prototype.hasOwnProperty.call(daysOpen, day))
+        return Boolean(daysOpen[day]);
+    return day === todayKey();
+}
+
 function barHeight(value: number, max: number, peak: number, empty: number): number {
     if (!value)
         return empty;
@@ -357,16 +371,21 @@ export function buildJournalView(state: JournalUiState): JournalViewModel {
     const rows: JournalEventRow[] = [];
     let lastDay = '';
     list.forEach((row) => {
+        const expanded = dayExpanded(row.d, state.daysOpen);
         if (row.d !== lastDay) {
             lastDay = row.d;
             const group = list.filter((item) => item.d === row.d);
             rows.push({
                 kind: 'head',
                 id: `day-${row.d}`,
+                day: row.d,
                 label: journalDayLabel(row.d),
                 summary: `Событий: ${group.length} · Заблокировано: ${group.filter((item) => item.status === 'blocked').length}`,
+                open: expanded,
             });
         }
+        if (!expanded)
+            return;
         const user = byId.get(row.u);
         rows.push({
             kind: 'event',
