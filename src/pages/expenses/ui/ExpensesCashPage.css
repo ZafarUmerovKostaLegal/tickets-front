@@ -116,8 +116,13 @@
   animation: exp-cash-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.exp-cash__stat:nth-child(2) { animation-delay: 0.05s; }
-.exp-cash__stat:nth-child(3) { animation-delay: 0.1s; }
+.exp-cash__stat:nth-child(2) {
+  animation-delay: 0.05s;
+}
+
+.exp-cash__stat:nth-child(3) {
+  animation-delay: 0.1s;
+}
 
 .exp-cash__stat-label {
   display: block;
@@ -134,11 +139,21 @@
   font-variant-numeric: tabular-nums;
 }
 
-.exp-cash__stat-value--in { color: #16a34a; }
-.exp-cash__stat-value--out { color: #dc2626; }
+.exp-cash__stat-value--in {
+  color: #16a34a;
+}
 
-body[data-theme='dark'] .exp-cash__stat-value--in { color: #4ade80; }
-body[data-theme='dark'] .exp-cash__stat-value--out { color: #f87171; }
+.exp-cash__stat-value--out {
+  color: #dc2626;
+}
+
+body[data-theme='dark'] .exp-cash__stat-value--in {
+  color: #4ade80;
+}
+
+body[data-theme='dark'] .exp-cash__stat-value--out {
+  color: #f87171;
+}
 
 .exp-cash__actions {
   display: grid;
@@ -189,11 +204,23 @@ body[data-theme='dark'] .exp-cash__stat-value--out { color: #f87171; }
   color: var(--app-text);
 }
 
-.exp-cash__action-icon--out { color: #dc2626; background: rgba(220, 38, 38, 0.1); }
-.exp-cash__action-icon--in { color: #16a34a; background: rgba(22, 163, 74, 0.12); }
+.exp-cash__action-icon--out {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
 
-body[data-theme='dark'] .exp-cash__action-icon--out { color: #f87171; }
-body[data-theme='dark'] .exp-cash__action-icon--in { color: #4ade80; }
+.exp-cash__action-icon--in {
+  color: #16a34a;
+  background: rgba(22, 163, 74, 0.12);
+}
+
+body[data-theme='dark'] .exp-cash__action-icon--out {
+  color: #f87171;
+}
+
+body[data-theme='dark'] .exp-cash__action-icon--in {
+  color: #4ade80;
+}
 
 .exp-cash__form {
   display: grid;
@@ -275,7 +302,9 @@ body[data-theme='dark'] .exp-cash__action-icon--in { color: #4ade80; }
   border-color: rgba(220, 38, 38, 0.25);
 }
 
-body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
+body[data-theme='dark'] .exp-cash__banner--error {
+  color: #fca5a5;
+}
 
 .exp-cash__ledger {
   padding: 0.35rem 0 0.5rem;
@@ -605,9 +634,17 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
     0 10px 28px color-mix(in srgb, var(--app-text) 7%, transparent);
 }
 
-.exp-cash__event--expense { --exp-cash-accent: #e11d48; }
-.exp-cash__event--topup { --exp-cash-accent: #16a34a; }
-.exp-cash__event--set { --exp-cash-accent: #6366f1; }
+.exp-cash__event--expense {
+  --exp-cash-accent: #e11d48;
+}
+
+.exp-cash__event--topup {
+  --exp-cash-accent: #16a34a;
+}
+
+.exp-cash__event--set {
+  --exp-cash-accent: #6366f1;
+}
 
 .exp-cash__event--drop {
   background: color-mix(in srgb, var(--app-accent) 8%, var(--app-surface));
@@ -676,7 +713,9 @@ body[data-theme='dark'] .exp-cash__banner--error { color: #fca5a5; }
   text-decoration: underline;
 }
 
-.exp-cash__event-after { margin-top: 0.25rem; }
+.exp-cash__event-after {
+  margin-top: 0.25rem;
+}
 
 .exp-cash__event-side {
   display: flex;
@@ -756,11 +795,21 @@ body[data-theme='dark'] .exp-cash__event-tool--danger:hover {
   color: var(--app-text);
 }
 
-.exp-cash__event-sum--expense { color: #dc2626; }
-.exp-cash__event-sum--topup { color: #16a34a; }
+.exp-cash__event-sum--expense {
+  color: #dc2626;
+}
 
-body[data-theme='dark'] .exp-cash__event-sum--expense { color: #f87171; }
-body[data-theme='dark'] .exp-cash__event-sum--topup { color: #4ade80; }
+.exp-cash__event-sum--topup {
+  color: #16a34a;
+}
+
+body[data-theme='dark'] .exp-cash__event-sum--expense {
+  color: #f87171;
+}
+
+body[data-theme='dark'] .exp-cash__event-sum--topup {
+  color: #4ade80;
+}
 
 .exp-cash__empty {
   margin: 0;
@@ -776,13 +825,25 @@ body[data-theme='dark'] .exp-cash__event-sum--topup { color: #4ade80; }
 }
 
 @keyframes exp-cash-rise {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 @keyframes exp-cash-shimmer {
-  from { background-position: 100% 0; }
-  to { background-position: -100% 0; }
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
 }
 
 @media (max-width: 768px) {
@@ -792,6 +853,7 @@ body[data-theme='dark'] .exp-cash__event-sum--topup { color: #4ade80; }
 }
 
 @media (max-width: 720px) {
+
   .exp-cash__stats,
   .exp-cash__actions {
     grid-template-columns: 1fr;
@@ -807,6 +869,7 @@ body[data-theme='dark'] .exp-cash__event-sum--topup { color: #4ade80; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .exp-cash__hero,
   .exp-cash__stat,
   .exp-cash__form,

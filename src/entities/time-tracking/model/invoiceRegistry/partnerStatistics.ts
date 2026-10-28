@@ -109,7 +109,7 @@ export function formatRegistryAmountCell(raw: string): string {
 }
 
 export function isInvoiceRegistryMoneyColumnKey(key: string): boolean {
-    return key === 'amount' || key === 'balance';
+    return key === 'amount' || key === 'amountUsd' || key === 'balance';
 }
 
 export type AdvanceFeeDisplayLine =

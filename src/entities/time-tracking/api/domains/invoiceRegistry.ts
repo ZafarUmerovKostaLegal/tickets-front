@@ -1,6 +1,6 @@
 import { apiFetch } from '@shared/api';
 import { reportsThrowIfNotOk } from './httpShared';
-import type { InvoiceRegistryRow, InvoiceRegistryYearId } from '../../model/invoiceRegistry';
+import type { InvoiceRegistryRow, InvoiceRegistryYearId, RegistryUsdSaveItem } from '../../model/invoiceRegistry';
 
 export type InvoiceRegistryYearMeta = {
     id: InvoiceRegistryYearId;
@@ -104,6 +104,18 @@ export async function replaceInvoiceRegistryArchiveSheet(
         body: JSON.stringify({ rows }),
     });
     await reportsThrowIfNotOk(res);
+}
+
+export async function saveInvoiceRegistryUsd(year: InvoiceRegistryYearId, items: RegistryUsdSaveItem[]): Promise<void> {
+    for (let offset = 0; offset < items.length; offset += 100) {
+        const chunk = items.slice(offset, offset + 100);
+        const res = await apiFetch(`/api/v1/time-tracking/invoice-registry/${encodeURIComponent(year)}/usd`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: chunk }),
+        });
+        await reportsThrowIfNotOk(res);
+    }
 }
 
 export async function getInvoiceRegistryStatistics(year: '2026' | 'all' = '2026'): Promise<InvoiceRegistryStatisticsDto> {

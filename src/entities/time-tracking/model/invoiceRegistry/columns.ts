@@ -1,6 +1,20 @@
 import type { InvoiceRegistryColumnDef, InvoiceRegistrySheetMeta, InvoiceRegistryYearId } from './types';
 
-const COL_2026: InvoiceRegistryColumnDef[] = [
+export const INVOICE_REGISTRY_USD_COLUMN = 'amountUsd';
+
+const USD_COLUMN: InvoiceRegistryColumnDef = { key: INVOICE_REGISTRY_USD_COLUMN, label: 'Сумма в $' };
+
+function withAmountUsd(columns: InvoiceRegistryColumnDef[]): InvoiceRegistryColumnDef[] {
+    const out: InvoiceRegistryColumnDef[] = [];
+    for (const column of columns) {
+        out.push(column);
+        if (column.key === 'amount')
+            out.push(USD_COLUMN);
+    }
+    return out;
+}
+
+const COL_2026: InvoiceRegistryColumnDef[] = withAmountUsd([
     { key: 'seqNo', label: '№' },
     { key: 'billedTo', label: 'Кому выставлено', wide: true },
     { key: 'currency', label: 'Валюта' },
@@ -13,9 +27,9 @@ const COL_2026: InvoiceRegistryColumnDef[] = [
     { key: 'statusNote', label: 'Статус', editor: 'status' },
     { key: 'advanceFee', label: 'Пред.вознаграждение', wide: true },
     { key: 'balance', label: 'Остаток' },
-];
+]);
 
-const COL_2025: InvoiceRegistryColumnDef[] = [
+const COL_2025: InvoiceRegistryColumnDef[] = withAmountUsd([
     { key: 'seqNo', label: '№' },
     { key: 'billedTo', label: 'Кому выставлено', wide: true },
     { key: 'currency', label: 'Валюта' },
@@ -28,9 +42,9 @@ const COL_2025: InvoiceRegistryColumnDef[] = [
     { key: 'statusNote', label: 'Статус', editor: 'status' },
     { key: 'advanceFee', label: 'Пред.вознаграждение', wide: true },
     { key: 'balance', label: 'Остаток' },
-];
+]);
 
-const COL_2024: InvoiceRegistryColumnDef[] = [
+const COL_2024: InvoiceRegistryColumnDef[] = withAmountUsd([
     { key: 'seqNo', label: '№' },
     { key: 'billedTo', label: 'Кому выставлено', wide: true },
     { key: 'currency', label: 'Валюта' },
@@ -42,9 +56,9 @@ const COL_2024: InvoiceRegistryColumnDef[] = [
     { key: 'statusNote', label: 'Статус', editor: 'status' },
     { key: 'advanceFee', label: 'Пред.вознаграждение', wide: true },
     { key: 'balance', label: 'Остаток' },
-];
+]);
 
-const COL_2023: InvoiceRegistryColumnDef[] = [
+const COL_2023: InvoiceRegistryColumnDef[] = withAmountUsd([
     { key: 'seqNo', label: '№' },
     { key: 'issueDate', label: 'Дата выставления' },
     { key: 'dueOrPayment', label: 'Дата оплаты', wide: true },
@@ -54,9 +68,9 @@ const COL_2023: InvoiceRegistryColumnDef[] = [
     { key: 'currency', label: 'Валюта' },
     { key: 'details', label: 'Детали', wide: true },
     { key: 'statusNote', label: 'Статус', editor: 'status' },
-];
+]);
 
-const COL_2022: InvoiceRegistryColumnDef[] = [
+const COL_2022: InvoiceRegistryColumnDef[] = withAmountUsd([
     { key: 'seqNo', label: '№' },
     { key: 'issueDate', label: 'Дата выставления' },
     { key: 'dueOrPayment', label: 'Дата оплаты', wide: true },
@@ -66,22 +80,9 @@ const COL_2022: InvoiceRegistryColumnDef[] = [
     { key: 'currency', label: 'Валюта' },
     { key: 'details', label: 'Детали', wide: true },
     { key: 'statusNote', label: 'Статус', editor: 'status' },
-];
+]);
 
-const COL_2021: InvoiceRegistryColumnDef[] = [
-    { key: 'seqNo', label: '№' },
-    { key: 'issueDate', label: 'Дата выставления' },
-    { key: 'dueOrPayment', label: 'Дата оплаты', wide: true },
-    { key: 'clientNumber', label: 'Номер' },
-    { key: 'billedTo', label: 'Клиент', wide: true },
-    { key: 'amount', label: 'Сумма' },
-    { key: 'currency', label: 'Валюта' },
-    { key: 'details', label: 'Детали', wide: true },
-    { key: 'uzbSia', label: 'UZB/SIA' },
-    { key: 'statusNote', label: 'Статус', editor: 'status' },
-];
-
-const COL_2020: InvoiceRegistryColumnDef[] = [
+const COL_2021: InvoiceRegistryColumnDef[] = withAmountUsd([
     { key: 'seqNo', label: '№' },
     { key: 'issueDate', label: 'Дата выставления' },
     { key: 'dueOrPayment', label: 'Дата оплаты', wide: true },
@@ -92,7 +93,20 @@ const COL_2020: InvoiceRegistryColumnDef[] = [
     { key: 'details', label: 'Детали', wide: true },
     { key: 'uzbSia', label: 'UZB/SIA' },
     { key: 'statusNote', label: 'Статус', editor: 'status' },
-];
+]);
+
+const COL_2020: InvoiceRegistryColumnDef[] = withAmountUsd([
+    { key: 'seqNo', label: '№' },
+    { key: 'issueDate', label: 'Дата выставления' },
+    { key: 'dueOrPayment', label: 'Дата оплаты', wide: true },
+    { key: 'clientNumber', label: 'Номер' },
+    { key: 'billedTo', label: 'Клиент', wide: true },
+    { key: 'amount', label: 'Сумма' },
+    { key: 'currency', label: 'Валюта' },
+    { key: 'details', label: 'Детали', wide: true },
+    { key: 'uzbSia', label: 'UZB/SIA' },
+    { key: 'statusNote', label: 'Статус', editor: 'status' },
+]);
 
 const COL_CHECKLIST: InvoiceRegistryColumnDef[] = [
     { key: 'seqNo', label: '№' },

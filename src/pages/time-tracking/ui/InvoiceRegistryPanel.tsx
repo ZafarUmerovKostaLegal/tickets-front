@@ -6,6 +6,10 @@ import { getInvoiceDetailUrl } from '@shared/config';
 import {
     formatAdvanceFeeLines,
     formatRegistryAmountCell,
+    formatRegistryAmountUsd,
+    INVOICE_REGISTRY_USD_COLUMN,
+    registryUsdPersistItem,
+    registryUsdRateDates,
     SYSTEM_INVOICE_REGISTRY_STATUSES,
     collectRegistryStatusOptions,
     normalizeRegistryStatusLabel,
@@ -30,8 +34,10 @@ import {
     patchInvoiceRegistryRow2026,
     replaceInvoiceRegistryArchiveSheet,
     replaceInvoiceRegistryRows2026,
+    saveInvoiceRegistryUsd,
     type InvoiceRegistryYearMeta,
 } from '@entities/time-tracking/api/domains/invoiceRegistry';
+import { fetchCbuParsedForDate, peekCachedCbuParsedForDate, type CbuParsed } from '@entities/expenses/model/cbuRates';
 import { buildExistingInvoicePdfFile, downloadExistingInvoicePdf } from '../lib/invoicePageShared';
 import { useI18n } from '@shared/i18n';
 import { useAppDialog } from '@shared/ui';
@@ -853,7 +859,110 @@ export function InvoiceRegistryPanel({
     const [fullscreen, setFullscreen] = useState(false);
     const sheet = useMemo(() => getInvoiceRegistrySheet(year), [year]);
     const columns = sheet.columns;
-    const columnKeys = useMemo(() => columns.map((c) => c.key), [columns]);
+    const columnKeys = useMemo(
+        () => columns.map((c) => c.key).filter((key) => key !== INVOICE_REGISTRY_USD_COLUMN),
+        [columns],
+    );
+    const [usdRates, setUsdRates] = useState<Record<string, CbuParsed>>({});
+    const [usdFailed, setUsdFailed] = useState<Record<string, true>>({});
+    const usdRatesRef = useRef(usdRates);
+    const usdFailedRef = useRef(usdFailed);
+    usdRatesRef.current = usdRates;
+    usdFailedRef.current = usdFailed;
+    const usdRateDates = useMemo(() => registryUsdRateDates(rows), [rows]);
+
+    useEffect(() => {
+        let cancelled = false;
+        const knownRates = usdRatesRef.current;
+        const knownFailed = usdFailedRef.current;
+        const cached = usdRateDates.filter((iso) => !knownRates[iso] && peekCachedCbuParsedForDate(iso));
+        if (cached.length > 0) {
+            setUsdRates((prev) => {
+                const next = { ...prev };
+                for (const iso of cached) {
+                    const parsed = peekCachedCbuParsedForDate(iso);
+                    if (parsed)
+                        next[iso] = parsed;
+                }
+                return next;
+            });
+        }
+        const missing = usdRateDates.filter((iso) => !knownRates[iso] && !knownFailed[iso] && !peekCachedCbuParsedForDate(iso));
+        if (missing.length === 0)
+            return () => {
+                cancelled = true;
+            };
+        void (async () => {
+            for (let index = 0; index < missing.length; index += 4) {
+                const chunk = missing.slice(index, index + 4);
+                const loaded = await Promise.all(chunk.map(async (iso) => {
+                    try {
+                        return [iso, await fetchCbuParsedForDate(iso)] as const;
+                    }
+                    catch {
+                        return [iso, null] as const;
+                    }
+                }));
+                if (cancelled)
+                    return;
+                setUsdRates((prev) => {
+                    const next = { ...prev };
+                    for (const [iso, parsed] of loaded) {
+                        if (parsed)
+                            next[iso] = parsed;
+                    }
+                    return next;
+                });
+                setUsdFailed((prev) => {
+                    const next = { ...prev };
+                    for (const [iso, parsed] of loaded) {
+                        if (!parsed)
+                            next[iso] = true;
+                    }
+                    return next;
+                });
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [usdRateDates]);
+
+    const usdSaveKey = useRef('');
+    useEffect(() => {
+        if (year === 'checklist')
+            return undefined;
+        const items = rows.flatMap((row) => {
+            const item = registryUsdPersistItem(row, usdRates, usdFailed);
+            return item ? [item] : [];
+        });
+        if (items.length === 0)
+            return undefined;
+        const key = `${year}:${items.map((item) => `${item.id}=${item.basis}:${item.amountUsd}`).join(';')}`;
+        if (usdSaveKey.current === key)
+            return undefined;
+        usdSaveKey.current = key;
+        let cancelled = false;
+        void saveInvoiceRegistryUsd(year, items)
+            .then(() => {
+                if (cancelled)
+                    return;
+                const byId = new Map(items.map((item) => [item.id, item]));
+                setRows((prev) => prev.map((row) => {
+                    const item = byId.get(row.id);
+                    return item ? { ...row, amountUsd: item.amountUsd, amountUsdBasis: item.basis } : row;
+                }));
+            })
+            .catch(() => {
+                if (usdSaveKey.current === key)
+                    usdSaveKey.current = '';
+            });
+        return () => {
+            cancelled = true;
+            if (usdSaveKey.current === key)
+                usdSaveKey.current = '';
+        };
+    }, [rows, usdFailed, usdRates, year]);
 
     const canEditYear = !readOnly && year !== '2026-system' && year !== 'checklist';
     const seededYearsRef = useRef<Set<string>>(new Set());
@@ -1548,12 +1657,15 @@ export function InvoiceRegistryPanel({
                                     }}
                                 >
                                     {columns.map((col) => {
-                                        const val = row[col.key] ?? '';
+                                        const usdColumn = col.key === INVOICE_REGISTRY_USD_COLUMN;
+                                        const val = usdColumn
+                                            ? formatRegistryAmountUsd(row, usdRates, usdFailed)
+                                            : (row[col.key] ?? '');
                                         const active = focus?.rowId === row.id && focus.key === col.key;
                                         const money = isInvoiceRegistryMoneyColumnKey(col.key);
                                         const systemStatus = year === '2026-system' && col.key === 'statusNote';
                                         const systemNote = year === '2026-system' && col.key === 'details';
-                                        const canEditCell = canEditYear || ((systemStatus || systemNote) && !readOnly);
+                                        const canEditCell = !usdColumn && (canEditYear || ((systemStatus || systemNote) && !readOnly));
                                         return (
                                             <RegistryEditableCell
                                                 key={col.key}
