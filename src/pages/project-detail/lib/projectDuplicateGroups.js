@@ -10,7 +10,6 @@ export function pickKeeperEntry(group) {
 export function pickKeeperEntryKey(group) {
     return duplicateEntryKey(pickKeeperEntry(group));
 }
-/** Split backend groups when entries span different work dates (defensive UI). */
 export function splitDuplicateGroupsByWorkDate(groups) {
     const out = [];
     for (const group of groups) {
