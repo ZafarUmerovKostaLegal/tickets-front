@@ -302,24 +302,20 @@ export function AccountingCorporateCardPanel() {
 
     return (
         <section className="acct-card acct-card-list" aria-label="Корпоративная карта">
-            <div className="tt-settings__actions-row tt-settings__actions-row--clients exp-tt-toolbar">
-                <div className="tt-settings__toolbar-left">
-                    {rows ? <p className="acct-card__total acct-card__total--inline"><span>Итого, UZS</span> <strong>{money(totalUzs)}</strong></p> : null}
-                </div>
-                <div className="tt-settings__actions-end">
-                    <div className="tt-settings__search-wrap">
-                        <span className="tt-settings__search-icon" aria-hidden>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <div className="acct-card__toolbar">
+                <div className="acct-card__bar">
+                    {rows ? <p className="acct-card__total acct-card__total--inline"><span>Итого, UZS</span> <strong>{money(totalUzs)}</strong></p> : <span />}
+                    <label className="acct-card__search">
+                        <span className="acct-card__search-icon" aria-hidden>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                                 <circle cx="11" cy="11" r="8" />
                                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
                             </svg>
                         </span>
-                        <input type="search" className="tt-settings__search" placeholder="По описанию, владельцу или комментарию" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Поиск по операциям" />
-                    </div>
+                        <input type="search" placeholder="По описанию, владельцу или комментарию" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Поиск по операциям" />
+                    </label>
                 </div>
-            </div>
-            <div className="exp-tt-filters-outer">
-                <div className="exp-filters" aria-label="Фильтры">
+                <div className="acct-card__chips exp-filters" aria-label="Фильтры">
                     <ChipFilter label={cardLabel} active={cardId !== ALL_CARDS} open={openChip === 'card'} onToggle={() => toggleChip('card')} wide>
                         <ChipOptions
                             value={cardId}
@@ -353,8 +349,19 @@ export function AccountingCorporateCardPanel() {
                             ]}
                         />
                     </ChipFilter>
+                </div>
+                <div className="acct-card__period" aria-label="Период">
+                    <span className="acct-card__period-label">Период</span>
+                    <div className="acct-card__period-field">
+                        <span>С</span>
+                        <DatePicker value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} portal buttonClassName="acct-card__date" emptyLabel="дд.мм.гггг" />
+                    </div>
+                    <div className="acct-card__period-field">
+                        <span>По</span>
+                        <DatePicker value={dateTo} min={dateFrom || undefined} onChange={setDateTo} portal buttonClassName="acct-card__date" emptyLabel="дд.мм.гггг" />
+                    </div>
                     {filtersOn ? (
-                        <button type="button" className="exp-filters-reset" onClick={() => {
+                        <button type="button" className="acct-card__clear" onClick={() => {
                             setQuery('');
                             setCardId(ALL_CARDS);
                             setKind('');
@@ -367,17 +374,6 @@ export function AccountingCorporateCardPanel() {
                             Сбросить
                         </button>
                     ) : null}
-                </div>
-                <div className="exp-filters-custom-range" aria-label="Период">
-                    <span className="exp-filters-custom-range__label">Период:</span>
-                    <div className="exp-filters-custom-range__field">
-                        <span className="exp-filters-custom-range__field-label">С</span>
-                        <DatePicker value={dateFrom} max={dateTo || undefined} onChange={setDateFrom} portal buttonClassName="exp-filters-custom-range__picker" emptyLabel="дд.мм.гггг" />
-                    </div>
-                    <div className="exp-filters-custom-range__field">
-                        <span className="exp-filters-custom-range__field-label">По</span>
-                        <DatePicker value={dateTo} min={dateFrom || undefined} onChange={setDateTo} portal buttonClassName="exp-filters-custom-range__picker" emptyLabel="дд.мм.гггг" />
-                    </div>
                 </div>
             </div>
 
