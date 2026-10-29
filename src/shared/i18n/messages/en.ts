@@ -84,6 +84,8 @@ export const enMessages = {
         utilPartnerReview: 'Partner review',
         utilTodo: 'To do',
         utilEmpty: 'No data yet',
+        utilCollapse: 'Collapse utilisation',
+        utilExpand: 'Expand utilisation',
         factTasks: 'Tasks',
         factHours: 'Hours this week',
         factCapacity: 'capacity {hours} h',

@@ -84,6 +84,8 @@ export const ruMessages: Messages = {
         utilPartnerReview: 'Проверка партнёра',
         utilTodo: 'К выполнению',
         utilEmpty: 'Нет данных',
+        utilCollapse: 'Свернуть утилизацию',
+        utilExpand: 'Развернуть утилизацию',
         factTasks: 'Задачи',
         factHours: 'Часы за неделю',
         factCapacity: 'норма {hours} ч',
@@ -835,6 +837,8 @@ export type Messages = {
         utilPartnerReview: string;
         utilTodo: string;
         utilEmpty: string;
+        utilCollapse: string;
+        utilExpand: string;
         factTasks: string;
         factHours: string;
         factCapacity: string;

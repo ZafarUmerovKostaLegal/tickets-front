@@ -3,7 +3,7 @@ import { AppBackButton, AppPageSettings, NAV_TRANSITION_TYPE } from '@shared/ui'
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { HeaderNotifications } from '@pages/home/ui/HeaderNotifications';
-import { LegalHubTeamBoard } from './LegalHubTeamBoard';
+import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import './LegalHubPage.css';
 
 type LegalHubNavId = 'myTasks' | 'reviewQueue' | 'allTeam';
@@ -70,6 +70,16 @@ function IconSearch() {
     );
 }
 
+function IconUtil() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <circle cx="12" cy="12" r="8" />
+            <path d="M12 12 12 4.5" />
+            <path d="M12 12 18.2 16" />
+        </svg>
+    );
+}
+
 function IconMenu() {
     return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -97,6 +107,7 @@ export function LegalHubPage() {
     const [section, setSection] = useState<LegalHubNavId>('allTeam');
     const [query, setQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
+    const [utilOpen, setUtilOpen] = useState(false);
     const [sideCollapsed, setSideCollapsed] = useState(() => {
         try {
             return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
@@ -120,6 +131,10 @@ export function LegalHubPage() {
     const active = NAV_ITEMS.find((item) => item.id === section) ?? NAV_ITEMS[2]!;
 
     const closeMenu = useCallback(() => setMenuOpen(false), []);
+    const openMenu = useCallback(() => {
+        setUtilOpen(false);
+        setMenuOpen((open) => !open);
+    }, []);
     const openSection = useCallback((id: LegalHubNavId) => {
         setMenuOpen(false);
         if (id === section)
@@ -134,6 +149,7 @@ export function LegalHubPage() {
         const onKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 setMenuOpen(false);
+                setUtilOpen(false);
                 return;
             }
             if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey)
@@ -221,7 +237,7 @@ export function LegalHubPage() {
                         className="lh-top__menu"
                         aria-label={menuOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
                         aria-expanded={menuOpen}
-                        onClick={() => setMenuOpen((open) => !open)}
+                        onClick={openMenu}
                     >
                         <IconMenu />
                     </button>
@@ -242,6 +258,20 @@ export function LegalHubPage() {
                         <kbd className="lh-top__search-kbd" aria-hidden>/</kbd>
                     </label>
                     <div className="lh-top__actions">
+                        {section === 'allTeam' ? (
+                            <button
+                                type="button"
+                                className="lh-top__util"
+                                aria-label={t('legalHub.utilisationTitle')}
+                                aria-expanded={utilOpen}
+                                onClick={() => {
+                                    setMenuOpen(false);
+                                    setUtilOpen((open) => !open);
+                                }}
+                            >
+                                <IconUtil />
+                            </button>
+                        ) : null}
                         <AppPageSettings showUserMenu beforeUserMenu={<HeaderNotifications />} />
                     </div>
                 </header>
@@ -252,6 +282,7 @@ export function LegalHubPage() {
                     </main>
                 </ViewTransition>
             </div>
+            {section === 'allTeam' ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
         </div>
     );
 }

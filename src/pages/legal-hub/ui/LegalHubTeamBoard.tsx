@@ -130,35 +130,89 @@ function MemberCardView({ member, tone, selected, onSelect }: {
     );
 }
 
-function TeamSidePanels() {
-    const { t } = useI18n();
+const UTIL_COLLAPSED_KEY = 'lh-util-collapsed';
+
+function IconRailCollapse({ pointRight }: { pointRight: boolean }) {
     return (
-        <aside className="lh-board__side">
-            <section className="lh-panel" aria-label={t('legalHub.utilisationTitle')}>
-                <h2 className="lh-panel__title">{t('legalHub.utilisationTitle')}</h2>
-                <div className="lh-util">
-                    <div className="lh-util__ring" aria-hidden>
-                        <div className="lh-util__hole">
-                            <strong>{t('legalHub.memberPercent')}</strong>
-                            <span>{t('legalHub.utilEmpty')}</span>
-                        </div>
-                    </div>
-                    <ul className="lh-util__legend">
-                        {UTIL_ROWS.map((row) => (
-                            <li key={row.key}>
-                                <span className={`lh-member__dot ${row.dot}`} aria-hidden />
-                                <span>{t(row.labelKey)}</span>
-                                <strong>{t('legalHub.memberPercent')}</strong>
-                            </li>
-                        ))}
-                    </ul>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            {pointRight ? <path d="m9 6 6 6-6 6" /> : <path d="m15 6-6 6 6 6" />}
+        </svg>
+    );
+}
+
+export function LegalHubUtilRail({ mobileOpen, onMobileClose }: {
+    mobileOpen: boolean;
+    onMobileClose: () => void;
+}) {
+    const { t } = useI18n();
+    const [collapsed, setCollapsed] = useState(() => {
+        try {
+            return localStorage.getItem(UTIL_COLLAPSED_KEY) === '1';
+        }
+        catch {
+            return false;
+        }
+    });
+    const toggle = () => {
+        setCollapsed((value) => {
+            const next = !value;
+            try {
+                localStorage.setItem(UTIL_COLLAPSED_KEY, next ? '1' : '0');
+            }
+            catch {
+                /* storage can be unavailable */
+            }
+            return next;
+        });
+    };
+    const collapseLabel = collapsed ? t('legalHub.utilExpand') : t('legalHub.utilCollapse');
+    return (
+        <>
+            {mobileOpen ? (
+                <button type="button" className="lh-rail__backdrop" aria-label={t('legalHub.closeMenu')} onClick={onMobileClose} />
+            ) : null}
+            <aside className={`lh-rail${collapsed ? ' lh-rail--collapsed' : ''}${mobileOpen ? ' lh-rail--open' : ''}`} aria-label={t('legalHub.utilisationTitle')}>
+                <div className="lh-rail__head">
+                    <h2 className="lh-rail__title">{t('legalHub.utilisationTitle')}</h2>
                 </div>
-            </section>
-            <section className="lh-panel" aria-label={t('legalHub.deadlinesTitle')}>
-                <h2 className="lh-panel__title">{t('legalHub.deadlinesTitle')}</h2>
-                <p className="lh-panel__empty">{t('legalHub.deadlinesEmpty')}</p>
-            </section>
-        </aside>
+                <div className="lh-rail__body">
+                    <div className="lh-util">
+                        <div className="lh-util__ring" aria-hidden>
+                            <div className="lh-util__hole">
+                                <strong>{t('legalHub.memberPercent')}</strong>
+                                <span>{t('legalHub.utilEmpty')}</span>
+                            </div>
+                        </div>
+                        <ul className="lh-util__legend">
+                            {UTIL_ROWS.map((row) => (
+                                <li key={row.key} title={t(row.labelKey)}>
+                                    <span className={`lh-member__dot ${row.dot}`} aria-hidden />
+                                    <span className="lh-util__label">{t(row.labelKey)}</span>
+                                    <strong className="lh-util__value">{t('legalHub.memberPercent')}</strong>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                    <section className="lh-rail__deadlines" aria-label={t('legalHub.deadlinesTitle')}>
+                        <h3 className="lh-rail__section">{t('legalHub.deadlinesTitle')}</h3>
+                        <p className="lh-panel__empty">{t('legalHub.deadlinesEmpty')}</p>
+                    </section>
+                </div>
+                <div className="lh-rail__foot">
+                    <button
+                        type="button"
+                        className="lh-side__collapse"
+                        aria-expanded={!collapsed}
+                        aria-label={collapseLabel}
+                        title={collapseLabel}
+                        onClick={toggle}
+                    >
+                        <IconRailCollapse pointRight={!collapsed} />
+                        <span className="lh-side__collapse-label">{collapseLabel}</span>
+                    </button>
+                </div>
+            </aside>
+        </>
     );
 }
 
@@ -250,7 +304,6 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
                     );
                 })}
             </div>
-            <TeamSidePanels />
         </div>
     );
 }
