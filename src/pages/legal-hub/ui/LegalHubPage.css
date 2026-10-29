@@ -322,3 +322,159 @@
     font-size: 1.25rem;
   }
 }
+
+.lh-team {
+  margin-top: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.lh-team__name {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--app-meta);
+}
+
+.lh-team__note {
+  margin: 0.85rem 0 0;
+  color: var(--app-meta);
+  font-size: 0.875rem;
+}
+
+.lh-team__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17.5rem, 20rem));
+  gap: 0.9rem;
+}
+
+.lh-member {
+  padding: 1rem 1rem 0.85rem;
+  border-radius: 16px;
+  background: #1c2433;
+  color: #f8fafc;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+.lh-member__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lh-member__avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.55rem;
+  height: 2.55rem;
+  border-radius: 50%;
+  background: #3d4db8;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.lh-member__presence {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 0.72rem;
+  height: 0.72rem;
+  border: 2px solid #1c2433;
+  border-radius: 50%;
+  background: #22c55e;
+  box-sizing: border-box;
+}
+
+.lh-member__id {
+  min-width: 0;
+}
+
+.lh-member__title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.lh-member__sub {
+  margin: 0.12rem 0 0;
+  color: #93a0b3;
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.lh-member__hours {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.95rem;
+  color: #d5dde8;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.lh-member__pct {
+  font-weight: 700;
+  color: #fff;
+}
+
+.lh-member__meter {
+  height: 6px;
+  margin-top: 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.lh-member__meter-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: #f5c451;
+}
+
+.lh-member__statuses {
+  list-style: none;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+}
+
+.lh-member__status {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #c5ceda;
+  font-size: 0.8125rem;
+}
+
+.lh-member__status strong {
+  margin-left: auto;
+  color: #fff;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+
+.lh-member__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.lh-member__dot--progress { background: #3b82f6; }
+.lh-member__dot--wait { background: #eab308; }
+.lh-member__dot--review { background: #a855f7; }
+.lh-member__dot--changes { background: #f43f5e; }

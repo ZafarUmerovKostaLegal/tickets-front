@@ -2,9 +2,8 @@ import { addTransitionType, startTransition, useCallback, useEffect, useState, V
 import { AppBackButton, AppPageSettings, NAV_TRANSITION_TYPE } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
-import { useCurrentUser } from '@shared/hooks';
-import { isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { HeaderNotifications } from '@pages/home/ui/HeaderNotifications';
+import { LegalHubTeamBoard } from './LegalHubTeamBoard';
 import './LegalHubPage.css';
 
 type LegalHubNavId = 'myTasks' | 'reviewQueue' | 'allTeam';
@@ -83,13 +82,9 @@ function IconMenu() {
 
 export function LegalHubPage() {
     const { t } = useI18n();
-    const { user } = useCurrentUser();
     const [section, setSection] = useState<LegalHubNavId>('allTeam');
     const [query, setQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
-    const workspaceLabel = isPartnerOrgRole(user?.role, user?.position)
-        ? t('legalHub.partnerWorkspace')
-        : t('legalHub.workspace');
     const active = NAV_ITEMS.find((item) => item.id === section) ?? NAV_ITEMS[2]!;
 
     const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -146,7 +141,7 @@ export function LegalHubPage() {
                     <span className="lh-side__brand">{t('nav.legalHub')}</span>
                 </div>
                 <nav className="lh-side__nav">
-                    <p className="lh-side__section">{workspaceLabel}</p>
+                    <p className="lh-side__section">{t('legalHub.workspace')}</p>
                     <ul className="lh-side__list">
                         {NAV_ITEMS.map((item) => {
                             const Icon = item.icon;
@@ -204,6 +199,7 @@ export function LegalHubPage() {
                 <ViewTransition default="none" enter="none" exit="none" update="lh-section">
                     <main key={section} className="lh-page__content">
                         <h1 className="lh-page__title">{t(active.labelKey)}</h1>
+                        {section === 'allTeam' ? <LegalHubTeamBoard query={query} /> : null}
                     </main>
                 </ViewTransition>
             </div>

@@ -53,13 +53,25 @@ export const ruMessages: Messages = {
     legalHub: {
         navAria: 'Навигация Legal Hub',
         workspace: 'Рабочее пространство',
-        partnerWorkspace: 'Рабочее место партнёра',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
         allTeam: 'Вся команда',
         searchPlaceholder: 'Задачи, проекты, люди…',
         openMenu: 'Открыть меню',
         closeMenu: 'Закрыть меню',
+        teamLoading: 'Загрузка команды…',
+        teamError: 'Не удалось загрузить команды.',
+        teamForbidden: 'Недостаточно прав, чтобы показать команды.',
+        teamEmpty: 'Вы пока не руководите командой в учёте времени.',
+        teamNoMembers: 'В команде пока нет участников.',
+        teamNoMatch: 'В команде никого не найдено.',
+        memberTasks: '— задач',
+        memberHours: '— ч / — ч',
+        memberPercent: '—',
+        statusInProgress: 'В работе',
+        statusWaiting: 'Внешнее ожидание',
+        statusReview: 'На проверке',
+        statusChanges: 'Нужны правки',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -777,13 +789,25 @@ export type Messages = {
     legalHub: {
         navAria: string;
         workspace: string;
-        partnerWorkspace: string;
         myTasks: string;
         reviewQueue: string;
         allTeam: string;
         searchPlaceholder: string;
         openMenu: string;
         closeMenu: string;
+        teamLoading: string;
+        teamError: string;
+        teamForbidden: string;
+        teamEmpty: string;
+        teamNoMembers: string;
+        teamNoMatch: string;
+        memberTasks: string;
+        memberHours: string;
+        memberPercent: string;
+        statusInProgress: string;
+        statusWaiting: string;
+        statusReview: string;
+        statusChanges: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;
