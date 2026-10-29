@@ -8,7 +8,7 @@ import {
     readProjectRecordsLanguage,
 } from '@entities/time-tracking';
 import type { InvoicePreviewSessionV1 } from '@entities/time-tracking/model/invoicePreviewSession';
-import { invoiceFixedFeeTotal, invoiceServicesAmount } from '@pages/time-tracking/lib/invoiceFixedFee';
+import { invoiceFixedFeeTotal } from '@pages/time-tracking/lib/invoiceFixedFee';
 import { billingPeriodBoundsFromIsoDates, inferBillingPeriodIsoFromDates } from '@pages/time-tracking/lib/invoicePageShared';
 import { buildInvoiceCoverLetterModel, KOSTA_LEGAL_FIRM, type InvoiceCoverLetterModel } from './invoiceCoverLetterModel';
 import { coverLanguageFromRecordsLanguage, type InvoiceCoverLanguage } from './invoiceCoverLetterI18n';
@@ -175,7 +175,6 @@ export async function resolveInvoiceCoverLetterModel(session: InvoicePreviewSess
                 clientAddress: client.address,
                 contactName: client.contact_name ?? null,
                 totalAmount: displayMoney.totalAmount,
-                servicesAmount: invoiceServicesAmount(displayMoney.totalAmount, extraFixedFeeAmount),
                 extraFixedFeeAmount,
                 currency: inv.currency,
                 coverLanguage,

@@ -29,8 +29,9 @@ export type InvoiceTimeReportPageProps = {
     onPatchDetailRow?: (rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => void;
     onPatchExpenseRow?: (rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => void;
     onPatchMehnatRow?: (rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => void;
+    onPatchFixedFeeRow?: (rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => void;
     onPatchSummaryRow?: (rowIndex: number, field: keyof InvoiceTimeReportSummaryRow, value: string) => void;
-    onPatchPack?: (patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'reportTitle' | 'reportTitleContinued'>>) => void;
+    onPatchPack?: (patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'fixedFeeTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'reportTitle' | 'reportTitleContinued'>>) => void;
 };
 
 function fitBreakableTextarea(el: HTMLTextAreaElement) {
@@ -200,6 +201,7 @@ export function InvoiceTimeReportPage({
     onPatchDetailRow,
     onPatchExpenseRow,
     onPatchMehnatRow,
+    onPatchFixedFeeRow,
     onPatchSummaryRow,
     onPatchPack,
 }: InvoiceTimeReportPageProps) {
@@ -212,6 +214,9 @@ export function InvoiceTimeReportPage({
         [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0),
     );
     const mehnat = (pack.mehnatSlots ?? []).filter((r) =>
+        [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0),
+    );
+    const fixedFee = (pack.fixedFeeSlots ?? []).filter((r) =>
         [r.date, r.initials, r.task, r.description, r.hours, r.hourlyRate, r.amount].some((c) => String(c).trim().length > 0),
     );
     const detailHasContent = detail.some((r) =>
@@ -384,6 +389,69 @@ export function InvoiceTimeReportPage({
                             />
                           )
                         : (pack.mehnatTotalAmountDisplay || '\u00a0')}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </>
+        ) : null}
+
+      {showSummarySection && fixedFee.length > 0 ? (
+          <>
+            <h3 className="tt-inv-tr__subtitle">{labels.fixedFeeTitle}</h3>
+            <div className="tt-inv-tr__table-wrap">
+              <table className="tt-inv-tr__table" role="grid" aria-label={labels.fixedFeeTitle}>
+                <thead className="tt-inv-tr__thead">
+                  <tr>
+                    <th scope="col" style={{ width: showInitiatorName ? '13%' : '15%' }}>{labels.date}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '8%' : '9%' }}>{labels.initials}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '11%' : '13%' }}>{labels.task}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.description}</th>
+                    {showInitiatorName ? <th scope="col" style={{ width: '12%' }}>{labels.initiatorName}</th> : null}
+                    <th scope="col" style={{ width: showInitiatorName ? '7%' : '8%' }}>{labels.hours}</th>
+                    <th scope="col" className="tt-inv-tr__th--money" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.rate}</th>
+                    <th scope="col" className="tt-inv-tr__th--money" style={{ width: showInitiatorName ? '17%' : '19%' }}>{amountHeader}</th>
+                  </tr>
+                </thead>
+                <tbody className="tt-inv-tr__tbody">
+                  {fixedFee.map((r, i) => {
+                      const cellClass = undefined;
+                      const numClass = 'tt-inv-tr__cell--num';
+                      const moneyClass = `${numClass} tt-inv-tr__cell--amount`;
+                      return (
+                          <tr key={i}>
+                            <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, ${labels.fixedFeeTitle} ${i + 1}`} onChange={(v) => onPatchFixedFeeRow?.(i, 'date', v)} />
+                            <TrCell editable={editable} className={cellClass} value={r.initials} ariaLabel={`${labels.initials}, ${labels.fixedFeeTitle} ${i + 1}`} onChange={(v) => onPatchFixedFeeRow?.(i, 'initials', v)} />
+                            <TrCell editable={editable} className={cellClass} value={r.task} ariaLabel={`${labels.task}, ${labels.fixedFeeTitle} ${i + 1}`} onChange={(v) => onPatchFixedFeeRow?.(i, 'task', v)} />
+                            <TrCell multiline editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(r.description).note : r.description} ariaLabel={`${labels.description}, ${labels.fixedFeeTitle} ${i + 1}`} onChange={(v) => onPatchFixedFeeRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
+                            {showInitiatorName ? (
+                              <TrCell editable={editable} className={cellClass} value={splitServiceInitiatorName(r.description).name} ariaLabel={`${labels.initiatorName}, ${labels.fixedFeeTitle} ${i + 1}`} onChange={(v) => onPatchFixedFeeRow?.(i, 'description', joinServiceInitiatorName(splitServiceInitiatorName(r.description).note, v, splitServiceInitiatorName(r.description).mark))} />
+                            ) : null}
+                            <TrCell editable={editable} className={numClass} value={r.hours} ariaLabel={`${labels.hours}, ${labels.fixedFeeTitle} ${i + 1}`} onChange={(v) => onPatchFixedFeeRow?.(i, 'hours', v)} />
+                            <TrCell editable={editable} className={moneyClass} value={r.hourlyRate} ariaLabel={`${labels.rate}, ${labels.fixedFeeTitle} ${i + 1}`} onChange={(v) => onPatchFixedFeeRow?.(i, 'hourlyRate', v)} />
+                            <TrCell editable={editable} className={moneyClass} value={r.amount} ariaLabel={`${labels.amount(cur)}, ${labels.fixedFeeTitle} ${i + 1}`} onChange={(v) => onPatchFixedFeeRow?.(i, 'amount', v)} />
+                          </tr>
+                      );
+                  })}
+                </tbody>
+                <tfoot className="tt-inv-tr__tfoot">
+                  <tr>
+                    <td colSpan={showInitiatorName ? 5 : 4}>{labels.total}</td>
+                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">—</td>
+                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">—</td>
+                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num tt-inv-tr__cell--amount">
+                      {editable
+                        ? (
+                            <input
+                              type="text"
+                              className="tt-inv-tr__cell-input tt-inv-tr__cell-input--foot"
+                              value={pack.fixedFeeTotalAmountDisplay ?? ''}
+                              aria-label={`${labels.fixedFeeTitle} ${labels.total}`}
+                              onChange={(e) => onPatchPack?.({ fixedFeeTotalAmountDisplay: e.target.value })}
+                            />
+                          )
+                        : (pack.fixedFeeTotalAmountDisplay || '\u00a0')}
                     </td>
                   </tr>
                 </tfoot>

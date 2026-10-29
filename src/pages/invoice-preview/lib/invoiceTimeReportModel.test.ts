@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     emptyInvoiceTimeReportPack,
     ensureMehnatSeparatedPack,
+    isFixedFeeTimeReportRow,
     isMyMehnatTimeReportRow,
     mergeTimeReportPackPreferLiveExpenses,
     type InvoiceTimeReportDetailRow,
@@ -29,6 +30,44 @@ describe('isMyMehnatTimeReportRow', () => {
     it('does not match other tasks that only mention mehnat in the description', () => {
         expect(isMyMehnatTimeReportRow({ task: 'Drafting' })).toBe(false);
         expect(isMyMehnatTimeReportRow({ task: 'Research' })).toBe(false);
+    });
+});
+
+describe('ensureMehnatSeparatedPack fixed fee', () => {
+    it('moves the fixed fee row into its own table before the time total keeps only hours', () => {
+        const pack = emptyInvoiceTimeReportPack('UZS');
+        pack.detailSlots = [
+            row({
+                date: '14.10.2026',
+                initials: 'TEST',
+                task: 'Court Hearing',
+                description: 'ponopno',
+                hours: '0,05',
+                hourlyRate: 'UZS 20.00',
+                amount: 'UZS 1.00',
+            }),
+            row({
+                date: '—',
+                initials: '—',
+                task: 'Other',
+                description: 'Fixed fee',
+                hours: '',
+                hourlyRate: '',
+                amount: 'UZS 100,000.00',
+            }),
+        ];
+        pack.detailTotalHoursDisplay = '0,05';
+        pack.detailTotalAmountDisplay = 'UZS 100,001.00';
+        expect(isFixedFeeTimeReportRow(pack.detailSlots[1]!)).toBe(true);
+        const next = ensureMehnatSeparatedPack(pack);
+        expect(next.detailSlots.map((item) => item.task)).toEqual(['Court Hearing']);
+        expect(next.fixedFeeSlots?.map((item) => item.description)).toEqual(['Fixed fee']);
+        expect(next.detailTotalAmountDisplay).toBe('UZS 1.00');
+        expect(next.fixedFeeTotalAmountDisplay).toBe('UZS 100,000.00');
+        const twice = ensureMehnatSeparatedPack(next);
+        expect(twice.detailSlots).toHaveLength(1);
+        expect(twice.fixedFeeSlots).toHaveLength(1);
+        expect(twice.detailTotalAmountDisplay).toBe('UZS 1.00');
     });
 });
 

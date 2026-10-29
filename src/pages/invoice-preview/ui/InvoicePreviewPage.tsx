@@ -819,7 +819,18 @@ export function InvoicePreviewPage() {
         });
     }, [resolvedTimeReportPack]);
 
-    const patchTimeReportPack = useCallback((patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'reportTitle' | 'reportTitleContinued'>>) => {
+    const patchFixedFeeRow = useCallback((rowIndex: number, field: keyof InvoiceTimeReportDetailRow, value: string) => {
+        setTimeReportPack((prev) => {
+            const base = prev ?? resolvedTimeReportPack;
+            const nextSlots = [...(base.fixedFeeSlots ?? [])];
+            while (nextSlots.length <= rowIndex)
+                nextSlots.push({ date: '', initials: '', task: '', description: '', hours: '', hourlyRate: '', amount: '' });
+            nextSlots[rowIndex] = { ...nextSlots[rowIndex]!, [field]: value };
+            return { ...base, fixedFeeSlots: nextSlots };
+        });
+    }, [resolvedTimeReportPack]);
+
+    const patchTimeReportPack = useCallback((patch: Partial<Pick<InvoiceTimeReportPack, 'detailTotalHoursDisplay' | 'detailTotalAmountDisplay' | 'expenseTotalAmountDisplay' | 'mehnatTotalHoursDisplay' | 'mehnatTotalAmountDisplay' | 'fixedFeeTotalAmountDisplay' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay' | 'reportTitle' | 'reportTitleContinued'>>) => {
         setTimeReportPack((prev) => ({ ...(prev ?? resolvedTimeReportPack), ...patch }));
     }, [resolvedTimeReportPack]);
 
@@ -1402,6 +1413,7 @@ export function InvoicePreviewPage() {
                                 onPatchDetailRow={(rowIndex, field, value) => patchDetailRowInChunk(slot.chunkIndex, rowIndex, field, value)}
                                 onPatchExpenseRow={patchExpenseRow}
                                 onPatchMehnatRow={patchMehnatRow}
+                                onPatchFixedFeeRow={patchFixedFeeRow}
                                 onPatchSummaryRow={patchSummaryRow}
                                 onPatchPack={patchTimeReportPack}
                               />

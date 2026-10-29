@@ -19,6 +19,7 @@ import {
   resolveLegalBillToBankName,
   resolveLegalBillToSwift,
   resolveLegalCaseDetailLine,
+  resolveLegalExtraExpensesAmount,
   resolveLegalOverrideText,
   resolveLegalPaymentDisclaimer,
   resolveLegalServiceDescriptionLine,
@@ -125,11 +126,12 @@ export function InvoiceLegalInvoicePage({
   );
   const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, defaultInvNo);
   const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, defaultZero);
-  const extraExpensesAmount = resolveLegalOverrideText(
+  const extraExpensesAmount = resolveLegalExtraExpensesAmount(
     legalOverrides?.extraExpensesAmount,
-    model.extraFixedFeeFormatted?.trim() || defaultZero,
+    model.extraFixedFeeFormatted,
+    defaultZero,
   );
-  const servicesAmount = model.servicesAmountFormatted?.trim() || model.totalFormatted;
+  const servicesAmount = model.totalFormatted;
   const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
 
   const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
@@ -343,7 +345,7 @@ export function InvoiceLegalInvoicePage({
           <LiField
             editable={editable}
             className="tt-inv-li__field--inline"
-            value={editable ? (legalOverrides?.extraExpensesAmount ?? extraExpensesAmount) : extraExpensesAmount}
+            value={extraExpensesAmount}
             ariaLabel={labels.extraExpenses}
             onChange={(extraExpensesAmount) => onChangeLegalOverrides?.({ extraExpensesAmount })}
           />

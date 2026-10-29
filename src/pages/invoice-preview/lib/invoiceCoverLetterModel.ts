@@ -32,7 +32,7 @@ export type InvoiceCoverLetterInput = {
     billingPeriodIso?: string | null;
     /** Billing period start. When it falls in another month, the report title lists both. */
     billingPeriodFromIso?: string | null;
-    /** Hours and expenses before the extra fixed fee. */
+    /** Optional services figure. The legal invoice uses the full total instead. */
     servicesAmount?: number | null;
     /** Fixed amount added on top of hours, in the invoice currency. */
     extraFixedFeeAmount?: number | null;
@@ -53,9 +53,9 @@ export type InvoiceCoverLetterModel = {
     quotedCompanyName: string;
     servicesMonthYear: string;
     totalFormatted: string;
-    /** Services row and subtotal when a fixed fee is split out. Due stays `totalFormatted`. */
+    /** Unused on the legal invoice: that page prints `totalFormatted` on the services line. */
     servicesAmountFormatted?: string | null;
-    /** Default for the legal-page extra expenses row. */
+    /** Fixed fee, kept so a saved EXTRA EXPENSES value equal to this fee can be ignored. */
     extraFixedFeeFormatted?: string | null;
     signatoryName: string;
     /** Partner initials matching `public/signatures/{initials}.*` when known. */

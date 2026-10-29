@@ -26,12 +26,15 @@ export type InvoiceTimeReportPack = {
     expenseSlots: InvoiceTimeReportDetailRow[];
     /** My Mehnat time lines — own table, not mixed into the main time grid. */
     mehnatSlots: InvoiceTimeReportDetailRow[];
+    /** Fixed amount on top of hours — own table, above Summary of services. */
+    fixedFeeSlots?: InvoiceTimeReportDetailRow[];
     summarySlots: InvoiceTimeReportSummaryRow[];
     detailTotalHoursDisplay: string;
     detailTotalAmountDisplay: string;
     expenseTotalAmountDisplay: string;
     mehnatTotalHoursDisplay: string;
     mehnatTotalAmountDisplay: string;
+    fixedFeeTotalAmountDisplay?: string;
     summaryGrandHoursDisplay: string;
     summaryGrandAmountDisplay: string;
     /** Edited heading on the first time-report sheet. Empty means the generated title. */
@@ -54,12 +57,14 @@ export function emptyInvoiceTimeReportPack(currency: string): InvoiceTimeReportP
         detailSlots: Array.from({ length: TIME_REPORT_DETAIL_ROWS }, emptyDetailRow),
         expenseSlots: [],
         mehnatSlots: [],
+        fixedFeeSlots: [],
         summarySlots: Array.from({ length: TIME_REPORT_SUMMARY_ROWS }, emptySummaryRow),
         detailTotalHoursDisplay: '',
         detailTotalAmountDisplay: '',
         expenseTotalAmountDisplay: '',
         mehnatTotalHoursDisplay: '',
         mehnatTotalAmountDisplay: '',
+        fixedFeeTotalAmountDisplay: '',
         summaryGrandHoursDisplay: '',
         summaryGrandAmountDisplay: '',
     };
@@ -120,7 +125,8 @@ export function timeReportPackHasContent(pack: InvoiceTimeReportPack | null | un
         return false;
     return trimTrailingEmptyDetailSlots(pack.detailSlots).length > 0
         || trimTrailingEmptyDetailSlots(pack.expenseSlots ?? []).length > 0
-        || trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []).length > 0;
+        || trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []).length > 0
+        || trimTrailingEmptyDetailSlots(pack.fixedFeeSlots ?? []).length > 0;
 }
 
 function expenseAmountKey(row: InvoiceTimeReportDetailRow): number {
@@ -272,8 +278,11 @@ export function mergeTimeReportPackPreferLiveExpenses(
     const liveExpenses = live.expenseSlots ?? [];
     const hasLiveExpenses = trimTrailingEmptyDetailSlots(liveExpenses).length > 0;
     const detailSlots = mergeTimeRowsKeepLiveDescription(saved.detailSlots ?? [], live.detailSlots ?? []);
+    const fixedFeeSlots = mergeTimeRowsKeepLiveDescription(saved.fixedFeeSlots ?? [], live.fixedFeeSlots ?? []);
+    const fixedFeeTotalAmountDisplay = (live.fixedFeeTotalAmountDisplay ?? '').trim()
+        || (saved.fixedFeeTotalAmountDisplay ?? '');
     if (!hasLiveExpenses)
-        return { ...saved, detailSlots };
+        return { ...saved, detailSlots, fixedFeeSlots, fixedFeeTotalAmountDisplay };
     const cur = (live.currency || saved.currency || 'USD').trim().toUpperCase() || 'USD';
     const expenseSlots = mergeExpenseSlotsKeepSavedText(saved.expenseSlots ?? [], liveExpenses);
     const totalFromLive = (live.expenseTotalAmountDisplay ?? '').trim();
@@ -283,6 +292,8 @@ export function mergeTimeReportPackPreferLiveExpenses(
         ...saved,
         currency: live.currency || saved.currency,
         detailSlots,
+        fixedFeeSlots,
+        fixedFeeTotalAmountDisplay,
         expenseSlots,
         expenseTotalAmountDisplay,
     };
@@ -385,8 +396,76 @@ function sumDetailAmounts(rows: readonly InvoiceTimeReportDetailRow[]): number {
     return rows.reduce((s, r) => s + parseTimeReportAmountDisplay(r.amount), 0);
 }
 
+function blankReportCell(raw: string): boolean {
+    const text = raw.trim();
+    return !text || text === '—' || text === '-' || text === '–';
+}
+
+/** The hours-plus-fee line: no date, person, hours or rate, task Other. */
+export function isFixedFeeTimeReportRow(row: InvoiceTimeReportDetailRow): boolean {
+    const hours = row.hours.trim();
+    const hoursBlank = blankReportCell(hours) || hours === '0' || hours === '0.00' || hours === '0,00';
+    if (!hoursBlank || !blankReportCell(row.hourlyRate) || !blankReportCell(row.initials) || !blankReportCell(row.date))
+        return false;
+    const task = row.task.trim().toLowerCase();
+    if (task === 'other' || task === 'прочее')
+        return true;
+    const desc = row.description.trim().toLowerCase();
+    return desc === 'fixed fee' || desc === 'fixed amount' || desc === 'фиксированная сумма';
+}
+
+function detailAmountWithoutFixedFee(
+    pack: InvoiceTimeReportPack,
+    regular: readonly InvoiceTimeReportDetailRow[],
+    feeRows: readonly InvoiceTimeReportDetailRow[],
+): string {
+    const cur = (pack.currency || 'USD').trim().toUpperCase() || 'USD';
+    const shown = parseTimeReportAmountDisplay(pack.detailTotalAmountDisplay);
+    const regularSum = sumDetailAmounts(regular);
+    const feeSum = sumDetailAmounts(feeRows);
+    if (feeSum !== 0 && Math.abs(shown - (regularSum + feeSum)) < 0.05)
+        return formatTimeReportAmount(regularSum, cur);
+    return pack.detailTotalAmountDisplay;
+}
+
+/** Pull the fixed-fee line out of the time grid (also heals older saved packs). */
+export function ensureFixedFeeSeparatedPack(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
+    const details = trimTrailingEmptyDetailSlots(pack.detailSlots);
+    const already = trimTrailingEmptyDetailSlots(pack.fixedFeeSlots ?? []);
+    const fromDetails = details.filter(isFixedFeeTimeReportRow);
+    const regular = fromDetails.length ? details.filter((row) => !isFixedFeeTimeReportRow(row)) : details;
+    const cur = (pack.currency || 'USD').trim().toUpperCase() || 'USD';
+    const feeRows = fromDetails.length ? [...already, ...fromDetails] : already;
+    if (!feeRows.length) {
+        if (pack.fixedFeeSlots != null)
+            return pack;
+        return { ...pack, fixedFeeSlots: [], fixedFeeTotalAmountDisplay: pack.fixedFeeTotalAmountDisplay ?? '' };
+    }
+    const detailTotalAmountDisplay = detailAmountWithoutFixedFee(pack, regular, feeRows);
+    const fixedFeeTotalAmountDisplay = (fromDetails.length || !(pack.fixedFeeTotalAmountDisplay ?? '').trim())
+        ? formatTimeReportAmount(sumDetailAmounts(feeRows), cur)
+        : pack.fixedFeeTotalAmountDisplay;
+    if (
+        !fromDetails.length
+        && detailTotalAmountDisplay === pack.detailTotalAmountDisplay
+        && fixedFeeTotalAmountDisplay === pack.fixedFeeTotalAmountDisplay
+        && pack.fixedFeeSlots != null
+    )
+        return pack;
+    return alignHoursToDisplayedLines({
+        ...pack,
+        detailSlots: fromDetails.length ? (regular.length ? finalizeDetailSlots(regular) : []) : pack.detailSlots,
+        detailTotalHoursDisplay: fromDetails.length
+            ? formatTimeReportHours(sumDetailHours(regular))
+            : pack.detailTotalHoursDisplay,
+        detailTotalAmountDisplay,
+        fixedFeeSlots: finalizeDetailSlots(feeRows),
+        fixedFeeTotalAmountDisplay,
+    });
+}
+
 /** Pull My Mehnat rows out of the main time grid (also heals older saved packs). */
-export function ensureMehnatSeparatedPack(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
+function separateMehnatRows(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
     const details = trimTrailingEmptyDetailSlots(pack.detailSlots);
     const already = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []);
     const fromDetails = details.filter(isMyMehnatTimeReportRow);
@@ -424,6 +503,11 @@ export function ensureMehnatSeparatedPack(pack: InvoiceTimeReportPack): InvoiceT
         mehnatTotalHoursDisplay: formatTimeReportHours(sumDetailHours(mehnat)),
         mehnatTotalAmountDisplay: formatTimeReportAmount(sumDetailAmounts(mehnat), cur),
     });
+}
+
+/** Pull My Mehnat rows out of the main time grid (also heals older saved packs). */
+export function ensureMehnatSeparatedPack(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
+    return ensureFixedFeeSeparatedPack(separateMehnatRows(pack));
 }
 
 export function finalizeDetailSlots(rows: InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {

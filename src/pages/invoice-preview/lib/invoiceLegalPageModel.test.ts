@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     legalFirmBankingRows,
     resolveLegalAccountCurrencyCode,
+    resolveLegalExtraExpensesAmount,
 } from './invoiceLegalPageModel';
 
 describe('resolveLegalAccountCurrencyCode', () => {
@@ -13,6 +14,18 @@ describe('resolveLegalAccountCurrencyCode', () => {
         expect(resolveLegalAccountCurrencyCode('USD', {})).toBe('USD');
         expect(resolveLegalAccountCurrencyCode('USD', { accountCurrency: '  ' })).toBe('USD');
         expect(resolveLegalAccountCurrencyCode('USD', { accountCurrency: null })).toBe('USD');
+    });
+});
+
+describe('resolveLegalExtraExpensesAmount', () => {
+    it('does not put the fixed fee into extra expenses', () => {
+        expect(resolveLegalExtraExpensesAmount('UZS 100,000.00', 'UZS 100,000.00', 'UZS 0.00')).toBe('UZS 0.00');
+        expect(resolveLegalExtraExpensesAmount('UZS 100000.00', 'UZS 100,000.00', 'UZS 0.00')).toBe('UZS 0.00');
+        expect(resolveLegalExtraExpensesAmount(undefined, 'UZS 100,000.00', 'UZS 0.00')).toBe('UZS 0.00');
+    });
+
+    it('keeps an extra expense that is not the fixed fee', () => {
+        expect(resolveLegalExtraExpensesAmount('UZS 15.00', 'UZS 100,000.00', 'UZS 0.00')).toBe('UZS 15.00');
     });
 });
 

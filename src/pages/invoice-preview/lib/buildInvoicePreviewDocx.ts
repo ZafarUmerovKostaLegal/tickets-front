@@ -49,6 +49,7 @@ import {
     resolveLegalBillToBankName,
     resolveLegalBillToSwift,
     resolveLegalCaseDetailLine,
+    resolveLegalExtraExpensesAmount,
     resolveLegalFirmBankingLines,
     resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
@@ -441,6 +442,37 @@ function timeReportDocxSectionChildren(
             );
         }
 
+        const fixedFeeRows = trimTrailingEmptyDetailSlots(pack.fixedFeeSlots ?? []);
+        if (fixedFeeRows.length > 0) {
+            const fixedFeeBodyRows: TableRow[] = fixedFeeRows.map((r) => new TableRow({
+                children: detailCells(r),
+            }));
+            fixedFeeBodyRows.push(new TableRow({
+                children: [
+                    new TableCell({
+                        borders: cellBorderGrid,
+                        columnSpan: totalSpan,
+                        children: [new Paragraph({
+                            children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                        })],
+                    }),
+                    trFootValueCell('—', DW[hoursI]!, AlignmentType.RIGHT),
+                    trFootValueCell('—', DW[rateI]!, AlignmentType.RIGHT),
+                    trFootValueCell(pack.fixedFeeTotalAmountDisplay ?? '', DW[amountI]!, AlignmentType.RIGHT),
+                ],
+            }));
+            out.push(
+                new Paragraph({
+                    spacing: { before: 260, after: 120 },
+                    children: [new TextRun({ text: labels.fixedFeeTitle, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
+                }),
+                new Table({
+                    ...tableOpts,
+                    rows: [detailHeader, ...fixedFeeBodyRows],
+                }),
+            );
+        }
+
         const summaryHeader = new TableRow({
             children: [
                 trHeadCell(labels.initials, SW[0] ?? 9),
@@ -603,11 +635,12 @@ function legalInvoiceDocxBlocks(
     );
     const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, packInvoiceNumberDisplay(session));
     const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, zeroFallback);
-    const extraExpensesAmount = resolveLegalOverrideText(
+    const extraExpensesAmount = resolveLegalExtraExpensesAmount(
         legalOverrides?.extraExpensesAmount,
-        model.extraFixedFeeFormatted?.trim() || zeroFallback,
+        model.extraFixedFeeFormatted,
+        zeroFallback,
     );
-    const servicesAmount = model.servicesAmountFormatted?.trim() || model.totalFormatted;
+    const servicesAmount = model.totalFormatted;
     const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
     const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);

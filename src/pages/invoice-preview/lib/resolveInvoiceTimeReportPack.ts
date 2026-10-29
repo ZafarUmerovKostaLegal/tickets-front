@@ -231,7 +231,7 @@ type BuildingDetail = InvoiceTimeReportDetailRow & {
     hoursNum: number;
     amtNum: number;
     rateNum: number;
-    rowKind: 'time' | 'expense' | 'other';
+    rowKind: 'time' | 'expense' | 'other' | 'fixed_fee';
 };
 
 /** Task names as shown in the time report, keyed by time entry id. */
@@ -389,12 +389,15 @@ function packFromDetails(
     initialsByAuthId: ReadonlyMap<number, string>,
 ): InvoiceTimeReportPack {
     const allTime = details.filter((d) => d.rowKind !== 'expense');
-    const mehnatRows = allTime.filter((d) => isMyMehnatTimeReportRow(d));
-    const timeRows = allTime.filter((d) => !isMyMehnatTimeReportRow(d));
+    const fixedFeeRows = allTime.filter((d) => d.rowKind === 'fixed_fee');
+    const timed = allTime.filter((d) => d.rowKind !== 'fixed_fee');
+    const mehnatRows = timed.filter((d) => isMyMehnatTimeReportRow(d));
+    const timeRows = timed.filter((d) => !isMyMehnatTimeReportRow(d));
     const expenseRows = details.filter((d) => d.rowKind === 'expense');
     const expenseTotal = expenseRows.reduce((s, d) => s + roundMoney2(d.amtNum), 0);
     const mehnatHours = sumRoundedTimeReportHours(mehnatRows.map((d) => d.hoursNum));
     const mehnatTotal = mehnatRows.reduce((s, d) => s + d.amtNum, 0);
+    const fixedFeeTotal = fixedFeeRows.reduce((s, d) => s + d.amtNum, 0);
     const tail = buildSummaryAndTotals(details, users, currency, initialsByAuthId);
     const timeHours = sumRoundedTimeReportHours(timeRows.map((d) => d.hoursNum));
     const timeTotal = timeRows.reduce((s, d) => s + d.amtNum, 0);
@@ -403,9 +406,11 @@ function packFromDetails(
         detailSlots: timeRows.length ? finalizeDetailSlots(timeRows.map(toPublicRow)) : [],
         expenseSlots: expenseRows.length ? finalizeDetailSlots(expenseRows.map(toPublicRow)) : [],
         mehnatSlots: mehnatRows.length ? finalizeDetailSlots(mehnatRows.map(toPublicRow)) : [],
+        fixedFeeSlots: fixedFeeRows.length ? finalizeDetailSlots(fixedFeeRows.map(toPublicRow)) : [],
         expenseTotalAmountDisplay: expenseRows.length ? formatTimeReportAmount(expenseTotal, currency) : '',
         mehnatTotalHoursDisplay: mehnatRows.length ? formatTimeReportHours(mehnatHours) : '',
         mehnatTotalAmountDisplay: mehnatRows.length ? formatTimeReportAmount(mehnatTotal, currency) : '',
+        fixedFeeTotalAmountDisplay: fixedFeeRows.length ? formatTimeReportAmount(fixedFeeTotal, currency) : '',
         ...tail,
         detailTotalHoursDisplay: formatTimeReportHours(timeHours),
         detailTotalAmountDisplay: formatTimeReportAmount(timeTotal, currency),
@@ -841,6 +846,7 @@ export async function resolveInvoiceTimeReportPack(
                 });
             }
             else {
+                const fixedFee = kind === 'fixed_fee';
                 const taskLabel = kind === 'manual' ? manualTask : otherTask;
                 details.push({
                     date: '—',
@@ -854,7 +860,7 @@ export async function resolveInvoiceTimeReportPack(
                     hoursNum: 0,
                     amtNum: amt,
                     rateNum: 0,
-                    rowKind: 'other',
+                    rowKind: fixedFee ? 'fixed_fee' : 'other',
                 });
             }
         }

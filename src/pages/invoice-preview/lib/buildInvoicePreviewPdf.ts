@@ -20,6 +20,7 @@ import {
     resolveLegalBillToBankName,
     resolveLegalBillToSwift,
     resolveLegalCaseDetailLine,
+    resolveLegalExtraExpensesAmount,
     resolveLegalFirmBankingLines,
     resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
@@ -611,9 +612,23 @@ function paginateDetailRowsForPdf(
             fontBold,
             true,
         );
+    const fixedFeeRows = trimTrailingEmptyDetailSlots(pack.fixedFeeSlots ?? []);
+    const fixedFeeReserve = fixedFeeRows.length === 0
+        ? 0
+        : TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP + estimateGridTableHeight(
+            tableW,
+            detailWeights,
+            detailHeaders,
+            fixedFeeRows.map((r) => detailPdfRowCells(r, showInitiatorName)),
+            detailWrap,
+            font,
+            fontBold,
+            true,
+            detailFixed,
+        );
     // Mehnat/expenses must not push Summary of services onto the next sheet
     // when the detail table still has a large empty region under it.
-    const summaryReserve = summaryOnlyReserve;
+    const summaryReserve = summaryOnlyReserve + fixedFeeReserve;
 
     const pages: PdfTimeReportPagePlan[] = [];
     let i = 0;
@@ -1257,6 +1272,44 @@ function drawSingleTimeReportPdfPage(
         yMid -= TR_SECTION_GAP;
     }
 
+    const fixedFeeRows = trimTrailingEmptyDetailSlots(pack.fixedFeeSlots ?? []);
+    if (fixedFeeRows.length > 0) {
+        page.drawText(labels.fixedFeeTitle, {
+            x: ML,
+            y: yMid,
+            size: DOC_FS,
+            font: fontBold,
+            color: TR_RED,
+        });
+        yMid -= TR_SUMMARY_TITLE_GAP;
+        const fixedFeeBody = fixedFeeRows.map((r) => detailPdfRowCells(r, showInitiatorName));
+        yMid = drawTimeReportGridTable(page, {
+            tableLeft: ML,
+            tableW,
+            yTopPdf: yMid,
+            colWeights: detailWeights,
+            headers: detailHeaders,
+            bodyRows: Math.max(fixedFeeBody.length, 1),
+            footerKind: 'detail',
+            summaryCurrency: null,
+            font,
+            fontBold,
+            bodyTexts: fixedFeeBody.length ? fixedFeeBody : emptyDetail,
+            rightAlignedBodyCols: detailRight,
+            wrapBodyCols: detailWrap,
+            fixedFsBodyCols: detailFixed,
+            showInnerTotal: true,
+            totalLabel: labels.total,
+            footerTotals: {
+                detail: {
+                    hours: '—',
+                    amount: pack.fixedFeeTotalAmountDisplay ?? '',
+                },
+            },
+        });
+        yMid -= TR_SECTION_GAP;
+    }
+
     page.drawText(labels.summaryTitle, {
         x: ML,
         y: yMid,
@@ -1362,9 +1415,10 @@ function drawLegalInvoicePdfPage(
     );
     const invNo = resolveLegalOverrideText(legalOverrides?.invoiceNumber, packInvoiceNumberDisplay(session));
     const vatAmount = resolveLegalOverrideText(legalOverrides?.vatAmount, zeroFallback);
-    const extraExpensesAmount = resolveLegalOverrideText(
+    const extraExpensesAmount = resolveLegalExtraExpensesAmount(
         legalOverrides?.extraExpensesAmount,
-        model.extraFixedFeeFormatted?.trim() || zeroFallback,
+        model.extraFixedFeeFormatted,
+        zeroFallback,
     );
     const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
     const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
@@ -1372,7 +1426,7 @@ function drawLegalInvoicePdfPage(
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
     const totalText = model.totalFormatted;
-    const servicesText = model.servicesAmountFormatted?.trim() || totalText;
+    const servicesText = totalText;
 
     const contentW = W - ML - MR;
     let y = H - MT;

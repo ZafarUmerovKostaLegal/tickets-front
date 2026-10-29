@@ -5,7 +5,7 @@ import {
     resolveLocalizedLegalPaymentDisclaimer,
     resolveLocalizedLegalServiceDescription,
 } from './invoiceLegalPageI18n';
-import type { InvoiceCoverLanguage } from './invoiceCoverLetterI18n';
+import { parseCoverLetterMoneyAmount, type InvoiceCoverLanguage } from './invoiceCoverLetterI18n';
 
 export type InvoiceLegalBankingFieldKey =
     | 'tin'
@@ -124,6 +124,30 @@ export function resolveLegalOverrideText(
 ): string {
     const t = override?.trim();
     return t || fallback;
+}
+
+/**
+ * EXTRA EXPENSES stays at zero unless the user typed a different amount.
+ * A saved value that is only the fixed fee (written when the fee was applied) is ignored.
+ */
+export function resolveLegalExtraExpensesAmount(
+    override: string | null | undefined,
+    fixedFeeFormatted: string | null | undefined,
+    zeroFallback: string,
+): string {
+    const saved = override?.trim() ?? '';
+    if (!saved)
+        return zeroFallback;
+    const fee = fixedFeeFormatted?.trim() ?? '';
+    if (!fee)
+        return saved;
+    if (saved === fee)
+        return zeroFallback;
+    const savedAmt = parseCoverLetterMoneyAmount(saved);
+    const feeAmt = parseCoverLetterMoneyAmount(fee);
+    if (savedAmt != null && feeAmt != null && Math.abs(savedAmt - feeAmt) < 0.005)
+        return zeroFallback;
+    return saved;
 }
 
 export function resolveLegalCaseDetailLine(
