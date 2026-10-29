@@ -4,6 +4,7 @@ import {
     getLegalInvoiceLabels,
     resolveLocalizedLegalPaymentDisclaimer,
     resolveLocalizedLegalServiceDescription,
+    resolveLocalizedLegalThanks,
 } from './invoiceLegalPageI18n';
 import { parseCoverLetterMoneyAmount, type InvoiceCoverLanguage } from './invoiceCoverLetterI18n';
 
@@ -23,6 +24,8 @@ export type InvoiceLegalPageOverrides = {
     caseDetailLine?: string | null;
     serviceDescriptionLine?: string | null;
     paymentDisclaimer?: string | null;
+    /** Closing line under the totals, e.g. «Благодарим за сотрудничество!». */
+    thanksLine?: string | null;
     invoiceNumber?: string | null;
     issueDateDisplay?: string | null;
     dueDateDisplay?: string | null;
@@ -173,6 +176,13 @@ export function resolveLegalPaymentDisclaimer(
     lang?: InvoiceCoverLanguage | null,
 ): string {
     return resolveLocalizedLegalPaymentDisclaimer(lang, overrides?.paymentDisclaimer);
+}
+
+export function resolveLegalThanksLine(
+    overrides?: InvoiceLegalPageOverrides | null,
+    lang?: InvoiceCoverLanguage | null,
+): string {
+    return resolveLocalizedLegalThanks(lang, overrides?.thanksLine);
 }
 
 export function invoicePreviewPageCount(timeReportChunkCount: number): number {

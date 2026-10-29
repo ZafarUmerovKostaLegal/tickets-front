@@ -269,8 +269,10 @@ textarea.tt-inv-tr__title-input:focus {
   line-height: 1.15;
 }
 
+.tt-inv-tr__thead th.tt-inv-tr__th--num,
 .tt-inv-tr__thead th.tt-inv-tr__th--money {
-  overflow: visible;
+  text-align: right;
+  overflow: hidden;
   text-overflow: clip;
   white-space: nowrap;
   padding-inline: 0.2rem;
@@ -366,9 +368,11 @@ textarea.tt-inv-tr__title-input:focus {
   background: rgba(232, 51, 55, 0.06);
 }
 
-.tt-inv-tr__tbody td.tt-inv-tr__cell--num {
+.tt-inv-tr__tbody td.tt-inv-tr__cell--num,
+.tt-inv-tr__tfoot td.tt-inv-tr__cell--num {
   white-space: nowrap;
-  overflow: visible;
+  overflow: hidden;
+  text-align: right;
   padding-inline: 0.2rem;
 }
 

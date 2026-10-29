@@ -23,6 +23,7 @@ import {
   resolveLegalOverrideText,
   resolveLegalPaymentDisclaimer,
   resolveLegalServiceDescriptionLine,
+  resolveLegalThanksLine,
   type InvoiceLegalBankingFieldKey,
   type InvoiceLegalPageOverrides,
 } from '../lib/invoiceLegalPageModel';
@@ -138,6 +139,7 @@ export function InvoiceLegalInvoicePage({
   const cur = packCurrencyCode(model);
   const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
   const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
+  const thanksLine = resolveLegalThanksLine(legalOverrides, model.coverLanguage);
   const addr2 = model.recipientAddressLines[1];
   const firmBankingRows = legalFirmBankingRows(cur, legalOverrides, model.coverLanguage);
   const billToBankName = resolveLegalBillToBankName(legalOverrides);
@@ -270,7 +272,7 @@ export function InvoiceLegalInvoicePage({
         <p className="tt-inv-li__panel-text">
           <LiField
             editable={editable}
-            value={caseLine}
+            value={editable ? (legalOverrides?.caseDetailLine ?? caseLine) : caseLine}
             ariaLabel={labels.caseDetails}
             multiline={editable}
             onChange={(caseDetailLine) => onChangeLegalOverrides?.({ caseDetailLine })}
@@ -291,7 +293,7 @@ export function InvoiceLegalInvoicePage({
           <td>
             <LiField
               editable={editable}
-              value={svcLine}
+              value={editable ? (legalOverrides?.serviceDescriptionLine ?? svcLine) : svcLine}
               ariaLabel={labels.description}
               multiline={editable}
               onChange={(serviceDescriptionLine) => onChangeLegalOverrides?.({ serviceDescriptionLine })}
@@ -376,11 +378,20 @@ export function InvoiceLegalInvoicePage({
     </div>
 
     <div className="tt-inv-li__closing">
-      <p className="tt-inv-li__thanks">{labels.thanks}</p>
+      <p className="tt-inv-li__thanks">
+        <LiField
+          editable={editable}
+          className="tt-inv-li__field--thanks"
+          value={editable ? (legalOverrides?.thanksLine ?? thanksLine) : thanksLine}
+          ariaLabel={labels.thanks}
+          onChange={(thanksLine) => onChangeLegalOverrides?.({ thanksLine })}
+        />
+      </p>
       <p className="tt-inv-li__disclaimer">
         <LiField
           editable={editable}
-          value={paymentDisclaimer}
+          className="tt-inv-li__field--disclaimer"
+          value={editable ? (legalOverrides?.paymentDisclaimer ?? paymentDisclaimer) : paymentDisclaimer}
           ariaLabel="Payment disclaimer"
           multiline={editable}
           onChange={(paymentDisclaimer) => onChangeLegalOverrides?.({ paymentDisclaimer })}

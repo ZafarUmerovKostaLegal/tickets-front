@@ -16,6 +16,7 @@ import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../li
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { splitDetailRowsForPagedTimeReport } from '../lib/invoiceTimeReportChunking';
 import { type InvoiceLegalPageOverrides } from '../lib/invoiceLegalPageModel';
+import { getLegalInvoiceLabels } from '../lib/invoiceLegalPageI18n';
 import {
     applyCoverDocumentOverrides,
     buildInvoiceDocumentOverridesPayload,
@@ -231,13 +232,27 @@ export function InvoicePreviewPage() {
     }, [session, coverModel?.issueDateIso]);
 
     const setCoverLanguage = useCallback((lang: InvoiceCoverLanguage) => {
+        const prevLabels = getLegalInvoiceLabels(coverLanguage);
+        const period = coverModel?.servicesMonthYear ?? '';
         setCoverModel((prev) => applyCoverLetterLanguage(prev ?? fallbackCoverModel(), lang, issueDateIso));
-        setLegalOverrides((prev) => ({
-            ...prev,
-            serviceDescriptionLine: null,
-            paymentDisclaimer: null,
-        }));
-    }, [issueDateIso]);
+        setLegalOverrides((prev) => {
+            const service = prev.serviceDescriptionLine?.trim() ?? '';
+            const disclaimer = prev.paymentDisclaimer?.trim() ?? '';
+            const thanks = prev.thanksLine?.trim() ?? '';
+            return {
+                ...prev,
+                serviceDescriptionLine: service && service !== prevLabels.serviceDescription(period)
+                    ? prev.serviceDescriptionLine
+                    : null,
+                paymentDisclaimer: disclaimer && disclaimer !== prevLabels.paymentDisclaimer.trim()
+                    ? prev.paymentDisclaimer
+                    : null,
+                thanksLine: thanks && thanks !== prevLabels.thanks.trim()
+                    ? prev.thanksLine
+                    : null,
+            };
+        });
+    }, [coverLanguage, coverModel?.servicesMonthYear, issueDateIso]);
 
     const patchCoverModel = useCallback((patch: Partial<InvoiceCoverLetterModel>) => {
         setCoverModel((prev) => ({
@@ -650,6 +665,13 @@ export function InvoicePreviewPage() {
 
     const persistPreviewEditsRef = useRef(persistPreviewEdits);
     persistPreviewEditsRef.current = persistPreviewEdits;
+    const editModeRef = useRef(editMode);
+    editModeRef.current = editMode;
+
+    useEffect(() => () => {
+        if (editModeRef.current)
+            void persistPreviewEditsRef.current({ silent: true });
+    }, []);
 
     // Persist page inclusion changes (even outside edit mode).
     useEffect(() => {

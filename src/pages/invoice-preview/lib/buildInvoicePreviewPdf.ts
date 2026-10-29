@@ -25,6 +25,7 @@ import {
     resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
     resolveLegalServiceDescriptionLine,
+    resolveLegalThanksLine,
     invoicePreviewPageCount,
     type InvoiceLegalPageOverrides,
 } from './invoiceLegalPageModel';
@@ -1035,8 +1036,8 @@ function drawTimeReportGridTable(
 }
 
 /** Wider Date so `25 Mar 2026` / `25 мар 2026` fit at DOC_FS (no shrink). */
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [13, 18, 15, 14, 8, 15, 17] as const;
-const TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS = [11, 16, 11, 12, 11, 7, 15, 17] as const;
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [12, 16, 12, 14, 10, 18, 18] as const;
+const TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS = [10, 14, 10, 11, 11, 10, 17, 17] as const;
 const TIME_REPORT_PDF_MEHNAT_WEIGHTS = [12, 16, 11, 13, 15, 15, 18] as const;
 const TIME_REPORT_PDF_MEHNAT_NAME_WEIGHTS = [10, 14, 10, 11, 10, 14, 14, 17] as const;
 const TIME_REPORT_PDF_FIXED_FEE_WEIGHTS = [46, 24, 30] as const;
@@ -1439,6 +1440,7 @@ function drawLegalInvoicePdfPage(
     const cur = packCurrencyCode(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
+    const thanksLine = resolveLegalThanksLine(legalOverrides, model.coverLanguage);
     const totalText = model.totalFormatted;
     const servicesText = totalText;
 
@@ -1706,16 +1708,21 @@ function drawLegalInvoicePdfPage(
     drawTotalRow(labels.totalDueBy(dueBanner), totalText, true);
     y -= DOC_LH * 3.1;
 
-    const thanks = labels.thanks;
-    const thanksW = font.widthOfTextAtSize(thanks, DOC_FS);
-    page.drawText(thanks, {
-        x: ML + (contentW - thanksW) / 2,
-        y,
-        size: DOC_FS,
-        font,
-        color: THANKS_TEXT,
-    });
-    y -= DOC_LH * 1.15;
+    const thanks = thanksLine;
+    const thanksW = font.widthOfTextAtSize(thanks.replace(/\r?\n/g, ' '), DOC_FS);
+    if (!thanks.includes('\n') && thanksW <= contentW) {
+        page.drawText(thanks, {
+            x: ML + (contentW - thanksW) / 2,
+            y,
+            size: DOC_FS,
+            font,
+            color: THANKS_TEXT,
+        });
+        y -= DOC_LH * 1.15;
+    }
+    else {
+        y = wrapTextBlock(page, thanks, ML, y, contentW, DOC_FS, font, THANKS_TEXT, DOC_LH);
+    }
 
     wrapTextBlock(page, paymentDisclaimer, ML, y, contentW, DOC_FS, font, DISCLAIMER_TEXT, DOC_LH);
 }

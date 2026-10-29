@@ -251,14 +251,14 @@ export function InvoiceTimeReportPage({
         <table className="tt-inv-tr__table" role="grid" aria-label="Детальный отчёт по времени">
           <thead className="tt-inv-tr__thead">
             <tr>
-              <th scope="col" style={{ width: showInitiatorName ? '11%' : '13%' }}>{labels.date}</th>
-              <th scope="col" className="tt-inv-tr__th--initials" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.initials}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '11%' : '15%' }}>{labels.task}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '13%' : '14%' }}>{labels.description}</th>
-              {showInitiatorName ? <th scope="col" style={{ width: '12%' }}>{labels.initiatorName}</th> : null}
-              <th scope="col" style={{ width: showInitiatorName ? '7%' : '8%' }}>{labels.hours}</th>
-              <th scope="col" className="tt-inv-tr__th--money" style={{ width: showInitiatorName ? '14%' : '15%' }}>{labels.rate}</th>
-              <th scope="col" className="tt-inv-tr__th--money" style={{ width: showInitiatorName ? '16%' : '17%' }}>{amountHeader}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '10%' : '12%' }}>{labels.date}</th>
+              <th scope="col" className="tt-inv-tr__th--initials" style={{ width: showInitiatorName ? '14%' : '16%' }}>{labels.initials}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '10%' : '12%' }}>{labels.task}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '11%' : '14%' }}>{labels.description}</th>
+              {showInitiatorName ? <th scope="col" style={{ width: '11%' }}>{labels.initiatorName}</th> : null}
+              <th scope="col" className="tt-inv-tr__th--num" style={{ width: showInitiatorName ? '10%' : '10%' }}>{labels.hours}</th>
+              <th scope="col" className="tt-inv-tr__th--num" style={{ width: showInitiatorName ? '17%' : '18%' }}>{labels.rate}</th>
+              <th scope="col" className="tt-inv-tr__th--num" style={{ width: showInitiatorName ? '17%' : '18%' }}>{amountHeader}</th>
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">

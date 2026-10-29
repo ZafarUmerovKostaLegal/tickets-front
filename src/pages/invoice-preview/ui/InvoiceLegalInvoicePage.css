@@ -414,6 +414,14 @@
   text-align: right;
 }
 
+.tt-inv-li--editable .tt-inv-li__thanks .tt-inv-li__field--thanks,
+.tt-inv-li--editable .tt-inv-li__disclaimer .tt-inv-li__field--disclaimer {
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  font-style: inherit;
+}
+
 .tt-inv-li--editable .tt-inv-li__field--due {
   font-weight: 700;
   font-size: inherit;

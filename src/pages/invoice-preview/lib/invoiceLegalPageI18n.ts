@@ -180,6 +180,16 @@ export function resolveLocalizedLegalPaymentDisclaimer(
 ): string {
     const custom = override?.trim();
     if (custom)
-        return custom;
+        return override ?? custom;
     return getLegalInvoiceLabels(lang).paymentDisclaimer;
+}
+
+export function resolveLocalizedLegalThanks(
+    lang?: InvoiceCoverLanguage | null,
+    override?: string | null,
+): string {
+    const custom = override?.trim();
+    if (custom)
+        return override ?? custom;
+    return getLegalInvoiceLabels(lang).thanks;
 }

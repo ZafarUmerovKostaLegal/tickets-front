@@ -56,6 +56,7 @@ import {
     resolveLegalOverrideText,
     resolveLegalPaymentDisclaimer,
     resolveLegalServiceDescriptionLine,
+    resolveLegalThanksLine,
     type InvoiceLegalPageOverrides,
 } from './invoiceLegalPageModel';
 
@@ -288,7 +289,7 @@ function timeReportDocxSectionChildren(
     const labels = getTimeReportLabels(model.coverLanguage);
     const amountHdr = labels.amount(cur);
     const showName = opts.showInitiatorName === true;
-    const DW = pctWidths(showName ? [11, 16, 11, 12, 11, 7, 15, 17] : [13, 18, 15, 14, 8, 15, 17]);
+    const DW = pctWidths(showName ? [10, 14, 10, 11, 11, 10, 17, 17] : [12, 16, 12, 14, 10, 18, 18]);
     const hoursI = showName ? 5 : 4;
     const rateI = showName ? 6 : 5;
     const amountI = showName ? 7 : 6;
@@ -690,6 +691,7 @@ function legalInvoiceDocxBlocks(
     const cur = packCurrencyCode(model);
     const svcLine = resolveLegalServiceDescriptionLine(model, legalOverrides);
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
+    const thanksLine = resolveLegalThanksLine(legalOverrides, model.coverLanguage);
 
     const firmParas = [
         new Paragraph({
@@ -951,7 +953,7 @@ function legalInvoiceDocxBlocks(
             spacing: { before: 480, after: 160 },
             alignment: AlignmentType.CENTER,
             children: [new TextRun({
-                text: labels.thanks,
+                text: thanksLine,
                 italics: true,
                 size: DOC_SIZE,
                 font: 'Georgia',
