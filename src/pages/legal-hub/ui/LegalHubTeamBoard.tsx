@@ -11,6 +11,8 @@ type MemberCard = {
     id: number;
     name: string;
     position: string;
+    email: string;
+    capacity: string;
     initials: string;
 };
 
@@ -43,6 +45,16 @@ function personInitials(name: string, stored?: string | null): string {
     return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
 }
 
+function capacityLabel(raw: string | number | null | undefined): string {
+    if (raw == null || raw === '')
+        return '';
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value <= 0)
+        return '';
+    const rounded = Math.round(value * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
 function memberCards(team: TimeTrackingTeamRow, usersById: Map<number, TimeTrackingUserRow>): MemberCard[] {
     const ids = team.member_auth_user_ids.length > 0
         ? team.member_auth_user_ids
@@ -55,6 +67,8 @@ function memberCards(team: TimeTrackingTeamRow, usersById: Map<number, TimeTrack
             id,
             name,
             position: (row?.position ?? '').trim(),
+            email: (row?.email || preview?.email || '').trim(),
+            capacity: capacityLabel(row?.weekly_capacity_hours),
             initials: personInitials(name, row?.initials),
         };
     });
@@ -78,8 +92,22 @@ function MemberCardView({ member, tone, selected, onSelect }: {
                 <span className="lh-member__avatar" aria-hidden>{member.initials}</span>
                 <span className="lh-member__id">
                     <span className="lh-member__title">{member.name}</span>
-                    <span className="lh-member__sub">{member.position || t('legalHub.memberTasks')}</span>
-                    {member.position ? <span className="lh-member__sub">{t('legalHub.memberTasks')}</span> : null}
+                    {member.position ? <span className="lh-member__role">{member.position}</span> : null}
+                    {member.email ? <span className="lh-member__email">{member.email}</span> : null}
+                </span>
+            </span>
+            <span className="lh-member__facts">
+                <span className="lh-member__fact">
+                    <span>{t('legalHub.factTasks')}</span>
+                    <strong>{t('legalHub.memberPercent')}</strong>
+                </span>
+                <span className="lh-member__fact">
+                    <span>{t('legalHub.factHours')}</span>
+                    <strong>
+                        {member.capacity
+                            ? t('legalHub.factCapacity').replace('{hours}', member.capacity)
+                            : t('legalHub.memberPercent')}
+                    </strong>
                 </span>
             </span>
             <span className="lh-member__hours">
@@ -112,7 +140,7 @@ function TeamSidePanels() {
                     <div className="lh-util__ring" aria-hidden>
                         <div className="lh-util__hole">
                             <strong>{t('legalHub.memberPercent')}</strong>
-                            <span>{t('legalHub.memberHours')}</span>
+                            <span>{t('legalHub.utilEmpty')}</span>
                         </div>
                     </div>
                     <ul className="lh-util__legend">
@@ -198,7 +226,7 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
                     const cards = memberCards(team, usersById).filter((member) => {
                         if (!needle)
                             return true;
-                        return `${member.name} ${member.position}`.toLowerCase().includes(needle);
+                        return `${member.name} ${member.position} ${member.email}`.toLowerCase().includes(needle);
                     });
                     return (
                         <section key={team.id} className="lh-team__group" aria-label={team.name}>

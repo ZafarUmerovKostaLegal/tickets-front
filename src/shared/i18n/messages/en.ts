@@ -81,6 +81,10 @@ export const enMessages = {
         utilAssociateReview: 'Associate review',
         utilPartnerReview: 'Partner review',
         utilTodo: 'To do',
+        utilEmpty: 'No data yet',
+        factTasks: 'Tasks',
+        factHours: 'Hours this week',
+        factCapacity: 'capacity {hours} h',
     },
     kostaLegalAi: {
         heroTitle: 'Where shall we start?',

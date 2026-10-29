@@ -81,6 +81,10 @@ export const ruMessages: Messages = {
         utilAssociateReview: 'Проверка ассоциата',
         utilPartnerReview: 'Проверка партнёра',
         utilTodo: 'К выполнению',
+        utilEmpty: 'Нет данных',
+        factTasks: 'Задачи',
+        factHours: 'Часы за неделю',
+        factCapacity: 'норма {hours} ч',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -826,6 +830,10 @@ export type Messages = {
         utilAssociateReview: string;
         utilPartnerReview: string;
         utilTodo: string;
+        utilEmpty: string;
+        factTasks: string;
+        factHours: string;
+        factCapacity: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;
