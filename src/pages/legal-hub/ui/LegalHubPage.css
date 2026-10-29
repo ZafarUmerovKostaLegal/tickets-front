@@ -1,0 +1,34 @@
+.lh-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+
+.lh-page__main {
+  flex: 1;
+  min-width: 0;
+  max-height: 100vh;
+  max-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.lh-page__content {
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .lh-page__main {
+    max-height: none;
+    min-height: 100dvh;
+  }
+
+  .lh-page__title {
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+}

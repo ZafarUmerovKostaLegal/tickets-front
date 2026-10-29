@@ -36,6 +36,7 @@ export const routes = {
     correspondenceOutgoingPreview: '/correspondence/outgoing/preview',
     accounting: '/accounting',
     kostaLegalAi: '/kosta-legal-ai',
+    legalHub: '/legal-hub',
     kostaDaily: '/kosta-daily',
     contacts: '/contacts',
     internalCommunication: '/internal-communication',

@@ -58,6 +58,7 @@ const KostaDailyPage = lazy(() => import('@pages/kosta-daily').then(m => ({ defa
 const ContactsPage = lazy(() => import('@pages/contacts').then(m => ({ default: m.ContactsPage })));
 const InternalCommunicationPage = lazy(() => import('@pages/internal-communication').then(m => ({ default: m.InternalCommunicationPage })));
 const ItSecurityPage = lazy(() => import('@pages/it-security').then(m => ({ default: m.ItSecurityPage })));
+const LegalHubPage = lazy(() => import('@pages/legal-hub').then(m => ({ default: m.LegalHubPage })));
 const ExpensesPage = lazy(() => import('@pages/expenses/ui/ExpensesPage').then(m => ({ default: m.ExpensesPage })));
 const ExpensesRequestsPage = lazy(() => import('@pages/expenses/ui/ExpensesRequestsPage').then(m => ({ default: m.ExpensesRequestsPage })));
 const ExpensesReportPage = lazy(() => import('@pages/expenses/ui/ExpensesReportPage').then(m => ({ default: m.ExpensesReportPage })));
@@ -107,6 +108,7 @@ const router = createBrowserRouter([
             { path: routes.authCallback, element: <Suspense fallback={<LazyFallback />}><AuthCallbackPage /></Suspense> },
             { path: routes.home, element: withProtected(<HomePage />) },
             { path: routes.kostaLegalAi, element: withProtected(<HomePage />) },
+            { path: routes.legalHub, element: withProtected(<LegalHubPage />) },
             { path: routes.tickets, element: withProtected(<TicketsPage />) },
             { path: routes.ticketDetail, element: withProtected(<TicketDetailPage />) },
             { path: routes.attendance, element: withProtected(<AttendanceAccessRoute>

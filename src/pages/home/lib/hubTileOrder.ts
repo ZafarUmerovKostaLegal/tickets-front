@@ -1,6 +1,6 @@
 import type { AppNavId } from '@widgets/sidebar/model/appNavConfig';
 
-export type HubTileId = AppNavId | 'kostaLegalAi';
+export type HubTileId = AppNavId | 'kostaLegalAi' | 'legalHub';
 
 const STORAGE_PREFIX = 'home_hub_tile_order_v1';
 

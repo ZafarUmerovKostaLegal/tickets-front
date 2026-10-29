@@ -15,6 +15,7 @@ export const HUB_SECTIONS: HubSectionDef[] = [
         id: 'daily',
         tileIds: [
             'kostaLegalAi',
+            'legalHub',
             'timeTracking',
             'kostaDaily',
             'todo',

@@ -166,6 +166,7 @@ export const enMessages = {
         internalCommunication: 'Internal directory',
         itSecurity: 'IT security',
         kostaLegalAi: 'Kosta Legal AI',
+        legalHub: 'Legal Hub',
         sectionsAria: 'Application sections',
     },
     pageTitle: {

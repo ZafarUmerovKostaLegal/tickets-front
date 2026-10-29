@@ -166,6 +166,7 @@ export const ruMessages: Messages = {
         internalCommunication: 'Внутренняя связь',
         itSecurity: 'IT-безопасность',
         kostaLegalAi: 'Kosta Legal AI',
+        legalHub: 'Legal Hub',
         sectionsAria: 'Разделы приложения',
     },
     pageTitle: {
@@ -844,6 +845,7 @@ export type Messages = {
         | 'internalCommunication'
         | 'itSecurity'
         | 'kostaLegalAi'
+        | 'legalHub'
         | 'sectionsAria',
         string
     >;

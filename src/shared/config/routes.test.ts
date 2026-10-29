@@ -54,7 +54,7 @@ describe('routes constants', () => {
             'login', 'home', 'tickets', 'authCallback', 'ticketDetail',
             'attendance', 'vacationSchedule', 'inventory', 'timeTracking',
             'todo', 'admin', 'expenses', 'rules', 'help', 'kostaDaily',
-            'correspondence', 'accounting', 'contacts', 'callSchedule',
+            'correspondence', 'accounting', 'contacts', 'callSchedule', 'legalHub',
             'internalCommunication', 'itSecurity',
         ];
         for (const key of expected)
