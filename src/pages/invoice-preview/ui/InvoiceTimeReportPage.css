@@ -254,6 +254,14 @@ textarea.tt-inv-tr__title-input:focus {
   white-space: nowrap;
 }
 
+.tt-inv-tr__thead th.tt-inv-tr__th--initials {
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+  padding-inline: 0.15rem;
+  letter-spacing: 0;
+}
+
 .tt-inv-tr__thead th.tt-inv-tr__th--per-recording {
   overflow: visible;
   text-overflow: clip;

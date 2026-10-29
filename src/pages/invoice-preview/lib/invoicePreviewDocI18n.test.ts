@@ -28,6 +28,10 @@ describe('invoiceTimeReportI18n', () => {
         expect(formatTimeReportDateDisplay('2026-07-02', 'RU')).toBe('02.07.2026');
         expect(formatTimeReportDateDisplay('bad', 'ENG')).toBe('—');
         expect(localizeTimeReportTaskLabel('Document Review', 'RU')).toBe('Просмотр документов');
+        expect(localizeTimeReportTaskLabel('Telephone calls', 'RU')).toBe('Телефонные звонки');
+        expect(localizeTimeReportTaskLabel('Drafting', 'RU')).toBe('Подготовка документов');
+        expect(localizeTimeReportTaskLabel('Emails', 'RU')).toBe('Электронная переписка');
+        expect(localizeTimeReportTaskLabel('Телефонные звонки', 'ENG')).toBe('Telephone calls');
         expect(localizeTimeReportTaskLabel('Telephone calls', 'ENG')).toBe('Telephone calls');
     });
 });

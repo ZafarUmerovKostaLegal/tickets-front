@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef, type ChangeEvent } from 'react';
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { fixedFeeScopeText, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
-import { getTimeReportLabels, timeReportHeading, timeReportServicesMonthYear } from '../lib/invoiceTimeReportI18n';
+import { getTimeReportLabels, localizeTimeReportTaskLabel, timeReportHeading, timeReportServicesMonthYear } from '../lib/invoiceTimeReportI18n';
 import { joinServiceInitiatorName, splitServiceInitiatorName } from '../lib/splitServiceInitiatorName';
 import './InvoiceTimeReportPage.css';
 
@@ -206,6 +206,7 @@ export function InvoiceTimeReportPage({
     onPatchPack,
 }: InvoiceTimeReportPageProps) {
     const labels = getTimeReportLabels(model.coverLanguage);
+    const taskText = (task: string) => localizeTimeReportTaskLabel(task, model.coverLanguage);
     const cur = packCurrencyCode(model);
     const amountHeader = labels.amount(cur);
     const sumGrandAmt = pack.summaryGrandAmountDisplay.trim().length ? pack.summaryGrandAmountDisplay : cur;
@@ -250,14 +251,14 @@ export function InvoiceTimeReportPage({
         <table className="tt-inv-tr__table" role="grid" aria-label="Детальный отчёт по времени">
           <thead className="tt-inv-tr__thead">
             <tr>
-              <th scope="col" style={{ width: showInitiatorName ? '13%' : '15%' }}>{labels.date}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '8%' : '9%' }}>{labels.initials}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '11%' : '13%' }}>{labels.task}</th>
-              <th scope="col" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.description}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '11%' : '13%' }}>{labels.date}</th>
+              <th scope="col" className="tt-inv-tr__th--initials" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.initials}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '11%' : '15%' }}>{labels.task}</th>
+              <th scope="col" style={{ width: showInitiatorName ? '13%' : '14%' }}>{labels.description}</th>
               {showInitiatorName ? <th scope="col" style={{ width: '12%' }}>{labels.initiatorName}</th> : null}
               <th scope="col" style={{ width: showInitiatorName ? '7%' : '8%' }}>{labels.hours}</th>
-              <th scope="col" className="tt-inv-tr__th--money" style={{ width: showInitiatorName ? '16%' : '18%' }}>{labels.rate}</th>
-              <th scope="col" className="tt-inv-tr__th--money" style={{ width: showInitiatorName ? '17%' : '19%' }}>{amountHeader}</th>
+              <th scope="col" className="tt-inv-tr__th--money" style={{ width: showInitiatorName ? '14%' : '15%' }}>{labels.rate}</th>
+              <th scope="col" className="tt-inv-tr__th--money" style={{ width: showInitiatorName ? '16%' : '17%' }}>{amountHeader}</th>
             </tr>
           </thead>
           <tbody className="tt-inv-tr__tbody">
@@ -271,7 +272,7 @@ export function InvoiceTimeReportPage({
                     <tr key={i}>
                       <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'date', v)} />
                       <TrCell editable={editable} className={cellClass} value={r.initials} ariaLabel={`${labels.initials}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'initials', v)} />
-                      <TrCell editable={editable} className={cellClass} value={r.task} ariaLabel={`${labels.task}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'task', v)} />
+                      <TrCell editable={editable} className={cellClass} value={taskText(r.task)} ariaLabel={`${labels.task}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'task', v)} />
                       <TrCell multiline editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(descriptionText).note : descriptionText} ariaLabel={`${labels.description}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
                       {showInitiatorName ? (
                         <TrCell editable={editable} className={cellClass} value={splitServiceInitiatorName(r.description).name} ariaLabel={`${labels.initiatorName}, row ${i + 1}`} onChange={(v) => onPatchDetailRow?.(i, 'description', joinServiceInitiatorName(splitServiceInitiatorName(r.description).note, v, splitServiceInitiatorName(r.description).mark))} />
@@ -328,13 +329,13 @@ export function InvoiceTimeReportPage({
               <table className="tt-inv-tr__table" role="grid" aria-label={labels.mehnatTitle}>
                 <thead className="tt-inv-tr__thead">
                   <tr>
-                    <th scope="col" style={{ width: showInitiatorName ? '11%' : '13%' }}>{labels.date}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '7%' : '8%' }}>{labels.initials}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '10%' : '12%' }}>{labels.task}</th>
-                    <th scope="col" style={{ width: showInitiatorName ? '12%' : '14%' }}>{labels.description}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '10%' : '12%' }}>{labels.date}</th>
+                    <th scope="col" className="tt-inv-tr__th--initials" style={{ width: showInitiatorName ? '14%' : '16%' }}>{labels.initials}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '10%' : '11%' }}>{labels.task}</th>
+                    <th scope="col" style={{ width: showInitiatorName ? '11%' : '13%' }}>{labels.description}</th>
                     {showInitiatorName ? <th scope="col" style={{ width: '10%' }}>{labels.initiatorName}</th> : null}
-                    <th scope="col" className="tt-inv-tr__th--per-recording" style={{ width: showInitiatorName ? '18%' : '20%' }}>{labels.perRecording}</th>
-                    <th scope="col" className="tt-inv-tr__th--money" style={{ width: '15%' }}>{labels.rate}</th>
+                    <th scope="col" className="tt-inv-tr__th--per-recording" style={{ width: showInitiatorName ? '14%' : '15%' }}>{labels.perRecording}</th>
+                    <th scope="col" className="tt-inv-tr__th--money" style={{ width: showInitiatorName ? '14%' : '15%' }}>{labels.rate}</th>
                     <th scope="col" className="tt-inv-tr__th--money" style={{ width: showInitiatorName ? '17%' : '18%' }}>{amountHeader}</th>
                   </tr>
                 </thead>
@@ -348,7 +349,7 @@ export function InvoiceTimeReportPage({
                           <tr key={i}>
                             <TrCell editable={editable} className={cellClass} value={r.date} ariaLabel={`${labels.date}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'date', v)} />
                             <TrCell editable={editable} className={cellClass} value={r.initials} ariaLabel={`${labels.initials}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'initials', v)} />
-                            <TrCell editable={editable} className={cellClass} value={r.task} ariaLabel={`${labels.task}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'task', v)} />
+                            <TrCell editable={editable} className={cellClass} value={taskText(r.task)} ariaLabel={`${labels.task}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'task', v)} />
                             <TrCell multiline editable={editable} className={cellClass} value={showInitiatorName ? splitServiceInitiatorName(r.description).note : r.description} ariaLabel={`${labels.description}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'description', showInitiatorName ? joinServiceInitiatorName(v, splitServiceInitiatorName(r.description).name, splitServiceInitiatorName(r.description).mark) : v)} />
                             {showInitiatorName ? (
                               <TrCell editable={editable} className={cellClass} value={splitServiceInitiatorName(r.description).name} ariaLabel={`${labels.initiatorName}, ${labels.mehnatTitle} ${i + 1}`} onChange={(v) => onPatchMehnatRow?.(i, 'description', joinServiceInitiatorName(splitServiceInitiatorName(r.description).note, v, splitServiceInitiatorName(r.description).mark))} />
@@ -451,12 +452,12 @@ export function InvoiceTimeReportPage({
               <table className="tt-inv-tr__table" role="grid" aria-label="Сводка по сервисам">
                 <thead className="tt-inv-tr__thead">
                   <tr>
-                    <th scope="col" style={{ width: '8%' }}>{labels.initials}</th>
-                    <th scope="col" style={{ width: '26%' }}>{labels.name}</th>
-                    <th scope="col" style={{ width: '22%' }}>{labels.titleCol}</th>
+                    <th scope="col" className="tt-inv-tr__th--initials" style={{ width: '22%' }}>{labels.initials}</th>
+                    <th scope="col" style={{ width: '18%' }}>{labels.name}</th>
+                    <th scope="col" style={{ width: '18%' }}>{labels.titleCol}</th>
                     <th scope="col" style={{ width: '10%' }}>{labels.hours}</th>
                     <th scope="col" style={{ width: '16%' }}>{labels.hourlyRate}</th>
-                    <th scope="col" style={{ width: '18%' }}>{labels.totalPrice(cur)}</th>
+                    <th scope="col" style={{ width: '16%' }}>{labels.totalPrice(cur)}</th>
                   </tr>
                 </thead>
                 <tbody className="tt-inv-tr__tbody">

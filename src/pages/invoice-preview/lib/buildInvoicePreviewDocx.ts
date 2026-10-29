@@ -43,7 +43,7 @@ import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import { combinedReportDocxChildren } from './combinedReportDocx';
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
-import { getTimeReportLabels, timeReportHeading, timeReportServicesMonthYear } from './invoiceTimeReportI18n';
+import { getTimeReportLabels, localizeTimeReportTaskLabel, timeReportHeading, timeReportServicesMonthYear } from './invoiceTimeReportI18n';
 import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels, uppercaseLegalDateDisplay } from './invoiceLegalPageI18n';
 import {
@@ -288,7 +288,7 @@ function timeReportDocxSectionChildren(
     const labels = getTimeReportLabels(model.coverLanguage);
     const amountHdr = labels.amount(cur);
     const showName = opts.showInitiatorName === true;
-    const DW = pctWidths(showName ? [13, 8, 11, 16, 12, 7, 16, 17] : [15, 9, 13, 18, 8, 18, 19]);
+    const DW = pctWidths(showName ? [11, 16, 11, 12, 11, 7, 15, 17] : [13, 18, 15, 14, 8, 15, 17]);
     const hoursI = showName ? 5 : 4;
     const rateI = showName ? 6 : 5;
     const amountI = showName ? 7 : 6;
@@ -299,7 +299,7 @@ function timeReportDocxSectionChildren(
         return [
             trBodyTextCell(r.date, DW[0]!, AlignmentType.LEFT),
             trBodyTextCell(r.initials, DW[1]!, AlignmentType.LEFT),
-            trBodyTextCell(r.task, DW[2]!, AlignmentType.LEFT),
+            trBodyTextCell(localizeTimeReportTaskLabel(r.task, model.coverLanguage), DW[2]!, AlignmentType.LEFT),
             trBodyTextCell(split ? split.note : description, DW[3]!, AlignmentType.LEFT),
             ...(showName ? [trBodyTextCell(split?.name ?? '', DW[4]!, AlignmentType.LEFT)] : []),
             trBodyTextCell(r.hours, DW[hoursI]!, AlignmentType.RIGHT),
@@ -307,7 +307,7 @@ function timeReportDocxSectionChildren(
             trBodyTextCell(r.amount, DW[amountI]!, AlignmentType.RIGHT),
         ];
     };
-    const SW = pctWidths([9, 20, 18, 12, 18, 23]);
+    const SW = pctWidths([22, 18, 18, 10, 16, 16]);
 
     const detailHeader = new TableRow({
         children: [
@@ -417,7 +417,7 @@ function timeReportDocxSectionChildren(
     if (opts.isLastChunk) {
         const mehnatRows = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []);
         if (mehnatRows.length > 0) {
-            const MW = pctWidths(showName ? [11, 7, 9, 13, 10, 18, 15, 17] : [12, 8, 11, 15, 20, 16, 18]);
+            const MW = pctWidths(showName ? [10, 14, 10, 11, 10, 14, 14, 17] : [12, 16, 11, 13, 15, 15, 18]);
             const mHoursI = showName ? 5 : 4;
             const mRateI = showName ? 6 : 5;
             const mAmountI = showName ? 7 : 6;
@@ -427,7 +427,7 @@ function timeReportDocxSectionChildren(
                 return [
                     trBodyTextCell(r.date, MW[0]!, AlignmentType.LEFT),
                     trBodyTextCell(r.initials, MW[1]!, AlignmentType.LEFT),
-                    trBodyTextCell(r.task, MW[2]!, AlignmentType.LEFT),
+                    trBodyTextCell(localizeTimeReportTaskLabel(r.task, model.coverLanguage), MW[2]!, AlignmentType.LEFT),
                     trBodyTextCell(split ? split.note : description, MW[3]!, AlignmentType.LEFT),
                     ...(showName ? [trBodyTextCell(split?.name ?? '', MW[4]!, AlignmentType.LEFT)] : []),
                     trBodyTextCell(r.hours, MW[mHoursI]!, AlignmentType.RIGHT),

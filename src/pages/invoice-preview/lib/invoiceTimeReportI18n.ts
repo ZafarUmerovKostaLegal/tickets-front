@@ -198,35 +198,47 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
 };
 
 /** Known default project task names → Russian labels for client-facing reports. */
-const TASK_LABEL_RU: Record<string, string> = {
-    'court hearing preparation': 'Подготовка к судебному заседанию',
-    'court hearing': 'Судебное заседание',
-    'document submission': 'Подача документов',
-    'document review': 'Просмотр документов',
-    'drafting documents': 'Подготовка документов',
-    drafting: 'Подготовка документов',
-    'telephone calls': 'Телефонные звонки',
-    'my mehnat registration': 'Регистрация My mehnat',
-    'kosta legal internal': 'Внутренние дела Kosta Legal',
-    'business development': 'Развитие бизнеса',
-    'other research': 'Прочие исследования',
-    'review new legislation': 'Обзор нового законодательства',
-    emails: 'Электронная переписка',
-    meetings: 'Встречи',
-    research: 'Исследования',
-    accounting: 'Бухгалтерия',
-    'lunch/dinner': 'Обед/ужин',
-    proposals: 'Предложения',
-    publications: 'Публикации',
-    expense: 'Расход',
-    manual: 'Вручную',
-    other: 'Прочее',
-};
+const TASK_LABEL_PAIRS: ReadonlyArray<readonly [string, string]> = [
+    ['Court Hearing Preparation', 'Подготовка к судебному заседанию'],
+    ['Court Hearing', 'Судебное заседание'],
+    ['Document Submission', 'Подача документов'],
+    ['Document Review', 'Просмотр документов'],
+    ['Drafting', 'Подготовка документов'],
+    ['Drafting Documents', 'Подготовка документов'],
+    ['Telephone calls', 'Телефонные звонки'],
+    ['My mehnat registration', 'Регистрация My mehnat'],
+    ['Kosta Legal Internal', 'Внутренние дела Kosta Legal'],
+    ['Business Development', 'Развитие бизнеса'],
+    ['Other research', 'Прочие исследования'],
+    ['Review new legislation', 'Обзор нового законодательства'],
+    ['Emails', 'Электронная переписка'],
+    ['Meetings', 'Встречи'],
+    ['Research', 'Исследования'],
+    ['Accounting', 'Бухгалтерия'],
+    ['Lunch/Dinner', 'Обед/ужин'],
+    ['Proposals', 'Предложения'],
+    ['Publications', 'Публикации'],
+    ['Expense', 'Расход'],
+    ['Manual', 'Вручную'],
+    ['Other', 'Прочее'],
+];
+
+const TASK_LABEL_RU: Record<string, string> = {};
+const TASK_RU_TO_EN: Record<string, string> = {};
+for (const [english, russian] of TASK_LABEL_PAIRS) {
+    TASK_LABEL_RU[english.toLowerCase()] = russian;
+    const ruKey = russian.toLowerCase();
+    if (!(ruKey in TASK_RU_TO_EN))
+        TASK_RU_TO_EN[ruKey] = english;
+}
 
 for (const prefix of INVOICE_DESCRIPTION_TASK_PREFIXES) {
     const key = prefix.toLowerCase();
     if (!(key in TASK_LABEL_RU))
         TASK_LABEL_RU[key] = prefix;
+    const ruKey = prefix.toLowerCase();
+    if (!(ruKey in TASK_RU_TO_EN))
+        TASK_RU_TO_EN[ruKey] = prefix;
 }
 
 export function getTimeReportLabels(lang?: InvoiceCoverLanguage | null): TimeReportLabels {
@@ -252,8 +264,8 @@ export function localizeTimeReportTaskLabel(
     const raw = (task ?? '').trim();
     if (!raw)
         return '';
-    if (normalizeCoverLanguage(lang) !== 'RU')
-        return raw;
-    const mapped = TASK_LABEL_RU[raw.toLowerCase()];
-    return mapped ?? raw;
+    const key = raw.toLowerCase();
+    if (normalizeCoverLanguage(lang) === 'RU')
+        return TASK_LABEL_RU[key] ?? raw;
+    return TASK_RU_TO_EN[key] ?? raw;
 }

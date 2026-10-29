@@ -33,7 +33,7 @@ import { COVER_LETTERHEAD_LOGO_ASPECT, LEGAL_VERT_LOGO_ASPECT, rasterizeInvoiceL
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
 import { countCombinedReportPages, drawCombinedReportPages } from './drawCombinedFeesReportPdf';
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
-import { getTimeReportLabels, timeReportHeading, timeReportServicesMonthYear } from './invoiceTimeReportI18n';
+import { getTimeReportLabels, localizeTimeReportTaskLabel, timeReportHeading, timeReportServicesMonthYear } from './invoiceTimeReportI18n';
 import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels, uppercaseLegalDateDisplay } from './invoiceLegalPageI18n';
 import {
@@ -644,7 +644,7 @@ function paginateDetailRowsForPdf(
         const remaining = trimmed.length - i;
 
         const heightFor = (count: number, withFooter: boolean) => {
-            const body = trimmed.slice(i, i + count).map((r) => detailPdfRowCells(r, showInitiatorName));
+            const body = trimmed.slice(i, i + count).map((r) => detailPdfRowCells(r, showInitiatorName, model.coverLanguage));
             return estimateGridTableHeight(
                 tableW,
                 detailWeights,
@@ -745,13 +745,14 @@ function trimDetailSliceToFitPage(
     font: PDFFont,
     fontBold: PDFFont,
     showInitiatorName = false,
+    lang?: InvoiceCoverLetterModel['coverLanguage'],
 ): InvoiceTimeReportDetailRow[] {
     const detailWeights = showInitiatorName ? TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS : TIME_REPORT_PDF_DETAIL_WEIGHTS;
     const detailWrap = showInitiatorName ? TR_DETAIL_NAME_WRAP_COLS : TR_DETAIL_WRAP_COLS;
     const maxDetailHeight = yGridTop - PAGE_FOOTER_ZONE_TOP;
     let trimmed = [...slice];
     while (trimmed.length > 1) {
-        const body = trimmed.map((r) => detailPdfRowCells(r, showInitiatorName));
+        const body = trimmed.map((r) => detailPdfRowCells(r, showInitiatorName, lang));
         const h = estimateGridTableHeight(
             tableW,
             detailWeights,
@@ -781,6 +782,7 @@ function trimDetailSliceToFitSummary(
     fontBold: PDFFont,
     expenseReserve = 0,
     showInitiatorName = false,
+    lang?: InvoiceCoverLetterModel['coverLanguage'],
 ): InvoiceTimeReportDetailRow[] {
     const summaryReserve = expenseReserve + TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP
         + estimateGridTableHeight(
@@ -798,7 +800,7 @@ function trimDetailSliceToFitSummary(
     while (trimmed.length > 1) {
         const detailWeights = showInitiatorName ? TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS : TIME_REPORT_PDF_DETAIL_WEIGHTS;
         const detailWrap = showInitiatorName ? TR_DETAIL_NAME_WRAP_COLS : TR_DETAIL_WRAP_COLS;
-        const body = trimmed.map((r) => detailPdfRowCells(r, showInitiatorName));
+        const body = trimmed.map((r) => detailPdfRowCells(r, showInitiatorName, lang));
         const h = estimateGridTableHeight(
             tableW,
             detailWeights,
@@ -1033,13 +1035,13 @@ function drawTimeReportGridTable(
 }
 
 /** Wider Date so `25 Mar 2026` / `25 мар 2026` fit at DOC_FS (no shrink). */
-const TIME_REPORT_PDF_DETAIL_WEIGHTS = [15, 9, 13, 18, 8, 18, 19] as const;
-const TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS = [13, 8, 11, 16, 12, 7, 16, 17] as const;
-const TIME_REPORT_PDF_MEHNAT_WEIGHTS = [12, 8, 11, 15, 20, 16, 18] as const;
-const TIME_REPORT_PDF_MEHNAT_NAME_WEIGHTS = [11, 7, 9, 13, 10, 18, 15, 17] as const;
+const TIME_REPORT_PDF_DETAIL_WEIGHTS = [13, 18, 15, 14, 8, 15, 17] as const;
+const TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS = [11, 16, 11, 12, 11, 7, 15, 17] as const;
+const TIME_REPORT_PDF_MEHNAT_WEIGHTS = [12, 16, 11, 13, 15, 15, 18] as const;
+const TIME_REPORT_PDF_MEHNAT_NAME_WEIGHTS = [10, 14, 10, 11, 10, 14, 14, 17] as const;
 const TIME_REPORT_PDF_FIXED_FEE_WEIGHTS = [46, 24, 30] as const;
 const TIME_REPORT_PDF_EXPENSE_WEIGHTS = [18, 52, 30] as const;
-const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 20, 18, 12, 18, 23] as const;
+const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [22, 18, 18, 10, 16, 16] as const;
 /** Task, Description, Rate, Amount — wrap at spaces; long tokens may split mid-word to fit the column. */
 const TR_DETAIL_WRAP_COLS = new Set([2, 3, 5, 6]);
 const TR_DETAIL_NAME_WRAP_COLS = new Set([2, 3, 4, 6, 7]);
@@ -1051,12 +1053,14 @@ const TR_DETAIL_NAME_FIXED_FS_COLS = new Set([0, 1, 5]);
 function detailPdfRowCells(
     row: InvoiceTimeReportDetailRow,
     showInitiatorName: boolean,
+    lang?: InvoiceCoverLetterModel['coverLanguage'],
 ): string[] {
     const description = row.description;
+    const task = localizeTimeReportTaskLabel(row.task, lang);
     if (!showInitiatorName)
-        return [row.date, row.initials, row.task, description, row.hours, row.hourlyRate, row.amount];
+        return [row.date, row.initials, task, description, row.hours, row.hourlyRate, row.amount];
     const split = splitServiceInitiatorName(description);
-    return [row.date, row.initials, row.task, split.note, split.name, row.hours, row.hourlyRate, row.amount];
+    return [row.date, row.initials, task, split.note, split.name, row.hours, row.hourlyRate, row.amount];
 }
 const TR_SUMMARY_FIXED_FS_COLS = new Set([0, 3]);
 
@@ -1194,15 +1198,16 @@ function drawSingleTimeReportPdfPage(
             fontBold,
             0,
             showInitiatorName,
+            model.coverLanguage,
         );
     }
     else if (showDetailGrid) {
-        detailSlice = trimDetailSliceToFitPage(slice, yGridTop, tableW, detailHeaders, false, font, fontBold, showInitiatorName);
+        detailSlice = trimDetailSliceToFitPage(slice, yGridTop, tableW, detailHeaders, false, font, fontBold, showInitiatorName, model.coverLanguage);
     }
 
     let yAfterDetail = yGridTop;
     if (showDetailGrid) {
-        const detailBody = detailSlice.map((r) => detailPdfRowCells(r, showInitiatorName));
+        const detailBody = detailSlice.map((r) => detailPdfRowCells(r, showInitiatorName, model.coverLanguage));
         const nRows = Math.max(detailSlice.length, 1);
 
         yAfterDetail = drawTimeReportGridTable(page, {
@@ -1250,7 +1255,7 @@ function drawSingleTimeReportPdfPage(
             color: TR_RED,
         });
         yMid -= TR_SUMMARY_TITLE_GAP;
-        const mehnatBody = mehnatRows.map((r) => detailPdfRowCells(r, showInitiatorName));
+        const mehnatBody = mehnatRows.map((r) => detailPdfRowCells(r, showInitiatorName, model.coverLanguage));
         const mehnatHoursIndex = showInitiatorName ? 5 : 4;
         const mehnatHeaders = detailHeaders.map((header, index) => (index === mehnatHoursIndex ? labels.perRecording : header));
         yMid = drawTimeReportGridTable(page, {
