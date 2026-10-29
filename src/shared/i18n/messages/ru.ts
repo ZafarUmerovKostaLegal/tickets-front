@@ -50,6 +50,17 @@ export const ruMessages: Messages = {
     itSecurityPage: {
         subtitle: 'Журнал контроля файлов',
     },
+    legalHub: {
+        navAria: 'Навигация Legal Hub',
+        workspace: 'Рабочее пространство',
+        partnerWorkspace: 'Рабочее место партнёра',
+        myTasks: 'Мои задачи',
+        reviewQueue: 'Очередь проверки',
+        allTeam: 'Вся команда',
+        searchPlaceholder: 'Задачи, проекты, люди…',
+        openMenu: 'Открыть меню',
+        closeMenu: 'Закрыть меню',
+    },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
         queryLabel: 'Запрос к Kosta Legal AI',
@@ -762,6 +773,17 @@ export type Messages = {
         sections: Record<'daily' | 'finance' | 'team', string>;
     };
     itSecurityPage: Record<'subtitle', string>;
+    legalHub: {
+        navAria: string;
+        workspace: string;
+        partnerWorkspace: string;
+        myTasks: string;
+        reviewQueue: string;
+        allTeam: string;
+        searchPlaceholder: string;
+        openMenu: string;
+        closeMenu: string;
+    };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;
     };

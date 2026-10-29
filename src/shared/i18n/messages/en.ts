@@ -50,6 +50,17 @@ export const enMessages = {
     itSecurityPage: {
         subtitle: 'File control log',
     },
+    legalHub: {
+        navAria: 'Legal Hub navigation',
+        workspace: 'Workspace',
+        partnerWorkspace: 'Partner workspace',
+        myTasks: 'My Tasks',
+        reviewQueue: 'Review Queue',
+        allTeam: 'All Team',
+        searchPlaceholder: 'Search tasks, projects, people…',
+        openMenu: 'Open menu',
+        closeMenu: 'Close menu',
+    },
     kostaLegalAi: {
         heroTitle: 'Where shall we start?',
         queryLabel: 'Kosta Legal AI query',

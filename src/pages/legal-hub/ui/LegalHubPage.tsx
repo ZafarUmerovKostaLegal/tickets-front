@@ -1,26 +1,204 @@
-import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
+import { useCallback, useEffect, useState, type ComponentType } from 'react';
+import { AppBackButton, AppPageSettings } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
+import type { TranslationKey } from '@shared/i18n/translate';
+import { useCurrentUser } from '@shared/hooks';
+import { isPartnerOrgRole } from '@shared/lib/orgRoles';
+import { HeaderNotifications } from '@pages/home/ui/HeaderNotifications';
 import './LegalHubPage.css';
+
+type LegalHubNavId = 'myTasks' | 'reviewQueue' | 'allTeam';
+
+const NAV_ITEMS: { id: LegalHubNavId; labelKey: TranslationKey; icon: ComponentType }[] = [
+    { id: 'myTasks', labelKey: 'legalHub.myTasks', icon: IconTasks },
+    { id: 'reviewQueue', labelKey: 'legalHub.reviewQueue', icon: IconShield },
+    { id: 'allTeam', labelKey: 'legalHub.allTeam', icon: IconTeam },
+];
+
+function IconMark() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 20h16" />
+            <path d="M6 20V10" />
+            <path d="M10 20V10" />
+            <path d="M14 20V10" />
+            <path d="M18 20V10" />
+            <path d="M3 10h18" />
+            <path d="M12 3 3 10h18L12 3z" />
+        </svg>
+    );
+}
+
+function IconTasks() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M8 6h13" />
+            <path d="M8 12h13" />
+            <path d="M8 18h13" />
+            <path d="M3 6h.01" />
+            <path d="M3 12h.01" />
+            <path d="M3 18h.01" />
+        </svg>
+    );
+}
+
+function IconShield() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 3 5 6v6c0 4.2 2.8 7.4 7 9 4.2-1.6 7-4.8 7-9V6l-7-3z" />
+            <path d="m9 12 2 2 4-4" />
+        </svg>
+    );
+}
+
+function IconTeam() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="3" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a3 3 0 0 1 0 5.75" />
+        </svg>
+    );
+}
+
+function IconSearch() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+        </svg>
+    );
+}
+
+function IconMenu() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <path d="M4 7h16" />
+            <path d="M4 12h16" />
+            <path d="M4 17h16" />
+        </svg>
+    );
+}
 
 export function LegalHubPage() {
     const { t } = useI18n();
+    const { user } = useCurrentUser();
+    const [section, setSection] = useState<LegalHubNavId>('allTeam');
+    const [query, setQuery] = useState('');
+    const [menuOpen, setMenuOpen] = useState(false);
+    const workspaceLabel = isPartnerOrgRole(user?.role, user?.position)
+        ? t('legalHub.partnerWorkspace')
+        : t('legalHub.workspace');
+    const active = NAV_ITEMS.find((item) => item.id === section) ?? NAV_ITEMS[2]!;
+
+    const closeMenu = useCallback(() => setMenuOpen(false), []);
+
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setMenuOpen(false);
+                return;
+            }
+            if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey)
+                return;
+            const target = event.target;
+            if (
+                target instanceof HTMLElement
+                && (target.isContentEditable
+                    || target.tagName === 'INPUT'
+                    || target.tagName === 'TEXTAREA'
+                    || target.tagName === 'SELECT')
+            )
+                return;
+            event.preventDefault();
+            document.querySelector<HTMLInputElement>('.lh-top__search-input')?.focus();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, []);
+
     return (
-        <div className="lh-page">
-            <main className="lh-page__main">
-                <header className="lh-page__header">
-                    <div className="lh-page__header-inner">
-                        <div className="lh-page__header-start">
-                            <AppBackButton className="app-back-btn" />
-                            <AppHomeLogo withSeparator />
-                            <div>
-                                <h1 className="lh-page__title">{t('nav.legalHub')}</h1>
-                            </div>
-                        </div>
-                        <AppPageSettings />
+        <div className={`lh-page${menuOpen ? ' lh-page--menu-open' : ''}`}>
+            {menuOpen ? (
+                <button
+                    type="button"
+                    className="lh-page__backdrop"
+                    aria-label={t('legalHub.closeMenu')}
+                    onClick={closeMenu}
+                />
+            ) : null}
+            <aside className="lh-side" aria-label={t('legalHub.navAria')}>
+                <div className="lh-side__head">
+                    <AppBackButton iconOnly className="lh-side__back" />
+                    <span className="lh-side__mark" aria-hidden>
+                        <IconMark />
+                    </span>
+                    <span className="lh-side__brand">{t('nav.legalHub')}</span>
+                </div>
+                <nav className="lh-side__nav">
+                    <p className="lh-side__section">{workspaceLabel}</p>
+                    <ul className="lh-side__list">
+                        {NAV_ITEMS.map((item) => {
+                            const Icon = item.icon;
+                            const selected = item.id === section;
+                            return (
+                                <li key={item.id}>
+                                    <button
+                                        type="button"
+                                        className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
+                                        aria-current={selected ? 'page' : undefined}
+                                        onClick={() => {
+                                            setSection(item.id);
+                                            closeMenu();
+                                        }}
+                                    >
+                                        <span className="lh-side__item-icon" aria-hidden>
+                                            <Icon />
+                                        </span>
+                                        <span className="lh-side__item-label">{t(item.labelKey)}</span>
+                                    </button>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </nav>
+            </aside>
+            <div className="lh-page__main">
+                <header className="lh-top">
+                    <button
+                        type="button"
+                        className="lh-top__menu"
+                        aria-label={menuOpen ? t('legalHub.closeMenu') : t('legalHub.openMenu')}
+                        aria-expanded={menuOpen}
+                        onClick={() => setMenuOpen((open) => !open)}
+                    >
+                        <IconMenu />
+                    </button>
+                    <label className="lh-top__search">
+                        <span className="lh-top__search-icon" aria-hidden>
+                            <IconSearch />
+                        </span>
+                        <input
+                            type="search"
+                            className="lh-top__search-input"
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            placeholder={t('legalHub.searchPlaceholder')}
+                            aria-label={t('legalHub.searchPlaceholder')}
+                            autoComplete="off"
+                            spellCheck={false}
+                        />
+                        <kbd className="lh-top__search-kbd" aria-hidden>/</kbd>
+                    </label>
+                    <div className="lh-top__actions">
+                        <AppPageSettings showUserMenu beforeUserMenu={<HeaderNotifications />} />
                     </div>
                 </header>
-                <div className="lh-page__content" />
-            </main>
+                <main className="lh-page__content">
+                    <h1 className="lh-page__title">{t(active.labelKey)}</h1>
+                </main>
+            </div>
         </div>
     );
 }
