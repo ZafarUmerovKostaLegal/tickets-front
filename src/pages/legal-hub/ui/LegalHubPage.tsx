@@ -1,8 +1,7 @@
 import { addTransitionType, startTransition, useCallback, useEffect, useState, ViewTransition, type ComponentType } from 'react';
-import { AppBackButton, AppPageSettings, NAV_TRANSITION_TYPE } from '@shared/ui';
+import { AppBackButton, NAV_TRANSITION_TYPE } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
-import { HeaderNotifications } from '@pages/home/ui/HeaderNotifications';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import './LegalHubPage.css';
 
@@ -257,8 +256,8 @@ export function LegalHubPage() {
                         />
                         <kbd className="lh-top__search-kbd" aria-hidden>/</kbd>
                     </label>
-                    <div className="lh-top__actions">
-                        {section === 'allTeam' ? (
+                    {section === 'allTeam' ? (
+                        <div className="lh-top__actions">
                             <button
                                 type="button"
                                 className="lh-top__util"
@@ -271,9 +270,8 @@ export function LegalHubPage() {
                             >
                                 <IconUtil />
                             </button>
-                        ) : null}
-                        <AppPageSettings showUserMenu beforeUserMenu={<HeaderNotifications />} />
-                    </div>
+                        </div>
+                    ) : null}
                 </header>
                 <ViewTransition default="none" enter="none" exit="none" update="lh-section">
                     <main key={section} className="lh-page__content">
