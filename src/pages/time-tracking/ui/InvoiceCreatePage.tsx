@@ -103,6 +103,7 @@ export function InvoiceCreatePage() {
   const [dueDate, setDueDate] = useState(addDaysIso(30));
   const [createInvoiceNumber, setCreateInvoiceNumber] = useState('');
   const [unbilledTime, setUnbilledTime] = useState<UnbilledTimeEntryDto[]>([]);
+  const [timeTableOpen, setTimeTableOpen] = useState(true);
   const [unbilledExp, setUnbilledExp] = useState<UnbilledExpenseEntryDto[]>([]);
   const [selTime, setSelTime] = useState<Set<string>>(() => new Set());
   const [selExp, setSelExp] = useState<Set<string>>(() => new Set());
@@ -338,7 +339,7 @@ export function InvoiceCreatePage() {
         ei.indeterminate = c > 0 && c < n;
       }
     }
-  }, [unbilledTime, unbilledExp, selTime, selExp]);
+  }, [unbilledTime, unbilledExp, selTime, selExp, timeTableOpen]);
 
   useEffect(() => {
     Promise.all([
@@ -1239,12 +1240,23 @@ export function InvoiceCreatePage() {
 
                 {unbilledTime.length > 0 && (
                   <section className="tt-inv-page__section">
-                    <div className="tt-inv-page__section-head">
-                      <h2 className="tt-inv-page__section-title">
+                    <div className={`tt-inv-page__section-head${timeTableOpen ? '' : ' tt-inv-page__section-head--collapsed'}`}>
+                      <h2 className="tt-inv-page__section-title" id="tt-inv-time-table-title">
                         {t('timeTrackingPage.invoices.createDialog.timeSection').replace('{count}', String(unbilledTime.length))}
                       </h2>
+                      <button
+                        type="button"
+                        className="tt-inv-page__section-toggle"
+                        aria-expanded={timeTableOpen}
+                        aria-controls="tt-inv-time-table"
+                        onClick={() => setTimeTableOpen((open) => !open)}
+                      >
+                        {timeTableOpen
+                          ? t('timeTrackingPage.invoices.createDialog.hideTimeTable')
+                          : t('timeTrackingPage.invoices.createDialog.showTimeTable')}
+                      </button>
                     </div>
-                    <div className="tt-reports__table-wrap tt-inv-page__table-wrap">
+                    <div id="tt-inv-time-table" className="tt-reports__table-wrap tt-inv-page__table-wrap" role="region" aria-labelledby="tt-inv-time-table-title" hidden={!timeTableOpen}>
                       <table className="tt-inv-mini">
                         <thead>
                           <tr>

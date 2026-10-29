@@ -1578,6 +1578,8 @@ export const timeTrackingPageExtraMessages = {
             openReportsLink: 'Открыть раздел «Отчёты»',
             openExpensesLink: 'Открыть реестр расходов',
             timeSection: 'Время ({count})',
+            hideTimeTable: 'Скрыть',
+            showTimeTable: 'Показать',
             expensesSection: 'Расходы ({count})',
             preview: 'Предпросмотр',
             date: 'Дата',

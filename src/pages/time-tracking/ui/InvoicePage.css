@@ -644,6 +644,29 @@
   margin-bottom: 0.85rem;
 }
 
+.tt-inv-page__section-head--collapsed {
+  margin-bottom: 0;
+}
+
+.tt-inv-page__section-toggle {
+  margin: 0;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-muted, #64748b);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.tt-inv-page__section-toggle:hover {
+  color: var(--app-text, #0f172a);
+  border-color: color-mix(in srgb, var(--app-text, #0f172a) 35%, var(--app-border, #e2e8f0));
+}
+
 .tt-inv-page__section-title {
   margin: 0;
   font-size: 0.72rem;
@@ -739,6 +762,10 @@
 }
 
 /* Lines table — full height, page scroll (no nested scrollbar) */
+.tt-inv-page__table-wrap[hidden] {
+  display: none;
+}
+
 .tt-inv-page__table-wrap {
   overflow-x: auto;
   overflow-y: visible;

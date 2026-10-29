@@ -21,14 +21,22 @@ export function ReportsRowContextMenu({ menu, onClose, onOpen, onOpenNewTab, ope
     const vh = window.innerHeight;
     const x = Math.min(Math.max(menu.x, pad), vw - MENU_W - pad);
     const y = Math.min(Math.max(menu.y, pad), vh - MENU_H - pad);
-    return createPortal(_jsx("div", { className: "tt-reports__ctx-overlay", role: "presentation", onClick: onClose, onContextMenu: (e) => {
+    return createPortal(_jsx("div", {
+        className: "tt-reports__ctx-overlay", role: "presentation", onClick: onClose, onContextMenu: (e) => {
             e.preventDefault();
             onClose();
-        }, children: _jsxs("div", { className: "tt-reports__ctx-menu", style: { left: x, top: y }, role: "menu", onClick: (e) => e.stopPropagation(), children: [_jsx("button", { type: "button", className: "tt-reports__ctx-item", role: "menuitem", onClick: () => {
-                        onOpen(menu.kind, menu.id);
-                        onClose();
-                    }, children: openLabel }), _jsx("button", { type: "button", className: "tt-reports__ctx-item", role: "menuitem", onClick: () => {
-                        onOpenNewTab(menu.kind, menu.id);
-                        onClose();
-                    }, children: openNewTabLabel })] }) }), document.body);
+        }, children: _jsxs("div", {
+            className: "tt-reports__ctx-menu", style: { left: x, top: y }, role: "menu", onClick: (e) => e.stopPropagation(), children: [_jsx("button", {
+                type: "button", className: "tt-reports__ctx-item", role: "menuitem", onClick: () => {
+                    onOpen(menu.kind, menu.id);
+                    onClose();
+                }, children: openLabel
+            }), _jsx("button", {
+                type: "button", className: "tt-reports__ctx-item", role: "menuitem", onClick: () => {
+                    onOpenNewTab(menu.kind, menu.id);
+                    onClose();
+                }, children: openNewTabLabel
+            })]
+        })
+    }), document.body);
 }

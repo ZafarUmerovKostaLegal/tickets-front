@@ -1580,6 +1580,8 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             openReportsLink: 'Open Reports',
             openExpensesLink: 'Open expenses registry',
             timeSection: 'Time ({count})',
+            hideTimeTable: 'Hide',
+            showTimeTable: 'Show',
             expensesSection: 'Expenses ({count})',
             preview: 'Preview',
             date: 'Date',
