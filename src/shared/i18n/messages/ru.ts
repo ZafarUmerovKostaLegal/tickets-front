@@ -94,6 +94,7 @@ export const ruMessages: Messages = {
         statReview: 'Ожидают проверки',
         statDue: 'Срок на этой неделе',
         utilTotal: 'Всего задач',
+        utilTipCount: '{count} задач',
         mockDeadline1: 'Правки к договору',
         mockDeadline2: 'Ответ на запрос документов',
         mockDeadline3: 'Пакет на проверку',
@@ -860,6 +861,7 @@ export type Messages = {
         statReview: string;
         statDue: string;
         utilTotal: string;
+        utilTipCount: string;
         mockDeadline1: string;
         mockDeadline2: string;
         mockDeadline3: string;

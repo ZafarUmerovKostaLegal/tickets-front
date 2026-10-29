@@ -664,9 +664,14 @@ body[data-theme='dark'] .lh-stat--review .lh-stat__icon { color: #c4b5fd; }
   display: none;
 }
 
+.lh-rail--collapsed .lh-rail__body {
+  overflow: visible;
+}
+
 .lh-rail--collapsed .lh-util__legend button,
 .lh-rail--collapsed .lh-util__legend button:hover,
 .lh-rail--collapsed .lh-util__legend button.is-active {
+  position: relative;
   display: flex;
   justify-content: center;
   width: 2.55rem;
@@ -675,6 +680,62 @@ body[data-theme='dark'] .lh-stat--review .lh-stat__icon { color: #c4b5fd; }
   padding: 0;
   border-radius: 50%;
   background: transparent;
+}
+
+.lh-util__tip {
+  display: none;
+}
+
+.lh-rail--collapsed .lh-util__legend button:hover .lh-util__tip,
+.lh-rail--collapsed .lh-util__legend button:focus-visible .lh-util__tip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  position: absolute;
+  right: calc(100% + 0.7rem);
+  top: 50%;
+  z-index: 8;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.12);
+  color: var(--app-text);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  line-height: 1.2;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.lh-util__tip::after {
+  content: '';
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-left-color: var(--app-surface);
+}
+
+.lh-util__tip-swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.lh-util__tip--progress .lh-util__tip-swatch { background: var(--app-accent); }
+.lh-util__tip--associate .lh-util__tip-swatch { background: #7c3aed; }
+.lh-util__tip--partner .lh-util__tip-swatch { background: #0891b2; }
+.lh-util__tip--wait .lh-util__tip-swatch { background: var(--app-warning); }
+.lh-util__tip--changes .lh-util__tip-swatch { background: var(--app-error); }
+.lh-util__tip--todo .lh-util__tip-swatch { background: #94a3b8; }
+
+.lh-util__tip-meta {
+  color: var(--app-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 .lh-rail--collapsed .lh-util__legend button .lh-member__dot {

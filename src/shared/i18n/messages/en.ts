@@ -94,6 +94,7 @@ export const enMessages = {
         statReview: 'Pending review',
         statDue: 'Due this week',
         utilTotal: 'Total tasks',
+        utilTipCount: '{count} tasks',
         mockDeadline1: 'Contract revisions',
         mockDeadline2: 'Document request reply',
         mockDeadline3: 'Package for review',

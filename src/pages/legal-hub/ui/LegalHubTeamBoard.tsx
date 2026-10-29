@@ -261,7 +261,7 @@ function UtilChart({ slices, caption }: { slices: UtilSlice[]; caption: string }
                                 type="button"
                                 className={active === slice.key ? 'is-active' : ''}
                                 aria-pressed={pressed}
-                                title={`${label}: ${share}%`}
+                                aria-label={`${label}: ${share}%`}
                                 onMouseEnter={() => setHover(slice.key)}
                                 onMouseLeave={() => setHover(null)}
                                 onFocus={() => setHover(slice.key)}
@@ -272,6 +272,11 @@ function UtilChart({ slices, caption }: { slices: UtilSlice[]; caption: string }
                                 <span className={`lh-util__pct lh-util__pct--${slice.key}`} aria-hidden>{share}%</span>
                                 <span className="lh-util__label">{label}</span>
                                 <strong className="lh-util__value">{slice.count}</strong>
+                                <span className={`lh-util__tip lh-util__tip--${slice.key}`} role="tooltip">
+                                    <span className="lh-util__tip-swatch" aria-hidden />
+                                    <span className="lh-util__tip-name">{label}</span>
+                                    <span className="lh-util__tip-meta">{t('legalHub.utilTipCount').replace('{count}', String(slice.count))}</span>
+                                </span>
                             </button>
                         </li>
                     );
