@@ -103,6 +103,30 @@ export const ruMessages: Messages = {
         mockWhenTomorrow: 'Завтра',
         mockWhenFriday: 'Пятница',
         mockWhenMonday: 'Понедельник',
+        tempAdd: 'Временный сотрудник',
+        tempTitle: 'Временный доступ',
+        tempHint: 'Сотрудник видит только свои задачи. Финансы, администрирование и чужие дела закрыты. Доступ заканчивается в выбранный день.',
+        tempTeam: 'Команда',
+        tempName: 'Имя',
+        tempEmail: 'Эл. почта',
+        tempPosition: 'Должность',
+        tempPositionDefault: 'Временный сотрудник',
+        tempUntil: 'Доступ до',
+        tempAccess: 'Что можно',
+        tempCanTasks: 'Свои задачи',
+        tempCanTime: 'Учёт времени по своим задачам',
+        tempCanComments: 'Комментарии к своим задачам',
+        tempDenied: 'Закрыто',
+        tempNoFinance: 'Финансы и счета',
+        tempNoAdmin: 'Администрирование',
+        tempNoTeam: 'Чужие дела и вся команда',
+        tempCancel: 'Отмена',
+        tempSave: 'Добавить',
+        tempUntilBadge: 'До {date}',
+        tempNameRequired: 'Укажите имя.',
+        tempEmailInvalid: 'Укажите почту.',
+        tempDateRequired: 'Укажите дату окончания доступа.',
+        tempDatePast: 'Дата окончания не может быть в прошлом.',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -870,6 +894,30 @@ export type Messages = {
         mockWhenTomorrow: string;
         mockWhenFriday: string;
         mockWhenMonday: string;
+        tempAdd: string;
+        tempTitle: string;
+        tempHint: string;
+        tempTeam: string;
+        tempName: string;
+        tempEmail: string;
+        tempPosition: string;
+        tempPositionDefault: string;
+        tempUntil: string;
+        tempAccess: string;
+        tempCanTasks: string;
+        tempCanTime: string;
+        tempCanComments: string;
+        tempDenied: string;
+        tempNoFinance: string;
+        tempNoAdmin: string;
+        tempNoTeam: string;
+        tempCancel: string;
+        tempSave: string;
+        tempUntilBadge: string;
+        tempNameRequired: string;
+        tempEmailInvalid: string;
+        tempDateRequired: string;
+        tempDatePast: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;

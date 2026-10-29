@@ -7,6 +7,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { useCurrentUser } from '@shared/hooks';
 import { fallbackSlices, mockMemberLoad, slicesFromUtil, sumUtil, teamStats, useLegalHubMock, type MemberLoad, type UtilKey, type UtilSlice } from './legalHubMock';
+import { LegalHubTempMemberDialog, type TempMemberDraft, type TempTeamRef } from './LegalHubTempMemberDialog';
 
 type MemberCard = {
     id: number;
@@ -15,7 +16,28 @@ type MemberCard = {
     email: string;
     capacity: string;
     initials: string;
+    accessUntil?: string;
 };
+
+type TempMember = TempMemberDraft & { id: number };
+
+function emptyLoad(): MemberLoad {
+    return {
+        tasks: 0,
+        hoursUsed: 0,
+        hoursCap: 40,
+        percent: 0,
+        statuses: { progress: 0, wait: 0, review: 0, changes: 0, reviewing: 0 },
+        util: { progress: 0, associate: 0, partner: 0, wait: 0, changes: 0, todo: 0 },
+    };
+}
+
+function formatAccessDate(iso: string): string {
+    const [year, month, day] = iso.split('-');
+    if (!year || !month || !day)
+        return iso;
+    return `${day}.${month}.${year}`;
+}
 
 const STATUS_ROWS: { key: string; labelKey: TranslationKey; dot: string }[] = [
     { key: 'progress', labelKey: 'legalHub.statusInProgress', dot: 'lh-member__dot--progress' },
@@ -111,6 +133,9 @@ function MemberCardView({ member, load, tone, selected, onSelect }: {
                 <span className="lh-member__id">
                     <span className="lh-member__title">{member.name}</span>
                     {member.position ? <span className="lh-member__role">{member.position}</span> : null}
+                    {member.accessUntil ? (
+                        <span className="lh-member__until">{t('legalHub.tempUntilBadge').replace('{date}', formatAccessDate(member.accessUntil))}</span>
+                    ) : null}
                     {member.email ? <span className="lh-member__email">{member.email}</span> : null}
                 </span>
             </span>
@@ -499,6 +524,8 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
     }, [userId, userLoading]);
 
     const { publish, select, selectedId } = useLegalHubMock();
+    const [tempOpen, setTempOpen] = useState(false);
+    const [tempMembers, setTempMembers] = useState<TempMember[]>([]);
     const usersById = useMemo(() => new Map(users.map((row) => [row.id, row])), [users]);
     const needle = query.trim().toLowerCase();
     const ledTeams = useMemo(() => {
@@ -506,11 +533,19 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
             return [];
         return teams.filter((team) => !team.is_archived && team.partner_auth_user_id === user.id);
     }, [teams, user]);
-    const published = useMemo(() => ledTeams.flatMap((team) => memberCards(team, usersById).map((member) => ({
-        id: member.id,
-        name: member.name,
-        load: mockMemberLoad(member.id, member.capacity),
-    }))), [ledTeams, usersById]);
+    const published = useMemo(() => {
+        const fromTeams = ledTeams.flatMap((team) => memberCards(team, usersById).map((member) => ({
+            id: member.id,
+            name: member.name,
+            load: mockMemberLoad(member.id, member.capacity),
+        })));
+        const extras = tempMembers.map((member) => ({
+            id: member.id,
+            name: member.name,
+            load: emptyLoad(),
+        }));
+        return [...fromTeams, ...extras];
+    }, [ledTeams, usersById, tempMembers]);
     const loadById = useMemo(() => new Map(published.map((row) => [row.id, row.load])), [published]);
 
     useEffect(() => {
@@ -528,15 +563,34 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
             <div className="lh-board__main">
                 <TeamStatsStrip stats={teamStats(published.map((row) => row.load))} />
                 {ledTeams.length === 0 ? <p className="lh-team__note">{t('legalHub.teamEmpty')}</p> : null}
-                {ledTeams.map((team) => {
-                    const cards = memberCards(team, usersById).filter((member) => {
+                {ledTeams.map((team, teamIndex) => {
+                    const temps = tempMembers
+                        .filter((member) => member.teamId === team.id)
+                        .map((member): MemberCard => ({
+                            id: member.id,
+                            name: member.name,
+                            position: member.position,
+                            email: member.email,
+                            capacity: '',
+                            initials: personInitials(member.name),
+                            accessUntil: member.accessUntil,
+                        }));
+                    const cards = [...memberCards(team, usersById), ...temps].filter((member) => {
                         if (!needle)
                             return true;
                         return `${member.name} ${member.position} ${member.email}`.toLowerCase().includes(needle);
                     });
                     return (
                         <section key={team.id} className="lh-team__group" aria-label={team.name}>
-                            <h3 className="lh-team__name">{team.name}</h3>
+                            <div className="lh-team__head">
+                                <h3 className="lh-team__name">{team.name}</h3>
+                                {teamIndex === 0 ? (
+                                    <button type="button" className="lh-temp__open" onClick={() => setTempOpen(true)}>
+                                        <span aria-hidden>+</span>
+                                        {t('legalHub.tempAdd')}
+                                    </button>
+                                ) : null}
+                            </div>
                             {cards.length === 0 ? (
                                 <p className="lh-team__note">{needle ? t('legalHub.teamNoMatch') : t('legalHub.teamNoMembers')}</p>
                             ) : (
@@ -545,7 +599,7 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
                                         <MemberCardView
                                             key={member.id}
                                             member={member}
-                                            load={loadById.get(member.id) ?? mockMemberLoad(member.id, member.capacity)}
+                                            load={member.accessUntil ? emptyLoad() : (loadById.get(member.id) ?? mockMemberLoad(member.id, member.capacity))}
                                             tone={index % 4}
                                             selected={selectedId === member.id}
                                             onSelect={() => select(selectedId === member.id ? null : member.id)}
@@ -557,6 +611,19 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
                     );
                 })}
             </div>
+            {tempOpen ? (
+                <LegalHubTempMemberDialog
+                    teams={ledTeams.map((team): TempTeamRef => ({ id: team.id, name: team.name }))}
+                    onClose={() => setTempOpen(false)}
+                    onCreate={(draft) => {
+                        setTempMembers((current) => {
+                            const nextId = current.reduce((min, member) => Math.min(min, member.id), 0) - 1;
+                            return [...current, { ...draft, id: nextId }];
+                        });
+                        setTempOpen(false);
+                    }}
+                />
+            ) : null}
         </div>
     );
 }
