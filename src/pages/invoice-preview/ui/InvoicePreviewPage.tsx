@@ -231,6 +231,8 @@ export function InvoicePreviewPage() {
         return coverModel?.issueDateIso ?? new Date().toISOString().slice(0, 10);
     }, [session, coverModel?.issueDateIso]);
 
+    const coverLanguage = displayModel.coverLanguage ?? 'ENG';
+
     const setCoverLanguage = useCallback((lang: InvoiceCoverLanguage) => {
         const prevLabels = getLegalInvoiceLabels(coverLanguage);
         const period = coverModel?.servicesMonthYear ?? '';
@@ -260,8 +262,6 @@ export function InvoicePreviewPage() {
             ...patch,
         }));
     }, []);
-
-    const coverLanguage = displayModel.coverLanguage ?? 'ENG';
 
     const patchLegalOverrides = useCallback((patch: Partial<InvoiceLegalPageOverrides>) => {
         setLegalOverrides((prev) => ({ ...prev, ...patch }));
