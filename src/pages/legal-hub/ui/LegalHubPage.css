@@ -1392,8 +1392,35 @@ body[data-theme='dark'] .lh-member__until {
   font-size: 0.75rem;
 }
 
-.lh-temp__field select {
-  margin-top: 0.45rem;
+.lh-temp__srch {
+  width: 100%;
+}
+
+.lh-temp__field .lh-temp__pick.tsp-srch__btn {
+  min-height: 2.4rem;
+  height: 2.4rem;
+  padding: 0 0.7rem;
+  border-radius: 10px;
+  background: var(--app-bg);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.lh-temp__field .lh-temp__calendar.ttp {
+  display: flex;
+  width: 100%;
+}
+
+.lh-temp__field .lh-temp__date.ttp__btn {
+  width: 100%;
+  height: 2.4rem;
+  min-height: 2.4rem;
+  justify-content: space-between;
+  padding: 0 0.7rem;
+  border-radius: 10px;
+  background: var(--app-bg);
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .lh-temp__row {

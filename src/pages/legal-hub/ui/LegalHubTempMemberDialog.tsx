@@ -2,6 +2,7 @@ import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/teamsAndLabor';
 import { useI18n } from '@shared/i18n';
+import { DatePicker, SearchableSelect } from '@shared/ui';
 
 export type TempTeamRef = {
     id: TimeTrackingTeamRow['id'];
@@ -43,7 +44,6 @@ export function LegalHubTempMemberDialog({ teams, employees, takenByTeam, onClos
     const { t } = useI18n();
     const formId = useId();
     const [teamId, setTeamId] = useState(teams[0]?.id ?? '');
-    const [query, setQuery] = useState('');
     const [userId, setUserId] = useState<number | null>(null);
     const [accessUntil, setAccessUntil] = useState('');
     const [canLogTime, setCanLogTime] = useState(true);
@@ -51,21 +51,14 @@ export function LegalHubTempMemberDialog({ teams, employees, takenByTeam, onClos
     const [error, setError] = useState<string | null>(null);
     const minDate = todayIso();
     const taken = new Set(takenByTeam[teamId] ?? []);
-    const needle = query.trim().toLowerCase();
-    const options = employees.filter((person) => {
-        if (taken.has(person.id))
-            return false;
-        if (person.id === userId)
-            return true;
-        if (!needle)
-            return true;
-        return `${person.name} ${person.email} ${person.position}`.toLowerCase().includes(needle);
-    });
+    const options = employees.filter((person) => !taken.has(person.id) || person.id === userId);
     const picked = employees.find((person) => person.id === userId && !taken.has(person.id)) ?? null;
 
     useEffect(() => {
         const onKey = (event: KeyboardEvent) => {
             if (event.key !== 'Escape')
+                return;
+            if (document.querySelector('.ttp-pop, .tsp-srch--open'))
                 return;
             event.preventDefault();
             onClose();
@@ -115,47 +108,63 @@ export function LegalHubTempMemberDialog({ teams, employees, takenByTeam, onClos
                 <h2 id={`${formId}-title`} className="lh-temp__title">{t('legalHub.tempTitle')}</h2>
                 <p className="lh-temp__hint">{t('legalHub.tempHint')}</p>
                 {teams.length > 1 ? (
-                    <label className="lh-temp__field">
-                        <span>{t('legalHub.tempTeam')}</span>
-                        <select value={teamId} onChange={(event) => { setTeamId(event.target.value); setUserId(null); }}>
-                            {teams.map((team) => (
-                                <option key={team.id} value={team.id}>{team.name}</option>
-                            ))}
-                        </select>
-                    </label>
+                    <div className="lh-temp__field">
+                        <span id={`${formId}-team`}>{t('legalHub.tempTeam')}</span>
+                        <SearchableSelect
+                            portalDropdown
+                            portalZIndex={6000}
+                            className="lh-temp__srch"
+                            buttonClassName="lh-temp__pick"
+                            aria-labelledby={`${formId}-team`}
+                            placeholder={t('legalHub.tempTeam')}
+                            emptyListText={t('legalHub.tempEmployeeEmpty')}
+                            noMatchText={t('legalHub.tempEmployeeEmpty')}
+                            value={teamId}
+                            items={teams}
+                            getOptionValue={(team) => team.id}
+                            getOptionLabel={(team) => team.name}
+                            getSearchText={(team) => team.name}
+                            onSelect={(team) => {
+                                setTeamId(team.id);
+                                setUserId(null);
+                            }}
+                        />
+                    </div>
                 ) : null}
-                <label className="lh-temp__field">
-                    <span>{t('legalHub.tempEmployee')}</span>
-                    <input
-                        autoFocus
-                        type="search"
-                        value={query}
+                <div className="lh-temp__field">
+                    <span id={`${formId}-employee`}>{t('legalHub.tempEmployee')}</span>
+                    <SearchableSelect
+                        portalDropdown
+                        portalZIndex={6000}
+                        className="lh-temp__srch"
+                        buttonClassName="lh-temp__pick"
+                        aria-labelledby={`${formId}-employee`}
                         placeholder={t('legalHub.tempEmployeeSearch')}
-                        onChange={(event) => setQuery(event.target.value)}
-                        aria-label={t('legalHub.tempEmployeeSearch')}
+                        emptyListText={t('legalHub.tempEmployeeEmpty')}
+                        noMatchText={t('legalHub.tempEmployeeEmpty')}
+                        value={userId == null ? '' : String(userId)}
+                        items={options}
+                        getOptionValue={(person) => String(person.id)}
+                        getOptionLabel={(person) => (person.position ? `${person.name} — ${person.position}` : person.name)}
+                        getSearchText={(person) => `${person.name} ${person.email} ${person.position}`}
+                        onSelect={(person) => setUserId(person.id)}
                     />
-                    <select
-                        value={picked ? String(picked.id) : ''}
-                        onChange={(event) => setUserId(event.target.value ? Number(event.target.value) : null)}
-                    >
-                        <option value="">{options.length === 0 ? t('legalHub.tempEmployeeEmpty') : t('legalHub.tempEmployee')}</option>
-                        {options.map((person) => (
-                            <option key={person.id} value={person.id}>
-                                {person.position ? `${person.name} — ${person.position}` : person.name}
-                            </option>
-                        ))}
-                    </select>
-                </label>
+                </div>
                 {picked ? <p className="lh-temp__picked">{picked.email}</p> : null}
-                <label className="lh-temp__field">
-                    <span>{t('legalHub.tempUntil')}</span>
-                    <input
-                        type="date"
-                        min={minDate}
+                <div className="lh-temp__field">
+                    <span id={`${formId}-until`}>{t('legalHub.tempUntil')}</span>
+                    <DatePicker
+                        portal
+                        portalZIndex={6000}
+                        className="lh-temp__calendar"
+                        buttonClassName="lh-temp__date"
+                        aria-labelledby={`${formId}-until`}
                         value={accessUntil}
-                        onChange={(event) => setAccessUntil(event.target.value)}
+                        min={minDate}
+                        emptyLabel="дд.мм.гггг"
+                        onChange={setAccessUntil}
                     />
-                </label>
+                </div>
                 <fieldset className="lh-temp__access">
                     <legend>{t('legalHub.tempAccess')}</legend>
                     <label className="lh-temp__check">

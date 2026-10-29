@@ -781,7 +781,7 @@ export function VacationSchedulePage() {
                             />
                             )}
                             </div>
-                            {viewMonth == null && !selectedPeriod ? (
+                            {!selectedPeriod ? (
                             <VacationMonthPanel
                                 year={scheduleYear}
                                 monthIndex={detailMonth}
@@ -789,7 +789,7 @@ export function VacationSchedulePage() {
                                 rows={monthRows}
                                 showDocs={canViewDocs}
                                 onToggle={() => setMonthPanelOpen((open) => !open)}
-                                onStepMonth={stepSideMonth}
+                                onStepMonth={viewMonth != null ? stepCalendarMonth : stepSideMonth}
                                 onOpenCard={setDetailEmployeeId}
                                 onOpenDocs={(employeeId, label) => {
                                     const hit = (daysByEmployee.get(employeeId) ?? []).find((day) => day.monthIndex === detailMonth);
