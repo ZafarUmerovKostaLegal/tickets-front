@@ -3,6 +3,7 @@ import { AppBackButton, NAV_TRANSITION_TYPE } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
+import { LegalHubMockProvider } from './legalHubMock';
 import './LegalHubPage.css';
 
 type LegalHubNavId = 'myTasks' | 'reviewQueue' | 'allTeam';
@@ -170,6 +171,7 @@ export function LegalHubPage() {
     }, []);
 
     return (
+        <LegalHubMockProvider>
         <div className={`lh-page${menuOpen ? ' lh-page--menu-open' : ''}${sideCollapsed ? ' lh-page--side-collapsed' : ''}`}>
             {menuOpen ? (
                 <button
@@ -282,5 +284,6 @@ export function LegalHubPage() {
             </div>
             {section === 'allTeam' ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
         </div>
+        </LegalHubMockProvider>
     );
 }

@@ -68,7 +68,7 @@ export const ruMessages: Messages = {
         teamNoMembers: 'В команде пока нет участников.',
         teamNoMatch: 'В команде никого не найдено.',
         memberTasks: '— задач',
-        memberHours: '— ч / — ч',
+        memberHours: '{used} ч / {cap} ч',
         memberPercent: '—',
         statusInProgress: 'В работе',
         statusWaiting: 'Внешнее ожидание',
@@ -93,6 +93,15 @@ export const ruMessages: Messages = {
         statProjects: 'Проекты',
         statReview: 'Ожидают проверки',
         statDue: 'Срок на этой неделе',
+        utilTotal: 'Всего задач',
+        mockDeadline1: 'Правки к договору',
+        mockDeadline2: 'Ответ на запрос документов',
+        mockDeadline3: 'Пакет на проверку',
+        mockDeadline4: 'Внутренний меморандум',
+        mockWhenToday: 'Сегодня',
+        mockWhenTomorrow: 'Завтра',
+        mockWhenFriday: 'Пятница',
+        mockWhenMonday: 'Понедельник',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -850,6 +859,15 @@ export type Messages = {
         statProjects: string;
         statReview: string;
         statDue: string;
+        utilTotal: string;
+        mockDeadline1: string;
+        mockDeadline2: string;
+        mockDeadline3: string;
+        mockDeadline4: string;
+        mockWhenToday: string;
+        mockWhenTomorrow: string;
+        mockWhenFriday: string;
+        mockWhenMonday: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;
