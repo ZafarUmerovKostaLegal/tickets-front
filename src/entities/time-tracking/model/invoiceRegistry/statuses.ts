@@ -4,7 +4,6 @@ export const INVOICE_REGISTRY_STATUSES = [
     'На согласовании с Клиентом',
     'Выставлен',
     'Оплачен',
-    'Оплачен клиентом',
     'Ольге направить',
 ] as const;
 
@@ -20,7 +19,6 @@ export const SYSTEM_INVOICE_REGISTRY_STATUSES = [
     'Просмотрен',
     'Частично оплачен',
     'Оплачен',
-    'Оплачен клиентом',
     'Ольге направить',
     'Просрочен',
     'Отменён',
@@ -44,6 +42,7 @@ const HIDDEN_REGISTRY_STATUSES = new Set([
 const REGISTRY_STATUS_ALIASES: Record<string, string> = {
     'ольге направила': 'Ольге направить',
     'жду подтверждения от клиента': 'Жду подтверждения от клиента',
+    'оплачен клиентом': 'Оплачен',
 };
 
 function registryStatusKey(raw: string): string {
@@ -91,7 +90,7 @@ export function registryStatusToneClass(value: string): string {
         return 'tt-inv-reg-status--review';
     if (label === 'Выставлен' || label === 'Отправлен' || label === 'Просмотрен')
         return 'tt-inv-reg-status--issued';
-    if (label === 'Оплачен' || label === 'Оплачен клиентом')
+    if (label === 'Оплачен')
         return 'tt-inv-reg-status--paid';
     if (label === 'Отменён')
         return 'tt-inv-reg-status--canceled';

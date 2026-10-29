@@ -6,7 +6,9 @@ import {
     isFixedFeeTimeReportRow,
     isMyMehnatTimeReportRow,
     mergeTimeReportPackPreferLiveExpenses,
+    orderTimeReportSummarySlots,
     type InvoiceTimeReportDetailRow,
+    type InvoiceTimeReportSummaryRow,
 } from './invoiceTimeReportModel';
 
 function row(partial: Partial<InvoiceTimeReportDetailRow>): InvoiceTimeReportDetailRow {
@@ -207,5 +209,45 @@ describe('mergeTimeReportPackPreferLiveExpenses', () => {
         expect(merged.expenseSlots[0]?.description).toBe('Visa application fee for Alfred Benedict');
         expect(merged.expenseSlots[0]?.amount).toBe('USD 5.06');
         expect(merged.expenseTotalAmountDisplay).toBe('USD 5.06');
+    });
+
+    it('reorders a saved summary from partner down to junior', () => {
+        const saved = emptyInvoiceTimeReportPack('UZS');
+        const live = emptyInvoiceTimeReportPack('UZS');
+        saved.summarySlots = [
+            summary({ initials: 'SRA', name: 'Sevara', title: 'Junior Associate', hourlyRate: 'UZS 1,500,000.00', totalPrice: 'UZS 54,420,000.00' }),
+            summary({ initials: 'AAA', name: 'Azizbek', title: 'Partner', hourlyRate: 'UZS 3,600,000.00', totalPrice: 'UZS 7,020,000.00' }),
+            summary({ initials: 'DGO', name: 'Dilshodbek', title: 'Associate', hourlyRate: 'UZS 2,000,000.00', totalPrice: 'UZS 1,100,000.00' }),
+            summary({ initials: 'IFT', name: 'Iroda', title: 'Associate', hourlyRate: 'UZS 2,000,000.00', totalPrice: 'UZS 5,260,000.00' }),
+        ];
+        const merged = mergeTimeReportPackPreferLiveExpenses(saved, live);
+        expect(merged.summarySlots.slice(0, 4).map((row) => row.initials)).toEqual(['AAA', 'IFT', 'DGO', 'SRA']);
+    });
+});
+
+function summary(partial: Partial<InvoiceTimeReportSummaryRow>): InvoiceTimeReportSummaryRow {
+    return {
+        initials: '',
+        name: '',
+        title: '',
+        hours: '1,00',
+        hourlyRate: '',
+        totalPrice: '',
+        ...partial,
+    };
+}
+
+describe('orderTimeReportSummarySlots', () => {
+    it('puts partner ahead of associate and junior even when the junior amount is larger', () => {
+        const ordered = orderTimeReportSummarySlots([
+            summary({ initials: 'SRA', name: 'Sevara', title: 'Junior Associate', totalPrice: 'UZS 54,420,000.00' }),
+            summary({ initials: 'AAA', name: 'Azizbek', title: 'Partner', totalPrice: 'UZS 7,020,000.00' }),
+            summary({ initials: 'IFT', name: 'Iroda', title: 'Associate', totalPrice: 'UZS 5,260,000.00' }),
+        ]);
+        expect(ordered.slice(0, 3).map((row) => row.title)).toEqual([
+            'Partner',
+            'Associate',
+            'Junior Associate',
+        ]);
     });
 });

@@ -11,7 +11,7 @@ import { firmBankingToLegalOverrides, applyFirmBankingProfileToLegalOverrides, p
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { applyCoverLetterLanguage, type InvoiceCoverLanguage } from '../lib/invoiceCoverLetterI18n';
-import { applyLinkedTaskNamesToTimeReportPack, emptyInvoiceTimeReportPack, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
+import { applyLinkedTaskNamesToTimeReportPack, emptyInvoiceTimeReportPack, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, orderTimeReportSummarySlots, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { splitDetailRowsForPagedTimeReport } from '../lib/invoiceTimeReportChunking';
@@ -783,8 +783,12 @@ export function InvoicePreviewPage() {
                     const healed = projectId
                         ? await overlayExpenseAmountsFromRegistry(savedPack, projectId)
                         : savedPack;
-                    if (!cancel)
-                        setTimeReportPack(ensureMehnatSeparatedPack(healed));
+                    if (!cancel) {
+                        setTimeReportPack(ensureMehnatSeparatedPack({
+                            ...healed,
+                            summarySlots: orderTimeReportSummarySlots(healed.summarySlots),
+                        }));
+                    }
                 }
                 else
                     pushToast({ message: 'Не удалось загрузить time report для счёта', variant: 'error' });

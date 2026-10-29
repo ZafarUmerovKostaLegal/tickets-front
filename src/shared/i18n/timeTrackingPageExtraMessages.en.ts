@@ -1411,7 +1411,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             viewed: 'Viewed',
             partial_paid: 'Partially paid',
             paid: 'Paid',
-            client_paid: 'Paid by client',
+            client_paid: 'Paid',
             send_to_olga: 'Send to Olga',
             client_review: 'Pending client approval',
             awaiting_client: 'Waiting for client confirmation',

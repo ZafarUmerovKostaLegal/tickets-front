@@ -8,7 +8,7 @@ export const INVOICE_STATUS_LABELS: Record<string, string> = {
     viewed: 'Просмотрен',
     partial_paid: 'Частично оплачен',
     paid: 'Оплачен',
-    client_paid: 'Оплачен клиентом',
+    client_paid: 'Оплачен',
     send_to_olga: 'Ольге направить',
     client_review: 'На согласовании с Клиентом',
     awaiting_client: 'Жду подтверждения от клиента',
@@ -31,13 +31,13 @@ export const INVOICE_STATUS_BADGE_CLASS: Record<string, string> = {
 };
 const BALANCE_EPS = 1e-6;
 export function invoiceCanSend(status: InvoiceUiStatus): boolean {
-    return status !== 'canceled' && status !== 'paid';
+    return status !== 'canceled' && status !== 'paid' && status !== 'client_paid';
 }
 export function invoiceCanMarkViewed(status: InvoiceUiStatus): boolean {
     return status === 'sent' || status === 'partial_paid' || status === 'overdue';
 }
 export function invoiceCanRegisterPayment(status: InvoiceUiStatus, balanceDue: number): boolean {
-    if (status === 'draft' || status === 'canceled' || status === 'paid')
+    if (status === 'draft' || status === 'canceled' || status === 'paid' || status === 'client_paid')
         return false;
     const due = Number(balanceDue);
     return Number.isFinite(due) && due > BALANCE_EPS;

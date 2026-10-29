@@ -1,3 +1,5 @@
+import { normalizeReportEmployeePositionLabel } from '@entities/time-tracking/lib/reportEmployeePosition';
+import { compareReportPositionTitles } from '@pages/report-preview/lib/reportPreviewPositionRates';
 import { TIME_REPORT_DETAIL_ROWS, TIME_REPORT_SUMMARY_ROWS } from './invoicePreviewPackShared';
 
 export type InvoiceTimeReportDetailRow = {
@@ -281,14 +283,20 @@ export function mergeTimeReportPackPreferLiveExpenses(
     const fixedFeeSlots = mergeTimeRowsKeepLiveDescription(saved.fixedFeeSlots ?? [], live.fixedFeeSlots ?? []);
     const fixedFeeTotalAmountDisplay = (live.fixedFeeTotalAmountDisplay ?? '').trim()
         || (saved.fixedFeeTotalAmountDisplay ?? '');
-    if (!hasLiveExpenses)
-        return { ...saved, detailSlots, fixedFeeSlots, fixedFeeTotalAmountDisplay };
+    if (!hasLiveExpenses) {
+        return withSummaryOrderedBySeniority({
+            ...saved,
+            detailSlots,
+            fixedFeeSlots,
+            fixedFeeTotalAmountDisplay,
+        });
+    }
     const cur = (live.currency || saved.currency || 'USD').trim().toUpperCase() || 'USD';
     const expenseSlots = mergeExpenseSlotsKeepSavedText(saved.expenseSlots ?? [], liveExpenses);
     const totalFromLive = (live.expenseTotalAmountDisplay ?? '').trim();
     const expenseTotalAmountDisplay = totalFromLive
         || formatTimeReportAmount(sumDetailAmounts(trimTrailingEmptyDetailSlots(expenseSlots)), cur);
-    return {
+    return withSummaryOrderedBySeniority({
         ...saved,
         currency: live.currency || saved.currency,
         detailSlots,
@@ -296,7 +304,7 @@ export function mergeTimeReportPackPreferLiveExpenses(
         fixedFeeTotalAmountDisplay,
         expenseSlots,
         expenseTotalAmountDisplay,
-    };
+    });
 }
 
 /** Task names like «My mehnat registration» / «Регистрация My mehnat». Description-only mentions do not count. */
@@ -553,6 +561,44 @@ export function padSummaryRows(rows: InvoiceTimeReportSummaryRow[]): InvoiceTime
     while (out.length < TIME_REPORT_SUMMARY_ROWS)
         out.push(emptySummaryRow());
     return out;
+}
+
+function summaryTitleIsBlank(title: string): boolean {
+    const text = title.trim();
+    return !text || text === '—' || text === '-' || text === '–';
+}
+
+/** Partner, then Counsel, Senior Associate, Associate, Junior Associate, Trainee. Same title: higher rate, then higher amount. */
+export function orderTimeReportSummarySlots(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow[] {
+    const filled = trimTrailingEmptySummarySlots(rows);
+    const sorted = [...filled].sort(compareTimeReportSummaryRows);
+    return padSummaryRows(sorted);
+}
+
+function compareTimeReportSummaryRows(a: InvoiceTimeReportSummaryRow, b: InvoiceTimeReportSummaryRow): number {
+    const aBlank = summaryTitleIsBlank(a.title);
+    const bBlank = summaryTitleIsBlank(b.title);
+    if (aBlank !== bBlank)
+        return aBlank ? 1 : -1;
+    if (!aBlank) {
+        const aTitle = normalizeReportEmployeePositionLabel(a.title) || a.title;
+        const bTitle = normalizeReportEmployeePositionLabel(b.title) || b.title;
+        const byTitle = compareReportPositionTitles(aTitle, bTitle);
+        if (byTitle !== 0)
+            return byTitle;
+    }
+    const rateDiff = parseTimeReportAmountDisplay(b.hourlyRate) - parseTimeReportAmountDisplay(a.hourlyRate);
+    if (rateDiff !== 0)
+        return rateDiff;
+    const amountDiff = parseTimeReportAmountDisplay(b.totalPrice) - parseTimeReportAmountDisplay(a.totalPrice);
+    if (amountDiff !== 0)
+        return amountDiff;
+    return a.name.localeCompare(b.name, 'en', { sensitivity: 'base' });
+}
+
+function withSummaryOrderedBySeniority(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
+    const summarySlots = orderTimeReportSummarySlots(pack.summarySlots);
+    return { ...pack, summarySlots };
 }
 
 export function formatTimeReportAmount(amount: number, currency: string): string {

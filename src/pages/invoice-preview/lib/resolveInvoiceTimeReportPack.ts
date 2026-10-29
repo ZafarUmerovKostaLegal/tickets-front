@@ -40,7 +40,7 @@ import {
     formatTimeReportHours,
     sumRoundedTimeReportHours,
     isMyMehnatTimeReportRow,
-    padSummaryRows,
+    orderTimeReportSummarySlots,
     parseTimeReportAmountDisplay,
     trimTrailingEmptyDetailSlots,
     type InvoiceTimeReportDetailRow,
@@ -343,7 +343,6 @@ function buildSummaryAndTotals(
     }
 
     const summaryRows: InvoiceTimeReportSummaryRow[] = [...agg.entries()]
-        .sort((a, b) => b[1].amount - a[1].amount)
         .map(([uid, v]) => {
             const u = v.u ?? userByAuthId(users, uid);
             const rate = pickSummaryHourlyRate(v.rateByHours, v.hours, v.amount);
@@ -378,7 +377,7 @@ function buildSummaryAndTotals(
         detailTotalAmountDisplay: formatTimeReportAmount(totalA, currency),
         summaryGrandHoursDisplay: formatTimeReportHours(sumH),
         summaryGrandAmountDisplay: formatTimeReportAmount(sumA, currency),
-        summarySlots: padSummaryRows(summaryRows),
+        summarySlots: orderTimeReportSummarySlots(summaryRows),
     };
 }
 

@@ -71,6 +71,7 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
     const [templateId, setTemplateId] = useState('');
     const [templateName, setTemplateName] = useState('');
     const [loadNote, setLoadNote] = useState<string | null>(null);
+    const [skipPartnerConfirmation, setSkipPartnerConfirmation] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -403,8 +404,9 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                 dueDate,
                 invoiceNumber: number.trim() || null,
                 currency,
-                skipPartnerInvoiceConfirmation: true,
-                deferPartnerConfirmation: true,
+                ...(skipPartnerConfirmation
+                    ? { skipPartnerInvoiceConfirmation: true, deferPartnerConfirmation: true }
+                    : {}),
                 partnerBillingPeriodFrom: from,
                 partnerBillingPeriodTo: to,
                 timeEntryIds: time.map((line) => line.id),
@@ -429,7 +431,9 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
         catch (error: unknown) {
             const raw = error instanceof Error ? error.message : 'Не удалось создать черновик.';
             const hint = isForbiddenError(error)
-                ? ' Нет полного подтверждения партнёров или строки принадлежат другому клиенту — сводный счёт уходит как исключение без ожидания всех подписей. Если ошибка повторяется, нужен донастрой API.'
+                ? (skipPartnerConfirmation
+                    ? ' Сервер всё равно требует подтверждение партнёров.'
+                    : ' Включите «Разовое исключение: этот счёт без всех подписей», чтобы создать счёт без подтверждения партнёров.')
                 : '';
             onError(`${raw}${hint}`);
         }
@@ -664,6 +668,25 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                     </tfoot>
                 </table>
             ) : null}
+            <div className="tt-inv-dialog__field tt-inv-combined__block">
+                <label className="tt-ios-toggle-row">
+                    <span className="tt-ios-toggle-row__text">Разовое исключение: этот счёт без всех подписей</span>
+                    <span className="tt-ios-toggle">
+                        <input
+                            type="checkbox"
+                            className="tt-ios-toggle__input"
+                            checked={skipPartnerConfirmation}
+                            onChange={(event) => setSkipPartnerConfirmation(event.target.checked)}
+                            disabled={busy}
+                            aria-describedby="tt-inv-combined-skip-partner-hint"
+                        />
+                        <span className="tt-ios-toggle__slider" aria-hidden />
+                    </span>
+                </label>
+                <p id="tt-inv-combined-skip-partner-hint" className="tt-inv-page__section-desc" style={{ marginTop: '0.35rem' }}>
+                    Не меняет настройки проектов. Можно создать сводный счёт по выбранным часам, даже если партнёры ещё не подписали отчёты.
+                </p>
+            </div>
             <div className="tt-inv-combined__actions">
                 <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => void loadLines()} disabled={loading}>{loading ? 'Загрузка…' : 'Загрузить часы'}</button>
                 <button type="button" className="tt-reports__btn tt-reports__btn--outline" onClick={() => setPreview(true)} disabled={time.length + expenses.length === 0}>Предпросмотр</button>

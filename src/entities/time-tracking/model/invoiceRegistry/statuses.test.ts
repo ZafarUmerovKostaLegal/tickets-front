@@ -27,6 +27,7 @@ describe('registry status tones', () => {
     it('uses one capitalised spelling for the Olga note', () => {
         expect(normalizeRegistryStatusLabel('Ольге направила')).toBe('Ольге направить');
         expect(normalizeRegistryStatusLabel('жду подтверждения от клиента')).toBe('Жду подтверждения от клиента');
+        expect(normalizeRegistryStatusLabel('Оплачен клиентом')).toBe('Оплачен');
         expect(registryStatusToneClass('Оплачен клиентом')).toBe('tt-inv-reg-status--paid');
     });
 
@@ -46,7 +47,7 @@ describe('registry status tones', () => {
             'Выставлен',
             'Оплачен',
         ]);
-        expect(options).toContain('Оплачен клиентом');
+        expect(options).not.toContain('Оплачен клиентом');
         expect(options).toContain('Ольге направить');
         expect(options).toContain('Жду подтверждения от клиента');
         expect(options).not.toContain('Ольге направила');
