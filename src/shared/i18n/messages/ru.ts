@@ -72,6 +72,15 @@ export const ruMessages: Messages = {
         statusWaiting: 'Внешнее ожидание',
         statusReview: 'На проверке',
         statusChanges: 'Нужны правки',
+        statusReviewing: 'Повторная проверка',
+        workloadTitle: 'Загрузка команды',
+        workloadHint: 'Нажмите на человека, чтобы выделить карточку',
+        utilisationTitle: 'Утилизация команды',
+        deadlinesTitle: 'Ближайшие сроки',
+        deadlinesEmpty: 'Сроков пока нет',
+        utilAssociateReview: 'Проверка ассоциата',
+        utilPartnerReview: 'Проверка партнёра',
+        utilTodo: 'К выполнению',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -808,6 +817,15 @@ export type Messages = {
         statusWaiting: string;
         statusReview: string;
         statusChanges: string;
+        statusReviewing: string;
+        workloadTitle: string;
+        workloadHint: string;
+        utilisationTitle: string;
+        deadlinesTitle: string;
+        deadlinesEmpty: string;
+        utilAssociateReview: string;
+        utilPartnerReview: string;
+        utilTodo: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;

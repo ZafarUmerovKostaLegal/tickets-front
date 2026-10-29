@@ -19,6 +19,16 @@ const STATUS_ROWS: { key: string; labelKey: TranslationKey; dot: string }[] = [
     { key: 'wait', labelKey: 'legalHub.statusWaiting', dot: 'lh-member__dot--wait' },
     { key: 'review', labelKey: 'legalHub.statusReview', dot: 'lh-member__dot--review' },
     { key: 'changes', labelKey: 'legalHub.statusChanges', dot: 'lh-member__dot--changes' },
+    { key: 'reviewing', labelKey: 'legalHub.statusReviewing', dot: 'lh-member__dot--reviewing' },
+];
+
+const UTIL_ROWS: { key: string; labelKey: TranslationKey; dot: string }[] = [
+    { key: 'progress', labelKey: 'legalHub.statusInProgress', dot: 'lh-member__dot--progress' },
+    { key: 'associate', labelKey: 'legalHub.utilAssociateReview', dot: 'lh-member__dot--review' },
+    { key: 'partner', labelKey: 'legalHub.utilPartnerReview', dot: 'lh-member__dot--partner' },
+    { key: 'wait', labelKey: 'legalHub.statusWaiting', dot: 'lh-member__dot--wait' },
+    { key: 'changes', labelKey: 'legalHub.statusChanges', dot: 'lh-member__dot--changes' },
+    { key: 'todo', labelKey: 'legalHub.utilTodo', dot: 'lh-member__dot--todo' },
 ];
 
 function personInitials(name: string, stored?: string | null): string {
@@ -50,38 +60,77 @@ function memberCards(team: TimeTrackingTeamRow, usersById: Map<number, TimeTrack
     });
 }
 
-function MemberCardView({ member }: { member: MemberCard }) {
+function MemberCardView({ member, tone, selected, onSelect }: {
+    member: MemberCard;
+    tone: number;
+    selected: boolean;
+    onSelect: () => void;
+}) {
     const { t } = useI18n();
     return (
-        <article className="lh-member">
-            <div className="lh-member__head">
-                <span className="lh-member__avatar" aria-hidden>
-                    {member.initials}
-                    <span className="lh-member__presence" />
+        <button
+            type="button"
+            className={`lh-member lh-member--tone-${tone}${selected ? ' lh-member--selected' : ''}`}
+            aria-pressed={selected}
+            onClick={onSelect}
+        >
+            <span className="lh-member__head">
+                <span className="lh-member__avatar" aria-hidden>{member.initials}</span>
+                <span className="lh-member__id">
+                    <span className="lh-member__title">{member.name}</span>
+                    <span className="lh-member__sub">{member.position || t('legalHub.memberTasks')}</span>
+                    {member.position ? <span className="lh-member__sub">{t('legalHub.memberTasks')}</span> : null}
                 </span>
-                <div className="lh-member__id">
-                    <h2 className="lh-member__title">{member.name}</h2>
-                    <p className="lh-member__sub">{member.position || t('legalHub.memberTasks')}</p>
-                    {member.position ? <p className="lh-member__sub">{t('legalHub.memberTasks')}</p> : null}
-                </div>
-            </div>
-            <div className="lh-member__hours">
+            </span>
+            <span className="lh-member__hours">
                 <span>{t('legalHub.memberHours')}</span>
                 <span className="lh-member__pct">{t('legalHub.memberPercent')}</span>
-            </div>
-            <div className="lh-member__meter" aria-hidden>
+            </span>
+            <span className="lh-member__meter" aria-hidden>
                 <span className="lh-member__meter-fill" />
-            </div>
-            <ul className="lh-member__statuses">
+            </span>
+            <span className="lh-member__statuses">
                 {STATUS_ROWS.map((row) => (
-                    <li key={row.key} className="lh-member__status">
+                    <span key={row.key} className="lh-member__status">
                         <span className={`lh-member__dot ${row.dot}`} aria-hidden />
                         <span>{t(row.labelKey)}</span>
                         <strong>{t('legalHub.memberPercent')}</strong>
-                    </li>
+                    </span>
                 ))}
-            </ul>
-        </article>
+            </span>
+        </button>
+    );
+}
+
+function TeamSidePanels() {
+    const { t } = useI18n();
+    return (
+        <aside className="lh-board__side">
+            <section className="lh-panel" aria-label={t('legalHub.utilisationTitle')}>
+                <h2 className="lh-panel__title">{t('legalHub.utilisationTitle')}</h2>
+                <div className="lh-util">
+                    <div className="lh-util__ring" aria-hidden>
+                        <div className="lh-util__hole">
+                            <strong>{t('legalHub.memberPercent')}</strong>
+                            <span>{t('legalHub.memberHours')}</span>
+                        </div>
+                    </div>
+                    <ul className="lh-util__legend">
+                        {UTIL_ROWS.map((row) => (
+                            <li key={row.key}>
+                                <span className={`lh-member__dot ${row.dot}`} aria-hidden />
+                                <span>{t(row.labelKey)}</span>
+                                <strong>{t('legalHub.memberPercent')}</strong>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </section>
+            <section className="lh-panel" aria-label={t('legalHub.deadlinesTitle')}>
+                <h2 className="lh-panel__title">{t('legalHub.deadlinesTitle')}</h2>
+                <p className="lh-panel__empty">{t('legalHub.deadlinesEmpty')}</p>
+            </section>
+        </aside>
     );
 }
 
@@ -122,6 +171,7 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
         };
     }, [userId, userLoading]);
 
+    const [selectedId, setSelectedId] = useState<number | null>(null);
     const usersById = useMemo(() => new Map(users.map((row) => [row.id, row])), [users]);
     const needle = query.trim().toLowerCase();
     const ledTeams = useMemo(() => {
@@ -138,26 +188,41 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
         return <p className="lh-team__note">{t('legalHub.teamEmpty')}</p>;
 
     return (
-        <div className="lh-team">
-            {ledTeams.map((team) => {
-                const cards = memberCards(team, usersById).filter((member) => {
-                    if (!needle)
-                        return true;
-                    return `${member.name} ${member.position}`.toLowerCase().includes(needle);
-                });
-                return (
-                    <section key={team.id} className="lh-team__group" aria-label={team.name}>
-                        <h2 className="lh-team__name">{team.name}</h2>
-                        {cards.length === 0 ? (
-                            <p className="lh-team__note">{needle ? t('legalHub.teamNoMatch') : t('legalHub.teamNoMembers')}</p>
-                        ) : (
-                            <div className="lh-team__grid">
-                                {cards.map((member) => <MemberCardView key={member.id} member={member} />)}
-                            </div>
-                        )}
-                    </section>
-                );
-            })}
+        <div className="lh-board">
+            <div className="lh-board__main">
+                <header className="lh-board__head">
+                    <h2 className="lh-board__title">{t('legalHub.workloadTitle')}</h2>
+                    <p className="lh-board__hint">{t('legalHub.workloadHint')}</p>
+                </header>
+                {ledTeams.map((team) => {
+                    const cards = memberCards(team, usersById).filter((member) => {
+                        if (!needle)
+                            return true;
+                        return `${member.name} ${member.position}`.toLowerCase().includes(needle);
+                    });
+                    return (
+                        <section key={team.id} className="lh-team__group" aria-label={team.name}>
+                            <h3 className="lh-team__name">{team.name}</h3>
+                            {cards.length === 0 ? (
+                                <p className="lh-team__note">{needle ? t('legalHub.teamNoMatch') : t('legalHub.teamNoMembers')}</p>
+                            ) : (
+                                <div className="lh-team__grid">
+                                    {cards.map((member, index) => (
+                                        <MemberCardView
+                                            key={member.id}
+                                            member={member}
+                                            tone={index % 4}
+                                            selected={selectedId === member.id}
+                                            onSelect={() => setSelectedId((current) => (current === member.id ? null : member.id))}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </section>
+                    );
+                })}
+            </div>
+            <TeamSidePanels />
         </div>
     );
 }
