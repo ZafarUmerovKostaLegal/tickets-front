@@ -89,6 +89,10 @@ export const enMessages = {
         factTasks: 'Tasks',
         factHours: 'Hours this week',
         factCapacity: 'capacity {hours} h',
+        statTasks: 'Active tasks',
+        statProjects: 'Projects',
+        statReview: 'Pending review',
+        statDue: 'Due this week',
     },
     kostaLegalAi: {
         heroTitle: 'Where shall we start?',

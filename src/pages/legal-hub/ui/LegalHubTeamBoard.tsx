@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type JSX } from 'react';
 import { listTimeTrackingTeams, listTimeTrackingUsers } from '@entities/time-tracking';
 import { isForbiddenError } from '@entities/time-tracking/api/domains/httpShared';
 import type { TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/teamsAndLabor';
@@ -216,6 +216,88 @@ export function LegalHubUtilRail({ mobileOpen, onMobileClose }: {
     );
 }
 
+function IconStatList() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <path d="M8 6h12M8 12h12M8 18h12" />
+            <path d="M4 6h.01M4 12h.01M4 18h.01" />
+        </svg>
+    );
+}
+
+function IconStatFolder() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M3 7h6l2 2h10v10H3z" />
+        </svg>
+    );
+}
+
+function IconStatHourglass() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <path d="M7 4h10M7 20h10" />
+            <path d="M8 4c0 4 8 4 8 8s-8 4-8 8" />
+        </svg>
+    );
+}
+
+function IconStatEye() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z" />
+            <circle cx="12" cy="12" r="2.5" />
+        </svg>
+    );
+}
+
+function IconStatRefresh() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <path d="M20 12a8 8 0 1 1-2.3-5.7" />
+            <path d="M20 4v6h-6" />
+        </svg>
+    );
+}
+
+function IconStatCalendar() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <rect x="4" y="5" width="16" height="15" rx="2" />
+            <path d="M8 3v4M16 3v4M4 10h16" />
+        </svg>
+    );
+}
+
+const TEAM_STATS: { key: string; labelKey: TranslationKey; tone: string; icon: () => JSX.Element }[] = [
+    { key: 'tasks', labelKey: 'legalHub.statTasks', tone: 'accent', icon: IconStatList },
+    { key: 'projects', labelKey: 'legalHub.statProjects', tone: 'success', icon: IconStatFolder },
+    { key: 'wait', labelKey: 'legalHub.statusWaiting', tone: 'wait', icon: IconStatHourglass },
+    { key: 'review', labelKey: 'legalHub.statReview', tone: 'review', icon: IconStatEye },
+    { key: 'changes', labelKey: 'legalHub.statusChanges', tone: 'changes', icon: IconStatRefresh },
+    { key: 'due', labelKey: 'legalHub.statDue', tone: 'due', icon: IconStatCalendar },
+];
+
+function TeamStatsStrip() {
+    const { t } = useI18n();
+    return (
+        <ul className="lh-stats" aria-label={t('legalHub.allTeam')}>
+            {TEAM_STATS.map((item) => {
+                const Icon = item.icon;
+                return (
+                    <li key={item.key} className={`lh-stat lh-stat--${item.tone}`}>
+                        <span className="lh-stat__icon" aria-hidden><Icon /></span>
+                        <span className="lh-stat__body">
+                            <strong className="lh-stat__value">{t('legalHub.memberPercent')}</strong>
+                            <span className="lh-stat__label">{t(item.labelKey)}</span>
+                        </span>
+                    </li>
+                );
+            })}
+        </ul>
+    );
+}
+
 export function LegalHubTeamBoard({ query }: { query: string }) {
     const { t } = useI18n();
     const { user, loading: userLoading } = useCurrentUser();
@@ -266,16 +348,11 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
         return <p className="lh-team__note">{t('legalHub.teamLoading')}</p>;
     if (error)
         return <p className="lh-team__note">{error === 'forbidden' ? t('legalHub.teamForbidden') : t('legalHub.teamError')}</p>;
-    if (ledTeams.length === 0)
-        return <p className="lh-team__note">{t('legalHub.teamEmpty')}</p>;
-
     return (
         <div className="lh-board">
             <div className="lh-board__main">
-                <header className="lh-board__head">
-                    <h2 className="lh-board__title">{t('legalHub.workloadTitle')}</h2>
-                    <p className="lh-board__hint">{t('legalHub.workloadHint')}</p>
-                </header>
+                <TeamStatsStrip />
+                {ledTeams.length === 0 ? <p className="lh-team__note">{t('legalHub.teamEmpty')}</p> : null}
                 {ledTeams.map((team) => {
                     const cards = memberCards(team, usersById).filter((member) => {
                         if (!needle)

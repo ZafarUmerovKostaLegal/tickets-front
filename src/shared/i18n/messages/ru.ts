@@ -89,6 +89,10 @@ export const ruMessages: Messages = {
         factTasks: 'Задачи',
         factHours: 'Часы за неделю',
         factCapacity: 'норма {hours} ч',
+        statTasks: 'Активные задачи',
+        statProjects: 'Проекты',
+        statReview: 'Ожидают проверки',
+        statDue: 'Срок на этой неделе',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -842,6 +846,10 @@ export type Messages = {
         factTasks: string;
         factHours: string;
         factCapacity: string;
+        statTasks: string;
+        statProjects: string;
+        statReview: string;
+        statDue: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;

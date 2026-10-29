@@ -462,8 +462,111 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  margin-top: 1.25rem;
+  margin-top: 1.15rem;
 }
+
+.lh-stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lh-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.8rem 0.85rem;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-surface);
+}
+
+.lh-stat__icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 12px;
+}
+
+.lh-stat__icon svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.lh-stat--accent .lh-stat__icon {
+  background: var(--app-accent-light-bg);
+  color: var(--app-accent);
+}
+
+.lh-stat--success .lh-stat__icon {
+  background: color-mix(in srgb, var(--app-success) 16%, var(--app-surface));
+  color: #15803d;
+}
+
+.lh-stat--wait .lh-stat__icon {
+  background: color-mix(in srgb, var(--app-warning) 18%, var(--app-surface));
+  color: #b45309;
+}
+
+.lh-stat--review .lh-stat__icon {
+  background: color-mix(in srgb, #7c3aed 14%, var(--app-surface));
+  color: #6d28d9;
+}
+
+.lh-stat--changes .lh-stat__icon {
+  background: var(--app-error-bg);
+  color: var(--app-error);
+}
+
+.lh-stat--due .lh-stat__icon {
+  background: var(--app-bg-soft);
+  color: var(--app-text-dim);
+}
+
+.lh-stat__body {
+  min-width: 0;
+}
+
+.lh-stat__value {
+  display: block;
+  color: var(--app-text);
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.lh-stat__label {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+@media (max-width: 1180px) {
+  .lh-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .lh-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+body[data-theme='dark'] .lh-stat--success .lh-stat__icon { color: #86efac; }
+body[data-theme='dark'] .lh-stat--wait .lh-stat__icon { color: #fcd34d; }
+body[data-theme='dark'] .lh-stat--review .lh-stat__icon { color: #c4b5fd; }
 
 .lh-rail {
   flex-shrink: 0;
