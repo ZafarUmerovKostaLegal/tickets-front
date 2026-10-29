@@ -250,6 +250,16 @@
   color: var(--app-text);
 }
 
+@supports (view-transition-name: none) {
+  ::view-transition-old(.lh-section) {
+    animation: vt-fade-out 0.18s ease both;
+  }
+
+  ::view-transition-new(.lh-section) {
+    animation: vt-fade-slide-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}
+
 @media (max-width: 860px) {
   .lh-side {
     position: fixed;

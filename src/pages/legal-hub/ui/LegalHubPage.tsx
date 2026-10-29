@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type ComponentType } from 'react';
-import { AppBackButton, AppPageSettings } from '@shared/ui';
+import { addTransitionType, startTransition, useCallback, useEffect, useState, ViewTransition, type ComponentType } from 'react';
+import { AppBackButton, AppPageSettings, NAV_TRANSITION_TYPE } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { useCurrentUser } from '@shared/hooks';
@@ -93,6 +93,15 @@ export function LegalHubPage() {
     const active = NAV_ITEMS.find((item) => item.id === section) ?? NAV_ITEMS[2]!;
 
     const closeMenu = useCallback(() => setMenuOpen(false), []);
+    const openSection = useCallback((id: LegalHubNavId) => {
+        setMenuOpen(false);
+        if (id === section)
+            return;
+        startTransition(() => {
+            addTransitionType(NAV_TRANSITION_TYPE);
+            setSection(id);
+        });
+    }, [section]);
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
@@ -148,10 +157,7 @@ export function LegalHubPage() {
                                         type="button"
                                         className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
                                         aria-current={selected ? 'page' : undefined}
-                                        onClick={() => {
-                                            setSection(item.id);
-                                            closeMenu();
-                                        }}
+                                        onClick={() => openSection(item.id)}
                                     >
                                         <span className="lh-side__item-icon" aria-hidden>
                                             <Icon />
@@ -195,9 +201,11 @@ export function LegalHubPage() {
                         <AppPageSettings showUserMenu beforeUserMenu={<HeaderNotifications />} />
                     </div>
                 </header>
-                <main className="lh-page__content">
-                    <h1 className="lh-page__title">{t(active.labelKey)}</h1>
-                </main>
+                <ViewTransition default="none" enter="none" exit="none" update="lh-section">
+                    <main key={section} className="lh-page__content">
+                        <h1 className="lh-page__title">{t(active.labelKey)}</h1>
+                    </main>
+                </ViewTransition>
             </div>
         </div>
     );
