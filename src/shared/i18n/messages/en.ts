@@ -164,6 +164,7 @@ export const enMessages = {
         tickets: 'IT tickets',
         correspondence: 'Correspondence',
         accounting: 'Accounting',
+        hr: 'HR',
         kostaDaily: 'Kosta Daily',
         vacationSchedule: 'Vacation schedule',
         inventory: 'Inventory',

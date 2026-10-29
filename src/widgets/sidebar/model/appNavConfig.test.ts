@@ -34,6 +34,7 @@ describe('getVisibleAppNavItems', () => {
         expect(ids).toContain('tickets');
         expect(ids).toContain('todo');
         expect(ids).not.toContain('admin');
+        expect(ids).not.toContain('hr');
         expect(ids).not.toContain('inventory');
         expect(ids).not.toContain('attendance');
     });
@@ -48,6 +49,7 @@ describe('getVisibleAppNavItems', () => {
         expect(ids).toContain('inventory');
         expect(ids).toContain('attendance');
         expect(ids).toContain('accounting');
+        expect(ids).toContain('hr');
         expect(ids).not.toContain('networkDrive');
     });
 
@@ -60,6 +62,7 @@ describe('getVisibleAppNavItems', () => {
         expect(ids).toContain('admin');
         expect(ids).toContain('attendance');
         expect(ids).toContain('accounting');
+        expect(ids).toContain('hr');
         expect(ids).not.toContain('contacts');
     });
 

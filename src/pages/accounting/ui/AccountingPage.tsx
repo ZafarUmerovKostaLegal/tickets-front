@@ -3,17 +3,15 @@ import { NavLink } from 'react-router-dom';
 import { AppBackButton, AppHomeLogo, AppPageSettings } from '@shared/ui';
 import { routes } from '@shared/config';
 import { useI18n } from '@shared/i18n';
-import { getUsers } from '@entities/user';
 import { getInvoiceRegistrySheet } from '@entities/time-tracking/api/domains/invoiceRegistry';
 import { LazyInvoicesPanel } from '@features/invoices';
 import { InvoicesSkeleton } from '@pages/time-tracking/ui/InvoicesSkeleton';
 import { getHubSectionDef } from '@pages/home/model/hubSections';
-import { AccountingHrPanel } from './AccountingHrPanel';
 import { AccountingCorporateCardPanel } from './AccountingCorporateCardPanel';
 import '@pages/home/ui/HomeNavTiles.css';
 import './AccountingPage.css';
 
-type AccountingTab = 'overview' | 'invoices' | 'hr' | 'corporate-card' | 'coming-soon';
+type AccountingTab = 'overview' | 'invoices' | 'corporate-card' | 'coming-soon';
 
 const FINANCE_SECTION = getHubSectionDef('finance');
 
@@ -23,12 +21,6 @@ const HUB_TILES = [
         tab: 'invoices' as const,
         label: 'Инвойсы',
         badgeKey: 'invoices' as const,
-    },
-    {
-        key: 'hr' as const,
-        tab: 'hr' as const,
-        label: 'HR',
-        badgeKey: 'hr' as const,
     },
     {
         key: 'expenses' as const,
@@ -66,15 +58,6 @@ function TileIcon({ name }: { name: (typeof HUB_TILES)[number]['key'] }) {
         strokeLinejoin: 'round' as const,
         'aria-hidden': true as const,
     };
-    if (name === 'hr') {
-        return (
-            <svg {...common}>
-                <circle cx="9" cy="8" r="2.4" />
-                <circle cx="16" cy="9" r="2" />
-                <path d="M4.5 18.5c.6-2.4 2.5-3.8 4.5-3.8s3.9 1.4 4.5 3.8M14 14.8c1.3-.5 2.6-.4 3.6.3 1 .7 1.6 1.8 1.9 3.4" />
-            </svg>
-        );
-    }
     if (name === 'invoices') {
         return (
             <svg {...common}>
@@ -130,7 +113,7 @@ function OverviewSkeleton() {
                     <div className="acct-skel acct-skel--head" />
                 </div>
                 <ul className="home-nav-tiles__grid" role="list">
-                    {Array.from({ length: 6 }, (_, i) => (
+                    {Array.from({ length: 5 }, (_, i) => (
                         <li key={i} className="home-nav-tiles__item">
                             <div className="acct-skel acct-skel--tile" />
                         </li>
@@ -146,7 +129,7 @@ const ACCOUNTING_TAB_KEY = 'acct-tab';
 function readAccountingTab(): AccountingTab {
     try {
         const saved = window.sessionStorage.getItem(ACCOUNTING_TAB_KEY);
-        if (saved === 'overview' || saved === 'invoices' || saved === 'hr' || saved === 'corporate-card' || saved === 'coming-soon')
+        if (saved === 'overview' || saved === 'invoices' || saved === 'corporate-card' || saved === 'coming-soon')
             return saved;
     }
     catch {
@@ -158,7 +141,6 @@ function readAccountingTab(): AccountingTab {
 export function AccountingPage() {
     const { t } = useI18n();
     const [activeTab, setActiveTab] = useState<AccountingTab>(readAccountingTab);
-    const [staffCount, setStaffCount] = useState<number | null>(null);
     const [invoiceCount, setInvoiceCount] = useState<number | null>(null);
     const [overviewLoading, setOverviewLoading] = useState(true);
 
@@ -174,15 +156,6 @@ export function AccountingPage() {
 
     useEffect(() => {
         let cancelled = false;
-        const staff = getUsers(false)
-            .then((rows) => {
-                if (!cancelled)
-                    setStaffCount(rows.filter((user) => !user.is_archived && !user.is_blocked).length);
-            })
-            .catch(() => {
-                if (!cancelled)
-                    setStaffCount(null);
-            });
         const invoices = getInvoiceRegistrySheet('2026-system')
             .then((sheet) => {
                 if (!cancelled)
@@ -192,7 +165,7 @@ export function AccountingPage() {
                 if (!cancelled)
                     setInvoiceCount(null);
             });
-        void Promise.allSettled([staff, invoices]).then(() => {
+        void Promise.allSettled([invoices]).then(() => {
             if (!cancelled)
                 setOverviewLoading(false);
         });
@@ -224,24 +197,20 @@ export function AccountingPage() {
                                 <h1 className="acct-page__title">
                                     {activeTab === 'invoices'
                                         ? 'Инвойсы'
-                                        : activeTab === 'hr'
-                                            ? 'HR'
-                                            : activeTab === 'corporate-card'
-                                                ? 'Корпоративная карта'
-                                                : activeTab === 'coming-soon'
-                                                    ? 'Скоро в системе'
-                                                    : 'Бухгалтерия'}
+                                        : activeTab === 'corporate-card'
+                                            ? 'Корпоративная карта'
+                                            : activeTab === 'coming-soon'
+                                                ? 'Скоро в системе'
+                                                : 'Бухгалтерия'}
                                 </h1>
                                 <p className="acct-page__subtitle">
                                     {activeTab === 'invoices'
                                         ? 'Реестр инвойсов'
-                                        : activeTab === 'hr'
-                                            ? 'Сотрудники, роли и должности'
-                                            : activeTab === 'corporate-card'
-                                                ? 'Расходы, оплаченные корпоративной картой офиса'
-                                                : activeTab === 'coming-soon'
-                                                    ? 'Разделы, которые появятся в следующих обновлениях'
-                                                    : 'Обзор, счета и сотрудники. Доступно администраторам и партнёрам'}
+                                        : activeTab === 'corporate-card'
+                                            ? 'Расходы, оплаченные корпоративной картой офиса'
+                                            : activeTab === 'coming-soon'
+                                                ? 'Разделы, которые появятся в следующих обновлениях'
+                                                : 'Обзор и счета. Доступно администраторам и партнёрам'}
                                 </p>
                             </div>
                         </div>
@@ -266,16 +235,12 @@ export function AccountingPage() {
                                 </div>
                                 <ul className="home-nav-tiles__grid" role="list">
                                     {HUB_TILES.map((tile, index) => {
-                                        const badge = tile.badgeKey === 'hr'
-                                            ? formatBadge(staffCount)
-                                            : tile.badgeKey === 'invoices'
-                                                ? formatBadge(invoiceCount)
-                                                : null;
-                                        const badgeAria = tile.badgeKey === 'hr'
-                                            ? `${staffCount ?? 0} сотрудников`
-                                            : tile.badgeKey === 'invoices'
-                                                ? `${invoiceCount ?? 0} счетов из системы`
-                                                : undefined;
+                                        const badge = tile.badgeKey === 'invoices'
+                                            ? formatBadge(invoiceCount)
+                                            : null;
+                                        const badgeAria = tile.badgeKey === 'invoices'
+                                            ? `${invoiceCount ?? 0} счетов из системы`
+                                            : undefined;
                                         const body = (
                                             <>
                                                 <span className="home-nav-tiles__icon" aria-hidden>
@@ -320,8 +285,6 @@ export function AccountingPage() {
                             </div>
                         </div>
                     ))}
-
-                    {activeTab === 'hr' && <AccountingHrPanel />}
 
                     {activeTab === 'corporate-card' && <AccountingCorporateCardPanel />}
 

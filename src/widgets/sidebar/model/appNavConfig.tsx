@@ -8,7 +8,7 @@ import { canAccessAdminPanel, canAccessAdminOnlyModules, canAccessAttendance, is
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import { canAccessItSecurity } from '@shared/lib/itSecurityAccess';
 import type { TranslationKey } from '@shared/i18n/translate';
-import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconMailInbox, IconMessages, IconContacts, IconAccounting, IconShield, } from '../ui/SidebarIcons';
+import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconMailInbox, IconMessages, IconContacts, IconAccounting, IconHr, IconShield, } from '../ui/SidebarIcons';
 
 export type AppNavId =
     | 'home'
@@ -19,6 +19,7 @@ export type AppNavId =
     | 'tickets'
     | 'correspondence'
     | 'accounting'
+    | 'hr'
     | 'kostaDaily'
     | 'vacationSchedule'
     | 'inventory'
@@ -71,6 +72,7 @@ export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { id: 'tickets', to: routes.tickets, icon: IconTicket },
     { id: 'correspondence', to: routes.correspondence, icon: IconMailInbox },
     { id: 'accounting', to: routes.accounting, icon: IconAccounting, adminOnly: true },
+    { id: 'hr', to: routes.hr, icon: IconHr, adminOnly: true },
     { id: 'kostaDaily', to: routes.kostaDaily, icon: IconMessages },
     { id: 'vacationSchedule', to: routes.vacationSchedule, icon: IconCalendarCheck },
     { id: 'inventory', to: routes.inventory, icon: IconBox },

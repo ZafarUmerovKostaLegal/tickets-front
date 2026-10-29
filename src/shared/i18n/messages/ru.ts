@@ -164,6 +164,7 @@ export const ruMessages: Messages = {
         tickets: 'IT-заявки',
         correspondence: 'Корреспонденция',
         accounting: 'Бухгалтерия',
+        hr: 'HR',
         kostaDaily: 'Kosta Daily',
         vacationSchedule: 'График отпусков',
         inventory: 'Инвентаризация',
@@ -854,6 +855,7 @@ export type Messages = {
         | 'tickets'
         | 'correspondence'
         | 'accounting'
+        | 'hr'
         | 'kostaDaily'
         | 'vacationSchedule'
         | 'inventory'

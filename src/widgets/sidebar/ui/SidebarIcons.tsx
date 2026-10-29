@@ -127,6 +127,15 @@ export function IconFileText() {
     </svg>);
 }
 
+export function IconHr() {
+    return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="9" cy="8" r="2.4"/>
+      <circle cx="16" cy="9" r="2"/>
+      <path d="M4.5 18.5c.6-2.4 2.5-3.8 4.5-3.8s3.9 1.4 4.5 3.8"/>
+      <path d="M14 14.8c1.3-.5 2.6-.4 3.6.3 1 .7 1.6 1.8 1.9 3.4"/>
+    </svg>);
+}
+
 export function IconAccounting() {
     return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="4" y="2" width="16" height="20" rx="2"/>

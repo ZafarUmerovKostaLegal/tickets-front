@@ -29,7 +29,7 @@ export const HUB_SECTIONS: HubSectionDef[] = [
     },
     {
         id: 'finance',
-        tileIds: ['expenses', 'accounting', 'correspondence', 'admin'],
+        tileIds: ['expenses', 'accounting', 'hr', 'correspondence', 'admin'],
         accent: '#9A8548',
         accentSoft: '#F8F6EF',
         accentBorder: '#E8E2D0',

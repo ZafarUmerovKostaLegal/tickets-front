@@ -42,6 +42,7 @@ const CorrespondencePage = lazy(() => import('@pages/correspondence').then(m => 
 const OutgoingLetterCreatePage = lazy(() => import('@pages/correspondence/ui/OutgoingLetterCreatePage').then(m => ({ default: m.OutgoingLetterCreatePage })));
 const OutgoingLetterPreviewPage = lazy(() => import('@pages/correspondence/ui/OutgoingLetterPreviewPage').then(m => ({ default: m.OutgoingLetterPreviewPage })));
 const AccountingPage = lazy(() => import('@pages/accounting').then(m => ({ default: m.AccountingPage })));
+const HrPage = lazy(() => import('@pages/hr').then(m => ({ default: m.HrPage })));
 const InventoryPage = lazy(() => import('@pages/inventory').then(m => ({ default: m.InventoryPage })));
 const InventoryQrSheetPage = lazy(() => import('@pages/inventory/ui/InventoryQrSheetPage').then(m => ({ default: m.InventoryQrSheetPage })));
 const InventoryTagPage = lazy(() => import('@pages/inventory/ui/InventoryTagPage').then(m => ({ default: m.InventoryTagPage })));
@@ -123,6 +124,9 @@ const router = createBrowserRouter([
                     <EnsureTimeTrackingI18n fallback={<LazyFallback />}>
                       <AccountingPage />
                     </EnsureTimeTrackingI18n>
+                  </AccountingAccessRoute>) },
+            { path: routes.hr, element: withProtected(<AccountingAccessRoute>
+                    <HrPage />
                   </AccountingAccessRoute>) },
             { path: routes.inventory, element: withProtected(<InventoryPage />) },
             { path: routes.inventoryQrSheet, element: withProtected(<InventoryQrSheetPage />) },
