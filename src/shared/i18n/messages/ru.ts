@@ -59,6 +59,8 @@ export const ruMessages: Messages = {
         searchPlaceholder: 'Задачи, проекты, люди…',
         openMenu: 'Открыть меню',
         closeMenu: 'Закрыть меню',
+        collapseSidebar: 'Свернуть меню',
+        expandSidebar: 'Развернуть меню',
         teamLoading: 'Загрузка команды…',
         teamError: 'Не удалось загрузить команды.',
         teamForbidden: 'Недостаточно прав, чтобы показать команды.',
@@ -808,6 +810,8 @@ export type Messages = {
         searchPlaceholder: string;
         openMenu: string;
         closeMenu: string;
+        collapseSidebar: string;
+        expandSidebar: string;
         teamLoading: string;
         teamError: string;
         teamForbidden: string;

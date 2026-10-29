@@ -59,6 +59,8 @@ export const enMessages = {
         searchPlaceholder: 'Search tasks, projects, people…',
         openMenu: 'Open menu',
         closeMenu: 'Close menu',
+        collapseSidebar: 'Collapse menu',
+        expandSidebar: 'Expand menu',
         teamLoading: 'Loading team…',
         teamError: 'Could not load teams.',
         teamForbidden: 'You do not have access to teams.',

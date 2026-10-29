@@ -80,11 +80,43 @@ function IconMenu() {
     );
 }
 
+function IconCollapse({ collapsed }: { collapsed: boolean }) {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            {collapsed
+                ? <path d="m9 6 6 6-6 6" />
+                : <path d="m15 6-6 6 6 6" />}
+        </svg>
+    );
+}
+
+const SIDEBAR_COLLAPSED_KEY = 'lh-sidebar-collapsed';
+
 export function LegalHubPage() {
     const { t } = useI18n();
     const [section, setSection] = useState<LegalHubNavId>('allTeam');
     const [query, setQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
+    const [sideCollapsed, setSideCollapsed] = useState(() => {
+        try {
+            return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
+        }
+        catch {
+            return false;
+        }
+    });
+    const toggleSide = useCallback(() => {
+        setSideCollapsed((collapsed) => {
+            const next = !collapsed;
+            try {
+                localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? '1' : '0');
+            }
+            catch {
+                /* storage can be unavailable */
+            }
+            return next;
+        });
+    }, []);
     const active = NAV_ITEMS.find((item) => item.id === section) ?? NAV_ITEMS[2]!;
 
     const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -123,7 +155,7 @@ export function LegalHubPage() {
     }, []);
 
     return (
-        <div className={`lh-page${menuOpen ? ' lh-page--menu-open' : ''}`}>
+        <div className={`lh-page${menuOpen ? ' lh-page--menu-open' : ''}${sideCollapsed ? ' lh-page--side-collapsed' : ''}`}>
             {menuOpen ? (
                 <button
                     type="button"
@@ -152,6 +184,8 @@ export function LegalHubPage() {
                                         type="button"
                                         className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
                                         aria-current={selected ? 'page' : undefined}
+                                        aria-label={t(item.labelKey)}
+                                        title={t(item.labelKey)}
                                         onClick={() => openSection(item.id)}
                                     >
                                         <span className="lh-side__item-icon" aria-hidden>
@@ -164,6 +198,21 @@ export function LegalHubPage() {
                         })}
                     </ul>
                 </nav>
+                <div className="lh-side__foot">
+                    <button
+                        type="button"
+                        className="lh-side__collapse"
+                        aria-expanded={!sideCollapsed}
+                        aria-label={sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
+                        title={sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
+                        onClick={toggleSide}
+                    >
+                        <IconCollapse collapsed={sideCollapsed} />
+                        <span className="lh-side__collapse-label">
+                            {sideCollapsed ? t('legalHub.expandSidebar') : t('legalHub.collapseSidebar')}
+                        </span>
+                    </button>
+                </div>
             </aside>
             <div className="lh-page__main">
                 <header className="lh-top">
