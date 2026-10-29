@@ -1386,6 +1386,16 @@ body[data-theme='dark'] .lh-member__until {
   line-height: 1.45;
 }
 
+.lh-temp__picked {
+  margin: -0.35rem 0 0.75rem;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+}
+
+.lh-temp__field select {
+  margin-top: 0.45rem;
+}
+
 .lh-temp__row {
   display: grid;
   grid-template-columns: 1fr 1fr;

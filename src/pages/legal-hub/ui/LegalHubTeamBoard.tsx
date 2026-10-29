@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type JSX } from 'react';
 import { listTimeTrackingTeams, listTimeTrackingUsers } from '@entities/time-tracking';
+import { isWithoutAuthRegistration } from '@entities/time-tracking/model/manualUsers';
 import { isForbiddenError } from '@entities/time-tracking/api/domains/httpShared';
 import type { TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/teamsAndLabor';
 import type { TimeTrackingUserRow } from '@entities/time-tracking/api/domains/usersAndRates';
@@ -7,7 +8,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { useCurrentUser } from '@shared/hooks';
 import { fallbackSlices, mockMemberLoad, slicesFromUtil, sumUtil, teamStats, useLegalHubMock, type MemberLoad, type UtilKey, type UtilSlice } from './legalHubMock';
-import { LegalHubTempMemberDialog, type TempMemberDraft, type TempTeamRef } from './LegalHubTempMemberDialog';
+import { LegalHubTempMemberDialog, type TempEmployeeOption, type TempMemberDraft, type TempTeamRef } from './LegalHubTempMemberDialog';
 
 type MemberCard = {
     id: number;
@@ -547,6 +548,28 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
         return [...fromTeams, ...extras];
     }, [ledTeams, usersById, tempMembers]);
     const loadById = useMemo(() => new Map(published.map((row) => [row.id, row.load])), [published]);
+    const staff = useMemo<TempEmployeeOption[]>(() => users
+        .filter((row) => !row.is_archived && !row.is_blocked && !isWithoutAuthRegistration(row))
+        .map((row) => ({
+            id: row.id,
+            name: (row.display_name || row.email || '').trim(),
+            email: row.email,
+            position: (row.position ?? '').trim(),
+        }))
+        .filter((row) => row.name.length > 0)
+        .sort((a, b) => a.name.localeCompare(b.name, 'ru', { sensitivity: 'base' })), [users]);
+    const takenByTeam = useMemo(() => {
+        const map: Record<string, number[]> = {};
+        for (const team of ledTeams) {
+            const ids = new Set(team.member_auth_user_ids);
+            for (const member of tempMembers) {
+                if (member.teamId === team.id)
+                    ids.add(member.id);
+            }
+            map[team.id] = [...ids];
+        }
+        return map;
+    }, [ledTeams, tempMembers]);
 
     useEffect(() => {
         if (teams == null)
@@ -614,11 +637,14 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
             {tempOpen ? (
                 <LegalHubTempMemberDialog
                     teams={ledTeams.map((team): TempTeamRef => ({ id: team.id, name: team.name }))}
+                    employees={staff}
+                    takenByTeam={takenByTeam}
                     onClose={() => setTempOpen(false)}
                     onCreate={(draft) => {
                         setTempMembers((current) => {
-                            const nextId = current.reduce((min, member) => Math.min(min, member.id), 0) - 1;
-                            return [...current, { ...draft, id: nextId }];
+                            if (current.some((member) => member.id === draft.userId && member.teamId === draft.teamId))
+                                return current;
+                            return [...current, { ...draft, id: draft.userId }];
                         });
                         setTempOpen(false);
                     }}

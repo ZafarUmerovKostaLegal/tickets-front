@@ -105,7 +105,11 @@ export const ruMessages: Messages = {
         mockWhenMonday: 'Понедельник',
         tempAdd: 'Временный сотрудник',
         tempTitle: 'Временный доступ',
-        tempHint: 'Сотрудник видит только свои задачи. Финансы, администрирование и чужие дела закрыты. Доступ заканчивается в выбранный день.',
+        tempHint: 'Можно выбрать только сотрудника фирмы. Сторонние люди в список не попадают. Доступ заканчивается в выбранный день.',
+        tempEmployee: 'Сотрудник',
+        tempEmployeeSearch: 'Поиск по имени или почте',
+        tempEmployeeEmpty: 'В списке никого нет',
+        tempPickRequired: 'Выберите сотрудника.',
         tempTeam: 'Команда',
         tempName: 'Имя',
         tempEmail: 'Эл. почта',
@@ -897,6 +901,10 @@ export type Messages = {
         tempAdd: string;
         tempTitle: string;
         tempHint: string;
+        tempEmployee: string;
+        tempEmployeeSearch: string;
+        tempEmployeeEmpty: string;
+        tempPickRequired: string;
         tempTeam: string;
         tempName: string;
         tempEmail: string;

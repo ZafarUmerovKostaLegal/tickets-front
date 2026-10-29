@@ -8,8 +8,16 @@ export type TempTeamRef = {
     name: string;
 };
 
+export type TempEmployeeOption = {
+    id: number;
+    name: string;
+    email: string;
+    position: string;
+};
+
 export type TempMemberDraft = {
     teamId: TempTeamRef['id'];
+    userId: number;
     name: string;
     email: string;
     position: string;
@@ -25,26 +33,35 @@ function todayIso(): string {
     return `${now.getFullYear()}-${month}-${day}`;
 }
 
-function isEmail(value: string): boolean {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-export function LegalHubTempMemberDialog({ teams, onClose, onCreate }: {
+export function LegalHubTempMemberDialog({ teams, employees, takenByTeam, onClose, onCreate }: {
     teams: TempTeamRef[];
+    employees: TempEmployeeOption[];
+    takenByTeam: Record<string, number[]>;
     onClose: () => void;
     onCreate: (draft: TempMemberDraft) => void;
 }) {
     const { t } = useI18n();
     const formId = useId();
     const [teamId, setTeamId] = useState(teams[0]?.id ?? '');
-    const [name, setName] = useState('');
-    const [email, setEmail] = useState('');
-    const [position, setPosition] = useState('');
+    const [query, setQuery] = useState('');
+    const [userId, setUserId] = useState<number | null>(null);
     const [accessUntil, setAccessUntil] = useState('');
     const [canLogTime, setCanLogTime] = useState(true);
     const [canComment, setCanComment] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const minDate = todayIso();
+    const taken = new Set(takenByTeam[teamId] ?? []);
+    const needle = query.trim().toLowerCase();
+    const options = employees.filter((person) => {
+        if (taken.has(person.id))
+            return false;
+        if (person.id === userId)
+            return true;
+        if (!needle)
+            return true;
+        return `${person.name} ${person.email} ${person.position}`.toLowerCase().includes(needle);
+    });
+    const picked = employees.find((person) => person.id === userId && !taken.has(person.id)) ?? null;
 
     useEffect(() => {
         const onKey = (event: KeyboardEvent) => {
@@ -58,14 +75,8 @@ export function LegalHubTempMemberDialog({ teams, onClose, onCreate }: {
     }, [onClose]);
 
     const submit = () => {
-        const trimmedName = name.trim();
-        const trimmedEmail = email.trim();
-        if (!trimmedName) {
-            setError(t('legalHub.tempNameRequired'));
-            return;
-        }
-        if (!isEmail(trimmedEmail)) {
-            setError(t('legalHub.tempEmailInvalid'));
+        if (picked == null) {
+            setError(t('legalHub.tempPickRequired'));
             return;
         }
         if (!accessUntil) {
@@ -78,9 +89,10 @@ export function LegalHubTempMemberDialog({ teams, onClose, onCreate }: {
         }
         onCreate({
             teamId,
-            name: trimmedName,
-            email: trimmedEmail,
-            position: position.trim() || t('legalHub.tempPositionDefault'),
+            userId: picked.id,
+            name: picked.name,
+            email: picked.email,
+            position: picked.position,
             accessUntil,
             canLogTime,
             canComment,
@@ -105,7 +117,7 @@ export function LegalHubTempMemberDialog({ teams, onClose, onCreate }: {
                 {teams.length > 1 ? (
                     <label className="lh-temp__field">
                         <span>{t('legalHub.tempTeam')}</span>
-                        <select value={teamId} onChange={(event) => setTeamId(event.target.value)}>
+                        <select value={teamId} onChange={(event) => { setTeamId(event.target.value); setUserId(null); }}>
                             {teams.map((team) => (
                                 <option key={team.id} value={team.id}>{team.name}</option>
                             ))}
@@ -113,43 +125,37 @@ export function LegalHubTempMemberDialog({ teams, onClose, onCreate }: {
                     </label>
                 ) : null}
                 <label className="lh-temp__field">
-                    <span>{t('legalHub.tempName')}</span>
+                    <span>{t('legalHub.tempEmployee')}</span>
                     <input
                         autoFocus
-                        value={name}
-                        onChange={(event) => setName(event.target.value)}
-                        autoComplete="name"
+                        type="search"
+                        value={query}
+                        placeholder={t('legalHub.tempEmployeeSearch')}
+                        onChange={(event) => setQuery(event.target.value)}
+                        aria-label={t('legalHub.tempEmployeeSearch')}
                     />
+                    <select
+                        value={picked ? String(picked.id) : ''}
+                        onChange={(event) => setUserId(event.target.value ? Number(event.target.value) : null)}
+                    >
+                        <option value="">{options.length === 0 ? t('legalHub.tempEmployeeEmpty') : t('legalHub.tempEmployee')}</option>
+                        {options.map((person) => (
+                            <option key={person.id} value={person.id}>
+                                {person.position ? `${person.name} — ${person.position}` : person.name}
+                            </option>
+                        ))}
+                    </select>
                 </label>
+                {picked ? <p className="lh-temp__picked">{picked.email}</p> : null}
                 <label className="lh-temp__field">
-                    <span>{t('legalHub.tempEmail')}</span>
+                    <span>{t('legalHub.tempUntil')}</span>
                     <input
-                        type="email"
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                        autoComplete="email"
-                        inputMode="email"
+                        type="date"
+                        min={minDate}
+                        value={accessUntil}
+                        onChange={(event) => setAccessUntil(event.target.value)}
                     />
                 </label>
-                <div className="lh-temp__row">
-                    <label className="lh-temp__field">
-                        <span>{t('legalHub.tempPosition')}</span>
-                        <input
-                            value={position}
-                            placeholder={t('legalHub.tempPositionDefault')}
-                            onChange={(event) => setPosition(event.target.value)}
-                        />
-                    </label>
-                    <label className="lh-temp__field">
-                        <span>{t('legalHub.tempUntil')}</span>
-                        <input
-                            type="date"
-                            min={minDate}
-                            value={accessUntil}
-                            onChange={(event) => setAccessUntil(event.target.value)}
-                        />
-                    </label>
-                </div>
                 <fieldset className="lh-temp__access">
                     <legend>{t('legalHub.tempAccess')}</legend>
                     <label className="lh-temp__check">
