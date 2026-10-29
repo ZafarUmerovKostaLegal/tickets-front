@@ -152,6 +152,7 @@ export type InvoiceCoverDocumentOverrides = Partial<Pick<
     | 'recipientAddressLines'
     | 'attentionName'
     | 'attentionTitle'
+    | 'salutation'
     | 'quotedCompanyName'
     | 'servicesMonthYear'
     | 'totalFormatted'
@@ -186,6 +187,7 @@ export function pickCoverDocumentOverrides(
         recipientAddressLines: model.recipientAddressLines,
         attentionName: model.attentionName,
         attentionTitle: model.attentionTitle,
+        salutation: model.salutation,
         quotedCompanyName: model.quotedCompanyName,
         servicesMonthYear: model.servicesMonthYear,
         totalFormatted: model.totalFormatted,
@@ -219,6 +221,8 @@ export function applyCoverDocumentOverrides(
         next.attentionName = cover.attentionName;
     if (typeof cover.attentionTitle === 'string')
         next.attentionTitle = cover.attentionTitle;
+    if (typeof cover.salutation === 'string')
+        next.salutation = cover.salutation;
     if (typeof cover.quotedCompanyName === 'string')
         next.quotedCompanyName = cover.quotedCompanyName;
     if (typeof cover.servicesMonthYear === 'string' && !isStaleServicesMonthYear(cover.servicesMonthYear, model))

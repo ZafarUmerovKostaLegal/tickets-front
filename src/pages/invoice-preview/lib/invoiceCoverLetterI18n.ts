@@ -60,6 +60,11 @@ export function getCoverLetterLabels(lang?: InvoiceCoverLanguage | null): CoverL
     return LABELS[normalizeCoverLanguage(lang)];
 }
 
+export function resolveCoverSalutation(model: Pick<InvoiceCoverLetterModel, 'salutation' | 'coverLanguage'>): string {
+    const custom = model.salutation?.trim();
+    return custom || getCoverLetterLabels(model.coverLanguage).dear;
+}
+
 export function formatCoverLetterDate(isoYmd: string, lang: InvoiceCoverLanguage): string {
     if (!isoYmd || !/^\d{4}-\d{2}-\d{2}/.test(isoYmd))
         return '—';
@@ -295,6 +300,8 @@ export function applyCoverLetterLanguage(
         next.attentionTitle = nextLabels.defaultAttentionTitle;
     if (model.attentionName === prevLabels.defaultAttentionName)
         next.attentionName = nextLabels.defaultAttentionName;
+    if (!model.salutation?.trim() || model.salutation.trim() === prevLabels.dear)
+        next.salutation = nextLabels.dear;
     if (model.recipientAddressLines[0] === prevLabels.defaultAddress) {
         next.recipientAddressLines = [nextLabels.defaultAddress, model.recipientAddressLines[1] ?? ''];
     }

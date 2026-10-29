@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildInvoiceCoverLetterModel } from './invoiceCoverLetterModel';
+import { buildInvoiceCoverLetterModel, coverFirmAddressLines, KOSTA_LEGAL_FIRM } from './invoiceCoverLetterModel';
 import {
     applyCoverLetterLanguage,
     formatCoverLetterDate,
@@ -23,6 +23,11 @@ describe('invoiceCoverLetterI18n', () => {
             coverLanguage: 'RU',
         });
         expect(model.coverLanguage).toBe('RU');
+        expect(coverFirmAddressLines('RU')).toEqual([
+            'Узбекистан, г. Ташкент, 100011,',
+            'улица Анхор буйи, 18',
+        ]);
+        expect(coverFirmAddressLines('ENG')).toEqual([KOSTA_LEGAL_FIRM.addressLine]);
         expect(model.letterDateDisplay).toContain('2026');
         expect(model.servicesMonthYear).toBe('июле 2026 года');
         expect(resolveLocalizedCoverIntroParagraph(model)).toContain('GOR INVESTMENT');
@@ -61,6 +66,8 @@ describe('invoiceCoverLetterI18n', () => {
         });
         const ru = applyCoverLetterLanguage(eng, 'RU', '2026-07-20');
         expect(ru.coverLanguage).toBe('RU');
+        expect(ru.salutation).toBe('Уважаемый(ая)');
+        expect(applyCoverLetterLanguage({ ...eng, salutation: 'Dear Sir' }, 'RU', '2026-07-20').salutation).toBe('Dear Sir');
         expect(formatCoverLetterDate('2026-07-20', 'RU')).toContain('июл');
         expect(formatCoverServicesPeriod('2026-07-20', 'ENG')).toBe('July 2026');
         expect(formatCoverServicesPeriodRange('2026-07-01', '2026-08-31', 'ENG')).toBe('July and August 2026');

@@ -38,7 +38,9 @@ import { splitServiceInitiatorName } from './splitServiceInitiatorName';
 import { getLegalInvoiceLabels, uppercaseLegalDateDisplay } from './invoiceLegalPageI18n';
 import {
     KOSTA_LEGAL_FIRM,
+    coverFirmAddressLines,
     getCoverLetterLabels,
+    resolveCoverSalutation,
     resolveCoverIntroParagraph,
     resolveCoverInvoiceParagraph,
     type InvoiceCoverLetterModel,
@@ -248,7 +250,7 @@ function drawCoverPage(
     }
 
     const contactTop = [
-        KOSTA_LEGAL_FIRM.addressLine,
+        ...coverFirmAddressLines(model.coverLanguage),
         KOSTA_LEGAL_FIRM.phone,
     ];
     const contactBottom = [
@@ -311,7 +313,7 @@ function drawCoverPage(
     y = wrapTextBlockPreservingNewlines(page, model.attentionTitle, ML, y, coverAddrW, DOC_FS, font, BODY, DOC_LH);
 
     y -= COVER_BLOCK_GAP;
-    y = wrapTextBlockPreservingNewlines(page, `${labels.dear} ${model.attentionName},`, ML, y, coverAddrW, DOC_FS, font, BODY, DOC_LH);
+    y = wrapTextBlockPreservingNewlines(page, `${resolveCoverSalutation(model)} ${model.attentionName},`, ML, y, coverAddrW, DOC_FS, font, BODY, DOC_LH);
 
     y -= COVER_SALUTE_GAP;
     const p1 = resolveCoverIntroParagraph(model);

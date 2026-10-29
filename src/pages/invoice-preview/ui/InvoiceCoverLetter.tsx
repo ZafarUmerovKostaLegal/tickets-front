@@ -14,6 +14,7 @@ import {
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import {
     KOSTA_LEGAL_FIRM,
+    coverFirmAddressLines,
     getCoverLetterLabels,
     resolveCoverIntroParagraph,
     resolveCoverInvoiceParagraph,
@@ -140,7 +141,9 @@ export function InvoiceCoverLetter({
         </div>
         <address className="tt-inv-cover__firm-contact">
           <span className="tt-inv-cover__firm-contact-group">
-            <span>{KOSTA_LEGAL_FIRM.addressLine}</span>
+            {coverFirmAddressLines(model.coverLanguage).map((line) => (
+              <span key={line}>{line}</span>
+            ))}
             <span>{KOSTA_LEGAL_FIRM.phone}</span>
           </span>
           <span className="tt-inv-cover__firm-contact-group">
@@ -213,7 +216,14 @@ export function InvoiceCoverLetter({
         </p>
 
         <p className="tt-inv-cover__salutation">
-          {labels.dear}{' '}
+          <CoverField
+            className="tt-inv-cover__field--dear"
+            editable={editable}
+            value={model.salutation}
+            ariaLabel="Обращение"
+            onChange={(salutation) => patch?.({ salutation })}
+          />
+          {' '}
           <CoverField
             editable={editable}
             value={model.attentionName}

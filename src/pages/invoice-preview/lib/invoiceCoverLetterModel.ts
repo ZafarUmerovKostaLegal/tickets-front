@@ -50,6 +50,8 @@ export type InvoiceCoverLetterModel = {
     recipientAddressLines: [string, string];
     attentionName: string;
     attentionTitle: string;
+    /** Greeting before the name, e.g. «Уважаемый(ая)» or «Dear». */
+    salutation: string;
     quotedCompanyName: string;
     servicesMonthYear: string;
     totalFormatted: string;
@@ -72,6 +74,7 @@ export {
     formatCoverServicesPeriod,
     getCoverLetterLabels,
     normalizeCoverLanguage,
+    resolveCoverSalutation,
     resolveLocalizedCoverIntroParagraph as resolveCoverIntroParagraph,
     resolveLocalizedCoverInvoiceParagraph as resolveCoverInvoiceParagraph,
 } from './invoiceCoverLetterI18n';
@@ -84,6 +87,16 @@ import {
 } from './invoiceCoverLetterI18n';
 import { findCoverSignatoryPartnerByName } from './invoiceCoverSignature';
 import { formatTimeReportAmount } from './invoiceTimeReportModel';
+
+const FIRM_ADDRESS_RU = [
+    'Узбекистан, г. Ташкент, 100011,',
+    'улица Анхор буйи, 18',
+] as const;
+
+/** Letterhead address. Russian uses the printed firm form; English stays one line. */
+export function coverFirmAddressLines(lang?: InvoiceCoverLanguage | null): readonly string[] {
+    return normalizeCoverLanguage(lang) === 'RU' ? FIRM_ADDRESS_RU : [KOSTA_LEGAL_FIRM.addressLine];
+}
 
 export function formatCoverLetterTotal(amount: number | null, currency: string): string {
     if (amount == null || !Number.isFinite(amount))
@@ -128,6 +141,7 @@ export function buildInvoiceCoverLetterModel(input: InvoiceCoverLetterInput): In
         ],
         attentionName: contact || labels.defaultAttentionName,
         attentionTitle: labels.defaultAttentionTitle,
+        salutation: labels.dear,
         quotedCompanyName: company,
         servicesMonthYear: formatCoverServicesPeriodRange(periodFromIso, periodIso, lang),
         totalFormatted: formatCoverLetterTotal(input.totalAmount, input.currency),

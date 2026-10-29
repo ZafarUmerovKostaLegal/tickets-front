@@ -19,7 +19,9 @@ import {
 } from 'docx';
 import {
     KOSTA_LEGAL_FIRM,
+    coverFirmAddressLines,
     getCoverLetterLabels,
+    resolveCoverSalutation,
     resolveCoverIntroParagraph,
     resolveCoverInvoiceParagraph,
     type InvoiceCoverLetterModel,
@@ -131,7 +133,9 @@ function coverChildren(
                         verticalAlign: VerticalAlignTable.TOP,
                         width: { size: 52, type: WidthType.PERCENTAGE },
                         children: [
-                            contactParagraph(KOSTA_LEGAL_FIRM.addressLine),
+                            ...coverFirmAddressLines(model.coverLanguage).map((line, index, lines) => (
+                                contactParagraph(line, index === lines.length - 1 ? 20 : 0)
+                            )),
                             contactParagraph(KOSTA_LEGAL_FIRM.phone, 100),
                             contactParagraph(KOSTA_LEGAL_FIRM.email),
                             contactParagraph(KOSTA_LEGAL_FIRM.web, 0),
@@ -165,7 +169,7 @@ function coverChildren(
     body.push(
         new Paragraph({ spacing: { before: 200 }, children: coverTextRuns(`${labels.attention}: ${model.attentionName}`, { bold: true }) }),
         new Paragraph({ children: coverTextRuns(model.attentionTitle) }),
-        new Paragraph({ spacing: { before: 200 }, children: coverTextRuns(`${labels.dear} ${model.attentionName},`) }),
+        new Paragraph({ spacing: { before: 200 }, children: coverTextRuns(`${resolveCoverSalutation(model)} ${model.attentionName},`) }),
         new Paragraph({
             spacing: { before: 160 },
             children: coverTextRuns(resolveCoverIntroParagraph(model)),
