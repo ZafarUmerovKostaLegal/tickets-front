@@ -164,6 +164,25 @@ const DONUT_R = 40;
 const DONUT_C = 2 * Math.PI * DONUT_R;
 const DONUT_GAP = 2.4;
 
+function sliceShares(slices: UtilSlice[]): number[] {
+    const total = slices.reduce((acc, slice) => acc + slice.count, 0);
+    if (total <= 0)
+        return slices.map(() => 0);
+    const raw = slices.map((slice) => (slice.count / total) * 100);
+    const shares = raw.map((value) => Math.floor(value));
+    let left = 100 - shares.reduce((acc, value) => acc + value, 0);
+    const order = raw
+        .map((value, index) => ({ index, frac: value - (shares[index] ?? 0) }))
+        .sort((a, b) => b.frac - a.frac);
+    for (const item of order) {
+        if (left <= 0)
+            break;
+        shares[item.index] = (shares[item.index] ?? 0) + 1;
+        left -= 1;
+    }
+    return shares;
+}
+
 function donutArcs(slices: UtilSlice[]) {
     const drawn = slices.filter((slice) => slice.count > 0);
     const total = drawn.reduce((acc, slice) => acc + slice.count, 0);
@@ -185,6 +204,7 @@ function UtilChart({ slices, caption }: { slices: UtilSlice[]; caption: string }
     const [hover, setHover] = useState<UtilKey | null>(null);
     const active = hover ?? pinned;
     const total = slices.reduce((acc, slice) => acc + slice.count, 0);
+    const shares = sliceShares(slices);
     const activeSlice = slices.find((slice) => slice.key === active) ?? null;
     const share = activeSlice != null && total > 0 ? Math.round((activeSlice.count / total) * 100) : null;
     const toggle = (key: UtilKey) => setPinned((current) => (current === key ? null : key));
@@ -230,17 +250,18 @@ function UtilChart({ slices, caption }: { slices: UtilSlice[]; caption: string }
                 </div>
             </div>
             <ul className="lh-util__legend">
-                {slices.map((slice) => {
+                {slices.map((slice, index) => {
                     const row = UTIL_ROWS.find((item) => item.key === slice.key);
                     const label = t(UTIL_LABEL[slice.key]);
                     const pressed = pinned === slice.key;
+                    const share = shares[index] ?? 0;
                     return (
                         <li key={slice.key}>
                             <button
                                 type="button"
                                 className={active === slice.key ? 'is-active' : ''}
                                 aria-pressed={pressed}
-                                title={label}
+                                title={`${label}: ${share}%`}
                                 onMouseEnter={() => setHover(slice.key)}
                                 onMouseLeave={() => setHover(null)}
                                 onFocus={() => setHover(slice.key)}
@@ -248,6 +269,7 @@ function UtilChart({ slices, caption }: { slices: UtilSlice[]; caption: string }
                                 onClick={() => toggle(slice.key)}
                             >
                                 <span className={`lh-member__dot ${row?.dot ?? ''}`} aria-hidden />
+                                <span className={`lh-util__pct lh-util__pct--${slice.key}`} aria-hidden>{share}%</span>
                                 <span className="lh-util__label">{label}</span>
                                 <strong className="lh-util__value">{slice.count}</strong>
                             </button>
