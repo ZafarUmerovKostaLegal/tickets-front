@@ -18,13 +18,21 @@ export type TimeReportLabels = {
     description: string;
     initiatorName: string;
     hours: string;
+    /** My Mehnat table: count is per recording, not hours. */
+    perRecording: string;
     rate: string;
     amount: (currency: string) => string;
+    /** Fixed-fee table amount column, without a currency suffix. */
+    fixedFeeAmount: string;
     total: string;
     summaryTitle: string;
     expensesTitle: string;
     mehnatTitle: string;
     fixedFeeTitle: string;
+    /** Fixed-fee table: narrative of what the fee covers. */
+    fixedFeeScope: string;
+    /** Fixed-fee table: the fee-type column. */
+    fixedFeeCol: string;
     name: string;
     titleCol: string;
     hourlyRate: string;
@@ -145,13 +153,17 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
         description: 'Description',
         initiatorName: 'Name',
         hours: 'Hours',
+        perRecording: 'Per recording',
         rate: 'Rate',
         amount: (cur) => (cur === 'EUR' ? 'Amount (EUR)' : `Amount (${cur})`),
+        fixedFeeAmount: 'Amount',
         total: 'Total',
         summaryTitle: 'Summary of services',
         expensesTitle: 'Expenses',
         mehnatTitle: 'My Mehnat',
         fixedFeeTitle: 'Fixed fee',
+        fixedFeeScope: 'Scope description',
+        fixedFeeCol: 'fixed fee',
         name: 'Name',
         titleCol: 'Title',
         hourlyRate: 'Hourly rate',
@@ -167,13 +179,17 @@ const LABELS: Record<InvoiceCoverLanguage, TimeReportLabels> = {
         description: 'Описание',
         initiatorName: 'Имя',
         hours: 'Часы',
+        perRecording: 'За запись',
         rate: 'Ставка',
         amount: (cur) => `Сумма (${cur})`,
+        fixedFeeAmount: 'Сумма',
         total: 'Итого',
         summaryTitle: 'Сводка по услугам',
         expensesTitle: 'Расходы',
         mehnatTitle: 'My Mehnat',
         fixedFeeTitle: 'Фиксированная сумма',
+        fixedFeeScope: 'Описание объёма',
+        fixedFeeCol: 'Фиксированная сумма',
         name: 'ФИО',
         titleCol: 'Должность',
         hourlyRate: 'Ставка',

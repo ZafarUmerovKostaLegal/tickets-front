@@ -401,6 +401,21 @@ function blankReportCell(raw: string): boolean {
     return !text || text === '—' || text === '-' || text === '–';
 }
 
+const GENERIC_FIXED_FEE_DESCRIPTION = /^(fixed fee|fixed amount|фиксированная сумма)$/i;
+
+/** Text for the fixed-fee table column «Scope description». */
+export function fixedFeeScopeText(row: Pick<InvoiceTimeReportDetailRow, 'task' | 'description'>): string {
+    const desc = row.description.trim();
+    const task = row.task.trim();
+    const taskOk = Boolean(task) && task !== '—' && task !== '-' && task !== '–';
+    const generic = !desc || desc === '—' || desc === '-' || desc === '–' || GENERIC_FIXED_FEE_DESCRIPTION.test(desc);
+    if (!generic)
+        return row.description;
+    if (taskOk)
+        return row.task;
+    return row.description;
+}
+
 /** The hours-plus-fee line: no date, person, hours or rate, task Other. */
 export function isFixedFeeTimeReportRow(row: InvoiceTimeReportDetailRow): boolean {
     const hours = row.hours.trim();

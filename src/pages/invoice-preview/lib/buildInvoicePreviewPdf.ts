@@ -13,7 +13,7 @@ import {
     packUppercaseRibbonDate,
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
-import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { ensureMehnatSeparatedPack, fixedFeeScopeText, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, trimTrailingEmptySummarySlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { wrapPdfCellLines } from './invoicePdfCellWrap';
 import { overlayExpenseAmountsFromRegistry, resolveInvoiceTimeReportPack } from './resolveInvoiceTimeReportPack';
 import {
@@ -613,18 +613,19 @@ function paginateDetailRowsForPdf(
             true,
         );
     const fixedFeeRows = trimTrailingEmptyDetailSlots(pack.fixedFeeSlots ?? []);
+    const fixedFeeHeaders = [labels.fixedFeeScope, labels.fixedFeeCol, labels.fixedFeeAmount];
     const fixedFeeReserve = fixedFeeRows.length === 0
         ? 0
         : TR_SECTION_GAP + TR_SUMMARY_TITLE_GAP + estimateGridTableHeight(
             tableW,
-            detailWeights,
-            detailHeaders,
-            fixedFeeRows.map((r) => detailPdfRowCells(r, showInitiatorName)),
-            detailWrap,
+            TIME_REPORT_PDF_FIXED_FEE_WEIGHTS,
+            fixedFeeHeaders,
+            fixedFeeRows.map((r) => [fixedFeeScopeText(r), labels.fixedFeeCol, r.amount]),
+            new Set([0]),
             font,
             fontBold,
             true,
-            detailFixed,
+            new Set([2]),
         );
     // Mehnat/expenses must not push Summary of services onto the next sheet
     // when the detail table still has a large empty region under it.
@@ -1032,6 +1033,9 @@ function drawTimeReportGridTable(
 /** Wider Date so `25 Mar 2026` / `25 мар 2026` fit at DOC_FS (no shrink). */
 const TIME_REPORT_PDF_DETAIL_WEIGHTS = [15, 9, 13, 18, 8, 18, 19] as const;
 const TIME_REPORT_PDF_DETAIL_NAME_WEIGHTS = [13, 8, 11, 16, 12, 7, 16, 17] as const;
+const TIME_REPORT_PDF_MEHNAT_WEIGHTS = [12, 8, 11, 15, 20, 16, 18] as const;
+const TIME_REPORT_PDF_MEHNAT_NAME_WEIGHTS = [11, 7, 9, 13, 10, 18, 15, 17] as const;
+const TIME_REPORT_PDF_FIXED_FEE_WEIGHTS = [46, 24, 30] as const;
 const TIME_REPORT_PDF_EXPENSE_WEIGHTS = [18, 52, 30] as const;
 const TIME_REPORT_PDF_SUMMARY_WEIGHTS = [9, 20, 18, 12, 18, 23] as const;
 /** Task, Description, Rate, Amount — wrap at spaces; long tokens may split mid-word to fit the column. */
@@ -1245,12 +1249,14 @@ function drawSingleTimeReportPdfPage(
         });
         yMid -= TR_SUMMARY_TITLE_GAP;
         const mehnatBody = mehnatRows.map((r) => detailPdfRowCells(r, showInitiatorName));
+        const mehnatHoursIndex = showInitiatorName ? 5 : 4;
+        const mehnatHeaders = detailHeaders.map((header, index) => (index === mehnatHoursIndex ? labels.perRecording : header));
         yMid = drawTimeReportGridTable(page, {
             tableLeft: ML,
             tableW,
             yTopPdf: yMid,
-            colWeights: detailWeights,
-            headers: detailHeaders,
+            colWeights: showInitiatorName ? TIME_REPORT_PDF_MEHNAT_NAME_WEIGHTS : TIME_REPORT_PDF_MEHNAT_WEIGHTS,
+            headers: mehnatHeaders,
             bodyRows: Math.max(mehnatBody.length, 1),
             footerKind: 'detail',
             summaryCurrency: null,
@@ -1282,27 +1288,28 @@ function drawSingleTimeReportPdfPage(
             color: TR_RED,
         });
         yMid -= TR_SUMMARY_TITLE_GAP;
-        const fixedFeeBody = fixedFeeRows.map((r) => detailPdfRowCells(r, showInitiatorName));
+        const fixedFeeHeaders = [labels.fixedFeeScope, labels.fixedFeeCol, labels.fixedFeeAmount];
+        const fixedFeeBody = fixedFeeRows.map((r) => [fixedFeeScopeText(r), labels.fixedFeeCol, r.amount]);
         yMid = drawTimeReportGridTable(page, {
             tableLeft: ML,
             tableW,
             yTopPdf: yMid,
-            colWeights: detailWeights,
-            headers: detailHeaders,
+            colWeights: TIME_REPORT_PDF_FIXED_FEE_WEIGHTS,
+            headers: fixedFeeHeaders,
             bodyRows: Math.max(fixedFeeBody.length, 1),
             footerKind: 'detail',
             summaryCurrency: null,
             font,
             fontBold,
-            bodyTexts: fixedFeeBody.length ? fixedFeeBody : emptyDetail,
-            rightAlignedBodyCols: detailRight,
-            wrapBodyCols: detailWrap,
-            fixedFsBodyCols: detailFixed,
+            bodyTexts: fixedFeeBody.length ? fixedFeeBody : [['', '', '']],
+            rightAlignedBodyCols: new Set([2]),
+            wrapBodyCols: new Set([0]),
+            fixedFsBodyCols: new Set([2]),
             showInnerTotal: true,
             totalLabel: labels.total,
             footerTotals: {
                 detail: {
-                    hours: '—',
+                    hours: '',
                     amount: pack.fixedFeeTotalAmountDisplay ?? '',
                 },
             },

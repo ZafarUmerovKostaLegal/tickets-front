@@ -254,6 +254,13 @@ textarea.tt-inv-tr__title-input:focus {
   white-space: nowrap;
 }
 
+.tt-inv-tr__thead th.tt-inv-tr__th--per-recording {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  line-height: 1.15;
+}
+
 .tt-inv-tr__thead th.tt-inv-tr__th--money {
   overflow: visible;
   text-overflow: clip;

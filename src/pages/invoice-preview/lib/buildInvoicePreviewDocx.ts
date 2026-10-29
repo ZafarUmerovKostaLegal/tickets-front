@@ -34,7 +34,7 @@ import {
     packZeroCommaAmount,
 } from './invoicePreviewPackShared';
 import { getInvoice } from '@entities/time-tracking';
-import { ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
+import { ensureMehnatSeparatedPack, fixedFeeScopeText, mergeTimeReportPackPreferLiveExpenses, timeReportPackHasContent, trimTrailingEmptyDetailSlots, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack } from './invoiceTimeReportModel';
 import { splitDetailRowsForPagedTimeReport } from './invoiceTimeReportChunking';
 import { rasterizeInvoiceLogoSvg } from './invoiceCoverLogoRaster';
 import { loadCoverSignaturePng } from './invoiceCoverSignature';
@@ -413,8 +413,38 @@ function timeReportDocxSectionChildren(
     if (opts.isLastChunk) {
         const mehnatRows = trimTrailingEmptyDetailSlots(pack.mehnatSlots ?? []);
         if (mehnatRows.length > 0) {
+            const MW = pctWidths(showName ? [11, 7, 9, 13, 10, 18, 15, 17] : [12, 8, 11, 15, 20, 16, 18]);
+            const mHoursI = showName ? 5 : 4;
+            const mRateI = showName ? 6 : 5;
+            const mAmountI = showName ? 7 : 6;
+            const mehnatCells = (r: InvoiceTimeReportDetailRow) => {
+                const description = r.description;
+                const split = showName ? splitServiceInitiatorName(description) : null;
+                return [
+                    trBodyTextCell(r.date, MW[0]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.initials, MW[1]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.task, MW[2]!, AlignmentType.LEFT),
+                    trBodyTextCell(split ? split.note : description, MW[3]!, AlignmentType.LEFT),
+                    ...(showName ? [trBodyTextCell(split?.name ?? '', MW[4]!, AlignmentType.LEFT)] : []),
+                    trBodyTextCell(r.hours, MW[mHoursI]!, AlignmentType.RIGHT),
+                    trBodyTextCell(r.hourlyRate, MW[mRateI]!, AlignmentType.RIGHT),
+                    trBodyTextCell(r.amount, MW[mAmountI]!, AlignmentType.RIGHT),
+                ];
+            };
+            const mehnatHeader = new TableRow({
+                children: [
+                    trHeadCell(labels.date, MW[0] ?? 13),
+                    trHeadCell(labels.initials, MW[1] ?? 8),
+                    trHeadCell(labels.task, MW[2] ?? 12),
+                    trHeadCell(labels.description, MW[3] ?? 16),
+                    ...(showName ? [trHeadCell(labels.initiatorName, MW[4] ?? 10)] : []),
+                    trHeadCell(labels.perRecording, MW[mHoursI] ?? 18),
+                    trHeadCell(labels.rate, MW[mRateI] ?? 15),
+                    trHeadCell(amountHdr, MW[mAmountI] ?? 18),
+                ],
+            });
             const mehnatBodyRows: TableRow[] = mehnatRows.map((r) => new TableRow({
-                children: detailCells(r),
+                children: mehnatCells(r),
             }));
             mehnatBodyRows.push(new TableRow({
                 children: [
@@ -425,9 +455,9 @@ function timeReportDocxSectionChildren(
                             children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
                         })],
                     }),
-                    trFootValueCell(pack.mehnatTotalHoursDisplay, DW[hoursI]!, AlignmentType.RIGHT),
-                    trFootValueCell('—', DW[rateI]!, AlignmentType.RIGHT),
-                    trFootValueCell(pack.mehnatTotalAmountDisplay, DW[amountI]!, AlignmentType.RIGHT),
+                    trFootValueCell(pack.mehnatTotalHoursDisplay, MW[mHoursI]!, AlignmentType.RIGHT),
+                    trFootValueCell('—', MW[mRateI]!, AlignmentType.RIGHT),
+                    trFootValueCell(pack.mehnatTotalAmountDisplay, MW[mAmountI]!, AlignmentType.RIGHT),
                 ],
             }));
             out.push(
@@ -437,28 +467,38 @@ function timeReportDocxSectionChildren(
                 }),
                 new Table({
                     ...tableOpts,
-                    rows: [detailHeader, ...mehnatBodyRows],
+                    rows: [mehnatHeader, ...mehnatBodyRows],
                 }),
             );
         }
 
         const fixedFeeRows = trimTrailingEmptyDetailSlots(pack.fixedFeeSlots ?? []);
         if (fixedFeeRows.length > 0) {
+            const FW = pctWidths([46, 24, 30]);
+            const fixedFeeHeader = new TableRow({
+                children: [
+                    trHeadCell(labels.fixedFeeScope, FW[0] ?? 46),
+                    trHeadCell(labels.fixedFeeCol, FW[1] ?? 24),
+                    trHeadCell(labels.fixedFeeAmount, FW[2] ?? 30),
+                ],
+            });
             const fixedFeeBodyRows: TableRow[] = fixedFeeRows.map((r) => new TableRow({
-                children: detailCells(r),
+                children: [
+                    trBodyTextCell(fixedFeeScopeText(r), FW[0]!, AlignmentType.LEFT),
+                    trBodyTextCell(labels.fixedFeeCol, FW[1]!, AlignmentType.LEFT),
+                    trBodyTextCell(r.amount, FW[2]!, AlignmentType.RIGHT),
+                ],
             }));
             fixedFeeBodyRows.push(new TableRow({
                 children: [
                     new TableCell({
                         borders: cellBorderGrid,
-                        columnSpan: totalSpan,
+                        columnSpan: 2,
                         children: [new Paragraph({
                             children: [new TextRun({ text: labels.total, bold: true, color: INV_RED, size: DOC_SIZE, font: DOC_FONT })],
                         })],
                     }),
-                    trFootValueCell('—', DW[hoursI]!, AlignmentType.RIGHT),
-                    trFootValueCell('—', DW[rateI]!, AlignmentType.RIGHT),
-                    trFootValueCell(pack.fixedFeeTotalAmountDisplay ?? '', DW[amountI]!, AlignmentType.RIGHT),
+                    trFootValueCell(pack.fixedFeeTotalAmountDisplay ?? '', FW[2]!, AlignmentType.RIGHT),
                 ],
             }));
             out.push(
@@ -468,7 +508,7 @@ function timeReportDocxSectionChildren(
                 }),
                 new Table({
                     ...tableOpts,
-                    rows: [detailHeader, ...fixedFeeBodyRows],
+                    rows: [fixedFeeHeader, ...fixedFeeBodyRows],
                 }),
             );
         }

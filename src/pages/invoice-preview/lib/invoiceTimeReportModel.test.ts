@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     emptyInvoiceTimeReportPack,
     ensureMehnatSeparatedPack,
+    fixedFeeScopeText,
     isFixedFeeTimeReportRow,
     isMyMehnatTimeReportRow,
     mergeTimeReportPackPreferLiveExpenses,
@@ -68,6 +69,16 @@ describe('ensureMehnatSeparatedPack fixed fee', () => {
         expect(twice.detailSlots).toHaveLength(1);
         expect(twice.fixedFeeSlots).toHaveLength(1);
         expect(twice.detailTotalAmountDisplay).toBe('UZS 1.00');
+    });
+});
+
+describe('fixedFeeScopeText', () => {
+    it('uses the task when the description is only the fee label', () => {
+        expect(fixedFeeScopeText({ task: 'Other', description: 'Fixed fee' })).toBe('Other');
+    });
+
+    it('uses a written description as the scope', () => {
+        expect(fixedFeeScopeText({ task: 'Other', description: 'Filing fee' })).toBe('Filing fee');
     });
 });
 
