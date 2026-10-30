@@ -43,10 +43,10 @@ function personCode(name: string, stored?: string | null): string {
     return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
 }
 
-function rosterOf(teams: TimeTrackingTeamRow[], users: TimeTrackingUserRow[], userId: number): RosterPerson[] {
+function rosterOf(teams: TimeTrackingTeamRow[], users: TimeTrackingUserRow[]): RosterPerson[] {
     const usersById = new Map(users.map((row) => [row.id, row]));
     return teams
-        .filter((team) => !team.is_archived && team.partner_auth_user_id === userId)
+        .filter((team) => !team.is_archived)
         .flatMap((team) => {
             const ids = team.member_auth_user_ids.length > 0
                 ? team.member_auth_user_ids
@@ -101,7 +101,7 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
                 ]);
                 if (cancelled)
                     return;
-                setRoster(rosterOf(teams, users, user.id));
+                setRoster(rosterOf(teams, users));
                 setReady(true);
             }
             catch (err) {

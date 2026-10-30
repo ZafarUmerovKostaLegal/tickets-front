@@ -559,8 +559,13 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
             return [];
         return teams.filter((team) => !team.is_archived && team.partner_auth_user_id === user.id);
     }, [teams, user]);
+    const visibleTeams = useMemo(() => {
+        if (teams == null)
+            return [];
+        return teams.filter((team) => !team.is_archived);
+    }, [teams]);
     const published = useMemo(() => {
-        const fromTeams = ledTeams.flatMap((team) => memberCards(team, usersById).map((member) => ({
+        const fromTeams = visibleTeams.flatMap((team) => memberCards(team, usersById).map((member) => ({
             id: member.id,
             name: member.name,
             load: mockMemberLoad(member.id, member.capacity),
@@ -571,7 +576,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
             load: emptyLoad(),
         }));
         return [...fromTeams, ...extras];
-    }, [ledTeams, usersById, tempMembers]);
+    }, [visibleTeams, usersById, tempMembers]);
     const loadById = useMemo(() => new Map(published.map((row) => [row.id, row.load])), [published]);
     const staff = useMemo<TempEmployeeOption[]>(() => users
         .filter((row) => !row.is_archived && !row.is_blocked && !isWithoutAuthRegistration(row))
@@ -596,7 +601,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
         return map;
     }, [ledTeams, tempMembers]);
 
-    const roster = useMemo(() => ledTeams.flatMap((team) => {
+    const roster = useMemo(() => visibleTeams.flatMap((team) => {
         const temps = tempMembers
             .filter((member) => member.teamId === team.id)
             .map((member): MemberCard => ({
@@ -609,7 +614,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                 accessUntil: member.accessUntil,
             }));
         return [...memberCards(team, usersById), ...temps];
-    }), [ledTeams, tempMembers, usersById]);
+    }), [visibleTeams, tempMembers, usersById]);
 
     useEffect(() => {
         if (teams == null)
@@ -625,7 +630,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
         <div className="lh-board">
             <div className="lh-board__main">
                 <TeamStatsStrip stats={teamStats(published.map((row) => row.load))} />
-                {ledTeams.length === 0 ? <p className="lh-team__note">{t('legalHub.teamEmpty')}</p> : (
+                {visibleTeams.length === 0 ? <p className="lh-team__note">{t('legalHub.teamEmpty')}</p> : (
                     <div className="lh-board__tools">
                         <div className="lh-view" role="group" aria-label={t('legalHub.viewAria')}>
                             <button
@@ -645,14 +650,16 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                                 {t('legalHub.viewDetails')}
                             </button>
                         </div>
-                        <button type="button" className="lh-temp__open" onClick={() => setTempOpen(true)}>
-                            <span aria-hidden>+</span>
-                            {t('legalHub.tempAdd')}
-                        </button>
+                        {ledTeams.length > 0 ? (
+                            <button type="button" className="lh-temp__open" onClick={() => setTempOpen(true)}>
+                                <span aria-hidden>+</span>
+                                {t('legalHub.tempAdd')}
+                            </button>
+                        ) : null}
                     </div>
                 )}
-                {view === 'details' && ledTeams.length > 0 ? <LegalHubTaskTable query={needle} /> : null}
-                {view === 'cards' ? ledTeams.map((team) => {
+                {view === 'details' && visibleTeams.length > 0 ? <LegalHubTaskTable query={needle} /> : null}
+                {view === 'cards' ? visibleTeams.map((team) => {
                     const temps = tempMembers
                         .filter((member) => member.teamId === team.id)
                         .map((member): MemberCard => ({
