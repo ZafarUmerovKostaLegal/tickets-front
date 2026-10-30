@@ -165,7 +165,7 @@ export function LegalHubReviewQueue({ query }: { query: string }) {
     const statusOptions = LANES.map((id) => ({ id, label: t(LANE_LABEL[id]) }));
 
     return (
-        <div className="lh-my lh-queue">
+        <div className="lh-queue">
             <p className="lh-queue__hint">{t('legalHub.queueHint')}</p>
             <ul className="lh-queue__stats">
                 <Stat icon="associate" value={visible.filter((item) => item.lane === 'associate').length} label={t('legalHub.taskStatusAssociate')} />
@@ -179,22 +179,22 @@ export function LegalHubReviewQueue({ query }: { query: string }) {
                     <span>{overdue[0]?.task.title}</span>
                 </div>
             ) : null}
-            <div className="lh-my__filters">
+            <div className="lh-queue__filters">
                 <Filter label={t('legalHub.taskColProject')} value={project} all={t('legalHub.queueAllProjects')} options={projectOptions} onChange={setProject} />
                 <Filter label={t('legalHub.taskColReviewer')} value={reviewer} all={t('legalHub.queueAllReviewers')} options={reviewerOptions} onChange={setReviewer} />
                 <Filter label={t('legalHub.taskColStatus')} value={status} all={t('legalHub.queueAllStatuses')} options={statusOptions} onChange={setStatus} />
             </div>
-            {visible.length === 0 ? <p className="lh-my__empty">{t('legalHub.queueEmpty')}</p> : (
-                <div className="lh-my__board">
+            {visible.length === 0 ? <p className="lh-queue__empty">{t('legalHub.queueEmpty')}</p> : (
+                <div className="lh-queue__board">
                     {LANES.filter((lane) => status === '' || status === lane).map((lane) => {
                         const cards = visible.filter((item) => item.lane === lane);
                         return (
-                            <section key={lane} className="lh-my__col">
+                            <section key={lane} className="lh-queue__col">
                                 <header>
                                     <span className={`lh-tasks__pill lh-tasks__pill--${LANE_TONE[lane]}`}>{t(LANE_LABEL[lane])}</span>
                                     <span>{cards.length}</span>
                                 </header>
-                                {cards.length === 0 ? <p>{t('legalHub.queueEmpty')}</p> : (
+                                {cards.length === 0 ? <p className="lh-queue__empty">{t('legalHub.queueEmpty')}</p> : (
                                     <ul>
                                         {cards.map((card) => (
                                             <QueueCard
@@ -313,11 +313,14 @@ function QueueCard({ item, locale, nudged, onOpen, onNudge }: {
                 <span className="lh-queue__stream">{item.task.workstream}</span>
                 <strong>{item.task.title}</strong>
                 <span className="lh-queue__when">
-                    {t('legalHub.queueSubmitted').replace('{date}', formatDay(item.submittedOn, locale))}
-                    {' · '}
-                    {item.approvedOn
-                        ? t('legalHub.queueApprovedOn').replace('{date}', formatDay(item.approvedOn, locale))
-                        : t('legalHub.queueTarget').replace('{date}', formatDay(item.targetOn, locale))}
+                    <span>
+                        {t('legalHub.queueSubmitted').replace('{date}', formatDay(item.submittedOn, locale))}
+                        {' · '}
+                        {item.approvedOn
+                            ? t('legalHub.queueApprovedOn').replace('{date}', formatDay(item.approvedOn, locale))
+                            : t('legalHub.queueTarget').replace('{date}', formatDay(item.targetOn, locale))}
+                    </span>
+                    {hint ? <em className={late || delta === 0 ? 'is-hot' : ''}>{hint}</em> : null}
                 </span>
                 {item.note ? <span className="lh-queue__note">{t('legalHub.queueNote')}</span> : null}
             </button>
@@ -325,16 +328,18 @@ function QueueCard({ item, locale, nudged, onOpen, onNudge }: {
                 {person ? <span className={`lh-tasks__avatar lh-tasks__avatar--${item.task.reviewer}`} title={person.name}>{person.code}</span> : null}
                 {person ? <span className="lh-queue__who">{person.name}</span> : null}
                 <span className={`lh-tasks__pill lh-tasks__pill--priority-${item.task.priority}`}>{t(PRIORITY_LABEL[item.task.priority])}</span>
-                {hint ? <span className={`lh-queue__due${late || delta === 0 ? ' is-hot' : ''}`}>{hint}</span> : null}
-                {item.lane === 'changes' ? (
-                    <button type="button" className="lh-queue__action" onClick={onOpen}>{t('legalHub.queueFix')}</button>
-                ) : null}
-                {late && item.lane !== 'changes' ? (
-                    <button type="button" className="lh-queue__action" disabled={nudged} onClick={onNudge}>
-                        {nudged ? t('legalHub.queueNudged') : t('legalHub.queueNudge')}
-                    </button>
-                ) : null}
             </span>
+            {item.lane === 'changes' || (late && item.lane !== 'changes') ? (
+                <span className="lh-queue__actions">
+                    {item.lane === 'changes' ? (
+                        <button type="button" className="lh-queue__action" onClick={onOpen}>{t('legalHub.queueFix')}</button>
+                    ) : (
+                        <button type="button" className="lh-queue__action" disabled={nudged} onClick={onNudge}>
+                            {nudged ? t('legalHub.queueNudged') : t('legalHub.queueNudge')}
+                        </button>
+                    )}
+                </span>
+            ) : null}
         </li>
     );
 }
