@@ -394,6 +394,11 @@ function sumDetailHours(rows: readonly InvoiceTimeReportDetailRow[]): number {
     return roundTimeReportHours2(rows.reduce((s, r) => s + hoursShownOnLine(r.hours), 0));
 }
 
+/** My Mehnat billed per hour belongs in the summary hours, not only in the amount. */
+function mehnatLineBilledHourly(row: InvoiceTimeReportDetailRow): boolean {
+    return hoursShownOnLine(row.hours) > 0 && parseTimeReportAmountDisplay(row.hourlyRate) > 0;
+}
+
 /**
  * Line hours, the person row and both totals must use the same 2-decimal hours.
  * Raw 0,083 + 0,084 is 0,17, while each line shows 0,08 and 0,08 + 0,08 = 0,16.
@@ -403,8 +408,9 @@ function alignHoursToDisplayedLines(pack: InvoiceTimeReportPack): InvoiceTimeRep
     const mehnatSlots = (pack.mehnatSlots ?? []).map(withLineHoursRounded);
     const details = trimTrailingEmptyDetailSlots(detailSlots);
     const mehnat = trimTrailingEmptyDetailSlots(mehnatSlots);
+    const hourlyMehnat = mehnat.filter(mehnatLineBilledHourly);
     const byInitials = new Map<string, number>();
-    for (const row of details) {
+    for (const row of [...details, ...hourlyMehnat]) {
         const key = row.initials.trim().toUpperCase();
         if (!key)
             continue;
@@ -426,7 +432,8 @@ function alignHoursToDisplayedLines(pack: InvoiceTimeReportPack): InvoiceTimeRep
     });
     const detailTotal = formatTimeReportHours(sumDetailHours(details));
     const mehnatTotal = mehnat.length ? formatTimeReportHours(sumDetailHours(mehnat)) : (pack.mehnatTotalHoursDisplay ?? '');
-    const grandTotal = detailTotal;
+    const grandHours = roundTimeReportHours2(sumDetailHours(details) + sumDetailHours(hourlyMehnat));
+    const grandTotal = formatTimeReportHours(grandHours);
     const slotsSame = detailSlots.every((row, i) => row === pack.detailSlots[i])
         && mehnatSlots.every((row, i) => row === (pack.mehnatSlots ?? [])[i]);
     if (
@@ -445,7 +452,7 @@ function alignHoursToDisplayedLines(pack: InvoiceTimeReportPack): InvoiceTimeRep
         summarySlots,
         detailTotalHoursDisplay: details.length ? detailTotal : pack.detailTotalHoursDisplay,
         mehnatTotalHoursDisplay: mehnatTotal,
-        summaryGrandHoursDisplay: details.length ? grandTotal : pack.summaryGrandHoursDisplay,
+        summaryGrandHoursDisplay: (details.length || hourlyMehnat.length) ? grandTotal : pack.summaryGrandHoursDisplay,
     };
 }
 

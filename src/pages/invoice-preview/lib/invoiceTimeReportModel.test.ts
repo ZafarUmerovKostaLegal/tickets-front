@@ -106,6 +106,31 @@ describe('ensureMehnatSeparatedPack', () => {
         expect(next.detailTotalAmountDisplay).toContain('525,000.00');
     });
 
+    it('adds hourly My Mehnat hours into the summary total', () => {
+        const pack = emptyInvoiceTimeReportPack('USD');
+        pack.detailSlots = [
+            row({ initials: 'ADA', task: 'Drafting', hours: '19,00', hourlyRate: 'USD 130.00', amount: 'USD 2,470.00' }),
+        ];
+        pack.detailTotalHoursDisplay = '19,00';
+        pack.detailTotalAmountDisplay = 'USD 2,470.00';
+        pack.mehnatSlots = [
+            row({ initials: 'ADA', task: 'My mehnat registration', hours: '0,58', hourlyRate: 'USD 130.00', amount: 'USD 75.40' }),
+        ];
+        pack.mehnatTotalHoursDisplay = '0,58';
+        pack.mehnatTotalAmountDisplay = 'USD 75.40';
+        pack.summarySlots = [
+            summary({ initials: 'ADA', name: 'Alina', title: 'Junior Associate', hours: '19,00', hourlyRate: 'USD 130.00', totalPrice: 'USD 2,545.40' }),
+        ];
+        pack.summaryGrandHoursDisplay = '19,00';
+        pack.summaryGrandAmountDisplay = 'USD 2,545.40';
+        const next = ensureMehnatSeparatedPack(pack);
+        expect(next.detailTotalHoursDisplay).toBe('19,00');
+        expect(next.mehnatTotalHoursDisplay).toBe('0,58');
+        expect(next.summarySlots.find((item) => item.initials === 'ADA')?.hours).toBe('19,58');
+        expect(next.summaryGrandHoursDisplay).toBe('19,58');
+        expect(next.summaryGrandAmountDisplay).toBe('USD 2,545.40');
+    });
+
     it('is idempotent after a split', () => {
         const pack = emptyInvoiceTimeReportPack('UZS');
         pack.detailSlots = [row({ task: 'My mehnat registration' })];
