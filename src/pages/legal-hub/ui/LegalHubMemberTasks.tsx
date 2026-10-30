@@ -148,29 +148,31 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
                     </button>
                 </div>
             </div>
-            {!ready && owner == null ? <p className="lh-team__note">{t('legalHub.teamLoading')}</p> : null}
-            {ready && error && owner == null ? (
-                <p className="lh-team__note">{error === 'forbidden' ? t('legalHub.teamForbidden') : t('legalHub.teamError')}</p>
-            ) : null}
-            {ready && !error && owner == null ? <p className="lh-team__note">{t('legalHub.memberMissing')}</p> : null}
-            {owner != null && stats ? (
-                <LegalHubMemberStats
-                    memberId={memberId}
-                    name={owner.name}
-                    code={owner.code}
-                    capacity={capacity}
-                    tasks={tasks}
-                />
-            ) : null}
-            {owner != null && !stats ? (
-                <LegalHubTaskTable
-                    key={memberId}
-                    query={query}
-                    tasks={tasks}
-                    owner={owner}
-                    title={t('legalHub.memberReportsTitle').replace('{name}', owner.name)}
-                />
-            ) : null}
+            <div className="lh-member-page__body">
+                {!ready && owner == null ? <p className="lh-team__note">{t('legalHub.teamLoading')}</p> : null}
+                {ready && error && owner == null ? (
+                    <p className="lh-team__note">{error === 'forbidden' ? t('legalHub.teamForbidden') : t('legalHub.teamError')}</p>
+                ) : null}
+                {ready && !error && owner == null ? <p className="lh-team__note">{t('legalHub.memberMissing')}</p> : null}
+                {owner != null && stats ? (
+                    <LegalHubMemberStats
+                        memberId={memberId}
+                        name={owner.name}
+                        code={owner.code}
+                        capacity={capacity}
+                        tasks={tasks}
+                    />
+                ) : null}
+                {owner != null && !stats ? (
+                    <LegalHubTaskTable
+                        key={memberId}
+                        query={query}
+                        tasks={tasks}
+                        owner={owner}
+                        title={t('legalHub.memberReportsTitle').replace('{name}', owner.name)}
+                    />
+                ) : null}
+            </div>
         </div>
     );
 }
