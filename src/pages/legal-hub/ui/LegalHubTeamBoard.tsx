@@ -103,6 +103,16 @@ function formatHours(value: number): string {
     return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
 }
 
+function meterColor(percent: number): string {
+    const clamped = Math.max(0, Math.min(100, percent)) / 100;
+    const low = clamped < 0.5;
+    const from = low ? [239, 68, 68] : [245, 158, 11];
+    const to = low ? [245, 158, 11] : [22, 197, 94];
+    const local = low ? clamped / 0.5 : (clamped - 0.5) / 0.5;
+    const mix = (start: number, end: number) => Math.round(start + (end - start) * local);
+    return `rgb(${mix(from[0]!, to[0]!)}, ${mix(from[1]!, to[1]!)}, ${mix(from[2]!, to[2]!)})`;
+}
+
 const STATUS_FIELD: Record<string, keyof MemberLoad['statuses']> = {
     progress: 'progress',
     wait: 'wait',
@@ -122,6 +132,7 @@ function MemberCardView({ member, load, tone, selected, onSelect }: {
     const hours = t('legalHub.memberHours')
         .replace('{used}', formatHours(load.hoursUsed))
         .replace('{cap}', formatHours(load.hoursCap));
+    const loadColor = meterColor(load.percent);
     return (
         <button
             type="button"
@@ -152,19 +163,22 @@ function MemberCardView({ member, load, tone, selected, onSelect }: {
             </span>
             <span className="lh-member__hours">
                 <span>{hours}</span>
-                <span className="lh-member__pct">{load.percent}%</span>
+                <span className="lh-member__pct" style={{ color: loadColor }}>{load.percent}%</span>
             </span>
             <span className="lh-member__meter" aria-hidden>
-                <span className="lh-member__meter-fill" style={{ width: `${load.percent}%` }} />
+                <span className="lh-member__meter-fill" style={{ width: `${Math.min(100, Math.max(0, load.percent))}%`, background: loadColor }} />
             </span>
             <span className="lh-member__statuses">
-                {STATUS_ROWS.map((row) => (
-                    <span key={row.key} className="lh-member__status">
-                        <span className={`lh-member__dot ${row.dot}`} aria-hidden />
-                        <span>{t(row.labelKey)}</span>
-                        <strong>{load.statuses[STATUS_FIELD[row.key] ?? 'progress']}</strong>
-                    </span>
-                ))}
+                {STATUS_ROWS.map((row) => {
+                    const count = load.statuses[STATUS_FIELD[row.key] ?? 'progress'];
+                    return (
+                        <span key={row.key} className={`lh-member__status${count === 0 ? ' is-zero' : ''}`}>
+                            <span className={`lh-member__dot ${row.dot}`} aria-hidden />
+                            <span className="lh-member__status-label">{t(row.labelKey)}</span>
+                            <strong>{count}</strong>
+                        </span>
+                    );
+                })}
             </span>
         </button>
     );
