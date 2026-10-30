@@ -234,15 +234,6 @@ export function LegalHubMyTasks({ query }: { query: string }) {
                 <StatButton label={t('legalHub.statusChanges')} value={changesCount} tone="changes" pressed={stat === 'changes'} onClick={() => setStat((current) => current === 'changes' ? '' : 'changes')} />
                 <StatButton label={t('legalHub.statDue')} value={dueCount} tone="due" pressed={stat === 'due'} onClick={() => setStat((current) => current === 'due' ? '' : 'due')} />
             </ul>
-            {attention.length > 0 ? (
-                <div className="lh-my__alert">
-                    <strong>{t('legalHub.myTasksAttention').replace('{count}', String(attention.length))}</strong>
-                    <span>{attention[0]?.title}</span>
-                    <button type="button" className={focus ? 'is-on' : ''} onClick={() => setFocus((value) => !value)}>
-                        {t('legalHub.myTasksFocus')}
-                    </button>
-                </div>
-            ) : null}
             <div className="lh-my__controls">
                 <div className="lh-view" role="group" aria-label={t('legalHub.viewAria')}>
                     <button type="button" className={mode === 'project' ? 'is-active' : ''} aria-pressed={mode === 'project'} onClick={() => setMode('project')}>
@@ -279,6 +270,15 @@ export function LegalHubMyTasks({ query }: { query: string }) {
                         </button>
                     ) : null}
                 </div>
+                {attention.length > 0 ? (
+                    <div className="lh-my__alert">
+                        <strong>{t('legalHub.myTasksAttention').replace('{count}', String(attention.length))}</strong>
+                        <span title={attention[0]?.title}>{attention[0]?.title}</span>
+                        <button type="button" className={focus ? 'is-on' : ''} onClick={() => setFocus((value) => !value)}>
+                            {t('legalHub.myTasksFocus')}
+                        </button>
+                    </div>
+                ) : null}
                 {mode === 'project' ? (
                     <div className="lh-my__fold">
                         <button type="button" onClick={() => setCollapsed([])}>{t('legalHub.myTasksExpand')}</button>
