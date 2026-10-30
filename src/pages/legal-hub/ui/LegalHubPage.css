@@ -3312,8 +3312,26 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   animation: lh-rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-.lh-my__card.is-locked {
-  cursor: default;
+.lh-my__card.is-late {
+  border-color: color-mix(in srgb, #dc2626 42%, var(--app-border));
+  background: color-mix(in srgb, #dc2626 7%, var(--app-surface));
+  box-shadow: inset 3px 0 0 #dc2626;
+}
+
+.lh-my__late {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #dc2626 14%, var(--app-surface));
+  color: #dc2626;
+  font-size: 0.68rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.lh-my__table tr.is-late td:first-child {
+  box-shadow: inset 3px 0 0 #dc2626;
 }
 
 .lh-my__card strong {

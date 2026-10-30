@@ -90,6 +90,12 @@ function dayDelta(iso: string): number {
     return Math.round((target.getTime() - start.getTime()) / 86400000);
 }
 
+function isOverdue(task: MineTask): boolean {
+    if (task.done)
+        return false;
+    return [task.clientOn, task.internalOn, task.reviewOn, task.followUpOn].some((iso) => iso != null && iso !== '' && dayDelta(iso) < 0);
+}
+
 function columnOf(status: TaskStatusId): BoardColumn {
     if (status === 'changes')
         return 'progress';
@@ -444,7 +450,7 @@ function ProjectRow({ task, onOpen }: { task: MineTask; onOpen: () => void }) {
             : t('legalHub.myTasksFollowOn').replace('{date}', formatDay(follow, locale));
     return (
         <tr
-            className={task.done ? 'is-done' : ''}
+            className={`${task.done ? 'is-done' : ''}${isOverdue(task) ? ' is-late' : ''}`}
             tabIndex={0}
             onClick={onOpen}
             onKeyDown={(event) => {
@@ -456,6 +462,7 @@ function ProjectRow({ task, onOpen }: { task: MineTask; onOpen: () => void }) {
                 <span className="lh-my__stream">
                     {task.workstream}
                     {task.important ? <span className="lh-my__important">{t('legalHub.myTasksImportant')}</span> : null}
+                    {isOverdue(task) ? <span className="lh-my__late">{t('legalHub.myTasksLate')}</span> : null}
                 </span>
                 <span className="lh-tasks__title">{task.title}</span>
             </td>
@@ -509,10 +516,11 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
     const { t } = useI18n();
     const dragged = useRef(false);
     const person = PERSON_LABEL[task.owner];
-    const late = dayDelta(task.clientOn) < 0;
+    const late = isOverdue(task);
+    const clientLate = dayDelta(task.clientOn) < 0;
     return (
         <li
-            className={`lh-my__card${draggable ? '' : ' is-locked'}`}
+            className={`lh-my__card${draggable ? '' : ' is-locked'}${late ? ' is-late' : ''}`}
             draggable={draggable}
             onDragStart={() => {
                 dragged.current = true;
@@ -536,8 +544,9 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
                 <span className={`lh-tasks__pill lh-tasks__pill--priority-${task.priority}`}>
                     {t(PRIORITY_LABEL[task.priority])}
                 </span>
+                {late ? <span className="lh-my__late">{t('legalHub.myTasksLate')}</span> : null}
                 <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={person.name}>{person.code}</span>
-                <span className={late ? 'is-late' : ''}>{task.clientOn.slice(8)}.{task.clientOn.slice(5, 7)}</span>
+                <span className={clientLate ? 'is-late' : ''}>{task.clientOn.slice(8)}.{task.clientOn.slice(5, 7)}</span>
             </span>
         </li>
     );

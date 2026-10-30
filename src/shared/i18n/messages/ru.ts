@@ -249,6 +249,7 @@ export const ruMessages: Messages = {
         myTasksFollowDue: 'Пора напомнить',
         myTasksFollowOn: 'Напоминание {date}',
         myTasksImportant: 'Важно',
+        myTasksLate: 'Просрочено',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -1162,6 +1163,7 @@ export type Messages = {
         myTasksFollowDue: string;
         myTasksFollowOn: string;
         myTasksImportant: string;
+        myTasksLate: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;

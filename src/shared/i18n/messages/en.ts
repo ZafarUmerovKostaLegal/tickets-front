@@ -249,6 +249,7 @@ export const enMessages = {
         myTasksFollowDue: 'Follow-up due',
         myTasksFollowOn: 'Follow up {date}',
         myTasksImportant: 'Important',
+        myTasksLate: 'Overdue',
     },
     kostaLegalAi: {
         heroTitle: 'Where shall we start?',
