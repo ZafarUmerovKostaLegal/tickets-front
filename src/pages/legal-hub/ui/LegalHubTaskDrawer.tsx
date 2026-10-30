@@ -153,21 +153,24 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
     const [comments, setComments] = useState<TaskComment[]>(seed.comments);
     const [commentDraft, setCommentDraft] = useState('');
     const [important, setImportant] = useState(seed.important || task.important === true);
-    const [stage, setStage] = useState(stageIndex(task.status));
+    const [approved, setApproved] = useState(false);
     const ownerPerson = owner ?? PERSON_LABEL[task.owner];
     const ownerName = ownerPerson.name;
     const ownerTone = owner ? 'member' : task.owner;
     const reviewerPerson = task.reviewer ? PERSON_LABEL[task.reviewer] : null;
     const reviewHint = reviewOn ? deadlineHint(reviewOn, t) : null;
-    const applyStage = (index: number) => {
-        const next = Math.max(0, Math.min(REVIEW_STAGES.length - 1, index));
-        setStage(next);
-        if (next === 1)
-            setStatus('associate');
-        else if (next === 2)
-            setStatus('partner');
-        else if (next === 0)
-            setStatus(task.status === 'todo' || task.status === 'wait' ? task.status : 'progress');
+    const stage = approved ? REVIEW_STAGES.length - 1 : stageIndex(status);
+    const notifyReviewer = () => {
+        if (status === 'partner') {
+            setApproved(true);
+            return;
+        }
+        setApproved(false);
+        setStatus(status === 'associate' || status === 'changes' ? 'partner' : 'associate');
+    };
+    const withdraw = () => {
+        setApproved(false);
+        setStatus(task.status === 'todo' || task.status === 'wait' ? task.status : 'progress');
     };
     const done = checks.filter((item) => item.done).length;
     const progress = checks.length === 0 ? 0 : Math.round((done / checks.length) * 100);
@@ -371,10 +374,10 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                                 <ol className="lh-drawer__steps" style={{ ['--lh-progress' as string]: String(stage / (REVIEW_STAGES.length - 1)) }}>
                                     {REVIEW_STAGES.map((key, index) => (
                                         <li key={key} className={index === stage ? 'is-on' : index < stage ? 'is-done' : ''}>
-                                            <button type="button" aria-pressed={index === stage} onClick={() => applyStage(index)}>
+                                            <span className="lh-drawer__step">
                                                 <span className="lh-drawer__dot" aria-hidden />
                                                 <span>{t(key)}</span>
-                                            </button>
+                                            </span>
                                         </li>
                                     ))}
                                 </ol>
@@ -626,12 +629,12 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                     ) : null}
                 </div>
                 <footer className="lh-drawer__foot">
-                    <button type="button" className="lh-drawer__send" onClick={() => applyStage(Math.min(stage + 1, REVIEW_STAGES.length - 1))}>
+                    <button type="button" className="lh-drawer__send" onClick={notifyReviewer}>
                         <IconBell />
                         {t('legalHub.taskNotifyReviewer')}
                     </button>
                     <div className="lh-drawer__foot-row">
-                        <button type="button" onClick={() => applyStage(0)}>{t('legalHub.taskWithdraw')}</button>
+                        <button type="button" onClick={withdraw}>{t('legalHub.taskWithdraw')}</button>
                         <button type="button" onClick={() => setTab('comments')}>{t('legalHub.taskAddComment')}</button>
                     </div>
                     <p className="lh-drawer__note">
@@ -701,7 +704,7 @@ function DateField({ id, label, value, onChange, hint }: {
     return (
         <div className="lh-drawer__field">
             <span id={id}>{label}</span>
-            <div className="lh-drawer__date-row">
+            <div className={`lh-drawer__date-row${hint ? ' is-stacked' : ''}`}>
                 <DatePicker
                     portal
                     portalZIndex={6000}

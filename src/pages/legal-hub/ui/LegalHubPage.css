@@ -2212,9 +2212,14 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   min-width: 0;
 }
 
-.lh-drawer__date-row .lh-drawer__calendar {
-  flex: 1;
-  min-width: 0;
+.lh-drawer__date-row.is-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.28rem;
+}
+
+.lh-drawer__date-row em {
+  font-style: normal;
 }
 
 .lh-drawer__stage {
@@ -2260,7 +2265,7 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   background: var(--app-accent);
 }
 
-.lh-drawer__steps button {
+.lh-drawer__step {
   position: relative;
   z-index: 1;
   display: flex;
@@ -2268,16 +2273,11 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   align-items: center;
   gap: 0.42rem;
   width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
   color: var(--app-muted);
-  font: inherit;
   font-size: 0.68rem;
   font-weight: 650;
   line-height: 1.25;
   text-align: center;
-  cursor: pointer;
 }
 
 .lh-drawer__dot {
@@ -2298,12 +2298,12 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--app-accent) 22%, var(--app-surface));
 }
 
-.lh-drawer__steps li.is-done button,
-.lh-drawer__steps li.is-on button {
+.lh-drawer__steps li.is-done .lh-drawer__step,
+.lh-drawer__steps li.is-on .lh-drawer__step {
   color: var(--app-text);
 }
 
-.lh-drawer__steps li.is-on button {
+.lh-drawer__steps li.is-on .lh-drawer__step {
   color: var(--app-accent);
   font-weight: 750;
 }
