@@ -134,6 +134,7 @@ export function LegalHubMyTasks({ query }: { query: string }) {
     const [openId, setOpenId] = useState<string | null>(null);
     const [extraColumns, setExtraColumns] = useState<ExtraColumn[]>([]);
     const [columnDraft, setColumnDraft] = useState<string | null>(null);
+    const [folded, setFolded] = useState<string[]>([]);
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
@@ -210,7 +211,11 @@ export function LegalHubMyTasks({ query }: { query: string }) {
     };
     const removeColumn = (id: string) => {
         setExtraColumns((current) => current.filter((column) => column.id !== id));
+        setFolded((current) => current.filter((item) => item !== id));
         setTasks((current) => current.map((task) => task.lane === id ? { ...task, lane: undefined } : task));
+    };
+    const toggleFold = (id: string) => {
+        setFolded((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
     };
 
     return (
@@ -294,6 +299,8 @@ export function LegalHubMyTasks({ query }: { query: string }) {
                             cards={visible.filter((task) => laneOf(task) === column)}
                             droppable={DROPPABLE.includes(column)}
                             dragging={dragging}
+                            collapsed={folded.includes(column)}
+                            onToggle={() => toggleFold(column)}
                             onMove={(id) => moveTask(id, column)}
                             onDragStart={setDragging}
                             onDragEnd={() => setDragging(null)}
@@ -308,6 +315,8 @@ export function LegalHubMyTasks({ query }: { query: string }) {
                             cards={visible.filter((task) => laneOf(task) === column.id)}
                             droppable
                             dragging={dragging}
+                            collapsed={folded.includes(column.id)}
+                            onToggle={() => toggleFold(column.id)}
                             onMove={(id) => moveTask(id, column.id)}
                             onDragStart={setDragging}
                             onDragEnd={() => setDragging(null)}
@@ -381,12 +390,14 @@ export function LegalHubMyTasks({ query }: { query: string }) {
     );
 }
 
-function BoardColumnView({ title, tone, cards, droppable, dragging, onMove, onDragStart, onDragEnd, onOpen, onRemove, removeLabel }: {
+function BoardColumnView({ title, tone, cards, droppable, dragging, collapsed, onToggle, onMove, onDragStart, onDragEnd, onOpen, onRemove, removeLabel }: {
     title: string;
     tone: string;
     cards: MineTask[];
     droppable: boolean;
     dragging: string | null;
+    collapsed: boolean;
+    onToggle: () => void;
     onMove: (id: string) => void;
     onDragStart: (id: string) => void;
     onDragEnd: () => void;
@@ -395,9 +406,10 @@ function BoardColumnView({ title, tone, cards, droppable, dragging, onMove, onDr
     removeLabel?: string;
 }) {
     const { t } = useI18n();
+    const foldLabel = t(collapsed ? 'legalHub.myTasksColumnExpand' : 'legalHub.myTasksColumnCollapse');
     return (
         <section
-            className={`lh-my__col${dragging && droppable ? ' is-target' : ''}`}
+            className={`lh-my__col${collapsed ? ' is-collapsed' : ''}${dragging && droppable ? ' is-target' : ''}`}
             onDragOver={(event) => {
                 if (!droppable || !dragging)
                     return;
@@ -414,8 +426,11 @@ function BoardColumnView({ title, tone, cards, droppable, dragging, onMove, onDr
                 <span className={`lh-tasks__pill lh-tasks__pill--${tone}`}>{title}</span>
                 <span className="lh-my__col-meta">
                     <span>{cards.length}</span>
+                    <button type="button" className="lh-my__col-fold" aria-label={foldLabel} aria-expanded={!collapsed} tabIndex={collapsed ? -1 : 0} onClick={onToggle}>
+                        <CollapseIcon />
+                    </button>
                     {onRemove ? (
-                        <button type="button" className="lh-my__col-remove" aria-label={removeLabel} onClick={onRemove}>
+                        <button type="button" className="lh-my__col-remove" aria-label={removeLabel} tabIndex={collapsed ? -1 : 0} onClick={onRemove}>
                             ×
                         </button>
                     ) : null}
@@ -435,7 +450,21 @@ function BoardColumnView({ title, tone, cards, droppable, dragging, onMove, onDr
                     ))}
                 </ul>
             )}
+            <button type="button" className="lh-my__col-spine" aria-label={foldLabel} tabIndex={collapsed ? 0 : -1} onClick={onToggle}>
+                <CollapseIcon />
+                <span>{title}</span>
+                <em>{cards.length}</em>
+            </button>
         </section>
+    );
+}
+
+function CollapseIcon() {
+    return (
+        <svg viewBox="0 0 24 24" aria-hidden>
+            <path d="M10 8l-4 4 4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M14 8l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
     );
 }
 

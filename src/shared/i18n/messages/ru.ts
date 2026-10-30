@@ -236,6 +236,8 @@ export const ruMessages: Messages = {
         myTasksColumnName: 'Название колонки',
         myTasksColumnAdd: 'Добавить',
         myTasksColumnRemove: 'Удалить колонку',
+        myTasksColumnCollapse: 'Свернуть колонку',
+        myTasksColumnExpand: 'Развернуть колонку',
         myTasksAttention: 'Нужно внимание · {count}',
         myTasksFocus: 'Показать эти',
         myTasksByProject: 'По проектам',
@@ -1169,6 +1171,8 @@ export type Messages = {
         myTasksColumnName: string;
         myTasksColumnAdd: string;
         myTasksColumnRemove: string;
+        myTasksColumnCollapse: string;
+        myTasksColumnExpand: string;
         myTasksAttention: string;
         myTasksFocus: string;
         myTasksByProject: string;

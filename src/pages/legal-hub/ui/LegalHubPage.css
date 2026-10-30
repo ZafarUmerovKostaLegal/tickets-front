@@ -3524,7 +3524,8 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   }
 
   .lh-member,
-  .lh-view button {
+  .lh-view button,
+  .lh-my__col {
     transition: none;
   }
 }
@@ -3799,6 +3800,7 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 }
 
 .lh-my__col {
+  position: relative;
   display: flex;
   flex: 0 0 280px;
   flex-direction: column;
@@ -3808,9 +3810,97 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   max-width: 280px;
   min-height: 0;
   padding: 0.7rem;
+  overflow: hidden;
   border: 1px dashed var(--app-border);
   border-radius: 16px;
   background: color-mix(in srgb, var(--app-bg-soft) 70%, var(--app-surface));
+  transition: flex-basis 0.28s ease, width 0.28s ease, min-width 0.28s ease, max-width 0.28s ease;
+}
+
+.lh-my__col.is-collapsed {
+  flex-basis: 52px;
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
+  padding-inline: 0.35rem;
+}
+
+.lh-my__col.is-collapsed > header,
+.lh-my__col.is-collapsed > p,
+.lh-my__col.is-collapsed > ul {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lh-my__col-fold svg,
+.lh-my__col-spine svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.lh-my__col-fold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.lh-my__col-fold:hover,
+.lh-my__col-spine:hover {
+  color: var(--app-text);
+}
+
+.lh-my__col-fold:hover {
+  background: color-mix(in srgb, var(--app-bg-soft) 80%, var(--app-surface));
+}
+
+.lh-my__col-spine {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-text);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.lh-my__col.is-collapsed .lh-my__col-spine {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lh-my__col-spine span {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 0.75rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.lh-my__col-spine em {
+  flex-shrink: 0;
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 700;
 }
 
 .lh-my__col.is-target {

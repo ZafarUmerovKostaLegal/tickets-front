@@ -236,6 +236,8 @@ export const enMessages = {
         myTasksColumnName: 'Column name',
         myTasksColumnAdd: 'Add',
         myTasksColumnRemove: 'Remove column',
+        myTasksColumnCollapse: 'Collapse column',
+        myTasksColumnExpand: 'Expand column',
         myTasksAttention: 'Needs your attention · {count}',
         myTasksFocus: 'Focus on these',
         myTasksByProject: 'By project',
