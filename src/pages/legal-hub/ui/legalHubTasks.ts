@@ -42,11 +42,13 @@ export const PERSON_LABEL: Record<TaskPersonId, { code: string; name: string }> 
     partner: { code: 'P', name: 'Partner' },
 };
 
-export type TaskCheck = { id: string; label: string; done: boolean; note?: string; fileName?: string | null };
+export type TaskCheckNote = { id: string; text: string };
+export type TaskCheckFile = { id: string; name: string };
+export type TaskCheck = { id: string; label: string; done: boolean; notes?: TaskCheckNote[]; files?: TaskCheckFile[] };
 export type TaskFile = { id: string; name: string; kind: 'pdf' | 'docx'; size: string; when: string };
-export type TaskComment = { id: string; author: string; text: string; when: string };
-export type TaskHistoryKind = 'created' | 'status';
-export type TaskHistory = { id: string; kind: TaskHistoryKind; when: string };
+export type TaskComment = { id: string; author: string; text: string; when: string; time: string; mine?: boolean };
+export type TaskHistoryKind = 'created' | 'started' | 'review' | 'file' | 'comment';
+export type TaskHistory = { id: string; kind: TaskHistoryKind; when: string; time: string };
 
 export type TaskDetail = {
     internalOn: string | null;
@@ -85,11 +87,14 @@ export function taskDrawerDetail(task: HubTask): TaskDetail {
                 { id: 'comments', name: 'Client_comments.docx', kind: 'docx', size: '1.2 MB', when: '26 Oct' },
             ],
             comments: [
-                { id: 'c1', author: 'Partner', text: 'Align the plan with the updated land plot coordinates before the next review.', when: '27 Oct' },
+                { id: 'c1', author: 'Junior Associate 1', text: 'Draft is ready. I am checking the easement schedule and the map.', when: '25 Oct', time: '10:12' },
+                { id: 'c2', author: 'Partner', text: 'Align the plan with the updated land plot coordinates before the next review.', when: '27 Oct', time: '16:05' },
             ],
             history: [
-                { id: 'h1', kind: 'created', when: '20 Oct' },
-                { id: 'h2', kind: 'status', when: '27 Oct' },
+                { id: 'h-review', kind: 'review', when: '27 Oct', time: '16:40' },
+                { id: 'h-file', kind: 'file', when: '26 Oct', time: '11:15' },
+                { id: 'h-started', kind: 'started', when: '25 Oct', time: '10:00' },
+                { id: 'h-created', kind: 'created', when: '24 Oct', time: '09:00' },
             ],
         };
     }
@@ -109,10 +114,15 @@ export function taskDrawerDetail(task: HubTask): TaskDetail {
         files: task.status === 'todo' ? [] : [
             { id: `${task.id}-file`, name: `${task.project}_draft.pdf`, kind: 'pdf', size: '180 KB', when: '27 Oct' },
         ],
-        comments: [],
+        comments: [
+            { id: `${task.id}-c1`, author: PERSON_LABEL[task.owner].name, text: 'Started the draft and checked the source documents.', when: '25 Oct', time: '10:12' },
+            { id: `${task.id}-c2`, author: task.reviewer ? PERSON_LABEL[task.reviewer].name : 'Partner', text: 'Leave the next step in the note before this goes to review.', when: '27 Oct', time: '16:05' },
+        ],
         history: [
-            { id: `${task.id}-created`, kind: 'created', when: '20 Oct' },
-            { id: `${task.id}-status`, kind: 'status', when: '27 Oct' },
+            ...(task.status === 'todo' ? [] : [{ id: `${task.id}-review`, kind: 'review' as const, when: '27 Oct', time: '16:40' }]),
+            ...(task.status === 'todo' ? [] : [{ id: `${task.id}-file`, kind: 'file' as const, when: '26 Oct', time: '11:20' }]),
+            { id: `${task.id}-started`, kind: 'started', when: '25 Oct', time: '10:00' },
+            { id: `${task.id}-created`, kind: 'created', when: '24 Oct', time: '09:00' },
         ],
     };
 }

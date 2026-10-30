@@ -183,8 +183,10 @@ export const ruMessages: Messages = {
         taskCheckFile: 'Файл',
         taskCheckNote: 'Комментарий к пункту',
         taskCheckClearFile: 'Убрать файл',
+        taskCheckClearNote: 'Убрать комментарий',
         taskFilesTitle: 'Файлы',
         taskFilesCount: '{count} файл.',
+        taskFilesEmpty: 'Файлов пока нет.',
         taskAddFiles: 'Добавить файлы',
         taskSendReview: 'Отправить на проверку',
         taskMarkWaiting: 'Внешнее ожидание',
@@ -193,10 +195,14 @@ export const ruMessages: Messages = {
         taskReviewerEmpty: 'Пока не назначен',
         taskCommentPlaceholder: 'Написать комментарий',
         taskCommentSend: 'Отправить',
-        taskCommentsEmpty: 'Комментариев пока нет.',
+        taskCommentsEmpty: 'Напишите команде — сообщение увидят участники задачи.',
         taskYou: 'Вы',
         taskFileToday: 'Сегодня',
         taskHistCreated: 'Задача создана',
+        taskHistStarted: 'Работа начата',
+        taskHistReview: 'Отправлено на проверку',
+        taskHistFile: 'Файл добавлен',
+        taskHistComment: 'Комментарий добавлен',
         taskHistStatus: 'Статус: {status}',
     },
     kostaLegalAi: {
@@ -1045,8 +1051,10 @@ export type Messages = {
         taskCheckFile: string;
         taskCheckNote: string;
         taskCheckClearFile: string;
+        taskCheckClearNote: string;
         taskFilesTitle: string;
         taskFilesCount: string;
+        taskFilesEmpty: string;
         taskAddFiles: string;
         taskSendReview: string;
         taskMarkWaiting: string;
@@ -1059,6 +1067,10 @@ export type Messages = {
         taskYou: string;
         taskFileToday: string;
         taskHistCreated: string;
+        taskHistStarted: string;
+        taskHistReview: string;
+        taskHistFile: string;
+        taskHistComment: string;
         taskHistStatus: string;
     };
     vacationSchedule: {
