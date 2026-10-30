@@ -1924,6 +1924,11 @@ body[data-theme='dark'] .lh-member__until {
   color: #b91c1c;
 }
 
+.lh-tasks__pill--priority-low {
+  background: color-mix(in srgb, #16a34a 16%, var(--app-surface));
+  color: #15803d;
+}
+
 .lh-tasks__date {
   display: flex;
   flex-direction: column;
@@ -1961,6 +1966,7 @@ body[data-theme='dark'] .lh-tasks__delta--soon { color: #fcd34d; }
 body[data-theme='dark'] .lh-tasks__pill--changes,
 body[data-theme='dark'] .lh-tasks__pill--priority-high,
 body[data-theme='dark'] .lh-tasks__delta--hot { color: #fca5a5; }
+body[data-theme='dark'] .lh-tasks__pill--priority-low { color: #86efac; }
 body[data-theme='dark'] .lh-tasks__pill--associate,
 body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 
@@ -3112,23 +3118,134 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   border: 1px solid var(--app-border);
   border-radius: 16px;
   background: var(--app-surface);
-  overflow: hidden;
+  overflow: auto;
 }
 
 .lh-my__group-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   width: 100%;
-  padding: 0.75rem 0.9rem;
+  padding: 0.8rem 0.95rem;
   border: 0;
   background: transparent;
   font: inherit;
   cursor: pointer;
 }
 
-.lh-my__group ul {
-  padding: 0 0.75rem 0.75rem;
+.lh-my__group-head:hover {
+  background: color-mix(in srgb, var(--app-bg-soft) 65%, var(--app-surface));
+}
+
+.lh-my__group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.lh-my__chevron {
+  width: 0.9rem;
+  height: 0.9rem;
+  flex-shrink: 0;
+  color: var(--app-muted);
+  transition: transform 0.2s ease;
+}
+
+.lh-my__chevron.is-open {
+  transform: rotate(90deg);
+}
+
+.lh-my__meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.lh-my__meter-track {
+  width: 5.5rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  background: var(--app-bg-soft);
+  overflow: hidden;
+}
+
+.lh-my__meter-track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #3b82f6;
+}
+
+.lh-my__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.lh-my__table th {
+  padding: 0.45rem 0.9rem;
+  border-top: 1px solid var(--app-border);
+  background: color-mix(in srgb, var(--app-bg-soft) 75%, var(--app-surface));
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.lh-my__table td {
+  padding: 0.72rem 0.9rem;
+  border-top: 1px solid var(--app-border);
+  vertical-align: top;
+}
+
+.lh-my__table th:first-child,
+.lh-my__table td:first-child {
+  width: 38%;
+}
+
+.lh-my__table tr.is-done td {
+  opacity: 0.55;
+}
+
+.lh-my__stream {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.15rem;
+  color: var(--app-muted);
+  font-size: 0.72rem;
+}
+
+.lh-my__important {
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #f59e0b 18%, var(--app-surface));
+  color: #b45309;
+  font-size: 0.65rem;
+  font-weight: 750;
+}
+
+.lh-my__status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.16rem;
+}
+
+.lh-my__sub {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.lh-my__sub.is-hot {
+  color: #dc2626;
+  font-weight: 700;
 }
 
 .lh-my__overlay {

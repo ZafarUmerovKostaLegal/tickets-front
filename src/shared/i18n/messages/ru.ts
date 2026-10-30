@@ -153,6 +153,7 @@ export const ruMessages: Messages = {
         taskStatusTodo: 'К выполнению',
         taskPriorityHigh: 'Высокий',
         taskPriorityNormal: 'Обычный',
+        taskPriorityLow: 'Низкий',
         taskOverdue: 'просрочено {count} д',
         taskDaysLeft: 'ещё {count} д',
         taskToday: 'сегодня',
@@ -230,6 +231,14 @@ export const ruMessages: Messages = {
         myTasksCreate: 'Создать задачу',
         myTasksTitleRequired: 'Укажите название.',
         myTasksDateRequired: 'Укажите срок клиента.',
+        myTasksProgress: '{done} из {total} готово',
+        myTasksCountOne: '{count} задача',
+        myTasksCountFew: '{count} задачи',
+        myTasksCountMany: '{count} задач',
+        myTasksWaitingFor: 'Ожидание: {name}',
+        myTasksFollowDue: 'Пора напомнить',
+        myTasksFollowOn: 'Напоминание {date}',
+        myTasksImportant: 'Важно',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -1047,6 +1056,7 @@ export type Messages = {
         taskStatusTodo: string;
         taskPriorityHigh: string;
         taskPriorityNormal: string;
+        taskPriorityLow: string;
         taskOverdue: string;
         taskDaysLeft: string;
         taskToday: string;
@@ -1124,6 +1134,14 @@ export type Messages = {
         myTasksCreate: string;
         myTasksTitleRequired: string;
         myTasksDateRequired: string;
+        myTasksProgress: string;
+        myTasksCountOne: string;
+        myTasksCountFew: string;
+        myTasksCountMany: string;
+        myTasksWaitingFor: string;
+        myTasksFollowDue: string;
+        myTasksFollowOn: string;
+        myTasksImportant: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;

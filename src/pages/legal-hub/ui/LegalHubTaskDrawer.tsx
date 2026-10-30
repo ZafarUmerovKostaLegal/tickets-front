@@ -38,6 +38,7 @@ const HISTORY_LABEL: Record<'created' | 'started' | 'review' | 'file' | 'comment
 const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
     high: 'legalHub.taskPriorityHigh',
     normal: 'legalHub.taskPriorityNormal',
+    low: 'legalHub.taskPriorityLow',
 };
 
 function IconClose() {

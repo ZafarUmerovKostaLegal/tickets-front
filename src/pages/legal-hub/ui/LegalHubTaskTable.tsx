@@ -51,6 +51,7 @@ const STATUS_LABEL: Record<TaskStatusId, TranslationKey> = {
 const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
     high: 'legalHub.taskPriorityHigh',
     normal: 'legalHub.taskPriorityNormal',
+    low: 'legalHub.taskPriorityLow',
 };
 
 const COLUMNS: { key: SortKey; labelKey: TranslationKey }[] = [

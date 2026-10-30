@@ -45,6 +45,42 @@ const COLUMN_DOT: Record<BoardColumn, string> = {
     partner: 'partner',
 };
 
+const STATUS_LABEL: Record<TaskStatusId, TranslationKey> = {
+    partner: 'legalHub.taskStatusPartner',
+    progress: 'legalHub.statusInProgress',
+    wait: 'legalHub.statusWaiting',
+    changes: 'legalHub.statusChanges',
+    associate: 'legalHub.taskStatusAssociate',
+    todo: 'legalHub.taskStatusTodo',
+};
+
+const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
+    high: 'legalHub.taskPriorityHigh',
+    normal: 'legalHub.taskPriorityNormal',
+    low: 'legalHub.taskPriorityLow',
+};
+
+const PROJECT_ORDER: TaskProjectId[] = ['solar', 'wind', 'infrastructure', 'bess', 'healthcare'];
+
+const BOARD_TITLE: Record<TaskProjectId, string> = {
+    solar: 'Project A — Solar',
+    wind: 'Project B — Wind',
+    infrastructure: 'Project C — Infrastructure',
+    bess: 'Project D — BESS',
+    healthcare: 'Project E — Healthcare',
+};
+
+const INTERNAL_ON: Record<string, string> = {
+    khokimiyat: '2026-10-31',
+    'lla-final': '2026-11-01',
+    'lla-prep': '2026-10-31',
+    allocation: '2026-10-30',
+    'tx-easement': '2026-10-31',
+    'permit-pack': '2026-11-03',
+    'wind-final': '2026-10-31',
+    schedule: '2026-11-01',
+};
+
 function dayDelta(iso: string): number {
     const [year, month, day] = iso.split('-').map(Number);
     const target = new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
@@ -64,9 +100,9 @@ function columnOf(status: TaskStatusId): BoardColumn {
 function seedTasks(): MineTask[] {
     return HUB_TASKS.map((task) => ({
         ...task,
-        done: false,
+        done: task.id === 'wind-easement',
         hours: 4,
-        internalOn: task.reviewOn ?? task.clientOn,
+        internalOn: INTERNAL_ON[task.id] ?? task.reviewOn ?? task.clientOn,
         instructions: '',
         approval: task.priority === 'high',
     }));
@@ -83,7 +119,7 @@ export function LegalHubMyTasks({ query }: { query: string }) {
     const [showDone, setShowDone] = useState(false);
     const [stat, setStat] = useState<'' | 'wait' | 'review' | 'changes' | 'due'>('');
     const [focus, setFocus] = useState(false);
-    const [collapsed, setCollapsed] = useState<string[]>([]);
+    const [collapsed, setCollapsed] = useState<string[]>(['infrastructure', 'bess', 'healthcare']);
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
     const needle = query.trim().toLowerCase();
@@ -92,13 +128,7 @@ export function LegalHubMyTasks({ query }: { query: string }) {
         () => tasks.filter((task) => !task.done && (task.status === 'changes' || task.status === 'wait' || (task.reviewOn != null && dayDelta(task.reviewOn) < 0))),
         [tasks],
     );
-    const visible = useMemo(() => tasks.filter((task) => {
-        if (!showDone && task.done)
-            return false;
-        if (showDone && !task.done && stat === '' && !focus && !project && !waiting && !priority && !dates && !needle)
-            return true;
-        if (task.done && !showDone)
-            return false;
+    const listed = useMemo(() => tasks.filter((task) => {
         if (project && task.project !== project)
             return false;
         if (waiting === 'none' && task.reviewer != null)
@@ -126,7 +156,8 @@ export function LegalHubMyTasks({ query }: { query: string }) {
         const owner = PERSON_LABEL[task.owner].name;
         const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer].name : '';
         return `${task.title} ${PROJECT_LABEL[task.project]} ${task.workstream} ${owner} ${reviewer}`.toLowerCase().includes(needle);
-    }), [attention, dates, focus, needle, priority, project, showDone, stat, tasks, waiting]);
+    }), [attention, dates, focus, needle, priority, project, stat, tasks, waiting]);
+    const visible = useMemo(() => listed.filter((task) => showDone || !task.done), [listed, showDone]);
 
     const activeCount = tasks.filter((task) => !task.done).length;
     const waitCount = tasks.filter((task) => task.status === 'wait' && !task.done).length;
@@ -136,7 +167,7 @@ export function LegalHubMyTasks({ query }: { query: string }) {
     const filtersOn = Boolean(project || waiting || priority || dates || showDone || stat || focus);
     const projectOptions = TASK_PROJECTS.map((id) => ({ id, label: PROJECT_LABEL[id] }));
     const peopleOptions = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].name }));
-    const priorityOptions = TASK_PRIORITIES.map((id) => ({ id, label: t(id === 'high' ? 'legalHub.taskPriorityHigh' : 'legalHub.taskPriorityNormal') }));
+    const priorityOptions = TASK_PRIORITIES.map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }));
     const dateOptions = [
         { id: 'overdue', label: t('legalHub.myTasksDatesOverdue') },
         { id: 'week', label: t('legalHub.myTasksDatesWeek') },
@@ -267,33 +298,16 @@ export function LegalHubMyTasks({ query }: { query: string }) {
             ) : null}
             {mode === 'project' && visible.length > 0 ? (
                 <div className="lh-my__groups">
-                    {TASK_PROJECTS.filter((id) => visible.some((task) => task.project === id)).map((id) => {
-                        const open = !collapsed.includes(id);
-                        const cards = visible.filter((task) => task.project === id);
-                        return (
-                            <section key={id} className="lh-my__group">
-                                <button
-                                    type="button"
-                                    className="lh-my__group-head"
-                                    aria-expanded={open}
-                                    onClick={() => setCollapsed((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
-                                >
-                                    <span className={`lh-tasks__project lh-tasks__project--${id}`}>
-                                        <FolderIcon />
-                                        <span>{PROJECT_LABEL[id]}</span>
-                                    </span>
-                                    <span>{cards.length}</span>
-                                </button>
-                                {open ? (
-                                    <ul>
-                                        {cards.map((task) => (
-                                            <TaskCard key={task.id} task={task} draggable={false} onDragStart={() => undefined} onDragEnd={() => undefined} />
-                                        ))}
-                                    </ul>
-                                ) : null}
-                            </section>
-                        );
-                    })}
+                    {PROJECT_ORDER.filter((id) => visible.some((task) => task.project === id)).map((id) => (
+                        <ProjectGroup
+                            key={id}
+                            id={id}
+                            open={!collapsed.includes(id)}
+                            rows={visible.filter((task) => task.project === id)}
+                            pool={listed.filter((task) => task.project === id)}
+                            onToggle={() => setCollapsed((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
+                        />
+                    ))}
                 </div>
             ) : null}
             {mode === 'status' ? <p className="lh-my__note">{t('legalHub.myTasksDragHint')}</p> : null}
@@ -330,6 +344,145 @@ function StatButton({ label, value, tone, pressed, onClick }: {
     );
 }
 
+function taskCountKey(count: number): TranslationKey {
+    const n = Math.abs(count) % 100;
+    const n1 = n % 10;
+    if (n > 10 && n < 20)
+        return 'legalHub.myTasksCountMany';
+    if (n1 === 1)
+        return 'legalHub.myTasksCountOne';
+    if (n1 >= 2 && n1 <= 4)
+        return 'legalHub.myTasksCountFew';
+    return 'legalHub.myTasksCountMany';
+}
+
+function formatDay(iso: string, locale: string): string {
+    const [year, month, day] = iso.split('-').map(Number);
+    return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-GB', {
+        day: 'numeric',
+        month: 'short',
+    });
+}
+
+function waitingName(task: MineTask): string | null {
+    if (task.status === 'todo' || task.status === 'progress' || task.status === 'changes')
+        return null;
+    if (task.waitingFor)
+        return task.waitingFor;
+    return task.reviewer ? PERSON_LABEL[task.reviewer].name : null;
+}
+
+function ProjectGroup({ id, open, rows, pool, onToggle }: {
+    id: TaskProjectId;
+    open: boolean;
+    rows: MineTask[];
+    pool: MineTask[];
+    onToggle: () => void;
+}) {
+    const { t } = useI18n();
+    const done = pool.filter((task) => task.done).length;
+    const progress = t('legalHub.myTasksProgress').replace('{done}', String(done)).replace('{total}', String(pool.length));
+    const count = t(taskCountKey(rows.length)).replace('{count}', String(rows.length));
+    const width = pool.length === 0 ? 0 : Math.round((done / pool.length) * 100);
+    return (
+        <section className="lh-my__group">
+            <button type="button" className="lh-my__group-head" aria-expanded={open} onClick={onToggle}>
+                <span className="lh-my__group-title">
+                    <ChevronIcon open={open} />
+                    <span className={`lh-tasks__project lh-tasks__project--${id}`}>
+                        <FolderIcon />
+                        <span>{BOARD_TITLE[id]}</span>
+                    </span>
+                    <span className="lh-my__meter">
+                        <span>{progress}</span>
+                        <span className="lh-my__meter-track" aria-hidden>
+                            <span style={{ width: `${width}%` }} />
+                        </span>
+                    </span>
+                </span>
+                <span>{count}</span>
+            </button>
+            {open ? (
+                <table className="lh-my__table">
+                    <thead>
+                        <tr>
+                            <th>{t('legalHub.taskColTitle')}</th>
+                            <th>{t('legalHub.taskColStatus')}</th>
+                            <th>{t('legalHub.taskColPriority')}</th>
+                            <th>{t('legalHub.taskFieldInternal')}</th>
+                            <th>{t('legalHub.taskColClient')}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map((task) => (
+                            <ProjectRow key={task.id} task={task} />
+                        ))}
+                    </tbody>
+                </table>
+            ) : null}
+        </section>
+    );
+}
+
+function ProjectRow({ task }: { task: MineTask }) {
+    const { t, locale } = useI18n();
+    const waiting = waitingName(task);
+    const follow = task.followUpOn;
+    const followLate = follow != null && dayDelta(follow) < 0;
+    const followLabel = follow == null
+        ? null
+        : followLate
+            ? t('legalHub.myTasksFollowDue')
+            : t('legalHub.myTasksFollowOn').replace('{date}', formatDay(follow, locale));
+    return (
+        <tr className={task.done ? 'is-done' : ''}>
+            <td>
+                <span className="lh-my__stream">
+                    {task.workstream}
+                    {task.important ? <span className="lh-my__important">{t('legalHub.myTasksImportant')}</span> : null}
+                </span>
+                <span className="lh-tasks__title">{task.title}</span>
+            </td>
+            <td>
+                <span className="lh-my__status">
+                    <span className={`lh-tasks__pill lh-tasks__pill--${task.status}`}>{t(STATUS_LABEL[task.status])}</span>
+                    {waiting ? <span className="lh-my__sub">{t('legalHub.myTasksWaitingFor').replace('{name}', waiting)}</span> : null}
+                    {followLabel ? <span className={`lh-my__sub${followLate ? ' is-hot' : ''}`}>{followLabel}</span> : null}
+                </span>
+            </td>
+            <td>
+                <span className={`lh-tasks__pill lh-tasks__pill--priority-${task.priority}`}>{t(PRIORITY_LABEL[task.priority])}</span>
+            </td>
+            <td><Deadline iso={task.internalOn} /></td>
+            <td><Deadline iso={task.clientOn} /></td>
+        </tr>
+    );
+}
+
+function Deadline({ iso }: { iso: string }) {
+    const { t, locale } = useI18n();
+    const delta = dayDelta(iso);
+    const tone = delta <= 0 ? 'hot' : delta <= 2 ? 'soon' : 'calm';
+    const hint = delta < 0
+        ? t('legalHub.taskOverdue').replace('{count}', String(-delta))
+        : delta === 0
+            ? t('legalHub.taskToday')
+            : t('legalHub.taskDaysLeft').replace('{count}', String(delta));
+    return (
+        <span className="lh-tasks__date">
+            <span>{formatDay(iso, locale)}</span>
+            <span className={`lh-tasks__delta lh-tasks__delta--${tone}`}>{hint}</span>
+        </span>
+    );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+    return (
+        <svg className={`lh-my__chevron${open ? ' is-open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+            <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+    );
+}
 function TaskCard({ task, draggable, onDragStart, onDragEnd }: {
     task: MineTask;
     draggable: boolean;
@@ -350,7 +503,7 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd }: {
             <span className="lh-my__card-meta">{PROJECT_LABEL[task.project]} · {task.workstream}</span>
             <span className="lh-my__card-foot">
                 <span className={`lh-tasks__pill lh-tasks__pill--priority-${task.priority}`}>
-                    {t(task.priority === 'high' ? 'legalHub.taskPriorityHigh' : 'legalHub.taskPriorityNormal')}
+                    {t(PRIORITY_LABEL[task.priority])}
                 </span>
                 <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={person.name}>{person.code}</span>
                 <span className={late ? 'is-late' : ''}>{task.clientOn.slice(8)}.{task.clientOn.slice(5, 7)}</span>
@@ -416,7 +569,7 @@ function NewTaskDialog({ onClose, onCreate }: {
     const [error, setError] = useState('');
     const projects = TASK_PROJECTS.map((id) => ({ id, label: PROJECT_LABEL[id] }));
     const people = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].name }));
-    const priorities = TASK_PRIORITIES.map((id) => ({ id, label: t(id === 'high' ? 'legalHub.taskPriorityHigh' : 'legalHub.taskPriorityNormal') }));
+    const priorities = TASK_PRIORITIES.map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }));
 
     const submit = () => {
         if (!title.trim()) {
