@@ -4041,11 +4041,11 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 
 .lh-queue__col {
   display: flex;
-  flex: 0 0 280px;
+  flex: 0 0 340px;
   flex-direction: column;
-  width: 280px;
-  min-width: 280px;
-  max-width: 280px;
+  width: 340px;
+  min-width: 340px;
+  max-width: 340px;
   min-height: 0;
   max-height: 100%;
   overflow: hidden;
