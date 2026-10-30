@@ -2,6 +2,7 @@ import { addTransitionType, startTransition, useCallback, useEffect, useState, V
 import { AppBackButton, NAV_TRANSITION_TYPE } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
+import { LegalHubMyTasks } from './LegalHubMyTasks';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
 import './LegalHubPage.css';
@@ -284,6 +285,7 @@ export function LegalHubPage() {
                 <ViewTransition default="none" enter="none" exit="none" update="lh-section">
                     <main key={section} className="lh-page__content">
                         <h1 className="lh-page__title">{t(active.labelKey)}</h1>
+                        {section === 'myTasks' ? <LegalHubMyTasks query={query} /> : null}
                         {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}
                     </main>
                 </ViewTransition>

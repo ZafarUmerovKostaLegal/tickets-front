@@ -204,6 +204,32 @@ export const ruMessages: Messages = {
         taskHistFile: 'Файл добавлен',
         taskHistComment: 'Комментарий добавлен',
         taskHistStatus: 'Статус: {status}',
+        myTasksHint: 'Сроки, загрузка и движение задач по проектам',
+        myTasksNew: 'Новая задача',
+        myTasksAttention: 'Нужно внимание · {count}',
+        myTasksFocus: 'Показать эти',
+        myTasksByProject: 'По проектам',
+        myTasksByStatus: 'По статусу',
+        myTasksFilterWaiting: 'Ожидание',
+        myTasksFilterDates: 'Сроки',
+        myTasksDatesOverdue: 'Просроченные',
+        myTasksDatesWeek: 'На этой неделе',
+        myTasksShowDone: 'Показать завершённые',
+        myTasksClear: 'Сбросить',
+        myTasksDrop: 'Перетащите задачу сюда',
+        myTasksDragHint: 'Карточки можно перетаскивать между «К выполнению», «В работе» и «Внешнее ожидание». Проверка сдвигается, когда задачу отправляют или проверяющий принимает решение.',
+        myTasksEmpty: 'По этим фильтрам задач нет.',
+        myTasksExpand: 'Развернуть все',
+        myTasksCollapse: 'Свернуть все',
+        myTasksTitle: 'Название',
+        myTasksTitlePh: 'Например, правка договора',
+        myTasksHours: 'Оценка работы, ч',
+        myTasksApproval: 'Обязательное согласование партнёра',
+        myTasksInstructionsPh: 'Что именно нужно сделать?',
+        myTasksCancel: 'Отмена',
+        myTasksCreate: 'Создать задачу',
+        myTasksTitleRequired: 'Укажите название.',
+        myTasksDateRequired: 'Укажите срок клиента.',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -1072,6 +1098,32 @@ export type Messages = {
         taskHistFile: string;
         taskHistComment: string;
         taskHistStatus: string;
+        myTasksHint: string;
+        myTasksNew: string;
+        myTasksAttention: string;
+        myTasksFocus: string;
+        myTasksByProject: string;
+        myTasksByStatus: string;
+        myTasksFilterWaiting: string;
+        myTasksFilterDates: string;
+        myTasksDatesOverdue: string;
+        myTasksDatesWeek: string;
+        myTasksShowDone: string;
+        myTasksClear: string;
+        myTasksDrop: string;
+        myTasksDragHint: string;
+        myTasksEmpty: string;
+        myTasksExpand: string;
+        myTasksCollapse: string;
+        myTasksTitle: string;
+        myTasksTitlePh: string;
+        myTasksHours: string;
+        myTasksApproval: string;
+        myTasksInstructionsPh: string;
+        myTasksCancel: string;
+        myTasksCreate: string;
+        myTasksTitleRequired: string;
+        myTasksDateRequired: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;
