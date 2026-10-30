@@ -7,6 +7,7 @@ import {
     isMyMehnatTimeReportRow,
     mergeTimeReportPackPreferLiveExpenses,
     orderTimeReportSummarySlots,
+    summaryRowsForRateSlices,
     type InvoiceTimeReportDetailRow,
     type InvoiceTimeReportSummaryRow,
 } from './invoiceTimeReportModel';
@@ -249,5 +250,72 @@ describe('orderTimeReportSummarySlots', () => {
             'Associate',
             'Junior Associate',
         ]);
+    });
+
+    it('keeps the older rate row under the same person', () => {
+        const ordered = orderTimeReportSummarySlots([
+            summary({ initials: 'III', name: 'Islombek', title: 'Junior Associate', hourlyRate: 'USD 160.00', totalPrice: 'USD 347.20' }),
+            summary({ initials: 'ADA', name: 'Alina', title: '', hourlyRate: 'USD 100.00', totalPrice: 'USD 640.00' }),
+            summary({ initials: 'SHOKH', name: 'Shahzoda', title: 'Junior Associate', hourlyRate: 'USD 130.00', totalPrice: 'USD 347.10' }),
+            summary({ initials: 'ADA', name: 'Alina', title: 'Junior Associate', hourlyRate: 'USD 130.00', totalPrice: 'USD 1,773.20' }),
+            summary({ initials: 'SHOKH', name: 'Shahzoda', title: '', hourlyRate: 'USD 100.00', totalPrice: 'USD 280.00' }),
+        ]);
+        expect(ordered.slice(0, 5).map((row) => `${row.initials} ${row.hourlyRate}`)).toEqual([
+            'III USD 160.00',
+            'ADA USD 130.00',
+            'ADA USD 100.00',
+            'SHOKH USD 130.00',
+            'SHOKH USD 100.00',
+        ]);
+    });
+});
+
+describe('summaryRowsForRateSlices', () => {
+    it('adds a second row at the older rate and leaves its title empty', () => {
+        const rows = summaryRowsForRateSlices({
+            initials: 'ADA',
+            name: 'Alina Abdullaeva',
+            title: 'Junior Associate',
+            currency: 'USD',
+            hours: 20.04,
+            amount: 2413.2,
+            slices: [
+                { rate: 130, hours: 13.64, amount: 1773.2 },
+                { rate: 100, hours: 6.4, amount: 640 },
+            ],
+        });
+        expect(rows).toEqual([
+            {
+                initials: 'ADA',
+                name: 'Alina Abdullaeva',
+                title: 'Junior Associate',
+                hours: '13,64',
+                hourlyRate: 'USD 130.00',
+                totalPrice: 'USD 1,773.20',
+            },
+            {
+                initials: 'ADA',
+                name: 'Alina Abdullaeva',
+                title: '',
+                hours: '6,40',
+                hourlyRate: 'USD 100.00',
+                totalPrice: 'USD 640.00',
+            },
+        ]);
+    });
+
+    it('keeps a single row when the rate did not change', () => {
+        const rows = summaryRowsForRateSlices({
+            initials: 'DGO',
+            name: 'Dilshodbek',
+            title: 'Associate',
+            currency: 'USD',
+            hours: 1.76,
+            amount: 387.2,
+            slices: [{ rate: 220, hours: 1.76, amount: 387.2 }],
+        });
+        expect(rows).toHaveLength(1);
+        expect(rows[0]?.title).toBe('Associate');
+        expect(rows[0]?.hourlyRate).toBe('USD 220.00');
     });
 });

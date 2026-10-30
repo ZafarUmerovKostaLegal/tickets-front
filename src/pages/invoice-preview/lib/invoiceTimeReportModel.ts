@@ -568,11 +568,101 @@ function summaryTitleIsBlank(title: string): boolean {
     return !text || text === '—' || text === '-' || text === '–';
 }
 
+export type InvoiceSummaryRateSlice = {
+    rate: number;
+    hours: number;
+    amount: number;
+};
+
+/**
+ * One summary line per hourly rate. A second line appears when hours in the
+ * period were billed at an older rate. That line leaves the title empty.
+ */
+export function summaryRowsForRateSlices(input: {
+    initials: string;
+    name: string;
+    title: string;
+    currency: string;
+    hours: number;
+    amount: number;
+    slices: readonly InvoiceSummaryRateSlice[];
+}): InvoiceTimeReportSummaryRow[] {
+    const byRate = new Map<number, { hours: number; amount: number }>();
+    for (const slice of input.slices) {
+        if (!(slice.rate > 0) || !(slice.hours > 0))
+            continue;
+        const rate = Math.round(slice.rate * 100) / 100;
+        const cur = byRate.get(rate) ?? { hours: 0, amount: 0 };
+        cur.hours += slice.hours;
+        cur.amount += slice.amount;
+        byRate.set(rate, cur);
+    }
+    const distinct = [...byRate.entries()].sort((a, b) => b[0] - a[0]);
+    if (distinct.length < 2) {
+        const rate = distinct[0]?.[0] ?? (input.hours > 0 ? input.amount / input.hours : 0);
+        return [summaryRowFromSlice(input, input.title, input.hours, rate, input.amount)];
+    }
+    const ratedHours = distinct.reduce((sum, [, bucket]) => sum + bucket.hours, 0);
+    const ratedAmount = distinct.reduce((sum, [, bucket]) => sum + bucket.amount, 0);
+    const leftoverHours = input.hours - ratedHours;
+    const leftoverAmount = input.amount - ratedAmount;
+    if (Math.abs(leftoverHours) > 0.0001 || Math.abs(leftoverAmount) > 0.0001) {
+        const host = distinct.reduce((best, entry) => (entry[1].hours > best[1].hours ? entry : best));
+        host[1].hours += leftoverHours;
+        host[1].amount += leftoverAmount;
+    }
+    return distinct.map(([rate, bucket], index) => summaryRowFromSlice(
+        input,
+        index === 0 ? input.title : '',
+        bucket.hours,
+        rate,
+        bucket.amount,
+    ));
+}
+
+function summaryRowFromSlice(
+    input: { initials: string; name: string; currency: string },
+    title: string,
+    hours: number,
+    rate: number,
+    amount: number,
+): InvoiceTimeReportSummaryRow {
+    return {
+        initials: input.initials,
+        name: input.name,
+        title,
+        hours: formatTimeReportHours(hours),
+        hourlyRate: rate > 0 ? formatTimeReportAmount(rate, input.currency) : '—',
+        totalPrice: formatTimeReportAmount(amount, input.currency),
+    };
+}
+
+function summaryPersonKey(row: InvoiceTimeReportSummaryRow): string {
+    return `${row.initials.trim()}\0${row.name.trim().toLowerCase()}`;
+}
+
 /** Partner, then Counsel, Senior Associate, Associate, Junior Associate, Trainee. Same title: higher rate, then higher amount. */
 export function orderTimeReportSummarySlots(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow[] {
     const filled = trimTrailingEmptySummarySlots(rows);
-    const sorted = [...filled].sort(compareTimeReportSummaryRows);
+    const groups = new Map<string, InvoiceTimeReportSummaryRow[]>();
+    for (const row of filled) {
+        const key = summaryPersonKey(row);
+        const list = groups.get(key);
+        if (list)
+            list.push(row);
+        else
+            groups.set(key, [row]);
+    }
+    const people = [...groups.values()].sort((a, b) => compareTimeReportSummaryRows(
+        representativeSummaryRow(a),
+        representativeSummaryRow(b),
+    ));
+    const sorted = people.flatMap((person) => [...person].sort(compareTimeReportSummaryRows));
     return padSummaryRows(sorted);
+}
+
+function representativeSummaryRow(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow {
+    return [...rows].sort(compareTimeReportSummaryRows)[0]!;
 }
 
 function compareTimeReportSummaryRows(a: InvoiceTimeReportSummaryRow, b: InvoiceTimeReportSummaryRow): number {

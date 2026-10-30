@@ -42,6 +42,7 @@ import {
     isMyMehnatTimeReportRow,
     orderTimeReportSummarySlots,
     parseTimeReportAmountDisplay,
+    summaryRowsForRateSlices,
     trimTrailingEmptyDetailSlots,
     type InvoiceTimeReportDetailRow,
     type InvoiceTimeReportPack,
@@ -291,21 +292,6 @@ function toPublicRow(d: BuildingDetail): InvoiceTimeReportDetailRow {
     };
 }
 
-/** Prefer the actual billed rate from detail rows (hours-weighted mode), not amount÷hours. */
-function pickSummaryHourlyRate(rateByHours: Map<number, number>, totalHours: number, totalAmount: number): number {
-    let bestRate = 0;
-    let bestHours = -1;
-    for (const [rate, hours] of rateByHours) {
-        if (hours > bestHours) {
-            bestHours = hours;
-            bestRate = rate;
-        }
-    }
-    if (bestRate > 0)
-        return bestRate;
-    return totalHours > 0 ? totalAmount / totalHours : 0;
-}
-
 function buildSummaryAndTotals(
     details: BuildingDetail[],
     users: TimeTrackingUserRow[],
@@ -317,7 +303,7 @@ function buildSummaryAndTotals(
         hours: number;
         amount: number;
         u: TimeTrackingUserRow | null;
-        rateByHours: Map<number, number>;
+        rateBuckets: Map<number, { hours: number; amount: number }>;
     }>();
     let otherAmount = 0;
     for (const d of timeLike) {
@@ -326,15 +312,18 @@ function buildSummaryAndTotals(
                 hours: 0,
                 amount: 0,
                 u: userByAuthId(users, d.authId),
-                rateByHours: new Map<number, number>(),
+                rateBuckets: new Map<number, { hours: number; amount: number }>(),
             };
-            cur.hours += sumRoundedTimeReportHours([d.hoursNum]);
+            const lineHours = sumRoundedTimeReportHours([d.hoursNum]);
+            cur.hours += lineHours;
             cur.amount += d.amtNum;
             cur.u = cur.u ?? userByAuthId(users, d.authId);
-            if (d.rateNum > 0 && d.hoursNum > 0) {
-                // Round to cents so 149.999… and 150 group together
+            if (d.rateNum > 0 && lineHours > 0) {
                 const key = Math.round(d.rateNum * 100) / 100;
-                cur.rateByHours.set(key, (cur.rateByHours.get(key) ?? 0) + d.hoursNum);
+                const bucket = cur.rateBuckets.get(key) ?? { hours: 0, amount: 0 };
+                bucket.hours += lineHours;
+                bucket.amount += d.amtNum;
+                cur.rateBuckets.set(key, bucket);
             }
             agg.set(d.authId, cur);
         }
@@ -343,17 +332,21 @@ function buildSummaryAndTotals(
     }
 
     const summaryRows: InvoiceTimeReportSummaryRow[] = [...agg.entries()]
-        .map(([uid, v]) => {
+        .flatMap(([uid, v]) => {
             const u = v.u ?? userByAuthId(users, uid);
-            const rate = pickSummaryHourlyRate(v.rateByHours, v.hours, v.amount);
-            return {
+            return summaryRowsForRateSlices({
                 initials: initialsForAuthUser(uid, users, initialsByAuthId),
                 name: u ? displayUserName(u) : `User ${uid}`,
                 title: u ? userTitle(u) : '—',
-                hours: formatTimeReportHours(v.hours),
-                hourlyRate: formatDetailHourlyRate(rate, currency) || '—',
-                totalPrice: formatTimeReportAmount(v.amount, currency),
-            };
+                currency,
+                hours: v.hours,
+                amount: v.amount,
+                slices: [...v.rateBuckets.entries()].map(([rate, bucket]) => ({
+                    rate,
+                    hours: bucket.hours,
+                    amount: bucket.amount,
+                })),
+            });
         });
 
     if (otherAmount !== 0) {
