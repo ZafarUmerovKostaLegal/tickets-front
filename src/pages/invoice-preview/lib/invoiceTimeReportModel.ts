@@ -530,7 +530,60 @@ function separateMehnatRows(pack: InvoiceTimeReportPack): InvoiceTimeReportPack 
 
 /** Pull My Mehnat rows out of the main time grid (also heals older saved packs). */
 export function ensureMehnatSeparatedPack(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
-    return ensureFixedFeeSeparatedPack(separateMehnatRows(pack));
+    return ensureFixedFeeSeparatedPack(separateMehnatRows(collapseSplitSummaryRates(pack)));
+}
+
+/** One row per person. A saved draft may still list every rounded FX rate separately. */
+function collapseSplitSummaryRates(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
+    const filled = trimTrailingEmptySummarySlots(pack.summarySlots ?? []);
+    const groups = new Map<string, InvoiceTimeReportSummaryRow[]>();
+    const order: string[] = [];
+    let split = false;
+    for (const row of filled) {
+        const key = `${row.initials.trim().toUpperCase()}\0${row.name.trim().toLowerCase()}`;
+        const list = groups.get(key);
+        if (list) {
+            list.push(row);
+            split = true;
+        }
+        else {
+            groups.set(key, [row]);
+            order.push(key);
+        }
+    }
+    if (!split)
+        return pack;
+    return {
+        ...pack,
+        summarySlots: order.map((key) => mergeSummaryRateRows(groups.get(key)!)),
+    };
+}
+
+function mergeSummaryRateRows(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow {
+    const first = rows[0]!;
+    if (rows.length === 1)
+        return first;
+    let best = first;
+    let bestHours = -1;
+    let hours = 0;
+    let amount = 0;
+    for (const row of rows) {
+        const lineHours = parseTimeReportHoursDisplay(row.hours);
+        hours += lineHours;
+        amount += parseTimeReportAmountDisplay(row.totalPrice);
+        if (lineHours > bestHours) {
+            best = row;
+            bestHours = lineHours;
+        }
+    }
+    const currency = /[A-Za-z]{3}/.exec(best.totalPrice)?.[0]
+        || /[A-Za-z]{3}/.exec(best.hourlyRate)?.[0]
+        || 'USD';
+    return {
+        ...best,
+        hours: formatTimeReportHours(roundTimeReportHours2(hours)),
+        totalPrice: formatTimeReportAmount(amount, currency),
+    };
 }
 
 export function finalizeDetailSlots(rows: InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {

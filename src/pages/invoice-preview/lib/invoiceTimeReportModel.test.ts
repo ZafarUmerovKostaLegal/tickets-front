@@ -113,6 +113,27 @@ describe('ensureMehnatSeparatedPack', () => {
         expect(twice.mehnatSlots).toHaveLength(1);
         expect(twice.detailSlots).toHaveLength(0);
     });
+
+    it('folds a saved per-rate summary back into one row per person', () => {
+        const pack = emptyInvoiceTimeReportPack('USD');
+        pack.detailSlots = [
+            row({ initials: 'ALAA', hours: '0,22', hourlyRate: 'USD 253.85', amount: 'USD 55.00' }),
+            row({ initials: 'ALAA', hours: '0,95', hourlyRate: 'USD 250.00', amount: 'USD 237.50' }),
+        ];
+        pack.summarySlots = [
+            summary({ initials: 'ALAA', name: 'Aliye Abylalimova', title: 'Senior Associate', hours: '0,22', hourlyRate: 'USD 253.85', totalPrice: 'USD 55.00' }),
+            summary({ initials: 'ALAA', name: 'Aliye Abylalimova', title: 'Senior Associate', hours: '0,95', hourlyRate: 'USD 250.00', totalPrice: 'USD 237.50' }),
+        ];
+        const next = ensureMehnatSeparatedPack(pack);
+        const alaa = next.summarySlots.filter((item) => item.initials === 'ALAA');
+        expect(alaa).toHaveLength(1);
+        expect(alaa[0]).toMatchObject({
+            title: 'Senior Associate',
+            hours: '1,17',
+            hourlyRate: 'USD 250.00',
+            totalPrice: 'USD 292.50',
+        });
+    });
 });
 
 describe('mergeTimeReportPackPreferLiveExpenses', () => {
