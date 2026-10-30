@@ -1787,8 +1787,18 @@ body[data-theme='dark'] .lh-member__until {
   border-bottom: 0;
 }
 
-.lh-tasks tbody tr:hover td {
-  background: color-mix(in srgb, var(--app-accent) 4%, var(--app-surface));
+.lh-tasks tbody tr {
+  cursor: pointer;
+}
+
+.lh-tasks tbody tr:hover td,
+.lh-tasks tbody tr.is-open td {
+  background: color-mix(in srgb, var(--app-accent) 7%, var(--app-surface));
+}
+
+.lh-tasks tbody tr:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: -2px;
 }
 
 .lh-tasks__muted {
@@ -2017,6 +2027,472 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   animation: lh-pop 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.lh-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: flex-end;
+  background: rgba(15, 23, 42, 0.35);
+  animation: lh-fade 0.2s ease both;
+}
+
+.lh-drawer__panel {
+  display: flex;
+  flex-direction: column;
+  width: min(28.5rem, 100%);
+  height: 100%;
+  background: var(--app-surface);
+  border-left: 1px solid var(--app-border);
+  box-shadow: -16px 0 40px rgba(15, 23, 42, 0.12);
+  animation: lh-drawer-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes lh-drawer-in {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+
+.lh-drawer__head,
+.lh-drawer__intro,
+.lh-drawer__tabs,
+.lh-drawer__foot {
+  flex-shrink: 0;
+}
+
+.lh-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem 0.35rem;
+}
+
+.lh-drawer__project {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.lh-drawer__project svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.lh-drawer__project span {
+  color: var(--app-text);
+}
+
+.lh-drawer__close {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+}
+
+.lh-drawer__close svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.lh-drawer__close:hover {
+  background: var(--app-bg-soft);
+  color: var(--app-text);
+}
+
+.lh-drawer__intro {
+  padding: 0.2rem 1rem 0.75rem;
+}
+
+.lh-drawer__kicker,
+.lh-drawer__badges {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.lh-drawer__kicker {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.lh-drawer__intro h2 {
+  margin: 0.35rem 0 0.55rem;
+  color: var(--app-text);
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.lh-drawer__important {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.18rem 0.5rem;
+  border: 1px solid color-mix(in srgb, #d97706 45%, var(--app-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, #f59e0b 16%, var(--app-surface));
+  color: #b45309;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.lh-drawer__important svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.lh-drawer__tabs {
+  display: flex;
+  gap: 0.15rem;
+  padding: 0 0.7rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.lh-drawer__tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.55rem 0.45rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--app-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.lh-drawer__tabs button span {
+  min-width: 1.1rem;
+  padding: 0 0.28rem;
+  border-radius: 999px;
+  background: var(--app-bg-soft);
+  color: var(--app-text-dim);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.lh-drawer__tabs button.is-active {
+  border-bottom-color: var(--app-accent);
+  color: var(--app-accent);
+}
+
+.lh-drawer__body {
+  flex: 1;
+  overflow: auto;
+  padding: 0.9rem 1rem 1.1rem;
+}
+
+.lh-drawer__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 0.85rem;
+}
+
+.lh-drawer__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.lh-drawer__field > span {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.lh-drawer__field > strong {
+  color: var(--app-text);
+  font-size: 0.92rem;
+  font-weight: 750;
+}
+
+.lh-drawer__field > strong.is-muted {
+  color: var(--app-muted);
+  font-weight: 650;
+}
+
+.lh-drawer__field--stack {
+  margin-top: 0.9rem;
+}
+
+.lh-drawer__input,
+.lh-drawer__area,
+.lh-drawer__add input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.lh-drawer__input {
+  height: 2.3rem;
+  padding: 0 0.7rem;
+}
+
+.lh-drawer__area {
+  min-height: 6.2rem;
+  padding: 0.65rem 0.7rem;
+  resize: vertical;
+}
+
+.lh-drawer__field .lh-drawer__calendar.ttp {
+  display: flex;
+  width: 100%;
+}
+
+.lh-drawer__field .lh-drawer__date.ttp__btn,
+.lh-drawer__field .lh-drawer__pick.tsp-srch__btn {
+  min-height: 2.3rem;
+  border-radius: 10px;
+  background: var(--app-bg);
+  font-size: 0.84rem;
+}
+
+.lh-drawer__block {
+  margin-top: 1rem;
+}
+
+.lh-drawer__block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.lh-drawer__block-head h3 {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 0.92rem;
+}
+
+.lh-drawer__block-head span,
+.lh-drawer__empty {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+}
+
+.lh-drawer__meter {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--app-bg-soft);
+  overflow: hidden;
+}
+
+.lh-drawer__meter span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #22c55e;
+}
+
+.lh-drawer__checks,
+.lh-drawer__files,
+.lh-drawer__comments,
+.lh-drawer__history {
+  margin: 0.55rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lh-drawer__checks button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.32rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.84rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lh-drawer__checks button > span:first-child {
+  width: 0.95rem;
+  height: 0.95rem;
+  border: 1.5px solid var(--app-border);
+  border-radius: 4px;
+  background: var(--app-surface);
+}
+
+.lh-drawer__checks button > span:first-child.is-on {
+  border-color: var(--app-accent);
+  background: var(--app-accent);
+  box-shadow: inset 0 0 0 2px var(--app-surface);
+}
+
+.lh-drawer__checks .is-done {
+  color: var(--app-muted);
+  text-decoration: line-through;
+}
+
+.lh-drawer__add {
+  display: flex;
+  gap: 0.45rem;
+  margin-top: 0.65rem;
+}
+
+.lh-drawer__add input {
+  height: 2.3rem;
+  padding: 0 0.7rem;
+}
+
+.lh-drawer__add button,
+.lh-drawer__add-file,
+.lh-drawer__foot-row button {
+  height: 2.3rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.lh-drawer__add-file {
+  margin-top: 0.65rem;
+}
+
+.lh-drawer__files li,
+.lh-drawer__comments li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0;
+}
+
+.lh-drawer__files strong,
+.lh-drawer__comments strong {
+  display: block;
+  color: var(--app-text);
+  font-size: 0.84rem;
+}
+
+.lh-drawer__files small,
+.lh-drawer__comments li > span {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+}
+
+.lh-drawer__comments {
+  display: flex;
+  flex-direction: column;
+}
+
+.lh-drawer__comments li {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.lh-drawer__comments p,
+.lh-drawer__history p {
+  width: 100%;
+  margin: 0.15rem 0 0;
+  color: var(--app-text);
+  font-size: 0.84rem;
+}
+
+.lh-drawer__file-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.lh-drawer__file-mark--pdf { background: #ef4444; }
+.lh-drawer__file-mark--docx { background: #2563eb; }
+
+.lh-drawer__history li {
+  padding: 0.45rem 0 0.45rem 0.8rem;
+  border-left: 2px solid var(--app-border);
+}
+
+.lh-drawer__history li > span {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.lh-drawer__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem 0.9rem;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.lh-drawer__send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 2.6rem;
+  border: 0;
+  border-radius: 12px;
+  background: var(--app-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lh-drawer__send svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.lh-drawer__foot-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.lh-drawer__foot-row button {
+  width: 100%;
+}
+
+.lh-drawer__close:focus-visible,
+.lh-drawer__send:focus-visible,
+.lh-drawer__tabs button:focus-visible,
+.lh-drawer__add button:focus-visible,
+.lh-drawer__foot-row button:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .lh-stat,
   .lh-member,
@@ -2027,7 +2503,9 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   .lh-tasks tbody tr,
   .lh-temp,
   .lh-temp__panel,
-  .lh-member__meter-fill {
+  .lh-member__meter-fill,
+  .lh-drawer,
+  .lh-drawer__panel {
     animation: none;
   }
 

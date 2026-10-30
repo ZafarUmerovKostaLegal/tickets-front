@@ -42,6 +42,81 @@ export const PERSON_LABEL: Record<TaskPersonId, { code: string; name: string }> 
     partner: { code: 'P', name: 'Partner' },
 };
 
+export type TaskCheck = { id: string; label: string; done: boolean };
+export type TaskFile = { id: string; name: string; kind: 'pdf' | 'docx'; size: string; when: string };
+export type TaskComment = { id: string; author: string; text: string; when: string };
+export type TaskHistoryKind = 'created' | 'status';
+export type TaskHistory = { id: string; kind: TaskHistoryKind; when: string };
+
+export type TaskDetail = {
+    internalOn: string | null;
+    important: boolean;
+    approval: 'required' | 'none';
+    instructions: string;
+    checks: TaskCheck[];
+    files: TaskFile[];
+    comments: TaskComment[];
+    history: TaskHistory[];
+};
+
+function shiftIso(iso: string, days: number): string {
+    const [year, month, day] = iso.split('-').map(Number);
+    const date = new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
+    date.setDate(date.getDate() + days);
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+export function taskDrawerDetail(task: HubTask): TaskDetail {
+    if (task.id === 'lla-prep') {
+        return {
+            internalOn: '2026-10-31',
+            important: true,
+            approval: 'required',
+            instructions: 'Prepare revised LLA, verify easement provisions and relevant schedules. Include updated map and reference to land plot coordinates.',
+            checks: [
+                { id: 'instructions', label: 'Review client instructions', done: true },
+                { id: 'draft', label: 'Prepare draft', done: true },
+                { id: 'refs', label: 'Check legal references', done: false },
+                { id: 'final', label: 'Verify final version', done: false },
+            ],
+            files: [
+                { id: 'draft', name: 'LLA_draft_v2.pdf', kind: 'pdf', size: '245 KB', when: '27 Oct' },
+                { id: 'comments', name: 'Client_comments.docx', kind: 'docx', size: '1.2 MB', when: '26 Oct' },
+            ],
+            comments: [
+                { id: 'c1', author: 'Partner', text: 'Align the plan with the updated land plot coordinates before the next review.', when: '27 Oct' },
+            ],
+            history: [
+                { id: 'h1', kind: 'created', when: '20 Oct' },
+                { id: 'h2', kind: 'status', when: '27 Oct' },
+            ],
+        };
+    }
+    const doneCount = task.status === 'todo' ? 0 : task.status === 'progress' || task.status === 'wait' ? 1 : 2;
+    const checks = [
+        'Review client instructions',
+        'Prepare draft',
+        'Check legal references',
+        'Verify final version',
+    ].map((label, index) => ({ id: `${task.id}-${index}`, label, done: index < doneCount }));
+    return {
+        internalOn: shiftIso(task.clientOn, -3),
+        important: task.priority === 'high',
+        approval: task.priority === 'high' ? 'required' : 'none',
+        instructions: `${task.title}. Check the workstream materials and leave the next step in the note before review.`,
+        checks,
+        files: task.status === 'todo' ? [] : [
+            { id: `${task.id}-file`, name: `${task.project}_draft.pdf`, kind: 'pdf', size: '180 KB', when: '27 Oct' },
+        ],
+        comments: [],
+        history: [
+            { id: `${task.id}-created`, kind: 'created', when: '20 Oct' },
+            { id: `${task.id}-status`, kind: 'status', when: '27 Oct' },
+        ],
+    };
+}
+
 export function tasksForMember(memberId: number, memberIds: number[]): HubTask[] {
     const ordered = [...new Set(memberIds)].sort((a, b) => a - b);
     const index = ordered.indexOf(memberId);

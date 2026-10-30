@@ -160,6 +160,40 @@ export const ruMessages: Messages = {
         taskAutoRouted: 'Автомаршрут',
         taskNoReviewer: 'Без проверяющего',
         taskMemberTitle: 'Задачи · {name}',
+        taskDrawerClose: 'Закрыть',
+        taskTabDetails: 'Детали',
+        taskTabFiles: 'Файлы',
+        taskTabComments: 'Комментарии',
+        taskTabHistory: 'История',
+        taskFieldOwner: 'Ответственный',
+        taskFieldReviewer: 'Проверяющий',
+        taskFieldInternal: 'Внутренний срок',
+        taskFieldReview: 'Срок проверки',
+        taskFieldClient: 'Срок клиента',
+        taskFieldApproval: 'Согласование партнёра',
+        taskApprovalRequired: 'Требуется',
+        taskApprovalNo: 'Не требуется',
+        taskFieldMinutes: 'Оценка, мин',
+        taskFieldInstructions: 'Инструкции / следующий шаг',
+        taskChecklist: 'Чеклист',
+        taskChecklistProgress: '{done}/{total} выполнено',
+        taskCheckAdd: 'Добавить пункт',
+        taskCheckAddBtn: 'Добавить',
+        taskFilesTitle: 'Файлы',
+        taskFilesCount: '{count} файл.',
+        taskAddFiles: 'Добавить файлы',
+        taskSendReview: 'Отправить на проверку',
+        taskMarkWaiting: 'Внешнее ожидание',
+        taskAddComment: 'Комментарий',
+        taskImportant: 'Важно',
+        taskReviewerEmpty: 'Пока не назначен',
+        taskCommentPlaceholder: 'Написать комментарий',
+        taskCommentSend: 'Отправить',
+        taskCommentsEmpty: 'Комментариев пока нет.',
+        taskYou: 'Вы',
+        taskFileToday: 'Сегодня',
+        taskHistCreated: 'Задача создана',
+        taskHistStatus: 'Статус: {status}',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -984,6 +1018,40 @@ export type Messages = {
         taskAutoRouted: string;
         taskNoReviewer: string;
         taskMemberTitle: string;
+        taskDrawerClose: string;
+        taskTabDetails: string;
+        taskTabFiles: string;
+        taskTabComments: string;
+        taskTabHistory: string;
+        taskFieldOwner: string;
+        taskFieldReviewer: string;
+        taskFieldInternal: string;
+        taskFieldReview: string;
+        taskFieldClient: string;
+        taskFieldApproval: string;
+        taskApprovalRequired: string;
+        taskApprovalNo: string;
+        taskFieldMinutes: string;
+        taskFieldInstructions: string;
+        taskChecklist: string;
+        taskChecklistProgress: string;
+        taskCheckAdd: string;
+        taskCheckAddBtn: string;
+        taskFilesTitle: string;
+        taskFilesCount: string;
+        taskAddFiles: string;
+        taskSendReview: string;
+        taskMarkWaiting: string;
+        taskAddComment: string;
+        taskImportant: string;
+        taskReviewerEmpty: string;
+        taskCommentPlaceholder: string;
+        taskCommentSend: string;
+        taskCommentsEmpty: string;
+        taskYou: string;
+        taskFileToday: string;
+        taskHistCreated: string;
+        taskHistStatus: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { SearchableSelect } from '@shared/ui';
+import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import {
     HUB_TASKS,
     PERSON_LABEL,
@@ -203,6 +204,7 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null }: {
 }) {
     const { t } = useI18n();
     const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+    const [openId, setOpenId] = useState<string | null>(null);
     const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'client', dir: 'asc' });
     const needle = query.trim().toLowerCase();
     const workstreams = useMemo(() => {
@@ -270,6 +272,7 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null }: {
         });
         return filtered;
     }, [filters, needle, owner, sort, t, tasks]);
+    const openTask = tasks.find((task) => task.id === openId) ?? null;
     const filtersOn = Object.values(filters).some(Boolean);
     const setFilter = (key: keyof Filters) => (id: string) => setFilters((current) => ({ ...current, [key]: id }));
     const toggleSort = (key: SortKey) => {
@@ -322,7 +325,19 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null }: {
                         </thead>
                         <tbody>
                             {rows.map((task, index) => (
-                                <tr key={task.id} style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}>
+                                <tr
+                                    key={task.id}
+                                    className={openId === task.id ? 'is-open' : ''}
+                                    tabIndex={0}
+                                    style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}
+                                    onClick={() => setOpenId(task.id)}
+                                    onKeyDown={(event) => {
+                                        if (event.key !== 'Enter' && event.key !== ' ')
+                                            return;
+                                        event.preventDefault();
+                                        setOpenId(task.id);
+                                    }}
+                                >
                                     <td>
                                         <span className={`lh-tasks__project lh-tasks__project--${task.project}`}>
                                             <IconFolder />
@@ -356,6 +371,14 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null }: {
                     </table>
                 </div>
             )}
+            {openTask ? (
+                <LegalHubTaskDrawer
+                    key={openTask.id}
+                    task={openTask}
+                    owner={owner}
+                    onClose={() => setOpenId(null)}
+                />
+            ) : null}
         </section>
     );
 }
