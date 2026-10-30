@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { excelWorkbookBufferToBlob, loadExcelJS, writeExcelWorkbookBuffer } from '@shared/lib/exceljsLoader';
 import { VACATION_MONTH_NAMES } from '../lib/vacationScheduleModel';
 import type { VacationDayDetailRow } from './VacationDayDetails';
 
@@ -62,6 +64,38 @@ function groupedRows(rows: ReadonlyArray<VacationDayDetailRow>): Array<{ kind: s
     });
 }
 
+async function downloadMonthList(title: string, rows: ReadonlyArray<VacationDayDetailRow>): Promise<void> {
+    const ExcelJS = await loadExcelJS();
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Отсутствия');
+    sheet.columns = [
+        { header: 'Тип', key: 'kind', width: 28 },
+        { header: 'Сотрудник', key: 'name', width: 32 },
+        { header: 'Команда', key: 'team', width: 24 },
+        { header: 'Период', key: 'when', width: 28 },
+    ];
+    sheet.getRow(1).font = { bold: true };
+    for (const group of groupedRows(rows)) {
+        for (const row of group.rows) {
+            const meta = rowWhen(row);
+            sheet.addRow({
+                kind: group.kind,
+                name: row.label,
+                team: row.teamName,
+                when: meta.times ? `${meta.when} (×${meta.times})` : meta.when,
+            });
+        }
+    }
+    const buffer = await writeExcelWorkbookBuffer(workbook);
+    const blob = excelWorkbookBufferToBlob(buffer);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Отсутствия ${title}.xlsx`;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+
 type Props = {
     year: number;
     monthIndex: number;
@@ -77,6 +111,15 @@ type Props = {
 
 export function VacationMonthPanel({ year, monthIndex, open, visible = true, rows, onToggle, onStepMonth, onOpenCard, onOpenDocs, showDocs }: Props) {
     const title = `${VACATION_MONTH_NAMES[monthIndex]} ${year}`;
+    const [downloading, setDownloading] = useState(false);
+    const download = () => {
+        if (rows.length === 0 || downloading)
+            return;
+        setDownloading(true);
+        void downloadMonthList(title, rows)
+            .catch(() => undefined)
+            .finally(() => setDownloading(false));
+    };
     return (
         <aside className={`vac-month${open ? '' : ' vac-month--closed'}${visible ? '' : ' vac-month--away'}`} aria-hidden={!visible} aria-label={`Отсутствия за ${title}`}>
             <div className="vac-month__bar">
@@ -87,7 +130,17 @@ export function VacationMonthPanel({ year, monthIndex, open, visible = true, row
                             <h2 className="vac-month__title">{title}</h2>
                             <button type="button" className="vac-month__step" aria-label="Следующий месяц" title="Следующий месяц" onClick={() => onStepMonth?.(1)}>›</button>
                         </div>
-                        <p className="vac-month__count">{monthSummary(rows)}</p>
+                        <div className="vac-month__summary">
+                            <p className="vac-month__count">{monthSummary(rows)}</p>
+                            <button
+                                type="button"
+                                className="vac-month__download"
+                                disabled={rows.length === 0 || downloading}
+                                onClick={download}
+                            >
+                                {downloading ? 'Файл…' : 'Скачать'}
+                            </button>
+                        </div>
                     </div>
                 ) : null}
                 <button
