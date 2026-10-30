@@ -198,10 +198,11 @@ function PersonCell({ id, person }: { id: TaskPersonId | null; person?: { code: 
     );
 }
 
-export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null }: {
+export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null, title = null }: {
     query: string;
     tasks?: HubTask[];
     owner?: { code: string; name: string } | null;
+    title?: string | null;
 }) {
     const { t } = useI18n();
     const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -282,8 +283,8 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null }: {
             : { key, dir: 'asc' }));
     };
     return (
-        <section className="lh-tasks" aria-label={owner ? t('legalHub.taskMemberTitle').replace('{name}', owner.name) : t('legalHub.viewDetails')}>
-            {owner ? <h3 className="lh-tasks__who">{t('legalHub.taskMemberTitle').replace('{name}', owner.name)}</h3> : null}
+        <section className="lh-tasks" aria-label={title ?? (owner ? t('legalHub.taskMemberTitle').replace('{name}', owner.name) : t('legalHub.viewDetails'))}>
+            {title || owner ? <h3 className="lh-tasks__who">{title ?? t('legalHub.taskMemberTitle').replace('{name}', owner?.name ?? '')}</h3> : null}
             <div className="lh-tasks__bar">
                 <div className="lh-tasks__filters">
                     <FilterSelect label={t('legalHub.taskColProject')} value={filters.project} options={projectOptions} onChange={setFilter('project')} />

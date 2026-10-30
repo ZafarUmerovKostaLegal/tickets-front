@@ -76,6 +76,8 @@ export const ruMessages: Messages = {
         memberStatsLater: 'Позже',
         memberStatsNone: 'Нет',
         memberStatsWithReviewer: 'С проверяющим',
+        memberReports: 'Отчёты',
+        memberReportsTitle: 'Отчёты · {name}',
         teamForbidden: 'Недостаточно прав, чтобы показать команды.',
         teamEmpty: 'Вы пока не руководите командой в учёте времени.',
         teamNoMembers: 'В команде пока нет участников.',
@@ -1003,6 +1005,8 @@ export type Messages = {
         memberStatsLater: string;
         memberStatsNone: string;
         memberStatsWithReviewer: string;
+        memberReports: string;
+        memberReportsTitle: string;
         teamForbidden: string;
         teamEmpty: string;
         teamNoMembers: string;

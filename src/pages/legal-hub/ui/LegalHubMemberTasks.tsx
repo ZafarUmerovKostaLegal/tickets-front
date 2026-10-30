@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useMatch, useNavigate } from 'react-router-dom';
 import { listTimeTrackingTeams, listTimeTrackingUsers } from '@entities/time-tracking';
 import { isForbiddenError } from '@entities/time-tracking/api/domains/httpShared';
 import type { TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/teamsAndLabor';
 import type { TimeTrackingUserRow } from '@entities/time-tracking/api/domains/usersAndRates';
-import { routes } from '@shared/config';
+import { getLegalHubMemberReportsUrl, getLegalHubMemberUrl, routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import { AppBackButton } from '@shared/ui';
@@ -80,6 +80,7 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
     const { t } = useI18n();
     const navigate = useNavigate();
     const location = useLocation();
+    const reports = useMatch(routes.legalHubMemberReports) != null;
     const { user, loading: userLoading } = useCurrentUser();
     const carried = useMemo(() => readMemberState(location.state, memberId), [location.state, memberId]);
     const [roster, setRoster] = useState<RosterPerson[] | null>(null);
@@ -119,6 +120,10 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
     const goBack = () => {
         navigate(routes.legalHub, { state: { section: 'allTeam' } });
     };
+    const openPane = (pane: 'stats' | 'reports') => {
+        const url = pane === 'reports' ? getLegalHubMemberReportsUrl(memberId) : getLegalHubMemberUrl(memberId);
+        navigate(url, { state: location.state });
+    };
     const found = roster?.find((member) => member.id === memberId) ?? null;
     const owner = carried
         ? { name: carried.name, code: carried.code }
@@ -132,28 +137,39 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
 
     return (
         <div className="lh-member-page">
-            <AppBackButton onClick={goBack} />
+            <div className="lh-member-page__bar">
+                <AppBackButton onClick={goBack} />
+                <div className="lh-view" role="group" aria-label={t('legalHub.viewAria')}>
+                    <button type="button" className={reports ? '' : 'is-active'} aria-pressed={!reports} onClick={() => openPane('stats')}>
+                        {t('legalHub.memberStats')}
+                    </button>
+                    <button type="button" className={reports ? 'is-active' : ''} aria-pressed={reports} onClick={() => openPane('reports')}>
+                        {t('legalHub.memberReports')}
+                    </button>
+                </div>
+            </div>
             {!ready && owner == null ? <p className="lh-team__note">{t('legalHub.teamLoading')}</p> : null}
             {ready && error && owner == null ? (
                 <p className="lh-team__note">{error === 'forbidden' ? t('legalHub.teamForbidden') : t('legalHub.teamError')}</p>
             ) : null}
             {ready && !error && owner == null ? <p className="lh-team__note">{t('legalHub.memberMissing')}</p> : null}
-            {owner != null ? (
-                <>
-                    <LegalHubMemberStats
-                        memberId={memberId}
-                        name={owner.name}
-                        code={owner.code}
-                        capacity={capacity}
-                        tasks={tasks}
-                    />
-                    <LegalHubTaskTable
-                        key={memberId}
-                        query={query}
-                        tasks={tasks}
-                        owner={owner}
-                    />
-                </>
+            {owner != null && !reports ? (
+                <LegalHubMemberStats
+                    memberId={memberId}
+                    name={owner.name}
+                    code={owner.code}
+                    capacity={capacity}
+                    tasks={tasks}
+                />
+            ) : null}
+            {owner != null && reports ? (
+                <LegalHubTaskTable
+                    key={memberId}
+                    query={query}
+                    tasks={tasks}
+                    owner={owner}
+                    title={t('legalHub.memberReportsTitle').replace('{name}', owner.name)}
+                />
             ) : null}
         </div>
     );

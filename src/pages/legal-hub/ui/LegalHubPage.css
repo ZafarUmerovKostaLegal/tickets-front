@@ -336,8 +336,16 @@
   gap: 0.85rem;
 }
 
-.lh-member-page > .app-back-btn {
+.lh-member-page > .app-back-btn,
+.lh-member-page__bar {
   align-self: flex-start;
+}
+
+.lh-member-page__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
 }
 
 .lh-member-page .lh-tasks {

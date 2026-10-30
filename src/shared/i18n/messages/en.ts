@@ -76,6 +76,8 @@ export const enMessages = {
         memberStatsLater: 'Later',
         memberStatsNone: 'None',
         memberStatsWithReviewer: 'With a reviewer',
+        memberReports: 'Reports',
+        memberReportsTitle: 'Reports · {name}',
         teamForbidden: 'You do not have access to teams.',
         teamEmpty: 'You do not lead a team in time tracking yet.',
         teamNoMembers: 'This team has no members yet.',
