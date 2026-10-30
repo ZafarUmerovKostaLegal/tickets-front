@@ -105,6 +105,7 @@ const SIDEBAR_COLLAPSED_KEY = 'lh-sidebar-collapsed';
 export function LegalHubPage() {
     const { t } = useI18n();
     const [section, setSection] = useState<LegalHubNavId>('allTeam');
+    const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
     const [query, setQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
     const [utilOpen, setUtilOpen] = useState(false);
@@ -116,6 +117,11 @@ export function LegalHubPage() {
             return false;
         }
     });
+    const changeTeamView = useCallback((next: 'cards' | 'details') => {
+        setTeamView(next);
+        if (next === 'details')
+            setUtilOpen(false);
+    }, []);
     const toggleSide = useCallback(() => {
         setSideCollapsed((collapsed) => {
             const next = !collapsed;
@@ -258,7 +264,7 @@ export function LegalHubPage() {
                         />
                         <kbd className="lh-top__search-kbd" aria-hidden>/</kbd>
                     </label>
-                    {section === 'allTeam' ? (
+                    {section === 'allTeam' && teamView === 'cards' ? (
                         <div className="lh-top__actions">
                             <button
                                 type="button"
@@ -278,11 +284,11 @@ export function LegalHubPage() {
                 <ViewTransition default="none" enter="none" exit="none" update="lh-section">
                     <main key={section} className="lh-page__content">
                         <h1 className="lh-page__title">{t(active.labelKey)}</h1>
-                        {section === 'allTeam' ? <LegalHubTeamBoard query={query} /> : null}
+                        {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}
                     </main>
                 </ViewTransition>
             </div>
-            {section === 'allTeam' ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
+            {section === 'allTeam' && teamView === 'cards' ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
         </div>
         </LegalHubMockProvider>
     );

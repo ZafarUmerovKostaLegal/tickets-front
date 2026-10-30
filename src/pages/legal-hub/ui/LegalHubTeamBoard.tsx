@@ -503,7 +503,11 @@ function TeamStatsStrip({ stats }: { stats: ReturnType<typeof teamStats> }) {
     );
 }
 
-export function LegalHubTeamBoard({ query }: { query: string }) {
+export function LegalHubTeamBoard({ query, view, onViewChange }: {
+    query: string;
+    view: 'cards' | 'details';
+    onViewChange: (view: 'cards' | 'details') => void;
+}) {
     const { t } = useI18n();
     const { user, loading: userLoading } = useCurrentUser();
     const userId = user?.id ?? null;
@@ -542,7 +546,6 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
 
     const { publish, select, selectedId } = useLegalHubMock();
     const [tempOpen, setTempOpen] = useState(false);
-    const [view, setView] = useState<'cards' | 'details'>('cards');
     const [tempMembers, setTempMembers] = useState<TempMember[]>([]);
     const usersById = useMemo(() => new Map(users.map((row) => [row.id, row])), [users]);
     const needle = query.trim().toLowerCase();
@@ -625,7 +628,7 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
                                 type="button"
                                 className={view === 'cards' ? 'is-active' : ''}
                                 aria-pressed={view === 'cards'}
-                                onClick={() => setView('cards')}
+                                onClick={() => onViewChange('cards')}
                             >
                                 {t('legalHub.viewCards')}
                             </button>
@@ -633,7 +636,7 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
                                 type="button"
                                 className={view === 'details' ? 'is-active' : ''}
                                 aria-pressed={view === 'details'}
-                                onClick={() => setView('details')}
+                                onClick={() => onViewChange('details')}
                             >
                                 {t('legalHub.viewDetails')}
                             </button>
