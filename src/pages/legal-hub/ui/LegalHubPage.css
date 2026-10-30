@@ -3668,8 +3668,27 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 .lh-my__board.is-wide {
   grid-template-columns: none;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(13rem, 1fr);
-  overflow-x: auto;
+  grid-auto-columns: calc((100% - 5 * 0.7rem) / 6);
+  overflow-x: scroll;
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--app-muted) 50%, var(--app-border)) var(--app-bg-soft);
+}
+
+.lh-my__board.is-wide::-webkit-scrollbar {
+  height: 12px;
+}
+
+.lh-my__board.is-wide::-webkit-scrollbar-track {
+  background: var(--app-bg-soft);
+  border-radius: 999px;
+}
+
+.lh-my__board.is-wide::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--app-muted) 55%, var(--app-border));
+  border: 2px solid var(--app-bg-soft);
+  border-radius: 999px;
 }
 
 .lh-my__adder {
