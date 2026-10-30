@@ -40,6 +40,7 @@ export const routes = {
     legalHub: '/legal-hub',
     legalHubMember: '/legal-hub/member/:memberId',
     legalHubMemberReports: '/legal-hub/member/:memberId/reports',
+    legalHubMemberStats: '/legal-hub/member/:memberId/stats',
     kostaDaily: '/kosta-daily',
     contacts: '/contacts',
     internalCommunication: '/internal-communication',
@@ -50,6 +51,9 @@ export function getLegalHubMemberUrl(memberId: number): string {
 }
 export function getLegalHubMemberReportsUrl(memberId: number): string {
     return `/legal-hub/member/${memberId}/reports`;
+}
+export function getLegalHubMemberStatsUrl(memberId: number): string {
+    return `/legal-hub/member/${memberId}/stats`;
 }
 export function getTicketDetailUrl(uuid: string): string {
     return `/ticket/${uuid}`;

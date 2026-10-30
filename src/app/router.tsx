@@ -110,6 +110,7 @@ const router = createBrowserRouter([
             { path: routes.home, element: withProtected(<HomePage />) },
             { path: routes.kostaLegalAi, element: withProtected(<HomePage />) },
             { path: routes.legalHub, element: withProtected(<LegalHubPage />) },
+            { path: routes.legalHubMemberStats, element: withProtected(<LegalHubPage />) },
             { path: routes.legalHubMemberReports, element: withProtected(<LegalHubPage />) },
             { path: routes.legalHubMember, element: withProtected(<LegalHubPage />) },
             { path: routes.tickets, element: withProtected(<TicketsPage />) },

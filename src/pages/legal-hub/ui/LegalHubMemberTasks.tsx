@@ -4,7 +4,7 @@ import { listTimeTrackingTeams, listTimeTrackingUsers } from '@entities/time-tra
 import { isForbiddenError } from '@entities/time-tracking/api/domains/httpShared';
 import type { TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/teamsAndLabor';
 import type { TimeTrackingUserRow } from '@entities/time-tracking/api/domains/usersAndRates';
-import { getLegalHubMemberReportsUrl, getLegalHubMemberUrl, routes } from '@shared/config';
+import { getLegalHubMemberStatsUrl, getLegalHubMemberUrl, routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import { AppBackButton } from '@shared/ui';
@@ -80,7 +80,7 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
     const { t } = useI18n();
     const navigate = useNavigate();
     const location = useLocation();
-    const reports = useMatch(routes.legalHubMemberReports) != null;
+    const stats = useMatch(routes.legalHubMemberStats) != null;
     const { user, loading: userLoading } = useCurrentUser();
     const carried = useMemo(() => readMemberState(location.state, memberId), [location.state, memberId]);
     const [roster, setRoster] = useState<RosterPerson[] | null>(null);
@@ -121,7 +121,7 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
         navigate(routes.legalHub, { state: { section: 'allTeam' } });
     };
     const openPane = (pane: 'stats' | 'reports') => {
-        const url = pane === 'reports' ? getLegalHubMemberReportsUrl(memberId) : getLegalHubMemberUrl(memberId);
+        const url = pane === 'stats' ? getLegalHubMemberStatsUrl(memberId) : getLegalHubMemberUrl(memberId);
         navigate(url, { state: location.state });
     };
     const found = roster?.find((member) => member.id === memberId) ?? null;
@@ -140,11 +140,11 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
             <div className="lh-member-page__bar">
                 <AppBackButton onClick={goBack} />
                 <div className="lh-view" role="group" aria-label={t('legalHub.viewAria')}>
-                    <button type="button" className={reports ? '' : 'is-active'} aria-pressed={!reports} onClick={() => openPane('stats')}>
-                        {t('legalHub.memberStats')}
-                    </button>
-                    <button type="button" className={reports ? 'is-active' : ''} aria-pressed={reports} onClick={() => openPane('reports')}>
+                    <button type="button" className={stats ? '' : 'is-active'} aria-pressed={!stats} onClick={() => openPane('reports')}>
                         {t('legalHub.memberReports')}
+                    </button>
+                    <button type="button" className={stats ? 'is-active' : ''} aria-pressed={stats} onClick={() => openPane('stats')}>
+                        {t('legalHub.memberStats')}
                     </button>
                 </div>
             </div>
@@ -153,7 +153,7 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
                 <p className="lh-team__note">{error === 'forbidden' ? t('legalHub.teamForbidden') : t('legalHub.teamError')}</p>
             ) : null}
             {ready && !error && owner == null ? <p className="lh-team__note">{t('legalHub.memberMissing')}</p> : null}
-            {owner != null && !reports ? (
+            {owner != null && stats ? (
                 <LegalHubMemberStats
                     memberId={memberId}
                     name={owner.name}
@@ -162,7 +162,7 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
                     tasks={tasks}
                 />
             ) : null}
-            {owner != null && reports ? (
+            {owner != null && !stats ? (
                 <LegalHubTaskTable
                     key={memberId}
                     query={query}

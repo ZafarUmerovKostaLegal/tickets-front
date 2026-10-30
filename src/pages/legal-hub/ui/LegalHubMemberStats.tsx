@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { mockMemberLoad } from './legalHubMock';
@@ -26,6 +26,25 @@ const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
     high: 'legalHub.taskPriorityHigh',
     normal: 'legalHub.taskPriorityNormal',
     low: 'legalHub.taskPriorityLow',
+};
+
+const STREAM_TONES = ['progress', 'associate', 'wait', 'partner', 'priority-low', 'changes'] as const;
+
+const TONE_COLOR: Record<string, string> = {
+    partner: '#db2777',
+    progress: '#2563eb',
+    wait: '#d97706',
+    changes: '#dc2626',
+    associate: '#7c3aed',
+    todo: '#64748b',
+    'priority-high': '#dc2626',
+    'priority-normal': '#64748b',
+    'priority-low': '#16a34a',
+    solar: '#d97706',
+    wind: '#2563eb',
+    healthcare: '#e11d48',
+    infrastructure: '#7c3aed',
+    bess: '#16a34a',
 };
 
 function dayDelta(iso: string): number {
@@ -132,27 +151,38 @@ export function LegalHubMemberStats({ memberId, name, code, capacity, tasks }: {
                     <span>{t('legalHub.memberStatsLoad')}</span>
                     <strong style={{ color }}>{load.percent}%</strong>
                     <span className="lh-person__meter" aria-hidden>
-                        <span style={{ width: `${load.percent}%`, background: color }} />
+                        <span style={{ ...barStyle(load.percent, 100, 0), background: color }} />
                     </span>
                 </div>
             </header>
             <ul className="lh-person__kpis">
-                <Kpi label={t('legalHub.statTasks')} value={total} />
-                <Kpi label={t('legalHub.myTasksLate')} value={overdue.length} hot={overdue.length > 0} />
-                <Kpi label={t('legalHub.statReview')} value={review.length} />
-                <Kpi label={t('legalHub.statusWaiting')} value={waiting.length} />
-                <Kpi label={t('legalHub.statDue')} value={dueWeek.length} />
-                <Kpi label={t('legalHub.memberStatsMinutes')} value={minutes} />
+                {[
+                    { label: t('legalHub.statTasks'), value: total },
+                    { label: t('legalHub.myTasksLate'), value: overdue.length, hot: overdue.length > 0 },
+                    { label: t('legalHub.statReview'), value: review.length },
+                    { label: t('legalHub.statusWaiting'), value: waiting.length },
+                    { label: t('legalHub.statDue'), value: dueWeek.length },
+                    { label: t('legalHub.memberStatsMinutes'), value: minutes },
+                ].map((item, index) => (
+                    <Kpi key={item.label} index={index} label={item.label} value={item.value} hot={item.hot} />
+                ))}
             </ul>
             <div className="lh-person__grid">
-                <Panel title={t('legalHub.memberStatsByStatus')}>
+                <Panel title={t('legalHub.memberStatsByStatus')} slices={statusRows.map((row) => ({ tone: row.id, count: row.count }))} total={total}>
                     <Bars rows={statusRows.map((row) => ({ ...row, tone: row.id }))} total={total} />
                 </Panel>
-                <Panel title={t('legalHub.memberStatsByPriority')}>
+                <Panel title={t('legalHub.memberStatsByPriority')} slices={priorityRows.map((row) => ({ tone: `priority-${row.id}`, count: row.count }))} total={total}>
                     <Bars rows={priorityRows.map((row) => ({ ...row, tone: `priority-${row.id}` }))} total={total} />
                     <p className="lh-person__note">{t('legalHub.memberStatsAvg').replace('{count}', String(average))}</p>
                 </Panel>
-                <Panel title={t('legalHub.memberStatsWithReviewer')}>
+                <Panel
+                    title={t('legalHub.memberStatsWithReviewer')}
+                    slices={[
+                        { tone: 'partner', count: withReviewer },
+                        { tone: 'todo', count: Math.max(0, total - withReviewer) },
+                    ]}
+                    total={total}
+                >
                     <Bars
                         rows={[
                             { id: 'reviewer', label: t('legalHub.memberStatsWithReviewer'), count: withReviewer, tone: 'partner' },
@@ -164,17 +194,17 @@ export function LegalHubMemberStats({ memberId, name, code, capacity, tasks }: {
                 </Panel>
             </div>
             <div className="lh-person__grid lh-person__grid--two">
-                <Panel title={t('legalHub.memberStatsByProject')}>
+                <Panel title={t('legalHub.memberStatsByProject')} slices={projectRows.map((row) => ({ tone: row.id, count: row.count }))} total={total}>
                     {projectRows.length === 0 ? <p className="lh-person__note">{t('legalHub.memberStatsNone')}</p> : (
                         <ul className="lh-person__projects">
-                            {projectRows.map((row) => (
+                            {projectRows.map((row, index) => (
                                 <li key={row.id}>
                                     <span className={`lh-tasks__project lh-tasks__project--${row.id}`}>
                                         <FolderIcon />
                                         <span>{row.label}</span>
                                     </span>
                                     <span className="lh-person__track" aria-hidden>
-                                        <span style={{ width: total === 0 ? '0%' : `${Math.round((row.count / total) * 100)}%` }} />
+                                        <span className={`is-${row.id}`} style={barStyle(row.count, total, index)} />
                                     </span>
                                     <strong>{row.count}</strong>
                                 </li>
@@ -182,49 +212,120 @@ export function LegalHubMemberStats({ memberId, name, code, capacity, tasks }: {
                         </ul>
                     )}
                 </Panel>
-                <Panel title={t('legalHub.memberStatsByStream')}>
+                <Panel title={t('legalHub.memberStatsByStream')} slices={streamRows.map((row, index) => ({ tone: STREAM_TONES[index % STREAM_TONES.length] ?? 'progress', count: row.count }))} total={total}>
                     {streamRows.length === 0 ? <p className="lh-person__note">{t('legalHub.memberStatsNone')}</p> : (
-                        <Bars rows={streamRows.map((row) => ({ id: row.label, label: row.label, count: row.count, tone: 'progress' }))} total={total} />
+                        <Bars
+                            rows={streamRows.map((row, index) => ({
+                                id: row.label,
+                                label: row.label,
+                                count: row.count,
+                                tone: STREAM_TONES[index % STREAM_TONES.length] ?? 'progress',
+                            }))}
+                            total={total}
+                        />
                     )}
                 </Panel>
             </div>
-            <Panel title={t('legalHub.memberStatsDeadlines')}>
-                <div className="lh-person__deadlines">
-                    <DeadlineColumn title={t('legalHub.myTasksLate')} tasks={overdue} locale={locale} empty={t('legalHub.memberStatsNone')} />
-                    <DeadlineColumn title={t('legalHub.statDue')} tasks={weekOnly} locale={locale} empty={t('legalHub.memberStatsNone')} />
-                    <DeadlineColumn title={t('legalHub.memberStatsLater')} tasks={later} locale={locale} empty={t('legalHub.memberStatsNone')} />
+            <section className="lh-person__deadlines" aria-label={t('legalHub.memberStatsDeadlines')}>
+                <h2>{t('legalHub.memberStatsDeadlines')}</h2>
+                <div className="lh-person__board">
+                    <DeadlineColumn tone="changes" title={t('legalHub.myTasksLate')} tasks={overdue} locale={locale} empty={t('legalHub.memberStatsNone')} />
+                    <DeadlineColumn tone="wait" title={t('legalHub.statDue')} tasks={weekOnly} locale={locale} empty={t('legalHub.memberStatsNone')} />
+                    <DeadlineColumn tone="progress" title={t('legalHub.memberStatsLater')} tasks={later} locale={locale} empty={t('legalHub.memberStatsNone')} />
                 </div>
-            </Panel>
+            </section>
         </section>
     );
 }
 
-function Kpi({ label, value, hot }: { label: string; value: number; hot?: boolean }) {
+function shareWidth(count: number, total: number): string {
+    return total === 0 ? '0%' : `${Math.round((count / total) * 100)}%`;
+}
+
+function barStyle(count: number, total: number, index: number): CSSProperties {
+    return { ['--w' as string]: shareWidth(count, total), animationDelay: `${90 + index * 70}ms` };
+}
+
+function useCount(value: number): number {
+    const [shown, setShown] = useState(0);
+    useEffect(() => {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            setShown(value);
+            return;
+        }
+        const start = performance.now();
+        let frame = 0;
+        const tick = (now: number) => {
+            const progress = Math.min(1, (now - start) / 700);
+            const eased = 1 - (1 - progress) ** 3;
+            setShown(Math.round(value * eased));
+            if (progress < 1)
+                frame = requestAnimationFrame(tick);
+        };
+        frame = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(frame);
+    }, [value]);
+    return shown;
+}
+
+function Kpi({ label, value, hot, index }: { label: string; value: number; hot?: boolean; index: number }) {
+    const shown = useCount(value);
     return (
-        <li className={hot ? 'is-hot' : ''}>
-            <strong>{value}</strong>
+        <li className={hot ? 'is-hot' : ''} style={{ animationDelay: `${index * 55}ms` }}>
+            <strong>{shown}</strong>
             <span>{label}</span>
         </li>
     );
 }
 
-function Panel({ title, children }: { title: string; children: ReactNode }) {
+function Panel({ title, slices, total, children }: {
+    title: string;
+    slices: { tone: string; count: number }[];
+    total: number;
+    children: ReactNode;
+}) {
     return (
         <section className="lh-person__panel">
-            <h2>{title}</h2>
+            <header>
+                <h2>{title}</h2>
+                <Ring slices={slices} total={total} />
+            </header>
             {children}
         </section>
+    );
+}
+
+function Ring({ slices, total }: { slices: { tone: string; count: number }[]; total: number }) {
+    const filled = slices.filter((slice) => slice.count > 0);
+    let cursor = 0;
+    const parts = filled.map((slice) => {
+        const sweep = total === 0 ? 0 : (slice.count / total) * 360;
+        const start = cursor;
+        cursor += sweep;
+        return `${TONE_COLOR[slice.tone] ?? '#64748b'} ${start}deg ${cursor}deg`;
+    });
+    return (
+        <div
+            className="lh-person__ring"
+            style={{ background: parts.length === 0 ? 'var(--app-bg-soft)' : `conic-gradient(${parts.join(', ')})` }}
+            aria-hidden
+        >
+            <strong>{total}</strong>
+        </div>
     );
 }
 
 function Bars({ rows, total }: { rows: { id: string; label: string; count: number; tone: string }[]; total: number }) {
     return (
         <ul className="lh-person__bars">
-            {rows.map((row) => (
+            {rows.map((row, index) => (
                 <li key={row.id}>
-                    <span>{row.label}</span>
+                    <span className="lh-person__name">
+                        <i className={`is-${row.tone}`} />
+                        {row.label}
+                    </span>
                     <span className="lh-person__track" aria-hidden>
-                        <span className={`is-${row.tone}`} style={{ width: total === 0 ? '0%' : `${Math.round((row.count / total) * 100)}%` }} />
+                        <span className={`is-${row.tone}`} style={barStyle(row.count, total, index)} />
                     </span>
                     <strong>{row.count}</strong>
                 </li>
@@ -233,7 +334,8 @@ function Bars({ rows, total }: { rows: { id: string; label: string; count: numbe
     );
 }
 
-function DeadlineColumn({ title, tasks, locale, empty }: {
+function DeadlineColumn({ tone, title, tasks, locale, empty }: {
+    tone: 'changes' | 'wait' | 'progress';
     title: string;
     tasks: HubTask[];
     locale: string;
@@ -241,23 +343,29 @@ function DeadlineColumn({ title, tasks, locale, empty }: {
 }) {
     const { t } = useI18n();
     return (
-        <div>
-            <h3>{title}<span>{tasks.length}</span></h3>
-            {tasks.length === 0 ? <p className="lh-person__note">{empty}</p> : (
+        <section className="lh-person__col">
+            <header>
+                <span className={`lh-tasks__pill lh-tasks__pill--${tone}`}>{title}</span>
+                <span>{tasks.length}</span>
+            </header>
+            {tasks.length === 0 ? <p>{empty}</p> : (
                 <ul>
-                    {tasks.map((task) => {
+                    {tasks.map((task, index) => {
                         const hint = dueHint(task.clientOn, t);
                         return (
-                            <li key={task.id}>
+                            <li key={task.id} className={`lh-person__card${tone === 'changes' ? ' is-late' : ''}`} style={{ animationDelay: `${index * 45}ms` }}>
                                 <strong>{task.title}</strong>
-                                <span>{PROJECT_LABEL[task.project as TaskProjectId]}</span>
-                                <em className={`lh-tasks__delta lh-tasks__delta--${hint.tone}`}>{formatDay(task.clientOn, locale)} · {hint.text}</em>
+                                <span className="lh-person__card-meta">{PROJECT_LABEL[task.project as TaskProjectId]} · {task.workstream}</span>
+                                <span className="lh-person__card-foot">
+                                    <span className={`lh-tasks__pill lh-tasks__pill--priority-${task.priority}`}>{t(PRIORITY_LABEL[task.priority])}</span>
+                                    <em className={`lh-tasks__delta lh-tasks__delta--${hint.tone}`}>{formatDay(task.clientOn, locale)} · {hint.text}</em>
+                                </span>
                             </li>
                         );
                     })}
                 </ul>
             )}
-        </div>
+        </section>
     );
 }
 
