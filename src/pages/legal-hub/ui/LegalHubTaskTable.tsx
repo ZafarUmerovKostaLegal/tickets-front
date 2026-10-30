@@ -183,28 +183,33 @@ function DeadlineCell({ iso }: { iso: string | null }) {
     );
 }
 
-function PersonCell({ id }: { id: TaskPersonId | null }) {
-    if (id == null)
+function PersonCell({ id, person }: { id: TaskPersonId | null; person?: { code: string; name: string } | null }) {
+    const shown = person ?? (id == null ? null : PERSON_LABEL[id]);
+    if (shown == null)
         return <span className="lh-tasks__dash">—</span>;
-    const person = PERSON_LABEL[id];
+    const tone = person ? 'member' : id;
     return (
         <span className="lh-tasks__person">
-            <span className={`lh-tasks__avatar lh-tasks__avatar--${id}`} aria-hidden>{person.code}</span>
-            <span>{person.name}</span>
+            <span className={`lh-tasks__avatar lh-tasks__avatar--${tone}`} aria-hidden>{shown.code}</span>
+            <span>{shown.name}</span>
         </span>
     );
 }
 
-export function LegalHubTaskTable({ query }: { query: string }) {
+export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null }: {
+    query: string;
+    tasks?: HubTask[];
+    owner?: { code: string; name: string } | null;
+}) {
     const { t } = useI18n();
     const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
     const [sort, setSort] = useState<{ key: SortKey; dir: 'asc' | 'desc' }>({ key: 'client', dir: 'asc' });
     const needle = query.trim().toLowerCase();
     const workstreams = useMemo(() => {
-        const names = [...new Set(HUB_TASKS.map((task) => task.workstream))];
+        const names = [...new Set(tasks.map((task) => task.workstream))];
         names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
         return names.map((name) => ({ id: name, label: name }));
-    }, []);
+    }, [tasks]);
     const projectOptions = TASK_PROJECTS.map((id) => ({ id, label: PROJECT_LABEL[id] }));
     const peopleOptions = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].name }));
     const reviewerOptions = [
@@ -221,7 +226,7 @@ export function LegalHubTaskTable({ query }: { query: string }) {
         if (key === 'workstream')
             return task.workstream;
         if (key === 'owner')
-            return PERSON_LABEL[task.owner].name;
+            return owner?.name ?? PERSON_LABEL[task.owner].name;
         if (key === 'reviewer')
             return task.reviewer ? PERSON_LABEL[task.reviewer].name : '';
         if (key === 'status')
@@ -232,12 +237,12 @@ export function LegalHubTaskTable({ query }: { query: string }) {
     };
     const rows = useMemo(() => {
         const dir = sort.dir === 'asc' ? 1 : -1;
-        const filtered = HUB_TASKS.filter((task) => {
+        const filtered = tasks.filter((task) => {
             if (filters.project && task.project !== filters.project)
                 return false;
             if (filters.workstream && task.workstream !== filters.workstream)
                 return false;
-            if (filters.owner && task.owner !== filters.owner)
+            if (!owner && filters.owner && task.owner !== filters.owner)
                 return false;
             if (filters.reviewer === NO_REVIEWER && task.reviewer != null)
                 return false;
@@ -250,7 +255,8 @@ export function LegalHubTaskTable({ query }: { query: string }) {
             if (!needle)
                 return true;
             const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer].name : '';
-            const haystack = `${PROJECT_LABEL[task.project]} ${task.title} ${task.workstream} ${PERSON_LABEL[task.owner].name} ${reviewer}`.toLowerCase();
+            const ownerName = owner?.name ?? PERSON_LABEL[task.owner].name;
+            const haystack = `${PROJECT_LABEL[task.project]} ${task.title} ${task.workstream} ${ownerName} ${reviewer}`.toLowerCase();
             return haystack.includes(needle);
         });
         filtered.sort((a, b) => {
@@ -263,7 +269,7 @@ export function LegalHubTaskTable({ query }: { query: string }) {
             return compareText(String(left ?? ''), String(right ?? ''), dir);
         });
         return filtered;
-    }, [filters, needle, sort, t]);
+    }, [filters, needle, owner, sort, t, tasks]);
     const filtersOn = Object.values(filters).some(Boolean);
     const setFilter = (key: keyof Filters) => (id: string) => setFilters((current) => ({ ...current, [key]: id }));
     const toggleSort = (key: SortKey) => {
@@ -272,12 +278,15 @@ export function LegalHubTaskTable({ query }: { query: string }) {
             : { key, dir: 'asc' }));
     };
     return (
-        <section className="lh-tasks" aria-label={t('legalHub.viewDetails')}>
+        <section className="lh-tasks" aria-label={owner ? t('legalHub.taskMemberTitle').replace('{name}', owner.name) : t('legalHub.viewDetails')}>
+            {owner ? <h3 className="lh-tasks__who">{t('legalHub.taskMemberTitle').replace('{name}', owner.name)}</h3> : null}
             <div className="lh-tasks__bar">
                 <div className="lh-tasks__filters">
                     <FilterSelect label={t('legalHub.taskColProject')} value={filters.project} options={projectOptions} onChange={setFilter('project')} />
                     <FilterSelect label={t('legalHub.taskColWorkstream')} value={filters.workstream} options={workstreams} onChange={setFilter('workstream')} />
-                    <FilterSelect label={t('legalHub.taskColOwner')} value={filters.owner} options={peopleOptions} onChange={setFilter('owner')} />
+                    {owner ? null : (
+                        <FilterSelect label={t('legalHub.taskColOwner')} value={filters.owner} options={peopleOptions} onChange={setFilter('owner')} />
+                    )}
                     <FilterSelect label={t('legalHub.taskColReviewer')} value={filters.reviewer} options={reviewerOptions} onChange={setFilter('reviewer')} />
                     <FilterSelect label={t('legalHub.taskColStatus')} value={filters.status} options={statusOptions} onChange={setFilter('status')} />
                     <FilterSelect label={t('legalHub.taskColPriority')} value={filters.priority} options={priorityOptions} onChange={setFilter('priority')} />
@@ -320,7 +329,7 @@ export function LegalHubTaskTable({ query }: { query: string }) {
                                             <span>{PROJECT_LABEL[task.project]}</span>
                                         </span>
                                     </td>
-                                    <td>
+                                    <td className="lh-tasks__cell-title">
                                         <span className="lh-tasks__title">{task.title}</span>
                                         {task.autoRouted ? (
                                             <span className="lh-tasks__route">
@@ -330,7 +339,7 @@ export function LegalHubTaskTable({ query }: { query: string }) {
                                         ) : null}
                                     </td>
                                     <td className="lh-tasks__muted">{task.workstream}</td>
-                                    <td><PersonCell id={task.owner} /></td>
+                                    <td><PersonCell id={task.owner} person={owner} /></td>
                                     <td><PersonCell id={task.reviewer} /></td>
                                     <td>
                                         <span className={`lh-tasks__pill lh-tasks__pill--${task.status}`}>{t(STATUS_LABEL[task.status])}</span>
@@ -340,7 +349,7 @@ export function LegalHubTaskTable({ query }: { query: string }) {
                                     </td>
                                     <td><DeadlineCell iso={task.reviewOn} /></td>
                                     <td><DeadlineCell iso={task.clientOn} /></td>
-                                    <td className="lh-tasks__muted">{t('legalHub.taskMinutes').replace('{count}', String(task.minutes))}</td>
+                                    <td className="lh-tasks__muted lh-tasks__cell-estimate">{t('legalHub.taskMinutes').replace('{count}', String(task.minutes))}</td>
                                 </tr>
                             ))}
                         </tbody>

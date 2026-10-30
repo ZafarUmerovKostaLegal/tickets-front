@@ -42,6 +42,14 @@ export const PERSON_LABEL: Record<TaskPersonId, { code: string; name: string }> 
     partner: { code: 'P', name: 'Partner' },
 };
 
+export function tasksForMember(memberId: number, memberIds: number[]): HubTask[] {
+    const ordered = [...new Set(memberIds)].sort((a, b) => a - b);
+    const index = ordered.indexOf(memberId);
+    if (index < 0)
+        return [];
+    return HUB_TASKS.filter((_, taskIndex) => taskIndex % ordered.length === index);
+}
+
 export const HUB_TASKS: HubTask[] = [
     { id: 'lla-final', project: 'solar', title: 'LLA Amendment — Final Approval', workstream: 'Land / LLA', owner: 'ja1', reviewer: 'partner', status: 'partner', priority: 'high', reviewOn: '2026-10-29', clientOn: '2026-11-02', minutes: 120 },
     { id: 'lla-prep', project: 'solar', title: 'Prepare LLA Amendment', workstream: 'Land / LLA', owner: 'ja1', reviewer: null, status: 'progress', priority: 'high', reviewOn: null, clientOn: '2026-11-03', minutes: 120 },

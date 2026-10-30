@@ -159,6 +159,7 @@ export const enMessages = {
         taskMinutes: '{count} min',
         taskAutoRouted: 'Auto-routed',
         taskNoReviewer: 'No reviewer',
+        taskMemberTitle: 'Tasks · {name}',
     },
     kostaLegalAi: {
         heroTitle: 'Where shall we start?',

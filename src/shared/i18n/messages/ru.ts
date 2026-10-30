@@ -159,6 +159,7 @@ export const ruMessages: Messages = {
         taskMinutes: '{count} мин',
         taskAutoRouted: 'Автомаршрут',
         taskNoReviewer: 'Без проверяющего',
+        taskMemberTitle: 'Задачи · {name}',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -982,6 +983,7 @@ export type Messages = {
         taskMinutes: string;
         taskAutoRouted: string;
         taskNoReviewer: string;
+        taskMemberTitle: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;

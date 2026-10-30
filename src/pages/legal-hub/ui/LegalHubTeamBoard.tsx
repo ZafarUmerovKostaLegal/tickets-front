@@ -8,6 +8,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { useCurrentUser } from '@shared/hooks';
 import { fallbackSlices, mockMemberLoad, slicesFromUtil, sumUtil, teamStats, useLegalHubMock, type MemberLoad, type UtilKey, type UtilSlice } from './legalHubMock';
+import { tasksForMember } from './legalHubTasks';
 import { LegalHubTaskTable } from './LegalHubTaskTable';
 import { LegalHubTempMemberDialog, type TempEmployeeOption, type TempMemberDraft, type TempTeamRef } from './LegalHubTempMemberDialog';
 
@@ -587,6 +588,22 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
         return map;
     }, [ledTeams, tempMembers]);
 
+    const roster = useMemo(() => ledTeams.flatMap((team) => {
+        const temps = tempMembers
+            .filter((member) => member.teamId === team.id)
+            .map((member): MemberCard => ({
+                id: member.id,
+                name: member.name,
+                position: member.position,
+                email: member.email,
+                capacity: '',
+                initials: personInitials(member.name),
+                accessUntil: member.accessUntil,
+            }));
+        return [...memberCards(team, usersById), ...temps];
+    }), [ledTeams, tempMembers, usersById]);
+    const selectedMember = roster.find((member) => member.id === selectedId) ?? null;
+
     useEffect(() => {
         if (teams == null)
             return;
@@ -669,6 +686,14 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
                         </section>
                     );
                 }) : null}
+                {view === 'cards' && selectedMember ? (
+                    <LegalHubTaskTable
+                        key={selectedMember.id}
+                        query={needle}
+                        tasks={tasksForMember(selectedMember.id, roster.map((member) => member.id))}
+                        owner={{ name: selectedMember.name, code: selectedMember.initials }}
+                    />
+                ) : null}
             </div>
             {tempOpen ? (
                 <LegalHubTempMemberDialog
