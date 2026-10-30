@@ -101,6 +101,30 @@ export function taskDrawerDetail(task: HubTask): TaskDetail {
             ],
         };
     }
+    if (task.id === 'wind-final') {
+        return {
+            internalOn: '2026-10-28',
+            important: true,
+            approval: 'required',
+            instructions: 'Prepare the document, check it against client instructions and the latest correspondence, then send it for review.',
+            checks: [
+                { id: 'instructions', label: 'Review client instructions', done: true },
+                { id: 'draft', label: 'Prepare draft', done: true },
+                { id: 'refs', label: 'Check legal references', done: true },
+                { id: 'final', label: 'Verify final version', done: true },
+            ],
+            files: [],
+            comments: [
+                { id: 'c1', author: 'Junior Associate 1', text: 'Final review is ready. Please check the correspondence before it goes out.', when: '28 Oct', time: '11:20' },
+                { id: 'c2', author: 'Partner', text: 'I will look at the client letter and confirm the deadline.', when: '29 Oct', time: '16:05' },
+            ],
+            history: [
+                { id: 'h-review', kind: 'review', when: '29 Oct', time: '16:40' },
+                { id: 'h-started', kind: 'started', when: '27 Oct', time: '10:00' },
+                { id: 'h-created', kind: 'created', when: '26 Oct', time: '09:00' },
+            ],
+        };
+    }
     const doneCount = task.status === 'todo' ? 0 : task.status === 'progress' || task.status === 'wait' ? 1 : 2;
     const checks = [
         'Review client instructions',

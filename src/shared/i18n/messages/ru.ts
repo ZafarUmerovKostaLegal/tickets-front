@@ -193,6 +193,16 @@ export const ruMessages: Messages = {
         taskMarkWaiting: 'Внешнее ожидание',
         taskAddComment: 'Комментарий',
         taskImportant: 'Важно',
+        taskFromAssociate: 'От ассоциата',
+        taskMarkImportant: 'Отметить важным',
+        taskReviewStatus: 'Статус проверки',
+        taskStageSubmitted: 'Отправлено',
+        taskStageAssociate: 'Проверка ассоциата',
+        taskStagePartner: 'Согласование партнёра',
+        taskStageApproved: 'Одобрено',
+        taskNotifyReviewer: 'Уведомить проверяющего',
+        taskWithdraw: 'Отозвать',
+        taskReviewerOnly: 'Одобрить документ может только назначенный проверяющий.',
         taskReviewerEmpty: 'Пока не назначен',
         taskCommentPlaceholder: 'Написать комментарий',
         taskCommentSend: 'Отправить',
@@ -1096,6 +1106,16 @@ export type Messages = {
         taskMarkWaiting: string;
         taskAddComment: string;
         taskImportant: string;
+        taskFromAssociate: string;
+        taskMarkImportant: string;
+        taskReviewStatus: string;
+        taskStageSubmitted: string;
+        taskStageAssociate: string;
+        taskStagePartner: string;
+        taskStageApproved: string;
+        taskNotifyReviewer: string;
+        taskWithdraw: string;
+        taskReviewerOnly: string;
         taskReviewerEmpty: string;
         taskCommentPlaceholder: string;
         taskCommentSend: string;

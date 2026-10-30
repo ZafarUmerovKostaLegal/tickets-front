@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
+import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import {
     HUB_TASKS,
     PERSON_LABEL,
@@ -122,7 +123,9 @@ export function LegalHubMyTasks({ query }: { query: string }) {
     const [collapsed, setCollapsed] = useState<string[]>(['infrastructure', 'bess', 'healthcare']);
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
+    const [openId, setOpenId] = useState<string | null>(null);
     const needle = query.trim().toLowerCase();
+    const openTask = tasks.find((task) => task.id === openId) ?? null;
 
     const attention = useMemo(
         () => tasks.filter((task) => !task.done && (task.status === 'changes' || task.status === 'wait' || (task.reviewOn != null && dayDelta(task.reviewOn) < 0))),
@@ -287,6 +290,7 @@ export function LegalHubMyTasks({ query }: { query: string }) {
                                                 draggable={droppable && task.status !== 'associate' && task.status !== 'partner'}
                                                 onDragStart={() => setDragging(task.id)}
                                                 onDragEnd={() => setDragging(null)}
+                                                onOpen={() => setOpenId(task.id)}
                                             />
                                         ))}
                                     </ul>
@@ -306,11 +310,14 @@ export function LegalHubMyTasks({ query }: { query: string }) {
                             rows={visible.filter((task) => task.project === id)}
                             pool={listed.filter((task) => task.project === id)}
                             onToggle={() => setCollapsed((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
+                            onOpen={setOpenId}
                         />
                     ))}
                 </div>
             ) : null}
-            {mode === 'status' ? <p className="lh-my__note">{t('legalHub.myTasksDragHint')}</p> : null}
+            {openTask ? (
+                <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} />
+            ) : null}
             {composer ? (
                 <NewTaskDialog
                     onClose={() => setComposer(false)}
@@ -372,12 +379,13 @@ function waitingName(task: MineTask): string | null {
     return task.reviewer ? PERSON_LABEL[task.reviewer].name : null;
 }
 
-function ProjectGroup({ id, open, rows, pool, onToggle }: {
+function ProjectGroup({ id, open, rows, pool, onToggle, onOpen }: {
     id: TaskProjectId;
     open: boolean;
     rows: MineTask[];
     pool: MineTask[];
     onToggle: () => void;
+    onOpen: (id: string) => void;
 }) {
     const { t } = useI18n();
     const done = pool.filter((task) => task.done).length;
@@ -415,7 +423,7 @@ function ProjectGroup({ id, open, rows, pool, onToggle }: {
                     </thead>
                     <tbody>
                         {rows.map((task) => (
-                            <ProjectRow key={task.id} task={task} />
+                            <ProjectRow key={task.id} task={task} onOpen={() => onOpen(task.id)} />
                         ))}
                     </tbody>
                 </table>
@@ -424,7 +432,7 @@ function ProjectGroup({ id, open, rows, pool, onToggle }: {
     );
 }
 
-function ProjectRow({ task }: { task: MineTask }) {
+function ProjectRow({ task, onOpen }: { task: MineTask; onOpen: () => void }) {
     const { t, locale } = useI18n();
     const waiting = waitingName(task);
     const follow = task.followUpOn;
@@ -435,7 +443,15 @@ function ProjectRow({ task }: { task: MineTask }) {
             ? t('legalHub.myTasksFollowDue')
             : t('legalHub.myTasksFollowOn').replace('{date}', formatDay(follow, locale));
     return (
-        <tr className={task.done ? 'is-done' : ''}>
+        <tr
+            className={task.done ? 'is-done' : ''}
+            tabIndex={0}
+            onClick={onOpen}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter')
+                    onOpen();
+            }}
+        >
             <td>
                 <span className="lh-my__stream">
                     {task.workstream}
@@ -483,21 +499,36 @@ function ChevronIcon({ open }: { open: boolean }) {
         </svg>
     );
 }
-function TaskCard({ task, draggable, onDragStart, onDragEnd }: {
+function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
     task: MineTask;
     draggable: boolean;
     onDragStart: () => void;
     onDragEnd: () => void;
+    onOpen: () => void;
 }) {
     const { t } = useI18n();
+    const dragged = useRef(false);
     const person = PERSON_LABEL[task.owner];
     const late = dayDelta(task.clientOn) < 0;
     return (
         <li
             className={`lh-my__card${draggable ? '' : ' is-locked'}`}
             draggable={draggable}
-            onDragStart={onDragStart}
-            onDragEnd={onDragEnd}
+            onDragStart={() => {
+                dragged.current = true;
+                onDragStart();
+            }}
+            onDragEnd={() => {
+                onDragEnd();
+                window.setTimeout(() => {
+                    dragged.current = false;
+                }, 0);
+            }}
+            onClick={() => {
+                if (dragged.current)
+                    return;
+                onOpen();
+            }}
         >
             <strong>{task.title}</strong>
             <span className="lh-my__card-meta">{PROJECT_LABEL[task.project]} · {task.workstream}</span>
