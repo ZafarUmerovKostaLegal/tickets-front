@@ -3658,17 +3658,13 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 }
 
 .lh-my__board {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+  display: flex;
+  flex: 1;
+  flex-wrap: nowrap;
+  align-items: stretch;
   gap: 0.7rem;
   min-width: 0;
   min-height: 0;
-}
-
-.lh-my__board.is-wide {
-  grid-template-columns: none;
-  grid-auto-flow: column;
-  grid-auto-columns: calc((100% - 5 * 0.7rem) / 6);
   overflow-x: scroll;
   overflow-y: hidden;
   scrollbar-gutter: stable;
@@ -3676,16 +3672,16 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   scrollbar-color: color-mix(in srgb, var(--app-muted) 50%, var(--app-border)) var(--app-bg-soft);
 }
 
-.lh-my__board.is-wide::-webkit-scrollbar {
+.lh-my__board::-webkit-scrollbar {
   height: 12px;
 }
 
-.lh-my__board.is-wide::-webkit-scrollbar-track {
+.lh-my__board::-webkit-scrollbar-track {
   background: var(--app-bg-soft);
   border-radius: 999px;
 }
 
-.lh-my__board.is-wide::-webkit-scrollbar-thumb {
+.lh-my__board::-webkit-scrollbar-thumb {
   background: color-mix(in srgb, var(--app-muted) 55%, var(--app-border));
   border: 2px solid var(--app-bg-soft);
   border-radius: 999px;
@@ -3693,9 +3689,13 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 
 .lh-my__adder {
   display: flex;
+  flex: 0 0 180px;
   flex-direction: column;
   align-items: stretch;
-  min-width: 9.5rem;
+  align-self: flex-start;
+  width: 180px;
+  min-width: 180px;
+  max-width: 180px;
   padding: 0.7rem;
   border: 1px dashed var(--app-border);
   border-radius: 16px;
@@ -3800,9 +3800,12 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 
 .lh-my__col {
   display: flex;
+  flex: 0 0 280px;
   flex-direction: column;
   gap: 0.55rem;
-  min-width: 0;
+  width: 280px;
+  min-width: 280px;
+  max-width: 280px;
   min-height: 0;
   padding: 0.7rem;
   border: 1px dashed var(--app-border);
@@ -3854,6 +3857,12 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   list-style: none;
 }
 
+.lh-my__col ul > .lh-my__card {
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
+}
+
 @media (min-width: 861px) {
   .lh-page__content:has(.lh-my__board) {
     display: flex;
@@ -3883,8 +3892,7 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 
 @media (max-width: 860px) {
   .lh-my__board {
-    grid-template-columns: repeat(5, minmax(12rem, 1fr)) auto;
-    overflow-x: auto;
+    overflow-x: scroll;
     padding-bottom: 0.2rem;
   }
 
@@ -3895,8 +3903,11 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 
 .lh-my__card {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   gap: 0.35rem;
+  box-sizing: border-box;
+  width: 100%;
   padding: 0.7rem 0.75rem;
   border: 1px solid var(--app-border);
   border-radius: 12px;
@@ -3940,8 +3951,13 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 
 .lh-my__card-foot {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
+}
+
+.lh-my__card-foot > * {
+  flex-shrink: 0;
 }
 
 .lh-my__card-foot .lh-tasks__avatar {
