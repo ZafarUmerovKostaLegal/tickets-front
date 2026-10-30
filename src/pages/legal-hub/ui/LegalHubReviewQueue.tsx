@@ -329,15 +329,15 @@ function QueueCard({ item, locale, nudged, onOpen, onNudge }: {
                 {person ? <span className="lh-queue__who">{person.name}</span> : null}
                 <span className={`lh-tasks__pill lh-tasks__pill--priority-${item.task.priority}`}>{t(PRIORITY_LABEL[item.task.priority])}</span>
             </span>
-            {item.lane === 'changes' || (late && item.lane !== 'changes') ? (
+            {item.lane === 'changes' ? (
                 <span className="lh-queue__actions">
-                    {item.lane === 'changes' ? (
-                        <button type="button" className="lh-queue__action" onClick={onOpen}>{t('legalHub.queueFix')}</button>
-                    ) : (
-                        <button type="button" className="lh-queue__action" disabled={nudged} onClick={onNudge}>
-                            {nudged ? t('legalHub.queueNudged') : t('legalHub.queueNudge')}
-                        </button>
-                    )}
+                    <button type="button" className="lh-queue__action" onClick={onOpen}>{t('legalHub.queueFix')}</button>
+                </span>
+            ) : late ? (
+                <span className="lh-queue__actions">
+                    <button type="button" className="lh-queue__action" disabled={nudged} onClick={onNudge}>
+                        {nudged ? t('legalHub.queueNudged') : t('legalHub.queueNudge')}
+                    </button>
                 </span>
             ) : null}
         </li>
