@@ -308,19 +308,26 @@ function QueueCard({ item, locale, nudged, onOpen, onNudge }: {
                 : t('legalHub.queueDaysLeft').replace('{count}', String(delta));
     return (
         <li className={`lh-queue__card${late || item.note ? ' is-late' : ''}`}>
+            {hint ? (
+                <span
+                    className={`lh-queue__badge${late ? ' is-late' : delta === 0 ? ' is-today' : delta <= 2 ? ' is-soon' : ''}`}
+                    title={hint}
+                    aria-label={hint}
+                >
+                    <strong>{Math.abs(delta)}</strong>
+                    <small>{locale === 'ru' ? 'д' : 'd'}</small>
+                </span>
+            ) : null}
             <button type="button" className="lh-queue__open" onClick={onOpen}>
                 <span className={`lh-queue__project lh-tasks__project--${item.task.project}`}>{BOARD_TITLE[item.task.project]}</span>
                 <span className="lh-queue__stream">{item.task.workstream}</span>
                 <strong>{item.task.title}</strong>
                 <span className="lh-queue__when">
-                    <span>
-                        {t('legalHub.queueSubmitted').replace('{date}', formatDay(item.submittedOn, locale))}
-                        {' · '}
-                        {item.approvedOn
-                            ? t('legalHub.queueApprovedOn').replace('{date}', formatDay(item.approvedOn, locale))
-                            : t('legalHub.queueTarget').replace('{date}', formatDay(item.targetOn, locale))}
-                    </span>
-                    {hint ? <em className={late || delta === 0 ? 'is-hot' : ''}>{hint}</em> : null}
+                    {t('legalHub.queueSubmitted').replace('{date}', formatDay(item.submittedOn, locale))}
+                    {' · '}
+                    {item.approvedOn
+                        ? t('legalHub.queueApprovedOn').replace('{date}', formatDay(item.approvedOn, locale))
+                        : t('legalHub.queueTarget').replace('{date}', formatDay(item.targetOn, locale))}
                 </span>
                 {item.note ? <span className="lh-queue__note">{t('legalHub.queueNote')}</span> : null}
             </button>

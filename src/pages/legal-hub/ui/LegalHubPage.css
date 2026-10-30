@@ -4088,6 +4088,7 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 }
 
 .lh-queue__card {
+  position: relative;
   display: flex;
   flex: 0 0 auto;
   flex-direction: column;
@@ -4096,6 +4097,45 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   border: 1px solid var(--app-border);
   border-radius: 12px;
   background: var(--app-surface);
+}
+
+.lh-queue__badge {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 2.7rem;
+  height: 2.7rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, #16a34a 16%, var(--app-surface));
+  color: #15803d;
+  line-height: 1;
+}
+
+.lh-queue__badge strong {
+  font-size: 0.95rem;
+  font-weight: 750;
+}
+
+.lh-queue__badge small {
+  margin-top: 0.05rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.lh-queue__badge.is-soon {
+  background: color-mix(in srgb, #d97706 18%, var(--app-surface));
+  color: #b45309;
+}
+
+.lh-queue__badge.is-today,
+.lh-queue__badge.is-late {
+  background: color-mix(in srgb, #dc2626 16%, var(--app-surface));
+  color: #dc2626;
 }
 
 .lh-queue__card.is-late {
@@ -4119,6 +4159,10 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   cursor: pointer;
 }
 
+.lh-queue__card:has(.lh-queue__badge) .lh-queue__open {
+  padding-right: 3rem;
+}
+
 .lh-queue__project {
   font-size: 0.75rem;
   font-weight: 700;
@@ -4139,24 +4183,6 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 .lh-queue__when {
   color: var(--app-muted);
   font-size: 0.72rem;
-}
-
-.lh-queue__when {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.45rem;
-  width: 100%;
-}
-
-.lh-queue__when em {
-  flex-shrink: 0;
-  font-style: normal;
-  font-weight: 700;
-}
-
-.lh-queue__when em.is-hot {
-  color: #dc2626;
 }
 
 .lh-queue__open strong {
