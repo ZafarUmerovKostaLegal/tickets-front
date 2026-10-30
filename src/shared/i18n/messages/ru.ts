@@ -55,6 +55,24 @@ export const ruMessages: Messages = {
         workspace: 'Рабочее пространство',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
+        queueHint: 'Отправленные документы и ход проверки',
+        queueApproved: 'Одобрено',
+        queueApprovedMeta: 'за {count} дн.',
+        queueAlert: 'Просрочено по сроку проверки: {count}. Напомните проверяющему с карточки или из панели.',
+        queueNudge: 'Напомнить',
+        queueNudged: 'Напомнили',
+        queueFix: 'Исправить',
+        queueSubmitted: 'Отправлено {date}',
+        queueTarget: 'Срок {date}',
+        queueApprovedOn: 'Одобрено {date}',
+        queueAllProjects: 'Все проекты',
+        queueAllReviewers: 'Все проверяющие',
+        queueAllStatuses: 'Все статусы',
+        queueDaysLeft: 'ещё {count} д',
+        queueDueNow: 'срок сегодня',
+        queueOverdueDays: 'просрочено {count} д',
+        queueEmpty: 'В этой очереди ничего нет.',
+        queueNote: 'Нужно поправить замечания: раздел 3 расходится с графиком обеспечения, определения нужно обновить.',
         allTeam: 'Вся команда',
         searchPlaceholder: 'Задачи, проекты, люди…',
         openMenu: 'Открыть меню',
@@ -990,6 +1008,24 @@ export type Messages = {
         workspace: string;
         myTasks: string;
         reviewQueue: string;
+        queueHint: string;
+        queueApproved: string;
+        queueApprovedMeta: string;
+        queueAlert: string;
+        queueNudge: string;
+        queueNudged: string;
+        queueFix: string;
+        queueSubmitted: string;
+        queueTarget: string;
+        queueApprovedOn: string;
+        queueAllProjects: string;
+        queueAllReviewers: string;
+        queueAllStatuses: string;
+        queueDaysLeft: string;
+        queueDueNow: string;
+        queueOverdueDays: string;
+        queueEmpty: string;
+        queueNote: string;
         allTeam: string;
         searchPlaceholder: string;
         openMenu: string;

@@ -6,6 +6,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { LegalHubMemberTasks } from './LegalHubMemberTasks';
 import { LegalHubMyTasks } from './LegalHubMyTasks';
+import { LegalHubReviewQueue } from './LegalHubReviewQueue';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
 import './LegalHubPage.css';
@@ -314,6 +315,7 @@ export function LegalHubPage() {
                             <>
                                 <h1 className="lh-page__title">{t(active.labelKey)}</h1>
                                 {section === 'myTasks' ? <LegalHubMyTasks query={query} /> : null}
+                                {section === 'reviewQueue' ? <LegalHubReviewQueue query={query} /> : null}
                                 {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}
                             </>
                         )}
