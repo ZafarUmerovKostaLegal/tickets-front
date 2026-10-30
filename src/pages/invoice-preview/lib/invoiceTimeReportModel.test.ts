@@ -7,6 +7,7 @@ import {
     isMyMehnatTimeReportRow,
     mergeTimeReportPackPreferLiveExpenses,
     orderTimeReportSummarySlots,
+    summaryRowsForOfficialRates,
     type InvoiceTimeReportDetailRow,
     type InvoiceTimeReportSummaryRow,
 } from './invoiceTimeReportModel';
@@ -114,25 +115,25 @@ describe('ensureMehnatSeparatedPack', () => {
         expect(twice.detailSlots).toHaveLength(0);
     });
 
-    it('folds a saved per-rate summary back into one row per person', () => {
+    it('keeps two official rate rows for one person', () => {
         const pack = emptyInvoiceTimeReportPack('USD');
         pack.detailSlots = [
-            row({ initials: 'ALAA', hours: '0,22', hourlyRate: 'USD 253.85', amount: 'USD 55.00' }),
-            row({ initials: 'ALAA', hours: '0,95', hourlyRate: 'USD 250.00', amount: 'USD 237.50' }),
+            row({ initials: 'ADA', hours: '6,40', hourlyRate: 'USD 100.00', amount: 'USD 640.00' }),
+            row({ initials: 'ADA', hours: '13,64', hourlyRate: 'USD 130.00', amount: 'USD 1,773.20' }),
         ];
         pack.summarySlots = [
-            summary({ initials: 'ALAA', name: 'Aliye Abylalimova', title: 'Senior Associate', hours: '0,22', hourlyRate: 'USD 253.85', totalPrice: 'USD 55.00' }),
-            summary({ initials: 'ALAA', name: 'Aliye Abylalimova', title: 'Senior Associate', hours: '0,95', hourlyRate: 'USD 250.00', totalPrice: 'USD 237.50' }),
+            summary({ initials: 'ADA', name: 'Alina Abdullaeva', title: 'Junior Associate', hours: '13,64', hourlyRate: 'USD 130.00', totalPrice: 'USD 1,773.20' }),
+            summary({ initials: 'ADA', name: 'Alina Abdullaeva', title: '', hours: '6,40', hourlyRate: 'USD 100.00', totalPrice: 'USD 640.00' }),
         ];
         const next = ensureMehnatSeparatedPack(pack);
-        const alaa = next.summarySlots.filter((item) => item.initials === 'ALAA');
-        expect(alaa).toHaveLength(1);
-        expect(alaa[0]).toMatchObject({
-            title: 'Senior Associate',
-            hours: '1,17',
-            hourlyRate: 'USD 250.00',
-            totalPrice: 'USD 292.50',
-        });
+        expect(next.summarySlots.filter((item) => item.initials === 'ADA').map((item) => ({
+            hours: item.hours,
+            hourlyRate: item.hourlyRate,
+            title: item.title,
+        }))).toEqual([
+            { hours: '13,64', hourlyRate: 'USD 130.00', title: 'Junior Associate' },
+            { hours: '6,40', hourlyRate: 'USD 100.00', title: '' },
+        ]);
     });
 });
 
@@ -244,6 +245,29 @@ describe('mergeTimeReportPackPreferLiveExpenses', () => {
         const merged = mergeTimeReportPackPreferLiveExpenses(saved, live);
         expect(merged.summarySlots.slice(0, 4).map((row) => row.initials)).toEqual(['AAA', 'IFT', 'DGO', 'SRA']);
     });
+
+    it('shows the older rate from the live pack inside a saved one-line draft', () => {
+        const saved = emptyInvoiceTimeReportPack('USD');
+        const live = emptyInvoiceTimeReportPack('USD');
+        saved.summarySlots = [
+            summary({ initials: 'SHOKH', name: 'Shahzoda Khusenova', title: 'Junior Associate', hours: '5,47', hourlyRate: 'USD 100.00', totalPrice: 'USD 627.10' }),
+        ];
+        live.summarySlots = [
+            summary({ initials: 'SHOKH', name: 'Shahzoda Khusenova', title: 'Junior Associate', hours: '2,67', hourlyRate: 'USD 130.00', totalPrice: 'USD 347.10' }),
+            summary({ initials: 'SHOKH', name: 'Shahzoda Khusenova', title: '', hours: '2,80', hourlyRate: 'USD 100.00', totalPrice: 'USD 280.00' }),
+        ];
+        live.summaryGrandHoursDisplay = '5,47';
+        live.summaryGrandAmountDisplay = 'USD 627.10';
+        const merged = mergeTimeReportPackPreferLiveExpenses(saved, live);
+        expect(merged.summarySlots.filter((item) => item.initials === 'SHOKH').map((item) => ({
+            hours: item.hours,
+            hourlyRate: item.hourlyRate,
+            title: item.title,
+        }))).toEqual([
+            { hours: '2,67', hourlyRate: 'USD 130.00', title: 'Junior Associate' },
+            { hours: '2,80', hourlyRate: 'USD 100.00', title: 'Junior Associate' },
+        ]);
+    });
 });
 
 function summary(partial: Partial<InvoiceTimeReportSummaryRow>): InvoiceTimeReportSummaryRow {
@@ -270,5 +294,65 @@ describe('orderTimeReportSummarySlots', () => {
             'Associate',
             'Junior Associate',
         ]);
+    });
+
+    it('keeps the older rate under the same person', () => {
+        const ordered = orderTimeReportSummarySlots([
+            summary({ initials: 'III', name: 'Islombek', title: 'Junior Associate', hourlyRate: 'USD 160.00', totalPrice: 'USD 347.20' }),
+            summary({ initials: 'ADA', name: 'Alina', title: '', hourlyRate: 'USD 100.00', totalPrice: 'USD 640.00' }),
+            summary({ initials: 'ADA', name: 'Alina', title: 'Junior Associate', hourlyRate: 'USD 130.00', totalPrice: 'USD 1,773.20' }),
+            summary({ initials: 'SHOKH', name: 'Shahzoda', title: 'Junior Associate', hourlyRate: 'USD 130.00', totalPrice: 'USD 347.10' }),
+            summary({ initials: 'SHOKH', name: 'Shahzoda', title: '', hourlyRate: 'USD 100.00', totalPrice: 'USD 280.00' }),
+        ]);
+        expect(ordered.slice(0, 5).map((item) => `${item.initials} ${item.hourlyRate}`)).toEqual([
+            'III USD 160.00',
+            'ADA USD 130.00',
+            'ADA USD 100.00',
+            'SHOKH USD 130.00',
+            'SHOKH USD 100.00',
+        ]);
+    });
+});
+
+describe('summaryRowsForOfficialRates', () => {
+    it('adds the rate that was in effect before the card changed and leaves its title empty', () => {
+        const rows = summaryRowsForOfficialRates({
+            initials: 'ADA',
+            name: 'Alina Abdullaeva',
+            title: 'Junior Associate',
+            currency: 'USD',
+            hours: 20.04,
+            amount: 2413.2,
+            fallbackRate: 130,
+            slices: [
+                { rate: 100, hours: 6.4, amount: 640, validFrom: '2025-01-01' },
+                { rate: 130, hours: 13.64, amount: 1773.2, validFrom: '2026-04-01' },
+            ],
+        });
+        expect(rows.map((item) => ({
+            hours: item.hours,
+            hourlyRate: item.hourlyRate,
+            title: item.title,
+            totalPrice: item.totalPrice,
+        }))).toEqual([
+            { hours: '13,64', hourlyRate: 'USD 130.00', title: 'Junior Associate', totalPrice: 'USD 1,773.20' },
+            { hours: '6,40', hourlyRate: 'USD 100.00', title: '', totalPrice: 'USD 640.00' },
+        ]);
+    });
+
+    it('stays one row when the rate card did not change', () => {
+        const rows = summaryRowsForOfficialRates({
+            initials: 'ALAA',
+            name: 'Aliye',
+            title: 'Senior Associate',
+            currency: 'USD',
+            hours: 3.81,
+            amount: 952.5,
+            fallbackRate: 250,
+            slices: [{ rate: 250, hours: 3.81, amount: 952.5, validFrom: '2026-01-01' }],
+        });
+        expect(rows).toHaveLength(1);
+        expect(rows[0]?.hourlyRate).toBe('USD 250.00');
+        expect(rows[0]?.hours).toBe('3,81');
     });
 });

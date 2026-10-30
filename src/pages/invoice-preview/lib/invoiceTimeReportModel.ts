@@ -270,8 +270,9 @@ function mergeTimeRowsKeepLiveDescription(
 }
 
 /**
- * Keep saved user edits for time/mehnat/summary and expense wording, but always
- * take expense amounts from a freshly resolved pack (registry UZS÷CBU).
+ * Keep saved wording for time lines and expenses, take expense amounts from the
+ * live pack, and take summary rows from the live pack so a rate-card change
+ * shows up in a draft that was saved as one line per person.
  */
 export function mergeTimeReportPackPreferLiveExpenses(
     saved: InvoiceTimeReportPack,
@@ -283,12 +284,14 @@ export function mergeTimeReportPackPreferLiveExpenses(
     const fixedFeeSlots = mergeTimeRowsKeepLiveDescription(saved.fixedFeeSlots ?? [], live.fixedFeeSlots ?? []);
     const fixedFeeTotalAmountDisplay = (live.fixedFeeTotalAmountDisplay ?? '').trim()
         || (saved.fixedFeeTotalAmountDisplay ?? '');
+    const summaryFromLive = mergeSummarySlotsPreferLiveRates(saved, live);
     if (!hasLiveExpenses) {
         return withSummaryOrderedBySeniority({
             ...saved,
             detailSlots,
             fixedFeeSlots,
             fixedFeeTotalAmountDisplay,
+            ...summaryFromLive,
         });
     }
     const cur = (live.currency || saved.currency || 'USD').trim().toUpperCase() || 'USD';
@@ -304,7 +307,51 @@ export function mergeTimeReportPackPreferLiveExpenses(
         fixedFeeTotalAmountDisplay,
         expenseSlots,
         expenseTotalAmountDisplay,
+        ...summaryFromLive,
     });
+}
+
+function mergeSummarySlotsPreferLiveRates(
+    saved: InvoiceTimeReportPack,
+    live: InvoiceTimeReportPack,
+): Pick<InvoiceTimeReportPack, 'summarySlots' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay'> {
+    const liveRows = trimTrailingEmptySummarySlots(live.summarySlots ?? []);
+    if (!liveRows.length) {
+        return {
+            summarySlots: saved.summarySlots,
+            summaryGrandHoursDisplay: saved.summaryGrandHoursDisplay,
+            summaryGrandAmountDisplay: saved.summaryGrandAmountDisplay,
+        };
+    }
+    const savedRows = trimTrailingEmptySummarySlots(saved.summarySlots ?? []);
+    const used = new Set<number>();
+    const summarySlots = liveRows.map((liveRow) => {
+        const match = savedRows.findIndex((savedRow, index) => {
+            if (used.has(index))
+                return false;
+            if (savedRow.initials.trim().toUpperCase() !== liveRow.initials.trim().toUpperCase())
+                return false;
+            if (savedRow.name.trim().toLowerCase() !== liveRow.name.trim().toLowerCase())
+                return false;
+            return Math.abs(
+                parseTimeReportAmountDisplay(savedRow.hourlyRate) - parseTimeReportAmountDisplay(liveRow.hourlyRate),
+            ) < 0.01;
+        });
+        if (match < 0)
+            return liveRow;
+        used.add(match);
+        const savedRow = savedRows[match]!;
+        return {
+            ...liveRow,
+            name: savedRow.name.trim() ? savedRow.name : liveRow.name,
+            title: savedRow.title.trim() ? savedRow.title : liveRow.title,
+        };
+    });
+    return {
+        summarySlots,
+        summaryGrandHoursDisplay: live.summaryGrandHoursDisplay || saved.summaryGrandHoursDisplay,
+        summaryGrandAmountDisplay: live.summaryGrandAmountDisplay || saved.summaryGrandAmountDisplay,
+    };
 }
 
 /** Task names like «My mehnat registration» / «Регистрация My mehnat». Description-only mentions do not count. */
@@ -368,6 +415,8 @@ function alignHoursToDisplayedLines(pack: InvoiceTimeReportPack): InvoiceTimeRep
             return row;
         const key = row.initials.trim().toUpperCase();
         if (!key || key === '—' || key === '-')
+            return row;
+        if ((summaryRowsForInitials(pack.summarySlots).get(key) ?? 0) !== 1)
             return row;
         const hours = byInitials.get(key);
         if (hours == null)
@@ -530,60 +579,20 @@ function separateMehnatRows(pack: InvoiceTimeReportPack): InvoiceTimeReportPack 
 
 /** Pull My Mehnat rows out of the main time grid (also heals older saved packs). */
 export function ensureMehnatSeparatedPack(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
-    return ensureFixedFeeSeparatedPack(separateMehnatRows(collapseSplitSummaryRates(pack)));
+    return ensureFixedFeeSeparatedPack(separateMehnatRows(pack));
 }
 
-/** One row per person. A saved draft may still list every rounded FX rate separately. */
-function collapseSplitSummaryRates(pack: InvoiceTimeReportPack): InvoiceTimeReportPack {
-    const filled = trimTrailingEmptySummarySlots(pack.summarySlots ?? []);
-    const groups = new Map<string, InvoiceTimeReportSummaryRow[]>();
-    const order: string[] = [];
-    let split = false;
-    for (const row of filled) {
-        const key = `${row.initials.trim().toUpperCase()}\0${row.name.trim().toLowerCase()}`;
-        const list = groups.get(key);
-        if (list) {
-            list.push(row);
-            split = true;
-        }
-        else {
-            groups.set(key, [row]);
-            order.push(key);
-        }
-    }
-    if (!split)
-        return pack;
-    return {
-        ...pack,
-        summarySlots: order.map((key) => mergeSummaryRateRows(groups.get(key)!)),
-    };
-}
-
-function mergeSummaryRateRows(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow {
-    const first = rows[0]!;
-    if (rows.length === 1)
-        return first;
-    let best = first;
-    let bestHours = -1;
-    let hours = 0;
-    let amount = 0;
+function summaryRowsForInitials(rows: readonly InvoiceTimeReportSummaryRow[]): Map<string, number> {
+    const counts = new Map<string, number>();
     for (const row of rows) {
-        const lineHours = parseTimeReportHoursDisplay(row.hours);
-        hours += lineHours;
-        amount += parseTimeReportAmountDisplay(row.totalPrice);
-        if (lineHours > bestHours) {
-            best = row;
-            bestHours = lineHours;
-        }
+        if (summaryRowIsEmpty(row))
+            continue;
+        const key = row.initials.trim().toUpperCase();
+        if (!key || key === '—' || key === '-')
+            continue;
+        counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-    const currency = /[A-Za-z]{3}/.exec(best.totalPrice)?.[0]
-        || /[A-Za-z]{3}/.exec(best.hourlyRate)?.[0]
-        || 'USD';
-    return {
-        ...best,
-        hours: formatTimeReportHours(roundTimeReportHours2(hours)),
-        totalPrice: formatTimeReportAmount(amount, currency),
-    };
+    return counts;
 }
 
 export function finalizeDetailSlots(rows: InvoiceTimeReportDetailRow[]): InvoiceTimeReportDetailRow[] {
@@ -621,11 +630,109 @@ function summaryTitleIsBlank(title: string): boolean {
     return !text || text === '—' || text === '-' || text === '–';
 }
 
+export type OfficialSummaryRateSlice = {
+    rate: number;
+    hours: number;
+    amount: number;
+    /** Rate card valid_from. Newer card row is listed first; its title stays, older rows stay blank. */
+    validFrom: string;
+};
+
+/** A second summary line only when the rate card itself changed, not when FX rounding drifts. */
+export function summaryRowsForOfficialRates(input: {
+    initials: string;
+    name: string;
+    title: string;
+    currency: string;
+    hours: number;
+    amount: number;
+    fallbackRate: number;
+    slices: readonly OfficialSummaryRateSlice[];
+}): InvoiceTimeReportSummaryRow[] {
+    const byRate = new Map<number, OfficialSummaryRateSlice>();
+    for (const slice of input.slices) {
+        if (!(slice.rate > 0) || !(slice.hours > 0))
+            continue;
+        const rate = Math.round(slice.rate * 100) / 100;
+        const prev = byRate.get(rate);
+        if (prev) {
+            prev.hours += slice.hours;
+            prev.amount += slice.amount;
+            if (slice.validFrom > prev.validFrom)
+                prev.validFrom = slice.validFrom;
+        }
+        else {
+            byRate.set(rate, { rate, hours: slice.hours, amount: slice.amount, validFrom: slice.validFrom });
+        }
+    }
+    const distinct = [...byRate.values()].sort((a, b) => {
+        if (a.validFrom !== b.validFrom)
+            return b.validFrom.localeCompare(a.validFrom);
+        return b.rate - a.rate;
+    });
+    if (distinct.length < 2) {
+        return [officialSummaryRow(input, input.title, input.hours, input.fallbackRate, input.amount)];
+    }
+    const ratedHours = distinct.reduce((sum, slice) => sum + slice.hours, 0);
+    const ratedAmount = distinct.reduce((sum, slice) => sum + slice.amount, 0);
+    const leftoverHours = input.hours - ratedHours;
+    const leftoverAmount = input.amount - ratedAmount;
+    if (Math.abs(leftoverHours) > 0.0001 || Math.abs(leftoverAmount) > 0.0001) {
+        distinct[0]!.hours += leftoverHours;
+        distinct[0]!.amount += leftoverAmount;
+    }
+    return distinct.map((slice, index) => officialSummaryRow(
+        input,
+        index === 0 ? input.title : '',
+        slice.hours,
+        slice.rate,
+        slice.amount,
+    ));
+}
+
+function officialSummaryRow(
+    input: { initials: string; name: string; currency: string },
+    title: string,
+    hours: number,
+    rate: number,
+    amount: number,
+): InvoiceTimeReportSummaryRow {
+    return {
+        initials: input.initials,
+        name: input.name,
+        title,
+        hours: formatTimeReportHours(hours),
+        hourlyRate: rate > 0 ? formatTimeReportAmount(rate, input.currency) : '—',
+        totalPrice: formatTimeReportAmount(amount, input.currency),
+    };
+}
+
+function summaryPersonKey(row: InvoiceTimeReportSummaryRow): string {
+    return `${row.initials.trim().toUpperCase()}\0${row.name.trim().toLowerCase()}`;
+}
+
 /** Partner, then Counsel, Senior Associate, Associate, Junior Associate, Trainee. Same title: higher rate, then higher amount. */
 export function orderTimeReportSummarySlots(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow[] {
     const filled = trimTrailingEmptySummarySlots(rows);
-    const sorted = [...filled].sort(compareTimeReportSummaryRows);
+    const groups = new Map<string, InvoiceTimeReportSummaryRow[]>();
+    for (const row of filled) {
+        const key = summaryPersonKey(row);
+        const list = groups.get(key);
+        if (list)
+            list.push(row);
+        else
+            groups.set(key, [row]);
+    }
+    const people = [...groups.values()].sort((a, b) => compareTimeReportSummaryRows(
+        representativeSummaryRow(a),
+        representativeSummaryRow(b),
+    ));
+    const sorted = people.flatMap((person) => [...person].sort(compareTimeReportSummaryRows));
     return padSummaryRows(sorted);
+}
+
+function representativeSummaryRow(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow {
+    return [...rows].sort(compareTimeReportSummaryRows)[0]!;
 }
 
 function compareTimeReportSummaryRows(a: InvoiceTimeReportSummaryRow, b: InvoiceTimeReportSummaryRow): number {

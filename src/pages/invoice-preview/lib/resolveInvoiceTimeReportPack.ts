@@ -13,6 +13,10 @@ import {
     type TimeTrackingUserRow,
     type UnbilledExpenseEntryDto,
     type UnbilledTimeEntryDto,
+    type HourlyRateRow,
+    listHourlyRates,
+    pickEffectiveBillableRateForProject,
+    parseHourlyRateAmount,
 } from '@entities/time-tracking';
 import { getUsers, type User } from '@entities/user';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
@@ -42,6 +46,7 @@ import {
     isMyMehnatTimeReportRow,
     orderTimeReportSummarySlots,
     parseTimeReportAmountDisplay,
+    summaryRowsForOfficialRates,
     trimTrailingEmptyDetailSlots,
     type InvoiceTimeReportDetailRow,
     type InvoiceTimeReportPack,
@@ -163,6 +168,46 @@ function userByAuthId(users: TimeTrackingUserRow[], authId: number): TimeTrackin
     return users.find((u) => u.id === authId) ?? null;
 }
 
+function workIsoFromRaw(raw: string | null | undefined): string | null {
+    const day = String(raw ?? '').trim().slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : null;
+}
+
+/** Rate-card amount on the work date. Ignores FX drift on the invoice line. */
+async function stampOfficialBillableRates(
+    details: BuildingDetail[],
+    projectId: string,
+    currency: string,
+): Promise<void> {
+    const ids = [...new Set(
+        details
+            .filter((d) => d.rowKind === 'time' && d.authId != null)
+            .map((d) => d.authId!),
+    )];
+    const byUser = new Map<number, HourlyRateRow[]>();
+    await Promise.all(ids.map(async (id) => {
+        try {
+            byUser.set(id, await listHourlyRates(id, 'billable'));
+        }
+        catch {
+            byUser.set(id, []);
+        }
+    }));
+    const pid = projectId.trim();
+    for (const detail of details) {
+        if (detail.rowKind !== 'time' || detail.authId == null || !detail.workIso)
+            continue;
+        const rows = byUser.get(detail.authId) ?? [];
+        const when = new Date(`${detail.workIso}T12:00:00Z`);
+        const pick = pickEffectiveBillableRateForProject(rows, pid, currency, when);
+        const amount = pick ? parseHourlyRateAmount(pick.row) : NaN;
+        if (!Number.isFinite(amount) || amount <= 0)
+            continue;
+        detail.cardRate = Math.round(amount * 100) / 100;
+        detail.cardFrom = String(pick?.row.valid_from ?? '').slice(0, 10);
+    }
+}
+
 function dateDisplayFromIso(
     iso: string | undefined | null,
     lang: ReturnType<typeof normalizeCoverLanguage>,
@@ -232,6 +277,9 @@ type BuildingDetail = InvoiceTimeReportDetailRow & {
     amtNum: number;
     rateNum: number;
     rowKind: 'time' | 'expense' | 'other' | 'fixed_fee';
+    workIso?: string | null;
+    cardRate?: number;
+    cardFrom?: string;
 };
 
 /** Task names as shown in the time report, keyed by time entry id. */
@@ -318,6 +366,7 @@ function buildSummaryAndTotals(
         amount: number;
         u: TimeTrackingUserRow | null;
         rateByHours: Map<number, number>;
+        cardBuckets: Map<number, { hours: number; amount: number; validFrom: string }>;
     }>();
     let otherAmount = 0;
     for (const d of timeLike) {
@@ -327,14 +376,25 @@ function buildSummaryAndTotals(
                 amount: 0,
                 u: userByAuthId(users, d.authId),
                 rateByHours: new Map<number, number>(),
+                cardBuckets: new Map<number, { hours: number; amount: number; validFrom: string }>(),
             };
-            cur.hours += sumRoundedTimeReportHours([d.hoursNum]);
+            const lineHours = sumRoundedTimeReportHours([d.hoursNum]);
+            cur.hours += lineHours;
             cur.amount += d.amtNum;
             cur.u = cur.u ?? userByAuthId(users, d.authId);
             if (d.rateNum > 0 && d.hoursNum > 0) {
                 // Round to cents so 149.999… and 150 group together
                 const key = Math.round(d.rateNum * 100) / 100;
                 cur.rateByHours.set(key, (cur.rateByHours.get(key) ?? 0) + d.hoursNum);
+            }
+            if (d.cardRate != null && d.cardRate > 0 && lineHours > 0) {
+                const key = Math.round(d.cardRate * 100) / 100;
+                const bucket = cur.cardBuckets.get(key) ?? { hours: 0, amount: 0, validFrom: d.cardFrom ?? '' };
+                bucket.hours += lineHours;
+                bucket.amount += d.amtNum;
+                if ((d.cardFrom ?? '') > bucket.validFrom)
+                    bucket.validFrom = d.cardFrom ?? '';
+                cur.cardBuckets.set(key, bucket);
             }
             agg.set(d.authId, cur);
         }
@@ -343,17 +403,23 @@ function buildSummaryAndTotals(
     }
 
     const summaryRows: InvoiceTimeReportSummaryRow[] = [...agg.entries()]
-        .map(([uid, v]) => {
+        .flatMap(([uid, v]) => {
             const u = v.u ?? userByAuthId(users, uid);
-            const rate = pickSummaryHourlyRate(v.rateByHours, v.hours, v.amount);
-            return {
+            return summaryRowsForOfficialRates({
                 initials: initialsForAuthUser(uid, users, initialsByAuthId),
                 name: u ? displayUserName(u) : `User ${uid}`,
                 title: u ? userTitle(u) : '—',
-                hours: formatTimeReportHours(v.hours),
-                hourlyRate: formatDetailHourlyRate(rate, currency) || '—',
-                totalPrice: formatTimeReportAmount(v.amount, currency),
-            };
+                currency,
+                hours: v.hours,
+                amount: v.amount,
+                fallbackRate: pickSummaryHourlyRate(v.rateByHours, v.hours, v.amount),
+                slices: [...v.cardBuckets.entries()].map(([rate, bucket]) => ({
+                    rate,
+                    hours: bucket.hours,
+                    amount: bucket.amount,
+                    validFrom: bucket.validFrom,
+                })),
+            });
         });
 
     if (otherAmount !== 0) {
@@ -596,6 +662,7 @@ export async function resolveInvoiceTimeReportPack(
                     hoursNum: h,
                     amtNum: a,
                     rateNum: rate,
+                    workIso: workIsoFromRaw(e.workDate),
                     rowKind: 'time',
                 });
             }
@@ -633,6 +700,7 @@ export async function resolveInvoiceTimeReportPack(
                 });
             }
 
+            await stampOfficialBillableRates(details, pid, currency);
             return overlayExpenseAmountsFromRegistry(
                 packFromDetails(details, users, currency, initialsByAuthId),
                 pid,
@@ -821,6 +889,7 @@ export async function resolveInvoiceTimeReportPack(
                     hoursNum: hours,
                     amtNum: amt,
                     rateNum: rate,
+                    workIso,
                     rowKind: 'time',
                 });
             }
@@ -864,6 +933,7 @@ export async function resolveInvoiceTimeReportPack(
             }
         }
 
+        await stampOfficialBillableRates(details, inv.projectId ?? '', currency);
         return overlayExpenseAmountsFromRegistry(
             packFromDetails(details, users, currency, initialsByAuthId),
             inv.projectId,
