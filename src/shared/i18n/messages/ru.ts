@@ -131,6 +131,34 @@ export const ruMessages: Messages = {
         tempEmailInvalid: 'Укажите почту.',
         tempDateRequired: 'Укажите дату окончания доступа.',
         tempDatePast: 'Дата окончания не может быть в прошлом.',
+        viewAria: 'Вид списка',
+        viewCards: 'Карточки',
+        viewDetails: 'Детали',
+        taskColProject: 'Проект',
+        taskColTitle: 'Задача / документ',
+        taskColWorkstream: 'Направление',
+        taskColOwner: 'Ответственный',
+        taskColReviewer: 'Проверяющий',
+        taskColStatus: 'Статус',
+        taskColPriority: 'Приоритет',
+        taskColReview: 'Срок проверки',
+        taskColClient: 'Срок клиента',
+        taskColEstimate: 'Оценка',
+        taskFilterAll: 'Все',
+        taskFilterReset: 'Сбросить',
+        taskEmpty: 'По этим фильтрам задач нет.',
+        taskShown: 'Показано {count}',
+        taskStatusPartner: 'Проверка партнёра',
+        taskStatusAssociate: 'Проверка ассоциата',
+        taskStatusTodo: 'К выполнению',
+        taskPriorityHigh: 'Высокий',
+        taskPriorityNormal: 'Обычный',
+        taskOverdue: 'просрочено {count} д',
+        taskDaysLeft: 'ещё {count} д',
+        taskToday: 'сегодня',
+        taskMinutes: '{count} мин',
+        taskAutoRouted: 'Автомаршрут',
+        taskNoReviewer: 'Без проверяющего',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -926,6 +954,34 @@ export type Messages = {
         tempEmailInvalid: string;
         tempDateRequired: string;
         tempDatePast: string;
+        viewAria: string;
+        viewCards: string;
+        viewDetails: string;
+        taskColProject: string;
+        taskColTitle: string;
+        taskColWorkstream: string;
+        taskColOwner: string;
+        taskColReviewer: string;
+        taskColStatus: string;
+        taskColPriority: string;
+        taskColReview: string;
+        taskColClient: string;
+        taskColEstimate: string;
+        taskFilterAll: string;
+        taskFilterReset: string;
+        taskEmpty: string;
+        taskShown: string;
+        taskStatusPartner: string;
+        taskStatusAssociate: string;
+        taskStatusTodo: string;
+        taskPriorityHigh: string;
+        taskPriorityNormal: string;
+        taskOverdue: string;
+        taskDaysLeft: string;
+        taskToday: string;
+        taskMinutes: string;
+        taskAutoRouted: string;
+        taskNoReviewer: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;

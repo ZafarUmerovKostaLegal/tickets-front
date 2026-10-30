@@ -8,6 +8,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { useCurrentUser } from '@shared/hooks';
 import { fallbackSlices, mockMemberLoad, slicesFromUtil, sumUtil, teamStats, useLegalHubMock, type MemberLoad, type UtilKey, type UtilSlice } from './legalHubMock';
+import { LegalHubTaskTable } from './LegalHubTaskTable';
 import { LegalHubTempMemberDialog, type TempEmployeeOption, type TempMemberDraft, type TempTeamRef } from './LegalHubTempMemberDialog';
 
 type MemberCard = {
@@ -540,6 +541,7 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
 
     const { publish, select, selectedId } = useLegalHubMock();
     const [tempOpen, setTempOpen] = useState(false);
+    const [view, setView] = useState<'cards' | 'details'>('cards');
     const [tempMembers, setTempMembers] = useState<TempMember[]>([]);
     const usersById = useMemo(() => new Map(users.map((row) => [row.id, row])), [users]);
     const needle = query.trim().toLowerCase();
@@ -599,8 +601,34 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
         <div className="lh-board">
             <div className="lh-board__main">
                 <TeamStatsStrip stats={teamStats(published.map((row) => row.load))} />
-                {ledTeams.length === 0 ? <p className="lh-team__note">{t('legalHub.teamEmpty')}</p> : null}
-                {ledTeams.map((team, teamIndex) => {
+                {ledTeams.length === 0 ? <p className="lh-team__note">{t('legalHub.teamEmpty')}</p> : (
+                    <div className="lh-board__tools">
+                        <div className="lh-view" role="group" aria-label={t('legalHub.viewAria')}>
+                            <button
+                                type="button"
+                                className={view === 'cards' ? 'is-active' : ''}
+                                aria-pressed={view === 'cards'}
+                                onClick={() => setView('cards')}
+                            >
+                                {t('legalHub.viewCards')}
+                            </button>
+                            <button
+                                type="button"
+                                className={view === 'details' ? 'is-active' : ''}
+                                aria-pressed={view === 'details'}
+                                onClick={() => setView('details')}
+                            >
+                                {t('legalHub.viewDetails')}
+                            </button>
+                        </div>
+                        <button type="button" className="lh-temp__open" onClick={() => setTempOpen(true)}>
+                            <span aria-hidden>+</span>
+                            {t('legalHub.tempAdd')}
+                        </button>
+                    </div>
+                )}
+                {view === 'details' && ledTeams.length > 0 ? <LegalHubTaskTable query={needle} /> : null}
+                {view === 'cards' ? ledTeams.map((team) => {
                     const temps = tempMembers
                         .filter((member) => member.teamId === team.id)
                         .map((member): MemberCard => ({
@@ -621,12 +649,6 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
                         <section key={team.id} className="lh-team__group" aria-label={team.name}>
                             <div className="lh-team__head">
                                 <h3 className="lh-team__name">{team.name}</h3>
-                                {teamIndex === 0 ? (
-                                    <button type="button" className="lh-temp__open" onClick={() => setTempOpen(true)}>
-                                        <span aria-hidden>+</span>
-                                        {t('legalHub.tempAdd')}
-                                    </button>
-                                ) : null}
                             </div>
                             {cards.length === 0 ? (
                                 <p className="lh-team__note">{needle ? t('legalHub.teamNoMatch') : t('legalHub.teamNoMembers')}</p>
@@ -646,7 +668,7 @@ export function LegalHubTeamBoard({ query }: { query: string }) {
                             )}
                         </section>
                     );
-                })}
+                }) : null}
             </div>
             {tempOpen ? (
                 <LegalHubTempMemberDialog
