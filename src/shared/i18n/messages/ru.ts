@@ -64,6 +64,18 @@ export const ruMessages: Messages = {
         teamLoading: 'Загрузка команды…',
         teamError: 'Не удалось загрузить команды.',
         memberMissing: 'Сотрудник не найден.',
+        memberStats: 'Статистика',
+        memberStatsLoad: 'Загрузка недели',
+        memberStatsMinutes: 'Минуты проверки',
+        memberStatsAvg: 'В среднем {count} мин',
+        memberStatsByStatus: 'По статусам',
+        memberStatsByPriority: 'По приоритету',
+        memberStatsByProject: 'По проектам',
+        memberStatsByStream: 'По направлениям',
+        memberStatsDeadlines: 'Сроки',
+        memberStatsLater: 'Позже',
+        memberStatsNone: 'Нет',
+        memberStatsWithReviewer: 'С проверяющим',
         teamForbidden: 'Недостаточно прав, чтобы показать команды.',
         teamEmpty: 'Вы пока не руководите командой в учёте времени.',
         teamNoMembers: 'В команде пока нет участников.',
@@ -979,6 +991,18 @@ export type Messages = {
         teamLoading: string;
         teamError: string;
         memberMissing: string;
+        memberStats: string;
+        memberStatsLoad: string;
+        memberStatsMinutes: string;
+        memberStatsAvg: string;
+        memberStatsByStatus: string;
+        memberStatsByPriority: string;
+        memberStatsByProject: string;
+        memberStatsByStream: string;
+        memberStatsDeadlines: string;
+        memberStatsLater: string;
+        memberStatsNone: string;
+        memberStatsWithReviewer: string;
         teamForbidden: string;
         teamEmpty: string;
         teamNoMembers: string;

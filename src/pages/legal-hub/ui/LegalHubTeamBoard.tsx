@@ -691,6 +691,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                                                     name: member.name,
                                                     code: member.initials,
                                                     memberIds: roster.map((item) => item.id),
+                                                    capacity: member.capacity,
                                                 };
                                                 navigate(getLegalHubMemberUrl(member.id), { state });
                                             }}

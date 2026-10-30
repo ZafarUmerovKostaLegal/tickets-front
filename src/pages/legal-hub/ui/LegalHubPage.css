@@ -332,12 +332,265 @@
 .lh-member-page {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0.85rem;
+}
+
+.lh-member-page > .app-back-btn {
+  align-self: flex-start;
 }
 
 .lh-member-page .lh-tasks {
   align-self: stretch;
+}
+
+.lh-person {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.lh-person__hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(12rem, 16rem);
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.05rem;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-surface);
+}
+
+.lh-person__hero .lh-tasks__avatar {
+  width: 3rem;
+  height: 3rem;
+  font-size: 0.95rem;
+}
+
+.lh-person__hero p,
+.lh-person__hero span,
+.lh-person__load span {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.lh-person__hero h1 {
+  margin: 0.1rem 0 0.2rem;
+  color: var(--app-text);
+  font-size: 1.45rem;
+  letter-spacing: -0.03em;
+}
+
+.lh-person__load {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.lh-person__load strong {
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.lh-person__meter,
+.lh-person__track {
+  display: block;
+  height: 0.42rem;
+  border-radius: 999px;
+  background: var(--app-bg-soft);
+  overflow: hidden;
+}
+
+.lh-person__meter > span,
+.lh-person__track > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--app-accent);
+}
+
+.lh-person__kpis {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lh-person__kpis li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.75rem 0.8rem;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface);
+}
+
+.lh-person__kpis strong {
+  color: var(--app-text);
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.lh-person__kpis span {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+}
+
+.lh-person__kpis .is-hot {
+  border-color: color-mix(in srgb, #dc2626 40%, var(--app-border));
+  background: color-mix(in srgb, #dc2626 7%, var(--app-surface));
+}
+
+.lh-person__kpis .is-hot strong {
+  color: #dc2626;
+}
+
+.lh-person__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.lh-person__grid--two {
+  grid-template-columns: 1.3fr 1fr;
+}
+
+.lh-person__panel {
+  padding: 0.85rem 0.9rem 0.95rem;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-surface);
+}
+
+.lh-person__panel h2,
+.lh-person__deadlines h3 {
+  margin: 0 0 0.7rem;
+  color: var(--app-text);
+  font-size: 0.92rem;
+}
+
+.lh-person__note {
+  margin: 0.55rem 0 0;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.lh-person__bars,
+.lh-person__projects,
+.lh-person__deadlines ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lh-person__bars li,
+.lh-person__projects li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(4rem, 1.4fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.lh-person__bars li > span:first-child,
+.lh-person__projects li > span:first-child {
+  color: var(--app-text);
+  font-size: 0.8rem;
+}
+
+.lh-person__bars strong,
+.lh-person__projects strong {
+  min-width: 1.2rem;
+  color: var(--app-text);
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.lh-person__track > span.is-partner { background: #db2777; }
+.lh-person__track > span.is-progress { background: #2563eb; }
+.lh-person__track > span.is-wait { background: #d97706; }
+.lh-person__track > span.is-changes,
+.lh-person__track > span.is-priority-high { background: #dc2626; }
+.lh-person__track > span.is-associate { background: #7c3aed; }
+.lh-person__track > span.is-todo,
+.lh-person__track > span.is-priority-normal { background: #64748b; }
+.lh-person__track > span.is-priority-low { background: #16a34a; }
+
+.lh-person__deadlines {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.lh-person__deadlines h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.lh-person__deadlines h3 span {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.lh-person__deadlines li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.lh-person__deadlines li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.lh-person__deadlines strong {
+  color: var(--app-text);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.lh-person__deadlines li > span {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+}
+
+.lh-person__deadlines em {
+  font-style: normal;
+}
+
+@media (max-width: 1100px) {
+  .lh-person__kpis,
+  .lh-person__grid,
+  .lh-person__deadlines {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lh-person__hero {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .lh-person__load {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 720px) {
+  .lh-person__kpis,
+  .lh-person__grid,
+  .lh-person__grid--two,
+  .lh-person__deadlines {
+    grid-template-columns: 1fr;
+  }
 }
 
 @supports (view-transition-name: none) {

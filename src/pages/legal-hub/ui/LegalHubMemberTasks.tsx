@@ -9,15 +9,27 @@ import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
 import { AppBackButton } from '@shared/ui';
 import { tasksForMember } from './legalHubTasks';
+import { LegalHubMemberStats } from './LegalHubMemberStats';
 import { LegalHubTaskTable } from './LegalHubTaskTable';
 
 export type LegalHubMemberLocationState = {
     name: string;
     code: string;
     memberIds: number[];
+    capacity?: string;
 };
 
-type RosterPerson = { id: number; name: string; code: string };
+type RosterPerson = { id: number; name: string; code: string; capacity: string };
+
+function capacityText(raw: string | number | null | undefined): string {
+    if (raw == null || raw === '')
+        return '';
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value <= 0)
+        return '';
+    const rounded = Math.round(value * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
 
 function personCode(name: string, stored?: string | null): string {
     const ready = stored?.trim();
@@ -43,7 +55,7 @@ function rosterOf(teams: TimeTrackingTeamRow[], users: TimeTrackingUserRow[], us
                 const row = usersById.get(id);
                 const preview = team.members?.find((member) => member.auth_user_id === id);
                 const name = (row?.display_name || preview?.display_name || row?.email || preview?.email || '').trim() || String(id);
-                return { id, name, code: personCode(name, row?.initials) };
+                return { id, name, code: personCode(name, row?.initials), capacity: capacityText(row?.weekly_capacity_hours) };
             });
         });
 }
@@ -56,7 +68,12 @@ function readMemberState(state: unknown, memberId: number): LegalHubMemberLocati
         return null;
     if (!row.memberIds.every((id) => typeof id === 'number') || !row.memberIds.includes(memberId))
         return null;
-    return { name: row.name, code: row.code, memberIds: row.memberIds };
+    return {
+        name: row.name,
+        code: row.code,
+        memberIds: row.memberIds,
+        capacity: typeof row.capacity === 'string' ? row.capacity : undefined,
+    };
 }
 
 export function LegalHubMemberTasks({ memberId, query }: { memberId: number; query: string }) {
@@ -110,6 +127,9 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
             : null;
     const memberIds = carried?.memberIds ?? roster?.map((member) => member.id) ?? [];
 
+    const capacity = carried?.capacity || found?.capacity || '';
+    const tasks = owner == null ? [] : tasksForMember(memberId, memberIds);
+
     return (
         <div className="lh-member-page">
             <AppBackButton onClick={goBack} />
@@ -119,12 +139,21 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
             ) : null}
             {ready && !error && owner == null ? <p className="lh-team__note">{t('legalHub.memberMissing')}</p> : null}
             {owner != null ? (
-                <LegalHubTaskTable
-                    key={memberId}
-                    query={query}
-                    tasks={tasksForMember(memberId, memberIds)}
-                    owner={owner}
-                />
+                <>
+                    <LegalHubMemberStats
+                        memberId={memberId}
+                        name={owner.name}
+                        code={owner.code}
+                        capacity={capacity}
+                        tasks={tasks}
+                    />
+                    <LegalHubTaskTable
+                        key={memberId}
+                        query={query}
+                        tasks={tasks}
+                        owner={owner}
+                    />
+                </>
             ) : null}
         </div>
     );
