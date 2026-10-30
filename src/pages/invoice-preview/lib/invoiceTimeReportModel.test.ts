@@ -8,6 +8,7 @@ import {
     mergeTimeReportPackPreferLiveExpenses,
     orderTimeReportSummarySlots,
     summaryRowsForRateSlices,
+    billableRateFromLine,
     type InvoiceTimeReportDetailRow,
     type InvoiceTimeReportSummaryRow,
 } from './invoiceTimeReportModel';
@@ -224,6 +225,53 @@ describe('mergeTimeReportPackPreferLiveExpenses', () => {
         const merged = mergeTimeReportPackPreferLiveExpenses(saved, live);
         expect(merged.summarySlots.slice(0, 4).map((row) => row.initials)).toEqual(['AAA', 'IFT', 'DGO', 'SRA']);
     });
+
+    it('replaces a saved single rate with the live old and new rate rows', () => {
+        const saved = emptyInvoiceTimeReportPack('USD');
+        const live = emptyInvoiceTimeReportPack('USD');
+        saved.summarySlots = [
+            summary({
+                initials: 'SHOKH',
+                name: 'Shahzoda Khusenova',
+                title: 'Junior Associate',
+                hours: '5,47',
+                hourlyRate: 'USD 100.00',
+                totalPrice: 'USD 627.10',
+            }),
+        ];
+        saved.summaryGrandHoursDisplay = '5,47';
+        saved.summaryGrandAmountDisplay = 'USD 627.10';
+        live.summarySlots = [
+            summary({
+                initials: 'SHOKH',
+                name: 'Shahzoda Khusenova',
+                title: 'Junior Associate',
+                hours: '2,67',
+                hourlyRate: 'USD 130.00',
+                totalPrice: 'USD 347.10',
+            }),
+            summary({
+                initials: 'SHOKH',
+                name: 'Shahzoda Khusenova',
+                title: '',
+                hours: '2,80',
+                hourlyRate: 'USD 100.00',
+                totalPrice: 'USD 280.00',
+            }),
+        ];
+        live.summaryGrandHoursDisplay = '5,47';
+        live.summaryGrandAmountDisplay = 'USD 627.10';
+        const merged = mergeTimeReportPackPreferLiveExpenses(saved, live);
+        expect(merged.summarySlots.filter((row) => row.initials === 'SHOKH').map((row) => ({
+            hours: row.hours,
+            hourlyRate: row.hourlyRate,
+            title: row.title,
+            totalPrice: row.totalPrice,
+        }))).toEqual([
+            { hours: '2,67', hourlyRate: 'USD 130.00', title: 'Junior Associate', totalPrice: 'USD 347.10' },
+            { hours: '2,80', hourlyRate: 'USD 100.00', title: 'Junior Associate', totalPrice: 'USD 280.00' },
+        ]);
+    });
 });
 
 function summary(partial: Partial<InvoiceTimeReportSummaryRow>): InvoiceTimeReportSummaryRow {
@@ -317,5 +365,47 @@ describe('summaryRowsForRateSlices', () => {
         expect(rows).toHaveLength(1);
         expect(rows[0]?.title).toBe('Associate');
         expect(rows[0]?.hourlyRate).toBe('USD 220.00');
+    });
+});
+
+describe('billableRateFromLine', () => {
+    it('uses amount divided by hours when the stored unit rate is not what was billed', () => {
+        expect(billableRateFromLine({
+            unitAmount: 100,
+            hours: 2.67,
+            amount: 347.1,
+        })).toBe(130);
+        expect(billableRateFromLine({
+            unitAmount: 250,
+            hours: 3.81,
+            amount: 952.5,
+        })).toBe(250);
+    });
+});
+
+describe('ensureMehnatSeparatedPack split rates', () => {
+    it('does not fold two rate rows back into the person total', () => {
+        const base = emptyInvoiceTimeReportPack('USD');
+        const line = (hours: string, rate: string, amount: string) => ({
+            date: '04.05.2026',
+            initials: 'SHOKH',
+            task: 'Emails',
+            description: '',
+            hours,
+            hourlyRate: rate,
+            amount,
+        });
+        const pack = ensureMehnatSeparatedPack({
+            ...base,
+            detailSlots: [
+                line('2,67', 'USD 130.00', 'USD 347.10'),
+                line('2,80', 'USD 100.00', 'USD 280.00'),
+            ],
+            summarySlots: [
+                summary({ initials: 'SHOKH', name: 'Shahzoda', title: 'Junior Associate', hours: '2,67', hourlyRate: 'USD 130.00', totalPrice: 'USD 347.10' }),
+                summary({ initials: 'SHOKH', name: 'Shahzoda', title: '', hours: '2,80', hourlyRate: 'USD 100.00', totalPrice: 'USD 280.00' }),
+            ],
+        });
+        expect(pack.summarySlots.filter((row) => row.initials === 'SHOKH').map((row) => row.hours)).toEqual(['2,67', '2,80']);
     });
 });

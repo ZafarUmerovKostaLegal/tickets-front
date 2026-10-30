@@ -40,6 +40,7 @@ import {
     formatTimeReportHours,
     sumRoundedTimeReportHours,
     isMyMehnatTimeReportRow,
+    billableRateFromLine,
     orderTimeReportSummarySlots,
     parseTimeReportAmountDisplay,
     summaryRowsForRateSlices,
@@ -135,15 +136,7 @@ function resolveDetailHourlyRate(opts: {
     hours: number;
     amount: number;
 }): number {
-    const unit = Number(opts.unitAmount);
-    if (Number.isFinite(unit) && unit > 0)
-        return unit;
-    const src = Number(opts.rateSource);
-    if (Number.isFinite(src) && src > 0)
-        return src;
-    if (opts.hours > 0 && Number.isFinite(opts.amount) && opts.amount !== 0)
-        return opts.amount / opts.hours;
-    return 0;
+    return billableRateFromLine(opts);
 }
 
 function formatDetailHourlyRate(rate: number, currency: string): string {
