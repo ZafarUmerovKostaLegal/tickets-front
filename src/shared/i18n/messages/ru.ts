@@ -232,6 +232,10 @@ export const ruMessages: Messages = {
         taskHistStatus: 'Статус: {status}',
         myTasksHint: 'Сроки, загрузка и движение задач по проектам',
         myTasksNew: 'Новая задача',
+        myTasksColumn: 'Колонка',
+        myTasksColumnName: 'Название колонки',
+        myTasksColumnAdd: 'Добавить',
+        myTasksColumnRemove: 'Удалить колонку',
         myTasksAttention: 'Нужно внимание · {count}',
         myTasksFocus: 'Показать эти',
         myTasksByProject: 'По проектам',
@@ -1161,6 +1165,10 @@ export type Messages = {
         taskHistStatus: string;
         myTasksHint: string;
         myTasksNew: string;
+        myTasksColumn: string;
+        myTasksColumnName: string;
+        myTasksColumnAdd: string;
+        myTasksColumnRemove: string;
         myTasksAttention: string;
         myTasksFocus: string;
         myTasksByProject: string;

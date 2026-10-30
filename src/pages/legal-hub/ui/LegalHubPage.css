@@ -697,8 +697,14 @@
   border: 1px solid var(--app-border);
   border-radius: 12px;
   background: var(--app-surface);
+  cursor: pointer;
   animation: lh-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) backwards;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.lh-person__card:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
 }
 
 .lh-person__card:hover {
@@ -3653,10 +3659,124 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 
 .lh-my__board {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
   gap: 0.7rem;
   min-width: 0;
   min-height: 0;
+}
+
+.lh-my__board.is-wide {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(13rem, 1fr);
+  overflow-x: auto;
+}
+
+.lh-my__adder {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 9.5rem;
+  padding: 0.7rem;
+  border: 1px dashed var(--app-border);
+  border-radius: 16px;
+}
+
+.lh-my__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.7rem;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--app-muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.lh-my__add:hover {
+  background: color-mix(in srgb, var(--app-bg-soft) 80%, var(--app-surface));
+  color: var(--app-text);
+}
+
+.lh-my__adder form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.lh-my__adder input {
+  width: 100%;
+  height: 2.15rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.82rem;
+  box-sizing: border-box;
+}
+
+.lh-my__adder input:focus {
+  outline: none;
+  border-color: var(--app-accent-border);
+  box-shadow: 0 0 0 3px var(--app-accent-focus);
+}
+
+.lh-my__adder-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.lh-my__adder-actions button {
+  height: 2rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.lh-my__adder-actions button[type='submit'] {
+  border-color: transparent;
+  background: var(--app-accent);
+  color: #fff;
+}
+
+.lh-my__adder-actions button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.lh-my__col-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--app-muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lh-my__col-remove:hover {
+  background: color-mix(in srgb, var(--app-bg-soft) 80%, var(--app-surface));
+  color: var(--app-text);
 }
 
 .lh-my__col {
@@ -3681,6 +3801,13 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   align-items: center;
   justify-content: space-between;
   gap: 0.4rem;
+}
+
+.lh-my__col-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-left: auto;
 }
 
 .lh-my__col header > span:last-child,
@@ -3737,7 +3864,7 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 
 @media (max-width: 860px) {
   .lh-my__board {
-    grid-template-columns: repeat(5, minmax(12rem, 1fr));
+    grid-template-columns: repeat(5, minmax(12rem, 1fr)) auto;
     overflow-x: auto;
     padding-bottom: 0.2rem;
   }

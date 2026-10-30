@@ -25,7 +25,9 @@ type MineTask = HubTask & {
     internalOn: string;
     instructions: string;
     approval: boolean;
+    lane?: string;
 };
+type ExtraColumn = { id: string; title: string };
 
 const COLUMNS: BoardColumn[] = ['todo', 'progress', 'wait', 'associate', 'partner'];
 const DROPPABLE: BoardColumn[] = ['todo', 'progress', 'wait'];
@@ -130,6 +132,8 @@ export function LegalHubMyTasks({ query }: { query: string }) {
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
     const [openId, setOpenId] = useState<string | null>(null);
+    const [extraColumns, setExtraColumns] = useState<ExtraColumn[]>([]);
+    const [columnDraft, setColumnDraft] = useState<string | null>(null);
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
@@ -186,9 +190,27 @@ export function LegalHubMyTasks({ query }: { query: string }) {
         ...peopleOptions,
     ];
 
-    const moveTask = (id: string, column: BoardColumn) => {
-        setTasks((current) => current.map((task) => task.id === id ? { ...task, status: column } : task));
+    const laneOf = (task: MineTask) => task.lane && extraColumns.some((column) => column.id === task.lane) ? task.lane : columnOf(task.status);
+    const moveTask = (id: string, column: string) => {
+        setTasks((current) => current.map((task) => {
+            if (task.id !== id)
+                return task;
+            if (COLUMNS.includes(column as BoardColumn))
+                return { ...task, lane: undefined, status: column as TaskStatusId };
+            return { ...task, lane: column };
+        }));
         setDragging(null);
+    };
+    const addColumn = (title: string) => {
+        const name = title.trim();
+        if (!name)
+            return;
+        setExtraColumns((current) => [...current, { id: `col-${Date.now()}`, title: name }]);
+        setColumnDraft(null);
+    };
+    const removeColumn = (id: string) => {
+        setExtraColumns((current) => current.filter((column) => column.id !== id));
+        setTasks((current) => current.map((task) => task.lane === id ? { ...task, lane: undefined } : task));
     };
 
     return (
@@ -263,47 +285,68 @@ export function LegalHubMyTasks({ query }: { query: string }) {
             </div>
             {visible.length === 0 ? <p className="lh-my__empty">{t('legalHub.myTasksEmpty')}</p> : null}
             {mode === 'status' && visible.length > 0 ? (
-                <div className="lh-my__board">
-                    {COLUMNS.map((column) => {
-                        const cards = visible.filter((task) => columnOf(task.status) === column);
-                        const droppable = DROPPABLE.includes(column);
-                        return (
-                            <section
-                                key={column}
-                                className={`lh-my__col${dragging && droppable ? ' is-target' : ''}`}
-                                onDragOver={(event) => {
-                                    if (!droppable || !dragging)
-                                        return;
+                <div className={`lh-my__board${extraColumns.length > 0 ? ' is-wide' : ''}`}>
+                    {COLUMNS.map((column) => (
+                        <BoardColumnView
+                            key={column}
+                            title={t(COLUMN_LABEL[column])}
+                            tone={COLUMN_DOT[column]}
+                            cards={visible.filter((task) => laneOf(task) === column)}
+                            droppable={DROPPABLE.includes(column)}
+                            dragging={dragging}
+                            onMove={(id) => moveTask(id, column)}
+                            onDragStart={setDragging}
+                            onDragEnd={() => setDragging(null)}
+                            onOpen={setOpenId}
+                        />
+                    ))}
+                    {extraColumns.map((column, index) => (
+                        <BoardColumnView
+                            key={column.id}
+                            title={column.title}
+                            tone={COLUMN_DOT[COLUMNS[index % COLUMNS.length] ?? 'todo']}
+                            cards={visible.filter((task) => laneOf(task) === column.id)}
+                            droppable
+                            dragging={dragging}
+                            onMove={(id) => moveTask(id, column.id)}
+                            onDragStart={setDragging}
+                            onDragEnd={() => setDragging(null)}
+                            onOpen={setOpenId}
+                            onRemove={() => removeColumn(column.id)}
+                            removeLabel={t('legalHub.myTasksColumnRemove')}
+                        />
+                    ))}
+                    <div className="lh-my__adder">
+                        {columnDraft == null ? (
+                            <button type="button" className="lh-my__add" onClick={() => setColumnDraft('')}>
+                                <span aria-hidden>+</span>
+                                {t('legalHub.myTasksColumn')}
+                            </button>
+                        ) : (
+                            <form
+                                onSubmit={(event) => {
                                     event.preventDefault();
-                                }}
-                                onDrop={(event) => {
-                                    if (!droppable || !dragging)
-                                        return;
-                                    event.preventDefault();
-                                    moveTask(dragging, column);
+                                    addColumn(columnDraft);
                                 }}
                             >
-                                <header>
-                                    <span className={`lh-tasks__pill lh-tasks__pill--${COLUMN_DOT[column]}`}>{t(COLUMN_LABEL[column])}</span>
-                                    <span>{cards.length}</span>
-                                </header>
-                                {cards.length === 0 ? <p>{t('legalHub.myTasksDrop')}</p> : (
-                                    <ul>
-                                        {cards.map((task) => (
-                                            <TaskCard
-                                                key={task.id}
-                                                task={task}
-                                                draggable={droppable && task.status !== 'associate' && task.status !== 'partner'}
-                                                onDragStart={() => setDragging(task.id)}
-                                                onDragEnd={() => setDragging(null)}
-                                                onOpen={() => setOpenId(task.id)}
-                                            />
-                                        ))}
-                                    </ul>
-                                )}
-                            </section>
-                        );
-                    })}
+                                <input
+                                    autoFocus
+                                    value={columnDraft}
+                                    placeholder={t('legalHub.myTasksColumnName')}
+                                    aria-label={t('legalHub.myTasksColumnName')}
+                                    onChange={(event) => setColumnDraft(event.target.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Escape')
+                                            setColumnDraft(null);
+                                    }}
+                                />
+                                <div className="lh-my__adder-actions">
+                                    <button type="submit" disabled={!columnDraft.trim()}>{t('legalHub.myTasksColumnAdd')}</button>
+                                    <button type="button" onClick={() => setColumnDraft(null)}>{t('legalHub.myTasksCancel')}</button>
+                                </div>
+                            </form>
+                        )}
+                    </div>
                 </div>
             ) : null}
             {mode === 'project' && visible.length > 0 ? (
@@ -335,6 +378,64 @@ export function LegalHubMyTasks({ query }: { query: string }) {
                 />
             ) : null}
         </div>
+    );
+}
+
+function BoardColumnView({ title, tone, cards, droppable, dragging, onMove, onDragStart, onDragEnd, onOpen, onRemove, removeLabel }: {
+    title: string;
+    tone: string;
+    cards: MineTask[];
+    droppable: boolean;
+    dragging: string | null;
+    onMove: (id: string) => void;
+    onDragStart: (id: string) => void;
+    onDragEnd: () => void;
+    onOpen: (id: string) => void;
+    onRemove?: () => void;
+    removeLabel?: string;
+}) {
+    const { t } = useI18n();
+    return (
+        <section
+            className={`lh-my__col${dragging && droppable ? ' is-target' : ''}`}
+            onDragOver={(event) => {
+                if (!droppable || !dragging)
+                    return;
+                event.preventDefault();
+            }}
+            onDrop={(event) => {
+                if (!droppable || !dragging)
+                    return;
+                event.preventDefault();
+                onMove(dragging);
+            }}
+        >
+            <header>
+                <span className={`lh-tasks__pill lh-tasks__pill--${tone}`}>{title}</span>
+                <span className="lh-my__col-meta">
+                    <span>{cards.length}</span>
+                    {onRemove ? (
+                        <button type="button" className="lh-my__col-remove" aria-label={removeLabel} onClick={onRemove}>
+                            ×
+                        </button>
+                    ) : null}
+                </span>
+            </header>
+            {cards.length === 0 ? <p>{t('legalHub.myTasksDrop')}</p> : (
+                <ul>
+                    {cards.map((task) => (
+                        <TaskCard
+                            key={task.id}
+                            task={task}
+                            draggable={droppable}
+                            onDragStart={() => onDragStart(task.id)}
+                            onDragEnd={onDragEnd}
+                            onOpen={() => onOpen(task.id)}
+                        />
+                    ))}
+                </ul>
+            )}
+        </section>
     );
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { mockMemberLoad } from './legalHubMock';
+import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import {
     PROJECT_LABEL,
     TASK_PRIORITIES,
@@ -96,6 +97,7 @@ export function LegalHubMemberStats({ memberId, name, code, capacity, tasks }: {
     tasks: HubTask[];
 }) {
     const { t, locale } = useI18n();
+    const [openId, setOpenId] = useState<string | null>(null);
     const load = mockMemberLoad(memberId, capacity);
     const total = tasks.length;
     const overdue = tasks.filter(isOverdue);
@@ -137,6 +139,7 @@ export function LegalHubMemberStats({ memberId, name, code, capacity, tasks }: {
     }, [tasks]);
     const later = tasks.filter((task) => !isOverdue(task) && dayDelta(task.clientOn) > 7);
     const weekOnly = dueWeek.filter((task) => !isOverdue(task));
+    const openTask = tasks.find((task) => task.id === openId) ?? null;
 
     return (
         <section className="lh-person" aria-label={t('legalHub.memberStats')}>
@@ -229,11 +232,19 @@ export function LegalHubMemberStats({ memberId, name, code, capacity, tasks }: {
             <section className="lh-person__deadlines" aria-label={t('legalHub.memberStatsDeadlines')}>
                 <h2>{t('legalHub.memberStatsDeadlines')}</h2>
                 <div className="lh-person__board">
-                    <DeadlineColumn tone="changes" title={t('legalHub.myTasksLate')} tasks={overdue} locale={locale} empty={t('legalHub.memberStatsNone')} />
-                    <DeadlineColumn tone="wait" title={t('legalHub.statDue')} tasks={weekOnly} locale={locale} empty={t('legalHub.memberStatsNone')} />
-                    <DeadlineColumn tone="progress" title={t('legalHub.memberStatsLater')} tasks={later} locale={locale} empty={t('legalHub.memberStatsNone')} />
+                    <DeadlineColumn tone="changes" title={t('legalHub.myTasksLate')} tasks={overdue} locale={locale} empty={t('legalHub.memberStatsNone')} onOpen={setOpenId} />
+                    <DeadlineColumn tone="wait" title={t('legalHub.statDue')} tasks={weekOnly} locale={locale} empty={t('legalHub.memberStatsNone')} onOpen={setOpenId} />
+                    <DeadlineColumn tone="progress" title={t('legalHub.memberStatsLater')} tasks={later} locale={locale} empty={t('legalHub.memberStatsNone')} onOpen={setOpenId} />
                 </div>
             </section>
+            {openTask ? (
+                <LegalHubTaskDrawer
+                    key={openTask.id}
+                    task={openTask}
+                    owner={{ code, name }}
+                    onClose={() => setOpenId(null)}
+                />
+            ) : null}
         </section>
     );
 }
@@ -334,12 +345,13 @@ function Bars({ rows, total }: { rows: { id: string; label: string; count: numbe
     );
 }
 
-function DeadlineColumn({ tone, title, tasks, locale, empty }: {
+function DeadlineColumn({ tone, title, tasks, locale, empty, onOpen }: {
     tone: 'changes' | 'wait' | 'progress';
     title: string;
     tasks: HubTask[];
     locale: string;
     empty: string;
+    onOpen: (id: string) => void;
 }) {
     const { t } = useI18n();
     return (
@@ -353,7 +365,20 @@ function DeadlineColumn({ tone, title, tasks, locale, empty }: {
                     {tasks.map((task, index) => {
                         const hint = dueHint(task.clientOn, t);
                         return (
-                            <li key={task.id} className={`lh-person__card${tone === 'changes' ? ' is-late' : ''}`} style={{ animationDelay: `${index * 45}ms` }}>
+                            <li
+                                key={task.id}
+                                className={`lh-person__card${tone === 'changes' ? ' is-late' : ''}`}
+                                style={{ animationDelay: `${index * 45}ms` }}
+                                tabIndex={0}
+                                role="button"
+                                onClick={() => onOpen(task.id)}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        onOpen(task.id);
+                                    }
+                                }}
+                            >
                                 <strong>{task.title}</strong>
                                 <span className="lh-person__card-meta">{PROJECT_LABEL[task.project as TaskProjectId]} · {task.workstream}</span>
                                 <span className="lh-person__card-foot">
