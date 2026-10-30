@@ -1525,6 +1525,7 @@ export const timeTrackingPageExtraMessages = {
             columns: {
                 number: 'Номер',
                 client: 'Клиент',
+                project: 'Проект',
                 issueDate: 'Дата счёта',
                 dueDate: 'Срок оплаты',
                 amount: 'Сумма',

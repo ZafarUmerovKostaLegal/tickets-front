@@ -100,6 +100,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [clients, setClients] = useState<TimeManagerClientRow[]>([]);
+  const [projectRows, setProjectRows] = useState<TimeManagerClientProjectRow[]>([]);
   const [clientsErr, setClientsErr] = useState<string | null>(null);
   const [items, setItems] = useState<InvoiceDto[]>([]);
   const [listLoading, setListLoading] = useState(true);
@@ -122,6 +123,17 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
     clients.forEach((c) => m.set(String(c.id), c.name));
     return m;
   }, [clients]);
+  const projectNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    const put = (p: TimeManagerClientProjectRow) => {
+      const name = (p.name ?? '').trim();
+      if (name)
+        m.set(String(p.id), name);
+    };
+    projectRows.forEach(put);
+    listProjectsFilter.forEach(put);
+    return m;
+  }, [projectRows, listProjectsFilter]);
   const clientFilterSearchItems = useMemo(() => [{ id: '', name: t('timeTrackingPage.common.allClients'), search: t('timeTrackingPage.invoices.filters.allClientsSearch') }, ...clients.map((c) => ({
     id: c.id,
     name: c.name,
@@ -163,12 +175,14 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
       listAllTimeManagerClientsMerged(false),
       listAllClientProjectsMerged(false),
     ])
-      .then(([clientRows, _projectRows]) => {
+      .then(([clientRows, loadedProjects]) => {
         setClients(clientRows.filter(isActiveTimeManagerClientRow));
+        setProjectRows(loadedProjects);
         setClientsErr(null);
       })
       .catch((e: unknown) => {
         setClients([]);
+        setProjectRows([]);
         setClientsErr(isForbiddenError(e) ? t('timeTrackingPage.invoices.errors.noClientAccess') : (e instanceof Error ? e.message : t('timeTrackingPage.invoices.errors.generic')));
       });
   }, [t]);
@@ -595,6 +609,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
               <tr>
                 <th scope="col">{t('timeTrackingPage.invoices.list.columns.number')}</th>
                 <th scope="col">{t('timeTrackingPage.invoices.list.columns.client')}</th>
+                <th scope="col">{t('timeTrackingPage.invoices.list.columns.project')}</th>
                 <th scope="col">{t('timeTrackingPage.invoices.list.columns.issueDate')}</th>
                 <th scope="col">{t('timeTrackingPage.invoices.list.columns.dueDate')}</th>
                 <th scope="col" className="tt-inv__th-num">{t('timeTrackingPage.invoices.list.columns.amount')}</th>
@@ -615,6 +630,7 @@ export function InvoicesPanel({ variant = 'default' }: InvoicesPanelProps) {
                 }}>
                   <td className="tt-inv__td-strong">{inv.invoiceNumber}</td>
                   <td>{clientNameById.get(inv.clientId) ?? inv.clientId}</td>
+                  <td>{inv.projectId ? (projectNameById.get(inv.projectId) ?? '—') : '—'}</td>
                   <td>{fmtDisplayDate(inv.issueDate, locale)}</td>
                   <td>{fmtDisplayDate(inv.dueDate, locale)}</td>
                   <td className="tt-inv__td-num">{fmtMoney(inv.totalAmount, inv.currency, locale)}</td>

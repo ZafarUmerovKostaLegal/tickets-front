@@ -1527,6 +1527,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             columns: {
                 number: 'Number',
                 client: 'Client',
+                project: 'Project',
                 issueDate: 'Invoice date',
                 dueDate: 'Due date',
                 amount: 'Amount',
