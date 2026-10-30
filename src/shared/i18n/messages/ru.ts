@@ -63,6 +63,7 @@ export const ruMessages: Messages = {
         expandSidebar: 'Развернуть меню',
         teamLoading: 'Загрузка команды…',
         teamError: 'Не удалось загрузить команды.',
+        memberMissing: 'Сотрудник не найден.',
         teamForbidden: 'Недостаточно прав, чтобы показать команды.',
         teamEmpty: 'Вы пока не руководите командой в учёте времени.',
         teamNoMembers: 'В команде пока нет участников.',
@@ -977,6 +978,7 @@ export type Messages = {
         expandSidebar: string;
         teamLoading: string;
         teamError: string;
+        memberMissing: string;
         teamForbidden: string;
         teamEmpty: string;
         teamNoMembers: string;

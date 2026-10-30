@@ -38,11 +38,15 @@ export const routes = {
     hr: '/hr',
     kostaLegalAi: '/kosta-legal-ai',
     legalHub: '/legal-hub',
+    legalHubMember: '/legal-hub/member/:memberId',
     kostaDaily: '/kosta-daily',
     contacts: '/contacts',
     internalCommunication: '/internal-communication',
     itSecurity: '/it-security',
 } as const;
+export function getLegalHubMemberUrl(memberId: number): string {
+    return `/legal-hub/member/${memberId}`;
+}
 export function getTicketDetailUrl(uuid: string): string {
     return `/ticket/${uuid}`;
 }

@@ -1,7 +1,10 @@
 import { addTransitionType, startTransition, useCallback, useEffect, useState, ViewTransition, type ComponentType } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { routes } from '@shared/config';
 import { AppBackButton, NAV_TRANSITION_TYPE } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
+import { LegalHubMemberTasks } from './LegalHubMemberTasks';
 import { LegalHubMyTasks } from './LegalHubMyTasks';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
@@ -103,9 +106,23 @@ function IconCollapse({ collapsed }: { collapsed: boolean }) {
 
 const SIDEBAR_COLLAPSED_KEY = 'lh-sidebar-collapsed';
 
+function sectionFromState(state: unknown): LegalHubNavId | null {
+    if (state == null || typeof state !== 'object' || !('section' in state))
+        return null;
+    const section = (state as { section?: string }).section;
+    if (section === 'myTasks' || section === 'reviewQueue' || section === 'allTeam')
+        return section;
+    return null;
+}
+
 export function LegalHubPage() {
     const { t } = useI18n();
-    const [section, setSection] = useState<LegalHubNavId>('allTeam');
+    const navigate = useNavigate();
+    const location = useLocation();
+    const { memberId: memberIdParam } = useParams();
+    const memberId = memberIdParam != null && /^\d+$/.test(memberIdParam) ? Number(memberIdParam) : null;
+    const onMemberPage = memberIdParam != null;
+    const [section, setSection] = useState<LegalHubNavId>(() => sectionFromState(location.state) ?? 'myTasks');
     const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
     const [query, setQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
@@ -135,7 +152,8 @@ export function LegalHubPage() {
             return next;
         });
     }, []);
-    const active = NAV_ITEMS.find((item) => item.id === section) ?? NAV_ITEMS[2]!;
+    const navSection: LegalHubNavId = onMemberPage ? 'allTeam' : section;
+    const active = NAV_ITEMS.find((item) => item.id === navSection) ?? NAV_ITEMS[0]!;
 
     const closeMenu = useCallback(() => setMenuOpen(false), []);
     const openMenu = useCallback(() => {
@@ -144,13 +162,17 @@ export function LegalHubPage() {
     }, []);
     const openSection = useCallback((id: LegalHubNavId) => {
         setMenuOpen(false);
+        if (onMemberPage) {
+            navigate(routes.legalHub, { state: { section: id } });
+            return;
+        }
         if (id === section)
             return;
         startTransition(() => {
             addTransitionType(NAV_TRANSITION_TYPE);
             setSection(id);
         });
-    }, [section]);
+    }, [navigate, onMemberPage, section]);
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
@@ -201,7 +223,7 @@ export function LegalHubPage() {
                     <ul className="lh-side__list">
                         {NAV_ITEMS.map((item) => {
                             const Icon = item.icon;
-                            const selected = item.id === section;
+                            const selected = item.id === navSection;
                             return (
                                 <li key={item.id}>
                                     <button
@@ -265,7 +287,7 @@ export function LegalHubPage() {
                         />
                         <kbd className="lh-top__search-kbd" aria-hidden>/</kbd>
                     </label>
-                    {section === 'allTeam' && teamView === 'cards' ? (
+                    {section === 'allTeam' && teamView === 'cards' && !onMemberPage ? (
                         <div className="lh-top__actions">
                             <button
                                 type="button"
@@ -283,14 +305,22 @@ export function LegalHubPage() {
                     ) : null}
                 </header>
                 <ViewTransition default="none" enter="none" exit="none" update="lh-section">
-                    <main key={section} className="lh-page__content">
-                        <h1 className="lh-page__title">{t(active.labelKey)}</h1>
-                        {section === 'myTasks' ? <LegalHubMyTasks query={query} /> : null}
-                        {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}
+                    <main key={onMemberPage ? `member-${memberIdParam}` : section} className="lh-page__content">
+                        {onMemberPage ? (
+                            memberId == null
+                                ? <p className="lh-team__note">{t('legalHub.memberMissing')}</p>
+                                : <LegalHubMemberTasks memberId={memberId} query={query} />
+                        ) : (
+                            <>
+                                <h1 className="lh-page__title">{t(active.labelKey)}</h1>
+                                {section === 'myTasks' ? <LegalHubMyTasks query={query} /> : null}
+                                {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}
+                            </>
+                        )}
                     </main>
                 </ViewTransition>
             </div>
-            {section === 'allTeam' && teamView === 'cards' ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
+            {section === 'allTeam' && teamView === 'cards' && !onMemberPage ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
         </div>
         </LegalHubMockProvider>
     );

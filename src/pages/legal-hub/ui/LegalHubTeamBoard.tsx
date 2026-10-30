@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState, type JSX } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getLegalHubMemberUrl } from '@shared/config';
 import { listTimeTrackingTeams, listTimeTrackingUsers } from '@entities/time-tracking';
 import { isWithoutAuthRegistration } from '@entities/time-tracking/model/manualUsers';
 import { isForbiddenError } from '@entities/time-tracking/api/domains/httpShared';
@@ -8,9 +10,9 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { useCurrentUser } from '@shared/hooks';
 import { fallbackSlices, mockMemberLoad, slicesFromUtil, sumUtil, teamStats, useLegalHubMock, type MemberLoad, type UtilKey, type UtilSlice } from './legalHubMock';
-import { tasksForMember } from './legalHubTasks';
 import { LegalHubTaskTable } from './LegalHubTaskTable';
 import { LegalHubTempMemberDialog, type TempEmployeeOption, type TempMemberDraft, type TempTeamRef } from './LegalHubTempMemberDialog';
+import type { LegalHubMemberLocationState } from './LegalHubMemberTasks';
 
 type MemberCard = {
     id: number;
@@ -511,6 +513,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
     onViewChange: (view: 'cards' | 'details') => void;
 }) {
     const { t } = useI18n();
+    const navigate = useNavigate();
     const { user, loading: userLoading } = useCurrentUser();
     const userId = user?.id ?? null;
     const [teams, setTeams] = useState<TimeTrackingTeamRow[] | null>(null);
@@ -546,7 +549,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
         };
     }, [userId, userLoading]);
 
-    const { publish, select, selectedId } = useLegalHubMock();
+    const { publish } = useLegalHubMock();
     const [tempOpen, setTempOpen] = useState(false);
     const [tempMembers, setTempMembers] = useState<TempMember[]>([]);
     const usersById = useMemo(() => new Map(users.map((row) => [row.id, row])), [users]);
@@ -607,7 +610,6 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
             }));
         return [...memberCards(team, usersById), ...temps];
     }), [ledTeams, tempMembers, usersById]);
-    const selectedMember = roster.find((member) => member.id === selectedId) ?? null;
 
     useEffect(() => {
         if (teams == null)
@@ -683,8 +685,15 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                                             load={member.accessUntil ? emptyLoad() : (loadById.get(member.id) ?? mockMemberLoad(member.id, member.capacity))}
                                             tone={index % 4}
                                             enterIndex={index}
-                                            selected={selectedId === member.id}
-                                            onSelect={() => select(selectedId === member.id ? null : member.id)}
+                                            selected={false}
+                                            onSelect={() => {
+                                                const state: LegalHubMemberLocationState = {
+                                                    name: member.name,
+                                                    code: member.initials,
+                                                    memberIds: roster.map((item) => item.id),
+                                                };
+                                                navigate(getLegalHubMemberUrl(member.id), { state });
+                                            }}
                                         />
                                     ))}
                                 </div>
@@ -692,14 +701,6 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                         </section>
                     );
                 }) : null}
-                {view === 'cards' && selectedMember ? (
-                    <LegalHubTaskTable
-                        key={selectedMember.id}
-                        query={needle}
-                        tasks={tasksForMember(selectedMember.id, roster.map((member) => member.id))}
-                        owner={{ name: selectedMember.name, code: selectedMember.initials }}
-                    />
-                ) : null}
             </div>
             {tempOpen ? (
                 <LegalHubTempMemberDialog

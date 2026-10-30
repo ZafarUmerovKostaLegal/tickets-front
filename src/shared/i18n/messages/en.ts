@@ -63,6 +63,7 @@ export const enMessages = {
         expandSidebar: 'Expand menu',
         teamLoading: 'Loading team…',
         teamError: 'Could not load teams.',
+        memberMissing: 'This person could not be found.',
         teamForbidden: 'You do not have access to teams.',
         teamEmpty: 'You do not lead a team in time tracking yet.',
         teamNoMembers: 'This team has no members yet.',
