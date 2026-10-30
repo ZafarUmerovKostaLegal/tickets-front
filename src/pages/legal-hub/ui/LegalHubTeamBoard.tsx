@@ -123,11 +123,12 @@ const STATUS_FIELD: Record<string, keyof MemberLoad['statuses']> = {
     reviewing: 'reviewing',
 };
 
-function MemberCardView({ member, load, tone, selected, onSelect }: {
+function MemberCardView({ member, load, tone, selected, enterIndex, onSelect }: {
     member: MemberCard;
     load: MemberLoad;
     tone: number;
     selected: boolean;
+    enterIndex: number;
     onSelect: () => void;
 }) {
     const { t } = useI18n();
@@ -140,6 +141,7 @@ function MemberCardView({ member, load, tone, selected, onSelect }: {
             type="button"
             className={`lh-member lh-member--tone-${tone}${selected ? ' lh-member--selected' : ''}`}
             aria-pressed={selected}
+            style={{ animationDelay: `${Math.min(enterIndex, 8) * 45}ms` }}
             onClick={onSelect}
         >
             <span className="lh-member__head">
@@ -680,6 +682,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                                             member={member}
                                             load={member.accessUntil ? emptyLoad() : (loadById.get(member.id) ?? mockMemberLoad(member.id, member.capacity))}
                                             tone={index % 4}
+                                            enterIndex={index}
                                             selected={selectedId === member.id}
                                             onSelect={() => select(selectedId === member.id ? null : member.id)}
                                         />

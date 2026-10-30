@@ -1222,6 +1222,8 @@ body[data-theme='dark'] .lh-util__seg--todo { stroke: #cbd5e1; }
   height: 100%;
   border-radius: inherit;
   background: var(--app-accent);
+  transform-origin: left center;
+  animation: lh-meter 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .lh-member__statuses {
@@ -1612,6 +1614,7 @@ body[data-theme='dark'] .lh-member__until {
   font-size: 0.8125rem;
   font-weight: 650;
   cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .lh-view button.is-active {
@@ -1950,3 +1953,86 @@ body[data-theme='dark'] .lh-tasks__pill--priority-high,
 body[data-theme='dark'] .lh-tasks__delta--hot { color: #fca5a5; }
 body[data-theme='dark'] .lh-tasks__pill--associate,
 body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
+
+@keyframes lh-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lh-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes lh-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes lh-meter {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+.lh-stat,
+.lh-member,
+.lh-board__tools,
+.lh-tasks__who,
+.lh-tasks__bar,
+.lh-tasks__empty {
+  animation: lh-rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lh-stat:nth-child(2) { animation-delay: 40ms; }
+.lh-stat:nth-child(3) { animation-delay: 80ms; }
+.lh-stat:nth-child(4) { animation-delay: 120ms; }
+.lh-stat:nth-child(5) { animation-delay: 160ms; }
+.lh-stat:nth-child(6) { animation-delay: 200ms; }
+
+.lh-member {
+  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.lh-tasks tbody tr {
+  animation: lh-fade 0.32s ease both;
+}
+
+.lh-temp {
+  animation: lh-fade 0.2s ease both;
+}
+
+.lh-temp__panel {
+  animation: lh-pop 0.34s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-stat,
+  .lh-member,
+  .lh-board__tools,
+  .lh-tasks__who,
+  .lh-tasks__bar,
+  .lh-tasks__empty,
+  .lh-tasks tbody tr,
+  .lh-temp,
+  .lh-temp__panel,
+  .lh-member__meter-fill {
+    animation: none;
+  }
+
+  .lh-member,
+  .lh-view button {
+    transition: none;
+  }
+}

@@ -321,8 +321,8 @@ export function LegalHubTaskTable({ query, tasks = HUB_TASKS, owner = null }: {
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.map((task) => (
-                                <tr key={task.id}>
+                            {rows.map((task, index) => (
+                                <tr key={task.id} style={{ animationDelay: `${Math.min(index, 12) * 28}ms` }}>
                                     <td>
                                         <span className={`lh-tasks__project lh-tasks__project--${task.project}`}>
                                             <IconFolder />
