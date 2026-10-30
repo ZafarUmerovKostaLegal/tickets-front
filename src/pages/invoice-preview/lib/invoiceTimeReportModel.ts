@@ -270,9 +270,8 @@ function mergeTimeRowsKeepLiveDescription(
 }
 
 /**
- * Keep saved wording for time lines and expenses, take expense amounts from the
- * live pack, and take summary rate rows from the live pack so an older rate
- * shows up in a draft that was saved before the split.
+ * Keep saved user edits for time/mehnat/summary and expense wording, but always
+ * take expense amounts from a freshly resolved pack (registry UZS÷CBU).
  */
 export function mergeTimeReportPackPreferLiveExpenses(
     saved: InvoiceTimeReportPack,
@@ -284,14 +283,12 @@ export function mergeTimeReportPackPreferLiveExpenses(
     const fixedFeeSlots = mergeTimeRowsKeepLiveDescription(saved.fixedFeeSlots ?? [], live.fixedFeeSlots ?? []);
     const fixedFeeTotalAmountDisplay = (live.fixedFeeTotalAmountDisplay ?? '').trim()
         || (saved.fixedFeeTotalAmountDisplay ?? '');
-    const summaryFromLive = mergeSummarySlotsPreferLiveRates(saved, live);
     if (!hasLiveExpenses) {
         return withSummaryOrderedBySeniority({
             ...saved,
             detailSlots,
             fixedFeeSlots,
             fixedFeeTotalAmountDisplay,
-            ...summaryFromLive,
         });
     }
     const cur = (live.currency || saved.currency || 'USD').trim().toUpperCase() || 'USD';
@@ -307,52 +304,7 @@ export function mergeTimeReportPackPreferLiveExpenses(
         fixedFeeTotalAmountDisplay,
         expenseSlots,
         expenseTotalAmountDisplay,
-        ...summaryFromLive,
     });
-}
-
-/** A saved draft keeps its wording, but rate rows come from the freshly resolved pack. */
-function mergeSummarySlotsPreferLiveRates(
-    saved: InvoiceTimeReportPack,
-    live: InvoiceTimeReportPack,
-): Pick<InvoiceTimeReportPack, 'summarySlots' | 'summaryGrandHoursDisplay' | 'summaryGrandAmountDisplay'> {
-    const liveRows = trimTrailingEmptySummarySlots(live.summarySlots ?? []);
-    if (!liveRows.length) {
-        return {
-            summarySlots: saved.summarySlots,
-            summaryGrandHoursDisplay: saved.summaryGrandHoursDisplay,
-            summaryGrandAmountDisplay: saved.summaryGrandAmountDisplay,
-        };
-    }
-    const savedRows = trimTrailingEmptySummarySlots(saved.summarySlots ?? []);
-    const used = new Set<number>();
-    const summarySlots = liveRows.map((liveRow) => {
-        const match = savedRows.findIndex((savedRow, index) => {
-            if (used.has(index))
-                return false;
-            if (savedRow.initials.trim().toUpperCase() !== liveRow.initials.trim().toUpperCase())
-                return false;
-            if (savedRow.name.trim().toLowerCase() !== liveRow.name.trim().toLowerCase())
-                return false;
-            return Math.abs(
-                parseTimeReportAmountDisplay(savedRow.hourlyRate) - parseTimeReportAmountDisplay(liveRow.hourlyRate),
-            ) < 0.01;
-        });
-        if (match < 0)
-            return liveRow;
-        used.add(match);
-        const savedRow = savedRows[match]!;
-        return {
-            ...liveRow,
-            name: savedRow.name.trim() ? savedRow.name : liveRow.name,
-            title: savedRow.title.trim() ? savedRow.title : liveRow.title,
-        };
-    });
-    return {
-        summarySlots,
-        summaryGrandHoursDisplay: live.summaryGrandHoursDisplay || saved.summaryGrandHoursDisplay,
-        summaryGrandAmountDisplay: live.summaryGrandAmountDisplay || saved.summaryGrandAmountDisplay,
-    };
 }
 
 /** Task names like «My mehnat registration» / «Регистрация My mehnat». Description-only mentions do not count. */
@@ -364,37 +316,6 @@ export function parseTimeReportHoursDisplay(raw: string): number {
     const t = String(raw ?? '').trim().replace(/\s/g, '').replace(',', '.');
     const n = Number(t);
     return Number.isFinite(n) ? n : 0;
-}
-
-/**
- * Rate actually billed on a line. When the stored unit rate and amount÷hours
- * disagree, the amount wins — that is the older rate still sitting on the draft.
- */
-export function billableRateFromLine(opts: {
-    unitAmount?: number | null;
-    rateSource?: number | null;
-    hours: number;
-    amount: number;
-}): number {
-    const implied = opts.hours > 0 && Number.isFinite(opts.amount) && opts.amount !== 0
-        ? opts.amount / opts.hours
-        : 0;
-    const unit = Number(opts.unitAmount);
-    const src = Number(opts.rateSource);
-    const listed = Number.isFinite(unit) && unit > 0
-        ? unit
-        : (Number.isFinite(src) && src > 0 ? src : 0);
-    if (listed > 0 && implied > 0) {
-        const listedCents = Math.round(listed * 100) / 100;
-        const impliedCents = Math.round(implied * 100) / 100;
-        const gap = Math.abs(opts.amount - listed * opts.hours);
-        if (Math.abs(listedCents - impliedCents) >= 0.01 && gap > Math.max(0.05, Math.abs(opts.amount) * 0.005))
-            return impliedCents;
-        return listedCents;
-    }
-    if (listed > 0)
-        return Math.round(listed * 100) / 100;
-    return implied > 0 ? Math.round(implied * 100) / 100 : 0;
 }
 
 export function parseTimeReportAmountDisplay(raw: string): number {
@@ -442,22 +363,11 @@ function alignHoursToDisplayedLines(pack: InvoiceTimeReportPack): InvoiceTimeRep
             continue;
         byInitials.set(key, roundTimeReportHours2((byInitials.get(key) ?? 0) + hoursShownOnLine(row.hours)));
     }
-    const summaryRowsForInitials = new Map<string, number>();
-    for (const row of pack.summarySlots) {
-        if (summaryRowIsEmpty(row))
-            continue;
-        const key = row.initials.trim().toUpperCase();
-        if (!key || key === '—' || key === '-')
-            continue;
-        summaryRowsForInitials.set(key, (summaryRowsForInitials.get(key) ?? 0) + 1);
-    }
     const summarySlots = pack.summarySlots.map((row) => {
         if (summaryRowIsEmpty(row))
             return row;
         const key = row.initials.trim().toUpperCase();
         if (!key || key === '—' || key === '-')
-            return row;
-        if ((summaryRowsForInitials.get(key) ?? 0) !== 1)
             return row;
         const hours = byInitials.get(key);
         if (hours == null)
@@ -658,101 +568,11 @@ function summaryTitleIsBlank(title: string): boolean {
     return !text || text === '—' || text === '-' || text === '–';
 }
 
-export type InvoiceSummaryRateSlice = {
-    rate: number;
-    hours: number;
-    amount: number;
-};
-
-/**
- * One summary line per hourly rate. A second line appears when hours in the
- * period were billed at an older rate. That line leaves the title empty.
- */
-export function summaryRowsForRateSlices(input: {
-    initials: string;
-    name: string;
-    title: string;
-    currency: string;
-    hours: number;
-    amount: number;
-    slices: readonly InvoiceSummaryRateSlice[];
-}): InvoiceTimeReportSummaryRow[] {
-    const byRate = new Map<number, { hours: number; amount: number }>();
-    for (const slice of input.slices) {
-        if (!(slice.rate > 0) || !(slice.hours > 0))
-            continue;
-        const rate = Math.round(slice.rate * 100) / 100;
-        const cur = byRate.get(rate) ?? { hours: 0, amount: 0 };
-        cur.hours += slice.hours;
-        cur.amount += slice.amount;
-        byRate.set(rate, cur);
-    }
-    const distinct = [...byRate.entries()].sort((a, b) => b[0] - a[0]);
-    if (distinct.length < 2) {
-        const rate = distinct[0]?.[0] ?? (input.hours > 0 ? input.amount / input.hours : 0);
-        return [summaryRowFromSlice(input, input.title, input.hours, rate, input.amount)];
-    }
-    const ratedHours = distinct.reduce((sum, [, bucket]) => sum + bucket.hours, 0);
-    const ratedAmount = distinct.reduce((sum, [, bucket]) => sum + bucket.amount, 0);
-    const leftoverHours = input.hours - ratedHours;
-    const leftoverAmount = input.amount - ratedAmount;
-    if (Math.abs(leftoverHours) > 0.0001 || Math.abs(leftoverAmount) > 0.0001) {
-        const host = distinct.reduce((best, entry) => (entry[1].hours > best[1].hours ? entry : best));
-        host[1].hours += leftoverHours;
-        host[1].amount += leftoverAmount;
-    }
-    return distinct.map(([rate, bucket], index) => summaryRowFromSlice(
-        input,
-        index === 0 ? input.title : '',
-        bucket.hours,
-        rate,
-        bucket.amount,
-    ));
-}
-
-function summaryRowFromSlice(
-    input: { initials: string; name: string; currency: string },
-    title: string,
-    hours: number,
-    rate: number,
-    amount: number,
-): InvoiceTimeReportSummaryRow {
-    return {
-        initials: input.initials,
-        name: input.name,
-        title,
-        hours: formatTimeReportHours(hours),
-        hourlyRate: rate > 0 ? formatTimeReportAmount(rate, input.currency) : '—',
-        totalPrice: formatTimeReportAmount(amount, input.currency),
-    };
-}
-
-function summaryPersonKey(row: InvoiceTimeReportSummaryRow): string {
-    return `${row.initials.trim()}\0${row.name.trim().toLowerCase()}`;
-}
-
 /** Partner, then Counsel, Senior Associate, Associate, Junior Associate, Trainee. Same title: higher rate, then higher amount. */
 export function orderTimeReportSummarySlots(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow[] {
     const filled = trimTrailingEmptySummarySlots(rows);
-    const groups = new Map<string, InvoiceTimeReportSummaryRow[]>();
-    for (const row of filled) {
-        const key = summaryPersonKey(row);
-        const list = groups.get(key);
-        if (list)
-            list.push(row);
-        else
-            groups.set(key, [row]);
-    }
-    const people = [...groups.values()].sort((a, b) => compareTimeReportSummaryRows(
-        representativeSummaryRow(a),
-        representativeSummaryRow(b),
-    ));
-    const sorted = people.flatMap((person) => [...person].sort(compareTimeReportSummaryRows));
+    const sorted = [...filled].sort(compareTimeReportSummaryRows);
     return padSummaryRows(sorted);
-}
-
-function representativeSummaryRow(rows: readonly InvoiceTimeReportSummaryRow[]): InvoiceTimeReportSummaryRow {
-    return [...rows].sort(compareTimeReportSummaryRows)[0]!;
 }
 
 function compareTimeReportSummaryRows(a: InvoiceTimeReportSummaryRow, b: InvoiceTimeReportSummaryRow): number {
