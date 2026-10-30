@@ -179,6 +179,10 @@ export const ruMessages: Messages = {
         taskChecklistProgress: '{done}/{total} выполнено',
         taskCheckAdd: 'Добавить пункт',
         taskCheckAddBtn: 'Добавить',
+        taskCheckComment: 'Комментарий',
+        taskCheckFile: 'Файл',
+        taskCheckNote: 'Комментарий к пункту',
+        taskCheckClearFile: 'Убрать файл',
         taskFilesTitle: 'Файлы',
         taskFilesCount: '{count} файл.',
         taskAddFiles: 'Добавить файлы',
@@ -1037,6 +1041,10 @@ export type Messages = {
         taskChecklistProgress: string;
         taskCheckAdd: string;
         taskCheckAddBtn: string;
+        taskCheckComment: string;
+        taskCheckFile: string;
+        taskCheckNote: string;
+        taskCheckClearFile: string;
         taskFilesTitle: string;
         taskFilesCount: string;
         taskAddFiles: string;

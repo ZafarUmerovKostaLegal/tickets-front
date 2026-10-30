@@ -42,7 +42,7 @@ export const PERSON_LABEL: Record<TaskPersonId, { code: string; name: string }> 
     partner: { code: 'P', name: 'Partner' },
 };
 
-export type TaskCheck = { id: string; label: string; done: boolean };
+export type TaskCheck = { id: string; label: string; done: boolean; note?: string; fileName?: string | null };
 export type TaskFile = { id: string; name: string; kind: 'pdf' | 'docx'; size: string; when: string };
 export type TaskComment = { id: string; author: string; text: string; when: string };
 export type TaskHistoryKind = 'created' | 'status';

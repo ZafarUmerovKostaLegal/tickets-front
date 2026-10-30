@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
@@ -82,6 +82,9 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
     const [instructions, setInstructions] = useState(seed.instructions);
     const [checks, setChecks] = useState<TaskCheck[]>(seed.checks);
     const [checkDraft, setCheckDraft] = useState('');
+    const [noteFor, setNoteFor] = useState<string | null>(null);
+    const fileTargetRef = useRef<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [files, setFiles] = useState<TaskFile[]>(seed.files);
     const [comments, setComments] = useState<TaskComment[]>(seed.comments);
     const [commentDraft, setCommentDraft] = useState('');
@@ -107,7 +110,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
         const label = checkDraft.trim();
         if (!label)
             return;
-        setChecks((current) => [...current, { id: `${task.id}-extra-${current.length}`, label, done: false }]);
+        setChecks((current) => [...current, { id: `${task.id}-extra-${current.length}`, label, done: false, note: '', fileName: null }]);
         setCheckDraft('');
     };
     const addFile = () => {
@@ -266,17 +269,77 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                                 <ul className="lh-drawer__checks">
                                     {checks.map((item) => (
                                         <li key={item.id}>
-                                            <button
-                                                type="button"
-                                                aria-pressed={item.done}
-                                                onClick={() => setChecks((current) => current.map((row) => row.id === item.id ? { ...row, done: !row.done } : row))}
-                                            >
-                                                <span className={item.done ? 'is-on' : ''} aria-hidden />
-                                                <span className={item.done ? 'is-done' : ''}>{item.label}</span>
-                                            </button>
+                                            <div className="lh-drawer__check-row">
+                                                <button
+                                                    type="button"
+                                                    className="lh-drawer__check"
+                                                    aria-pressed={item.done}
+                                                    onClick={() => setChecks((current) => current.map((row) => row.id === item.id ? { ...row, done: !row.done } : row))}
+                                                >
+                                                    <span className={item.done ? 'is-on' : ''} aria-hidden />
+                                                    <span className={item.done ? 'is-done' : ''}>{item.label}</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`lh-drawer__check-tool${noteFor === item.id || item.note ? ' is-on' : ''}`}
+                                                    aria-expanded={noteFor === item.id}
+                                                    onClick={() => setNoteFor((current) => current === item.id ? null : item.id)}
+                                                >
+                                                    {t('legalHub.taskCheckComment')}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={`lh-drawer__check-tool${item.fileName ? ' is-on' : ''}`}
+                                                    onClick={() => {
+                                                        fileTargetRef.current = item.id;
+                                                        fileInputRef.current?.click();
+                                                    }}
+                                                >
+                                                    {t('legalHub.taskCheckFile')}
+                                                </button>
+                                            </div>
+                                            {noteFor === item.id || item.note ? (
+                                                <input
+                                                    className="lh-drawer__check-note"
+                                                    value={item.note ?? ''}
+                                                    placeholder={t('legalHub.taskCheckNote')}
+                                                    aria-label={t('legalHub.taskCheckNote')}
+                                                    onChange={(event) => {
+                                                        const note = event.target.value;
+                                                        setChecks((current) => current.map((row) => row.id === item.id ? { ...row, note } : row));
+                                                    }}
+                                                />
+                                            ) : null}
+                                            {item.fileName ? (
+                                                <span className="lh-drawer__check-file">
+                                                    <span>{item.fileName}</span>
+                                                    <button
+                                                        type="button"
+                                                        aria-label={t('legalHub.taskCheckClearFile')}
+                                                        onClick={() => setChecks((current) => current.map((row) => row.id === item.id ? { ...row, fileName: null } : row))}
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </span>
+                                            ) : null}
                                         </li>
                                     ))}
                                 </ul>
+                                <input
+                                    ref={fileInputRef}
+                                    className="lh-drawer__file-input"
+                                    type="file"
+                                    tabIndex={-1}
+                                    aria-hidden
+                                    onChange={(event) => {
+                                        const file = event.target.files?.[0];
+                                        const targetId = fileTargetRef.current;
+                                        event.target.value = '';
+                                        if (!file || !targetId)
+                                            return;
+                                        setChecks((current) => current.map((row) => row.id === targetId ? { ...row, fileName: file.name } : row));
+                                    }}
+                                />
                                 <form
                                     className="lh-drawer__add"
                                     onSubmit={(event) => {
