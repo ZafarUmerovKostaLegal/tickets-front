@@ -367,23 +367,14 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                                 </label>
                             </div>
                             <div className="lh-drawer__stage">
-                                <span>{t('legalHub.taskReviewStatus')}</span>
-                                <input
-                                    className="lh-drawer__range"
-                                    type="range"
-                                    min={0}
-                                    max={REVIEW_STAGES.length - 1}
-                                    step={1}
-                                    value={stage}
-                                    aria-valuetext={t(REVIEW_STAGES[stage] ?? REVIEW_STAGES[0])}
-                                    aria-label={t('legalHub.taskReviewStatus')}
-                                    style={{ ['--lh-fill' as string]: `${(stage / (REVIEW_STAGES.length - 1)) * 100}%` }}
-                                    onChange={(event) => applyStage(Number(event.target.value))}
-                                />
-                                <ol>
+                                <span id={`${formId}-stage`}>{t('legalHub.taskReviewStatus')}</span>
+                                <ol className="lh-drawer__steps" style={{ ['--lh-progress' as string]: String(stage / (REVIEW_STAGES.length - 1)) }}>
                                     {REVIEW_STAGES.map((key, index) => (
                                         <li key={key} className={index === stage ? 'is-on' : index < stage ? 'is-done' : ''}>
-                                            <button type="button" onClick={() => applyStage(index)}>{t(key)}</button>
+                                            <button type="button" aria-pressed={index === stage} onClick={() => applyStage(index)}>
+                                                <span className="lh-drawer__dot" aria-hidden />
+                                                <span>{t(key)}</span>
+                                            </button>
                                         </li>
                                     ))}
                                 </ol>
@@ -412,6 +403,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                                         };
                                         return (
                                             <li key={item.id}>
+                                                <div className="lh-drawer__check-row">
                                                 <button
                                                     type="button"
                                                     className="lh-drawer__check"
@@ -440,6 +432,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                                                         {t('legalHub.taskCheckFile')}
                                                         {itemFiles.length > 0 ? <span>{itemFiles.length}</span> : null}
                                                     </button>
+                                                </div>
                                                 </div>
                                                 {notesOpen ? (
                                                     <div className="lh-drawer__check-panel">
