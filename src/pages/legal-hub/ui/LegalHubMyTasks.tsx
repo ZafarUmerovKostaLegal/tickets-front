@@ -40,14 +40,6 @@ const COLUMN_LABEL: Record<BoardColumn, TranslationKey> = {
     partner: 'legalHub.taskStatusPartner',
 };
 
-const COLUMN_DOT: Record<BoardColumn, string> = {
-    todo: 'todo',
-    progress: 'progress',
-    wait: 'wait',
-    associate: 'associate',
-    partner: 'partner',
-};
-
 const STATUS_LABEL: Record<TaskStatusId, TranslationKey> = {
     partner: 'legalHub.taskStatusPartner',
     progress: 'legalHub.statusInProgress',
@@ -295,28 +287,30 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
                         <BoardColumnView
                             key={column}
                             title={t(COLUMN_LABEL[column])}
-                            tone={COLUMN_DOT[column]}
                             cards={visible.filter((task) => laneOf(task) === column)}
                             droppable={DROPPABLE.includes(column)}
                             dragging={dragging}
                             collapsed={folded.includes(column)}
                             onToggle={() => toggleFold(column)}
+                            onAdd={() => setComposer(true)}
+                            addLabel={t('legalHub.myTasksNew')}
                             onMove={(id) => moveTask(id, column)}
                             onDragStart={setDragging}
                             onDragEnd={() => setDragging(null)}
                             onOpen={setOpenId}
                         />
                     ))}
-                    {extraColumns.map((column, index) => (
+                    {extraColumns.map((column) => (
                         <BoardColumnView
                             key={column.id}
                             title={column.title}
-                            tone={COLUMN_DOT[COLUMNS[index % COLUMNS.length] ?? 'todo']}
                             cards={visible.filter((task) => laneOf(task) === column.id)}
                             droppable
                             dragging={dragging}
                             collapsed={folded.includes(column.id)}
                             onToggle={() => toggleFold(column.id)}
+                            onAdd={() => setComposer(true)}
+                            addLabel={t('legalHub.myTasksNew')}
                             onMove={(id) => moveTask(id, column.id)}
                             onDragStart={setDragging}
                             onDragEnd={() => setDragging(null)}
@@ -390,14 +384,15 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
     );
 }
 
-function BoardColumnView({ title, tone, cards, droppable, dragging, collapsed, onToggle, onMove, onDragStart, onDragEnd, onOpen, onRemove, removeLabel }: {
+function BoardColumnView({ title, cards, droppable, dragging, collapsed, onToggle, onAdd, addLabel, onMove, onDragStart, onDragEnd, onOpen, onRemove, removeLabel }: {
     title: string;
-    tone: string;
     cards: MineTask[];
     droppable: boolean;
     dragging: string | null;
     collapsed: boolean;
     onToggle: () => void;
+    onAdd: () => void;
+    addLabel: string;
     onMove: (id: string) => void;
     onDragStart: (id: string) => void;
     onDragEnd: () => void;
@@ -423,9 +418,14 @@ function BoardColumnView({ title, tone, cards, droppable, dragging, collapsed, o
             }}
         >
             <header>
-                <span className={`lh-tasks__pill lh-tasks__pill--${tone}`}>{title}</span>
+                <span className="lh-my__col-title">
+                    <strong>{title}</strong>
+                    <em>{cards.length}</em>
+                </span>
                 <span className="lh-my__col-meta">
-                    <span>{cards.length}</span>
+                    <button type="button" className="lh-my__col-add" aria-label={addLabel} tabIndex={collapsed ? -1 : 0} onClick={onAdd}>
+                        +
+                    </button>
                     <button type="button" className="lh-my__col-fold" aria-label={foldLabel} aria-expanded={!collapsed} tabIndex={collapsed ? -1 : 0} onClick={onToggle}>
                         <CollapseIcon />
                     </button>
@@ -499,12 +499,23 @@ function taskCountKey(count: number): TranslationKey {
     return 'legalHub.myTasksCountMany';
 }
 
+const CARD_MONTHS: Record<string, string[]> = {
+    ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+};
+
 function formatDay(iso: string, locale: string): string {
     const [year, month, day] = iso.split('-').map(Number);
     return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-GB', {
         day: 'numeric',
         month: 'short',
     });
+}
+
+function formatCardDate(iso: string, locale: string): string {
+    const [, month, day] = iso.split('-').map(Number);
+    const names = CARD_MONTHS[locale] ?? CARD_MONTHS.en!;
+    return `${day ?? ''} ${names[(month ?? 1) - 1] ?? ''}`.trim();
 }
 
 function waitingName(task: MineTask): string | null {
@@ -643,14 +654,13 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
     onDragEnd: () => void;
     onOpen: () => void;
 }) {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const dragged = useRef(false);
     const person = PERSON_LABEL[task.owner];
-    const late = isOverdue(task);
     const clientLate = dayDelta(task.clientOn) < 0;
     return (
         <li
-            className={`lh-my__card${draggable ? '' : ' is-locked'}${late ? ' is-late' : ''}`}
+            className={`lh-my__card${draggable ? '' : ' is-locked'}`}
             draggable={draggable}
             onDragStart={() => {
                 dragged.current = true;
@@ -671,12 +681,16 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
             <strong>{task.title}</strong>
             <span className="lh-my__card-meta">{PROJECT_LABEL[task.project]} · {task.workstream}</span>
             <span className="lh-my__card-foot">
-                <span className={`lh-tasks__pill lh-tasks__pill--priority-${task.priority}`}>
-                    {t(PRIORITY_LABEL[task.priority])}
+                {task.priority === 'normal' ? <span /> : (
+                    <span className={`lh-my__prio lh-my__prio--${task.priority}`}>
+                        <i aria-hidden />
+                        {t(PRIORITY_LABEL[task.priority])}
+                    </span>
+                )}
+                <span className="lh-my__card-end">
+                    <span className={clientLate ? 'is-late' : ''}>{formatCardDate(task.clientOn, locale)}</span>
+                    <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={person.name}>{person.code}</span>
                 </span>
-                {late ? <span className="lh-my__late">{t('legalHub.myTasksLate')}</span> : null}
-                <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={person.name}>{person.code}</span>
-                <span className={clientLate ? 'is-late' : ''}>{task.clientOn.slice(8)}.{task.clientOn.slice(5, 7)}</span>
             </span>
         </li>
     );
