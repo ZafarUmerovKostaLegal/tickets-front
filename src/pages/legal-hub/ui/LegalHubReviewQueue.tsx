@@ -183,7 +183,7 @@ export function LegalHubReviewQueue({ query, tasks = null }: { query: string; ta
                 <div className="lh-queue__alert">
                     <strong>{t('legalHub.queueAlert').replace('{count}', String(overdue.length))}</strong>
                     <span>{overdue[0]?.task.title}</span>
-                </div>
+                </div> 
             ) : null}
             <div className="lh-queue__filters">
                 <Filter label={t('legalHub.taskColProject')} value={project} all={t('legalHub.queueAllProjects')} options={projectOptions} onChange={setProject} />

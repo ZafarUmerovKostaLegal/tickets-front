@@ -5,12 +5,15 @@ import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
 import {
     PERSON_LABEL,
+    PROJECT_LABEL,
+    TASK_PEOPLE,
     TASK_PRIORITIES,
     taskDrawerDetail,
     type HubTask,
     type TaskCheck,
     type TaskComment,
     type TaskFile,
+    type TaskPersonId,
     type TaskPriorityId,
     type TaskStatusId,
 } from './legalHubTasks';
@@ -40,14 +43,6 @@ const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
     low: 'legalHub.taskPriorityLow',
 };
 
-const PROJECT_BOARD = {
-    solar: 'Project A — Solar',
-    wind: 'Project B — Wind',
-    infrastructure: 'Project C — Infrastructure',
-    bess: 'Project D — BESS',
-    healthcare: 'Project E — Healthcare',
-} as const;
-
 const REVIEW_STAGES: TranslationKey[] = [
     'legalHub.taskStageSubmitted',
     'legalHub.taskStageAssociate',
@@ -71,17 +66,6 @@ function dayDelta(iso: string): number {
     return Math.round((target.getTime() - start.getTime()) / 86400000);
 }
 
-function deadlineHint(iso: string, t: (key: TranslationKey) => string): { text: string; tone: 'hot' | 'soon' | 'calm' } {
-    const delta = dayDelta(iso);
-    if (delta < 0)
-        return { text: t('legalHub.taskOverdue').replace('{count}', String(-delta)), tone: 'hot' };
-    if (delta === 0)
-        return { text: t('legalHub.taskToday'), tone: 'hot' };
-    if (delta <= 2)
-        return { text: t('legalHub.taskDaysLeft').replace('{count}', String(delta)), tone: 'soon' };
-    return { text: t('legalHub.taskDaysLeft').replace('{count}', String(delta)), tone: 'calm' };
-}
-
 function IconClose() {
     return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -92,18 +76,29 @@ function IconClose() {
 
 function IconFolder() {
     return (
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v8A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-10z" />
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+            <path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h3.2L10.5 7.5H19a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5.5a2 2 0 0 1-2-2V7.5z" />
         </svg>
     );
 }
 
-function IconStar() {
+function IconStar({ filled }: { filled: boolean }) {
     return (
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="m12 3 2.4 5.4 5.9.6-4.4 3.9 1.3 5.8L12 15.8 6.8 18.7l1.3-5.8L3.7 9l5.9-.6L12 3z" />
+        <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+            <path d="m12 3.6 2.15 4.7 5.15.5-3.9 3.4 1.15 5.1L12 14.9 7.45 17.3l1.15-5.1-3.9-3.4 5.15-.5L12 3.6z" />
         </svg>
     );
+}
+
+const DETAIL_MONTHS: Record<string, string[]> = {
+    ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'нояб', 'дек'],
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+};
+
+function formatDetailDate(iso: string, locale: string): string {
+    const [year, month, day] = iso.split('-').map(Number);
+    const names = DETAIL_MONTHS[locale] ?? DETAIL_MONTHS.en!;
+    return `${day ?? ''} ${names[(month ?? 1) - 1] ?? ''} ${year ?? ''}`.trim();
 }
 
 const CHAT_COLORS = ['#3b82f6', '#22c55e', '#8b5cf6', '#f97316', '#06b6d4', '#ef4444'];
@@ -130,7 +125,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
     owner: { code: string; name: string } | null;
     onClose: () => void;
 }) {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const formId = useId();
     const seed = taskDrawerDetail(task);
     const [tab, setTab] = useState<TabId>('details');
@@ -153,12 +148,19 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
     const [comments, setComments] = useState<TaskComment[]>(seed.comments);
     const [commentDraft, setCommentDraft] = useState('');
     const [important, setImportant] = useState(seed.important || task.important === true);
+    const [reviewer, setReviewer] = useState<TaskPersonId | ''>(task.reviewer ?? '');
     const [approved, setApproved] = useState(false);
     const ownerPerson = owner ?? PERSON_LABEL[task.owner];
     const ownerName = ownerPerson.name;
     const ownerTone = owner ? 'member' : task.owner;
-    const reviewerPerson = task.reviewer ? PERSON_LABEL[task.reviewer] : null;
-    const reviewHint = reviewOn ? deadlineHint(reviewOn, t) : null;
+    const people = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].code }));
+    const clientLate = clientOn !== '' && dayDelta(clientOn) < 0;
+    const dateLabel = (iso: string, late = false) => {
+        if (!iso)
+            return '';
+        const text = formatDetailDate(iso, locale);
+        return late ? `${text} · ${t('legalHub.taskOverdueMark')}` : text;
+    };
     const stage = approved ? REVIEW_STAGES.length - 1 : stageIndex(status);
     const notifyReviewer = () => {
         if (status === 'partner') {
@@ -243,7 +245,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                 <h3>{t('legalHub.taskFilesTitle')}</h3>
                 <span className="lh-drawer__count">{files.length}</span>
             </div>
-            {files.length === 0 ? <p className="lh-drawer__empty">{t('legalHub.taskFilesEmpty')}</p> : (
+            {files.length === 0 ? null : (
                 <ul className="lh-drawer__files">
                     {files.map((file) => (
                         <li key={file.id}>
@@ -286,33 +288,29 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                 onMouseDown={(event) => event.stopPropagation()}
             >
                 <header className="lh-drawer__head">
-                    <span className={`lh-drawer__project lh-tasks__project--${task.project}`}>
+                    <span className="lh-drawer__project">
                         <IconFolder />
-                        <span>{PROJECT_BOARD[task.project]}</span>
+                        <span>{PROJECT_LABEL[task.project]} / {task.workstream}</span>
                     </span>
-                    <span className="lh-drawer__head-tools">
-                        <span className={`lh-tasks__pill lh-tasks__pill--priority-${priority}`}>{t(PRIORITY_LABEL[priority])}</span>
-                        <button type="button" className="lh-drawer__close" aria-label={t('legalHub.taskDrawerClose')} onClick={onClose}>
-                            <IconClose />
-                        </button>
-                    </span>
+                    <button type="button" className="lh-drawer__close" aria-label={t('legalHub.taskDrawerClose')} onClick={onClose}>
+                        <IconClose />
+                    </button>
                 </header>
                 <div className="lh-drawer__intro">
-                    <p className="lh-drawer__stream">{task.workstream}</p>
                     <h2 id={`${formId}-title`}>{task.title}</h2>
                     <div className="lh-drawer__badges">
-                        <span className={`lh-tasks__pill lh-tasks__pill--${stage === 3 ? 'partner' : status}`}>
+                        <span className={`lh-drawer__status lh-drawer__status--${stage === 3 ? 'partner' : status}`}>
+                            <i aria-hidden />
                             {stage === 3 ? t('legalHub.taskStageApproved') : t(STATUS_LABEL[status])}
                         </span>
-                        {stage >= 2 ? <span className="lh-drawer__from">{t('legalHub.taskFromAssociate')}</span> : null}
                         <button
                             type="button"
                             className={`lh-drawer__mark${important ? ' is-on' : ''}`}
                             aria-pressed={important}
                             onClick={() => setImportant((value) => !value)}
                         >
-                            <IconStar />
-                            {t('legalHub.taskMarkImportant')}
+                            <IconStar filled={important} />
+                            {t('legalHub.taskImportantChip')}
                         </button>
                     </div>
                 </div>
@@ -327,26 +325,50 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                             onClick={() => setTab(item.id)}
                         >
                             {item.label}
-                            {item.count != null ? <span>{item.count}</span> : null}
+                            {item.id === 'files' ? <span>{item.count ?? 0}</span> : null}
                         </button>
                     ))}
                 </div>
                 <div className={`lh-drawer__body${tab === 'comments' ? ' lh-drawer__body--chat' : ''}`}>
                     {tab === 'details' ? (
                         <>
-                            <div className="lh-drawer__grid">
-                                <PersonField label={t('legalHub.taskFieldOwner')} name={ownerPerson.name} code={ownerPerson.code} tone={ownerTone} />
-                                <PersonField label={t('legalHub.taskFieldReviewer')} name={reviewerPerson?.name ?? t('legalHub.taskReviewerEmpty')} code={reviewerPerson?.code ?? ''} tone={task.reviewer ?? 'member'} muted={!reviewerPerson} />
-                                <DateField id={`${formId}-internal`} label={t('legalHub.taskFieldInternal')} value={internalOn} onChange={setInternalOn} />
-                                <DateField id={`${formId}-review`} label={t('legalHub.taskFieldReview')} value={reviewOn} onChange={setReviewOn} hint={reviewHint} />
-                                <DateField id={`${formId}-client`} label={t('legalHub.taskFieldClient')} value={clientOn} onChange={setClientOn} />
-                                <Field label={t('legalHub.taskFieldApproval')} value={seed.approval === 'required' ? t('legalHub.taskApprovalRequired') : t('legalHub.taskApprovalNo')} />
-                                <label className="lh-drawer__field">
+                            <div className="lh-drawer__rows">
+                                <PersonField label={t('legalHub.taskFieldOwner')} name={ownerPerson.code} code={ownerPerson.code} tone={ownerTone} />
+                                <div className="lh-drawer__row">
+                                    <span>{t('legalHub.taskFieldReviewer')}</span>
+                                    <SearchableSelect
+                                        portalDropdown
+                                        portalZIndex={6000}
+                                        className="lh-drawer__assign"
+                                        buttonClassName="lh-drawer__assign-btn"
+                                        aria-label={t('legalHub.taskFieldReviewer')}
+                                        placeholder={`+ ${t('legalHub.taskAssign')}`}
+                                        emptyListText={t('legalHub.taskFilterAll')}
+                                        noMatchText={t('legalHub.teamNoMatch')}
+                                        value={reviewer}
+                                        items={people}
+                                        getOptionValue={(item) => item.id}
+                                        getOptionLabel={(item) => item.label}
+                                        getSearchText={(item) => `${item.label} ${PERSON_LABEL[item.id].name}`}
+                                        onSelect={(item) => setReviewer(item.id)}
+                                        renderButtonContent={(item) => (
+                                            <span className="lh-drawer__person">
+                                                <span className={`lh-tasks__avatar lh-tasks__avatar--${item.id}`} aria-hidden>{item.label}</span>
+                                                {item.label}
+                                            </span>
+                                        )}
+                                    />
+                                </div>
+                                <DateField id={`${formId}-internal`} label={t('legalHub.taskFieldInternal')} value={internalOn} emptyLabel={t('legalHub.taskDateEmpty')} labelText={dateLabel(internalOn)} onChange={setInternalOn} />
+                                <DateField id={`${formId}-review`} label={t('legalHub.taskFieldReview')} value={reviewOn} emptyLabel={t('legalHub.taskDateEmpty')} labelText={dateLabel(reviewOn)} onChange={setReviewOn} />
+                                <DateField id={`${formId}-client`} label={t('legalHub.taskFieldClient')} value={clientOn} emptyLabel={t('legalHub.taskDateEmpty')} labelText={dateLabel(clientOn, clientLate)} late={clientLate} onChange={setClientOn} />
+                                <div className="lh-drawer__row">
                                     <span>{t('legalHub.taskColPriority')}</span>
                                     <SearchableSelect
                                         portalDropdown
                                         portalZIndex={6000}
-                                        buttonClassName="lh-drawer__pick"
+                                        className="lh-drawer__plain"
+                                        buttonClassName="lh-drawer__plain-btn"
                                         aria-label={t('legalHub.taskColPriority')}
                                         placeholder={t('legalHub.taskColPriority')}
                                         emptyListText={t('legalHub.taskFilterAll')}
@@ -357,13 +379,21 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                                         getOptionLabel={(item) => item.label}
                                         getSearchText={(item) => item.label}
                                         onSelect={(item) => setPriority(item.id)}
+                                        renderButtonContent={(item) => (
+                                            <span className={`lh-drawer__prio lh-drawer__prio--${item.id}`}>
+                                                <i aria-hidden />
+                                                {item.label}
+                                            </span>
+                                        )}
                                     />
-                                </label>
-                                <label className="lh-drawer__field">
-                                    <span>{t('legalHub.taskFieldMinutes')}</span>
+                                </div>
+                                <label className="lh-drawer__row">
+                                    <span>{t('legalHub.taskColEstimate')}</span>
                                     <input
-                                        className="lh-drawer__input"
+                                        className="lh-drawer__estimate"
                                         inputMode="numeric"
+                                        placeholder={t('legalHub.taskEstimateEmpty')}
+                                        aria-label={t('legalHub.taskColEstimate')}
                                         value={minutes}
                                         onChange={(event) => setMinutes(event.target.value.replace(/[^\d]/g, '').slice(0, 4))}
                                     />
@@ -371,20 +401,17 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                             </div>
                             <div className="lh-drawer__stage">
                                 <span id={`${formId}-stage`}>{t('legalHub.taskReviewStatus')}</span>
-                                <ol className="lh-drawer__steps" style={{ ['--lh-progress' as string]: String(stage / (REVIEW_STAGES.length - 1)) }}>
+                                <ol className="lh-drawer__steps">
                                     {REVIEW_STAGES.map((key, index) => (
                                         <li key={key} className={index === stage ? 'is-on' : index < stage ? 'is-done' : ''}>
-                                            <span className="lh-drawer__step">
-                                                <span className="lh-drawer__dot" aria-hidden />
-                                                <span>{t(key)}</span>
-                                            </span>
+                                            {t(key)}
                                         </li>
                                     ))}
                                 </ol>
                             </div>
                             <label className="lh-drawer__field lh-drawer__field--stack">
                                 <span>{t('legalHub.taskFieldInstructions')}</span>
-                                <textarea className="lh-drawer__area" rows={4} value={instructions} onChange={(event) => setInstructions(event.target.value)} />
+                                <textarea className="lh-drawer__area" rows={4} placeholder={t('legalHub.taskInstructionsPh')} value={instructions} onChange={(event) => setInstructions(event.target.value)} />
                             </label>
                             <section className="lh-drawer__block">
                                 <div className="lh-drawer__block-head">
@@ -629,18 +656,15 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                     ) : null}
                 </div>
                 <footer className="lh-drawer__foot">
-                    <button type="button" className="lh-drawer__send" onClick={notifyReviewer}>
-                        <IconBell />
-                        {t('legalHub.taskNotifyReviewer')}
-                    </button>
                     <div className="lh-drawer__foot-row">
-                        <button type="button" onClick={withdraw}>{t('legalHub.taskWithdraw')}</button>
+                        <button type="button" className="lh-drawer__send" onClick={notifyReviewer}>
+                            <IconBell />
+                            <span>{t('legalHub.taskNotifyReviewer')}</span>
+                        </button>
                         <button type="button" onClick={() => setTab('comments')}>{t('legalHub.taskAddComment')}</button>
+                        <button type="button" onClick={withdraw}>{t('legalHub.taskWithdraw')}</button>
                     </div>
-                    <p className="lh-drawer__note">
-                        <IconInfo />
-                        {t('legalHub.taskReviewerOnly')}
-                    </p>
+                    <p className="lh-drawer__note">{t('legalHub.taskReviewerOnly')}</p>
                 </footer>
             </div>
         </div>,
@@ -657,16 +681,6 @@ function IconBell() {
     );
 }
 
-function IconInfo() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 11v6" strokeLinecap="round" />
-            <path d="M12 8h.01" strokeLinecap="round" />
-        </svg>
-    );
-}
-
 function PersonField({ label, name, code, tone, muted }: {
     label: string;
     name: string;
@@ -675,49 +689,41 @@ function PersonField({ label, name, code, tone, muted }: {
     muted?: boolean;
 }) {
     return (
-        <div className="lh-drawer__field">
+        <div className="lh-drawer__row">
             <span>{label}</span>
             <strong className={`lh-drawer__person${muted ? ' is-muted' : ''}`}>
-                {muted ? null : <span className={`lh-tasks__avatar lh-tasks__avatar--${tone}`} aria-hidden>{code}</span>}
+                {muted || code === '' ? null : <span className={`lh-tasks__avatar lh-tasks__avatar--${tone}`} aria-hidden>{code}</span>}
                 {name}
             </strong>
         </div>
     );
 }
 
-function Field({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
-    return (
-        <div className="lh-drawer__field">
-            <span>{label}</span>
-            <strong className={muted ? 'is-muted' : ''}>{value}</strong>
-        </div>
-    );
-}
-
-function DateField({ id, label, value, onChange, hint }: {
+function DateField({ id, label, value, emptyLabel, labelText, late, onChange }: {
     id: string;
     label: string;
     value: string;
+    emptyLabel: string;
+    labelText: string;
+    late?: boolean;
     onChange: (iso: string) => void;
-    hint?: { text: string; tone: 'hot' | 'soon' | 'calm' } | null;
 }) {
     return (
-        <div className="lh-drawer__field">
+        <div className="lh-drawer__row">
             <span id={id}>{label}</span>
-            <div className={`lh-drawer__date-row${hint ? ' is-stacked' : ''}`}>
-                <DatePicker
-                    portal
-                    portalZIndex={6000}
-                    className="lh-drawer__calendar"
-                    buttonClassName="lh-drawer__date"
-                    aria-labelledby={id}
-                    title={label}
-                    emptyLabel="—"
-                    value={value}
-                    onChange={onChange}
-                />
-                {hint ? <em className={`lh-tasks__delta lh-tasks__delta--${hint.tone}`}>{hint.text}</em> : null}
-            </div>
+            <DatePicker
+                portal
+                portalZIndex={6000}
+                showChevron={false}
+                className="lh-drawer__calendar"
+                buttonClassName={`lh-drawer__date${late ? ' is-late' : ''}`}
+                aria-labelledby={id}
+                title={label}
+                emptyLabel={emptyLabel}
+                labelText={labelText}
+                value={value}
+                onChange={onChange}
+            />
         </div>
     );
 }

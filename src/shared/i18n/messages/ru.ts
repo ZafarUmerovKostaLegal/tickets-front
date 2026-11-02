@@ -212,7 +212,13 @@ export const ruMessages: Messages = {
         taskFieldMinutes: 'Оценка, мин',
         taskFieldInstructions: 'Инструкции / следующий шаг',
         taskChecklist: 'Чеклист',
-        taskChecklistProgress: '{done}/{total} выполнено',
+        taskChecklistProgress: '{done} из {total}',
+        taskAssign: 'Назначить',
+        taskDateEmpty: 'Не задан',
+        taskEstimateEmpty: 'Не задана',
+        taskOverdueMark: 'просрочено',
+        taskInstructionsPh: 'Что нужно сделать дальше',
+        taskImportantChip: 'Важное',
         taskCheckAdd: 'Добавить пункт',
         taskCheckAddBtn: 'Добавить',
         taskCheckComment: 'Комментарий',
@@ -1168,6 +1174,12 @@ export type Messages = {
         taskFieldInstructions: string;
         taskChecklist: string;
         taskChecklistProgress: string;
+        taskAssign: string;
+        taskDateEmpty: string;
+        taskEstimateEmpty: string;
+        taskOverdueMark: string;
+        taskInstructionsPh: string;
+        taskImportantChip: string;
         taskCheckAdd: string;
         taskCheckAddBtn: string;
         taskCheckComment: string;

@@ -81,8 +81,9 @@ export type DatePickerProps = {
     
     isDateDisabled?: (iso: string) => boolean;
     emptyLabel?: string;
+    labelText?: string;
 };
-export function DatePicker({ value, onChange, min, max, disabled = false, isDateDisabled, className = '', buttonClassName = '', id, 'aria-labelledby': ariaLabelledBy, portal = false, portalZIndex = 1300, title = 'Выбрать дату', iconAfterLabel = false, showChevron = true, emptyLabel, }: DatePickerProps) {
+export function DatePicker({ value, onChange, min, max, disabled = false, isDateDisabled, className = '', buttonClassName = '', id, 'aria-labelledby': ariaLabelledBy, portal = false, portalZIndex = 1300, title = 'Выбрать дату', iconAfterLabel = false, showChevron = true, emptyLabel, labelText, }: DatePickerProps) {
     const genId = useId();
     const btnId = id ?? `${genId}-btn`;
     const gridId = `${genId}-grid`;
@@ -286,7 +287,7 @@ export function DatePicker({ value, onChange, min, max, disabled = false, isDate
       </span>)
         : null;
     const displayLabel = parsedValue
-        ? parsedValue.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+        ? (labelText ?? parsedValue.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' }))
         : (emptyLabel ?? displayRuFromIso(value));
     const labelClass = ['ttp__label', !parsedValue ? 'ttp__label--empty' : ''].filter(Boolean).join(' ');
     return (<div ref={wrapRef} className={`ttp${iconAfterLabel ? ' ttp--icon-end' : ''} ${className}`.trim()}>

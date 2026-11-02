@@ -64,14 +64,6 @@ export type TaskDetail = {
     history: TaskHistory[];
 };
 
-function shiftIso(iso: string, days: number): string {
-    const [year, month, day] = iso.split('-').map(Number);
-    const date = new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
-    date.setDate(date.getDate() + days);
-    const pad = (value: number) => String(value).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
 export function taskDrawerDetail(task: HubTask): TaskDetail {
     if (task.id === 'lla-prep') {
         return {
@@ -125,19 +117,12 @@ export function taskDrawerDetail(task: HubTask): TaskDetail {
             ],
         };
     }
-    const doneCount = task.status === 'todo' ? 0 : task.status === 'progress' || task.status === 'wait' ? 1 : 2;
-    const checks = [
-        'Review client instructions',
-        'Prepare draft',
-        'Check legal references',
-        'Verify final version',
-    ].map((label, index) => ({ id: `${task.id}-${index}`, label, done: index < doneCount }));
     return {
-        internalOn: shiftIso(task.clientOn, -3),
+        internalOn: '',
         important: task.priority === 'high',
         approval: task.priority === 'high' ? 'required' : 'none',
-        instructions: `${task.title}. Check the workstream materials and leave the next step in the note before review.`,
-        checks,
+        instructions: '',
+        checks: [],
         files: task.status === 'todo' ? [] : [
             { id: `${task.id}-file`, name: `${task.project}_draft.pdf`, kind: 'pdf', size: '180 KB', when: '27 Oct' },
         ],
