@@ -58,7 +58,7 @@ export const ruMessages: Messages = {
         queueHint: 'Отправленные документы и ход проверки',
         queueApproved: 'Одобрено',
         queueApprovedMeta: 'за {count} дн.',
-        queueAlert: 'Просрочено по сроку проверки: {count}. Напомните проверяющему с карточки или из панели.',
+        queueAlert: 'Просрочено · {count}',
         queueNudge: 'Напомнить',
         queueNudged: 'Напомнили',
         queueFix: 'Исправить',

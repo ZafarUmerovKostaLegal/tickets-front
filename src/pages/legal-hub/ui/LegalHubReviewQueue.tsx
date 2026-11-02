@@ -175,16 +175,16 @@ export function LegalHubReviewQueue({ query, tasks = null }: { query: string; ta
                 <Stat icon="changes" value={visible.filter((item) => item.lane === 'changes').length} label={t('legalHub.statusChanges')} />
                 <Stat icon="approved" value={approvedCount} label={`${t('legalHub.queueApproved')} · ${t('legalHub.queueApprovedMeta').replace('{count}', String(APPROVED_WINDOW))}`} />
             </ul>
-            {overdue.length > 0 ? (
-                <div className="lh-queue__alert">
-                    <strong>{t('legalHub.queueAlert').replace('{count}', String(overdue.length))}</strong>
-                    <span>{overdue[0]?.task.title}</span>
-                </div>
-            ) : null}
             <div className="lh-queue__filters">
                 <Filter label={t('legalHub.taskColProject')} value={project} all={t('legalHub.queueAllProjects')} options={projectOptions} onChange={setProject} />
                 <Filter label={t('legalHub.taskColReviewer')} value={reviewer} all={t('legalHub.queueAllReviewers')} options={reviewerOptions} onChange={setReviewer} />
                 <Filter label={t('legalHub.taskColStatus')} value={status} all={t('legalHub.queueAllStatuses')} options={statusOptions} onChange={setStatus} />
+                {overdue.length > 0 ? (
+                    <div className="lh-queue__alert">
+                        <strong>{t('legalHub.queueAlert').replace('{count}', String(overdue.length))}</strong>
+                        <span title={overdue[0]?.task.title}>{overdue[0]?.task.title}</span>
+                    </div>
+                ) : null}
             </div>
             {visible.length === 0 ? <p className="lh-queue__empty">{t('legalHub.queueEmpty')}</p> : (
                 <div className="lh-queue__board">

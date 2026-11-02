@@ -58,7 +58,7 @@ export const enMessages = {
         queueHint: 'Submitted documents and review progress',
         queueApproved: 'Approved',
         queueApprovedMeta: 'in {count} days',
-        queueAlert: '{count} document is past the review target. Nudge the reviewer from the card or the panel.',
+        queueAlert: 'Overdue · {count}',
         queueNudge: 'Nudge',
         queueNudged: 'Nudged',
         queueFix: 'Fix now',
