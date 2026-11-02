@@ -313,6 +313,27 @@
   gap: 0.45rem;
 }
 
+.lh-top__member {
+  height: 2.4rem;
+  width: min(16rem, 42vw);
+  min-width: 8.5rem;
+  max-width: 16rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.lh-top__member:focus {
+  outline: none;
+  border-color: var(--app-accent-border);
+  box-shadow: 0 0 0 3px var(--app-accent-focus);
+}
+
 .lh-page__content {
   flex: 1;
   min-height: 0;

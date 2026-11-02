@@ -135,14 +135,20 @@ function liveItems(): QueueItem[] {
     });
 }
 
-export function LegalHubReviewQueue({ query }: { query: string }) {
+export function LegalHubReviewQueue({ query, tasks = null }: { query: string; tasks?: HubTask[] | null }) {
     const { t, locale } = useI18n();
     const [project, setProject] = useState('');
     const [reviewer, setReviewer] = useState('');
     const [status, setStatus] = useState('');
     const [nudged, setNudged] = useState<string[]>([]);
     const [openId, setOpenId] = useState<string | null>(null);
-    const items = useMemo(() => [...liveItems(), ...APPROVED], []);
+    const items = useMemo(() => {
+        const live = liveItems();
+        if (tasks == null)
+            return [...live, ...APPROVED];
+        const allowed = new Set(tasks.map((task) => task.id));
+        return live.filter((item) => allowed.has(item.task.id));
+    }, [tasks]);
     const needle = query.trim().toLowerCase();
     const visible = items.filter((item) => {
         if (project && item.task.project !== project)

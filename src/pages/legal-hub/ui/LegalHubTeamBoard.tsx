@@ -11,6 +11,8 @@ import type { TranslationKey } from '@shared/i18n/translate';
 import { useCurrentUser } from '@shared/hooks';
 import { fallbackSlices, mockMemberLoad, slicesFromUtil, sumUtil, teamStats, useLegalHubMock, type MemberLoad, type UtilKey, type UtilSlice } from './legalHubMock';
 import { LegalHubTaskTable } from './LegalHubTaskTable';
+import { tasksForMember } from './legalHubTasks';
+import { useLegalHubView } from './legalHubView';
 import { LegalHubTempMemberDialog, type TempEmployeeOption, type TempMemberDraft, type TempTeamRef } from './LegalHubTempMemberDialog';
 import type { LegalHubMemberLocationState } from './LegalHubMemberTasks';
 
@@ -549,6 +551,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
         };
     }, [userId, userLoading]);
 
+    const { viewAs, memberIds } = useLegalHubView();
     const { publish } = useLegalHubMock();
     const [tempOpen, setTempOpen] = useState(false);
     const [tempMembers, setTempMembers] = useState<TempMember[]>([]);
@@ -578,6 +581,14 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
         return [...fromTeams, ...extras];
     }, [visibleTeams, usersById, tempMembers]);
     const loadById = useMemo(() => new Map(published.map((row) => [row.id, row.load])), [published]);
+    const scopedPublished = useMemo(
+        () => (viewAs == null ? published : published.filter((row) => row.id === viewAs.id)),
+        [published, viewAs],
+    );
+    const focusedTasks = useMemo(
+        () => (viewAs == null ? null : tasksForMember(viewAs.id, memberIds)),
+        [viewAs, memberIds],
+    );
     const staff = useMemo<TempEmployeeOption[]>(() => users
         .filter((row) => !row.is_archived && !row.is_blocked && !isWithoutAuthRegistration(row))
         .map((row) => ({
@@ -629,7 +640,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
     return (
         <div className="lh-board">
             <div className="lh-board__main">
-                <TeamStatsStrip stats={teamStats(published.map((row) => row.load))} />
+                <TeamStatsStrip stats={teamStats(scopedPublished.map((row) => row.load))} />
                 {visibleTeams.length === 0 ? <p className="lh-team__note">{t('legalHub.teamEmpty')}</p> : (
                     <div className="lh-board__tools">
                         <div className="lh-view" role="group" aria-label={t('legalHub.viewAria')}>
@@ -658,7 +669,13 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                         ) : null}
                     </div>
                 )}
-                {view === 'details' && visibleTeams.length > 0 ? <LegalHubTaskTable query={needle} /> : null}
+                {view === 'details' && visibleTeams.length > 0 ? (
+                    <LegalHubTaskTable
+                        query={needle}
+                        tasks={focusedTasks ?? undefined}
+                        owner={viewAs == null ? null : { code: viewAs.code, name: viewAs.name }}
+                    />
+                ) : null}
                 {view === 'cards' ? visibleTeams.map((team) => {
                     const temps = tempMembers
                         .filter((member) => member.teamId === team.id)
@@ -672,10 +689,14 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                             accessUntil: member.accessUntil,
                         }));
                     const cards = [...memberCards(team, usersById), ...temps].filter((member) => {
+                        if (viewAs != null && member.id !== viewAs.id)
+                            return false;
                         if (!needle)
                             return true;
                         return `${member.name} ${member.position} ${member.email}`.toLowerCase().includes(needle);
                     });
+                    if (viewAs != null && cards.length === 0)
+                        return null;
                     return (
                         <section key={team.id} className="lh-team__group" aria-label={team.name}>
                             <div className="lh-team__head">

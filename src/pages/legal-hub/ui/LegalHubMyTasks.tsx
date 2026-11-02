@@ -106,8 +106,8 @@ function columnOf(status: TaskStatusId): BoardColumn {
     return 'todo';
 }
 
-function seedTasks(): MineTask[] {
-    return HUB_TASKS.map((task) => ({
+function mineFrom(source: HubTask[]): MineTask[] {
+    return source.map((task) => ({
         ...task,
         done: task.id === 'wind-easement',
         hours: 4,
@@ -117,9 +117,9 @@ function seedTasks(): MineTask[] {
     }));
 }
 
-export function LegalHubMyTasks({ query }: { query: string }) {
+export function LegalHubMyTasks({ query, source = null }: { query: string; source?: HubTask[] | null }) {
     const { t } = useI18n();
-    const [tasks, setTasks] = useState<MineTask[]>(seedTasks);
+    const [tasks, setTasks] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
     const [mode, setMode] = useState<'status' | 'project'>('status');
     const [project, setProject] = useState('');
     const [waiting, setWaiting] = useState('');

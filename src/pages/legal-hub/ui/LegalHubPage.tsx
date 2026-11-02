@@ -1,4 +1,4 @@
-import { addTransitionType, startTransition, useCallback, useEffect, useState, ViewTransition, type ComponentType } from 'react';
+import { addTransitionType, startTransition, useCallback, useEffect, useMemo, useState, ViewTransition, type ComponentType } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { routes } from '@shared/config';
 import { AppBackButton, NAV_TRANSITION_TYPE } from '@shared/ui';
@@ -9,6 +9,8 @@ import { LegalHubMyTasks } from './LegalHubMyTasks';
 import { LegalHubReviewQueue } from './LegalHubReviewQueue';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
+import { tasksForMember } from './legalHubTasks';
+import { LegalHubViewProvider, useLegalHubView } from './legalHubView';
 import './LegalHubPage.css';
 
 type LegalHubNavId = 'myTasks' | 'reviewQueue' | 'allTeam';
@@ -116,8 +118,9 @@ function sectionFromState(state: unknown): LegalHubNavId | null {
     return null;
 }
 
-export function LegalHubPage() {
+function LegalHubPageBody() {
     const { t } = useI18n();
+    const { people, memberIds, viewAs, setViewAsId } = useLegalHubView();
     const navigate = useNavigate();
     const location = useLocation();
     const { memberId: memberIdParam } = useParams();
@@ -155,6 +158,20 @@ export function LegalHubPage() {
     }, []);
     const navSection: LegalHubNavId = onMemberPage ? 'allTeam' : section;
     const active = NAV_ITEMS.find((item) => item.id === navSection) ?? NAV_ITEMS[0]!;
+    const viewedTasks = useMemo(
+        () => (viewAs == null ? null : tasksForMember(viewAs.id, memberIds)),
+        [viewAs, memberIds],
+    );
+    const pageTitle = viewAs != null && !onMemberPage ? `${t(active.labelKey)} · ${viewAs.name}` : t(active.labelKey);
+    const showUtil = section === 'allTeam' && teamView === 'cards' && !onMemberPage;
+    const choosePerson = useCallback((raw: string) => {
+        const next = raw === '' ? null : Number(raw);
+        setViewAsId(next != null && Number.isFinite(next) ? next : null);
+        if (!onMemberPage)
+            return;
+        setSection('myTasks');
+        navigate(routes.legalHub, { state: { section: 'myTasks' } });
+    }, [navigate, onMemberPage, setViewAsId]);
 
     const closeMenu = useCallback(() => setMenuOpen(false), []);
     const openMenu = useCallback(() => {
@@ -201,7 +218,6 @@ export function LegalHubPage() {
     }, []);
 
     return (
-        <LegalHubMockProvider>
         <div className={`lh-page${menuOpen ? ' lh-page--menu-open' : ''}${sideCollapsed ? ' lh-page--side-collapsed' : ''}`}>
             {menuOpen ? (
                 <button
@@ -288,20 +304,35 @@ export function LegalHubPage() {
                         />
                         <kbd className="lh-top__search-kbd" aria-hidden>/</kbd>
                     </label>
-                    {section === 'allTeam' && teamView === 'cards' && !onMemberPage ? (
+                    {people.length > 0 || showUtil ? (
                         <div className="lh-top__actions">
-                            <button
-                                type="button"
-                                className="lh-top__util"
-                                aria-label={t('legalHub.utilisationTitle')}
-                                aria-expanded={utilOpen}
-                                onClick={() => {
-                                    setMenuOpen(false);
-                                    setUtilOpen((open) => !open);
-                                }}
-                            >
-                                <IconUtil />
-                            </button>
+                            {people.length > 0 ? (
+                                <select
+                                    className="lh-top__member"
+                                    aria-label={t('legalHub.viewAsAria')}
+                                    value={viewAs == null ? '' : String(viewAs.id)}
+                                    onChange={(event) => choosePerson(event.target.value)}
+                                >
+                                    <option value="">{t('legalHub.viewAsMe')}</option>
+                                    {people.map((person) => (
+                                        <option key={person.id} value={person.id}>{person.name}</option>
+                                    ))}
+                                </select>
+                            ) : null}
+                            {showUtil ? (
+                                <button
+                                    type="button"
+                                    className="lh-top__util"
+                                    aria-label={t('legalHub.utilisationTitle')}
+                                    aria-expanded={utilOpen}
+                                    onClick={() => {
+                                        setMenuOpen(false);
+                                        setUtilOpen((open) => !open);
+                                    }}
+                                >
+                                    <IconUtil />
+                                </button>
+                            ) : null}
                         </div>
                     ) : null}
                 </header>
@@ -313,17 +344,26 @@ export function LegalHubPage() {
                                 : <LegalHubMemberTasks memberId={memberId} query={query} />
                         ) : (
                             <>
-                                <h1 className="lh-page__title">{t(active.labelKey)}</h1>
-                                {section === 'myTasks' ? <LegalHubMyTasks query={query} /> : null}
-                                {section === 'reviewQueue' ? <LegalHubReviewQueue query={query} /> : null}
+                                <h1 className="lh-page__title">{pageTitle}</h1>
+                                {section === 'myTasks' ? <LegalHubMyTasks key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} /> : null}
+                                {section === 'reviewQueue' ? <LegalHubReviewQueue key={viewAs?.id ?? 'me'} query={query} tasks={viewedTasks} /> : null}
                                 {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}
                             </>
                         )}
                     </main>
                 </ViewTransition>
             </div>
-            {section === 'allTeam' && teamView === 'cards' && !onMemberPage ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
+            {showUtil ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
         </div>
+    );
+}
+
+export function LegalHubPage() {
+    return (
+        <LegalHubMockProvider>
+            <LegalHubViewProvider>
+                <LegalHubPageBody />
+            </LegalHubViewProvider>
         </LegalHubMockProvider>
     );
 }

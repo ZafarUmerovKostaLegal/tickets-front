@@ -75,6 +75,8 @@ export const ruMessages: Messages = {
         queueNote: 'Нужно поправить замечания: раздел 3 расходится с графиком обеспечения, определения нужно обновить.',
         allTeam: 'Вся команда',
         searchPlaceholder: 'Задачи, проекты, люди…',
+        viewAsMe: 'Мои данные',
+        viewAsAria: 'Чьи данные смотреть',
         openMenu: 'Открыть меню',
         closeMenu: 'Закрыть меню',
         collapseSidebar: 'Свернуть меню',
@@ -1028,6 +1030,8 @@ export type Messages = {
         queueNote: string;
         allTeam: string;
         searchPlaceholder: string;
+        viewAsMe: string;
+        viewAsAria: string;
         openMenu: string;
         closeMenu: string;
         collapseSidebar: string;

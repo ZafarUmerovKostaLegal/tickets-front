@@ -75,6 +75,8 @@ export const enMessages = {
         queueNote: 'Please address the review comments: section 3 conflicts with the collateral schedule, and the definitions need updating.',
         allTeam: 'All Team',
         searchPlaceholder: 'Search tasks, projects, people…',
+        viewAsMe: 'My data',
+        viewAsAria: 'Whose data to view',
         openMenu: 'Open menu',
         closeMenu: 'Close menu',
         collapseSidebar: 'Collapse menu',
