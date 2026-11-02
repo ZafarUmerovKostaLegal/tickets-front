@@ -60,7 +60,6 @@ function canReloadNow(): boolean {
     }
 }
 
-/** Soft reload once — avoids infinite loops if assets are truly missing. */
 export function reloadForStaleBundle(): boolean {
     if (typeof window === 'undefined')
         return false;

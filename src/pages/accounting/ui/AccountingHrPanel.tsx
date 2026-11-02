@@ -267,6 +267,7 @@ export function AccountingHrPanel() {
     const docInputRef = useRef<HTMLInputElement>(null);
     const photoInputRef = useRef<HTMLInputElement>(null);
     const uploadSlotRef = useRef<string>('other');
+    const dossierUserIdRef = useRef<number | null>(null);
     const [photoAdjust, setPhotoAdjust] = useState<{ url: string } | null>(null);
     const [photoMissing, setPhotoMissing] = useState(false);
     const [pendingDelete, setPendingDelete] = useState<PersonnelFile | null>(null);
@@ -326,12 +327,14 @@ export function AccountingHrPanel() {
 
     useEffect(() => {
         if (!selected) {
+            dossierUserIdRef.current = null;
             setExtras(EMPTY_EXTRAS);
             setTab('profile');
             return undefined;
         }
         let cancelled = false;
         const userId = selected.id;
+        dossierUserIdRef.current = userId;
         setDossierError('');
         setPhotoMissing(false);
         setPendingDelete(null);
@@ -367,7 +370,7 @@ export function AccountingHrPanel() {
                     leaveRequests,
                     absences,
                     manualEntries,
-                    personnelFiles,
+                    personnelFiles: personnelFiles.filter((file) => file.userId === userId),
                     scheduleEmployee,
                     error: '',
                 });
@@ -387,6 +390,10 @@ export function AccountingHrPanel() {
             cancelled = true;
         };
     }, [selected, extensions, year]);
+
+    const filesForOpenUser = (files: PersonnelFile[], userId: number) => (
+        files.filter((file) => file.userId === userId)
+    );
 
     const positions = useMemo(() => {
         const names = new Set(people.map((user) => user.position?.trim()).filter((name): name is string => Boolean(name)));
@@ -468,24 +475,38 @@ export function AccountingHrPanel() {
         if (!file.isPrimary || !file.createdAt)
             return;
         setPhotoVersions((prev) => ({ ...prev, [file.userId]: file.createdAt! }));
+        if (dossierUserIdRef.current !== file.userId)
+            return;
         setExtras((prev) => ({
             ...prev,
-            personnelFiles: prev.personnelFiles.map((item) => (
-                item.userId === file.userId ? { ...item, isPrimary: item.id === file.id } : item
+            personnelFiles: filesForOpenUser(prev.personnelFiles, file.userId).map((item) => (
+                { ...item, isPrimary: item.id === file.id }
             )),
         }));
     };
 
     const uploadDossierFiles = async (slot: string, files: File[]) => {
-        if (!selected || files.length === 0)
+        const userId = dossierUserIdRef.current;
+        if (userId == null || files.length === 0)
             return;
         setDocBusyId(`upload-${slot}`);
         setDossierError('');
         try {
             const created: PersonnelFile[] = [];
-            for (const file of files)
-                created.push(await uploadPersonnelFile(selected.id, slot, file));
-            setExtras((prev) => ({ ...prev, personnelFiles: [...created, ...prev.personnelFiles] }));
+            for (const file of files) {
+                const saved = await uploadPersonnelFile(userId, slot, file);
+                if (saved.userId === userId)
+                    created.push(saved);
+            }
+            if (dossierUserIdRef.current !== userId)
+                return;
+            setExtras((prev) => ({
+                ...prev,
+                personnelFiles: [
+                    ...created,
+                    ...filesForOpenUser(prev.personnelFiles, userId).filter((file) => !created.some((item) => item.id === file.id)),
+                ],
+            }));
         }
         catch (e: unknown) {
             setDossierError(e instanceof Error ? e.message : 'Не удалось загрузить файл');
@@ -513,20 +534,25 @@ export function AccountingHrPanel() {
     };
 
     const uploadMainPhoto = async (file: File) => {
-        if (!selected)
+        const userId = dossierUserIdRef.current;
+        if (userId == null)
             return false;
         setDocBusyId('upload-photo');
         setDossierError('');
         try {
-            const created = await uploadPersonnelPhoto(selected.id, file);
+            const created = await uploadPersonnelPhoto(userId, file);
+            if (created.userId !== userId)
+                return false;
+            rememberPhoto(created);
+            if (dossierUserIdRef.current !== userId)
+                return true;
             setExtras((prev) => ({
                 ...prev,
                 personnelFiles: [
                     created,
-                    ...prev.personnelFiles.filter((item) => item.slot !== 'photo'),
+                    ...filesForOpenUser(prev.personnelFiles, userId).filter((item) => item.slot !== 'photo'),
                 ],
             }));
-            rememberPhoto(created);
             return true;
         }
         catch (e: unknown) {
@@ -596,7 +622,7 @@ export function AccountingHrPanel() {
     };
 
     const docCount = extras.leaveRequests.length
-        + extras.personnelFiles.filter((file) => file.slot !== 'photo').length
+        + extras.personnelFiles.filter((file) => file.userId === selected?.id && file.slot !== 'photo').length
         + extras.manualEntries.reduce((sum, entry) => sum + (entry.documents?.length ?? 0), 0);
 
     return (
@@ -898,7 +924,7 @@ export function AccountingHrPanel() {
                                     <h3 className="acct-hr__block-title">Кадровое досье</h3>
                                     <ul className="acct-hr__doc-slots">
                                         {DOSSIER_SLOTS.map((slot) => {
-                                            const files = extras.personnelFiles.filter((file) => file.slot === slot.id);
+                                            const files = extras.personnelFiles.filter((file) => file.userId === selected.id && file.slot === slot.id);
                                             return (
                                                 <li key={slot.id} className="acct-hr__doc-slot">
                                                     <div className="acct-hr__doc-slot-head">
