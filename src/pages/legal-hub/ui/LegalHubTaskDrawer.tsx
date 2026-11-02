@@ -404,7 +404,8 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                                 <ol className="lh-drawer__steps">
                                     {REVIEW_STAGES.map((key, index) => (
                                         <li key={key} className={index === stage ? 'is-on' : index < stage ? 'is-done' : ''}>
-                                            {t(key)}
+                                            <span className="lh-drawer__step-mark" aria-hidden />
+                                            <span>{t(key)}</span>
                                         </li>
                                     ))}
                                 </ol>
@@ -656,11 +657,11 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                     ) : null}
                 </div>
                 <footer className="lh-drawer__foot">
+                    <button type="button" className="lh-drawer__send" onClick={notifyReviewer}>
+                        <IconBell />
+                        <span>{t('legalHub.taskNotifyReviewer')}</span>
+                    </button>
                     <div className="lh-drawer__foot-row">
-                        <button type="button" className="lh-drawer__send" onClick={notifyReviewer}>
-                            <IconBell />
-                            <span>{t('legalHub.taskNotifyReviewer')}</span>
-                        </button>
                         <button type="button" onClick={() => setTab('comments')}>{t('legalHub.taskAddComment')}</button>
                         <button type="button" onClick={withdraw}>{t('legalHub.taskWithdraw')}</button>
                     </div>
