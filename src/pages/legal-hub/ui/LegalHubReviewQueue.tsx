@@ -35,13 +35,6 @@ const LANE_LABEL: Record<Lane, TranslationKey> = {
     approved: 'legalHub.queueApproved',
 };
 
-const LANE_TONE: Record<Lane, string> = {
-    associate: 'associate',
-    partner: 'partner',
-    changes: 'changes',
-    approved: 'priority-low',
-};
-
 const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
     high: 'legalHub.taskPriorityHigh',
     normal: 'legalHub.taskPriorityNormal',
@@ -111,12 +104,15 @@ function shiftIso(iso: string, days: number): string {
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function formatDay(iso: string, locale: string): string {
-    const [year, month, day] = iso.split('-').map(Number);
-    return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-GB', {
-        day: 'numeric',
-        month: 'short',
-    });
+const CARD_MONTHS: Record<string, string[]> = {
+    ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+};
+
+function formatCardDate(iso: string, locale: string): string {
+    const [, month, day] = iso.split('-').map(Number);
+    const names = CARD_MONTHS[locale] ?? CARD_MONTHS.en!;
+    return `${day ?? ''} ${names[(month ?? 1) - 1] ?? ''}`.trim();
 }
 
 function liveItems(): QueueItem[] {
@@ -197,8 +193,10 @@ export function LegalHubReviewQueue({ query, tasks = null }: { query: string; ta
                         return (
                             <section key={lane} className="lh-queue__col">
                                 <header>
-                                    <span className={`lh-tasks__pill lh-tasks__pill--${LANE_TONE[lane]}`}>{t(LANE_LABEL[lane])}</span>
-                                    <span>{cards.length}</span>
+                                    <span className="lh-my__col-title">
+                                        <strong>{t(LANE_LABEL[lane])}</strong>
+                                        <em>{cards.length}</em>
+                                    </span>
                                 </header>
                                 {cards.length === 0 ? <p className="lh-queue__empty">{t('legalHub.queueEmpty')}</p> : (
                                     <ul>
@@ -305,43 +303,26 @@ function QueueCard({ item, locale, nudged, onOpen, onNudge }: {
     const person = item.task.reviewer ? PERSON_LABEL[item.task.reviewer] : null;
     const delta = dayDelta(item.targetOn);
     const late = item.lane !== 'approved' && delta < 0;
-    const hint = item.lane === 'approved'
-        ? null
-        : delta < 0
-            ? t('legalHub.queueOverdueDays').replace('{count}', String(-delta))
-            : delta === 0
-                ? t('legalHub.queueDueNow')
-                : t('legalHub.queueDaysLeft').replace('{count}', String(delta));
+    const when = item.approvedOn ?? item.targetOn;
     return (
-        <li className={`lh-queue__card${late || item.note ? ' is-late' : ''}`}>
-            {hint ? (
-                <span
-                    className={`lh-queue__badge${late ? ' is-late' : delta === 0 ? ' is-today' : delta <= 2 ? ' is-soon' : ''}`}
-                    title={hint}
-                    aria-label={hint}
-                >
-                    <strong>{Math.abs(delta)}</strong>
-                    <small>{locale === 'ru' ? 'д' : 'd'}</small>
-                </span>
-            ) : null}
+        <li className="lh-queue__card">
             <button type="button" className="lh-queue__open" onClick={onOpen}>
-                <span className={`lh-queue__project lh-tasks__project--${item.task.project}`}>{BOARD_TITLE[item.task.project]}</span>
-                <span className="lh-queue__stream">{item.task.workstream}</span>
                 <strong>{item.task.title}</strong>
-                <span className="lh-queue__when">
-                    {t('legalHub.queueSubmitted').replace('{date}', formatDay(item.submittedOn, locale))}
-                    {' · '}
-                    {item.approvedOn
-                        ? t('legalHub.queueApprovedOn').replace('{date}', formatDay(item.approvedOn, locale))
-                        : t('legalHub.queueTarget').replace('{date}', formatDay(item.targetOn, locale))}
-                </span>
+                <span className="lh-my__card-meta">{PROJECT_LABEL[item.task.project]} · {item.task.workstream}</span>
                 {item.note ? <span className="lh-queue__note">{t('legalHub.queueNote')}</span> : null}
+                <span className="lh-my__card-foot">
+                    {item.task.priority === 'normal' ? <span /> : (
+                        <span className={`lh-my__prio lh-my__prio--${item.task.priority}`}>
+                            <i aria-hidden />
+                            {t(PRIORITY_LABEL[item.task.priority])}
+                        </span>
+                    )}
+                    <span className="lh-my__card-end">
+                        <span className={late ? 'is-late' : ''}>{formatCardDate(when, locale)}</span>
+                        {person ? <span className={`lh-tasks__avatar lh-tasks__avatar--${item.task.reviewer}`} title={person.name}>{person.code}</span> : null}
+                    </span>
+                </span>
             </button>
-            <span className="lh-queue__foot">
-                {person ? <span className={`lh-tasks__avatar lh-tasks__avatar--${item.task.reviewer}`} title={person.name}>{person.code}</span> : null}
-                {person ? <span className="lh-queue__who">{person.name}</span> : null}
-                <span className={`lh-tasks__pill lh-tasks__pill--priority-${item.task.priority}`}>{t(PRIORITY_LABEL[item.task.priority])}</span>
-            </span>
             {item.lane === 'changes' ? (
                 <span className="lh-queue__actions">
                     <button type="button" className="lh-queue__action" onClick={onOpen}>{t('legalHub.queueFix')}</button>
