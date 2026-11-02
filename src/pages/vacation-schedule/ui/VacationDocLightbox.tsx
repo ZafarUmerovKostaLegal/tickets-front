@@ -81,14 +81,18 @@ export function VacationDocLightbox({ entryId, docId, filename, contentType, onC
     }, [onClose]);
 
     const handleDownload = () => {
-        if (!url)
+        const blob = blobRef.current;
+        if (!blob)
             return;
+        const objectUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = filename || 'document';
+        a.href = objectUrl;
+        a.download = filename.trim() || 'document';
+        a.rel = 'noopener';
         document.body.appendChild(a);
         a.click();
         a.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
     };
 
     return createPortal(

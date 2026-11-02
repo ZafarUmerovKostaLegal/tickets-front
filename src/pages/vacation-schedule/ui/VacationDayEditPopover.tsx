@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { VacationAbsenceBasis } from '../lib/vacationAbsenceBasisStorage';
-import { readFileAsBasisAttachment, vacationAbsenceBasisLimits } from '../lib/vacationAbsenceBasisStorage';
+import { downloadVacationBasisAttachment, readFileAsBasisAttachment, vacationAbsenceBasisLimits } from '../lib/vacationAbsenceBasisStorage';
 import type { VacationMarkCell, VacationUiLegendItem } from '../lib/vacationScheduleModel';
 import { vacationKindSealUsesDarkInk } from '../lib/vacationScheduleModel';
 import './VacationDayEditPopover.css';
@@ -151,9 +151,9 @@ export function VacationDayEditPopover({ open, x, y, legendItems, current, savin
                           <path d="M4 7.5V10a4 4 0 008 0V6.5a3 3 0 10-6 0V9a1.5 1.5 0 003 0V6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       </span>)}
-                    <span className="vac-day-pop__att-name" title={a.name}>
+                    <button type="button" className="vac-day-pop__att-name" title={`Скачать ${a.name}`} onClick={() => downloadVacationBasisAttachment(a)}>
                       {a.name}
-                    </span>
+                    </button>
                     <button type="button" className="vac-day-pop__att-remove" disabled={saving} onClick={() => removeAtt(a.id)} aria-label={`Удалить ${a.name}`}>
                       ✕
                     </button>

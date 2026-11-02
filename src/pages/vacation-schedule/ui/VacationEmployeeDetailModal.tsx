@@ -6,6 +6,7 @@ import {
     deleteVacationManualEntry,
     deleteVacationManualEntryDocument,
     deleteVacationScheduleEmployee,
+    downloadVacationManualEntryDocument,
     getVacationScheduleEmployee,
     listVacationAttendanceMarkers,
     listVacationManualEntries,
@@ -25,11 +26,13 @@ import {
     formatVacationLateMinutesTotal,
     vacationAttendanceArrivalClock,
     vacationAttendanceLateMinutes,
+    vacationCellKey,
     vacationDayIsWeekendRu,
     vacationKindHumanLabel,
     VACATION_MONTH_NAMES,
     type VacationAttendanceWorkday,
 } from '../lib/vacationScheduleModel';
+import { downloadVacationBasisAttachment, loadVacationAbsenceBasisMap, type VacationAbsenceBasisAttachment } from '../lib/vacationAbsenceBasisStorage';
 import { VacationDocLightbox, type VacationDocLightboxTarget } from './VacationDocLightbox';
 import './VacationEmployeeDetailModal.css';
 
@@ -133,6 +136,13 @@ type LinkOption = {
     label: string;
     email: string;
 };
+function attachmentsForAbsenceDay(employeeId: number, iso: string): VacationAbsenceBasisAttachment[] {
+    const parts = parseIsoParts(iso);
+    if (!parts)
+        return [];
+    const basis = loadVacationAbsenceBasisMap()[vacationCellKey(employeeId, parts.year, parts.monthIndex, parts.day)];
+    return basis?.attachments ?? [];
+}
 function userLabel(u: User): string {
     return (u.display_name?.trim() || u.email || `Пользователь ${u.id}`).trim();
 }
@@ -154,6 +164,8 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
     const [manualEntries, setManualEntries] = useState<VacationManualEntryApi[]>([]);
     const [preview, setPreview] = useState<VacationDocLightboxTarget | null>(null);
     const [busyEntryId, setBusyEntryId] = useState<number | null>(null);
+    const [downloadingDocKey, setDownloadingDocKey] = useState<string | null>(null);
+    const [downloadError, setDownloadError] = useState<string | null>(null);
     const [linkOptions, setLinkOptions] = useState<LinkOption[]>([]);
     const [selectedLinkUserId, setSelectedLinkUserId] = useState('');
     const [linkSaving, setLinkSaving] = useState(false);
@@ -291,6 +303,20 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
         }
         finally {
             setDeletingId(null);
+        }
+    };
+    const handleDownloadDoc = async (entryId: number, docId: number, filename: string) => {
+        const key = `${entryId}:${docId}`;
+        setDownloadingDocKey(key);
+        setDownloadError(null);
+        try {
+            await downloadVacationManualEntryDocument(entryId, docId, filename);
+        }
+        catch (e: unknown) {
+            setDownloadError(e instanceof Error ? e.message : 'Не удалось скачать документ');
+        }
+        finally {
+            setDownloadingDocKey(null);
         }
     };
     const handleDeleteDoc = async (entryId: number, docId: number) => {
@@ -530,18 +556,25 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
                             </button>
                         </div>
                     </div>)}
+                    {downloadError && <p className="vac-emp-card__err" role="alert">{downloadError}</p>}
                     <h3 className="vac-emp-card__sub">Дни отсутствий</h3>
                     {days.length === 0 ? (<p className="vac-emp-card__empty">Нет отмеченных дней за этот год.</p>) : (<ul className="vac-emp-card__list">
                         {days.map((d) => {
                             const ui = apiAbsenceKindToUi(d.kind);
                             const label = ui ? vacationKindHumanLabel(ui) : d.kind;
                             const rowKey = d.id != null ? String(d.id) : `${d.absence_on}-${d.kind}-${label}`;
+                            const files = attachmentsForAbsenceDay(employeeId, d.absence_on);
                             return (<li key={rowKey} className="vac-emp-card__li">
                                 <span className="vac-emp-card__li-date">{formatIsoDateRu(d.absence_on)}</span>
                                 <span className="vac-emp-card__li-kind">{label}</span>
                                 {canEdit && d.id != null && (<button type="button" className="vac-emp-card__li-del" disabled={deletingId === d.id || deletingEmployee} onClick={() => void handleDeleteDay(d.id!)}>
                                     {deletingId === d.id ? '…' : 'Удалить'}
                                 </button>)}
+                                {files.length > 0 && (<div className="vac-emp-card__li-files">
+                                    {files.map((file) => (<button key={file.id} type="button" className="vac-emp-card__li-file" onClick={() => downloadVacationBasisAttachment(file)}>
+                                        Скачать {file.name}
+                                    </button>))}
+                                </div>)}
                             </li>);
                         })}
                     </ul>)}
@@ -565,6 +598,9 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
                                                 <circle cx="12" cy="12" r="3" />
                                             </svg>
                                             <span>{doc.original_filename}</span>
+                                        </button>
+                                        <button type="button" className="vac-emp-entry__doc-dl" disabled={downloadingDocKey === `${en.id}:${doc.id}`} onClick={() => void handleDownloadDoc(en.id, doc.id, doc.original_filename)}>
+                                            {downloadingDocKey === `${en.id}:${doc.id}` ? '…' : 'Скачать'}
                                         </button>
                                         {canEdit && (<button type="button" className="vac-emp-entry__doc-del" disabled={busyEntryId === en.id} onClick={() => void handleDeleteDoc(en.id, doc.id)} aria-label="Удалить документ">×</button>)}
                                     </li>))}

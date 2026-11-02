@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+    downloadVacationManualEntryDocument,
     listVacationManualEntries,
     type VacationManualEntryApi,
 } from '@entities/vacation';
@@ -37,6 +38,8 @@ export function VacationPeriodDocsModal({ open, onClose, employeeId, employeeNam
     const [error, setError] = useState<string | null>(null);
     const [entries, setEntries] = useState<VacationManualEntryApi[]>([]);
     const [preview, setPreview] = useState<VacationDocLightboxTarget | null>(null);
+    const [downloadingDocKey, setDownloadingDocKey] = useState<string | null>(null);
+    const [downloadError, setDownloadError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!open)
@@ -78,6 +81,21 @@ export function VacationPeriodDocsModal({ open, onClose, employeeId, employeeNam
         };
     }, [open, onClose]);
 
+    const handleDownload = async (entryId: number, docId: number, filename: string) => {
+        const key = `${entryId}:${docId}`;
+        setDownloadingDocKey(key);
+        setDownloadError(null);
+        try {
+            await downloadVacationManualEntryDocument(entryId, docId, filename);
+        }
+        catch (e: unknown) {
+            setDownloadError(e instanceof Error ? e.message : 'Не удалось скачать документ');
+        }
+        finally {
+            setDownloadingDocKey(null);
+        }
+    };
+
     if (!open)
         return null;
 
@@ -95,6 +113,7 @@ export function VacationPeriodDocsModal({ open, onClose, employeeId, employeeNam
                         Сотрудник: <strong>{employeeName}</strong>
                     </p>
                     {error && <p className="vac-emp-card__err" role="alert">{error}</p>}
+                    {downloadError && <p className="vac-emp-card__err" role="alert">{downloadError}</p>}
                     {!error && loading && <p className="vac-emp-card__empty">Загрузка…</p>}
                     {!error && !loading && entries.length === 0 && (
                         <p className="vac-emp-card__empty">
@@ -129,6 +148,14 @@ export function VacationPeriodDocsModal({ open, onClose, employeeId, employeeNam
                                                         <circle cx="12" cy="12" r="3" />
                                                     </svg>
                                                     <span>{doc.original_filename}</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="vac-emp-entry__doc-dl"
+                                                    disabled={downloadingDocKey === `${en.id}:${doc.id}`}
+                                                    onClick={() => void handleDownload(en.id, doc.id, doc.original_filename)}
+                                                >
+                                                    {downloadingDocKey === `${en.id}:${doc.id}` ? '…' : 'Скачать'}
                                                 </button>
                                             </li>
                                         ))}

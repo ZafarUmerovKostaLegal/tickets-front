@@ -8,6 +8,8 @@ export type RequestInitAuth = RequestInit & {
     skipAuthRedirectOn401?: boolean;
     /** Reuse a completed successful GET response for this many milliseconds. */
     getReuseWindowMs?: number;
+    /** Skip GET response reuse. File downloads must keep the original body; reuse clones it and then cancels the stream. */
+    skipGetDedupe?: boolean;
 };
 
 type InflightGet = {
@@ -254,7 +256,7 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
         assertSafeRelativeApiPath(rel);
     }
     const url = upgradeUrlToPageSecurity(path.startsWith('http') ? path : `${baseUrl}${rel}`);
-    const { skipAuth = false, skipAuthRedirectOn401 = false, getReuseWindowMs = GET_REUSE_WINDOW_MS, ...rest } = init;
+    const { skipAuth = false, skipAuthRedirectOn401 = false, getReuseWindowMs = GET_REUSE_WINDOW_MS, skipGetDedupe = false, ...rest } = init;
     const headers = new Headers(rest.headers);
     if (rest.body instanceof FormData)
         headers.delete('Content-Type');
@@ -268,9 +270,14 @@ export async function apiFetch(path: string, init: RequestInitAuth = {}): Promis
     let delivery: ApiRequestDelivery = 'network';
     let response: Response;
     try {
-        const coordinated = fetchWithGetDedupe(url, rest, headers, getReuseWindowMs);
-        delivery = coordinated.delivery;
-        response = await coordinated.promise;
+        if (skipGetDedupe) {
+            response = await fetch(url, { ...rest, headers, credentials: 'include' });
+        }
+        else {
+            const coordinated = fetchWithGetDedupe(url, rest, headers, getReuseWindowMs);
+            delivery = coordinated.delivery;
+            response = await coordinated.promise;
+        }
         const retryableOutage = (response.status === 502 || response.status === 503)
             && (method === 'GET' || method === 'HEAD')
             && isTimeTrackingApiPath(rel)

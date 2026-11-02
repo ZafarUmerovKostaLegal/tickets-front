@@ -126,6 +126,36 @@ export const vacationAbsenceBasisLimits = {
     maxFileBytes: MAX_FILE_BYTES,
 } as const;
 
+function dataUrlToBlob(dataUrl: string, mimeType: string): Blob {
+    const comma = dataUrl.indexOf(',');
+    const fallback = mimeType || 'application/octet-stream';
+    if (comma < 0)
+        return new Blob([], { type: fallback });
+    const meta = dataUrl.slice(0, comma);
+    const payload = dataUrl.slice(comma + 1);
+    const mime = /data:([^;,]+)/i.exec(meta)?.[1] || fallback;
+    if (!/;base64/i.test(meta))
+        return new Blob([decodeURIComponent(payload)], { type: mime });
+    const binary = atob(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1)
+        bytes[i] = binary.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+}
+
+export function downloadVacationBasisAttachment(attachment: VacationAbsenceBasisAttachment): void {
+    const blob = dataUrlToBlob(attachment.dataUrl, attachment.mimeType);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = attachment.name.trim() || 'document';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export async function readFileAsBasisAttachment(file: File): Promise<VacationAbsenceBasisAttachment | string> {
     if (file.size > MAX_FILE_BYTES)
         return `Файл слишком большой (макс. ${Math.round(MAX_FILE_BYTES / 1024)} КБ): ${file.name}`;

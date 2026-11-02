@@ -1153,12 +1153,25 @@ export async function addVacationManualEntryDocuments(id: number, files: File[])
 }
 
 export async function fetchVacationManualEntryDocumentBlob(entryId: number, docId: number): Promise<Blob> {
-    const res = await vacationApiFetch(`/api/v1/vacations/schedule/manual-entries/${entryId}/documents/${docId}/download`);
+    const res = await vacationApiFetch(`/api/v1/vacations/schedule/manual-entries/${entryId}/documents/${docId}/download`, { skipGetDedupe: true });
     if (res.status === 401)
         throw new Error('Не авторизован');
     if (!res.ok)
         await throwVacationRequestError(res);
     return res.blob();
+}
+
+export async function downloadVacationManualEntryDocument(entryId: number, docId: number, filename: string): Promise<void> {
+    const blob = await fetchVacationManualEntryDocumentBlob(entryId, docId);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename.trim() || 'document';
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 export async function deleteVacationManualEntryDocument(entryId: number, docId: number): Promise<void> {

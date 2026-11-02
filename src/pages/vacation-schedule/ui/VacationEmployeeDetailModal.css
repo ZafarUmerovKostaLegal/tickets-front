@@ -399,6 +399,31 @@
   cursor: not-allowed;
 }
 
+.vac-emp-card__li-files {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.vac-emp-card__li-file {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--app-accent, #2563eb);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.vac-emp-card__li-file:hover {
+  text-decoration: underline;
+}
+
 .vac-emp-card__entries {
   margin: 0 0 0.5rem;
   padding: 0;
@@ -505,6 +530,29 @@
 }
 
 .vac-emp-entry__doc-name:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.vac-emp-entry__doc-dl {
+  flex-shrink: 0;
+  border: 1px solid var(--app-border, #e2e8f0);
+  border-radius: 7px;
+  padding: 0.3rem 0.55rem;
+  background: var(--app-surface, #fff);
+  color: var(--app-accent, #2563eb);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.vac-emp-entry__doc-dl:hover:not(:disabled) {
+  border-color: var(--app-accent, #2563eb);
+  background: rgba(37, 99, 235, 0.06);
+}
+
+.vac-emp-entry__doc-dl:disabled {
   opacity: 0.6;
   cursor: progress;
 }

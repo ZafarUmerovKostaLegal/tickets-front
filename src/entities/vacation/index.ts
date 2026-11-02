@@ -34,6 +34,7 @@ export {
     getVacationManualEntry,
     addVacationManualEntryDocuments,
     fetchVacationManualEntryDocumentBlob,
+    downloadVacationManualEntryDocument,
     deleteVacationManualEntryDocument,
     deleteVacationManualEntry,
     VACATION_LEAVE_REQUEST_KINDS,
