@@ -431,10 +431,34 @@ export type VacationAbsenceDayItemApi = {
     absence_on: string;
     kind_code: number;
     kind: string;
+    leave_request_id?: number | null;
+};
+export type VacationLeaveDocumentApi = {
+    leave_request_id: number;
+    date_from: string;
+    date_to: string;
+    kind: string;
 };
 export type VacationScheduleEmployeeDetailApi = VacationScheduleEmployeeApi & {
     absence_days: VacationAbsenceDayItemApi[];
+    leave_documents: VacationLeaveDocumentApi[];
 };
+function coerceLeaveDocumentApi(raw: unknown): VacationLeaveDocumentApi | null {
+    if (!raw || typeof raw !== 'object')
+        return null;
+    const o = raw as Record<string, unknown>;
+    const id = Number(o.leave_request_id ?? o.leaveRequestId);
+    const dateFrom = str(o.date_from ?? o.dateFrom).slice(0, 10);
+    const dateTo = str(o.date_to ?? o.dateTo).slice(0, 10);
+    if (!Number.isFinite(id) || id <= 0 || !dateFrom || !dateTo)
+        return null;
+    return {
+        leave_request_id: id,
+        date_from: dateFrom,
+        date_to: dateTo,
+        kind: str(o.kind),
+    };
+}
 export async function getVacationScheduleEmployee(employeeId: number, year?: number): Promise<VacationScheduleEmployeeDetailApi> {
     const q = year != null ? `?year=${encodeURIComponent(String(year))}` : '';
     const res = await vacationApiFetch(`/api/v1/vacations/schedule/employees/${employeeId}${q}`);
@@ -445,7 +469,18 @@ export async function getVacationScheduleEmployee(employeeId: number, year?: num
     }
     if (!res.ok)
         await throwVacationRequestError(res);
-    return res.json() as Promise<VacationScheduleEmployeeDetailApi>;
+    const raw = await res.json() as VacationScheduleEmployeeDetailApi & {
+        leave_documents?: unknown;
+        leaveDocuments?: unknown;
+    };
+    const docsRaw = raw.leave_documents ?? raw.leaveDocuments;
+    return {
+        ...raw,
+        absence_days: Array.isArray(raw.absence_days) ? raw.absence_days : [],
+        leave_documents: Array.isArray(docsRaw)
+            ? docsRaw.map((item) => coerceLeaveDocumentApi(item)).filter((item): item is VacationLeaveDocumentApi => item != null)
+            : [],
+    };
 }
 export type VacationScheduleImportResultApi = {
     year: number;
@@ -888,7 +923,7 @@ export async function deleteVacationLeaveRequest(id: number): Promise<void> {
 }
 
 export async function fetchVacationLeaveRequestPdfBlob(id: number): Promise<Blob> {
-    const res = await vacationApiFetch(`/api/v1/vacations/leave-requests/${id}/pdf`);
+    const res = await vacationApiFetch(`/api/v1/vacations/leave-requests/${id}/pdf`, { skipGetDedupe: true });
     if (res.status === 401)
         throw new Error('Не авторизован');
     if (!res.ok)
@@ -1161,8 +1196,7 @@ export async function fetchVacationManualEntryDocumentBlob(entryId: number, docI
     return res.blob();
 }
 
-export async function downloadVacationManualEntryDocument(entryId: number, docId: number, filename: string): Promise<void> {
-    const blob = await fetchVacationManualEntryDocumentBlob(entryId, docId);
+function saveBlobAsFile(blob: Blob, filename: string): void {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1172,6 +1206,23 @@ export async function downloadVacationManualEntryDocument(entryId: number, docId
     a.click();
     a.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+export async function downloadScheduleLeaveApplicationPdf(employeeId: number, leaveRequestId: number, filename: string): Promise<void> {
+    const schedulePath = `/api/v1/vacations/schedule/employees/${employeeId}/leave-requests/${leaveRequestId}/pdf`;
+    let res = await vacationApiFetch(schedulePath, { skipGetDedupe: true });
+    if (res.status === 404) {
+        res = await vacationApiFetch(`/api/v1/vacations/leave-requests/${leaveRequestId}/pdf`, { skipGetDedupe: true });
+    }
+    if (res.status === 401)
+        throw new Error('Не авторизован');
+    if (!res.ok)
+        await throwVacationRequestError(res);
+    saveBlobAsFile(await res.blob(), filename);
+}
+
+export async function downloadVacationManualEntryDocument(entryId: number, docId: number, filename: string): Promise<void> {
+    saveBlobAsFile(await fetchVacationManualEntryDocumentBlob(entryId, docId), filename);
 }
 
 export async function deleteVacationManualEntryDocument(entryId: number, docId: number): Promise<void> {

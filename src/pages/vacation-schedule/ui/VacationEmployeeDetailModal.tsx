@@ -6,6 +6,7 @@ import {
     deleteVacationManualEntry,
     deleteVacationManualEntryDocument,
     deleteVacationScheduleEmployee,
+    downloadScheduleLeaveApplicationPdf,
     downloadVacationManualEntryDocument,
     getVacationScheduleEmployee,
     listVacationAttendanceMarkers,
@@ -32,6 +33,7 @@ import {
     VACATION_MONTH_NAMES,
     type VacationAttendanceWorkday,
 } from '../lib/vacationScheduleModel';
+import { leaveApplicationFileName, resolveLeaveApplicationDocs, type LeaveApplicationDoc } from '../lib/leaveApplicationDocs';
 import { downloadVacationBasisAttachment, loadVacationAbsenceBasisMap, type VacationAbsenceBasisAttachment } from '../lib/vacationAbsenceBasisStorage';
 import { VacationDocLightbox, type VacationDocLightboxTarget } from './VacationDocLightbox';
 import './VacationEmployeeDetailModal.css';
@@ -162,6 +164,8 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [deletingEmployee, setDeletingEmployee] = useState(false);
     const [manualEntries, setManualEntries] = useState<VacationManualEntryApi[]>([]);
+    const [leaveDocs, setLeaveDocs] = useState<LeaveApplicationDoc[]>([]);
+    const [downloadingLeaveId, setDownloadingLeaveId] = useState<number | null>(null);
     const [preview, setPreview] = useState<VacationDocLightboxTarget | null>(null);
     const [busyEntryId, setBusyEntryId] = useState<number | null>(null);
     const [downloadingDocKey, setDownloadingDocKey] = useState<string | null>(null);
@@ -201,6 +205,12 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
                 setExcelRow(row.excel_row_no);
                 setDays(row.absence_days ?? []);
                 setManualEntries(entries);
+                setLeaveDocs([]);
+                if (canViewDocs) {
+                    void resolveLeaveApplicationDocs(row)
+                        .then(setLeaveDocs)
+                        .catch(() => setLeaveDocs([]));
+                }
             })
             .catch((e: unknown) => {
                 setError(e instanceof Error ? e.message : 'Не удалось загрузить данные');
@@ -303,6 +313,19 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
         }
         finally {
             setDeletingId(null);
+        }
+    };
+    const handleDownloadLeave = async (doc: LeaveApplicationDoc) => {
+        setDownloadingLeaveId(doc.leaveRequestId);
+        setDownloadError(null);
+        try {
+            await downloadScheduleLeaveApplicationPdf(employeeId, doc.leaveRequestId, leaveApplicationFileName(doc));
+        }
+        catch (e: unknown) {
+            setDownloadError(e instanceof Error ? e.message : 'Не удалось скачать заявление');
+        }
+        finally {
+            setDownloadingLeaveId(null);
         }
     };
     const handleDownloadDoc = async (entryId: number, docId: number, filename: string) => {
@@ -579,6 +602,29 @@ export function VacationEmployeeDetailModal({ employeeId, year, onClose, canEdit
                         })}
                     </ul>)}
                     {canViewDocs && (<>
+                        {leaveDocs.length > 0 && (<>
+                            <h3 className="vac-emp-card__sub">Заявления</h3>
+                            <ul className="vac-emp-card__entries">
+                                {leaveDocs.map((doc) => {
+                                    const docUi = apiAbsenceKindToUi(doc.kind);
+                                    const docLabel = docUi ? vacationKindHumanLabel(docUi) : doc.kind;
+                                    const period = doc.dateFrom === doc.dateTo
+                                        ? formatIsoDateRu(doc.dateFrom)
+                                        : `${formatIsoDateRu(doc.dateFrom)} — ${formatIsoDateRu(doc.dateTo)}`;
+                                    return (<li key={doc.leaveRequestId} className="vac-emp-entry">
+                                        <div className="vac-emp-entry__head">
+                                            <span className="vac-emp-entry__kind">{docLabel}</span>
+                                            <span className="vac-emp-entry__period">{period}</span>
+                                        </div>
+                                        <div className="vac-emp-entry__actions">
+                                            <button type="button" className="vac-emp-entry__doc-dl" disabled={downloadingLeaveId === doc.leaveRequestId} onClick={() => void handleDownloadLeave(doc)}>
+                                                {downloadingLeaveId === doc.leaveRequestId ? '…' : 'Скачать'}
+                                            </button>
+                                        </div>
+                                    </li>);
+                                })}
+                            </ul>
+                        </>)}
                         <h3 className="vac-emp-card__sub">Ручные записи (основания)</h3>
                         {manualEntries.length === 0 ? (<p className="vac-emp-card__empty">Нет ручных записей с документами за этот год.</p>) : (<ul className="vac-emp-card__entries">
                             {manualEntries.map((en) => (<li key={en.id} className="vac-emp-entry">

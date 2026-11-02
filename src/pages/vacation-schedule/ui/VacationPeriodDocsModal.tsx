@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
+    downloadScheduleLeaveApplicationPdf,
     downloadVacationManualEntryDocument,
+    getVacationScheduleEmployee,
     listVacationManualEntries,
     type VacationManualEntryApi,
 } from '@entities/vacation';
-import { VACATION_MONTH_NAMES } from '../lib/vacationScheduleModel';
+import { leaveApplicationFileName, leaveDocsCoveringDate, resolveLeaveApplicationDocs, type LeaveApplicationDoc } from '../lib/leaveApplicationDocs';
+import { apiAbsenceKindToUi, vacationKindHumanLabel, VACATION_MONTH_NAMES } from '../lib/vacationScheduleModel';
 import { VacationDocLightbox, type VacationDocLightboxTarget } from './VacationDocLightbox';
 import './VacationEmployeeDetailModal.css';
 
@@ -37,6 +40,8 @@ export function VacationPeriodDocsModal({ open, onClose, employeeId, employeeNam
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [entries, setEntries] = useState<VacationManualEntryApi[]>([]);
+    const [leaveDocs, setLeaveDocs] = useState<LeaveApplicationDoc[]>([]);
+    const [downloadingLeaveId, setDownloadingLeaveId] = useState<number | null>(null);
     const [preview, setPreview] = useState<VacationDocLightboxTarget | null>(null);
     const [downloadingDocKey, setDownloadingDocKey] = useState<string | null>(null);
     const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -47,11 +52,18 @@ export function VacationPeriodDocsModal({ open, onClose, employeeId, employeeNam
         let cancelled = false;
         setLoading(true);
         setError(null);
-        void listVacationManualEntries({ year, employeeId })
-            .then((list) => {
+        setLeaveDocs([]);
+        void Promise.all([
+            listVacationManualEntries({ year, employeeId }),
+            getVacationScheduleEmployee(employeeId, year)
+                .then((row) => resolveLeaveApplicationDocs(row))
+                .catch(() => [] as LeaveApplicationDoc[]),
+        ])
+            .then(([list, docs]) => {
                 if (cancelled)
                     return;
                 setEntries(list.filter((en) => dateInRange(dateIso, en.date_from, en.date_to)));
+                setLeaveDocs(leaveDocsCoveringDate(docs, dateIso));
             })
             .catch((e: unknown) => {
                 if (!cancelled)
@@ -80,6 +92,20 @@ export function VacationPeriodDocsModal({ open, onClose, employeeId, employeeNam
             document.body.style.overflow = '';
         };
     }, [open, onClose]);
+
+    const handleDownloadLeave = async (doc: LeaveApplicationDoc) => {
+        setDownloadingLeaveId(doc.leaveRequestId);
+        setDownloadError(null);
+        try {
+            await downloadScheduleLeaveApplicationPdf(employeeId, doc.leaveRequestId, leaveApplicationFileName(doc));
+        }
+        catch (e: unknown) {
+            setDownloadError(e instanceof Error ? e.message : 'Не удалось скачать заявление');
+        }
+        finally {
+            setDownloadingLeaveId(null);
+        }
+    };
 
     const handleDownload = async (entryId: number, docId: number, filename: string) => {
         const key = `${entryId}:${docId}`;
@@ -115,10 +141,39 @@ export function VacationPeriodDocsModal({ open, onClose, employeeId, employeeNam
                     {error && <p className="vac-emp-card__err" role="alert">{error}</p>}
                     {downloadError && <p className="vac-emp-card__err" role="alert">{downloadError}</p>}
                     {!error && loading && <p className="vac-emp-card__empty">Загрузка…</p>}
-                    {!error && !loading && entries.length === 0 && (
+                    {!error && !loading && entries.length === 0 && leaveDocs.length === 0 && (
                         <p className="vac-emp-card__empty">
                             За эту дату нет ручной записи с документами-основаниями.
                         </p>
+                    )}
+                    {!error && !loading && leaveDocs.length > 0 && (
+                        <ul className="vac-emp-card__entries">
+                            {leaveDocs.map((doc) => {
+                                const ui = apiAbsenceKindToUi(doc.kind);
+                                const label = ui ? vacationKindHumanLabel(ui) : 'Заявление';
+                                const period = doc.dateFrom === doc.dateTo
+                                    ? formatIsoDateRu(doc.dateFrom)
+                                    : `${formatIsoDateRu(doc.dateFrom)} — ${formatIsoDateRu(doc.dateTo)}`;
+                                return (
+                                    <li key={doc.leaveRequestId} className="vac-emp-entry">
+                                        <div className="vac-emp-entry__head">
+                                            <span className="vac-emp-entry__kind">{label}</span>
+                                            <span className="vac-emp-entry__period">{period}</span>
+                                        </div>
+                                        <div className="vac-emp-entry__actions">
+                                            <button
+                                                type="button"
+                                                className="vac-emp-entry__doc-dl"
+                                                disabled={downloadingLeaveId === doc.leaveRequestId}
+                                                onClick={() => void handleDownloadLeave(doc)}
+                                            >
+                                                {downloadingLeaveId === doc.leaveRequestId ? '…' : 'Скачать заявление'}
+                                            </button>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
                     )}
                     {!error && !loading && entries.length > 0 && (
                         <ul className="vac-emp-card__entries">
