@@ -1,7 +1,7 @@
 import { addTransitionType, startTransition, useCallback, useEffect, useMemo, useState, ViewTransition, type ComponentType } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { routes } from '@shared/config';
-import { AppBackButton, NAV_TRANSITION_TYPE } from '@shared/ui';
+import { AppBackButton, NAV_TRANSITION_TYPE, SearchableSelect } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { LegalHubMemberTasks } from './LegalHubMemberTasks';
@@ -162,6 +162,13 @@ function LegalHubPageBody() {
         () => (viewAs == null ? null : tasksForMember(viewAs.id, memberIds)),
         [viewAs, memberIds],
     );
+    const memberOptions = useMemo(
+        () => [
+            { id: '', name: t('legalHub.viewAsMe'), code: '' },
+            ...people.map((person) => ({ id: String(person.id), name: person.name, code: person.code })),
+        ],
+        [people, t],
+    );
     const pageTitle = viewAs != null && !onMemberPage ? `${t(active.labelKey)} · ${viewAs.name}` : t(active.labelKey);
     const showUtil = section === 'allTeam' && teamView === 'cards' && !onMemberPage;
     const choosePerson = useCallback((raw: string) => {
@@ -307,17 +314,33 @@ function LegalHubPageBody() {
                     {people.length > 0 || showUtil ? (
                         <div className="lh-top__actions">
                             {people.length > 0 ? (
-                                <select
-                                    className="lh-top__member"
-                                    aria-label={t('legalHub.viewAsAria')}
-                                    value={viewAs == null ? '' : String(viewAs.id)}
-                                    onChange={(event) => choosePerson(event.target.value)}
-                                >
-                                    <option value="">{t('legalHub.viewAsMe')}</option>
-                                    {people.map((person) => (
-                                        <option key={person.id} value={person.id}>{person.name}</option>
-                                    ))}
-                                </select>
+                                <>
+                                    <span id="lh-view-as-label" className="lh-top__member-label">{t('legalHub.viewAsAria')}</span>
+                                    <SearchableSelect
+                                        className="lh-top__member"
+                                        buttonClassName="lh-top__member-btn"
+                                        buttonId="lh-view-as"
+                                        aria-labelledby="lh-view-as-label"
+                                        portalDropdown
+                                        portalZIndex={80}
+                                        portalMinWidth={240}
+                                        placeholder={t('legalHub.viewAsMe')}
+                                        emptyListText={t('legalHub.viewAsMe')}
+                                        noMatchText={t('legalHub.teamNoMatch')}
+                                        value={viewAs == null ? '' : String(viewAs.id)}
+                                        items={memberOptions}
+                                        getOptionValue={(item) => item.id}
+                                        getOptionLabel={(item) => item.name}
+                                        getSearchText={(item) => `${item.name} ${item.code}`}
+                                        onSelect={(item) => choosePerson(item.id)}
+                                        renderOption={(item) => (
+                                            <span className="lh-top__member-opt">
+                                                {item.code ? <span className="lh-top__member-code" aria-hidden>{item.code}</span> : null}
+                                                <span className="lh-top__member-name">{item.name}</span>
+                                            </span>
+                                        )}
+                                    />
+                                </>
                             ) : null}
                             {showUtil ? (
                                 <button
