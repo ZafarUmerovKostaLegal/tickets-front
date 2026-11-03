@@ -27,9 +27,7 @@ type MineTask = HubTask & {
     internalOn: string;
     instructions: string;
     approval: boolean;
-    lane?: string;
 };
-type ExtraColumn = { id: string; title: string };
 
 const COLUMNS: BoardColumn[] = ['todo', 'progress', 'wait', 'associate', 'partner'];
 const DROPPABLE: BoardColumn[] = ['todo', 'progress', 'wait'];
@@ -42,29 +40,10 @@ const COLUMN_LABEL: Record<BoardColumn, TranslationKey> = {
     partner: 'legalHub.taskStatusPartner',
 };
 
-const STATUS_LABEL: Record<TaskStatusId, TranslationKey> = {
-    partner: 'legalHub.taskStatusPartner',
-    progress: 'legalHub.statusInProgress',
-    wait: 'legalHub.statusWaiting',
-    changes: 'legalHub.statusChanges',
-    associate: 'legalHub.taskStatusAssociate',
-    todo: 'legalHub.taskStatusTodo',
-};
-
 const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
     high: 'legalHub.taskPriorityHigh',
     normal: 'legalHub.taskPriorityNormal',
     low: 'legalHub.taskPriorityLow',
-};
-
-const PROJECT_ORDER: TaskProjectId[] = ['solar', 'wind', 'infrastructure', 'bess', 'healthcare'];
-
-const BOARD_TITLE: Record<TaskProjectId, string> = {
-    solar: 'Project A — Solar',
-    wind: 'Project B — Wind',
-    infrastructure: 'Project C — Infrastructure',
-    bess: 'Project D — BESS',
-    healthcare: 'Project E — Healthcare',
 };
 
 const INTERNAL_ON: Record<string, string> = {
@@ -84,12 +63,6 @@ function dayDelta(iso: string): number {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     return Math.round((target.getTime() - start.getTime()) / 86400000);
-}
-
-function isOverdue(task: MineTask): boolean {
-    if (task.done)
-        return false;
-    return [task.clientOn, task.internalOn, task.reviewOn, task.followUpOn].some((iso) => iso != null && iso !== '' && dayDelta(iso) < 0);
 }
 
 function columnOf(status: TaskStatusId): BoardColumn {
@@ -114,89 +87,27 @@ function mineFrom(source: HubTask[]): MineTask[] {
 export function LegalHubMyTasks({ query, source = null }: { query: string; source?: HubTask[] | null }) {
     const { t } = useI18n();
     const [tasks, setTasks] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
-    const [mode, setMode] = useState<'status' | 'project'>('status');
-    const [project, setProject] = useState('');
-    const [waiting, setWaiting] = useState('');
-    const [priority, setPriority] = useState('');
-    const [dates, setDates] = useState('');
-    const [showDone, setShowDone] = useState(false);
-    const [collapsed, setCollapsed] = useState<string[]>(['infrastructure', 'bess', 'healthcare']);
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
     const [openId, setOpenId] = useState<string | null>(null);
-    const [extraColumns, setExtraColumns] = useState<ExtraColumn[]>([]);
-    const [columnDraft, setColumnDraft] = useState<string | null>(null);
-    const [folded, setFolded] = useState<string[]>([]);
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
-    const listed = useMemo(() => tasks.filter((task) => {
-        if (project && task.project !== project)
-            return false;
-        if (waiting === 'none' && task.reviewer != null)
-            return false;
-        if (waiting && waiting !== 'none' && task.reviewer !== waiting)
-            return false;
-        if (priority && task.priority !== priority)
-            return false;
-        if (dates === 'overdue' && dayDelta(task.clientOn) >= 0 && !(task.reviewOn && dayDelta(task.reviewOn) < 0))
-            return false;
-        if (dates === 'week' && (dayDelta(task.clientOn) < 0 || dayDelta(task.clientOn) > 7))
+    const visible = useMemo(() => tasks.filter((task) => {
+        if (task.done)
             return false;
         if (!needle)
             return true;
         const owner = PERSON_LABEL[task.owner].name;
         const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer].name : '';
         return `${task.title} ${PROJECT_LABEL[task.project]} ${task.workstream} ${owner} ${reviewer}`.toLowerCase().includes(needle);
-    }), [dates, needle, priority, project, tasks, waiting]);
-    const visible = useMemo(() => listed.filter((task) => showDone || !task.done), [listed, showDone]);
+    }), [needle, tasks]);
 
-    const hasFilters = Boolean(project || waiting || priority || dates || showDone);
-    const totalCount = tasks.filter((task) => showDone || !task.done).length;
-    const resetFilters = () => {
-        setProject('');
-        setWaiting('');
-        setPriority('');
-        setDates('');
-        setShowDone(false);
-    };
-    const projectOptions = TASK_PROJECTS.map((id) => ({ id, label: PROJECT_LABEL[id] }));
-    const peopleOptions = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].name }));
-    const priorityOptions = TASK_PRIORITIES.map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }));
-    const dateOptions = [
-        { id: 'overdue', label: t('legalHub.myTasksDatesOverdue') },
-        { id: 'week', label: t('legalHub.myTasksDatesWeek') },
-    ];
-    const waitingOptions = [
-        { id: 'none', label: t('legalHub.taskNoReviewer') },
-        ...peopleOptions,
-    ];
-
-    const laneOf = (task: MineTask) => task.lane && extraColumns.some((column) => column.id === task.lane) ? task.lane : columnOf(task.status);
-    const moveTask = (id: string, column: string) => {
-        setTasks((current) => current.map((task) => {
-            if (task.id !== id)
-                return task;
-            if (COLUMNS.includes(column as BoardColumn))
-                return { ...task, lane: undefined, status: column as TaskStatusId };
-            return { ...task, lane: column };
-        }));
+    const moveTask = (id: string, column: BoardColumn) => {
+        setTasks((current) => current.map((task) => (
+            task.id === id ? { ...task, status: column } : task
+        )));
         setDragging(null);
-    };
-    const addColumn = (title: string) => {
-        const name = title.trim();
-        if (!name)
-            return;
-        setExtraColumns((current) => [...current, { id: `col-${Date.now()}`, title: name }]);
-        setColumnDraft(null);
-    };
-    const removeColumn = (id: string) => {
-        setExtraColumns((current) => current.filter((column) => column.id !== id));
-        setFolded((current) => current.filter((item) => item !== id));
-        setTasks((current) => current.map((task) => task.lane === id ? { ...task, lane: undefined } : task));
-    };
-    const toggleFold = (id: string) => {
-        setFolded((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
     };
 
     return (
@@ -207,136 +118,27 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
                     {t('legalHub.myTasksNew')}
                 </button>
             </HeadActions>
-            <div className="lh-my__controls">
-                <div className="lh-view" role="group" aria-label={t('legalHub.viewAria')}>
-                    <button type="button" className={mode === 'project' ? 'is-active' : ''} aria-pressed={mode === 'project'} onClick={() => setMode('project')}>
-                        {t('legalHub.myTasksByProject')}
-                    </button>
-                    <button type="button" className={mode === 'status' ? 'is-active' : ''} aria-pressed={mode === 'status'} onClick={() => setMode('status')}>
-                        {t('legalHub.myTasksByStatus')}
-                    </button>
-                </div>
-                <div className="lh-my__filters">
-                    <FilterSelect label={t('legalHub.taskColProject')} value={project} options={projectOptions} onChange={setProject} />
-                    <FilterSelect label={t('legalHub.myTasksFilterWaiting')} value={waiting} options={waitingOptions} onChange={setWaiting} />
-                    <FilterSelect label={t('legalHub.taskColPriority')} value={priority} options={priorityOptions} onChange={setPriority} />
-                    <FilterSelect label={t('legalHub.myTasksFilterDates')} value={dates} options={dateOptions} onChange={setDates} />
-                    <label className="lh-my__check">
-                        <input type="checkbox" checked={showDone} onChange={(event) => setShowDone(event.target.checked)} />
-                        {t('legalHub.myTasksShowDone')}
-                    </label>
-                </div>
-                <div className="lh-my__summary" aria-live="polite">
-                    <span>{t('legalHub.myTasksShown').replace('{shown}', String(visible.length)).replace('{total}', String(totalCount))}</span>
-                    {hasFilters ? (
-                        <button type="button" className="lh-tasks__reset" onClick={resetFilters}>
-                            {t('legalHub.myTasksClear')}
-                        </button>
-                    ) : null}
-                </div>
-                {mode === 'project' ? (
-                    <div className="lh-my__fold">
-                        <button type="button" onClick={() => setCollapsed([])}>{t('legalHub.myTasksExpand')}</button>
-                        <button type="button" onClick={() => setCollapsed(TASK_PROJECTS.filter((id) => visible.some((task) => task.project === id)))}>
-                            {t('legalHub.myTasksCollapse')}
-                        </button>
-                    </div>
-                ) : null}
-            </div>
             {visible.length === 0 ? (
                 <div className="lh-empty">
                     <p>{t('legalHub.myTasksEmpty')}</p>
-                    {hasFilters ? (
-                        <button type="button" className="lh-tasks__reset" onClick={resetFilters}>{t('legalHub.myTasksClear')}</button>
-                    ) : null}
                 </div>
-            ) : null}
-            {mode === 'status' && visible.length > 0 ? (
-                <div className={`lh-my__board${extraColumns.length > 0 ? ' is-wide' : ''}`}>
+            ) : (
+                <div className="lh-my__board">
                     {COLUMNS.map((column) => (
                         <BoardColumnView
                             key={column}
                             title={t(COLUMN_LABEL[column])}
-                            cards={visible.filter((task) => laneOf(task) === column)}
+                            cards={visible.filter((task) => columnOf(task.status) === column)}
                             droppable={DROPPABLE.includes(column)}
                             dragging={dragging}
-                            collapsed={folded.includes(column)}
-                            onToggle={() => toggleFold(column)}
-                            onAdd={() => setComposer(true)}
-                            addLabel={t('legalHub.myTasksNew')}
                             onMove={(id) => moveTask(id, column)}
                             onDragStart={setDragging}
                             onDragEnd={() => setDragging(null)}
                             onOpen={setOpenId}
                         />
                     ))}
-                    {extraColumns.map((column) => (
-                        <BoardColumnView
-                            key={column.id}
-                            title={column.title}
-                            cards={visible.filter((task) => laneOf(task) === column.id)}
-                            droppable
-                            dragging={dragging}
-                            collapsed={folded.includes(column.id)}
-                            onToggle={() => toggleFold(column.id)}
-                            onAdd={() => setComposer(true)}
-                            addLabel={t('legalHub.myTasksNew')}
-                            onMove={(id) => moveTask(id, column.id)}
-                            onDragStart={setDragging}
-                            onDragEnd={() => setDragging(null)}
-                            onOpen={setOpenId}
-                            onRemove={() => removeColumn(column.id)}
-                            removeLabel={t('legalHub.myTasksColumnRemove')}
-                        />
-                    ))}
-                    <div className="lh-my__adder">
-                        {columnDraft == null ? (
-                            <button type="button" className="lh-my__add" onClick={() => setColumnDraft('')}>
-                                <span aria-hidden>+</span>
-                                {t('legalHub.myTasksColumn')}
-                            </button>
-                        ) : (
-                            <form
-                                onSubmit={(event) => {
-                                    event.preventDefault();
-                                    addColumn(columnDraft);
-                                }}
-                            >
-                                <input
-                                    autoFocus
-                                    value={columnDraft}
-                                    placeholder={t('legalHub.myTasksColumnName')}
-                                    aria-label={t('legalHub.myTasksColumnName')}
-                                    onChange={(event) => setColumnDraft(event.target.value)}
-                                    onKeyDown={(event) => {
-                                        if (event.key === 'Escape')
-                                            setColumnDraft(null);
-                                    }}
-                                />
-                                <div className="lh-my__adder-actions">
-                                    <button type="submit" disabled={!columnDraft.trim()}>{t('legalHub.myTasksColumnAdd')}</button>
-                                    <button type="button" onClick={() => setColumnDraft(null)}>{t('legalHub.myTasksCancel')}</button>
-                                </div>
-                            </form>
-                        )}
-                    </div>
                 </div>
-            ) : null}
-            {mode === 'project' && visible.length > 0 ? (
-                <div className="lh-my__groups">
-                    {PROJECT_ORDER.filter((id) => visible.some((task) => task.project === id)).map((id) => (
-                        <ProjectGroup
-                            key={id}
-                            id={id}
-                            open={!collapsed.includes(id)}
-                            rows={visible.filter((task) => task.project === id)}
-                            pool={listed.filter((task) => task.project === id)}
-                            onToggle={() => setCollapsed((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
-                            onOpen={setOpenId}
-                        />
-                    ))}
-                </div>
-            ) : null}
+            )}
             {openTask ? (
                 <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} />
             ) : null}
@@ -346,7 +148,6 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
                     onCreate={(draft) => {
                         setTasks((current) => [...current, draft]);
                         setComposer(false);
-                        setMode('status');
                     }}
                 />
             ) : null}
@@ -354,27 +155,20 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
     );
 }
 
-function BoardColumnView({ title, cards, droppable, dragging, collapsed, onToggle, onAdd, addLabel, onMove, onDragStart, onDragEnd, onOpen, onRemove, removeLabel }: {
+function BoardColumnView({ title, cards, droppable, dragging, onMove, onDragStart, onDragEnd, onOpen }: {
     title: string;
     cards: MineTask[];
     droppable: boolean;
     dragging: string | null;
-    collapsed: boolean;
-    onToggle: () => void;
-    onAdd: () => void;
-    addLabel: string;
     onMove: (id: string) => void;
     onDragStart: (id: string) => void;
     onDragEnd: () => void;
     onOpen: (id: string) => void;
-    onRemove?: () => void;
-    removeLabel?: string;
 }) {
     const { t } = useI18n();
-    const foldLabel = t(collapsed ? 'legalHub.myTasksColumnExpand' : 'legalHub.myTasksColumnCollapse');
     return (
         <section
-            className={`lh-my__col${collapsed ? ' is-collapsed' : ''}${dragging && droppable ? ' is-target' : ''}`}
+            className={`lh-my__col${dragging && droppable ? ' is-target' : ''}`}
             onDragOver={(event) => {
                 if (!droppable || !dragging)
                     return;
@@ -392,19 +186,6 @@ function BoardColumnView({ title, cards, droppable, dragging, collapsed, onToggl
                     <strong>{title}</strong>
                     <em>{cards.length}</em>
                 </span>
-                <span className="lh-my__col-meta">
-                    <button type="button" className="lh-my__col-add" aria-label={addLabel} tabIndex={collapsed ? -1 : 0} onClick={onAdd}>
-                        +
-                    </button>
-                    <button type="button" className="lh-my__col-fold" aria-label={foldLabel} aria-expanded={!collapsed} tabIndex={collapsed ? -1 : 0} onClick={onToggle}>
-                        <CollapseIcon />
-                    </button>
-                    {onRemove ? (
-                        <button type="button" className="lh-my__col-remove" aria-label={removeLabel} tabIndex={collapsed ? -1 : 0} onClick={onRemove}>
-                            ×
-                        </button>
-                    ) : null}
-                </span>
             </header>
             {cards.length === 0 ? <p>{droppable ? t('legalHub.myTasksDrop') : t('legalHub.queueEmpty')}</p> : (
                 <ul>
@@ -420,184 +201,10 @@ function BoardColumnView({ title, cards, droppable, dragging, collapsed, onToggl
                     ))}
                 </ul>
             )}
-            <button type="button" className="lh-my__col-spine" aria-label={foldLabel} tabIndex={collapsed ? 0 : -1} onClick={onToggle}>
-                <CollapseIcon />
-                <span>{title}</span>
-                <em>{cards.length}</em>
-            </button>
         </section>
     );
 }
 
-function CollapseIcon() {
-    return (
-        <svg viewBox="0 0 24 24" aria-hidden>
-            <path d="M10 8l-4 4 4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M14 8l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    );
-}
-
-function taskCountKey(count: number): TranslationKey {
-    const n = Math.abs(count) % 100;
-    const n1 = n % 10;
-    if (n > 10 && n < 20)
-        return 'legalHub.myTasksCountMany';
-    if (n1 === 1)
-        return 'legalHub.myTasksCountOne';
-    if (n1 >= 2 && n1 <= 4)
-        return 'legalHub.myTasksCountFew';
-    return 'legalHub.myTasksCountMany';
-}
-
-const CARD_MONTHS: Record<string, string[]> = {
-    ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
-    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-};
-
-function formatDay(iso: string, locale: string): string {
-    const [year, month, day] = iso.split('-').map(Number);
-    return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1).toLocaleDateString(locale === 'ru' ? 'ru-RU' : 'en-GB', {
-        day: 'numeric',
-        month: 'short',
-    });
-}
-
-function formatCardDate(iso: string, locale: string): string {
-    const [, month, day] = iso.split('-').map(Number);
-    const names = CARD_MONTHS[locale] ?? CARD_MONTHS.en!;
-    return `${day ?? ''} ${names[(month ?? 1) - 1] ?? ''}`.trim();
-}
-
-function waitingName(task: MineTask): string | null {
-    if (task.status === 'todo' || task.status === 'progress' || task.status === 'changes')
-        return null;
-    if (task.waitingFor)
-        return task.waitingFor;
-    return task.reviewer ? PERSON_LABEL[task.reviewer].name : null;
-}
-
-function ProjectGroup({ id, open, rows, pool, onToggle, onOpen }: {
-    id: TaskProjectId;
-    open: boolean;
-    rows: MineTask[];
-    pool: MineTask[];
-    onToggle: () => void;
-    onOpen: (id: string) => void;
-}) {
-    const { t } = useI18n();
-    const done = pool.filter((task) => task.done).length;
-    const progress = t('legalHub.myTasksProgress').replace('{done}', String(done)).replace('{total}', String(pool.length));
-    const count = t(taskCountKey(rows.length)).replace('{count}', String(rows.length));
-    const width = pool.length === 0 ? 0 : Math.round((done / pool.length) * 100);
-    return (
-        <section className="lh-my__group">
-            <button type="button" className="lh-my__group-head" aria-expanded={open} onClick={onToggle}>
-                <span className="lh-my__group-title">
-                    <ChevronIcon open={open} />
-                    <span className={`lh-tasks__project lh-tasks__project--${id}`}>
-                        <FolderIcon />
-                        <span>{BOARD_TITLE[id]}</span>
-                    </span>
-                    <span className="lh-my__meter">
-                        <span>{progress}</span>
-                        <span className="lh-my__meter-track" aria-hidden>
-                            <span style={{ width: `${width}%` }} />
-                        </span>
-                    </span>
-                </span>
-                <span>{count}</span>
-            </button>
-            {open ? (
-                <table className="lh-my__table">
-                    <thead>
-                        <tr>
-                            <th>{t('legalHub.taskColTitle')}</th>
-                            <th>{t('legalHub.taskColStatus')}</th>
-                            <th>{t('legalHub.taskColPriority')}</th>
-                            <th>{t('legalHub.taskFieldInternal')}</th>
-                            <th>{t('legalHub.taskColClient')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rows.map((task) => (
-                            <ProjectRow key={task.id} task={task} onOpen={() => onOpen(task.id)} />
-                        ))}
-                    </tbody>
-                </table>
-            ) : null}
-        </section>
-    );
-}
-
-function ProjectRow({ task, onOpen }: { task: MineTask; onOpen: () => void }) {
-    const { t, locale } = useI18n();
-    const waiting = waitingName(task);
-    const follow = task.followUpOn;
-    const followLate = follow != null && dayDelta(follow) < 0;
-    const followLabel = follow == null
-        ? null
-        : followLate
-            ? t('legalHub.myTasksFollowDue')
-            : t('legalHub.myTasksFollowOn').replace('{date}', formatDay(follow, locale));
-    return (
-        <tr
-            className={`${task.done ? 'is-done' : ''}${isOverdue(task) ? ' is-late' : ''}`}
-            tabIndex={0}
-            onClick={onOpen}
-            onKeyDown={(event) => {
-                if (event.key === 'Enter')
-                    onOpen();
-            }}
-        >
-            <td>
-                <span className="lh-my__stream">
-                    {task.workstream}
-                    {task.important ? <span className="lh-my__important">{t('legalHub.myTasksImportant')}</span> : null}
-                    {isOverdue(task) ? <span className="lh-my__late">{t('legalHub.myTasksLate')}</span> : null}
-                </span>
-                <span className="lh-tasks__title">{task.title}</span>
-            </td>
-            <td>
-                <span className="lh-my__status">
-                    <span className={`lh-tasks__pill lh-tasks__pill--${task.status}`}>{t(STATUS_LABEL[task.status])}</span>
-                    {waiting ? <span className="lh-my__sub">{t('legalHub.myTasksWaitingFor').replace('{name}', waiting)}</span> : null}
-                    {followLabel ? <span className={`lh-my__sub${followLate ? ' is-hot' : ''}`}>{followLabel}</span> : null}
-                </span>
-            </td>
-            <td>
-                <span className={`lh-tasks__pill lh-tasks__pill--priority-${task.priority}`}>{t(PRIORITY_LABEL[task.priority])}</span>
-            </td>
-            <td><Deadline iso={task.internalOn} /></td>
-            <td><Deadline iso={task.clientOn} /></td>
-        </tr>
-    );
-}
-
-function Deadline({ iso }: { iso: string }) {
-    const { t, locale } = useI18n();
-    const delta = dayDelta(iso);
-    const tone = delta <= 0 ? 'hot' : delta <= 2 ? 'soon' : 'calm';
-    const hint = delta < 0
-        ? t('legalHub.taskOverdue').replace('{count}', String(-delta))
-        : delta === 0
-            ? t('legalHub.taskToday')
-            : t('legalHub.taskDaysLeft').replace('{count}', String(delta));
-    return (
-        <span className="lh-tasks__date">
-            <span>{formatDay(iso, locale)}</span>
-            <span className={`lh-tasks__delta lh-tasks__delta--${tone}`}>{hint}</span>
-        </span>
-    );
-}
-
-function ChevronIcon({ open }: { open: boolean }) {
-    return (
-        <svg className={`lh-my__chevron${open ? ' is-open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-            <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    );
-}
 function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
     task: MineTask;
     draggable: boolean;
@@ -605,7 +212,7 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
     onDragEnd: () => void;
     onOpen: () => void;
 }) {
-    const { t, locale } = useI18n();
+    const { t } = useI18n();
     const dragged = useRef(false);
     const person = PERSON_LABEL[task.owner];
     const clientLate = !task.done && dayDelta(task.clientOn) < 0;
@@ -632,58 +239,11 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
         >
             <strong>{task.title}</strong>
             <span className="lh-my__card-meta">{PROJECT_LABEL[task.project]} · {task.workstream}</span>
-            {task.done ? null : <DueBadge iso={task.clientOn} className="lh-my__card-due" />}
             <span className="lh-my__card-foot">
-                {task.priority === 'normal' ? <span /> : (
-                    <span className={`lh-my__prio lh-my__prio--${task.priority}`}>
-                        <i aria-hidden />
-                        {t(PRIORITY_LABEL[task.priority])}
-                    </span>
-                )}
-                <span className="lh-my__card-end">
-                    <span className={clientLate ? 'is-late' : ''}>{formatCardDate(task.clientOn, locale)}</span>
-                    <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={person.name}>{person.code}</span>
-                </span>
+                {task.done ? <span /> : <DueBadge iso={task.clientOn} className="lh-my__card-due" />}
+                <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={person.name}>{person.code}</span>
             </span>
         </li>
-    );
-}
-
-function FilterSelect({ label, value, options, onChange }: {
-    label: string;
-    value: string;
-    options: { id: string; label: string }[];
-    onChange: (id: string) => void;
-}) {
-    const { t } = useI18n();
-    const items = useMemo(() => [{ id: '', label: t('legalHub.taskFilterAll') }, ...options], [options, t]);
-    return (
-        <label className={`lh-my__filter${value ? ' is-set' : ''}`}>
-            <span>{label}</span>
-            <SearchableSelect
-                portalDropdown
-                portalZIndex={40}
-                buttonClassName="lh-tasks__pick"
-                placeholder={t('legalHub.taskFilterAll')}
-                emptyListText={t('legalHub.taskFilterAll')}
-                noMatchText={t('legalHub.teamNoMatch')}
-                aria-label={label}
-                value={value}
-                items={items}
-                getOptionValue={(item) => item.id}
-                getOptionLabel={(item) => item.label}
-                getSearchText={(item) => item.label}
-                onSelect={(item) => onChange(item.id)}
-            />
-        </label>
-    );
-}
-
-function FolderIcon() {
-    return (
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-            <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v8A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-10z" />
-        </svg>
     );
 }
 
