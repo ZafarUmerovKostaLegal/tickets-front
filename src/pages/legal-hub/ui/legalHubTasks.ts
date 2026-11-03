@@ -36,6 +36,21 @@ export const PROJECT_LABEL: Record<TaskProjectId, string> = {
     bess: 'BESS',
 };
 
+export const PROJECT_TITLE: Record<TaskProjectId, string> = {
+    solar: 'Project A — Solar',
+    wind: 'Project B — Wind',
+    infrastructure: 'Project C — Infrastructure',
+    bess: 'Project D — BESS',
+    healthcare: 'Project E — Healthcare',
+};
+
+/** Demo data: tasks that already count as finished on «Мои задачи». */
+export const MOCK_DONE_IDS: readonly string[] = ['wind-easement'];
+
+export function isTaskProjectId(value: string | null | undefined): value is TaskProjectId {
+    return value != null && (TASK_PROJECTS as readonly string[]).includes(value);
+}
+
 export const PERSON_LABEL: Record<TaskPersonId, { code: string; name: string }> = {
     ja1: { code: 'JA1', name: 'Junior Associate 1' },
     ja2: { code: 'JA2', name: 'Junior Associate 2' },

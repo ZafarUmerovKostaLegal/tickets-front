@@ -1,6 +1,5 @@
 import { addTransitionType, startTransition, useCallback, useEffect, useMemo, useState, ViewTransition, type ComponentType } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { routes } from '@shared/config';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppBackButton, NAV_TRANSITION_TYPE, SearchableSelect } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
@@ -10,11 +9,11 @@ import { LegalHubProjects } from './LegalHubProjects';
 import { LegalHubReviewQueue } from './LegalHubReviewQueue';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
-import { tasksForMember } from './legalHubTasks';
+import { HUB_TASKS, isTaskProjectId, PROJECT_TITLE, tasksForMember, type TaskProjectId } from './legalHubTasks';
+import { HeadActionsContext, hubBadges, legalHubSectionUrl, type LegalHubNavId } from './legalHubShared';
 import { LegalHubViewProvider, useLegalHubView } from './legalHubView';
 import './LegalHubPage.css';
 
-type LegalHubNavId = 'myTasks' | 'reviewQueue' | 'projects' | 'allTeam';
 
 const NAV_ITEMS: { id: LegalHubNavId; labelKey: TranslationKey; icon: ComponentType }[] = [
     { id: 'myTasks', labelKey: 'legalHub.myTasks', icon: IconTasks },
@@ -120,13 +119,23 @@ function IconCollapse({ collapsed }: { collapsed: boolean }) {
 
 const SIDEBAR_COLLAPSED_KEY = 'lh-sidebar-collapsed';
 
+const SECTION_HINT: Record<LegalHubNavId, TranslationKey> = {
+    myTasks: 'legalHub.myTasksHint',
+    reviewQueue: 'legalHub.queueHint',
+    projects: 'legalHub.projectsHint',
+    allTeam: 'legalHub.teamHint',
+};
+
+function parseSection(value: unknown): LegalHubNavId | null {
+    if (value === 'myTasks' || value === 'reviewQueue' || value === 'projects' || value === 'allTeam')
+        return value;
+    return null;
+}
+
 function sectionFromState(state: unknown): LegalHubNavId | null {
     if (state == null || typeof state !== 'object' || !('section' in state))
         return null;
-    const section = (state as { section?: string }).section;
-    if (section === 'myTasks' || section === 'reviewQueue' || section === 'projects' || section === 'allTeam')
-        return section;
-    return null;
+    return parseSection((state as { section?: unknown }).section);
 }
 
 function LegalHubPageBody() {
@@ -134,14 +143,18 @@ function LegalHubPageBody() {
     const { people, memberIds, viewAs, setViewAsId } = useLegalHubView();
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { memberId: memberIdParam } = useParams();
     const memberId = memberIdParam != null && /^\d+$/.test(memberIdParam) ? Number(memberIdParam) : null;
     const onMemberPage = memberIdParam != null;
-    const [section, setSection] = useState<LegalHubNavId>(() => sectionFromState(location.state) ?? 'myTasks');
+    const section: LegalHubNavId = parseSection(searchParams.get('view')) ?? sectionFromState(location.state) ?? 'myTasks';
+    const projectParam = searchParams.get('project');
+    const openProjectId = section === 'projects' && isTaskProjectId(projectParam) ? projectParam : null;
     const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
     const [query, setQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
     const [utilOpen, setUtilOpen] = useState(false);
+    const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
     const [sideCollapsed, setSideCollapsed] = useState(() => {
         try {
             return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1';
@@ -173,6 +186,16 @@ function LegalHubPageBody() {
         () => (viewAs == null ? null : tasksForMember(viewAs.id, memberIds)),
         [viewAs, memberIds],
     );
+    const badges = useMemo(() => hubBadges(viewedTasks ?? HUB_TASKS), [viewedTasks]);
+    const badgeFor = (id: LegalHubNavId): { count: number; tone: 'hot' | 'calm'; label: string } | null => {
+        if (id === 'myTasks' && badges.attention > 0)
+            return { count: badges.attention, tone: 'hot', label: t('legalHub.navBadgeMyTasks').replace('{count}', String(badges.attention)) };
+        if (id === 'reviewQueue' && badges.review > 0)
+            return { count: badges.review, tone: 'calm', label: t('legalHub.navBadgeQueue').replace('{count}', String(badges.review)) };
+        if (id === 'projects' && badges.risk > 0)
+            return { count: badges.risk, tone: 'hot', label: t('legalHub.navBadgeProjects').replace('{count}', String(badges.risk)) };
+        return null;
+    };
     const memberOptions = useMemo(
         () => [
             { id: '', name: t('legalHub.viewAsMe'), code: '' },
@@ -180,15 +203,13 @@ function LegalHubPageBody() {
         ],
         [people, t],
     );
-    const pageTitle = viewAs != null && !onMemberPage ? `${t(active.labelKey)} · ${viewAs.name}` : t(active.labelKey);
     const showUtil = section === 'allTeam' && teamView === 'cards' && !onMemberPage;
     const choosePerson = useCallback((raw: string) => {
         const next = raw === '' ? null : Number(raw);
         setViewAsId(next != null && Number.isFinite(next) ? next : null);
         if (!onMemberPage)
             return;
-        setSection('myTasks');
-        navigate(routes.legalHub, { state: { section: 'myTasks' } });
+        navigate(legalHubSectionUrl('myTasks'));
     }, [navigate, onMemberPage, setViewAsId]);
 
     const closeMenu = useCallback(() => setMenuOpen(false), []);
@@ -199,16 +220,25 @@ function LegalHubPageBody() {
     const openSection = useCallback((id: LegalHubNavId) => {
         setMenuOpen(false);
         if (onMemberPage) {
-            navigate(routes.legalHub, { state: { section: id } });
+            navigate(legalHubSectionUrl(id));
             return;
         }
-        if (id === section)
+        if (id === section && openProjectId == null)
             return;
         startTransition(() => {
             addTransitionType(NAV_TRANSITION_TYPE);
-            setSection(id);
+            navigate(legalHubSectionUrl(id));
         });
-    }, [navigate, onMemberPage, section]);
+    }, [navigate, onMemberPage, openProjectId, section]);
+    const openProject = useCallback((id: TaskProjectId | null) => {
+        const next = new URLSearchParams(searchParams);
+        next.set('view', 'projects');
+        if (id == null)
+            next.delete('project');
+        else
+            next.set('project', id);
+        setSearchParams(next);
+    }, [searchParams, setSearchParams]);
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
@@ -259,20 +289,26 @@ function LegalHubPageBody() {
                         {NAV_ITEMS.map((item) => {
                             const Icon = item.icon;
                             const selected = item.id === navSection;
+                            const badge = badgeFor(item.id);
+                            const label = t(item.labelKey);
                             return (
                                 <li key={item.id}>
                                     <button
                                         type="button"
                                         className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
                                         aria-current={selected ? 'page' : undefined}
-                                        aria-label={t(item.labelKey)}
-                                        title={t(item.labelKey)}
+                                        aria-label={badge ? `${label} · ${badge.label}` : label}
+                                        title={badge ? `${label} · ${badge.label}` : label}
                                         onClick={() => openSection(item.id)}
                                     >
                                         <span className="lh-side__item-icon" aria-hidden>
                                             <Icon />
+                                            {badge ? <i className={`lh-side__dot lh-side__dot--${badge.tone}`} /> : null}
                                         </span>
-                                        <span className="lh-side__item-label">{t(item.labelKey)}</span>
+                                        <span className="lh-side__item-label">{label}</span>
+                                        {badge ? (
+                                            <span className={`lh-side__badge lh-side__badge--${badge.tone}`} aria-hidden>{badge.count}</span>
+                                        ) : null}
                                     </button>
                                 </li>
                             );
@@ -320,7 +356,13 @@ function LegalHubPageBody() {
                             autoComplete="off"
                             spellCheck={false}
                         />
-                        <kbd className="lh-top__search-kbd" aria-hidden>/</kbd>
+                        {query ? (
+                            <button type="button" className="lh-top__search-clear" aria-label={t('legalHub.taskFilterReset')} onClick={() => setQuery('')}>
+                                ×
+                            </button>
+                        ) : (
+                            <kbd className="lh-top__search-kbd" aria-hidden>/</kbd>
+                        )}
                     </label>
                     {people.length > 0 || showUtil ? (
                         <div className="lh-top__actions">
@@ -328,7 +370,7 @@ function LegalHubPageBody() {
                                 <>
                                     <span id="lh-view-as-label" className="lh-top__member-label">{t('legalHub.viewAsAria')}</span>
                                     <SearchableSelect
-                                        className="lh-top__member"
+                                        className={`lh-top__member${viewAs != null ? ' is-other' : ''}`}
                                         buttonClassName="lh-top__member-btn"
                                         buttonId="lh-view-as"
                                         aria-labelledby="lh-view-as-label"
@@ -370,6 +412,15 @@ function LegalHubPageBody() {
                         </div>
                     ) : null}
                 </header>
+                {viewAs != null && !onMemberPage ? (
+                    <div className="lh-viewas" role="status">
+                        <span className="lh-viewas__avatar" aria-hidden>{viewAs.code}</span>
+                        <span className="lh-viewas__text">{t('legalHub.viewAsBanner').replace('{name}', viewAs.name)}</span>
+                        <button type="button" className="lh-viewas__reset" onClick={() => setViewAsId(null)}>
+                            {t('legalHub.viewAsReset')}
+                        </button>
+                    </div>
+                ) : null}
                 <ViewTransition default="none" enter="none" exit="none" update="lh-section">
                     <main key={onMemberPage ? `member-${memberIdParam}` : section} className="lh-page__content">
                         {onMemberPage ? (
@@ -377,13 +428,33 @@ function LegalHubPageBody() {
                                 ? <p className="lh-team__note">{t('legalHub.memberMissing')}</p>
                                 : <LegalHubMemberTasks memberId={memberId} query={query} />
                         ) : (
-                            <>
-                                <h1 className="lh-page__title">{pageTitle}</h1>
+                            <HeadActionsContext.Provider value={actionsSlot}>
+                                <header className="lh-page__head">
+                                    <div className="lh-page__head-text">
+                                        {openProjectId != null ? (
+                                            <nav className="lh-crumbs" aria-label={t('legalHub.projects')}>
+                                                <button type="button" onClick={() => openProject(null)}>{t('legalHub.projectsBack')}</button>
+                                                <span aria-hidden>/</span>
+                                            </nav>
+                                        ) : null}
+                                        <h1 className="lh-page__title">{openProjectId != null ? PROJECT_TITLE[openProjectId] : t(active.labelKey)}</h1>
+                                        {openProjectId == null ? <p className="lh-page__hint">{t(SECTION_HINT[section])}</p> : null}
+                                    </div>
+                                    <div className="lh-page__head-actions" ref={setActionsSlot} />
+                                </header>
                                 {section === 'myTasks' ? <LegalHubMyTasks key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} /> : null}
                                 {section === 'reviewQueue' ? <LegalHubReviewQueue key={viewAs?.id ?? 'me'} query={query} tasks={viewedTasks} /> : null}
-                                {section === 'projects' ? <LegalHubProjects key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} /> : null}
+                                {section === 'projects' ? (
+                                    <LegalHubProjects
+                                        key={viewAs?.id ?? 'me'}
+                                        query={query}
+                                        source={viewedTasks}
+                                        selected={openProjectId}
+                                        onSelect={openProject}
+                                    />
+                                ) : null}
                                 {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}
-                            </>
+                            </HeadActionsContext.Provider>
                         )}
                     </main>
                 </ViewTransition>

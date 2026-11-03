@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
+import { DueBadge } from './legalHubShared';
 import {
     HUB_TASKS,
     PERSON_LABEL,
     PROJECT_LABEL,
+    PROJECT_TITLE,
     TASK_PROJECTS,
     type HubTask,
     type TaskPriorityId,
@@ -43,13 +45,7 @@ const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
     low: 'legalHub.taskPriorityLow',
 };
 
-const PROJECT_TITLE: Record<TaskProjectId, string> = {
-    solar: 'Project A — Solar',
-    wind: 'Project B — Wind',
-    healthcare: 'Project E — Healthcare',
-    infrastructure: 'Project C — Infrastructure',
-    bess: 'Project D — BESS',
-};
+const HEALTH_ORDER: Health[] = ['risk', 'changes', 'review', 'wait', 'active', 'empty'];
 
 const CARD_MONTHS: Record<string, string[]> = {
     ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
@@ -145,13 +141,17 @@ function summarize(id: TaskProjectId, tasks: HubTask[]): ProjectSummary {
 export function LegalHubProjects({
     query,
     source,
+    selected,
+    onSelect,
 }: {
     query: string;
     source?: HubTask[] | null;
+    selected: TaskProjectId | null;
+    onSelect: (id: TaskProjectId | null) => void;
 }) {
     const { t, locale } = useI18n();
     const [tasks, setTasks] = useState<HubTask[]>(() => [...(source ?? HUB_TASKS)]);
-    const [selected, setSelected] = useState<TaskProjectId | null>(null);
+    const [healthFilter, setHealthFilter] = useState<Health | ''>('');
     const [focusColumn, setFocusColumn] = useState<BoardColumn | null>(null);
     const [openId, setOpenId] = useState<string | null>(null);
     const [dragging, setDragging] = useState<string | null>(null);
@@ -161,9 +161,21 @@ export function LegalHubProjects({
         setTasks([...(source ?? HUB_TASKS)]);
     }, [source]);
 
+    useEffect(() => {
+        setFocusColumn(null);
+        setDragging(null);
+    }, [selected]);
+
     const needle = query.trim().toLowerCase();
-    const projects = useMemo(() => TASK_PROJECTS.map((id) => summarize(id, tasks)), [tasks]);
-    const visible = useMemo(() => {
+    const projects = useMemo(() => TASK_PROJECTS
+        .map((id) => summarize(id, tasks))
+        .sort((a, b) => {
+            const byHealth = HEALTH_ORDER.indexOf(a.health) - HEALTH_ORDER.indexOf(b.health);
+            if (byHealth !== 0)
+                return byHealth;
+            return (a.next?.clientOn ?? '9999').localeCompare(b.next?.clientOn ?? '9999');
+        }), [tasks]);
+    const matched = useMemo(() => {
         if (!needle)
             return projects;
         return projects.filter((project) => {
@@ -171,6 +183,10 @@ export function LegalHubProjects({
             return hay.includes(needle);
         });
     }, [needle, projects]);
+    const visible = healthFilter ? matched.filter((project) => project.health === healthFilter) : matched;
+    const healthCounts = HEALTH_ORDER
+        .map((health) => ({ health, count: matched.filter((project) => project.health === health).length }))
+        .filter((row) => row.count > 0);
     const current = selected == null ? null : projects.find((project) => project.id === selected) ?? null;
     const boardTasks = useMemo(() => {
         if (current == null)
@@ -184,12 +200,6 @@ export function LegalHubProjects({
     }, [current, needle]);
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
-    const openProject = (id: TaskProjectId) => {
-        setSelected(id);
-        setFocusColumn(null);
-        setDragging(null);
-    };
-
     const moveTask = (taskId: string, column: BoardColumn) => {
         setTasks((list) => list.map((task) => (task.id === taskId ? { ...task, status: column } : task)));
         setDragging(null);
@@ -199,32 +209,66 @@ export function LegalHubProjects({
         <div className={`lh-projects${current ? ' lh-projects--workspace' : ''}`}>
             {current == null ? (
                 <>
-                    <p className="lh-projects__hint">{t('legalHub.projectsHint')}</p>
+                    <div className="lh-projects__tools">
+                        {healthCounts.length > 1 ? (
+                            <div className="lh-chips" role="group" aria-label={t('legalHub.taskColStatus')}>
+                                <button
+                                    type="button"
+                                    className={`lh-chip${healthFilter === '' ? ' is-on' : ''}`}
+                                    aria-pressed={healthFilter === ''}
+                                    onClick={() => setHealthFilter('')}
+                                >
+                                    {t('legalHub.projectsAll')}
+                                    <em>{matched.length}</em>
+                                </button>
+                                {healthCounts.map((row) => (
+                                    <button
+                                        key={row.health}
+                                        type="button"
+                                        className={`lh-chip lh-chip--${row.health}${healthFilter === row.health ? ' is-on' : ''}`}
+                                        aria-pressed={healthFilter === row.health}
+                                        onClick={() => setHealthFilter((value) => (value === row.health ? '' : row.health))}
+                                    >
+                                        <i aria-hidden />
+                                        {t(HEALTH_LABEL[row.health])}
+                                        <em>{row.count}</em>
+                                    </button>
+                                ))}
+                            </div>
+                        ) : <span />}
+                        <StageLegend />
+                    </div>
                     {visible.length === 0 ? (
                         <p className="lh-projects__empty">{t('legalHub.projectsEmpty')}</p>
                     ) : (
                         <ul className="lh-projects__list">
                             {visible.map((project) => (
                                 <li key={project.id}>
-                                    <button type="button" className={`lh-projects__card is-${project.health}`} onClick={() => openProject(project.id)}>
+                                    <button type="button" className={`lh-projects__card is-${project.health}`} onClick={() => onSelect(project.id)}>
                                         <span className="lh-projects__card-top">
                                             <span className={`lh-projects__health is-${project.health}`}>{t(HEALTH_LABEL[project.health])}</span>
                                             <span className="lh-projects__card-count">{t('legalHub.projectsTaskCount').replace('{count}', String(project.tasks.length))}</span>
+                                            <span className="lh-projects__card-go" aria-hidden><ForwardIcon /></span>
                                         </span>
                                         <strong className="lh-projects__card-title">{project.title}</strong>
-                                        <span className="lh-projects__card-label">{project.label}</span>
                                         <StageBar counts={project.counts} />
-                                        <span className="lh-projects__card-foot">
-                                            <span>{t('legalHub.projectsInReview')}: {project.review}</span>
-                                            {project.overdue > 0 ? <span className="is-due">{t('legalHub.projectsOverdue')}: {project.overdue}</span> : null}
-                                            {project.next ? (
-                                                <span className="lh-projects__card-next">
-                                                    {t('legalHub.projectsNext')
-                                                        .replace('{date}', formatCardDate(project.next.clientOn, locale))
-                                                        .replace('{title}', project.next.title)}
-                                                </span>
-                                            ) : null}
+                                        <span className="lh-projects__card-metrics">
+                                            <span><strong>{project.review}</strong> {t('legalHub.projectsInReview').toLowerCase()}</span>
+                                            <span className={project.overdue > 0 ? 'is-due' : ''}>
+                                                <strong>{project.overdue}</strong> {t('legalHub.projectsOverdue').toLowerCase()}
+                                            </span>
                                         </span>
+                                        {project.next ? (
+                                            <span className="lh-projects__card-next">
+                                                <span className="lh-projects__card-next-date">
+                                                    {formatCardDate(project.next.clientOn, locale)}
+                                                    <DueBadge iso={project.next.clientOn} />
+                                                </span>
+                                                <span className="lh-projects__card-next-title">{project.next.title}</span>
+                                            </span>
+                                        ) : (
+                                            <span className="lh-projects__card-next is-empty">{t('legalHub.projectsNoDeadline')}</span>
+                                        )}
                                     </button>
                                 </li>
                             ))}
@@ -233,14 +277,9 @@ export function LegalHubProjects({
                 </>
             ) : (
                 <div className="lh-projects__workspace">
-                    <button type="button" className="lh-projects__back" onClick={() => setSelected(null)}>
-                        <BackIcon />
-                        {t('legalHub.projectsBack')}
-                    </button>
                     <header className="lh-projects__board-head">
                         <div>
                             <span className={`lh-projects__health is-${current.health}`}>{t(HEALTH_LABEL[current.health])}</span>
-                            <h2 className="lh-projects__board-title">{current.title}</h2>
                             <p className="lh-projects__board-sub">
                                 {current.label}
                                 {current.next
@@ -272,6 +311,7 @@ export function LegalHubProjects({
                                 return (
                                     <BoardColumnView
                                         key={column}
+                                        column={column}
                                         title={t(COLUMN_LABEL[column])}
                                         cards={cards}
                                         collapsed={folded}
@@ -297,15 +337,34 @@ export function LegalHubProjects({
     );
 }
 
-function StageBar({ counts }: { counts: Record<BoardColumn, number> }) {
-    const total = COLUMNS.reduce((sum, column) => sum + counts[column], 0);
+function StageLegend() {
+    const { t } = useI18n();
     return (
-        <span className="lh-projects__bar" aria-hidden>
+        <ul className="lh-legend" aria-label={t('legalHub.projectsMapHint')}>
             {COLUMNS.map((column) => (
+                <li key={column}>
+                    <i className={`lh-legend__dot is-${column}`} aria-hidden />
+                    {t(COLUMN_LABEL[column])}
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+function StageBar({ counts }: { counts: Record<BoardColumn, number> }) {
+    const { t } = useI18n();
+    const total = COLUMNS.reduce((sum, column) => sum + counts[column], 0);
+    const summary = COLUMNS
+        .filter((column) => counts[column] > 0)
+        .map((column) => t('legalHub.projectsSegment').replace('{label}', t(COLUMN_LABEL[column])).replace('{count}', String(counts[column])))
+        .join(' · ');
+    return (
+        <span className="lh-projects__bar" role="img" aria-label={summary || t('legalHub.projectsHealthEmpty')} title={summary}>
+            {COLUMNS.filter((column) => total === 0 || counts[column] > 0).map((column) => (
                 <span
                     key={column}
-                    className={`lh-projects__bar-seg is-${column}${counts[column] === 0 ? ' is-empty' : ''}`}
-                    style={{ flexGrow: total === 0 ? 1 : Math.max(counts[column], 0.35) }}
+                    className={`lh-projects__bar-seg is-${column}${total === 0 ? ' is-empty' : ''}`}
+                    style={{ flexGrow: total === 0 ? 1 : counts[column] }}
                 />
             ))}
         </span>
@@ -374,6 +433,7 @@ function ProjectMap({
 }
 
 function BoardColumnView({
+    column,
     title,
     cards,
     collapsed,
@@ -386,6 +446,7 @@ function BoardColumnView({
     onMove,
     onOpen,
 }: {
+    column: BoardColumn;
     title: string;
     cards: HubTask[];
     collapsed: boolean;
@@ -402,7 +463,7 @@ function BoardColumnView({
     const foldLabel = t(collapsed ? 'legalHub.myTasksColumnExpand' : 'legalHub.myTasksColumnCollapse');
     return (
         <section
-            className={`lh-my__col${collapsed ? ' is-collapsed' : ''}${dimmed ? ' is-dimmed' : ''}${dragging && droppable ? ' is-target' : ''}`}
+            className={`lh-my__col lh-my__col--${column}${collapsed ? ' is-collapsed' : ''}${dimmed ? ' is-dimmed' : ''}${dragging && droppable ? ' is-target' : ''}`}
             onDragOver={(event) => {
                 if (!droppable || !dragging)
                     return;
@@ -426,7 +487,7 @@ function BoardColumnView({
                     </button>
                 </span>
             </header>
-            {cards.length === 0 ? <p>{t('legalHub.myTasksDrop')}</p> : (
+            {cards.length === 0 ? <p>{droppable ? t('legalHub.myTasksDrop') : t('legalHub.queueEmpty')}</p> : (
                 <ul>
                     {cards.map((task) => (
                         <ProjectTaskCard
@@ -468,7 +529,8 @@ function ProjectTaskCard({
     const clientLate = dayDelta(task.clientOn) < 0;
     return (
         <li
-            className={`lh-my__card${draggable ? '' : ' is-locked'}`}
+            className={`lh-my__card${draggable ? '' : ' is-locked'}${clientLate ? ' is-late' : ''}`}
+            title={draggable ? undefined : t('legalHub.myTasksLocked')}
             draggable={draggable}
             onDragStart={() => {
                 dragged.current = true;
@@ -488,6 +550,7 @@ function ProjectTaskCard({
         >
             <strong>{task.title}</strong>
             <span className="lh-my__card-meta">{task.workstream}</span>
+            <DueBadge iso={task.clientOn} className="lh-my__card-due" />
             <span className="lh-my__card-foot">
                 {task.priority === 'normal' ? <span /> : (
                     <span className={`lh-my__prio lh-my__prio--${task.priority}`}>
@@ -504,10 +567,10 @@ function ProjectTaskCard({
     );
 }
 
-function BackIcon() {
+function ForwardIcon() {
     return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M15 6 9 12l6 6" />
+            <path d="m9 6 6 6-6 6" />
         </svg>
     );
 }

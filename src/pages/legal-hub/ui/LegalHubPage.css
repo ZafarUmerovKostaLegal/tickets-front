@@ -5399,3 +5399,910 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
     flex-direction: column;
   }
 }
+
+/* ==========================================================================
+   Legal Hub — UX refresh: shared tokens, header, nav badges, attention, chips
+   ========================================================================== */
+
+.lh-page {
+  --lh-late: #be123c;
+  --lh-late-bg: color-mix(in srgb, #e11d48 9%, var(--app-surface));
+  --lh-late-border: color-mix(in srgb, #e11d48 30%, var(--app-border));
+  --lh-warn: #b45309;
+  --lh-warn-bg: color-mix(in srgb, #f59e0b 12%, var(--app-surface));
+  --lh-review: #6d28d9;
+  --lh-review-bg: color-mix(in srgb, #7c3aed 11%, var(--app-surface));
+  --lh-ok: #15803d;
+  --lh-ok-bg: color-mix(in srgb, #22c55e 13%, var(--app-surface));
+  --lh-radius: 14px;
+}
+
+body[data-theme='dark'] .lh-page {
+  --lh-late: #fda4af;
+  --lh-warn: #fcd34d;
+  --lh-review: #c4b5fd;
+  --lh-ok: #86efac;
+}
+
+/* --- Page header: title, one-line explanation, primary action on the right --- */
+
+.lh-page__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.lh-page__head-text {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.45rem;
+}
+
+.lh-page__head-text .lh-page__title {
+  min-width: 0;
+}
+
+.lh-page__hint {
+  flex-basis: 100%;
+  margin: 0.3rem 0 0;
+  color: var(--app-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.lh-page__head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.lh-page__head-actions:empty {
+  display: none;
+}
+
+.lh-page__content:has(.lh-projects--workspace) > .lh-page__head {
+  flex-shrink: 0;
+}
+
+.lh-primary {
+  height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 12px;
+  font-size: 0.875rem;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--app-accent) 28%, transparent);
+}
+
+.lh-primary > span[aria-hidden] {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+/* Breadcrumbs: «Проекты / Project A — Solar», «Вся команда / Имя» */
+.lh-crumbs {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  color: var(--app-meta);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.lh-crumbs button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.lh-crumbs button:hover {
+  color: var(--app-accent);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.lh-crumbs button:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* --- "Viewing someone else's data" banner --- */
+
+.lh-viewas {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+  padding: 0.5rem max(1.25rem, var(--mob-safe-right, 0px)) 0.5rem max(1.25rem, var(--mob-safe-left, 0px));
+  border-bottom: 1px solid color-mix(in srgb, var(--app-accent) 25%, var(--app-border));
+  background: var(--app-accent-light-bg);
+  color: var(--app-text);
+  font-size: 0.84rem;
+}
+
+.lh-viewas__avatar {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--app-accent);
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.lh-viewas__text {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lh-viewas__reset {
+  margin-left: auto;
+  flex-shrink: 0;
+  height: 1.9rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--app-accent-border);
+  border-radius: 999px;
+  background: var(--app-surface);
+  color: var(--app-accent);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lh-viewas__reset:hover {
+  background: var(--app-accent);
+  color: #fff;
+}
+
+.lh-top__member.is-other .lh-top__member-btn.tsp-srch__btn {
+  border-color: var(--app-accent-border);
+  background: var(--app-accent-light-bg);
+  color: var(--app-accent);
+  font-weight: 650;
+}
+
+/* --- Search: clear button instead of the "/" hint while typing --- */
+
+.lh-top__search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.lh-top__search-clear {
+  position: absolute;
+  right: 0.45rem;
+  display: inline-grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--app-bg-soft);
+  color: var(--app-muted);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.lh-top__search-clear:hover {
+  color: var(--app-text);
+}
+
+/* --- Sidebar counters --- */
+
+.lh-side__item-icon {
+  position: relative;
+}
+
+.lh-side__badge {
+  flex-shrink: 0;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  margin-left: auto;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--app-bg-soft);
+  color: var(--app-text-dim);
+  font-size: 0.7rem;
+  font-weight: 750;
+  line-height: 1.35rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  box-sizing: border-box;
+}
+
+.lh-side__badge--hot {
+  background: var(--lh-late-bg);
+  color: var(--lh-late);
+}
+
+.lh-side__item--active .lh-side__badge--calm {
+  background: var(--app-surface);
+  color: var(--app-accent);
+}
+
+.lh-side__dot {
+  display: none;
+  position: absolute;
+  top: -3px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  border: 2px solid var(--app-surface);
+  border-radius: 999px;
+  background: var(--app-meta);
+}
+
+.lh-side__dot--hot {
+  background: #e11d48;
+}
+
+@media (min-width: 861px) {
+  .lh-page--side-collapsed .lh-side__badge {
+    display: none;
+  }
+
+  .lh-page--side-collapsed .lh-side__dot {
+    display: block;
+  }
+}
+
+/* --- Relative deadline badge --- */
+
+.lh-due {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--app-bg-soft);
+  color: var(--app-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+.lh-due i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.lh-due--late {
+  background: var(--lh-late-bg);
+  color: var(--lh-late);
+}
+
+.lh-due--today,
+.lh-due--soon {
+  background: var(--lh-warn-bg);
+  color: var(--lh-warn);
+}
+
+.lh-my__card-due {
+  margin-top: 0.25rem;
+}
+
+/* --- Kanban cards: overdue accent, locked hint --- */
+
+.lh-my__card.is-late {
+  border-color: var(--lh-late-border);
+  box-shadow: inset 3px 0 0 #e11d48, 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.lh-my__card.is-locked {
+  cursor: pointer;
+}
+
+.lh-my__card.is-done {
+  opacity: 0.6;
+}
+
+.lh-my__hint {
+  margin: -0.35rem 0 0;
+  color: var(--app-meta);
+  font-size: 0.75rem;
+}
+
+/* --- My tasks: «Требуют внимания» --- */
+
+.lh-my {
+  margin-top: 0;
+}
+
+.lh-attn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem 1rem;
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, var(--app-border));
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, #f59e0b 9%, var(--app-surface)), var(--app-surface) 70%);
+}
+
+.lh-attn__head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lh-attn__icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 2.1rem;
+  height: 2.1rem;
+  border-radius: 12px;
+  background: color-mix(in srgb, #f59e0b 22%, var(--app-surface));
+  color: var(--lh-warn);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.lh-attn__text {
+  flex: 1;
+  min-width: 0;
+}
+
+.lh-attn__text h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  color: var(--app-text);
+  font-size: 0.98rem;
+  font-weight: 750;
+}
+
+.lh-attn__text h2 em {
+  min-width: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, #f59e0b 22%, var(--app-surface));
+  color: var(--lh-warn);
+  font-size: 0.72rem;
+  font-style: normal;
+  line-height: 1.4rem;
+  text-align: center;
+}
+
+.lh-attn__text p {
+  margin: 0.15rem 0 0;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.lh-attn__toggle,
+.lh-attn__more {
+  flex-shrink: 0;
+  height: 2rem;
+  padding: 0 0.8rem;
+  border: 1px solid color-mix(in srgb, #f59e0b 40%, var(--app-border));
+  border-radius: 999px;
+  background: var(--app-surface);
+  color: var(--lh-warn);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lh-attn__toggle.is-on {
+  background: color-mix(in srgb, #f59e0b 22%, var(--app-surface));
+}
+
+.lh-attn__more {
+  align-self: flex-start;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.lh-attn__more:hover {
+  text-decoration: underline;
+}
+
+.lh-attn__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 0.55rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lh-attn__item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  width: 100%;
+  height: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.lh-attn__item:hover {
+  border-color: var(--app-accent-border);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--app-fg) 7%, transparent);
+}
+
+.lh-attn__item:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
+.lh-attn__reason {
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+.lh-attn__reason--late,
+.lh-attn__reason--changes {
+  background: var(--lh-late-bg);
+  color: var(--lh-late);
+}
+
+.lh-attn__reason--reviewLate {
+  background: var(--lh-review-bg);
+  color: var(--lh-review);
+}
+
+.lh-attn__reason--follow,
+.lh-attn__reason--wait {
+  background: var(--lh-warn-bg);
+  color: var(--lh-warn);
+}
+
+.lh-attn__title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.lh-attn__meta {
+  color: var(--app-meta);
+  font-size: 0.72rem;
+}
+
+/* --- Results line under filters --- */
+
+.lh-my__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-left: auto;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lh-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 2.25rem 1rem;
+  border: 1px dashed var(--app-border);
+  border-radius: 16px;
+  color: var(--app-muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.lh-empty p {
+  margin: 0;
+}
+
+/* --- Review queue: clickable stats, dates, overdue --- */
+
+.lh-queue__stats .lh-stat {
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lh-queue__stats .lh-stat:hover,
+.lh-my__stats .lh-stat:hover {
+  border-color: var(--app-accent-border);
+}
+
+.lh-queue__stats .lh-stat.is-selected {
+  border: 1px solid var(--app-accent);
+  box-shadow: 0 0 0 3px var(--app-accent-focus);
+}
+
+.lh-queue__dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  color: var(--app-meta);
+  font-size: 0.72rem;
+}
+
+.lh-queue__card.is-late {
+  border-color: var(--lh-late-border);
+  box-shadow: inset 3px 0 0 #e11d48, 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.lh-queue__alert button {
+  flex-shrink: 0;
+  padding: 0.2rem 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--app-surface);
+  color: var(--lh-late);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.lh-queue__alert.is-on {
+  background: var(--lh-late-bg);
+  box-shadow: 0 0 0 3px color-mix(in srgb, #e11d48 15%, transparent);
+}
+
+.lh-queue__col--approved header strong {
+  color: var(--lh-ok);
+}
+
+/* --- Projects: chips, legend, cards --- */
+
+.lh-projects__tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+}
+
+.lh-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.lh-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface);
+  color: var(--app-text-dim);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.lh-chip:hover {
+  border-color: var(--app-accent-border);
+  color: var(--app-text);
+}
+
+.lh-chip.is-on {
+  border-color: var(--app-accent);
+  background: var(--app-accent-light-bg);
+  color: var(--app-accent);
+}
+
+.lh-chip em {
+  color: var(--app-meta);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+
+.lh-chip.is-on em {
+  color: inherit;
+}
+
+.lh-chip i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--app-meta);
+}
+
+.lh-chip--risk i { background: #e11d48; }
+.lh-chip--changes i { background: #f59e0b; }
+.lh-chip--review i { background: #7c3aed; }
+.lh-chip--wait i { background: #d97706; }
+.lh-chip--active i { background: #2563eb; }
+
+.lh-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.lh-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lh-legend__dot {
+  width: 10px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.lh-legend__dot.is-todo { background: #94a3b8; }
+.lh-legend__dot.is-progress { background: #2563eb; }
+.lh-legend__dot.is-wait { background: #d97706; }
+.lh-legend__dot.is-associate { background: #7c3aed; }
+.lh-legend__dot.is-partner { background: #4f46e5; }
+.lh-legend__dot.is-changes { background: #e11d48; }
+
+.lh-projects__card {
+  gap: 0.55rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.lh-projects__card:hover {
+  transform: translateY(-1px);
+}
+
+.lh-projects__card:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
+.lh-projects__card.is-risk {
+  box-shadow: inset 3px 0 0 #e11d48;
+}
+
+.lh-projects__card-go {
+  display: inline-flex;
+  margin-left: auto;
+  color: var(--app-meta);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.lh-projects__card-go svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.lh-projects__card:hover .lh-projects__card-go {
+  color: var(--app-accent);
+  transform: translateX(2px);
+}
+
+.lh-projects__bar {
+  height: 8px;
+  margin: 0.15rem 0;
+  gap: 2px;
+}
+
+.lh-projects__bar-seg {
+  min-width: 6px;
+}
+
+.lh-projects__card-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1rem;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.lh-projects__card-metrics strong {
+  color: var(--app-text);
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+
+.lh-projects__card-metrics .is-due,
+.lh-projects__card-metrics .is-due strong {
+  color: var(--lh-late);
+}
+
+.lh-projects__card .lh-projects__card-next {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: auto;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--app-border);
+  white-space: normal;
+}
+
+.lh-projects__card-next.is-empty {
+  color: var(--app-meta);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.lh-projects__card-next-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
+}
+
+.lh-projects__card-next-title {
+  overflow: hidden;
+  color: var(--app-text);
+  font-size: 0.84rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- Team: member card affordance --- */
+
+.lh-member__open {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.85rem;
+  color: var(--app-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.lh-member__open svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  transition: transform 0.15s ease;
+}
+
+.lh-member:hover .lh-member__open svg {
+  transform: translateX(3px);
+}
+
+.lh-member:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
+/* --- Member page header --- */
+
+.lh-member-page__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.lh-member-page__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.lh-member-page__avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: var(--app-accent-light-bg);
+  color: var(--app-accent);
+  font-size: 0.75rem;
+  font-weight: 750;
+}
+
+/* --- Task drawer: finished state --- */
+
+.lh-drawer__send.is-done,
+.lh-drawer__send:disabled {
+  background: var(--lh-ok-bg);
+  color: var(--lh-ok);
+  cursor: default;
+}
+
+/* --- Small screens --- */
+
+@media (max-width: 720px) {
+  .lh-crumbs {
+    font-size: 1.2rem;
+  }
+
+  .lh-page__head {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .lh-page__head-actions > * {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .lh-attn__head {
+    flex-wrap: wrap;
+  }
+
+  .lh-attn__toggle {
+    width: 100%;
+  }
+
+  .lh-my__summary {
+    margin-left: 0;
+  }
+
+  .lh-legend {
+    display: none;
+  }
+
+  .lh-viewas__text {
+    white-space: normal;
+  }
+}
+
+.lh-page__content > .lh-page__head {
+  flex-shrink: 0;
+}
+
+.lh-board {
+  margin-top: 0;
+}
+
+@media (min-width: 861px) {
+  /* Leave the kanban enough room when the attention block is shown. */
+  .lh-my:has(.lh-my__board) {
+    overflow-y: auto;
+  }
+
+  .lh-my:has(.lh-my__board) .lh-my__board {
+    min-height: 22rem;
+  }
+}

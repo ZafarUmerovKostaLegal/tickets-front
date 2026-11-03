@@ -3,6 +3,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { SearchableSelect } from '@shared/ui';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
+import { DueBadge } from './legalHubShared';
 import {
     HUB_TASKS,
     PERSON_LABEL,
@@ -136,6 +137,7 @@ export function LegalHubReviewQueue({ query, tasks = null }: { query: string; ta
     const [project, setProject] = useState('');
     const [reviewer, setReviewer] = useState('');
     const [status, setStatus] = useState('');
+    const [overdueOnly, setOverdueOnly] = useState(false);
     const [nudged, setNudged] = useState<string[]>([]);
     const [openId, setOpenId] = useState<string | null>(null);
     const items = useMemo(() => {
@@ -153,13 +155,18 @@ export function LegalHubReviewQueue({ query, tasks = null }: { query: string; ta
             return false;
         if (status && item.lane !== status)
             return false;
+        if (overdueOnly && (item.lane === 'approved' || dayDelta(item.targetOn) >= 0))
+            return false;
         if (!needle)
             return true;
         const person = item.task.reviewer ? PERSON_LABEL[item.task.reviewer].name : '';
         return `${item.task.title} ${BOARD_TITLE[item.task.project]} ${item.task.workstream} ${person}`.toLowerCase().includes(needle);
     });
-    const overdue = visible.filter((item) => item.lane !== 'approved' && dayDelta(item.targetOn) < 0);
-    const approvedCount = visible.filter((item) => item.lane === 'approved' && item.approvedOn != null && dayDelta(item.approvedOn) >= -APPROVED_WINDOW).length;
+    const scoped = items.filter((item) => (!project || item.task.project === project) && (!reviewer || item.task.reviewer === reviewer));
+    const overdue = scoped.filter((item) => item.lane !== 'approved' && dayDelta(item.targetOn) < 0);
+    const laneCount = (lane: Lane) => scoped.filter((item) => item.lane === lane).length;
+    const toggleLane = (lane: Lane) => setStatus((current) => (current === lane ? '' : lane));
+    const approvedCount = scoped.filter((item) => item.lane === 'approved' && item.approvedOn != null && dayDelta(item.approvedOn) >= -APPROVED_WINDOW).length;
     const openTask = items.find((item) => item.task.id === openId)?.task ?? null;
     const projectOptions = TASK_PROJECTS.map((id) => ({ id, label: PROJECT_LABEL[id] }));
     const reviewerOptions = [...new Set(items.flatMap((item) => item.task.reviewer ? [item.task.reviewer] : []))]
@@ -168,21 +175,37 @@ export function LegalHubReviewQueue({ query, tasks = null }: { query: string; ta
 
     return (
         <div className="lh-queue">
-            <p className="lh-queue__hint">{t('legalHub.queueHint')}</p>
-            <ul className="lh-queue__stats">
-                <Stat icon="associate" value={visible.filter((item) => item.lane === 'associate').length} label={t('legalHub.taskStatusAssociate')} />
-                <Stat icon="partner" value={visible.filter((item) => item.lane === 'partner').length} label={t('legalHub.taskStatusPartner')} />
-                <Stat icon="changes" value={visible.filter((item) => item.lane === 'changes').length} label={t('legalHub.statusChanges')} />
-                <Stat icon="approved" value={approvedCount} label={`${t('legalHub.queueApproved')} · ${t('legalHub.queueApprovedMeta').replace('{count}', String(APPROVED_WINDOW))}`} />
+            <ul className="lh-queue__stats" title={t('legalHub.queueStatHint')}>
+                <Stat icon="associate" value={laneCount('associate')} label={t('legalHub.taskStatusAssociate')} pressed={status === 'associate'} onClick={() => toggleLane('associate')} />
+                <Stat icon="partner" value={laneCount('partner')} label={t('legalHub.taskStatusPartner')} pressed={status === 'partner'} onClick={() => toggleLane('partner')} />
+                <Stat icon="changes" value={laneCount('changes')} label={t('legalHub.statusChanges')} pressed={status === 'changes'} onClick={() => toggleLane('changes')} />
+                <Stat icon="approved" value={approvedCount} label={`${t('legalHub.queueApproved')} · ${t('legalHub.queueApprovedMeta').replace('{count}', String(APPROVED_WINDOW))}`} pressed={status === 'approved'} onClick={() => toggleLane('approved')} />
             </ul>
             <div className="lh-queue__filters">
                 <Filter label={t('legalHub.taskColProject')} value={project} all={t('legalHub.queueAllProjects')} options={projectOptions} onChange={setProject} />
                 <Filter label={t('legalHub.taskColReviewer')} value={reviewer} all={t('legalHub.queueAllReviewers')} options={reviewerOptions} onChange={setReviewer} />
                 <Filter label={t('legalHub.taskColStatus')} value={status} all={t('legalHub.queueAllStatuses')} options={statusOptions} onChange={setStatus} />
+                {project || reviewer || status || overdueOnly ? (
+                    <button
+                        type="button"
+                        className="lh-tasks__reset"
+                        onClick={() => {
+                            setProject('');
+                            setReviewer('');
+                            setStatus('');
+                            setOverdueOnly(false);
+                        }}
+                    >
+                        {t('legalHub.myTasksClear')}
+                    </button>
+                ) : null}
                 {overdue.length > 0 ? (
-                    <div className="lh-queue__alert">
+                    <div className={`lh-queue__alert${overdueOnly ? ' is-on' : ''}`}>
                         <strong>{t('legalHub.queueAlert').replace('{count}', String(overdue.length))}</strong>
                         <span title={overdue[0]?.task.title}>{overdue[0]?.task.title}</span>
+                        <button type="button" aria-pressed={overdueOnly} onClick={() => setOverdueOnly((value) => !value)}>
+                            {overdueOnly ? t('legalHub.queueOverdueAll') : t('legalHub.queueOverdueShow')}
+                        </button>
                     </div>
                 ) : null}
             </div>
@@ -191,7 +214,7 @@ export function LegalHubReviewQueue({ query, tasks = null }: { query: string; ta
                     {LANES.filter((lane) => status === '' || status === lane).map((lane) => {
                         const cards = visible.filter((item) => item.lane === lane);
                         return (
-                            <section key={lane} className="lh-queue__col">
+                            <section key={lane} className={`lh-queue__col lh-queue__col--${lane}`}>
                                 <header>
                                     <span className="lh-my__col-title">
                                         <strong>{t(LANE_LABEL[lane])}</strong>
@@ -222,14 +245,17 @@ export function LegalHubReviewQueue({ query, tasks = null }: { query: string; ta
     );
 }
 
-function Stat({ icon, value, label }: { icon: string; value: number; label: string }) {
+function Stat({ icon, value, label, pressed, onClick }: { icon: string; value: number; label: string; pressed: boolean; onClick: () => void }) {
+    const tone = icon === 'approved' ? 'success' : icon === 'partner' ? 'accent' : icon === 'associate' ? 'review' : icon;
     return (
-        <li className={`lh-stat lh-stat--${icon === 'approved' ? 'success' : icon === 'partner' ? 'accent' : icon === 'associate' ? 'review' : icon}`}>
-            <span className="lh-stat__icon" aria-hidden><StatIcon kind={icon} /></span>
-            <span className="lh-stat__body">
-                <strong className="lh-stat__value">{value}</strong>
-                <span className="lh-stat__label">{label}</span>
-            </span>
+        <li>
+            <button type="button" className={`lh-stat lh-stat--${tone}${pressed ? ' is-selected' : ''}`} aria-pressed={pressed} onClick={onClick}>
+                <span className="lh-stat__icon" aria-hidden><StatIcon kind={icon} /></span>
+                <span className="lh-stat__body">
+                    <strong className="lh-stat__value">{value}</strong>
+                    <span className="lh-stat__label">{label}</span>
+                </span>
+            </button>
         </li>
     );
 }
@@ -305,10 +331,14 @@ function QueueCard({ item, locale, nudged, onOpen, onNudge }: {
     const late = item.lane !== 'approved' && delta < 0;
     const when = item.approvedOn ?? item.targetOn;
     return (
-        <li className="lh-queue__card">
+        <li className={`lh-queue__card${late ? ' is-late' : ''}`}>
             <button type="button" className="lh-queue__open" onClick={onOpen}>
                 <strong>{item.task.title}</strong>
                 <span className="lh-my__card-meta">{PROJECT_LABEL[item.task.project]} · {item.task.workstream}</span>
+                <span className="lh-queue__dates">
+                    <span>{t('legalHub.queueSubmitted').replace('{date}', formatCardDate(item.submittedOn, locale))}</span>
+                    {item.lane === 'approved' ? null : <DueBadge iso={item.targetOn} />}
+                </span>
                 {item.note ? <span className="lh-queue__note">{t('legalHub.queueNote')}</span> : null}
                 <span className="lh-my__card-foot">
                     {item.task.priority === 'normal' ? <span /> : (

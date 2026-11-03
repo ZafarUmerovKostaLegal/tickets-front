@@ -4,8 +4,10 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
+import { ATTENTION_LABEL, attentionRank, attentionReason, DueBadge, HeadActions, type AttentionReason } from './legalHubShared';
 import {
     HUB_TASKS,
+    MOCK_DONE_IDS,
     PERSON_LABEL,
     PROJECT_LABEL,
     TASK_PEOPLE,
@@ -101,7 +103,7 @@ function columnOf(status: TaskStatusId): BoardColumn {
 function mineFrom(source: HubTask[]): MineTask[] {
     return source.map((task) => ({
         ...task,
-        done: task.id === 'wind-easement',
+        done: MOCK_DONE_IDS.includes(task.id),
         hours: 4,
         internalOn: INTERNAL_ON[task.id] ?? task.reviewOn ?? task.clientOn,
         instructions: '',
@@ -131,7 +133,12 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
     const attention = useMemo(
-        () => tasks.filter((task) => !task.done && (task.status === 'changes' || task.status === 'wait' || (task.reviewOn != null && dayDelta(task.reviewOn) < 0))),
+        () => tasks
+            .flatMap((task) => {
+                const reason = task.done ? null : attentionReason(task);
+                return reason == null ? [] : [{ task, reason }];
+            })
+            .sort((a, b) => attentionRank(a.reason) - attentionRank(b.reason) || a.task.clientOn.localeCompare(b.task.clientOn)),
         [tasks],
     );
     const listed = useMemo(() => tasks.filter((task) => {
@@ -155,7 +162,7 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
             return false;
         if (stat === 'due' && (dayDelta(task.clientOn) < 0 || dayDelta(task.clientOn) > 7))
             return false;
-        if (focus && !attention.some((item) => item.id === task.id))
+        if (focus && !attention.some((item) => item.task.id === task.id))
             return false;
         if (!needle)
             return true;
@@ -170,7 +177,17 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
     const reviewCount = tasks.filter((task) => (task.status === 'associate' || task.status === 'partner') && !task.done).length;
     const changesCount = tasks.filter((task) => task.status === 'changes' && !task.done).length;
     const dueCount = tasks.filter((task) => !task.done && dayDelta(task.clientOn) >= 0 && dayDelta(task.clientOn) <= 7).length;
-    const filtersOn = Boolean(project || waiting || priority || dates || showDone || stat || focus);
+    const hasFilters = Boolean(project || waiting || priority || dates || showDone || stat || focus);
+    const totalCount = tasks.filter((task) => showDone || !task.done).length;
+    const resetFilters = () => {
+        setProject('');
+        setWaiting('');
+        setPriority('');
+        setDates('');
+        setShowDone(false);
+        setStat('');
+        setFocus(false);
+    };
     const projectOptions = TASK_PROJECTS.map((id) => ({ id, label: PROJECT_LABEL[id] }));
     const peopleOptions = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].name }));
     const priorityOptions = TASK_PRIORITIES.map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }));
@@ -212,13 +229,20 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
 
     return (
         <div className="lh-my">
-            <div className="lh-my__toolbar">
-                <p>{t('legalHub.myTasksHint')}</p>
-                <button type="button" className="lh-temp__open" onClick={() => setComposer(true)}>
+            <HeadActions>
+                <button type="button" className="lh-temp__open lh-primary" onClick={() => setComposer(true)}>
                     <span aria-hidden>+</span>
                     {t('legalHub.myTasksNew')}
                 </button>
-            </div>
+            </HeadActions>
+            {attention.length > 0 ? (
+                <AttentionPanel
+                    items={attention}
+                    focus={focus}
+                    onToggleFocus={() => setFocus((value) => !value)}
+                    onOpen={setOpenId}
+                />
+            ) : null}
             <ul className="lh-my__stats">
                 <StatButton label={t('legalHub.statTasks')} value={activeCount} tone="accent" pressed={stat === ''} onClick={() => setStat('')} />
                 <StatButton label={t('legalHub.statusWaiting')} value={waitCount} tone="wait" pressed={stat === 'wait'} onClick={() => setStat((current) => current === 'wait' ? '' : 'wait')} />
@@ -244,33 +268,15 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
                         <input type="checkbox" checked={showDone} onChange={(event) => setShowDone(event.target.checked)} />
                         {t('legalHub.myTasksShowDone')}
                     </label>
-                    {filtersOn ? (
-                        <button
-                            type="button"
-                            className="lh-tasks__reset"
-                            onClick={() => {
-                                setProject('');
-                                setWaiting('');
-                                setPriority('');
-                                setDates('');
-                                setShowDone(false);
-                                setStat('');
-                                setFocus(false);
-                            }}
-                        >
+                </div>
+                <div className="lh-my__summary" aria-live="polite">
+                    <span>{t('legalHub.myTasksShown').replace('{shown}', String(visible.length)).replace('{total}', String(totalCount))}</span>
+                    {hasFilters ? (
+                        <button type="button" className="lh-tasks__reset" onClick={resetFilters}>
                             {t('legalHub.myTasksClear')}
                         </button>
                     ) : null}
                 </div>
-                {attention.length > 0 ? (
-                    <div className="lh-my__alert">
-                        <strong>{t('legalHub.myTasksAttention').replace('{count}', String(attention.length))}</strong>
-                        <span title={attention[0]?.title}>{attention[0]?.title}</span>
-                        <button type="button" className={focus ? 'is-on' : ''} onClick={() => setFocus((value) => !value)}>
-                            {t('legalHub.myTasksFocus')}
-                        </button>
-                    </div>
-                ) : null}
                 {mode === 'project' ? (
                     <div className="lh-my__fold">
                         <button type="button" onClick={() => setCollapsed([])}>{t('legalHub.myTasksExpand')}</button>
@@ -280,7 +286,15 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
                     </div>
                 ) : null}
             </div>
-            {visible.length === 0 ? <p className="lh-my__empty">{t('legalHub.myTasksEmpty')}</p> : null}
+            {visible.length === 0 ? (
+                <div className="lh-empty">
+                    <p>{t('legalHub.myTasksEmpty')}</p>
+                    {hasFilters ? (
+                        <button type="button" className="lh-tasks__reset" onClick={resetFilters}>{t('legalHub.myTasksClear')}</button>
+                    ) : null}
+                </div>
+            ) : null}
+            {mode === 'status' && visible.length > 0 ? <p className="lh-my__hint">{t('legalHub.myTasksDragHint')}</p> : null}
             {mode === 'status' && visible.length > 0 ? (
                 <div className={`lh-my__board${extraColumns.length > 0 ? ' is-wide' : ''}`}>
                     {COLUMNS.map((column) => (
@@ -436,7 +450,7 @@ function BoardColumnView({ title, cards, droppable, dragging, collapsed, onToggl
                     ) : null}
                 </span>
             </header>
-            {cards.length === 0 ? <p>{t('legalHub.myTasksDrop')}</p> : (
+            {cards.length === 0 ? <p>{droppable ? t('legalHub.myTasksDrop') : t('legalHub.queueEmpty')}</p> : (
                 <ul>
                     {cards.map((task) => (
                         <TaskCard
@@ -465,6 +479,52 @@ function CollapseIcon() {
             <path d="M10 8l-4 4 4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M14 8l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
+    );
+}
+
+function AttentionPanel({ items, focus, onToggleFocus, onOpen }: {
+    items: { task: MineTask; reason: AttentionReason }[];
+    focus: boolean;
+    onToggleFocus: () => void;
+    onOpen: (id: string) => void;
+}) {
+    const { t, locale } = useI18n();
+    const shown = items.slice(0, 4);
+    const rest = items.length - shown.length;
+    return (
+        <section className="lh-attn" aria-labelledby="lh-attn-title">
+            <header className="lh-attn__head">
+                <span className="lh-attn__icon" aria-hidden>!</span>
+                <div className="lh-attn__text">
+                    <h2 id="lh-attn-title">
+                        {t('legalHub.myTasksAttentionTitle')}
+                        <em>{items.length}</em>
+                    </h2>
+                    <p>{t('legalHub.myTasksAttentionHint')}</p>
+                </div>
+                <button type="button" className={`lh-attn__toggle${focus ? ' is-on' : ''}`} aria-pressed={focus} onClick={onToggleFocus}>
+                    {focus ? t('legalHub.myTasksAttentionAll') : t('legalHub.myTasksAttentionOnly')}
+                </button>
+            </header>
+            <ul className="lh-attn__list">
+                {shown.map(({ task, reason }) => (
+                    <li key={task.id}>
+                        <button type="button" className="lh-attn__item" onClick={() => onOpen(task.id)}>
+                            <span className={`lh-attn__reason lh-attn__reason--${reason}`}>{t(ATTENTION_LABEL[reason])}</span>
+                            <span className="lh-attn__title">{task.title}</span>
+                            <span className="lh-attn__meta">
+                                {PROJECT_LABEL[task.project]} · {formatCardDate(task.clientOn, locale)}
+                            </span>
+                        </button>
+                    </li>
+                ))}
+            </ul>
+            {rest > 0 && !focus ? (
+                <button type="button" className="lh-attn__more" onClick={onToggleFocus}>
+                    {t('legalHub.myTasksAttentionMore').replace('{count}', String(rest))}
+                </button>
+            ) : null}
+        </section>
     );
 }
 
@@ -657,10 +717,11 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
     const { t, locale } = useI18n();
     const dragged = useRef(false);
     const person = PERSON_LABEL[task.owner];
-    const clientLate = dayDelta(task.clientOn) < 0;
+    const clientLate = !task.done && dayDelta(task.clientOn) < 0;
     return (
         <li
-            className={`lh-my__card${draggable ? '' : ' is-locked'}`}
+            className={`lh-my__card${draggable ? '' : ' is-locked'}${clientLate ? ' is-late' : ''}${task.done ? ' is-done' : ''}`}
+            title={draggable ? undefined : t('legalHub.myTasksLocked')}
             draggable={draggable}
             onDragStart={() => {
                 dragged.current = true;
@@ -680,6 +741,7 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
         >
             <strong>{task.title}</strong>
             <span className="lh-my__card-meta">{PROJECT_LABEL[task.project]} · {task.workstream}</span>
+            {task.done ? null : <DueBadge iso={task.clientOn} className="lh-my__card-due" />}
             <span className="lh-my__card-foot">
                 {task.priority === 'normal' ? <span /> : (
                     <span className={`lh-my__prio lh-my__prio--${task.priority}`}>

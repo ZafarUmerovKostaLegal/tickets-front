@@ -12,6 +12,7 @@ import { useCurrentUser } from '@shared/hooks';
 import { fallbackSlices, mockMemberLoad, slicesFromUtil, sumUtil, teamStats, useLegalHubMock, type MemberLoad, type UtilKey, type UtilSlice } from './legalHubMock';
 import { LegalHubTaskTable } from './LegalHubTaskTable';
 import { tasksForMember } from './legalHubTasks';
+import { HeadActions } from './legalHubShared';
 import { useLegalHubView } from './legalHubView';
 import { LegalHubTempMemberDialog, type TempEmployeeOption, type TempMemberDraft, type TempTeamRef } from './LegalHubTempMemberDialog';
 import type { LegalHubMemberLocationState } from './LegalHubMemberTasks';
@@ -187,6 +188,12 @@ function MemberCardView({ member, load, tone, selected, enterIndex, onSelect }: 
                         </span>
                     );
                 })}
+            </span>
+            <span className="lh-member__open">
+                {t('legalHub.memberOpen')}
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <path d="m9 6 6 6-6 6" />
+                </svg>
             </span>
         </button>
     );
@@ -639,6 +646,14 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
         return <p className="lh-team__note">{error === 'forbidden' ? t('legalHub.teamForbidden') : t('legalHub.teamError')}</p>;
     return (
         <div className="lh-board">
+            {ledTeams.length > 0 ? (
+                <HeadActions>
+                    <button type="button" className="lh-temp__open" onClick={() => setTempOpen(true)}>
+                        <span aria-hidden>+</span>
+                        {t('legalHub.tempAdd')}
+                    </button>
+                </HeadActions>
+            ) : null}
             <div className="lh-board__main">
                 <TeamStatsStrip stats={teamStats(scopedPublished.map((row) => row.load))} />
                 {visibleTeams.length === 0 ? <p className="lh-team__note">{t('legalHub.teamEmpty')}</p> : (
@@ -661,12 +676,7 @@ export function LegalHubTeamBoard({ query, view, onViewChange }: {
                                 {t('legalHub.viewDetails')}
                             </button>
                         </div>
-                        {ledTeams.length > 0 ? (
-                            <button type="button" className="lh-temp__open" onClick={() => setTempOpen(true)}>
-                                <span aria-hidden>+</span>
-                                {t('legalHub.tempAdd')}
-                            </button>
-                        ) : null}
+
                     </div>
                 )}
                 {view === 'details' && visibleTeams.length > 0 ? (

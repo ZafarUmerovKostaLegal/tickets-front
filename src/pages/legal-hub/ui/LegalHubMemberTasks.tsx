@@ -5,9 +5,9 @@ import { isForbiddenError } from '@entities/time-tracking/api/domains/httpShared
 import type { TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/teamsAndLabor';
 import type { TimeTrackingUserRow } from '@entities/time-tracking/api/domains/usersAndRates';
 import { getLegalHubMemberStatsUrl, getLegalHubMemberUrl, routes } from '@shared/config';
+import { legalHubSectionUrl } from './legalHubShared';
 import { useCurrentUser } from '@shared/hooks';
 import { useI18n } from '@shared/i18n';
-import { AppBackButton } from '@shared/ui';
 import { tasksForMember } from './legalHubTasks';
 import { LegalHubMemberStats } from './LegalHubMemberStats';
 import { LegalHubTaskTable } from './LegalHubTaskTable';
@@ -118,7 +118,7 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
     }, [carried, user, userLoading]);
 
     const goBack = () => {
-        navigate(routes.legalHub, { state: { section: 'allTeam' } });
+        navigate(legalHubSectionUrl('allTeam'));
     };
     const openPane = (pane: 'stats' | 'reports') => {
         const url = pane === 'stats' ? getLegalHubMemberStatsUrl(memberId) : getLegalHubMemberUrl(memberId);
@@ -137,8 +137,19 @@ export function LegalHubMemberTasks({ memberId, query }: { memberId: number; que
 
     return (
         <div className="lh-member-page">
+            <header className="lh-member-page__head">
+                <nav className="lh-crumbs" aria-label={t('legalHub.allTeam')}>
+                    <button type="button" onClick={goBack}>{t('legalHub.memberBackToTeam')}</button>
+                    <span aria-hidden>/</span>
+                </nav>
+                {owner != null ? (
+                    <div className="lh-member-page__who">
+                        <span className="lh-member-page__avatar" aria-hidden>{owner.code}</span>
+                        <h1 className="lh-page__title">{owner.name}</h1>
+                    </div>
+                ) : null}
+            </header>
             <div className="lh-member-page__bar">
-                <AppBackButton onClick={goBack} />
                 <div className="lh-view" role="group" aria-label={t('legalHub.viewAria')}>
                     <button type="button" className={stats ? '' : 'is-active'} aria-pressed={!stats} onClick={() => openPane('reports')}>
                         {t('legalHub.memberReports')}

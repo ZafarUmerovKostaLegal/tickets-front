@@ -317,6 +317,32 @@ export const ruMessages: Messages = {
         myTasksFollowOn: 'Напоминание {date}',
         myTasksImportant: 'Важно',
         myTasksLate: 'Просрочено',
+        teamHint: 'Загрузка, статусы и задачи каждого сотрудника',
+        viewAsBanner: 'Вы смотрите данные: {name}',
+        viewAsReset: 'Вернуться к моим',
+        navBadgeMyTasks: 'Требуют внимания: {count}',
+        navBadgeQueue: 'На проверке: {count}',
+        navBadgeProjects: 'Под риском: {count}',
+        myTasksAttentionTitle: 'Требуют внимания',
+        myTasksAttentionHint: 'Начните с этих задач — у них истёк срок, есть замечания или пора напомнить',
+        myTasksAttentionOnly: 'Показать только их',
+        myTasksAttentionAll: 'Показать все задачи',
+        myTasksAttentionMore: 'и ещё {count}',
+        myTasksReviewLate: 'Срок проверки прошёл',
+        myTasksShown: 'Показано {shown} из {total}',
+        myTasksLocked: 'На проверке — статус меняет проверяющий',
+        queueOverdueShow: 'Показать',
+        queueOverdueAll: 'Показать все',
+        queueStatHint: 'Нажмите на карточку, чтобы отфильтровать',
+        projectsAll: 'Все',
+        projectsSegment: '{label}: {count}',
+        projectsNoDeadline: 'Сроков нет',
+        memberBackToTeam: 'Вся команда',
+        memberOpen: 'Открыть задачи',
+        taskSendFixes: 'Отправить исправления',
+        taskPassPartner: 'Передать партнёру',
+        taskApprove: 'Одобрить',
+        taskApprovedDone: 'Документ одобрен',
     },
     kostaLegalAi: {
         heroTitle: 'С чего начнём?',
@@ -1298,6 +1324,32 @@ export type Messages = {
         myTasksFollowOn: string;
         myTasksImportant: string;
         myTasksLate: string;
+        teamHint: string;
+        viewAsBanner: string;
+        viewAsReset: string;
+        navBadgeMyTasks: string;
+        navBadgeQueue: string;
+        navBadgeProjects: string;
+        myTasksAttentionTitle: string;
+        myTasksAttentionHint: string;
+        myTasksAttentionOnly: string;
+        myTasksAttentionAll: string;
+        myTasksAttentionMore: string;
+        myTasksReviewLate: string;
+        myTasksShown: string;
+        myTasksLocked: string;
+        queueOverdueShow: string;
+        queueOverdueAll: string;
+        queueStatHint: string;
+        projectsAll: string;
+        projectsSegment: string;
+        projectsNoDeadline: string;
+        memberBackToTeam: string;
+        memberOpen: string;
+        taskSendFixes: string;
+        taskPassPartner: string;
+        taskApprove: string;
+        taskApprovedDone: string;
     };
     vacationSchedule: {
         attention: Record<'toDecide' | 'goToDecide' | 'minePending' | 'goToMine', string>;

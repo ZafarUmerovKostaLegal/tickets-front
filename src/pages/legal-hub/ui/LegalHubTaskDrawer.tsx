@@ -162,13 +162,32 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
         return late ? `${text} · ${t('legalHub.taskOverdueMark')}` : text;
     };
     const stage = approved ? REVIEW_STAGES.length - 1 : stageIndex(status);
+    const inReview = approved || status === 'associate' || status === 'partner' || status === 'changes';
+    const primaryLabel: TranslationKey = approved
+        ? 'legalHub.taskApprovedDone'
+        : status === 'partner'
+            ? 'legalHub.taskApprove'
+            : status === 'associate'
+                ? 'legalHub.taskPassPartner'
+                : status === 'changes'
+                    ? 'legalHub.taskSendFixes'
+                    : 'legalHub.taskSendReview';
     const notifyReviewer = () => {
+        if (approved)
+            return;
         if (status === 'partner') {
             setApproved(true);
             return;
         }
-        setApproved(false);
-        setStatus(status === 'associate' || status === 'changes' ? 'partner' : 'associate');
+        if (status === 'associate') {
+            setStatus('partner');
+            return;
+        }
+        if (status === 'changes') {
+            setStatus(reviewer === 'partner' ? 'partner' : 'associate');
+            return;
+        }
+        setStatus(reviewer === 'partner' ? 'partner' : 'associate');
     };
     const withdraw = () => {
         setApproved(false);
@@ -325,7 +344,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                             onClick={() => setTab(item.id)}
                         >
                             {item.label}
-                            {item.id === 'files' ? <span>{item.count ?? 0}</span> : null}
+                            {item.count != null && item.count > 0 ? <span>{item.count}</span> : null}
                         </button>
                     ))}
                 </div>
@@ -657,19 +676,32 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                     ) : null}
                 </div>
                 <footer className="lh-drawer__foot">
-                    <button type="button" className="lh-drawer__send" onClick={notifyReviewer}>
-                        <IconBell />
-                        <span>{t('legalHub.taskNotifyReviewer')}</span>
+                    <button
+                        type="button"
+                        className={`lh-drawer__send${approved ? ' is-done' : ''}`}
+                        disabled={approved}
+                        onClick={notifyReviewer}
+                    >
+                        {approved ? <IconCheck /> : <IconBell />}
+                        <span>{t(primaryLabel)}</span>
                     </button>
                     <div className="lh-drawer__foot-row">
                         <button type="button" onClick={() => setTab('comments')}>{t('legalHub.taskAddComment')}</button>
-                        <button type="button" onClick={withdraw}>{t('legalHub.taskWithdraw')}</button>
+                        {inReview ? <button type="button" onClick={withdraw}>{t('legalHub.taskWithdraw')}</button> : null}
                     </div>
-                    <p className="lh-drawer__note">{t('legalHub.taskReviewerOnly')}</p>
+                    {status === 'partner' && !approved ? <p className="lh-drawer__note">{t('legalHub.taskReviewerOnly')}</p> : null}
                 </footer>
             </div>
         </div>,
         document.body,
+    );
+}
+
+function IconCheck() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M20 6 9 17l-5-5" />
+        </svg>
     );
 }
 
