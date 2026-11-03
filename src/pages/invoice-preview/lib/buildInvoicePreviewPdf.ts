@@ -1652,23 +1652,23 @@ function drawLegalInvoicePdfPage(
         const valueColor = BODY;
         const valW = fontBold.widthOfTextAtSize(value, DOC_FS);
         const labelStartY = y - DOC_FS + 1;
-        // Same left edge as SUBTOTAL. Shrink only if the date would otherwise
-        // run into the amount or wrap onto the next line.
+        // Keep the amount on the first line. A long due phrase wraps under it
+        // instead of running through the number.
         if (due) {
             const maxLabelW = Math.max(48, rightX - valW - valueGap - totalsLeft);
-            let size = DOC_FS;
-            let labelW = fontBold.widthOfTextAtSize(label, size);
-            while (labelW > maxLabelW && size > 6) {
-                size -= 0.25;
-                labelW = fontBold.widthOfTextAtSize(label, size);
+            const labelLines = splitTextLines(label, maxLabelW, DOC_FS, fontBold);
+            const blockH = Math.max(labelLines.length, 1) * (DOC_LH * 0.95);
+            let labelY = labelStartY;
+            for (const ln of labelLines) {
+                page.drawText(ln, {
+                    x: totalsLeft,
+                    y: labelY,
+                    size: DOC_FS,
+                    font: fontBold,
+                    color: labelColor,
+                });
+                labelY -= DOC_LH * 0.95;
             }
-            page.drawText(label, {
-                x: totalsLeft,
-                y: labelStartY,
-                size,
-                font: fontBold,
-                color: labelColor,
-            });
             page.drawText(value, {
                 x: rightX - valW,
                 y: labelStartY,
@@ -1676,7 +1676,7 @@ function drawLegalInvoicePdfPage(
                 font: fontBold,
                 color: valueColor,
             });
-            y -= DOC_LH * 0.95 + 3;
+            y -= blockH + 3;
             return;
         }
         const labelLines = splitTextLines(label, labelMaxW, DOC_FS, fontBold);
