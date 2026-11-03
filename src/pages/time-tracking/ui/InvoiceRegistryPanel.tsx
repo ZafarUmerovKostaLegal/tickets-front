@@ -39,6 +39,7 @@ import {
     type InvoiceRegistryYearMeta,
 } from '@entities/time-tracking/api/domains/invoiceRegistry';
 import { fetchCbuParsedForDate, peekCachedCbuParsedForDate, type CbuParsed } from '@entities/expenses/model/cbuRates';
+import { exportInvoiceRegistryExcel } from '@entities/time-tracking/lib/exportInvoiceRegistryExcel';
 import { buildExistingInvoicePdfFile, downloadExistingInvoicePdf } from '../lib/invoicePageShared';
 import { useI18n } from '@shared/i18n';
 import { useAppDialog } from '@shared/ui';
@@ -860,6 +861,7 @@ export function InvoiceRegistryPanel({
     const [dateTo, setDateTo] = useState('');
     const [months, setMonths] = useState<Set<number>>(() => new Set());
     const [fullscreen, setFullscreen] = useState(false);
+    const [exportBusy, setExportBusy] = useState(false);
     const sheet = useMemo(() => getInvoiceRegistrySheet(year), [year]);
     const columns = sheet.columns;
     const columnKeys = useMemo(
@@ -1173,6 +1175,48 @@ export function InvoiceRegistryPanel({
         months,
     }), [rows, search, columnKeys, partners, clients, currencies, numberQuery, dateFrom, dateTo, months]);
 
+    const yearExportLabel = year === 'checklist'
+        ? t('timeTrackingPage.invoices.registry.checklistTab')
+        : year === '2026-system'
+            ? t('timeTrackingPage.invoices.registry.systemTab')
+            : year;
+
+    const handleExportExcel = useCallback(async () => {
+        if (exportBusy)
+            return;
+        if (filteredRows.length === 0) {
+            showToast({ message: t('timeTrackingPage.invoices.registry.exportExcelEmpty'), variant: 'warning' });
+            return;
+        }
+        setExportBusy(true);
+        try {
+            const file = await exportInvoiceRegistryExcel({
+                rows: filteredRows,
+                columns,
+                sheetName: sheet.sheetName,
+                yearLabel: yearExportLabel,
+                usdRates,
+                usdFailed,
+            });
+            showToast({
+                message: t('timeTrackingPage.invoices.registry.exportExcelDone').replace('{file}', file),
+                variant: 'info',
+            });
+        }
+        catch (e) {
+            const msg = e instanceof Error && e.message === 'empty'
+                ? t('timeTrackingPage.invoices.registry.exportExcelEmpty')
+                : (e instanceof Error ? e.message : t('timeTrackingPage.invoices.registry.exportExcelFailed'));
+            showToast({
+                message: msg || t('timeTrackingPage.invoices.registry.exportExcelFailed'),
+                variant: 'error',
+            });
+        }
+        finally {
+            setExportBusy(false);
+        }
+    }, [columns, exportBusy, filteredRows, sheet.sheetName, t, usdFailed, usdRates, yearExportLabel]);
+
     const toggleCurrency = (code: string) => {
         setCurrencies((prev) => {
             const next = new Set(prev);
@@ -1461,6 +1505,19 @@ export function InvoiceRegistryPanel({
                             )}
                         </>
                     )}
+                    <button
+                        type="button"
+                        className="tt-reports__btn tt-reports__btn--outline"
+                        onClick={() => void handleExportExcel()}
+                        disabled={loading || exportBusy || filteredRows.length === 0}
+                        title={exportBusy
+                            ? t('timeTrackingPage.invoices.registry.exportExcelBusy')
+                            : t('timeTrackingPage.invoices.registry.exportExcel')}
+                    >
+                        {exportBusy
+                            ? t('timeTrackingPage.invoices.registry.exportExcelBusy')
+                            : t('timeTrackingPage.invoices.registry.exportExcel')}
+                    </button>
                     <button
                         type="button"
                         className="tt-inv-reg__fullscreen-btn"

@@ -65,7 +65,7 @@ const CURRENCY_OPTIONS: TmOpt[] = TIME_TRACKING_PROJECT_CURRENCIES.map((c) => ({
 
 function buildProjectTypeOptions(t: ReturnType<typeof useI18n>['t']): TmOpt[] {
   return [
-    { id: 'time_and_materials', label: t('timeTrackingPage.projects.modal.projectTypes.timeAndMaterials'), search: 'time materials T&M tm' },
+    { id: 'time_and_materials', label: t('timeTrackingPage.projects.modal.projectTypes.timeAndMaterials'), search: 'time materials T&M tm предельное вознаграждение capped fee' },
     { id: 'fixed_fee', label: t('timeTrackingPage.projects.modal.projectTypes.fixedFee'), search: 'fixed fee' },
     { id: 'hour_package', label: t('timeTrackingPage.projects.modal.projectTypes.hourPackage'), search: 'hour package monthly hours пакет часов' },
     { id: 'non_billable', label: t('timeTrackingPage.projects.modal.projectTypes.nonBillable'), search: 'non billable' },

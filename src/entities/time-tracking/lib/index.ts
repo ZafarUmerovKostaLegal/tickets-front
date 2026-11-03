@@ -13,6 +13,7 @@ export * from './timeEntryEditUnlockStorage';
 export * from './reportSnapshotOverrides';
 export * from './exportPartnerConfirmedSnapshotExcel';
 export * from './exportProjectsListExcel';
+export * from './exportInvoiceRegistryExcel';
 export * from './projectsFiltersStorage';
 export * from './reportEmployeeInitials';
 export * from './reportEmployeePosition';

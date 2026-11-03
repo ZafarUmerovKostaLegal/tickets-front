@@ -402,7 +402,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             archived: 'Archived',
         },
         budgetTypes: {
-            timeAndMaterials: 'Time and materials (T&M)',
+            timeAndMaterials: 'Capped fee',
             fixedRate: 'Fixed fee',
             noBudget: 'Non-billable',
             hourPackage: 'Hour package (N hrs/mo for $X)',
@@ -541,7 +541,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             save: 'Save',
             create: 'Create',
             projectTypes: {
-                timeAndMaterials: 'Time and materials (T&M)',
+                timeAndMaterials: 'Capped fee',
                 fixedFee: 'Fixed fee',
                 nonBillable: 'Non-billable',
                 hourPackage: 'Hour package (N hrs/mo for $X)',
@@ -660,7 +660,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             noFilterMatch: 'Nothing matches the filter.',
         },
         budgetTypes: {
-            timeAndMaterials: 'Time and materials (T&M)',
+            timeAndMaterials: 'Capped fee',
             fixedRate: 'Fixed fee',
             noBudget: 'Non-billable',
             hourPackage: 'Hour package (N hrs/mo for $X)',
@@ -1368,6 +1368,11 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             rowN: 'row {n}',
             enterFullscreen: 'Expand table to full screen',
             exitFullscreen: 'Exit full screen',
+            exportExcel: 'Export to Excel',
+            exportExcelBusy: 'Building Excel…',
+            exportExcelDone: 'Downloaded {file}',
+            exportExcelEmpty: 'No rows to export for the current filter',
+            exportExcelFailed: 'Could not export the registry to Excel',
         },
         statistics: {
             intro: 'Partner profit and revenue from the invoice registry. Remuneration is taken from the advance fee column; amounts are not converted across currencies.',

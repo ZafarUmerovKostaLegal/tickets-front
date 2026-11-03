@@ -400,7 +400,7 @@ export const timeTrackingPageExtraMessages = {
             archived: 'Архив',
         },
         budgetTypes: {
-            timeAndMaterials: 'Время и материалы (T&M)',
+            timeAndMaterials: 'Предельное вознаграждение',
             fixedRate: 'Фиксированный гонорар',
             noBudget: 'Не оплачиваемый',
             hourPackage: 'Пакет часов (N ч/мес за $X)',
@@ -539,7 +539,7 @@ export const timeTrackingPageExtraMessages = {
             save: 'Сохранить',
             create: 'Создать',
             projectTypes: {
-                timeAndMaterials: 'Время и материалы (T&M)',
+                timeAndMaterials: 'Предельное вознаграждение',
                 fixedFee: 'Фиксированный гонорар',
                 nonBillable: 'Не оплачиваемый',
                 hourPackage: 'Пакет часов (N ч/мес за $X)',
@@ -658,7 +658,7 @@ export const timeTrackingPageExtraMessages = {
             noFilterMatch: 'Ничего не найдено по фильтру.',
         },
         budgetTypes: {
-            timeAndMaterials: 'Время и материалы (T&M)',
+            timeAndMaterials: 'Предельное вознаграждение',
             fixedRate: 'Фиксированный гонорар',
             noBudget: 'Не оплачиваемый',
             hourPackage: 'Пакет часов (N ч/мес за $X)',
@@ -1366,6 +1366,11 @@ export const timeTrackingPageExtraMessages = {
             rowN: 'строка {n}',
             enterFullscreen: 'Развернуть таблицу на весь экран',
             exitFullscreen: 'Свернуть таблицу',
+            exportExcel: 'Выгрузить в Excel',
+            exportExcelBusy: 'Формирование Excel…',
+            exportExcelDone: 'Скачан файл {file}',
+            exportExcelEmpty: 'Нет строк для выгрузки по текущему фильтру',
+            exportExcelFailed: 'Не удалось выгрузить реестр в Excel',
         },
         statistics: {
             intro: 'Прибыль и выручка по партнёрам на основе реестра инвойсов. Вознаграждение берётся из колонки «Пред.вознаграждение», суммы по валютам не пересчитываются.',
