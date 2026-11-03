@@ -95,9 +95,6 @@ function buildBudgetTypeOptions(t: ReturnType<typeof useI18n>['t']): TmOpt[] {
 
 type SoftProjectBudgetType = 'hourly_rate' | 'no_budget' | 'total_project_fees' | 'total_project_hours' | 'fees_and_hours';
 
-function softBudgetType(projectType: string | null | undefined): SoftProjectBudgetType {
-  return projectType === 'time_and_materials' ? 'hourly_rate' : 'no_budget';}
-
 function isSoftBudgetType(budgetType: string): boolean {
   return budgetType === 'hourly_rate' || budgetType === 'no_budget';}
 const DEFAULT_PROJECT_TASK_SEED: Array<{
@@ -185,7 +182,7 @@ function rowToBudgetFormSlice(row: TimeManagerClientProjectRow): Pick<ProjectFor
       return { budgetType: 'total_project_fees', budgetAmount: aStr, budgetHours: '', progressBudgetAmount: '' };
     if (fromFixed)
       return { budgetType: 'total_project_fees', budgetAmount: fromFixed, budgetHours: '', progressBudgetAmount: '' };
-    return { budgetType: softBudgetType(row.project_type), budgetAmount: '', budgetHours: '', progressBudgetAmount: '' };
+    return { budgetType: 'no_budget', budgetAmount: '', budgetHours: '', progressBudgetAmount: '' };
   }
 
   if (t === 'hours_and_money' || t === 'hours_and_fees' || t === 'fees_and_hours') {
@@ -195,7 +192,7 @@ function rowToBudgetFormSlice(row: TimeManagerClientProjectRow): Pick<ProjectFor
       return { budgetType: 'total_project_hours', budgetAmount: '', progressBudgetAmount: '', budgetHours: hStr };
     if (hasHardMoney || hasProgMoney)
       return { budgetType: 'total_project_fees', budgetAmount: aStr, budgetHours: '', progressBudgetAmount: pStr };
-    return { budgetType: softBudgetType(row.project_type), budgetAmount: '', budgetHours: '', progressBudgetAmount: '' };
+    return { budgetType: 'no_budget', budgetAmount: '', budgetHours: '', progressBudgetAmount: '' };
   }
   if (t === 'total_project_fees' || t === 'money')
     return { budgetType: 'total_project_fees', budgetAmount: aStr, budgetHours: '', progressBudgetAmount: pStr };
@@ -207,14 +204,14 @@ function rowToBudgetFormSlice(row: TimeManagerClientProjectRow): Pick<ProjectFor
     return { budgetType: 'no_budget', budgetAmount: aStr, budgetHours: hStr, progressBudgetAmount: pStr };
 
   if (!hasHours && !hasHardMoney && hasProgMoney)
-    return { budgetType: softBudgetType(row.project_type), budgetAmount: '', budgetHours: '', progressBudgetAmount: pStr };
+    return { budgetType: 'no_budget', budgetAmount: '', budgetHours: '', progressBudgetAmount: pStr };
   if (hasHours && (hasHardMoney || hasProgMoney))
     return { budgetType: 'fees_and_hours', budgetAmount: aStr, progressBudgetAmount: pStr, budgetHours: hStr };
   if (hasHours)
     return { budgetType: 'total_project_hours', budgetAmount: '', progressBudgetAmount: '', budgetHours: hStr };
   if (hasHardMoney || hasProgMoney)
     return { budgetType: 'total_project_fees', budgetAmount: aStr, budgetHours: '', progressBudgetAmount: pStr };
-  return { budgetType: softBudgetType(row.project_type), budgetAmount: '', budgetHours: '', progressBudgetAmount: '' };
+  return { budgetType: 'no_budget', budgetAmount: '', budgetHours: '', progressBudgetAmount: '' };
 }
 
 type ProjectFormState = {
@@ -1206,11 +1203,7 @@ export function ClientProjectModal({ mode, fixedClientId, clientsForPicker, init
       <label className="tt-tm-label" id={`${uid}-ptype-lbl`} htmlFor={`${uid}-ptype`}>
         {t('timeTrackingPage.projects.modal.projectType')}
       </label>
-      <SearchableSelect<TmOpt> className="tt-tm-dd" buttonClassName="tt-tm-dd__btn" buttonId={`${uid}-ptype`} value={form.projectType} items={projectTypeOptions} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={getTmOptSearch} onSelect={(o) => setForm((f) => {
-        const nextType = o.id as ProjectFormState['projectType'];
-        const nextBudget = isSoftBudgetType(f.budgetType) ? softBudgetType(nextType) : f.budgetType;
-        return { ...f, projectType: nextType, budgetType: nextBudget };
-      })} placeholder={t('timeTrackingPage.projects.modal.projectTypePlaceholder')} emptyListText={t('timeTrackingPage.projects.modal.noOptions')} noMatchText={t('timeTrackingPage.common.notFound')} disabled={saving} portalDropdown portalZIndex={TM_DD_PORTAL_Z} portalMinWidth={300} aria-labelledby={`${uid}-ptype-lbl`} />
+      <SearchableSelect<TmOpt> className="tt-tm-dd" buttonClassName="tt-tm-dd__btn" buttonId={`${uid}-ptype`} value={form.projectType} items={projectTypeOptions} getOptionValue={(o) => o.id} getOptionLabel={(o) => o.label} getSearchText={getTmOptSearch} onSelect={(o) => setForm((f) => ({ ...f, projectType: o.id as ProjectFormState['projectType'] }))} placeholder={t('timeTrackingPage.projects.modal.projectTypePlaceholder')} emptyListText={t('timeTrackingPage.projects.modal.noOptions')} noMatchText={t('timeTrackingPage.common.notFound')} disabled={saving} portalDropdown portalZIndex={TM_DD_PORTAL_Z} portalMinWidth={300} aria-labelledby={`${uid}-ptype-lbl`} />
     </div>
 
     <div className="tt-tm-field">
