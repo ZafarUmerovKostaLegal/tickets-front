@@ -3802,9 +3802,9 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 .lh-my {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
+  gap: 0.55rem;
   min-width: 0;
-  margin-top: 0.85rem;
+  margin-top: 0.15rem;
 }
 
 .lh-my__toolbar {
@@ -3900,9 +3900,10 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 
 .lh-my__controls {
   display: flex;
+  flex: 0 0 auto;
   flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 0.7rem;
+  align-items: center;
+  gap: 0.55rem;
 }
 
 .lh-my__filters {
@@ -3914,16 +3915,22 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
 }
 
 .lh-my__filter {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  width: 10.5rem;
+  width: 11rem;
 }
 
 .lh-my__filter > span {
-  color: var(--app-muted);
-  font-size: 0.7rem;
-  font-weight: 700;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .lh-my__check {
@@ -6297,12 +6304,7 @@ body[data-theme='dark'] .lh-page {
 }
 
 @media (min-width: 861px) {
-  /* Leave the kanban enough room when the attention block is shown. */
   .lh-my:has(.lh-my__board) {
-    overflow-y: auto;
-  }
-
-  .lh-my:has(.lh-my__board) .lh-my__board {
-    min-height: 22rem;
+    overflow: hidden;
   }
 }

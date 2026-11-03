@@ -4,7 +4,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
-import { ATTENTION_LABEL, attentionRank, attentionReason, DueBadge, HeadActions, type AttentionReason } from './legalHubShared';
+import { DueBadge, HeadActions } from './legalHubShared';
 import {
     HUB_TASKS,
     MOCK_DONE_IDS,
@@ -120,8 +120,6 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
     const [priority, setPriority] = useState('');
     const [dates, setDates] = useState('');
     const [showDone, setShowDone] = useState(false);
-    const [stat, setStat] = useState<'' | 'wait' | 'review' | 'changes' | 'due'>('');
-    const [focus, setFocus] = useState(false);
     const [collapsed, setCollapsed] = useState<string[]>(['infrastructure', 'bess', 'healthcare']);
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
@@ -132,15 +130,6 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
-    const attention = useMemo(
-        () => tasks
-            .flatMap((task) => {
-                const reason = task.done ? null : attentionReason(task);
-                return reason == null ? [] : [{ task, reason }];
-            })
-            .sort((a, b) => attentionRank(a.reason) - attentionRank(b.reason) || a.task.clientOn.localeCompare(b.task.clientOn)),
-        [tasks],
-    );
     const listed = useMemo(() => tasks.filter((task) => {
         if (project && task.project !== project)
             return false;
@@ -154,30 +143,15 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
             return false;
         if (dates === 'week' && (dayDelta(task.clientOn) < 0 || dayDelta(task.clientOn) > 7))
             return false;
-        if (stat === 'wait' && task.status !== 'wait')
-            return false;
-        if (stat === 'review' && task.status !== 'associate' && task.status !== 'partner')
-            return false;
-        if (stat === 'changes' && task.status !== 'changes')
-            return false;
-        if (stat === 'due' && (dayDelta(task.clientOn) < 0 || dayDelta(task.clientOn) > 7))
-            return false;
-        if (focus && !attention.some((item) => item.task.id === task.id))
-            return false;
         if (!needle)
             return true;
         const owner = PERSON_LABEL[task.owner].name;
         const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer].name : '';
         return `${task.title} ${PROJECT_LABEL[task.project]} ${task.workstream} ${owner} ${reviewer}`.toLowerCase().includes(needle);
-    }), [attention, dates, focus, needle, priority, project, stat, tasks, waiting]);
+    }), [dates, needle, priority, project, tasks, waiting]);
     const visible = useMemo(() => listed.filter((task) => showDone || !task.done), [listed, showDone]);
 
-    const activeCount = tasks.filter((task) => !task.done).length;
-    const waitCount = tasks.filter((task) => task.status === 'wait' && !task.done).length;
-    const reviewCount = tasks.filter((task) => (task.status === 'associate' || task.status === 'partner') && !task.done).length;
-    const changesCount = tasks.filter((task) => task.status === 'changes' && !task.done).length;
-    const dueCount = tasks.filter((task) => !task.done && dayDelta(task.clientOn) >= 0 && dayDelta(task.clientOn) <= 7).length;
-    const hasFilters = Boolean(project || waiting || priority || dates || showDone || stat || focus);
+    const hasFilters = Boolean(project || waiting || priority || dates || showDone);
     const totalCount = tasks.filter((task) => showDone || !task.done).length;
     const resetFilters = () => {
         setProject('');
@@ -185,8 +159,6 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
         setPriority('');
         setDates('');
         setShowDone(false);
-        setStat('');
-        setFocus(false);
     };
     const projectOptions = TASK_PROJECTS.map((id) => ({ id, label: PROJECT_LABEL[id] }));
     const peopleOptions = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].name }));
@@ -235,21 +207,6 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
                     {t('legalHub.myTasksNew')}
                 </button>
             </HeadActions>
-            {attention.length > 0 ? (
-                <AttentionPanel
-                    items={attention}
-                    focus={focus}
-                    onToggleFocus={() => setFocus((value) => !value)}
-                    onOpen={setOpenId}
-                />
-            ) : null}
-            <ul className="lh-my__stats">
-                <StatButton label={t('legalHub.statTasks')} value={activeCount} tone="accent" pressed={stat === ''} onClick={() => setStat('')} />
-                <StatButton label={t('legalHub.statusWaiting')} value={waitCount} tone="wait" pressed={stat === 'wait'} onClick={() => setStat((current) => current === 'wait' ? '' : 'wait')} />
-                <StatButton label={t('legalHub.statReview')} value={reviewCount} tone="review" pressed={stat === 'review'} onClick={() => setStat((current) => current === 'review' ? '' : 'review')} />
-                <StatButton label={t('legalHub.statusChanges')} value={changesCount} tone="changes" pressed={stat === 'changes'} onClick={() => setStat((current) => current === 'changes' ? '' : 'changes')} />
-                <StatButton label={t('legalHub.statDue')} value={dueCount} tone="due" pressed={stat === 'due'} onClick={() => setStat((current) => current === 'due' ? '' : 'due')} />
-            </ul>
             <div className="lh-my__controls">
                 <div className="lh-view" role="group" aria-label={t('legalHub.viewAria')}>
                     <button type="button" className={mode === 'project' ? 'is-active' : ''} aria-pressed={mode === 'project'} onClick={() => setMode('project')}>
@@ -294,7 +251,6 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
                     ) : null}
                 </div>
             ) : null}
-            {mode === 'status' && visible.length > 0 ? <p className="lh-my__hint">{t('legalHub.myTasksDragHint')}</p> : null}
             {mode === 'status' && visible.length > 0 ? (
                 <div className={`lh-my__board${extraColumns.length > 0 ? ' is-wide' : ''}`}>
                     {COLUMNS.map((column) => (
@@ -479,71 +435,6 @@ function CollapseIcon() {
             <path d="M10 8l-4 4 4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
             <path d="M14 8l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-    );
-}
-
-function AttentionPanel({ items, focus, onToggleFocus, onOpen }: {
-    items: { task: MineTask; reason: AttentionReason }[];
-    focus: boolean;
-    onToggleFocus: () => void;
-    onOpen: (id: string) => void;
-}) {
-    const { t, locale } = useI18n();
-    const shown = items.slice(0, 4);
-    const rest = items.length - shown.length;
-    return (
-        <section className="lh-attn" aria-labelledby="lh-attn-title">
-            <header className="lh-attn__head">
-                <span className="lh-attn__icon" aria-hidden>!</span>
-                <div className="lh-attn__text">
-                    <h2 id="lh-attn-title">
-                        {t('legalHub.myTasksAttentionTitle')}
-                        <em>{items.length}</em>
-                    </h2>
-                    <p>{t('legalHub.myTasksAttentionHint')}</p>
-                </div>
-                <button type="button" className={`lh-attn__toggle${focus ? ' is-on' : ''}`} aria-pressed={focus} onClick={onToggleFocus}>
-                    {focus ? t('legalHub.myTasksAttentionAll') : t('legalHub.myTasksAttentionOnly')}
-                </button>
-            </header>
-            <ul className="lh-attn__list">
-                {shown.map(({ task, reason }) => (
-                    <li key={task.id}>
-                        <button type="button" className="lh-attn__item" onClick={() => onOpen(task.id)}>
-                            <span className={`lh-attn__reason lh-attn__reason--${reason}`}>{t(ATTENTION_LABEL[reason])}</span>
-                            <span className="lh-attn__title">{task.title}</span>
-                            <span className="lh-attn__meta">
-                                {PROJECT_LABEL[task.project]} · {formatCardDate(task.clientOn, locale)}
-                            </span>
-                        </button>
-                    </li>
-                ))}
-            </ul>
-            {rest > 0 && !focus ? (
-                <button type="button" className="lh-attn__more" onClick={onToggleFocus}>
-                    {t('legalHub.myTasksAttentionMore').replace('{count}', String(rest))}
-                </button>
-            ) : null}
-        </section>
-    );
-}
-
-function StatButton({ label, value, tone, pressed, onClick }: {
-    label: string;
-    value: number;
-    tone: string;
-    pressed: boolean;
-    onClick: () => void;
-}) {
-    return (
-        <li>
-            <button type="button" className={`lh-stat lh-stat--${tone}${pressed ? ' is-selected' : ''}`} aria-pressed={pressed} onClick={onClick}>
-                <span className="lh-stat__body">
-                    <strong className="lh-stat__value">{value}</strong>
-                    <span className="lh-stat__label">{label}</span>
-                </span>
-            </button>
-        </li>
     );
 }
 

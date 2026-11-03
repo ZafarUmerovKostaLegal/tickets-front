@@ -438,7 +438,7 @@ function LegalHubPageBody() {
                                             </nav>
                                         ) : null}
                                         <h1 className="lh-page__title">{openProjectId != null ? PROJECT_TITLE[openProjectId] : t(active.labelKey)}</h1>
-                                        {openProjectId == null ? <p className="lh-page__hint">{t(SECTION_HINT[section])}</p> : null}
+                                        {openProjectId == null && section !== 'myTasks' ? <p className="lh-page__hint">{t(SECTION_HINT[section])}</p> : null}
                                     </div>
                                     <div className="lh-page__head-actions" ref={setActionsSlot} />
                                 </header>
