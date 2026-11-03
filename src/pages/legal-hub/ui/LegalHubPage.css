@@ -5803,6 +5803,23 @@ body[data-theme='dark'] .lh-page {
   background: var(--app-success);
 }
 
+.lh-my--docket .lh-my__dot--later {
+  background: var(--app-meta);
+}
+
+.lh-my--docket .lh-my__dot--overdue {
+  background: var(--app-error);
+}
+
+.lh-my--docket .lh-my__dot--today,
+.lh-my--docket .lh-my__dot--tomorrow {
+  background: var(--app-warning);
+}
+
+.lh-my--docket .lh-my__dot--week {
+  background: var(--app-accent);
+}
+
 .lh-my--docket .lh-my__lock {
   display: inline-flex;
   margin-left: auto;

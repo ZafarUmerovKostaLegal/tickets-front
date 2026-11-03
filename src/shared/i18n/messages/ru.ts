@@ -326,6 +326,16 @@ export const ruMessages: Messages = {
         dlSoon: 'Сегодня и завтра',
         dlWeek: 'На этой неделе',
         dlLater: 'Позже',
+        queueDueOverdue: 'Просрочено',
+        queueDueToday: 'Сегодня',
+        queueDueTomorrow: 'Завтра',
+        queueDueWeek: 'На этой неделе',
+        queueDueLater: 'Позже',
+        queueDueSubOverdue: 'Срок клиента уже прошёл',
+        queueDueSubToday: 'Сдать сегодня',
+        queueDueSubTomorrow: 'Сдать завтра',
+        queueDueSubWeek: 'Осталось от 2 до 7 дней',
+        queueDueSubLater: 'Дальше недели',
         myTasksWaitClient: 'Ожидание клиента',
         myTasksWaitGov: 'Ожидание госорганов',
         myTasksSubWaitClient: 'Документы, ответы, подписи от клиента',
@@ -1379,6 +1389,16 @@ export type Messages = {
         dlSoon: string;
         dlWeek: string;
         dlLater: string;
+        queueDueOverdue: string;
+        queueDueToday: string;
+        queueDueTomorrow: string;
+        queueDueWeek: string;
+        queueDueLater: string;
+        queueDueSubOverdue: string;
+        queueDueSubToday: string;
+        queueDueSubTomorrow: string;
+        queueDueSubWeek: string;
+        queueDueSubLater: string;
         myTasksWaitClient: string;
         myTasksWaitGov: string;
         myTasksSubWaitClient: string;

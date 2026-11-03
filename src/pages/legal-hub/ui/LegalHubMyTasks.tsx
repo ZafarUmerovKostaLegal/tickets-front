@@ -91,6 +91,21 @@ function isClientWait(task: Pick<HubTask, 'waitingFor'>): boolean {
     return who.includes('client') || who.includes('клиент');
 }
 
+export type DueColumn = 'overdue' | 'today' | 'tomorrow' | 'week' | 'later';
+
+function dueColumnOf(task: Pick<MineTask, 'clientOn'>): DueColumn {
+    const delta = dayDelta(task.clientOn);
+    if (delta < 0)
+        return 'overdue';
+    if (delta === 0)
+        return 'today';
+    if (delta === 1)
+        return 'tomorrow';
+    if (delta <= 7)
+        return 'week';
+    return 'later';
+}
+
 export function columnOf(task: Pick<MineTask, 'status' | 'waitingFor' | 'done'>): BoardColumn {
     if (task.done)
         return 'done';
@@ -171,7 +186,7 @@ export function LegalHubMyTasks({
 
     const scoped = useMemo(() => tasks.filter((task) => project == null || task.project === project), [project, tasks]);
     const visible = useMemo(() => scoped.filter((task) => {
-        if (layout === 'list' && mode === 'queue' && task.status !== 'associate' && task.status !== 'partner')
+        if (mode === 'queue' && (task.done || (task.status !== 'associate' && task.status !== 'partner')))
             return false;
         if (layout === 'list' && task.done)
             return false;
@@ -275,6 +290,50 @@ export function LegalHubMyTasks({
         );
     }
 
+    if (mode === 'queue') {
+        const dueColumns: { id: DueColumn; label: TranslationKey; hint: TranslationKey }[] = [
+            { id: 'overdue', label: 'legalHub.queueDueOverdue', hint: 'legalHub.queueDueSubOverdue' },
+            { id: 'today', label: 'legalHub.queueDueToday', hint: 'legalHub.queueDueSubToday' },
+            { id: 'tomorrow', label: 'legalHub.queueDueTomorrow', hint: 'legalHub.queueDueSubTomorrow' },
+            { id: 'week', label: 'legalHub.queueDueWeek', hint: 'legalHub.queueDueSubWeek' },
+            { id: 'later', label: 'legalHub.queueDueLater', hint: 'legalHub.queueDueSubLater' },
+        ];
+        return (
+            <div className="lh-my lh-my--docket">
+                <div className="lh-my__board">
+                    {dueColumns.map((column) => (
+                        <BoardColumnView
+                            key={column.id}
+                            id={column.id}
+                            title={t(column.label)}
+                            hint={t(column.hint)}
+                            review={false}
+                            cards={visible
+                                .filter((task) => dueColumnOf(task) === column.id)
+                                .sort((a, b) => a.clientOn.localeCompare(b.clientOn))}
+                            droppable={false}
+                            dragging={null}
+                            adding={false}
+                            draft=""
+                            onDraft={() => undefined}
+                            onStartAdd={() => undefined}
+                            onCancelAdd={() => undefined}
+                            onAdd={() => undefined}
+                            canAdd={false}
+                            onMove={() => undefined}
+                            onDragStart={() => undefined}
+                            onDragEnd={() => undefined}
+                            onOpen={setOpenId}
+                        />
+                    ))}
+                </div>
+                {openTask ? (
+                    <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} />
+                ) : null}
+            </div>
+        );
+    }
+
     return (
         <div className="lh-my lh-my--docket">
             <HeadActions>
@@ -337,7 +396,7 @@ export function LegalHubMyTasks({
 }
 
 function BoardColumnView({ id, title, hint, review, cards, droppable, dragging, adding, draft, onDraft, onStartAdd, onCancelAdd, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen }: {
-    id: BoardColumn;
+    id: string;
     title: string;
     hint: string | null;
     review: boolean;

@@ -183,12 +183,21 @@ export function applyLinkedTaskNames(
     return changed ? { ...report, projects } : report;
 }
 
+export type CombinedProjectSummaryRow = {
+    initials: string;
+    name: string;
+    title: string;
+    hours: number;
+    rate: number;
+    amount: number;
+};
+
 export type CombinedReportSnapshot = {
     feeTitle: string;
     currency: string;
     /** perProject: each project is its own report page. Omitted means one merged table. */
     layout?: CombinedReportLayout;
-    projects: Array<{ name: string; pageTitle?: string; lines: CombinedReportLine[] }>;
+    projects: Array<{ name: string; pageTitle?: string; lines: CombinedReportLine[]; summary?: CombinedProjectSummaryRow[] }>;
     people: Array<{
         initials: string;
         name: string;
@@ -331,6 +340,56 @@ export function buildCombinedReportSnapshot(input: {
         totalHours: input.totalHours,
         totalFees: input.totalFees,
         totalExpenses: input.totalExpenses,
+    };
+}
+
+/** Per-project summary. Saved rows win; otherwise the table is rolled up from time lines. */
+export function projectSummaryRows(report: CombinedReportSnapshot, projectIndex: number): CombinedProjectSummaryRow[] {
+    const project = report.projects[projectIndex];
+    if (!project)
+        return [];
+    if (project.summary && project.summary.length > 0)
+        return project.summary;
+    const peopleByKey = new Map<string, CombinedProjectSummaryRow>();
+    for (const line of project.lines) {
+        const key = `${line.initials || ''}|${line.user}`;
+        const prev = peopleByKey.get(key) ?? {
+            initials: line.initials || line.user,
+            name: line.user,
+            title: report.people.find((person) => person.initials === line.initials || person.name === line.user)?.title || '—',
+            hours: 0,
+            rate: line.rate ?? (line.hours > 0 ? line.amount / line.hours : 0),
+            amount: 0,
+        };
+        prev.hours += line.hours;
+        prev.amount += line.amount;
+        peopleByKey.set(key, prev);
+    }
+    return [...peopleByKey.values()].map((row) => ({
+        ...row,
+        rate: row.hours > 0 ? row.amount / row.hours : row.rate,
+    }));
+}
+
+export function patchProjectSummary(
+    report: CombinedReportSnapshot,
+    projectIndex: number,
+    rowIndex: number,
+    patch: Partial<CombinedProjectSummaryRow>,
+): CombinedReportSnapshot {
+    const rows = projectSummaryRows(report, projectIndex).map((row, index) => {
+        if (index !== rowIndex)
+            return row;
+        const next = { ...row, ...patch };
+        if ((patch.hours != null || patch.rate != null) && patch.amount == null)
+            next.amount = next.hours * next.rate;
+        return next;
+    });
+    return {
+        ...report,
+        projects: report.projects.map((project, index) => (
+            index === projectIndex ? { ...project, summary: rows } : project
+        )),
     };
 }
 

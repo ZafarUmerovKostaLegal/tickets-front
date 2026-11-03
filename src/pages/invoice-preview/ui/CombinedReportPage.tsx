@@ -2,8 +2,8 @@ import { useState, type ChangeEvent } from 'react';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from '../lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
 import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
+import { patchProjectSummary, projectSummaryRows, type CombinedReportLine, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import { formatTimeReportHours } from '../lib/invoiceTimeReportModel';
-import type { CombinedReportLine, CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import './InvoiceTimeReportPage.css';
 
 type Props = {
@@ -178,23 +178,11 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
             || (a.initials || a.user).localeCompare(b.initials || b.user));
         const visibleLines = projectLines.slice(slice.timeFrom, slice.timeTo);
         const title = project?.pageTitle?.trim() || `${report.feeTitle} (${project?.name ?? ''})`;
-        const peopleByKey = new Map<string, { initials: string; name: string; title: string; hours: number; amount: number }>();
-        for (const line of projectLines) {
-            const key = `${line.initials || ''}|${line.user}`;
-            const prev = peopleByKey.get(key) ?? {
-                initials: line.initials || line.user,
-                name: line.user,
-                title: report.people.find((person) => person.initials === line.initials || person.name === line.user)?.title || '—',
-                hours: 0,
-                amount: 0,
-            };
-            prev.hours += line.hours;
-            prev.amount += line.amount;
-            peopleByKey.set(key, prev);
-        }
-        const projectPeople = [...peopleByKey.values()];
+        const projectPeople = projectSummaryRows(report, slice.projectIndex);
         const projectHours = projectLines.reduce((sum, line) => sum + line.hours, 0);
         const projectFees = projectLines.reduce((sum, line) => sum + line.amount, 0);
+        const summaryHours = projectPeople.reduce((sum, person) => sum + person.hours, 0);
+        const summaryFees = projectPeople.reduce((sum, person) => sum + person.amount, 0);
         return (
             <div className={`tt-inv-tr tt-inv-tr--sheet${editable ? ' tt-inv-tr--editable' : ''}`}>
                 <div className="tt-inv-tr__top">
@@ -274,23 +262,23 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                 </tr>
                             </thead>
                             <tbody className="tt-inv-tr__tbody">
-                                {projectPeople.map((person) => (
-                                    <tr key={person.initials + person.name}>
-                                        <td>{person.initials}</td>
-                                        <td>{person.name}</td>
-                                        <td>{person.title}</td>
-                                        <td className="tt-inv-tr__cell--num">{formatTimeReportHours(person.hours)}</td>
-                                        <td className="tt-inv-tr__cell--num">{formatTimeReportHours(person.hours > 0 ? person.amount / person.hours : 0)}</td>
-                                        <td className="tt-inv-tr__cell--num">{formatTimeReportHours(person.amount)}</td>
+                                {projectPeople.map((person, index) => (
+                                    <tr key={`${index}-${person.initials}`}>
+                                        <TextCell editable={editable} ariaLabel="Initials" value={person.initials} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { initials: v }))} />
+                                        <TextCell editable={editable} ariaLabel="Name" value={person.name} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { name: v }))} />
+                                        <TextCell editable={editable} ariaLabel="Title" value={person.title} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { title: v }))} />
+                                        <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Hours" value={person.hours} format={formatTimeReportHours} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { hours: v }))} />
+                                        <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Rate" value={person.rate} format={money} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { rate: v }))} />
+                                        <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Amount" value={person.amount} format={money} onChange={(v) => emit(patchProjectSummary(report, slice.projectIndex, index, { amount: v }))} />
                                     </tr>
                                 ))}
                             </tbody>
                             <tfoot className="tt-inv-tr__tfoot">
                                 <tr>
                                     <td colSpan={3}>Total ({cur})</td>
-                                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(projectHours)}</td>
+                                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(summaryHours)}</td>
                                     <td />
-                                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(projectFees)}</td>
+                                    <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(summaryFees)}</td>
                                 </tr>
                             </tfoot>
                         </table>
