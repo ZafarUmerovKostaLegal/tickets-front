@@ -10,6 +10,7 @@ import {
     MOCK_DONE_IDS,
     PERSON_LABEL,
     PROJECT_LABEL,
+    PROJECT_TITLE,
     TASK_PEOPLE,
     TASK_PRIORITIES,
     TASK_PROJECTS,
@@ -21,8 +22,8 @@ import {
     type TaskStatusId,
 } from './legalHubTasks';
 
-type BoardColumn = 'todo' | 'progress' | 'waitClient' | 'waitGov' | 'associate' | 'partner' | 'changes';
-type MineTask = HubTask & {
+type BoardColumn = 'todo' | 'progress' | 'waitClient' | 'waitGov' | 'associate' | 'partner' | 'changes' | 'done';
+export type MineTask = HubTask & {
     done: boolean;
     hours: number;
     internalOn: string;
@@ -30,8 +31,9 @@ type MineTask = HubTask & {
     approval: boolean;
 };
 
-const COLUMNS: BoardColumn[] = ['todo', 'progress', 'waitClient', 'waitGov', 'associate', 'partner', 'changes'];
+const COLUMNS: BoardColumn[] = ['todo', 'progress', 'waitClient', 'waitGov', 'associate', 'partner', 'changes', 'done'];
 const DROPPABLE: BoardColumn[] = ['todo', 'progress', 'waitClient', 'waitGov', 'changes'];
+const LOCKED: BoardColumn[] = ['associate', 'partner'];
 const QUICK_ADD: BoardColumn[] = ['todo', 'progress'];
 
 const COLUMN_LABEL: Record<BoardColumn, TranslationKey> = {
@@ -42,6 +44,7 @@ const COLUMN_LABEL: Record<BoardColumn, TranslationKey> = {
     associate: 'legalHub.taskStatusAssociate',
     partner: 'legalHub.taskStagePartner',
     changes: 'legalHub.statusChanges',
+    done: 'legalHub.matterDoneCol',
 };
 
 const COLUMN_SUB: Partial<Record<BoardColumn, TranslationKey>> = {
@@ -50,6 +53,7 @@ const COLUMN_SUB: Partial<Record<BoardColumn, TranslationKey>> = {
     associate: 'legalHub.myTasksSubAssociate',
     partner: 'legalHub.myTasksSubPartner',
     changes: 'legalHub.myTasksSubChanges',
+    done: 'legalHub.myTasksSubDone',
 };
 
 const CARD_MONTHS: Record<string, string[]> = {
@@ -87,7 +91,9 @@ function isClientWait(task: Pick<HubTask, 'waitingFor'>): boolean {
     return who.includes('client') || who.includes('клиент');
 }
 
-function columnOf(task: MineTask): BoardColumn {
+export function columnOf(task: Pick<MineTask, 'status' | 'waitingFor' | 'done'>): BoardColumn {
+    if (task.done)
+        return 'done';
     if (task.status === 'changes')
         return 'changes';
     if (task.status === 'wait')
@@ -98,8 +104,8 @@ function columnOf(task: MineTask): BoardColumn {
 }
 
 function statusOf(column: BoardColumn): TaskStatusId {
-    if (column === 'waitClient' || column === 'waitGov')
-        return 'wait';
+    if (column === 'waitClient' || column === 'waitGov' || column === 'done')
+        return column === 'done' ? 'progress' : 'wait';
     return column;
 }
 
@@ -117,7 +123,7 @@ function plusDays(days: number): string {
     return `${date.getFullYear()}-${month}-${day}`;
 }
 
-function mineFrom(source: HubTask[]): MineTask[] {
+export function mineFrom(source: HubTask[]): MineTask[] {
     return source.map((task) => ({
         ...task,
         done: MOCK_DONE_IDS.includes(task.id),
@@ -128,26 +134,64 @@ function mineFrom(source: HubTask[]): MineTask[] {
     }));
 }
 
-export function LegalHubMyTasks({ query, source = null }: { query: string; source?: HubTask[] | null }) {
-    const { t } = useI18n();
-    const [tasks, setTasks] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
+export function LegalHubMyTasks({
+    query,
+    source = null,
+    layout = 'list',
+    mode = 'mine',
+    project = null,
+    tasks: tasksProp,
+    onTasks,
+}: {
+    query: string;
+    source?: HubTask[] | null;
+    layout?: 'list' | 'board';
+    mode?: 'mine' | 'queue';
+    project?: TaskProjectId | null;
+    tasks?: MineTask[];
+    onTasks?: (tasks: MineTask[]) => void;
+}) {
+    const { t, locale } = useI18n();
+    const [inner, setInner] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
+    const tasks = tasksProp ?? inner;
+    const setTasks = (updater: MineTask[] | ((current: MineTask[]) => MineTask[])) => {
+        const next = typeof updater === 'function' ? updater(tasks) : updater;
+        if (onTasks)
+            onTasks(next);
+        else
+            setInner(next);
+    };
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
     const [adding, setAdding] = useState<BoardColumn | null>(null);
     const [draft, setDraft] = useState('');
     const [openId, setOpenId] = useState<string | null>(null);
+    const [onlyLate, setOnlyLate] = useState(false);
+    const [person, setPerson] = useState<TaskPersonId | ''>('');
+    const [label, setLabel] = useState('');
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
-    const visible = useMemo(() => tasks.filter((task) => {
-        if (task.done)
+    const scoped = useMemo(() => tasks.filter((task) => project == null || task.project === project), [project, tasks]);
+    const visible = useMemo(() => scoped.filter((task) => {
+        if (layout === 'list' && mode === 'queue' && task.status !== 'associate' && task.status !== 'partner')
+            return false;
+        if (layout === 'list' && task.done)
+            return false;
+        if (layout === 'board' && onlyLate && !( !task.done && dayDelta(task.clientOn) < 0))
+            return false;
+        if (layout === 'board' && person && task.owner !== person && task.reviewer !== person)
+            return false;
+        if (layout === 'board' && label && task.workstream !== label)
             return false;
         if (!needle)
             return true;
         const owner = PERSON_LABEL[task.owner].name;
         const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer].name : '';
         return `${task.title} ${PROJECT_LABEL[task.project]} ${task.workstream} ${owner} ${reviewer}`.toLowerCase().includes(needle);
-    }), [needle, tasks]);
+    }), [label, layout, mode, needle, onlyLate, person, scoped]);
+    const streams = useMemo(() => [...new Set(scoped.map((task) => task.workstream))].sort(), [scoped]);
+    const lateCount = scoped.filter((task) => !task.done && dayDelta(task.clientOn) < 0).length;
 
     const moveTask = (id: string, column: BoardColumn) => {
         setTasks((current) => current.map((task) => {
@@ -158,7 +202,7 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
                 : column === 'waitGov'
                     ? (task.waitingFor && !isClientWait(task) ? task.waitingFor : task.waitingFor)
                     : task.waitingFor;
-            return { ...task, status: statusOf(column), waitingFor };
+            return { ...task, done: column === 'done', status: statusOf(column), waitingFor };
         }));
         setDragging(null);
     };
@@ -190,6 +234,58 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
         setAdding(null);
     };
 
+    const listed = [...visible].sort((a, b) => a.clientOn.localeCompare(b.clientOn));
+
+    if (layout === 'list') {
+        const emptyTitle = mode === 'queue' ? t('legalHub.queueEmptyTitle') : t('legalHub.myTasksEmptyTitle');
+        const emptyText = mode === 'queue' ? t('legalHub.queueEmptyText') : t('legalHub.myTasksEmptyText');
+        return (
+            <div className="lh-rows">
+                {listed.length === 0 ? (
+                    <div className="lh-rows__empty">
+                        <strong>{emptyTitle}</strong>
+                        <p>{emptyText}</p>
+                    </div>
+                ) : (
+                    <>
+                        <p className="lh-rows__intro">{t(mode === 'queue' ? 'legalHub.queueIntro' : 'legalHub.myTasksIntro')}</p>
+                        <ul>
+                            {listed.map((task) => {
+                                const column = columnOf(task);
+                                const owner = PERSON_LABEL[task.owner];
+                                const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer] : null;
+                                const late = dayDelta(task.clientOn) < 0;
+                                const soon = !late && dayDelta(task.clientOn) <= 1;
+                                return (
+                                    <li key={task.id}>
+                                        <button type="button" className="lh-rows__item" onClick={() => setOpenId(task.id)}>
+                                            <span className="lh-rows__text">
+                                                <strong>{task.title}</strong>
+                                                <small>
+                                                    {PROJECT_TITLE[task.project]}
+                                                    {' · '}
+                                                    {owner.name}
+                                                    {reviewer ? ` → ${reviewer.name}` : ''}
+                                                </small>
+                                            </span>
+                                            <span className={`lh-rows__stage lh-rows__stage--${column}`}>{t(COLUMN_LABEL[column])}</span>
+                                            <span className={`lh-my__duepill${late ? ' is-late' : ''}${soon ? ' is-soon' : ''}`}>
+                                                {shortDate(task.clientOn, locale)} · {dueText(dayDelta(task.clientOn), t)}
+                                            </span>
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </>
+                )}
+                {openTask ? (
+                    <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} />
+                ) : null}
+            </div>
+        );
+    }
+
     return (
         <div className="lh-my lh-my--docket">
             <HeadActions>
@@ -198,6 +294,36 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
                     {t('legalHub.myTasksNew')}
                 </button>
             </HeadActions>
+            <div className="lh-boardbar">
+                <div className="lh-boardbar__people" role="group" aria-label={t('legalHub.taskColOwner')}>
+                    {TASK_PEOPLE.map((id) => (
+                        <button
+                            key={id}
+                            type="button"
+                            className={person === id ? 'is-on' : ''}
+                            aria-pressed={person === id}
+                            title={PERSON_LABEL[id].name}
+                            onClick={() => setPerson((current) => current === id ? '' : id)}
+                        >
+                            <span className={`lh-tasks__avatar lh-tasks__avatar--${id}`}>{PERSON_LABEL[id].code}</span>
+                        </button>
+                    ))}
+                </div>
+                <button type="button" className={`lh-boardbar__chip${onlyLate ? ' is-on' : ''}`} aria-pressed={onlyLate} onClick={() => setOnlyLate((value) => !value)}>
+                    {t('legalHub.myTasksDatesOverdue')}
+                    <em>{lateCount}</em>
+                </button>
+                <select className="lh-boardbar__chip" aria-label={t('legalHub.taskColWorkstream')} value={label} onChange={(event) => setLabel(event.target.value)}>
+                    <option value="">{t('legalHub.filterLabels')}</option>
+                    {streams.map((stream) => <option key={stream} value={stream}>{stream}</option>)}
+                </select>
+                {onlyLate || person || label ? (
+                    <button type="button" className="lh-boardbar__chip" onClick={() => { setOnlyLate(false); setPerson(''); setLabel(''); }}>
+                        {t('legalHub.taskFilterReset')}
+                    </button>
+                ) : null}
+                <span className="lh-boardbar__shown">{t('legalHub.shownCount').replace('{shown}', String(visible.length)).replace('{total}', String(scoped.length))}</span>
+            </div>
             <div className="lh-my__board">
                 {COLUMNS.map((column) => {
                     const cards = visible
@@ -210,7 +336,7 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
                             id={column}
                             title={t(COLUMN_LABEL[column])}
                             hint={sub ? t(sub) : null}
-                            review={!DROPPABLE.includes(column)}
+                            review={LOCKED.includes(column)}
                             cards={cards}
                             droppable={DROPPABLE.includes(column)}
                             dragging={dragging}

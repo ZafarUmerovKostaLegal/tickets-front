@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
+import { LegalHubMyTasks, columnOf as docketColumn, mineFrom, type MineTask } from './LegalHubMyTasks';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
-import { DueBadge } from './legalHubShared';
+import { dueText, DueBadge, dayDelta as sharedDelta } from './legalHubShared';
 import {
     HUB_TASKS,
     PERSON_LABEL,
@@ -10,7 +11,6 @@ import {
     PROJECT_TITLE,
     TASK_PROJECTS,
     type HubTask,
-    type TaskPriorityId,
     type TaskProjectId,
     type TaskStatusId,
 } from './legalHubTasks';
@@ -19,7 +19,6 @@ type BoardColumn = 'todo' | 'progress' | 'wait' | 'associate' | 'partner' | 'cha
 type Health = 'risk' | 'changes' | 'review' | 'wait' | 'active' | 'empty';
 
 const COLUMNS: BoardColumn[] = ['todo', 'progress', 'wait', 'associate', 'partner', 'changes'];
-const DROPPABLE: BoardColumn[] = ['todo', 'progress', 'wait', 'changes'];
 
 const COLUMN_LABEL: Record<BoardColumn, TranslationKey> = {
     todo: 'legalHub.taskStatusTodo',
@@ -39,13 +38,17 @@ const HEALTH_LABEL: Record<Health, TranslationKey> = {
     empty: 'legalHub.projectsHealthEmpty',
 };
 
-const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
-    high: 'legalHub.taskPriorityHigh',
-    normal: 'legalHub.taskPriorityNormal',
-    low: 'legalHub.taskPriorityLow',
+const HEALTH_ORDER: Health[] = ['risk', 'changes', 'review', 'wait', 'active', 'empty'];
+
+const MATTER_META: Record<TaskProjectId, { client: string; no: string }> = {
+    solar: { client: 'SunGrid Energy', no: 'M-2026-014' },
+    wind: { client: 'Aral Wind Power', no: 'M-2026-021' },
+    infrastructure: { client: 'TransCaspian Roads', no: 'M-2026-009' },
+    bess: { client: 'VoltStore Central Asia', no: 'M-2026-030' },
+    healthcare: { client: 'MedLine Clinics', no: 'M-2026-017' },
 };
 
-const HEALTH_ORDER: Health[] = ['risk', 'changes', 'review', 'wait', 'active', 'empty'];
+const MAP_COLUMNS = ['todo', 'progress', 'waitClient', 'waitGov', 'associate', 'partner', 'changes', 'done'] as const;
 
 const CARD_MONTHS: Record<string, string[]> = {
     ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
@@ -150,20 +153,17 @@ export function LegalHubProjects({
     onSelect: (id: TaskProjectId | null) => void;
 }) {
     const { t, locale } = useI18n();
-    const [tasks, setTasks] = useState<HubTask[]>(() => [...(source ?? HUB_TASKS)]);
+    const [tasks, setTasks] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
     const [healthFilter, setHealthFilter] = useState<Health | ''>('');
-    const [focusColumn, setFocusColumn] = useState<BoardColumn | null>(null);
     const [openId, setOpenId] = useState<string | null>(null);
-    const [dragging, setDragging] = useState<string | null>(null);
-    const [collapsed, setCollapsed] = useState<BoardColumn[]>([]);
+    const [matterView, setMatterView] = useState<'board' | 'map'>('board');
 
     useEffect(() => {
-        setTasks([...(source ?? HUB_TASKS)]);
+        setTasks(mineFrom(source ?? HUB_TASKS));
     }, [source]);
 
     useEffect(() => {
-        setFocusColumn(null);
-        setDragging(null);
+        setMatterView('board');
     }, [selected]);
 
     const needle = query.trim().toLowerCase();
@@ -188,22 +188,11 @@ export function LegalHubProjects({
         .map((health) => ({ health, count: matched.filter((project) => project.health === health).length }))
         .filter((row) => row.count > 0);
     const current = selected == null ? null : projects.find((project) => project.id === selected) ?? null;
-    const boardTasks = useMemo(() => {
-        if (current == null)
-            return [];
-        if (!needle)
-            return current.tasks;
-        return current.tasks.filter((task) => {
-            const hay = `${task.title} ${task.workstream} ${PERSON_LABEL[task.owner].name} ${task.reviewer ? PERSON_LABEL[task.reviewer].name : ''}`.toLowerCase();
-            return hay.includes(needle);
-        });
-    }, [current, needle]);
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
-    const moveTask = (taskId: string, column: BoardColumn) => {
-        setTasks((list) => list.map((task) => (task.id === taskId ? { ...task, status: column } : task)));
-        setDragging(null);
-    };
+    const matter = current == null ? null : MATTER_META[current.id];
+    const doneCount = current == null ? 0 : (current.tasks as MineTask[]).filter((task) => task.done).length;
+    const team = current == null ? [] : [...new Set(current.tasks.flatMap((task) => [task.owner, task.reviewer]).filter((id): id is NonNullable<typeof id> => id != null))];
 
     return (
         <div className={`lh-projects${current ? ' lh-projects--workspace' : ''}`}>
@@ -276,59 +265,37 @@ export function LegalHubProjects({
                     )}
                 </>
             ) : (
-                <div className="lh-projects__workspace">
-                    <header className="lh-projects__board-head">
-                        <div>
-                            <span className={`lh-projects__health is-${current.health}`}>{t(HEALTH_LABEL[current.health])}</span>
-                            <p className="lh-projects__board-sub">
-                                {current.label}
-                                {current.next
-                                    ? ` · ${t('legalHub.projectsNext').replace('{date}', formatCardDate(current.next.clientOn, locale)).replace('{title}', current.next.title)}`
-                                    : ''}
-                            </p>
+                <div className="lh-matter">
+                    <div className="lh-matter__bar">
+                        <div className="lh-seg" role="tablist" aria-label={t('legalHub.viewAria')}>
+                            <button type="button" role="tab" aria-selected={matterView === 'board'} className={matterView === 'board' ? 'is-on' : ''} onClick={() => setMatterView('board')}>
+                                {t('legalHub.viewBoard')}
+                            </button>
+                            <button type="button" role="tab" aria-selected={matterView === 'map'} className={matterView === 'map' ? 'is-on' : ''} onClick={() => setMatterView('map')}>
+                                {t('legalHub.viewMap')}
+                            </button>
                         </div>
-                        <ul className="lh-projects__board-stats">
-                            <li><strong>{current.tasks.length}</strong><span>{t('legalHub.projectsOpenTasks')}</span></li>
-                            <li><strong>{current.review}</strong><span>{t('legalHub.projectsInReview')}</span></li>
-                            <li className={current.overdue > 0 ? 'is-due' : undefined}><strong>{current.overdue}</strong><span>{t('legalHub.projectsOverdue')}</span></li>
-                        </ul>
-                    </header>
-                    <ProjectMap
-                        project={current}
-                        focus={focusColumn}
-                        onFocus={(column) => setFocusColumn((currentColumn) => (currentColumn === column ? null : column))}
-                        onOpenTask={setOpenId}
-                    />
-                    <h3 className="lh-projects__board-label">{t('legalHub.projectsBoard')}</h3>
-                    {boardTasks.length === 0 ? (
-                        <p className="lh-projects__empty">{needle ? t('legalHub.myTasksEmpty') : t('legalHub.projectsBoardEmpty')}</p>
+                        <span className="lh-matter__team">
+                            {team.map((id) => (
+                                <span key={id} className={`lh-tasks__avatar lh-tasks__avatar--${id}`} title={PERSON_LABEL[id].name}>{PERSON_LABEL[id].code}</span>
+                            ))}
+                        </span>
+                        <span className="lh-matter__progress">
+                            <span>{t('legalHub.matterApproved').replace('{done}', String(doneCount)).replace('{total}', String(current.tasks.length))}</span>
+                            <i><b style={{ width: `${current.tasks.length ? Math.round(doneCount / current.tasks.length * 100) : 0}%` }} /></i>
+                        </span>
+                        {matter ? <span className="lh-matter__meta">{matter.client} · {matter.no} · {t('legalHub.matterPrivate')}</span> : null}
+                    </div>
+                    {matterView === 'map' ? (
+                        <MatterMap tasks={current.tasks} onOpen={setOpenId} />
                     ) : (
-                        <div className="lh-projects__board lh-my__board is-wide">
-                            {COLUMNS.map((column) => {
-                                const cards = boardTasks.filter((task) => columnOf(task.status) === column);
-                                const folded = collapsed.includes(column);
-                                const dimmed = focusColumn != null && focusColumn !== column;
-                                return (
-                                    <BoardColumnView
-                                        key={column}
-                                        column={column}
-                                        title={t(COLUMN_LABEL[column])}
-                                        cards={cards}
-                                        collapsed={folded}
-                                        dimmed={dimmed}
-                                        droppable={DROPPABLE.includes(column)}
-                                        dragging={dragging}
-                                        onToggle={() => setCollapsed((list) => (
-                                            list.includes(column) ? list.filter((id) => id !== column) : [...list, column]
-                                        ))}
-                                        onDragStart={setDragging}
-                                        onDragEnd={() => setDragging(null)}
-                                        onMove={(taskId) => moveTask(taskId, column)}
-                                        onOpen={setOpenId}
-                                    />
-                                );
-                            })}
-                        </div>
+                        <LegalHubMyTasks
+                            layout="board"
+                            project={current.id}
+                            query={query}
+                            tasks={tasks}
+                            onTasks={setTasks}
+                        />
                     )}
                 </div>
             )}
@@ -336,6 +303,111 @@ export function LegalHubProjects({
         </div>
     );
 }
+
+function MatterMap({ tasks, onOpen }: { tasks: HubTask[]; onOpen: (id: string) => void }) {
+    const { t, locale } = useI18n();
+    const rows = tasks as MineTask[];
+    const open = rows.filter((task) => !task.done);
+    const count = (column: (typeof MAP_COLUMNS)[number]) => rows.filter((task) => docketColumn(task) === column).length;
+    const late = open.filter((task) => sharedDelta(task.clientOn) < 0);
+    const review = rows.filter((task) => task.status === 'associate' || task.status === 'partner').length;
+    const hours = open.reduce((sum, task) => sum + (task.hours || Math.round(task.minutes / 60) || 0), 0);
+    const streams = [...new Set(rows.map((task) => task.workstream))];
+    const groups: { title: string; tone: string; match: (delta: number) => boolean }[] = [
+        { title: t('legalHub.dlLate'), tone: 'late', match: (delta) => delta < 0 },
+        { title: t('legalHub.dlSoon'), tone: '', match: (delta) => delta >= 0 && delta <= 1 },
+        { title: t('legalHub.dlWeek'), tone: '', match: (delta) => delta >= 2 && delta <= 7 },
+        { title: t('legalHub.dlLater'), tone: '', match: (delta) => delta > 7 },
+    ];
+    return (
+        <div className="lh-map">
+            <ul className="lh-map__kpis">
+                <li><strong>{open.length}</strong><span>{t('legalHub.mapOpen')}</span><small>{t('legalHub.myTasksHoursShort').replace('{count}', String(hours))}</small></li>
+                <li><strong>{count('todo') + count('progress') + count('changes')}</strong><span>{t('legalHub.mapLawyers')}</span></li>
+                <li><strong>{review}</strong><span>{t('legalHub.mapReview')}</span></li>
+                <li><strong>{count('waitClient') + count('waitGov')}</strong><span>{t('legalHub.mapWaiting')}</span></li>
+                <li className={late.length ? 'is-late' : ''}><strong>{late.length}</strong><span>{t('legalHub.mapLate')}</span></li>
+                <li className="is-ok"><strong>{rows.length ? Math.round((rows.length - open.length) / rows.length * 100) : 0}%</strong><span>{t('legalHub.mapApproved')}</span></li>
+            </ul>
+            <section>
+                <h2>{t('legalHub.mapWhere')}</h2>
+                <p>{t('legalHub.mapWhereLead')}</p>
+                <ol className="lh-map__pipe">
+                    {MAP_COLUMNS.map((column) => (
+                        <li key={column} className={count(column) ? 'is-live' : ''}>
+                            <strong>{count(column)}</strong>
+                            <span>{t(MAP_LABEL[column])}</span>
+                        </li>
+                    ))}
+                </ol>
+            </section>
+            <section>
+                <h2>{t('legalHub.mapStreams')}</h2>
+                <div className="lh-map__scroll">
+                    <table className="lh-map__matrix">
+                        <thead>
+                            <tr>
+                                <th>{t('legalHub.taskColWorkstream')}</th>
+                                {MAP_COLUMNS.map((column) => <th key={column}>{t(MAP_LABEL[column])}</th>)}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {streams.map((stream) => (
+                                <tr key={stream}>
+                                    <td>{stream}</td>
+                                    {MAP_COLUMNS.map((column) => {
+                                        const cards = rows.filter((task) => task.workstream === stream && docketColumn(task) === column);
+                                        return (
+                                            <td key={column}>
+                                                {cards.length === 0 ? '—' : cards.map((task) => (
+                                                    <button key={task.id} type="button" className={sharedDelta(task.clientOn) < 0 && !task.done ? 'is-late' : ''} onClick={() => onOpen(task.id)}>
+                                                        {task.title}
+                                                    </button>
+                                                ))}
+                                            </td>
+                                        );
+                                    })}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+            <section>
+                <h2>{t('legalHub.mapDeadlines')}</h2>
+                {groups.map((group) => {
+                    const items = open.filter((task) => group.match(sharedDelta(task.clientOn))).sort((a, b) => a.clientOn.localeCompare(b.clientOn));
+                    if (items.length === 0)
+                        return null;
+                    return (
+                        <div key={group.title} className="lh-map__group">
+                            <h3 className={group.tone ? `is-${group.tone}` : ''}>{group.title} · {items.length}</h3>
+                            {items.map((task) => (
+                                <button key={task.id} type="button" className="lh-map__deadline" onClick={() => onOpen(task.id)}>
+                                    <span>{formatCardDate(task.clientOn, locale)}</span>
+                                    <strong>{task.title}</strong>
+                                    <em>{t(MAP_LABEL[docketColumn(task)])}</em>
+                                    <span className={`lh-my__duepill${sharedDelta(task.clientOn) < 0 ? ' is-late' : ''}`}>{dueText(sharedDelta(task.clientOn), t)}</span>
+                                </button>
+                            ))}
+                        </div>
+                    );
+                })}
+            </section>
+        </div>
+    );
+}
+
+const MAP_LABEL: Record<(typeof MAP_COLUMNS)[number], TranslationKey> = {
+    todo: 'legalHub.taskStatusTodo',
+    progress: 'legalHub.statusInProgress',
+    waitClient: 'legalHub.myTasksWaitClient',
+    waitGov: 'legalHub.myTasksWaitGov',
+    associate: 'legalHub.taskStatusAssociate',
+    partner: 'legalHub.taskStagePartner',
+    changes: 'legalHub.statusChanges',
+    done: 'legalHub.matterDoneCol',
+};
 
 function StageLegend() {
     const { t } = useI18n();
@@ -371,202 +443,6 @@ function StageBar({ counts }: { counts: Record<BoardColumn, number> }) {
     );
 }
 
-function ProjectMap({
-    project,
-    focus,
-    onFocus,
-    onOpenTask,
-}: {
-    project: ProjectSummary;
-    focus: BoardColumn | null;
-    onFocus: (column: BoardColumn) => void;
-    onOpenTask: (id: string) => void;
-}) {
-    const { t } = useI18n();
-    return (
-        <section className="lh-projects__map" aria-label={t('legalHub.projectsMap')}>
-            <header className="lh-projects__map-head">
-                <div>
-                    <h3>{t('legalHub.projectsMap')}</h3>
-                    <p>{t('legalHub.projectsMapHint')}</p>
-                </div>
-            </header>
-            <ol className="lh-projects__stages">
-                {COLUMNS.map((column, index) => {
-                    const count = project.counts[column];
-                    const active = count > 0;
-                    const selected = focus === column;
-                    return (
-                        <li key={column} className={`lh-projects__stage is-${column}${active ? ' is-live' : ''}${selected ? ' is-selected' : ''}`}>
-                            {index > 0 ? <span className="lh-projects__stage-line" aria-hidden /> : null}
-                            <button type="button" onClick={() => onFocus(column)} aria-pressed={selected}>
-                                <strong>{count}</strong>
-                                <span>{t(COLUMN_LABEL[column])}</span>
-                            </button>
-                        </li>
-                    );
-                })}
-            </ol>
-            {project.workstreams.length > 0 ? (
-                <ul className="lh-projects__streams">
-                    {project.workstreams.map((stream) => (
-                        <li key={stream.name}>
-                            <span className="lh-projects__stream-name">{stream.name}</span>
-                            <span className="lh-projects__stream-tasks">
-                                {stream.tasks.map((task) => (
-                                    <button
-                                        key={task.id}
-                                        type="button"
-                                        className={`lh-projects__chip is-${columnOf(task.status)}${isOverdue(task) ? ' is-late' : ''}`}
-                                        onClick={() => onOpenTask(task.id)}
-                                    >
-                                        {task.title}
-                                    </button>
-                                ))}
-                            </span>
-                        </li>
-                    ))}
-                </ul>
-            ) : null}
-        </section>
-    );
-}
-
-function BoardColumnView({
-    column,
-    title,
-    cards,
-    collapsed,
-    dimmed,
-    droppable,
-    dragging,
-    onToggle,
-    onDragStart,
-    onDragEnd,
-    onMove,
-    onOpen,
-}: {
-    column: BoardColumn;
-    title: string;
-    cards: HubTask[];
-    collapsed: boolean;
-    dimmed: boolean;
-    droppable: boolean;
-    dragging: string | null;
-    onToggle: () => void;
-    onDragStart: (id: string) => void;
-    onDragEnd: () => void;
-    onMove: (id: string) => void;
-    onOpen: (id: string) => void;
-}) {
-    const { t } = useI18n();
-    const foldLabel = t(collapsed ? 'legalHub.myTasksColumnExpand' : 'legalHub.myTasksColumnCollapse');
-    return (
-        <section
-            className={`lh-my__col lh-my__col--${column}${collapsed ? ' is-collapsed' : ''}${dimmed ? ' is-dimmed' : ''}${dragging && droppable ? ' is-target' : ''}`}
-            onDragOver={(event) => {
-                if (!droppable || !dragging)
-                    return;
-                event.preventDefault();
-            }}
-            onDrop={(event) => {
-                if (!droppable || !dragging)
-                    return;
-                event.preventDefault();
-                onMove(dragging);
-            }}
-        >
-            <header>
-                <span className="lh-my__col-title">
-                    <strong>{title}</strong>
-                    <em>{cards.length}</em>
-                </span>
-                <span className="lh-my__col-meta">
-                    <button type="button" className="lh-my__col-fold" aria-label={foldLabel} aria-expanded={!collapsed} tabIndex={collapsed ? -1 : 0} onClick={onToggle}>
-                        <CollapseIcon />
-                    </button>
-                </span>
-            </header>
-            {cards.length === 0 ? <p>{droppable ? t('legalHub.myTasksDrop') : t('legalHub.queueEmpty')}</p> : (
-                <ul>
-                    {cards.map((task) => (
-                        <ProjectTaskCard
-                            key={task.id}
-                            task={task}
-                            draggable={droppable}
-                            onDragStart={() => onDragStart(task.id)}
-                            onDragEnd={onDragEnd}
-                            onOpen={() => onOpen(task.id)}
-                        />
-                    ))}
-                </ul>
-            )}
-            <button type="button" className="lh-my__col-spine" aria-label={foldLabel} tabIndex={collapsed ? 0 : -1} onClick={onToggle}>
-                <CollapseIcon />
-                <span>{title}</span>
-                <em>{cards.length}</em>
-            </button>
-        </section>
-    );
-}
-
-function ProjectTaskCard({
-    task,
-    draggable,
-    onDragStart,
-    onDragEnd,
-    onOpen,
-}: {
-    task: HubTask;
-    draggable: boolean;
-    onDragStart: () => void;
-    onDragEnd: () => void;
-    onOpen: () => void;
-}) {
-    const { t, locale } = useI18n();
-    const dragged = useRef(false);
-    const person = PERSON_LABEL[task.owner];
-    const clientLate = dayDelta(task.clientOn) < 0;
-    return (
-        <li
-            className={`lh-my__card${draggable ? '' : ' is-locked'}${clientLate ? ' is-late' : ''}`}
-            title={draggable ? undefined : t('legalHub.myTasksLocked')}
-            draggable={draggable}
-            onDragStart={() => {
-                dragged.current = true;
-                onDragStart();
-            }}
-            onDragEnd={() => {
-                onDragEnd();
-                window.setTimeout(() => {
-                    dragged.current = false;
-                }, 0);
-            }}
-            onClick={() => {
-                if (dragged.current)
-                    return;
-                onOpen();
-            }}
-        >
-            <strong>{task.title}</strong>
-            <span className="lh-my__card-meta">{task.workstream}</span>
-            <DueBadge iso={task.clientOn} className="lh-my__card-due" />
-            <span className="lh-my__card-foot">
-                {task.priority === 'normal' ? <span /> : (
-                    <span className={`lh-my__prio lh-my__prio--${task.priority}`}>
-                        <i aria-hidden />
-                        {t(PRIORITY_LABEL[task.priority])}
-                    </span>
-                )}
-                <span className="lh-my__card-end">
-                    <span className={clientLate ? 'is-late' : ''}>{formatCardDate(task.clientOn, locale)}</span>
-                    <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={person.name}>{person.code}</span>
-                </span>
-            </span>
-        </li>
-    );
-}
-
 function ForwardIcon() {
     return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -575,11 +451,3 @@ function ForwardIcon() {
     );
 }
 
-function CollapseIcon() {
-    return (
-        <svg viewBox="0 0 24 24" aria-hidden>
-            <path d="M10 8l-4 4 4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M14 8l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-    );
-}

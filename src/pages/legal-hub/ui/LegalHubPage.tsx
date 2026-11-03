@@ -6,7 +6,6 @@ import type { TranslationKey } from '@shared/i18n/translate';
 import { LegalHubMemberTasks } from './LegalHubMemberTasks';
 import { LegalHubMyTasks } from './LegalHubMyTasks';
 import { LegalHubProjects } from './LegalHubProjects';
-import { LegalHubReviewQueue } from './LegalHubReviewQueue';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
 import { HUB_TASKS, isTaskProjectId, MOCK_DONE_IDS, PROJECT_TITLE, tasksForMember, type TaskProjectId } from './legalHubTasks';
@@ -502,7 +501,7 @@ function LegalHubPageBody() {
                                     <div className="lh-page__head-actions" ref={setActionsSlot} />
                                 </header>
                                 {section === 'myTasks' ? <LegalHubMyTasks key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} /> : null}
-                                {section === 'reviewQueue' ? <LegalHubReviewQueue key={viewAs?.id ?? 'me'} query={query} tasks={viewedTasks} /> : null}
+                                {section === 'reviewQueue' ? <LegalHubMyTasks key={`queue-${viewAs?.id ?? 'me'}`} query={query} source={viewedTasks} mode="queue" /> : null}
                                 {section === 'projects' ? (
                                     <LegalHubProjects
                                         key={viewAs?.id ?? 'me'}

@@ -298,6 +298,34 @@ export const ruMessages: Messages = {
         myTasksShowDone: 'Показать завершённые',
         myTasksClear: 'Сбросить',
         myTasksDrop: 'Перетащите задачу сюда',
+        myTasksIntro: 'Всё, что на вас, по всем делам. Сверху — самые ранние сроки клиента.',
+        myTasksEmptyTitle: 'Задач нет',
+        myTasksEmptyText: 'Когда вам назначат задачу, она появится здесь.',
+        queueIntro: 'Документы, которые ждут вашего решения: одобрить, передать дальше или вернуть с замечанием.',
+        queueEmptyTitle: 'Очередь пуста',
+        queueEmptyText: 'Новых документов на проверку нет.',
+        viewBoard: 'Доска',
+        viewMap: 'Карта проекта',
+        matterPrivate: 'Конфиденциально · адвокатская тайна',
+        matterApproved: 'Утверждено {done} из {total}',
+        matterDoneCol: 'Утверждено',
+        myTasksSubDone: 'Готово к отправке клиенту',
+        filterLabels: 'Все метки',
+        shownCount: 'Показано {shown} из {total}',
+        mapOpen: 'Открытых задач',
+        mapLawyers: 'В работе у юристов',
+        mapReview: 'На проверке',
+        mapWaiting: 'Ждём ответа',
+        mapLate: 'Просрочено',
+        mapApproved: 'Утверждено',
+        mapWhere: 'Где сейчас работа',
+        mapWhereLead: 'Сколько задач на каждом этапе цепочки согласования',
+        mapStreams: 'Направления и этапы',
+        mapDeadlines: 'Сроки клиента',
+        dlLate: 'Просрочено',
+        dlSoon: 'Сегодня и завтра',
+        dlWeek: 'На этой неделе',
+        dlLater: 'Позже',
         myTasksWaitClient: 'Ожидание клиента',
         myTasksWaitGov: 'Ожидание госорганов',
         myTasksSubWaitClient: 'Документы, ответы, подписи от клиента',
@@ -1323,6 +1351,34 @@ export type Messages = {
         myTasksShowDone: string;
         myTasksClear: string;
         myTasksDrop: string;
+        myTasksIntro: string;
+        myTasksEmptyTitle: string;
+        myTasksEmptyText: string;
+        queueIntro: string;
+        queueEmptyTitle: string;
+        queueEmptyText: string;
+        viewBoard: string;
+        viewMap: string;
+        matterPrivate: string;
+        matterApproved: string;
+        matterDoneCol: string;
+        myTasksSubDone: string;
+        filterLabels: string;
+        shownCount: string;
+        mapOpen: string;
+        mapLawyers: string;
+        mapReview: string;
+        mapWaiting: string;
+        mapLate: string;
+        mapApproved: string;
+        mapWhere: string;
+        mapWhereLead: string;
+        mapStreams: string;
+        mapDeadlines: string;
+        dlLate: string;
+        dlSoon: string;
+        dlWeek: string;
+        dlLater: string;
         myTasksWaitClient: string;
         myTasksWaitGov: string;
         myTasksSubWaitClient: string;
