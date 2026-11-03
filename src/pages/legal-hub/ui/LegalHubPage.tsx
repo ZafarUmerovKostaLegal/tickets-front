@@ -9,18 +9,18 @@ import { LegalHubProjects } from './LegalHubProjects';
 import { LegalHubReviewQueue } from './LegalHubReviewQueue';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
-import { HUB_TASKS, isTaskProjectId, PROJECT_TITLE, tasksForMember, type TaskProjectId } from './legalHubTasks';
-import { HeadActionsContext, hubBadges, legalHubSectionUrl, type LegalHubNavId } from './legalHubShared';
+import { HUB_TASKS, isTaskProjectId, MOCK_DONE_IDS, PROJECT_TITLE, tasksForMember, type TaskProjectId } from './legalHubTasks';
+import { dayDelta, HeadActionsContext, legalHubSectionUrl, type LegalHubNavId } from './legalHubShared';
 import { LegalHubViewProvider, useLegalHubView } from './legalHubView';
 import './LegalHubPage.css';
 
 
-const NAV_ITEMS: { id: LegalHubNavId; labelKey: TranslationKey; icon: ComponentType }[] = [
+const MINE_ITEMS: { id: 'myTasks' | 'reviewQueue'; labelKey: TranslationKey; icon: ComponentType }[] = [
     { id: 'myTasks', labelKey: 'legalHub.myTasks', icon: IconTasks },
-    { id: 'reviewQueue', labelKey: 'legalHub.reviewQueue', icon: IconShield },
-    { id: 'projects', labelKey: 'legalHub.projects', icon: IconProjects },
-    { id: 'allTeam', labelKey: 'legalHub.allTeam', icon: IconTeam },
+    { id: 'reviewQueue', labelKey: 'legalHub.sideReview', icon: IconShield },
 ];
+
+const MATTERS: TaskProjectId[] = ['solar', 'wind', 'infrastructure', 'bess', 'healthcare'];
 
 function IconMark() {
     return (
@@ -65,15 +65,6 @@ function IconTeam() {
             <circle cx="9" cy="7" r="3" />
             <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
             <path d="M16 3.13a3 3 0 0 1 0 5.75" />
-        </svg>
-    );
-}
-
-function IconProjects() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M3 7h7l2 2h9v10a2 2 0 0 1-2 2H3z" />
-            <path d="M3 7V5a2 2 0 0 1 2-2h4l2 2" />
         </svg>
     );
 }
@@ -181,21 +172,32 @@ function LegalHubPageBody() {
         });
     }, []);
     const navSection: LegalHubNavId = onMemberPage ? 'allTeam' : section;
-    const active = NAV_ITEMS.find((item) => item.id === navSection) ?? NAV_ITEMS[0]!;
+    const sectionTitle: TranslationKey = navSection === 'reviewQueue'
+        ? 'legalHub.reviewQueue'
+        : navSection === 'projects'
+            ? 'legalHub.projects'
+            : navSection === 'allTeam'
+                ? 'legalHub.allTeam'
+                : 'legalHub.myTasks';
     const viewedTasks = useMemo(
         () => (viewAs == null ? null : tasksForMember(viewAs.id, memberIds)),
         [viewAs, memberIds],
     );
-    const badges = useMemo(() => hubBadges(viewedTasks ?? HUB_TASKS), [viewedTasks]);
-    const badgeFor = (id: LegalHubNavId): { count: number; tone: 'hot' | 'calm'; label: string } | null => {
-        if (id === 'myTasks' && badges.attention > 0)
-            return { count: badges.attention, tone: 'hot', label: t('legalHub.navBadgeMyTasks').replace('{count}', String(badges.attention)) };
-        if (id === 'reviewQueue' && badges.review > 0)
-            return { count: badges.review, tone: 'calm', label: t('legalHub.navBadgeQueue').replace('{count}', String(badges.review)) };
-        if (id === 'projects' && badges.risk > 0)
-            return { count: badges.risk, tone: 'hot', label: t('legalHub.navBadgeProjects').replace('{count}', String(badges.risk)) };
-        return null;
-    };
+    const boardTasks = viewedTasks ?? HUB_TASKS;
+    const openTasks = useMemo(
+        () => boardTasks.filter((task) => !MOCK_DONE_IDS.includes(task.id)),
+        [boardTasks],
+    );
+    const matterStats = useMemo(() => MATTERS.map((id) => {
+        const rows = openTasks.filter((task) => task.project === id);
+        return {
+            id,
+            count: rows.length,
+            hot: rows.some((task) => dayDelta(task.clientOn) < 0),
+        };
+    }), [openTasks]);
+    const myHot = openTasks.some((task) => dayDelta(task.clientOn) < 0);
+    const reviewCount = boardTasks.filter((task) => task.status === 'associate' || task.status === 'partner' || task.status === 'changes').length;
     const memberOptions = useMemo(
         () => [
             { id: '', name: t('legalHub.viewAsMe'), code: '' },
@@ -230,6 +232,20 @@ function LegalHubPageBody() {
             navigate(legalHubSectionUrl(id));
         });
     }, [navigate, onMemberPage, openProjectId, section]);
+    const openMatter = useCallback((id: TaskProjectId) => {
+        setMenuOpen(false);
+        if (onMemberPage) {
+            navigate(`${legalHubSectionUrl('projects')}&project=${id}`);
+            return;
+        }
+        const next = new URLSearchParams(searchParams);
+        next.set('view', 'projects');
+        next.set('project', id);
+        startTransition(() => {
+            addTransitionType(NAV_TRANSITION_TYPE);
+            setSearchParams(next);
+        });
+    }, [navigate, onMemberPage, searchParams, setSearchParams]);
     const openProject = useCallback((id: TaskProjectId | null) => {
         const next = new URLSearchParams(searchParams);
         next.set('view', 'projects');
@@ -284,35 +300,78 @@ function LegalHubPageBody() {
                     <span className="lh-side__brand">{t('nav.legalHub')}</span>
                 </div>
                 <nav className="lh-side__nav">
-                    <p className="lh-side__section">{t('legalHub.workspace')}</p>
-                    <ul className="lh-side__list">
-                        {NAV_ITEMS.map((item) => {
-                            const Icon = item.icon;
-                            const selected = item.id === navSection;
-                            const badge = badgeFor(item.id);
-                            const label = t(item.labelKey);
-                            return (
-                                <li key={item.id}>
-                                    <button
-                                        type="button"
-                                        className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
-                                        aria-current={selected ? 'page' : undefined}
-                                        aria-label={badge ? `${label} · ${badge.label}` : label}
-                                        title={badge ? `${label} · ${badge.label}` : label}
-                                        onClick={() => openSection(item.id)}
-                                    >
-                                        <span className="lh-side__item-icon" aria-hidden>
-                                            <Icon />
-                                            {badge ? <i className={`lh-side__dot lh-side__dot--${badge.tone}`} /> : null}
-                                        </span>
-                                        <span className="lh-side__item-label">{label}</span>
-                                        {badge ? (
-                                            <span className={`lh-side__badge lh-side__badge--${badge.tone}`} aria-hidden>{badge.count}</span>
-                                        ) : null}
-                                    </button>
-                                </li>
-                            );
-                        })}
+                    <div>
+                        <p className="lh-side__section">{t('legalHub.sideMine')}</p>
+                        <ul className="lh-side__list">
+                            {MINE_ITEMS.map((item) => {
+                                const Icon = item.icon;
+                                const selected = item.id === navSection && openProjectId == null;
+                                const count = item.id === 'myTasks' ? openTasks.length : reviewCount;
+                                const hot = item.id === 'myTasks' && myHot;
+                                const showCount = count > 0;
+                                const label = t(item.labelKey);
+                                return (
+                                    <li key={item.id}>
+                                        <button
+                                            type="button"
+                                            className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
+                                            aria-current={selected ? 'page' : undefined}
+                                            onClick={() => openSection(item.id)}
+                                        >
+                                            <span className="lh-side__item-icon" aria-hidden>
+                                                <Icon />
+                                                {showCount ? <i className={`lh-side__dot${hot ? ' lh-side__dot--hot' : ''}`} /> : null}
+                                            </span>
+                                            <span className="lh-side__item-label">{label}</span>
+                                            {showCount ? (
+                                                <span className={`lh-side__badge${hot ? ' lh-side__badge--hot' : ''}${item.id === 'reviewQueue' ? ' lh-side__badge--review' : ''}`} aria-hidden>{count}</span>
+                                            ) : null}
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                    <div>
+                        <p className="lh-side__section">{t('legalHub.sideMatters')}</p>
+                        <ul className="lh-side__list">
+                            {matterStats.map((matter) => {
+                                const selected = openProjectId === matter.id;
+                                const label = PROJECT_TITLE[matter.id];
+                                return (
+                                    <li key={matter.id}>
+                                        <button
+                                            type="button"
+                                            className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
+                                            aria-current={selected ? 'page' : undefined}
+                                            title={label}
+                                            onClick={() => openMatter(matter.id)}
+                                        >
+                                            <span className={`lh-side__sw lh-side__sw--${matter.id}`} aria-hidden />
+                                            <span className="lh-side__item-label">{label}</span>
+                                            {matter.count > 0 ? (
+                                                <span className={`lh-side__badge${matter.hot ? ' lh-side__badge--hot' : ''}`} aria-hidden>{matter.count}</span>
+                                            ) : null}
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                    <ul className="lh-side__list lh-side__list--tail">
+                        <li>
+                            <button
+                                type="button"
+                                className={`lh-side__item${navSection === 'allTeam' ? ' lh-side__item--active' : ''}`}
+                                aria-current={navSection === 'allTeam' ? 'page' : undefined}
+                                onClick={() => openSection('allTeam')}
+                            >
+                                <span className="lh-side__item-icon" aria-hidden>
+                                    <IconTeam />
+                                </span>
+                                <span className="lh-side__item-label">{t('legalHub.allTeam')}</span>
+                            </button>
+                        </li>
                     </ul>
                 </nav>
                 <div className="lh-side__foot">
@@ -437,7 +496,7 @@ function LegalHubPageBody() {
                                                 <span aria-hidden>/</span>
                                             </nav>
                                         ) : null}
-                                        <h1 className="lh-page__title">{openProjectId != null ? PROJECT_TITLE[openProjectId] : t(active.labelKey)}</h1>
+                                        <h1 className="lh-page__title">{openProjectId != null ? PROJECT_TITLE[openProjectId] : t(sectionTitle)}</h1>
                                         {openProjectId == null && section !== 'myTasks' ? <p className="lh-page__hint">{t(SECTION_HINT[section])}</p> : null}
                                     </div>
                                     <div className="lh-page__head-actions" ref={setActionsSlot} />

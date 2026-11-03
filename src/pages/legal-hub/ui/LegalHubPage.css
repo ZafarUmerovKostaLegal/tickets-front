@@ -71,15 +71,18 @@
 
 .lh-side__nav {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
   overflow-y: auto;
-  padding: 1.1rem 0.75rem 1.25rem;
+  padding: 0.9rem 0.6rem 1rem;
 }
 
 .lh-side__section {
-  margin: 0 0.55rem 0.55rem;
-  font-size: 0.6875rem;
+  margin: 0 0.5rem 0.35rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   color: var(--app-meta);
 }
@@ -90,25 +93,42 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 2px;
+}
+
+.lh-side__list--tail {
+  margin-top: auto;
 }
 
 .lh-side__item {
   display: flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 0.6rem;
   width: 100%;
-  padding: 0.62rem 0.7rem;
+  padding: 0.5rem 0.55rem;
   border: 0;
-  border-radius: 12px;
+  border-radius: 9px;
   background: transparent;
   color: var(--app-text-dim);
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 0.86rem;
   font-weight: 600;
   text-align: left;
   cursor: pointer;
 }
+
+.lh-side__sw {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.lh-side__sw--solar { background: var(--app-warning); }
+.lh-side__sw--wind { background: var(--app-accent); }
+.lh-side__sw--infrastructure { background: var(--app-meta); }
+.lh-side__sw--bess { background: var(--app-success); }
+.lh-side__sw--healthcare { background: var(--app-error); }
 
 .lh-side__item:hover {
   background: var(--app-surface-soft);
@@ -197,6 +217,11 @@
   .lh-page--side-collapsed .lh-side__item-label,
   .lh-page--side-collapsed .lh-side__collapse-label {
     display: none;
+  }
+
+  .lh-page--side-collapsed .lh-side__sw {
+    width: 12px;
+    height: 12px;
   }
 
   .lh-page--side-collapsed .lh-side__nav,
@@ -5636,8 +5661,13 @@ body[data-theme='dark'] .lh-page {
 }
 
 .lh-side__badge--hot {
-  background: var(--lh-late-bg);
-  color: var(--lh-late);
+  background: var(--app-error-bg);
+  color: var(--app-error);
+}
+
+.lh-side__badge--review {
+  background: var(--app-accent-light-bg);
+  color: var(--app-accent);
 }
 
 .lh-side__item--active .lh-side__badge--calm {

@@ -53,6 +53,9 @@ export const enMessages = {
     legalHub: {
         navAria: 'Legal Hub navigation',
         workspace: 'Workspace',
+        sideMine: 'Mine',
+        sideMatters: 'Matters',
+        sideReview: 'Waiting for my review',
         myTasks: 'My Tasks',
         reviewQueue: 'Review Queue',
         projects: 'Projects',
