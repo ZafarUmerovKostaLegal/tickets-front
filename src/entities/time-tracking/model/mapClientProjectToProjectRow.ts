@@ -114,6 +114,7 @@ export function mapClientProjectToProjectRow(p: TimeManagerClientProjectRow, cli
         currency: projectCur || clientCur || 'USD',
         status,
         hasBudgetConfigured,
+        budgetType: p.budget_type == null ? null : String(p.budget_type),
         budgetIncludesExpenses: Boolean(p.budget_includes_expenses),
         deletable: Boolean(p.deletable),
         partnerAuthUserIds: readProjectAuthUserIds(p, 'partnerAuthUserIds', 'partner_auth_user_ids'),

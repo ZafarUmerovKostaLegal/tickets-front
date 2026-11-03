@@ -651,7 +651,7 @@ export function ProjectsPanel() {
                         </span>
                         <span className="pp__td pp__td--budget">
                           {!hasBudgetConfigured
-                                ? (<span className="pp__dash">{p.type === 'Время и материалы' ? t('timeTrackingPage.projects.table.hourlyRate') : t('timeTrackingPage.projects.table.noBudget')}</span>)
+                                ? (<span className="pp__dash">{(p.budgetType ?? '').toLowerCase().replace(/-/g, '_') === 'hourly_rate' ? t('timeTrackingPage.projects.table.hourlyRate') : t('timeTrackingPage.projects.table.noBudget')}</span>)
                                 : hasBudget
                                     ? fmtAmt(p.budget!, p.currency)
                                     : fmtAmt(0, p.currency)}
