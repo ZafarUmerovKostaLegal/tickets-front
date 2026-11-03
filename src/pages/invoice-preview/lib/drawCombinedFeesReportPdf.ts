@@ -1,6 +1,8 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
-import { combinedReportDetailLines, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { combinedReportDetailLines, projectSummaryRows, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from './invoiceCoverLetterModel';
+import { formatTimeReportHours } from './invoiceTimeReportModel';
 import { wrapPdfCellLines } from './invoicePdfCellWrap';
 
 const W = 595.28;
@@ -136,9 +138,192 @@ function blocks(snapshot: CombinedReportSnapshot): Array<{ title?: string; heade
 }
 
 type PageOp =
+    | { kind: 'chrome'; title: string | null }
     | { kind: 'title'; text: string }
     | { kind: 'thead'; headers: string[]; weights: number[]; right: Set<number> }
     | { kind: 'row'; lines: string[][]; weights: number[]; right: Set<number>; height: number; bold: boolean };
+
+const CONFIDENTIAL = 'PRIVATE AND CONFIDENTIAL';
+
+function sheetNum(n: number): string {
+    return formatTimeReportHours(n).replace(/[\u00a0\u202f]/g, ' ');
+}
+
+function wrapAt(text: string, font: PDFFont, width: number, size: number): string[] {
+    const lines = wrapPdfCellLines(text || '—', Math.max(4, width), (s) => font.widthOfTextAtSize(s, size));
+    return lines.length ? lines : ['—'];
+}
+
+function chromeHeight(title: string | null, fontBold: PDFFont): number {
+    let height = 36;
+    if (!title)
+        return height;
+    const lines = wrapAt(title.toUpperCase(), fontBold, W - ML - MR, 9);
+    return height + lines.length * 11 + 8;
+}
+
+function drawChrome(page: PDFPage, fontBold: PDFFont, title: string | null): number {
+    let y = H - MT;
+    const size = 8;
+    const padX = 6;
+    const padY = 3;
+    const boxW = fontBold.widthOfTextAtSize(CONFIDENTIAL, size) + padX * 2;
+    const boxH = size + padY * 2;
+    const boxX = W - MR - boxW;
+    const boxBottom = y - boxH;
+    page.drawRectangle({ x: boxX, y: boxBottom, width: boxW, height: boxH, color: RED });
+    page.drawText(CONFIDENTIAL, { x: boxX + padX, y: boxBottom + padY, size, font: fontBold, color: rgb(1, 1, 1) });
+    y = boxBottom - 8;
+    page.drawLine({ start: { x: ML, y }, end: { x: W - MR, y }, thickness: 1.2, color: RED });
+    y -= 14;
+    if (title) {
+        const lines = wrapAt(title.toUpperCase(), fontBold, W - ML - MR, 9);
+        lines.forEach((line, index) => {
+            page.drawText(line, { x: ML, y: y - index * 11, size: 9, font: fontBold, color: RED });
+        });
+        y -= lines.length * 11 + 8;
+    }
+    return y;
+}
+
+function sortedProjectLines(snapshot: CombinedReportSnapshot, projectIndex: number) {
+    return [...(snapshot.projects[projectIndex]?.lines ?? [])].sort((a, b) => a.date.localeCompare(b.date)
+        || (a.initials || a.user).localeCompare(b.initials || b.user));
+}
+
+function sheetBlocks(
+    snapshot: CombinedReportSnapshot,
+    projectIndex: number,
+    timeFrom: number,
+    timeTo: number,
+    showTime: boolean,
+    showTimeTotal: boolean,
+    showSummary: boolean,
+): Array<{ headers: string[]; rows: Row[]; weights: number[]; right: Set<number> }> {
+    const cur = snapshot.currency || 'USD';
+    const out: Array<{ headers: string[]; rows: Row[]; weights: number[]; right: Set<number> }> = [];
+    const lines = sortedProjectLines(snapshot, projectIndex);
+    if (showTime) {
+        const projectHours = lines.reduce((sum, line) => sum + line.hours, 0);
+        const projectFees = lines.reduce((sum, line) => sum + line.amount, 0);
+        const rows: Row[] = lines.slice(timeFrom, timeTo).map((line) => ({
+            cells: [
+                dateRu(line.date),
+                line.initials || line.user,
+                line.task || '—',
+                line.description || '—',
+                sheetNum(line.hours),
+                sheetNum(line.rate ?? (line.hours > 0 ? line.amount / line.hours : 0)),
+                sheetNum(line.amount),
+            ],
+        }));
+        if (showTimeTotal)
+            rows.push({ bold: true, cells: ['', '', '', `Total (${cur})`, sheetNum(projectHours), '', sheetNum(projectFees)] });
+        out.push({
+            headers: ['Date', 'Initials', 'Task', 'Description', 'Hours', 'Rate', `Amount (${cur})`],
+            weights: [12, 8, 16, 34, 8, 10, 12],
+            right: new Set([4, 5, 6]),
+            rows,
+        });
+    }
+    if (showSummary) {
+        const people = projectSummaryRows(snapshot, projectIndex);
+        const summaryHours = people.reduce((sum, person) => sum + person.hours, 0);
+        const summaryFees = people.reduce((sum, person) => sum + person.amount, 0);
+        out.push({
+            headers: ['Initials', 'Name', 'Title', 'Hours', `Rate (${cur})`, `Amount (${cur})`],
+            weights: [10, 28, 22, 12, 14, 14],
+            right: new Set([3, 4, 5]),
+            rows: [
+                ...people.map((person) => ({
+                    cells: [person.initials, person.name, person.title, sheetNum(person.hours), sheetNum(person.rate), sheetNum(person.amount)],
+                })),
+                { bold: true, cells: ['', '', `Total (${cur})`, sheetNum(summaryHours), '', sheetNum(summaryFees)] },
+            ],
+        });
+    }
+    return out;
+}
+
+function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fontBold: PDFFont): PageOp[][] {
+    const slices = planCombinedReportPreviewPages(snapshot).filter((slice) => slice.projectIndex >= 0);
+    const pages: PageOp[][] = [];
+    let y = 0;
+    const open = (title: string | null) => {
+        pages.push([{ kind: 'chrome', title }]);
+        y = H - MT - chromeHeight(title, fontBold);
+    };
+    const push = (op: PageOp, height: number) => {
+        pages[pages.length - 1]!.push(op);
+        y -= height;
+    };
+    for (const slice of slices) {
+        const project = snapshot.projects[slice.projectIndex];
+        const title = slice.showMasthead
+            ? (project?.pageTitle?.trim() || `${snapshot.feeTitle} (${project?.name ?? ''})`).toUpperCase()
+            : null;
+        open(title);
+        const showTime = slice.showTimeTotal || slice.timeTo > slice.timeFrom;
+        for (const block of sheetBlocks(snapshot, slice.projectIndex, slice.timeFrom, slice.timeTo, showTime, slice.showTimeTotal, slice.showPeopleTotal)) {
+            const paintHead = () => {
+                if (y - THEAD_H < MB)
+                    open(null);
+                push({ kind: 'thead', headers: block.headers, weights: block.weights, right: block.right }, THEAD_H);
+            };
+            paintHead();
+            for (const row of block.rows) {
+                const face = row.bold ? fontBold : font;
+                const layout = rowLayout(row.cells, block.weights, block.right, face);
+                if (y - layout.height < MB) {
+                    open(null);
+                    paintHead();
+                }
+                push({
+                    kind: 'row',
+                    lines: layout.lines,
+                    weights: block.weights,
+                    right: block.right,
+                    height: layout.height,
+                    bold: Boolean(row.bold),
+                }, layout.height);
+            }
+            y -= 12;
+        }
+    }
+    if (pages.length === 0)
+        open(snapshot.feeTitle.toUpperCase());
+    return pages.filter((page) => page.length > 0);
+}
+
+function drawPlannedOps(page: PDFPage, font: PDFFont, fontBold: PDFFont, ops: PageOp[], startY: number): void {
+    let y = startY;
+    for (const op of ops) {
+        if (op.kind === 'chrome') {
+            y = drawChrome(page, fontBold, op.title);
+            continue;
+        }
+        if (op.kind === 'title') {
+            page.drawText(clip(op.text, fontBold, 10, W - ML - MR), { x: ML, y, size: 10, font: fontBold, color: INK });
+            y -= TITLE_H;
+            continue;
+        }
+        if (op.kind === 'thead') {
+            drawThead(page, fontBold, y, op.headers, op.weights, op.right);
+            y -= THEAD_H;
+            continue;
+        }
+        const { widths, xs } = colXs(op.weights);
+        const face = op.bold ? fontBold : font;
+        op.lines.forEach((col, i) => {
+            col.forEach((text, lineIndex) => {
+                const tw = face.widthOfTextAtSize(text, CELL);
+                const dx = op.right.has(i) ? xs[i]! + widths[i]! - 4 - tw : xs[i]! + 3;
+                page.drawText(text, { x: dx, y: y - lineIndex * STEP, size: CELL, font: face, color: INK });
+            });
+        });
+        y -= op.height;
+    }
+}
 
 function leadLines(snapshot: CombinedReportSnapshot, fontBold: PDFFont): string[] {
     return wrapped(snapshot.feeTitle.toUpperCase(), fontBold, W - ML - MR);
@@ -195,7 +380,10 @@ function planPages(snapshot: CombinedReportSnapshot, font: PDFFont, fontBold: PD
 }
 
 export function countCombinedReportPages(snapshot: CombinedReportSnapshot, font: PDFFont, fontBold: PDFFont): number {
-    return Math.max(1, planPages(snapshot, font, fontBold).length);
+    const pages = snapshot.layout === 'perProject'
+        ? planPerProjectPages(snapshot, font, fontBold)
+        : planPages(snapshot, font, fontBold);
+    return Math.max(1, pages.length);
 }
 
 function drawThead(page: PDFPage, fontBold: PDFFont, y: number, headers: string[], weights: number[], right: Set<number>): void {
@@ -219,6 +407,13 @@ export function drawCombinedReportPages(
     logo: Logo,
     snapshot: CombinedReportSnapshot,
 ): void {
+    if (snapshot.layout === 'perProject') {
+        for (const ops of planPerProjectPages(snapshot, font, fontBold)) {
+            const page = doc.addPage([W, H]);
+            drawPlannedOps(page, font, fontBold, ops, H - MT);
+        }
+        return;
+    }
     const lead = leadLines(snapshot, fontBold);
     const pages = planPages(snapshot, font, fontBold);
     pages.forEach((ops, index) => {
@@ -242,27 +437,6 @@ export function drawCombinedReportPages(
         else {
             y = contentTop(false, 0);
         }
-        for (const op of ops) {
-            if (op.kind === 'title') {
-                page.drawText(clip(op.text, fontBold, 10, W - ML - MR), { x: ML, y, size: 10, font: fontBold, color: INK });
-                y -= TITLE_H;
-                continue;
-            }
-            if (op.kind === 'thead') {
-                drawThead(page, fontBold, y, op.headers, op.weights, op.right);
-                y -= THEAD_H;
-                continue;
-            }
-            const { widths, xs } = colXs(op.weights);
-            const face = op.bold ? fontBold : font;
-            op.lines.forEach((col, i) => {
-                col.forEach((text, lineIndex) => {
-                    const tw = face.widthOfTextAtSize(text, CELL);
-                    const dx = op.right.has(i) ? xs[i]! + widths[i]! - 4 - tw : xs[i]! + 3;
-                    page.drawText(text, { x: dx, y: y - lineIndex * STEP, size: CELL, font: face, color: INK });
-                });
-            });
-            y -= op.height;
-        }
+        drawPlannedOps(page, font, fontBold, ops, y);
     });
 }

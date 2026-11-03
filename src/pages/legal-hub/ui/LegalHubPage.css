@@ -5769,8 +5769,9 @@ body[data-theme='dark'] .lh-page {
 }
 
 .lh-my--docket .lh-my__col header {
+  justify-content: flex-start;
   gap: 0.45rem;
-  padding: 0.7rem 0.75rem 0.15rem;
+  padding: 0.7rem 0.75rem 0.35rem;
 }
 
 .lh-my--docket .lh-my__dot {

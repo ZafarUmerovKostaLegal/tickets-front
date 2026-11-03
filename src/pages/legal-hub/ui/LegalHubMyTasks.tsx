@@ -443,7 +443,6 @@ function BoardColumnView({ id, title, hint, review, cards, droppable, dragging, 
                     </span>
                 ) : null}
             </header>
-            {hint ? <p className="lh-my__sub">{hint}</p> : null}
             {cards.length === 0 ? <p className="lh-my__empty">{droppable ? t('legalHub.myTasksDrop') : t('legalHub.myTasksColEmpty')}</p> : (
                 <ul>
                     {cards.map((task) => (
