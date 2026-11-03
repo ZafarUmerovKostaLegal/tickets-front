@@ -97,4 +97,6 @@ export type InvoicePreviewPackInput = {
     showServiceInitiatorName?: boolean;
     /** Present only for a combined invoice. Ordinary invoices leave this unset. */
     combinedReport?: CombinedReportSnapshot | null;
+    /** Preview pages captured 1:1. One PNG per combined-report sheet, in preview order. */
+    combinedReportPagePngs?: Uint8Array[] | null;
 };

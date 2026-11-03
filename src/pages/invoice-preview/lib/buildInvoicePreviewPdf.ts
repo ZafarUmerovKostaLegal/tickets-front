@@ -1813,7 +1813,10 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
     }
 
     if (input.combinedReport) {
-        const reportPages = Math.max(1, countCombinedReportPages(input.combinedReport, font, fontBold));
+        const shots = input.combinedReportPagePngs?.filter((png) => png.length > 0) ?? [];
+        const reportPages = shots.length > 0
+            ? shots.length
+            : Math.max(1, countCombinedReportPages(input.combinedReport, font, fontBold));
         const pdfPageCount = 2 + reportPages;
         const previewPageCount = 2 + Math.max(1, planCombinedReportPreviewPages(input.combinedReport).length);
         const selectedPreview = selectedPageNumbers?.length ? new Set(selectedPageNumbers) : null;
@@ -1823,7 +1826,16 @@ export async function buildInvoicePreviewPdfBlob(input: InvoicePreviewPackInput)
             const p1 = doc.addPage([W, H]);
             drawCoverPage(p1, model, font, fontBold, coverLogoImage, coverSignatureImage);
         }
-        if (Array.from({ length: reportPages }, (_, i) => 2 + i).some((n) => includePage(n)))
+        if (shots.length > 0) {
+            for (let i = 0; i < shots.length; i += 1) {
+                if (!includePage(2 + i))
+                    continue;
+                const page = doc.addPage([W, H]);
+                const image = await doc.embedPng(shots[i]!);
+                page.drawImage(image, { x: 0, y: 0, width: W, height: H });
+            }
+        }
+        else if (Array.from({ length: reportPages }, (_, i) => 2 + i).some((n) => includePage(n)))
             drawCombinedReportPages(doc, font, fontBold, coverLogoImage, input.combinedReport);
         if (includePage(pdfPageCount)) {
             const pInv = doc.addPage([W, H]);

@@ -138,6 +138,18 @@ function globalDetailRowOffset(chunks: InvoiceTimeReportDetailRow[][], chunkInde
     return offset;
 }
 
+async function captureCombinedReportPages(report: CombinedReportSnapshot | null | undefined): Promise<Uint8Array[] | null> {
+    if (!report)
+        return null;
+    try {
+        const { rasterizeCombinedReportPages } = await import('../lib/rasterizeCombinedReportPage');
+        return await rasterizeCombinedReportPages(report);
+    }
+    catch {
+        return null;
+    }
+}
+
 export function InvoicePreviewPage() {
     const { pushToast } = useAppToast();
     const location = useLocation();
@@ -973,7 +985,10 @@ export function InvoicePreviewPage() {
         setDownloadBusy('pdf');
         try {
             const { buildInvoicePreviewPdfBlob } = await import('../lib/buildInvoicePreviewPdf');
-            const blob = await buildInvoicePreviewPdfBlob(exportInput);
+            const blob = await buildInvoicePreviewPdfBlob({
+                ...exportInput,
+                combinedReportPagePngs: await captureCombinedReportPages(exportInput.combinedReport),
+            });
             triggerBrowserDownload(blob, `${defaultFilename}.pdf`);
         }
         catch (e) {
@@ -1004,6 +1019,7 @@ export function InvoicePreviewPage() {
             const blob = await buildInvoicePreviewPdfBlob({
                 ...exportInput,
                 selectedPageNumbers: [fullIdx + 1],
+                combinedReportPagePngs: await captureCombinedReportPages(exportInput.combinedReport),
             });
             const pageSuffix = slot.kind === 'cover'
                 ? 'letter'
