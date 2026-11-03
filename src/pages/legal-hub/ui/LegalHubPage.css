@@ -5726,6 +5726,289 @@ body[data-theme='dark'] .lh-page {
   opacity: 0.6;
 }
 
+/* Docket board: same layout as the legal board, painted with the app palette. */
+.lh-my--docket .lh-my__col {
+  gap: 0;
+  width: 284px;
+  min-width: 284px;
+  max-width: 284px;
+  flex-basis: 284px;
+  padding: 0.15rem 0 0.35rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--app-bg-soft) 88%, var(--app-surface));
+}
+
+.lh-my--docket .lh-my__col header {
+  gap: 0.45rem;
+  padding: 0.7rem 0.75rem 0.15rem;
+}
+
+.lh-my--docket .lh-my__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+  flex-shrink: 0;
+  background: var(--app-meta);
+}
+
+.lh-my--docket .lh-my__dot--progress,
+.lh-my--docket .lh-my__dot--associate {
+  background: var(--app-accent);
+}
+
+.lh-my--docket .lh-my__dot--partner {
+  background: var(--app-accent-hover);
+}
+
+.lh-my--docket .lh-my__dot--waitClient,
+.lh-my--docket .lh-my__dot--waitGov {
+  background: var(--app-warning);
+}
+
+.lh-my--docket .lh-my__dot--changes {
+  background: var(--app-error);
+}
+
+.lh-my--docket .lh-my__lock {
+  display: inline-flex;
+  margin-left: auto;
+  color: var(--app-muted);
+}
+
+.lh-my--docket .lh-my__lock svg {
+  width: 13px;
+  height: 13px;
+}
+
+.lh-my--docket .lh-my__sub {
+  margin: 0 0.75rem 0.4rem;
+  color: var(--app-muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.lh-my--docket .lh-my__col > ul {
+  gap: 0.5rem;
+  padding: 0.15rem 0.5rem 0.45rem;
+  overflow-y: auto;
+}
+
+.lh-my--docket .lh-my__empty {
+  margin: 0.15rem 0.5rem 0.55rem;
+  padding: 0.9rem 0.6rem;
+  border: 1px dashed color-mix(in srgb, var(--app-muted) 45%, var(--app-border));
+  border-radius: 10px;
+  color: var(--app-muted);
+  font-size: 0.74rem;
+  text-align: center;
+}
+
+.lh-my--docket .lh-my__col.is-target {
+  background: color-mix(in srgb, var(--app-accent) 8%, var(--app-bg-soft));
+  box-shadow: inset 0 0 0 1px var(--app-accent);
+}
+
+.lh-my--docket .lh-my__col.is-locked-col {
+  opacity: 0.72;
+}
+
+.lh-my--docket .lh-my__card {
+  gap: 0.4rem;
+  padding: 0.65rem 0.7rem 0.6rem;
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.lh-my--docket .lh-my__card:hover {
+  border-color: color-mix(in srgb, var(--app-muted) 40%, var(--app-border));
+}
+
+.lh-my--docket .lh-my__card.is-late {
+  border-color: var(--app-border);
+  box-shadow: inset 3px 0 0 var(--app-error), 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.lh-my--docket .lh-my__card strong {
+  font-size: 0.87rem;
+  font-weight: 650;
+  line-height: 1.32;
+}
+
+.lh-my--docket .lh-my__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.lh-my--docket .lh-my__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.4rem;
+  border-radius: 5px;
+  background: var(--app-accent-light-bg);
+  color: var(--app-accent);
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.lh-my--docket .lh-my__chip--soft {
+  background: var(--app-bg-soft);
+  color: var(--app-muted);
+}
+
+.lh-my--docket .lh-my__chip--hot {
+  background: var(--app-error-bg);
+  color: var(--app-error);
+}
+
+.lh-my--docket .lh-my__wait {
+  color: color-mix(in srgb, var(--app-warning) 75%, var(--app-text));
+  font-size: 0.72rem;
+  font-weight: 650;
+}
+
+.lh-my--docket .lh-my__review {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 8px;
+  background: var(--app-accent-light-bg);
+  color: var(--app-accent);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.lh-my--docket .lh-my__review--back {
+  background: var(--app-error-bg);
+  color: var(--app-error);
+}
+
+.lh-my--docket .lh-my__review .lh-tasks__avatar {
+  width: 1.15rem;
+  height: 1.15rem;
+  font-size: 0.52rem;
+}
+
+.lh-my--docket .lh-my__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.55rem;
+  color: var(--app-muted);
+  font-size: 0.72rem;
+}
+
+.lh-my--docket .lh-my__duepill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--app-bg-soft);
+  color: var(--app-text-light);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.lh-my--docket .lh-my__duepill.is-late {
+  background: var(--app-error-bg);
+  color: var(--app-error);
+}
+
+.lh-my--docket .lh-my__duepill.is-soon {
+  background: color-mix(in srgb, var(--app-warning) 16%, var(--app-surface));
+  color: color-mix(in srgb, var(--app-warning) 78%, var(--app-text));
+}
+
+.lh-my--docket .lh-my__pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-left: auto;
+}
+
+.lh-my--docket .lh-my__arrow {
+  color: var(--app-muted);
+  font-size: 0.7rem;
+}
+
+.lh-my--docket .lh-my__card-foot .lh-tasks__avatar {
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 0.62rem;
+}
+
+.lh-my--docket .lh-my__quick {
+  margin: auto 0.5rem 0.35rem;
+}
+
+.lh-my--docket .lh-my__quick > button {
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--app-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lh-my--docket .lh-my__quick > button:hover {
+  background: color-mix(in srgb, var(--app-text) 6%, transparent);
+  color: var(--app-text);
+}
+
+.lh-my--docket .lh-my__quick form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.lh-my--docket .lh-my__quick textarea {
+  width: 100%;
+  min-height: 3.6rem;
+  padding: 0.5rem 0.55rem;
+  border: 1px solid var(--app-accent);
+  border-radius: 9px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  resize: vertical;
+}
+
+.lh-my--docket .lh-my__quick form > div {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.lh-my--docket .lh-my__quick form button {
+  height: 2rem;
+  padding: 0 0.8rem;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.lh-my--docket .lh-my__quick form button[type='submit'] {
+  border: 0;
+  background: var(--app-accent);
+  color: #fff;
+}
+
+.lh-my--docket .lh-my__quick form button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .lh-my__hint {
   margin: -0.35rem 0 0;
   color: var(--app-meta);

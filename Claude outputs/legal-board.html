@@ -1,0 +1,928 @@
+<title>Legal Board</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: matter list on the left, a docket-style kanban that follows the firm's review chain (draft → associate → partner → approved). */
+:root {
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --surface-2: #f6f8fa;
+  --col: #e3e8ee;
+  --line: #d5dce4;
+  --line-strong: #b8c3cf;
+  --ink: #16202b;
+  --ink-2: #44515f;
+  --ink-3: #6f7c8a;
+  --accent: #1f5f8b;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2edf6;
+  --late: #b4232f;
+  --late-soft: #fbe7e8;
+  --warn: #9a5a00;
+  --warn-soft: #fdf0d9;
+  --review: #5b3fa6;
+  --review-soft: #ece7f8;
+  --ok: #1d7a4a;
+  --ok-soft: #e1f3e9;
+  --shadow: 0 1px 2px rgba(22, 32, 43, .06), 0 1px 1px rgba(22, 32, 43, .04);
+  --shadow-lift: 0 12px 28px rgba(22, 32, 43, .16);
+  --font: "Onest", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11161c; --surface: #19212a; --surface-2: #1e2731; --col: #151c24; --line: #2a3542; --line-strong: #3a4757;
+    --ink: #e6ebf0; --ink-2: #b3bfcb; --ink-3: #8593a2; --accent: #6aa9d8; --accent-ink: #0d1620; --accent-soft: #1b3346;
+    --late: #ff8a92; --late-soft: #3a1c21; --warn: #f2bd5b; --warn-soft: #3a2c14; --review: #b9a4f3; --review-soft: #2a2342;
+    --ok: #74d3a0; --ok-soft: #173326; --shadow: 0 1px 2px rgba(0,0,0,.35); --shadow-lift: 0 14px 30px rgba(0,0,0,.5);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11161c; --surface: #19212a; --surface-2: #1e2731; --col: #151c24; --line: #2a3542; --line-strong: #3a4757;
+  --ink: #e6ebf0; --ink-2: #b3bfcb; --ink-3: #8593a2; --accent: #6aa9d8; --accent-ink: #0d1620; --accent-soft: #1b3346;
+  --late: #ff8a92; --late-soft: #3a1c21; --warn: #f2bd5b; --warn-soft: #3a2c14; --review: #b9a4f3; --review-soft: #2a2342;
+  --ok: #74d3a0; --ok-soft: #173326; --shadow: 0 1px 2px rgba(0,0,0,.35); --shadow-lift: 0 14px 30px rgba(0,0,0,.5);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 14px; line-height: 1.4; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.mono { font-family: var(--mono); font-size: .92em; letter-spacing: -.01em; }
+
+.app { display: grid; grid-template-columns: 252px minmax(0, 1fr); height: 100%; }
+
+/* ---------- sidebar ---------- */
+.side { display: flex; flex-direction: column; min-height: 0; background: var(--surface); border-right: 1px solid var(--line); padding-left: max(0px, env(safe-area-inset-left, 0px)); }
+.brand { display: flex; align-items: center; gap: .6rem; padding: 1rem 1rem .9rem; border-bottom: 1px solid var(--line); }
+.brand-mark { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 9px; background: var(--ink); color: var(--surface); font-weight: 800; font-size: .9rem; }
+.brand b { display: block; font-size: .95rem; letter-spacing: -.01em; }
+.brand small { color: var(--ink-3); font-size: .72rem; }
+.side-scroll { flex: 1; overflow-y: auto; padding: .9rem .6rem 1rem; display: flex; flex-direction: column; gap: 1.1rem; }
+.side-label { margin: 0 .5rem .35rem; color: var(--ink-3); font-size: .66rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+.side-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.side-item { display: flex; align-items: center; gap: .6rem; width: 100%; padding: .5rem .55rem; border: 0; border-radius: 9px; background: none; text-align: left; color: var(--ink-2); font-weight: 600; font-size: .86rem; }
+.side-item:hover { background: var(--surface-2); color: var(--ink); }
+.side-item.is-on { background: var(--accent-soft); color: var(--accent); }
+.side-item .sw { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.side-item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-item .ct { min-width: 1.35rem; padding: 0 .35rem; border-radius: 999px; background: var(--surface-2); color: var(--ink-3); font-size: .7rem; font-weight: 700; text-align: center; line-height: 1.35rem; }
+.side-item .ct.hot { background: var(--late-soft); color: var(--late); }
+.side-item .ct.rv { background: var(--review-soft); color: var(--review); }
+.side-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+.me { margin: .6rem; padding: .7rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.me label { display: block; color: var(--ink-3); font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; margin-bottom: .35rem; }
+.me select { width: 100%; padding: .45rem .5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-weight: 600; }
+.me p { margin: .45rem 0 0; color: var(--ink-3); font-size: .72rem; }
+.side-foot { display: flex; gap: .4rem; padding: 0 .6rem .8rem; }
+.ghost-btn { flex: 1; padding: .45rem .5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink-2); font-size: .76rem; font-weight: 600; }
+.ghost-btn:hover { border-color: var(--line-strong); color: var(--ink); }
+
+/* ---------- main ---------- */
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1rem; padding-block: .9rem .75rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); background: var(--surface); border-bottom: 1px solid var(--line); }
+.mobile-pick { display: none; }
+.title-block { min-width: 0; flex: 1 1 18rem; }
+.crumb { display: flex; flex-wrap: wrap; gap: .25rem .6rem; align-items: center; color: var(--ink-3); font-size: .75rem; font-weight: 600; }
+.crumb .tag { padding: .05rem .4rem; border: 1px solid var(--line); border-radius: 5px; }
+.priv { color: var(--review); }
+.title-block h1 { margin: .15rem 0 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -.025em; text-wrap: balance; }
+.top-right { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.stack { display: flex; }
+.stack .av { margin-left: -6px; box-shadow: 0 0 0 2px var(--surface); }
+.stack .av:first-child { margin-left: 0; }
+.progress { display: flex; flex-direction: column; gap: .25rem; min-width: 8.5rem; color: var(--ink-3); font-size: .72rem; font-weight: 600; }
+.progress .track { height: 6px; border-radius: 99px; background: var(--col); overflow: hidden; }
+.progress .track i { display: block; height: 100%; background: var(--ok); border-radius: 99px; }
+.primary { display: inline-flex; align-items: center; gap: .35rem; height: 2.4rem; padding: 0 1rem; border: 0; border-radius: 10px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: .86rem; white-space: nowrap; }
+.primary:hover { filter: brightness(1.08); }
+.primary:disabled { opacity: .5; cursor: not-allowed; filter: none; }
+.secondary { display: inline-flex; align-items: center; gap: .35rem; height: 2.4rem; padding: 0 .9rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); font-weight: 650; font-size: .84rem; white-space: nowrap; }
+.secondary:hover { border-color: var(--line-strong); }
+.danger { color: var(--late); }
+
+.filters { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; padding-block: .6rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); background: var(--surface); }
+.search { position: relative; flex: 0 1 16rem; min-width: 10rem; }
+.search input { width: 100%; height: 2.1rem; padding: 0 .7rem 0 2rem; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); }
+.search svg { position: absolute; left: .6rem; top: 50%; width: 15px; height: 15px; transform: translateY(-50%); color: var(--ink-3); }
+.chip { display: inline-flex; align-items: center; gap: .35rem; height: 2.1rem; padding: 0 .7rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink-2); font-size: .78rem; font-weight: 650; }
+.chip:hover { border-color: var(--line-strong); color: var(--ink); }
+.chip.is-on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.chip em { font-style: normal; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.chip.is-on em { color: inherit; }
+.people-filter { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 999px; }
+.people-filter button { padding: 0; border: 0; background: none; border-radius: 999px; opacity: .55; }
+.people-filter button.is-on { opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
+.people-filter button:hover { opacity: 1; }
+.shown { margin-left: auto; color: var(--ink-3); font-size: .76rem; font-weight: 600; white-space: nowrap; }
+
+/* ---------- board ---------- */
+.board-wrap { flex: 1; min-height: 0; overflow: auto; padding-block: 1rem 1.25rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.board { display: flex; gap: .75rem; align-items: flex-start; min-height: 100%; width: max-content; }
+.col { display: flex; flex-direction: column; width: 284px; max-height: 100%; border-radius: 14px; background: var(--col); border: 1px solid transparent; }
+.col.drop-ok { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--col)); }
+.col.drop-no { opacity: .55; }
+.col-head { display: flex; align-items: center; gap: .5rem; padding: .7rem .75rem .45rem; }
+.col-head .dot { width: 8px; height: 8px; border-radius: 99px; flex-shrink: 0; }
+.col-head h2 { margin: 0; font-size: .84rem; font-weight: 750; letter-spacing: -.005em; }
+.col-head .n { color: var(--ink-3); font-size: .78rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.col-head .lock { margin-left: auto; display: inline-flex; align-items: center; gap: .25rem; color: var(--ink-3); font-size: .66rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.col-head .lock svg { width: 13px; height: 13px; }
+.col-sub { margin: -.2rem .75rem .45rem; color: var(--ink-3); font-size: .7rem; }
+.cards { list-style: none; margin: 0; padding: .1rem .5rem .5rem; display: flex; flex-direction: column; gap: .5rem; overflow-y: auto; min-height: 2.5rem; }
+.empty-col { margin: .1rem .5rem .6rem; padding: .9rem .6rem; border: 1px dashed var(--line-strong); border-radius: 10px; color: var(--ink-3); font-size: .74rem; text-align: center; }
+
+.card { position: relative; display: flex; flex-direction: column; gap: .45rem; width: 100%; padding: .65rem .7rem .6rem; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); box-shadow: var(--shadow); text-align: left; cursor: grab; }
+.card:hover { border-color: var(--line-strong); }
+.card.dragging { opacity: .4; }
+.card.late { box-shadow: inset 3px 0 0 var(--late), var(--shadow); }
+.card-top { display: flex; flex-wrap: wrap; gap: .3rem; }
+.lbl { display: inline-flex; align-items: center; padding: .05rem .4rem; border-radius: 5px; font-size: .66rem; font-weight: 700; letter-spacing: .01em; }
+.card h3 { margin: 0; font-size: .87rem; font-weight: 650; line-height: 1.32; }
+.card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .55rem; color: var(--ink-3); font-size: .72rem; }
+.card-meta span { display: inline-flex; align-items: center; gap: .2rem; }
+.card-meta svg { width: 13px; height: 13px; }
+.card-foot { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
+.due { display: inline-flex; align-items: center; gap: .3rem; padding: .1rem .45rem; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); font-size: .7rem; font-weight: 700; white-space: nowrap; }
+.due.late { background: var(--late-soft); color: var(--late); }
+.due.soon { background: var(--warn-soft); color: var(--warn); }
+.due.ok { background: var(--ok-soft); color: var(--ok); }
+.waitfor { color: var(--warn); font-weight: 650; }
+.prio { width: 8px; height: 8px; border-radius: 2px; transform: rotate(45deg); background: var(--late); flex-shrink: 0; }
+.rv-line { display: flex; align-items: center; gap: .35rem; padding: .3rem .45rem; border-radius: 8px; background: var(--review-soft); color: var(--review); font-size: .7rem; font-weight: 650; }
+.rv-line.ch { background: var(--late-soft); color: var(--late); }
+.rv-line.ok { background: var(--ok-soft); color: var(--ok); }
+
+.av { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 999px; color: #fff; font-size: .62rem; font-weight: 750; letter-spacing: .02em; flex-shrink: 0; }
+.av.lg { width: 2rem; height: 2rem; font-size: .72rem; }
+.pair { display: inline-flex; align-items: center; gap: .15rem; }
+.pair .arrow { color: var(--ink-3); font-size: .7rem; }
+
+.adder { margin: 0 .5rem .55rem; }
+.adder button.open { width: 100%; padding: .45rem .5rem; border: 0; border-radius: 9px; background: none; color: var(--ink-3); font-weight: 650; font-size: .8rem; text-align: left; }
+.adder button.open:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); color: var(--ink); }
+.adder form { display: flex; flex-direction: column; gap: .4rem; }
+.adder textarea { width: 100%; min-height: 3.6rem; padding: .5rem .55rem; border: 1px solid var(--accent); border-radius: 9px; background: var(--surface); resize: vertical; }
+.adder .row { display: flex; gap: .4rem; }
+.adder .row button { height: 2rem; padding: 0 .8rem; border-radius: 8px; font-weight: 700; font-size: .78rem; }
+.adder .row button[type=submit] { border: 0; background: var(--accent); color: var(--accent-ink); }
+.adder .row button[type=button] { border: 1px solid var(--line); background: var(--surface); }
+
+/* ---------- list view ---------- */
+.list { display: flex; flex-direction: column; gap: .5rem; max-width: 980px; }
+.list-intro { margin: 0 0 .4rem; color: var(--ink-2); font-size: .86rem; }
+.row-item { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: .9rem; width: 100%; padding: .75rem .9rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); text-align: left; }
+.row-item:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
+.row-item .t { min-width: 0; }
+.row-item .t b { display: block; font-size: .9rem; font-weight: 650; }
+.row-item .t small { display: block; margin-top: .15rem; color: var(--ink-3); font-size: .74rem; }
+.stage { padding: .15rem .5rem; border-radius: 999px; font-size: .7rem; font-weight: 700; white-space: nowrap; }
+.empty-state { padding: 2.5rem 1rem; border: 1px dashed var(--line-strong); border-radius: 14px; color: var(--ink-3); text-align: center; }
+.empty-state b { display: block; margin-bottom: .3rem; color: var(--ink); font-size: 1rem; }
+
+/* ---------- modal ---------- */
+.scrim { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: center; align-items: flex-start; padding: max(2rem, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 2rem max(16px, env(safe-area-inset-left, 0px)); background: rgba(10, 16, 24, .48); overflow-y: auto; }
+.modal { width: min(900px, 100%); border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-lift); }
+.m-head { display: flex; align-items: flex-start; gap: .75rem; padding: 1.1rem 1.25rem .9rem; border-bottom: 1px solid var(--line); }
+.m-head .grow { flex: 1; min-width: 0; }
+.m-title { width: 100%; margin: .2rem 0 0; padding: .2rem .3rem; margin-left: -.3rem; border: 1px solid transparent; border-radius: 7px; background: none; font-size: 1.25rem; font-weight: 800; letter-spacing: -.02em; }
+.m-title:hover { border-color: var(--line); }
+.m-title:focus { border-color: var(--accent); outline: none; background: var(--surface-2); }
+.x { display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border: 0; border-radius: 9px; background: var(--surface-2); color: var(--ink-2); font-size: 1.2rem; }
+.x:hover { color: var(--ink); }
+.m-body { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 0; }
+.m-main { padding: 1.1rem 1.25rem 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
+.m-side { padding: 1.1rem 1.1rem 1.25rem; border-left: 1px solid var(--line); background: var(--surface-2); border-radius: 0 0 16px 0; display: flex; flex-direction: column; gap: .85rem; }
+.sec h3 { display: flex; align-items: center; gap: .45rem; margin: 0 0 .55rem; font-size: .8rem; font-weight: 750; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-2); }
+.sec h3 em { font-style: normal; color: var(--ink-3); font-weight: 650; text-transform: none; letter-spacing: 0; }
+.field { display: flex; flex-direction: column; gap: .3rem; }
+.field > span:first-child { color: var(--ink-3); font-size: .68rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.field select, .field input { width: 100%; height: 2.1rem; padding: 0 .5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.field .hint { color: var(--ink-3); font-size: .72rem; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.muted-note { margin: 0; color: var(--ink-3); font-size: .8rem; }
+.field .hint.late { color: var(--late); font-weight: 650; }
+textarea.desc { width: 100%; min-height: 5.5rem; padding: .6rem .7rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); resize: vertical; line-height: 1.5; }
+
+.flow { padding: .9rem 1rem 1rem; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: .8rem; }
+.steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .35rem; list-style: none; margin: 0; padding: 0; }
+.steps li { display: flex; flex-direction: column; gap: .35rem; color: var(--ink-3); font-size: .72rem; font-weight: 650; }
+.steps li i { height: 5px; border-radius: 99px; background: var(--line); }
+.steps li.done i { background: var(--ok); }
+.steps li.done { color: var(--ok); }
+.steps li.now i { background: var(--review); }
+.steps li.now { color: var(--review); }
+.steps li.back i { background: var(--late); }
+.steps li.back { color: var(--late); }
+.flow-msg { margin: 0; color: var(--ink-2); font-size: .82rem; }
+.flow-msg b { color: var(--ink); }
+.flow-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.confirm { display: flex; flex-direction: column; gap: .5rem; padding: .7rem .8rem; border: 1px solid var(--warn); border-radius: 10px; background: var(--warn-soft); color: var(--ink); font-size: .8rem; }
+.confirm.back { border-color: var(--late); background: var(--late-soft); }
+.confirm textarea { width: 100%; min-height: 3.5rem; padding: .5rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.confirm .row { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+.checks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.checks li { display: flex; align-items: center; gap: .55rem; padding: .35rem .4rem; border-radius: 8px; }
+.checks li:hover { background: var(--surface-2); }
+.checks input { width: 16px; height: 16px; accent-color: var(--ok); }
+.checks label { flex: 1; cursor: pointer; }
+.checks .done label { color: var(--ink-3); text-decoration: line-through; }
+.checks .rm { border: 0; background: none; color: var(--ink-3); opacity: 0; }
+.checks li:hover .rm, .checks .rm:focus-visible { opacity: 1; }
+.bar { height: 6px; border-radius: 99px; background: var(--col); overflow: hidden; margin-bottom: .45rem; }
+.bar i { display: block; height: 100%; background: var(--ok); }
+.inline-add { display: flex; gap: .4rem; margin-top: .4rem; }
+.inline-add input { flex: 1; min-width: 0; height: 2.1rem; padding: 0 .6rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.inline-add button { height: 2.1rem; padding: 0 .8rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); font-weight: 650; font-size: .8rem; }
+
+.files { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+.files li { display: flex; align-items: center; gap: .6rem; padding: .5rem .6rem; border: 1px solid var(--line); border-radius: 10px; }
+.ft { display: grid; place-items: center; width: 2.1rem; height: 2.1rem; border-radius: 7px; font-family: var(--mono); font-size: .62rem; font-weight: 600; }
+.ft.pdf { background: var(--late-soft); color: var(--late); }
+.ft.doc { background: var(--accent-soft); color: var(--accent); }
+.files .fn { flex: 1; min-width: 0; }
+.files .fn b { display: block; font-size: .82rem; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.files .fn small { color: var(--ink-3); font-size: .7rem; }
+.ver { padding: .05rem .35rem; border-radius: 5px; background: var(--surface-2); border: 1px solid var(--line); font-family: var(--mono); font-size: .66rem; }
+
+.tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--line); margin-bottom: .7rem; }
+.tabs button { padding: .45rem .7rem; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--ink-3); font-weight: 650; font-size: .82rem; margin-bottom: -1px; }
+.tabs button.is-on { color: var(--ink); border-bottom-color: var(--accent); }
+.thread { list-style: none; margin: 0 0 .6rem; padding: 0; display: flex; flex-direction: column; gap: .7rem; }
+.thread li { display: flex; gap: .55rem; }
+.thread .bubble { flex: 1; min-width: 0; padding: .5rem .65rem; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
+.thread .bubble.return { border-color: var(--late); background: var(--late-soft); }
+.thread .who { display: flex; gap: .4rem; align-items: baseline; font-size: .74rem; color: var(--ink-3); margin-bottom: .15rem; }
+.thread .who b { color: var(--ink); font-size: .8rem; }
+.thread p { margin: 0; font-size: .84rem; }
+.compose { display: flex; gap: .4rem; }
+.compose textarea { flex: 1; min-width: 0; min-height: 2.4rem; padding: .5rem .6rem; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); resize: vertical; }
+.log { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+.log li { display: flex; gap: .55rem; font-size: .8rem; color: var(--ink-2); }
+.log li::before { content: ""; width: 7px; height: 7px; margin-top: .4rem; border-radius: 99px; background: var(--line-strong); flex-shrink: 0; }
+.log small { display: block; color: var(--ink-3); font-size: .7rem; }
+
+/* ---------- toast ---------- */
+.toasts { position: fixed; z-index: 80; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: .5rem; align-items: flex-end; pointer-events: none; }
+.toast { max-width: min(26rem, calc(100vw - 32px)); padding: .65rem .85rem; border-radius: 10px; background: var(--ink); color: var(--surface); font-size: .82rem; font-weight: 600; box-shadow: var(--shadow-lift); animation: rise .2s ease both; }
+.toast.err { background: var(--late); color: #fff; }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
+
+/* ---------- responsive ---------- */
+@media (max-width: 860px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .side { display: none; }
+  .mobile-pick { display: flex; gap: .5rem; width: 100%; }
+  .mobile-pick select { flex: 1; min-width: 0; height: 2.3rem; padding: 0 .5rem; border: 1px solid var(--line); border-radius: 9px; background: var(--surface-2); font-weight: 650; }
+  .m-body { grid-template-columns: minmax(0, 1fr); }
+  .m-side { border-left: 0; border-top: 1px solid var(--line); border-radius: 0 0 16px 16px; }
+  .progress { display: none; }
+  .shown { margin-left: 0; }
+  .col { width: 262px; }
+  .row-item { grid-template-columns: minmax(0, 1fr); gap: .45rem; }
+}
+</style>
+
+<div class="app">
+  <aside class="side" aria-label="Навигация">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">§</span>
+      <div><b>Legal Board</b><small>Демо · только интерфейс</small></div>
+    </div>
+    <div class="side-scroll">
+      <nav>
+        <p class="side-label">Мне</p>
+        <ul class="side-list" id="sideMine"></ul>
+      </nav>
+      <nav>
+        <p class="side-label">Дела</p>
+        <ul class="side-list" id="sideBoards"></ul>
+      </nav>
+    </div>
+    <div class="me">
+      <label for="who">Вы вошли как</label>
+      <select id="who"></select>
+      <p id="whoHint"></p>
+    </div>
+    <div class="side-foot">
+      <button class="ghost-btn" type="button" id="resetBtn">Сбросить демо</button>
+    </div>
+  </aside>
+
+  <section class="main">
+    <header class="top">
+      <div class="mobile-pick">
+        <select id="mobileView" aria-label="Раздел"></select>
+        <select id="mobileWho" aria-label="Вы вошли как"></select>
+      </div>
+      <div class="title-block">
+        <div class="crumb" id="crumb"></div>
+        <h1 id="title"></h1>
+      </div>
+      <div class="top-right" id="topRight"></div>
+    </header>
+    <div class="filters" id="filters"></div>
+    <div class="board-wrap" id="content"></div>
+  </section>
+</div>
+<div id="modalRoot"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ---------------- reference data ---------------- */
+  const PEOPLE = [
+    { id: 'ek', name: 'Елена Ким', role: 'partner', color: '#7a3e9d' },
+    { id: 'ta', name: 'Тимур Ахмедов', role: 'associate', color: '#1f6f8b' },
+    { id: 'os', name: 'Ольга Соколова', role: 'associate', color: '#2f7d4f' },
+    { id: 'my', name: 'Мадина Юсупова', role: 'junior', color: '#b5562a' },
+    { id: 'an', name: 'Азиз Назаров', role: 'junior', color: '#8a6d1d' },
+  ];
+  const ROLE = { partner: 'Партнёр', associate: 'Ассоциат', junior: 'Младший юрист' };
+  const ROLE_HINT = {
+    partner: 'Утверждаете документы и возвращаете их на доработку.',
+    associate: 'Проверяете работу младших юристов и передаёте партнёру.',
+    junior: 'Готовите документы и отправляете их на проверку.',
+  };
+
+  const BOARDS = [
+    { id: 'solar', name: 'Project A — Solar', client: 'SunGrid Energy', no: 'M-2026-014', color: '#d08a12' },
+    { id: 'wind', name: 'Project B — Wind', client: 'Aral Wind Power', no: 'M-2026-021', color: '#1f6f8b' },
+    { id: 'infra', name: 'Project C — Infrastructure', client: 'TransCaspian Roads', no: 'M-2026-009', color: '#5a6b7c' },
+    { id: 'bess', name: 'Project D — BESS', client: 'VoltStore Central Asia', no: 'M-2026-030', color: '#2f7d4f' },
+    { id: 'health', name: 'Project E — Healthcare', client: 'MedLine Clinics', no: 'M-2026-017', color: '#b4232f' },
+  ];
+
+  const COLS = [
+    { id: 'todo', title: 'К выполнению', kind: 'work', dot: '#8593a2' },
+    { id: 'progress', title: 'В работе', kind: 'work', dot: '#1f5f8b' },
+    { id: 'wait', title: 'Внешнее ожидание', kind: 'work', dot: '#c98a12', sub: 'Ждём клиента, госорган или контрагента' },
+    { id: 'assoc', title: 'Проверка ассоциата', kind: 'review', dot: '#5b3fa6', sub: 'Двигает только проверяющий' },
+    { id: 'partner', title: 'Согласование партнёра', kind: 'review', dot: '#3d2a85', sub: 'Утверждает только партнёр' },
+    { id: 'changes', title: 'Нужны правки', kind: 'work', dot: '#b4232f', sub: 'Вернули с замечаниями' },
+    { id: 'done', title: 'Утверждено', kind: 'done', dot: '#1d7a4a', sub: 'Готово к отправке клиенту' },
+  ];
+  const COL = Object.fromEntries(COLS.map((c) => [c.id, c]));
+  const WORK = ['todo', 'progress', 'wait', 'changes'];
+
+  const LABELS = {
+    lla: { t: 'Аренда земли', c: '#d08a12' },
+    ease: { t: 'Сервитуты', c: '#1f6f8b' },
+    permit: { t: 'Разрешения', c: '#2f7d4f' },
+    corr: { t: 'Переписка', c: '#5a6b7c' },
+    opinion: { t: 'Заключение', c: '#5b3fa6' },
+    contract: { t: 'Договор', c: '#7a3e9d' },
+    reg: { t: 'Регуляторика', c: '#b4232f' },
+  };
+
+  /* ---------------- dates (seeded relative to today, so the demo stays fresh) ---------------- */
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const iso = (offset) => { const d = new Date(today); d.setDate(d.getDate() + offset); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const newId = () => 'n' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const delta = (s) => Math.round((parse(s) - today) / 86400000);
+  const MONTHS = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+  const fmt = (s) => { const d = parse(s); return `${d.getDate()} ${MONTHS[d.getMonth()]}`; };
+  const rel = (s) => {
+    const n = delta(s);
+    if (n < 0) return `просрочено ${-n} д`;
+    if (n === 0) return 'сегодня';
+    if (n === 1) return 'завтра';
+    return `через ${n} д`;
+  };
+  const dueClass = (s, done) => { if (done) return 'ok'; const n = delta(s); return n < 0 ? 'late' : n <= 1 ? 'soon' : ''; };
+  const stamp = () => { const d = new Date(); return `${d.getDate()} ${MONTHS[d.getMonth()]}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+
+  /* ---------------- seed ---------------- */
+  let seq = 100;
+  const ck = (...items) => items.map((x) => (typeof x === 'string' ? { t: x, done: false } : { t: x[0], done: true }));
+  function seed() {
+    const c = (o) => Object.assign({
+      id: 'c' + (seq++), desc: '', labels: [], reviewer: null, prio: false, est: 2, checks: [], files: [], comments: [], log: [], waitFor: '', internal: null, returnTo: null, approvedBy: null,
+    }, o);
+    const cards = [
+      c({ board: 'solar', col: 'partner', title: 'Дополнение к договору аренды земли — финальная редакция', labels: ['lla'], owner: 'my', reviewer: 'ek', prio: true, client: iso(-1), internal: iso(-3), est: 3,
+        checks: ck(['Сверить с инструкциями клиента'], ['Подготовить проект'], ['Проверить ссылки на нормы'], ['Приложить карту участка']),
+        files: [{ n: 'LLA_Amendment_v4.docx', v: 'v4', k: 'doc', s: '312 КБ' }, { n: 'Plot_map_2026.pdf', v: 'v1', k: 'pdf', s: '1,4 МБ' }],
+        comments: [{ who: 'ta', text: 'Проверил, замечаний нет. Передаю на утверждение.', at: '2 дня назад' }],
+        log: ['Мадина Юсупова создала карточку', 'Отправлено на проверку ассоциату', 'Тимур Ахмедов одобрил и передал партнёру'] }),
+      c({ board: 'solar', col: 'progress', title: 'Подготовить дополнение к договору аренды (сервитут ЛЭП)', labels: ['lla', 'ease'], owner: 'my', reviewer: 'ta', prio: true, client: iso(0), internal: iso(-1), est: 4,
+        desc: 'Учесть обновлённые координаты участка и схему прохождения ЛЭП. Сверить с письмом хокимията от 12.10.',
+        checks: ck(['Изучить инструкции клиента'], ['Подготовить проект'], 'Проверить ссылки на нормы', 'Сверить финальную редакцию'),
+        files: [{ n: 'LLA_draft_v2.docx', v: 'v2', k: 'doc', s: '245 КБ' }],
+        comments: [{ who: 'ek', text: 'Сначала согласуйте координаты с клиентом, потом отправляйте на проверку.', at: 'вчера' }],
+        log: ['Мадина Юсупова создала карточку', 'Мадина Юсупова начала работу'] }),
+      c({ board: 'solar', col: 'wait', title: 'Подтверждение хокимията по отводу земли', labels: ['permit'], owner: 'my', client: iso(1), waitFor: 'Хокимият района', est: 1,
+        checks: ck(['Отправить запрос'], 'Получить ответ'), log: ['Запрос отправлен в хокимият'] }),
+      c({ board: 'solar', col: 'assoc', title: 'Письмо о передаче линии электропередачи', labels: ['ease', 'corr'], owner: 'an', reviewer: 'ta', client: iso(3), est: 1,
+        checks: ck(['Подготовить проект'], ['Согласовать с клиентом']), files: [{ n: 'TX_easement_letter_v1.docx', v: 'v1', k: 'doc', s: '88 КБ' }],
+        log: ['Азиз Назаров отправил на проверку'] }),
+      c({ board: 'solar', col: 'todo', title: 'Проверить проект пакета разрешений', labels: ['permit'], owner: 'an', client: iso(4), est: 2, checks: ck('Перечень документов', 'Сверка сроков') }),
+      c({ board: 'solar', col: 'done', title: 'Справка о правах на земельный участок', labels: ['lla'], owner: 'os', reviewer: 'ek', client: iso(-2), est: 2, approvedBy: 'ek',
+        checks: ck(['Выписка из кадастра'], ['Анализ обременений']), files: [{ n: 'Land_rights_memo_v3.pdf', v: 'v3', k: 'pdf', s: '420 КБ' }], log: ['Елена Ким утвердила документ'] }),
+
+      c({ board: 'wind', col: 'partner', title: 'Финальная проверка письма клиенту перед отправкой', labels: ['corr'], owner: 'my', reviewer: 'ek', prio: true, client: iso(0), est: 1,
+        checks: ck(['Сверить с перепиской'], ['Проверить сроки']), files: [{ n: 'Client_letter_v3.docx', v: 'v3', k: 'doc', s: '64 КБ' }] }),
+      c({ board: 'wind', col: 'assoc', title: 'Договор сервитута — проверка ассоциатом', labels: ['ease', 'contract'], owner: 'an', reviewer: 'os', client: iso(1), est: 2,
+        checks: ck(['Проект договора'], ['График платежей'], 'Карта сервитута') }),
+      c({ board: 'wind', col: 'changes', title: 'Перечень сервитутов — исправить нумерацию участков', labels: ['ease'], owner: 'an', reviewer: 'ta', client: iso(2), est: 1, returnTo: 'assoc',
+        comments: [{ who: 'ta', text: 'Раздел 3 расходится с графиком обеспечения, обновите определения.', at: 'сегодня', ret: true }],
+        log: ['Тимур Ахмедов вернул на доработку'] }),
+      c({ board: 'wind', col: 'todo', title: 'Подготовить приложение к договору подряда', labels: ['contract'], owner: 'my', client: iso(5), est: 3 }),
+
+      c({ board: 'infra', col: 'changes', title: 'Доработать юридическое заключение по замечаниям', labels: ['opinion'], owner: 'my', reviewer: 'ta', prio: true, client: iso(1), est: 3, returnTo: 'assoc',
+        comments: [{ who: 'ta', text: 'Добавьте анализ ст. 27 и ссылку на постановление №112.', at: 'вчера', ret: true }] }),
+      c({ board: 'infra', col: 'partner', title: 'Ответное письмо в министерство', labels: ['reg', 'corr'], owner: 'an', reviewer: 'ek', client: iso(1), est: 1 }),
+      c({ board: 'infra', col: 'wait', title: 'Подтверждение регулятора', labels: ['reg'], owner: 'ta', client: iso(2), waitFor: 'Регулятор' }),
+
+      c({ board: 'bess', col: 'assoc', title: 'Договор аренды площадки BESS — проверка', labels: ['lla', 'contract'], owner: 'my', reviewer: 'ta', prio: true, client: iso(-1), est: 3,
+        checks: ck(['Проект'], ['Сверка с term sheet'], 'Ссылки на нормы') }),
+      c({ board: 'bess', col: 'partner', title: 'Договор аренды BESS — утверждение', labels: ['lla'], owner: 'an', reviewer: 'ek', client: iso(2), est: 2 }),
+
+      c({ board: 'health', col: 'progress', title: 'Стратегическая записка для клиента', labels: ['opinion'], owner: 'ek', client: iso(0), est: 2 }),
+      c({ board: 'health', col: 'done', title: 'Письмо о регистрации клиники', labels: ['reg'], owner: 'an', reviewer: 'os', client: iso(-4), approvedBy: 'os' }),
+    ];
+    return { cards, board: 'solar', view: 'board', me: 'my' };
+  }
+
+  /* ---------------- state ---------------- */
+  const KEY = 'legal-board-demo-v1';
+  let S;
+  try { S = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { S = null; }
+  if (!S || !Array.isArray(S.cards)) S = seed();
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* storage unavailable */ } };
+  const F = { q: '', people: [], mine: false, late: false, label: '' };
+  let openId = null, tab = 'comments', pending = null, adding = null, dragId = null;
+
+  const P = (id) => PEOPLE.find((p) => p.id === id);
+  const me = () => P(S.me);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  const initials = (p) => p.name.split(' ').map((x) => x[0]).join('');
+  const av = (id, cls = '') => { const p = P(id); return p ? `<span class="av ${cls}" style="background:${p.color}" title="${esc(p.name)} · ${ROLE[p.role]}">${initials(p)}</span>` : ''; };
+  const $ = (s) => document.querySelector(s);
+  const isLate = (c) => c.col !== 'done' && delta(c.client) < 0;
+  const reviewerOf = (c) => P(c.reviewer);
+
+  function toast(text, err = false) {
+    const el = document.createElement('div');
+    el.className = 'toast' + (err ? ' err' : '');
+    el.textContent = text;
+    $('#toasts').appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  function log(c, text) { c.log.push(`${text} · ${stamp()}`); }
+
+  /* ---------------- workflow rules ---------------- */
+  // Who may act on a card right now, and where a move is allowed to land.
+  function canReview(c, who = me()) {
+    if (c.col === 'assoc') return who.role === 'partner' || (who.role === 'associate' && (c.reviewer === who.id || !c.reviewer));
+    if (c.col === 'partner') return who.role === 'partner';
+    return false;
+  }
+  function moveCheck(c, to) {
+    const from = c.col; const who = me();
+    if (from === to) return { ok: false, silent: true };
+    if (to === 'done') {
+      if (from !== 'partner') return { ok: false, msg: 'Утвердить можно только документ на согласовании партнёра.' };
+      if (who.role !== 'partner') return { ok: false, msg: 'Утверждает только партнёр.' };
+      return { ok: true, action: 'approve' };
+    }
+    if (from === 'done') return { ok: false, msg: 'Утверждённый документ не двигается. Создайте новую версию.' };
+    if (COL[from].kind === 'review') {
+      if (to === 'changes') return canReview(c) ? { ok: true, action: 'return' } : { ok: false, msg: 'Вернуть на доработку может только проверяющий.' };
+      if (from === 'assoc' && to === 'partner') return canReview(c) ? { ok: true, action: 'pass' } : { ok: false, msg: 'Передать партнёру может только проверяющий ассоциат.' };
+      if (WORK.includes(to)) return (c.owner === who.id || who.role === 'partner') ? { ok: true, action: 'withdraw' } : { ok: false, msg: 'Отозвать с проверки может только ответственный.' };
+      return { ok: false, msg: 'Так документ двигаться не может.' };
+    }
+    if (to === 'assoc' || to === 'partner') {
+      if (!c.reviewer) return { ok: false, msg: 'Сначала назначьте проверяющего в карточке.', open: true };
+      const r = reviewerOf(c);
+      if (to === 'assoc' && r.role === 'partner') return { ok: true, action: 'submit', to: 'partner' };
+      if (to === 'partner' && r.role !== 'partner') return { ok: true, action: 'submit', to: 'assoc' };
+      return { ok: true, action: 'submit', to };
+    }
+    return { ok: true, action: 'move' };
+  }
+
+  function applyMove(c, to) {
+    const r = moveCheck(c, to);
+    if (!r.ok) {
+      if (!r.silent) toast(r.msg, true);
+      if (r.open) openCard(c.id);
+      return;
+    }
+    if (r.action === 'return') { openCard(c.id); pending = { kind: 'return' }; renderModal(); return; }
+    if (r.action === 'submit') { submit(c); return; }
+    if (r.action === 'approve') { approve(c); return; }
+    if (r.action === 'pass') { pass(c); return; }
+    if (r.action === 'withdraw') { c.col = to; log(c, `${me().name} отозвал(а) с проверки`); toast('Документ отозван с проверки'); }
+    else { log(c, `${me().name}: «${COL[c.col].title}» → «${COL[to].title}»`); c.col = to; }
+    commit();
+  }
+
+  function submit(c, force = false) {
+    if (!c.reviewer) { toast('Назначьте проверяющего, чтобы отправить на проверку.', true); openCard(c.id); return; }
+    const left = c.checks.filter((x) => !x.done).length;
+    if (left > 0 && !force) { openCard(c.id); pending = { kind: 'submit', left }; renderModal(); return; }
+    const to = c.col === 'changes' && c.returnTo ? c.returnTo : (reviewerOf(c).role === 'partner' ? 'partner' : 'assoc');
+    const wasChanges = c.col === 'changes';
+    c.col = to; c.returnTo = null;
+    log(c, `${me().name} ${wasChanges ? 'отправил(а) исправления' : 'отправил(а) на проверку'} → ${reviewerOf(c).name}`);
+    toast(`Отправлено: ${COL[to].title.toLowerCase()} · ${reviewerOf(c).name}`);
+    pending = null; commit();
+  }
+  function pass(c) {
+    const partner = PEOPLE.find((p) => p.role === 'partner');
+    c.col = 'partner'; c.reviewer = partner.id;
+    log(c, `${me().name} одобрил(а) и передал(а) партнёру`);
+    toast(`Передано партнёру · ${partner.name}`); pending = null; commit();
+  }
+  function approve(c) {
+    c.col = 'done'; c.approvedBy = me().id;
+    log(c, `${me().name} утвердил(а) документ`);
+    toast('Документ утверждён'); pending = null; commit();
+  }
+  function sendBack(c, text) {
+    c.returnTo = c.col; c.col = 'changes';
+    c.comments.push({ who: me().id, text, at: stamp(), ret: true });
+    log(c, `${me().name} вернул(а) на доработку`);
+    toast('Возвращено на доработку с замечанием'); pending = null; tab = 'comments'; commit();
+  }
+
+  function commit() { save(); render(); if (openId) renderModal(); }
+
+  /* ---------------- filtering ---------------- */
+  function matches(c) {
+    if (F.q) {
+      const hay = `${c.title} ${c.desc} ${(P(c.owner) || {}).name} ${(P(c.reviewer) || {}).name || ''} ${c.labels.map((l) => LABELS[l].t).join(' ')}`.toLowerCase();
+      if (!hay.includes(F.q.toLowerCase())) return false;
+    }
+    if (F.people.length && !F.people.includes(c.owner) && !F.people.includes(c.reviewer)) return false;
+    if (F.mine && c.owner !== S.me && c.reviewer !== S.me) return false;
+    if (F.late && !isLate(c)) return false;
+    if (F.label && !c.labels.includes(F.label)) return false;
+    return true;
+  }
+  const myQueue = () => S.cards.filter((c) => (c.col === 'assoc' || c.col === 'partner') && canReview(c) && (c.reviewer === S.me || me().role === 'partner'));
+  const myWork = () => S.cards.filter((c) => c.owner === S.me && c.col !== 'done');
+
+  /* ---------------- sidebar ---------------- */
+  function renderSide() {
+    const q = myQueue().length, w = myWork(), lateMine = w.filter(isLate).length;
+    const icon = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+    $('#sideMine').innerHTML = `
+      <li><button class="side-item ${S.view === 'mine' ? 'is-on' : ''}" data-view="mine">${icon('<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>')}<span class="nm">Мои задачи</span><span class="ct ${lateMine ? 'hot' : ''}">${w.length}</span></button></li>
+      <li><button class="side-item ${S.view === 'queue' ? 'is-on' : ''}" data-view="queue">${icon('<path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6z"/><path d="m9 12 2 2 4-4"/>')}<span class="nm">Ждут моей проверки</span>${q ? `<span class="ct rv">${q}</span>` : ''}</button></li>`;
+    $('#sideBoards').innerHTML = BOARDS.map((b) => {
+      const list = S.cards.filter((c) => c.board === b.id);
+      const late = list.filter(isLate).length;
+      return `<li><button class="side-item ${S.view === 'board' && S.board === b.id ? 'is-on' : ''}" data-board="${b.id}"><span class="sw" style="background:${b.color}"></span><span class="nm">${esc(b.name)}</span><span class="ct ${late ? 'hot' : ''}" title="${late ? `Просрочено: ${late}` : `Карточек: ${list.length}`}">${late || list.filter((c) => c.col !== 'done').length}</span></button></li>`;
+    }).join('');
+    const opts = PEOPLE.map((p) => `<option value="${p.id}" ${p.id === S.me ? 'selected' : ''}>${esc(p.name)} — ${ROLE[p.role]}</option>`).join('');
+    $('#who').innerHTML = opts; $('#mobileWho').innerHTML = opts;
+    $('#whoHint').textContent = ROLE_HINT[me().role];
+    $('#mobileView').innerHTML = `<option value="v:mine" ${S.view === 'mine' ? 'selected' : ''}>Мои задачи</option><option value="v:queue" ${S.view === 'queue' ? 'selected' : ''}>Ждут моей проверки (${q})</option>` +
+      BOARDS.map((b) => `<option value="b:${b.id}" ${S.view === 'board' && S.board === b.id ? 'selected' : ''}>${esc(b.name)}</option>`).join('');
+  }
+
+  /* ---------------- header + filters ---------------- */
+  function renderTop() {
+    if (S.view === 'board') {
+      const b = BOARDS.find((x) => x.id === S.board);
+      const list = S.cards.filter((c) => c.board === b.id);
+      const done = list.filter((c) => c.col === 'done').length;
+      const team = [...new Set(list.flatMap((c) => [c.owner, c.reviewer]).filter(Boolean))];
+      $('#crumb').innerHTML = `<span>${esc(b.client)}</span><span class="tag mono">${b.no}</span><span class="priv">Конфиденциально · адвокатская тайна</span>`;
+      $('#title').textContent = b.name;
+      $('#topRight').innerHTML = `
+        <span class="stack">${team.map((id) => av(id)).join('')}</span>
+        <span class="progress"><span>Утверждено ${done} из ${list.length}</span><span class="track"><i style="width:${list.length ? Math.round(done / list.length * 100) : 0}%"></i></span></span>
+        <button class="primary" type="button" data-new="todo"><span aria-hidden="true">+</span> Новая задача</button>`;
+    } else {
+      $('#crumb').innerHTML = `<span>${esc(me().name)}</span><span>${ROLE[me().role]}</span>`;
+      $('#title').textContent = S.view === 'mine' ? 'Мои задачи' : 'Ждут моей проверки';
+      $('#topRight').innerHTML = '';
+    }
+    const shown = S.view === 'board' ? S.cards.filter((c) => c.board === S.board) : null;
+    const filters = S.view !== 'board' ? '' : `
+      <label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Поиск по карточкам" value="${esc(F.q)}" aria-label="Поиск по карточкам"></label>
+      <span class="people-filter" role="group" aria-label="Фильтр по людям">${PEOPLE.map((p) => `<button type="button" data-person="${p.id}" class="${F.people.includes(p.id) ? 'is-on' : ''}" aria-pressed="${F.people.includes(p.id)}">${av(p.id)}</button>`).join('')}</span>
+      <button class="chip ${F.mine ? 'is-on' : ''}" type="button" data-f="mine" aria-pressed="${F.mine}">Только мои</button>
+      <button class="chip ${F.late ? 'is-on' : ''}" type="button" data-f="late" aria-pressed="${F.late}">Просроченные <em>${shown.filter(isLate).length}</em></button>
+      <select class="chip" id="lbl" aria-label="Метка"><option value="">Все метки</option>${Object.entries(LABELS).map(([k, v]) => `<option value="${k}" ${F.label === k ? 'selected' : ''}>${v.t}</option>`).join('')}</select>
+      ${F.q || F.people.length || F.mine || F.late || F.label ? '<button class="chip" type="button" data-f="reset">Сбросить</button>' : ''}
+      <span class="shown">Показано ${shown.filter(matches).length} из ${shown.length}</span>`;
+    const fl = $('#filters');
+    fl.hidden = !filters;
+    if (filters) {
+      const hadFocus = document.activeElement && document.activeElement.id === 'q';
+      const pos = hadFocus ? document.activeElement.selectionStart : 0;
+      fl.innerHTML = filters;
+      if (hadFocus) { const i = $('#q'); i.focus(); i.setSelectionRange(pos, pos); }
+    }
+  }
+
+  /* ---------------- card ---------------- */
+  function cardHtml(c) {
+    const done = c.checks.filter((x) => x.done).length;
+    const r = reviewerOf(c);
+    let rv = '';
+    if (c.col === 'assoc' || c.col === 'partner') rv = `<span class="rv-line">${av(c.reviewer)} На проверке у ${esc(r ? r.name : '—')}</span>`;
+    if (c.col === 'changes') { const last = [...c.comments].reverse().find((x) => x.ret); rv = `<span class="rv-line ch">Замечание: ${esc(last ? last.text.slice(0, 64) + (last.text.length > 64 ? '…' : '') : 'см. комментарии')}</span>`; }
+    if (c.col === 'done') rv = `<span class="rv-line ok">Утвердил(а) ${esc((P(c.approvedBy) || {}).name || '—')}</span>`;
+    const draggable = c.col !== 'done';
+    return `<li><div class="card ${isLate(c) ? 'late' : ''}" role="button" tabindex="0" draggable="${draggable}" data-card="${c.id}" aria-label="${esc(c.title)}">
+      ${c.labels.length || c.prio ? `<span class="card-top">${c.prio ? '<span class="lbl" style="background:var(--late-soft);color:var(--late)">Срочно</span>' : ''}${c.labels.map((l) => `<span class="lbl" style="background:color-mix(in srgb, ${LABELS[l].c} 16%, var(--surface));color:${LABELS[l].c}">${LABELS[l].t}</span>`).join('')}</span>` : ''}
+      <h3>${esc(c.title)}</h3>
+      ${c.waitFor && c.col === 'wait' ? `<span class="card-meta"><span class="waitfor">Ждём: ${esc(c.waitFor)}</span></span>` : ''}
+      ${rv}
+      <span class="card-meta">
+        ${c.checks.length ? `<span title="Чеклист">${svgCheck()} ${done}/${c.checks.length}</span>` : ''}
+        ${c.files.length ? `<span title="Файлы">${svgClip()} ${c.files.length}</span>` : ''}
+        ${c.comments.length ? `<span title="Комментарии">${svgChat()} ${c.comments.length}</span>` : ''}
+        ${c.est ? `<span title="Оценка">${c.est} ч</span>` : ''}
+      </span>
+      <span class="card-foot">
+        <span class="due ${dueClass(c.client, c.col === 'done')}" title="Срок клиента ${fmt(c.client)}">${fmt(c.client)} · ${c.col === 'done' ? 'готово' : rel(c.client)}</span>
+        <span class="pair">${av(c.owner)}${c.reviewer ? `<span class="arrow" aria-hidden="true">→</span>${av(c.reviewer)}` : ''}</span>
+      </span>
+    </div></li>`;
+  }
+  const svgCheck = () => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>';
+  const svgClip = () => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m20 11-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 7"/></svg>';
+  const svgChat = () => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 5h14v10H9l-4 4z"/></svg>';
+  const svgLock = () => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+
+  /* ---------------- views ---------------- */
+  function renderBoard() {
+    const list = S.cards.filter((c) => c.board === S.board && matches(c));
+    return `<div class="board">${COLS.map((col) => {
+      const cards = list.filter((c) => c.col === col.id).sort((a, b) => (isLate(b) - isLate(a)) || (b.prio - a.prio) || a.client.localeCompare(b.client));
+      const canAdd = col.id === 'todo' || col.id === 'progress';
+      return `<section class="col" data-col="${col.id}" aria-label="${col.title}">
+        <header class="col-head"><span class="dot" style="background:${col.dot}"></span><h2>${col.title}</h2><span class="n">${cards.length}</span>${col.kind === 'review' ? `<span class="lock" title="${col.sub}">${svgLock()}</span>` : ''}</header>
+        ${col.sub ? `<p class="col-sub">${col.sub}</p>` : ''}
+        ${cards.length ? `<ul class="cards">${cards.map(cardHtml).join('')}</ul>` : `<p class="empty-col">${col.kind === 'review' ? 'Здесь пока ничего нет' : 'Перетащите карточку сюда'}</p>`}
+        ${canAdd ? `<div class="adder">${adding === col.id ? `<form data-addform="${col.id}"><textarea id="newTitle" placeholder="Например: подготовить проект доверенности" aria-label="Название задачи"></textarea><div class="row"><button type="submit">Добавить</button><button type="button" data-cancel>Отмена</button></div></form>` : `<button class="open" type="button" data-add="${col.id}">+ Добавить карточку</button>`}</div>` : ''}
+      </section>`;
+    }).join('')}</div>`;
+  }
+
+  function renderList(cards, intro, emptyTitle, emptyText) {
+    if (!cards.length) return `<div class="list"><div class="empty-state"><b>${emptyTitle}</b>${emptyText}</div></div>`;
+    const stageStyle = (col) => {
+      const map = { assoc: ['--review-soft', '--review'], partner: ['--review-soft', '--review'], changes: ['--late-soft', '--late'], done: ['--ok-soft', '--ok'], wait: ['--warn-soft', '--warn'] };
+      const [bg, fg] = map[col] || ['--surface-2', '--ink-2'];
+      return `background:var(${bg});color:var(${fg})`;
+    };
+    return `<div class="list"><p class="list-intro">${intro}</p>${cards.sort((a, b) => a.client.localeCompare(b.client)).map((c) => {
+      const b = BOARDS.find((x) => x.id === c.board);
+      return `<button class="row-item" type="button" data-card="${c.id}">
+        <span class="t"><b>${esc(c.title)}</b><small>${esc(b.name)} · <span class="mono">${b.no}</span> · ${esc(P(c.owner).name)}${c.reviewer ? ' → ' + esc(P(c.reviewer).name) : ''}</small></span>
+        <span class="stage" style="${stageStyle(c.col)}">${COL[c.col].title}</span>
+        <span class="due ${dueClass(c.client, false)}">${fmt(c.client)} · ${rel(c.client)}</span>
+      </button>`;
+    }).join('')}</div>`;
+  }
+
+  function render() {
+    renderSide(); renderTop();
+    const el = $('#content');
+    if (S.view === 'board') el.innerHTML = renderBoard();
+    else if (S.view === 'mine') el.innerHTML = renderList(myWork(), 'Всё, что на вас, по всем делам. Сверху — самые ранние сроки клиента.', 'Задач нет', 'Когда вам назначат задачу, она появится здесь.');
+    else el.innerHTML = renderList(myQueue(), me().role === 'junior' ? 'Младший юрист не проверяет документы. Переключитесь на ассоциата или партнёра в левом меню.' : 'Документы, которые ждут вашего решения: одобрить, передать дальше или вернуть с замечанием.', 'Очередь пуста', me().role === 'junior' ? 'Войдите как ассоциат или партнёр, чтобы увидеть проверки.' : 'Новых документов на проверку нет.');
+    if (adding) { const t = $('#newTitle'); if (t) t.focus(); }
+  }
+
+  /* ---------------- modal ---------------- */
+  function openCard(id) { openId = id; pending = null; tab = 'comments'; renderModal(); }
+  function closeCard() { openId = null; pending = null; $('#modalRoot').innerHTML = ''; }
+
+  function flowHtml(c) {
+    const who = me(); const r = reviewerOf(c);
+    const order = ['draft', 'assoc', 'partner', 'done'];
+    const at = c.col === 'done' ? 3 : c.col === 'partner' ? 2 : c.col === 'assoc' ? 1 : 0;
+    const back = c.col === 'changes';
+    const names = ['Черновик', 'Проверка ассоциата', 'Партнёр', 'Утверждено'];
+    const steps = order.map((_, i) => {
+      let cls = i < at ? 'done' : i === at ? 'now' : '';
+      if (back && i === 0) cls = 'back';
+      if (c.col === 'done') cls = 'done';
+      return `<li class="${cls}"><i></i>${i === 0 && back ? 'Нужны правки' : names[i]}</li>`;
+    }).join('');
+    let msg = '', actions = '';
+    if (WORK.includes(c.col)) {
+      msg = !c.reviewer ? 'Назначьте проверяющего справа, чтобы отправить документ на проверку.'
+        : `Проверяющий: <b>${esc(r.name)}</b> (${ROLE[r.role].toLowerCase()}).${back ? ' Исправьте замечания и отправьте снова.' : ''}`;
+      const canSend = c.owner === who.id || who.role !== 'junior';
+      actions = `<button class="primary" type="button" data-act="submit" ${!c.reviewer || !canSend ? 'disabled' : ''}>${back ? 'Отправить исправления' : 'Отправить на проверку'}</button>`;
+      if (!canSend) msg += ' Отправить может только ответственный.';
+    } else if (c.col === 'assoc' || c.col === 'partner') {
+      msg = `Сейчас у <b>${esc(r ? r.name : '—')}</b>.`;
+      if (canReview(c)) {
+        actions = c.col === 'assoc'
+          ? '<button class="primary" type="button" data-act="pass">Одобрить и передать партнёру</button><button class="secondary danger" type="button" data-act="return">Вернуть на доработку</button>'
+          : '<button class="primary" type="button" data-act="approve">Утвердить</button><button class="secondary danger" type="button" data-act="return">Вернуть на доработку</button>';
+      } else {
+        msg += c.col === 'partner' ? ' Утвердить может только партнёр.' : ' Решение принимает проверяющий ассоциат.';
+        if (c.owner === who.id) actions = '<button class="secondary" type="button" data-act="withdraw">Отозвать с проверки</button>';
+      }
+    } else {
+      msg = `Утвердил(а) <b>${esc((P(c.approvedBy) || {}).name || '—')}</b>. Документ готов к отправке клиенту.`;
+    }
+    let confirm = '';
+    if (pending && pending.kind === 'submit') confirm = `<div class="confirm"><span>В чеклисте не выполнено пунктов: <b>${pending.left}</b>. Отправить на проверку всё равно?</span><div class="row"><button class="primary" type="button" data-act="force">Отправить</button><button class="secondary" type="button" data-act="cancel">Вернуться к чеклисту</button></div></div>`;
+    if (pending && pending.kind === 'return') confirm = `<div class="confirm back"><label for="retText"><b>Что нужно исправить?</b> Замечание увидит ответственный.</label><textarea id="retText" placeholder="Например: раздел 3 расходится с графиком платежей"></textarea><div class="row"><button class="primary" type="button" data-act="sendback">Вернуть с замечанием</button><button class="secondary" type="button" data-act="cancel">Отмена</button></div></div>`;
+    return `<section class="flow" aria-label="Согласование"><ol class="steps">${steps}</ol><p class="flow-msg">${msg}</p>${confirm}${actions && !confirm ? `<div class="flow-actions">${actions}</div>` : ''}</section>`;
+  }
+
+  function renderModal() {
+    const c = S.cards.find((x) => x.id === openId);
+    if (!c) { closeCard(); return; }
+    const b = BOARDS.find((x) => x.id === c.board);
+    const done = c.checks.filter((x) => x.done).length;
+    const pct = c.checks.length ? Math.round(done / c.checks.length * 100) : 0;
+    const locked = c.col !== 'todo' && c.col !== 'progress' && c.col !== 'wait' && c.col !== 'changes';
+    const reviewers = PEOPLE.filter((p) => p.role !== 'junior');
+    const sel = (id, list, value, extra = '') => `<select id="${id}" ${extra}>${list}</select>`;
+    const scrollY = $('.scrim') ? $('.scrim').scrollTop : 0;
+    $('#modalRoot').innerHTML = `<div class="scrim" data-scrim>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+        <header class="m-head">
+          <div class="grow">
+            <div class="crumb"><span class="sw" style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${b.color}"></span><span>${esc(b.name)}</span><span class="tag mono">${b.no}-${c.id.slice(1)}</span><span>в колонке «${COL[c.col].title}»</span></div>
+            <input class="m-title" id="mTitle" value="${esc(c.title)}" aria-label="Название">
+          </div>
+          <button class="x" type="button" data-close aria-label="Закрыть">×</button>
+        </header>
+        <div class="m-body">
+          <div class="m-main">
+            ${flowHtml(c)}
+            <section class="sec"><h3>Описание и следующий шаг</h3><textarea class="desc" id="mDesc" placeholder="Что нужно сделать, на что обратить внимание">${esc(c.desc)}</textarea></section>
+            <section class="sec"><h3>Чеклист <em>${done} из ${c.checks.length}</em></h3>
+              ${c.checks.length ? `<div class="bar"><i style="width:${pct}%"></i></div>` : ''}
+              <ul class="checks">${c.checks.map((x, i) => `<li class="${x.done ? 'done' : ''}"><input type="checkbox" id="ck${i}" data-ck="${i}" ${x.done ? 'checked' : ''}><label for="ck${i}">${esc(x.t)}</label><button class="rm" type="button" data-rmck="${i}" aria-label="Удалить пункт">×</button></li>`).join('')}</ul>
+              <form class="inline-add" data-addck><input id="ckNew" placeholder="Добавить пункт" aria-label="Новый пункт чеклиста"><button type="submit">Добавить</button></form>
+            </section>
+            <section class="sec"><h3>Документы <em>${c.files.length}</em></h3>
+              ${c.files.length ? `<ul class="files">${c.files.map((f) => `<li><span class="ft ${f.k}">${f.k === 'pdf' ? 'PDF' : 'DOCX'}</span><span class="fn"><b>${esc(f.n)}</b><small>${f.s}</small></span><span class="ver">${f.v}</span></li>`).join('')}</ul>` : '<p class="muted-note">Документов пока нет. Прикрепите проект, чтобы проверяющий видел актуальную версию.</p>'}
+              <form class="inline-add" data-addfile><input id="fileNew" placeholder="Имя файла, например Memo_v1.docx" aria-label="Имя файла"><button type="submit">Прикрепить</button></form>
+            </section>
+            <section class="sec">
+              <div class="tabs" role="tablist"><button type="button" role="tab" data-tab="comments" class="${tab === 'comments' ? 'is-on' : ''}" aria-selected="${tab === 'comments'}">Комментарии (${c.comments.length})</button><button type="button" role="tab" data-tab="log" class="${tab === 'log' ? 'is-on' : ''}" aria-selected="${tab === 'log'}">История</button></div>
+              ${tab === 'comments' ? `
+                <ul class="thread">${c.comments.map((m) => `<li>${av(m.who)}<div class="bubble ${m.ret ? 'return' : ''}"><div class="who"><b>${esc(P(m.who).name)}</b><span>${esc(m.at)}</span>${m.ret ? '<span style="color:var(--late);font-weight:700">Вернул(а) на доработку</span>' : ''}</div><p>${esc(m.text)}</p></div></li>`).join('') || '<li><p style="color:var(--ink-3)">Комментариев пока нет.</p></li>'}</ul>
+                <form class="compose" data-comment><textarea id="cmNew" placeholder="Написать комментарий" aria-label="Комментарий"></textarea><button class="primary" type="submit">Отправить</button></form>`
+                : `<ul class="log">${[...c.log].reverse().map((l) => { const [t, at] = l.split(' · '); return `<li><span>${esc(t)}${at ? `<small>${esc(at)}</small>` : ''}</span></li>`; }).join('') || '<li>Событий пока нет</li>'}</ul>`}
+            </section>
+          </div>
+          <aside class="m-side">
+            <label class="field"><span>Ответственный</span>${sel('mOwner', PEOPLE.map((p) => `<option value="${p.id}" ${p.id === c.owner ? 'selected' : ''}>${esc(p.name)} — ${ROLE[p.role]}</option>`).join(''))}</label>
+            <label class="field"><span>Проверяющий</span>${sel('mRev', `<option value="">Не назначен</option>` + reviewers.map((p) => `<option value="${p.id}" ${p.id === c.reviewer ? 'selected' : ''}>${esc(p.name)} — ${ROLE[p.role]}</option>`).join(''), locked ? 'disabled' : '')}${locked && c.col !== 'done' ? '<span class="hint">Меняется после отзыва с проверки</span>' : ''}</label>
+            <label class="field"><span>Срок клиента</span><input type="date" id="mClient" value="${c.client}"><span class="hint ${isLate(c) ? 'late' : ''}">${c.col === 'done' ? 'Готово' : rel(c.client)}</span></label>
+            <label class="field"><span>Внутренний срок</span><input type="date" id="mInternal" value="${c.internal || ''}"><span class="hint">Когда сдать на проверку</span></label>
+            <label class="field"><span>Оценка, часов</span><input type="number" min="0" step="0.5" id="mEst" value="${c.est || ''}"></label>
+            ${c.col === 'wait' ? `<label class="field"><span>Кого ждём</span><input id="mWait" value="${esc(c.waitFor)}" placeholder="Клиент, госорган, контрагент"></label>` : ''}
+            <label class="field"><span>Колонка</span>${sel('mCol', COLS.map((col) => `<option value="${col.id}" ${col.id === c.col ? 'selected' : ''}>${col.title}</option>`).join(''))}<span class="hint">Правила согласования действуют и здесь</span></label>
+            <label class="field" style="flex-direction:row;align-items:center;gap:.5rem"><input type="checkbox" id="mPrio" style="width:16px;height:16px" ${c.prio ? 'checked' : ''}><span style="text-transform:none;letter-spacing:0;font-size:.84rem;color:var(--ink)">Срочно</span></label>
+            <div class="field"><span>Метки</span><div style="display:flex;flex-wrap:wrap;gap:.3rem">${Object.entries(LABELS).map(([k, v]) => `<button type="button" class="lbl" data-lbl="${k}" aria-pressed="${c.labels.includes(k)}" style="border:1px solid ${c.labels.includes(k) ? v.c : 'var(--line)'};background:${c.labels.includes(k) ? `color-mix(in srgb, ${v.c} 16%, var(--surface))` : 'var(--surface)'};color:${c.labels.includes(k) ? v.c : 'var(--ink-3)'};padding:.2rem .45rem">${v.t}</button>`).join('')}</div></div>
+            <button class="ghost-btn danger" type="button" data-del style="flex:none;margin-top:.4rem">Удалить карточку</button>
+          </aside>
+        </div>
+      </div></div>`;
+    const sc = $('.scrim'); if (sc) sc.scrollTop = scrollY;
+    if (pending && pending.kind === 'return') { const t = $('#retText'); if (t) t.focus(); }
+  }
+
+  /* ---------------- events ---------------- */
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('button, [data-card], [data-scrim]');
+    if (!t) return;
+    const c = openId ? S.cards.find((x) => x.id === openId) : null;
+
+    if (t.matches('[data-scrim]') && e.target === t) { closeCard(); return; }
+    if (t.dataset.close !== undefined) { closeCard(); return; }
+    if (t.dataset.view) { S.view = t.dataset.view; save(); render(); return; }
+    if (t.dataset.board) { S.view = 'board'; S.board = t.dataset.board; save(); render(); return; }
+    if (t.dataset.card && !t.closest('.modal')) { openCard(t.dataset.card); return; }
+    if (t.dataset.person) { const id = t.dataset.person; F.people = F.people.includes(id) ? F.people.filter((x) => x !== id) : [...F.people, id]; render(); return; }
+    if (t.dataset.f) {
+      if (t.dataset.f === 'reset') Object.assign(F, { q: '', people: [], mine: false, late: false, label: '' });
+      else F[t.dataset.f] = !F[t.dataset.f];
+      render(); return;
+    }
+    if (t.dataset.add) { adding = t.dataset.add; render(); return; }
+    if (t.dataset.cancel !== undefined) { adding = null; render(); return; }
+    if (t.dataset.new) {
+      const card = { id: newId(), board: S.board, col: 'todo', title: 'Новая задача', desc: '', labels: [], owner: S.me, reviewer: null, prio: false, est: 1, client: iso(5), internal: iso(3), checks: [], files: [], comments: [], log: [], waitFor: '', returnTo: null, approvedBy: null };
+      log(card, `${me().name} создал(а) карточку`); S.cards.push(card); commit(); openCard(card.id);
+      setTimeout(() => { const i = $('#mTitle'); if (i) { i.focus(); i.select(); } }, 0); return;
+    }
+    if (t.id === 'resetBtn') { S = seed(); Object.assign(F, { q: '', people: [], mine: false, late: false, label: '' }); closeCard(); save(); render(); toast('Демо-данные восстановлены'); return; }
+    if (!c) return;
+    if (t.dataset.tab) { tab = t.dataset.tab; renderModal(); return; }
+    if (t.dataset.rmck) { c.checks.splice(Number(t.dataset.rmck), 1); commit(); return; }
+    if (t.dataset.lbl) { const k = t.dataset.lbl; c.labels = c.labels.includes(k) ? c.labels.filter((x) => x !== k) : [...c.labels, k]; commit(); return; }
+    if (t.dataset.del !== undefined) { pending = { kind: 'delete' }; t.outerHTML = `<div class="confirm back"><span>Удалить карточку без возможности восстановления?</span><div class="row"><button class="primary" type="button" data-act="delete">Удалить</button><button class="secondary" type="button" data-act="cancel">Отмена</button></div></div>`; return; }
+    const act = t.dataset.act;
+    if (act === 'submit') submit(c);
+    else if (act === 'force') submit(c, true);
+    else if (act === 'pass') pass(c);
+    else if (act === 'approve') approve(c);
+    else if (act === 'return') { pending = { kind: 'return' }; renderModal(); }
+    else if (act === 'sendback') { const txt = ($('#retText').value || '').trim(); if (!txt) { toast('Опишите, что нужно исправить.', true); $('#retText').focus(); return; } sendBack(c, txt); }
+    else if (act === 'withdraw') { c.col = 'progress'; log(c, `${me().name} отозвал(а) с проверки`); toast('Документ отозван с проверки'); commit(); }
+    else if (act === 'cancel') { pending = null; renderModal(); }
+    else if (act === 'delete') { S.cards = S.cards.filter((x) => x.id !== c.id); closeCard(); save(); render(); toast('Карточка удалена'); }
+  });
+
+  document.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target; const c = openId ? S.cards.find((x) => x.id === openId) : null;
+    if (f.dataset.addform) {
+      const title = ($('#newTitle').value || '').trim();
+      if (!title) { $('#newTitle').focus(); return; }
+      const card = { id: newId(), board: S.board, col: f.dataset.addform, title, desc: '', labels: [], owner: S.me, reviewer: null, prio: false, est: 1, client: iso(5), internal: iso(3), checks: [], files: [], comments: [], log: [], waitFor: '', returnTo: null, approvedBy: null };
+      log(card, `${me().name} создал(а) карточку`); S.cards.push(card); save(); render();
+      const ta = $('#newTitle'); if (ta) ta.focus();
+      return;
+    }
+    if (!c) return;
+    if (f.dataset.addck !== undefined) { const v = $('#ckNew').value.trim(); if (v) { c.checks.push({ t: v, done: false }); commit(); setTimeout(() => $('#ckNew') && $('#ckNew').focus(), 0); } }
+    if (f.dataset.addfile !== undefined) { const v = $('#fileNew').value.trim(); if (v) { const same = c.files.filter((x) => x.n.replace(/_v\d+/, '') === v.replace(/_v\d+/, '')).length; c.files.push({ n: v, v: 'v' + (same + 1), k: /\.pdf$/i.test(v) ? 'pdf' : 'doc', s: 'только что' }); log(c, `${me().name} прикрепил(а) ${v}`); commit(); } }
+    if (f.dataset.comment !== undefined) { const v = $('#cmNew').value.trim(); if (v) { c.comments.push({ who: S.me, text: v, at: stamp() }); log(c, `${me().name} оставил(а) комментарий`); commit(); } }
+  });
+
+  document.addEventListener('change', (e) => {
+    const t = e.target; const c = openId ? S.cards.find((x) => x.id === openId) : null;
+    if (t.id === 'who' || t.id === 'mobileWho') { S.me = t.value; save(); render(); if (openId) renderModal(); toast(`Вы вошли как ${me().name} · ${ROLE[me().role]}`); return; }
+    if (t.id === 'mobileView') { const [k, v] = t.value.split(':'); if (k === 'v') S.view = v; else { S.view = 'board'; S.board = v; } save(); render(); return; }
+    if (t.id === 'lbl') { F.label = t.value; render(); return; }
+    if (!c) return;
+    if (t.dataset.ck) { c.checks[Number(t.dataset.ck)].done = t.checked; commit(); return; }
+    if (t.id === 'mOwner') { c.owner = t.value; log(c, `Ответственный: ${P(t.value).name}`); commit(); }
+    if (t.id === 'mRev') { c.reviewer = t.value || null; log(c, `Проверяющий: ${t.value ? P(t.value).name : 'не назначен'}`); commit(); }
+    if (t.id === 'mClient' && t.value) { c.client = t.value; commit(); }
+    if (t.id === 'mInternal') { c.internal = t.value || null; commit(); }
+    if (t.id === 'mEst') { c.est = Number(t.value) || 0; commit(); }
+    if (t.id === 'mWait') { c.waitFor = t.value; commit(); }
+    if (t.id === 'mPrio') { c.prio = t.checked; commit(); }
+    if (t.id === 'mCol') { const to = t.value; t.value = c.col; applyMove(c, to); }
+    if (t.id === 'mTitle') { const v = t.value.trim(); if (v) { c.title = v; commit(); } }
+    if (t.id === 'mDesc') { c.desc = t.value; save(); }
+  });
+
+  document.addEventListener('input', (e) => { if (e.target.id === 'q') { F.q = e.target.value; render(); } });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') { if (pending) { pending = null; renderModal(); } else if (openId) closeCard(); else if (adding) { adding = null; render(); } return; }
+    if (e.key === 'Enter' && e.target.matches('.card')) { e.preventDefault(); openCard(e.target.dataset.card); return; }
+    if (e.key === 'Enter' && !e.shiftKey && (e.target.id === 'newTitle' || e.target.id === 'cmNew')) { e.preventDefault(); e.target.form.requestSubmit(); return; }
+    if (e.key === 'Enter' && e.target.id === 'mTitle') { e.preventDefault(); e.target.blur(); }
+  });
+
+  /* ---------------- drag and drop ---------------- */
+  document.addEventListener('dragstart', (e) => {
+    const el = e.target.closest && e.target.closest('.card');
+    if (!el) return;
+    dragId = el.dataset.card;
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', dragId); } catch { /* ignore */ }
+    requestAnimationFrame(() => {
+      el.classList.add('dragging');
+      const c = S.cards.find((x) => x.id === dragId);
+      document.querySelectorAll('.col').forEach((col) => {
+        const r = moveCheck(c, col.dataset.col);
+        if (col.dataset.col !== c.col) col.classList.add(r.ok ? 'drop-ok' : 'drop-no');
+      });
+    });
+  });
+  document.addEventListener('dragend', () => {
+    dragId = null;
+    document.querySelectorAll('.dragging').forEach((x) => x.classList.remove('dragging'));
+    document.querySelectorAll('.col').forEach((x) => x.classList.remove('drop-ok', 'drop-no'));
+  });
+  document.addEventListener('dragover', (e) => { if (dragId && e.target.closest && e.target.closest('.col')) e.preventDefault(); });
+  document.addEventListener('drop', (e) => {
+    const col = e.target.closest && e.target.closest('.col');
+    if (!col || !dragId) return;
+    e.preventDefault();
+    const c = S.cards.find((x) => x.id === dragId);
+    dragId = null;
+    document.querySelectorAll('.col').forEach((x) => x.classList.remove('drop-ok', 'drop-no'));
+    if (c) applyMove(c, col.dataset.col);
+  });
+
+  render();
+})();
+</script>

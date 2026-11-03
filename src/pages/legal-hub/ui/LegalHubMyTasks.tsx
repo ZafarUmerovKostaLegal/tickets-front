@@ -4,7 +4,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
-import { DueBadge, HeadActions } from './legalHubShared';
+import { dueText, HeadActions } from './legalHubShared';
 import {
     HUB_TASKS,
     MOCK_DONE_IDS,
@@ -13,6 +13,7 @@ import {
     TASK_PEOPLE,
     TASK_PRIORITIES,
     TASK_PROJECTS,
+    taskDrawerDetail,
     type HubTask,
     type TaskPersonId,
     type TaskPriorityId,
@@ -20,7 +21,7 @@ import {
     type TaskStatusId,
 } from './legalHubTasks';
 
-type BoardColumn = 'todo' | 'progress' | 'wait' | 'associate' | 'partner';
+type BoardColumn = 'todo' | 'progress' | 'waitClient' | 'waitGov' | 'associate' | 'partner' | 'changes';
 type MineTask = HubTask & {
     done: boolean;
     hours: number;
@@ -29,15 +30,31 @@ type MineTask = HubTask & {
     approval: boolean;
 };
 
-const COLUMNS: BoardColumn[] = ['todo', 'progress', 'wait', 'associate', 'partner'];
-const DROPPABLE: BoardColumn[] = ['todo', 'progress', 'wait'];
+const COLUMNS: BoardColumn[] = ['todo', 'progress', 'waitClient', 'waitGov', 'associate', 'partner', 'changes'];
+const DROPPABLE: BoardColumn[] = ['todo', 'progress', 'waitClient', 'waitGov', 'changes'];
+const QUICK_ADD: BoardColumn[] = ['todo', 'progress'];
 
 const COLUMN_LABEL: Record<BoardColumn, TranslationKey> = {
     todo: 'legalHub.taskStatusTodo',
     progress: 'legalHub.statusInProgress',
-    wait: 'legalHub.statusWaiting',
+    waitClient: 'legalHub.myTasksWaitClient',
+    waitGov: 'legalHub.myTasksWaitGov',
     associate: 'legalHub.taskStatusAssociate',
-    partner: 'legalHub.taskStatusPartner',
+    partner: 'legalHub.taskStagePartner',
+    changes: 'legalHub.statusChanges',
+};
+
+const COLUMN_SUB: Partial<Record<BoardColumn, TranslationKey>> = {
+    waitClient: 'legalHub.myTasksSubWaitClient',
+    waitGov: 'legalHub.myTasksSubWaitGov',
+    associate: 'legalHub.myTasksSubAssociate',
+    partner: 'legalHub.myTasksSubPartner',
+    changes: 'legalHub.myTasksSubChanges',
+};
+
+const CARD_MONTHS: Record<string, string[]> = {
+    ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
+    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
 };
 
 const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
@@ -65,12 +82,39 @@ function dayDelta(iso: string): number {
     return Math.round((target.getTime() - start.getTime()) / 86400000);
 }
 
-function columnOf(status: TaskStatusId): BoardColumn {
-    if (status === 'changes')
-        return 'progress';
-    if (status === 'todo' || status === 'progress' || status === 'wait' || status === 'associate' || status === 'partner')
-        return status;
+function isClientWait(task: Pick<HubTask, 'waitingFor'>): boolean {
+    const who = (task.waitingFor ?? '').toLowerCase();
+    return who.includes('client') || who.includes('клиент');
+}
+
+function columnOf(task: MineTask): BoardColumn {
+    if (task.status === 'changes')
+        return 'changes';
+    if (task.status === 'wait')
+        return isClientWait(task) ? 'waitClient' : 'waitGov';
+    if (task.status === 'todo' || task.status === 'progress' || task.status === 'associate' || task.status === 'partner')
+        return task.status;
     return 'todo';
+}
+
+function statusOf(column: BoardColumn): TaskStatusId {
+    if (column === 'waitClient' || column === 'waitGov')
+        return 'wait';
+    return column;
+}
+
+function shortDate(iso: string, locale: string): string {
+    const [, month, day] = iso.split('-').map(Number);
+    const names = CARD_MONTHS[locale] ?? CARD_MONTHS.en!;
+    return `${day ?? ''} ${names[(month ?? 1) - 1] ?? ''}`.trim();
+}
+
+function plusDays(days: number): string {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function mineFrom(source: HubTask[]): MineTask[] {
@@ -89,6 +133,8 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
     const [tasks, setTasks] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
+    const [adding, setAdding] = useState<BoardColumn | null>(null);
+    const [draft, setDraft] = useState('');
     const [openId, setOpenId] = useState<string | null>(null);
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
@@ -104,41 +150,91 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
     }), [needle, tasks]);
 
     const moveTask = (id: string, column: BoardColumn) => {
-        setTasks((current) => current.map((task) => (
-            task.id === id ? { ...task, status: column } : task
-        )));
+        setTasks((current) => current.map((task) => {
+            if (task.id !== id)
+                return task;
+            const waitingFor = column === 'waitClient'
+                ? (isClientWait(task) ? task.waitingFor : 'Client')
+                : column === 'waitGov'
+                    ? (task.waitingFor && !isClientWait(task) ? task.waitingFor : task.waitingFor)
+                    : task.waitingFor;
+            return { ...task, status: statusOf(column), waitingFor };
+        }));
         setDragging(null);
     };
 
+    const addCard = (column: BoardColumn) => {
+        const title = draft.trim();
+        if (!title)
+            return;
+        const clientOn = plusDays(4);
+        setTasks((current) => [...current, {
+            id: `new-${Date.now()}`,
+            project: 'solar',
+            title,
+            workstream: '—',
+            owner: 'ja1',
+            reviewer: null,
+            status: statusOf(column),
+            priority: 'normal',
+            reviewOn: null,
+            clientOn,
+            minutes: 60,
+            done: false,
+            hours: 1,
+            internalOn: clientOn,
+            instructions: '',
+            approval: false,
+        }]);
+        setDraft('');
+        setAdding(null);
+    };
+
     return (
-        <div className="lh-my">
+        <div className="lh-my lh-my--docket">
             <HeadActions>
                 <button type="button" className="lh-temp__open lh-primary" onClick={() => setComposer(true)}>
                     <span aria-hidden>+</span>
                     {t('legalHub.myTasksNew')}
                 </button>
             </HeadActions>
-            {visible.length === 0 ? (
-                <div className="lh-empty">
-                    <p>{t('legalHub.myTasksEmpty')}</p>
-                </div>
-            ) : (
-                <div className="lh-my__board">
-                    {COLUMNS.map((column) => (
+            <div className="lh-my__board">
+                {COLUMNS.map((column) => {
+                    const cards = visible
+                        .filter((task) => columnOf(task) === column)
+                        .sort((a, b) => Number(dayDelta(b.clientOn) < 0) - Number(dayDelta(a.clientOn) < 0) || Number(b.priority === 'high') - Number(a.priority === 'high') || a.clientOn.localeCompare(b.clientOn));
+                    const sub = COLUMN_SUB[column];
+                    return (
                         <BoardColumnView
                             key={column}
+                            id={column}
                             title={t(COLUMN_LABEL[column])}
-                            cards={visible.filter((task) => columnOf(task.status) === column)}
+                            hint={sub ? t(sub) : null}
+                            review={!DROPPABLE.includes(column)}
+                            cards={cards}
                             droppable={DROPPABLE.includes(column)}
                             dragging={dragging}
+                            adding={adding === column}
+                            draft={draft}
+                            onDraft={setDraft}
+                            onStartAdd={() => {
+                                setAdding(column);
+                                setDraft('');
+                            }}
+                            onCancelAdd={() => {
+                                setAdding(null);
+                                setDraft('');
+                            }}
+                            onAdd={() => addCard(column)}
+                            canAdd={QUICK_ADD.includes(column)}
                             onMove={(id) => moveTask(id, column)}
                             onDragStart={setDragging}
                             onDragEnd={() => setDragging(null)}
                             onOpen={setOpenId}
                         />
-                    ))}
-                </div>
-            )}
+                    );
+                })}
+            </div>
             {openTask ? (
                 <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} />
             ) : null}
@@ -155,11 +251,21 @@ export function LegalHubMyTasks({ query, source = null }: { query: string; sourc
     );
 }
 
-function BoardColumnView({ title, cards, droppable, dragging, onMove, onDragStart, onDragEnd, onOpen }: {
+function BoardColumnView({ id, title, hint, review, cards, droppable, dragging, adding, draft, onDraft, onStartAdd, onCancelAdd, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen }: {
+    id: BoardColumn;
     title: string;
+    hint: string | null;
+    review: boolean;
     cards: MineTask[];
     droppable: boolean;
     dragging: string | null;
+    adding: boolean;
+    draft: string;
+    onDraft: (value: string) => void;
+    onStartAdd: () => void;
+    onCancelAdd: () => void;
+    onAdd: () => void;
+    canAdd: boolean;
     onMove: (id: string) => void;
     onDragStart: (id: string) => void;
     onDragEnd: () => void;
@@ -168,7 +274,7 @@ function BoardColumnView({ title, cards, droppable, dragging, onMove, onDragStar
     const { t } = useI18n();
     return (
         <section
-            className={`lh-my__col${dragging && droppable ? ' is-target' : ''}`}
+            className={`lh-my__col lh-my__col--${id}${dragging && droppable ? ' is-target' : ''}${dragging && !droppable ? ' is-locked-col' : ''}`}
             onDragOver={(event) => {
                 if (!droppable || !dragging)
                     return;
@@ -182,12 +288,19 @@ function BoardColumnView({ title, cards, droppable, dragging, onMove, onDragStar
             }}
         >
             <header>
+                <span className={`lh-my__dot lh-my__dot--${id}`} aria-hidden />
                 <span className="lh-my__col-title">
                     <strong>{title}</strong>
                     <em>{cards.length}</em>
                 </span>
+                {review ? (
+                    <span className="lh-my__lock" title={hint ?? undefined}>
+                        <LockIcon />
+                    </span>
+                ) : null}
             </header>
-            {cards.length === 0 ? <p>{droppable ? t('legalHub.myTasksDrop') : t('legalHub.queueEmpty')}</p> : (
+            {hint ? <p className="lh-my__sub">{hint}</p> : null}
+            {cards.length === 0 ? <p className="lh-my__empty">{droppable ? t('legalHub.myTasksDrop') : t('legalHub.myTasksColEmpty')}</p> : (
                 <ul>
                     {cards.map((task) => (
                         <TaskCard
@@ -201,7 +314,45 @@ function BoardColumnView({ title, cards, droppable, dragging, onMove, onDragStar
                     ))}
                 </ul>
             )}
+            {canAdd ? (
+                <div className="lh-my__quick">
+                    {adding ? (
+                        <form onSubmit={(event) => {
+                            event.preventDefault();
+                            onAdd();
+                        }}
+                        >
+                            <textarea
+                                autoFocus
+                                value={draft}
+                                placeholder={t('legalHub.myTasksCardPh')}
+                                aria-label={t('legalHub.myTasksTitle')}
+                                onChange={(event) => onDraft(event.target.value)}
+                                onKeyDown={(event) => {
+                                    if (event.key === 'Escape')
+                                        onCancelAdd();
+                                }}
+                            />
+                            <div>
+                                <button type="submit" disabled={!draft.trim()}>{t('legalHub.myTasksColumnAdd')}</button>
+                                <button type="button" onClick={onCancelAdd}>{t('legalHub.myTasksCancel')}</button>
+                            </div>
+                        </form>
+                    ) : (
+                        <button type="button" onClick={onStartAdd}>+ {t('legalHub.myTasksAddCard')}</button>
+                    )}
+                </div>
+            ) : null}
         </section>
+    );
+}
+
+function LockIcon() {
+    return (
+        <svg viewBox="0 0 24 24" aria-hidden>
+            <rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="currentColor" strokeWidth="2.2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" strokeWidth="2.2" />
+        </svg>
     );
 }
 
@@ -212,13 +363,19 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
     onDragEnd: () => void;
     onOpen: () => void;
 }) {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const dragged = useRef(false);
-    const person = PERSON_LABEL[task.owner];
+    const owner = PERSON_LABEL[task.owner];
+    const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer] : null;
     const clientLate = !task.done && dayDelta(task.clientOn) < 0;
+    const soon = !clientLate && dayDelta(task.clientOn) <= 1;
+    const detail = taskDrawerDetail(task);
+    const checksDone = detail.checks.filter((item) => item.done).length;
+    const hours = task.hours || Math.max(1, Math.round(task.minutes / 60));
+    const due = `${shortDate(task.clientOn, locale)} · ${dueText(dayDelta(task.clientOn), t)}`;
     return (
         <li
-            className={`lh-my__card${draggable ? '' : ' is-locked'}${clientLate ? ' is-late' : ''}${task.done ? ' is-done' : ''}`}
+            className={`lh-my__card${draggable ? '' : ' is-locked'}${clientLate ? ' is-late' : ''}`}
             title={draggable ? undefined : t('legalHub.myTasksLocked')}
             draggable={draggable}
             onDragStart={() => {
@@ -237,11 +394,41 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
                 onOpen();
             }}
         >
+            <span className="lh-my__tags">
+                {task.priority === 'high' ? <span className="lh-my__chip lh-my__chip--hot">{t('legalHub.myTasksUrgent')}</span> : null}
+                <span className="lh-my__chip">{PROJECT_LABEL[task.project]}</span>
+                {task.workstream && task.workstream !== '—' ? <span className="lh-my__chip lh-my__chip--soft">{task.workstream}</span> : null}
+            </span>
             <strong>{task.title}</strong>
-            <span className="lh-my__card-meta">{PROJECT_LABEL[task.project]} · {task.workstream}</span>
+            {task.status === 'wait' && task.waitingFor ? (
+                <span className="lh-my__wait">
+                    {t(isClientWait(task) ? 'legalHub.myTasksWaitClientWho' : 'legalHub.myTasksWaitGovWho')}: {task.waitingFor}
+                </span>
+            ) : null}
+            {(task.status === 'associate' || task.status === 'partner') && reviewer ? (
+                <span className="lh-my__review">
+                    <span className={`lh-tasks__avatar lh-tasks__avatar--${task.reviewer}`}>{reviewer.code}</span>
+                    {t('legalHub.myTasksOnReview').replace('{name}', reviewer.name)}
+                </span>
+            ) : null}
+            {task.status === 'changes' ? <span className="lh-my__review lh-my__review--back">{t('legalHub.myTasksSubChanges')}</span> : null}
+            <span className="lh-my__facts">
+                {detail.checks.length > 0 ? <span>{checksDone}/{detail.checks.length}</span> : null}
+                {detail.files.length > 0 ? <span>{detail.files.length}</span> : null}
+                {detail.comments.length > 0 ? <span>{detail.comments.length}</span> : null}
+                <span>{t('legalHub.myTasksHoursShort').replace('{count}', String(hours))}</span>
+            </span>
             <span className="lh-my__card-foot">
-                {task.done ? <span /> : <DueBadge iso={task.clientOn} className="lh-my__card-due" />}
-                <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={person.name}>{person.code}</span>
+                <span className={`lh-my__duepill${clientLate ? ' is-late' : ''}${soon ? ' is-soon' : ''}`}>{due}</span>
+                <span className="lh-my__pair">
+                    <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={owner.name}>{owner.code}</span>
+                    {reviewer ? (
+                        <>
+                            <span className="lh-my__arrow" aria-hidden>→</span>
+                            <span className={`lh-tasks__avatar lh-tasks__avatar--${task.reviewer}`} title={reviewer.name}>{reviewer.code}</span>
+                        </>
+                    ) : null}
+                </span>
             </span>
         </li>
     );

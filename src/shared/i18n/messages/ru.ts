@@ -295,6 +295,21 @@ export const ruMessages: Messages = {
         myTasksShowDone: 'Показать завершённые',
         myTasksClear: 'Сбросить',
         myTasksDrop: 'Перетащите задачу сюда',
+        myTasksWaitClient: 'Ожидание клиента',
+        myTasksWaitGov: 'Ожидание госорганов',
+        myTasksSubWaitClient: 'Документы, ответы, подписи от клиента',
+        myTasksSubWaitGov: 'Хокимият, министерства, регулятор, кадастр',
+        myTasksSubAssociate: 'Двигает только проверяющий',
+        myTasksSubPartner: 'Утверждает только партнёр',
+        myTasksSubChanges: 'Вернули с замечаниями',
+        myTasksUrgent: 'Срочно',
+        myTasksOnReview: 'На проверке у {name}',
+        myTasksAddCard: 'Добавить карточку',
+        myTasksCardPh: 'Например: подготовить проект доверенности',
+        myTasksWaitClientWho: 'Клиент',
+        myTasksWaitGovWho: 'Орган',
+        myTasksHoursShort: '{count} ч',
+        myTasksColEmpty: 'Здесь пока ничего нет',
         myTasksDragHint: 'Карточки можно перетаскивать между «К выполнению», «В работе» и «Внешнее ожидание». Проверка сдвигается, когда задачу отправляют или проверяющий принимает решение.',
         myTasksEmpty: 'По этим фильтрам задач нет.',
         myTasksExpand: 'Развернуть все',
@@ -1302,6 +1317,21 @@ export type Messages = {
         myTasksShowDone: string;
         myTasksClear: string;
         myTasksDrop: string;
+        myTasksWaitClient: string;
+        myTasksWaitGov: string;
+        myTasksSubWaitClient: string;
+        myTasksSubWaitGov: string;
+        myTasksSubAssociate: string;
+        myTasksSubPartner: string;
+        myTasksSubChanges: string;
+        myTasksUrgent: string;
+        myTasksOnReview: string;
+        myTasksAddCard: string;
+        myTasksCardPh: string;
+        myTasksWaitClientWho: string;
+        myTasksWaitGovWho: string;
+        myTasksHoursShort: string;
+        myTasksColEmpty: string;
         myTasksDragHint: string;
         myTasksEmpty: string;
         myTasksExpand: string;
