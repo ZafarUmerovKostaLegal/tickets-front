@@ -14,6 +14,7 @@ import {
 } from './legalHubTasks';
 
 type BoardColumn = 'todo' | 'progress' | 'wait' | 'associate' | 'partner' | 'changes';
+type Health = 'risk' | 'changes' | 'review' | 'wait' | 'active' | 'empty';
 
 const COLUMNS: BoardColumn[] = ['todo', 'progress', 'wait', 'associate', 'partner', 'changes'];
 const DROPPABLE: BoardColumn[] = ['todo', 'progress', 'wait', 'changes'];
@@ -25,6 +26,15 @@ const COLUMN_LABEL: Record<BoardColumn, TranslationKey> = {
     associate: 'legalHub.taskStatusAssociate',
     partner: 'legalHub.taskStatusPartner',
     changes: 'legalHub.statusChanges',
+};
+
+const HEALTH_LABEL: Record<Health, TranslationKey> = {
+    risk: 'legalHub.projectsHealthRisk',
+    changes: 'legalHub.projectsHealthChanges',
+    review: 'legalHub.projectsHealthReview',
+    wait: 'legalHub.projectsHealthWait',
+    active: 'legalHub.projectsHealthActive',
+    empty: 'legalHub.projectsHealthEmpty',
 };
 
 const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
@@ -44,6 +54,19 @@ const PROJECT_TITLE: Record<TaskProjectId, string> = {
 const CARD_MONTHS: Record<string, string[]> = {
     ru: ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'],
     en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+};
+
+type ProjectSummary = {
+    id: TaskProjectId;
+    title: string;
+    label: string;
+    tasks: HubTask[];
+    counts: Record<BoardColumn, number>;
+    overdue: number;
+    review: number;
+    health: Health;
+    next: HubTask | null;
+    workstreams: { name: string; tasks: HubTask[] }[];
 };
 
 function dayDelta(iso: string): number {
@@ -74,6 +97,51 @@ function isOverdue(task: HubTask): boolean {
     return dayDelta(task.clientOn) < 0;
 }
 
+function healthOf(tasks: HubTask[]): Health {
+    if (tasks.length === 0)
+        return 'empty';
+    if (tasks.some(isOverdue))
+        return 'risk';
+    if (tasks.some((task) => task.status === 'changes'))
+        return 'changes';
+    if (tasks.some((task) => task.status === 'associate' || task.status === 'partner'))
+        return 'review';
+    if (tasks.some((task) => task.status === 'wait'))
+        return 'wait';
+    return 'active';
+}
+
+function summarize(id: TaskProjectId, tasks: HubTask[]): ProjectSummary {
+    const scoped = tasks.filter((task) => task.project === id);
+    const counts = Object.fromEntries(COLUMNS.map((column) => [column, 0])) as Record<BoardColumn, number>;
+    for (const task of scoped)
+        counts[columnOf(task.status)] += 1;
+    const byStream = new Map<string, HubTask[]>();
+    for (const task of scoped) {
+        const list = byStream.get(task.workstream) ?? [];
+        list.push(task);
+        byStream.set(task.workstream, list);
+    }
+    const next = [...scoped].sort((a, b) => a.clientOn.localeCompare(b.clientOn))[0] ?? null;
+    return {
+        id,
+        title: PROJECT_TITLE[id],
+        label: PROJECT_LABEL[id],
+        tasks: scoped,
+        counts,
+        overdue: scoped.filter(isOverdue).length,
+        review: scoped.filter(isReview).length,
+        health: healthOf(scoped),
+        next,
+        workstreams: [...byStream.entries()]
+            .sort((a, b) => a[0].localeCompare(b[0], 'en'))
+            .map(([name, streamTasks]) => ({
+                name,
+                tasks: [...streamTasks].sort((a, b) => COLUMNS.indexOf(columnOf(a.status)) - COLUMNS.indexOf(columnOf(b.status))),
+            })),
+    };
+}
+
 export function LegalHubProjects({
     query,
     source,
@@ -81,9 +149,10 @@ export function LegalHubProjects({
     query: string;
     source?: HubTask[] | null;
 }) {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const [tasks, setTasks] = useState<HubTask[]>(() => [...(source ?? HUB_TASKS)]);
-    const [selected, setSelected] = useState<TaskProjectId>(() => TASK_PROJECTS[0]!);
+    const [selected, setSelected] = useState<TaskProjectId | null>(null);
+    const [focusColumn, setFocusColumn] = useState<BoardColumn | null>(null);
     const [openId, setOpenId] = useState<string | null>(null);
     const [dragging, setDragging] = useState<string | null>(null);
     const [collapsed, setCollapsed] = useState<BoardColumn[]>([]);
@@ -93,106 +162,214 @@ export function LegalHubProjects({
     }, [source]);
 
     const needle = query.trim().toLowerCase();
-    const projectTabs = useMemo(() => TASK_PROJECTS.map((id) => {
-        const count = tasks.filter((task) => task.project === id).length;
-        return { id, title: PROJECT_TITLE[id], label: PROJECT_LABEL[id], count };
-    }), [tasks]);
-
-    const boardTasks = useMemo(() => {
-        const scoped = tasks.filter((task) => task.project === selected);
+    const projects = useMemo(() => TASK_PROJECTS.map((id) => summarize(id, tasks)), [tasks]);
+    const visible = useMemo(() => {
         if (!needle)
-            return scoped;
-        return scoped.filter((task) => {
+            return projects;
+        return projects.filter((project) => {
+            const hay = `${project.title} ${project.label} ${project.workstreams.map((stream) => stream.name).join(' ')} ${project.tasks.map((task) => task.title).join(' ')}`.toLowerCase();
+            return hay.includes(needle);
+        });
+    }, [needle, projects]);
+    const current = selected == null ? null : projects.find((project) => project.id === selected) ?? null;
+    const boardTasks = useMemo(() => {
+        if (current == null)
+            return [];
+        if (!needle)
+            return current.tasks;
+        return current.tasks.filter((task) => {
             const hay = `${task.title} ${task.workstream} ${PERSON_LABEL[task.owner].name} ${task.reviewer ? PERSON_LABEL[task.reviewer].name : ''}`.toLowerCase();
             return hay.includes(needle);
         });
-    }, [needle, selected, tasks]);
-
+    }, [current, needle]);
     const openTask = tasks.find((task) => task.id === openId) ?? null;
-    const totals = {
-        open: boardTasks.length,
-        review: boardTasks.filter(isReview).length,
-        overdue: boardTasks.filter(isOverdue).length,
+
+    const openProject = (id: TaskProjectId) => {
+        setSelected(id);
+        setFocusColumn(null);
+        setDragging(null);
     };
 
     const moveTask = (taskId: string, column: BoardColumn) => {
-        setTasks((current) => current.map((task) => (
-            task.id === taskId ? { ...task, status: column } : task
-        )));
+        setTasks((list) => list.map((task) => (task.id === taskId ? { ...task, status: column } : task)));
         setDragging(null);
     };
 
     return (
-        <div className="lh-projects">
-            <p className="lh-projects__hint">{t('legalHub.projectsHint')}</p>
-            <div className="lh-projects__tabs" role="tablist" aria-label={t('legalHub.projects')}>
-                {projectTabs.map((tab) => {
-                    const active = tab.id === selected;
-                    return (
-                        <button
-                            key={tab.id}
-                            type="button"
-                            role="tab"
-                            aria-selected={active}
-                            className={`lh-projects__tab${active ? ' is-active' : ''}${tab.count === 0 ? ' is-empty' : ''}`}
-                            onClick={() => {
-                                setSelected(tab.id);
-                                setDragging(null);
-                            }}
-                        >
-                            <strong>{tab.title}</strong>
-                            <em>{tab.count}</em>
-                        </button>
-                    );
-                })}
-            </div>
-
-            <header className="lh-projects__board-head">
-                <div>
-                    <h2 className="lh-projects__board-title">{PROJECT_TITLE[selected]}</h2>
-                    <p className="lh-projects__board-sub">{PROJECT_LABEL[selected]} · {t('legalHub.projectsBoard')}</p>
-                </div>
-                <ul className="lh-projects__board-stats">
-                    <li><strong>{totals.open}</strong><span>{t('legalHub.projectsOpenTasks')}</span></li>
-                    <li><strong>{totals.review}</strong><span>{t('legalHub.projectsInReview')}</span></li>
-                    <li className={totals.overdue > 0 ? 'is-due' : undefined}><strong>{totals.overdue}</strong><span>{t('legalHub.projectsOverdue')}</span></li>
-                </ul>
-            </header>
-
-            {boardTasks.length === 0 && !needle ? (
-                <p className="lh-projects__empty">{t('legalHub.projectsBoardEmpty')}</p>
-            ) : boardTasks.length === 0 ? (
-                <p className="lh-projects__empty">{t('legalHub.projectsEmpty')}</p>
+        <div className={`lh-projects${current ? ' lh-projects--workspace' : ''}`}>
+            {current == null ? (
+                <>
+                    <p className="lh-projects__hint">{t('legalHub.projectsHint')}</p>
+                    {visible.length === 0 ? (
+                        <p className="lh-projects__empty">{t('legalHub.projectsEmpty')}</p>
+                    ) : (
+                        <ul className="lh-projects__list">
+                            {visible.map((project) => (
+                                <li key={project.id}>
+                                    <button type="button" className={`lh-projects__card is-${project.health}`} onClick={() => openProject(project.id)}>
+                                        <span className="lh-projects__card-top">
+                                            <span className={`lh-projects__health is-${project.health}`}>{t(HEALTH_LABEL[project.health])}</span>
+                                            <span className="lh-projects__card-count">{t('legalHub.projectsTaskCount').replace('{count}', String(project.tasks.length))}</span>
+                                        </span>
+                                        <strong className="lh-projects__card-title">{project.title}</strong>
+                                        <span className="lh-projects__card-label">{project.label}</span>
+                                        <StageBar counts={project.counts} />
+                                        <span className="lh-projects__card-foot">
+                                            <span>{t('legalHub.projectsInReview')}: {project.review}</span>
+                                            {project.overdue > 0 ? <span className="is-due">{t('legalHub.projectsOverdue')}: {project.overdue}</span> : null}
+                                            {project.next ? (
+                                                <span className="lh-projects__card-next">
+                                                    {t('legalHub.projectsNext')
+                                                        .replace('{date}', formatCardDate(project.next.clientOn, locale))
+                                                        .replace('{title}', project.next.title)}
+                                                </span>
+                                            ) : null}
+                                        </span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </>
             ) : (
-                <div className="lh-projects__board lh-my__board is-wide">
-                    {COLUMNS.map((column) => {
-                        const cards = boardTasks.filter((task) => columnOf(task.status) === column);
-                        const folded = collapsed.includes(column);
-                        return (
-                            <BoardColumnView
-                                key={column}
-                                title={t(COLUMN_LABEL[column])}
-                                cards={cards}
-                                collapsed={folded}
-                                droppable={DROPPABLE.includes(column)}
-                                dragging={dragging}
-                                onToggle={() => setCollapsed((current) => (
-                                    current.includes(column)
-                                        ? current.filter((id) => id !== column)
-                                        : [...current, column]
-                                ))}
-                                onDragStart={setDragging}
-                                onDragEnd={() => setDragging(null)}
-                                onMove={(taskId) => moveTask(taskId, column)}
-                                onOpen={setOpenId}
-                            />
-                        );
-                    })}
+                <div className="lh-projects__workspace">
+                    <button type="button" className="lh-projects__back" onClick={() => setSelected(null)}>
+                        <BackIcon />
+                        {t('legalHub.projectsBack')}
+                    </button>
+                    <header className="lh-projects__board-head">
+                        <div>
+                            <span className={`lh-projects__health is-${current.health}`}>{t(HEALTH_LABEL[current.health])}</span>
+                            <h2 className="lh-projects__board-title">{current.title}</h2>
+                            <p className="lh-projects__board-sub">
+                                {current.label}
+                                {current.next
+                                    ? ` · ${t('legalHub.projectsNext').replace('{date}', formatCardDate(current.next.clientOn, locale)).replace('{title}', current.next.title)}`
+                                    : ''}
+                            </p>
+                        </div>
+                        <ul className="lh-projects__board-stats">
+                            <li><strong>{current.tasks.length}</strong><span>{t('legalHub.projectsOpenTasks')}</span></li>
+                            <li><strong>{current.review}</strong><span>{t('legalHub.projectsInReview')}</span></li>
+                            <li className={current.overdue > 0 ? 'is-due' : undefined}><strong>{current.overdue}</strong><span>{t('legalHub.projectsOverdue')}</span></li>
+                        </ul>
+                    </header>
+                    <ProjectMap
+                        project={current}
+                        focus={focusColumn}
+                        onFocus={(column) => setFocusColumn((currentColumn) => (currentColumn === column ? null : column))}
+                        onOpenTask={setOpenId}
+                    />
+                    <h3 className="lh-projects__board-label">{t('legalHub.projectsBoard')}</h3>
+                    {boardTasks.length === 0 ? (
+                        <p className="lh-projects__empty">{needle ? t('legalHub.myTasksEmpty') : t('legalHub.projectsBoardEmpty')}</p>
+                    ) : (
+                        <div className="lh-projects__board lh-my__board is-wide">
+                            {COLUMNS.map((column) => {
+                                const cards = boardTasks.filter((task) => columnOf(task.status) === column);
+                                const folded = collapsed.includes(column);
+                                const dimmed = focusColumn != null && focusColumn !== column;
+                                return (
+                                    <BoardColumnView
+                                        key={column}
+                                        title={t(COLUMN_LABEL[column])}
+                                        cards={cards}
+                                        collapsed={folded}
+                                        dimmed={dimmed}
+                                        droppable={DROPPABLE.includes(column)}
+                                        dragging={dragging}
+                                        onToggle={() => setCollapsed((list) => (
+                                            list.includes(column) ? list.filter((id) => id !== column) : [...list, column]
+                                        ))}
+                                        onDragStart={setDragging}
+                                        onDragEnd={() => setDragging(null)}
+                                        onMove={(taskId) => moveTask(taskId, column)}
+                                        onOpen={setOpenId}
+                                    />
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             )}
-
             {openTask ? <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} /> : null}
         </div>
+    );
+}
+
+function StageBar({ counts }: { counts: Record<BoardColumn, number> }) {
+    const total = COLUMNS.reduce((sum, column) => sum + counts[column], 0);
+    return (
+        <span className="lh-projects__bar" aria-hidden>
+            {COLUMNS.map((column) => (
+                <span
+                    key={column}
+                    className={`lh-projects__bar-seg is-${column}${counts[column] === 0 ? ' is-empty' : ''}`}
+                    style={{ flexGrow: total === 0 ? 1 : Math.max(counts[column], 0.35) }}
+                />
+            ))}
+        </span>
+    );
+}
+
+function ProjectMap({
+    project,
+    focus,
+    onFocus,
+    onOpenTask,
+}: {
+    project: ProjectSummary;
+    focus: BoardColumn | null;
+    onFocus: (column: BoardColumn) => void;
+    onOpenTask: (id: string) => void;
+}) {
+    const { t } = useI18n();
+    return (
+        <section className="lh-projects__map" aria-label={t('legalHub.projectsMap')}>
+            <header className="lh-projects__map-head">
+                <div>
+                    <h3>{t('legalHub.projectsMap')}</h3>
+                    <p>{t('legalHub.projectsMapHint')}</p>
+                </div>
+            </header>
+            <ol className="lh-projects__stages">
+                {COLUMNS.map((column, index) => {
+                    const count = project.counts[column];
+                    const active = count > 0;
+                    const selected = focus === column;
+                    return (
+                        <li key={column} className={`lh-projects__stage is-${column}${active ? ' is-live' : ''}${selected ? ' is-selected' : ''}`}>
+                            {index > 0 ? <span className="lh-projects__stage-line" aria-hidden /> : null}
+                            <button type="button" onClick={() => onFocus(column)} aria-pressed={selected}>
+                                <strong>{count}</strong>
+                                <span>{t(COLUMN_LABEL[column])}</span>
+                            </button>
+                        </li>
+                    );
+                })}
+            </ol>
+            {project.workstreams.length > 0 ? (
+                <ul className="lh-projects__streams">
+                    {project.workstreams.map((stream) => (
+                        <li key={stream.name}>
+                            <span className="lh-projects__stream-name">{stream.name}</span>
+                            <span className="lh-projects__stream-tasks">
+                                {stream.tasks.map((task) => (
+                                    <button
+                                        key={task.id}
+                                        type="button"
+                                        className={`lh-projects__chip is-${columnOf(task.status)}${isOverdue(task) ? ' is-late' : ''}`}
+                                        onClick={() => onOpenTask(task.id)}
+                                    >
+                                        {task.title}
+                                    </button>
+                                ))}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            ) : null}
+        </section>
     );
 }
 
@@ -200,6 +377,7 @@ function BoardColumnView({
     title,
     cards,
     collapsed,
+    dimmed,
     droppable,
     dragging,
     onToggle,
@@ -211,6 +389,7 @@ function BoardColumnView({
     title: string;
     cards: HubTask[];
     collapsed: boolean;
+    dimmed: boolean;
     droppable: boolean;
     dragging: string | null;
     onToggle: () => void;
@@ -223,7 +402,7 @@ function BoardColumnView({
     const foldLabel = t(collapsed ? 'legalHub.myTasksColumnExpand' : 'legalHub.myTasksColumnCollapse');
     return (
         <section
-            className={`lh-my__col${collapsed ? ' is-collapsed' : ''}${dragging && droppable ? ' is-target' : ''}`}
+            className={`lh-my__col${collapsed ? ' is-collapsed' : ''}${dimmed ? ' is-dimmed' : ''}${dragging && droppable ? ' is-target' : ''}`}
             onDragOver={(event) => {
                 if (!droppable || !dragging)
                     return;
@@ -322,6 +501,14 @@ function ProjectTaskCard({
                 </span>
             </span>
         </li>
+    );
+}
+
+function BackIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M15 6 9 12l6 6" />
+        </svg>
     );
 }
 

@@ -56,10 +56,20 @@ export const ruMessages: Messages = {
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
         projects: 'Проекты',
-        projectsHint: 'У каждого проекта своя доска задач и проверки',
-        projectsEmpty: 'По этим фильтрам задач нет.',
+        projectsHint: 'Откройте проект, чтобы увидеть карту статуса и его доску',
+        projectsEmpty: 'По этим фильтрам проектов нет.',
         projectsBoardEmpty: 'На доске этого проекта пока нет задач.',
         projectsBoard: 'Доска проекта',
+        projectsBack: 'Все проекты',
+        projectsMap: 'Карта проекта',
+        projectsMapHint: 'Стадии и направления — где сейчас находится работа',
+        projectsHealthRisk: 'Под риском',
+        projectsHealthChanges: 'Нужны правки',
+        projectsHealthReview: 'На проверке',
+        projectsHealthWait: 'Внешнее ожидание',
+        projectsHealthActive: 'В работе',
+        projectsHealthEmpty: 'Нет задач',
+        projectsNext: 'Ближайший срок {date} — {title}',
         projectsOpenTasks: 'Задачи',
         projectsInReview: 'На проверке',
         projectsOverdue: 'Просрочено',
@@ -1031,6 +1041,16 @@ export type Messages = {
         projectsEmpty: string;
         projectsBoardEmpty: string;
         projectsBoard: string;
+        projectsBack: string;
+        projectsMap: string;
+        projectsMapHint: string;
+        projectsHealthRisk: string;
+        projectsHealthChanges: string;
+        projectsHealthReview: string;
+        projectsHealthWait: string;
+        projectsHealthActive: string;
+        projectsHealthEmpty: string;
+        projectsNext: string;
         projectsOpenTasks: string;
         projectsInReview: string;
         projectsOverdue: string;
