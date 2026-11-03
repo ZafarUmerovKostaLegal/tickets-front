@@ -1597,7 +1597,7 @@ export function TimeTrackingClientsPanel() {
                                         </span>
                                         <span className="pp__td pp__td--budget">
                                           {!hasBudgetConfigured
-                                                ? (<span className="pp__dash">{t('timeTrackingPage.projects.table.noBudget')}</span>)
+                                                ? (<span className="pp__dash">{mapped.type === 'Время и материалы' ? t('timeTrackingPage.projects.table.hourlyRate') : t('timeTrackingPage.projects.table.noBudget')}</span>)
                                                 : hasBudget
                                                     ? fmtAmt(mapped.budget!, mapped.currency)
                                                     : fmtAmt(0, mapped.currency)}
