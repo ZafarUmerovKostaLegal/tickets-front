@@ -68,8 +68,8 @@ const FIRM_NAME = rgb(0.12, 0.16, 0.23);
 const THANKS_TEXT = rgb(0.42, 0.45, 0.5);
 const DISCLAIMER_TEXT = rgb(0.29, 0.33, 0.39);
 
-/** Match preview (11px on 794px canvas) ≈ 8.25pt on A4. DejaVu reads larger than Calibri at same pt. */
-const DOC_FS = 8.25;
+/** Preview body is 11px. DejaVu at 8.25pt reads smaller than Calibri on the sheet, so the PDF sits a step higher. */
+const DOC_FS = 9;
 const DOC_LH = DOC_FS * 1.45;
 /** CSS rem @ 16px root → pt (shared layout rhythm). */
 const CSS_REM_PT = 12;
