@@ -500,7 +500,7 @@ function LegalHubPageBody() {
                                     </div>
                                     <div className="lh-page__head-actions" ref={setActionsSlot} />
                                 </header>
-                                {section === 'myTasks' ? <LegalHubMyTasks key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} /> : null}
+                                {section === 'myTasks' ? <LegalHubMyTasks key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} layout="board" /> : null}
                                 {section === 'reviewQueue' ? <LegalHubMyTasks key={`queue-${viewAs?.id ?? 'me'}`} query={query} source={viewedTasks} mode="queue" /> : null}
                                 {section === 'projects' ? (
                                     <LegalHubProjects

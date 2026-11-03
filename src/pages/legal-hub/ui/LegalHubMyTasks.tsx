@@ -166,9 +166,6 @@ export function LegalHubMyTasks({
     const [adding, setAdding] = useState<BoardColumn | null>(null);
     const [draft, setDraft] = useState('');
     const [openId, setOpenId] = useState<string | null>(null);
-    const [onlyLate, setOnlyLate] = useState(false);
-    const [person, setPerson] = useState<TaskPersonId | ''>('');
-    const [label, setLabel] = useState('');
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
@@ -178,20 +175,12 @@ export function LegalHubMyTasks({
             return false;
         if (layout === 'list' && task.done)
             return false;
-        if (layout === 'board' && onlyLate && !( !task.done && dayDelta(task.clientOn) < 0))
-            return false;
-        if (layout === 'board' && person && task.owner !== person && task.reviewer !== person)
-            return false;
-        if (layout === 'board' && label && task.workstream !== label)
-            return false;
         if (!needle)
             return true;
         const owner = PERSON_LABEL[task.owner].name;
         const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer].name : '';
         return `${task.title} ${PROJECT_LABEL[task.project]} ${task.workstream} ${owner} ${reviewer}`.toLowerCase().includes(needle);
-    }), [label, layout, mode, needle, onlyLate, person, scoped]);
-    const streams = useMemo(() => [...new Set(scoped.map((task) => task.workstream))].sort(), [scoped]);
-    const lateCount = scoped.filter((task) => !task.done && dayDelta(task.clientOn) < 0).length;
+    }), [layout, mode, needle, scoped]);
 
     const moveTask = (id: string, column: BoardColumn) => {
         setTasks((current) => current.map((task) => {
@@ -294,36 +283,6 @@ export function LegalHubMyTasks({
                     {t('legalHub.myTasksNew')}
                 </button>
             </HeadActions>
-            <div className="lh-boardbar">
-                <div className="lh-boardbar__people" role="group" aria-label={t('legalHub.taskColOwner')}>
-                    {TASK_PEOPLE.map((id) => (
-                        <button
-                            key={id}
-                            type="button"
-                            className={person === id ? 'is-on' : ''}
-                            aria-pressed={person === id}
-                            title={PERSON_LABEL[id].name}
-                            onClick={() => setPerson((current) => current === id ? '' : id)}
-                        >
-                            <span className={`lh-tasks__avatar lh-tasks__avatar--${id}`}>{PERSON_LABEL[id].code}</span>
-                        </button>
-                    ))}
-                </div>
-                <button type="button" className={`lh-boardbar__chip${onlyLate ? ' is-on' : ''}`} aria-pressed={onlyLate} onClick={() => setOnlyLate((value) => !value)}>
-                    {t('legalHub.myTasksDatesOverdue')}
-                    <em>{lateCount}</em>
-                </button>
-                <select className="lh-boardbar__chip" aria-label={t('legalHub.taskColWorkstream')} value={label} onChange={(event) => setLabel(event.target.value)}>
-                    <option value="">{t('legalHub.filterLabels')}</option>
-                    {streams.map((stream) => <option key={stream} value={stream}>{stream}</option>)}
-                </select>
-                {onlyLate || person || label ? (
-                    <button type="button" className="lh-boardbar__chip" onClick={() => { setOnlyLate(false); setPerson(''); setLabel(''); }}>
-                        {t('legalHub.taskFilterReset')}
-                    </button>
-                ) : null}
-                <span className="lh-boardbar__shown">{t('legalHub.shownCount').replace('{shown}', String(visible.length)).replace('{total}', String(scoped.length))}</span>
-            </div>
             <div className="lh-my__board">
                 {COLUMNS.map((column) => {
                     const cards = visible
