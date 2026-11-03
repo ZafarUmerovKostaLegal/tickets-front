@@ -15,6 +15,7 @@ import { useCorrespondencePartnerAttentionBadge } from '@entities/correspondence
 import { useVacationLeavePendingBadge, formatVacationLeavePendingBadge } from '@entities/vacation';
 import { useTodoInvitesBadge } from '@entities/todo';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
+import { canAccessLegalHub } from '@shared/lib/legalHubAccess';
 import {
     getHubSectionForTile,
     HUB_SECTIONS,
@@ -165,7 +166,10 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
             }));
         if (isMeetingRoomAccount(user))
             return fromNav;
-        return [KOSTA_LEGAL_AI_TILE, LEGAL_HUB_TILE, ...fromNav];
+        const extras = [KOSTA_LEGAL_AI_TILE];
+        if (!loading && canAccessLegalHub(user))
+            extras.push(LEGAL_HUB_TILE);
+        return [...extras, ...fromNav];
     }, [user, loading]);
 
     const showKostaDailyTile = useMemo(

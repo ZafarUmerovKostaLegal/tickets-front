@@ -10,6 +10,7 @@ import { ExpensesAccessRoute } from '@app/ExpensesAccessRoute';
 import { AttendanceAccessRoute } from '@app/AttendanceAccessRoute';
 import { AccountingAccessRoute } from '@app/AccountingAccessRoute';
 import { ItSecurityAccessRoute } from '@app/ItSecurityAccessRoute';
+import { LegalHubAccessRoute } from '@app/LegalHubAccessRoute';
 import { AdminOnlyModuleRoute } from '@app/AdminOnlyModuleRoute';
 import { ExpensesMgmtRoute } from '@app/ExpensesMgmtRoute';
 import { ExpensesNestedLayout } from '@app/ExpensesNestedLayout';
@@ -109,10 +110,10 @@ const router = createBrowserRouter([
             { path: routes.authCallback, element: <Suspense fallback={<LazyFallback />}><AuthCallbackPage /></Suspense> },
             { path: routes.home, element: withProtected(<HomePage />) },
             { path: routes.kostaLegalAi, element: withProtected(<HomePage />) },
-            { path: routes.legalHub, element: withProtected(<LegalHubPage />) },
-            { path: routes.legalHubMemberStats, element: withProtected(<LegalHubPage />) },
-            { path: routes.legalHubMemberReports, element: withProtected(<LegalHubPage />) },
-            { path: routes.legalHubMember, element: withProtected(<LegalHubPage />) },
+            { path: routes.legalHub, element: withProtected(<LegalHubAccessRoute><LegalHubPage /></LegalHubAccessRoute>) },
+            { path: routes.legalHubMemberStats, element: withProtected(<LegalHubAccessRoute><LegalHubPage /></LegalHubAccessRoute>) },
+            { path: routes.legalHubMemberReports, element: withProtected(<LegalHubAccessRoute><LegalHubPage /></LegalHubAccessRoute>) },
+            { path: routes.legalHubMember, element: withProtected(<LegalHubAccessRoute><LegalHubPage /></LegalHubAccessRoute>) },
             { path: routes.tickets, element: withProtected(<TicketsPage />) },
             { path: routes.ticketDetail, element: withProtected(<TicketDetailPage />) },
             { path: routes.attendance, element: withProtected(<AttendanceAccessRoute>
