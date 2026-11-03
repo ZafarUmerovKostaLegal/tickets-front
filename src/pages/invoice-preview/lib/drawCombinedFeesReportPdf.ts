@@ -137,8 +137,19 @@ function blocks(snapshot: CombinedReportSnapshot): Array<{ title?: string; heade
     return out;
 }
 
+const SL = 20;
+const SR = 20;
+const ST = 22;
+const SB = 28;
+const SHEET_HEAD = 22;
+const SHEET_LINE = 12;
+const SHEET_GAP = 18;
+const PAD_X = 6;
+const GRID = rgb(0.58, 0.64, 0.72);
+
 type PageOp =
     | { kind: 'chrome'; title: string | null }
+    | { kind: 'gap' }
     | { kind: 'title'; text: string }
     | { kind: 'thead'; headers: string[]; weights: number[]; right: Set<number> }
     | { kind: 'row'; lines: string[][]; weights: number[]; right: Set<number>; height: number; bold: boolean };
@@ -154,34 +165,63 @@ function wrapAt(text: string, font: PDFFont, width: number, size: number): strin
     return lines.length ? lines : ['—'];
 }
 
+function sheetTableW(): number {
+    return W - SL - SR;
+}
+
+function sheetColXs(weights: number[]): { widths: number[]; xs: number[] } {
+    const tableW = sheetTableW();
+    const sum = weights.reduce((a, b) => a + b, 0);
+    const widths = weights.map((w) => (tableW * w) / sum);
+    const xs: number[] = [];
+    let x = SL;
+    for (const width of widths) {
+        xs.push(x);
+        x += width;
+    }
+    return { widths, xs };
+}
+
+function sheetRowLayout(cells: string[], weights: number[], right: Set<number>, font: PDFFont): { lines: string[][]; height: number } {
+    const { widths } = sheetColXs(weights);
+    const lines = cells.map((cell, i) => {
+        const width = Math.max(8, widths[i]! - PAD_X * 2);
+        if (right.has(i))
+            return [clip(cell, font, CELL, width)];
+        return wrapped(cell, font, width);
+    });
+    const count = Math.max(1, ...lines.map((line) => line.length));
+    return { lines, height: 5 + count * SHEET_LINE + 4 };
+}
+
 function chromeHeight(title: string | null, fontBold: PDFFont): number {
-    let height = 36;
+    let height = 30;
     if (!title)
         return height;
-    const lines = wrapAt(title.toUpperCase(), fontBold, W - ML - MR, 9);
-    return height + lines.length * 11 + 8;
+    const lines = wrapAt(title.toUpperCase(), fontBold, sheetTableW(), 9);
+    return height + lines.length * 11 + 6;
 }
 
 function drawChrome(page: PDFPage, fontBold: PDFFont, title: string | null): number {
-    let y = H - MT;
+    let y = H - ST;
     const size = 8;
     const padX = 6;
     const padY = 3;
     const boxW = fontBold.widthOfTextAtSize(CONFIDENTIAL, size) + padX * 2;
     const boxH = size + padY * 2;
-    const boxX = W - MR - boxW;
+    const boxX = W - SR - boxW;
     const boxBottom = y - boxH;
     page.drawRectangle({ x: boxX, y: boxBottom, width: boxW, height: boxH, color: RED });
     page.drawText(CONFIDENTIAL, { x: boxX + padX, y: boxBottom + padY, size, font: fontBold, color: rgb(1, 1, 1) });
-    y = boxBottom - 8;
-    page.drawLine({ start: { x: ML, y }, end: { x: W - MR, y }, thickness: 1.2, color: RED });
-    y -= 14;
+    y = boxBottom - 6;
+    page.drawLine({ start: { x: SL, y }, end: { x: W - SR, y }, thickness: 1.2, color: RED });
+    y -= 10;
     if (title) {
-        const lines = wrapAt(title.toUpperCase(), fontBold, W - ML - MR, 9);
+        const lines = wrapAt(title.toUpperCase(), fontBold, sheetTableW(), 9);
         lines.forEach((line, index) => {
-            page.drawText(line, { x: ML, y: y - index * 11, size: 9, font: fontBold, color: RED });
+            page.drawText(line, { x: SL, y: y - index * 11, size: 9, font: fontBold, color: RED });
         });
-        y -= lines.length * 11 + 8;
+        y -= lines.length * 11 + 6;
     }
     return y;
 }
@@ -221,7 +261,7 @@ function sheetBlocks(
             rows.push({ bold: true, cells: ['', '', '', `Total (${cur})`, sheetNum(projectHours), '', sheetNum(projectFees)] });
         out.push({
             headers: ['Date', 'Initials', 'Task', 'Description', 'Hours', 'Rate', `Amount (${cur})`],
-            weights: [12, 8, 16, 34, 8, 10, 12],
+            weights: [13, 9, 14, 28, 9, 11, 16],
             right: new Set([4, 5, 6]),
             rows,
         });
@@ -232,7 +272,7 @@ function sheetBlocks(
         const summaryFees = people.reduce((sum, person) => sum + person.amount, 0);
         out.push({
             headers: ['Initials', 'Name', 'Title', 'Hours', `Rate (${cur})`, `Amount (${cur})`],
-            weights: [10, 28, 22, 12, 14, 14],
+            weights: [11, 24, 20, 12, 16, 17],
             right: new Set([3, 4, 5]),
             rows: [
                 ...people.map((person) => ({
@@ -251,7 +291,7 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
     let y = 0;
     const open = (title: string | null) => {
         pages.push([{ kind: 'chrome', title }]);
-        y = H - MT - chromeHeight(title, fontBold);
+        y = H - ST - chromeHeight(title, fontBold);
     };
     const push = (op: PageOp, height: number) => {
         pages[pages.length - 1]!.push(op);
@@ -264,17 +304,25 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
             : null;
         open(title);
         const showTime = slice.showTimeTotal || slice.timeTo > slice.timeFrom;
+        let firstBlock = true;
         for (const block of sheetBlocks(snapshot, slice.projectIndex, slice.timeFrom, slice.timeTo, showTime, slice.showTimeTotal, slice.showPeopleTotal)) {
-            const paintHead = () => {
-                if (y - THEAD_H < MB)
+            if (!firstBlock) {
+                if (y - SHEET_GAP - SHEET_HEAD < SB)
                     open(null);
-                push({ kind: 'thead', headers: block.headers, weights: block.weights, right: block.right }, THEAD_H);
+                else
+                    push({ kind: 'gap' }, SHEET_GAP);
+            }
+            firstBlock = false;
+            const paintHead = () => {
+                if (y - SHEET_HEAD < SB)
+                    open(null);
+                push({ kind: 'thead', headers: block.headers, weights: block.weights, right: block.right }, SHEET_HEAD);
             };
             paintHead();
             for (const row of block.rows) {
                 const face = row.bold ? fontBold : font;
-                const layout = rowLayout(row.cells, block.weights, block.right, face);
-                if (y - layout.height < MB) {
+                const layout = sheetRowLayout(row.cells, block.weights, block.right, face);
+                if (y - layout.height < SB) {
                     open(null);
                     paintHead();
                 }
@@ -287,7 +335,6 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
                     bold: Boolean(row.bold),
                 }, layout.height);
             }
-            y -= 12;
         }
     }
     if (pages.length === 0)
@@ -305,6 +352,10 @@ function drawPlannedOps(page: PDFPage, font: PDFFont, fontBold: PDFFont, ops: Pa
         if (op.kind === 'title') {
             page.drawText(clip(op.text, fontBold, 10, W - ML - MR), { x: ML, y, size: 10, font: fontBold, color: INK });
             y -= TITLE_H;
+            continue;
+        }
+        if (op.kind === 'gap') {
+            y -= SHEET_GAP;
             continue;
         }
         if (op.kind === 'thead') {
@@ -386,6 +437,55 @@ export function countCombinedReportPages(snapshot: CombinedReportSnapshot, font:
     return Math.max(1, pages.length);
 }
 
+function drawSheetOps(page: PDFPage, font: PDFFont, fontBold: PDFFont, ops: PageOp[]): void {
+    let y = H - ST;
+    const tableW = sheetTableW();
+    for (const op of ops) {
+        if (op.kind === 'chrome') {
+            y = drawChrome(page, fontBold, op.title);
+            continue;
+        }
+        if (op.kind === 'gap') {
+            y -= SHEET_GAP;
+            continue;
+        }
+        if (op.kind === 'thead') {
+            const { widths, xs } = sheetColXs(op.weights);
+            page.drawRectangle({ x: SL, y: y - SHEET_HEAD, width: tableW, height: SHEET_HEAD, color: RED });
+            const textY = y - SHEET_HEAD + 7;
+            op.headers.forEach((cell, i) => {
+                if (!cell.trim())
+                    return;
+                const text = clip(cell, fontBold, CELL, widths[i]! - PAD_X * 2);
+                const tw = fontBold.widthOfTextAtSize(text, CELL);
+                const dx = op.right.has(i) ? xs[i]! + widths[i]! - PAD_X - tw : xs[i]! + PAD_X;
+                page.drawText(text, { x: dx, y: textY, size: CELL, font: fontBold, color: rgb(1, 1, 1) });
+            });
+            y -= SHEET_HEAD;
+            continue;
+        }
+        if (op.kind !== 'row')
+            continue;
+        const { widths, xs } = sheetColXs(op.weights);
+        const face = op.bold ? fontBold : font;
+        const color = op.bold ? RED : INK;
+        op.lines.forEach((col, i) => {
+            col.forEach((text, lineIndex) => {
+                const tw = face.widthOfTextAtSize(text, CELL);
+                const dx = op.right.has(i) ? xs[i]! + widths[i]! - PAD_X - tw : xs[i]! + PAD_X;
+                page.drawText(text, { x: dx, y: y - 13 - lineIndex * SHEET_LINE, size: CELL, font: face, color });
+            });
+        });
+        y -= op.height;
+        page.drawLine({
+            start: { x: SL, y },
+            end: { x: SL + tableW, y },
+            thickness: op.bold ? 1 : 0.4,
+            color: op.bold ? RED : GRID,
+        });
+    }
+}
+
 function drawThead(page: PDFPage, fontBold: PDFFont, y: number, headers: string[], weights: number[], right: Set<number>): void {
     const { widths, xs } = colXs(weights);
     const tableW = W - ML - MR;
@@ -410,7 +510,7 @@ export function drawCombinedReportPages(
     if (snapshot.layout === 'perProject') {
         for (const ops of planPerProjectPages(snapshot, font, fontBold)) {
             const page = doc.addPage([W, H]);
-            drawPlannedOps(page, font, fontBold, ops, H - MT);
+            drawSheetOps(page, font, fontBold, ops);
         }
         return;
     }
