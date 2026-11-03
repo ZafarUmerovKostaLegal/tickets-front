@@ -6,6 +6,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { LegalHubMemberTasks } from './LegalHubMemberTasks';
 import { LegalHubMyTasks } from './LegalHubMyTasks';
+import { LegalHubProjects } from './LegalHubProjects';
 import { LegalHubReviewQueue } from './LegalHubReviewQueue';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
@@ -13,11 +14,12 @@ import { tasksForMember } from './legalHubTasks';
 import { LegalHubViewProvider, useLegalHubView } from './legalHubView';
 import './LegalHubPage.css';
 
-type LegalHubNavId = 'myTasks' | 'reviewQueue' | 'allTeam';
+type LegalHubNavId = 'myTasks' | 'reviewQueue' | 'projects' | 'allTeam';
 
 const NAV_ITEMS: { id: LegalHubNavId; labelKey: TranslationKey; icon: ComponentType }[] = [
     { id: 'myTasks', labelKey: 'legalHub.myTasks', icon: IconTasks },
     { id: 'reviewQueue', labelKey: 'legalHub.reviewQueue', icon: IconShield },
+    { id: 'projects', labelKey: 'legalHub.projects', icon: IconProjects },
     { id: 'allTeam', labelKey: 'legalHub.allTeam', icon: IconTeam },
 ];
 
@@ -68,6 +70,15 @@ function IconTeam() {
     );
 }
 
+function IconProjects() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M3 7h7l2 2h9v10a2 2 0 0 1-2 2H3z" />
+            <path d="M3 7V5a2 2 0 0 1 2-2h4l2 2" />
+        </svg>
+    );
+}
+
 function IconSearch() {
     return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -113,7 +124,7 @@ function sectionFromState(state: unknown): LegalHubNavId | null {
     if (state == null || typeof state !== 'object' || !('section' in state))
         return null;
     const section = (state as { section?: string }).section;
-    if (section === 'myTasks' || section === 'reviewQueue' || section === 'allTeam')
+    if (section === 'myTasks' || section === 'reviewQueue' || section === 'projects' || section === 'allTeam')
         return section;
     return null;
 }
@@ -370,6 +381,7 @@ function LegalHubPageBody() {
                                 <h1 className="lh-page__title">{pageTitle}</h1>
                                 {section === 'myTasks' ? <LegalHubMyTasks key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} /> : null}
                                 {section === 'reviewQueue' ? <LegalHubReviewQueue key={viewAs?.id ?? 'me'} query={query} tasks={viewedTasks} /> : null}
+                                {section === 'projects' ? <LegalHubProjects key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} /> : null}
                                 {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}
                             </>
                         )}

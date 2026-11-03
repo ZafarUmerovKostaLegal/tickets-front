@@ -55,6 +55,16 @@ export const ruMessages: Messages = {
         workspace: 'Рабочее пространство',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
+        projects: 'Проекты',
+        projectsHint: 'У каждого проекта своя доска задач и проверки',
+        projectsEmpty: 'По этим фильтрам задач нет.',
+        projectsBoardEmpty: 'На доске этого проекта пока нет задач.',
+        projectsBoard: 'Доска проекта',
+        projectsOpenTasks: 'Задачи',
+        projectsInReview: 'На проверке',
+        projectsOverdue: 'Просрочено',
+        projectsTaskCount: '{count} задач',
+        projectsWorkstreams: '{count} направлений',
         queueHint: 'Отправленные документы и ход проверки',
         queueApproved: 'Одобрено',
         queueApprovedMeta: 'за {count} дн.',
@@ -1016,6 +1026,16 @@ export type Messages = {
         workspace: string;
         myTasks: string;
         reviewQueue: string;
+        projects: string;
+        projectsHint: string;
+        projectsEmpty: string;
+        projectsBoardEmpty: string;
+        projectsBoard: string;
+        projectsOpenTasks: string;
+        projectsInReview: string;
+        projectsOverdue: string;
+        projectsTaskCount: string;
+        projectsWorkstreams: string;
         queueHint: string;
         queueApproved: string;
         queueApprovedMeta: string;
