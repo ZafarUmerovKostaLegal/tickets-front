@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { LegalHubMyTasks, columnOf as docketColumn, mineFrom, type MineTask } from './LegalHubMyTasks';
@@ -6,7 +6,6 @@ import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import { dueText, DueBadge, dayDelta as sharedDelta } from './legalHubShared';
 import {
     HUB_TASKS,
-    PERSON_LABEL,
     PROJECT_LABEL,
     PROJECT_TITLE,
     TASK_PROJECTS,
@@ -146,21 +145,31 @@ export function LegalHubProjects({
     source,
     selected,
     onSelect,
+    createSignal = 0,
 }: {
     query: string;
     source?: HubTask[] | null;
     selected: TaskProjectId | null;
     onSelect: (id: TaskProjectId | null) => void;
+    createSignal?: number;
 }) {
     const { t, locale } = useI18n();
     const [tasks, setTasks] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
     const [healthFilter, setHealthFilter] = useState<Health | ''>('');
     const [openId, setOpenId] = useState<string | null>(null);
     const [matterView, setMatterView] = useState<'board' | 'map'>('board');
+    const seenCreate = useRef(createSignal);
 
     useEffect(() => {
         setTasks(mineFrom(source ?? HUB_TASKS));
     }, [source]);
+
+    useEffect(() => {
+        if (createSignal === seenCreate.current)
+            return;
+        seenCreate.current = createSignal;
+        setMatterView('board');
+    }, [createSignal]);
 
     useEffect(() => {
         setMatterView('board');
@@ -192,7 +201,6 @@ export function LegalHubProjects({
 
     const matter = current == null ? null : MATTER_META[current.id];
     const doneCount = current == null ? 0 : (current.tasks as MineTask[]).filter((task) => task.done).length;
-    const team = current == null ? [] : [...new Set(current.tasks.flatMap((task) => [task.owner, task.reviewer]).filter((id): id is NonNullable<typeof id> => id != null))];
 
     return (
         <div className={`lh-projects${current ? ' lh-projects--workspace' : ''}`}>
@@ -275,28 +283,23 @@ export function LegalHubProjects({
                                 {t('legalHub.viewMap')}
                             </button>
                         </div>
-                        <span className="lh-matter__team">
-                            {team.map((id) => (
-                                <span key={id} className={`lh-tasks__avatar lh-tasks__avatar--${id}`} title={PERSON_LABEL[id].name}>{PERSON_LABEL[id].code}</span>
-                            ))}
-                        </span>
                         <span className="lh-matter__progress">
                             <span>{t('legalHub.matterApproved').replace('{done}', String(doneCount)).replace('{total}', String(current.tasks.length))}</span>
                             <i><b style={{ width: `${current.tasks.length ? Math.round(doneCount / current.tasks.length * 100) : 0}%` }} /></i>
                         </span>
                         {matter ? <span className="lh-matter__meta">{matter.client} · {matter.no} · {t('legalHub.matterPrivate')}</span> : null}
                     </div>
-                    {matterView === 'map' ? (
-                        <MatterMap tasks={current.tasks} onOpen={setOpenId} />
-                    ) : (
+                    <div className={matterView === 'board' ? undefined : 'lh-matter__pane-off'}>
                         <LegalHubMyTasks
                             layout="board"
                             project={current.id}
                             query={query}
                             tasks={tasks}
                             onTasks={setTasks}
+                            createSignal={createSignal}
                         />
-                    )}
+                    </div>
+                    {matterView === 'map' ? <MatterMap tasks={current.tasks} onOpen={setOpenId} /> : null}
                 </div>
             )}
             {openTask ? <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} /> : null}

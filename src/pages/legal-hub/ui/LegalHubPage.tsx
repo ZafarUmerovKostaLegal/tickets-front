@@ -446,7 +446,7 @@ function LegalHubPageBody() {
                             <kbd className="lh-top__search-kbd" aria-hidden>/</kbd>
                         )}
                     </label>
-                    {people.length > 0 || showUtil || (section === 'myTasks' && !onMemberPage) ? (
+                    {people.length > 0 || showUtil || ((section === 'myTasks' || (section === 'projects' && openProjectId != null)) && !onMemberPage) ? (
                         <div className="lh-top__actions">
                             {people.length > 0 ? (
                                 <>
@@ -477,7 +477,7 @@ function LegalHubPageBody() {
                                     />
                                 </>
                             ) : null}
-                            {section === 'myTasks' && !onMemberPage ? (
+                            {(section === 'myTasks' || (section === 'projects' && openProjectId != null)) && !onMemberPage ? (
                                 <button
                                     type="button"
                                     className="lh-top__add"
@@ -524,7 +524,7 @@ function LegalHubPageBody() {
                                 : <LegalHubMemberTasks memberId={memberId} query={query} />
                         ) : (
                             <HeadActionsContext.Provider value={actionsSlot}>
-                                {section === 'myTasks' || section === 'reviewQueue' ? null : (
+                                {section === 'myTasks' || section === 'reviewQueue' || openProjectId != null ? null : (
                                 <header className="lh-page__head">
                                     <div className="lh-page__head-text">
                                         {openProjectId != null ? (
@@ -548,6 +548,7 @@ function LegalHubPageBody() {
                                         source={viewedTasks}
                                         selected={openProjectId}
                                         onSelect={openProject}
+                                        createSignal={createTick}
                                     />
                                 ) : null}
                                 {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}

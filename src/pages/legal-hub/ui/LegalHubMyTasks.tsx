@@ -4,7 +4,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
-import { dueText, HeadActions } from './legalHubShared';
+import { dueText } from './legalHubShared';
 import {
     HUB_TASKS,
     MOCK_DONE_IDS,
@@ -166,7 +166,7 @@ export function LegalHubMyTasks({
     project?: TaskProjectId | null;
     tasks?: MineTask[];
     onTasks?: (tasks: MineTask[]) => void;
-    /** Bumps from the top-bar + button. Project boards keep their own header button. */
+    /** Bumps from the top-bar + button. */
     createSignal?: number;
 }) {
     const { t, locale } = useI18n();
@@ -181,10 +181,14 @@ export function LegalHubMyTasks({
     };
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
+    const seenCreate = useRef(createSignal);
     useEffect(() => {
-        if (createSignal > 0 && mode === 'mine' && project == null)
+        if (createSignal === seenCreate.current)
+            return;
+        seenCreate.current = createSignal;
+        if (mode === 'mine')
             setComposer(true);
-    }, [createSignal, mode, project]);
+    }, [createSignal, mode]);
     const [adding, setAdding] = useState<BoardColumn | null>(null);
     const [draft, setDraft] = useState('');
     const [openId, setOpenId] = useState<string | null>(null);
@@ -343,14 +347,6 @@ export function LegalHubMyTasks({
 
     return (
         <div className="lh-my lh-my--docket">
-            {project != null ? (
-                <HeadActions>
-                    <button type="button" className="lh-temp__open lh-primary" onClick={() => setComposer(true)}>
-                        <span aria-hidden>+</span>
-                        {t('legalHub.myTasksNew')}
-                    </button>
-                </HeadActions>
-            ) : null}
             <div className="lh-my__board">
                 {COLUMNS.map((column) => {
                     const cards = visible
