@@ -6046,50 +6046,24 @@ body[data-theme='dark'] .lh-page {
 .lh-my--docket .lh-my__card {
   gap: 0.4rem;
   padding: 0.95rem 1rem 0.8rem;
-  border: 1px solid color-mix(in srgb, #fff 70%, var(--app-border));
-  border-radius: 16px;
-  background:
-    linear-gradient(165deg, color-mix(in srgb, #fff 82%, transparent) 0%, color-mix(in srgb, var(--app-surface) 58%, transparent) 100%);
-  -webkit-backdrop-filter: blur(16px) saturate(1.45);
-  backdrop-filter: blur(16px) saturate(1.45);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 92%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--app-border) 45%, transparent),
-    0 10px 24px color-mix(in srgb, var(--app-fg) 7%, transparent);
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--app-surface);
+  box-shadow: none;
 }
 
 .lh-my--docket .lh-my__card:hover {
-  border-color: color-mix(in srgb, #fff 88%, var(--app-accent-border));
-  background:
-    linear-gradient(165deg, color-mix(in srgb, #fff 90%, transparent) 0%, color-mix(in srgb, var(--app-surface) 68%, transparent) 100%);
-  box-shadow:
-    inset 0 1px 0 #fff,
-    inset 0 -1px 0 color-mix(in srgb, var(--app-border) 35%, transparent),
-    0 14px 30px color-mix(in srgb, var(--app-fg) 11%, transparent);
+  border-color: var(--app-accent-border);
+  box-shadow: none;
 }
 
 .lh-my--docket .lh-my__card.is-late {
-  border-color: color-mix(in srgb, var(--app-error) 28%, #fff);
-  box-shadow:
-    inset 3px 0 0 var(--app-error),
-    inset 0 1px 0 color-mix(in srgb, #fff 92%, transparent),
-    0 10px 24px color-mix(in srgb, var(--app-error) 10%, transparent);
+  border-color: var(--app-border);
+  box-shadow: inset 3px 0 0 var(--app-error);
 }
 
 .lh-my--docket .lh-my__card.is-late:hover {
-  box-shadow:
-    inset 3px 0 0 var(--app-error),
-    inset 0 1px 0 #fff,
-    0 14px 30px color-mix(in srgb, var(--app-error) 14%, transparent);
-}
-
-body[data-theme='dark'] .lh-my--docket .lh-my__card {
-  border-color: color-mix(in srgb, #fff 22%, var(--app-border));
-  background:
-    linear-gradient(165deg, color-mix(in srgb, #fff 16%, transparent) 0%, color-mix(in srgb, var(--app-surface) 48%, transparent) 100%);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 24%, transparent),
-    0 12px 28px rgba(0, 0, 0, 0.32);
+  box-shadow: inset 3px 0 0 var(--app-error);
 }
 
 .lh-my--docket .lh-my__card strong {
