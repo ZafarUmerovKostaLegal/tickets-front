@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
@@ -157,6 +157,7 @@ export function LegalHubMyTasks({
     project = null,
     tasks: tasksProp,
     onTasks,
+    createSignal = 0,
 }: {
     query: string;
     source?: HubTask[] | null;
@@ -165,6 +166,8 @@ export function LegalHubMyTasks({
     project?: TaskProjectId | null;
     tasks?: MineTask[];
     onTasks?: (tasks: MineTask[]) => void;
+    /** Bumps from the top-bar + button. Project boards keep their own header button. */
+    createSignal?: number;
 }) {
     const { t, locale } = useI18n();
     const [inner, setInner] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
@@ -178,6 +181,10 @@ export function LegalHubMyTasks({
     };
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
+    useEffect(() => {
+        if (createSignal > 0 && mode === 'mine' && project == null)
+            setComposer(true);
+    }, [createSignal, mode, project]);
     const [adding, setAdding] = useState<BoardColumn | null>(null);
     const [draft, setDraft] = useState('');
     const [openId, setOpenId] = useState<string | null>(null);
@@ -336,12 +343,14 @@ export function LegalHubMyTasks({
 
     return (
         <div className="lh-my lh-my--docket">
-            <HeadActions>
-                <button type="button" className="lh-temp__open lh-primary" onClick={() => setComposer(true)}>
-                    <span aria-hidden>+</span>
-                    {t('legalHub.myTasksNew')}
-                </button>
-            </HeadActions>
+            {project != null ? (
+                <HeadActions>
+                    <button type="button" className="lh-temp__open lh-primary" onClick={() => setComposer(true)}>
+                        <span aria-hidden>+</span>
+                        {t('legalHub.myTasksNew')}
+                    </button>
+                </HeadActions>
+            ) : null}
             <div className="lh-my__board">
                 {COLUMNS.map((column) => {
                     const cards = visible

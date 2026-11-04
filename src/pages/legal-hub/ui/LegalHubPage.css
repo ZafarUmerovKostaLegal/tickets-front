@@ -384,6 +384,29 @@
   gap: 0.45rem;
 }
 
+.lh-top__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: var(--app-accent);
+  color: #fff;
+  font: inherit;
+  font-size: 1.45rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--app-accent) 28%, transparent);
+}
+
+.lh-top__add:hover {
+  background: var(--app-accent-hover, var(--app-accent));
+}
+
 .lh-top__member.tsp-srch {
   width: min(16rem, 46vw);
   min-width: 9.5rem;

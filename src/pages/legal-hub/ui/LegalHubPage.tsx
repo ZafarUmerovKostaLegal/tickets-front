@@ -142,6 +142,7 @@ function LegalHubPageBody() {
     const openProjectId = section === 'projects' && isTaskProjectId(projectParam) ? projectParam : null;
     const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
     const [query, setQuery] = useState('');
+    const [createTick, setCreateTick] = useState(0);
     const [projectQuery, setProjectQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
     const [utilOpen, setUtilOpen] = useState(false);
@@ -445,7 +446,7 @@ function LegalHubPageBody() {
                             <kbd className="lh-top__search-kbd" aria-hidden>/</kbd>
                         )}
                     </label>
-                    {people.length > 0 || showUtil ? (
+                    {people.length > 0 || showUtil || (section === 'myTasks' && !onMemberPage) ? (
                         <div className="lh-top__actions">
                             {people.length > 0 ? (
                                 <>
@@ -475,6 +476,17 @@ function LegalHubPageBody() {
                                         )}
                                     />
                                 </>
+                            ) : null}
+                            {section === 'myTasks' && !onMemberPage ? (
+                                <button
+                                    type="button"
+                                    className="lh-top__add"
+                                    aria-label={t('legalHub.myTasksNew')}
+                                    title={t('legalHub.myTasksNew')}
+                                    onClick={() => setCreateTick((tick) => tick + 1)}
+                                >
+                                    +
+                                </button>
                             ) : null}
                             {showUtil ? (
                                 <button
@@ -510,6 +522,7 @@ function LegalHubPageBody() {
                                 : <LegalHubMemberTasks memberId={memberId} query={query} />
                         ) : (
                             <HeadActionsContext.Provider value={actionsSlot}>
+                                {section === 'myTasks' || section === 'reviewQueue' ? null : (
                                 <header className="lh-page__head">
                                     <div className="lh-page__head-text">
                                         {openProjectId != null ? (
@@ -519,11 +532,12 @@ function LegalHubPageBody() {
                                             </nav>
                                         ) : null}
                                         <h1 className="lh-page__title">{openProjectId != null ? PROJECT_TITLE[openProjectId] : t(sectionTitle)}</h1>
-                                        {openProjectId == null && section !== 'myTasks' ? <p className="lh-page__hint">{t(SECTION_HINT[section])}</p> : null}
+                                        {openProjectId == null ? <p className="lh-page__hint">{t(SECTION_HINT[section])}</p> : null}
                                     </div>
                                     <div className="lh-page__head-actions" ref={setActionsSlot} />
                                 </header>
-                                {section === 'myTasks' ? <LegalHubMyTasks key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} layout="board" /> : null}
+                                )}
+                                {section === 'myTasks' ? <LegalHubMyTasks key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} layout="board" createSignal={createTick} /> : null}
                                 {section === 'reviewQueue' ? <LegalHubMyTasks key={`queue-${viewAs?.id ?? 'me'}`} query={query} source={viewedTasks} layout="board" mode="queue" /> : null}
                                 {section === 'projects' ? (
                                     <LegalHubProjects
