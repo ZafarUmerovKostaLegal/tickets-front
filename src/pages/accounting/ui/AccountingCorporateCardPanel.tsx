@@ -382,25 +382,26 @@ export function AccountingCorporateCardPanel() {
             {rows && visible.length === 0 ? <p className="acct-card__empty">По этой карте операций пока нет</p> : null}
             {rows && visible.length > 0 ? (
                 <div className="acct-ops" role="region" aria-label="Операции по корпоративной карте">
-                    <div className="acct-ops__head" role="row">
-                        <span>Дата</span>
-                        <span>Карта</span>
-                        <span>Вид</span>
-                        <span>Описание</span>
-                        <span>Оплата</span>
-                        <span className="acct-ops__sum">Сумма, UZS</span>
-                    </div>
                     <div className="acct-ops__body">
+                        <div className="acct-ops__row acct-ops__row--head" role="row">
+                            <span className="acct-ops__th" role="columnheader">Дата</span>
+                            <span className="acct-ops__th" role="columnheader">Карта</span>
+                            <span className="acct-ops__th" role="columnheader">Вид</span>
+                            <span className="acct-ops__th acct-ops__th--desc" role="columnheader">Описание</span>
+                            <span className="acct-ops__th" role="columnheader">Оплата</span>
+                            <span className="acct-ops__th acct-ops__th--sum" role="columnheader">Сумма, UZS</span>
+                        </div>
                         {visible.map((row) => {
                             const payFull = PAYMENT_META[(row.paymentMethod ?? '') as PaymentMethod]?.label ?? (row.paymentMethod || '—');
                             const kind = expenseKind(row);
+                            const pay = paymentShort(row.paymentMethod);
                             return (
-                                <button key={row.id} type="button" className="acct-ops__row" onClick={() => openExpense(row)}>
+                                <button key={row.id} type="button" className={`acct-ops__row acct-ops__row--${row.status}`} onClick={() => openExpense(row)}>
                                     <span className="acct-ops__date">{formatDate(row.expenseDate)}</span>
                                     <span className="acct-ops__owner">{cardOwner(row)}</span>
-                                    <span className="acct-ops__kind">{kind || '—'}</span>
+                                    <span className="acct-ops__kind">{kind ? <span className="acct-ops__pill">{kind}</span> : '—'}</span>
                                     <span className="acct-ops__desc" title={expenseDescription(row)}>{expenseDescription(row)}</span>
-                                    <span className="acct-ops__pay" title={payFull}>{paymentShort(row.paymentMethod)}</span>
+                                    <span className="acct-ops__pay" title={payFull}>{pay === '—' ? '—' : <span className="acct-ops__pill acct-ops__pill--pay">{pay}</span>}</span>
                                     <span className="acct-ops__sum">{money(Number(row.amountUzs) || 0)}</span>
                                 </button>
                             );
