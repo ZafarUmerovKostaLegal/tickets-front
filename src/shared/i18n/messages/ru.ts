@@ -54,7 +54,9 @@ export const ruMessages: Messages = {
         navAria: 'Навигация Legal Hub',
         workspace: 'Рабочее пространство',
         sideMine: 'Мне',
-        sideMatters: 'Дела',
+        sideMatters: 'Проекты',
+        projectSearch: 'Поиск проекта',
+        projectSearchEmpty: 'Ничего не найдено',
         sideReview: 'Ждут моей проверки',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
@@ -1118,6 +1120,8 @@ export type Messages = {
         workspace: string;
         sideMine: string;
         sideMatters: string;
+        projectSearch: string;
+        projectSearchEmpty: string;
         sideReview: string;
         myTasks: string;
         reviewQueue: string;

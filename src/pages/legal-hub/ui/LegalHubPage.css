@@ -87,6 +87,50 @@
   color: var(--app-meta);
 }
 
+.lh-side__find {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0.35rem 0.45rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--app-border);
+  border-radius: 9px;
+  background: var(--app-surface);
+}
+
+.lh-side__find-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--app-muted);
+}
+
+.lh-side__find-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lh-side__find-input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.78rem;
+  outline: none;
+}
+
+.lh-side__find-input::placeholder {
+  color: var(--app-muted);
+}
+
+.lh-side__find-empty {
+  padding: 0.35rem 0.55rem;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+}
+
 .lh-side__list {
   list-style: none;
   margin: 0;
@@ -214,6 +258,8 @@
 
   .lh-page--side-collapsed .lh-side__brand,
   .lh-page--side-collapsed .lh-side__section,
+  .lh-page--side-collapsed .lh-side__find,
+  .lh-page--side-collapsed .lh-side__find-empty,
   .lh-page--side-collapsed .lh-side__item-label,
   .lh-page--side-collapsed .lh-side__collapse-label {
     display: none;

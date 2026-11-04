@@ -142,6 +142,7 @@ function LegalHubPageBody() {
     const openProjectId = section === 'projects' && isTaskProjectId(projectParam) ? projectParam : null;
     const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
     const [query, setQuery] = useState('');
+    const [projectQuery, setProjectQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
     const [utilOpen, setUtilOpen] = useState(false);
     const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
@@ -195,6 +196,12 @@ function LegalHubPageBody() {
             hot: rows.some((task) => dayDelta(task.clientOn) < 0),
         };
     }), [openTasks]);
+    const visibleMatters = useMemo(() => {
+        const needle = projectQuery.trim().toLowerCase();
+        if (!needle)
+            return matterStats;
+        return matterStats.filter((matter) => PROJECT_TITLE[matter.id].toLowerCase().includes(needle));
+    }, [matterStats, projectQuery]);
     const myHot = openTasks.some((task) => dayDelta(task.clientOn) < 0);
     const reviewCount = boardTasks.filter((task) => task.status === 'associate' || task.status === 'partner' || task.status === 'changes').length;
     const memberOptions = useMemo(
@@ -333,8 +340,24 @@ function LegalHubPageBody() {
                     </div>
                     <div>
                         <p className="lh-side__section">{t('legalHub.sideMatters')}</p>
+                        <label className="lh-side__find">
+                            <span className="lh-side__find-icon" aria-hidden>
+                                <IconSearch />
+                            </span>
+                            <input
+                                type="search"
+                                className="lh-side__find-input"
+                                value={projectQuery}
+                                placeholder={t('legalHub.projectSearch')}
+                                aria-label={t('legalHub.projectSearch')}
+                                onChange={(event) => setProjectQuery(event.target.value)}
+                            />
+                        </label>
                         <ul className="lh-side__list">
-                            {matterStats.map((matter) => {
+                            {visibleMatters.length === 0 ? (
+                                <li className="lh-side__find-empty">{t('legalHub.projectSearchEmpty')}</li>
+                            ) : null}
+                            {visibleMatters.map((matter) => {
                                 const selected = openProjectId === matter.id;
                                 const label = PROJECT_TITLE[matter.id];
                                 return (
