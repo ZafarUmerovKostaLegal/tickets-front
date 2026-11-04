@@ -5938,10 +5938,10 @@ body[data-theme='dark'] .lh-page {
 
 .lh-my--docket .lh-my__col {
   gap: 0;
-  width: 284px;
-  min-width: 284px;
-  max-width: 284px;
-  flex-basis: 284px;
+  width: 360px;
+  min-width: 360px;
+  max-width: 360px;
+  flex-basis: 360px;
   padding: 0.15rem 0 0.35rem;
   border-radius: 14px;
   background: color-mix(in srgb, var(--app-bg-soft) 88%, var(--app-surface));
@@ -6044,26 +6044,48 @@ body[data-theme='dark'] .lh-page {
 }
 
 .lh-my--docket .lh-my__card {
-  gap: 0.4rem;
-  padding: 0.65rem 0.7rem 0.6rem;
+  gap: 0.35rem;
+  padding: 0.9rem 0.95rem 0.75rem;
   border: 1px solid var(--app-border);
-  border-radius: 11px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  border-radius: 14px;
+  background: var(--app-surface);
+  box-shadow: none;
 }
 
 .lh-my--docket .lh-my__card:hover {
-  border-color: color-mix(in srgb, var(--app-muted) 40%, var(--app-border));
+  border-color: var(--app-accent-border);
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--app-fg) 7%, transparent);
 }
 
 .lh-my--docket .lh-my__card.is-late {
   border-color: var(--app-border);
-  box-shadow: inset 3px 0 0 var(--app-error), 0 1px 2px rgba(15, 23, 42, 0.06);
+  box-shadow: inset 3px 0 0 var(--app-error);
 }
 
 .lh-my--docket .lh-my__card strong {
-  font-size: 0.87rem;
+  color: var(--app-text);
+  font-size: 0.98rem;
   font-weight: 650;
-  line-height: 1.32;
+  letter-spacing: -0.015em;
+  line-height: 1.35;
+}
+
+.lh-my--docket .lh-my__hot {
+  display: inline-flex;
+  margin-right: 0.3rem;
+  color: var(--app-error);
+  vertical-align: -2px;
+}
+
+.lh-my--docket .lh-my__hot svg {
+  width: 13px;
+  height: 13px;
+}
+
+.lh-my--docket .lh-my__context {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  line-height: 1.3;
 }
 
 .lh-my--docket .lh-my__tags {
@@ -6133,22 +6155,22 @@ body[data-theme='dark'] .lh-page {
 .lh-my--docket .lh-my__duepill {
   display: inline-flex;
   align-items: center;
-  padding: 0.1rem 0.45rem;
-  border-radius: 999px;
-  background: var(--app-bg-soft);
-  color: var(--app-text-light);
-  font-size: 0.7rem;
-  font-weight: 700;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 650;
   white-space: nowrap;
 }
 
 .lh-my--docket .lh-my__duepill.is-late {
-  background: var(--app-error-bg);
+  background: transparent;
   color: var(--app-error);
 }
 
 .lh-my--docket .lh-my__duepill.is-soon {
-  background: color-mix(in srgb, var(--app-warning) 16%, var(--app-surface));
+  background: transparent;
   color: color-mix(in srgb, var(--app-warning) 78%, var(--app-text));
 }
 
@@ -6164,9 +6186,13 @@ body[data-theme='dark'] .lh-page {
   font-size: 0.7rem;
 }
 
+.lh-my--docket .lh-my__card-foot {
+  margin-top: 0.35rem;
+}
+
 .lh-my--docket .lh-my__card-foot .lh-tasks__avatar {
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.7rem;
+  height: 1.7rem;
   font-size: 0.62rem;
 }
 
@@ -7651,10 +7677,10 @@ body[data-theme='dark'] .lh-page {
 
 /* Columns: narrower, add-card right under the last card, foldable */
 .lh-my--docket .lh-my__col {
-  width: 272px;
-  min-width: 272px;
-  max-width: 272px;
-  flex-basis: 272px;
+  width: 360px;
+  min-width: 360px;
+  max-width: 360px;
+  flex-basis: 360px;
 }
 
 .lh-my--docket .lh-my__col > ul {

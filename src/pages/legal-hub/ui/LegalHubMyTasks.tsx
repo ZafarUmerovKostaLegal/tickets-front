@@ -14,7 +14,6 @@ import {
     TASK_PEOPLE,
     TASK_PRIORITIES,
     TASK_PROJECTS,
-    taskDrawerDetail,
     type HubTask,
     type TaskPersonId,
     type TaskPriorityId,
@@ -837,40 +836,6 @@ function IconFlag() {
     );
 }
 
-function IconChecklist() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <rect x="4" y="4" width="16" height="16" rx="3" />
-            <path d="m8.5 12 2.5 2.5 4.5-5" />
-        </svg>
-    );
-}
-
-function IconClip() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="m20 11-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 7" />
-        </svg>
-    );
-}
-
-function IconChat() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
-            <path d="M5 5h14v10H9l-4 4z" />
-        </svg>
-    );
-}
-
-function IconClock() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-            <circle cx="12" cy="12" r="8" />
-            <path d="M12 8v4l2.5 2" />
-        </svg>
-    );
-}
-
 function TaskCard({ task, showProject, draggable, onDragStart, onDragEnd, onOpen }: {
     task: MineTask;
     showProject: boolean;
@@ -885,18 +850,8 @@ function TaskCard({ task, showProject, draggable, onDragStart, onDragEnd, onOpen
     const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer] : null;
     const clientLate = !task.done && dayDelta(task.clientOn) < 0;
     const soon = !task.done && !clientLate && dayDelta(task.clientOn) <= 1;
-    const detail = taskDrawerDetail(task);
-    const checksDone = detail.checks.filter((item) => item.done).length;
-    const hours = task.hours > 0 ? task.hours : (task.minutes > 0 ? Math.max(1, Math.round(task.minutes / 60)) : 0);
     const due = `${shortDate(task.clientOn, locale)} · ${task.done ? t('legalHub.taskStageApproved') : dueText(dayDelta(task.clientOn), t)}`;
-    const waitWho = (task.waitingFor ?? '').trim();
-    const genericClient = /^(client|клиент)$/i.test(waitWho);
-    const waitText = task.status === 'wait'
-        ? (waitWho && !genericClient
-            ? t('legalHub.cardWaitWho').replace('{name}', waitWho)
-            : isClientWait(task) ? t('legalHub.cardWaitClientAny') : null)
-        : null;
-    const showStream = task.workstream && task.workstream !== '—';
+    const context = [showProject ? PROJECT_LABEL[task.project] : '', task.workstream && task.workstream !== '—' ? task.workstream : ''].filter(Boolean).join(' · ');
     return (
         <li
             className={`lh-my__card${draggable ? '' : ' is-locked'}${clientLate ? ' is-late' : ''}${task.done ? ' is-done' : ''}`}
@@ -927,64 +882,14 @@ function TaskCard({ task, showProject, draggable, onDragStart, onDragEnd, onOpen
                 }
             }}
         >
-            {task.priority === 'high' || showProject || showStream ? (
-                <span className="lh-my__tags">
-                    {task.priority === 'high' && !task.done ? (
-                        <span className="lh-my__chip lh-my__chip--hot"><IconFlag />{t('legalHub.myTasksUrgent')}</span>
-                    ) : null}
-                    {showProject ? <span className={`lh-my__chip lh-my__chip--project lh-my__chip--${task.project}`}>{PROJECT_LABEL[task.project]}</span> : null}
-                    {showStream ? <span className="lh-my__chip lh-my__chip--soft">{task.workstream}</span> : null}
-                </span>
-            ) : null}
-            <strong>{task.title}</strong>
-            {waitText ? <span className="lh-my__wait">{waitText}</span> : null}
-            {(task.status === 'associate' || task.status === 'partner') && reviewer && !task.done ? (
-                <span className="lh-my__review">
-                    <span className={`lh-tasks__avatar lh-tasks__avatar--${task.reviewer}`}>{reviewer.code}</span>
-                    {t('legalHub.myTasksOnReview').replace('{name}', reviewer.name)}
-                </span>
-            ) : null}
-            {task.status === 'changes' && !task.done ? <span className="lh-my__review lh-my__review--back">{t('legalHub.myTasksSubChanges')}</span> : null}
-            <span className="lh-my__facts">
-                {detail.checks.length > 0 ? (
-                    <span
-                        className={checksDone === detail.checks.length ? 'is-complete' : ''}
-                        title={t('legalHub.cardChecklist').replace('{done}', String(checksDone)).replace('{total}', String(detail.checks.length))}
-                    >
-                        <IconChecklist />
-                        {checksDone}/{detail.checks.length}
-                    </span>
-                ) : null}
-                {detail.files.length > 0 ? (
-                    <span title={t('legalHub.cardFiles').replace('{count}', String(detail.files.length))}>
-                        <IconClip />
-                        {detail.files.length}
-                    </span>
-                ) : null}
-                {detail.comments.length > 0 ? (
-                    <span title={t('legalHub.cardComments').replace('{count}', String(detail.comments.length))}>
-                        <IconChat />
-                        {detail.comments.length}
-                    </span>
-                ) : null}
-                {hours > 0 ? (
-                    <span title={t('legalHub.cardEstimate').replace('{count}', String(hours))}>
-                        <IconClock />
-                        {t('legalHub.myTasksHoursShort').replace('{count}', String(hours))}
-                    </span>
-                ) : null}
-            </span>
+            <strong>
+                {task.priority === 'high' && !task.done ? <span className="lh-my__hot" title={t('legalHub.myTasksUrgent')}><IconFlag /></span> : null}
+                {task.title}
+            </strong>
+            {context ? <span className="lh-my__context">{context}</span> : null}
             <span className="lh-my__card-foot">
                 <span className={`lh-my__duepill${clientLate ? ' is-late' : ''}${soon ? ' is-soon' : ''}${task.done ? ' is-done' : ''}`}>{due}</span>
-                <span className="lh-my__pair">
-                    <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={`${t('legalHub.taskFieldOwner')}: ${owner.name}`}>{owner.code}</span>
-                    {reviewer ? (
-                        <>
-                            <span className="lh-my__arrow" aria-hidden>→</span>
-                            <span className={`lh-tasks__avatar lh-tasks__avatar--${task.reviewer}`} title={`${t('legalHub.taskFieldReviewer')}: ${reviewer.name}`}>{reviewer.code}</span>
-                        </>
-                    ) : null}
-                </span>
+                <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={reviewer ? `${owner.name} → ${reviewer.name}` : owner.name}>{owner.code}</span>
             </span>
         </li>
     );
