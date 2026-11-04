@@ -202,7 +202,7 @@ function LegalHubPageBody() {
             return matterStats;
         return matterStats.filter((matter) => PROJECT_TITLE[matter.id].toLowerCase().includes(needle));
     }, [matterStats, projectQuery]);
-    const myHot = openTasks.some((task) => dayDelta(task.clientOn) < 0);
+    const lateCount = openTasks.filter((task) => dayDelta(task.clientOn) < 0).length;
     const reviewCount = boardTasks.filter((task) => task.status === 'associate' || task.status === 'partner' || task.status === 'changes').length;
     const memberOptions = useMemo(
         () => [
@@ -312,16 +312,18 @@ function LegalHubPageBody() {
                             {MINE_ITEMS.map((item) => {
                                 const Icon = item.icon;
                                 const selected = item.id === navSection && openProjectId == null;
-                                const count = item.id === 'myTasks' ? openTasks.length : reviewCount;
-                                const hot = item.id === 'myTasks' && myHot;
+                                const count = item.id === 'myTasks' ? lateCount : reviewCount;
+                                const hot = item.id === 'myTasks' && lateCount > 0;
                                 const showCount = count > 0;
                                 const label = t(item.labelKey);
+                                const lateLabel = hot ? t('legalHub.boardLate').replace('{count}', String(lateCount)) : '';
                                 return (
                                     <li key={item.id}>
                                         <button
                                             type="button"
                                             className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
                                             aria-current={selected ? 'page' : undefined}
+                                            aria-label={lateLabel ? `${label}, ${lateLabel}` : undefined}
                                             onClick={() => openSection(item.id)}
                                         >
                                             <span className="lh-side__item-icon" aria-hidden>
@@ -330,7 +332,7 @@ function LegalHubPageBody() {
                                             </span>
                                             <span className="lh-side__item-label">{label}</span>
                                             {showCount ? (
-                                                <span className={`lh-side__badge${hot ? ' lh-side__badge--hot' : ''}${item.id === 'reviewQueue' ? ' lh-side__badge--review' : ''}`} aria-hidden>{count}</span>
+                                                <span className={`lh-side__badge${hot ? ' lh-side__badge--hot' : ''}${item.id === 'reviewQueue' ? ' lh-side__badge--review' : ''}`} title={lateLabel || undefined} aria-hidden>{count}</span>
                                             ) : null}
                                         </button>
                                     </li>

@@ -308,11 +308,12 @@ export function LegalHubMyTasks({
         if (createSignal === seenCreate.current)
             return;
         seenCreate.current = createSignal;
-        if (mode === 'mine')
+        if (mode === 'mine') {
+            setComposeColumn(null);
             setComposer(true);
+        }
     }, [createSignal, mode]);
-    const [adding, setAdding] = useState<BoardColumn | null>(null);
-    const [draft, setDraft] = useState('');
+    const [composeColumn, setComposeColumn] = useState<BoardColumn | null>(null);
     const [openId, setOpenId] = useState<string | null>(null);
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
@@ -374,30 +375,13 @@ export function LegalHubMyTasks({
         setDragging(null);
     };
 
-    const addCard = (column: BoardColumn) => {
-        const title = draft.trim();
-        if (!title)
-            return;
-        const clientOn = plusDays(4);
-        setTasks((current) => [...current, {
-            id: `new-${Date.now()}`,
-            project: project ?? 'solar',
-            title,
-            workstream: '—',
-            owner: 'ja1',
-            reviewer: null,
-            status: statusOf(column),
-            priority: 'normal',
-            reviewOn: null,
-            clientOn,
-            minutes: 60,
-            done: false,
-            hours: 1,
-            internalOn: clientOn,
-            instructions: '',
-            approval: false,
-        }]);
-        setDraft('');
+    const openComposer = (column: BoardColumn | null) => {
+        setComposeColumn(column);
+        setComposer(true);
+    };
+    const closeComposer = () => {
+        setComposer(false);
+        setComposeColumn(null);
     };
 
     const canCreate = mode === 'mine';
@@ -454,7 +438,7 @@ export function LegalHubMyTasks({
                     .sort((a, b) => Number(isLateTask(b)) - Number(isLateTask(a)) || Number(b.priority === 'high') - Number(a.priority === 'high') || a.clientOn.localeCompare(b.clientOn)),
             };
         });
-    const shownColumns = columns.filter((column) => !hideEmpty || column.cards.length > 0 || (dragging != null && column.droppable) || adding === column.id);
+    const shownColumns = columns.filter((column) => !hideEmpty || column.cards.length > 0 || (dragging != null && column.droppable));
     const hiddenCount = columns.length - shownColumns.length;
 
     const toolbar = (
@@ -525,7 +509,7 @@ export function LegalHubMyTasks({
                         </button>
                     </div>
                     {canCreate ? (
-                        <button type="button" className="lh-bt__new" onClick={() => setComposer(true)}>
+                        <button type="button" className="lh-bt__new" onClick={() => openComposer(null)}>
                             <span aria-hidden>+</span>
                             {t('legalHub.myTasksNew')}
                         </button>
@@ -541,10 +525,11 @@ export function LegalHubMyTasks({
     const dialog = composer ? (
         <NewTaskDialog
             project={project}
-            onClose={() => setComposer(false)}
+            column={composeColumn}
+            onClose={closeComposer}
             onCreate={(created) => {
                 setTasks((current) => [...current, created]);
-                setComposer(false);
+                closeComposer();
             }}
         />
     ) : null;
@@ -635,18 +620,7 @@ export function LegalHubMyTasks({
                             onToggleCollapsed={() => toggleCollapsed(column.id)}
                             droppable={column.droppable}
                             dragging={dragging}
-                            adding={adding === column.id}
-                            draft={draft}
-                            onDraft={setDraft}
-                            onStartAdd={() => {
-                                setAdding(column.id as BoardColumn);
-                                setDraft('');
-                            }}
-                            onCancelAdd={() => {
-                                setAdding(null);
-                                setDraft('');
-                            }}
-                            onAdd={() => addCard(column.id as BoardColumn)}
+                            onAdd={() => openComposer(column.id as BoardColumn)}
                             canAdd={column.canAdd}
                             onMove={(id) => moveTask(id, column.id as BoardColumn)}
                             onDragStart={setDragging}
@@ -662,7 +636,7 @@ export function LegalHubMyTasks({
     );
 }
 
-function BoardColumnView({ id, title, hint, review, cards, showProject, collapsed, onToggleCollapsed, droppable, dragging, adding, draft, onDraft, onStartAdd, onCancelAdd, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen }: {
+function BoardColumnView({ id, title, hint, review, cards, showProject, collapsed, onToggleCollapsed, droppable, dragging, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen }: {
     id: string;
     title: string;
     hint: string | null;
@@ -673,11 +647,6 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
     onToggleCollapsed: () => void;
     droppable: boolean;
     dragging: string | null;
-    adding: boolean;
-    draft: string;
-    onDraft: (value: string) => void;
-    onStartAdd: () => void;
-    onCancelAdd: () => void;
     onAdd: () => void;
     canAdd: boolean;
     onMove: (id: string) => void;
@@ -730,7 +699,7 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
                     <FoldIcon />
                 </button>
             </header>
-            {cards.length === 0 && !adding ? <p className="lh-my__empty">{droppable ? t('legalHub.myTasksDrop') : t('legalHub.myTasksColEmpty')}</p> : null}
+            {cards.length === 0 ? <p className="lh-my__empty">{droppable ? t('legalHub.myTasksDrop') : t('legalHub.myTasksColEmpty')}</p> : null}
             {cards.length > 0 ? (
                 <ul>
                     {cards.map((task) => (
@@ -748,35 +717,7 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
             ) : null}
             {canAdd ? (
                 <div className="lh-my__quick">
-                    {adding ? (
-                        <form onSubmit={(event) => {
-                            event.preventDefault();
-                            onAdd();
-                        }}
-                        >
-                            <textarea
-                                autoFocus
-                                value={draft}
-                                placeholder={t('legalHub.myTasksCardPh')}
-                                aria-label={t('legalHub.myTasksTitle')}
-                                onChange={(event) => onDraft(event.target.value)}
-                                onKeyDown={(event) => {
-                                    if (event.key === 'Escape')
-                                        onCancelAdd();
-                                    if (event.key === 'Enter' && !event.shiftKey) {
-                                        event.preventDefault();
-                                        onAdd();
-                                    }
-                                }}
-                            />
-                            <div>
-                                <button type="submit" disabled={!draft.trim()}>{t('legalHub.myTasksColumnAdd')}</button>
-                                <button type="button" onClick={onCancelAdd}>{t('legalHub.myTasksCancel')}</button>
-                            </div>
-                        </form>
-                    ) : (
-                        <button type="button" onClick={onStartAdd}>+ {t('legalHub.myTasksAddCard')}</button>
-                    )}
+                    <button type="button" onClick={onAdd}>+ {t('legalHub.myTasksAddCard')}</button>
                 </div>
             ) : null}
         </section>
@@ -895,8 +836,9 @@ function TaskCard({ task, showProject, draggable, onDragStart, onDragEnd, onOpen
     );
 }
 
-function NewTaskDialog({ project: fixedProject = null, onClose, onCreate }: {
+function NewTaskDialog({ project: fixedProject = null, column = null, onClose, onCreate }: {
     project?: TaskProjectId | null;
+    column?: BoardColumn | null;
     onClose: () => void;
     onCreate: (task: MineTask) => void;
 }) {
@@ -943,7 +885,7 @@ function NewTaskDialog({ project: fixedProject = null, onClose, onCreate }: {
             workstream: workstream.trim() || '—',
             owner,
             reviewer: approval ? 'partner' : null,
-            status: 'todo',
+            status: column ? statusOf(column) : 'todo',
             priority,
             reviewOn: null,
             clientOn,
