@@ -176,6 +176,40 @@ function writeStored(key: string, value: unknown): void {
     }
 }
 
+function FilterPick<T extends string>({
+    label,
+    value,
+    items,
+    noMatch,
+    onSelect,
+}: {
+    label: string;
+    value: T | '';
+    items: { id: T | ''; label: string }[];
+    noMatch: string;
+    onSelect: (id: T | '') => void;
+}) {
+    return (
+        <SearchableSelect
+            className={`lh-bt__pick${value ? ' is-on' : ''}`}
+            buttonClassName="lh-bt__pick-btn"
+            portalDropdown
+            portalZIndex={60}
+            portalMinWidth={240}
+            aria-label={label}
+            placeholder={label}
+            emptyListText={label}
+            noMatchText={noMatch}
+            value={value}
+            items={items}
+            getOptionValue={(item) => item.id}
+            getOptionLabel={(item) => item.label}
+            getSearchText={(item) => item.label}
+            onSelect={(item) => onSelect(item.id)}
+        />
+    );
+}
+
 function taskCountKey(count: number): TranslationKey {
     const n = Math.abs(count) % 100;
     const n1 = n % 10;
@@ -246,6 +280,10 @@ export function LegalHubMyTasks({
     const [onlyLate, setOnlyLate] = useState(false);
     const [onlyUrgent, setOnlyUrgent] = useState(false);
     const [projectFilter, setProjectFilter] = useState<TaskProjectId | ''>('');
+    const [statusFilter, setStatusFilter] = useState<BoardColumn | ''>('');
+    const [streamFilter, setStreamFilter] = useState('');
+    const [ownerFilter, setOwnerFilter] = useState<TaskPersonId | ''>('');
+    const [priorityFilter, setPriorityFilter] = useState<TaskPriorityId | ''>('');
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
     const seenCreate = useRef(createSignal);
@@ -274,6 +312,14 @@ export function LegalHubMyTasks({
     const visible = useMemo(() => scoped.filter((task) => {
         if (projectFilter && task.project !== projectFilter)
             return false;
+        if (statusFilter && columnOf(task) !== statusFilter)
+            return false;
+        if (streamFilter && task.workstream !== streamFilter)
+            return false;
+        if (ownerFilter && task.owner !== ownerFilter)
+            return false;
+        if (priorityFilter && task.priority !== priorityFilter)
+            return false;
         if (onlyLate && !isLateTask(task))
             return false;
         if (onlyUrgent && task.priority !== 'high')
@@ -283,14 +329,18 @@ export function LegalHubMyTasks({
         const owner = PERSON_LABEL[task.owner].name;
         const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer].name : '';
         return `${task.title} ${PROJECT_LABEL[task.project]} ${task.workstream} ${owner} ${reviewer}`.toLowerCase().includes(needle);
-    }), [needle, onlyLate, onlyUrgent, projectFilter, scoped]);
+    }), [needle, onlyLate, onlyUrgent, ownerFilter, priorityFilter, projectFilter, scoped, statusFilter, streamFilter]);
     const lateCount = scoped.filter(isLateTask).length;
     const urgentCount = scoped.filter((task) => !task.done && task.priority === 'high').length;
-    const filtersOn = Boolean(onlyLate || onlyUrgent || projectFilter);
+    const filtersOn = Boolean(onlyLate || onlyUrgent || projectFilter || statusFilter || streamFilter || ownerFilter || priorityFilter);
     const resetFilters = () => {
         setOnlyLate(false);
         setOnlyUrgent(false);
         setProjectFilter('');
+        setStatusFilter('');
+        setStreamFilter('');
+        setOwnerFilter('');
+        setPriorityFilter('');
     };
 
     const moveTask = (id: string, column: BoardColumn) => {
@@ -337,6 +387,23 @@ export function LegalHubMyTasks({
     const title = project != null ? PROJECT_TITLE[project] : t(mode === 'queue' ? 'legalHub.sideReview' : 'legalHub.myTasks');
     const projectOptions = useMemo(
         () => [{ id: '' as const, label: t('legalHub.boardAllProjects') }, ...TASK_PROJECTS.map((id) => ({ id, label: PROJECT_TITLE[id] }))],
+        [t],
+    );
+    const statusOptions = useMemo(() => {
+        const ids: BoardColumn[] = mode === 'queue' ? ['associate', 'partner'] : COLUMNS;
+        return [{ id: '' as const, label: t('legalHub.boardAllStatuses') }, ...ids.map((id) => ({ id, label: t(COLUMN_LABEL[id]) }))];
+    }, [mode, t]);
+    const streamOptions = useMemo(() => {
+        const names = [...new Set(scoped.map((task) => task.workstream).filter((name) => name && name !== '—'))];
+        names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+        return [{ id: '', label: t('legalHub.boardAllStreams') }, ...names.map((name) => ({ id: name, label: name }))];
+    }, [scoped, t]);
+    const ownerOptions = useMemo(
+        () => [{ id: '' as const, label: t('legalHub.boardAllOwners') }, ...TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].name }))],
+        [t],
+    );
+    const priorityOptions = useMemo(
+        () => [{ id: '' as const, label: t('legalHub.boardAllPriorities') }, ...TASK_PRIORITIES.map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }))],
         [t],
     );
 
@@ -420,24 +487,12 @@ export function LegalHubMyTasks({
                     <em>{urgentCount}</em>
                 </button>
                 {project == null ? (
-                    <SearchableSelect
-                        className={`lh-bt__project${projectFilter ? ' is-on' : ''}`}
-                        buttonClassName="lh-bt__project-btn"
-                        portalDropdown
-                        portalZIndex={60}
-                        portalMinWidth={240}
-                        aria-label={t('legalHub.taskColProject')}
-                        placeholder={t('legalHub.boardAllProjects')}
-                        emptyListText={t('legalHub.boardAllProjects')}
-                        noMatchText={t('legalHub.teamNoMatch')}
-                        value={projectFilter}
-                        items={projectOptions}
-                        getOptionValue={(item) => item.id}
-                        getOptionLabel={(item) => item.label}
-                        getSearchText={(item) => item.label}
-                        onSelect={(item) => setProjectFilter(item.id)}
-                    />
+                    <FilterPick label={t('legalHub.taskColProject')} value={projectFilter} items={projectOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setProjectFilter} />
                 ) : null}
+                <FilterPick label={t('legalHub.taskColStatus')} value={statusFilter} items={statusOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setStatusFilter} />
+                <FilterPick label={t('legalHub.taskColWorkstream')} value={streamFilter} items={streamOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setStreamFilter} />
+                <FilterPick label={t('legalHub.taskColOwner')} value={ownerFilter} items={ownerOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setOwnerFilter} />
+                <FilterPick label={t('legalHub.taskColPriority')} value={priorityFilter} items={priorityOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setPriorityFilter} />
                 {view === 'board' ? (
                     <label className={`lh-bt__toggle${hideEmpty ? ' is-on' : ''}`}>
                         <input type="checkbox" checked={hideEmpty} onChange={(event) => setHideEmpty(event.target.checked)} />
@@ -479,7 +534,7 @@ export function LegalHubMyTasks({
         return (
             <div className="lh-my lh-my--docket lh-my--list">
                 {toolbar}
-                <div className="lh-rows">
+                <div className={`lh-rows${project == null ? '' : ' lh-rows--one'}`}>
                     {noMatch ?? (listed.length === 0 ? (
                         <div className="lh-rows__empty">
                             <strong>{emptyTitle}</strong>
@@ -491,6 +546,7 @@ export function LegalHubMyTasks({
                                 const column = columnOf(task);
                                 const owner = PERSON_LABEL[task.owner];
                                 const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer] : null;
+                                const stream = task.workstream && task.workstream !== '—' ? task.workstream : '';
                                 const late = dayDelta(task.clientOn) < 0;
                                 const soon = !late && dayDelta(task.clientOn) <= 1;
                                 return (
@@ -501,13 +557,20 @@ export function LegalHubMyTasks({
                                                     {task.priority === 'high' ? <span className="lh-rows__flag" title={t('legalHub.myTasksUrgent')}><IconFlag /></span> : null}
                                                     {task.title}
                                                 </strong>
-                                                <small>
-                                                    {PROJECT_TITLE[task.project]}
-                                                    {task.workstream && task.workstream !== '—' ? ` · ${task.workstream}` : ''}
-                                                    {' · '}
+                                                <small className="lh-rows__meta">
+                                                    {project == null ? `${PROJECT_TITLE[task.project]} · ` : ''}
+                                                    {stream ? `${stream} · ` : ''}
                                                     {owner.name}
                                                     {reviewer ? ` → ${reviewer.name}` : ''}
                                                 </small>
+                                            </span>
+                                            <span className="lh-rows__project">
+                                                {project == null ? <b>{PROJECT_TITLE[task.project]}</b> : null}
+                                                {stream ? <small>{stream}</small> : null}
+                                            </span>
+                                            <span className="lh-rows__people">
+                                                <b>{owner.name}</b>
+                                                {reviewer ? <small>→ {reviewer.name}</small> : null}
                                             </span>
                                             <span className={`lh-rows__stage lh-rows__stage--${column}`}>{t(COLUMN_LABEL[column])}</span>
                                             <span className={`lh-my__duepill${late ? ' is-late' : ''}${soon ? ' is-soon' : ''}`}>

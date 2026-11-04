@@ -383,6 +383,10 @@ export const ruMessages: Messages = {
         boardViewBoard: 'Доска',
         boardViewList: 'Список',
         boardAllProjects: 'Все проекты',
+        boardAllStatuses: 'Все статусы',
+        boardAllStreams: 'Все направления',
+        boardAllOwners: 'Все ответственные',
+        boardAllPriorities: 'Все приоритеты',
         boardNoMatch: 'Ничего не найдено. Измените фильтры или поиск.',
         cardChecklist: 'Чеклист: {done} из {total}',
         cardFiles: 'Файлы: {count}',
@@ -1464,6 +1468,10 @@ export type Messages = {
         boardViewBoard: string;
         boardViewList: string;
         boardAllProjects: string;
+        boardAllStatuses: string;
+        boardAllStreams: string;
+        boardAllOwners: string;
+        boardAllPriorities: string;
         boardNoMatch: string;
         cardChecklist: string;
         cardFiles: string;
