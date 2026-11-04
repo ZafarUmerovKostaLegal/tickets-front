@@ -254,6 +254,7 @@ export function LegalHubProjects({
                     tasks={tasks}
                     onTasks={setTasks}
                     createSignal={createSignal}
+                    onBack={() => onSelect(null)}
                 />
             )}
             {openTask ? <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} /> : null}

@@ -57,7 +57,7 @@ export const ruMessages: Messages = {
         sideMatters: 'Проекты',
         projectSearch: 'Поиск проекта',
         projectSearchEmpty: 'Ничего не найдено',
-        sideReview: 'Ждут моей проверки',
+        sideReview: 'Мои проверки',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
         projects: 'Проекты',
@@ -375,6 +375,22 @@ export const ruMessages: Messages = {
         myTasksFollowOn: 'Напоминание {date}',
         myTasksImportant: 'Важно',
         myTasksLate: 'Просрочено',
+        boardLate: 'просрочено: {count}',
+        boardFilterLate: 'Просроченные',
+        boardFilterUrgent: 'Срочные',
+        boardHideEmpty: 'Скрыть пустые колонки',
+        boardHiddenCount: 'Скрыто колонок: {count}',
+        boardViewBoard: 'Доска',
+        boardViewList: 'Список',
+        boardAllProjects: 'Все проекты',
+        boardNoMatch: 'Ничего не найдено. Измените фильтры или поиск.',
+        cardChecklist: 'Чеклист: {done} из {total}',
+        cardFiles: 'Файлы: {count}',
+        cardComments: 'Комментарии: {count}',
+        cardEstimate: 'Оценка: {count} ч',
+        cardWaitClientAny: 'Ждём ответа клиента',
+        cardWaitWho: 'Ждём: {name}',
+        cardDragHint: 'Перетащите в другую колонку или нажмите, чтобы открыть',
         teamHint: 'Загрузка, статусы и задачи каждого сотрудника',
         viewAsBanner: 'Вы смотрите данные: {name}',
         viewAsReset: 'Вернуться к моим',
@@ -1440,6 +1456,22 @@ export type Messages = {
         myTasksFollowOn: string;
         myTasksImportant: string;
         myTasksLate: string;
+        boardLate: string;
+        boardFilterLate: string;
+        boardFilterUrgent: string;
+        boardHideEmpty: string;
+        boardHiddenCount: string;
+        boardViewBoard: string;
+        boardViewList: string;
+        boardAllProjects: string;
+        boardNoMatch: string;
+        cardChecklist: string;
+        cardFiles: string;
+        cardComments: string;
+        cardEstimate: string;
+        cardWaitClientAny: string;
+        cardWaitWho: string;
+        cardDragHint: string;
         teamHint: string;
         viewAsBanner: string;
         viewAsReset: string;

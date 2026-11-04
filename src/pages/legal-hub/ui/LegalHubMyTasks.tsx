@@ -149,6 +149,45 @@ export function mineFrom(source: HubTask[]): MineTask[] {
     }));
 }
 
+const COLLAPSED_KEY = 'lh-board-collapsed';
+const HIDE_EMPTY_KEY = 'lh-board-hide-empty';
+const VIEW_KEY = 'lh-board-view';
+
+function isLateTask(task: MineTask): boolean {
+    return !task.done && dayDelta(task.clientOn) < 0;
+}
+
+function readStored<T>(key: string, fallback: T): T {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw == null ? fallback : (JSON.parse(raw) as T);
+    }
+    catch {
+        return fallback;
+    }
+}
+
+function writeStored(key: string, value: unknown): void {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    }
+    catch {
+        /* storage can be unavailable */
+    }
+}
+
+function taskCountKey(count: number): TranslationKey {
+    const n = Math.abs(count) % 100;
+    const n1 = n % 10;
+    if (n > 10 && n < 20)
+        return 'legalHub.myTasksCountMany';
+    if (n1 === 1)
+        return 'legalHub.myTasksCountOne';
+    if (n1 >= 2 && n1 <= 4)
+        return 'legalHub.myTasksCountFew';
+    return 'legalHub.myTasksCountMany';
+}
+
 export function LegalHubMyTasks({
     query,
     source = null,
@@ -158,6 +197,7 @@ export function LegalHubMyTasks({
     tasks: tasksProp,
     onTasks,
     createSignal = 0,
+    onBack,
 }: {
     query: string;
     source?: HubTask[] | null;
@@ -168,6 +208,8 @@ export function LegalHubMyTasks({
     onTasks?: (tasks: MineTask[]) => void;
     /** Bumps from the top-bar + button. */
     createSignal?: number;
+    /** Project board: return to the list of projects. */
+    onBack?: () => void;
 }) {
     const { t, locale } = useI18n();
     const [inner, setInner] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
@@ -179,6 +221,31 @@ export function LegalHubMyTasks({
         else
             setInner(next);
     };
+    const viewKey = `${VIEW_KEY}-${mode}`;
+    const [view, setViewState] = useState<'list' | 'board'>(() => {
+        const stored = readStored<string | null>(viewKey, null);
+        return stored === 'list' || stored === 'board' ? stored : layout;
+    });
+    const setView = (next: 'list' | 'board') => {
+        setViewState(next);
+        writeStored(viewKey, next);
+    };
+    const [collapsed, setCollapsedState] = useState<string[]>(() => readStored<string[]>(COLLAPSED_KEY, ['done']));
+    const toggleCollapsed = (id: string) => {
+        setCollapsedState((current) => {
+            const next = current.includes(id) ? current.filter((item) => item !== id) : [...current, id];
+            writeStored(COLLAPSED_KEY, next);
+            return next;
+        });
+    };
+    const [hideEmpty, setHideEmptyState] = useState<boolean>(() => readStored<boolean>(HIDE_EMPTY_KEY, false));
+    const setHideEmpty = (next: boolean) => {
+        setHideEmptyState(next);
+        writeStored(HIDE_EMPTY_KEY, next);
+    };
+    const [onlyLate, setOnlyLate] = useState(false);
+    const [onlyUrgent, setOnlyUrgent] = useState(false);
+    const [projectFilter, setProjectFilter] = useState<TaskProjectId | ''>('');
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
     const seenCreate = useRef(createSignal);
@@ -195,18 +262,36 @@ export function LegalHubMyTasks({
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
-    const scoped = useMemo(() => tasks.filter((task) => project == null || task.project === project), [project, tasks]);
-    const visible = useMemo(() => scoped.filter((task) => {
+    const scoped = useMemo(() => tasks.filter((task) => {
+        if (project != null && task.project !== project)
+            return false;
         if (mode === 'queue' && (task.done || (task.status !== 'associate' && task.status !== 'partner')))
             return false;
-        if (layout === 'list' && task.done)
+        if (view === 'list' && task.done)
+            return false;
+        return true;
+    }), [mode, project, tasks, view]);
+    const visible = useMemo(() => scoped.filter((task) => {
+        if (projectFilter && task.project !== projectFilter)
+            return false;
+        if (onlyLate && !isLateTask(task))
+            return false;
+        if (onlyUrgent && task.priority !== 'high')
             return false;
         if (!needle)
             return true;
         const owner = PERSON_LABEL[task.owner].name;
         const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer].name : '';
         return `${task.title} ${PROJECT_LABEL[task.project]} ${task.workstream} ${owner} ${reviewer}`.toLowerCase().includes(needle);
-    }), [layout, mode, needle, scoped]);
+    }), [needle, onlyLate, onlyUrgent, projectFilter, scoped]);
+    const lateCount = scoped.filter(isLateTask).length;
+    const urgentCount = scoped.filter((task) => !task.done && task.priority === 'high').length;
+    const filtersOn = Boolean(onlyLate || onlyUrgent || projectFilter);
+    const resetFilters = () => {
+        setOnlyLate(false);
+        setOnlyUrgent(false);
+        setProjectFilter('');
+    };
 
     const moveTask = (id: string, column: BoardColumn) => {
         setTasks((current) => current.map((task) => {
@@ -215,7 +300,7 @@ export function LegalHubMyTasks({
             const waitingFor = column === 'waitClient'
                 ? (isClientWait(task) ? task.waitingFor : 'Client')
                 : column === 'waitGov'
-                    ? (task.waitingFor && !isClientWait(task) ? task.waitingFor : task.waitingFor)
+                    ? (task.waitingFor && !isClientWait(task) ? task.waitingFor : undefined)
                     : task.waitingFor;
             return { ...task, done: column === 'done', status: statusOf(column), waitingFor };
         }));
@@ -229,7 +314,7 @@ export function LegalHubMyTasks({
         const clientOn = plusDays(4);
         setTasks((current) => [...current, {
             id: `new-${Date.now()}`,
-            project: 'solar',
+            project: project ?? 'solar',
             title,
             workstream: '—',
             owner: 'ja1',
@@ -246,24 +331,161 @@ export function LegalHubMyTasks({
             approval: false,
         }]);
         setDraft('');
-        setAdding(null);
     };
 
-    const listed = [...visible].sort((a, b) => a.clientOn.localeCompare(b.clientOn));
+    const canCreate = mode === 'mine';
+    const title = project != null ? PROJECT_TITLE[project] : t(mode === 'queue' ? 'legalHub.sideReview' : 'legalHub.myTasks');
+    const projectOptions = useMemo(
+        () => [{ id: '' as const, label: t('legalHub.boardAllProjects') }, ...TASK_PROJECTS.map((id) => ({ id, label: PROJECT_TITLE[id] }))],
+        [t],
+    );
 
-    if (layout === 'list') {
+    const columns: { id: string; label: string; hint: string | null; review: boolean; droppable: boolean; canAdd: boolean; cards: MineTask[] }[] = mode === 'queue'
+        ? ([
+            { id: 'overdue', label: 'legalHub.queueDueOverdue', hint: 'legalHub.queueDueSubOverdue' },
+            { id: 'today', label: 'legalHub.queueDueToday', hint: 'legalHub.queueDueSubToday' },
+            { id: 'tomorrow', label: 'legalHub.queueDueTomorrow', hint: 'legalHub.queueDueSubTomorrow' },
+            { id: 'week', label: 'legalHub.queueDueWeek', hint: 'legalHub.queueDueSubWeek' },
+            { id: 'later', label: 'legalHub.queueDueLater', hint: 'legalHub.queueDueSubLater' },
+        ] as { id: DueColumn; label: TranslationKey; hint: TranslationKey }[]).map((column) => ({
+            id: column.id,
+            label: t(column.label),
+            hint: t(column.hint),
+            review: false,
+            droppable: false,
+            canAdd: false,
+            cards: visible.filter((task) => dueColumnOf(task) === column.id).sort((a, b) => a.clientOn.localeCompare(b.clientOn)),
+        }))
+        : COLUMNS.map((column) => {
+            const sub = COLUMN_SUB[column];
+            return {
+                id: column,
+                label: t(COLUMN_LABEL[column]),
+                hint: sub ? t(sub) : null,
+                review: LOCKED.includes(column),
+                droppable: DROPPABLE.includes(column),
+                canAdd: canCreate && QUICK_ADD.includes(column),
+                cards: visible
+                    .filter((task) => columnOf(task) === column)
+                    .sort((a, b) => Number(isLateTask(b)) - Number(isLateTask(a)) || Number(b.priority === 'high') - Number(a.priority === 'high') || a.clientOn.localeCompare(b.clientOn)),
+            };
+        });
+    const shownColumns = columns.filter((column) => !hideEmpty || column.cards.length > 0 || (dragging != null && column.droppable) || adding === column.id);
+    const hiddenCount = columns.length - shownColumns.length;
+
+    const toolbar = (
+        <div className="lh-bt">
+            <div className="lh-bt__head">
+                <div className="lh-bt__title">
+                    {project != null && onBack ? (
+                        <nav className="lh-bt__crumbs" aria-label={t('legalHub.projects')}>
+                            <button type="button" onClick={onBack}>{t('legalHub.projectsBack')}</button>
+                            <span aria-hidden>/</span>
+                        </nav>
+                    ) : null}
+                    <h1>{title}</h1>
+                    <span className="lh-bt__meta">
+                        {t(taskCountKey(visible.filter((task) => !task.done).length)).replace('{count}', String(visible.filter((task) => !task.done).length))}
+                        {lateCount > 0 ? <em>{t('legalHub.boardLate').replace('{count}', String(lateCount))}</em> : null}
+                    </span>
+                </div>
+                <div className="lh-bt__actions">
+                    <div className="lh-bt__seg" role="group" aria-label={t('legalHub.viewAria')}>
+                        <button type="button" className={view === 'board' ? 'is-on' : ''} aria-pressed={view === 'board'} onClick={() => setView('board')}>
+                            <IconBoard />
+                            {t('legalHub.boardViewBoard')}
+                        </button>
+                        <button type="button" className={view === 'list' ? 'is-on' : ''} aria-pressed={view === 'list'} onClick={() => setView('list')}>
+                            <IconList />
+                            {t('legalHub.boardViewList')}
+                        </button>
+                    </div>
+                    {canCreate ? (
+                        <button type="button" className="lh-bt__new" onClick={() => setComposer(true)}>
+                            <span aria-hidden>+</span>
+                            {t('legalHub.myTasksNew')}
+                        </button>
+                    ) : null}
+                </div>
+            </div>
+            <div className="lh-bt__filters">
+                <button type="button" className={`lh-bt__chip lh-bt__chip--late${onlyLate ? ' is-on' : ''}`} aria-pressed={onlyLate} disabled={lateCount === 0 && !onlyLate} onClick={() => setOnlyLate((value) => !value)}>
+                    <i aria-hidden />
+                    {t('legalHub.boardFilterLate')}
+                    <em>{lateCount}</em>
+                </button>
+                <button type="button" className={`lh-bt__chip${onlyUrgent ? ' is-on' : ''}`} aria-pressed={onlyUrgent} disabled={urgentCount === 0 && !onlyUrgent} onClick={() => setOnlyUrgent((value) => !value)}>
+                    <IconFlag />
+                    {t('legalHub.boardFilterUrgent')}
+                    <em>{urgentCount}</em>
+                </button>
+                {project == null ? (
+                    <SearchableSelect
+                        className={`lh-bt__project${projectFilter ? ' is-on' : ''}`}
+                        buttonClassName="lh-bt__project-btn"
+                        portalDropdown
+                        portalZIndex={60}
+                        portalMinWidth={240}
+                        aria-label={t('legalHub.taskColProject')}
+                        placeholder={t('legalHub.boardAllProjects')}
+                        emptyListText={t('legalHub.boardAllProjects')}
+                        noMatchText={t('legalHub.teamNoMatch')}
+                        value={projectFilter}
+                        items={projectOptions}
+                        getOptionValue={(item) => item.id}
+                        getOptionLabel={(item) => item.label}
+                        getSearchText={(item) => item.label}
+                        onSelect={(item) => setProjectFilter(item.id)}
+                    />
+                ) : null}
+                {view === 'board' ? (
+                    <label className={`lh-bt__toggle${hideEmpty ? ' is-on' : ''}`}>
+                        <input type="checkbox" checked={hideEmpty} onChange={(event) => setHideEmpty(event.target.checked)} />
+                        {t('legalHub.boardHideEmpty')}
+                        {hideEmpty && hiddenCount > 0 ? <em>{t('legalHub.boardHiddenCount').replace('{count}', String(hiddenCount))}</em> : null}
+                    </label>
+                ) : null}
+                {filtersOn ? (
+                    <button type="button" className="lh-bt__reset" onClick={resetFilters}>{t('legalHub.myTasksClear')}</button>
+                ) : null}
+            </div>
+        </div>
+    );
+
+    const drawer = openTask ? (
+        <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} />
+    ) : null;
+    const dialog = composer ? (
+        <NewTaskDialog
+            project={project}
+            onClose={() => setComposer(false)}
+            onCreate={(created) => {
+                setTasks((current) => [...current, created]);
+                setComposer(false);
+            }}
+        />
+    ) : null;
+    const noMatch = visible.length === 0 && (filtersOn || needle) ? (
+        <div className="lh-rows__empty">
+            <strong>{t('legalHub.boardNoMatch')}</strong>
+            {filtersOn ? <button type="button" className="lh-bt__reset" onClick={resetFilters}>{t('legalHub.myTasksClear')}</button> : null}
+        </div>
+    ) : null;
+
+    if (view === 'list') {
+        const listed = [...visible].sort((a, b) => a.clientOn.localeCompare(b.clientOn));
         const emptyTitle = mode === 'queue' ? t('legalHub.queueEmptyTitle') : t('legalHub.myTasksEmptyTitle');
         const emptyText = mode === 'queue' ? t('legalHub.queueEmptyText') : t('legalHub.myTasksEmptyText');
         return (
-            <div className="lh-rows">
-                {listed.length === 0 ? (
-                    <div className="lh-rows__empty">
-                        <strong>{emptyTitle}</strong>
-                        <p>{emptyText}</p>
-                    </div>
-                ) : (
-                    <>
-                        <p className="lh-rows__intro">{t(mode === 'queue' ? 'legalHub.queueIntro' : 'legalHub.myTasksIntro')}</p>
+            <div className="lh-my lh-my--docket lh-my--list">
+                {toolbar}
+                <div className="lh-rows">
+                    {noMatch ?? (listed.length === 0 ? (
+                        <div className="lh-rows__empty">
+                            <strong>{emptyTitle}</strong>
+                            <p>{emptyText}</p>
+                        </div>
+                    ) : (
                         <ul>
                             {listed.map((task) => {
                                 const column = columnOf(task);
@@ -273,11 +495,15 @@ export function LegalHubMyTasks({
                                 const soon = !late && dayDelta(task.clientOn) <= 1;
                                 return (
                                     <li key={task.id}>
-                                        <button type="button" className="lh-rows__item" onClick={() => setOpenId(task.id)}>
+                                        <button type="button" className={`lh-rows__item${late ? ' is-late' : ''}`} onClick={() => setOpenId(task.id)}>
                                             <span className="lh-rows__text">
-                                                <strong>{task.title}</strong>
+                                                <strong>
+                                                    {task.priority === 'high' ? <span className="lh-rows__flag" title={t('legalHub.myTasksUrgent')}><IconFlag /></span> : null}
+                                                    {task.title}
+                                                </strong>
                                                 <small>
                                                     {PROJECT_TITLE[task.project]}
+                                                    {task.workstream && task.workstream !== '—' ? ` · ${task.workstream}` : ''}
                                                     {' · '}
                                                     {owner.name}
                                                     {reviewer ? ` → ${reviewer.name}` : ''}
@@ -292,120 +518,68 @@ export function LegalHubMyTasks({
                                 );
                             })}
                         </ul>
-                    </>
-                )}
-                {openTask ? (
-                    <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} />
-                ) : null}
-            </div>
-        );
-    }
-
-    if (mode === 'queue') {
-        const dueColumns: { id: DueColumn; label: TranslationKey; hint: TranslationKey }[] = [
-            { id: 'overdue', label: 'legalHub.queueDueOverdue', hint: 'legalHub.queueDueSubOverdue' },
-            { id: 'today', label: 'legalHub.queueDueToday', hint: 'legalHub.queueDueSubToday' },
-            { id: 'tomorrow', label: 'legalHub.queueDueTomorrow', hint: 'legalHub.queueDueSubTomorrow' },
-            { id: 'week', label: 'legalHub.queueDueWeek', hint: 'legalHub.queueDueSubWeek' },
-            { id: 'later', label: 'legalHub.queueDueLater', hint: 'legalHub.queueDueSubLater' },
-        ];
-        return (
-            <div className="lh-my lh-my--docket">
-                <div className="lh-my__board">
-                    {dueColumns.map((column) => (
-                        <BoardColumnView
-                            key={column.id}
-                            id={column.id}
-                            title={t(column.label)}
-                            hint={t(column.hint)}
-                            review={false}
-                            cards={visible
-                                .filter((task) => dueColumnOf(task) === column.id)
-                                .sort((a, b) => a.clientOn.localeCompare(b.clientOn))}
-                            droppable={false}
-                            dragging={null}
-                            adding={false}
-                            draft=""
-                            onDraft={() => undefined}
-                            onStartAdd={() => undefined}
-                            onCancelAdd={() => undefined}
-                            onAdd={() => undefined}
-                            canAdd={false}
-                            onMove={() => undefined}
-                            onDragStart={() => undefined}
-                            onDragEnd={() => undefined}
-                            onOpen={setOpenId}
-                        />
                     ))}
                 </div>
-                {openTask ? (
-                    <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} />
-                ) : null}
+                {drawer}
+                {dialog}
             </div>
         );
     }
 
     return (
         <div className="lh-my lh-my--docket">
-            <div className="lh-my__board">
-                {COLUMNS.map((column) => {
-                    const cards = visible
-                        .filter((task) => columnOf(task) === column)
-                        .sort((a, b) => Number(dayDelta(b.clientOn) < 0) - Number(dayDelta(a.clientOn) < 0) || Number(b.priority === 'high') - Number(a.priority === 'high') || a.clientOn.localeCompare(b.clientOn));
-                    const sub = COLUMN_SUB[column];
-                    return (
+            {toolbar}
+            {noMatch ?? (
+                <div className="lh-my__board">
+                    {shownColumns.map((column) => (
                         <BoardColumnView
-                            key={column}
-                            id={column}
-                            title={t(COLUMN_LABEL[column])}
-                            hint={sub ? t(sub) : null}
-                            review={LOCKED.includes(column)}
-                            cards={cards}
-                            droppable={DROPPABLE.includes(column)}
+                            key={column.id}
+                            id={column.id}
+                            title={column.label}
+                            hint={column.hint}
+                            review={column.review}
+                            cards={column.cards}
+                            showProject={project == null}
+                            collapsed={collapsed.includes(column.id) && dragging == null}
+                            onToggleCollapsed={() => toggleCollapsed(column.id)}
+                            droppable={column.droppable}
                             dragging={dragging}
-                            adding={adding === column}
+                            adding={adding === column.id}
                             draft={draft}
                             onDraft={setDraft}
                             onStartAdd={() => {
-                                setAdding(column);
+                                setAdding(column.id as BoardColumn);
                                 setDraft('');
                             }}
                             onCancelAdd={() => {
                                 setAdding(null);
                                 setDraft('');
                             }}
-                            onAdd={() => addCard(column)}
-                            canAdd={project == null && QUICK_ADD.includes(column)}
-                            onMove={(id) => moveTask(id, column)}
+                            onAdd={() => addCard(column.id as BoardColumn)}
+                            canAdd={column.canAdd}
+                            onMove={(id) => moveTask(id, column.id as BoardColumn)}
                             onDragStart={setDragging}
                             onDragEnd={() => setDragging(null)}
                             onOpen={setOpenId}
                         />
-                    );
-                })}
-            </div>
-            {openTask ? (
-                <LegalHubTaskDrawer key={openTask.id} task={openTask} owner={null} onClose={() => setOpenId(null)} />
-            ) : null}
-            {composer ? (
-                <NewTaskDialog
-                    onClose={() => setComposer(false)}
-                    onCreate={(draft) => {
-                        setTasks((current) => [...current, draft]);
-                        setComposer(false);
-                    }}
-                />
-            ) : null}
+                    ))}
+                </div>
+            )}
+            {drawer}
+            {dialog}
         </div>
     );
 }
 
-function BoardColumnView({ id, title, hint, review, cards, droppable, dragging, adding, draft, onDraft, onStartAdd, onCancelAdd, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen }: {
+function BoardColumnView({ id, title, hint, review, cards, showProject, collapsed, onToggleCollapsed, droppable, dragging, adding, draft, onDraft, onStartAdd, onCancelAdd, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen }: {
     id: string;
     title: string;
     hint: string | null;
     review: boolean;
     cards: MineTask[];
+    showProject: boolean;
+    collapsed: boolean;
+    onToggleCollapsed: () => void;
     droppable: boolean;
     dragging: string | null;
     adding: boolean;
@@ -421,9 +595,23 @@ function BoardColumnView({ id, title, hint, review, cards, droppable, dragging, 
     onOpen: (id: string) => void;
 }) {
     const { t } = useI18n();
+    const foldLabel = t(collapsed ? 'legalHub.myTasksColumnExpand' : 'legalHub.myTasksColumnCollapse');
+    const lateCount = cards.filter((task) => !task.done && dayDelta(task.clientOn) < 0).length;
+    if (collapsed) {
+        return (
+            <section className={`lh-my__col lh-my__col--${id} is-folded`} aria-label={title}>
+                <button type="button" className="lh-my__fold-spine" aria-label={`${foldLabel}: ${title}`} title={foldLabel} onClick={onToggleCollapsed}>
+                    <span className={`lh-my__dot lh-my__dot--${id}`} aria-hidden />
+                    <em className={lateCount > 0 ? 'is-late' : ''}>{cards.length}</em>
+                    <span className="lh-my__fold-label">{title}</span>
+                </button>
+            </section>
+        );
+    }
     return (
         <section
             className={`lh-my__col lh-my__col--${id}${dragging && droppable ? ' is-target' : ''}${dragging && !droppable ? ' is-locked-col' : ''}`}
+            aria-label={title}
             onDragOver={(event) => {
                 if (!droppable || !dragging)
                     return;
@@ -438,7 +626,7 @@ function BoardColumnView({ id, title, hint, review, cards, droppable, dragging, 
         >
             <header>
                 <span className={`lh-my__dot lh-my__dot--${id}`} aria-hidden />
-                <span className="lh-my__col-title">
+                <span className="lh-my__col-title" title={hint ?? undefined}>
                     <strong>{title}</strong>
                     <em>{cards.length}</em>
                 </span>
@@ -447,13 +635,18 @@ function BoardColumnView({ id, title, hint, review, cards, droppable, dragging, 
                         <LockIcon />
                     </span>
                 ) : null}
+                <button type="button" className="lh-my__fold-btn" aria-label={foldLabel} title={foldLabel} onClick={onToggleCollapsed}>
+                    <FoldIcon />
+                </button>
             </header>
-            {cards.length === 0 ? <p className="lh-my__empty">{droppable ? t('legalHub.myTasksDrop') : t('legalHub.myTasksColEmpty')}</p> : (
+            {cards.length === 0 && !adding ? <p className="lh-my__empty">{droppable ? t('legalHub.myTasksDrop') : t('legalHub.myTasksColEmpty')}</p> : null}
+            {cards.length > 0 ? (
                 <ul>
                     {cards.map((task) => (
                         <TaskCard
                             key={task.id}
                             task={task}
+                            showProject={showProject}
                             draggable={droppable}
                             onDragStart={() => onDragStart(task.id)}
                             onDragEnd={onDragEnd}
@@ -461,7 +654,7 @@ function BoardColumnView({ id, title, hint, review, cards, droppable, dragging, 
                         />
                     ))}
                 </ul>
-            )}
+            ) : null}
             {canAdd ? (
                 <div className="lh-my__quick">
                     {adding ? (
@@ -479,6 +672,10 @@ function BoardColumnView({ id, title, hint, review, cards, droppable, dragging, 
                                 onKeyDown={(event) => {
                                     if (event.key === 'Escape')
                                         onCancelAdd();
+                                    if (event.key === 'Enter' && !event.shiftKey) {
+                                        event.preventDefault();
+                                        onAdd();
+                                    }
                                 }}
                             />
                             <div>
@@ -504,8 +701,79 @@ function LockIcon() {
     );
 }
 
-function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
+function FoldIcon() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="m11 7-5 5 5 5" />
+            <path d="m18 7-5 5 5 5" />
+        </svg>
+    );
+}
+
+function IconBoard() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
+            <rect x="3" y="4" width="5" height="16" rx="1.5" />
+            <rect x="10" y="4" width="5" height="11" rx="1.5" />
+            <rect x="17" y="4" width="4" height="7" rx="1.5" />
+        </svg>
+    );
+}
+
+function IconList() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
+        </svg>
+    );
+}
+
+function IconFlag() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M5 21V4" />
+            <path d="M5 4h11l-2 4 2 4H5" />
+        </svg>
+    );
+}
+
+function IconChecklist() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="4" y="4" width="16" height="16" rx="3" />
+            <path d="m8.5 12 2.5 2.5 4.5-5" />
+        </svg>
+    );
+}
+
+function IconClip() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="m20 11-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 7" />
+        </svg>
+    );
+}
+
+function IconChat() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-hidden>
+            <path d="M5 5h14v10H9l-4 4z" />
+        </svg>
+    );
+}
+
+function IconClock() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <circle cx="12" cy="12" r="8" />
+            <path d="M12 8v4l2.5 2" />
+        </svg>
+    );
+}
+
+function TaskCard({ task, showProject, draggable, onDragStart, onDragEnd, onOpen }: {
     task: MineTask;
+    showProject: boolean;
     draggable: boolean;
     onDragStart: () => void;
     onDragEnd: () => void;
@@ -516,16 +784,27 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
     const owner = PERSON_LABEL[task.owner];
     const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer] : null;
     const clientLate = !task.done && dayDelta(task.clientOn) < 0;
-    const soon = !clientLate && dayDelta(task.clientOn) <= 1;
+    const soon = !task.done && !clientLate && dayDelta(task.clientOn) <= 1;
     const detail = taskDrawerDetail(task);
     const checksDone = detail.checks.filter((item) => item.done).length;
-    const hours = task.hours || Math.max(1, Math.round(task.minutes / 60));
-    const due = `${shortDate(task.clientOn, locale)} · ${dueText(dayDelta(task.clientOn), t)}`;
+    const hours = task.hours > 0 ? task.hours : (task.minutes > 0 ? Math.max(1, Math.round(task.minutes / 60)) : 0);
+    const due = `${shortDate(task.clientOn, locale)} · ${task.done ? t('legalHub.taskStageApproved') : dueText(dayDelta(task.clientOn), t)}`;
+    const waitWho = (task.waitingFor ?? '').trim();
+    const genericClient = /^(client|клиент)$/i.test(waitWho);
+    const waitText = task.status === 'wait'
+        ? (waitWho && !genericClient
+            ? t('legalHub.cardWaitWho').replace('{name}', waitWho)
+            : isClientWait(task) ? t('legalHub.cardWaitClientAny') : null)
+        : null;
+    const showStream = task.workstream && task.workstream !== '—';
     return (
         <li
-            className={`lh-my__card${draggable ? '' : ' is-locked'}${clientLate ? ' is-late' : ''}`}
-            title={draggable ? undefined : t('legalHub.myTasksLocked')}
+            className={`lh-my__card${draggable ? '' : ' is-locked'}${clientLate ? ' is-late' : ''}${task.done ? ' is-done' : ''}`}
+            title={draggable ? t('legalHub.cardDragHint') : t('legalHub.myTasksLocked')}
             draggable={draggable}
+            tabIndex={0}
+            role="button"
+            aria-label={`${task.title}. ${due}`}
             onDragStart={() => {
                 dragged.current = true;
                 onDragStart();
@@ -541,39 +820,68 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
                     return;
                 onOpen();
             }}
+            onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onOpen();
+                }
+            }}
         >
-            <span className="lh-my__tags">
-                {task.priority === 'high' ? <span className="lh-my__chip lh-my__chip--hot">{t('legalHub.myTasksUrgent')}</span> : null}
-                <span className="lh-my__chip">{PROJECT_LABEL[task.project]}</span>
-                {task.workstream && task.workstream !== '—' ? <span className="lh-my__chip lh-my__chip--soft">{task.workstream}</span> : null}
-            </span>
-            <strong>{task.title}</strong>
-            {task.status === 'wait' && task.waitingFor ? (
-                <span className="lh-my__wait">
-                    {t(isClientWait(task) ? 'legalHub.myTasksWaitClientWho' : 'legalHub.myTasksWaitGovWho')}: {task.waitingFor}
+            {task.priority === 'high' || showProject || showStream ? (
+                <span className="lh-my__tags">
+                    {task.priority === 'high' && !task.done ? (
+                        <span className="lh-my__chip lh-my__chip--hot"><IconFlag />{t('legalHub.myTasksUrgent')}</span>
+                    ) : null}
+                    {showProject ? <span className={`lh-my__chip lh-my__chip--project lh-my__chip--${task.project}`}>{PROJECT_LABEL[task.project]}</span> : null}
+                    {showStream ? <span className="lh-my__chip lh-my__chip--soft">{task.workstream}</span> : null}
                 </span>
             ) : null}
-            {(task.status === 'associate' || task.status === 'partner') && reviewer ? (
+            <strong>{task.title}</strong>
+            {waitText ? <span className="lh-my__wait">{waitText}</span> : null}
+            {(task.status === 'associate' || task.status === 'partner') && reviewer && !task.done ? (
                 <span className="lh-my__review">
                     <span className={`lh-tasks__avatar lh-tasks__avatar--${task.reviewer}`}>{reviewer.code}</span>
                     {t('legalHub.myTasksOnReview').replace('{name}', reviewer.name)}
                 </span>
             ) : null}
-            {task.status === 'changes' ? <span className="lh-my__review lh-my__review--back">{t('legalHub.myTasksSubChanges')}</span> : null}
+            {task.status === 'changes' && !task.done ? <span className="lh-my__review lh-my__review--back">{t('legalHub.myTasksSubChanges')}</span> : null}
             <span className="lh-my__facts">
-                {detail.checks.length > 0 ? <span>{checksDone}/{detail.checks.length}</span> : null}
-                {detail.files.length > 0 ? <span>{detail.files.length}</span> : null}
-                {detail.comments.length > 0 ? <span>{detail.comments.length}</span> : null}
-                <span>{t('legalHub.myTasksHoursShort').replace('{count}', String(hours))}</span>
+                {detail.checks.length > 0 ? (
+                    <span
+                        className={checksDone === detail.checks.length ? 'is-complete' : ''}
+                        title={t('legalHub.cardChecklist').replace('{done}', String(checksDone)).replace('{total}', String(detail.checks.length))}
+                    >
+                        <IconChecklist />
+                        {checksDone}/{detail.checks.length}
+                    </span>
+                ) : null}
+                {detail.files.length > 0 ? (
+                    <span title={t('legalHub.cardFiles').replace('{count}', String(detail.files.length))}>
+                        <IconClip />
+                        {detail.files.length}
+                    </span>
+                ) : null}
+                {detail.comments.length > 0 ? (
+                    <span title={t('legalHub.cardComments').replace('{count}', String(detail.comments.length))}>
+                        <IconChat />
+                        {detail.comments.length}
+                    </span>
+                ) : null}
+                {hours > 0 ? (
+                    <span title={t('legalHub.cardEstimate').replace('{count}', String(hours))}>
+                        <IconClock />
+                        {t('legalHub.myTasksHoursShort').replace('{count}', String(hours))}
+                    </span>
+                ) : null}
             </span>
             <span className="lh-my__card-foot">
-                <span className={`lh-my__duepill${clientLate ? ' is-late' : ''}${soon ? ' is-soon' : ''}`}>{due}</span>
+                <span className={`lh-my__duepill${clientLate ? ' is-late' : ''}${soon ? ' is-soon' : ''}${task.done ? ' is-done' : ''}`}>{due}</span>
                 <span className="lh-my__pair">
-                    <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={owner.name}>{owner.code}</span>
+                    <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={`${t('legalHub.taskFieldOwner')}: ${owner.name}`}>{owner.code}</span>
                     {reviewer ? (
                         <>
                             <span className="lh-my__arrow" aria-hidden>→</span>
-                            <span className={`lh-tasks__avatar lh-tasks__avatar--${task.reviewer}`} title={reviewer.name}>{reviewer.code}</span>
+                            <span className={`lh-tasks__avatar lh-tasks__avatar--${task.reviewer}`} title={`${t('legalHub.taskFieldReviewer')}: ${reviewer.name}`}>{reviewer.code}</span>
                         </>
                     ) : null}
                 </span>
@@ -582,26 +890,37 @@ function TaskCard({ task, draggable, onDragStart, onDragEnd, onOpen }: {
     );
 }
 
-function NewTaskDialog({ onClose, onCreate }: {
+function NewTaskDialog({ project: fixedProject = null, onClose, onCreate }: {
+    project?: TaskProjectId | null;
     onClose: () => void;
     onCreate: (task: MineTask) => void;
 }) {
     const { t } = useI18n();
     const [title, setTitle] = useState('');
-    const [project, setProject] = useState<TaskProjectId>('solar');
+    const [project, setProject] = useState<TaskProjectId>(fixedProject ?? 'solar');
     const [workstream, setWorkstream] = useState('Land / LLA');
-    const [internalOn, setInternalOn] = useState('2026-11-01');
-    const [clientOn, setClientOn] = useState('2026-11-04');
+    const [internalOn, setInternalOn] = useState(() => plusDays(2));
+    const [clientOn, setClientOn] = useState(() => plusDays(4));
     const [priority, setPriority] = useState<TaskPriorityId>('normal');
     const [owner, setOwner] = useState<TaskPersonId>('ja1');
-    const [hours, setHours] = useState('4');
-    const [minutes, setMinutes] = useState('60');
     const [approval, setApproval] = useState(false);
     const [instructions, setInstructions] = useState('');
     const [error, setError] = useState('');
     const projects = TASK_PROJECTS.map((id) => ({ id, label: PROJECT_LABEL[id] }));
     const people = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].name }));
     const priorities = TASK_PRIORITIES.map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }));
+
+    useEffect(() => {
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== 'Escape')
+                return;
+            if (document.querySelector('.ttp-pop, .tsp-srch--open'))
+                return;
+            onClose();
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [onClose]);
 
     const submit = () => {
         if (!title.trim()) {
@@ -623,9 +942,9 @@ function NewTaskDialog({ onClose, onCreate }: {
             priority,
             reviewOn: null,
             clientOn,
-            minutes: Number(minutes) || 0,
+            minutes: 0,
             done: false,
-            hours: Number(hours) || 0,
+            hours: 0,
             internalOn,
             instructions: instructions.trim(),
             approval,
@@ -647,11 +966,15 @@ function NewTaskDialog({ onClose, onCreate }: {
             >
                 <header>
                     <h2 id="lh-new-task-title">{t('legalHub.myTasksNew')}</h2>
-                    <button type="button" className="lh-drawer__close" aria-label={t('legalHub.taskDrawerClose')} onClick={onClose}>×</button>
+                    <button type="button" className="lh-drawer__close" aria-label={t('legalHub.taskDrawerClose')} onClick={onClose}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                            <path d="M6 6l12 12M18 6 6 18" />
+                        </svg>
+                    </button>
                 </header>
                 <label className="lh-drawer__field">
                     <span>{t('legalHub.myTasksTitle')}</span>
-                    <input className="lh-drawer__input" value={title} placeholder={t('legalHub.myTasksTitlePh')} onChange={(event) => setTitle(event.target.value)} />
+                    <input className="lh-drawer__input" autoFocus value={title} placeholder={t('legalHub.myTasksTitlePh')} onChange={(event) => setTitle(event.target.value)} />
                 </label>
                 <div className="lh-drawer__grid">
                     <label className="lh-drawer__field">
@@ -714,20 +1037,12 @@ function NewTaskDialog({ onClose, onCreate }: {
                             onSelect={(item) => setOwner(item.id)}
                         />
                     </label>
-                    <label className="lh-drawer__field">
-                        <span>{t('legalHub.myTasksHours')}</span>
-                        <input className="lh-drawer__input" inputMode="numeric" value={hours} onChange={(event) => setHours(event.target.value.replace(/[^\d]/g, '').slice(0, 3))} />
-                    </label>
-                    <label className="lh-drawer__field">
-                        <span>{t('legalHub.taskFieldMinutes')}</span>
-                        <input className="lh-drawer__input" inputMode="numeric" value={minutes} onChange={(event) => setMinutes(event.target.value.replace(/[^\d]/g, '').slice(0, 4))} />
-                    </label>
                 </div>
                 <label className="lh-my__check">
                     <input type="checkbox" checked={approval} onChange={(event) => setApproval(event.target.checked)} />
                     {t('legalHub.myTasksApproval')}
                 </label>
-                <label className="lh-drawer__field lh-drawer__field--stack">
+                <label className="lh-drawer__field">
                     <span>{t('legalHub.taskFieldInstructions')}</span>
                     <textarea className="lh-drawer__area" rows={3} value={instructions} placeholder={t('legalHub.myTasksInstructionsPh')} onChange={(event) => setInstructions(event.target.value)} />
                 </label>
