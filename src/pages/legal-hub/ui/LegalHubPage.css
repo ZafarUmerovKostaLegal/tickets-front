@@ -5947,6 +5947,53 @@ body[data-theme='dark'] .lh-page {
   background: color-mix(in srgb, var(--app-bg-soft) 88%, var(--app-surface));
 }
 
+.lh-my--docket .lh-my__col {
+  transition: background 0.22s ease, box-shadow 0.22s ease, opacity 0.22s ease, flex-basis 0.28s ease, width 0.28s ease, min-width 0.28s ease, max-width 0.28s ease;
+}
+
+.lh-my--docket .lh-my__col.is-col-dragging {
+  opacity: 0.45;
+}
+
+.lh-my--docket .lh-my__col-grip {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 1.15rem;
+  height: 1.35rem;
+  margin: 0 -0.15rem 0 -0.2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--app-meta);
+  cursor: grab;
+}
+
+.lh-my--docket .lh-my__col-grip svg {
+  width: 14px;
+  height: 14px;
+}
+
+.lh-my--docket .lh-my__col-grip:hover,
+.lh-my--docket .lh-my__col-grip:focus-visible {
+  color: var(--app-text);
+  background: color-mix(in srgb, var(--app-text) 6%, transparent);
+}
+
+.lh-my--docket .lh-my__col-grip:active {
+  cursor: grabbing;
+}
+
+.lh-my--docket .lh-my__col-grip--fold {
+  position: absolute;
+  top: 0.35rem;
+  left: 50%;
+  z-index: 1;
+  margin: 0;
+  transform: translateX(-50%);
+}
+
 .lh-my--docket .lh-my__col header {
   justify-content: flex-start;
   gap: 0.45rem;
@@ -6055,6 +6102,10 @@ body[data-theme='dark'] .lh-page {
 .lh-my--docket .lh-my__card:hover {
   border-color: var(--app-accent-border);
   box-shadow: none;
+}
+
+.lh-my--docket .lh-my__card.is-lifting {
+  opacity: 0.4;
 }
 
 .lh-my--docket .lh-my__card.is-late {
@@ -6880,11 +6931,13 @@ body[data-theme='dark'] .lh-page {
 
 .lh-rows__item {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(9rem, 1fr) minmax(8rem, 0.85fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) 15.5rem 13.5rem 12.5rem 11.5rem;
   align-items: center;
-  gap: 0.65rem 1.1rem;
+  column-gap: 1.25rem;
+  row-gap: 0.2rem;
   width: 100%;
-  padding: 0.75rem 1rem;
+  min-height: 4.35rem;
+  padding: 0.7rem 1rem;
   border: 1px solid var(--app-border);
   border-radius: 12px;
   background: var(--app-surface);
@@ -6893,7 +6946,7 @@ body[data-theme='dark'] .lh-page {
 }
 
 .lh-rows--one .lh-rows__item {
-  grid-template-columns: minmax(0, 1.8fr) minmax(7rem, 0.7fr) minmax(8rem, 0.85fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) 11rem 13.5rem 12.5rem 11.5rem;
 }
 
 .lh-rows__item:hover {
@@ -6914,6 +6967,8 @@ body[data-theme='dark'] .lh-page {
   color: var(--app-text);
   font-size: 0.9rem;
   line-height: 1.35;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .lh-rows__meta,
@@ -6924,14 +6979,15 @@ body[data-theme='dark'] .lh-page {
   font-size: 0.74rem;
 }
 
-.lh-rows__meta {
+.lh-rows__text .lh-rows__meta {
   display: none;
 }
 
 .lh-rows__project,
 .lh-rows__people {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 1.15rem 1.05rem;
+  align-content: center;
   min-width: 0;
 }
 
@@ -6949,11 +7005,18 @@ body[data-theme='dark'] .lh-page {
   color: var(--app-text);
   font-size: 0.8rem;
   font-weight: 650;
+  line-height: 1.15rem;
+}
+
+.lh-rows__stage,
+.lh-rows .lh-my__duepill {
+  justify-self: start;
 }
 
 .lh-rows__project small,
 .lh-rows__people small {
-  margin-top: 0.08rem;
+  margin-top: 0;
+  line-height: 1.05rem;
 }
 
 .lh-rows__stage {
@@ -7948,11 +8011,15 @@ body[data-theme='dark'] .lh-page {
 @media (max-width: 1180px) {
   .lh-rows__item,
   .lh-rows--one .lh-rows__item {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) 12.5rem 11.5rem;
+    min-height: 0;
   }
 
-  .lh-rows__meta {
+  .lh-rows__text .lh-rows__meta {
     display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .lh-rows__project,

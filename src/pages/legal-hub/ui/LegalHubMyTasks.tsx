@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
@@ -151,6 +151,15 @@ export function mineFrom(source: HubTask[]): MineTask[] {
 const COLLAPSED_KEY = 'lh-board-collapsed';
 const HIDE_EMPTY_KEY = 'lh-board-hide-empty';
 const VIEW_KEY = 'lh-board-view';
+const COLUMN_ORDER_KEY = 'lh-board-column-order';
+
+function readColumnOrder(): BoardColumn[] {
+    const stored = readStored<unknown>(COLUMN_ORDER_KEY, []);
+    const list = Array.isArray(stored) ? stored : [];
+    const known = new Set<string>(COLUMNS);
+    const picked = list.filter((id): id is BoardColumn => typeof id === 'string' && known.has(id));
+    return [...picked, ...COLUMNS.filter((id) => !picked.includes(id))];
+}
 
 function isLateTask(task: MineTask): boolean {
     return !task.done && dayDelta(task.clientOn) < 0;
@@ -271,9 +280,13 @@ export function LegalHubMyTasks({
     };
     const [hideEmpty, setHideEmptyState] = useState<boolean>(() => readStored<boolean>(HIDE_EMPTY_KEY, false));
     const setHideEmpty = (next: boolean) => {
+        flip.current = 'columns';
         setHideEmptyState(next);
         writeStored(HIDE_EMPTY_KEY, next);
     };
+    const [columnOrder, setColumnOrder] = useState<BoardColumn[]>(readColumnOrder);
+    const [columnDrag, setColumnDrag] = useState<string | null>(null);
+    const [columnOver, setColumnOver] = useState<string | null>(null);
     const [onlyLate, setOnlyLate] = useState(false);
     const [onlyUrgent, setOnlyUrgent] = useState(false);
     const [projectFilter, setProjectFilter] = useState<TaskProjectId | ''>('');
@@ -284,6 +297,10 @@ export function LegalHubMyTasks({
     const [filtersOpen, setFiltersOpen] = useState(false);
     const filtersRef = useRef<HTMLDivElement>(null);
     const [dragging, setDragging] = useState<string | null>(null);
+    const boardRef = useRef<HTMLDivElement>(null);
+    const flip = useRef<null | 'cards' | 'columns'>(null);
+    const cardBoxes = useRef(new Map<string, { left: number; top: number }>());
+    const colBoxes = useRef(new Map<string, { left: number; top: number }>());
     const [composer, setComposer] = useState(false);
     const seenCreate = useRef(createSignal);
     useEffect(() => {
@@ -362,6 +379,7 @@ export function LegalHubMyTasks({
     };
 
     const moveTask = (id: string, column: BoardColumn) => {
+        flip.current = 'cards';
         setTasks((current) => current.map((task) => {
             if (task.id !== id)
                 return task;
@@ -375,6 +393,25 @@ export function LegalHubMyTasks({
         setDragging(null);
     };
 
+    const reorderColumns = (from: string, to: string) => {
+        if (from === to)
+            return;
+        flip.current = 'columns';
+        setColumnOrder((current) => {
+            const fromIndex = current.indexOf(from as BoardColumn);
+            const toIndex = current.indexOf(to as BoardColumn);
+            if (fromIndex < 0 || toIndex < 0)
+                return current;
+            const next = [...current];
+            const [item] = next.splice(fromIndex, 1);
+            next.splice(toIndex, 0, item!);
+            writeStored(COLUMN_ORDER_KEY, next);
+            return next;
+        });
+        setColumnDrag(null);
+        setColumnOver(null);
+    };
+
     const openComposer = (column: BoardColumn | null) => {
         setComposeColumn(column);
         setComposer(true);
@@ -383,6 +420,45 @@ export function LegalHubMyTasks({
         setComposer(false);
         setComposeColumn(null);
     };
+
+    useLayoutEffect(() => {
+        const board = boardRef.current;
+        if (!board)
+            return;
+        const kind = flip.current;
+        flip.current = null;
+        const motion = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const place = (node: HTMLElement) => {
+            const nodeBox = node.getBoundingClientRect();
+            const boardBox = board.getBoundingClientRect();
+            return {
+                left: nodeBox.left - boardBox.left + board.scrollLeft,
+                top: nodeBox.top - boardBox.top + board.scrollTop,
+            };
+        };
+        const sync = (selector: string, attr: string, store: Map<string, { left: number; top: number }>, animate: boolean) => {
+            board.querySelectorAll<HTMLElement>(selector).forEach((node) => {
+                const id = node.getAttribute(attr);
+                if (!id)
+                    return;
+                const next = place(node);
+                const prev = store.get(id);
+                if (animate && motion && prev) {
+                    const dx = prev.left - next.left;
+                    const dy = prev.top - next.top;
+                    if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+                        node.animate(
+                            [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
+                            { duration: animate && attr === 'data-col' ? 320 : 280, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+                        );
+                    }
+                }
+                store.set(id, next);
+            });
+        };
+        sync('[data-col]', 'data-col', colBoxes.current, kind === 'columns');
+        sync('[data-card]', 'data-card', cardBoxes.current, kind === 'cards');
+    });
 
     const canCreate = mode === 'mine';
     const title = project != null ? PROJECT_TITLE[project] : t(mode === 'queue' ? 'legalHub.sideReview' : 'legalHub.myTasks');
@@ -424,7 +500,7 @@ export function LegalHubMyTasks({
             canAdd: false,
             cards: visible.filter((task) => dueColumnOf(task) === column.id).sort((a, b) => a.clientOn.localeCompare(b.clientOn)),
         }))
-        : COLUMNS.map((column) => {
+        : columnOrder.map((column) => {
             const sub = COLUMN_SUB[column];
             return {
                 id: column,
@@ -578,12 +654,12 @@ export function LegalHubMyTasks({
                                                 </small>
                                             </span>
                                             <span className="lh-rows__project">
-                                                {project == null ? <b>{PROJECT_TITLE[task.project]}</b> : null}
-                                                {stream ? <small>{stream}</small> : null}
+                                                {project == null ? <b>{PROJECT_TITLE[task.project]}</b> : <b>{stream || '—'}</b>}
+                                                {project == null ? <small>{stream || '\u00a0'}</small> : null}
                                             </span>
                                             <span className="lh-rows__people">
                                                 <b>{owner.name}</b>
-                                                {reviewer ? <small>→ {reviewer.name}</small> : null}
+                                                <small>{reviewer ? `→ ${reviewer.name}` : '\u00a0'}</small>
                                             </span>
                                             <span className={`lh-rows__stage lh-rows__stage--${column}`}>{t(COLUMN_LABEL[column])}</span>
                                             <span className={`lh-my__duepill${late ? ' is-late' : ''}${soon ? ' is-soon' : ''}`}>
@@ -606,7 +682,7 @@ export function LegalHubMyTasks({
         <div className="lh-my lh-my--docket">
             {toolbar}
             {noMatch ?? (
-                <div className="lh-my__board">
+                <div className="lh-my__board" ref={boardRef}>
                     {shownColumns.map((column) => (
                         <BoardColumnView
                             key={column.id}
@@ -616,10 +692,20 @@ export function LegalHubMyTasks({
                             review={column.review}
                             cards={column.cards}
                             showProject={project == null}
-                            collapsed={collapsed.includes(column.id) && dragging == null}
+                            collapsed={collapsed.includes(column.id) && dragging == null && columnDrag == null}
                             onToggleCollapsed={() => toggleCollapsed(column.id)}
                             droppable={column.droppable}
                             dragging={dragging}
+                            reorderable={mode === 'mine'}
+                            columnDrag={columnDrag}
+                            columnOver={columnOver === column.id}
+                            onColumnDragStart={setColumnDrag}
+                            onColumnDragEnd={() => {
+                                setColumnDrag(null);
+                                setColumnOver(null);
+                            }}
+                            onColumnOver={setColumnOver}
+                            onColumnDrop={reorderColumns}
                             onAdd={() => openComposer(column.id as BoardColumn)}
                             canAdd={column.canAdd}
                             onMove={(id) => moveTask(id, column.id as BoardColumn)}
@@ -636,7 +722,7 @@ export function LegalHubMyTasks({
     );
 }
 
-function BoardColumnView({ id, title, hint, review, cards, showProject, collapsed, onToggleCollapsed, droppable, dragging, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen }: {
+function BoardColumnView({ id, title, hint, review, cards, showProject, collapsed, onToggleCollapsed, droppable, dragging, reorderable, columnDrag, columnOver, onColumnDragStart, onColumnDragEnd, onColumnOver, onColumnDrop, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen }: {
     id: string;
     title: string;
     hint: string | null;
@@ -647,6 +733,13 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
     onToggleCollapsed: () => void;
     droppable: boolean;
     dragging: string | null;
+    reorderable: boolean;
+    columnDrag: string | null;
+    columnOver: boolean;
+    onColumnDragStart: (id: string) => void;
+    onColumnDragEnd: () => void;
+    onColumnOver: (id: string | null) => void;
+    onColumnDrop: (from: string, to: string) => void;
     onAdd: () => void;
     canAdd: boolean;
     onMove: (id: string) => void;
@@ -656,10 +749,54 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
 }) {
     const { t } = useI18n();
     const foldLabel = t(collapsed ? 'legalHub.myTasksColumnExpand' : 'legalHub.myTasksColumnCollapse');
+    const moveLabel = t('legalHub.boardMoveColumn');
     const lateCount = cards.filter((task) => !task.done && dayDelta(task.clientOn) < 0).length;
+    const onDragOver = (event: DragEvent) => {
+        if (columnDrag) {
+            if (reorderable && columnDrag !== id) {
+                event.preventDefault();
+                onColumnOver(id);
+            }
+            return;
+        }
+        if (!droppable || !dragging)
+            return;
+        event.preventDefault();
+    };
+    const onDrop = (event: DragEvent) => {
+        if (columnDrag) {
+            event.preventDefault();
+            onColumnDrop(columnDrag, id);
+            return;
+        }
+        if (!droppable || !dragging)
+            return;
+        event.preventDefault();
+        onMove(dragging);
+    };
+    const grip = reorderable ? (
+        <ColumnGrip
+            label={moveLabel}
+            folded={collapsed}
+            onDragStart={() => onColumnDragStart(id)}
+            onDragEnd={onColumnDragEnd}
+        />
+    ) : null;
     if (collapsed) {
         return (
-            <section className={`lh-my__col lh-my__col--${id} is-folded`} aria-label={title}>
+            <section
+                className={`lh-my__col lh-my__col--${id} is-folded${columnDrag === id ? ' is-col-dragging' : ''}${columnOver ? ' is-target' : ''}`}
+                data-col={id}
+                aria-label={title}
+                onDragOver={onDragOver}
+                onDragLeave={(event) => {
+                    if (!columnDrag || event.currentTarget.contains(event.relatedTarget as Node))
+                        return;
+                    onColumnOver(null);
+                }}
+                onDrop={onDrop}
+            >
+                {grip}
                 <button type="button" className="lh-my__fold-spine" aria-label={`${foldLabel}: ${title}`} title={foldLabel} onClick={onToggleCollapsed}>
                     <span className={`lh-my__dot lh-my__dot--${id}`} aria-hidden />
                     <em className={lateCount > 0 ? 'is-late' : ''}>{cards.length}</em>
@@ -670,21 +807,19 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
     }
     return (
         <section
-            className={`lh-my__col lh-my__col--${id}${dragging && droppable ? ' is-target' : ''}${dragging && !droppable ? ' is-locked-col' : ''}`}
+            className={`lh-my__col lh-my__col--${id}${columnDrag === id ? ' is-col-dragging' : ''}${columnOver || (dragging && droppable) ? ' is-target' : ''}${dragging && !droppable && !columnDrag ? ' is-locked-col' : ''}`}
+            data-col={id}
             aria-label={title}
-            onDragOver={(event) => {
-                if (!droppable || !dragging)
+            onDragOver={onDragOver}
+            onDragLeave={(event) => {
+                if (!columnDrag || event.currentTarget.contains(event.relatedTarget as Node))
                     return;
-                event.preventDefault();
+                onColumnOver(null);
             }}
-            onDrop={(event) => {
-                if (!droppable || !dragging)
-                    return;
-                event.preventDefault();
-                onMove(dragging);
-            }}
+            onDrop={onDrop}
         >
             <header>
+                {grip}
                 <span className={`lh-my__dot lh-my__dot--${id}`} aria-hidden />
                 <span className="lh-my__col-title" title={hint ?? undefined}>
                     <strong>{title}</strong>
@@ -707,7 +842,8 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
                             key={task.id}
                             task={task}
                             showProject={showProject}
-                            draggable={droppable}
+                            draggable={droppable && !columnDrag}
+                            lifting={dragging === task.id}
                             onDragStart={() => onDragStart(task.id)}
                             onDragEnd={onDragEnd}
                             onOpen={() => onOpen(task.id)}
@@ -721,6 +857,43 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
                 </div>
             ) : null}
         </section>
+    );
+}
+
+function ColumnGrip({ label, folded, onDragStart, onDragEnd }: {
+    label: string;
+    folded: boolean;
+    onDragStart: () => void;
+    onDragEnd: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            className={`lh-my__col-grip${folded ? ' lh-my__col-grip--fold' : ''}`}
+            draggable
+            aria-label={label}
+            title={label}
+            onClick={(event) => event.stopPropagation()}
+            onDragStart={(event) => {
+                event.stopPropagation();
+                event.dataTransfer.setData('application/x-lh-column', '1');
+                event.dataTransfer.effectAllowed = 'move';
+                onDragStart();
+            }}
+            onDragEnd={(event) => {
+                event.stopPropagation();
+                onDragEnd();
+            }}
+        >
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <circle cx="9" cy="7" r="1.4" />
+                <circle cx="15" cy="7" r="1.4" />
+                <circle cx="9" cy="12" r="1.4" />
+                <circle cx="15" cy="12" r="1.4" />
+                <circle cx="9" cy="17" r="1.4" />
+                <circle cx="15" cy="17" r="1.4" />
+            </svg>
+        </button>
     );
 }
 
@@ -777,10 +950,11 @@ function IconFlag() {
     );
 }
 
-function TaskCard({ task, showProject, draggable, onDragStart, onDragEnd, onOpen }: {
+function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEnd, onOpen }: {
     task: MineTask;
     showProject: boolean;
     draggable: boolean;
+    lifting: boolean;
     onDragStart: () => void;
     onDragEnd: () => void;
     onOpen: () => void;
@@ -795,7 +969,8 @@ function TaskCard({ task, showProject, draggable, onDragStart, onDragEnd, onOpen
     const context = [showProject ? PROJECT_LABEL[task.project] : '', task.workstream && task.workstream !== '—' ? task.workstream : ''].filter(Boolean).join(' · ');
     return (
         <li
-            className={`lh-my__card${draggable ? '' : ' is-locked'}${clientLate ? ' is-late' : ''}${task.done ? ' is-done' : ''}`}
+            data-card={task.id}
+            className={`lh-my__card${draggable ? '' : ' is-locked'}${lifting ? ' is-lifting' : ''}${clientLate ? ' is-late' : ''}${task.done ? ' is-done' : ''}`}
             title={draggable ? t('legalHub.cardDragHint') : t('legalHub.myTasksLocked')}
             draggable={draggable}
             tabIndex={0}

@@ -381,6 +381,7 @@ export const enMessages = {
         boardFilterUrgent: 'Urgent',
         boardHideEmpty: 'Hide empty columns',
         boardHiddenCount: 'Hidden columns: {count}',
+        boardMoveColumn: 'Move column',
         boardViewBoard: 'Board',
         boardViewList: 'List',
         boardAllProjects: 'All projects',

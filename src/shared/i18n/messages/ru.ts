@@ -381,6 +381,7 @@ export const ruMessages: Messages = {
         boardFilterUrgent: 'Срочные',
         boardHideEmpty: 'Скрыть пустые колонки',
         boardHiddenCount: 'Скрыто колонок: {count}',
+        boardMoveColumn: 'Переместить колонку',
         boardViewBoard: 'Доска',
         boardViewList: 'Список',
         boardAllProjects: 'Все проекты',
@@ -1467,6 +1468,7 @@ export type Messages = {
         boardFilterUrgent: string;
         boardHideEmpty: string;
         boardHiddenCount: string;
+        boardMoveColumn: string;
         boardViewBoard: string;
         boardViewList: string;
         boardAllProjects: string;
