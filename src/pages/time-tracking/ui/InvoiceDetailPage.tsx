@@ -53,7 +53,7 @@ import { InvoiceSendContactModal } from './InvoiceSendContactModal';
 import { getClientProject } from '@entities/time-tracking/api/domains/projects';
 import { invoiceFixedFeeTotal, parseInvoiceFixedFeeInput, readProjectExtraFixedFee } from '../lib/invoiceFixedFee';
 import { invoiceDescriptionWithTask } from '../lib/invoiceClientDescription';
-import { invoiceClientMailSignature, rasterizePublicLogoPng } from '../lib/invoiceClientMailSignature';
+import { invoiceClientMailSignature, invoiceSenderPosition, rasterizePublicLogoPng } from '../lib/invoiceClientMailSignature';
 import {
   blobToBase64,
   buildPaidAtForPaymentApi,
@@ -1336,9 +1336,10 @@ export function InvoiceDetailPage() {
               const logoPngBase64 = await rasterizePublicLogoPng();
               if (cancelled())
                 return;
+              const senderName = user?.display_name?.trim() || 'Kosta Legal';
               const signature = invoiceClientMailSignature({
-                name: user?.display_name?.trim() || 'Kosta Legal',
-                position: 'Contract Manager',
+                name: senderName,
+                position: invoiceSenderPosition(senderName),
                 embedLogo: Boolean(logoPngBase64),
               });
               const bodyHtml = t('timeTrackingPage.invoices.sendDialog.mailBodyHtml')

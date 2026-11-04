@@ -15,6 +15,16 @@ const DISCLAIMER_EN = 'This e-mail and any attached documents hereto are intende
 
 const DISCLAIMER_RU = 'Данное электронное сообщение и любые приложения к нему предназначены только указанному(ым) получателю(ям), строго конфиденциальны и являются предметом адвокатской тайны. Если Вы не являетесь адресатом этого электронного сообщения, пожалуйста, незамедлительно уведомите об этом отправителя ответным электронным сообщением, а затем полностью удалите настоящее сообщение из системы. Пожалуйста, не читайте, не копируйте, не распечатывайте, не переправляйте и не сохраняйте настоящее сообщение или любые его приложения. Любое несанкционированное раскрытие или иное использование информации, содержащейся в настоящем сообщении в любых целях строго запрещено и преследуется по закону. Спасибо за Ваше сотрудничество.';
 
+const DEFAULT_SENDER_POSITION = 'Contract Manager';
+
+/** Title printed under the sender name in the client invoice email. */
+export function invoiceSenderPosition(senderName: string | null | undefined): string {
+    const normalized = (senderName ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+    if (normalized === 'kamola yusupova' || normalized === 'yusupova kamola')
+        return 'Contracts and BD Assistant';
+    return DEFAULT_SENDER_POSITION;
+}
+
 export function invoiceClientMailSignature(input: {
     name: string;
     position?: string | null;
