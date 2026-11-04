@@ -485,7 +485,9 @@ function LegalHubPageBody() {
                                     title={t('legalHub.myTasksNew')}
                                     onClick={() => setCreateTick((tick) => tick + 1)}
                                 >
-                                    +
+                                    <svg viewBox="0 0 24 24" aria-hidden>
+                                        <path d="M12 5v14M5 12h14" />
+                                    </svg>
                                 </button>
                             ) : null}
                             {showUtil ? (
