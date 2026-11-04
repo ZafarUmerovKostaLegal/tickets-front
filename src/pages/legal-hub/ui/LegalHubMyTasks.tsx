@@ -375,7 +375,7 @@ export function LegalHubMyTasks({
                                 setDraft('');
                             }}
                             onAdd={() => addCard(column)}
-                            canAdd={QUICK_ADD.includes(column)}
+                            canAdd={project == null && QUICK_ADD.includes(column)}
                             onMove={(id) => moveTask(id, column)}
                             onDragStart={setDragging}
                             onDragEnd={() => setDragging(null)}

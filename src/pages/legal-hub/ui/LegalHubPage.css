@@ -6925,10 +6925,6 @@ body[data-theme='dark'] .lh-page {
   font-weight: 600;
 }
 
-.lh-matter__pane-off {
-  display: none;
-}
-
 .lh-matter__bar,
 .lh-seg {
   display: flex;
