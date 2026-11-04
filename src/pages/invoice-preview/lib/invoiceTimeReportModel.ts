@@ -768,6 +768,36 @@ function withSummaryOrderedBySeniority(pack: InvoiceTimeReportPack): InvoiceTime
     return { ...pack, summarySlots };
 }
 
+/** Fees and expenses as printed on the time report. The invoice total is their sum. */
+export function billedAmountsFromTimeReport(pack: InvoiceTimeReportPack): {
+    currency: string;
+    services: number;
+    expenses: number;
+    total: number;
+} | null {
+    const currency = (pack.currency || 'USD').trim().toUpperCase() || 'USD';
+    const summary = pack.summaryGrandAmountDisplay.trim();
+    const detail = pack.detailTotalAmountDisplay.trim();
+    const mehnat = (pack.mehnatTotalAmountDisplay ?? '').trim();
+    const fixed = (pack.fixedFeeTotalAmountDisplay ?? '').trim();
+    const expenseLabel = (pack.expenseTotalAmountDisplay ?? '').trim();
+    if (!summary && !detail && !mehnat && !fixed && !expenseLabel)
+        return null;
+    const services = summary
+        ? parseTimeReportAmountDisplay(summary)
+        : parseTimeReportAmountDisplay(detail)
+            + parseTimeReportAmountDisplay(mehnat)
+            + parseTimeReportAmountDisplay(fixed);
+    const expenses = parseTimeReportAmountDisplay(expenseLabel);
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    return {
+        currency,
+        services: round2(services),
+        expenses: round2(expenses),
+        total: round2(services + expenses),
+    };
+}
+
 export function formatTimeReportAmount(amount: number, currency: string): string {
     const cur = (currency || 'EUR').trim().toUpperCase() || 'EUR';
     if (!Number.isFinite(amount))

@@ -11,7 +11,7 @@ import { firmBankingToLegalOverrides, applyFirmBankingProfileToLegalOverrides, p
 import type { InvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { buildInvoiceCoverLetterModel } from '../lib/invoiceCoverLetterModel';
 import { applyCoverLetterLanguage, type InvoiceCoverLanguage } from '../lib/invoiceCoverLetterI18n';
-import { applyLinkedTaskNamesToTimeReportPack, emptyInvoiceTimeReportPack, ensureMehnatSeparatedPack, mergeTimeReportPackPreferLiveExpenses, orderTimeReportSummarySlots, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
+import { applyLinkedTaskNamesToTimeReportPack, billedAmountsFromTimeReport, emptyInvoiceTimeReportPack, ensureMehnatSeparatedPack, formatTimeReportAmount, mergeTimeReportPackPreferLiveExpenses, orderTimeReportSummarySlots, parseTimeReportAmountDisplay, timeReportPackHasContent, type InvoiceTimeReportDetailRow, type InvoiceTimeReportPack, type InvoiceTimeReportSummaryRow } from '../lib/invoiceTimeReportModel';
 import { buildInvoicePreviewExportBasename, triggerBrowserDownload } from '../lib/invoicePreviewDownload';
 import { packCurrencyCode } from '../lib/invoicePreviewPackShared';
 import { splitDetailRowsForPagedTimeReport } from '../lib/invoiceTimeReportChunking';
@@ -554,6 +554,30 @@ export function InvoicePreviewPage() {
         [displayModel],
     );
     const resolvedTimeReportPack = ensureMehnatSeparatedPack(timeReportPack ?? timeReportFallback);
+    const reportBill = useMemo(
+        () => (timeReportPack ? billedAmountsFromTimeReport(resolvedTimeReportPack) : null),
+        [timeReportPack, resolvedTimeReportPack],
+    );
+    const pricedModel = useMemo(() => {
+        const base = coverModel ?? fallbackCoverModel();
+        if (!reportBill)
+            return base;
+        const vat = parseTimeReportAmountDisplay(legalOverrides.vatAmount ?? '');
+        const total = Math.round((reportBill.services + reportBill.expenses + vat) * 100) / 100;
+        return {
+            ...base,
+            servicesAmountFormatted: formatTimeReportAmount(reportBill.services, reportBill.currency),
+            totalFormatted: formatTimeReportAmount(total, reportBill.currency),
+        };
+    }, [coverModel, reportBill, legalOverrides.vatAmount]);
+    const pricedLegal = useMemo(() => {
+        if (!reportBill)
+            return legalOverrides;
+        return {
+            ...legalOverrides,
+            extraExpensesAmount: formatTimeReportAmount(reportBill.expenses, reportBill.currency),
+        };
+    }, [legalOverrides, reportBill]);
 
     const combinedReportPages = useMemo(
         () => combinedReport ? Math.max(1, planCombinedReportPreviewPages(combinedReport).length) : 0,
@@ -946,14 +970,14 @@ export function InvoicePreviewPage() {
         : getInvoiceCreateUrl({ resume: true });
 
     const exportInput = useMemo(() => ({
-        model: coverModel ?? fallbackCoverModel(),
+        model: pricedModel,
         session,
         timeReportPack: resolvedTimeReportPack,
-        legalOverrides,
+        legalOverrides: pricedLegal,
         selectedPageNumbers: exportPageNumbers,
         showServiceInitiatorName: showInitiatorName,
         combinedReport,
-    }), [coverModel, session, resolvedTimeReportPack, legalOverrides, exportPageNumbers, showInitiatorName, combinedReport]);
+    }), [pricedModel, session, resolvedTimeReportPack, pricedLegal, exportPageNumbers, showInitiatorName, combinedReport]);
 
     const handleDownloadWord = useCallback(async () => {
         if (exportPageNumbers.length === 0) {
@@ -1149,7 +1173,7 @@ export function InvoicePreviewPage() {
                           {slot.kind === 'cover'
                             ? (
                                 <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--letter">
-                                  <InvoiceCoverLetter model={displayModel}/>
+                                  <InvoiceCoverLetter model={pricedModel}/>
                                 </div>
                               )
                             : slot.kind === 'timeReport' && (summaryOnly || timeReportChunks[slot.chunkIndex])
@@ -1177,7 +1201,7 @@ export function InvoicePreviewPage() {
                               : slot.kind === 'invoice'
                                 ? (
                                     <div className="tt-inv-preview__thumb-doc tt-inv-preview__thumb-doc--invoice">
-                                      <InvoiceLegalInvoicePage model={displayModel} session={session} legalOverrides={legalOverrides}/>
+                                      <InvoiceLegalInvoicePage model={pricedModel} session={session} legalOverrides={pricedLegal}/>
                                     </div>
                                   )
                                 : (
@@ -1408,7 +1432,7 @@ export function InvoicePreviewPage() {
                               aria-label={`Страница ${pageNum} из ${pageCount} — сопроводительное письмо${editingPage === pageNum ? ', режим редактирования' : ''}`}
                             >
                               <InvoiceCoverLetter
-                                model={displayModel}
+                                model={pricedModel}
                                 editable={editingPage === pageNum}
                                 onChange={patchCoverModel}
                               />
@@ -1473,10 +1497,10 @@ export function InvoicePreviewPage() {
                           aria-label={`Страница ${pageNum} из ${pageCount} — счёт`}
                         >
                           <InvoiceLegalInvoicePage
-                            model={displayModel}
+                            model={pricedModel}
                             session={session}
                             editable={editingPage === pageNum}
-                            legalOverrides={legalOverrides}
+                            legalOverrides={pricedLegal}
                             onChangeLegalOverrides={patchLegalOverrides}
                             onChangeModel={patchCoverModel}
                           />

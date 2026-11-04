@@ -685,7 +685,7 @@ function legalInvoiceDocxBlocks(
         model.extraFixedFeeFormatted,
         zeroFallback,
     );
-    const servicesAmount = model.totalFormatted;
+    const servicesAmount = model.servicesAmountFormatted?.trim() || model.totalFormatted;
     const firmAddress = resolveLegalOverrideText(legalOverrides?.firmAddress, KOSTA_LEGAL_FIRM.addressLine);
     const caseLine = resolveLegalCaseDetailLine(session, legalOverrides, model.coverLanguage);
     const cur = packCurrencyCode(model);

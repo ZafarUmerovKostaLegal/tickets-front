@@ -1442,7 +1442,7 @@ function drawLegalInvoicePdfPage(
     const paymentDisclaimer = resolveLegalPaymentDisclaimer(legalOverrides, model.coverLanguage);
     const thanksLine = resolveLegalThanksLine(legalOverrides, model.coverLanguage);
     const totalText = model.totalFormatted;
-    const servicesText = totalText;
+    const servicesText = model.servicesAmountFormatted?.trim() || totalText;
 
     const contentW = W - ML - MR;
     let y = H - MT;
