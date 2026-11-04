@@ -376,6 +376,7 @@ export const ruMessages: Messages = {
         myTasksImportant: 'Важно',
         myTasksLate: 'Просрочено',
         boardLate: 'просрочено: {count}',
+        boardFilters: 'Фильтры',
         boardFilterLate: 'Просроченные',
         boardFilterUrgent: 'Срочные',
         boardHideEmpty: 'Скрыть пустые колонки',
@@ -1461,6 +1462,7 @@ export type Messages = {
         myTasksImportant: string;
         myTasksLate: string;
         boardLate: string;
+        boardFilters: string;
         boardFilterLate: string;
         boardFilterUrgent: string;
         boardHideEmpty: string;

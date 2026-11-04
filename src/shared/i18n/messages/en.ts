@@ -376,6 +376,7 @@ export const enMessages = {
         myTasksImportant: 'Important',
         myTasksLate: 'Overdue',
         boardLate: 'overdue: {count}',
+        boardFilters: 'Filters',
         boardFilterLate: 'Overdue',
         boardFilterUrgent: 'Urgent',
         boardHideEmpty: 'Hide empty columns',

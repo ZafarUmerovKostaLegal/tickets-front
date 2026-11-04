@@ -193,8 +193,6 @@ function FilterPick<T extends string>({
         <SearchableSelect
             className={`lh-bt__pick${value ? ' is-on' : ''}`}
             buttonClassName="lh-bt__pick-btn"
-            portalDropdown
-            portalZIndex={60}
             portalMinWidth={240}
             aria-label={label}
             placeholder={label}
@@ -284,9 +282,29 @@ export function LegalHubMyTasks({
     const [streamFilter, setStreamFilter] = useState('');
     const [ownerFilter, setOwnerFilter] = useState<TaskPersonId | ''>('');
     const [priorityFilter, setPriorityFilter] = useState<TaskPriorityId | ''>('');
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const filtersRef = useRef<HTMLDivElement>(null);
     const [dragging, setDragging] = useState<string | null>(null);
     const [composer, setComposer] = useState(false);
     const seenCreate = useRef(createSignal);
+    useEffect(() => {
+        if (!filtersOpen)
+            return;
+        const onPointer = (event: MouseEvent) => {
+            if (!filtersRef.current?.contains(event.target as Node))
+                setFiltersOpen(false);
+        };
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape')
+                setFiltersOpen(false);
+        };
+        document.addEventListener('mousedown', onPointer);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onPointer);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [filtersOpen]);
     useEffect(() => {
         if (createSignal === seenCreate.current)
             return;
@@ -457,6 +475,46 @@ export function LegalHubMyTasks({
                     </span>
                 </div>
                 <div className="lh-bt__actions">
+                    <div className="lh-bt__menu" ref={filtersRef}>
+                        <button type="button" className={`lh-bt__filter${filtersOpen || filtersOn ? ' is-on' : ''}`} aria-expanded={filtersOpen} aria-haspopup="dialog" onClick={() => setFiltersOpen((value) => !value)}>
+                            <IconFilter />
+                            {t('legalHub.boardFilters')}
+                            {filtersOn ? <em>{[onlyLate, onlyUrgent, projectFilter, statusFilter, streamFilter, ownerFilter, priorityFilter].filter(Boolean).length}</em> : null}
+                        </button>
+                        {filtersOpen ? (
+                            <div className="lh-bt__panel" role="dialog" aria-label={t('legalHub.boardFilters')}>
+                                <div className="lh-bt__chips">
+                                    <button type="button" className={`lh-bt__chip lh-bt__chip--late${onlyLate ? ' is-on' : ''}`} aria-pressed={onlyLate} disabled={lateCount === 0 && !onlyLate} onClick={() => setOnlyLate((value) => !value)}>
+                                        <i aria-hidden />
+                                        {t('legalHub.boardFilterLate')}
+                                        <em>{lateCount}</em>
+                                    </button>
+                                    <button type="button" className={`lh-bt__chip${onlyUrgent ? ' is-on' : ''}`} aria-pressed={onlyUrgent} disabled={urgentCount === 0 && !onlyUrgent} onClick={() => setOnlyUrgent((value) => !value)}>
+                                        <IconFlag />
+                                        {t('legalHub.boardFilterUrgent')}
+                                        <em>{urgentCount}</em>
+                                    </button>
+                                </div>
+                                {project == null ? (
+                                    <FilterPick label={t('legalHub.taskColProject')} value={projectFilter} items={projectOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setProjectFilter} />
+                                ) : null}
+                                <FilterPick label={t('legalHub.taskColStatus')} value={statusFilter} items={statusOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setStatusFilter} />
+                                <FilterPick label={t('legalHub.taskColWorkstream')} value={streamFilter} items={streamOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setStreamFilter} />
+                                <FilterPick label={t('legalHub.taskColOwner')} value={ownerFilter} items={ownerOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setOwnerFilter} />
+                                <FilterPick label={t('legalHub.taskColPriority')} value={priorityFilter} items={priorityOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setPriorityFilter} />
+                                {view === 'board' ? (
+                                    <label className={`lh-bt__toggle${hideEmpty ? ' is-on' : ''}`}>
+                                        <input type="checkbox" checked={hideEmpty} onChange={(event) => setHideEmpty(event.target.checked)} />
+                                        {t('legalHub.boardHideEmpty')}
+                                        {hideEmpty && hiddenCount > 0 ? <em>{t('legalHub.boardHiddenCount').replace('{count}', String(hiddenCount))}</em> : null}
+                                    </label>
+                                ) : null}
+                                {filtersOn ? (
+                                    <button type="button" className="lh-bt__reset" onClick={resetFilters}>{t('legalHub.myTasksClear')}</button>
+                                ) : null}
+                            </div>
+                        ) : null}
+                    </div>
                     <div className="lh-bt__seg" role="group" aria-label={t('legalHub.viewAria')}>
                         <button type="button" className={view === 'board' ? 'is-on' : ''} aria-pressed={view === 'board'} onClick={() => setView('board')}>
                             <IconBoard />
@@ -474,35 +532,6 @@ export function LegalHubMyTasks({
                         </button>
                     ) : null}
                 </div>
-            </div>
-            <div className="lh-bt__filters">
-                <button type="button" className={`lh-bt__chip lh-bt__chip--late${onlyLate ? ' is-on' : ''}`} aria-pressed={onlyLate} disabled={lateCount === 0 && !onlyLate} onClick={() => setOnlyLate((value) => !value)}>
-                    <i aria-hidden />
-                    {t('legalHub.boardFilterLate')}
-                    <em>{lateCount}</em>
-                </button>
-                <button type="button" className={`lh-bt__chip${onlyUrgent ? ' is-on' : ''}`} aria-pressed={onlyUrgent} disabled={urgentCount === 0 && !onlyUrgent} onClick={() => setOnlyUrgent((value) => !value)}>
-                    <IconFlag />
-                    {t('legalHub.boardFilterUrgent')}
-                    <em>{urgentCount}</em>
-                </button>
-                {project == null ? (
-                    <FilterPick label={t('legalHub.taskColProject')} value={projectFilter} items={projectOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setProjectFilter} />
-                ) : null}
-                <FilterPick label={t('legalHub.taskColStatus')} value={statusFilter} items={statusOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setStatusFilter} />
-                <FilterPick label={t('legalHub.taskColWorkstream')} value={streamFilter} items={streamOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setStreamFilter} />
-                <FilterPick label={t('legalHub.taskColOwner')} value={ownerFilter} items={ownerOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setOwnerFilter} />
-                <FilterPick label={t('legalHub.taskColPriority')} value={priorityFilter} items={priorityOptions} noMatch={t('legalHub.teamNoMatch')} onSelect={setPriorityFilter} />
-                {view === 'board' ? (
-                    <label className={`lh-bt__toggle${hideEmpty ? ' is-on' : ''}`}>
-                        <input type="checkbox" checked={hideEmpty} onChange={(event) => setHideEmpty(event.target.checked)} />
-                        {t('legalHub.boardHideEmpty')}
-                        {hideEmpty && hiddenCount > 0 ? <em>{t('legalHub.boardHiddenCount').replace('{count}', String(hiddenCount))}</em> : null}
-                    </label>
-                ) : null}
-                {filtersOn ? (
-                    <button type="button" className="lh-bt__reset" onClick={resetFilters}>{t('legalHub.myTasksClear')}</button>
-                ) : null}
             </div>
         </div>
     );
@@ -769,6 +798,14 @@ function FoldIcon() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <path d="m11 7-5 5 5 5" />
             <path d="m18 7-5 5 5 5" />
+        </svg>
+    );
+}
+
+function IconFilter() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <path d="M4 5h16l-6 7v6l-4 2v-8z" />
         </svg>
     );
 }
