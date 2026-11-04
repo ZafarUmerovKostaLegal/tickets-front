@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { isAuthenticated } from '@shared/lib/auth';
 import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
-import { canAccessAdminPanel } from '@shared/lib/orgRoles';
+import { canAccessAdminPanel, isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { isMeetingRoomAccount, isMeetingRoomAllowedPath } from '@shared/lib/meetingRoomAccounts';
 import { resolveDesktopBackgroundDisplayUrl } from '@entities/user';
 import './ProtectedRoute.css';
@@ -54,6 +54,10 @@ export function ProtectedRoute({ children, adminOnly = false, fallback = null }:
         const strictAdminOnly = location.pathname === routes.networkDriveAccess;
         if (strictAdminOnly) {
             if (user.role !== ADMIN_ROLE)
+                return <Navigate to={routes.home} replace/>;
+        }
+        else if (location.pathname === routes.admin || location.pathname.startsWith('/admin/')) {
+            if (!isPartnerOrgRole(user.role, user.position))
                 return <Navigate to={routes.home} replace/>;
         }
         else if (!canAccessAdminPanel(user.role, user.position)) {

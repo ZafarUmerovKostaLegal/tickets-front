@@ -39,17 +39,17 @@ describe('getVisibleAppNavItems', () => {
         expect(ids).not.toContain('attendance');
     });
 
-    it('администратор видит admin, inventory, attendance', () => {
+    it('администратор видит inventory и attendance, но не партнёрские разделы', () => {
         const items = getVisibleAppNavItems(user({
             role: 'Администратор',
             time_tracking_role: 'manager',
         }), false);
         const ids = items.map((i) => i.id);
-        expect(ids).toContain('admin');
+        expect(ids).not.toContain('admin');
         expect(ids).toContain('inventory');
         expect(ids).toContain('attendance');
-        expect(ids).toContain('accounting');
-        expect(ids).toContain('hr');
+        expect(ids).not.toContain('accounting');
+        expect(ids).not.toContain('hr');
         expect(ids).not.toContain('networkDrive');
     });
 
@@ -64,6 +64,18 @@ describe('getVisibleAppNavItems', () => {
         expect(ids).toContain('accounting');
         expect(ids).toContain('hr');
         expect(ids).not.toContain('contacts');
+    });
+
+    it('сотрудник с должностью партнёра видит партнёрские разделы', () => {
+        const items = getVisibleAppNavItems(user({
+            role: 'Сотрудник',
+            position: 'Партнёр',
+            time_tracking_role: 'user',
+        }), false);
+        const ids = items.map((i) => i.id);
+        expect(ids).toContain('admin');
+        expect(ids).toContain('accounting');
+        expect(ids).toContain('hr');
     });
 
     it('без учёта времени скрывает timeTracking', () => {

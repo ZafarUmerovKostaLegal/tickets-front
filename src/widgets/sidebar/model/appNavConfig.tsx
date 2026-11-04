@@ -4,7 +4,7 @@ import { routes } from '@shared/config';
 import type { User } from '@entities/user';
 import { canAccessExpensesSection } from '@entities/expenses/model/expenseModeration';
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
-import { canAccessAdminPanel, canAccessAdminOnlyModules, canAccessAttendance, isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
+import { canAccessAdminOnlyModules, canAccessAdminPanel, canAccessAttendance, isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import { canAccessItSecurity } from '@shared/lib/itSecurityAccess';
 import type { TranslationKey } from '@shared/i18n/translate';
@@ -38,6 +38,7 @@ export type AppNavItemDef = {
     to: string;
     icon: ComponentType;
     adminOnly?: boolean;
+    partnerOnly?: boolean;
 
     adminOnlyStrict?: boolean;
 
@@ -71,12 +72,12 @@ export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { id: 'todo', to: routes.todo, icon: IconList },
     { id: 'tickets', to: routes.tickets, icon: IconTicket },
     { id: 'correspondence', to: routes.correspondence, icon: IconMailInbox },
-    { id: 'accounting', to: routes.accounting, icon: IconAccounting, adminOnly: true },
-    { id: 'hr', to: routes.hr, icon: IconHr, adminOnly: true },
+    { id: 'accounting', to: routes.accounting, icon: IconAccounting, partnerOnly: true },
+    { id: 'hr', to: routes.hr, icon: IconHr, partnerOnly: true },
     { id: 'kostaDaily', to: routes.kostaDaily, icon: IconMessages },
     { id: 'vacationSchedule', to: routes.vacationSchedule, icon: IconCalendarCheck },
     { id: 'inventory', to: routes.inventory, icon: IconBox },
-    { id: 'admin', to: routes.admin, icon: IconGear },
+    { id: 'admin', to: routes.admin, icon: IconGear, partnerOnly: true },
     { id: 'networkDrive', to: routes.networkDriveAccess, icon: IconFolderNetwork, adminOnly: true, adminOnlyStrict: true, desktopOnly: true },
     { id: 'attendance', to: routes.attendance, icon: IconClock },
     { id: 'callSchedule', to: routes.callSchedule, icon: IconPhone },
@@ -97,14 +98,10 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
     }
     const role = user?.role?.toLowerCase() || '';
     const isEmployee = !loading && role.includes('сотрудник');
-    const rk = normalizeOrgRoleKey(user?.role);
-    const isAdminOrPartner = !loading && (rk.includes('администратор') || isPartnerOrgRole(user?.role, user?.position));
+    const isPartner = !loading && isPartnerOrgRole(user?.role, user?.position);
     let visible: AppNavItemDef[] = APP_NAV_DEFINITIONS;
     if (isEmployee) {
-        visible = APP_NAV_DEFINITIONS.filter((item) => EMPLOYEE_NAV_IDS.has(item.id));
-    }
-    else if (!isAdminOrPartner) {
-        visible = visible.filter((item) => item.id !== 'admin');
+        visible = APP_NAV_DEFINITIONS.filter((item) => EMPLOYEE_NAV_IDS.has(item.id) || (item.partnerOnly && isPartner));
     }
     if (!loading && !canAccessExpensesSection(user?.role)) {
         visible = visible.filter((item) => item.id !== 'expenses' && item.id !== 'expensesPartners');
@@ -116,6 +113,7 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
         visible = visible.filter((item) => item.id !== 'attendance');
     }
     if (!loading) {
+        visible = visible.filter((item) => !item.partnerOnly || isPartner);
         visible = visible.filter((item) => {
             if (!item.adminOnly)
                 return true;
