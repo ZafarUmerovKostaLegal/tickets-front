@@ -28,6 +28,8 @@ export type MineTask = HubTask & {
     internalOn: string;
     instructions: string;
     approval: boolean;
+    /** Custom board column. Built-in columns leave this empty. */
+    boardColumn?: string;
 };
 
 const COLUMNS: BoardColumn[] = ['todo', 'progress', 'waitClient', 'waitGov', 'associate', 'partner', 'changes', 'done'];
@@ -105,7 +107,13 @@ function dueColumnOf(task: Pick<MineTask, 'clientOn'>): DueColumn {
     return 'later';
 }
 
-export function columnOf(task: Pick<MineTask, 'status' | 'waitingFor' | 'done'>): BoardColumn {
+function isBuiltin(column: string): column is BoardColumn {
+    return (COLUMNS as readonly string[]).includes(column);
+}
+
+export function columnOf(task: Pick<MineTask, 'status' | 'waitingFor' | 'done' | 'boardColumn'>): string {
+    if (task.boardColumn)
+        return task.boardColumn;
     if (task.done)
         return 'done';
     if (task.status === 'changes')
@@ -152,13 +160,36 @@ const COLLAPSED_KEY = 'lh-board-collapsed';
 const HIDE_EMPTY_KEY = 'lh-board-hide-empty';
 const VIEW_KEY = 'lh-board-view';
 const COLUMN_ORDER_KEY = 'lh-board-column-order';
+const CUSTOM_COLUMNS_KEY = 'lh-board-custom-columns';
 
-function readColumnOrder(): BoardColumn[] {
+type CustomColumn = { id: string; title: string };
+
+function readCustomColumns(): CustomColumn[] {
+    const stored = readStored<unknown>(CUSTOM_COLUMNS_KEY, []);
+    if (!Array.isArray(stored))
+        return [];
+    return stored.flatMap((item) => {
+        if (!item || typeof item !== 'object')
+            return [];
+        const row = item as { id?: unknown; title?: unknown };
+        const id = typeof row.id === 'string' ? row.id.trim() : '';
+        const title = typeof row.title === 'string' ? row.title.trim() : '';
+        if (!id || !title || isBuiltin(id))
+            return [];
+        return [{ id, title }];
+    });
+}
+
+function readColumnOrder(customIds: readonly string[]): string[] {
     const stored = readStored<unknown>(COLUMN_ORDER_KEY, []);
     const list = Array.isArray(stored) ? stored : [];
-    const known = new Set<string>(COLUMNS);
-    const picked = list.filter((id): id is BoardColumn => typeof id === 'string' && known.has(id));
-    return [...picked, ...COLUMNS.filter((id) => !picked.includes(id))];
+    const known = new Set<string>([...COLUMNS, ...customIds]);
+    const picked = list.filter((id): id is string => typeof id === 'string' && known.has(id));
+    return [
+        ...picked,
+        ...COLUMNS.filter((id) => !picked.includes(id)),
+        ...customIds.filter((id) => !picked.includes(id)),
+    ];
 }
 
 function isLateTask(task: MineTask): boolean {
@@ -284,13 +315,14 @@ export function LegalHubMyTasks({
         setHideEmptyState(next);
         writeStored(HIDE_EMPTY_KEY, next);
     };
-    const [columnOrder, setColumnOrder] = useState<BoardColumn[]>(readColumnOrder);
+    const [customColumns, setCustomColumns] = useState<CustomColumn[]>(readCustomColumns);
+    const [columnOrder, setColumnOrder] = useState<string[]>(() => readColumnOrder(readCustomColumns().map((column) => column.id)));
     const [columnDrag, setColumnDrag] = useState<string | null>(null);
     const [columnOver, setColumnOver] = useState<string | null>(null);
     const [onlyLate, setOnlyLate] = useState(false);
     const [onlyUrgent, setOnlyUrgent] = useState(false);
     const [projectFilter, setProjectFilter] = useState<TaskProjectId | ''>('');
-    const [statusFilter, setStatusFilter] = useState<BoardColumn | ''>('');
+    const [statusFilter, setStatusFilter] = useState('');
     const [streamFilter, setStreamFilter] = useState('');
     const [ownerFilter, setOwnerFilter] = useState<TaskPersonId | ''>('');
     const [priorityFilter, setPriorityFilter] = useState<TaskPriorityId | ''>('');
@@ -330,7 +362,7 @@ export function LegalHubMyTasks({
             setComposer(true);
         }
     }, [createSignal, mode]);
-    const [composeColumn, setComposeColumn] = useState<BoardColumn | null>(null);
+    const [composeColumn, setComposeColumn] = useState<string | null>(null);
     const [openId, setOpenId] = useState<string | null>(null);
     const needle = query.trim().toLowerCase();
     const openTask = tasks.find((task) => task.id === openId) ?? null;
@@ -378,17 +410,19 @@ export function LegalHubMyTasks({
         setPriorityFilter('');
     };
 
-    const moveTask = (id: string, column: BoardColumn) => {
+    const moveTask = (id: string, column: string) => {
         flip.current = 'cards';
         setTasks((current) => current.map((task) => {
             if (task.id !== id)
                 return task;
+            if (!isBuiltin(column))
+                return { ...task, boardColumn: column, done: false };
             const waitingFor = column === 'waitClient'
                 ? (isClientWait(task) ? task.waitingFor : 'Client')
                 : column === 'waitGov'
                     ? (task.waitingFor && !isClientWait(task) ? task.waitingFor : undefined)
                     : task.waitingFor;
-            return { ...task, done: column === 'done', status: statusOf(column), waitingFor };
+            return { ...task, boardColumn: undefined, done: column === 'done', status: statusOf(column), waitingFor };
         }));
         setDragging(null);
     };
@@ -398,8 +432,8 @@ export function LegalHubMyTasks({
             return;
         flip.current = 'columns';
         setColumnOrder((current) => {
-            const fromIndex = current.indexOf(from as BoardColumn);
-            const toIndex = current.indexOf(to as BoardColumn);
+            const fromIndex = current.indexOf(from);
+            const toIndex = current.indexOf(to);
             if (fromIndex < 0 || toIndex < 0)
                 return current;
             const next = [...current];
@@ -412,7 +446,47 @@ export function LegalHubMyTasks({
         setColumnOver(null);
     };
 
-    const openComposer = (column: BoardColumn | null) => {
+    const addColumn = (title: string) => {
+        const name = title.trim();
+        if (!name)
+            return;
+        const id = `c-${Date.now().toString(36)}`;
+        flip.current = 'columns';
+        setCustomColumns((current) => {
+            const next = [...current, { id, title: name }];
+            writeStored(CUSTOM_COLUMNS_KEY, next);
+            return next;
+        });
+        setColumnOrder((current) => {
+            const next = [...current, id];
+            writeStored(COLUMN_ORDER_KEY, next);
+            return next;
+        });
+        requestAnimationFrame(() => {
+            const board = boardRef.current;
+            if (board)
+                board.scrollLeft = board.scrollWidth;
+        });
+    };
+
+    const removeColumn = (id: string) => {
+        flip.current = 'columns';
+        setCustomColumns((current) => {
+            const next = current.filter((column) => column.id !== id);
+            writeStored(CUSTOM_COLUMNS_KEY, next);
+            return next;
+        });
+        setColumnOrder((current) => {
+            const next = current.filter((column) => column !== id);
+            writeStored(COLUMN_ORDER_KEY, next);
+            return next;
+        });
+        setTasks((current) => current.map((task) => (
+            task.boardColumn === id ? { ...task, boardColumn: undefined } : task
+        )));
+    };
+
+    const openComposer = (column: string | null) => {
         setComposeColumn(column);
         setComposer(true);
     };
@@ -460,6 +534,82 @@ export function LegalHubMyTasks({
         sync('[data-card]', 'data-card', cardBoxes.current, kind === 'cards');
     });
 
+    useEffect(() => {
+        const board = boardRef.current;
+        if (!board || view !== 'board')
+            return;
+        let pan: { x: number; left: number; pointerId: number } | null = null;
+        const onDown = (event: PointerEvent) => {
+            if (event.button !== 0)
+                return;
+            const target = event.target;
+            if (!(target instanceof Element))
+                return;
+            if (target.closest('button, a, input, textarea, select, label, [draggable="true"], .lh-my__card, .lh-my__adder'))
+                return;
+            const rect = board.getBoundingClientRect();
+            if (event.clientY >= rect.bottom - 18)
+                return;
+            event.preventDefault();
+            pan = { x: event.clientX, left: board.scrollLeft, pointerId: event.pointerId };
+            board.classList.add('is-panning');
+            board.setPointerCapture(event.pointerId);
+        };
+        const onMove = (event: PointerEvent) => {
+            if (!pan || event.pointerId !== pan.pointerId)
+                return;
+            board.scrollLeft = pan.left - (event.clientX - pan.x);
+        };
+        const onUp = (event: PointerEvent) => {
+            if (!pan || event.pointerId !== pan.pointerId)
+                return;
+            pan = null;
+            board.classList.remove('is-panning');
+        };
+        board.addEventListener('pointerdown', onDown);
+        board.addEventListener('pointermove', onMove);
+        board.addEventListener('pointerup', onUp);
+        board.addEventListener('pointercancel', onUp);
+        return () => {
+            board.classList.remove('is-panning');
+            board.removeEventListener('pointerdown', onDown);
+            board.removeEventListener('pointermove', onMove);
+            board.removeEventListener('pointerup', onUp);
+            board.removeEventListener('pointercancel', onUp);
+        };
+    }, [view]);
+
+    useEffect(() => {
+        if (!dragging && !columnDrag)
+            return;
+        const board = boardRef.current;
+        if (!board)
+            return;
+        let dx = 0;
+        let frame = 0;
+        const onOver = (event: globalThis.DragEvent) => {
+            const rect = board.getBoundingClientRect();
+            const edge = 72;
+            if (event.clientX < rect.left + edge)
+                dx = -16;
+            else if (event.clientX > rect.right - edge)
+                dx = 16;
+            else
+                dx = 0;
+        };
+        const tick = () => {
+            if (dx)
+                board.scrollLeft += dx;
+            frame = requestAnimationFrame(tick);
+        };
+        frame = requestAnimationFrame(tick);
+        window.addEventListener('dragover', onOver);
+        return () => {
+            cancelAnimationFrame(frame);
+            window.removeEventListener('dragover', onOver);
+        };
+    }, [columnDrag, dragging]);
+
     const canCreate = mode === 'mine';
     const title = project != null ? PROJECT_TITLE[project] : t(mode === 'queue' ? 'legalHub.sideReview' : 'legalHub.myTasks');
     const projectOptions = useMemo(
@@ -467,9 +617,12 @@ export function LegalHubMyTasks({
         [t],
     );
     const statusOptions = useMemo(() => {
-        const ids: BoardColumn[] = mode === 'queue' ? ['associate', 'partner'] : COLUMNS;
-        return [{ id: '' as const, label: t('legalHub.boardAllStatuses') }, ...ids.map((id) => ({ id, label: t(COLUMN_LABEL[id]) }))];
-    }, [mode, t]);
+        const ids: string[] = mode === 'queue' ? ['associate', 'partner'] : [...COLUMNS, ...customColumns.map((column) => column.id)];
+        return [{ id: '' as const, label: t('legalHub.boardAllStatuses') }, ...ids.map((id) => ({
+            id,
+            label: customColumns.find((column) => column.id === id)?.title ?? (isBuiltin(id) ? t(COLUMN_LABEL[id]) : id),
+        }))];
+    }, [customColumns, mode, t]);
     const streamOptions = useMemo(() => {
         const names = [...new Set(scoped.map((task) => task.workstream).filter((name) => name && name !== '—'))];
         names.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
@@ -484,7 +637,8 @@ export function LegalHubMyTasks({
         [t],
     );
 
-    const columns: { id: string; label: string; hint: string | null; review: boolean; droppable: boolean; canAdd: boolean; cards: MineTask[] }[] = mode === 'queue'
+    type BoardColumnModel = { id: string; label: string; hint: string | null; review: boolean; droppable: boolean; canAdd: boolean; custom: boolean; cards: MineTask[] };
+    const columns: BoardColumnModel[] = mode === 'queue'
         ? ([
             { id: 'overdue', label: 'legalHub.queueDueOverdue', hint: 'legalHub.queueDueSubOverdue' },
             { id: 'today', label: 'legalHub.queueDueToday', hint: 'legalHub.queueDueSubToday' },
@@ -498,23 +652,41 @@ export function LegalHubMyTasks({
             review: false,
             droppable: false,
             canAdd: false,
+            custom: false,
             cards: visible.filter((task) => dueColumnOf(task) === column.id).sort((a, b) => a.clientOn.localeCompare(b.clientOn)),
         }))
-        : columnOrder.map((column) => {
+        : columnOrder.flatMap((column): BoardColumnModel[] => {
+            const custom = customColumns.find((item) => item.id === column);
+            const cards = visible
+                .filter((task) => columnOf(task) === column)
+                .sort((a, b) => Number(isLateTask(b)) - Number(isLateTask(a)) || Number(b.priority === 'high') - Number(a.priority === 'high') || a.clientOn.localeCompare(b.clientOn));
+            if (custom) {
+                return [{
+                    id: custom.id,
+                    label: custom.title,
+                    hint: null,
+                    review: false,
+                    droppable: true,
+                    canAdd: canCreate,
+                    custom: true,
+                    cards,
+                }];
+            }
+            if (!isBuiltin(column))
+                return [];
             const sub = COLUMN_SUB[column];
-            return {
+            return [{
                 id: column,
                 label: t(COLUMN_LABEL[column]),
                 hint: sub ? t(sub) : null,
                 review: LOCKED.includes(column),
                 droppable: DROPPABLE.includes(column),
                 canAdd: canCreate && QUICK_ADD.includes(column),
-                cards: visible
-                    .filter((task) => columnOf(task) === column)
-                    .sort((a, b) => Number(isLateTask(b)) - Number(isLateTask(a)) || Number(b.priority === 'high') - Number(a.priority === 'high') || a.clientOn.localeCompare(b.clientOn)),
-            };
+                custom: false,
+                cards,
+            }];
         });
-    const shownColumns = columns.filter((column) => !hideEmpty || column.cards.length > 0 || (dragging != null && column.droppable));
+    const shownColumns = columns.filter((column) => !hideEmpty || column.custom || column.cards.length > 0 || (dragging != null && column.droppable));
     const hiddenCount = columns.length - shownColumns.length;
 
     const toolbar = (
@@ -661,7 +833,7 @@ export function LegalHubMyTasks({
                                                 <b>{owner.name}</b>
                                                 <small>{reviewer ? `→ ${reviewer.name}` : '\u00a0'}</small>
                                             </span>
-                                            <span className={`lh-rows__stage lh-rows__stage--${column}`}>{t(COLUMN_LABEL[column])}</span>
+                                            <span className={`lh-rows__stage lh-rows__stage--${column}`}>{customColumns.find((item) => item.id === column)?.title ?? (isBuiltin(column) ? t(COLUMN_LABEL[column]) : column)}</span>
                                             <span className={`lh-my__duepill${late ? ' is-late' : ''}${soon ? ' is-soon' : ''}`}>
                                                 {shortDate(task.clientOn, locale)} · {dueText(dayDelta(task.clientOn), t)}
                                             </span>
@@ -708,12 +880,14 @@ export function LegalHubMyTasks({
                             onColumnDrop={reorderColumns}
                             onAdd={() => openComposer(column.id as BoardColumn)}
                             canAdd={column.canAdd}
-                            onMove={(id) => moveTask(id, column.id as BoardColumn)}
+                            onMove={(id) => moveTask(id, column.id)}
                             onDragStart={setDragging}
                             onDragEnd={() => setDragging(null)}
                             onOpen={setOpenId}
+                            onRemove={column.custom ? () => removeColumn(column.id) : undefined}
                         />
                     ))}
+                    {mode === 'mine' ? <ColumnAdder onCreate={addColumn} /> : null}
                 </div>
             )}
             {drawer}
@@ -722,7 +896,7 @@ export function LegalHubMyTasks({
     );
 }
 
-function BoardColumnView({ id, title, hint, review, cards, showProject, collapsed, onToggleCollapsed, droppable, dragging, reorderable, columnDrag, columnOver, onColumnDragStart, onColumnDragEnd, onColumnOver, onColumnDrop, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen }: {
+function BoardColumnView({ id, title, hint, review, cards, showProject, collapsed, onToggleCollapsed, droppable, dragging, reorderable, columnDrag, columnOver, onColumnDragStart, onColumnDragEnd, onColumnOver, onColumnDrop, onAdd, canAdd, onMove, onDragStart, onDragEnd, onOpen, onRemove }: {
     id: string;
     title: string;
     hint: string | null;
@@ -746,6 +920,7 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
     onDragStart: (id: string) => void;
     onDragEnd: () => void;
     onOpen: (id: string) => void;
+    onRemove?: () => void;
 }) {
     const { t } = useI18n();
     const foldLabel = t(collapsed ? 'legalHub.myTasksColumnExpand' : 'legalHub.myTasksColumnCollapse');
@@ -829,6 +1004,9 @@ function BoardColumnView({ id, title, hint, review, cards, showProject, collapse
                     <span className="lh-my__lock" title={hint ?? undefined}>
                         <LockIcon />
                     </span>
+                ) : null}
+                {onRemove ? (
+                    <button type="button" className="lh-my__col-remove" aria-label={t('legalHub.boardRemoveColumn')} title={t('legalHub.boardRemoveColumn')} onClick={onRemove}>×</button>
                 ) : null}
                 <button type="button" className="lh-my__fold-btn" aria-label={foldLabel} title={foldLabel} onClick={onToggleCollapsed}>
                     <FoldIcon />
@@ -1011,9 +1189,58 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
     );
 }
 
+function ColumnAdder({ onCreate }: { onCreate: (title: string) => void }) {
+    const { t } = useI18n();
+    const [open, setOpen] = useState(false);
+    const [title, setTitle] = useState('');
+    const submit = () => {
+        const name = title.trim();
+        if (!name)
+            return;
+        onCreate(name);
+        setTitle('');
+        setOpen(false);
+    };
+    if (!open) {
+        return (
+            <div className="lh-my__adder">
+                <button type="button" className="lh-my__add" onClick={() => setOpen(true)}>+ {t('legalHub.boardAddColumn')}</button>
+            </div>
+        );
+    }
+    return (
+        <div className="lh-my__adder">
+            <form onSubmit={(event) => {
+                event.preventDefault();
+                submit();
+            }}
+            >
+                <input
+                    autoFocus
+                    value={title}
+                    placeholder={t('legalHub.boardColumnName')}
+                    aria-label={t('legalHub.boardColumnName')}
+                    onChange={(event) => setTitle(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Escape') {
+                            event.preventDefault();
+                            setTitle('');
+                            setOpen(false);
+                        }
+                    }}
+                />
+                <div className="lh-my__adder-actions">
+                    <button type="submit" disabled={!title.trim()}>{t('legalHub.boardAddColumn')}</button>
+                    <button type="button" onClick={() => { setTitle(''); setOpen(false); }}>{t('legalHub.myTasksCancel')}</button>
+                </div>
+            </form>
+        </div>
+    );
+}
+
 function NewTaskDialog({ project: fixedProject = null, column = null, onClose, onCreate }: {
     project?: TaskProjectId | null;
-    column?: BoardColumn | null;
+    column?: string | null;
     onClose: () => void;
     onCreate: (task: MineTask) => void;
 }) {
@@ -1060,7 +1287,7 @@ function NewTaskDialog({ project: fixedProject = null, column = null, onClose, o
             workstream: workstream.trim() || '—',
             owner,
             reviewer: approval ? 'partner' : null,
-            status: column ? statusOf(column) : 'todo',
+            status: column && isBuiltin(column) ? statusOf(column) : 'todo',
             priority,
             reviewOn: null,
             clientOn,
@@ -1070,6 +1297,7 @@ function NewTaskDialog({ project: fixedProject = null, column = null, onClose, o
             internalOn,
             instructions: instructions.trim(),
             approval,
+            boardColumn: column && !isBuiltin(column) ? column : undefined,
         });
     };
 

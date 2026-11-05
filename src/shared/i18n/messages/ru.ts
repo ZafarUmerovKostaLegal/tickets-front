@@ -382,6 +382,9 @@ export const ruMessages: Messages = {
         boardHideEmpty: 'Скрыть пустые колонки',
         boardHiddenCount: 'Скрыто колонок: {count}',
         boardMoveColumn: 'Переместить колонку',
+        boardAddColumn: 'Добавить колонку',
+        boardColumnName: 'Название колонки',
+        boardRemoveColumn: 'Удалить колонку',
         boardViewBoard: 'Доска',
         boardViewList: 'Список',
         boardAllProjects: 'Все проекты',
@@ -1469,6 +1472,9 @@ export type Messages = {
         boardHideEmpty: string;
         boardHiddenCount: string;
         boardMoveColumn: string;
+        boardAddColumn: string;
+        boardColumnName: string;
+        boardRemoveColumn: string;
         boardViewBoard: string;
         boardViewList: string;
         boardAllProjects: string;

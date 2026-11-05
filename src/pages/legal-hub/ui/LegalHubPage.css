@@ -4090,6 +4090,11 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   border-radius: 999px;
 }
 
+.lh-my__board.is-panning {
+  cursor: grabbing;
+  user-select: none;
+}
+
 .lh-my__adder {
   display: flex;
   flex: 0 0 272px;
@@ -4186,6 +4191,7 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  margin-left: auto;
   width: 1.35rem;
   height: 1.35rem;
   padding: 0;
@@ -5934,6 +5940,14 @@ body[data-theme='dark'] .lh-page {
 
 .lh-my--docket .lh-bt {
   margin-bottom: 0;
+}
+
+.lh-my--docket .lh-my__adder {
+  flex-basis: 360px;
+  width: 360px;
+  min-width: 360px;
+  max-width: 360px;
+  align-self: flex-start;
 }
 
 .lh-my--docket .lh-my__col {
@@ -7780,7 +7794,8 @@ body[data-theme='dark'] .lh-page {
   transition: opacity 0.15s ease;
 }
 
-.lh-my--docket .lh-my__lock + .lh-my__fold-btn {
+.lh-my--docket .lh-my__lock + .lh-my__fold-btn,
+.lh-my__col-remove + .lh-my__fold-btn {
   margin-left: 0.15rem;
 }
 
