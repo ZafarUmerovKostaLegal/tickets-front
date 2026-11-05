@@ -150,7 +150,9 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
     const [important, setImportant] = useState(seed.important || task.important === true);
     const [reviewer, setReviewer] = useState<TaskPersonId | ''>(task.reviewer ?? '');
     const [approved, setApproved] = useState(false);
-    const ownerPerson = owner ?? PERSON_LABEL[task.owner];
+    const ownerPerson = owner ?? (task.assigneeName?.trim()
+        ? { name: task.assigneeName.trim(), code: task.assigneeCode?.trim() || task.assigneeName.trim().slice(0, 2).toUpperCase() }
+        : PERSON_LABEL[task.owner]);
     const ownerName = ownerPerson.name;
     const ownerTone = owner ? 'member' : task.owner;
     const people = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].code }));
@@ -309,7 +311,7 @@ export function LegalHubTaskDrawer({ task, owner, onClose }: {
                 <header className="lh-drawer__head">
                     <span className="lh-drawer__project">
                         <IconFolder />
-                        <span>{PROJECT_LABEL[task.project]} / {task.workstream}</span>
+                        <span>{task.projectName?.trim() || PROJECT_LABEL[task.project]}{task.workstream && task.workstream !== '—' ? ` / ${task.workstream}` : ''}</span>
                     </span>
                     <button type="button" className="lh-drawer__close" aria-label={t('legalHub.taskDrawerClose')} onClick={onClose}>
                         <IconClose />

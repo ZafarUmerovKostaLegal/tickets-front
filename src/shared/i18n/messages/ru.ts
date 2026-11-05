@@ -213,7 +213,7 @@ export const ruMessages: Messages = {
         taskStatusAssociate: 'Проверка ассоциата',
         taskStatusTodo: 'К выполнению',
         taskPriorityHigh: 'Высокий',
-        taskPriorityNormal: 'Обычный',
+        taskPriorityNormal: 'Средний',
         taskPriorityLow: 'Низкий',
         taskOverdue: 'просрочено {count} д',
         taskDaysLeft: 'ещё {count} д',
@@ -366,6 +366,7 @@ export const ruMessages: Messages = {
         myTasksCancel: 'Отмена',
         myTasksCreate: 'Создать задачу',
         myTasksTitleRequired: 'Укажите название.',
+        myTasksProjectRequired: 'Выберите проект.',
         myTasksDateRequired: 'Укажите срок клиента.',
         myTasksProgress: '{done} из {total} готово',
         myTasksCountOne: '{count} задача',
@@ -1469,6 +1470,7 @@ export type Messages = {
         myTasksCancel: string;
         myTasksCreate: string;
         myTasksTitleRequired: string;
+        myTasksProjectRequired: string;
         myTasksDateRequired: string;
         myTasksProgress: string;
         myTasksCountOne: string;

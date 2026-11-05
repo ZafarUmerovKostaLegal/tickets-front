@@ -3112,6 +3112,10 @@ body[data-theme='dark'] .lh-tasks__route { color: #c4b5fd; }
   gap: 0.75rem 0.85rem;
 }
 
+.lh-drawer__field--wide {
+  grid-column: 1 / -1;
+}
+
 .lh-drawer__rows {
   display: flex;
   flex-direction: column;

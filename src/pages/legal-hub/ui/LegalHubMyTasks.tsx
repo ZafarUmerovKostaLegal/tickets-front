@@ -6,12 +6,15 @@ import { DatePicker, SearchableSelect } from '@shared/ui';
 import { useSetLegalHubChrome } from './legalHubChrome';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import { dueText } from './legalHubShared';
+import { canAssignLegalHubTask } from './legalHubRank';
+import { useLegalHubView } from './legalHubView';
 import {
     HUB_TASKS,
     MOCK_DONE_IDS,
     PERSON_LABEL,
-    PROJECT_LABEL,
     PROJECT_TITLE,
+    taskOwnerLabel,
+    taskProjectName,
     TASK_PEOPLE,
     TASK_PRIORITIES,
     TASK_PROJECTS,
@@ -263,6 +266,7 @@ export function LegalHubMyTasks({
     onBack,
     heading = null,
     scope = null,
+    boardOwnerId = null,
 }: {
     query: string;
     source?: HubTask[] | null;
@@ -278,6 +282,8 @@ export function LegalHubMyTasks({
     heading?: string | null;
     /** Separate stored board title from the personal board. */
     scope?: string | null;
+    /** Whose board is open. Project boards ignore this and show that project's tasks. */
+    boardOwnerId?: number | null;
 }) {
     const { t, locale } = useI18n();
     const [inner, setInner] = useState<MineTask[]>(() => mineFrom(source ?? HUB_TASKS));
@@ -372,6 +378,10 @@ export function LegalHubMyTasks({
     const openTask = tasks.find((task) => task.id === openId) ?? null;
 
     const scoped = useMemo(() => tasks.filter((task) => {
+        if (scope && task.projectId && task.projectId !== scope)
+            return false;
+        if (!scope && boardOwnerId != null && task.assigneeId != null && task.assigneeId !== boardOwnerId)
+            return false;
         if (project != null && task.project !== project)
             return false;
         if (mode === 'queue' && (task.done || (task.status !== 'associate' && task.status !== 'partner')))
@@ -379,7 +389,7 @@ export function LegalHubMyTasks({
         if (view === 'list' && task.done)
             return false;
         return true;
-    }), [mode, project, tasks, view]);
+    }), [boardOwnerId, mode, project, scope, tasks, view]);
     const visible = useMemo(() => scoped.filter((task) => {
         if (projectFilter && task.project !== projectFilter)
             return false;
@@ -397,9 +407,9 @@ export function LegalHubMyTasks({
             return false;
         if (!needle)
             return true;
-        const owner = PERSON_LABEL[task.owner].name;
-        const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer].name : '';
-        return `${task.title} ${PROJECT_LABEL[task.project]} ${task.workstream} ${owner} ${reviewer}`.toLowerCase().includes(needle);
+        const owner = taskOwnerLabel(task).name;
+        const reviewer = task.reviewer && (TASK_PEOPLE as readonly string[]).includes(task.reviewer) ? PERSON_LABEL[task.reviewer].name : '';
+        return `${task.title} ${taskProjectName(task)} ${task.workstream} ${owner} ${reviewer}`.toLowerCase().includes(needle);
     }), [needle, onlyLate, onlyUrgent, ownerFilter, priorityFilter, projectFilter, scoped, statusFilter, streamFilter]);
     const lateCount = scoped.filter(isLateTask).length;
     const urgentCount = scoped.filter((task) => !task.done && task.priority === 'high').length;
@@ -793,7 +803,8 @@ export function LegalHubMyTasks({
     ) : null;
     const dialog = composer ? (
         <NewTaskDialog
-            project={project}
+            fixedProjectId={scope}
+            boardOwnerId={boardOwnerId}
             column={composeColumn}
             onClose={closeComposer}
             onCreate={(created) => {
@@ -827,8 +838,8 @@ export function LegalHubMyTasks({
                         <ul>
                             {listed.map((task) => {
                                 const column = columnOf(task);
-                                const owner = PERSON_LABEL[task.owner];
-                                const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer] : null;
+                                const owner = taskOwnerLabel(task);
+                                const reviewer = task.reviewer && (TASK_PEOPLE as readonly string[]).includes(task.reviewer) ? PERSON_LABEL[task.reviewer] : null;
                                 const stream = task.workstream && task.workstream !== '—' ? task.workstream : '';
                                 const late = dayDelta(task.clientOn) < 0;
                                 const soon = !late && dayDelta(task.clientOn) <= 1;
@@ -841,14 +852,14 @@ export function LegalHubMyTasks({
                                                     {task.title}
                                                 </strong>
                                                 <small className="lh-rows__meta">
-                                                    {project == null ? `${PROJECT_TITLE[task.project]} · ` : ''}
+                                                    {project == null ? `${taskProjectName(task)} · ` : ''}
                                                     {stream ? `${stream} · ` : ''}
                                                     {owner.name}
                                                     {reviewer ? ` → ${reviewer.name}` : ''}
                                                 </small>
                                             </span>
                                             <span className="lh-rows__project">
-                                                {project == null ? <b>{PROJECT_TITLE[task.project]}</b> : <b>{stream || '—'}</b>}
+                                                {project == null ? <b>{taskProjectName(task)}</b> : <b>{stream || '—'}</b>}
                                                 {project == null ? <small>{stream || '\u00a0'}</small> : null}
                                             </span>
                                             <span className="lh-rows__people">
@@ -1164,12 +1175,12 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
 }) {
     const { t, locale } = useI18n();
     const dragged = useRef(false);
-    const owner = PERSON_LABEL[task.owner];
-    const reviewer = task.reviewer ? PERSON_LABEL[task.reviewer] : null;
+    const owner = taskOwnerLabel(task);
+    const reviewer = task.reviewer && (TASK_PEOPLE as readonly string[]).includes(task.reviewer) ? PERSON_LABEL[task.reviewer] : null;
     const clientLate = !task.done && dayDelta(task.clientOn) < 0;
     const soon = !task.done && !clientLate && dayDelta(task.clientOn) <= 1;
     const due = `${shortDate(task.clientOn, locale)} · ${task.done ? t('legalHub.taskStageApproved') : dueText(dayDelta(task.clientOn), t)}`;
-    const context = [showProject ? PROJECT_LABEL[task.project] : '', task.workstream && task.workstream !== '—' ? task.workstream : ''].filter(Boolean).join(' · ');
+    const context = [showProject ? taskProjectName(task) : '', task.workstream && task.workstream !== '—' ? task.workstream : ''].filter(Boolean).join(' · ');
     return (
         <li
             data-card={task.id}
@@ -1208,7 +1219,7 @@ function TaskCard({ task, showProject, draggable, lifting, onDragStart, onDragEn
             {context ? <span className="lh-my__context">{context}</span> : null}
             <span className="lh-my__card-foot">
                 <span className={`lh-my__duepill${clientLate ? ' is-late' : ''}${soon ? ' is-soon' : ''}${task.done ? ' is-done' : ''}`}>{due}</span>
-                <span className={`lh-tasks__avatar lh-tasks__avatar--${task.owner}`} title={reviewer ? `${owner.name} → ${reviewer.name}` : owner.name}>{owner.code}</span>
+                <span className={`lh-tasks__avatar${task.assigneeName ? '' : ` lh-tasks__avatar--${task.owner}`}`} title={reviewer ? `${owner.name} → ${reviewer.name}` : owner.name}>{owner.code}</span>
             </span>
         </li>
     );
@@ -1263,26 +1274,61 @@ function ColumnAdder({ onCreate }: { onCreate: (title: string) => void }) {
     );
 }
 
-function NewTaskDialog({ project: fixedProject = null, column = null, onClose, onCreate }: {
-    project?: TaskProjectId | null;
+function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = null, onClose, onCreate }: {
+    fixedProjectId?: string | null;
+    boardOwnerId?: number | null;
     column?: string | null;
     onClose: () => void;
     onCreate: (task: MineTask) => void;
 }) {
     const { t } = useI18n();
+    const { staff, projects: hubProjects, userId, me } = useLegalHubView();
+    const openProjects = useMemo(
+        () => hubProjects.filter((project) => userId != null && project.accessIds.includes(userId)),
+        [hubProjects, userId],
+    );
+    const assignees = useMemo(() => {
+        if (me == null)
+            return [];
+        return staff.filter((person) => canAssignLegalHubTask(me, person));
+    }, [me, staff]);
+    const showOwner = assignees.some((person) => person.id !== me?.id);
     const [title, setTitle] = useState('');
-    const [project, setProject] = useState<TaskProjectId>(fixedProject ?? 'solar');
-    const [workstream, setWorkstream] = useState('Land / LLA');
+    const [projectId, setProjectId] = useState(() => {
+        if (fixedProjectId && openProjects.some((project) => project.id === fixedProjectId))
+            return fixedProjectId;
+        return openProjects[0]?.id ?? '';
+    });
     const [internalOn, setInternalOn] = useState(() => plusDays(2));
     const [clientOn, setClientOn] = useState(() => plusDays(4));
     const [priority, setPriority] = useState<TaskPriorityId>('normal');
-    const [owner, setOwner] = useState<TaskPersonId>('ja1');
+    const [ownerId, setOwnerId] = useState(() => {
+        if (boardOwnerId != null && assignees.some((person) => person.id === boardOwnerId))
+            return boardOwnerId;
+        return assignees[0]?.id ?? me?.id ?? 0;
+    });
     const [approval, setApproval] = useState(false);
     const [instructions, setInstructions] = useState('');
     const [error, setError] = useState('');
-    const projects = TASK_PROJECTS.map((id) => ({ id, label: PROJECT_LABEL[id] }));
-    const people = TASK_PEOPLE.map((id) => ({ id, label: PERSON_LABEL[id].name }));
-    const priorities = TASK_PRIORITIES.map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }));
+    const priorities = (['normal', 'high', 'low'] as const).map((id) => ({ id, label: t(PRIORITY_LABEL[id]) }));
+    useEffect(() => {
+        if (projectId && openProjects.some((project) => project.id === projectId))
+            return;
+        const next = fixedProjectId && openProjects.some((project) => project.id === fixedProjectId)
+            ? fixedProjectId
+            : openProjects[0]?.id ?? '';
+        if (next !== projectId)
+            setProjectId(next);
+    }, [fixedProjectId, openProjects, projectId]);
+    useEffect(() => {
+        if (assignees.some((person) => person.id === ownerId))
+            return;
+        const next = boardOwnerId != null && assignees.some((person) => person.id === boardOwnerId)
+            ? boardOwnerId
+            : assignees[0]?.id ?? me?.id ?? 0;
+        if (next !== ownerId)
+            setOwnerId(next);
+    }, [assignees, boardOwnerId, me?.id, ownerId]);
 
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
@@ -1297,8 +1343,18 @@ function NewTaskDialog({ project: fixedProject = null, column = null, onClose, o
     }, [onClose]);
 
     const submit = () => {
+        const project = openProjects.find((item) => item.id === projectId) ?? null;
+        const owner = assignees.find((person) => person.id === ownerId) ?? (showOwner ? null : me);
         if (!title.trim()) {
             setError(t('legalHub.myTasksTitleRequired'));
+            return;
+        }
+        if (project == null) {
+            setError(t('legalHub.myTasksProjectRequired'));
+            return;
+        }
+        if (owner == null) {
+            setError(t('legalHub.taskFieldOwner'));
             return;
         }
         if (!clientOn) {
@@ -1307,10 +1363,15 @@ function NewTaskDialog({ project: fixedProject = null, column = null, onClose, o
         }
         onCreate({
             id: `new-${Date.now()}`,
-            project,
+            project: 'solar',
+            projectId: project.id,
+            projectName: project.name,
             title: title.trim(),
-            workstream: workstream.trim() || '—',
-            owner,
+            workstream: '—',
+            owner: 'ja1',
+            assigneeId: owner.id,
+            assigneeName: owner.name,
+            assigneeCode: owner.code,
             reviewer: approval ? 'partner' : null,
             status: column && isBuiltin(column) ? statusOf(column) : 'todo',
             priority,
@@ -1352,7 +1413,7 @@ function NewTaskDialog({ project: fixedProject = null, column = null, onClose, o
                     <input className="lh-drawer__input" autoFocus value={title} placeholder={t('legalHub.myTasksTitlePh')} onChange={(event) => setTitle(event.target.value)} />
                 </label>
                 <div className="lh-drawer__grid">
-                    <label className="lh-drawer__field">
+                    <label className="lh-drawer__field lh-drawer__field--wide">
                         <span>{t('legalHub.taskColProject')}</span>
                         <SearchableSelect
                             portalDropdown
@@ -1360,19 +1421,15 @@ function NewTaskDialog({ project: fixedProject = null, column = null, onClose, o
                             buttonClassName="lh-drawer__pick"
                             aria-label={t('legalHub.taskColProject')}
                             placeholder={t('legalHub.taskColProject')}
-                            emptyListText={t('legalHub.taskFilterAll')}
+                            emptyListText={t('legalHub.myTasksProjectRequired')}
                             noMatchText={t('legalHub.teamNoMatch')}
-                            value={project}
-                            items={projects}
+                            value={projectId}
+                            items={openProjects}
                             getOptionValue={(item) => item.id}
-                            getOptionLabel={(item) => item.label}
-                            getSearchText={(item) => item.label}
-                            onSelect={(item) => setProject(item.id)}
+                            getOptionLabel={(item) => item.name}
+                            getSearchText={(item) => item.name}
+                            onSelect={(item) => setProjectId(item.id)}
                         />
-                    </label>
-                    <label className="lh-drawer__field">
-                        <span>{t('legalHub.taskColWorkstream')}</span>
-                        <input className="lh-drawer__input" value={workstream} onChange={(event) => setWorkstream(event.target.value)} />
                     </label>
                     <DateField label={t('legalHub.taskFieldInternal')} value={internalOn} onChange={setInternalOn} />
                     <DateField label={t('legalHub.taskFieldClient')} value={clientOn} onChange={setClientOn} />
@@ -1394,24 +1451,26 @@ function NewTaskDialog({ project: fixedProject = null, column = null, onClose, o
                             onSelect={(item) => setPriority(item.id)}
                         />
                     </label>
-                    <label className="lh-drawer__field">
-                        <span>{t('legalHub.taskFieldOwner')}</span>
-                        <SearchableSelect
-                            portalDropdown
-                            portalZIndex={6000}
-                            buttonClassName="lh-drawer__pick"
-                            aria-label={t('legalHub.taskFieldOwner')}
-                            placeholder={t('legalHub.taskFieldOwner')}
-                            emptyListText={t('legalHub.taskFilterAll')}
-                            noMatchText={t('legalHub.teamNoMatch')}
-                            value={owner}
-                            items={people}
-                            getOptionValue={(item) => item.id}
-                            getOptionLabel={(item) => item.label}
-                            getSearchText={(item) => item.label}
-                            onSelect={(item) => setOwner(item.id)}
-                        />
-                    </label>
+                    {showOwner ? (
+                        <label className="lh-drawer__field">
+                            <span>{t('legalHub.taskFieldOwner')}</span>
+                            <SearchableSelect
+                                portalDropdown
+                                portalZIndex={6000}
+                                buttonClassName="lh-drawer__pick"
+                                aria-label={t('legalHub.taskFieldOwner')}
+                                placeholder={t('legalHub.taskFieldOwner')}
+                                emptyListText={t('legalHub.taskFilterAll')}
+                                noMatchText={t('legalHub.teamNoMatch')}
+                                value={String(ownerId)}
+                                items={assignees}
+                                getOptionValue={(item) => String(item.id)}
+                                getOptionLabel={(item) => item.position ? `${item.name} · ${item.position}` : item.name}
+                                getSearchText={(item) => `${item.name} ${item.position}`}
+                                onSelect={(item) => setOwnerId(item.id)}
+                            />
+                        </label>
+                    ) : null}
                 </div>
                 <label className="lh-my__check">
                     <input type="checkbox" checked={approval} onChange={(event) => setApproval(event.target.checked)} />

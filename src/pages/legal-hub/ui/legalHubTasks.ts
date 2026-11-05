@@ -22,6 +22,12 @@ export type HubTask = {
     reviewOn: string | null;
     clientOn: string;
     minutes: number;
+    /** Real project from time tracking. Mock ids stay in `project`. */
+    projectId?: string;
+    projectName?: string;
+    assigneeId?: number;
+    assigneeName?: string;
+    assigneeCode?: string;
     autoRouted?: boolean;
     important?: boolean;
     waitingFor?: string;
@@ -45,6 +51,24 @@ export const PROJECT_TITLE: Record<TaskProjectId, string> = {
 };
 
 export const MOCK_DONE_IDS: readonly string[] = [];
+
+export function taskProjectName(task: Pick<HubTask, 'project' | 'projectName'>): string {
+    const named = task.projectName?.trim();
+    if (named)
+        return named;
+    return isTaskProjectId(task.project) ? PROJECT_TITLE[task.project] : task.project;
+}
+
+export function taskOwnerLabel(task: Pick<HubTask, 'owner' | 'assigneeName' | 'assigneeCode'>): { name: string; code: string } {
+    const named = task.assigneeName?.trim();
+    if (named) {
+        const code = task.assigneeCode?.trim() || named.slice(0, 2).toUpperCase();
+        return { name: named, code };
+    }
+    if ((TASK_PEOPLE as readonly string[]).includes(task.owner))
+        return PERSON_LABEL[task.owner];
+    return { name: task.owner, code: task.owner.slice(0, 2).toUpperCase() };
+}
 
 export function isTaskProjectId(value: string | null | undefined): value is TaskProjectId {
     return value != null && (TASK_PROJECTS as readonly string[]).includes(value);

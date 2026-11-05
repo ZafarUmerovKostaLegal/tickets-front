@@ -5,11 +5,14 @@ import type { TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/te
 import type { TimeTrackingUserRow } from '@entities/time-tracking/api/domains/usersAndRates';
 import { readProjectParticipantAuthUserIds, readProjectPartnerAuthUserIds } from '@entities/time-tracking/lib/partnerReportProjectScope';
 import { useCurrentUser } from '@shared/hooks';
+import { canAssignLegalHubTask, legalHubPositionRank } from './legalHubRank';
 
 export type LegalHubPerson = {
     id: number;
     name: string;
     code: string;
+    position: string;
+    rank: number;
 };
 
 export type LegalHubProject = {
@@ -21,6 +24,8 @@ export type LegalHubProject = {
 
 type LegalHubViewValue = {
     people: LegalHubPerson[];
+    staff: LegalHubPerson[];
+    me: LegalHubPerson | null;
     memberIds: number[];
     projects: LegalHubProject[];
     userId: number | null;
@@ -48,24 +53,41 @@ function memberIdsOf(team: TimeTrackingTeamRow): number[] {
         : (team.members ?? []).map((member) => member.auth_user_id);
 }
 
-function ledRoster(teams: TimeTrackingTeamRow[], users: TimeTrackingUserRow[], partnerId: number): LegalHubPerson[] {
+function collectStaff(
+    teams: TimeTrackingTeamRow[],
+    users: TimeTrackingUserRow[],
+    self: { id: number; name: string; position: string; role: string | null; initials?: string | null },
+): LegalHubPerson[] {
     const usersById = new Map(users.map((row) => [row.id, row]));
-    const seen = new Set<number>();
-    const people: LegalHubPerson[] = [];
-    for (const team of teams) {
-        if (team.is_archived || team.partner_auth_user_id !== partnerId)
-            continue;
+    const related = teams.filter((team) => !team.is_archived && (
+        team.partner_auth_user_id === self.id || memberIdsOf(team).includes(self.id)
+    ));
+    const ids = new Set<number>([self.id]);
+    for (const team of related) {
+        if (team.partner_auth_user_id > 0)
+            ids.add(team.partner_auth_user_id);
         for (const id of memberIdsOf(team)) {
-            if (!Number.isFinite(id) || id <= 0 || id === partnerId || seen.has(id))
-                continue;
-            seen.add(id);
-            const row = usersById.get(id);
-            const preview = team.members?.find((member) => member.auth_user_id === id);
-            const name = (row?.display_name || preview?.display_name || row?.email || preview?.email || '').trim() || String(id);
-            people.push({ id, name, code: personCode(name, row?.initials) });
+            if (Number.isFinite(id) && id > 0)
+                ids.add(id);
         }
     }
-    people.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+    const people: LegalHubPerson[] = [];
+    for (const id of ids) {
+        const row = usersById.get(id);
+        const preview = related.flatMap((team) => team.members ?? []).find((member) => member.auth_user_id === id);
+        const isSelf = id === self.id;
+        const name = ((isSelf ? self.name : '') || row?.display_name || preview?.display_name || row?.email || preview?.email || '').trim() || String(id);
+        const position = ((isSelf ? self.position : '') || row?.position || '').trim();
+        const role = (isSelf ? self.role : null) || row?.role || null;
+        people.push({
+            id,
+            name,
+            code: personCode(name, isSelf ? self.initials : row?.initials),
+            position,
+            rank: legalHubPositionRank(position, role),
+        });
+    }
+    people.sort((a, b) => a.rank - b.rank || a.name.localeCompare(b.name, 'ru'));
     return people;
 }
 
@@ -93,17 +115,28 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
     const { user, loading } = useCurrentUser();
     const userId = user?.id ?? null;
     const [people, setPeople] = useState<LegalHubPerson[]>([]);
+    const [staff, setStaff] = useState<LegalHubPerson[]>([]);
+    const [me, setMe] = useState<LegalHubPerson | null>(null);
     const [projects, setProjects] = useState<LegalHubProject[]>([]);
     const [viewAsId, setViewAsId] = useState<number | null>(null);
 
     useEffect(() => {
         if (loading)
             return undefined;
-        if (userId == null) {
+        if (userId == null || user == null) {
             setPeople([]);
+            setStaff([]);
+            setMe(null);
             setProjects([]);
             return undefined;
         }
+        const self = {
+            id: userId,
+            name: (user.display_name || user.email || '').trim() || String(userId),
+            position: (user.position ?? '').trim(),
+            role: user.role ?? null,
+            initials: user.initials,
+        };
         let cancelled = false;
         void (async () => {
             try {
@@ -114,13 +147,18 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
                 ]);
                 if (cancelled)
                     return;
-                const roster = ledRoster(teams, users, userId);
-                setPeople(roster);
-                setProjects(projectsOfTeam(projectRows, userId, roster.map((person) => person.id)));
+                const roster = collectStaff(teams, users, self);
+                const actor = roster.find((person) => person.id === userId) ?? roster[0] ?? null;
+                setStaff(roster);
+                setMe(actor);
+                setPeople(actor == null ? [] : roster.filter((person) => person.id !== actor.id && canAssignLegalHubTask(actor, person)));
+                setProjects(projectsOfTeam(projectRows, userId, roster.filter((person) => person.id !== userId).map((person) => person.id)));
             }
             catch {
                 if (!cancelled) {
                     setPeople([]);
+                    setStaff([]);
+                    setMe(null);
                     setProjects([]);
                 }
             }
@@ -128,7 +166,7 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         return () => {
             cancelled = true;
         };
-    }, [loading, userId]);
+    }, [loading, user, userId]);
 
     useEffect(() => {
         if (viewAsId != null && !people.some((person) => person.id === viewAsId))
@@ -139,13 +177,15 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         const viewAs = people.find((person) => person.id === viewAsId) ?? null;
         return {
             people,
-            memberIds: people.map((person) => person.id),
+            staff,
+            me,
+            memberIds: staff.map((person) => person.id),
             projects,
             userId,
             viewAs,
             setViewAsId,
         };
-    }, [people, projects, userId, viewAsId]);
+    }, [me, people, projects, staff, userId, viewAsId]);
 
     return <LegalHubViewContext.Provider value={value}>{children}</LegalHubViewContext.Provider>;
 }

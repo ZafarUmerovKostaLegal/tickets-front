@@ -4,7 +4,7 @@ import { AppBackButton, NAV_TRANSITION_TYPE, SearchableSelect } from '@shared/ui
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { LegalHubMemberTasks } from './LegalHubMemberTasks';
-import { LegalHubMyTasks } from './LegalHubMyTasks';
+import { LegalHubMyTasks, type MineTask } from './LegalHubMyTasks';
 import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
 import { HUB_TASKS, MOCK_DONE_IDS, tasksForMember } from './legalHubTasks';
@@ -157,6 +157,7 @@ function LegalHubPageBody() {
     const openProject = requestedProject != null && canOpenProject(requestedProject.id) ? requestedProject : null;
     const openProjectId = openProject?.id ?? null;
     const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
+    const [hubTasks, setHubTasks] = useState<MineTask[]>([]);
     const [query, setQuery] = useState('');
     const [projectQuery, setProjectQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
@@ -215,7 +216,11 @@ function LegalHubPageBody() {
     const memberOptions = useMemo(
         () => [
             { id: '', name: t('legalHub.viewAsMe'), code: '' },
-            ...people.map((person) => ({ id: String(person.id), name: person.name, code: person.code })),
+            ...people.map((person) => ({
+                id: String(person.id),
+                name: person.position ? `${person.name} · ${person.position}` : person.name,
+                code: person.code,
+            })),
         ],
         [people, t],
     );
@@ -534,8 +539,28 @@ function LegalHubPageBody() {
                                     <div className="lh-page__head-actions" ref={setActionsSlot} />
                                 </header>
                                 )}
-                                {section === 'myTasks' ? <LegalHubMyTasks key={viewAs?.id ?? 'me'} query={query} source={viewedTasks} layout="board" /> : null}
-                                {section === 'reviewQueue' ? <LegalHubMyTasks key={`queue-${viewAs?.id ?? 'me'}`} query={query} source={viewedTasks} layout="board" mode="queue" /> : null}
+                                {section === 'myTasks' ? (
+                                    <LegalHubMyTasks
+                                        key={viewAs?.id ?? 'me'}
+                                        query={query}
+                                        source={viewedTasks}
+                                        layout="board"
+                                        tasks={hubTasks}
+                                        onTasks={setHubTasks}
+                                        boardOwnerId={viewAs?.id ?? userId}
+                                    />
+                                ) : null}
+                                {section === 'reviewQueue' ? (
+                                    <LegalHubMyTasks
+                                        key={`queue-${viewAs?.id ?? 'me'}`}
+                                        query={query}
+                                        source={viewedTasks}
+                                        layout="board"
+                                        mode="queue"
+                                        tasks={hubTasks}
+                                        onTasks={setHubTasks}
+                                    />
+                                ) : null}
                                 {section === 'projects' && openProject ? (
                                     <LegalHubMyTasks
                                         key={openProject.id}
@@ -544,6 +569,8 @@ function LegalHubPageBody() {
                                         heading={openProject.name}
                                         scope={openProject.id}
                                         onBack={closeProject}
+                                        tasks={hubTasks}
+                                        onTasks={setHubTasks}
                                     />
                                 ) : null}
                                 {section === 'projects' && !openProject ? (
