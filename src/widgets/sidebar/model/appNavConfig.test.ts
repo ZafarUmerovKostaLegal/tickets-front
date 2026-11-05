@@ -96,6 +96,15 @@ describe('getVisibleAppNavItems', () => {
         }
     });
 
+    it('znurmatov видит только учёт времени', () => {
+        const items = getVisibleAppNavItems(user({
+            role: 'Администратор',
+            email: 'znurmatov@kostalegal.com',
+            time_tracking_role: 'manager',
+        }), false);
+        expect(items.map((item) => item.id)).toEqual(['timeTracking']);
+    });
+
     it('IT-безопасность видна только aakhmadjonov и zumerov', () => {
         const allowed = getVisibleAppNavItems(user({
             role: 'Сотрудник',

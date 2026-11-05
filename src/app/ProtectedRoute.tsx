@@ -5,6 +5,7 @@ import { routes } from '@shared/config';
 import { useCurrentUser } from '@shared/hooks';
 import { canAccessAdminPanel, isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { isMeetingRoomAccount, isMeetingRoomAllowedPath } from '@shared/lib/meetingRoomAccounts';
+import { isScheduleOnlyAccount, isScheduleOnlyAllowedPath, scheduleOnlyLandingPath } from '@shared/lib/scheduleOnlyAccount';
 import { resolveDesktopBackgroundDisplayUrl } from '@entities/user';
 import './ProtectedRoute.css';
 
@@ -63,6 +64,9 @@ export function ProtectedRoute({ children, adminOnly = false, fallback = null }:
         else if (!canAccessAdminPanel(user.role, user.position)) {
             return <Navigate to={routes.home} replace/>;
         }
+    }
+    if (isScheduleOnlyAccount(user) && !isScheduleOnlyAllowedPath(location.pathname)) {
+        return <Navigate to={scheduleOnlyLandingPath()} replace/>;
     }
     if (isMeetingRoomAccount(user) && !isMeetingRoomAllowedPath(location.pathname)) {
         return <Navigate to={routes.home} replace/>;

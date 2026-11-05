@@ -54,6 +54,18 @@ describe('timeTrackingAccess', () => {
         }))).toBe(false);
     });
 
+    it('znurmatov видит только расписание', () => {
+        const u = user({
+            role: 'Администратор',
+            email: 'Znurmatov@kostalegal.com',
+            time_tracking_role: 'manager',
+        });
+        expect(canAccessTimeTracking(u)).toBe(true);
+        expect(hasFullTimeTrackingTabs(u)).toBe(false);
+        expect(getVisibleTimeTrackingTabs(u)).toEqual(['timesheet']);
+        expect(resolveInitialTimeTab(u, 'expenses')).toBe('timesheet');
+    });
+
     it('resolveInitialTimeTab сохраняет допустимую вкладку', () => {
         const u = user({ role: 'X', time_tracking_role: 'user' });
         expect(resolveInitialTimeTab(u, 'expenses')).toBe('expenses');

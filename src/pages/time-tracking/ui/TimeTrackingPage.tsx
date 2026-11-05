@@ -6,6 +6,7 @@ import { OUTLOOK_ADD_TIME_EVENT } from '@entities/todo/lib/outlookAddTimeRequest
 import { AppBackButton, AppPageSettings, AttentionBanner } from '@shared/ui';
 import { useCurrentUser } from '@shared/hooks';
 import { isHiddenSystemUser } from '@shared/lib';
+import { isScheduleOnlyAccount } from '@shared/lib/scheduleOnlyAccount';
 import { useI18n } from '@shared/i18n';
 import type { TimeTabId } from '@entities/time-tracking/model/types';
 import { isTimeTrackingHttpError, listTimeTrackingUsers, type TimeTrackingUserRow } from '@entities/time-tracking';
@@ -257,6 +258,7 @@ export function TimeTrackingPage() {
     const [managedScopeUserId, setManagedScopeUserId] = useState<number | null>(() => readStoredScopeUserId());
     const [ttScopeUsers, setTtScopeUsers] = useState<TimeTrackingUserRow[]>([]);
     const [ttScopeLoadError, setTtScopeLoadError] = useState<ScopeLoadError | null>(null);
+    const scheduleOnly = isScheduleOnlyAccount(user);
     const hasAccess = !loading && canAccessTimeTracking(user);
     const accessDenied = !loading && user != null && !canAccessTimeTracking(user);
     const { badge: forReviewBadge, count: forReviewCount } = usePartnerForReviewBadge(hasAccess && canViewTimeTrackingReports(user));
@@ -435,7 +437,8 @@ export function TimeTrackingPage() {
           </div>)}
         
         <nav className="time-page__navbar" aria-label={t('timeTrackingPage.page.navAria')}>
-          <AppBackButton to={routes.home} hideLabelOnMobile />
+          {scheduleOnly ? null : <AppBackButton to={routes.home} hideLabelOnMobile />}
+          {scheduleOnly ? null : (
           <button
             type="button"
             className="time-page__navbar-menu-btn"
@@ -446,13 +449,20 @@ export function TimeTrackingPage() {
           >
             <IconMenu />
           </button>
+          )}
           <div className="time-page__navbar-sep time-page__navbar-sep--logo" aria-hidden="true"/>
           <button
             type="button"
             className="time-page__navbar-logo-btn"
-            onClick={() => navigate(routes.home)}
-            aria-label={t('brand.homeAria')}
-            title={t('brand.homeAria')}
+            onClick={() => {
+                if (scheduleOnly) {
+                    setActiveTab('timesheet');
+                    return;
+                }
+                navigate(routes.home);
+            }}
+            aria-label={scheduleOnly ? t('timeTrackingPage.page.scheduleLogoAria') : t('brand.homeAria')}
+            title={scheduleOnly ? t('timeTrackingPage.page.scheduleLogoTitle') : t('brand.homeAria')}
           >
             <img src="/logo.svg" alt="" className="time-page__navbar-logo-img" width={26} height={38} draggable={false}/>
           </button>
@@ -464,14 +474,14 @@ export function TimeTrackingPage() {
             </>) : hasAccess && user ? (<>
               <div className="time-page__navbar-sep time-page__navbar-sep--tabs" aria-hidden="true"/>
               <span className="time-page__navbar-current" title={activeTabLabel}>{activeTabLabel}</span>
-              <div className="time-page__navbar-tabs" role="tablist" aria-label={t('timeTrackingPage.page.sectionsTablistAria')}>
+              {scheduleOnly ? null : <div className="time-page__navbar-tabs" role="tablist" aria-label={t('timeTrackingPage.page.sectionsTablistAria')}>
                 {visibleTabDefs.map((tab) => (<button key={tab.id} type="button" role="tab" aria-selected={activeTab === tab.id} aria-controls={`time-tab-${tab.id}`} id={`time-tab-btn-${tab.id}`} className={`time-page__navbar-tab${activeTab === tab.id ? ' time-page__navbar-tab--active' : ''}`} onClick={() => handleTabChange(tab.id)} aria-label={tab.id === 'reports' && forReviewBadgeAria ? `${tab.label}. ${forReviewBadgeAria}` : undefined}>
                     <span className="time-page__navbar-tab-inner">
                       {tab.label}
                       {tab.id === 'reports' && forReviewBadge ? (<span className="time-page__navbar-tab-badge" aria-hidden>{forReviewBadge}</span>) : null}
                     </span>
                   </button>))}
-              </div>
+              </div>}
             </>) : null}
           <div className="time-page__navbar-spacer"/>
           <div className="time-page__navbar-settings">
@@ -479,7 +489,7 @@ export function TimeTrackingPage() {
           </div>
           {headerManagerTrailing}
         </nav>
-        {hasAccess && user && forReviewCount > 0 && activeTab !== 'reports' ? (
+        {hasAccess && user && !scheduleOnly && forReviewCount > 0 && activeTab !== 'reports' ? (
             <AttentionBanner
                 text={t('attentionBanner.reportsForReview').replace('{count}', String(forReviewCount))}
                 actionLabel={t('attentionBanner.reportsGo')}

@@ -5,6 +5,7 @@ import { reconcileDesktopAuthCallbackLocation } from '@shared/lib/desktopAuth';
 import { refreshCurrentUser } from '@shared/hooks';
 import { routes, AUTH_ERROR_AUTH_FAILED } from '@shared/config';
 import { consumeAuthReturnPath } from '@shared/lib/authReturnPath';
+import { isScheduleOnlyAccount, scheduleOnlyLandingPath } from '@shared/lib/scheduleOnlyAccount';
 function parseCallbackParams(): {
     token: string | null;
     error: string | null;
@@ -38,7 +39,8 @@ export function AuthCallbackPage() {
             window.history.replaceState({}, document.title, window.location.pathname);
             void refreshCurrentUser().then((user) => {
                 if (user) {
-                    navigate(consumeAuthReturnPath() ?? routes.home, { replace: true });
+                    const stored = consumeAuthReturnPath();
+                    navigate(isScheduleOnlyAccount(user) ? scheduleOnlyLandingPath() : (stored ?? routes.home), { replace: true });
                     return;
                 }
                 setSessionCookieHint(false);
@@ -50,7 +52,8 @@ export function AuthCallbackPage() {
         void refreshCurrentUser().then((u) => {
             if (u) {
                 setSessionCookieHint(true);
-                navigate(consumeAuthReturnPath() ?? routes.home, { replace: true });
+                const stored = consumeAuthReturnPath();
+                navigate(isScheduleOnlyAccount(u) ? scheduleOnlyLandingPath() : (stored ?? routes.home), { replace: true });
             }
             else {
                 navigate(routes.login, { replace: true });

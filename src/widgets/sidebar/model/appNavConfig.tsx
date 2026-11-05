@@ -6,6 +6,7 @@ import { canAccessExpensesSection } from '@entities/expenses/model/expenseModera
 import { canAccessTimeTracking } from '@entities/time-tracking/model/timeTrackingAccess';
 import { canAccessAdminOnlyModules, canAccessAdminPanel, canAccessAttendance, isPartnerOrgRole } from '@shared/lib/orgRoles';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
+import { isScheduleOnlyAccount } from '@shared/lib/scheduleOnlyAccount';
 import { canAccessItSecurity } from '@shared/lib/itSecurityAccess';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { canAccessLegalHub } from '@shared/lib/legalHubAccess';
@@ -97,6 +98,9 @@ export function getNavTranslationKey(id: AppNavId): TranslationKey {
 }
 
 export function getVisibleAppNavItems(user: User | null | undefined, loading: boolean): AppNavItemDef[] {
+    if (!loading && isScheduleOnlyAccount(user)) {
+        return APP_NAV_DEFINITIONS.filter((item) => item.id === 'timeTracking');
+    }
     if (!loading && isMeetingRoomAccount(user)) {
         return APP_NAV_DEFINITIONS.filter((item) => MEETING_ROOM_NAV_IDS.has(item.id));
     }

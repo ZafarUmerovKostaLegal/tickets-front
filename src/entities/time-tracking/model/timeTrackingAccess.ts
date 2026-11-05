@@ -3,9 +3,12 @@ import type { TimeTabId } from '@entities/time-tracking/model/types';
 import { TABS } from '@entities/time-tracking/model/constants';
 import { canManageTimeManagerClients } from '@entities/time-tracking/model/timeManagerClientsAccess';
 import { isPartnerOrgRole, normalizeOrgRoleKey } from '@shared/lib/orgRoles';
+import { isScheduleOnlyAccount } from '@shared/lib/scheduleOnlyAccount';
 export const TIME_TRACKING_LIMITED_TAB_IDS: readonly TimeTabId[] = ['timesheet', 'expenses'];
 export const TIME_TRACKING_ALL_TAB_IDS: TimeTabId[] = TABS.map(t => t.id);
 export function hasFullTimeTrackingTabs(user: User | null | undefined): boolean {
+    if (isScheduleOnlyAccount(user))
+        return false;
     return user?.time_tracking_role === 'manager';
 }
 
@@ -92,12 +95,16 @@ export function canGrantTimeEntryEditUnlock(viewer: User | null | undefined, tar
 export function canAccessTimeTracking(user: User | null | undefined): boolean {
     if (!user)
         return false;
+    if (isScheduleOnlyAccount(user))
+        return true;
     const tt = user.time_tracking_role;
     return tt === 'manager' || tt === 'user';
 }
 export function getVisibleTimeTrackingTabs(user: User | null | undefined): TimeTabId[] {
     if (!user)
         return [];
+    if (isScheduleOnlyAccount(user))
+        return ['timesheet'];
     if (!canAccessTimeTracking(user))
         return [];
     if (hasFullTimeTrackingTabs(user)) {
