@@ -385,6 +385,18 @@ export const ruMessages: Messages = {
         boardAddColumn: 'Добавить колонку',
         boardColumnName: 'Название колонки',
         boardRemoveColumn: 'Удалить колонку',
+        boardMenu: 'Дополнительно',
+        boardRename: 'Переименовать доску',
+        boardBg: 'Фон рабочей области',
+        boardRemoveBg: 'Убрать фон',
+        boardMembers: 'Участники доски',
+        boardMembersEmpty: 'На этой доске пока никого нет.',
+        boardExport: 'Экспорт данных',
+        boardImport: 'Импорт данных',
+        boardDelete: 'Удалить доску',
+        boardDeleteConfirm: 'Сбросить доску? Локальные колонки, название, фон и изменения карточек пропадут.',
+        boardBgTooBig: 'Выберите изображение меньше 2,5 МБ.',
+        boardImportBad: 'Этот файл не похож на экспорт доски.',
         boardViewBoard: 'Доска',
         boardViewList: 'Список',
         boardAllProjects: 'Все проекты',
@@ -1475,6 +1487,18 @@ export type Messages = {
         boardAddColumn: string;
         boardColumnName: string;
         boardRemoveColumn: string;
+        boardMenu: string;
+        boardRename: string;
+        boardBg: string;
+        boardRemoveBg: string;
+        boardMembers: string;
+        boardMembersEmpty: string;
+        boardExport: string;
+        boardImport: string;
+        boardDelete: string;
+        boardDeleteConfirm: string;
+        boardBgTooBig: string;
+        boardImportBad: string;
         boardViewBoard: string;
         boardViewList: string;
         boardAllProjects: string;

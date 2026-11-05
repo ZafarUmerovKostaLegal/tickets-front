@@ -7474,6 +7474,172 @@ body[data-theme='dark'] .lh-page {
   font-weight: 700;
 }
 
+.lh-bt__rename {
+  width: min(22rem, 70vw);
+  height: 2.2rem;
+  padding: 0 0.7rem;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 750;
+}
+
+.lh-bt__rename:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 25%, transparent);
+}
+
+.lh-board-menu {
+  position: relative;
+}
+
+.lh-board-menu__btn {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 11px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  cursor: pointer;
+}
+
+.lh-board-menu__btn:hover,
+.lh-board-menu__btn.is-on {
+  border-color: color-mix(in srgb, var(--app-accent) 45%, var(--app-border));
+}
+
+.lh-board-menu__drop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  min-width: 15.5rem;
+  padding: 0.35rem;
+  border: 1px solid var(--app-border);
+  border-radius: 14px;
+  background: var(--lh-menu-bg, var(--app-surface));
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
+}
+
+.lh-board-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lh-board-menu__item:hover {
+  background: color-mix(in srgb, var(--app-text) 8%, transparent);
+}
+
+.lh-board-menu__item.is-danger {
+  color: #ef4444;
+}
+
+.lh-board-menu__item.is-danger:hover {
+  background: color-mix(in srgb, #ef4444 14%, transparent);
+}
+
+.lh-board-menu__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--app-muted);
+}
+
+.lh-board-menu__item.is-danger .lh-board-menu__icon {
+  color: #ef4444;
+}
+
+.lh-board-menu__icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.lh-my--photo {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+}
+
+.lh-my__photo,
+.lh-my__photo-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.lh-my__photo {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.lh-my__photo-shade {
+  background: linear-gradient(to bottom, rgba(15, 23, 42, 0.18), rgba(15, 23, 42, 0.42));
+}
+
+.lh-my--photo > :not(.lh-my__photo):not(.lh-my__photo-shade) {
+  position: relative;
+  z-index: 1;
+}
+
+.lh-board-members ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0.2rem 1rem 0.4rem;
+  list-style: none;
+}
+
+.lh-board-members li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.lh-board-members b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-accent) 16%, var(--app-surface));
+  color: var(--app-accent);
+  font-size: 0.72rem;
+}
+
+.lh-board-members footer button {
+  height: 2.1rem;
+  padding: 0 0.8rem;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  font: inherit;
+  cursor: pointer;
+}
+
 .lh-bt__actions {
   display: flex;
   align-items: center;
