@@ -1,9 +1,8 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties, type DragEvent } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
-import { createDefaultTodoThemeVars, deriveThemeFromImage, type ThemeVars } from '@entities/todo/lib/todoTheme';
 import { useSetLegalHubChrome } from './legalHubChrome';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import { dueText } from './legalHubShared';
@@ -332,15 +331,11 @@ export function LegalHubMyTasks({
     const filtersRef = useRef<HTMLDivElement>(null);
     const boardScope = project ?? 'mine';
     const titleKey = `lh-board-title-${boardScope}`;
-    const bgKey = `lh-board-bg-${boardScope}`;
     const [boardTitle, setBoardTitle] = useState('');
     const [renaming, setRenaming] = useState(false);
-    const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-    const [themeVars, setThemeVars] = useState<ThemeVars | null>(null);
     const [boardMenuOpen, setBoardMenuOpen] = useState(false);
     const [membersOpen, setMembersOpen] = useState(false);
     const boardMenuRef = useRef<HTMLDivElement>(null);
-    const bgInputRef = useRef<HTMLInputElement>(null);
     const importInputRef = useRef<HTMLInputElement>(null);
     const [dragging, setDragging] = useState<string | null>(null);
     const boardRef = useRef<HTMLDivElement>(null);
@@ -371,9 +366,7 @@ export function LegalHubMyTasks({
         const storedTitle = readStored<unknown>(titleKey, '');
         setBoardTitle(typeof storedTitle === 'string' ? storedTitle : '');
         setRenaming(false);
-        const storedBg = readStored<unknown>(bgKey, '');
-        setBackgroundImage(typeof storedBg === 'string' && storedBg.startsWith('data:image/') ? storedBg : null);
-    }, [bgKey, titleKey]);
+    }, [titleKey]);
     useEffect(() => {
         if (!boardMenuOpen)
             return;
@@ -392,25 +385,6 @@ export function LegalHubMyTasks({
             document.removeEventListener('keydown', onKey);
         };
     }, [boardMenuOpen]);
-    useEffect(() => {
-        let cancelled = false;
-        if (!backgroundImage) {
-            setThemeVars(null);
-            return;
-        }
-        deriveThemeFromImage(backgroundImage)
-            .then((vars) => {
-                if (!cancelled)
-                    setThemeVars(vars);
-            })
-            .catch(() => {
-                if (!cancelled)
-                    setThemeVars(createDefaultTodoThemeVars());
-            });
-        return () => {
-            cancelled = true;
-        };
-    }, [backgroundImage]);
     useEffect(() => {
         if (createSignal === seenCreate.current)
             return;
@@ -748,40 +722,21 @@ export function LegalHubMyTasks({
     const hiddenCount = columns.length - shownColumns.length;
     const shownTitle = boardTitle.trim() || title;
     const setChrome = useSetLegalHubChrome();
-    const themeStyle = useMemo<CSSProperties | undefined>(() => themeVars ? {
-        ['--app-text' as string]: themeVars.text,
-        ['--app-text-dim' as string]: themeVars.muted,
-        ['--app-muted' as string]: themeVars.muted,
-        ['--app-meta' as string]: themeVars.muted,
-        ['--app-surface' as string]: themeVars.panelBg,
-        ['--app-surface-soft' as string]: themeVars.surface,
-        ['--app-bg' as string]: themeVars.headerBg,
-        ['--app-bg-soft' as string]: themeVars.surface,
-        ['--app-border' as string]: themeVars.border,
-        ['--app-accent' as string]: themeVars.accent,
-        ['--app-accent-hover' as string]: themeVars.accent,
-        ['--app-accent-border' as string]: themeVars.accent,
-        ['--app-accent-light-bg' as string]: themeVars.isDark ? 'rgba(255,255,255,0.1)' : themeVars.surface2,
-        ['--app-accent-focus' as string]: themeVars.isDark ? 'rgba(255,255,255,0.16)' : themeVars.border,
-        ['--lh-photo-surface' as string]: themeVars.surface,
-        ['--lh-photo-surface2' as string]: themeVars.surface2,
-        ['--lh-photo-header' as string]: themeVars.headerBg,
-        ...(themeVars.isDark ? {
-            ['--app-error' as string]: '#fca5a5',
-            ['--app-error-bg' as string]: 'rgba(239,68,68,0.22)',
-        } : {}),
-        colorScheme: themeVars.isDark ? 'dark' : 'light',
-    } : undefined, [themeVars]);
     useEffect(() => {
-        setChrome(themeStyle);
-        return () => setChrome(undefined);
-    }, [setChrome, themeStyle]);
-    const photo = backgroundImage ? (
-        <>
-            <div className="lh-my__photo" style={{ backgroundImage: `url(${backgroundImage})` }} />
-            <div className="lh-my__photo-shade" />
-        </>
-    ) : null;
+        setChrome(undefined);
+        try {
+            const keys: string[] = [];
+            for (let index = 0; index < localStorage.length; index += 1) {
+                const key = localStorage.key(index);
+                if (key?.startsWith('lh-board-bg-'))
+                    keys.push(key);
+            }
+            keys.forEach((key) => localStorage.removeItem(key));
+        }
+        catch {
+            /* private mode */
+        }
+    }, [setChrome]);
     const members = [...new Set(tasks.flatMap((task) => [task.owner, task.reviewer].filter((id): id is NonNullable<typeof id> => Boolean(id))))]
         .map((id) => PERSON_LABEL[id]);
     const saveTitle = (next: string) => {
@@ -789,30 +744,6 @@ export function LegalHubMyTasks({
         setBoardTitle(name);
         setRenaming(false);
         writeStored(titleKey, name);
-    };
-    const onBackgroundFile = (event: ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        event.target.value = '';
-        if (!file)
-            return;
-        if (!file.type.startsWith('image/') || file.size > 2.5 * 1024 * 1024) {
-            window.alert(t('legalHub.boardBgTooBig'));
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = () => {
-            const url = typeof reader.result === 'string' ? reader.result : '';
-            if (!url.startsWith('data:image/'))
-                return;
-            setBackgroundImage(url);
-            writeStored(bgKey, url);
-        };
-        reader.readAsDataURL(file);
-    };
-    const removeBackground = () => {
-        setBackgroundImage(null);
-        setThemeVars(null);
-        writeStored(bgKey, '');
     };
     const exportBoard = () => {
         const payload = {
@@ -890,7 +821,6 @@ export function LegalHubMyTasks({
         setColumnOrder([...COLUMNS]);
         writeStored(COLUMN_ORDER_KEY, [...COLUMNS]);
         saveTitle('');
-        removeBackground();
     };
 
     const toolbar = (
@@ -994,16 +924,6 @@ export function LegalHubMyTasks({
                                         <MenuIcon d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
                                         {t('legalHub.boardRename')}
                                     </button>
-                                    <button type="button" className="lh-board-menu__item" onClick={() => { setBoardMenuOpen(false); bgInputRef.current?.click(); }}>
-                                        <MenuIcon d="M4 5h16v14H4zM8 11l2.5 3 2-2.5L16 16H8z" />
-                                        {t('legalHub.boardBg')}
-                                    </button>
-                                    {backgroundImage ? (
-                                        <button type="button" className="lh-board-menu__item is-danger" onClick={() => { setBoardMenuOpen(false); removeBackground(); }}>
-                                            <MenuIcon d="M4 7h16M9 7V5h6v2M7 7l1 13h8l1-13" />
-                                            {t('legalHub.boardRemoveBg')}
-                                        </button>
-                                    ) : null}
                                     <button type="button" className="lh-board-menu__item" onClick={() => { setBoardMenuOpen(false); setMembersOpen(true); }}>
                                         <MenuIcon d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zM4 20a8 8 0 0 1 16 0" />
                                         {t('legalHub.boardMembers')}
@@ -1022,7 +942,6 @@ export function LegalHubMyTasks({
                                     </button>
                                 </div>
                             ) : null}
-                            <input ref={bgInputRef} type="file" accept="image/*" hidden onChange={onBackgroundFile} />
                             <input ref={importInputRef} type="file" accept="application/json,.json" hidden onChange={importBoard} />
                         </div>
                     ) : null}
@@ -1057,8 +976,7 @@ export function LegalHubMyTasks({
         const emptyTitle = mode === 'queue' ? t('legalHub.queueEmptyTitle') : t('legalHub.myTasksEmptyTitle');
         const emptyText = mode === 'queue' ? t('legalHub.queueEmptyText') : t('legalHub.myTasksEmptyText');
         return (
-            <div className={`lh-my lh-my--docket lh-my--list${backgroundImage ? ' lh-my--photo' : ''}`} style={themeStyle}>
-                {photo}
+            <div className="lh-my lh-my--docket lh-my--list">
                 {toolbar}
                 <div key={view} className="lh-my__swap">
                 <div className={`lh-rows${project == null ? '' : ' lh-rows--one'}`}>
@@ -1119,8 +1037,7 @@ export function LegalHubMyTasks({
     }
 
     return (
-        <div className={`lh-my lh-my--docket${backgroundImage ? ' lh-my--photo' : ''}`} style={themeStyle}>
-            {photo}
+        <div className="lh-my lh-my--docket">
             {toolbar}
             <div key={view} className="lh-my__swap">
             {noMatch ?? (
