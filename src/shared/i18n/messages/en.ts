@@ -57,6 +57,7 @@ export const enMessages = {
         sideMatters: 'Projects',
         projectSearch: 'Search projects',
         projectSearchEmpty: 'No projects found',
+        projectLocked: 'No access',
         sideReview: 'My reviews',
         myTasks: 'My Tasks',
         reviewQueue: 'Review Queue',

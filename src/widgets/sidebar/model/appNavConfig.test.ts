@@ -33,6 +33,7 @@ describe('getVisibleAppNavItems', () => {
         const ids = items.map((i) => i.id);
         expect(ids).toContain('tickets');
         expect(ids).toContain('todo');
+        expect(ids).toContain('legalHub');
         expect(ids).not.toContain('admin');
         expect(ids).not.toContain('hr');
         expect(ids).not.toContain('inventory');
@@ -60,6 +61,7 @@ describe('getVisibleAppNavItems', () => {
         }), false);
         const ids = items.map((i) => i.id);
         expect(ids).toContain('admin');
+        expect(ids).toContain('legalHub');
         expect(ids).toContain('attendance');
         expect(ids).toContain('accounting');
         expect(ids).toContain('hr');
@@ -132,5 +134,6 @@ describe('getVisibleAppNavItems', () => {
         expect(ids.has('expenses')).toBe(true);
         expect(ids.has('expensesPartners')).toBe(true);
         expect(ids.has('internalCommunication')).toBe(true);
+        expect(ids.has('legalHub')).toBe(true);
     });
 });

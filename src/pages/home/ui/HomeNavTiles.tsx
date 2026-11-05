@@ -15,7 +15,6 @@ import { useCorrespondencePartnerAttentionBadge } from '@entities/correspondence
 import { useVacationLeavePendingBadge, formatVacationLeavePendingBadge } from '@entities/vacation';
 import { useTodoInvitesBadge } from '@entities/todo';
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
-import { canAccessLegalHub } from '@shared/lib/legalHubAccess';
 import {
     getHubSectionForTile,
     HUB_SECTIONS,
@@ -55,27 +54,6 @@ const KOSTA_LEGAL_AI_TILE: HubNavLinkTile = {
     id: 'kostaLegalAi',
     to: routes.kostaLegalAi,
     icon: IconSparkles,
-};
-
-function IconLegalHub() {
-    return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M4 20h16" />
-            <path d="M6 20V10" />
-            <path d="M10 20V10" />
-            <path d="M14 20V10" />
-            <path d="M18 20V10" />
-            <path d="M3 10h18" />
-            <path d="M12 3 3 10h18L12 3z" />
-        </svg>
-    );
-}
-
-const LEGAL_HUB_TILE: HubNavLinkTile = {
-    kind: 'link',
-    id: 'legalHub',
-    to: routes.legalHub,
-    icon: IconLegalHub,
 };
 
 function hubTileLabel(id: HubTileId, t: ReturnType<typeof useI18n>['t']): string {
@@ -166,10 +144,7 @@ export function HomeNavTiles({ searchQuery = '' }: HomeNavTilesProps) {
             }));
         if (isMeetingRoomAccount(user))
             return fromNav;
-        const extras = [KOSTA_LEGAL_AI_TILE];
-        if (!loading && canAccessLegalHub(user))
-            extras.push(LEGAL_HUB_TILE);
-        return [...extras, ...fromNav];
+        return [KOSTA_LEGAL_AI_TILE, ...fromNav];
     }, [user, loading]);
 
     const showKostaDailyTile = useMemo(

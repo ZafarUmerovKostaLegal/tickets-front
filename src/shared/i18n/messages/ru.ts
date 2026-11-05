@@ -57,6 +57,7 @@ export const ruMessages: Messages = {
         sideMatters: 'Проекты',
         projectSearch: 'Поиск проекта',
         projectSearchEmpty: 'Ничего не найдено',
+        projectLocked: 'Нет доступа',
         sideReview: 'Мои проверки',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
@@ -1159,6 +1160,7 @@ export type Messages = {
         sideMatters: string;
         projectSearch: string;
         projectSearchEmpty: string;
+        projectLocked: string;
         sideReview: string;
         myTasks: string;
         reviewQueue: string;

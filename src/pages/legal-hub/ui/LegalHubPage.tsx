@@ -66,6 +66,15 @@ function IconTeam() {
     );
 }
 
+function IconLock() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <rect x="5" y="11" width="14" height="9" rx="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        </svg>
+    );
+}
+
 function IconSearch() {
     return (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -128,7 +137,12 @@ function sectionFromState(state: unknown): LegalHubNavId | null {
 
 function LegalHubPageBody() {
     const { t } = useI18n();
-    const { people, memberIds, projects, viewAs, setViewAsId } = useLegalHubView();
+    const { people, memberIds, projects, userId, viewAs, setViewAsId } = useLegalHubView();
+    const actorId = viewAs?.id ?? userId;
+    const canOpenProject = useCallback((id: string) => {
+        const project = projects.find((row) => row.id === id);
+        return project != null && actorId != null && project.accessIds.includes(actorId);
+    }, [actorId, projects]);
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
@@ -137,9 +151,10 @@ function LegalHubPageBody() {
     const onMemberPage = memberIdParam != null;
     const section: LegalHubNavId = parseSection(searchParams.get('view')) ?? sectionFromState(location.state) ?? 'myTasks';
     const projectParam = searchParams.get('project');
-    const openProject = section === 'projects' && projectParam
+    const requestedProject = section === 'projects' && projectParam
         ? projects.find((project) => project.id === projectParam) ?? null
         : null;
+    const openProject = requestedProject != null && canOpenProject(requestedProject.id) ? requestedProject : null;
     const openProjectId = openProject?.id ?? null;
     const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
     const [query, setQuery] = useState('');
@@ -232,6 +247,8 @@ function LegalHubPageBody() {
         });
     }, [navigate, onMemberPage, openProjectId, section]);
     const openMatter = useCallback((id: string) => {
+        if (!canOpenProject(id))
+            return;
         setMenuOpen(false);
         const projectId = encodeURIComponent(id);
         if (onMemberPage) {
@@ -245,7 +262,7 @@ function LegalHubPageBody() {
             addTransitionType(NAV_TRANSITION_TYPE);
             setSearchParams(next);
         });
-    }, [navigate, onMemberPage, searchParams, setSearchParams]);
+    }, [canOpenProject, navigate, onMemberPage, searchParams, setSearchParams]);
     const closeProject = useCallback(() => {
         const next = new URLSearchParams(searchParams);
         next.set('view', 'projects');
@@ -352,17 +369,26 @@ function LegalHubPageBody() {
                             ) : null}
                             {visibleProjects.map((project) => {
                                 const selected = openProjectId === project.id;
+                                const locked = !canOpenProject(project.id);
+                                const lockedLabel = t('legalHub.projectLocked');
                                 return (
                                     <li key={project.id}>
                                         <button
                                             type="button"
-                                            className={`lh-side__item${selected ? ' lh-side__item--active' : ''}`}
+                                            className={`lh-side__item${selected ? ' lh-side__item--active' : ''}${locked ? ' lh-side__item--locked' : ''}`}
                                             aria-current={selected ? 'page' : undefined}
-                                            title={project.name}
+                                            aria-disabled={locked || undefined}
+                                            disabled={locked}
+                                            title={locked ? `${project.name}. ${lockedLabel}` : project.name}
                                             onClick={() => openMatter(project.id)}
                                         >
                                             <span className="lh-side__sw lh-side__sw--project" aria-hidden />
                                             <span className="lh-side__item-label">{project.name}</span>
+                                            {locked ? (
+                                                <span className="lh-lock" aria-hidden>
+                                                    <IconLock />
+                                                </span>
+                                            ) : null}
                                         </button>
                                     </li>
                                 );
@@ -522,13 +548,29 @@ function LegalHubPageBody() {
                                 ) : null}
                                 {section === 'projects' && !openProject ? (
                                     <ul className="lh-project-list">
-                                        {visibleProjects.map((project) => (
-                                            <li key={project.id}>
-                                                <button type="button" className="lh-project-list__item" onClick={() => openMatter(project.id)}>
-                                                    {project.name}
-                                                </button>
-                                            </li>
-                                        ))}
+                                        {visibleProjects.map((project) => {
+                                            const locked = !canOpenProject(project.id);
+                                            const lockedLabel = t('legalHub.projectLocked');
+                                            return (
+                                                <li key={project.id}>
+                                                    <button
+                                                        type="button"
+                                                        className={`lh-project-list__item${locked ? ' lh-project-list__item--locked' : ''}`}
+                                                        aria-disabled={locked || undefined}
+                                                        disabled={locked}
+                                                        title={locked ? `${project.name}. ${lockedLabel}` : project.name}
+                                                        onClick={() => openMatter(project.id)}
+                                                    >
+                                                        <span className="lh-project-list__name">{project.name}</span>
+                                                        {locked ? (
+                                                            <span className="lh-lock" aria-hidden>
+                                                                <IconLock />
+                                                            </span>
+                                                        ) : null}
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
                                     </ul>
                                 ) : null}
                                 {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}

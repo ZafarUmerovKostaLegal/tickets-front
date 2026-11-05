@@ -187,6 +187,27 @@
   color: var(--app-text);
 }
 
+.lh-side__item--locked,
+.lh-side__item--locked:hover,
+.lh-side__item--locked:disabled {
+  background: transparent;
+  color: var(--app-muted);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.lh-lock {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--app-muted);
+}
+
+.lh-lock svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
 .lh-side__item--active {
   background: var(--app-bg-soft);
   box-shadow: inset 2px 0 0 var(--app-accent);
@@ -288,6 +309,14 @@
   .lh-page--side-collapsed .lh-side__collapse {
     justify-content: center;
     padding-inline: 0;
+  }
+
+  .lh-page--side-collapsed .lh-side__item--locked .lh-side__sw {
+    display: none;
+  }
+
+  .lh-page--side-collapsed .lh-lock {
+    margin-left: 0;
   }
 }
 
@@ -6987,6 +7016,7 @@ body[data-theme='dark'] .lh-page {
 .lh-project-list__item {
   display: flex;
   align-items: center;
+  gap: 0.6rem;
   width: 100%;
   min-height: 2.75rem;
   padding: 0.65rem 0.85rem;
@@ -7003,6 +7033,22 @@ body[data-theme='dark'] .lh-page {
 
 .lh-project-list__item:hover {
   border-color: color-mix(in srgb, var(--app-text) 22%, var(--app-border));
+}
+
+.lh-project-list__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lh-project-list__item--locked,
+.lh-project-list__item--locked:hover,
+.lh-project-list__item--locked:disabled {
+  color: var(--app-muted);
+  border-color: var(--app-border);
+  cursor: not-allowed;
+  opacity: 1;
 }
 
 .lh-rows ul {

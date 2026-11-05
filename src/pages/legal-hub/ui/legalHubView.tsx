@@ -15,12 +15,15 @@ export type LegalHubPerson = {
 export type LegalHubProject = {
     id: string;
     name: string;
+    /** Users who may open the project: partners and participants. */
+    accessIds: number[];
 };
 
 type LegalHubViewValue = {
     people: LegalHubPerson[];
     memberIds: number[];
     projects: LegalHubProject[];
+    userId: number | null;
     viewAs: LegalHubPerson | null;
     setViewAsId: (id: number | null) => void;
 };
@@ -79,7 +82,8 @@ function projectsOfTeam(rows: TimeManagerClientProjectRow[], partnerId: number, 
             continue;
         seen.add(id);
         const name = row.name.trim() || id;
-        projects.push({ id, name });
+        const accessIds = [...new Set([...readProjectPartnerAuthUserIds(row), ...readProjectParticipantAuthUserIds(row)])];
+        projects.push({ id, name, accessIds });
     }
     projects.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
     return projects;
@@ -137,10 +141,11 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
             people,
             memberIds: people.map((person) => person.id),
             projects,
+            userId,
             viewAs,
             setViewAsId,
         };
-    }, [people, projects, viewAsId]);
+    }, [people, projects, userId, viewAsId]);
 
     return <LegalHubViewContext.Provider value={value}>{children}</LegalHubViewContext.Provider>;
 }

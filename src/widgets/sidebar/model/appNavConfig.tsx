@@ -8,7 +8,8 @@ import { canAccessAdminOnlyModules, canAccessAdminPanel, canAccessAttendance, is
 import { isMeetingRoomAccount } from '@shared/lib/meetingRoomAccounts';
 import { canAccessItSecurity } from '@shared/lib/itSecurityAccess';
 import type { TranslationKey } from '@shared/i18n/translate';
-import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconMailInbox, IconMessages, IconContacts, IconAccounting, IconHr, IconShield, } from '../ui/SidebarIcons';
+import { canAccessLegalHub } from '@shared/lib/legalHubAccess';
+import { IconHome, IconTicket, IconGear, IconClock, IconBox, IconStopwatch, IconList, IconWallet, IconFileText, IconHelpCircle, IconCalendarCheck, IconPhone, IconFolderNetwork, IconMailInbox, IconMessages, IconContacts, IconAccounting, IconHr, IconLegalHub, IconShield, } from '../ui/SidebarIcons';
 
 export type AppNavId =
     | 'home'
@@ -31,7 +32,8 @@ export type AppNavId =
     | 'help'
     | 'contacts'
     | 'internalCommunication'
-    | 'itSecurity';
+    | 'itSecurity'
+    | 'legalHub';
 
 export type AppNavItemDef = {
     id: AppNavId;
@@ -48,6 +50,7 @@ export type AppNavItemDef = {
 
 const EMPLOYEE_NAV_IDS = new Set<AppNavId>([
     'home',
+    'legalHub',
     'timeTracking',
     'expenses',
     'expensesPartners',
@@ -66,6 +69,7 @@ const MEETING_ROOM_NAV_IDS = new Set<AppNavId>(['home', 'callSchedule']);
 
 export const APP_NAV_DEFINITIONS: AppNavItemDef[] = [
     { id: 'home', to: routes.home, icon: IconHome },
+    { id: 'legalHub', to: routes.legalHub, icon: IconLegalHub },
     { id: 'timeTracking', to: routes.timeTracking, icon: IconStopwatch },
     { id: 'expenses', to: routes.expenses, icon: IconWallet },
     { id: 'expensesPartners', to: routes.expensesPartners, icon: IconContacts },
@@ -118,7 +122,7 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
             if (!item.adminOnly)
                 return true;
             if (item.adminModulesOnly)
-                
+
                 return canAccessAdminOnlyModules(user?.role);
             if (item.adminOnlyStrict)
                 return user?.role === 'Администратор';
@@ -130,6 +134,9 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
     }
     if (loading || !canAccessItSecurity(user)) {
         visible = visible.filter((item) => item.id !== 'itSecurity');
+    }
+    if (!loading && !canAccessLegalHub(user)) {
+        visible = visible.filter((item) => item.id !== 'legalHub');
     }
     return visible;
 }

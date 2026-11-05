@@ -178,6 +178,17 @@ export function IconMessages() {
       <line x1="9" y1="14" x2="13" y2="14"/>
     </svg>);
 }
+export function IconLegalHub() {
+    return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 20h16"/>
+      <path d="M6 20V10"/>
+      <path d="M10 20V10"/>
+      <path d="M14 20V10"/>
+      <path d="M18 20V10"/>
+      <path d="M3 10h18"/>
+      <path d="M12 3 3 10h18L12 3z"/>
+    </svg>);
+}
 export function IconShield() {
     return (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M12 3 5 6v6c0 4.2 2.8 7.4 7 8.5 4.2-1.1 7-4.3 7-8.5V6l-7-3z"/>
