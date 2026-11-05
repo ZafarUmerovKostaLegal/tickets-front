@@ -118,6 +118,7 @@ export function getVisibleAppNavItems(user: User | null | undefined, loading: bo
             if (!item.adminOnly)
                 return true;
             if (item.adminModulesOnly)
+                
                 return canAccessAdminOnlyModules(user?.role);
             if (item.adminOnlyStrict)
                 return user?.role === 'Администратор';

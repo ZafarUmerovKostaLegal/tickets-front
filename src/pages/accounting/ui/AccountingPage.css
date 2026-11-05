@@ -168,12 +168,32 @@ body[data-theme='dark'] .acct-page .home-nav-tiles--hub .home-nav-tiles__section
   min-height: 0;
   min-width: 0;
   max-width: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   scrollbar-gutter: stable;
 }
 
 .acct-page__invoices-wrap .tt-inv--accounting {
+  flex: 1;
+  min-height: 0;
   padding-top: 0;
+  padding-bottom: 0;
+}
+
+.acct-page__invoices-wrap .tt-inv-reg {
+  flex: 1;
+  min-height: 0;
+}
+
+.acct-page__invoices-wrap .tt-inv-reg > :not(.tt-inv-reg__table-wrap) {
+  flex-shrink: 0;
+}
+
+.acct-page__invoices-wrap .tt-inv-reg__table-wrap {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
 }
 
 .acct-settings__lead,
