@@ -1322,7 +1322,8 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
         registry: {
             intro: 'Sheets 2020–2026 can be edited by hand, including the old Excel statuses. “2026 (system)” is view-only: those invoices come from the Invoices section.',
             systemTab: '2026 (system)',
-            systemReadonly: 'system invoices (only the status can be changed)',
+            systemReadonly: 'system invoices (status and the partner note can be changed)',
+            editPartnerNote: 'Edit',
             openInvoiceAria: 'Open invoice {number}',
             emptyTitle: 'Registry is empty for now',
             emptyText: 'If the table is empty, click “Load from Excel” to import the bundled seed.',

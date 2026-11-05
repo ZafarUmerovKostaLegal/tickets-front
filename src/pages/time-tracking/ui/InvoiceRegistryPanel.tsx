@@ -416,6 +416,119 @@ function AdvanceFeeReadout({ value }: { value: string }) {
     );
 }
 
+function PartnerNoteDialog({
+    value,
+    title,
+    onClose,
+    onSave,
+}: {
+    value: string;
+    title: string;
+    onClose: () => void;
+    onSave: (next: string) => Promise<void>;
+}) {
+    const { t } = useI18n();
+    const [draft, setDraft] = useState(value);
+    const [saving, setSaving] = useState(false);
+    const areaRef = useRef<HTMLTextAreaElement | null>(null);
+    useEffect(() => {
+        areaRef.current?.focus();
+    }, []);
+    useEffect(() => {
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape' && !saving)
+                onClose();
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [onClose, saving]);
+    return createPortal(
+        <div className="tt-inv-reg-pdf" role="presentation" onClick={() => { if (!saving) onClose(); }}>
+            <div
+                className="tt-inv-reg-pdf__dialog tt-inv-reg-note__dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="tt-inv-reg-note-title"
+                onClick={(event) => event.stopPropagation()}
+            >
+                <div className="tt-inv-reg-pdf__bar">
+                    <span className="tt-inv-reg-pdf__name" id="tt-inv-reg-note-title">{title}</span>
+                </div>
+                <form
+                    className="tt-inv-reg-note__field"
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        if (saving)
+                            return;
+                        setSaving(true);
+                        void onSave(draft).then(() => {
+                            onClose();
+                        }).catch(() => {
+                            setSaving(false);
+                        });
+                    }}
+                >
+                    <textarea
+                        ref={areaRef}
+                        className="tt-inv-reg-note__area"
+                        value={draft}
+                        rows={8}
+                        aria-label={title}
+                        onChange={(event) => setDraft(event.target.value)}
+                    />
+                    <div className="tt-inv-reg-note__actions">
+                        <button type="button" className="tt-inv-reg__pdf" disabled={saving} onClick={onClose}>
+                            {t('timeTrackingPage.common.cancel')}
+                        </button>
+                        <button type="submit" className="tt-inv-reg__pdf" disabled={saving}>
+                            {t('timeTrackingPage.common.save')}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>,
+        document.body,
+    );
+}
+
+function RegistryPartnerNoteCell({
+    value,
+    ariaLabel,
+    title,
+    editable,
+    onSave,
+}: {
+    value: string;
+    ariaLabel: string;
+    title: string;
+    editable: boolean;
+    onSave: (next: string) => Promise<void>;
+}) {
+    const { t } = useI18n();
+    const [open, setOpen] = useState(false);
+    const close = useCallback(() => setOpen(false), []);
+    return (
+        <td className="tt-inv-reg__td tt-inv-reg__td--wide tt-inv-reg__td--note" title={value || undefined}>
+            <div className="tt-inv-reg-note">
+                <span className="tt-inv-reg__cell-text">{value || '\u00a0'}</span>
+                {editable ? (
+                    <button
+                        type="button"
+                        className="tt-inv-reg__pdf"
+                        aria-label={ariaLabel}
+                        onClick={() => setOpen(true)}
+                    >
+                        {t('timeTrackingPage.invoices.registry.editPartnerNote')}
+                    </button>
+                ) : null}
+            </div>
+            {open ? (
+                <PartnerNoteDialog value={value} title={title} onClose={close} onSave={onSave} />
+            ) : null}
+        </td>
+    );
+}
+
 function RegistryEditableCell({
     value,
     ariaLabel,
@@ -429,6 +542,8 @@ function RegistryEditableCell({
     statusChoices,
     allowCustomStatus = true,
     title,
+    noteEditable = false,
+    onSaveNote,
     onActivate,
     onChange,
     onBlurCommit,
@@ -437,7 +552,7 @@ function RegistryEditableCell({
     ariaLabel: string;
     wide?: boolean;
     columnKey?: string;
-    editor?: 'text' | 'status' | 'pdf';
+    editor?: 'text' | 'status' | 'pdf' | 'note';
     money?: boolean;
     readOnly?: boolean;
     active: boolean;
@@ -445,6 +560,8 @@ function RegistryEditableCell({
     statusChoices: readonly string[];
     allowCustomStatus?: boolean;
     title?: string;
+    noteEditable?: boolean;
+    onSaveNote?: (next: string) => Promise<void>;
     onActivate: () => void;
     onChange: (next: string) => void;
     onBlurCommit: () => void;
@@ -458,6 +575,18 @@ function RegistryEditableCell({
                 ref.current.select();
         }
     }, [active, editor]);
+
+    if (editor === 'note' && onSaveNote) {
+        return (
+            <RegistryPartnerNoteCell
+                value={value}
+                ariaLabel={ariaLabel}
+                title={title || ariaLabel}
+                editable={noteEditable}
+                onSave={onSaveNote}
+            />
+        );
+    }
 
     if (editor === 'pdf') {
         return (
@@ -1777,7 +1906,31 @@ export function InvoiceRegistryPanel({
                                                 readOnly={!canEditCell}
                                                 statusChoices={statusChoices}
                                                 allowCustomStatus={!systemStatus}
-                                                title={usdHint || undefined}
+                                                title={usdHint || col.label}
+                                                noteEditable={col.editor === 'note' && !readOnly && Boolean(invoiceId)}
+                                                onSaveNote={col.editor === 'note' ? async (next) => {
+                                                    const previous = val;
+                                                    if (!invoiceId || next === previous)
+                                                        return;
+                                                    setRows((prev) => prev.map((item) => (
+                                                        item.id === row.id ? { ...item, partnerNote: next } : item
+                                                    )));
+                                                    try {
+                                                        await patchInvoice(invoiceId, { clientNote: next.trim() ? next : null });
+                                                    }
+                                                    catch (error: unknown) {
+                                                        setRows((prev) => prev.map((item) => (
+                                                            item.id === row.id ? { ...item, partnerNote: previous } : item
+                                                        )));
+                                                        showToast({
+                                                            message: error instanceof Error && error.message
+                                                                ? error.message
+                                                                : t('timeTrackingPage.invoices.registry.loadFailed'),
+                                                            variant: 'error',
+                                                        });
+                                                        throw error;
+                                                    }
+                                                } : undefined}
                                                 active={canEditCell && active && col.editor !== 'status'}
                                                 ariaLabel={`${col.label}, ${t('timeTrackingPage.invoices.registry.rowN').replace('{n}', String(idx + 1))}`}
                                                 onActivate={() => {

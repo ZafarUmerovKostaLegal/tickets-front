@@ -8,6 +8,7 @@ const PARTNER_NOTE_COLUMN: InvoiceRegistryColumnDef = {
     key: 'partnerNote',
     label: 'Примечание для партнера',
     wide: true,
+    editor: 'note',
 };
 
 function withAmountUsd(columns: InvoiceRegistryColumnDef[]): InvoiceRegistryColumnDef[] {
