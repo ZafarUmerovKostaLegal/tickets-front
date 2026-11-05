@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { listTimeTrackingTeams, listTimeTrackingUsers } from '@entities/time-tracking';
+import { listAllTimeManagerClientsMerged, type TimeManagerClientRow } from '@entities/time-tracking/api/domains/clients';
 import { listAllClientProjectsMerged, type TimeManagerClientProjectRow } from '@entities/time-tracking/api/domains/projects';
 import type { TimeTrackingTeamRow } from '@entities/time-tracking/api/domains/teamsAndLabor';
 import type { TimeTrackingUserRow } from '@entities/time-tracking/api/domains/usersAndRates';
@@ -18,6 +19,7 @@ export type LegalHubPerson = {
 export type LegalHubProject = {
     id: string;
     name: string;
+    client: string;
     /** Users who may open the project: partners and participants. */
     accessIds: number[];
 };
@@ -91,7 +93,12 @@ function collectStaff(
     return people;
 }
 
-function projectsOfTeam(rows: TimeManagerClientProjectRow[], partnerId: number, memberIds: number[]): LegalHubProject[] {
+function projectsOfTeam(
+    rows: TimeManagerClientProjectRow[],
+    partnerId: number,
+    memberIds: number[],
+    clientNames: ReadonlyMap<string, string>,
+): LegalHubProject[] {
     const team = new Set([partnerId, ...memberIds]);
     const projects: LegalHubProject[] = [];
     const seen = new Set<string>();
@@ -104,8 +111,11 @@ function projectsOfTeam(rows: TimeManagerClientProjectRow[], partnerId: number, 
             continue;
         seen.add(id);
         const name = row.name.trim() || id;
+        const raw = row as TimeManagerClientProjectRow & { clientName?: string; client_name?: string };
+        const embedded = String(raw.clientName ?? raw.client_name ?? '').trim();
+        const client = embedded || clientNames.get((row.client_id ?? '').trim()) || '';
         const accessIds = [...new Set([...readProjectPartnerAuthUserIds(row), ...readProjectParticipantAuthUserIds(row)])];
-        projects.push({ id, name, accessIds });
+        projects.push({ id, name, client, accessIds });
     }
     projects.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
     return projects;
@@ -140,19 +150,21 @@ export function LegalHubViewProvider({ children }: { children: ReactNode }) {
         let cancelled = false;
         void (async () => {
             try {
-                const [teams, users, projectRows] = await Promise.all([
+                const [teams, users, projectRows, clients] = await Promise.all([
                     listTimeTrackingTeams().catch(() => [] as TimeTrackingTeamRow[]),
                     listTimeTrackingUsers().catch(() => [] as TimeTrackingUserRow[]),
                     listAllClientProjectsMerged(false).catch(() => [] as TimeManagerClientProjectRow[]),
+                    listAllTimeManagerClientsMerged(false).catch(() => [] as TimeManagerClientRow[]),
                 ]);
                 if (cancelled)
                     return;
                 const roster = collectStaff(teams, users, self);
                 const actor = roster.find((person) => person.id === userId) ?? roster[0] ?? null;
+                const clientNames = new Map(clients.map((client) => [client.id, client.name.trim()]));
                 setStaff(roster);
                 setMe(actor);
                 setPeople(actor == null ? [] : roster.filter((person) => person.id !== actor.id && canAssignLegalHubTask(actor, person)));
-                setProjects(projectsOfTeam(projectRows, userId, roster.filter((person) => person.id !== userId).map((person) => person.id)));
+                setProjects(projectsOfTeam(projectRows, userId, roster.filter((person) => person.id !== userId).map((person) => person.id), clientNames));
             }
             catch {
                 if (!cancelled) {

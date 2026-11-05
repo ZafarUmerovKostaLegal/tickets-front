@@ -248,7 +248,7 @@ function LegalHubPageBody() {
         const rows = projectDisplay.hideLocked ? projects.filter((project) => canOpenProject(project.id)) : projects;
         if (!needle)
             return rows;
-        return rows.filter((project) => project.name.toLowerCase().includes(needle));
+        return rows.filter((project) => `${project.name} ${project.client}`.toLowerCase().includes(needle));
     }, [canOpenProject, projectDisplay.hideLocked, projectQuery, projects]);
     const projectGroups = useMemo(
         () => groupProjects(visibleProjects, projectDisplay.folders),
@@ -646,6 +646,7 @@ function LegalHubPageBody() {
                                         query={query}
                                         layout="board"
                                         heading={openProject.name}
+                                        headingNote={openProject.client}
                                         scope={openProject.id}
                                         onBack={closeProject}
                                         tasks={hubTasks}
@@ -699,6 +700,20 @@ function LegalHubPageBody() {
     );
 }
 
+function projectTitle(project: { name: string; client: string }, locked: boolean, lockedLabel: string): string {
+    const label = project.client ? `${project.name} · ${project.client}` : project.name;
+    return locked ? `${label}. ${lockedLabel}` : label;
+}
+
+function ProjectLabel({ project, list = false }: { project: { name: string; client: string }; list?: boolean }) {
+    return (
+        <span className={list ? 'lh-project-list__name' : 'lh-side__item-label lh-side__item-label--stack'}>
+            <span className={list ? 'lh-project-list__title' : 'lh-side__item-title'}>{project.name}</span>
+            {project.client ? <span className={list ? 'lh-project-list__client' : 'lh-side__item-client'}>{project.client}</span> : null}
+        </span>
+    );
+}
+
 function SideProject({
     project,
     selected,
@@ -706,7 +721,7 @@ function SideProject({
     lockedLabel,
     onOpen,
 }: {
-    project: { id: string; name: string };
+    project: { id: string; name: string; client: string };
     selected: boolean;
     locked: boolean;
     lockedLabel: string;
@@ -720,11 +735,11 @@ function SideProject({
                 aria-current={selected ? 'page' : undefined}
                 aria-disabled={locked || undefined}
                 disabled={locked}
-                title={locked ? `${project.name}. ${lockedLabel}` : project.name}
+                title={projectTitle(project, locked, lockedLabel)}
                 onClick={() => onOpen(project.id)}
             >
                 <span className="lh-side__sw lh-side__sw--project" aria-hidden />
-                <span className="lh-side__item-label">{project.name}</span>
+                <ProjectLabel project={project} />
                 {locked ? (
                     <span className="lh-lock" aria-hidden>
                         <IconLock />
@@ -741,7 +756,7 @@ function ProjectList({
     lockedLabel,
     onOpen,
 }: {
-    projects: { id: string; name: string }[];
+    projects: { id: string; name: string; client: string }[];
     canOpen: (id: string) => boolean;
     lockedLabel: string;
     onOpen: (id: string) => void;
@@ -759,10 +774,10 @@ function ProjectList({
                             className={`lh-project-list__item${locked ? ' lh-project-list__item--locked' : ''}`}
                             aria-disabled={locked || undefined}
                             disabled={locked}
-                            title={locked ? `${project.name}. ${lockedLabel}` : project.name}
+                            title={projectTitle(project, locked, lockedLabel)}
                             onClick={() => onOpen(project.id)}
                         >
-                            <span className="lh-project-list__name">{project.name}</span>
+                            <ProjectLabel project={project} list />
                             {locked ? (
                                 <span className="lh-lock" aria-hidden>
                                     <IconLock />

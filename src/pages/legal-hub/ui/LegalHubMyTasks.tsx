@@ -265,6 +265,7 @@ export function LegalHubMyTasks({
     createSignal = 0,
     onBack,
     heading = null,
+    headingNote = null,
     scope = null,
     boardOwnerId = null,
 }: {
@@ -280,6 +281,7 @@ export function LegalHubMyTasks({
     /** Project board: return to the list of projects. */
     onBack?: () => void;
     heading?: string | null;
+    headingNote?: string | null;
     /** Separate stored board title from the personal board. */
     scope?: string | null;
     /** Whose board is open. Project boards ignore this and show that project's tasks. */
@@ -731,6 +733,7 @@ export function LegalHubMyTasks({
                         </nav>
                     ) : null}
                     <h1>{shownTitle}</h1>
+                    {headingNote?.trim() ? <span className="lh-bt__client">{headingNote.trim()}</span> : null}
                     <span className="lh-bt__meta">
                         {t(taskCountKey(visible.filter((task) => !task.done).length)).replace('{count}', String(visible.filter((task) => !task.done).length))}
                         {lateCount > 0 ? <em>{t('legalHub.boardLate').replace('{count}', String(lateCount))}</em> : null}
@@ -1426,8 +1429,8 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
                             value={projectId}
                             items={openProjects}
                             getOptionValue={(item) => item.id}
-                            getOptionLabel={(item) => item.name}
-                            getSearchText={(item) => item.name}
+                            getOptionLabel={(item) => item.client ? `${item.name} · ${item.client}` : item.name}
+                            getSearchText={(item) => `${item.name} ${item.client}`}
                             onSelect={(item) => setProjectId(item.id)}
                         />
                     </label>

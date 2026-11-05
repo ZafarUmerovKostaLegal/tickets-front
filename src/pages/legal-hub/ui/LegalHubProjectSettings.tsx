@@ -10,7 +10,7 @@ import {
     type ProjectFolder,
 } from './legalHubProjectDisplay';
 
-type ProjectRow = { id: string; name: string };
+type ProjectRow = { id: string; name: string; client: string };
 
 const COLOR_LABEL: Record<FolderColor, TranslationKey> = {
     slate: 'legalHub.projectFolderColorSlate',
@@ -148,7 +148,7 @@ function FolderCard({
     const [query, setQuery] = useState('');
     const needle = query.trim().toLowerCase();
     const visible = needle
-        ? projects.filter((project) => project.name.toLowerCase().includes(needle))
+        ? projects.filter((project) => `${project.name} ${project.client}`.toLowerCase().includes(needle))
         : projects;
 
     return (
@@ -216,7 +216,10 @@ function FolderCard({
                                             <path d="M2.2 6.1 4.7 8.6 9.8 3.4" />
                                         </svg>
                                     </span>
-                                    <span className="lh-folders__pick-name">{project.name}</span>
+                                    <span className="lh-folders__pick-text">
+                                        <span className="lh-folders__pick-name">{project.name}</span>
+                                        {project.client ? <span className="lh-folders__pick-client">{project.client}</span> : null}
+                                    </span>
                                 </label>
                             </li>
                         );
