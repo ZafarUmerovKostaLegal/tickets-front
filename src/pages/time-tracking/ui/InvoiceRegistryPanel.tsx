@@ -19,10 +19,12 @@ import {
     isInvoiceRegistryMoneyColumnKey,
     registryStatusToneClass,
     loadInvoiceRegistryRows,
+    mergeRegistryPartnerNotes,
     type InvoiceRegistryRow,
     type InvoiceRegistryYearId,
 } from '@entities/time-tracking/model/invoiceRegistry';
 import {
+    listInvoices,
     patchInvoice,
     setInvoiceRegistryStatus,
 } from '@entities/time-tracking/api/domains/invoices';
@@ -230,6 +232,29 @@ function systemInvoiceId(row: InvoiceRegistryRow): string {
     if (explicit)
         return explicit;
     return row.id.startsWith('sys-') ? row.id.slice(4) : '';
+}
+
+/** Partner notes live on the invoice. The registry sheet only has them after the time-tracking service is updated. */
+async function partnerNotesByInvoiceId(): Promise<Map<string, string>> {
+    const notes = new Map<string, string>();
+    const limit = 500;
+    for (let offset = 0; offset < 5000; offset += limit) {
+        const page = await listInvoices({
+            dateFrom: '2026-01-01',
+            dateTo: '2026-12-31',
+            limit,
+            offset,
+        });
+        for (const item of page.items) {
+            const raw = item as typeof item & { client_note?: string | null };
+            const note = String(raw.clientNote ?? raw.client_note ?? '').trim();
+            if (item.id && note)
+                notes.set(item.id, note);
+        }
+        if (page.items.length < limit)
+            break;
+    }
+    return notes;
 }
 
 function RegistryPdfPreview({
@@ -1058,7 +1083,18 @@ export function InvoiceRegistryPanel({
 
                 if (cancelled)
                     return;
-                setRows(Array.isArray(loadedSheet.rows) ? loadedSheet.rows : []);
+                let nextRows = Array.isArray(loadedSheet.rows) ? loadedSheet.rows : [];
+                if (year === '2026-system' && nextRows.length > 0) {
+                    try {
+                        nextRows = mergeRegistryPartnerNotes(nextRows, await partnerNotesByInvoiceId());
+                    }
+                    catch {
+                        /* the sheet still opens; notes appear after the service returns them */
+                    }
+                    if (cancelled)
+                        return;
+                }
+                setRows(nextRows);
                 setSheetMode(loadedSheet.mode === 'archive' || loadedSheet.mode === 'system' ? loadedSheet.mode : 'active');
                 setDirty(false);
             }

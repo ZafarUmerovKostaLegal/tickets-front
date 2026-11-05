@@ -3,6 +3,7 @@ export { INVOICE_REGISTRY_SHEETS, INVOICE_REGISTRY_USD_COLUMN, getInvoiceRegistr
 export { formatRegistryAmountUsd, registryAmountUsd, registryIssueIso, registryUsdBasis, registryUsdPersistItem, registryUsdRateDates, registryUsdRateHint, type RegistryUsdSaveItem } from './amountUsd';
 export { INVOICE_REGISTRY_STATUSES, SYSTEM_INVOICE_REGISTRY_STATUSES, LEGACY_INVOICE_REGISTRY_STATUSES, collectRegistryStatusOptions, isInvoiceRegistryStatus, normalizeRegistryStatusLabel, registryStatusToneClass, type InvoiceRegistryStatus } from './statuses';
 export { loadInvoiceRegistryRows } from './loadSeed';
+export { mergeRegistryPartnerNotes } from './partnerNote';
 export { filterInvoiceRegistryRows, parseRegistryDay, type InvoiceRegistryFilter, type RegistryDay } from './registryFilters';
 export {
     aggregatePartnerRegistryStats,
