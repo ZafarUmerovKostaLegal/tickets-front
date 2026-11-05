@@ -1682,7 +1682,7 @@ export const timeTrackingPageExtraMessagesEn: TimeTrackingPageExtraMessages = {
             discountPlaceholder: 'amount, e.g. 50',
             taxPlaceholder: 'e.g. 20',
             optionalPlaceholder: 'optional',
-            clientNote: 'Note for client',
+            clientNote: 'Note for partner',
             internalNote: 'Internal note',
             saveDraft: 'Save draft',
             fixedFeeTitle: 'Fixed amount on top of hours',

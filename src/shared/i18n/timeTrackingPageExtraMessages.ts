@@ -1680,7 +1680,7 @@ export const timeTrackingPageExtraMessages = {
             discountPlaceholder: 'сумма, напр. 50',
             taxPlaceholder: 'например 20',
             optionalPlaceholder: 'необязательно',
-            clientNote: 'Примечание для клиента',
+            clientNote: 'Примечание для партнера',
             internalNote: 'Внутреннее примечание',
             saveDraft: 'Сохранить черновик',
             fixedFeeTitle: 'Фиксированная сумма к часам',

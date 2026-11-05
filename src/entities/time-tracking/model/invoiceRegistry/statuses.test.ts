@@ -86,10 +86,18 @@ describe('2026 system sheet', () => {
         const system = getInvoiceRegistrySheet('2026-system');
         expect(system.sheetName).toBe('2026 (система)');
         expect(system.columns.map((column) => column.key)).toEqual([
-            ...manual.columns.map((column) => column.key).filter((key) => key !== 'details'),
+            ...manual.columns.map((column) => column.key).filter((key) => key !== 'details').flatMap((key) => (
+                key === 'amountUsd' ? ['partnerNote', key] : [key]
+            )),
             'invoicePdf',
             'details',
         ]);
+        expect(system.columns.find((column) => column.key === 'partnerNote')?.label).toBe('Примечание для партнера');
+        const amountAt = system.columns.findIndex((column) => column.key === 'amount');
+        const noteAt = system.columns.findIndex((column) => column.key === 'partnerNote');
+        const usdAt = system.columns.findIndex((column) => column.key === 'amountUsd');
+        expect(noteAt).toBe(amountAt + 1);
+        expect(usdAt).toBe(noteAt + 1);
         expect(system.columns.find((column) => column.key === 'details')?.label).toBe('Внутреннее примечание');
         expect(system.columns.find((column) => column.key === 'invoicePdf')?.editor).toBe('pdf');
     });

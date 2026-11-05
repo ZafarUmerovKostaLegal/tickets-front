@@ -4,6 +4,12 @@ export const INVOICE_REGISTRY_USD_COLUMN = 'amountUsd';
 
 const USD_COLUMN: InvoiceRegistryColumnDef = { key: INVOICE_REGISTRY_USD_COLUMN, label: 'Сумма в $' };
 
+const PARTNER_NOTE_COLUMN: InvoiceRegistryColumnDef = {
+    key: 'partnerNote',
+    label: 'Примечание для партнера',
+    wide: true,
+};
+
 function withAmountUsd(columns: InvoiceRegistryColumnDef[]): InvoiceRegistryColumnDef[] {
     const out: InvoiceRegistryColumnDef[] = [];
     for (const column of columns) {
@@ -128,7 +134,9 @@ export const INVOICE_REGISTRY_SHEETS: InvoiceRegistrySheetMeta[] = [
         year: '2026-system',
         sheetName: '2026 (система)',
         columns: [
-            ...COL_2026.filter((col) => col.key !== 'details'),
+            ...COL_2026.filter((col) => col.key !== 'details').flatMap((col) => (
+                col.key === INVOICE_REGISTRY_USD_COLUMN ? [PARTNER_NOTE_COLUMN, col] : [col]
+            )),
             { key: 'invoicePdf', label: 'PDF', editor: 'pdf' },
             { key: 'details', label: 'Внутреннее примечание', wide: true },
         ],
