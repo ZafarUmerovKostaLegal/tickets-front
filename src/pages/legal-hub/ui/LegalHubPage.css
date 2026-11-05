@@ -7574,9 +7574,16 @@ body[data-theme='dark'] .lh-page {
   height: 16px;
 }
 
+.lh-page--photo .lh-page__content,
+.lh-page--photo .lh-page__content:has(.lh-my__board) {
+  padding: 0;
+}
+
 .lh-my--photo {
   position: relative;
   isolation: isolate;
+  box-sizing: border-box;
+  padding: 0.7rem 0.85rem 0.35rem;
   background: transparent;
 }
 
