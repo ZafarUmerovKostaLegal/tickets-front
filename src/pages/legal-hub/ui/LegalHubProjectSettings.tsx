@@ -68,6 +68,7 @@ export function LegalHubProjectSettings({
                     color: 'slate',
                     projectIds: [],
                     collapsed: false,
+                    clientOrder: [],
                 },
             ],
         });

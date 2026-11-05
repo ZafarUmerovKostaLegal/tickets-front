@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assignProjectToFolder, groupProjects, normalizeProjectDisplay, type ProjectFolder } from './legalHubProjectDisplay';
+import { assignProjectToFolder, groupProjects, normalizeProjectDisplay, reorderProjectDisplay, type ProjectFolder } from './legalHubProjectDisplay';
 
 const projects = [
     { id: 'a', name: 'A' },
@@ -13,6 +13,7 @@ function folder(partial: Partial<ProjectFolder> & Pick<ProjectFolder, 'id'>): Pr
         color: partial.color ?? 'slate',
         projectIds: partial.projectIds ?? [],
         collapsed: partial.collapsed ?? false,
+        clientOrder: partial.clientOrder ?? [],
         id: partial.id,
     };
 }
@@ -44,8 +45,30 @@ describe('project folders', () => {
         });
         expect(settings.hideLocked).toBe(true);
         expect(settings.folders).toEqual([
-            { id: 'one', name: 'Суды', color: 'slate', projectIds: ['a'], collapsed: true },
-            { id: 'two', name: 'Сделки', color: 'accent', projectIds: ['b'], collapsed: false },
+            { id: 'one', name: 'Суды', color: 'slate', projectIds: ['a'], collapsed: true, clientOrder: [] },
+            { id: 'two', name: 'Сделки', color: 'accent', projectIds: ['b'], collapsed: false, clientOrder: [] },
+        ]);
+        expect(settings.sidebarOrder).toEqual([]);
+    });
+
+    it('меняет местами папку и клиента', () => {
+        const rows = [
+            { id: 'a', client: 'Kosta Legal' },
+            { id: 'b', client: 'North' },
+        ];
+        const settings = normalizeProjectDisplay({
+            folders: [folder({ id: 'one', projectIds: [] })],
+            sidebarOrder: [
+                { type: 'folder', id: 'one' },
+                { type: 'client', name: 'Kosta Legal' },
+                { type: 'client', name: 'North' },
+            ],
+        });
+        const next = reorderProjectDisplay(settings, rows, 'root', 'client:north', 'folder:one');
+        expect(next.sidebarOrder.map((token) => token.type === 'folder' ? token.id : token.name)).toEqual([
+            'North',
+            'one',
+            'Kosta Legal',
         ]);
     });
 });

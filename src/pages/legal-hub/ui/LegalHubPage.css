@@ -216,6 +216,44 @@
 .lh-side__sw--success { background: var(--app-success); }
 .lh-side__sw--error { background: var(--app-error); }
 
+.lh-side__row {
+  display: flex;
+  align-items: center;
+  gap: 0.1rem;
+  border-radius: 6px;
+}
+
+.lh-side__row.is-over {
+  outline: 1px solid var(--app-accent);
+  outline-offset: -1px;
+}
+
+.lh-side__grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 0.85rem;
+  height: 1.4rem;
+  flex-shrink: 0;
+  color: var(--app-muted);
+  cursor: grab;
+  opacity: 0.45;
+}
+
+.lh-side__row:hover .lh-side__grip,
+.lh-side__grip:focus {
+  opacity: 1;
+}
+
+.lh-side__grip svg {
+  width: 0.72rem;
+  height: 0.72rem;
+}
+
+.lh-side__grip:active {
+  cursor: grabbing;
+}
+
 .lh-side__folder-head {
   display: flex;
   align-items: center;
@@ -434,6 +472,7 @@
   .lh-page--side-collapsed .lh-side__brand,
   .lh-page--side-collapsed .lh-side__section,
   .lh-page--side-collapsed .lh-side__tools,
+  .lh-page--side-collapsed .lh-side__grip,
   .lh-page--side-collapsed .lh-side__folder-head,
   .lh-page--side-collapsed .lh-side__client-head,
   .lh-page--side-collapsed .lh-side__find,

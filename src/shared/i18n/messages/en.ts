@@ -75,6 +75,7 @@ export const enMessages = {
         projectFoldersEmpty: 'No folders yet. Create one and choose the projects that belong in it.',
         projectFolderLoose: 'Ungrouped',
         projectNoClient: 'No client',
+        reorder: 'Reorder',
         sideReview: 'My reviews',
         myTasks: 'My Tasks',
         reviewQueue: 'Review Queue',

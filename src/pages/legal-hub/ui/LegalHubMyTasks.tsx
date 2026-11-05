@@ -358,6 +358,7 @@ export function LegalHubMyTasks({
     const boardScope = scope?.trim() || project || 'mine';
     const filterScope = boardFilterScope(mode, scope);
     const columnsReady = useRef(false);
+    const columnsTouched = useRef(false);
     const filtersReady = useRef(false);
     const titleKey = `lh-board-title-${boardScope}`;
     const [boardTitle, setBoardTitle] = useState('');
@@ -393,6 +394,10 @@ export function LegalHubMyTasks({
             if (cancelled)
                 return;
             const localCustom = readCustomColumns();
+            if (columnsTouched.current) {
+                columnsReady.current = true;
+                return;
+            }
             if (remote && !columnsAreDefault(remote.columns)) {
                 const custom = remote.columns.custom;
                 const order = mergeColumnOrder(remote.columns.order, custom.map((column) => column.id));
@@ -422,10 +427,14 @@ export function LegalHubMyTasks({
         writeStored(CUSTOM_COLUMNS_KEY, customColumns);
         writeStored(COLUMN_ORDER_KEY, columnOrder);
         writeStored(COLLAPSED_KEY, collapsed);
+        const payload = { custom: customColumns, order: columnOrder, collapsed };
         const handle = window.setTimeout(() => {
-            void saveLegalHubColumns({ custom: customColumns, order: columnOrder, collapsed });
+            void saveLegalHubColumns(payload);
         }, 400);
-        return () => window.clearTimeout(handle);
+        return () => {
+            window.clearTimeout(handle);
+            void saveLegalHubColumns(payload);
+        };
     }, [collapsed, columnOrder, customColumns]);
     useEffect(() => {
         let cancelled = false;
@@ -552,6 +561,8 @@ export function LegalHubMyTasks({
         if (from === to)
             return;
         flip.current = 'columns';
+        columnsTouched.current = true;
+        columnsReady.current = true;
         setColumnOrder((current) => {
             const fromIndex = current.indexOf(from);
             const toIndex = current.indexOf(to);

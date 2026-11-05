@@ -75,6 +75,7 @@ export const ruMessages: Messages = {
         projectFoldersEmpty: 'Папок пока нет. Создайте папку и отметьте проекты, которые в неё входят.',
         projectFolderLoose: 'Без папки',
         projectNoClient: 'Без клиента',
+        reorder: 'Переместить',
         sideReview: 'Мои проверки',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
@@ -1196,6 +1197,7 @@ export type Messages = {
         projectFoldersEmpty: string;
         projectFolderLoose: string;
         projectNoClient: string;
+        reorder: string;
         sideReview: string;
         myTasks: string;
         reviewQueue: string;

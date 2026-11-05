@@ -98,6 +98,8 @@ export function boardFilterScope(mode: 'mine' | 'queue', scope: string | null): 
 
 let snapshot: LegalHubBoardDocument | null = null;
 let loading: Promise<LegalHubBoardDocument | null> | null = null;
+let columnQueue: Promise<void> = Promise.resolve();
+let folderQueue: Promise<void> = Promise.resolve();
 
 export function fetchLegalHubBoard(): Promise<LegalHubBoardDocument | null> {
     if (snapshot)
@@ -136,17 +138,25 @@ async function putBoard(path: string, body: unknown): Promise<boolean> {
     }
 }
 
-export async function saveLegalHubColumns(columns: BoardColumnSettings): Promise<void> {
-    const saved = await putBoard('/api/v1/legal-hub/board/columns', columns);
-    if (saved && snapshot)
-        snapshot = { ...snapshot, columns };
+export function saveLegalHubColumns(columns: BoardColumnSettings): Promise<void> {
+    const payload = columns;
+    columnQueue = columnQueue.then(async () => {
+        const saved = await putBoard('/api/v1/legal-hub/board/columns', payload);
+        if (saved && snapshot)
+            snapshot = { ...snapshot, columns: payload };
+    });
+    return columnQueue;
 }
 
-export async function saveLegalHubFolders(userId: number, folders: ProjectDisplaySettings): Promise<void> {
-    saveProjectDisplay(userId, folders);
-    const saved = await putBoard('/api/v1/legal-hub/board/folders', folders);
-    if (saved && snapshot)
-        snapshot = { ...snapshot, folders: normalizeProjectDisplay(folders) };
+export function saveLegalHubFolders(userId: number, folders: ProjectDisplaySettings): Promise<void> {
+    const payload = normalizeProjectDisplay(folders);
+    saveProjectDisplay(userId, payload);
+    folderQueue = folderQueue.then(async () => {
+        const saved = await putBoard('/api/v1/legal-hub/board/folders', payload);
+        if (saved && snapshot)
+            snapshot = { ...snapshot, folders: payload };
+    });
+    return folderQueue;
 }
 
 export async function saveLegalHubFilters(filters: BoardFilterSettings): Promise<void> {
