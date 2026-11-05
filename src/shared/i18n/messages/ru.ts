@@ -58,6 +58,21 @@ export const ruMessages: Messages = {
         projectSearch: 'Поиск проекта',
         projectSearchEmpty: 'Ничего не найдено',
         projectLocked: 'Нет доступа',
+        projectDisplay: 'Отображение проектов',
+        projectDisplayHideLocked: 'Скрывать проекты без доступа',
+        projectFolders: 'Папки',
+        projectFolderNew: 'Новая папка',
+        projectFolderName: 'Название папки',
+        projectFolderDelete: 'Удалить',
+        projectFolderColor: 'Цвет папки',
+        projectFolderColorSlate: 'Серый',
+        projectFolderColorInk: 'Тёмный',
+        projectFolderColorAccent: 'Синий',
+        projectFolderColorWarning: 'Янтарный',
+        projectFolderColorSuccess: 'Зелёный',
+        projectFolderColorError: 'Красный',
+        projectFoldersEmpty: 'Папок пока нет. Создайте папку и отметьте проекты, которые в неё входят.',
+        projectFolderLoose: 'Без папки',
         sideReview: 'Мои проверки',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
@@ -1162,6 +1177,21 @@ export type Messages = {
         projectSearch: string;
         projectSearchEmpty: string;
         projectLocked: string;
+        projectDisplay: string;
+        projectDisplayHideLocked: string;
+        projectFolders: string;
+        projectFolderNew: string;
+        projectFolderName: string;
+        projectFolderDelete: string;
+        projectFolderColor: string;
+        projectFolderColorSlate: string;
+        projectFolderColorInk: string;
+        projectFolderColorAccent: string;
+        projectFolderColorWarning: string;
+        projectFolderColorSuccess: string;
+        projectFolderColorError: string;
+        projectFoldersEmpty: string;
+        projectFolderLoose: string;
         sideReview: string;
         myTasks: string;
         reviewQueue: string;

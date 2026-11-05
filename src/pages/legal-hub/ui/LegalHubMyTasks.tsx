@@ -1472,10 +1472,16 @@ function NewTaskDialog({ fixedProjectId = null, boardOwnerId = null, column = nu
                         </label>
                     ) : null}
                 </div>
-                <label className="lh-my__check">
-                    <input type="checkbox" checked={approval} onChange={(event) => setApproval(event.target.checked)} />
-                    {t('legalHub.myTasksApproval')}
-                </label>
+                <button
+                    type="button"
+                    className={`lh-my__switch${approval ? ' is-on' : ''}`}
+                    role="switch"
+                    aria-checked={approval}
+                    onClick={() => setApproval((value) => !value)}
+                >
+                    <span>{t('legalHub.myTasksApproval')}</span>
+                    <i aria-hidden />
+                </button>
                 <label className="lh-drawer__field">
                     <span>{t('legalHub.taskFieldInstructions')}</span>
                     <textarea className="lh-drawer__area" rows={3} value={instructions} placeholder={t('legalHub.myTasksInstructionsPh')} onChange={(event) => setInstructions(event.target.value)} />

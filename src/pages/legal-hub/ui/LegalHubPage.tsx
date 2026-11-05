@@ -1,4 +1,4 @@
-import { addTransitionType, startTransition, useCallback, useEffect, useMemo, useState, ViewTransition, type ComponentType } from 'react';
+import { addTransitionType, startTransition, useCallback, useEffect, useMemo, useRef, useState, ViewTransition, type ComponentType } from 'react';
 import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppBackButton, NAV_TRANSITION_TYPE, SearchableSelect } from '@shared/ui';
 import { useI18n } from '@shared/i18n';
@@ -11,6 +11,15 @@ import { HUB_TASKS, MOCK_DONE_IDS, tasksForMember } from './legalHubTasks';
 import { dayDelta, HeadActionsContext, legalHubSectionUrl, type LegalHubNavId } from './legalHubShared';
 import { LegalHubChromeProvider } from './legalHubChrome';
 import { LegalHubViewProvider, useLegalHubView } from './legalHubView';
+import { folderSwatchClass, LegalHubProjectSettings } from './LegalHubProjectSettings';
+import {
+    EMPTY_PROJECT_DISPLAY,
+    groupProjects,
+    loadProjectDisplay,
+    saveProjectDisplay,
+    type ProjectDisplaySettings,
+    type ProjectFolder,
+} from './legalHubProjectDisplay';
 import './LegalHubPage.css';
 
 
@@ -71,6 +80,19 @@ function IconLock() {
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <rect x="5" y="11" width="14" height="9" rx="2" />
             <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        </svg>
+    );
+}
+
+function IconSliders() {
+    return (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+            <path d="M4 7h16" />
+            <path d="M4 12h16" />
+            <path d="M4 17h16" />
+            <circle cx="8" cy="7" r="1.6" fill="var(--app-surface)" />
+            <circle cx="15" cy="12" r="1.6" fill="var(--app-surface)" />
+            <circle cx="11" cy="17" r="1.6" fill="var(--app-surface)" />
         </svg>
     );
 }
@@ -158,6 +180,9 @@ function LegalHubPageBody() {
     const openProjectId = openProject?.id ?? null;
     const [teamView, setTeamView] = useState<'cards' | 'details'>('cards');
     const [hubTasks, setHubTasks] = useState<MineTask[]>([]);
+    const [projectDisplay, setProjectDisplay] = useState<ProjectDisplaySettings>(EMPTY_PROJECT_DISPLAY);
+    const [displayOpen, setDisplayOpen] = useState(false);
+    const skipDisplaySave = useRef(true);
     const [query, setQuery] = useState('');
     const [projectQuery, setProjectQuery] = useState('');
     const [menuOpen, setMenuOpen] = useState(false);
@@ -205,12 +230,36 @@ function LegalHubPageBody() {
         () => boardTasks.filter((task) => !MOCK_DONE_IDS.includes(task.id)),
         [boardTasks],
     );
+    useEffect(() => {
+        skipDisplaySave.current = true;
+        setProjectDisplay(loadProjectDisplay(userId));
+    }, [userId]);
+    useEffect(() => {
+        if (skipDisplaySave.current) {
+            skipDisplaySave.current = false;
+            return;
+        }
+        if (userId == null)
+            return;
+        saveProjectDisplay(userId, projectDisplay);
+    }, [projectDisplay, userId]);
     const visibleProjects = useMemo(() => {
         const needle = projectQuery.trim().toLowerCase();
+        const rows = projectDisplay.hideLocked ? projects.filter((project) => canOpenProject(project.id)) : projects;
         if (!needle)
-            return projects;
-        return projects.filter((project) => project.name.toLowerCase().includes(needle));
-    }, [projects, projectQuery]);
+            return rows;
+        return rows.filter((project) => project.name.toLowerCase().includes(needle));
+    }, [canOpenProject, projectDisplay.hideLocked, projectQuery, projects]);
+    const projectGroups = useMemo(
+        () => groupProjects(visibleProjects, projectDisplay.folders),
+        [projectDisplay.folders, visibleProjects],
+    );
+    const toggleFolder = useCallback((folder: ProjectFolder) => {
+        setProjectDisplay((current) => ({
+            ...current,
+            folders: current.folders.map((item) => item.id === folder.id ? { ...item, collapsed: !item.collapsed } : item),
+        }));
+    }, []);
     const lateCount = openTasks.filter((task) => dayDelta(task.clientOn) < 0).length;
     const reviewCount = boardTasks.filter((task) => task.status === 'associate' || task.status === 'partner' || task.status === 'changes').length;
     const memberOptions = useMemo(
@@ -355,49 +404,79 @@ function LegalHubPageBody() {
                     </div>
                     <div>
                         <p className="lh-side__section">{t('legalHub.sideMatters')}</p>
-                        <label className="lh-side__find">
-                            <span className="lh-side__find-icon" aria-hidden>
-                                <IconSearch />
-                            </span>
-                            <input
-                                type="search"
-                                className="lh-side__find-input"
-                                value={projectQuery}
-                                placeholder={t('legalHub.projectSearch')}
-                                aria-label={t('legalHub.projectSearch')}
-                                onChange={(event) => setProjectQuery(event.target.value)}
-                            />
-                        </label>
+                        <div className="lh-side__tools">
+                            <label className="lh-side__find">
+                                <span className="lh-side__find-icon" aria-hidden>
+                                    <IconSearch />
+                                </span>
+                                <input
+                                    type="search"
+                                    className="lh-side__find-input"
+                                    value={projectQuery}
+                                    placeholder={t('legalHub.projectSearch')}
+                                    aria-label={t('legalHub.projectSearch')}
+                                    onChange={(event) => setProjectQuery(event.target.value)}
+                                />
+                            </label>
+                            <button
+                                type="button"
+                                className={`lh-side__settings${displayOpen ? ' is-on' : ''}`}
+                                aria-label={t('legalHub.projectDisplay')}
+                                aria-expanded={displayOpen}
+                                title={t('legalHub.projectDisplay')}
+                                onClick={() => setDisplayOpen(true)}
+                            >
+                                <IconSliders />
+                            </button>
+                        </div>
                         <ul className="lh-side__list">
                             {visibleProjects.length === 0 && projectQuery.trim() ? (
                                 <li className="lh-side__find-empty">{t('legalHub.projectSearchEmpty')}</li>
                             ) : null}
-                            {visibleProjects.map((project) => {
-                                const selected = openProjectId === project.id;
-                                const locked = !canOpenProject(project.id);
-                                const lockedLabel = t('legalHub.projectLocked');
+                            {projectGroups.folders.map(({ folder, projects: folderProjects }) => {
+                                const searching = projectQuery.trim().length > 0;
+                                if (searching && folderProjects.length === 0)
+                                    return null;
+                                const folded = folder.collapsed && !searching;
                                 return (
-                                    <li key={project.id}>
+                                    <li key={folder.id} className="lh-side__folder">
                                         <button
                                             type="button"
-                                            className={`lh-side__item${selected ? ' lh-side__item--active' : ''}${locked ? ' lh-side__item--locked' : ''}`}
-                                            aria-current={selected ? 'page' : undefined}
-                                            aria-disabled={locked || undefined}
-                                            disabled={locked}
-                                            title={locked ? `${project.name}. ${lockedLabel}` : project.name}
-                                            onClick={() => openMatter(project.id)}
+                                            className="lh-side__folder-head"
+                                            aria-expanded={!folded}
+                                            onClick={() => toggleFolder(folder)}
                                         >
-                                            <span className="lh-side__sw lh-side__sw--project" aria-hidden />
-                                            <span className="lh-side__item-label">{project.name}</span>
-                                            {locked ? (
-                                                <span className="lh-lock" aria-hidden>
-                                                    <IconLock />
-                                                </span>
-                                            ) : null}
+                                            <span className={folderSwatchClass(folder.color)} aria-hidden />
+                                            <span className="lh-side__folder-name">{folder.name.trim() || t('legalHub.projectFolderNew')}</span>
+                                            <em className="lh-side__folder-count">{folderProjects.length}</em>
                                         </button>
+                                        {folded ? null : (
+                                            <ul className="lh-side__list">
+                                                {folderProjects.map((project) => (
+                                                    <SideProject
+                                                        key={project.id}
+                                                        project={project}
+                                                        selected={openProjectId === project.id}
+                                                        locked={!canOpenProject(project.id)}
+                                                        lockedLabel={t('legalHub.projectLocked')}
+                                                        onOpen={openMatter}
+                                                    />
+                                                ))}
+                                            </ul>
+                                        )}
                                     </li>
                                 );
                             })}
+                            {projectGroups.loose.map((project) => (
+                                <SideProject
+                                    key={project.id}
+                                    project={project}
+                                    selected={openProjectId === project.id}
+                                    locked={!canOpenProject(project.id)}
+                                    lockedLabel={t('legalHub.projectLocked')}
+                                    onOpen={openMatter}
+                                />
+                            ))}
                         </ul>
                     </div>
                     <ul className="lh-side__list lh-side__list--tail">
@@ -574,31 +653,33 @@ function LegalHubPageBody() {
                                     />
                                 ) : null}
                                 {section === 'projects' && !openProject ? (
-                                    <ul className="lh-project-list">
-                                        {visibleProjects.map((project) => {
-                                            const locked = !canOpenProject(project.id);
-                                            const lockedLabel = t('legalHub.projectLocked');
-                                            return (
-                                                <li key={project.id}>
-                                                    <button
-                                                        type="button"
-                                                        className={`lh-project-list__item${locked ? ' lh-project-list__item--locked' : ''}`}
-                                                        aria-disabled={locked || undefined}
-                                                        disabled={locked}
-                                                        title={locked ? `${project.name}. ${lockedLabel}` : project.name}
-                                                        onClick={() => openMatter(project.id)}
-                                                    >
-                                                        <span className="lh-project-list__name">{project.name}</span>
-                                                        {locked ? (
-                                                            <span className="lh-lock" aria-hidden>
-                                                                <IconLock />
-                                                            </span>
-                                                        ) : null}
-                                                    </button>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
+                                    <div className="lh-project-groups">
+                                        {projectGroups.folders.map(({ folder, projects: folderProjects }) => (
+                                            folderProjects.length === 0 ? null : (
+                                                <section key={folder.id} className="lh-project-folder">
+                                                    <h2>
+                                                        <span className={folderSwatchClass(folder.color)} aria-hidden />
+                                                        {folder.name.trim() || t('legalHub.projectFolderNew')}
+                                                    </h2>
+                                                    <ProjectList
+                                                        projects={folderProjects}
+                                                        canOpen={canOpenProject}
+                                                        lockedLabel={t('legalHub.projectLocked')}
+                                                        onOpen={openMatter}
+                                                    />
+                                                </section>
+                                            )
+                                        ))}
+                                        {projectGroups.loose.length > 0 && projectGroups.folders.some((group) => group.projects.length > 0) ? (
+                                            <h2 className="lh-project-folder__loose">{t('legalHub.projectFolderLoose')}</h2>
+                                        ) : null}
+                                        <ProjectList
+                                            projects={projectGroups.loose}
+                                            canOpen={canOpenProject}
+                                            lockedLabel={t('legalHub.projectLocked')}
+                                            onOpen={openMatter}
+                                        />
+                                    </div>
                                 ) : null}
                                 {section === 'allTeam' ? <LegalHubTeamBoard query={query} view={teamView} onViewChange={changeTeamView} /> : null}
                             </HeadActionsContext.Provider>
@@ -607,7 +688,91 @@ function LegalHubPageBody() {
                 </ViewTransition>
             </div>
             {showUtil ? <LegalHubUtilRail mobileOpen={utilOpen} onMobileClose={() => setUtilOpen(false)} /> : null}
+            <LegalHubProjectSettings
+                open={displayOpen}
+                settings={projectDisplay}
+                projects={projects}
+                onClose={() => setDisplayOpen(false)}
+                onChange={setProjectDisplay}
+            />
         </div>
+    );
+}
+
+function SideProject({
+    project,
+    selected,
+    locked,
+    lockedLabel,
+    onOpen,
+}: {
+    project: { id: string; name: string };
+    selected: boolean;
+    locked: boolean;
+    lockedLabel: string;
+    onOpen: (id: string) => void;
+}) {
+    return (
+        <li>
+            <button
+                type="button"
+                className={`lh-side__item${selected ? ' lh-side__item--active' : ''}${locked ? ' lh-side__item--locked' : ''}`}
+                aria-current={selected ? 'page' : undefined}
+                aria-disabled={locked || undefined}
+                disabled={locked}
+                title={locked ? `${project.name}. ${lockedLabel}` : project.name}
+                onClick={() => onOpen(project.id)}
+            >
+                <span className="lh-side__sw lh-side__sw--project" aria-hidden />
+                <span className="lh-side__item-label">{project.name}</span>
+                {locked ? (
+                    <span className="lh-lock" aria-hidden>
+                        <IconLock />
+                    </span>
+                ) : null}
+            </button>
+        </li>
+    );
+}
+
+function ProjectList({
+    projects,
+    canOpen,
+    lockedLabel,
+    onOpen,
+}: {
+    projects: { id: string; name: string }[];
+    canOpen: (id: string) => boolean;
+    lockedLabel: string;
+    onOpen: (id: string) => void;
+}) {
+    if (projects.length === 0)
+        return null;
+    return (
+        <ul className="lh-project-list">
+            {projects.map((project) => {
+                const locked = !canOpen(project.id);
+                return (
+                    <li key={project.id}>
+                        <button
+                            type="button"
+                            className={`lh-project-list__item${locked ? ' lh-project-list__item--locked' : ''}`}
+                            aria-disabled={locked || undefined}
+                            disabled={locked}
+                            title={locked ? `${project.name}. ${lockedLabel}` : project.name}
+                            onClick={() => onOpen(project.id)}
+                        >
+                            <span className="lh-project-list__name">{project.name}</span>
+                            {locked ? (
+                                <span className="lh-lock" aria-hidden>
+                                    <IconLock />
+                                </span>
+                            ) : null}
+                        </button>
+                    </li>
+                );
+            })}
+        </ul>
     );
 }
 
