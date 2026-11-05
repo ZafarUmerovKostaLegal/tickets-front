@@ -1,4 +1,6 @@
 import type { InvoiceLineDto, TimeManagerClientProjectRow, UnbilledExpenseEntryDto, UnbilledTimeEntryDto } from '@entities/time-tracking';
+import { fetchExpenseById } from '@entities/expenses/model/expensesApi';
+import { asExpenseNumber } from '@entities/expenses/model/coerceExpense';
 import { fetchTimeEntry } from '@entities/time-tracking/api/domains/timeEntries';
 import { listProjectTasksCached } from '@entities/time-tracking/lib/projectTasksCache';
 import { resolveReportEmployeeInitials } from '@entities/time-tracking/lib/reportEmployeeInitials';
@@ -51,19 +53,62 @@ export function saveCombinedInvoiceTemplates(items: CombinedInvoiceTemplate[]): 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
+function roundMoney2(value: number): number {
+    return Math.round(value * 100) / 100;
+}
+
+/** USD reports keep the dollar equivalent. A sums report uses the som amount of the expense. */
+export function combinedExpenseAmount(
+    line: { equivalentAmount: number; amountUzs?: number | null },
+    currency: string,
+): number {
+    const cur = (currency || '').trim().toUpperCase();
+    if (cur === 'UZS') {
+        const uzs = Number(line.amountUzs);
+        if (Number.isFinite(uzs) && uzs > 0)
+            return roundMoney2(uzs);
+    }
+    const usd = Number(line.equivalentAmount);
+    return Number.isFinite(usd) ? usd : 0;
+}
+
+/** Fill amountUzs from the expense card when the unbilled row only has the dollar equivalent. */
+export async function withProjectCurrencyExpenseAmounts(
+    lines: CombinedExpenseLine[],
+    currency: string,
+): Promise<CombinedExpenseLine[]> {
+    if ((currency || '').trim().toUpperCase() !== 'UZS')
+        return lines;
+    return Promise.all(lines.map(async (line) => {
+        if (Number(line.amountUzs) > 0)
+            return line;
+        try {
+            const req = await fetchExpenseById(line.id);
+            const uzs = asExpenseNumber(req.amountUzs);
+            if (uzs > 0)
+                return { ...line, amountUzs: uzs, exchangeRate: asExpenseNumber(req.exchangeRate) };
+        }
+        catch {
+            /* leave the dollar equivalent */
+        }
+        return line;
+    }));
+}
+
 export function buildCombinedShares(
     projects: TimeManagerClientProjectRow[],
     clientNameById: ReadonlyMap<string, string>,
     time: CombinedTimeLine[],
     expenses: CombinedExpenseLine[],
     allocation: CombinedAllocation,
+    currency = 'USD',
 ): CombinedShare[] {
     const fees = new Map<string, number>();
     const exp = new Map<string, number>();
     for (const line of time)
         fees.set(line.projectId, (fees.get(line.projectId) ?? 0) + line.billableAmount);
     for (const line of expenses)
-        exp.set(line.projectId, (exp.get(line.projectId) ?? 0) + line.equivalentAmount);
+        exp.set(line.projectId, (exp.get(line.projectId) ?? 0) + combinedExpenseAmount(line, currency));
     const totalFees = [...fees.values()].reduce((sum, value) => sum + value, 0);
     const totalExp = [...exp.values()].reduce((sum, value) => sum + value, 0);
     const count = Math.max(projects.length, 1);
@@ -329,7 +374,7 @@ export function buildCombinedReportSnapshot(input: {
         expenses: input.expenses.map((line) => ({
             description: line.description?.trim() || '—',
             date: line.expenseDate.slice(0, 10),
-            amount: line.equivalentAmount,
+            amount: combinedExpenseAmount(line, input.currency),
         })),
         shares: input.shares.map((share) => ({
             name: share.projectName,
@@ -398,6 +443,74 @@ export function combinedReportDetailLines(snapshot: CombinedReportSnapshot): Com
         .flatMap((project) => project.lines)
         .slice()
         .sort((a, b) => a.date.localeCompare(b.date) || (a.initials || a.user).localeCompare(b.initials || b.user));
+}
+
+/**
+ * Saved sums reports stored the dollar equivalent under an UZS label.
+ * Replace those lines when the invoice lines (or the expense cards) are in sums.
+ */
+export function applyCombinedExpenseAmounts(
+    report: CombinedReportSnapshot,
+    amounts: readonly number[],
+): CombinedReportSnapshot {
+    if ((report.currency || '').trim().toUpperCase() !== 'UZS')
+        return report;
+    if (!report.expenses?.length || amounts.length !== report.expenses.length)
+        return report;
+    const snap = report.expenses.reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
+    const nextTotal = roundMoney2(amounts.reduce((sum, value) => sum + (Number(value) || 0), 0));
+    if (!(nextTotal > snap * 10 && snap < 100_000 && nextTotal > 0))
+        return report;
+    const expenses = report.expenses.map((line, index) => ({
+        ...line,
+        amount: roundMoney2(Number(amounts[index]) || 0),
+    }));
+    const shares = report.shares.map((share) => {
+        const oldExp = Number(share.expenses ?? 0);
+        const fees = Number(share.total) - oldExp;
+        const nextExp = report.shares.length === 1
+            ? nextTotal
+            : (snap > 0 ? nextTotal * (oldExp / snap) : nextTotal / report.shares.length);
+        const expensesRounded = roundMoney2(nextExp);
+        return { ...share, expenses: expensesRounded, total: roundMoney2(fees + expensesRounded) };
+    });
+    return { ...report, expenses, shares, totalExpenses: nextTotal };
+}
+
+export async function alignCombinedReportToProjectCurrency(
+    report: CombinedReportSnapshot,
+    lines: readonly InvoiceLineDto[],
+): Promise<CombinedReportSnapshot> {
+    const cur = (report.currency || '').trim().toUpperCase();
+    if (cur !== 'UZS' || !report.expenses?.length)
+        return report;
+    const expenseLines = lines
+        .filter((line) => (line.lineKind ?? '').toLowerCase() === 'expense')
+        .slice()
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+    if (expenseLines.length !== report.expenses.length)
+        return report;
+    const amounts = await Promise.all(expenseLines.map(async (line, index) => {
+        const billed = Number(line.lineTotal);
+        const snap = Number(report.expenses[index]?.amount) || 0;
+        const billedInSums = Number.isFinite(billed) && billed > snap * 10 && billed >= 1000;
+        if (!billedInSums) {
+            const id = (line.expenseRequestId ?? '').trim();
+            if (id) {
+                try {
+                    const req = await fetchExpenseById(id);
+                    const uzs = asExpenseNumber(req.amountUzs);
+                    if (uzs > 0)
+                        return roundMoney2(uzs);
+                }
+                catch {
+                    /* use the invoice line */
+                }
+            }
+        }
+        return Number.isFinite(billed) ? roundMoney2(billed) : snap;
+    }));
+    return applyCombinedExpenseAmounts(report, amounts);
 }
 
 export function isCombinedReportSnapshot(raw: unknown): raw is CombinedReportSnapshot {

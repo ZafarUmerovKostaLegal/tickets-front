@@ -420,13 +420,21 @@ export function InvoiceDetailPage() {
       const clientLabel = (clientNameById.get(fresh.clientId) ?? fresh.clientId).trim();
       const meta = await invoicePreviewMetaForExisting(fresh, clientLabel);
       const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || null;
-      const doc = scrubStaleBillingPeriodDocumentOverrides(
+      let doc = scrubStaleBillingPeriodDocumentOverrides(
         parseInvoiceDocumentOverrides(fresh.documentOverrides),
         {
           issueDateIso: meta.issueDateIso ?? fresh.issueDate.slice(0, 10),
           billingPeriodIso: periodIso,
         },
       );
+      if (doc?.combinedReport) {
+        const { alignCombinedReportToProjectCurrency } = await import('../lib/combinedInvoice');
+        const lines = (fresh.lines?.length ? fresh.lines : (await getInvoice(fresh.id, false)).lines) ?? [];
+        doc = {
+          ...doc,
+          combinedReport: await alignCombinedReportToProjectCurrency(doc.combinedReport, lines),
+        };
+      }
       const client = await getTimeManagerClient(fresh.clientId);
       const displayTotal = invoiceDisplayMoneyTotals(
         fresh,
@@ -490,13 +498,21 @@ export function InvoiceDetailPage() {
       const clientLabel = (clientNameById.get(fresh.clientId) ?? fresh.clientId).trim();
       const meta = await invoicePreviewMetaForExisting(fresh, clientLabel);
       const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || null;
-      const doc = scrubStaleBillingPeriodDocumentOverrides(
+      let doc = scrubStaleBillingPeriodDocumentOverrides(
         parseInvoiceDocumentOverrides(fresh.documentOverrides),
         {
           issueDateIso: meta.issueDateIso ?? fresh.issueDate.slice(0, 10),
           billingPeriodIso: periodIso,
         },
       );
+      if (doc?.combinedReport) {
+        const { alignCombinedReportToProjectCurrency } = await import('../lib/combinedInvoice');
+        const lines = (fresh.lines?.length ? fresh.lines : (await getInvoice(fresh.id, false)).lines) ?? [];
+        doc = {
+          ...doc,
+          combinedReport: await alignCombinedReportToProjectCurrency(doc.combinedReport, lines),
+        };
+      }
       const client = await getTimeManagerClient(fresh.clientId);
       const displayTotal = invoiceDisplayMoneyTotals(
         fresh,

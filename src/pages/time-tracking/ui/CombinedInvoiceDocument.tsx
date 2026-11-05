@@ -1,7 +1,7 @@
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from '@pages/invoice-preview/lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '@pages/invoice-preview/lib/invoiceCoverLogoRaster';
 import type { TimeManagerClientProjectRow, TimeTrackingUserRow } from '@entities/time-tracking';
-import { combinedTimeTaskAndNotes, type CombinedExpenseLine, type CombinedReportLayout, type CombinedShare, type CombinedTimeLine } from '../lib/combinedInvoice';
+import { combinedExpenseAmount, combinedTimeTaskAndNotes, type CombinedExpenseLine, type CombinedReportLayout, type CombinedShare, type CombinedTimeLine } from '../lib/combinedInvoice';
 
 type Props = {
     feeTitle: string;
@@ -289,7 +289,7 @@ export function CombinedInvoiceDocument({
                                 <tr key={line.id}>
                                     <td>{line.description || '—'}</td>
                                     <td>{dateRu(line.expenseDate)}</td>
-                                    <td className="num">{money(line.equivalentAmount)}</td>
+                                    <td className="num">{money(combinedExpenseAmount(line, currency))}</td>
                                 </tr>
                             ))}
                         </tbody>

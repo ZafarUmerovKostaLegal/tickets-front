@@ -99,6 +99,9 @@ export type UnbilledExpenseEntryDto = {
     expenseDate: string;
     description: string | null;
     equivalentAmount: number;
+    /** Som amount entered on the expense. Present when the report currency is UZS. */
+    amountUzs?: number;
+    exchangeRate?: number;
     status: string;
 };
 export type PartnerInvoicePreviewDto = {

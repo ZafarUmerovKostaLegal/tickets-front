@@ -35,7 +35,7 @@ import { resolveInvoiceCoverLetterModel } from '../lib/resolveInvoiceCoverLetter
 import { resolveInvoiceTimeReportPack, overlayExpenseAmountsFromRegistry } from '../lib/resolveInvoiceTimeReportPack';
 import { getUsers } from '@entities/user';
 import { systemInitialsForDisplayedCode } from '@entities/time-tracking/lib/reportEmployeeInitials';
-import { applyLinkedTaskNames, applyStoredUserInitials, linkedTaskHintsForInvoiceLines, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { alignCombinedReportToProjectCurrency, applyLinkedTaskNames, applyStoredUserInitials, linkedTaskHintsForInvoiceLines, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
 import { InvoiceCoverLetter } from './InvoiceCoverLetter';
 import { CombinedReportPage } from './CombinedReportPage';
@@ -390,8 +390,13 @@ export function InvoicePreviewPage() {
                 const hints = await linkedTaskHintsForInvoiceLines(invoiceLines, invoiceClientId, invoiceProjectId);
                 if (cancelled)
                     return;
-                if (hints.length)
-                    doc = { ...doc, combinedReport: applyLinkedTaskNames(doc.combinedReport, hints) };
+                let combinedReport = hints.length
+                    ? applyLinkedTaskNames(doc.combinedReport, hints)
+                    : doc.combinedReport;
+                combinedReport = await alignCombinedReportToProjectCurrency(combinedReport, invoiceLines);
+                if (cancelled)
+                    return;
+                doc = { ...doc, combinedReport };
             }
             if (cancelled)
                 return;

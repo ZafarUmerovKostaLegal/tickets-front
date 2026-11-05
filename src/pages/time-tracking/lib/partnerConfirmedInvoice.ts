@@ -16,6 +16,7 @@ import {
     buildCombinedReportSnapshot,
     buildCombinedShares,
     formatCombinedShareNote,
+    withProjectCurrencyExpenseAmounts,
     type CombinedExpenseLine,
     type CombinedTimeLine,
 } from './combinedInvoice';
@@ -341,10 +342,12 @@ export async function generateCombinedInvoiceFromConfirmedReports(args: {
         client_id: project.clientId,
     } as TimeManagerClientProjectRow));
     const clientNameById = new Map(args.projectMeta.map((project) => [project.clientId, project.clientName]));
-    const shares = buildCombinedShares(projects, clientNameById, time, expenses, 'hours');
+    const reportCurrency = currency || 'USD';
+    const projectExpenses = await withProjectCurrencyExpenseAmounts(expenses, reportCurrency);
+    const shares = buildCombinedShares(projects, clientNameById, time, projectExpenses, 'hours', reportCurrency);
     const totalHours = time.reduce((sum, line) => sum + (line.billableHours ?? line.hours), 0);
     const totalFees = time.reduce((sum, line) => sum + line.billableAmount, 0);
-    const totalExpenses = expenses.reduce((sum, line) => sum + line.equivalentAmount, 0);
+    const totalExpenses = shares.reduce((sum, share) => sum + share.expenses, 0);
     const feeTitle = `Fees for services in the period from ${dateFrom} till ${dateTo} under confirmed partner reports`;
     const shareNote = formatCombinedShareNote(shares);
     const issueDate = todayIso();
@@ -357,10 +360,10 @@ export async function generateCombinedInvoiceFromConfirmedReports(args: {
     });
     const snapshot = buildCombinedReportSnapshot({
         feeTitle,
-        currency,
+        currency: reportCurrency,
         projects,
         time,
-        expenses,
+        expenses: projectExpenses,
         shares,
         users: args.users,
         totalHours,

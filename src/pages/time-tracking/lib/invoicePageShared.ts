@@ -375,13 +375,20 @@ export async function buildExistingInvoicePdfFile(invoiceId: string): Promise<{
   const clientLabel = (client.name || fresh.clientId).trim();
   const meta = await invoicePreviewMetaForExisting(fresh, clientLabel);
   const periodIso = meta.billingPeriodTo || meta.billingPeriodFrom || null;
-  const doc = scrubStaleBillingPeriodDocumentOverrides(
+  let doc = scrubStaleBillingPeriodDocumentOverrides(
     parseInvoiceDocumentOverrides(fresh.documentOverrides),
     {
       issueDateIso: meta.issueDateIso ?? fresh.issueDate.slice(0, 10),
       billingPeriodIso: periodIso,
     },
   );
+  if (doc?.combinedReport) {
+    const { alignCombinedReportToProjectCurrency } = await import('./combinedInvoice');
+    doc = {
+      ...doc,
+      combinedReport: await alignCombinedReportToProjectCurrency(doc.combinedReport, fresh.lines ?? []),
+    };
+  }
   const { resolveInvoiceDisplayMoney } = await import('./invoiceExpenseLineDisplay');
   const displayMoney = await resolveInvoiceDisplayMoney(fresh);
   const model = applyCoverDocumentOverrides(buildInvoiceCoverLetterModel({

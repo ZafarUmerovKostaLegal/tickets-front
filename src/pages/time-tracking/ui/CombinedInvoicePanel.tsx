@@ -22,6 +22,7 @@ import {
     buildCombinedReportSnapshot,
     type CombinedReportLayout,
     buildCombinedShares,
+    withProjectCurrencyExpenseAmounts,
     formatCombinedShareNote,
     loadCombinedInvoiceTemplates,
     saveCombinedInvoiceTemplates,
@@ -171,14 +172,14 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
             })
             .slice(0, 8);
     }, [clientName, projectIds, projects, query]);
+    const currency = time.find((line) => line.currency)?.currency ?? 'USD';
     const shares = useMemo(
-        () => buildCombinedShares(selectedProjects, clientName, time, expenses, allocation),
-        [allocation, clientName, expenses, selectedProjects, time],
+        () => buildCombinedShares(selectedProjects, clientName, time, expenses, allocation, currency),
+        [allocation, clientName, currency, expenses, selectedProjects, time],
     );
     const totalHours = time.reduce((sum, line) => sum + (line.billableHours ?? line.hours), 0);
     const totalFees = time.reduce((sum, line) => sum + line.billableAmount, 0);
-    const totalExp = expenses.reduce((sum, line) => sum + line.equivalentAmount, 0);
-    const currency = time.find((line) => line.currency)?.currency ?? 'USD';
+    const totalExp = shares.reduce((sum, share) => sum + share.expenses, 0);
 
     useEffect(() => {
         if (payerId)
@@ -273,7 +274,7 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                 }
             }));
             const nextTime: CombinedTimeLine[] = [];
-            const nextExpenses: CombinedExpenseLine[] = [];
+            let nextExpenses: CombinedExpenseLine[] = [];
             const failed: string[] = [];
             for (const pack of packs) {
                 if (pack.ok) {
@@ -284,6 +285,8 @@ export function CombinedInvoicePanel({ clients, projects, onCreated, onError }: 
                     failed.push(`${pack.label}: ${pack.message}`);
                 }
             }
+            const loadedCurrency = nextTime.find((line) => line.currency)?.currency ?? 'USD';
+            nextExpenses = await withProjectCurrencyExpenseAmounts(nextExpenses, loadedCurrency);
             setTime(nextTime);
             setExpenses(nextExpenses);
             if (nextTime.length === 0 && nextExpenses.length === 0) {
