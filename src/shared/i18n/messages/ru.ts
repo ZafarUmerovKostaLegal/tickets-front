@@ -74,6 +74,7 @@ export const ruMessages: Messages = {
         projectFolderColorError: 'Красный',
         projectFoldersEmpty: 'Папок пока нет. Создайте папку и отметьте проекты, которые в неё входят.',
         projectFolderLoose: 'Без папки',
+        projectNoClient: 'Без клиента',
         sideReview: 'Мои проверки',
         myTasks: 'Мои задачи',
         reviewQueue: 'Очередь проверки',
@@ -1194,6 +1195,7 @@ export type Messages = {
         projectFolderColorError: string;
         projectFoldersEmpty: string;
         projectFolderLoose: string;
+        projectNoClient: string;
         sideReview: string;
         myTasks: string;
         reviewQueue: string;

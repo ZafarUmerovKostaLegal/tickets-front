@@ -7,6 +7,7 @@ import { useSetLegalHubChrome } from './legalHubChrome';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import { dueText } from './legalHubShared';
 import { canAssignLegalHubTask } from './legalHubRank';
+import { boardFilterScope, fetchLegalHubBoard, saveLegalHubColumns, saveLegalHubFilters } from './legalHubBoardApi';
 import { useLegalHubView } from './legalHubView';
 import {
     HUB_TASKS,
@@ -175,8 +176,7 @@ function readCustomColumns(): CustomColumn[] {
     });
 }
 
-function readColumnOrder(customIds: readonly string[]): string[] {
-    const stored = readStored<unknown>(COLUMN_ORDER_KEY, []);
+function mergeColumnOrder(stored: unknown, customIds: readonly string[]): string[] {
     const list = Array.isArray(stored) ? stored : [];
     const known = new Set<string>([...COLUMNS, ...customIds]);
     const picked = list.filter((id): id is string => typeof id === 'string' && known.has(id));
@@ -185,6 +185,28 @@ function readColumnOrder(customIds: readonly string[]): string[] {
         ...COLUMNS.filter((id) => !picked.includes(id)),
         ...customIds.filter((id) => !picked.includes(id)),
     ];
+}
+
+function readColumnOrder(customIds: readonly string[]): string[] {
+    return mergeColumnOrder(readStored<unknown>(COLUMN_ORDER_KEY, []), customIds);
+}
+
+function hasLocalColumnPrefs(): boolean {
+    try {
+        return localStorage.getItem(COLUMN_ORDER_KEY) != null
+            || localStorage.getItem(CUSTOM_COLUMNS_KEY) != null
+            || localStorage.getItem(COLLAPSED_KEY) != null;
+    }
+    catch {
+        return false;
+    }
+}
+
+function columnsAreDefault(columns: { custom: { id: string }[]; order: string[]; collapsed: string[] }): boolean {
+    return columns.custom.length === 0
+        && columns.collapsed.length === 1
+        && columns.collapsed[0] === 'done'
+        && columns.order.join('|') === COLUMNS.join('|');
 }
 
 function isLateTask(task: MineTask): boolean {
@@ -334,6 +356,9 @@ export function LegalHubMyTasks({
     const [filtersOpen, setFiltersOpen] = useState(false);
     const filtersRef = useRef<HTMLDivElement>(null);
     const boardScope = scope?.trim() || project || 'mine';
+    const filterScope = boardFilterScope(mode, scope);
+    const columnsReady = useRef(false);
+    const filtersReady = useRef(false);
     const titleKey = `lh-board-title-${boardScope}`;
     const [boardTitle, setBoardTitle] = useState('');
     const [dragging, setDragging] = useState<string | null>(null);
@@ -361,6 +386,86 @@ export function LegalHubMyTasks({
             document.removeEventListener('keydown', onKey);
         };
     }, [filtersOpen]);
+    useEffect(() => {
+        let cancelled = false;
+        columnsReady.current = false;
+        void fetchLegalHubBoard().then((remote) => {
+            if (cancelled)
+                return;
+            const localCustom = readCustomColumns();
+            if (remote && !columnsAreDefault(remote.columns)) {
+                const custom = remote.columns.custom;
+                const order = mergeColumnOrder(remote.columns.order, custom.map((column) => column.id));
+                setCustomColumns(custom);
+                setColumnOrder(order);
+                setCollapsedState(remote.columns.collapsed);
+                writeStored(CUSTOM_COLUMNS_KEY, custom);
+                writeStored(COLUMN_ORDER_KEY, order);
+                writeStored(COLLAPSED_KEY, remote.columns.collapsed);
+            }
+            else if (remote && hasLocalColumnPrefs()) {
+                void saveLegalHubColumns({
+                    custom: localCustom,
+                    order: readColumnOrder(localCustom.map((column) => column.id)),
+                    collapsed: readStored<string[]>(COLLAPSED_KEY, ['done']),
+                });
+            }
+            columnsReady.current = true;
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+    useEffect(() => {
+        if (!columnsReady.current)
+            return undefined;
+        writeStored(CUSTOM_COLUMNS_KEY, customColumns);
+        writeStored(COLUMN_ORDER_KEY, columnOrder);
+        writeStored(COLLAPSED_KEY, collapsed);
+        const handle = window.setTimeout(() => {
+            void saveLegalHubColumns({ custom: customColumns, order: columnOrder, collapsed });
+        }, 400);
+        return () => window.clearTimeout(handle);
+    }, [collapsed, columnOrder, customColumns]);
+    useEffect(() => {
+        let cancelled = false;
+        filtersReady.current = false;
+        void fetchLegalHubBoard().then((remote) => {
+            if (cancelled)
+                return;
+            const stored = remote?.filters.find((item) => item.scope === filterScope);
+            if (stored) {
+                setOnlyLate(stored.onlyLate);
+                setOnlyUrgent(stored.onlyUrgent);
+                setProjectFilter((TASK_PROJECTS as readonly string[]).includes(stored.project) ? stored.project as TaskProjectId : '');
+                setStatusFilter(stored.status);
+                setStreamFilter(stored.stream);
+                setOwnerFilter((TASK_PEOPLE as readonly string[]).includes(stored.owner) ? stored.owner as TaskPersonId : '');
+                setPriorityFilter((TASK_PRIORITIES as readonly string[]).includes(stored.priority) ? stored.priority as TaskPriorityId : '');
+            }
+            filtersReady.current = true;
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, [filterScope]);
+    useEffect(() => {
+        if (!filtersReady.current)
+            return undefined;
+        const handle = window.setTimeout(() => {
+            void saveLegalHubFilters({
+                scope: filterScope,
+                onlyLate,
+                onlyUrgent,
+                project: projectFilter,
+                status: statusFilter,
+                stream: streamFilter,
+                owner: ownerFilter,
+                priority: priorityFilter,
+            });
+        }, 400);
+        return () => window.clearTimeout(handle);
+    }, [filterScope, onlyLate, onlyUrgent, ownerFilter, priorityFilter, projectFilter, statusFilter, streamFilter]);
     useEffect(() => {
         const storedTitle = readStored<unknown>(titleKey, '');
         setBoardTitle(typeof storedTitle === 'string' ? storedTitle : '');

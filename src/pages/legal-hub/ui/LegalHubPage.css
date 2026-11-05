@@ -256,6 +256,50 @@
 .lh-side__folder > .lh-side__list {
   padding-left: 0.85rem;
 }
+
+.lh-side__client-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 1.85rem;
+  padding: 0.2rem 0.45rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--app-text);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 650;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lh-side__client-head:hover {
+  background: color-mix(in srgb, var(--app-text) 5%, transparent);
+}
+
+.lh-side__client-head svg {
+  width: 0.7rem;
+  height: 0.7rem;
+  flex-shrink: 0;
+  color: var(--app-muted);
+  transition: transform 0.15s ease;
+}
+
+.lh-side__client-head svg.is-open {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lh-side__client-head svg {
+    transition: none;
+  }
+}
+
+.lh-side__client-list {
+  padding-left: 0.85rem;
+}
 .lh-side__sw--solar { background: var(--app-warning); }
 .lh-side__sw--wind { background: var(--app-accent); }
 .lh-side__sw--infrastructure { background: var(--app-meta); }
@@ -391,6 +435,7 @@
   .lh-page--side-collapsed .lh-side__section,
   .lh-page--side-collapsed .lh-side__tools,
   .lh-page--side-collapsed .lh-side__folder-head,
+  .lh-page--side-collapsed .lh-side__client-head,
   .lh-page--side-collapsed .lh-side__find,
   .lh-page--side-collapsed .lh-side__find-empty,
   .lh-page--side-collapsed .lh-side__item-label,
@@ -422,8 +467,13 @@
     margin-left: 0;
   }
 
-  .lh-page--side-collapsed .lh-side__folder > .lh-side__list {
+  .lh-page--side-collapsed .lh-side__folder > .lh-side__list,
+  .lh-page--side-collapsed .lh-side__client-list {
     padding-left: 0;
+  }
+
+  .lh-page--side-collapsed .lh-side__client-head svg {
+    transition: none;
   }
 }
 

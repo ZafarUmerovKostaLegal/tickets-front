@@ -74,6 +74,7 @@ export const enMessages = {
         projectFolderColorError: 'Red',
         projectFoldersEmpty: 'No folders yet. Create one and choose the projects that belong in it.',
         projectFolderLoose: 'Ungrouped',
+        projectNoClient: 'No client',
         sideReview: 'My reviews',
         myTasks: 'My Tasks',
         reviewQueue: 'Review Queue',

@@ -12,11 +12,11 @@ import { dayDelta, HeadActionsContext, legalHubSectionUrl, type LegalHubNavId } 
 import { LegalHubChromeProvider } from './legalHubChrome';
 import { LegalHubViewProvider, useLegalHubView } from './legalHubView';
 import { folderSwatchClass, LegalHubProjectSettings } from './LegalHubProjectSettings';
+import { fetchLegalHubBoard, saveLegalHubFolders } from './legalHubBoardApi';
 import {
     EMPTY_PROJECT_DISPLAY,
     groupProjects,
     loadProjectDisplay,
-    saveProjectDisplay,
     type ProjectDisplaySettings,
     type ProjectFolder,
 } from './legalHubProjectDisplay';
@@ -93,6 +93,14 @@ function IconSliders() {
             <circle cx="8" cy="7" r="1.6" fill="var(--app-surface)" />
             <circle cx="15" cy="12" r="1.6" fill="var(--app-surface)" />
             <circle cx="11" cy="17" r="1.6" fill="var(--app-surface)" />
+        </svg>
+    );
+}
+
+function IconChevron({ open }: { open: boolean }) {
+    return (
+        <svg className={open ? 'is-open' : ''} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="m9 6 6 6-6 6" />
         </svg>
     );
 }
@@ -182,9 +190,11 @@ function LegalHubPageBody() {
     const [hubTasks, setHubTasks] = useState<MineTask[]>([]);
     const [projectDisplay, setProjectDisplay] = useState<ProjectDisplaySettings>(EMPTY_PROJECT_DISPLAY);
     const [displayOpen, setDisplayOpen] = useState(false);
-    const skipDisplaySave = useRef(true);
+    const displayPhase = useRef<'boot' | 'ready'>('boot');
+    const savedFolders = useRef('');
     const [query, setQuery] = useState('');
     const [projectQuery, setProjectQuery] = useState('');
+    const [collapsedClients, setCollapsedClients] = useState<Set<string>>(() => new Set());
     const [menuOpen, setMenuOpen] = useState(false);
     const [utilOpen, setUtilOpen] = useState(false);
     const [actionsSlot, setActionsSlot] = useState<HTMLElement | null>(null);
@@ -231,17 +241,44 @@ function LegalHubPageBody() {
         [boardTasks],
     );
     useEffect(() => {
-        skipDisplaySave.current = true;
-        setProjectDisplay(loadProjectDisplay(userId));
+        let cancelled = false;
+        displayPhase.current = 'boot';
+        const local = loadProjectDisplay(userId);
+        setProjectDisplay(local);
+        void (async () => {
+            const remote = await fetchLegalHubBoard();
+            if (cancelled)
+                return;
+            if (remote != null && userId != null) {
+                const serverEmpty = !remote.folders.hideLocked && remote.folders.folders.length === 0;
+                const localHas = local.hideLocked || local.folders.length > 0;
+                const localJson = JSON.stringify(local);
+                if (serverEmpty && localHas) {
+                    savedFolders.current = localJson;
+                    void saveLegalHubFolders(userId, local);
+                }
+                else {
+                    savedFolders.current = JSON.stringify(remote.folders);
+                    setProjectDisplay((current) => JSON.stringify(current) === localJson ? remote.folders : current);
+                }
+            }
+            displayPhase.current = 'ready';
+        })();
+        return () => {
+            cancelled = true;
+        };
     }, [userId]);
     useEffect(() => {
-        if (skipDisplaySave.current) {
-            skipDisplaySave.current = false;
-            return;
-        }
-        if (userId == null)
-            return;
-        saveProjectDisplay(userId, projectDisplay);
+        if (displayPhase.current !== 'ready' || userId == null)
+            return undefined;
+        const json = JSON.stringify(projectDisplay);
+        if (json === savedFolders.current)
+            return undefined;
+        savedFolders.current = json;
+        const handle = window.setTimeout(() => {
+            void saveLegalHubFolders(userId, projectDisplay);
+        }, 400);
+        return () => window.clearTimeout(handle);
     }, [projectDisplay, userId]);
     const visibleProjects = useMemo(() => {
         const needle = projectQuery.trim().toLowerCase();
@@ -254,6 +291,16 @@ function LegalHubPageBody() {
         () => groupProjects(visibleProjects, projectDisplay.folders),
         [projectDisplay.folders, visibleProjects],
     );
+    const toggleClient = useCallback((key: string) => {
+        setCollapsedClients((current) => {
+            const next = new Set(current);
+            if (next.has(key))
+                next.delete(key);
+            else
+                next.add(key);
+            return next;
+        });
+    }, []);
     const toggleFolder = useCallback((folder: ProjectFolder) => {
         setProjectDisplay((current) => ({
             ...current,
@@ -452,31 +499,33 @@ function LegalHubPageBody() {
                                         </button>
                                         {folded ? null : (
                                             <ul className="lh-side__list">
-                                                {folderProjects.map((project) => (
-                                                    <SideProject
-                                                        key={project.id}
-                                                        project={project}
-                                                        selected={openProjectId === project.id}
-                                                        locked={!canOpenProject(project.id)}
-                                                        lockedLabel={t('legalHub.projectLocked')}
-                                                        onOpen={openMatter}
-                                                    />
-                                                ))}
+                                                <ClientGroups
+                                                    projects={folderProjects}
+                                                    groupKey={folder.id}
+                                                    searching={searching}
+                                                    collapsed={collapsedClients}
+                                                    onToggle={toggleClient}
+                                                    openProjectId={openProjectId}
+                                                    canOpen={canOpenProject}
+                                                    lockedLabel={t('legalHub.projectLocked')}
+                                                    onOpen={openMatter}
+                                                />
                                             </ul>
                                         )}
                                     </li>
                                 );
                             })}
-                            {projectGroups.loose.map((project) => (
-                                <SideProject
-                                    key={project.id}
-                                    project={project}
-                                    selected={openProjectId === project.id}
-                                    locked={!canOpenProject(project.id)}
-                                    lockedLabel={t('legalHub.projectLocked')}
-                                    onOpen={openMatter}
-                                />
-                            ))}
+                            <ClientGroups
+                                projects={projectGroups.loose}
+                                groupKey="loose"
+                                searching={projectQuery.trim().length > 0}
+                                collapsed={collapsedClients}
+                                onToggle={toggleClient}
+                                openProjectId={openProjectId}
+                                canOpen={canOpenProject}
+                                lockedLabel={t('legalHub.projectLocked')}
+                                onOpen={openMatter}
+                            />
                         </ul>
                     </div>
                     <ul className="lh-side__list lh-side__list--tail">
@@ -700,6 +749,86 @@ function LegalHubPageBody() {
     );
 }
 
+function groupByClient<T extends { client: string }>(projects: readonly T[]): { client: string; projects: T[] }[] {
+    const groups: { client: string; projects: T[] }[] = [];
+    const index = new Map<string, { client: string; projects: T[] }>();
+    for (const project of projects) {
+        const client = project.client.trim();
+        const key = client.toLowerCase();
+        const existing = index.get(key);
+        if (existing)
+            existing.projects.push(project);
+        else {
+            const group = { client, projects: [project] };
+            index.set(key, group);
+            groups.push(group);
+        }
+    }
+    groups.sort((a, b) => a.client.localeCompare(b.client, 'ru'));
+    return groups;
+}
+
+function ClientGroups({
+    projects,
+    groupKey,
+    searching,
+    collapsed,
+    onToggle,
+    openProjectId,
+    canOpen,
+    lockedLabel,
+    onOpen,
+}: {
+    projects: { id: string; name: string; client: string }[];
+    groupKey: string;
+    searching: boolean;
+    collapsed: Set<string>;
+    onToggle: (key: string) => void;
+    openProjectId: string | null;
+    canOpen: (id: string) => boolean;
+    lockedLabel: string;
+    onOpen: (id: string) => void;
+}) {
+    const { t } = useI18n();
+    return (
+        <>
+            {groupByClient(projects).map((group) => {
+                const key = `${groupKey}:${group.client.toLowerCase()}`;
+                const folded = collapsed.has(key) && !searching;
+                const label = group.client || t('legalHub.projectNoClient');
+                return (
+                    <li key={key} className="lh-side__client">
+                        <button
+                            type="button"
+                            className="lh-side__client-head"
+                            aria-expanded={!folded}
+                            onClick={() => onToggle(key)}
+                        >
+                            <IconChevron open={!folded} />
+                            <span className="lh-side__folder-name">{label}</span>
+                            <em className="lh-side__folder-count">{group.projects.length}</em>
+                        </button>
+                        {folded ? null : (
+                            <ul className="lh-side__list lh-side__client-list">
+                                {group.projects.map((project) => (
+                                    <SideProject
+                                        key={project.id}
+                                        project={project}
+                                        selected={openProjectId === project.id}
+                                        locked={!canOpen(project.id)}
+                                        lockedLabel={lockedLabel}
+                                        onOpen={onOpen}
+                                    />
+                                ))}
+                            </ul>
+                        )}
+                    </li>
+                );
+            })}
+        </>
+    );
+}
+
 function projectTitle(project: { name: string; client: string }, locked: boolean, lockedLabel: string): string {
     const label = project.client ? `${project.name} · ${project.client}` : project.name;
     return locked ? `${label}. ${lockedLabel}` : label;
@@ -739,7 +868,7 @@ function SideProject({
                 onClick={() => onOpen(project.id)}
             >
                 <span className="lh-side__sw lh-side__sw--project" aria-hidden />
-                <ProjectLabel project={project} />
+                <span className="lh-side__item-label">{project.name}</span>
                 {locked ? (
                     <span className="lh-lock" aria-hidden>
                         <IconLock />
