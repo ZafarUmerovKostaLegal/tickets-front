@@ -651,52 +651,70 @@
 }
 
 .tt-inv-reg-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.45rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.4rem;
+  align-items: start;
 }
 
 .tt-inv-reg-note .tt-inv-reg__cell-text {
-  flex: 1;
   min-width: 0;
 }
 
-.tt-inv-reg-note__dialog {
-  width: min(36rem, 100%);
-  height: auto;
-  max-height: min(80vh, 640px);
+.tt-inv-reg-note__edit {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  height: 1.65rem;
+  padding: 0 0.55rem 0 0.4rem;
+  border: 1px solid var(--app-border, #e5e7eb);
+  border-radius: 999px;
+  background: var(--app-surface, #fff);
+  color: var(--app-muted, #64748b);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 650;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.tt-inv-reg-note__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin: 0;
-  padding: 0.9rem;
+.tt-inv-reg-note__edit:hover {
+  border-color: var(--app-accent, #4f46e5);
+  color: var(--app-accent, #4f46e5);
+  background: color-mix(in srgb, var(--app-accent, #4f46e5) 8%, var(--app-surface, #fff));
+}
+
+.tt-inv-reg-note-overlay {
+  z-index: 13060;
+  align-items: center;
+}
+
+.tt-inv-reg-note__dialog {
+  width: min(34rem, 100%);
 }
 
 .tt-inv-reg-note__area {
+  display: block;
   width: 100%;
-  min-height: 12rem;
+  min-height: 11rem;
+  max-height: 50vh;
+  box-sizing: border-box;
   resize: vertical;
-  border: 1px solid var(--app-border, #e2e8f0);
+  border: 1px solid var(--app-border, #e5e7eb);
   border-radius: 10px;
-  padding: 0.7rem 0.75rem;
+  padding: 0.75rem 0.85rem;
   background: var(--app-bg, #fff);
-  color: inherit;
+  color: var(--app-text, inherit);
   font: inherit;
-  line-height: 1.45;
+  font-size: 0.92rem;
+  line-height: 1.5;
 }
 
 .tt-inv-reg-note__area:focus {
-  outline: 2px solid var(--app-accent-focus, color-mix(in srgb, var(--app-accent, #4f46e5) 35%, transparent));
+  outline: none;
   border-color: var(--app-accent, #4f46e5);
-}
-
-.tt-inv-reg-note__actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.45rem;
+  box-shadow: 0 0 0 3px var(--app-accent-focus, color-mix(in srgb, var(--app-accent, #4f46e5) 22%, transparent));
 }
 
 .tt-inv-reg-pdf {

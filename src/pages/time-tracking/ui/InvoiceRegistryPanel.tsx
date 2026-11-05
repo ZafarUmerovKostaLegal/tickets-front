@@ -443,19 +443,29 @@ function PartnerNoteDialog({
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose, saving]);
     return createPortal(
-        <div className="tt-inv-reg-pdf" role="presentation" onClick={() => { if (!saving) onClose(); }}>
+        <div className="tt-inv-overlay tt-inv-reg-note-overlay" role="presentation" onClick={() => { if (!saving) onClose(); }}>
             <div
-                className="tt-inv-reg-pdf__dialog tt-inv-reg-note__dialog"
+                className="tt-inv-dialog tt-inv-reg-note__dialog"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="tt-inv-reg-note-title"
                 onClick={(event) => event.stopPropagation()}
             >
-                <div className="tt-inv-reg-pdf__bar">
-                    <span className="tt-inv-reg-pdf__name" id="tt-inv-reg-note-title">{title}</span>
+                <div className="tt-inv-dialog__head">
+                    <div className="tt-inv-dialog__head-main">
+                        <h3 id="tt-inv-reg-note-title">{title}</h3>
+                    </div>
+                    <button
+                        type="button"
+                        className="tt-inv-dialog__x"
+                        aria-label={t('timeTrackingPage.common.close')}
+                        disabled={saving}
+                        onClick={onClose}
+                    >
+                        ×
+                    </button>
                 </div>
                 <form
-                    className="tt-inv-reg-note__field"
                     onSubmit={(event) => {
                         event.preventDefault();
                         if (saving)
@@ -468,20 +478,22 @@ function PartnerNoteDialog({
                         });
                     }}
                 >
-                    <textarea
-                        ref={areaRef}
-                        className="tt-inv-reg-note__area"
-                        value={draft}
-                        rows={8}
-                        aria-label={title}
-                        onChange={(event) => setDraft(event.target.value)}
-                    />
-                    <div className="tt-inv-reg-note__actions">
-                        <button type="button" className="tt-inv-reg__pdf" disabled={saving} onClick={onClose}>
+                    <div className="tt-inv-dialog__body">
+                        <textarea
+                            ref={areaRef}
+                            className="tt-inv-reg-note__area"
+                            value={draft}
+                            rows={8}
+                            aria-label={title}
+                            onChange={(event) => setDraft(event.target.value)}
+                        />
+                    </div>
+                    <div className="tt-inv-dialog__foot">
+                        <button type="button" className="tt-reports__btn tt-reports__btn--outline" disabled={saving} onClick={onClose}>
                             {t('timeTrackingPage.common.cancel')}
                         </button>
-                        <button type="submit" className="tt-inv-reg__pdf" disabled={saving}>
-                            {t('timeTrackingPage.common.save')}
+                        <button type="submit" className="tt-reports__btn tt-reports__btn--accent" disabled={saving}>
+                            {saving ? t('timeTrackingPage.common.loading') : t('timeTrackingPage.common.save')}
                         </button>
                     </div>
                 </form>
@@ -514,10 +526,14 @@ function RegistryPartnerNoteCell({
                 {editable ? (
                     <button
                         type="button"
-                        className="tt-inv-reg__pdf"
+                        className="tt-inv-reg-note__edit"
                         aria-label={ariaLabel}
                         onClick={() => setOpen(true)}
                     >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                        </svg>
                         {t('timeTrackingPage.invoices.registry.editPartnerNote')}
                     </button>
                 ) : null}
