@@ -251,7 +251,7 @@ export type CombinedReportSnapshot = {
         rate: number;
         amount: number;
     }>;
-    expenses: Array<{ description: string; date: string; amount: number }>;
+    expenses: Array<{ description: string; date: string; amount: number; projectName?: string }>;
     shares: Array<{ name: string; percent: number; expenses?: number; total: number }>;
     totalHours: number;
     totalFees: number;
@@ -375,6 +375,7 @@ export function buildCombinedReportSnapshot(input: {
             description: line.description?.trim() || '—',
             date: line.expenseDate.slice(0, 10),
             amount: combinedExpenseAmount(line, input.currency),
+            projectName: input.projects.find((project) => project.id === line.projectId)?.name ?? '',
         })),
         shares: input.shares.map((share) => ({
             name: share.projectName,
@@ -386,6 +387,25 @@ export function buildCombinedReportSnapshot(input: {
         totalFees: input.totalFees,
         totalExpenses: input.totalExpenses,
     };
+}
+
+/**
+ * Expense rows that belong on one project's sheet.
+ * New snapshots store projectName. Older ones have no name: a single-project
+ * report keeps every row, a multi-project report keeps them on the last sheet.
+ */
+export function projectExpenseIndexes(report: CombinedReportSnapshot, projectIndex: number): number[] {
+    const expenses = report.expenses ?? [];
+    const name = (report.projects[projectIndex]?.name ?? '').trim();
+    const tagged = expenses.some((line) => (line.projectName ?? '').trim().length > 0);
+    if (tagged) {
+        return expenses.flatMap((line, index) => (
+            (line.projectName ?? '').trim() === name ? [index] : []
+        ));
+    }
+    if (report.projects.length <= 1 || projectIndex === report.projects.length - 1)
+        return expenses.map((_, index) => index);
+    return [];
 }
 
 /** Per-project summary. Saved rows win; otherwise the table is rolled up from time lines. */

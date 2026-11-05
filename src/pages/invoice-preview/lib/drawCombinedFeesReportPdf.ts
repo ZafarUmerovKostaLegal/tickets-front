@@ -1,5 +1,5 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
-import { combinedReportDetailLines, projectSummaryRows, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { combinedReportDetailLines, projectExpenseIndexes, projectSummaryRows, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import { planCombinedReportPreviewPages } from './combinedReportPreviewPages';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from './invoiceCoverLetterModel';
 import { formatTimeReportHours } from './invoiceTimeReportModel';
@@ -285,6 +285,39 @@ function sheetBlocks(
     return out;
 }
 
+function expenseSheetBlock(
+    snapshot: CombinedReportSnapshot,
+    projectIndex: number,
+    from: number,
+    to: number,
+    showTotal: boolean,
+): { title: string; headers: string[]; rows: Row[]; weights: number[]; right: Set<number> } | null {
+    if (!showTotal && to <= from)
+        return null;
+    const cur = snapshot.currency || 'USD';
+    const refs = projectExpenseIndexes(snapshot, projectIndex);
+    const visible = refs.slice(Math.max(0, from), Math.max(0, to));
+    const rows: Row[] = visible.map((index) => {
+        const line = snapshot.expenses[index];
+        return {
+            cells: [line?.description || '—', dateRu(line?.date || ''), sheetNum(line?.amount || 0)],
+        };
+    });
+    if (showTotal) {
+        const total = refs.reduce((sum, index) => sum + (Number(snapshot.expenses[index]?.amount) || 0), 0);
+        rows.push({ bold: true, cells: ['Subtotal', '', sheetNum(total)] });
+    }
+    if (rows.length === 0)
+        return null;
+    return {
+        title: 'Reimbursable Expenses via',
+        headers: ['Description', 'Email date', `Amount (${cur})`],
+        weights: [52, 18, 30],
+        right: new Set([2]),
+        rows,
+    };
+}
+
 function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fontBold: PDFFont): PageOp[][] {
     const slices = planCombinedReportPreviewPages(snapshot).filter((slice) => slice.projectIndex >= 0);
     const pages: PageOp[][] = [];
@@ -304,8 +337,16 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
             : null;
         open(title);
         const showTime = slice.showTimeTotal || slice.timeTo > slice.timeFrom;
+        const showExpenses = slice.showExpensesTotal || slice.expensesTo > slice.expensesFrom;
+        const expenseBlock = showExpenses
+            ? expenseSheetBlock(snapshot, slice.projectIndex, slice.expensesFrom, slice.expensesTo, slice.showExpensesTotal)
+            : null;
+        const blocks: Array<{ title?: string; headers: string[]; rows: Row[]; weights: number[]; right: Set<number> }> = [
+            ...sheetBlocks(snapshot, slice.projectIndex, slice.timeFrom, slice.timeTo, showTime, slice.showTimeTotal, slice.showPeopleTotal),
+            ...(expenseBlock ? [expenseBlock] : []),
+        ];
         let firstBlock = true;
-        for (const block of sheetBlocks(snapshot, slice.projectIndex, slice.timeFrom, slice.timeTo, showTime, slice.showTimeTotal, slice.showPeopleTotal)) {
+        for (const block of blocks) {
             if (!firstBlock) {
                 if (y - SHEET_GAP - SHEET_HEAD < SB)
                     open(null);
@@ -313,6 +354,11 @@ function planPerProjectPages(snapshot: CombinedReportSnapshot, font: PDFFont, fo
                     push({ kind: 'gap' }, SHEET_GAP);
             }
             firstBlock = false;
+            if (block.title) {
+                if (y - 16 < SB)
+                    open(null);
+                push({ kind: 'title', text: block.title }, 16);
+            }
             const paintHead = () => {
                 if (y - SHEET_HEAD < SB)
                     open(null);
@@ -447,6 +493,11 @@ function drawSheetOps(page: PDFPage, font: PDFFont, fontBold: PDFFont, ops: Page
         }
         if (op.kind === 'gap') {
             y -= SHEET_GAP;
+            continue;
+        }
+        if (op.kind === 'title') {
+            page.drawText(op.text, { x: SL, y: y - 11, size: 10, font: fontBold, color: RED });
+            y -= 16;
             continue;
         }
         if (op.kind === 'thead') {

@@ -97,6 +97,8 @@ export function CombinedInvoiceDocument({
                 const projectTime = time.filter((line) => line.projectId === project.id);
                 const projectHours = projectTime.reduce((sum, line) => sum + (line.billableHours ?? line.hours), 0);
                 const projectFees = projectTime.reduce((sum, line) => sum + line.billableAmount, 0);
+                const projectExpenses = expenses.filter((line) => line.projectId === project.id);
+                const projectExpTotal = projectExpenses.reduce((sum, line) => sum + combinedExpenseAmount(line, currency), 0);
                 const projectPeople = new Map<number, { hours: number; amount: number }>();
                 for (const line of projectTime) {
                     const prev = projectPeople.get(line.authUserId) ?? { hours: 0, amount: 0 };
@@ -188,6 +190,35 @@ export function CombinedInvoiceDocument({
                                 </tfoot>
                             </table>
                         </section>
+                        {projectExpenses.length > 0 ? (
+                            <section className="tt-inv-cdoc__block">
+                                <h2>Reimbursable Expenses via</h2>
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Description</th>
+                                            <th>Email date</th>
+                                            <th className="num">Amount ({currency})</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {projectExpenses.map((line) => (
+                                            <tr key={line.id}>
+                                                <td>{line.description || '—'}</td>
+                                                <td>{dateRu(line.expenseDate)}</td>
+                                                <td className="num">{money(combinedExpenseAmount(line, currency))}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                    <tfoot>
+                                        <tr>
+                                            <td colSpan={2}>Subtotal</td>
+                                            <td className="num">{money(projectExpTotal)}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </section>
+                        ) : null}
                     </article>
                 );
             }) : (

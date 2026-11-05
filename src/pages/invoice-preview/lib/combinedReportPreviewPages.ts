@@ -1,4 +1,4 @@
-import { combinedReportDetailLines, type CombinedReportLine, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { combinedReportDetailLines, projectExpenseIndexes, type CombinedReportLine, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 
 /** Usable content height inside the A4 sheet, after page padding and the footer. */
 const USABLE_PX = 820;
@@ -126,6 +126,41 @@ function planPerProjectPages(report: CombinedReportSnapshot): CombinedReportPrev
         page.peopleTo = people;
         page.showPeopleTotal = people > 0;
         used += people > 0 ? peopleBlock : 0;
+        const expenseIndexes = projectExpenseIndexes(report, projectIndex);
+        if (expenseIndexes.length > 0) {
+            let opened = false;
+            const expenseHeight = (localIndex: number) => {
+                const line = report.expenses[expenseIndexes[localIndex]!];
+                return rowPx(textLines(line?.description || '', 64));
+            };
+            const openExpenses = (localIndex: number) => {
+                if (!fits(SECTION_HEAD_PX))
+                    commit();
+                page.expensesFrom = localIndex;
+                page.expensesTo = localIndex;
+                used += SECTION_HEAD_PX;
+                opened = true;
+            };
+            for (let index = 0; index < expenseIndexes.length; index += 1) {
+                const height = expenseHeight(index);
+                if (!fits((opened ? 0 : SECTION_HEAD_PX) + height)) {
+                    commit();
+                    opened = false;
+                }
+                if (!opened)
+                    openExpenses(index);
+                page.expensesTo = index + 1;
+                used += height;
+            }
+            if (!fits((opened ? 0 : SECTION_HEAD_PX) + TOTAL_PX)) {
+                commit();
+                opened = false;
+            }
+            if (!opened)
+                openExpenses(expenseIndexes.length);
+            page.showExpensesTotal = true;
+            used += TOTAL_PX + GAP_PX;
+        }
         commit();
     });
     return pages.length > 0 ? pages : [emptySlice()];

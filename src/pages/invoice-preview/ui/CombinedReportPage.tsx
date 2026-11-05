@@ -2,7 +2,7 @@ import { useState, type ChangeEvent } from 'react';
 import { KOSTA_LEGAL_LETTERHEAD_LINES } from '../lib/invoiceCoverLetterModel';
 import { coverLetterheadLogoUrl } from '../lib/invoiceCoverLogoRaster';
 import { planCombinedReportPreviewPages } from '../lib/combinedReportPreviewPages';
-import { patchProjectSummary, projectSummaryRows, type CombinedReportLine, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
+import { patchProjectSummary, projectExpenseIndexes, projectSummaryRows, type CombinedReportLine, type CombinedReportSnapshot } from '@pages/time-tracking/lib/combinedInvoice';
 import { formatTimeReportHours } from '../lib/invoiceTimeReportModel';
 import './InvoiceTimeReportPage.css';
 
@@ -281,6 +281,63 @@ export function CombinedReportPage({ report, pageNumber, pageIndex = 0, editable
                                     <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">{formatTimeReportHours(summaryFees)}</td>
                                 </tr>
                             </tfoot>
+                        </table>
+                    </div>
+                ) : null}
+                {showExpenses ? (
+                    <div className="tt-inv-tr__table-wrap">
+                        <h2 className="tt-inv-tr__subtitle">Reimbursable Expenses via</h2>
+                        <table className="tt-inv-tr__table">
+                            <thead className="tt-inv-tr__thead">
+                                <tr>
+                                    <th style={{ width: '52%' }}>Description</th>
+                                    <th style={{ width: '18%' }}>Email date</th>
+                                    <th className="num" style={{ width: '30%' }}>Amount ({cur})</th>
+                                </tr>
+                            </thead>
+                            <tbody className="tt-inv-tr__tbody">
+                                {projectExpenseIndexes(report, slice.projectIndex)
+                                    .slice(Math.max(0, slice.expensesFrom), Math.max(0, slice.expensesTo))
+                                    .map((index) => {
+                                        const line = report.expenses[index];
+                                        if (!line)
+                                            return null;
+                                        return (
+                                            <tr key={`expense-${index}`}>
+                                                <TextCell editable={editable} ariaLabel="Description" value={line.description} onChange={(v) => emit({
+                                                    ...report,
+                                                    expenses: report.expenses.map((row, i) => i === index ? { ...row, description: v } : row),
+                                                })}
+                                                />
+                                                <TextCell editable={editable} ariaLabel="Email date" value={dateRu(line.date)} onChange={(v) => emit({
+                                                    ...report,
+                                                    expenses: report.expenses.map((row, i) => i === index ? { ...row, date: commitDate(v) } : row),
+                                                })}
+                                                />
+                                                <NumCell editable={editable} className="tt-inv-tr__cell--num" ariaLabel="Amount" value={line.amount} format={(n) => formatTimeReportHours(n)} onChange={(v) => {
+                                                    const expenses = report.expenses.map((row, i) => i === index ? { ...row, amount: v } : row);
+                                                    emit({
+                                                        ...report,
+                                                        expenses,
+                                                        totalExpenses: expenses.reduce((sum, row) => sum + (Number(row.amount) || 0), 0),
+                                                    });
+                                                }}
+                                                />
+                                            </tr>
+                                        );
+                                    })}
+                            </tbody>
+                            {slice.showExpensesTotal ? (
+                                <tfoot className="tt-inv-tr__tfoot">
+                                    <tr>
+                                        <td colSpan={2}>Subtotal</td>
+                                        <td className="tt-inv-tr__cell--num tt-inv-tr__tfoot-num">
+                                            {formatTimeReportHours(projectExpenseIndexes(report, slice.projectIndex)
+                                                .reduce((sum, index) => sum + (Number(report.expenses[index]?.amount) || 0), 0))}
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            ) : null}
                         </table>
                     </div>
                 ) : null}
