@@ -65,6 +65,7 @@ export const enMessages = {
         projectFolderName: 'Folder name',
         projectFolderDelete: 'Delete',
         projectFolderColor: 'Folder color',
+        projectFolderProjects: 'Projects',
         projectFolderColorSlate: 'Gray',
         projectFolderColorInk: 'Ink',
         projectFolderColorAccent: 'Blue',

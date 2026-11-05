@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
@@ -109,62 +109,121 @@ export function LegalHubProjectSettings({
                 {settings.folders.length === 0 ? <p className="lh-folders__note">{t('legalHub.projectFoldersEmpty')}</p> : null}
                 <div className="lh-folders__list">
                     {settings.folders.map((folder) => (
-                        <section key={folder.id} className="lh-folders__card">
-                            <div className="lh-folders__card-head">
-                                <label className="lh-folders__name">
-                                    <input
-                                        value={folder.name}
-                                        aria-label={t('legalHub.projectFolderName')}
-                                        onChange={(event) => patchFolder(folder.id, { name: event.target.value })}
-                                    />
-                                </label>
-                                <button type="button" className="lh-folders__delete" onClick={() => onChange({
-                                    ...settings,
-                                    folders: settings.folders.filter((item) => item.id !== folder.id),
-                                })}
-                                >
-                                    {t('legalHub.projectFolderDelete')}
-                                </button>
-                            </div>
-                            <div className="lh-folders__colors" role="radiogroup" aria-label={t('legalHub.projectFolderColor')}>
-                                {FOLDER_COLORS.map((color) => (
-                                    <button
-                                        key={color}
-                                        type="button"
-                                        className={`lh-folders__color is-${color}${folder.color === color ? ' is-on' : ''}`}
-                                        role="radio"
-                                        aria-checked={folder.color === color}
-                                        aria-label={t(COLOR_LABEL[color])}
-                                        onClick={() => patchFolder(folder.id, { color })}
-                                    />
-                                ))}
-                            </div>
-                            <ul className="lh-folders__picks">
-                                {projects.map((project) => {
-                                    const checked = folder.projectIds.includes(project.id);
-                                    return (
-                                        <li key={project.id}>
-                                            <label className="lh-folders__pick">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={checked}
-                                                    onChange={(event) => onChange({
-                                                        ...settings,
-                                                        folders: assignProjectToFolder(settings.folders, folder.id, project.id, event.target.checked),
-                                                    })}
-                                                />
-                                                <span>{project.name}</span>
-                                            </label>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </section>
+                        <FolderCard
+                            key={folder.id}
+                            folder={folder}
+                            projects={projects}
+                            onPatch={(patch) => patchFolder(folder.id, patch)}
+                            onDelete={() => onChange({
+                                ...settings,
+                                folders: settings.folders.filter((item) => item.id !== folder.id),
+                            })}
+                            onToggleProject={(projectId, on) => onChange({
+                                ...settings,
+                                folders: assignProjectToFolder(settings.folders, folder.id, projectId, on),
+                            })}
+                        />
                     ))}
                 </div>
             </div>
         </div>,
         document.body,
+    );
+}
+
+function FolderCard({
+    folder,
+    projects,
+    onPatch,
+    onDelete,
+    onToggleProject,
+}: {
+    folder: ProjectFolder;
+    projects: ProjectRow[];
+    onPatch: (patch: Partial<ProjectFolder>) => void;
+    onDelete: () => void;
+    onToggleProject: (projectId: string, on: boolean) => void;
+}) {
+    const { t } = useI18n();
+    const [query, setQuery] = useState('');
+    const needle = query.trim().toLowerCase();
+    const visible = needle
+        ? projects.filter((project) => project.name.toLowerCase().includes(needle))
+        : projects;
+
+    return (
+        <section className="lh-folders__card">
+            <div className="lh-folders__card-head">
+                <label className="lh-folders__name">
+                    <input
+                        value={folder.name}
+                        aria-label={t('legalHub.projectFolderName')}
+                        autoComplete="off"
+                        onChange={(event) => onPatch({ name: event.target.value })}
+                    />
+                </label>
+                <button type="button" className="lh-folders__delete" onClick={onDelete}>
+                    {t('legalHub.projectFolderDelete')}
+                </button>
+            </div>
+            <div className="lh-folders__colors" role="radiogroup" aria-label={t('legalHub.projectFolderColor')}>
+                {FOLDER_COLORS.map((color) => (
+                    <button
+                        key={color}
+                        type="button"
+                        className={`lh-folders__color is-${color}${folder.color === color ? ' is-on' : ''}`}
+                        role="radio"
+                        aria-checked={folder.color === color}
+                        aria-label={t(COLOR_LABEL[color])}
+                        onClick={() => onPatch({ color })}
+                    />
+                ))}
+            </div>
+            <div className="lh-folders__projects">
+                <div className="lh-folders__projects-head">
+                    <span>{t('legalHub.projectFolderProjects')}</span>
+                    <span>{folder.projectIds.length}</span>
+                </div>
+                <label className="lh-folders__find">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+                        <circle cx="11" cy="11" r="7" />
+                        <path d="m20 20-3.5-3.5" />
+                    </svg>
+                    <input
+                        type="search"
+                        value={query}
+                        placeholder={t('legalHub.projectSearch')}
+                        aria-label={t('legalHub.projectSearch')}
+                        autoComplete="off"
+                        onChange={(event) => setQuery(event.target.value)}
+                    />
+                </label>
+                <ul className="lh-folders__picks">
+                    {visible.length === 0 ? (
+                        <li className="lh-folders__empty">{t('legalHub.projectSearchEmpty')}</li>
+                    ) : visible.map((project) => {
+                        const checked = folder.projectIds.includes(project.id);
+                        return (
+                            <li key={project.id}>
+                                <label className={`lh-folders__pick${checked ? ' is-on' : ''}`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={checked}
+                                        onChange={(event) => onToggleProject(project.id, event.target.checked)}
+                                    />
+                                    <span className="lh-folders__box" aria-hidden>
+                                        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M2.2 6.1 4.7 8.6 9.8 3.4" />
+                                        </svg>
+                                    </span>
+                                    <span className="lh-folders__pick-name">{project.name}</span>
+                                </label>
+                            </li>
+                        );
+                    })}
+                </ul>
+            </div>
+        </section>
     );
 }
 

@@ -65,6 +65,7 @@ export const ruMessages: Messages = {
         projectFolderName: 'Название папки',
         projectFolderDelete: 'Удалить',
         projectFolderColor: 'Цвет папки',
+        projectFolderProjects: 'Проекты',
         projectFolderColorSlate: 'Серый',
         projectFolderColorInk: 'Тёмный',
         projectFolderColorAccent: 'Синий',
@@ -1184,6 +1185,7 @@ export type Messages = {
         projectFolderName: string;
         projectFolderDelete: string;
         projectFolderColor: string;
+        projectFolderProjects: string;
         projectFolderColorSlate: string;
         projectFolderColorInk: string;
         projectFolderColorAccent: string;
