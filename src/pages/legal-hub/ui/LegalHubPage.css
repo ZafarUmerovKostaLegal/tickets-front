@@ -6962,7 +6962,7 @@ body[data-theme='dark'] .lh-page {
 .lh-rows {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.45rem;
   width: 100%;
   max-width: none;
 }
@@ -6977,7 +6977,7 @@ body[data-theme='dark'] .lh-page {
 .lh-rows ul {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.45rem;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -6990,10 +6990,10 @@ body[data-theme='dark'] .lh-page {
   column-gap: 1.25rem;
   row-gap: 0.2rem;
   width: 100%;
-  min-height: 4.35rem;
-  padding: 0.7rem 1rem;
+  min-height: 4.1rem;
+  padding: 0.65rem 0.85rem;
   border: 1px solid var(--app-border);
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--app-surface);
   text-align: left;
   cursor: pointer;
@@ -7020,6 +7020,8 @@ body[data-theme='dark'] .lh-page {
   overflow: hidden;
   color: var(--app-text);
   font-size: 0.9rem;
+  font-weight: 650;
+  letter-spacing: -0.011em;
   line-height: 1.35;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -7074,12 +7076,13 @@ body[data-theme='dark'] .lh-page {
 }
 
 .lh-rows__stage {
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
+  padding: 0.12rem 0.4rem;
+  border-radius: 3px;
   background: var(--app-bg-soft);
   color: var(--app-text-dim);
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
@@ -7108,8 +7111,8 @@ body[data-theme='dark'] .lh-page {
 
 .lh-rows__empty {
   padding: 2.5rem 1rem;
-  border: 1px dashed color-mix(in srgb, var(--app-muted) 45%, var(--app-border));
-  border-radius: 14px;
+  border: 1px dashed var(--app-border);
+  border-radius: 6px;
   color: var(--app-muted);
   text-align: center;
 }
@@ -7123,23 +7126,24 @@ body[data-theme='dark'] .lh-page {
 .lh-rows .lh-my__duepill,
 .lh-map .lh-my__duepill {
   display: inline-flex;
-  padding: 0.1rem 0.45rem;
-  border-radius: 999px;
-  background: var(--app-bg-soft);
-  color: var(--app-text-light);
-  font-size: 0.7rem;
-  font-weight: 700;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   white-space: nowrap;
 }
 
 .lh-rows .lh-my__duepill.is-late,
 .lh-map .lh-my__duepill.is-late {
-  background: var(--app-error-bg);
+  background: transparent;
   color: var(--app-error);
 }
 
 .lh-rows .lh-my__duepill.is-soon {
-  background: color-mix(in srgb, var(--app-warning) 16%, var(--app-surface));
+  background: transparent;
   color: color-mix(in srgb, var(--app-warning) 78%, var(--app-text));
 }
 
@@ -8180,7 +8184,7 @@ body[data-theme='dark'] .lh-page {
 }
 
 .lh-rows__item.is-late {
-  box-shadow: inset 3px 0 0 var(--app-error);
+  box-shadow: inset 2px 0 0 var(--app-error);
 }
 
 .lh-rows__flag {
