@@ -189,13 +189,15 @@ function LegalHubPageBody() {
         () => boardTasks.filter((task) => !MOCK_DONE_IDS.includes(task.id)),
         [boardTasks],
     );
-    const matterStats = useMemo(() => MATTERS.map((id) => {
+    const matterStats = useMemo(() => MATTERS.flatMap((id) => {
         const rows = openTasks.filter((task) => task.project === id);
-        return {
+        if (rows.length === 0)
+            return [];
+        return [{
             id,
             count: rows.length,
             hot: rows.some((task) => dayDelta(task.clientOn) < 0),
-        };
+        }];
     }), [openTasks]);
     const visibleMatters = useMemo(() => {
         const needle = projectQuery.trim().toLowerCase();
@@ -357,7 +359,7 @@ function LegalHubPageBody() {
                             />
                         </label>
                         <ul className="lh-side__list">
-                            {visibleMatters.length === 0 ? (
+                            {visibleMatters.length === 0 && projectQuery.trim() ? (
                                 <li className="lh-side__find-empty">{t('legalHub.projectSearchEmpty')}</li>
                             ) : null}
                             {visibleMatters.map((matter) => {

@@ -208,12 +208,7 @@ const UTIL_LABEL: Record<UtilKey, TranslationKey> = {
     todo: 'legalHub.utilTodo',
 };
 
-const MOCK_DEADLINES: { title: TranslationKey; when: TranslationKey; tone: 'hot' | 'soon' | 'calm' }[] = [
-    { title: 'legalHub.mockDeadline1', when: 'legalHub.mockWhenToday', tone: 'hot' },
-    { title: 'legalHub.mockDeadline2', when: 'legalHub.mockWhenTomorrow', tone: 'soon' },
-    { title: 'legalHub.mockDeadline3', when: 'legalHub.mockWhenFriday', tone: 'calm' },
-    { title: 'legalHub.mockDeadline4', when: 'legalHub.mockWhenMonday', tone: 'calm' },
-];
+const MOCK_DEADLINES: { title: TranslationKey; when: TranslationKey; tone: 'hot' | 'soon' | 'calm' }[] = [];
 
 const DONUT_R = 40;
 const DONUT_C = 2 * Math.PI * DONUT_R;

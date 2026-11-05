@@ -44,8 +44,7 @@ export const PROJECT_TITLE: Record<TaskProjectId, string> = {
     healthcare: 'Project E — Healthcare',
 };
 
-/** Demo data: tasks that already count as finished on «Мои задачи». */
-export const MOCK_DONE_IDS: readonly string[] = ['wind-easement'];
+export const MOCK_DONE_IDS: readonly string[] = [];
 
 export function isTaskProjectId(value: string | null | undefined): value is TaskProjectId {
     return value != null && (TASK_PROJECTS as readonly string[]).includes(value);
@@ -80,77 +79,15 @@ export type TaskDetail = {
 };
 
 export function taskDrawerDetail(task: HubTask): TaskDetail {
-    if (task.id === 'lla-prep') {
-        return {
-            internalOn: '2026-10-31',
-            important: true,
-            approval: 'required',
-            instructions: 'Prepare revised LLA, verify easement provisions and relevant schedules. Include updated map and reference to land plot coordinates.',
-            checks: [
-                { id: 'instructions', label: 'Review client instructions', done: true },
-                { id: 'draft', label: 'Prepare draft', done: true },
-                { id: 'refs', label: 'Check legal references', done: false },
-                { id: 'final', label: 'Verify final version', done: false },
-            ],
-            files: [
-                { id: 'draft', name: 'LLA_draft_v2.pdf', kind: 'pdf', size: '245 KB', when: '27 Oct' },
-                { id: 'comments', name: 'Client_comments.docx', kind: 'docx', size: '1.2 MB', when: '26 Oct' },
-            ],
-            comments: [
-                { id: 'c1', author: 'Junior Associate 1', text: 'Draft is ready. I am checking the easement schedule and the map.', when: '25 Oct', time: '10:12' },
-                { id: 'c2', author: 'Partner', text: 'Align the plan with the updated land plot coordinates before the next review.', when: '27 Oct', time: '16:05' },
-            ],
-            history: [
-                { id: 'h-review', kind: 'review', when: '27 Oct', time: '16:40' },
-                { id: 'h-file', kind: 'file', when: '26 Oct', time: '11:15' },
-                { id: 'h-started', kind: 'started', when: '25 Oct', time: '10:00' },
-                { id: 'h-created', kind: 'created', when: '24 Oct', time: '09:00' },
-            ],
-        };
-    }
-    if (task.id === 'wind-final') {
-        return {
-            internalOn: '2026-10-28',
-            important: true,
-            approval: 'required',
-            instructions: 'Prepare the document, check it against client instructions and the latest correspondence, then send it for review.',
-            checks: [
-                { id: 'instructions', label: 'Review client instructions', done: true },
-                { id: 'draft', label: 'Prepare draft', done: true },
-                { id: 'refs', label: 'Check legal references', done: true },
-                { id: 'final', label: 'Verify final version', done: true },
-            ],
-            files: [],
-            comments: [
-                { id: 'c1', author: 'Junior Associate 1', text: 'Final review is ready. Please check the correspondence before it goes out.', when: '28 Oct', time: '11:20' },
-                { id: 'c2', author: 'Partner', text: 'I will look at the client letter and confirm the deadline.', when: '29 Oct', time: '16:05' },
-            ],
-            history: [
-                { id: 'h-review', kind: 'review', when: '29 Oct', time: '16:40' },
-                { id: 'h-started', kind: 'started', when: '27 Oct', time: '10:00' },
-                { id: 'h-created', kind: 'created', when: '26 Oct', time: '09:00' },
-            ],
-        };
-    }
     return {
         internalOn: '',
         important: task.priority === 'high',
         approval: task.priority === 'high' ? 'required' : 'none',
         instructions: '',
         checks: [],
-        files: task.status === 'todo' ? [] : [
-            { id: `${task.id}-file`, name: `${task.project}_draft.pdf`, kind: 'pdf', size: '180 KB', when: '27 Oct' },
-        ],
-        comments: [
-            { id: `${task.id}-c1`, author: PERSON_LABEL[task.owner].name, text: 'Started the draft and checked the source documents.', when: '25 Oct', time: '10:12' },
-            { id: `${task.id}-c2`, author: task.reviewer ? PERSON_LABEL[task.reviewer].name : 'Partner', text: 'Leave the next step in the note before this goes to review.', when: '27 Oct', time: '16:05' },
-        ],
-        history: [
-            ...(task.status === 'todo' ? [] : [{ id: `${task.id}-review`, kind: 'review' as const, when: '27 Oct', time: '16:40' }]),
-            ...(task.status === 'todo' ? [] : [{ id: `${task.id}-file`, kind: 'file' as const, when: '26 Oct', time: '11:20' }]),
-            { id: `${task.id}-started`, kind: 'started', when: '25 Oct', time: '10:00' },
-            { id: `${task.id}-created`, kind: 'created', when: '24 Oct', time: '09:00' },
-        ],
+        files: [],
+        comments: [],
+        history: [],
     };
 }
 
@@ -162,22 +99,4 @@ export function tasksForMember(memberId: number, memberIds: number[]): HubTask[]
     return HUB_TASKS.filter((_, taskIndex) => taskIndex % ordered.length === index);
 }
 
-export const HUB_TASKS: HubTask[] = [
-    { id: 'lla-final', project: 'solar', title: 'LLA Amendment — Final Approval', workstream: 'Land / LLA', owner: 'ja1', reviewer: 'partner', status: 'partner', priority: 'high', important: true, reviewOn: '2026-10-29', clientOn: '2026-11-02', minutes: 120 },
-    { id: 'lla-prep', project: 'solar', title: 'Prepare LLA Amendment', workstream: 'Land / LLA', owner: 'ja1', reviewer: null, status: 'progress', priority: 'high', important: true, reviewOn: null, clientOn: '2026-11-03', minutes: 120 },
-    { id: 'wind-final', project: 'wind', title: 'Final review before sending', workstream: 'Correspondence', owner: 'ja1', reviewer: 'partner', status: 'partner', priority: 'high', reviewOn: '2026-11-01', clientOn: '2026-11-03', minutes: 60 },
-    { id: 'wind-easement', project: 'wind', title: 'Easement Schedule — Direct Review', workstream: 'Easements', owner: 'ja2', reviewer: 'partner', status: 'partner', priority: 'high', reviewOn: '2026-11-01', clientOn: '2026-11-03', minutes: 60 },
-    { id: 'land-note', project: 'solar', title: 'Land rights note', workstream: 'Land / LLA', owner: 'a2', reviewer: null, status: 'progress', priority: 'high', reviewOn: null, clientOn: '2026-11-03', minutes: 60 },
-    { id: 'strategy', project: 'healthcare', title: 'Client Strategy Note', workstream: 'Management', owner: 'partner', reviewer: null, status: 'progress', priority: 'high', reviewOn: null, clientOn: '2026-11-03', minutes: 60 },
-    { id: 'khokimiyat', project: 'solar', title: 'Khokimiyat Land Confirmation', workstream: 'Permits', owner: 'ja1', reviewer: null, status: 'wait', priority: 'high', waitingFor: 'Khokimiyat', followUpOn: '2026-10-29', reviewOn: null, clientOn: '2026-11-04', minutes: 60 },
-    { id: 'revise-draft', project: 'infrastructure', title: 'Revise draft based on comments', workstream: 'Legal Opinion', owner: 'ja1', reviewer: 'a1', status: 'changes', priority: 'high', reviewOn: null, clientOn: '2026-11-04', minutes: 60 },
-    { id: 'bess-review', project: 'bess', title: 'BESS Lease Agreement — Review', workstream: 'Land / LLA', owner: 'ja1', reviewer: 'a1', status: 'associate', priority: 'high', reviewOn: '2026-10-31', clientOn: '2026-11-04', minutes: 120 },
-    { id: 'easement-assoc', project: 'wind', title: 'Easement Agreement — Associate Review', workstream: 'Easements', owner: 'ja2', reviewer: 'a1', status: 'associate', priority: 'high', reviewOn: '2026-10-31', clientOn: '2026-11-04', minutes: 90 },
-    { id: 'gov-letter', project: 'infrastructure', title: 'Government Response Letter', workstream: 'Compliance', owner: 'ja3', reviewer: 'partner', status: 'partner', priority: 'high', reviewOn: '2026-10-31', clientOn: '2026-11-04', minutes: 60, autoRouted: true },
-    { id: 'bess-final', project: 'bess', title: 'BESS Lease — Final Approval', workstream: 'Land', owner: 'ja3', reviewer: 'partner', status: 'partner', priority: 'high', reviewOn: '2026-11-02', clientOn: '2026-11-04', minutes: 90 },
-    { id: 'regulator', project: 'infrastructure', title: 'Regulator confirmation', workstream: 'Permits', owner: 'a1', reviewer: null, status: 'wait', priority: 'normal', waitingFor: 'Regulator', reviewOn: null, clientOn: '2026-11-04', minutes: 60 },
-    { id: 'allocation', project: 'solar', title: 'Letter on Land Allocation', workstream: 'Correspondence', owner: 'ja1', reviewer: null, status: 'wait', priority: 'normal', waitingFor: 'Client', followUpOn: '2026-11-01', reviewOn: null, clientOn: '2026-11-05', minutes: 60 },
-    { id: 'tx-easement', project: 'solar', title: 'Transmission Easement Letter', workstream: 'Easements', owner: 'ja2', reviewer: 'a1', status: 'associate', priority: 'normal', reviewOn: '2026-10-31', clientOn: '2026-11-06', minutes: 60 },
-    { id: 'permit-pack', project: 'solar', title: 'Review draft permit package', workstream: 'Permits', owner: 'ja1', reviewer: null, status: 'todo', priority: 'low', reviewOn: null, clientOn: '2026-11-07', minutes: 45 },
-    { id: 'schedule', project: 'wind', title: 'Prepare contract schedule', workstream: 'Contracts', owner: 'ja1', reviewer: null, status: 'todo', priority: 'normal', reviewOn: null, clientOn: '2026-11-05', minutes: 90 },
-];
+export const HUB_TASKS: HubTask[] = [];

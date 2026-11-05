@@ -155,6 +155,7 @@ export function LegalHubProjects({
     const needle = query.trim().toLowerCase();
     const projects = useMemo(() => TASK_PROJECTS
         .map((id) => summarize(id, tasks))
+        .filter((project) => project.tasks.length > 0)
         .sort((a, b) => {
             const byHealth = HEALTH_ORDER.indexOf(a.health) - HEALTH_ORDER.indexOf(b.health);
             if (byHealth !== 0)

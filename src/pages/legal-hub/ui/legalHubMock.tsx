@@ -27,66 +27,39 @@ export type MockMemberRow = {
 };
 
 const FALLBACK_UTIL: Record<UtilKey, number> = {
-    progress: 12,
-    associate: 8,
-    partner: 6,
-    wait: 5,
-    changes: 1,
-    todo: 3,
+    progress: 0,
+    associate: 0,
+    partner: 0,
+    wait: 0,
+    changes: 0,
+    todo: 0,
 };
 
-export const MOCK_PROJECTS = 6;
-export const MOCK_DUE = 4;
+export const MOCK_PROJECTS = 0;
+export const MOCK_DUE = 0;
 
-function rng(seed: number): () => number {
-    let x = (seed >>> 0) || 1;
-    return () => {
-        x = (Math.imul(x, 1664525) + 1013904223) >>> 0;
-        return x / 4294967296;
-    };
-}
-
-function splitInt(total: number, parts: number, rand: () => number): number[] {
-    const weights = Array.from({ length: parts }, () => 0.35 + rand());
-    const sum = weights.reduce((acc, value) => acc + value, 0);
-    const out = weights.map((weight) => Math.floor((total * weight) / sum));
-    let left = total - out.reduce((acc, value) => acc + value, 0);
-    let index = 0;
-    while (left > 0) {
-        out[index % parts] += 1;
-        left -= 1;
-        index += 1;
-    }
-    return out;
-}
-
-export function mockMemberLoad(id: number, capacityRaw?: string): MemberLoad {
-    const rand = rng(id * 97 + 13);
-    const tasks = 6 + Math.floor(rand() * 10);
-    const parts = splitInt(tasks, UTIL_KEYS.length, rand);
-    const util = {
-        progress: parts[0] ?? 0,
-        associate: parts[1] ?? 0,
-        partner: parts[2] ?? 0,
-        wait: parts[3] ?? 0,
-        changes: parts[4] ?? 0,
-        todo: parts[5] ?? 0,
-    };
+export function mockMemberLoad(_id: number, capacityRaw?: string): MemberLoad {
     const parsedCap = Number(capacityRaw);
     const hoursCap = Number.isFinite(parsedCap) && parsedCap > 0 ? parsedCap : 40;
-    const percent = 42 + Math.floor(rand() * 48);
-    const hoursUsed = Math.round(hoursCap * percent) / 100;
+    const util = {
+        progress: 0,
+        associate: 0,
+        partner: 0,
+        wait: 0,
+        changes: 0,
+        todo: 0,
+    };
     return {
-        tasks,
-        hoursUsed: Math.round(hoursUsed * 10) / 10,
+        tasks: 0,
+        hoursUsed: 0,
         hoursCap,
-        percent,
+        percent: 0,
         statuses: {
-            progress: util.progress,
-            wait: util.wait,
-            review: util.associate + util.partner,
-            changes: util.changes,
-            reviewing: util.todo,
+            progress: 0,
+            wait: 0,
+            review: 0,
+            changes: 0,
+            reviewing: 0,
         },
         util,
     };

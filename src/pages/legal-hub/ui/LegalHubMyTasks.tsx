@@ -69,16 +69,7 @@ const PRIORITY_LABEL: Record<TaskPriorityId, TranslationKey> = {
     low: 'legalHub.taskPriorityLow',
 };
 
-const INTERNAL_ON: Record<string, string> = {
-    khokimiyat: '2026-10-31',
-    'lla-final': '2026-11-01',
-    'lla-prep': '2026-10-31',
-    allocation: '2026-10-30',
-    'tx-easement': '2026-10-31',
-    'permit-pack': '2026-11-03',
-    'wind-final': '2026-10-31',
-    schedule: '2026-11-01',
-};
+const INTERNAL_ON: Record<string, string> = {};
 
 function dayDelta(iso: string): number {
     const [year, month, day] = iso.split('-').map(Number);
