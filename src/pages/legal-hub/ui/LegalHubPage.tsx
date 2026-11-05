@@ -10,6 +10,7 @@ import { LegalHubTeamBoard, LegalHubUtilRail } from './LegalHubTeamBoard';
 import { LegalHubMockProvider } from './legalHubMock';
 import { HUB_TASKS, isTaskProjectId, MOCK_DONE_IDS, PROJECT_TITLE, tasksForMember, type TaskProjectId } from './legalHubTasks';
 import { dayDelta, HeadActionsContext, legalHubSectionUrl, type LegalHubNavId } from './legalHubShared';
+import { LegalHubChromeProvider, useLegalHubChromeStyle } from './legalHubChrome';
 import { LegalHubViewProvider, useLegalHubView } from './legalHubView';
 import './LegalHubPage.css';
 
@@ -287,8 +288,9 @@ function LegalHubPageBody() {
         return () => window.removeEventListener('keydown', onKeyDown);
     }, []);
 
+    const chrome = useLegalHubChromeStyle();
     return (
-        <div className={`lh-page${menuOpen ? ' lh-page--menu-open' : ''}${sideCollapsed ? ' lh-page--side-collapsed' : ''}`}>
+        <div className={`lh-page${menuOpen ? ' lh-page--menu-open' : ''}${sideCollapsed ? ' lh-page--side-collapsed' : ''}${chrome ? ' lh-page--photo' : ''}`} style={chrome}>
             {menuOpen ? (
                 <button
                     type="button"
@@ -554,7 +556,9 @@ export function LegalHubPage() {
     return (
         <LegalHubMockProvider>
             <LegalHubViewProvider>
-                <LegalHubPageBody />
+                <LegalHubChromeProvider>
+                    <LegalHubPageBody />
+                </LegalHubChromeProvider>
             </LegalHubViewProvider>
         </LegalHubMockProvider>
     );

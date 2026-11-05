@@ -4,6 +4,7 @@ import { useI18n } from '@shared/i18n';
 import type { TranslationKey } from '@shared/i18n/translate';
 import { DatePicker, SearchableSelect } from '@shared/ui';
 import { createDefaultTodoThemeVars, deriveThemeFromImage, type ThemeVars } from '@entities/todo/lib/todoTheme';
+import { useSetLegalHubChrome } from './legalHubChrome';
 import { LegalHubTaskDrawer } from './LegalHubTaskDrawer';
 import { dueText } from './legalHubShared';
 import {
@@ -746,17 +747,32 @@ export function LegalHubMyTasks({
     const shownColumns = columns.filter((column) => !hideEmpty || column.custom || column.cards.length > 0 || (dragging != null && column.droppable));
     const hiddenCount = columns.length - shownColumns.length;
     const shownTitle = boardTitle.trim() || title;
-    const themeStyle: CSSProperties | undefined = themeVars ? {
+    const setChrome = useSetLegalHubChrome();
+    const themeStyle = useMemo<CSSProperties | undefined>(() => themeVars ? {
         ['--app-text' as string]: themeVars.text,
-        ['--app-muted' as string]: themeVars.muted,
         ['--app-text-dim' as string]: themeVars.muted,
+        ['--app-muted' as string]: themeVars.muted,
+        ['--app-meta' as string]: themeVars.muted,
         ['--app-surface' as string]: themeVars.panelBg,
+        ['--app-surface-soft' as string]: themeVars.surface,
+        ['--app-bg' as string]: themeVars.headerBg,
         ['--app-bg-soft' as string]: themeVars.surface,
         ['--app-border' as string]: themeVars.border,
         ['--app-accent' as string]: themeVars.accent,
-        ['--lh-menu-bg' as string]: themeVars.surface2,
+        ['--app-accent-hover' as string]: themeVars.accent,
+        ['--app-accent-border' as string]: themeVars.accent,
+        ['--app-accent-light-bg' as string]: themeVars.isDark ? 'rgba(255,255,255,0.1)' : themeVars.surface2,
+        ['--app-accent-focus' as string]: themeVars.isDark ? 'rgba(255,255,255,0.16)' : themeVars.border,
+        ...(themeVars.isDark ? {
+            ['--app-error' as string]: '#fca5a5',
+            ['--app-error-bg' as string]: 'rgba(239,68,68,0.22)',
+        } : {}),
         colorScheme: themeVars.isDark ? 'dark' : 'light',
-    } : undefined;
+    } : undefined, [themeVars]);
+    useEffect(() => {
+        setChrome(themeStyle);
+        return () => setChrome(undefined);
+    }, [setChrome, themeStyle]);
     const photo = backgroundImage ? (
         <>
             <div className="lh-my__photo" style={{ backgroundImage: `url(${backgroundImage})` }} />

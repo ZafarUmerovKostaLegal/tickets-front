@@ -7524,7 +7524,7 @@ body[data-theme='dark'] .lh-page {
   padding: 0.35rem;
   border: 1px solid var(--app-border);
   border-radius: 14px;
-  background: var(--lh-menu-bg, var(--app-surface));
+  background: var(--app-surface);
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.16);
 }
 
