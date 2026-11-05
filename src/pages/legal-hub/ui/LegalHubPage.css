@@ -6001,11 +6001,15 @@ body[data-theme='dark'] .lh-page {
 
 .lh-my--docket .lh-my__col-grip--fold {
   position: absolute;
-  top: 0.35rem;
+  top: 0.4rem;
   left: 50%;
   z-index: 1;
   margin: 0;
   transform: translateX(-50%);
+}
+
+.lh-my--docket .lh-my__col.is-folded:has(.lh-my__col-grip) .lh-my__fold-spine {
+  padding-top: 2.35rem;
 }
 
 .lh-my--docket .lh-my__col header {
